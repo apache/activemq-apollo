@@ -225,14 +225,14 @@ public class FlowController<E> implements ISinkController<E>, ISourceController<
             if (okToAdd(elem)) {
                 ok = true;
                 if (limiter.add(elem)) {
-                    blockSource(sourceController);
                     setUnThrottleListener();
+                    blockSource(sourceController);
                 }
             } else {
                 // Add to overflow queue and block source:
                 overflowQueue.add(elem);
-                blockSource(sourceController);
                 setUnThrottleListener();
+                blockSource(sourceController);
             }
         }
         if (ok) {
@@ -315,8 +315,7 @@ public class FlowController<E> implements ISinkController<E>, ISourceController<
         waitForResume();
 
         if (!blockedSources.contains(source)) {
-            // System.out.println("BLOCKING  : SINK["+this + "], SOURCE[" +
-            // source+"]");
+//            System.out.println("BLOCKING  : SINK[" + this + "], SOURCE[" + source + "]");
             blockedSources.add(source);
             source.onFlowBlock(this);
         }
@@ -341,7 +340,7 @@ public class FlowController<E> implements ISinkController<E>, ISourceController<
         // If we've exceeded the the throttle threshold, register
         // a listener so we can resume the blocked sources after
         // the limiter falls below the threshold:
-        if (!overflowQueue.isEmpty()) {
+        if (!overflowQueue.isEmpty() || limiter.getThrottled()) {
             setUnThrottleListener();
         } else if (notifyUnblock) {
             mutex.notifyAll();
@@ -397,8 +396,7 @@ public class FlowController<E> implements ISinkController<E>, ISourceController<
                     try {
                         Thread.currentThread().setName(name);
                         for (ISourceController<E> source : blockedSources) {
-                            // System.out.println("UNBLOCKING: SINK["+FlowController.this
-                            // + "], SOURCE[" + source+"]");
+//                            System.out.println("UNBLOCKING: SINK[" + FlowController.this + "], SOURCE[" + source + "]");
                             source.onFlowResume(FlowController.this);
                         }
                         for (FlowUnblockListener<E> listener : unblockListeners) {

@@ -75,14 +75,15 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                     boolean notify = false;
                     if (node.cursor == null) {
                         readyDirectSubs.addLast(node);
-                        // System.out.println("Subscription state change: un-ready direct -> ready direct: "+node);
+//                         System.out.println("Subscription state change: un-ready direct -> ready direct: "+node);
                     } else {
                         if (readyPollingSubs.isEmpty()) {
                             notify = !store.isEmpty();
                         }
                         readyPollingSubs.addLast(node);
-                        // System.out.println("Subscription state change: un-ready polling -> ready polling: "+node);
+//                         System.out.println("Subscription state change: un-ready polling -> ready polling: "+node);
                     }
+                    
                     if (notify) {
                         notifyReady();
                     }
@@ -169,7 +170,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                         sub.resumeAt(node);
                         unreadyPollingSubs.addLast(sub);
                         matchCount++;
-                        // System.out.println("Subscription state change: un-ready direct -> un-ready polling: "+sub);
+//                         System.out.println("Subscription state change: un-ready direct -> un-ready polling: "+sub);
                     }
                     sub = next;
                 }
@@ -181,7 +182,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                     subNode.unlink();
                     subNode.resumeAt(node);
                     unreadyPollingSubs.addLast(subNode);
-                    // System.out.println("Subscription state change: ready direct -> un-ready polling: "+subNode);
+//                     System.out.println("Subscription state change: ready direct -> un-ready polling: "+subNode);
                 }
                 matchCount += matches.size();
 
@@ -236,6 +237,8 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
 
     public boolean pollingDispatch() {
 
+//        System.out.println("polling dispatch");
+        
         // Keep looping until we can find one subscription that we can
         // dispatch a message to.
         while (true) {
@@ -261,7 +264,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                     } else {
                         // Cursor dried up... this subscriber can now be direct
                         // dispatched.
-                        // System.out.println("Subscription state change: ready polling -> ready direct: "+subNode);
+//                        System.out.println("Subscription state change: ready polling -> ready direct: "+subNode);
                         subNode.unlink();
                         readyDirectSubs.addLast(subNode);
                     }
@@ -291,7 +294,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                     }
                     return true;
                 } else {
-                    // System.out.println("Subscription state change: ready polling -> un-ready polling: "+subNode);
+//                     System.out.println("Subscription state change: ready polling -> un-ready polling: "+subNode);
                     // Subscription is no longer ready..
                     subNode.cursorUnPeek(storeNode);
                     subNode.unlink();
