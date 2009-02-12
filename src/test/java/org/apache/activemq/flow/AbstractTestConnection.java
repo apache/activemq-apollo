@@ -61,22 +61,20 @@ public abstract class AbstractTestConnection implements Service {
     public static final int BLOCKING = 0;
     public static final int POLLING = 1;
     public static final int ASYNC = 2;
-    private final int dispatchMode;
 
     AbstractTestConnection(MockBroker broker, String name, Flow flow, Pipe<Message> p) {
         this.name = name;
         this.broker = broker;
         this.flow = flow;
-        this.dispatchMode = broker.dispatchMode;
 
         // Set up an input source:
         this.input = new NetworkSource(flow, name + "-INPUT", inputWindowSize, inputResumeThreshold);
 
         // Setup output queue:
-        if (broker.priorityLevels <= 1) {
-            this.output = broker.getFlowManager().createFlowQueue(flow, name + "-OUTPUT", outputQueueSize, resumeThreshold);
+        if (MockBrokerTest.PRIORITY_LEVELS <= 1) {
+            this.output = TestFlowManager.createFlowQueue(flow, name + "-OUTPUT", outputQueueSize, resumeThreshold);
         } else {
-            ExclusivePriorityQueue<Message> t = new ExclusivePriorityQueue<Message>(broker.priorityLevels, flow, name + "-OUTPUT", outputQueueSize, resumeThreshold);
+            ExclusivePriorityQueue<Message> t = new ExclusivePriorityQueue<Message>(MockBrokerTest.PRIORITY_LEVELS, flow, name + "-OUTPUT", outputQueueSize, resumeThreshold);
             t.setPriorityMapper(Message.PRIORITY_MAPPER);
             this.output = t;
         }
@@ -130,8 +128,8 @@ public abstract class AbstractTestConnection implements Service {
     }
 
     public final void simulateEncodingWork() {
-        if (broker.ioWorkAmount > 1) {
-            fib(broker.ioWorkAmount);
+        if (MockBrokerTest.IO_WORK_AMOUNT > 1) {
+            fib(MockBrokerTest.IO_WORK_AMOUNT);
         }
     }
 
@@ -187,7 +185,7 @@ public abstract class AbstractTestConnection implements Service {
 
     public final void start() throws Exception {
         running.set(true);
-        if (dispatchMode == BLOCKING) {
+        if (MockBrokerTest.DISPATCH_MODE == BLOCKING) {
             listener = new Thread(new Runnable() {
                 public void run() {
                     try {
@@ -212,8 +210,8 @@ public abstract class AbstractTestConnection implements Service {
             }, name + "-Sender");
             sender.start();
         } else {
-            output.setDispatcher(broker.dispatcher);
-            input.setDispatcher(broker.dispatcher);
+            output.setDispatcher(broker.getDispatcher());
+            input.setDispatcher(broker.getDispatcher());
             return;
         }
 
@@ -221,7 +219,7 @@ public abstract class AbstractTestConnection implements Service {
 
     public final void stop() throws Exception {
         running.set(false);
-        if (dispatchMode == BLOCKING) {
+        if (MockBrokerTest.DISPATCH_MODE == BLOCKING) {
             listener.interrupt();
             listener.join();
             sender.interrupt();
@@ -262,16 +260,16 @@ public abstract class AbstractTestConnection implements Service {
         public NetworkSource(Flow flow, String name, int capacity, int resumeThreshold) {
             super(name);
             if (flow == null) {
-                if (broker.useInputQueues) {
-                    inputQueue = broker.getFlowManager().createFlowQueue(flow, name, capacity, resumeThreshold);
+                if (MockBrokerTest.USE_INPUT_QUEUES) {
+                    inputQueue = TestFlowManager.createFlowQueue(flow, name, capacity, resumeThreshold);
                 } else {
                     inputQueue = null;
                 }
                 flowController = null;
             } else {
-                if (broker.useInputQueues) {
-                    if (broker.priorityLevels <= 1) {
-                        inputQueue = broker.getFlowManager().createFlowQueue(flow, name, capacity, resumeThreshold);
+                if (MockBrokerTest.USE_INPUT_QUEUES) {
+                    if (MockBrokerTest.PRIORITY_LEVELS <= 1) {
+                        inputQueue = TestFlowManager.createFlowQueue(flow, name, capacity, resumeThreshold);
                     } else {
                         SingleFlowPriorityQueue<Message> t = new SingleFlowPriorityQueue<Message>(flow, name, new SizeLimiter<Message>(capacity, resumeThreshold));
                         t.setPriorityMapper(Message.PRIORITY_MAPPER);
@@ -332,7 +330,7 @@ public abstract class AbstractTestConnection implements Service {
             // priority. Note that flow control from the input queue will limit
             // dispatch
             // of lower priority messages:
-            if (broker.useInputQueues) {
+            if (MockBrokerTest.USE_INPUT_QUEUES) {
                 dispatchContext.updatePriority(Message.MAX_PRIORITY);
             }
             dispatchContext.requestDispatch();

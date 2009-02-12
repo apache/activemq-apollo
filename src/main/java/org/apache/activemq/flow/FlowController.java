@@ -91,7 +91,7 @@ public class FlowController<E> implements ISinkController<E>, ISourceController<
         this.flow = flow;
         this.limiter = limiter == null ? new SizeLimiter<E>(0, 0) : limiter;
         this.mutex = mutex;
-        this.name = controllable.getFlowSource().toString();
+        this.name = controllable.toString();
     }
 
     public final IFlowLimiter<E> getLimiter() {

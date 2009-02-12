@@ -14,7 +14,7 @@ import org.apache.activemq.transport.TransportListener;
 public class RemoteProducer implements TransportListener, Runnable {
 
     private final AtomicBoolean stopping = new AtomicBoolean();
-    private final MetricCounter producerRate = new MetricCounter();
+    private final MetricCounter rate = new MetricCounter();
 
     private Transport transport;
     private MockBroker broker;
@@ -30,14 +30,17 @@ public class RemoteProducer implements TransportListener, Runnable {
     private MetricAggregator totalProducerRate;
     
     public void start() throws Exception {
-        producerRate.name("Producer " + name + " Rate");
-        totalProducerRate.add(producerRate);
+        rate.name("Producer " + name + " Rate");
+        totalProducerRate.add(rate);
 
-        URI uri = broker.transportServer.getConnectURI();
-        transport = TransportFactory.connect(uri);
+        URI uri = broker.getConnectURI();
+        transport = TransportFactory.compositeConnect(uri);
         transport.setTransportListener(this);
         transport.start();
         
+        // Let the remote side know our name.
+        transport.oneway(name);
+
         thread = new Thread(this, name);
         thread.start();
     }
@@ -46,9 +49,9 @@ public class RemoteProducer implements TransportListener, Runnable {
         stopping.set(true);
         if( transport!=null ) {
             transport.stop();
-            transport=null;
         }
         thread.join();
+        transport=null;
     }
 
     public void run() {
@@ -66,6 +69,7 @@ public class RemoteProducer implements TransportListener, Runnable {
                 }
                 
                 transport.oneway(next);
+                rate.increment();
             }
         } catch (IOException e) {
             onException(e);
@@ -78,6 +82,7 @@ public class RemoteProducer implements TransportListener, Runnable {
 
     public void onException(IOException error) {
         if( !stopping.get() ) {
+            System.out.println("RemoteProducer error: "+error);
             error.printStackTrace();
         }
     }
@@ -92,14 +97,6 @@ public class RemoteProducer implements TransportListener, Runnable {
     }
     public void setBroker(MockBroker broker) {
         this.broker = broker;
-    }
-
-    public Transport getTransport() {
-        return transport;
-    }
-
-    public void setTransport(Transport transport) {
-        this.transport = transport;
     }
 
     public AtomicLong getMessageIdGenerator() {
@@ -124,14 +121,6 @@ public class RemoteProducer implements TransportListener, Runnable {
 
     public void setPriorityMod(int priorityMod) {
         this.priorityMod = priorityMod;
-    }
-
-    public int getCounter() {
-        return counter;
-    }
-
-    public void setCounter(int msgCounter) {
-        this.counter = msgCounter;
     }
 
     public int getProducerId() {
@@ -172,4 +161,8 @@ public class RemoteProducer implements TransportListener, Runnable {
 
     public void setTotalProducerRate(MetricAggregator totalProducerRate) {
         this.totalProducerRate = totalProducerRate;
+    }
+
+    public MetricCounter getRate() {
+        return rate;
     }}

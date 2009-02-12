@@ -23,11 +23,11 @@ import org.apache.activemq.queue.IFlowQueue;
 import org.apache.activemq.queue.MultiFlowQueue;
 
 public class TestFlowManager {
-    synchronized <T> IFlowQueue<T> createQueue(String name, Flow flow, int capacity, int resumeThreshold) {
+    static  <T> IFlowQueue<T> createQueue(String name, Flow flow, int capacity, int resumeThreshold) {
         return createFlowQueue(flow, name, capacity, resumeThreshold);
     }
 
-    public synchronized <T> IFlowQueue<T> createFlowQueue(Flow flow, String name, int capacity, int resumeThreshold) {
+    static public <T> IFlowQueue<T> createFlowQueue(Flow flow, String name, int capacity, int resumeThreshold) {
         IFlowQueue<T> queue;
         if (flow != null) {
             queue = new ExclusiveQueue<T>(flow, name, new SizeLimiter<T>(capacity, resumeThreshold));
@@ -37,7 +37,7 @@ public class TestFlowManager {
         return queue;
     }
 
-    public Flow createFlow(String name) {
+    static public Flow createFlow(String name) {
         Flow rc = new Flow(name, false);
         return rc;
     }

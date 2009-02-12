@@ -21,16 +21,19 @@ public class RemoteConsumer implements TransportListener {
     private MetricAggregator totalConsumerRate;
     private long thinkTime;
     private Destination destination;
+    private String selector;
     
     public void start() throws Exception {
         consumerRate.name("Consumer " + name + " Rate");
         totalConsumerRate.add(consumerRate);
 
-        URI uri = broker.transportServer.getConnectURI();
-        transport = TransportFactory.connect(uri);
+        URI uri = broker.getConnectURI();
+        transport = TransportFactory.compositeConnect(uri);
         transport.setTransportListener(this);
         transport.start();
         
+        // Let the remote side know our name.
+        transport.oneway(name);
         // Sending the destination acts as the subscribe.
         transport.oneway(destination);
     }
@@ -61,6 +64,7 @@ public class RemoteConsumer implements TransportListener {
 
     public void onException(IOException error) {
         if( !stopping.get() ) {
+            System.out.println("RemoteConsumer error: "+error);
             error.printStackTrace();
         }
     }
@@ -77,15 +81,6 @@ public class RemoteConsumer implements TransportListener {
         this.broker = broker;
     }
 
-    public Transport getTransport() {
-        return transport;
-    }
-
-    public void setTransport(Transport transport) {
-        this.transport = transport;
-    }
-
-
     public MockBroker getBroker() {
         return broker;
     }
@@ -98,8 +93,8 @@ public class RemoteConsumer implements TransportListener {
         return totalConsumerRate;
     }
 
-    public void setTotalConsumerRate(MetricAggregator totalProducerRate) {
-        this.totalConsumerRate = totalProducerRate;
+    public void setTotalConsumerRate(MetricAggregator totalConsumerRate) {
+        this.totalConsumerRate = totalConsumerRate;
     }
 
     public Destination getDestination() {
@@ -108,4 +103,24 @@ public class RemoteConsumer implements TransportListener {
 
     public void setDestination(Destination destination) {
         this.destination = destination;
+    }
+
+    public long getThinkTime() {
+        return thinkTime;
+    }
+
+    public void setThinkTime(long thinkTime) {
+        this.thinkTime = thinkTime;
+    }
+
+    public MetricCounter getConsumerRate() {
+        return consumerRate;
+    }
+
+    public String getSelector() {
+        return selector;
+    }
+
+    public void setSelector(String selector) {
+        this.selector = selector;
     }}

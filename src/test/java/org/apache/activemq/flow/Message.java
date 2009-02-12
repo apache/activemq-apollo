@@ -19,10 +19,11 @@ package org.apache.activemq.flow;
 import java.io.Serializable;
 import java.util.HashSet;
 
-import org.apache.activemq.flow.Flow;
 import org.apache.activemq.queue.Mapper;
 
 public class Message implements Serializable {
+
+    private static final long serialVersionUID = 6759761889075451996L;
 
     public static final Mapper<Integer, Message> PRIORITY_MAPPER = new Mapper<Integer, Message>() {
         public Integer map(Message element) {

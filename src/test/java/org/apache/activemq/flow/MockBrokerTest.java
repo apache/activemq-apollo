@@ -19,18 +19,12 @@ package org.apache.activemq.flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import junit.framework.TestCase;
 
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.PriorityPooledDispatcher;
-import org.apache.activemq.flow.FlowController;
-import org.apache.activemq.flow.IFlowSink;
-import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.queue.Mapper;
@@ -50,10 +44,10 @@ public class MockBrokerTest extends TestCase {
     private boolean multibroker = false;
 
     // Set to mockup up ptp:
-    boolean ptp = true;
+    boolean ptp = false;
 
     // Can be set to BLOCKING, POLLING or ASYNC
-    final int dispatchMode = AbstractTestConnection.ASYNC;
+    public final static int DISPATCH_MODE = AbstractTestConnection.ASYNC;
     // Set's the number of threads to use:
     private final int asyncThreadPoolSize = Runtime.getRuntime().availableProcessors();
     boolean usePartitionedQueue = false;
@@ -77,7 +71,6 @@ public class MockBrokerTest extends TestCase {
     }
 
     final AtomicLong msgIdGenerator = new AtomicLong();
-    final AtomicInteger prodcuerIdGenerator = new AtomicInteger();
 
     class BrokerConnection extends AbstractTestConnection implements DeliveryTarget {
         private final Pipe<Message> pipe;
@@ -148,28 +141,6 @@ public class MockBrokerTest extends TestCase {
         }
     };
 
-    class Router {
-        final HashMap<Destination, Collection<DeliveryTarget>> lookupTable = new HashMap<Destination, Collection<DeliveryTarget>>();
-
-        final synchronized void bind(DeliveryTarget dt, Destination destination) {
-            Collection<DeliveryTarget> targets = lookupTable.get(destination);
-            if (targets == null) {
-                targets = new ArrayList<DeliveryTarget>();
-                lookupTable.put(destination, targets);
-            }
-            targets.add(dt);
-        }
-
-        final void route(ISourceController<Message> source, Message msg) {
-            Collection<DeliveryTarget> targets = lookupTable.get(msg.getDestination());
-            for (DeliveryTarget dt : targets) {
-                if (dt.match(msg)) {
-                    dt.getSink().add(msg, source);
-                }
-            }
-        }
-    }
-
     private void reportRates() throws InterruptedException {
         System.out.println("Checking rates for test: " + getName());
         for (int i = 0; i < PERFORMANCE_SAMPLES; i++) {
@@ -195,9 +166,9 @@ public class MockBrokerTest extends TestCase {
         consumerCount = 1;
 
         createConnections();
-        LocalProducer producer = sendBroker.producers.get(0);
-        producer.msgPriority = 1;
-        producer.producerRate.setName("High Priority Producer Rate");
+        RemoteProducer producer = sendBroker.producers.get(0);
+        producer.setPriority(1);
+        producer.getRate().setName("High Priority Producer Rate");
 
         rcvBroker.consumers.get(0).setThinkTime(1);
 
@@ -209,7 +180,7 @@ public class MockBrokerTest extends TestCase {
             for (int i = 0; i < PERFORMANCE_SAMPLES; i++) {
                 Period p = new Period();
                 Thread.sleep(1000 * 5);
-                System.out.println(producer.producerRate.getRateSummary(p));
+                System.out.println(producer.getRate().getRateSummary(p));
                 System.out.println(totalProducerRate.getRateSummary(p));
                 System.out.println(totalConsumerRate.getRateSummary(p));
                 totalProducerRate.reset();
@@ -233,10 +204,10 @@ public class MockBrokerTest extends TestCase {
         consumerCount = 1;
 
         createConnections();
-        LocalProducer producer = sendBroker.producers.get(0);
-        producer.msgPriority = 1;
-        producer.priorityMod = 3;
-        producer.producerRate.setName("High Priority Producer Rate");
+        RemoteProducer producer = sendBroker.producers.get(0);
+        producer.setPriority(1);
+        producer.setPriorityMod(3);
+        producer.getRate().setName("High Priority Producer Rate");
 
         rcvBroker.consumers.get(0).setThinkTime(1);
 
@@ -248,7 +219,7 @@ public class MockBrokerTest extends TestCase {
             for (int i = 0; i < PERFORMANCE_SAMPLES; i++) {
                 Period p = new Period();
                 Thread.sleep(1000 * 5);
-                System.out.println(producer.producerRate.getRateSummary(p));
+                System.out.println(producer.getRate().getRateSummary(p));
                 System.out.println(totalProducerRate.getRateSummary(p));
                 System.out.println(totalConsumerRate.getRateSummary(p));
                 totalProducerRate.reset();
@@ -389,7 +360,9 @@ public class MockBrokerTest extends TestCase {
 
         // Add properties to match producers to their consumers
         for (int i = 0; i < consumerCount; i++) {
-            rcvBroker.consumers.get(i).selector = sendBroker.producers.get(i).property = "match" + i;
+            String property = "match" + i;
+            rcvBroker.consumers.get(i).setSelector(property);
+            sendBroker.producers.get(i).setProperty(property);
         }
 
         // Start 'em up.
@@ -400,21 +373,21 @@ public class MockBrokerTest extends TestCase {
             stopServices();
         }
     }
-
+    
     private void createConnections() throws IOException, URISyntaxException {
 
-        if (dispatchMode == AbstractTestConnection.ASYNC || dispatchMode == AbstractTestConnection.POLLING) {
+        if (DISPATCH_MODE == AbstractTestConnection.ASYNC || DISPATCH_MODE == AbstractTestConnection.POLLING) {
             dispatcher = new PriorityPooledDispatcher("BrokerDispatcher", asyncThreadPoolSize, Message.MAX_PRIORITY);
             FlowController.setFlowExecutor(dispatcher.createPriorityExecutor(Message.MAX_PRIORITY));
         }
 
         if (multibroker) {
-            sendBroker = new MockBroker(this, "SendBroker");
-            rcvBroker = new MockBroker(this, "RcvBroker");
+            sendBroker = createBroker("SendBroker", "tcp://localhost:10000?wireFormat=test");
             brokers.add(sendBroker);
+            rcvBroker = createBroker("RcvBroker", "tcp://localhost:20000?wireFormat=test");
             brokers.add(rcvBroker);
         } else {
-            sendBroker = rcvBroker = new MockBroker(this, "Broker");
+            sendBroker = rcvBroker = createBroker("Broker", "tcp://localhost:10000?wireFormat=test");
             brokers.add(sendBroker);
         }
 
@@ -423,26 +396,72 @@ public class MockBrokerTest extends TestCase {
         for (int i = 0; i < destCount; i++) {
             dests[i] = new Destination("dest" + (i + 1), ptp);
             if (ptp) {
-                sendBroker.createQueue(dests[i]);
+                MockQueue queue = createQueue(sendBroker, dests[i]);
+                sendBroker.addQueue(queue);
                 if (multibroker) {
-                    rcvBroker.createQueue(dests[i]);
+                    queue = createQueue(rcvBroker, dests[i]);
+                    rcvBroker.addQueue(queue);
                 }
             }
         }
 
         for (int i = 0; i < producerCount; i++) {
-            sendBroker.createProducerConnection(dests[i % destCount]);
+            Destination destination = dests[i % destCount];
+            RemoteProducer producer = createProducer(i, destination);
+            sendBroker.producers.add(producer);
         }
+        
         for (int i = 0; i < consumerCount; i++) {
-            rcvBroker.createConsumerConnection(dests[i % destCount]);
+            Destination destination = dests[i % destCount];
+            RemoteConsumer consumer = createConsumer(i, destination);
+            sendBroker.consumers.add(consumer);
         }
 
         // Create MultiBroker connections:
-        if (multibroker) {
-            Pipe<Message> pipe = new Pipe<Message>();
-            sendBroker.createBrokerConnection(rcvBroker, pipe);
-            rcvBroker.createBrokerConnection(sendBroker, pipe.connect());
+//        if (multibroker) {
+//            Pipe<Message> pipe = new Pipe<Message>();
+//            sendBroker.createBrokerConnection(rcvBroker, pipe);
+//            rcvBroker.createBrokerConnection(sendBroker, pipe.connect());
+//        }
+    }
+
+    private RemoteConsumer createConsumer(int i, Destination destination) {
+        RemoteConsumer consumer = new RemoteConsumer();
+        consumer.setBroker(rcvBroker);
+        consumer.setDestination(destination);
+        consumer.setName("consumer"+(i+1));
+        consumer.setTotalConsumerRate(totalConsumerRate);
+        return consumer;
+    }
+
+    private RemoteProducer createProducer(int id, Destination destination) {
+        RemoteProducer producer = new RemoteProducer();
+        producer.setBroker(sendBroker);
+        producer.setProducerId(id+1);
+        producer.setName("producer" +(id+1));
+        producer.setDestination(destination);
+        producer.setMessageIdGenerator(msgIdGenerator);
+        producer.setTotalProducerRate(totalProducerRate);
+        return producer;
+    }
+
+    private MockQueue createQueue(MockBroker broker, Destination destination) {
+        MockQueue queue = new MockQueue();
+        queue.setBroker(broker);
+        queue.setDestination(destination);
+        queue.setKeyExtractor(keyExtractor);
+        if( usePartitionedQueue ) {
+            queue.setPartitionMapper(partitionMapper);
         }
+        return queue;
+    }
+
+    private MockBroker createBroker(String name, String uri) {
+        MockBroker broker = new MockBroker();
+        broker.setName(name);
+        broker.setUri(uri);
+        broker.setDispatcher(dispatcher);
+        return broker;
     }
 
     private void stopServices() throws Exception {

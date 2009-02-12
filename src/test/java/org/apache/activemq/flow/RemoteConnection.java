@@ -40,7 +40,6 @@ public class RemoteConnection implements TransportListener, DeliveryTarget {
 
     public void setBroker(MockBroker broker) {
         this.broker = broker;
-
     }
 
     public void setTransport(Transport transport) {
@@ -48,15 +47,57 @@ public class RemoteConnection implements TransportListener, DeliveryTarget {
     }
 
     public void start() throws Exception {
+        transport.setTransportListener(this);
+        transport.start();
+    }
 
+    public void stop() throws Exception {
+        stopping.set(true);
+        writer.shutdown();
+        if (transport != null) {
+            transport.stop();
+        }
+    }
+
+    public void onCommand(Object command) {
+        try {
+            // First command in should be the name of the connection
+            if( name==null ) {
+                name = (String) command;
+                initialize();
+            } else if (command.getClass() == Message.class) {
+                Message msg = (Message) command;
+                // Use the flow controller to send the message on so that we do
+                // not overflow
+                // the broker.
+                while (!inboundController.offer(msg, null)) {
+                    inboundController.waitForFlowUnblock();
+                }
+            } else if (command.getClass() == Destination.class) {
+                // This is a subscription request
+                Destination destination = (Destination) command;
+                broker.subscribe(destination, this);
+            }
+        } catch (Exception e) {
+            onException(e);
+        }
+    }
+
+    private void initialize() {
         // Setup the input processing..
         SizeLimiter<Message> limiter = new SizeLimiter<Message>(inputWindowSize, inputResumeThreshold);
         Flow flow = new Flow(name + "-inbound", false);
         inboundController = new FlowController<Message>(new FlowControllable<Message>() {
             public void flowElemAccepted(ISourceController<Message> controller, Message elem) {
                 broker.router.route(controller, elem);
+                inboundController.elementDispatched(elem);
             }
 
+            @Override
+            public String toString() {
+                return name;
+            }
+            
             public IFlowSink<Message> getFlowSink() {
                 return null;
             }
@@ -73,7 +114,7 @@ public class RemoteConnection implements TransportListener, DeliveryTarget {
             ExclusiveQueue<Message> queue = new ExclusiveQueue<Message>(flow, flow.getFlowName(), limiter);
             this.output = queue;
         } else {
-            ExclusivePriorityQueue<Message> t = new ExclusivePriorityQueue<Message>(broker.priorityLevels, flow, name + "-outbound", outputWindowSize, outputResumeThreshold);
+            ExclusivePriorityQueue<Message> t = new ExclusivePriorityQueue<Message>(priorityLevels, flow, name + "-outbound", outputWindowSize, outputResumeThreshold);
             t.setPriorityMapper(Message.PRIORITY_MAPPER);
             this.output = t;
         }
@@ -98,47 +139,15 @@ public class RemoteConnection implements TransportListener, DeliveryTarget {
                 });
             }
         });
-
-        transport.setTransportListener(this);
-        transport.start();
-    }
-
-    public void stop() throws Exception {
-        stopping.set(true);
-        writer.shutdown();
-        if (transport != null) {
-            transport.stop();
-        }
-    }
-
-    public void onCommand(Object command) {
-        try {
-            if (command.getClass() == Message.class) {
-                Message msg = (Message) command;
-                // Use the flow controller to send the message on so that we do
-                // not overflow
-                // the broker.
-                while (!inboundController.offer(msg, null)) {
-                    inboundController.waitForFlowUnblock();
-                }
-            } else if (command.getClass() == Destination.class) {
-                // This is a subscription request
-                Destination destination = (Destination) command;
-                broker.subscribe(destination, this);
-            }
-        } catch (Exception e) {
-            onException(e);
-        }
     }
 
     public void onException(IOException error) {
-        if (!stopping.get()) {
-            error.printStackTrace();
-        }
+        onException((Exception)error);
     }
 
     public void onException(Exception error) {
-        if (!stopping.get()) {
+        if (!stopping.get() && !broker.isStopping()) {
+            System.out.println("RemoteConnection error: "+error);
             error.printStackTrace();
         }
     }
@@ -151,10 +160,6 @@ public class RemoteConnection implements TransportListener, DeliveryTarget {
 
     public String getName() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public int getPriorityLevels() {

@@ -7,6 +7,7 @@ import java.util.HashMap;
 
 import org.apache.activemq.flow.MockBrokerTest.DeliveryTarget;
 import org.apache.activemq.queue.IQueue;
+import org.apache.activemq.queue.Mapper;
 import org.apache.activemq.queue.PartitionedQueue;
 import org.apache.activemq.queue.SharedPriorityQueue;
 import org.apache.activemq.queue.SharedQueue;
@@ -14,30 +15,24 @@ import org.apache.activemq.queue.Subscription;
 
 class MockQueue implements MockBrokerTest.DeliveryTarget {
 
-    private final MockBrokerTest mockBrokerTest;
     HashMap<DeliveryTarget, Subscription<Message>> subs = new HashMap<DeliveryTarget, Subscription<Message>>();
-    private final Destination destination;
-    private final IQueue<Long, Message> queue;
-    private final MockBroker broker;
-
-    MockQueue(MockBrokerTest mockBrokerTest, MockBroker broker, Destination destination) {
-        this.mockBrokerTest = mockBrokerTest;
-        this.broker = broker;
-        this.destination = destination;
-        this.queue = createQueue();
-        broker.router.bind(this, destination);
-    }
+    private Destination destination;
+    private IQueue<Long, Message> queue;
+    private MockBroker broker;
+    
+    private Mapper<Integer, Message> partitionMapper;
+    private Mapper<Long, Message> keyExtractor;
 
     private IQueue<Long, Message> createQueue() {
 
-        if (this.mockBrokerTest.usePartitionedQueue) {
+        if (partitionMapper!=null) {
             PartitionedQueue<Integer, Long, Message> queue = new PartitionedQueue<Integer, Long, Message>() {
                 @Override
                 protected IQueue<Long, Message> cratePartition(Integer partitionKey) {
                     return createSharedFlowQueue();
                 }
             };
-            queue.setPartitionMapper(this.mockBrokerTest.partitionMapper);
+            queue.setPartitionMapper(partitionMapper);
             queue.setResourceName(destination.getName());
             return queue;
         } else {
@@ -46,33 +41,28 @@ class MockQueue implements MockBrokerTest.DeliveryTarget {
     }
 
     private IQueue<Long, Message> createSharedFlowQueue() {
-        if (broker.priorityLevels > 1) {
-            PrioritySizeLimiter<Message> limiter = new PrioritySizeLimiter<Message>(100, 1, broker.priorityLevels);
+        if (MockBrokerTest.PRIORITY_LEVELS > 1) {
+            PrioritySizeLimiter<Message> limiter = new PrioritySizeLimiter<Message>(100, 1, MockBrokerTest.PRIORITY_LEVELS);
             limiter.setPriorityMapper(Message.PRIORITY_MAPPER);
             SharedPriorityQueue<Long, Message> queue = new SharedPriorityQueue<Long, Message>(destination.getName(), limiter);
-            queue.setKeyMapper(this.mockBrokerTest.keyExtractor);
+            queue.setKeyMapper(keyExtractor);
             queue.setAutoRelease(true);
-            queue.setDispatcher(broker.dispatcher);
+            queue.setDispatcher(broker.getDispatcher());
             return queue;
         } else {
             SizeLimiter<Message> limiter = new SizeLimiter<Message>(100, 1);
             SharedQueue<Long, Message> queue = new SharedQueue<Long, Message>(destination.getName(), limiter);
-            queue.setKeyMapper(this.mockBrokerTest.keyExtractor);
+            queue.setKeyMapper(keyExtractor);
             queue.setAutoRelease(true);
-            queue.setDispatcher(broker.dispatcher);
+            queue.setDispatcher(broker.getDispatcher());
             return queue;
         }
     }
 
     public final void deliver(ISourceController<Message> source, Message msg) {
-
         queue.add(msg, source);
     }
-
-    public String getSelector() {
-        return null;
-    }
-
+    
     public final Destination getDestination() {
         return destination;
     }
@@ -113,6 +103,7 @@ class MockQueue implements MockBrokerTest.DeliveryTarget {
     }
 
     public void start() throws Exception {
+        queue = createQueue();
     }
 
     public void stop() throws Exception {
@@ -124,6 +115,34 @@ class MockQueue implements MockBrokerTest.DeliveryTarget {
 
     public boolean match(Message message) {
         return true;
+    }
+
+    public MockBroker getBroker() {
+        return broker;
+    }
+
+    public void setBroker(MockBroker broker) {
+        this.broker = broker;
+    }
+
+    public Mapper<Integer, Message> getPartitionMapper() {
+        return partitionMapper;
+    }
+
+    public void setPartitionMapper(Mapper<Integer, Message> partitionMapper) {
+        this.partitionMapper = partitionMapper;
+    }
+
+    public Mapper<Long, Message> getKeyExtractor() {
+        return keyExtractor;
+    }
+
+    public void setKeyExtractor(Mapper<Long, Message> keyExtractor) {
+        this.keyExtractor = keyExtractor;
+    }
+
+    public void setDestination(Destination destination) {
+        this.destination = destination;
     }
 
 }

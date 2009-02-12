@@ -1,12 +1,12 @@
 package org.apache.activemq.flow;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 
 import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.IOExceptionSupport;
@@ -15,17 +15,25 @@ import org.apache.activemq.wireformat.WireFormatFactory;
 
 public class TestWireFormatFactory implements WireFormatFactory {
 
-    public class TestWireFormat implements WireFormat {
+    static public class TestWireFormat implements WireFormat {
 
         public void marshal(Object value, DataOutput out) throws IOException {
-            ObjectOutputStream oos = new ObjectOutputStream((OutputStream) out);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
             oos.writeObject(value);
-            oos.reset();
-            oos.flush();
+            oos.close();
+            
+            byte[] data = baos.toByteArray();
+            out.writeInt(data.length);
+            out.write(data);
         }
 
         public Object unmarshal(DataInput in) throws IOException {
-            ObjectInputStream ois = new ObjectInputStream((InputStream) in);
+            byte data[] = new byte[in.readInt()];
+            in.readFully(data);
+            
+            ByteArrayInputStream is = new ByteArrayInputStream(data);
+            ObjectInputStream ois = new ObjectInputStream(is);
             try {
                 return ois.readObject();
             } catch (ClassNotFoundException e) {
@@ -53,6 +61,6 @@ public class TestWireFormatFactory implements WireFormatFactory {
 
 	public WireFormat createWireFormat() {
 		return new TestWireFormat();
-	}
+	}	
 
 }
