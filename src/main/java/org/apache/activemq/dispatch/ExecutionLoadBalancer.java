@@ -16,82 +16,24 @@
  */
 package org.apache.activemq.dispatch;
 
-import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
+import org.apache.activemq.dispatch.PooledDispatcher.PoolableDispatcher;
+import org.apache.activemq.dispatch.PooledDispatcher.PooledDispatchContext;
 
 public interface ExecutionLoadBalancer {
 
-    /**
-     * A Load Balanced Dispatch context can be moved between different
-     * dispatchers.
-     */
-    public interface LoadBalancedDispatchContext extends DispatchContext {
-        /**
-         * A dispatcher must call this when it starts dispatch for this context
-         */
-        public void startingDispatch();
+	public interface ExecutionTracker {
+		public void onDispatchRequest(PoolableDispatcher caller, PooledDispatchContext context);
 
-        /**
-         * A dispatcher must call this when it has finished dispatching a
-         * context
-         */
-        public void finishedDispatch();
+		public void close();
+	}
 
-        /**
-		 * 
-		 */
-        public void processForeignUpdates();
-    }
+	public void addDispatcher(PoolableDispatcher dispatcher);
 
-    public interface PoolableDispatchContext extends DispatchContext {
+	public void removeDispatcher(PoolableDispatcher dispatcher);
 
-        public void setLoadBalancedDispatchContext(LoadBalancedDispatchContext context);
+	public ExecutionTracker createExecutionTracker(PooledDispatchContext context);
 
-        /**
-         * Indicates that another thread has made an update to the dispatch
-         * context.
-         * 
-         */
-        public void onForeignThreadUpdate();
+	public void start();
 
-        public PoolableDispatcher getDispatcher();
-    }
-
-    public interface PoolableDispatcher extends IDispatcher {
-
-        /**
-         * Indicates that another thread has made an update to the dispatch
-         * context.
-         * 
-         */
-        public PoolableDispatchContext createPoolablDispatchContext(Dispatchable dispatchable, String name);
-    }
-
-    /**
-     * This wraps the dispatch context into one that is load balanced by the
-     * LoadBalancer
-     * 
-     * @param context
-     *            The context to wrap.
-     * @return
-     */
-    public LoadBalancedDispatchContext createLoadBalancedDispatchContext(PoolableDispatchContext context);
-
-    /**
-     * Adds a Dispatcher to the list of dispatchers managed by the load balancer
-     * 
-     * @param dispatcher
-     */
-    public void addDispatcher(PoolableDispatcher dispatcher);
-
-    /**
-     * A Dispatcher must call this from it's dispatcher thread to indicate that
-     * is has started it's dispatch has started.
-     */
-    public void onDispatcherStarted(PoolableDispatcher dispatcher);
-
-    /**
-     * A Dispatcher must call this from it's dispatcher thread when exiting it's
-     * dispatch loop
-     */
-    public void onDispatcherStopped(PoolableDispatcher dispatcher);
+	public void stop();
 }

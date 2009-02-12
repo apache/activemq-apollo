@@ -47,7 +47,7 @@ public class MockBrokerTest extends TestCase {
     boolean ptp = false;
 
     // Set to use tcp IO
-    boolean tcp = false;
+    boolean tcp = true;
 
     // Can be set to BLOCKING, POLLING or ASYNC
     public final static int DISPATCH_MODE = AbstractTestConnection.ASYNC;
