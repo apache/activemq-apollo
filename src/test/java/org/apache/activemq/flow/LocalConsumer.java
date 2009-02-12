@@ -9,7 +9,7 @@ import org.apache.activemq.flow.AbstractTestConnection.ReadReadyListener;
 import org.apache.activemq.flow.MockBrokerTest.DeliveryTarget;
 import org.apache.activemq.metric.MetricCounter;
 
-class MockConsumerConnection extends AbstractTestConnection implements MockBrokerTest.DeliveryTarget {
+class LocalConsumer extends AbstractTestConnection implements MockBrokerTest.DeliveryTarget {
 
     /**
      * 
@@ -22,7 +22,7 @@ class MockConsumerConnection extends AbstractTestConnection implements MockBroke
 
     private long thinkTime = 0;
 
-    public MockConsumerConnection(MockBrokerTest mockBrokerTest, String name, MockBroker broker, Destination destination) {
+    public LocalConsumer(MockBrokerTest mockBrokerTest, String name, MockBroker broker, Destination destination) {
         super(broker, name, broker.getFlowManager().createFlow(destination.getName()), null);
         this.mockBrokerTest = mockBrokerTest;
         this.destination = destination;

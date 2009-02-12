@@ -6,7 +6,7 @@ package org.apache.activemq.flow;
 import org.apache.activemq.flow.AbstractTestConnection.ReadReadyListener;
 import org.apache.activemq.metric.MetricCounter;
 
-class MockProducerConnection extends AbstractTestConnection {
+class LocalProducer extends AbstractTestConnection {
 
     /**
      * 
@@ -24,7 +24,7 @@ class MockProducerConnection extends AbstractTestConnection {
     int priorityMod = 0;
     int producerId;
 
-    public MockProducerConnection(MockBrokerTest mockBrokerTest, String name, MockBroker broker, Destination destination) {
+    public LocalProducer(MockBrokerTest mockBrokerTest, String name, MockBroker broker, Destination destination) {
 
         super(broker, name, broker.getFlowManager().createFlow(name), null);
         this.mockBrokerTest = mockBrokerTest;

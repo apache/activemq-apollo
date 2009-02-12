@@ -16,12 +16,18 @@
  */
 package org.apache.activemq.flow;
 
-public class Destination {
+import java.io.Serializable;
 
+public class Destination implements Serializable{
+
+    private static final long serialVersionUID = 4020372477810069873L;
+    
     String name;
+    boolean ptp;
 
-    Destination(String name) {
+    Destination(String name, boolean ptp) {
         this.name = name;
+        this.ptp=ptp;
     }
 
     public final String getName() {

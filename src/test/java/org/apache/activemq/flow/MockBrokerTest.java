@@ -50,7 +50,7 @@ public class MockBrokerTest extends TestCase {
     private boolean multibroker = false;
 
     // Set to mockup up ptp:
-    private boolean ptp = true;
+    boolean ptp = true;
 
     // Can be set to BLOCKING, POLLING or ASYNC
     final int dispatchMode = AbstractTestConnection.ASYNC;
@@ -195,7 +195,7 @@ public class MockBrokerTest extends TestCase {
         consumerCount = 1;
 
         createConnections();
-        MockProducerConnection producer = sendBroker.producers.get(0);
+        LocalProducer producer = sendBroker.producers.get(0);
         producer.msgPriority = 1;
         producer.producerRate.setName("High Priority Producer Rate");
 
@@ -233,7 +233,7 @@ public class MockBrokerTest extends TestCase {
         consumerCount = 1;
 
         createConnections();
-        MockProducerConnection producer = sendBroker.producers.get(0);
+        LocalProducer producer = sendBroker.producers.get(0);
         producer.msgPriority = 1;
         producer.priorityMod = 3;
         producer.producerRate.setName("High Priority Producer Rate");
@@ -421,7 +421,7 @@ public class MockBrokerTest extends TestCase {
         Destination[] dests = new Destination[destCount];
 
         for (int i = 0; i < destCount; i++) {
-            dests[i] = new Destination("dest" + (i + 1));
+            dests[i] = new Destination("dest" + (i + 1), ptp);
             if (ptp) {
                 sendBroker.createQueue(dests[i]);
                 if (multibroker) {
@@ -434,7 +434,7 @@ public class MockBrokerTest extends TestCase {
             sendBroker.createProducerConnection(dests[i % destCount]);
         }
         for (int i = 0; i < consumerCount; i++) {
-            rcvBroker.createConsumerConnection(dests[i % destCount], ptp);
+            rcvBroker.createConsumerConnection(dests[i % destCount]);
         }
 
         // Create MultiBroker connections:

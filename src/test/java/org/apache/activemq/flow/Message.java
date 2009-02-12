@@ -16,12 +16,13 @@
  */
 package org.apache.activemq.flow;
 
+import java.io.Serializable;
 import java.util.HashSet;
 
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.queue.Mapper;
 
-public class Message {
+public class Message implements Serializable {
 
     public static final Mapper<Integer, Message> PRIORITY_MAPPER = new Mapper<Integer, Message>() {
         public Integer map(Message element) {
@@ -39,7 +40,7 @@ public class Message {
     public static final short TYPE_FLOW_CLOSE = 3;
 
     final String msg;
-    final Flow flow;
+    transient final Flow flow;
     final Destination dest;
     int hopCount;
     HashSet<String> matchProps;

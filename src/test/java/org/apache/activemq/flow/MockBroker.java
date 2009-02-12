@@ -11,6 +11,7 @@ import java.util.HashMap;
 
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.MockBrokerTest.BrokerConnection;
+import org.apache.activemq.flow.MockBrokerTest.DeliveryTarget;
 import org.apache.activemq.flow.MockBrokerTest.Router;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportAcceptListener;
@@ -22,9 +23,9 @@ class MockBroker implements TransportAcceptListener {
     private final MockBrokerTest mockBrokerTest;
     private final TestFlowManager flowMgr;
     
-    final ArrayList<MockTransportConnection> connections = new ArrayList<MockTransportConnection>();
-    final ArrayList<MockProducerConnection> producers = new ArrayList<MockProducerConnection>();
-    final ArrayList<MockConsumerConnection> consumers = new ArrayList<MockConsumerConnection>();
+    final ArrayList<RemoteConnection> connections = new ArrayList<RemoteConnection>();
+    final ArrayList<LocalProducer> producers = new ArrayList<LocalProducer>();
+    final ArrayList<LocalConsumer> consumers = new ArrayList<LocalConsumer>();
     private final ArrayList<BrokerConnection> brokerConns = new ArrayList<BrokerConnection>();
 
     private final HashMap<Destination, MockQueue> queues = new HashMap<Destination, MockQueue>();
@@ -38,7 +39,7 @@ class MockBroker implements TransportAcceptListener {
     public final int priorityLevels = MockBrokerTest.PRIORITY_LEVELS;
     public final int ioWorkAmount = MockBrokerTest.IO_WORK_AMOUNT;
     public final boolean useInputQueues = MockBrokerTest.USE_INPUT_QUEUES;
-    private TransportServer transportServer;
+    public TransportServer transportServer;
 
     MockBroker(MockBrokerTest mockBrokerTest, String name) throws IOException, URISyntaxException {
         this.mockBrokerTest = mockBrokerTest;
@@ -58,23 +59,26 @@ class MockBroker implements TransportAcceptListener {
     }
 
     public void createProducerConnection(Destination destination) {
-        MockProducerConnection c = new MockProducerConnection(this.mockBrokerTest, "producer" + ++pCount, this, destination);
+        LocalProducer c = new LocalProducer(this.mockBrokerTest, "producer" + ++pCount, this, destination);
         producers.add(c);
     }
 
-    public void createConsumerConnection(Destination destination, boolean ptp) {
-        MockConsumerConnection c = new MockConsumerConnection(this.mockBrokerTest, "consumer" + ++cCount, this, destination);
+    public void createConsumerConnection(Destination destination) {
+        LocalConsumer c = new LocalConsumer(this.mockBrokerTest, "consumer" + ++cCount, this, destination);
         consumers.add(c);
-        if (ptp) {
-            queues.get(destination).addConsumer(c);
-        } else {
-            router.bind(c, destination);
-        }
+        subscribe(destination, c);
+    }
 
+    public void subscribe(Destination destination, DeliveryTarget deliveryTarget) {
+        if (destination.ptp) {
+            queues.get(destination).addConsumer(deliveryTarget);
+        } else {
+            router.bind(deliveryTarget, destination);
+        }
     }
 
     public void createClusterConnection(Destination destination) {
-        MockConsumerConnection c = new MockConsumerConnection(this.mockBrokerTest, "consumer" + ++cCount, this, destination);
+        LocalConsumer c = new LocalConsumer(this.mockBrokerTest, "consumer" + ++cCount, this, destination);
         consumers.add(c);
         router.bind(c, destination);
     }
@@ -100,13 +104,13 @@ class MockBroker implements TransportAcceptListener {
     final void stopServices() throws Exception {
         transportServer.stop();
         
-        for (MockTransportConnection connection : connections) {
+        for (RemoteConnection connection : connections) {
             connection.stop();
         }
-        for (MockProducerConnection connection : producers) {
+        for (LocalProducer connection : producers) {
             connection.stop();
         }
-        for (MockConsumerConnection connection : consumers) {
+        for (LocalConsumer connection : consumers) {
             connection.stop();
         }
         for (BrokerConnection connection : brokerConns) {
@@ -127,7 +131,7 @@ class MockBroker implements TransportAcceptListener {
         
         dispatcher.start();
 
-        for (MockConsumerConnection connection : consumers) {
+        for (LocalConsumer connection : consumers) {
             connection.start();
         }
 
@@ -135,7 +139,7 @@ class MockBroker implements TransportAcceptListener {
             queue.start();
         }
         
-        for (MockProducerConnection connection : producers) {
+        for (LocalProducer connection : producers) {
             connection.start();
         }
 
@@ -145,7 +149,8 @@ class MockBroker implements TransportAcceptListener {
     }
 
     public void onAccept(final Transport transport) {
-        MockTransportConnection connection = new MockTransportConnection();
+        RemoteConnection connection = new RemoteConnection();
+        connection.setBroker(this);
         connection.setTransport(transport);
         try {
             connection.start();

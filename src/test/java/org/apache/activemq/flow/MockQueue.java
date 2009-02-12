@@ -15,7 +15,7 @@ import org.apache.activemq.queue.Subscription;
 class MockQueue implements MockBrokerTest.DeliveryTarget {
 
     private final MockBrokerTest mockBrokerTest;
-    HashMap<MockConsumerConnection, Subscription<Message>> subs = new HashMap<MockConsumerConnection, Subscription<Message>>();
+    HashMap<DeliveryTarget, Subscription<Message>> subs = new HashMap<DeliveryTarget, Subscription<Message>>();
     private final Destination destination;
     private final IQueue<Long, Message> queue;
     private final MockBroker broker;
@@ -77,7 +77,7 @@ class MockQueue implements MockBrokerTest.DeliveryTarget {
         return destination;
     }
 
-    public final void addConsumer(final MockConsumerConnection dt) {
+    public final void addConsumer(final DeliveryTarget dt) {
         Subscription<Message> sub = new Subscription<Message>() {
             public boolean isPreAcquired() {
                 return true;
