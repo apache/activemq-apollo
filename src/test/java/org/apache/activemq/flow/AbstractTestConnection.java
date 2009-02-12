@@ -31,7 +31,6 @@ import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.IFlowSource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
-import org.apache.activemq.flow.MockBrokerTest.MockBroker;
 import org.apache.activemq.flow.IFlowResource.FlowLifeCycleListener;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.queue.ExclusivePriorityQueue;
@@ -42,6 +41,7 @@ import org.apache.activemq.queue.IPollableFlowSource;
 import org.apache.activemq.queue.SingleFlowPriorityQueue;
 
 public abstract class AbstractTestConnection implements Service {
+    
     protected final IFlowQueue<Message> output;
     protected final NetworkSource input;
     protected final MockBroker broker;
