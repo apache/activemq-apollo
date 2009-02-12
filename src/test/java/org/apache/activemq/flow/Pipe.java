@@ -17,6 +17,7 @@
 package org.apache.activemq.flow;
 
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class Pipe<E> {
     private final LinkedBlockingQueue<E> in;
@@ -34,6 +35,10 @@ public class Pipe<E> {
         public void onReadReady(Pipe<E> pipe);
     }
 
+    public Pipe(int capacity) {
+        this(new LinkedBlockingQueue<E>(capacity), new LinkedBlockingQueue<E>(capacity));
+    }
+    
     public Pipe() {
         this(new LinkedBlockingQueue<E>(), new LinkedBlockingQueue<E>());
     }
@@ -95,4 +100,17 @@ public class Pipe<E> {
     public E poll() {
         return in.poll();
     }
+
+    public E poll(long time, TimeUnit unit) throws InterruptedException {
+        return in.poll(time, unit);
+    }
+
+    public boolean offer(E arg0, long arg1, TimeUnit arg2) throws InterruptedException {
+        return out.offer(arg0, arg1, arg2);
+    }
+
+    public boolean offer(E arg0) {
+        return out.offer(arg0);
+    }
+
 }

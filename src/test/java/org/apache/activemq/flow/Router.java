@@ -23,6 +23,8 @@ public class Router {
 
     final void route(ISourceController<Message> source, Message msg) {
         Collection<DeliveryTarget> targets = lookupTable.get(msg.getDestination());
+        if( targets == null ) 
+            return;
         for (DeliveryTarget dt : targets) {
             if (dt.match(msg)) {
                 dt.getSink().add(msg, source);

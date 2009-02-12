@@ -46,6 +46,9 @@ public class MockBrokerTest extends TestCase {
     // Set to mockup up ptp:
     boolean ptp = false;
 
+    // Set to use tcp IO
+    boolean tcp = false;
+
     // Can be set to BLOCKING, POLLING or ASYNC
     public final static int DISPATCH_MODE = AbstractTestConnection.ASYNC;
     // Set's the number of threads to use:
@@ -382,12 +385,22 @@ public class MockBrokerTest extends TestCase {
         }
 
         if (multibroker) {
-            sendBroker = createBroker("SendBroker", "tcp://localhost:10000?wireFormat=test");
+            if( tcp ) {
+                sendBroker = createBroker("SendBroker", "tcp://localhost:10000?wireFormat=test");
+                rcvBroker = createBroker("RcvBroker", "tcp://localhost:20000?wireFormat=test");
+            } else {
+                sendBroker = createBroker("SendBroker", "pipe://SendBroker");
+                rcvBroker = createBroker("RcvBroker", "pipe://RcvBroker");
+            }
             brokers.add(sendBroker);
-            rcvBroker = createBroker("RcvBroker", "tcp://localhost:20000?wireFormat=test");
             brokers.add(rcvBroker);
         } else {
-            sendBroker = rcvBroker = createBroker("Broker", "tcp://localhost:10000?wireFormat=test");
+            if( tcp ) {
+                sendBroker = rcvBroker = createBroker("Broker", "tcp://localhost:10000?wireFormat=test");
+            } else {
+                sendBroker = rcvBroker = createBroker("Broker", "pipe://Broker");
+            }
+            
             brokers.add(sendBroker);
         }
 
