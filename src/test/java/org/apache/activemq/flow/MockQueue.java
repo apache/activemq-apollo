@@ -5,7 +5,7 @@ package org.apache.activemq.flow;
 
 import java.util.HashMap;
 
-import org.apache.activemq.flow.MockBrokerTest.DeliveryTarget;
+import org.apache.activemq.flow.MockBroker.DeliveryTarget;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.Mapper;
 import org.apache.activemq.queue.PartitionedQueue;
@@ -13,7 +13,7 @@ import org.apache.activemq.queue.SharedPriorityQueue;
 import org.apache.activemq.queue.SharedQueue;
 import org.apache.activemq.queue.Subscription;
 
-class MockQueue implements MockBrokerTest.DeliveryTarget {
+class MockQueue implements MockBroker.DeliveryTarget {
 
     HashMap<DeliveryTarget, Subscription<Message>> subs = new HashMap<DeliveryTarget, Subscription<Message>>();
     private Destination destination;

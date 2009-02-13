@@ -66,173 +66,20 @@ public class MockBrokerTest extends TestCase {
     MockBroker rcvBroker;
     private ArrayList<MockBroker> brokers = new ArrayList<MockBroker>();
     IDispatcher dispatcher;
-
-    public interface DeliveryTarget {
-        public IFlowSink<Message> getSink();
-
-        public boolean match(Message message);
-    }
-
     final AtomicLong msgIdGenerator = new AtomicLong();
 
-    class BrokerConnection extends AbstractTestConnection implements DeliveryTarget {
-        private final Pipe<Message> pipe;
-        private final MockBroker local;
-
-        BrokerConnection(MockBroker local, MockBroker remote, Pipe<Message> pipe) {
-            super(local, remote.getName(), null, pipe);
-            this.pipe = pipe;
-            this.local = local;
-        }
-
-        @Override
-        protected Message getNextMessage() throws InterruptedException {
-            return pipe.read();
-        }
-
-        @Override
-        protected void addReadReadyListener(final ReadReadyListener listener) {
-            pipe.setReadReadyListener(new Pipe.ReadReadyListener<Message>() {
-                public void onReadReady(Pipe<Message> pipe) {
-                    listener.onReadReady();
-                }
-            });
-        }
-
-        public Message pollNextMessage() {
-            return pipe.poll();
-        }
-
-        @Override
-        protected void messageReceived(Message m, ISourceController<Message> controller) {
-
-            m = new Message(m);
-            m.hopCount++;
-
-            local.router.route(controller, m);
-        }
-
-        @Override
-        protected void write(Message m, ISourceController<Message> controller) throws InterruptedException {
-            pipe.write(m);
-        }
-
-        public IFlowSink<Message> getSink() {
-            return output;
-        }
-
-        public boolean match(Message message) {
-            // Avoid loops:
-            if (message.hopCount > 0) {
-                return false;
-            }
-
-            return true;
-        }
-    }
-
-    final Mapper<Long, Message> keyExtractor = new Mapper<Long, Message>() {
+    static public final Mapper<Long, Message> KEY_MAPPER = new Mapper<Long, Message>() {
         public Long map(Message element) {
             return element.getMsgId();
         }
     };
-    final Mapper<Integer, Message> partitionMapper = new Mapper<Integer, Message>() {
+    static public final Mapper<Integer, Message> PARTITION_MAPPER = new Mapper<Integer, Message>() {
         public Integer map(Message element) {
             // we modulo 10 to have at most 10 partitions which the producers
             // gets split across.
             return (int) (element.getProducerId() % 10);
         }
     };
-
-    private void reportRates() throws InterruptedException {
-        System.out.println("Checking rates for test: " + getName());
-        for (int i = 0; i < PERFORMANCE_SAMPLES; i++) {
-            Period p = new Period();
-            Thread.sleep(1000 * 5);
-            System.out.println(totalProducerRate.getRateSummary(p));
-            System.out.println(totalConsumerRate.getRateSummary(p));
-            totalProducerRate.reset();
-            totalConsumerRate.reset();
-        }
-    }
-
-    /**
-     * Test sending with 1 high priority sender. The high priority sender should
-     * have higher throughput than the other low priority senders.
-     * 
-     * @throws Exception
-     */
-    public void test_2_1_1_HighPriorityProducer() throws Exception {
-
-        producerCount = 2;
-        destCount = 1;
-        consumerCount = 1;
-
-        createConnections();
-        RemoteProducer producer = sendBroker.producers.get(0);
-        producer.setPriority(1);
-        producer.getRate().setName("High Priority Producer Rate");
-
-        rcvBroker.consumers.get(0).setThinkTime(1);
-
-        // Start 'em up.
-        startServices();
-        try {
-
-            System.out.println("Checking rates for test: " + getName());
-            for (int i = 0; i < PERFORMANCE_SAMPLES; i++) {
-                Period p = new Period();
-                Thread.sleep(1000 * 5);
-                System.out.println(producer.getRate().getRateSummary(p));
-                System.out.println(totalProducerRate.getRateSummary(p));
-                System.out.println(totalConsumerRate.getRateSummary(p));
-                totalProducerRate.reset();
-                totalConsumerRate.reset();
-            }
-
-        } finally {
-            stopServices();
-        }
-    }
-
-    /**
-     * Test sending with 1 high priority sender. The high priority sender should
-     * have higher throughput than the other low priority senders.
-     * 
-     * @throws Exception
-     */
-    public void test_2_1_1_MixedHighPriorityProducer() throws Exception {
-        producerCount = 2;
-        destCount = 1;
-        consumerCount = 1;
-
-        createConnections();
-        RemoteProducer producer = sendBroker.producers.get(0);
-        producer.setPriority(1);
-        producer.setPriorityMod(3);
-        producer.getRate().setName("High Priority Producer Rate");
-
-        rcvBroker.consumers.get(0).setThinkTime(1);
-
-        // Start 'em up.
-        startServices();
-        try {
-
-            System.out.println("Checking rates for test: " + getName());
-            for (int i = 0; i < PERFORMANCE_SAMPLES; i++) {
-                Period p = new Period();
-                Thread.sleep(1000 * 5);
-                System.out.println(producer.getRate().getRateSummary(p));
-                System.out.println(totalProducerRate.getRateSummary(p));
-                System.out.println(totalConsumerRate.getRateSummary(p));
-                totalProducerRate.reset();
-                totalConsumerRate.reset();
-            }
-
-        } finally {
-            stopServices();
-        }
-    }
 
     public void test_1_1_1() throws Exception {
         producerCount = 1;
@@ -377,6 +224,96 @@ public class MockBrokerTest extends TestCase {
         }
     }
     
+    /**
+     * Test sending with 1 high priority sender. The high priority sender should
+     * have higher throughput than the other low priority senders.
+     * 
+     * @throws Exception
+     */
+    public void test_2_1_1_HighPriorityProducer() throws Exception {
+
+        producerCount = 2;
+        destCount = 1;
+        consumerCount = 1;
+
+        createConnections();
+        RemoteProducer producer = sendBroker.producers.get(0);
+        producer.setPriority(1);
+        producer.getRate().setName("High Priority Producer Rate");
+
+        rcvBroker.consumers.get(0).setThinkTime(1);
+
+        // Start 'em up.
+        startServices();
+        try {
+
+            System.out.println("Checking rates for test: " + getName());
+            for (int i = 0; i < PERFORMANCE_SAMPLES; i++) {
+                Period p = new Period();
+                Thread.sleep(1000 * 5);
+                System.out.println(producer.getRate().getRateSummary(p));
+                System.out.println(totalProducerRate.getRateSummary(p));
+                System.out.println(totalConsumerRate.getRateSummary(p));
+                totalProducerRate.reset();
+                totalConsumerRate.reset();
+            }
+
+        } finally {
+            stopServices();
+        }
+    }
+
+    /**
+     * Test sending with 1 high priority sender. The high priority sender should
+     * have higher throughput than the other low priority senders.
+     * 
+     * @throws Exception
+     */
+    public void test_2_1_1_MixedHighPriorityProducer() throws Exception {
+        producerCount = 2;
+        destCount = 1;
+        consumerCount = 1;
+
+        createConnections();
+        RemoteProducer producer = sendBroker.producers.get(0);
+        producer.setPriority(1);
+        producer.setPriorityMod(3);
+        producer.getRate().setName("High Priority Producer Rate");
+
+        rcvBroker.consumers.get(0).setThinkTime(1);
+
+        // Start 'em up.
+        startServices();
+        try {
+
+            System.out.println("Checking rates for test: " + getName());
+            for (int i = 0; i < PERFORMANCE_SAMPLES; i++) {
+                Period p = new Period();
+                Thread.sleep(1000 * 5);
+                System.out.println(producer.getRate().getRateSummary(p));
+                System.out.println(totalProducerRate.getRateSummary(p));
+                System.out.println(totalConsumerRate.getRateSummary(p));
+                totalProducerRate.reset();
+                totalConsumerRate.reset();
+            }
+
+        } finally {
+            stopServices();
+        }
+    }
+        
+    private void reportRates() throws InterruptedException {
+        System.out.println("Checking rates for test: " + getName()+", "+(ptp?"ptp":"topic"));
+        for (int i = 0; i < PERFORMANCE_SAMPLES; i++) {
+            Period p = new Period();
+            Thread.sleep(1000 * 5);
+            System.out.println(totalProducerRate.getRateSummary(p));
+            System.out.println(totalConsumerRate.getRateSummary(p));
+            totalProducerRate.reset();
+            totalConsumerRate.reset();
+        }
+    }
+
     private void createConnections() throws IOException, URISyntaxException {
 
         if (DISPATCH_MODE == AbstractTestConnection.ASYNC || DISPATCH_MODE == AbstractTestConnection.POLLING) {
@@ -462,9 +399,9 @@ public class MockBrokerTest extends TestCase {
         MockQueue queue = new MockQueue();
         queue.setBroker(broker);
         queue.setDestination(destination);
-        queue.setKeyExtractor(keyExtractor);
+        queue.setKeyExtractor(KEY_MAPPER);
         if( usePartitionedQueue ) {
-            queue.setPartitionMapper(partitionMapper);
+            queue.setPartitionMapper(PARTITION_MAPPER);
         }
         return queue;
     }

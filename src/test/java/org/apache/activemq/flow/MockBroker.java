@@ -9,14 +9,18 @@ import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.dispatch.IDispatcher;
-import org.apache.activemq.flow.MockBrokerTest.BrokerConnection;
-import org.apache.activemq.flow.MockBrokerTest.DeliveryTarget;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
 
 class MockBroker implements TransportAcceptListener {
+
+    public interface DeliveryTarget {
+        public IFlowSink<Message> getSink();
+
+        public boolean match(Message message);
+    }
 
     final Router router=  new Router();
     

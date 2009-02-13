@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 
-import org.apache.activemq.flow.MockBrokerTest.DeliveryTarget;
+import org.apache.activemq.flow.MockBroker.DeliveryTarget;
 
 public class Router {
     final HashMap<Destination, Collection<DeliveryTarget>> lookupTable = new HashMap<Destination, Collection<DeliveryTarget>>();

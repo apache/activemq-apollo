@@ -251,6 +251,7 @@ public class FlowController<E> implements ISinkController<E>, ISourceController<
      *            the source flow controller.
      */
     public boolean offer(E elem, ISourceController<E> sourceController) {
+        boolean ok = false;
         synchronized (mutex) {
             // If we don't have an fc sink, then just increment the limiter.
             if (controllable == null) {
@@ -263,14 +264,16 @@ public class FlowController<E> implements ISinkController<E>, ISourceController<
                     blockSource(sourceController);
                     setUnThrottleListener();
                 }
-                controllable.flowElemAccepted(this, elem);
-                return true;
+                ok = true;
             } else {
                 blockSource(sourceController);
                 setUnThrottleListener();
-                return false;
             }
         }
+        if( ok ) {
+            controllable.flowElemAccepted(this, elem);
+        }
+        return ok;
     }
 
     private boolean okToAdd(E elem) {
