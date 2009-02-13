@@ -9,21 +9,20 @@ import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.flow.MockBroker.DeliveryTarget;
-import org.apache.activemq.queue.ExclusivePriorityQueue;
-import org.apache.activemq.queue.ExclusiveQueue;
-import org.apache.activemq.queue.IFlowQueue;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
 
 public class RemoteConnection implements TransportListener, DeliveryTarget {
 
-    protected final Object mutex = new Object();
 
     protected Transport transport;
     protected MockBroker broker;
-    protected IFlowQueue<Message> output;
 
+    protected final Object inboundMutex = new Object();
     protected FlowController<Message> inboundController;
+
+    protected final Object outboundMutex = new Object();
+    protected IFlowSink<Message> outboundController;
     protected String name;
 
     private int priorityLevels;
@@ -106,26 +105,12 @@ public class RemoteConnection implements TransportListener, DeliveryTarget {
             public IFlowSource<Message> getFlowSource() {
                 return null;
             }
-        }, flow, limiter, mutex);
+        }, flow, limiter, inboundMutex);
 
         // Setup output processing
-        if (priorityLevels <= 1) {
-            limiter = new SizeLimiter<Message>(outputWindowSize, outputResumeThreshold);
-            flow = new Flow(name + "-outbound", false);
-            ExclusiveQueue<Message> queue = new ExclusiveQueue<Message>(flow, flow.getFlowName(), limiter);
-            this.output = queue;
-        } else {
-            ExclusivePriorityQueue<Message> t = new ExclusivePriorityQueue<Message>(priorityLevels, flow, name + "-outbound", outputWindowSize, outputResumeThreshold);
-            t.setPriorityMapper(Message.PRIORITY_MAPPER);
-            this.output = t;
-        }
-
-        // Use an async thread to drain the output queue.
-        // Personally I think it would be better if we polled messages out of the output queue.
         writer = Executors.newSingleThreadExecutor();
-        output.setDispatcher(dispatcher);
-        output.setDrain(new IFlowDrain<Message>() {
-            public void drain(final Message elem, final ISourceController<Message> controller) {
+        FlowControllable<Message> controllable = new FlowControllable<Message>(){
+            public void flowElemAccepted(final ISourceController<Message> controller, final Message elem) {
                 writer.execute(new Runnable() {
                     public void run() {
                         if (!stopping.get()) {
@@ -139,7 +124,24 @@ public class RemoteConnection implements TransportListener, DeliveryTarget {
                     }
                 });
             }
-        });
+            public IFlowSink<Message> getFlowSink() {
+                return null;
+            }
+            public IFlowSource<Message> getFlowSource() {
+                return null;
+            }
+        };
+
+        flow = new Flow(name + "-outbound", false);
+        if (priorityLevels <= 1) {
+            limiter = new SizeLimiter<Message>(outputWindowSize, outputResumeThreshold);
+            outboundController = new FlowController<Message>(controllable, flow, limiter,  outboundMutex);
+        } else {
+            PrioritySizeLimiter<Message> pl = new PrioritySizeLimiter<Message>(outputWindowSize, outputResumeThreshold, priorityLevels);
+            pl.setPriorityMapper(Message.PRIORITY_MAPPER);
+            outboundController = new PriorityFlowController<Message>(controllable, flow, pl,  outboundMutex);
+        }
+
     }
 
     public void onException(IOException error) {
@@ -200,7 +202,7 @@ public class RemoteConnection implements TransportListener, DeliveryTarget {
     }
 
     public IFlowSink<Message> getSink() {
-        return output;
+        return outboundController;
     }
 
     public boolean match(Message message) {

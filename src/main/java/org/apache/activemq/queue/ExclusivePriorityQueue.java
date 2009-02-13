@@ -21,6 +21,7 @@ import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.PriorityFlowController;
+import org.apache.activemq.flow.PrioritySizeLimiter;
 import org.apache.kahadb.util.LinkedNode;
 
 /**
@@ -28,7 +29,6 @@ import org.apache.kahadb.util.LinkedNode;
 public class ExclusivePriorityQueue<E> extends AbstractFlowQueue<E> implements IFlowQueue<E> {
 
     private final PriorityLinkedList<PriorityNode> queue;
-    private Mapper<Integer, E> priorityMapper;
 
     private class PriorityNode extends LinkedNode<PriorityNode> {
         E elem;
@@ -36,6 +36,7 @@ public class ExclusivePriorityQueue<E> extends AbstractFlowQueue<E> implements I
     }
 
     private final PriorityFlowController<E> controller;
+    private final PrioritySizeLimiter<E> limiter;
 
     /**
      * Creates a flow queue that can handle multiple flows.
@@ -48,10 +49,11 @@ public class ExclusivePriorityQueue<E> extends AbstractFlowQueue<E> implements I
      * @param controller
      *            The FlowController if this queue is flow controlled:
      */
-    public ExclusivePriorityQueue(int priority, Flow flow, String name, int capacity, int resume) {
+    public ExclusivePriorityQueue(Flow flow, String name, PrioritySizeLimiter<E> limiter) {
         super(name);
+        this.limiter = limiter;
         this.queue = new PriorityLinkedList<PriorityNode>(10);
-        this.controller = new PriorityFlowController<E>(priority, getFlowControllableHook(), flow, this, capacity, resume);
+        this.controller = new PriorityFlowController<E>(getFlowControllableHook(), flow, limiter, this);
 
     }
 
@@ -72,7 +74,7 @@ public class ExclusivePriorityQueue<E> extends AbstractFlowQueue<E> implements I
     public synchronized void flowElemAccepted(ISourceController<E> controller, E elem) {
         PriorityNode node = new PriorityNode();
         node.elem = elem;
-        node.prio = priorityMapper.map(elem);
+        node.prio = limiter.getPriorityMapper().map(elem);
 
         queue.add(node, node.prio);
         notifyReady();
@@ -105,15 +107,6 @@ public class ExclusivePriorityQueue<E> extends AbstractFlowQueue<E> implements I
         } else {
             return false;
         }
-    }
-
-    public Mapper<Integer, E> getPriorityMapper() {
-        return priorityMapper;
-    }
-
-    public void setPriorityMapper(Mapper<Integer, E> priorityMapper) {
-        this.priorityMapper = priorityMapper;
-        controller.setPriorityMapper(priorityMapper);
     }
 
     @Override

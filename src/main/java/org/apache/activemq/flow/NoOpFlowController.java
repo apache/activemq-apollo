@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.flow;
 
+
 public class NoOpFlowController<E> implements ISinkController<E> {
     private final IFlowSource<E> source;
     private final Flow flow;
@@ -89,4 +90,33 @@ public class NoOpFlowController<E> implements ISinkController<E> {
         return null;
     }
 
+    public long getResourceId() {
+        IFlowSink<E> flowSink = getFlowSink();
+        if( flowSink!=null ) {
+            return flowSink.getResourceId();
+        }
+        return 0;
+    }
+
+    public String getResourceName() {
+        IFlowSink<E> flowSink = getFlowSink();
+        if( flowSink!=null ) {
+            return flowSink.getResourceName();
+        }
+        return null;
+    }
+
+    public void addFlowLifeCycleListener(FlowLifeCycleListener listener) {
+        IFlowSink<E> flowSink = getFlowSink();
+        if( flowSink!=null ) {
+            flowSink.addFlowLifeCycleListener(listener);
+        }
+    }
+    
+    public void removeFlowLifeCycleListener(FlowLifeCycleListener listener) {
+        IFlowSink<E> flowSink = getFlowSink();
+        if( flowSink!=null ) {
+            flowSink.removeFlowLifeCycleListener(listener);
+        }
+    }
 }

@@ -65,8 +65,9 @@ public abstract class AbstractTestConnection implements Service {
         if (MockBrokerTest.PRIORITY_LEVELS <= 1) {
             this.output = TestFlowManager.createFlowQueue(flow, name + "-OUTPUT", outputQueueSize, resumeThreshold);
         } else {
-            ExclusivePriorityQueue<Message> t = new ExclusivePriorityQueue<Message>(MockBrokerTest.PRIORITY_LEVELS, flow, name + "-OUTPUT", outputQueueSize, resumeThreshold);
-            t.setPriorityMapper(Message.PRIORITY_MAPPER);
+            PrioritySizeLimiter<Message> pl = new PrioritySizeLimiter<Message>(outputQueueSize, resumeThreshold, MockBrokerTest.PRIORITY_LEVELS);
+            pl.setPriorityMapper(Message.PRIORITY_MAPPER);
+            ExclusivePriorityQueue<Message> t = new ExclusivePriorityQueue<Message>(flow, name + "-OUTPUT", pl);
             this.output = t;
         }
 
