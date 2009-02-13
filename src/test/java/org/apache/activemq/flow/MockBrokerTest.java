@@ -25,6 +25,7 @@ import junit.framework.TestCase;
 
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.PriorityPooledDispatcher;
+import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.queue.Mapper;
@@ -323,8 +324,8 @@ public class MockBrokerTest extends TestCase {
 
         if (multibroker) {
             if( tcp ) {
-                sendBroker = createBroker("SendBroker", "tcp://localhost:10000?wireFormat=test");
-                rcvBroker = createBroker("RcvBroker", "tcp://localhost:20000?wireFormat=test");
+                sendBroker = createBroker("SendBroker", "tcp://localhost:10000?wireFormat=proto");
+                rcvBroker = createBroker("RcvBroker", "tcp://localhost:20000?wireFormat=proto");
             } else {
                 sendBroker = createBroker("SendBroker", "pipe://SendBroker");
                 rcvBroker = createBroker("RcvBroker", "pipe://RcvBroker");
@@ -333,7 +334,7 @@ public class MockBrokerTest extends TestCase {
             brokers.add(rcvBroker);
         } else {
             if( tcp ) {
-                sendBroker = rcvBroker = createBroker("Broker", "tcp://localhost:10000?wireFormat=test");
+                sendBroker = rcvBroker = createBroker("Broker", "tcp://localhost:10000?wireFormat=proto");
             } else {
                 sendBroker = rcvBroker = createBroker("Broker", "pipe://Broker");
             }
@@ -344,7 +345,9 @@ public class MockBrokerTest extends TestCase {
         Destination[] dests = new Destination[destCount];
 
         for (int i = 0; i < destCount; i++) {
-            dests[i] = new Destination("dest" + (i + 1), ptp);
+            dests[i] = new Destination();
+            dests[i].setName("dest" + (i + 1));
+            dests[i].setPtp(ptp);
             if (ptp) {
                 MockQueue queue = createQueue(sendBroker, dests[i]);
                 sendBroker.addQueue(queue);

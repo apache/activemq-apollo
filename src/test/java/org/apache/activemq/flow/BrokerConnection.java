@@ -3,7 +3,6 @@
  */
 package org.apache.activemq.flow;
 
-import org.apache.activemq.flow.AbstractTestConnection.ReadReadyListener;
 
 class BrokerConnection extends AbstractTestConnection implements MockBroker.DeliveryTarget {
     private final Pipe<Message> pipe;
@@ -37,7 +36,7 @@ class BrokerConnection extends AbstractTestConnection implements MockBroker.Deli
     protected void messageReceived(Message m, ISourceController<Message> controller) {
 
         m = new Message(m);
-        m.hopCount++;
+        m.incrementHopCount();
 
         local.router.route(controller, m);
     }
@@ -53,7 +52,7 @@ class BrokerConnection extends AbstractTestConnection implements MockBroker.Deli
 
     public boolean match(Message message) {
         // Avoid loops:
-        if (message.hopCount > 0) {
+        if (message.getHopCount() > 0) {
             return false;
         }
 

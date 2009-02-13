@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.dispatch.IDispatcher;
+import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportFactory;
@@ -41,7 +42,7 @@ class MockBroker implements TransportAcceptListener {
     }
 
     public void subscribe(Destination destination, DeliveryTarget deliveryTarget) {
-        if (destination.ptp) {
+        if (destination.getPtp()) {
             queues.get(destination).addConsumer(deliveryTarget);
         } else {
             router.bind(deliveryTarget, destination);

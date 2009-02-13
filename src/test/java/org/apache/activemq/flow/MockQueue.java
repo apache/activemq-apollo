@@ -5,6 +5,7 @@ package org.apache.activemq.flow;
 
 import java.util.HashMap;
 
+import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.MockBroker.DeliveryTarget;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.Mapper;

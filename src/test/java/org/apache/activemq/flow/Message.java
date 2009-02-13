@@ -17,8 +17,8 @@
 package org.apache.activemq.flow;
 
 import java.io.Serializable;
-import java.util.HashSet;
 
+import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.queue.Mapper;
 
 public class Message implements Serializable {
@@ -27,7 +27,7 @@ public class Message implements Serializable {
 
     public static final Mapper<Integer, Message> PRIORITY_MAPPER = new Mapper<Integer, Message>() {
         public Integer map(Message element) {
-            return element.priority;
+            return element.getPriority();
         }
     };
 
@@ -40,34 +40,25 @@ public class Message implements Serializable {
     public static final short TYPE_FLOW_OPEN = 2;
     public static final short TYPE_FLOW_CLOSE = 3;
 
-    final String msg;
-    transient final Flow flow;
-    final Destination dest;
-    int hopCount;
-    HashSet<String> matchProps;
-    final long msgId;
-    final int producerId;
-    final int priority;
+    transient Flow flow;
+    private Commands.Message message = new Commands.Message();
 
     Message(long msgId, int producerId, String msg, Flow flow, Destination dest, int priority) {
-        this.msgId = msgId;
-        this.producerId = producerId;
-        this.msg = msg;
+        this.message.setMsgId(msgId);
+        this.message.setProducerId(producerId);
+        this.message.setMsg(msg);
+        this.message.setDest(dest);
+        this.message.setPriority(priority);
         this.flow = flow;
-        this.dest = dest;
-        this.priority = priority;
-        hopCount = 0;
     }
 
     Message(Message m) {
-        this.msgId = m.msgId;
-        this.producerId = m.producerId;
-        this.msg = m.msg;
+        this.message = m.message;
         this.flow = m.flow;
-        this.dest = m.dest;
-        this.matchProps = m.matchProps;
-        this.priority = m.priority;
-        hopCount = m.hopCount;
+    }
+
+    public Message(Commands.Message m) {
+        this.message=m;
     }
 
     public short type() {
@@ -75,17 +66,16 @@ public class Message implements Serializable {
     }
 
     public void setProperty(String matchProp) {
-        if (matchProps == null) {
-            matchProps = new HashSet<String>();
-        }
-        matchProps.add(matchProp);
+        Commands.Message clone = message.clone();
+        clone.addProperty(matchProp);
+        message = clone;
     }
 
     public boolean match(String matchProp) {
-        if (matchProps == null) {
+        if (!message.hasProperty()) {
             return false;
         }
-        return matchProps.contains(matchProp);
+        return message.getPropertyList().contains(matchProp);
     }
 
     public boolean isSystem() {
@@ -93,15 +83,17 @@ public class Message implements Serializable {
     }
 
     public void incrementHopCount() {
-        hopCount++;
+        Commands.Message clone = message.clone();
+        clone.setHopCount(message.getHopCount());
+        message = clone;
     }
 
     public final int getHopCount() {
-        return hopCount;
+        return message.getHopCount();
     }
 
     public final Destination getDestination() {
-        return dest;
+        return message.getDest();
     }
 
     public Flow getFlow() {
@@ -113,18 +105,22 @@ public class Message implements Serializable {
     }
 
     public int getPriority() {
-        return priority;
+        return message.getPriority();
     }
 
     public String toString() {
-        return "Message: " + msg + " flow + " + flow + " dest: " + dest;
+        return "Message: " + message.getMsg() + " flow + " + flow + " dest: " + message.getDest();
     }
 
     public long getMsgId() {
-        return msgId;
+        return message.getMsgId();
     }
 
     public int getProducerId() {
-        return producerId;
+        return message.getProducerId();
+    }
+
+    public Commands.Message getProto() {
+        return message;
     }
 }
