@@ -28,7 +28,7 @@ public interface IFlowSource<E> extends IFlowResource {
      *            The flow.
      * @return The flow controller for the specified flow.
      */
-    public FlowController<E> getFlowController(Flow flow);
+    public IFlowController<E> getFlowController(Flow flow);
 
     /**
      * If set to true the source will automatically release limiter space

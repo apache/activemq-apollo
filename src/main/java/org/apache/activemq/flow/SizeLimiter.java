@@ -31,7 +31,7 @@ public class SizeLimiter<E> extends AbstractLimiter<E> {
         this.resumeThreshold = resumeThreshold;
     }
 
-    public final boolean add(E elem) {
+    public boolean add(E elem) {
         this.size += getElementSize(elem);
 
         if (this.size >= capacity) {
@@ -101,5 +101,9 @@ public class SizeLimiter<E> extends AbstractLimiter<E> {
 
     public int getSize() {
         return size;
+    }
+
+    public String toString() {
+        return "SizeLimiter " + capacity + "/" + resumeThreshold + ", s=" + size + " res=" + reserved + ", thr= " + throttled;
     }
 }

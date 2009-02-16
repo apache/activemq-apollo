@@ -29,6 +29,7 @@ import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.queue.Mapper;
+import org.apache.activemq.transport.nio.SelectorManager;
 
 public class MockBrokerTest extends TestCase {
 
@@ -48,10 +49,8 @@ public class MockBrokerTest extends TestCase {
     boolean ptp = false;
 
     // Set to use tcp IO
-    boolean tcp = true;
+    boolean tcp = false;
 
-    // Can be set to BLOCKING, POLLING or ASYNC
-    public final static int DISPATCH_MODE = AbstractTestConnection.ASYNC;
     // Set's the number of threads to use:
     private final int asyncThreadPoolSize = Runtime.getRuntime().availableProcessors();
     boolean usePartitionedQueue = false;
@@ -317,11 +316,9 @@ public class MockBrokerTest extends TestCase {
 
     private void createConnections() throws IOException, URISyntaxException {
 
-        if (DISPATCH_MODE == AbstractTestConnection.ASYNC || DISPATCH_MODE == AbstractTestConnection.POLLING) {
-            dispatcher = new PriorityPooledDispatcher("BrokerDispatcher", asyncThreadPoolSize, Message.MAX_PRIORITY);
-            FlowController.setFlowExecutor(dispatcher.createPriorityExecutor(Message.MAX_PRIORITY));
-        }
-
+        dispatcher = new PriorityPooledDispatcher("BrokerDispatcher", asyncThreadPoolSize, Message.MAX_PRIORITY);
+        FlowController.setFlowExecutor(dispatcher.createPriorityExecutor(Message.MAX_PRIORITY));
+        
         if (multibroker) {
             if( tcp ) {
                 sendBroker = createBroker("SendBroker", "tcp://localhost:10000?wireFormat=proto");
@@ -384,6 +381,7 @@ public class MockBrokerTest extends TestCase {
         consumer.setDestination(destination);
         consumer.setName("consumer"+(i+1));
         consumer.setTotalConsumerRate(totalConsumerRate);
+        consumer.setDispatcher(dispatcher);
         return consumer;
     }
 
@@ -395,6 +393,7 @@ public class MockBrokerTest extends TestCase {
         producer.setDestination(destination);
         producer.setMessageIdGenerator(msgIdGenerator);
         producer.setTotalProducerRate(totalProducerRate);
+        producer.setDispatcher(dispatcher);
         return producer;
     }
 
@@ -431,6 +430,7 @@ public class MockBrokerTest extends TestCase {
         for (MockBroker broker : brokers) {
             broker.startServices();
         }
+        SelectorManager.SINGLETON.setChannelExecutor(dispatcher.createPriorityExecutor(PRIORITY_LEVELS));
     }
 
 }

@@ -5,22 +5,21 @@ import java.net.URI;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
+import org.apache.activemq.dispatch.IDispatcher.Dispatchable;
 import org.apache.activemq.flow.Commands.Destination;
+import org.apache.activemq.flow.ISinkController.FlowUnblockListener;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
+import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportListener;
 
-public class RemoteProducer implements TransportListener, Runnable {
+public class RemoteProducer extends RemoteConnection implements Dispatchable, FlowUnblockListener<Message>{
 
-    private final AtomicBoolean stopping = new AtomicBoolean();
     private final MetricCounter rate = new MetricCounter();
 
-    private Transport transport;
-    private MockBroker broker;
-    private String name;
-    private Thread thread;
     private AtomicLong messageIdGenerator;
     private int priority;
     private int priorityMod;
@@ -29,6 +28,8 @@ public class RemoteProducer implements TransportListener, Runnable {
     private Destination destination;
     private String property;
     private MetricAggregator totalProducerRate;
+    Message next;
+    private DispatchContext dispatchContext;
     
     public void start() throws Exception {
         rate.name("Producer " + name + " Rate");
@@ -37,67 +38,66 @@ public class RemoteProducer implements TransportListener, Runnable {
         URI uri = broker.getConnectURI();
         transport = TransportFactory.compositeConnect(uri);
         transport.setTransportListener(this);
+        if(transport instanceof DispatchableTransport)
+        {
+            DispatchableTransport dt = ((DispatchableTransport)transport);
+            dt.setName(name);
+            dt.setDispatcher(getDispatcher());
+        }
+        super.setTransport(transport);
+       
+        super.initialize();
         transport.start();
-        
         // Let the remote side know our name.
         transport.oneway(name);
-
-        thread = new Thread(this, name);
-        thread.start();
+        dispatchContext = getDispatcher().register(this, name + "-producer");
+        dispatchContext.requestDispatch();
     }
     
-    public void stop() throws Exception {
-        stopping.set(true);
-        if( transport!=null ) {
-            transport.stop();
-        }
-        thread.join();
-        transport=null;
+    public void stop() throws Exception
+    {
+    	dispatchContext.close();
+    	super.stop();
     }
 
-    public void run() {
-        try {
-            while( !stopping.get() ) {
-                
-                int priority = this.priority;
-                if (priorityMod > 0) {
-                    priority = counter % priorityMod == 0 ? 0 : priority;
-                }
+	public void onFlowUnblocked(ISinkController<Message> controller) {
+		dispatchContext.requestDispatch();
+	}
 
-                Message next = new Message(messageIdGenerator.getAndIncrement(), producerId, name + ++counter, null, destination, priority);
-                if (property != null) {
-                    next.setProperty(property);
-                }
-                
-                transport.oneway(next);
-                rate.increment();
-            }
-        } catch (IOException e) {
-            onException(e);
-        }
-    }
-
-    public void onCommand(Object command) {
-        System.out.println("Unhandled command: "+command);
-    }
-
-    public void onException(IOException error) {
-        if( !stopping.get() ) {
-            System.out.println("RemoteProducer error: "+error);
-            error.printStackTrace();
-        }
-    }
-
-    public void transportInterupted() {
-    }
-    public void transportResumed() {
-    }
-
-    public void setName(String name) {
+	public boolean dispatch() {
+		while(true)
+		{
+			
+			if(next == null)
+			{
+	            int priority = this.priority;
+	            if (priorityMod > 0) {
+	                priority = counter % priorityMod == 0 ? 0 : priority;
+	            }
+	
+	            next = new Message(messageIdGenerator.getAndIncrement(), producerId, name + ++counter, null, destination, priority);
+	            if (property != null) {
+	                next.setProperty(property);
+	            }
+			}
+	        
+			//If flow controlled stop until flow control is lifted.
+			if(outboundController.isSinkBlocked())
+			{
+				if(outboundController.addUnblockListener(this))
+				{
+					return true;
+				}
+			}
+			
+	        getSink().add(next, null);
+	        rate.increment();
+	        next = null;
+		}
+	}
+	
+	public void setName(String name) {
         this.name = name;
-    }
-    public void setBroker(MockBroker broker) {
-        this.broker = broker;
     }
 
     public AtomicLong getMessageIdGenerator() {
@@ -148,14 +148,6 @@ public class RemoteProducer implements TransportListener, Runnable {
         this.property = property;
     }
 
-    public MockBroker getBroker() {
-        return broker;
-    }
-
-    public String getName() {
-        return name;
-    }
-
     public MetricAggregator getTotalProducerRate() {
         return totalProducerRate;
     }
@@ -166,4 +158,6 @@ public class RemoteProducer implements TransportListener, Runnable {
 
     public MetricCounter getRate() {
         return rate;
-    }}
+    }
+}
+

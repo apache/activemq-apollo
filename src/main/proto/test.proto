@@ -35,3 +35,6 @@ message Message {
   repeated string property=7;
 }
 
+message FlowControl {
+  required int32 credit = 2;
+}

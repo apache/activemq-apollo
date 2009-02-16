@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.flow;
 
-public interface ISinkController<E> extends IFlowSink<E> {
+public interface ISinkController<E> {
     /**
      * Defines required attributes for an entity that can be flow controlled.
      * 

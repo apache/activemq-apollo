@@ -25,7 +25,7 @@ import org.apache.activemq.flow.IFlowLimiter.UnThrottleListener;
 
 /**
  */
-public class FlowController<E> implements ISinkController<E>, ISourceController<E> {
+public class FlowController<E> implements IFlowController<E> {
 
     // Sinks that are blocking us.
     private final HashSet<ISinkController<E>> blockingSinks = new HashSet<ISinkController<E>>();
@@ -437,35 +437,5 @@ public class FlowController<E> implements ISinkController<E>, ISourceController<
 
     public IFlowSink<E> getFlowSink() {
         return controllable.getFlowSink();
-    }
-
-    public long getResourceId() {
-        IFlowSink<E> flowSink = getFlowSink();
-        if( flowSink!=null ) {
-            return flowSink.getResourceId();
-        }
-        return 0;
-    }
-
-    public String getResourceName() {
-        IFlowSink<E> flowSink = getFlowSink();
-        if( flowSink!=null ) {
-            return flowSink.getResourceName();
-        }
-        return null;
-    }
-
-    public void addFlowLifeCycleListener(FlowLifeCycleListener listener) {
-        IFlowSink<E> flowSink = getFlowSink();
-        if( flowSink!=null ) {
-            flowSink.addFlowLifeCycleListener(listener);
-        }
-    }
-    
-    public void removeFlowLifeCycleListener(FlowLifeCycleListener listener) {
-        IFlowSink<E> flowSink = getFlowSink();
-        if( flowSink!=null ) {
-            flowSink.removeFlowLifeCycleListener(listener);
-        }
     }
 }

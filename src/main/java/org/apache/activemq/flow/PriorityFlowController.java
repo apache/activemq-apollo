@@ -18,7 +18,7 @@ package org.apache.activemq.flow;
 
 import java.util.ArrayList;
 
-public class PriorityFlowController<E> implements ISourceController<E>, ISinkController<E> {
+public class PriorityFlowController<E> implements IFlowController<E> {
 
     private final Object mutex;
     private final ArrayList<FlowController<E>> controllers;
@@ -70,37 +70,6 @@ public class PriorityFlowController<E> implements ISourceController<E>, ISinkCon
         throw new UnsupportedOperationException();
     }
     
-    public long getResourceId() {
-        IFlowSink<E> flowSink = getFlowSink();
-        if( flowSink!=null ) {
-            return flowSink.getResourceId();
-        }
-        return 0;
-    }
-
-    public String getResourceName() {
-        IFlowSink<E> flowSink = getFlowSink();
-        if( flowSink!=null ) {
-            return flowSink.getResourceName();
-        }
-        return null;
-    }
-
-    public void addFlowLifeCycleListener(FlowLifeCycleListener listener) {
-        IFlowSink<E> flowSink = getFlowSink();
-        if( flowSink!=null ) {
-            flowSink.addFlowLifeCycleListener(listener);
-        }
-    }
-    
-    public void removeFlowLifeCycleListener(FlowLifeCycleListener listener) {
-        IFlowSink<E> flowSink = getFlowSink();
-        if( flowSink!=null ) {
-            flowSink.removeFlowLifeCycleListener(listener);
-        }
-    }
-
-
     // /////////////////////////////////////////////////////////////////
     // ISourceController interface impl.
     // /////////////////////////////////////////////////////////////////

@@ -89,34 +89,4 @@ public class NoOpFlowController<E> implements ISinkController<E> {
     public IFlowSink<E> getFlowSink() {
         return null;
     }
-
-    public long getResourceId() {
-        IFlowSink<E> flowSink = getFlowSink();
-        if( flowSink!=null ) {
-            return flowSink.getResourceId();
-        }
-        return 0;
-    }
-
-    public String getResourceName() {
-        IFlowSink<E> flowSink = getFlowSink();
-        if( flowSink!=null ) {
-            return flowSink.getResourceName();
-        }
-        return null;
-    }
-
-    public void addFlowLifeCycleListener(FlowLifeCycleListener listener) {
-        IFlowSink<E> flowSink = getFlowSink();
-        if( flowSink!=null ) {
-            flowSink.addFlowLifeCycleListener(listener);
-        }
-    }
-    
-    public void removeFlowLifeCycleListener(FlowLifeCycleListener listener) {
-        IFlowSink<E> flowSink = getFlowSink();
-        if( flowSink!=null ) {
-            flowSink.removeFlowLifeCycleListener(listener);
-        }
-    }
 }
