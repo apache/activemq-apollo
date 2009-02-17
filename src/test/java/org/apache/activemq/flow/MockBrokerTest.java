@@ -26,6 +26,8 @@ import junit.framework.TestCase;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.PriorityPooledDispatcher;
 import org.apache.activemq.flow.Commands.Destination;
+import org.apache.activemq.flow.Commands.Destination.DestinationBean;
+import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.queue.Mapper;
@@ -49,7 +51,7 @@ public class MockBrokerTest extends TestCase {
     boolean ptp = false;
 
     // Set to use tcp IO
-    boolean tcp = false;
+    boolean tcp = true;
 
     // Set's the number of threads to use:
     private final int asyncThreadPoolSize = Runtime.getRuntime().availableProcessors();
@@ -339,12 +341,13 @@ public class MockBrokerTest extends TestCase {
             brokers.add(sendBroker);
         }
 
-        Destination[] dests = new Destination[destCount];
+        DestinationBuffer[] dests = new DestinationBuffer[destCount];
 
         for (int i = 0; i < destCount; i++) {
-            dests[i] = new Destination();
-            dests[i].setName("dest" + (i + 1));
-            dests[i].setPtp(ptp);
+            DestinationBean bean = new DestinationBean();
+            bean.setName("dest" + (i + 1));
+            bean.setPtp(ptp);
+            dests[i] = bean.freeze();
             if (ptp) {
                 MockQueue queue = createQueue(sendBroker, dests[i]);
                 sendBroker.addQueue(queue);

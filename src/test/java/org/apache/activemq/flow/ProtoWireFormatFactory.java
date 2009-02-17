@@ -6,8 +6,9 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
-import org.apache.activemq.flow.Commands.Destination;
-import org.apache.activemq.flow.Commands.FlowControl;
+import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
+import org.apache.activemq.flow.Commands.FlowControl.FlowControlBuffer;
+import org.apache.activemq.flow.Commands.Message.MessageBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.IOExceptionSupport;
@@ -27,7 +28,7 @@ public class ProtoWireFormatFactory implements WireFormatFactory {
         public void marshal(Object value, DataOutput out) throws IOException {
             if( value.getClass() == Message.class ) {
                 out.writeByte(0);
-                Commands.Message proto = ((Message)value).getProto();
+                MessageBuffer proto = ((Message)value).getProto();
                 Buffer buffer = proto.toUnframedBuffer();
                 out.writeInt(buffer.getLength());
                 out.write(buffer.getData(), buffer.getOffset(), buffer.getLength());
@@ -37,15 +38,15 @@ public class ProtoWireFormatFactory implements WireFormatFactory {
                 byte[] bytes = value2.getBytes("UTF-8");
                 out.writeInt(bytes.length);
                 out.write(bytes);
-            } else if( value.getClass() == Destination.class ) {
+            } else if( value.getClass() == DestinationBuffer.class ) {
                 out.writeByte(2);
-                Destination proto = (Destination)value;
+                DestinationBuffer proto = (DestinationBuffer)value;
                 Buffer buffer = proto.toUnframedBuffer();
                 out.writeInt(buffer.getLength());
                 out.write(buffer.getData(), buffer.getOffset(), buffer.getLength());
-            }else if( value.getClass() == FlowControl.class ) {
+            }else if( value.getClass() == FlowControlBuffer.class ) {
                 out.writeByte(3);
-                FlowControl proto = (FlowControl)value;
+                FlowControlBuffer proto = (FlowControlBuffer)value;
                 Buffer buffer = proto.toUnframedBuffer();
                 out.writeInt(buffer.getLength());
                 out.write(buffer.getData(), buffer.getOffset(), buffer.getLength());
@@ -61,18 +62,15 @@ public class ProtoWireFormatFactory implements WireFormatFactory {
             in.readFully(data);
             switch(type) {
                 case 0:
-                    Commands.Message m = new Commands.Message();
-                    m.mergeUnframed(data);
+                    MessageBuffer m = MessageBuffer.parseUnframed(data);
                     return new Message(m);
                 case 1:
                     return new String(data, "UTF-8");
                 case 2:
-                    Destination d = new Destination();
-                    d.mergeUnframed(data);
+                    DestinationBuffer d = DestinationBuffer.parseUnframed(data);
                     return d;
                 case 3:
-                    FlowControl fc = new FlowControl();
-                    fc.mergeUnframed(data);
+                    FlowControlBuffer fc = FlowControlBuffer.parseUnframed(data);
                     return fc;
                 default:
                     throw new IOException("Unknonw type byte: ");
@@ -101,12 +99,12 @@ public class ProtoWireFormatFactory implements WireFormatFactory {
                         //Shouldn't happen.
                         throw IOExceptionSupport.create(e);
                     }
-                } else if( value.getClass() == Destination.class ) {
+                } else if( value.getClass() == DestinationBuffer.class ) {
                 	outType = 2;
-                    currentOut = ByteBuffer.wrap(((Destination)value).toUnframedByteArray());
-                }else if( value.getClass() == FlowControl.class ) {
+                    currentOut = ByteBuffer.wrap(((DestinationBuffer)value).toUnframedByteArray());
+                }else if( value.getClass() == FlowControlBuffer.class ) {
                 	outType = 3;
-                    currentOut = ByteBuffer.wrap(((FlowControl)value).toUnframedByteArray());
+                    currentOut = ByteBuffer.wrap(((FlowControlBuffer)value).toUnframedByteArray());
                 }else {
                     throw new IOException("Unsupported type: "+value.getClass());
                 }
@@ -192,28 +190,18 @@ public class ProtoWireFormatFactory implements WireFormatFactory {
             Object ret = null;
             switch(inType) {
             case 0:
-            	Commands.Message m = new Commands.Message();
-            	try
-            	{
-            		m.mergeUnframed(currentIn.array());
-            	}
-            	catch(Exception e)
-            	{
-            		e.printStackTrace();
-            	}
+            	MessageBuffer m = MessageBuffer.parseUnframed(currentIn.array());
             	ret = new Message(m);
             	break;
             case 1:
             	ret = new String(currentIn.array(), "utf-8");
             	break;
         	case 2:
-        		Destination d = new Destination();
-        		d.mergeUnframed(currentIn.array());
+        		DestinationBuffer d = DestinationBuffer.parseUnframed(currentIn.array());
         		ret = d;
         		break;
         	case 3:
-        		FlowControl c = new FlowControl();
-        		c.mergeUnframed(currentIn.array());
+        		FlowControlBuffer c = FlowControlBuffer.parseUnframed(currentIn.array());
         		ret = c;
         		break;
         	default:

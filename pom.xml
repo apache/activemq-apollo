@@ -62,6 +62,9 @@
       <plugin>
         <groupId>org.apache.activemq.protobuf</groupId>
         <artifactId>activemq-protobuf</artifactId>
+        <configuration>
+          <type>alt</type>
+        </configuration>
          <executions>
           <execution>
             <goals>

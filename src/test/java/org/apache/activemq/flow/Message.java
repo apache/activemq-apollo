@@ -19,6 +19,8 @@ package org.apache.activemq.flow;
 import java.io.Serializable;
 
 import org.apache.activemq.flow.Commands.Destination;
+import org.apache.activemq.flow.Commands.Message.MessageBean;
+import org.apache.activemq.flow.Commands.Message.MessageBuffer;
 import org.apache.activemq.queue.Mapper;
 
 public class Message implements Serializable {
@@ -41,14 +43,16 @@ public class Message implements Serializable {
     public static final short TYPE_FLOW_CLOSE = 3;
 
     transient Flow flow;
-    private Commands.Message message = new Commands.Message();
+    private MessageBuffer message;
 
     Message(long msgId, int producerId, String msg, Flow flow, Destination dest, int priority) {
-        this.message.setMsgId(msgId);
-        this.message.setProducerId(producerId);
-        this.message.setMsg(msg);
-        this.message.setDest(dest);
-        this.message.setPriority(priority);
+        MessageBean message = new MessageBean();
+        message.setMsgId(msgId);
+        message.setProducerId(producerId);
+        message.setMsg(msg);
+        message.setDest(dest);
+        message.setPriority(priority);
+        this.message = message.freeze();
         this.flow = flow;
     }
 
@@ -57,7 +61,7 @@ public class Message implements Serializable {
         this.flow = m.flow;
     }
 
-    public Message(Commands.Message m) {
+    public Message(MessageBuffer m) {
         this.message=m;
     }
 
@@ -66,9 +70,7 @@ public class Message implements Serializable {
     }
 
     public void setProperty(String matchProp) {
-        Commands.Message clone = message.clone();
-        clone.addProperty(matchProp);
-        message = clone;
+        message = message.copy().addProperty(matchProp).freeze();
     }
 
     public boolean match(String matchProp) {
@@ -83,9 +85,7 @@ public class Message implements Serializable {
     }
 
     public void incrementHopCount() {
-        Commands.Message clone = message.clone();
-        clone.setHopCount(message.getHopCount());
-        message = clone;
+        message = message.copy().setHopCount(message.getHopCount()).freeze();
     }
 
     public final int getHopCount() {
@@ -120,7 +120,7 @@ public class Message implements Serializable {
         return message.getProducerId();
     }
 
-    public Commands.Message getProto() {
+    public MessageBuffer getProto() {
         return message;
     }
 }

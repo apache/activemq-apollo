@@ -8,6 +8,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.FlowControl;
+import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
+import org.apache.activemq.flow.Commands.FlowControl.FlowControlBean;
+import org.apache.activemq.flow.Commands.FlowControl.FlowControlBuffer;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.flow.MockBroker.DeliveryTarget;
 import org.apache.activemq.queue.SingleFlowRelay;
@@ -77,12 +80,12 @@ public class RemoteConnection implements TransportListener, DeliveryTarget {
             } else if (command.getClass() == Message.class) {
                 Message msg = (Message) command;
                 inboundController.add(msg, null);
-            } else if (command.getClass() == Destination.class) {
+            } else if (command.getClass() == DestinationBuffer.class) {
                 // This is a subscription request
                 Destination destination = (Destination) command;
 
                 broker.subscribe(destination, this);
-            } else if (command.getClass() == FlowControl.class) {
+            } else if (command.getClass() == FlowControlBuffer.class) {
                 // This is a subscription request
                 FlowControl fc = (FlowControl) command;
                 synchronized (outputQueue) {
@@ -306,9 +309,9 @@ public class RemoteConnection implements TransportListener, DeliveryTarget {
             if (!clientMode) {
                 available += size;
                 if (available >= capacity - resumeThreshold) {
-                    FlowControl fc = new FlowControl();
+                    FlowControlBean fc = new FlowControlBean();
                     fc.setCredit(available);
-                    write(fc);
+                    write(fc.freeze());
                     // System.out.println(RemoteConnection.this.name +
                     // " Send Release " + available + this);
                     available = 0;
