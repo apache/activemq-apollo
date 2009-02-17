@@ -35,40 +35,42 @@ import org.apache.activemq.transport.nio.SelectorManager;
 
 public class MockBrokerTest extends TestCase {
 
-    private static final int PERFORMANCE_SAMPLES = 3;
+    protected static final int PERFORMANCE_SAMPLES = 3;
 
-    static final int IO_WORK_AMOUNT = 0;
-    private static final int FANIN_COUNT = 10;
-    private static final int FANOUT_COUNT = 10;
+    protected static final int IO_WORK_AMOUNT = 0;
+    protected static final int FANIN_COUNT = 10;
+    protected static final int FANOUT_COUNT = 10;
 
-    static final int PRIORITY_LEVELS = 10;
-    static final boolean USE_INPUT_QUEUES = true;
+    protected static final int PRIORITY_LEVELS = 10;
+    protected static final boolean USE_INPUT_QUEUES = true;
 
     // Set to put senders and consumers on separate brokers.
-    private boolean multibroker = false;
+    protected boolean multibroker = false;
 
     // Set to mockup up ptp:
-    boolean ptp = false;
+    protected boolean ptp = false;
 
     // Set to use tcp IO
-    boolean tcp = true;
+    protected boolean tcp = true;
+    protected String sendBrokerURI;
+    protected String receiveBrokerURI;
 
     // Set's the number of threads to use:
-    private final int asyncThreadPoolSize = Runtime.getRuntime().availableProcessors();
-    boolean usePartitionedQueue = false;
+    protected final int asyncThreadPoolSize = Runtime.getRuntime().availableProcessors();
+    protected boolean usePartitionedQueue = false;
 
-    private int producerCount;
-    private int consumerCount;
-    private int destCount;
+    protected int producerCount;
+    protected int consumerCount;
+    protected int destCount;
 
-    MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
-    MetricAggregator totalConsumerRate = new MetricAggregator().name("Aggregate Consumer Rate").unit("items");
+    protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
+    protected MetricAggregator totalConsumerRate = new MetricAggregator().name("Aggregate Consumer Rate").unit("items");
 
-    MockBroker sendBroker;
-    MockBroker rcvBroker;
-    private ArrayList<MockBroker> brokers = new ArrayList<MockBroker>();
-    IDispatcher dispatcher;
-    final AtomicLong msgIdGenerator = new AtomicLong();
+    protected MockBroker sendBroker;
+    protected MockBroker rcvBroker;
+    protected ArrayList<MockBroker> brokers = new ArrayList<MockBroker>();
+    protected IDispatcher dispatcher;
+    protected final AtomicLong msgIdGenerator = new AtomicLong();
 
     static public final Mapper<Long, Message> KEY_MAPPER = new Mapper<Long, Message>() {
         public Long map(Message element) {
@@ -83,6 +85,17 @@ public class MockBrokerTest extends TestCase {
         }
     };
 
+    @Override
+    protected void setUp() throws Exception {
+        if( tcp ) {
+            sendBrokerURI = "tcp://localhost:10000?wireFormat=proto";
+            receiveBrokerURI = "tcp://localhost:20000?wireFormat=proto";
+        } else {
+            sendBrokerURI = "pipe://SendBroker";
+            receiveBrokerURI = "pipe://ReceiveBroker";
+        }
+    }
+    
     public void test_1_1_1() throws Exception {
         producerCount = 1;
         destCount = 1;
@@ -320,24 +333,14 @@ public class MockBrokerTest extends TestCase {
 
         dispatcher = new PriorityPooledDispatcher("BrokerDispatcher", asyncThreadPoolSize, Message.MAX_PRIORITY);
         FlowController.setFlowExecutor(dispatcher.createPriorityExecutor(Message.MAX_PRIORITY));
-        
+                
         if (multibroker) {
-            if( tcp ) {
-                sendBroker = createBroker("SendBroker", "tcp://localhost:10000?wireFormat=proto");
-                rcvBroker = createBroker("RcvBroker", "tcp://localhost:20000?wireFormat=proto");
-            } else {
-                sendBroker = createBroker("SendBroker", "pipe://SendBroker");
-                rcvBroker = createBroker("RcvBroker", "pipe://RcvBroker");
-            }
+            sendBroker = createBroker("SendBroker", sendBrokerURI);
+            rcvBroker = createBroker("RcvBroker", receiveBrokerURI);
             brokers.add(sendBroker);
             brokers.add(rcvBroker);
         } else {
-            if( tcp ) {
-                sendBroker = rcvBroker = createBroker("Broker", "tcp://localhost:10000?wireFormat=proto");
-            } else {
-                sendBroker = rcvBroker = createBroker("Broker", "pipe://Broker");
-            }
-            
+            sendBroker = rcvBroker = createBroker("Broker", sendBrokerURI);
             brokers.add(sendBroker);
         }
 
