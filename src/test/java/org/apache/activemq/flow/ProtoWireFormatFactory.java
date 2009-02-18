@@ -11,6 +11,8 @@ import org.apache.activemq.flow.Commands.FlowControl.FlowControlBuffer;
 import org.apache.activemq.flow.Commands.Message.MessageBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.DataByteArrayInputStream;
+import org.apache.activemq.util.DataByteArrayOutputStream;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.wireformat.StatefulWireFormat;
 import org.apache.activemq.wireformat.WireFormat;
@@ -223,10 +225,14 @@ public class ProtoWireFormatFactory implements WireFormatFactory {
         }
 
         public ByteSequence marshal(Object value) throws IOException {
-            return null;
+            DataByteArrayOutputStream os = new DataByteArrayOutputStream();
+            marshal(value, os);
+            return os.toByteSequence();
         }
+        
         public Object unmarshal(ByteSequence data) throws IOException {
-            return null;
+            DataByteArrayInputStream is = new DataByteArrayInputStream(data);
+            return unmarshal(is);
         }
     }
 

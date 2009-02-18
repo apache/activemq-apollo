@@ -1,8 +1,6 @@
 package org.apache.activemq.flow;
 
-import java.io.IOException;
 import java.net.URI;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
@@ -12,11 +10,11 @@ import org.apache.activemq.flow.ISinkController.FlowUnblockListener;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
 import org.apache.activemq.transport.DispatchableTransport;
-import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
-import org.apache.activemq.transport.TransportListener;
 
 public class RemoteProducer extends RemoteConnection implements Dispatchable, FlowUnblockListener<Message>{
+
+    private static final int FILLER_SIZE = 100;
 
     private final MetricCounter rate = new MetricCounter();
 
@@ -30,8 +28,17 @@ public class RemoteProducer extends RemoteConnection implements Dispatchable, Fl
     private MetricAggregator totalProducerRate;
     Message next;
     private DispatchContext dispatchContext;
+
+    private String filler;
     
     public void start() throws Exception {
+        
+        StringBuilder sb = new StringBuilder(FILLER_SIZE);
+        for( int i=0; i < FILLER_SIZE; ++i) {
+            sb.append('a'+(i%26));
+        }
+        filler = sb.toString();
+        
         rate.name("Producer " + name + " Rate");
         totalProducerRate.add(rate);
 
@@ -75,7 +82,7 @@ public class RemoteProducer extends RemoteConnection implements Dispatchable, Fl
 	                priority = counter % priorityMod == 0 ? 0 : priority;
 	            }
 	
-	            next = new Message(messageIdGenerator.getAndIncrement(), producerId, name + ++counter, null, destination, priority);
+	            next = new Message(messageIdGenerator.getAndIncrement(), producerId, createPayload(), null, destination, priority);
 	            if (property != null) {
 	                next.setProperty(property);
 	            }
@@ -95,6 +102,10 @@ public class RemoteProducer extends RemoteConnection implements Dispatchable, Fl
 	        next = null;
 		}
 	}
+
+    private String createPayload() {
+        return name + ++counter+filler;
+    }
 	
 	public void setName(String name) {
         this.name = name;

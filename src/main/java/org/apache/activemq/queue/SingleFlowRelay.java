@@ -45,4 +45,9 @@ public class SingleFlowRelay<E> extends AbstractLimitedFlowSource<E> implements
 		// TODO Auto-generated method stub
 		return this;
 	}
+	
+	@Override
+	public String toString() {
+	    return getResourceName();
+	}
 }

@@ -1,15 +1,12 @@
 package org.apache.activemq.flow;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
 import org.apache.activemq.transport.DispatchableTransport;
-import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
 
 public class RemoteConsumer extends RemoteConnection{
@@ -20,6 +17,8 @@ public class RemoteConsumer extends RemoteConnection{
     private long thinkTime;
     private Destination destination;
     private String selector;
+
+    private boolean schedualWait;
     
     public void start() throws Exception {
         consumerRate.name("Consumer " + name + " Rate");
@@ -32,6 +31,7 @@ public class RemoteConsumer extends RemoteConnection{
             DispatchableTransport dt = ((DispatchableTransport)transport);
             dt.setName(name);
             dt.setDispatcher(getDispatcher());
+            schedualWait = true;
         }
         transport.setTransportListener(this);
         transport.start();
@@ -44,22 +44,34 @@ public class RemoteConsumer extends RemoteConnection{
     }
     
     protected void messageReceived(final ISourceController<Message> controller, final Message elem) {
-	    if (thinkTime > 0) {
-	        getDispatcher().schedule(new Runnable(){
+        if( schedualWait ) {
+            if (thinkTime > 0) {
+                getDispatcher().schedule(new Runnable(){
 
-                public void run() {
-                    consumerRate.increment();
-                    controller.elementDispatched(elem);
+                    public void run() {
+                        consumerRate.increment();
+                        controller.elementDispatched(elem);
+                    }
+                    
+                }, thinkTime, TimeUnit.MILLISECONDS);
+                
+            }
+            else
+            {
+                consumerRate.increment();
+                controller.elementDispatched(elem);
+            }
+
+        } else {
+            if( thinkTime>0 ) {
+                try {
+                    Thread.sleep(thinkTime);
+                } catch (InterruptedException e) {
                 }
-	            
-	        }, thinkTime, TimeUnit.MILLISECONDS);
-            
+            }
+            consumerRate.increment();
+            controller.elementDispatched(elem);
         }
-	    else
-	    {
-	        consumerRate.increment();
-	        controller.elementDispatched(elem);
-	    }
     }
 
     public void setName(String name) {

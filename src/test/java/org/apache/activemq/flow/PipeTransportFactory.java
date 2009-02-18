@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -21,6 +23,11 @@ import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.transport.TransportServer;
+import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.IOExceptionSupport;
+import org.apache.activemq.util.URISupport;
+import org.apache.activemq.wireformat.WireFormat;
+import org.apache.activemq.wireformat.WireFormatFactory;
 
 import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicInteger;
 
@@ -38,6 +45,7 @@ public class PipeTransportFactory extends TransportFactory {
         private Thread thread;
         private DispatchContext readContext;
         private String name;
+        private WireFormat wireFormat;
 
         public PipeTransport(Pipe<Object> pipe) {
             this.pipe = pipe;
@@ -79,7 +87,11 @@ public class PipeTransportFactory extends TransportFactory {
         public void oneway(Object command) throws IOException {
 
             try {
-                pipe.write(command);
+                if( wireFormat!=null ) {
+                    pipe.write(wireFormat.marshal(command));
+                } else {
+                    pipe.write(command);
+                }
             } catch (InterruptedException e) {
                 throw new InterruptedIOException();
             }
@@ -92,13 +104,20 @@ public class PipeTransportFactory extends TransportFactory {
 
         public boolean dispatch() {
             while (true) {
-
-                Object o = pipe.poll();
-                if (o == null) {
-                    pipe.setReadReadyListener(this);
-                    return true;
-                } else {
-                    listener.onCommand(o);
+                try {
+                    Object o = pipe.poll();
+                    if (o == null) {
+                        pipe.setReadReadyListener(this);
+                        return true;
+                    } else {
+                        if( wireFormat!=null ) {
+                            listener.onCommand(wireFormat.unmarshal((ByteSequence)o));
+                        } else {
+                            listener.onCommand(o);
+                        }
+                    }
+                } catch (IOException e) {
+                    listener.onException(e);
                 }
             }
         }
@@ -169,12 +188,17 @@ public class PipeTransportFactory extends TransportFactory {
                 name = remoteAddress;
             }
         }
+
+        public void setWireFormat(WireFormat wireFormat) {
+            this.wireFormat = wireFormat;
+        }
     }
 
     private class PipeTransportServer implements TransportServer {
         private URI connectURI;
         private TransportAcceptListener listener;
         private String name;
+        private WireFormatFactory wireFormatFactory;
 
         public URI getConnectURI() {
             return connectURI;
@@ -219,22 +243,39 @@ public class PipeTransportFactory extends TransportFactory {
             rc.setRemoteAddress(remoteAddress);
             PipeTransport serverSide = new PipeTransport(pipe.connect());
             serverSide.setRemoteAddress(remoteAddress);
+            if( wireFormatFactory!=null ) {
+                rc.setWireFormat(wireFormatFactory.createWireFormat());
+                serverSide.setWireFormat(wireFormatFactory.createWireFormat());
+            }
             listener.onAccept(serverSide);
             return rc;
+        }
+
+        public void setWireFormatFactory(WireFormatFactory wireFormatFactory) {
+            this.wireFormatFactory = wireFormatFactory;
         }
     }
 
     @Override
     public synchronized TransportServer doBind(URI uri) throws IOException {
-        String node = uri.getHost();
-        if (servers.containsKey(node)) {
-            throw new IOException("Server allready bound: " + node);
+        try {
+            Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
+
+            String node = uri.getHost();
+            if (servers.containsKey(node)) {
+                throw new IOException("Server allready bound: " + node);
+            }
+            PipeTransportServer server = new PipeTransportServer();
+            server.setConnectURI(uri);
+            server.setName(node);
+            if( options.containsKey("wireFormat") ) {
+                server.setWireFormatFactory(createWireFormatFactory(options));
+            }
+            servers.put(node, server);
+            return server;
+        } catch (URISyntaxException e) {
+            throw IOExceptionSupport.create(e);
         }
-        PipeTransportServer server = new PipeTransportServer();
-        server.setConnectURI(uri);
-        server.setName(node);
-        servers.put(node, server);
-        return server;
     }
 
     private synchronized void unbind(PipeTransportServer server) {
