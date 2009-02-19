@@ -35,7 +35,7 @@ import org.apache.activemq.transport.nio.SelectorManager;
 
 public class MockBrokerTest extends TestCase {
 
-    protected static final int PERFORMANCE_SAMPLES = 30000;
+    protected static final int PERFORMANCE_SAMPLES = 3;
 
     protected static final int IO_WORK_AMOUNT = 0;
     protected static final int FANIN_COUNT = 10;
@@ -51,7 +51,7 @@ public class MockBrokerTest extends TestCase {
     protected boolean ptp = false;
 
     // Set to use tcp IO
-    protected boolean tcp = true;
+    protected boolean tcp = false;
     // set to force marshalling even in the NON tcp case.
     protected boolean forceMarshalling = false;
     

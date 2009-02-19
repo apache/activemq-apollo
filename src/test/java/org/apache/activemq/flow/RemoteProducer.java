@@ -14,7 +14,6 @@ import org.apache.activemq.transport.TransportFactory;
 
 public class RemoteProducer extends RemoteConnection implements Dispatchable, FlowUnblockListener<Message>{
 
-    private static final int FILLER_SIZE = 100;
 
     private final MetricCounter rate = new MetricCounter();
 
@@ -30,14 +29,17 @@ public class RemoteProducer extends RemoteConnection implements Dispatchable, Fl
     private DispatchContext dispatchContext;
 
     private String filler;
+    private int payloadSize = 20;
     
     public void start() throws Exception {
         
-        StringBuilder sb = new StringBuilder(FILLER_SIZE);
-        for( int i=0; i < FILLER_SIZE; ++i) {
-            sb.append('a'+(i%26));
+        if( payloadSize>0 ) {
+            StringBuilder sb = new StringBuilder(payloadSize);
+            for( int i=0; i < payloadSize; ++i) {
+                sb.append((char)('a'+(i%26)));
+            }
+            filler = sb.toString();
         }
-        filler = sb.toString();
         
         rate.name("Producer " + name + " Rate");
         totalProducerRate.add(rate);
@@ -104,7 +106,22 @@ public class RemoteProducer extends RemoteConnection implements Dispatchable, Fl
 	}
 
     private String createPayload() {
-        return name + ++counter+filler;
+        if( payloadSize>=0 ) {
+            StringBuilder sb = new StringBuilder(payloadSize);
+            sb.append(name);
+            sb.append(':');
+            sb.append(++counter);
+            sb.append(':');
+            int length = sb.length();
+            if( length <= payloadSize ) {
+                sb.append(filler.subSequence(0, payloadSize-length));
+                return sb.toString();
+            } else {
+               return sb.substring(0, payloadSize); 
+            }
+        } else {
+            return name+":"+(++counter);
+        }
     }
 	
 	public void setName(String name) {
@@ -169,6 +186,14 @@ public class RemoteProducer extends RemoteConnection implements Dispatchable, Fl
 
     public MetricCounter getRate() {
         return rate;
+    }
+
+    public int getPayloadSize() {
+        return payloadSize;
+    }
+
+    public void setPayloadSize(int messageSize) {
+        this.payloadSize = messageSize;
     }
 }
 
