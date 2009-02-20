@@ -21,6 +21,7 @@ import java.io.Serializable;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Message.MessageBean;
 import org.apache.activemq.flow.Commands.Message.MessageBuffer;
+import org.apache.activemq.protobuf.UTF8Buffer;
 import org.apache.activemq.queue.Mapper;
 
 public class Message implements Serializable {
@@ -49,7 +50,7 @@ public class Message implements Serializable {
         MessageBean message = new MessageBean();
         message.setMsgId(msgId);
         message.setProducerId(producerId);
-        message.setMsg(msg);
+        message.setMsg(new UTF8Buffer(msg));
         message.setDest(dest);
         message.setPriority(priority);
         this.message = message.freeze();

@@ -34,7 +34,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
                 }
             };
             queue.setPartitionMapper(partitionMapper);
-            queue.setResourceName(destination.getName());
+            queue.setResourceName(destination.getName().toString());
             return queue;
         } else {
             return createSharedFlowQueue();
@@ -45,14 +45,14 @@ class MockQueue implements MockBroker.DeliveryTarget {
         if (MockBrokerTest.PRIORITY_LEVELS > 1) {
             PrioritySizeLimiter<Message> limiter = new PrioritySizeLimiter<Message>(100, 1, MockBrokerTest.PRIORITY_LEVELS);
             limiter.setPriorityMapper(Message.PRIORITY_MAPPER);
-            SharedPriorityQueue<Long, Message> queue = new SharedPriorityQueue<Long, Message>(destination.getName(), limiter);
+            SharedPriorityQueue<Long, Message> queue = new SharedPriorityQueue<Long, Message>(destination.getName().toString(), limiter);
             queue.setKeyMapper(keyExtractor);
             queue.setAutoRelease(true);
             queue.setDispatcher(broker.getDispatcher());
             return queue;
         } else {
             SizeLimiter<Message> limiter = new SizeLimiter<Message>(100, 1);
-            SharedQueue<Long, Message> queue = new SharedQueue<Long, Message>(destination.getName(), limiter);
+            SharedQueue<Long, Message> queue = new SharedQueue<Long, Message>(destination.getName().toString(), limiter);
             queue.setKeyMapper(keyExtractor);
             queue.setAutoRelease(true);
             queue.setDispatcher(broker.getDispatcher());

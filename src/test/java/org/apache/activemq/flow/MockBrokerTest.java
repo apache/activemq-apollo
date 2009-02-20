@@ -30,6 +30,7 @@ import org.apache.activemq.flow.Commands.Destination.DestinationBean;
 import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
+import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.Mapper;
 import org.apache.activemq.transport.nio.SelectorManager;
 
@@ -356,7 +357,7 @@ public class MockBrokerTest extends TestCase {
 
         for (int i = 0; i < destCount; i++) {
             DestinationBean bean = new DestinationBean();
-            bean.setName("dest" + (i + 1));
+            bean.setName(new AsciiBuffer("dest" + (i + 1)));
             bean.setPtp(ptp);
             dests[i] = bean.freeze();
             if (ptp) {

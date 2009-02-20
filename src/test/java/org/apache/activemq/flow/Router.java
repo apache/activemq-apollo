@@ -9,12 +9,13 @@ import java.util.HashMap;
 
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.MockBroker.DeliveryTarget;
+import org.apache.activemq.protobuf.AsciiBuffer;
 
 public class Router {
-    final HashMap<String, Collection<DeliveryTarget>> lookupTable = new HashMap<String, Collection<DeliveryTarget>>();
+    final HashMap<AsciiBuffer, Collection<DeliveryTarget>> lookupTable = new HashMap<AsciiBuffer, Collection<DeliveryTarget>>();
 
     final synchronized void bind(DeliveryTarget dt, Destination destination) {
-        String key = destination.getName();
+        AsciiBuffer key = destination.getName();
         Collection<DeliveryTarget> targets = lookupTable.get(key);
         if (targets == null) {
             targets = new ArrayList<DeliveryTarget>();
@@ -24,7 +25,7 @@ public class Router {
     }
 
     final void route(ISourceController<Message> source, Message msg) {
-        String key = msg.getDestination().getName();
+        AsciiBuffer key = msg.getDestination().getName();
         Collection<DeliveryTarget> targets = lookupTable.get(key);
         if( targets == null ) 
             return;
