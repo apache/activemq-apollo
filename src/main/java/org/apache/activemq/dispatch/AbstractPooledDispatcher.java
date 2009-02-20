@@ -1,12 +1,12 @@
 package org.apache.activemq.dispatch;
 
 import java.util.ArrayList;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-
 public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements IDispatcher, PooledDispatcher<D> {
-    
+
     private final String name;
 
     private final ThreadLocal<D> dispatcher = new ThreadLocal<D>();
@@ -17,7 +17,7 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
     final AtomicBoolean shutdown = new AtomicBoolean();
 
     private int roundRobinCounter = 0;
-    private final int size;
+    private int size;
 
     protected ExecutionLoadBalancer<D> loadBalancer;
 
@@ -73,8 +73,6 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
                 interrupted = true;
                 continue;
             }
-            dispatchers.remove(dispatchers.size() - 1);
-
         }
         // Re-interrupt:
         if (interrupted) {
@@ -119,6 +117,11 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
      * A Dispatcher must call this when exiting it's dispatch loop
      */
     public void onDispatcherStopped(D d) {
+        synchronized (dispatchers) {
+            if (dispatchers.remove(d)) {
+                size--;
+            }
+        }
         loadBalancer.removeDispatcher(d);
     }
 
@@ -126,6 +129,10 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
         D d = dispatcher.get();
         if (d == null) {
             synchronized (dispatchers) {
+                if(dispatchers.isEmpty())
+                {
+                    throw new RejectedExecutionException();
+                }
                 if (++roundRobinCounter >= size) {
                     roundRobinCounter = 0;
                 }

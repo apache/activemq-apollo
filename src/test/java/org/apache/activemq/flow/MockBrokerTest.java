@@ -55,7 +55,7 @@ public class MockBrokerTest extends TestCase {
     protected boolean tcp = false;
     // set to force marshalling even in the NON tcp case.
     protected boolean forceMarshalling = false;
-    
+
     protected String sendBrokerURI;
     protected String receiveBrokerURI;
 
@@ -91,13 +91,13 @@ public class MockBrokerTest extends TestCase {
 
     @Override
     protected void setUp() throws Exception {
-        dispatcher = PriorityDispatcher.createPriorityDispatchPool("BrokerDispatcher", Message.MAX_PRIORITY, asyncThreadPoolSize);
-        
-        if( tcp ) {
+        dispatcher = createDispatcher();
+        dispatcher.start();
+        if (tcp) {
             sendBrokerURI = "tcp://localhost:10000?wireFormat=proto";
             receiveBrokerURI = "tcp://localhost:20000?wireFormat=proto";
         } else {
-            if( forceMarshalling ) {
+            if (forceMarshalling) {
                 sendBrokerURI = "pipe://SendBroker?wireFormat=proto";
                 receiveBrokerURI = "pipe://ReceiveBroker?wireFormat=proto";
             } else {
@@ -106,7 +106,11 @@ public class MockBrokerTest extends TestCase {
             }
         }
     }
-    
+
+    protected IDispatcher createDispatcher() {
+        return PriorityDispatcher.createPriorityDispatchPool("BrokerDispatcher", Message.MAX_PRIORITY, asyncThreadPoolSize);
+    }
+
     public void test_1_1_0() throws Exception {
         producerCount = 1;
         destCount = 1;
@@ -121,7 +125,7 @@ public class MockBrokerTest extends TestCase {
             stopServices();
         }
     }
-    
+
     public void test_1_1_1() throws Exception {
         producerCount = 1;
         destCount = 1;
@@ -264,7 +268,7 @@ public class MockBrokerTest extends TestCase {
             stopServices();
         }
     }
-    
+
     /**
      * Test sending with 1 high priority sender. The high priority sender should
      * have higher throughput than the other low priority senders.
@@ -342,9 +346,9 @@ public class MockBrokerTest extends TestCase {
             stopServices();
         }
     }
-        
+
     private void reportRates() throws InterruptedException {
-        System.out.println("Checking rates for test: " + getName()+", "+(ptp?"ptp":"topic"));
+        System.out.println("Checking rates for test: " + getName() + ", " + (ptp ? "ptp" : "topic"));
         for (int i = 0; i < PERFORMANCE_SAMPLES; i++) {
             Period p = new Period();
             Thread.sleep(1000 * 5);
@@ -390,7 +394,7 @@ public class MockBrokerTest extends TestCase {
             RemoteProducer producer = createProducer(i, destination);
             sendBroker.producers.add(producer);
         }
-        
+
         for (int i = 0; i < consumerCount; i++) {
             Destination destination = dests[i % destCount];
             RemoteConsumer consumer = createConsumer(i, destination);
@@ -398,18 +402,18 @@ public class MockBrokerTest extends TestCase {
         }
 
         // Create MultiBroker connections:
-//        if (multibroker) {
-//            Pipe<Message> pipe = new Pipe<Message>();
-//            sendBroker.createBrokerConnection(rcvBroker, pipe);
-//            rcvBroker.createBrokerConnection(sendBroker, pipe.connect());
-//        }
+        // if (multibroker) {
+        // Pipe<Message> pipe = new Pipe<Message>();
+        // sendBroker.createBrokerConnection(rcvBroker, pipe);
+        // rcvBroker.createBrokerConnection(sendBroker, pipe.connect());
+        // }
     }
 
     private RemoteConsumer createConsumer(int i, Destination destination) {
         RemoteConsumer consumer = new RemoteConsumer();
         consumer.setBroker(rcvBroker);
         consumer.setDestination(destination);
-        consumer.setName("consumer"+(i+1));
+        consumer.setName("consumer" + (i + 1));
         consumer.setTotalConsumerRate(totalConsumerRate);
         consumer.setDispatcher(dispatcher);
         return consumer;
@@ -418,8 +422,8 @@ public class MockBrokerTest extends TestCase {
     private RemoteProducer createProducer(int id, Destination destination) {
         RemoteProducer producer = new RemoteProducer();
         producer.setBroker(sendBroker);
-        producer.setProducerId(id+1);
-        producer.setName("producer" +(id+1));
+        producer.setProducerId(id + 1);
+        producer.setName("producer" + (id + 1));
         producer.setDestination(destination);
         producer.setMessageIdGenerator(msgIdGenerator);
         producer.setTotalProducerRate(totalProducerRate);
@@ -432,7 +436,7 @@ public class MockBrokerTest extends TestCase {
         queue.setBroker(broker);
         queue.setDestination(destination);
         queue.setKeyExtractor(KEY_MAPPER);
-        if( usePartitionedQueue ) {
+        if (usePartitionedQueue) {
             queue.setPartitionMapper(PARTITION_MAPPER);
         }
         return queue;

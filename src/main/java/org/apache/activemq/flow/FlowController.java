@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 import org.apache.activemq.flow.IFlowLimiter.UnThrottleListener;
 
@@ -270,7 +271,7 @@ public class FlowController<E> implements IFlowController<E> {
                 setUnThrottleListener();
             }
         }
-        if( ok ) {
+        if (ok) {
             controllable.flowElemAccepted(this, elem);
         }
         return ok;
@@ -318,7 +319,8 @@ public class FlowController<E> implements IFlowController<E> {
         waitForResume();
 
         if (!blockedSources.contains(source)) {
-//            System.out.println("BLOCKING  : SINK[" + this + "], SOURCE[" + source + "]");
+            // System.out.println("BLOCKING  : SINK[" + this + "], SOURCE[" +
+            // source + "]");
             blockedSources.add(source);
             source.onFlowBlock(this);
         }
@@ -399,7 +401,9 @@ public class FlowController<E> implements IFlowController<E> {
                     try {
                         Thread.currentThread().setName(name);
                         for (ISourceController<E> source : blockedSources) {
-//                            System.out.println("UNBLOCKING: SINK[" + FlowController.this + "], SOURCE[" + source + "]");
+                            // System.out.println("UNBLOCKING: SINK[" +
+                            // FlowController.this + "], SOURCE[" + source +
+                            // "]");
                             source.onFlowResume(FlowController.this);
                         }
                         for (FlowUnblockListener<E> listener : unblockListeners) {
@@ -421,7 +425,12 @@ public class FlowController<E> implements IFlowController<E> {
                 }
             };
 
-            RESUME_SERVICE.execute(resume);
+            try {
+                RESUME_SERVICE.execute(resume);
+            } catch (RejectedExecutionException ree) {
+                // Must be shutting down, ignore this, leaving resumeScheduled
+                // true
+            }
         }
     }
 

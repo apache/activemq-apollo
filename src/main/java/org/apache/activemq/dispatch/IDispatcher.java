@@ -17,6 +17,7 @@
 package org.apache.activemq.dispatch;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public interface IDispatcher {
@@ -48,8 +49,10 @@ public interface IDispatcher {
          * dispatch. The {@link Dispatchable} will remain in the dispatch queue
          * until a subsequent call to {@link Dispatchable#dispatch()} returns
          * false;
+         * 
+         * @throws RejectedExecutionException If the dispatcher has been shutdown.
          */
-        public void requestDispatch();
+        public void requestDispatch() throws RejectedExecutionException;
 
         /**
          * This can be called to update the dispatch priority.

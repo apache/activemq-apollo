@@ -17,6 +17,7 @@
 package org.apache.activemq.dispatch;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -370,7 +371,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
         final UpdateEvent updateEvent[];
 
         private final ExecutionTracker<D> tracker;
-        private D currentOwner;
+        protected D currentOwner;
         private D updateDispatcher = null;
 
         private int priority;
@@ -433,6 +434,9 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
 
         public void requestDispatch() {
 
+            if (closed) {
+                throw new RejectedExecutionException();
+            }
             D callingDispatcher = getCurrentDispatcher();
             if (tracker != null)
                 tracker.onDispatchRequest(callingDispatcher, getCurrentDispatchContext());
@@ -536,17 +540,17 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
         }
 
         public void close() {
-            tracker.close();
             D callingDispatcher = getCurrentDispatcher();
             synchronized (this) {
                 closed = true;
-
                 // If the owner of this context is the calling thread, then
                 // delegate to the dispatcher.
                 if (currentOwner == callingDispatcher) {
                     if (isLinked()) {
                         unlink();
                     }
+                    tracker.close();
+
                     // FIXME Deadlock potential!
                     synchronized (foreignQueue) {
                         if (updateEvent[foreignToggle].isLinked()) {
