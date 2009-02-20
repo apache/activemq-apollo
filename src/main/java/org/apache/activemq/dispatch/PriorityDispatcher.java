@@ -33,7 +33,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
     private Thread thread;
     protected boolean running = false;
     private boolean threaded = false;
-    private final int MAX_USER_PRIORITY;
+    protected final int MAX_USER_PRIORITY;
 
     // Set if this dispatcher is part of a dispatch pool:
     protected final PooledDispatcher<D> pooledDispatcher;
@@ -49,7 +49,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
     // Timed Execution List
     protected final TimerHeap timerHeap = new TimerHeap();
 
-    private final String name;
+    protected final String name;
     private final AtomicBoolean foreignAvailable = new AtomicBoolean(false);
     private final Semaphore foreignPermits = new Semaphore(0);
 
@@ -156,14 +156,12 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
      * 
      * @see org.apache.activemq.dispatch.IDispatcher#shutdown()
      */
-    public synchronized final void shutdown() throws InterruptedException {
+    public synchronized void shutdown() throws InterruptedException {
         if (thread != null) {
             dispatch(new RunnableAdapter(new Runnable() {
-
                 public void run() {
                     running = false;
                 }
-
             }), MAX_USER_PRIORITY + 1);
             // thread.interrupt();
             thread.join();
