@@ -79,10 +79,10 @@ public interface IDispatcher {
         public void close();
     }
 
-    class RunnableAdapter implements Dispatchable {
+    public class RunnableAdapter implements Dispatchable {
         final Runnable runnable;
 
-        RunnableAdapter(Runnable runnable) {
+        public RunnableAdapter(Runnable runnable) {
             this.runnable = runnable;
         }
 
@@ -117,7 +117,7 @@ public interface IDispatcher {
     /**
      * Starts the dispatcher.
      */
-    public void start();
+    public void start() throws Exception;
 
     /**
      * Shuts down the dispatcher, this may result in previous dispatch requests

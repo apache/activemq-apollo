@@ -16,86 +16,66 @@
  */
 package org.apache.activemq.dispatch;
 
+import org.apache.activemq.dispatch.ExecutionLoadBalancer.ExecutionTracker;
 import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
 
-public interface PooledDispatcher {
+public interface PooledDispatcher<D extends IDispatcher> {
 
-	/**
-	 * A {@link PooledDispatchContext}s can be moved between different
-	 * dispatchers.
-	 */
-	public interface PooledDispatchContext extends DispatchContext {
-		/**
-		 * Called to transfer a {@link PooledDispatchContext} to a new
-		 * Dispatcher.
-		 */
-		public void assignToNewDispatcher(PoolableDispatcher newDispatcher);
+    /**
+     * A {@link PooledDispatchContext}s can be moved between different
+     * dispatchers.
+     */
+    public interface PooledDispatchContext<D extends IDispatcher> extends DispatchContext {
+        /**
+         * Called to transfer a {@link PooledDispatchContext} to a new
+         * Dispatcher.
+         */
+        public void assignToNewDispatcher(D newDispatcher);
 
-		/**
-		 * A dispatcher must call this when it starts dispatch for this context
-		 */
-		public void startingDispatch();
+        /**
+         * Gets the dispatcher to which this PooledDispatchContext currently
+         * belongs
+         * 
+         * @return
+         */
+        public D getDispatcher();
 
-		/**
-		 * A dispatcher must call this when it has finished dispatching a
-		 * context
-		 */
-		public void finishedDispatch();
+        /**
+         * Gets the execution tracker for the context.
+         * 
+         * @return the execution tracker for the context:
+         */
+        public ExecutionTracker<D> getExecutionTracker();
+    }
 
-		/**
-		 * Called by the dispatch thread to let the pooled context set any info
-		 * set by other threads.
-		 */
-		public void processForeignUpdates();
-	}
+    /**
+     * A Dispatcher must call this from it's dispatcher thread to indicate that
+     * is has started it's dispatch has started.
+     */
+    public void onDispatcherStarted(D dispatcher);
 
-	public interface PoolableDispatchContext extends DispatchContext {
+    /**
+     * A Dispatcher must call this from it's dispatcher thread when exiting it's
+     * dispatch loop
+     */
+    public void onDispatcherStopped(D dispatcher);
 
-		public void setPooledDispatchContext(PooledDispatchContext context);
+    /**
+     * Returns the currently executing dispatcher, or null if the current thread
+     * is not a dispatcher:
+     * 
+     * @return The currently executing dispatcher
+     */
+    public D getCurrentDispatcher();
 
-		/**
-		 * Indicates that another thread has made an update to the dispatch
-		 * context.
-		 * 
-		 */
-		public void onForeignThreadUpdate();
+    public void setCurrentDispatchContext(PooledDispatchContext<D> context);
 
-		public PoolableDispatcher getDispatcher();
-	}
+    public PooledDispatchContext<D> getCurrentDispatchContext();
 
-	/**
-	 * A PoolableDispatcher is one that can be owned by an
-	 * {@link PooledDispatcher}.
-	 */
-	public interface PoolableDispatcher extends IDispatcher {
-
-		/**
-		 * Indicates that another thread has made an update to the dispatch
-		 * context.
-		 * 
-		 */
-		public PoolableDispatchContext createPoolableDispatchContext(Dispatchable dispatchable, String name);
-	}
-
-	/**
-	 * This wraps the dispatch context into one that is load balanced by the
-	 * LoadBalancer
-	 * 
-	 * @param context
-	 *            The context to wrap.
-	 * @return
-	 */
-	public PooledDispatchContext createPooledDispatchContext(PoolableDispatchContext context);
-
-	/**
-	 * A Dispatcher must call this from it's dispatcher thread to indicate that
-	 * is has started it's dispatch has started.
-	 */
-	public void onDispatcherStarted(PoolableDispatcher dispatcher);
-
-	/**
-	 * A Dispatcher must call this from it's dispatcher thread when exiting it's
-	 * dispatch loop
-	 */
-	public void onDispatcherStopped(PoolableDispatcher dispatcher);
+    /**
+     * Returns the load balancer for this dispatch pool.
+     * 
+     * @return
+     */
+    public ExecutionLoadBalancer<D> getLoadBalancer();
 }

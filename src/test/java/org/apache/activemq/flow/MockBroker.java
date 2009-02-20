@@ -37,14 +37,14 @@ class MockBroker implements TransportAcceptListener {
         public boolean match(Message message);
     }
 
-    final Router router=  new Router();
-    
+    final Router router = new Router();
+
     final ArrayList<RemoteConnection> connections = new ArrayList<RemoteConnection>();
     final ArrayList<RemoteProducer> producers = new ArrayList<RemoteProducer>();
     final ArrayList<RemoteConsumer> consumers = new ArrayList<RemoteConsumer>();
     final ArrayList<BrokerConnection> brokerConnections = new ArrayList<BrokerConnection>();
     final HashMap<Destination, MockQueue> queues = new HashMap<Destination, MockQueue>();
-    
+
     private TransportServer transportServer;
     private String uri;
     private String name;
@@ -62,7 +62,6 @@ class MockBroker implements TransportAcceptListener {
             router.bind(deliveryTarget, destination);
         }
     }
-
 
     public void addQueue(MockQueue queue) {
         router.bind(queue, queue.getDestination());
@@ -111,17 +110,15 @@ class MockBroker implements TransportAcceptListener {
     }
 
     final void startServices() throws Exception {
-        
+
+        dispatcher.start();
+
         transportServer = TransportFactory.bind(new URI(uri));
         transportServer.setAcceptListener(this);
-        if(transportServer instanceof DispatchableTransportServer)
-        {
-        	((DispatchableTransportServer)transportServer).setDispatcher(dispatcher);
+        if (transportServer instanceof DispatchableTransportServer) {
+            ((DispatchableTransportServer) transportServer).setDispatcher(dispatcher);
         }
         transportServer.start();
-        
-        
-        dispatcher.start();
 
         for (MockQueue queue : queues.values()) {
             queue.start();
@@ -130,7 +127,7 @@ class MockBroker implements TransportAcceptListener {
         for (RemoteConsumer connection : consumers) {
             connection.start();
         }
-        
+
         for (RemoteProducer connection : producers) {
             connection.start();
         }
@@ -155,7 +152,7 @@ class MockBroker implements TransportAcceptListener {
     }
 
     public void onAcceptError(Exception error) {
-        System.out.println("Accept error: "+error);
+        System.out.println("Accept error: " + error);
         error.printStackTrace();
     }
 
@@ -186,5 +183,5 @@ class MockBroker implements TransportAcceptListener {
     public boolean isStopping() {
         return stopping.get();
     }
-    
+
 }

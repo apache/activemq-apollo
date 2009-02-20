@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import junit.framework.TestCase;
 
 import org.apache.activemq.dispatch.IDispatcher;
-import org.apache.activemq.dispatch.PriorityPooledDispatcher;
+import org.apache.activemq.dispatch.PriorityDispatcher;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Destination.DestinationBean;
 import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
@@ -91,6 +91,8 @@ public class MockBrokerTest extends TestCase {
 
     @Override
     protected void setUp() throws Exception {
+        dispatcher = PriorityDispatcher.createPriorityDispatchPool("BrokerDispatcher", Message.MAX_PRIORITY, asyncThreadPoolSize);
+        
         if( tcp ) {
             sendBrokerURI = "tcp://localhost:10000?wireFormat=proto";
             receiveBrokerURI = "tcp://localhost:20000?wireFormat=proto";
@@ -102,6 +104,21 @@ public class MockBrokerTest extends TestCase {
                 sendBrokerURI = "pipe://SendBroker";
                 receiveBrokerURI = "pipe://ReceiveBroker";
             }
+        }
+    }
+    
+    public void test_1_1_0() throws Exception {
+        producerCount = 1;
+        destCount = 1;
+
+        createConnections();
+
+        // Start 'em up.
+        startServices();
+        try {
+            reportRates();
+        } finally {
+            stopServices();
         }
     }
     
@@ -340,9 +357,7 @@ public class MockBrokerTest extends TestCase {
 
     private void createConnections() throws IOException, URISyntaxException {
 
-        dispatcher = new PriorityPooledDispatcher("BrokerDispatcher", asyncThreadPoolSize, Message.MAX_PRIORITY);
         FlowController.setFlowExecutor(dispatcher.createPriorityExecutor(Message.MAX_PRIORITY));
-                
         if (multibroker) {
             sendBroker = createBroker("SendBroker", sendBrokerURI);
             rcvBroker = createBroker("RcvBroker", receiveBrokerURI);

@@ -16,24 +16,23 @@
  */
 package org.apache.activemq.dispatch;
 
-import org.apache.activemq.dispatch.PooledDispatcher.PoolableDispatcher;
 import org.apache.activemq.dispatch.PooledDispatcher.PooledDispatchContext;
 
-public interface ExecutionLoadBalancer {
+public interface ExecutionLoadBalancer<D extends IDispatcher> {
 
-	public interface ExecutionTracker {
-		public void onDispatchRequest(PoolableDispatcher caller, PooledDispatchContext context);
+    public interface ExecutionTracker<D extends IDispatcher> {
+        public void onDispatchRequest(D caller, PooledDispatchContext<D> context);
 
-		public void close();
-	}
+        public void close();
+    }
 
-	public void addDispatcher(PoolableDispatcher dispatcher);
+    public void addDispatcher(D dispatcher);
 
-	public void removeDispatcher(PoolableDispatcher dispatcher);
+    public void removeDispatcher(D dispatcher);
 
-	public ExecutionTracker createExecutionTracker(PooledDispatchContext context);
+    public ExecutionTracker<D> createExecutionTracker(PooledDispatchContext<D> context);
 
-	public void start();
+    public void start();
 
-	public void stop();
+    public void stop();
 }

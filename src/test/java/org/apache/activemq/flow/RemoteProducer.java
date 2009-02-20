@@ -50,7 +50,7 @@ public class RemoteProducer extends RemoteConnection implements Dispatchable, Fl
         if(transport instanceof DispatchableTransport)
         {
             DispatchableTransport dt = ((DispatchableTransport)transport);
-            dt.setName(name);
+            dt.setName(name + "-client-transport");
             dt.setDispatcher(getDispatcher());
         }
         super.setTransport(transport);
@@ -59,7 +59,7 @@ public class RemoteProducer extends RemoteConnection implements Dispatchable, Fl
         transport.start();
         // Let the remote side know our name.
         transport.oneway(name);
-        dispatchContext = getDispatcher().register(this, name + "-producer");
+        dispatchContext = getDispatcher().register(this, name + "-client");
         dispatchContext.requestDispatch();
     }
     

@@ -19,117 +19,119 @@ package org.apache.activemq.dispatch;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.activemq.dispatch.PooledDispatcher.PoolableDispatcher;
 import org.apache.activemq.dispatch.PooledDispatcher.PooledDispatchContext;
 
-public class SimpleLoadBalancer implements ExecutionLoadBalancer {
+public class SimpleLoadBalancer<D extends IDispatcher> implements ExecutionLoadBalancer<D> {
 
-	private final boolean DEBUG = false;
+    private final boolean DEBUG = false;
 
-	SimpleLoadBalancer() {
-	}
+    public SimpleLoadBalancer() {
+    }
 
-	private class ExecutionStats {
-		final PooledDispatchContext target;
-		final PooledDispatchContext source;
-		int count;
+    @SuppressWarnings("hiding")
+    private class ExecutionStats<D extends IDispatcher> {
+        final PooledDispatchContext<D> target;
+        final PooledDispatchContext<D> source;
+        int count;
 
-		ExecutionStats(PooledDispatchContext source, PooledDispatchContext target) {
-			this.target = target;
-			this.source = source;
-		}
+        ExecutionStats(PooledDispatchContext<D> source, PooledDispatchContext<D> target) {
+            this.target = target;
+            this.source = source;
+        }
 
-		public String toString() {
-			return "Connection from: " + source + " to " + target;
-		}
-	}
+        public String toString() {
+            return "Connection from: " + source + " to " + target;
+        }
+    }
 
-	public void addDispatcher(PoolableDispatcher dispatcher) {
+    public void addDispatcher(D dispatcher) {
 
-	}
+    }
 
-	public void removeDispatcher(PoolableDispatcher dispatcher) {
+    public void removeDispatcher(D dispatcher) {
 
-	}
+    }
 
-	public void start() {
-	}
+    public void start() {
+    }
 
-	public void stop() {
-	}
+    public void stop() {
+    }
 
-	public ExecutionTracker createExecutionTracker(PooledDispatchContext context) {
-		return new SimpleExecutionTracker(context);
-	}
+    public ExecutionTracker<D> createExecutionTracker(PooledDispatchContext<D> context) {
+        return new SimpleExecutionTracker<D>(context);
+    }
 
-	private class SimpleExecutionTracker implements ExecutionTracker {
-		private final HashMap<PooledDispatchContext, ExecutionStats> sources = new HashMap<PooledDispatchContext, ExecutionStats>();
-		private final PooledDispatchContext context;
-		private final AtomicInteger work = new AtomicInteger(0);
+    private class SimpleExecutionTracker<D extends IDispatcher> implements ExecutionTracker<D> {
+        private final HashMap<PooledDispatchContext<D>, ExecutionStats<D>> sources = new HashMap<PooledDispatchContext<D>, ExecutionStats<D>>();
+        private final PooledDispatchContext<D> context;
+        private final AtomicInteger work = new AtomicInteger(0);
 
-		private PooledDispatchContext singleSource;
-		private PoolableDispatcher currentOwner;
+        private PooledDispatchContext<D> singleSource;
+        private IDispatcher currentOwner;
 
-		SimpleExecutionTracker(PooledDispatchContext context) {
-			this.context = context;
-		}
+        SimpleExecutionTracker(PooledDispatchContext<D> context) {
+            this.context = context;
+            currentOwner = context.getDispatcher();
+        }
 
-		/**
-		 * This method is called to track which dispatch contexts are requesting
-		 * dispatch for the target context represented by this node.
-		 * 
-		 * This method is not threadsafe, the caller must ensure serialized
-		 * access to this method.
-		 * 
-		 * @param callngDispatcher
-		 *            The calling dispatcher.
-		 * @param context
-		 *            the originating dispatch context
-		 * @return True if this method resulted in the dispatch request being
-		 *         assigned to another dispatcher.
-		 */
-		public void onDispatchRequest(PoolableDispatcher callingDispatcher, PooledDispatchContext callingContext) {
+        /**
+         * This method is called to track which dispatch contexts are requesting
+         * dispatch for the target context represented by this node.
+         * 
+         * This method is not threadsafe, the caller must ensure serialized
+         * access to this method.
+         * 
+         * @param callngDispatcher
+         *            The calling dispatcher.
+         * @param context
+         *            the originating dispatch context
+         * @return True if this method resulted in the dispatch request being
+         *         assigned to another dispatcher.
+         */
+        public void onDispatchRequest(D callingDispatcher, PooledDispatchContext<D> callingContext) {
 
-			if (callingContext != null) {
-				// Make sure we are being called by another node:
-				if (callingContext == null || callingContext == context) {
-					return;
-				}
+            if (callingContext != null) {
+                // Make sure we are being called by another node:
+                if (callingContext == null || callingContext == context) {
+                    return;
+                }
 
-				// Optimize for single source case:
-				if (singleSource != callingContext) {
-					if (singleSource == null && sources.isEmpty()) {
-						singleSource = callingContext;
-						ExecutionStats stats = new ExecutionStats(callingContext, context);
-						sources.put(callingContext, stats);
+                // Optimize for single source case:
+                if (singleSource != callingContext) {
+                    if (singleSource == null && sources.isEmpty()) {
+                        singleSource = callingContext;
+                        ExecutionStats<D> stats = new ExecutionStats<D>(callingContext, context);
+                        sources.put(callingContext, stats);
 
-						// If this context only has a single source
-						// assign it to that source to minimize contention:
-						if (callingDispatcher != currentOwner) {
-							currentOwner = callingDispatcher;
-							if (DEBUG)
-								System.out.println("Assigning: " + context + " to " + callingContext + "'s  dispatcher: " + callingDispatcher);
-							context.assignToNewDispatcher(callingDispatcher);
-						}
+                        // If this context only has a single source
+                        // assign it to that source to minimize contention:
+                        if (callingDispatcher != currentOwner) {
+                            if (DEBUG)
+                                System.out.println("Assigning: " + context + " to " + callingContext + "'s  dispatcher: " + callingDispatcher + " From: " + currentOwner);
 
-					} else {
+                            currentOwner = callingDispatcher;
+                            context.assignToNewDispatcher(callingDispatcher);
+                        }
 
-						ExecutionStats stats = sources.get(callingContext);
-						if (stats == null) {
-							stats = new ExecutionStats(callingContext, context);
-							sources.put(callingContext, stats);
-						}
+                    } else {
 
-						if (singleSource != null) {
-							singleSource = null;
-						}
-					}
-				}
-				work.incrementAndGet();
-			}
-		}
+                        ExecutionStats<D> stats = sources.get(callingContext);
+                        if (stats == null) {
+                            stats = new ExecutionStats<D>(callingContext, context);
+                            sources.put(callingContext, stats);
+                        }
 
-		public void close() {
-		}
-	}
+                        if (singleSource != null) {
+                            singleSource = null;
+                        }
+                    }
+                }
+                work.incrementAndGet();
+            }
+        }
+
+        public void close() {
+        }
+    }
 }
