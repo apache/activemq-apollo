@@ -49,7 +49,8 @@
       <artifactId>log4j</artifactId>
       <scope>test</scope>
     </dependency>
-    
+  
+<!--   In case we want to look at mina..
     <dependency>
       <groupId>org.apache.mina</groupId>
       <artifactId>mina-core</artifactId>
@@ -63,6 +64,7 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-jcl</artifactId>
     </dependency>
+-->
     
   </dependencies>
 

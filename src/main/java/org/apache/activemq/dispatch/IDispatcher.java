@@ -79,9 +79,12 @@ public interface IDispatcher {
         public void close();
     }
 
-    public class RunnableAdapter implements Dispatchable {
-        final Runnable runnable;
+    public class RunnableAdapter implements Dispatchable, Runnable {
+        private Runnable runnable;
 
+        public RunnableAdapter() {
+            runnable = this;
+        }
         public RunnableAdapter(Runnable runnable) {
             this.runnable = runnable;
         }
@@ -89,6 +92,9 @@ public interface IDispatcher {
         public boolean dispatch() {
             runnable.run();
             return true;
+        }
+
+        public void run() {
         }
     }
 

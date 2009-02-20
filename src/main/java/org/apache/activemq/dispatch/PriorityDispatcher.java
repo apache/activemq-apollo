@@ -158,11 +158,11 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
      */
     public synchronized void shutdown() throws InterruptedException {
         if (thread != null) {
-            dispatch(new RunnableAdapter(new Runnable() {
+            dispatch(new RunnableAdapter() {
                 public void run() {
                     running = false;
                 }
-            }), MAX_USER_PRIORITY + 1);
+            }, MAX_USER_PRIORITY + 1);
             // thread.interrupt();
             thread.join();
             thread = null;
@@ -358,7 +358,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
      */
     protected class PriorityDispatchContext extends LinkedNode<PriorityDispatchContext> implements PooledDispatchContext<D> {
         // The dispatchable target:
-        final Dispatchable dispatchable;
+        private final Dispatchable dispatchable;
         // The name of this context:
         final String name;
         // list prio can only be updated in the thread of of the owning
