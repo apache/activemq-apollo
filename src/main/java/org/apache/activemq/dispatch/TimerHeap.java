@@ -5,11 +5,12 @@ import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 public class TimerHeap {
-    final TreeMap<Long, LinkedList<Runnable>> timers = new TreeMap<Long, LinkedList<Runnable>>();
-
+    private final TreeMap<Long, LinkedList<Runnable>> timers = new TreeMap<Long, LinkedList<Runnable>>();
+    private final TimeUnit resolution = TimeUnit.NANOSECONDS;
+    
     public final void add(Runnable runnable, long delay, TimeUnit timeUnit) {
 
-        long nanoDelay = timeUnit.convert(delay, TimeUnit.NANOSECONDS);
+        long nanoDelay = resolution.convert(delay, timeUnit);
         long eTime = System.nanoTime() + nanoDelay;
         LinkedList<Runnable> list = new LinkedList<Runnable>();
         list.add(runnable);
@@ -19,19 +20,18 @@ public class TimerHeap {
             list.addAll(old);
         }
     }
-    
+
     /**
-     * Returns the time of the next scheduled event. 
-     * @return -1 if there are no events, otherwise the time that the next timer should fire.
+     * Returns the time of the next scheduled event.
+     * 
+     * @return -1 if there are no events, otherwise the time that the next timer
+     *         should fire.
      */
-    public final long timeToNext() {
-        if(timers.isEmpty())
-        {
+    public final long timeToNext(TimeUnit unit) {
+        if (timers.isEmpty()) {
             return -1;
-        }
-        else
-        {
-            return Math.max(0, timers.firstKey() - System.nanoTime());
+        } else {
+            return unit.convert(Math.max(0, timers.firstKey() - System.nanoTime()), resolution);
         }
     }
 
@@ -50,7 +50,7 @@ public class TimerHeap {
             }
             ready = new LinkedList<Runnable>();
 
-            while (first < now) {
+            while (first <= now) {
                 ready.addAll(timers.remove(first));
                 if (timers.isEmpty()) {
                     break;
