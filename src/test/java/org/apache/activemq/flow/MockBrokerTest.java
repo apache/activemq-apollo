@@ -32,7 +32,6 @@ import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.Mapper;
-import org.apache.activemq.transport.nio.SelectorManager;
 
 public class MockBrokerTest extends TestCase {
 
@@ -110,7 +109,7 @@ public class MockBrokerTest extends TestCase {
     protected IDispatcher createDispatcher() {
         return PriorityDispatcher.createPriorityDispatchPool("BrokerDispatcher", Message.MAX_PRIORITY, asyncThreadPoolSize);
     }
-
+    
     public void test_1_1_0() throws Exception {
         producerCount = 1;
         destCount = 1;
@@ -235,7 +234,7 @@ public class MockBrokerTest extends TestCase {
         consumerCount = 2;
 
         createConnections();
-        rcvBroker.consumers.get(0).setThinkTime(5);
+        rcvBroker.consumers.get(0).setThinkTime(50);
 
         // Start 'em up.
         startServices();
@@ -451,11 +450,11 @@ public class MockBrokerTest extends TestCase {
     }
 
     private void stopServices() throws Exception {
-        if (dispatcher != null) {
-            dispatcher.shutdown();
-        }
         for (MockBroker broker : brokers) {
             broker.stopServices();
+        }
+        if (dispatcher != null) {
+            dispatcher.shutdown();
         }
     }
 
@@ -463,7 +462,7 @@ public class MockBrokerTest extends TestCase {
         for (MockBroker broker : brokers) {
             broker.startServices();
         }
-        SelectorManager.SINGLETON.setChannelExecutor(dispatcher.createPriorityExecutor(PRIORITY_LEVELS));
+        //SelectorManager.SINGLETON.setChannelExecutor(dispatcher.createPriorityExecutor(PRIORITY_LEVELS));
     }
 
 }

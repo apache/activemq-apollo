@@ -3,6 +3,7 @@ package org.apache.activemq.flow;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.dispatch.IDispatcher;
@@ -39,7 +40,7 @@ public class RemoteConnection implements TransportListener, DeliveryTarget {
     private final int outputResumeThreshold = 900;
 
     private final int inputWindowSize = 1000;
-    private final int inputResumeThreshold = 900;
+    private final int inputResumeThreshold = 500;
 
     private IDispatcher dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean();
@@ -181,17 +182,21 @@ public class RemoteConnection implements TransportListener, DeliveryTarget {
                     onException(e);
                 }
             } else {
-                blockingWriter.execute(new Runnable() {
-                    public void run() {
-                        if (!stopping.get()) {
-                            try {
-                                transport.oneway(o);
-                            } catch (IOException e) {
-                                onException(e);
+                try {
+                    blockingWriter.execute(new Runnable() {
+                        public void run() {
+                            if (!stopping.get()) {
+                                try {
+                                    transport.oneway(o);
+                                } catch (IOException e) {
+                                    onException(e);
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                } catch (RejectedExecutionException re) {
+                    //Must be shutting down.
+                }
             }
         }
     }

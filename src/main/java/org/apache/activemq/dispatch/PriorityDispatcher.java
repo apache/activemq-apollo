@@ -16,6 +16,9 @@
  */
 package org.apache.activemq.dispatch;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
@@ -35,12 +38,13 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
     protected boolean running = false;
     private boolean threaded = false;
     protected final int MAX_USER_PRIORITY;
+    protected final HashSet<PriorityDispatchContext> contexts = new HashSet<PriorityDispatchContext>();
 
     // Set if this dispatcher is part of a dispatch pool:
     protected final PooledDispatcher<D> pooledDispatcher;
 
     // The local dispatch queue:
-    private final PriorityLinkedList<PriorityDispatchContext> priorityQueue;
+    protected final PriorityLinkedList<PriorityDispatchContext> priorityQueue;
 
     // Dispatch queue for requests from other threads:
     private final LinkedNodeList<ForeignEvent>[] foreignQueue;
@@ -157,16 +161,35 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
      * 
      * @see org.apache.activemq.dispatch.IDispatcher#shutdown()
      */
-    public synchronized void shutdown() throws InterruptedException {
-        if (thread != null) {
-            dispatch(new RunnableAdapter() {
-                public void run() {
-                    running = false;
-                }
-            }, MAX_USER_PRIORITY + 1);
+    public void shutdown() throws InterruptedException {
+        Thread joinThread = null;
+        synchronized (this) {
+            if (thread != null) {
+                dispatch(new RunnableAdapter() {
+                    public void run() {
+                        running = false;
+                    }
+                }, MAX_USER_PRIORITY + 1);
+                joinThread = thread;
+                thread = null;
+            }
+        }
+        if (joinThread != null) {
             // thread.interrupt();
-            thread.join();
-            thread = null;
+            joinThread.join();
+        }
+    }
+
+    protected void cleanup() {
+        ArrayList<PriorityDispatchContext> toClose = null;
+        synchronized (this) {
+            running = false;
+            toClose = new ArrayList<PriorityDispatchContext>(contexts.size());
+            toClose.addAll(contexts);
+        }
+
+        for (PriorityDispatchContext context : toClose) {
+            context.close(false);
         }
     }
 
@@ -235,6 +258,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
             thrown.printStackTrace();
         } finally {
             pooledDispatcher.onDispatcherStopped((D) this);
+            cleanup();
         }
     }
 
@@ -261,7 +285,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
         foreignPermits.release();
     }
 
-    protected final void onForeignUdate(PriorityDispatchContext context) {
+    protected final void onForeignUpdate(PriorityDispatchContext context) {
         synchronized (foreignQueue) {
 
             ForeignEvent fe = context.updateEvent[foreignToggle];
@@ -283,12 +307,29 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
             if (context.updateEvent[1].isLinked()) {
                 context.updateEvent[1].unlink();
             }
-            if (context.isLinked()) {
-                context.unlink();
-                return true;
+        }
+
+        if (context.isLinked()) {
+            context.unlink();
+            return true;
+        }
+
+        synchronized (this) {
+            contexts.remove(context);
+        }
+
+        return false;
+    }
+
+    protected final boolean takeOwnership(PriorityDispatchContext context) {
+        synchronized (this) {
+            if (running) {
+                contexts.add(context);
+            } else {
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
     /*
@@ -377,11 +418,13 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
         private int priority;
         private boolean dispatchRequested = false;
         private boolean closed = false;
+        final CountDownLatch closeLatch = new CountDownLatch(1);
 
         protected PriorityDispatchContext(Dispatchable dispatchable, boolean persistent, String name) {
             this.dispatchable = dispatchable;
             this.name = name;
             this.currentOwner = (D) PriorityDispatcher.this;
+            this.currentOwner.contexts.add(this);
             if (persistent) {
                 this.tracker = pooledDispatcher.getLoadBalancer().createExecutionTracker((PooledDispatchContext<D>) this);
             } else {
@@ -428,15 +471,14 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
                 updateDispatcher = newDispatcher;
                 if (DEBUG)
                     System.out.println(getName() + " updating to " + updateDispatcher);
+
+                currentOwner.onForeignUpdate(this);
             }
-            currentOwner.onForeignUdate(this);
+
         }
 
         public void requestDispatch() {
 
-            if (closed) {
-                throw new RejectedExecutionException();
-            }
             D callingDispatcher = getCurrentDispatcher();
             if (tracker != null)
                 tracker.onDispatchRequest(callingDispatcher, getCurrentDispatchContext());
@@ -449,6 +491,12 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
                 // delegate to the dispatcher.
                 if (currentOwner == callingDispatcher) {
 
+                    if (!currentOwner.running) {
+                        // TODO In the event that the current dispatcher
+                        // failed due to a runtime exception, we could
+                        // try to switch to a new dispatcher.
+                        throw new RejectedExecutionException();
+                    }
                     if (!isLinked()) {
                         currentOwner.priorityQueue.add(this, listPrio);
                     }
@@ -456,12 +504,16 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
                 }
 
                 dispatchRequested = true;
+                currentOwner.onForeignUpdate(this);
             }
-            // FIXME Thread safety!
-            currentOwner.onForeignUdate(this);
         }
 
         public void updatePriority(int priority) {
+
+            if (closed) {
+                return;
+            }
+
             if (this.priority == priority) {
                 return;
             }
@@ -470,6 +522,9 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
             // Otherwise this is coming off another thread, so we need to
             // synchronize to protect against ownership changes:
             synchronized (this) {
+                if (closed) {
+                    return;
+                }
                 this.priority = priority;
 
                 // If this is called by the owning dispatcher, then we go ahead
@@ -488,30 +543,34 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
                     }
                     return;
                 }
+
+                currentOwner.onForeignUpdate(this);
             }
-            // FIXME Thread safety!
-            currentOwner.onForeignUdate(this);
+
         }
 
         public void processForeignUpdates() {
-            boolean ownerChange = false;
             synchronized (this) {
 
                 if (closed) {
-                    close();
+                    close(false);
                     return;
                 }
 
-                if (updateDispatcher != null) {
+                if (updateDispatcher != null && updateDispatcher.takeOwnership(this)) {
                     if (DEBUG) {
                         System.out.println("Assigning " + getName() + " to " + updateDispatcher);
                     }
+
                     if (currentOwner.removeDispatchContext(this)) {
                         dispatchRequested = true;
                     }
+
+                    updateDispatcher.onForeignUpdate(this);
+                    switchedDispatcher(currentOwner, updateDispatcher);
                     currentOwner = updateDispatcher;
                     updateDispatcher = null;
-                    ownerChange = true;
+
                 } else {
                     updatePriority(priority);
 
@@ -520,10 +579,6 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
                         requestDispatch();
                     }
                 }
-            }
-
-            if (ownerChange) {
-                currentOwner.onForeignUdate(this);
             }
         }
 
@@ -539,27 +594,40 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
 
         }
 
-        public void close() {
+        public boolean isClosed() {
+            return closed;
+        }
+
+        public void close(boolean sync) {
             D callingDispatcher = getCurrentDispatcher();
+            // System.out.println(this + "Closing");
             synchronized (this) {
                 closed = true;
                 // If the owner of this context is the calling thread, then
                 // delegate to the dispatcher.
                 if (currentOwner == callingDispatcher) {
-                    if (isLinked()) {
-                        unlink();
-                    }
-                    tracker.close();
-
-                    // FIXME Deadlock potential!
-                    synchronized (foreignQueue) {
-                        if (updateEvent[foreignToggle].isLinked()) {
-                            updateEvent[foreignToggle].unlink();
-                        }
-                    }
+                    removeDispatchContext(this);
+                    closeLatch.countDown();
+                    return;
                 }
             }
-            currentOwner.onForeignUdate(this);
+
+            currentOwner.onForeignUpdate(this);
+            if (sync) {
+                boolean interrupted = false;
+                while (true) {
+                    try {
+                        closeLatch.await();
+                        break;
+                    } catch (InterruptedException e) {
+                        interrupted = true;
+                    }
+                }
+
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            }
         }
 
         public final String toString() {

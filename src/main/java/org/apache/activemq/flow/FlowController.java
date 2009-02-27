@@ -399,7 +399,6 @@ public class FlowController<E> implements IFlowController<E> {
                     }
                     String was = Thread.currentThread().getName();
                     try {
-                        Thread.currentThread().setName(name);
                         for (ISourceController<E> source : blockedSources) {
                             // System.out.println("UNBLOCKING: SINK[" +
                             // FlowController.this + "], SOURCE[" + source +
@@ -420,7 +419,6 @@ public class FlowController<E> implements IFlowController<E> {
                             resumeScheduled = false;
                             mutex.notifyAll();
                         }
-                        Thread.currentThread().setName(was);
                     }
                 }
             };

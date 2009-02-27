@@ -77,9 +77,10 @@ public interface IDispatcher {
 
         /**
          * This must be called to release any resource the dispatcher is holding
-         * on behalf of this context.
+         * on behalf of this context. Once called this {@link DispatchContext} should
+         * no longer be used. 
          */
-        public void close();
+        public void close(boolean sync);
     }
 
     public class RunnableAdapter implements Dispatchable, Runnable {

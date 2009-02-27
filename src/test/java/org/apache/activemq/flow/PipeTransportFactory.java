@@ -63,7 +63,7 @@ public class PipeTransportFactory extends TransportFactory {
 
         public void stop() throws Exception {
             if (readContext != null) {
-                readContext.close();
+                readContext.close(true);
             } else {
                 stopping.set(true);
                 thread.join();

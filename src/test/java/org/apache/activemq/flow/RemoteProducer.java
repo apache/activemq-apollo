@@ -65,7 +65,7 @@ public class RemoteProducer extends RemoteConnection implements Dispatchable, Fl
     
     public void stop() throws Exception
     {
-    	dispatchContext.close();
+    	dispatchContext.close(false);
     	super.stop();
     }
 
