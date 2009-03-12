@@ -2,44 +2,33 @@ package org.apache.activemq;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.broker.DeliveryTarget;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.IFlowLimiter;
-import org.apache.activemq.flow.IFlowRelay;
-import org.apache.activemq.flow.IFlowSink;
-import org.apache.activemq.flow.Message;
 import org.apache.activemq.flow.SizeLimiter;
-import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
 
-abstract public class Connection implements TransportListener, DeliveryTarget {
+abstract public class Connection implements TransportListener {
 
     protected Transport transport;
-
     protected String name;
 
     private int priorityLevels;
-
     protected final int outputWindowSize = 1000;
     protected final int outputResumeThreshold = 900;
-
     protected final int inputWindowSize = 1000;
     protected final int inputResumeThreshold = 500;
     
-    protected IFlowRelay<MessageDelivery> outputQueue;
-
     private IDispatcher dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean();
-    protected Flow outputFlow;
-    protected boolean blockingTransport = false;
-    protected ExecutorService blockingWriter;
+    private  ExecutorService blockingWriter;
 
     public void setTransport(Transport transport) {
         this.transport = transport;
@@ -47,6 +36,15 @@ abstract public class Connection implements TransportListener, DeliveryTarget {
 
     public void start() throws Exception {
         transport.setTransportListener(this);
+        if (transport instanceof DispatchableTransport) {
+            DispatchableTransport dt = ((DispatchableTransport) transport);
+            if (name != null) {
+                dt.setName(name);
+            }
+            dt.setDispatcher(getDispatcher());
+        } else {
+            blockingWriter = Executors.newSingleThreadExecutor();
+        }
         transport.start();
     }
 
@@ -64,8 +62,8 @@ abstract public class Connection implements TransportListener, DeliveryTarget {
     }
     
     protected final void write(final Object o) {
-        synchronized (outputQueue) {
-            if (!blockingTransport) {
+        synchronized (transport) {
+            if (blockingWriter==null) {
                 try {
                     transport.oneway(o);
                 } catch (IOException e) {
@@ -130,13 +128,6 @@ abstract public class Connection implements TransportListener, DeliveryTarget {
 
     public void setDispatcher(IDispatcher dispatcher) {
         this.dispatcher = dispatcher;
-        if (transport instanceof DispatchableTransport) {
-            DispatchableTransport dt = ((DispatchableTransport) transport);
-            if (name != null) {
-                dt.setName(name);
-            }
-            dt.setDispatcher(getDispatcher());
-        }
     }
 
     public int getOutputWindowSize() {
@@ -153,14 +144,6 @@ abstract public class Connection implements TransportListener, DeliveryTarget {
 
     public int getInputResumeThreshold() {
         return inputResumeThreshold;
-    }
-
-    public IFlowRelay<MessageDelivery> getSink() {
-        return outputQueue;
-    }
-
-    public boolean match(MessageDelivery message) {
-        return true;
     }
 
     protected interface ProtocolLimiter<E> extends IFlowLimiter<E> {

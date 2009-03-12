@@ -1,11 +1,24 @@
 package org.apache.activemq.broker.openwire;
 
+import static org.apache.activemq.broker.openwire.Openwire2Support.createConnectionInfo;
+import static org.apache.activemq.broker.openwire.Openwire2Support.createConsumerInfo;
+import static org.apache.activemq.broker.openwire.Openwire2Support.createSessionInfo;
+
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.activemq.Connection;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
+import org.apache.activemq.broker.Router;
+import org.apache.activemq.command.ActiveMQDestination;
+import org.apache.activemq.command.ActiveMQQueue;
+import org.apache.activemq.command.ActiveMQTopic;
+import org.apache.activemq.command.BrokerInfo;
+import org.apache.activemq.command.ConnectionInfo;
+import org.apache.activemq.command.ConsumerInfo;
+import org.apache.activemq.command.SessionInfo;
+import org.apache.activemq.command.WireFormatInfo;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowSink;
@@ -32,27 +45,41 @@ public class RemoteConsumer extends Connection {
 
     protected final Object inboundMutex = new Object();
     private FlowController<MessageDelivery> inboundController;
+
+    private ActiveMQDestination activemqDestination;
+
+    private ConnectionInfo connectionInfo;
+
+    private SessionInfo sessionInfo;
+
+    private ConsumerInfo consumerInfo;
     
     public void start() throws Exception {
         consumerRate.name("Consumer " + name + " Rate");
         totalConsumerRate.add(consumerRate);
 
-        transport = TransportFactory.compositeConnect(uri);
+        initialize();
+        transport = TransportFactory.connect(uri);
         if(transport instanceof DispatchableTransport)
         {
-            DispatchableTransport dt = ((DispatchableTransport)transport);
-            dt.setName(name + "-client-transport");
-            dt.setDispatcher(getDispatcher());
             schedualWait = true;
         }
-        transport.setTransportListener(this);
-        transport.start();
+        super.start();
+
+        if( destination.getDomain().equals( Router.QUEUE_DOMAIN ) ) {
+            activemqDestination = new ActiveMQQueue(destination.getName().toString());
+        } else {
+            activemqDestination = new ActiveMQTopic(destination.getName().toString());
+        }
         
-        // Let the remote side know our name.
-        transport.oneway(name);
-        // Sending the destination acts as the subscribe.
-        transport.oneway(destination);
-        super.initialize();
+        connectionInfo = createConnectionInfo();
+        transport.oneway(connectionInfo);
+        sessionInfo = createSessionInfo(connectionInfo);
+        transport.oneway(sessionInfo);
+        consumerInfo = createConsumerInfo(sessionInfo, activemqDestination);
+        consumerInfo.setPrefetchSize(1000);
+        transport.oneway(consumerInfo);
+        
     }
     
     protected void initialize() {
@@ -78,7 +105,10 @@ public class RemoteConsumer extends Connection {
     
     public void onCommand(Object command) {
         try {
-            if (command.getClass() == MessageDelivery.class) {
+            if (command.getClass() == WireFormatInfo.class) {
+            } else if (command.getClass() == BrokerInfo.class) {
+                System.out.println("Consumer "+name+" connected to "+((BrokerInfo)command).getBrokerName());
+            } else if (command.getClass() == MessageDelivery.class) {
                 MessageDelivery msg = (MessageDelivery) command;
                 inboundController.add(msg, null);
             } else {

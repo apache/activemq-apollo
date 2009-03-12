@@ -109,10 +109,6 @@ public class Broker implements TransportAcceptListener {
         this.uri = uri;
     }
 
-    public URI getConnectURI() {
-        return transportServer.getConnectURI();
-    }
-
     public boolean isStopping() {
         return stopping.get();
     }

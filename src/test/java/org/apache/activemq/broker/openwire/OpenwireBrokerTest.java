@@ -17,6 +17,7 @@
 package org.apache.activemq.broker.openwire;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
@@ -35,9 +36,9 @@ import org.apache.activemq.metric.Period;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.Mapper;
 
-public class MockBrokerTest extends TestCase {
+public class OpenwireBrokerTest extends TestCase {
 
-    protected static final int PERFORMANCE_SAMPLES = 3;
+    protected static final int PERFORMANCE_SAMPLES = 3000000;
 
     protected static final int IO_WORK_AMOUNT = 0;
     protected static final int FANIN_COUNT = 10;
@@ -98,12 +99,12 @@ public class MockBrokerTest extends TestCase {
         dispatcher = createDispatcher();
         dispatcher.start();
         if (tcp) {
-            sendBrokerURI = "tcp://localhost:10000?wireFormat=proto2";
-            receiveBrokerURI = "tcp://localhost:20000?wireFormat=proto2";
+            sendBrokerURI = "tcp://localhost:10000";
+            receiveBrokerURI = "tcp://localhost:20000";
         } else {
             if (forceMarshalling) {
-                sendBrokerURI = "pipe://SendBroker?wireFormat=proto";
-                receiveBrokerURI = "pipe://ReceiveBroker?wireFormat=proto";
+                sendBrokerURI = "pipe://SendBroker";
+                receiveBrokerURI = "pipe://ReceiveBroker";
             } else {
                 sendBrokerURI = "pipe://SendBroker";
                 receiveBrokerURI = "pipe://ReceiveBroker";
@@ -412,9 +413,9 @@ public class MockBrokerTest extends TestCase {
         // }
     }
 
-    private RemoteConsumer createConsumer(int i, Destination destination) {
+    private RemoteConsumer createConsumer(int i, Destination destination) throws URISyntaxException {
         RemoteConsumer consumer = new RemoteConsumer();
-        consumer.setUri(rcvBroker.getConnectURI());
+        consumer.setUri(new URI(rcvBroker.getUri()));
         consumer.setDestination(destination);
         consumer.setName("consumer" + (i + 1));
         consumer.setTotalConsumerRate(totalConsumerRate);
@@ -422,9 +423,9 @@ public class MockBrokerTest extends TestCase {
         return consumer;
     }
 
-    private RemoteProducer createProducer(int id, Destination destination) {
+    private RemoteProducer createProducer(int id, Destination destination) throws URISyntaxException {
         RemoteProducer producer = new RemoteProducer();
-        producer.setUri(sendBroker.getConnectURI());
+        producer.setUri(new URI(sendBroker.getUri()));
         producer.setProducerId(id + 1);
         producer.setName("producer" + (id + 1));
         producer.setDestination(destination);

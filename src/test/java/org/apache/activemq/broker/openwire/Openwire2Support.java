@@ -14,12 +14,10 @@ import org.apache.activemq.command.ProducerInfo;
 import org.apache.activemq.command.RemoveInfo;
 import org.apache.activemq.command.SessionInfo;
 
-public class OpenWireSupport {
+public class Openwire2Support {
     
     static private long idGenerator;
-    static private int msgIdGenerator;
-    static private int txGenerator;
-    static private int tempDestGenerator;
+    static private long msgIdGenerator;
 
     public static ConsumerInfo createConsumerInfo(SessionInfo sessionInfo, ActiveMQDestination destination) throws Exception {
         ConsumerInfo info = new ConsumerInfo(sessionInfo, ++idGenerator);
@@ -58,6 +56,7 @@ public class OpenWireSupport {
     public static ActiveMQTextMessage createMessage(ProducerInfo producerInfo, ActiveMQDestination destination, int priority, String payload) {
         ActiveMQTextMessage message = new ActiveMQTextMessage();
         message.setJMSPriority(priority);
+        message.setProducerId(producerInfo.getProducerId());
         message.setMessageId(new MessageId(producerInfo, ++msgIdGenerator));
         message.setDestination(destination);
         message.setPersistent(false);

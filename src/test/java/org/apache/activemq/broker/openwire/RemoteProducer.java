@@ -1,12 +1,11 @@
 package org.apache.activemq.broker.openwire;
 
-import static org.apache.activemq.broker.openwire.OpenWireSupport.createConnectionInfo;
-import static org.apache.activemq.broker.openwire.OpenWireSupport.createMessage;
-import static org.apache.activemq.broker.openwire.OpenWireSupport.createProducerInfo;
-import static org.apache.activemq.broker.openwire.OpenWireSupport.createSessionInfo;
+import static org.apache.activemq.broker.openwire.Openwire2Support.createConnectionInfo;
+import static org.apache.activemq.broker.openwire.Openwire2Support.createMessage;
+import static org.apache.activemq.broker.openwire.Openwire2Support.createProducerInfo;
+import static org.apache.activemq.broker.openwire.Openwire2Support.createSessionInfo;
 
 import java.net.URI;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.jms.JMSException;
@@ -15,15 +14,17 @@ import org.apache.activemq.Connection;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;
-import org.apache.activemq.broker.openwire.OpenWireMessageDelivery;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.ActiveMQTopic;
+import org.apache.activemq.command.BrokerInfo;
 import org.apache.activemq.command.ConnectionInfo;
+import org.apache.activemq.command.Message;
 import org.apache.activemq.command.ProducerAck;
 import org.apache.activemq.command.ProducerInfo;
 import org.apache.activemq.command.SessionInfo;
+import org.apache.activemq.command.WireFormatInfo;
 import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
 import org.apache.activemq.dispatch.IDispatcher.Dispatchable;
 import org.apache.activemq.flow.Flow;
@@ -35,7 +36,6 @@ import org.apache.activemq.flow.ISinkController.FlowUnblockListener;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
 import org.apache.activemq.queue.SingleFlowRelay;
-import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.TransportFactory;
 
 public class RemoteProducer extends Connection implements Dispatchable, FlowUnblockListener<MessageDelivery> {
@@ -61,8 +61,9 @@ public class RemoteProducer extends Connection implements Dispatchable, FlowUnbl
     private ActiveMQDestination activemqDestination;
 
     private WindowLimiter<MessageDelivery> outboundLimiter;
-
     private IFlowController<MessageDelivery> outboundController;
+
+    private SingleFlowRelay<MessageDelivery> outboundQueue;
     
     public void start() throws Exception {
         
@@ -77,18 +78,9 @@ public class RemoteProducer extends Connection implements Dispatchable, FlowUnbl
         rate.name("Producer " + name + " Rate");
         totalProducerRate.add(rate);
 
-        transport = TransportFactory.compositeConnect(uri);
-        transport.setTransportListener(this);
-        if(transport instanceof DispatchableTransport)
-        {
-            DispatchableTransport dt = ((DispatchableTransport)transport);
-            dt.setName(name + "-client-transport");
-            dt.setDispatcher(getDispatcher());
-        }
-        super.setTransport(transport);
-       
-        super.initialize();
-        transport.start();
+        initialize();
+        transport = TransportFactory.connect(uri);
+        super.start();
         
         if( destination.getDomain().equals( Router.QUEUE_DOMAIN ) ) {
             activemqDestination = new ActiveMQQueue(destination.getName().toString());
@@ -111,26 +103,15 @@ public class RemoteProducer extends Connection implements Dispatchable, FlowUnbl
     protected void initialize() {
         Flow ouboundFlow = new Flow(name, false);
         outboundLimiter = new WindowLimiter<MessageDelivery>(true, ouboundFlow, outputWindowSize, outputResumeThreshold);
-        outputQueue = new SingleFlowRelay<MessageDelivery>(ouboundFlow, name + "-outbound", outboundLimiter);
-        outboundController = outputQueue.getFlowController(ouboundFlow);
-
-        if (transport instanceof DispatchableTransport) {
-            outputQueue.setDrain(new IFlowDrain<MessageDelivery>() {
-
-                public void drain(MessageDelivery message, ISourceController<MessageDelivery> controller) {
-                    write(message);
-                }
-            });
-
-        } else {
-            blockingTransport = true;
-            blockingWriter = Executors.newSingleThreadExecutor();
-            outputQueue.setDrain(new IFlowDrain<MessageDelivery>() {
-                public void drain(final MessageDelivery message, ISourceController<MessageDelivery> controller) {
-                    write(message);
-                };
-            });
-        }
+        outboundQueue = new SingleFlowRelay<MessageDelivery>(ouboundFlow, name + "-outbound", outboundLimiter);
+        
+        outboundController = outboundQueue.getFlowController(ouboundFlow);
+        outboundQueue.setDrain(new IFlowDrain<MessageDelivery>() {
+            public void drain(MessageDelivery message, ISourceController<MessageDelivery> controller) {
+                Message msg = message.asType(Message.class);
+                write(msg);
+            }
+        });
     }
     
     public void stop() throws Exception
@@ -142,9 +123,12 @@ public class RemoteProducer extends Connection implements Dispatchable, FlowUnbl
     
     public void onCommand(Object command) {
         try {
-            if (command.getClass() == ProducerAck.class) {
+            if (command.getClass() == WireFormatInfo.class) {
+            } else if (command.getClass() == BrokerInfo.class) {
+                System.out.println("Producer "+name+" connected to "+((BrokerInfo)command).getBrokerName());
+            } else if (command.getClass() == ProducerAck.class) {
                 ProducerAck fc = (ProducerAck) command;
-                synchronized (outputQueue) {
+                synchronized (outboundQueue) {
                     outboundLimiter.onProtocolCredit(fc.getSize());
                 }
             } else {
@@ -190,7 +174,7 @@ public class RemoteProducer extends Connection implements Dispatchable, FlowUnbl
 				}
 			}
 			
-	        getSink().add(next, null);
+			outboundQueue.add(next, null);
 	        rate.increment();
 	        next = null;
 		}

@@ -11,7 +11,6 @@ import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
 import org.apache.activemq.flow.Commands.FlowControl.FlowControlBean;
 import org.apache.activemq.flow.Commands.FlowControl.FlowControlBuffer;
 import org.apache.activemq.flow.Commands.Message.MessageBean;
-import org.apache.activemq.flow.Commands.Message.MessageBuffer;
 import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.DataByteArrayInputStream;
 import org.apache.activemq.util.DataByteArrayOutputStream;
