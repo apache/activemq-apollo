@@ -39,7 +39,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
     private boolean threaded = false;
     protected final int MAX_USER_PRIORITY;
     protected final HashSet<PriorityDispatchContext> contexts = new HashSet<PriorityDispatchContext>();
-
+    
     // Set if this dispatcher is part of a dispatch pool:
     protected final PooledDispatcher<D> pooledDispatcher;
 
@@ -66,7 +66,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
 
     protected PriorityDispatcher(String name, int priorities, PooledDispatcher<D> pooledDispactcher) {
         this.name = name;
-        MAX_USER_PRIORITY = priorities;
+        MAX_USER_PRIORITY = priorities - 1;
         priorityQueue = new PriorityLinkedList<PriorityDispatchContext>(MAX_USER_PRIORITY + 1, PRIORITY_MAPPER);
         foreignQueue = createForeignEventQueue();
         for (int i = 0; i < 2; i++) {
@@ -94,6 +94,15 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
                         chooseDispatcher().dispatch(new RunnableAdapter(runnable), priority);
                     }
                 };
+            }
+
+            public int getDispatchPriorities() {
+                // TODO Auto-generated method stub
+                return numPriorities;
+            }
+
+            public void execute(Runnable command) {
+                chooseDispatcher().dispatch(new RunnableAdapter(command), 0);
             }
         };
     }
@@ -124,6 +133,10 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
 
     public void setThreaded(boolean threaded) {
         this.threaded = threaded;
+    }
+
+    public int getDispatchPriorities() {
+        return MAX_USER_PRIORITY;
     }
 
     private class UpdateEvent extends ForeignEvent {
@@ -197,8 +210,12 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
 
         // Inform the dispatcher that we have started:
         pooledDispatcher.onDispatcherStarted((D) this);
+
         PriorityDispatchContext pdc;
         try {
+            final int MAX_DISPATCH_PER_LOOP = 20;
+            int processed = 0;
+
             while (running) {
                 pdc = priorityQueue.poll();
                 // If no local work available wait for foreign work:
@@ -210,9 +227,9 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
                     }
 
                     while (!pdc.dispatch()) {
-                        // If there is a higher priority dispatchable stop
-                        // processing this one:
-                        if (pdc.listPrio < priorityQueue.getHighestPriority()) {
+                        processed++;
+                        if (processed > MAX_DISPATCH_PER_LOOP || pdc.listPrio < priorityQueue.getHighestPriority()) {
+                            // Give other dispatchables a shot:
                             // May have gotten relinked by the caller:
                             if (!pdc.isLinked()) {
                                 priorityQueue.add(pdc, pdc.listPrio);
@@ -221,9 +238,16 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
                         }
                     }
 
-                    pooledDispatcher.setCurrentDispatchContext(null);
+                    if (pdc.tracker != null) {
+                        pooledDispatcher.setCurrentDispatchContext(null);
+                    }
+
+                    if (processed < MAX_DISPATCH_PER_LOOP) {
+                        continue;
+                    }
                 }
 
+                processed = 0;
                 // Execute delayed events:
                 timerHeap.executeReadyTimers();
 
@@ -275,7 +299,12 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
      * @throws Exception
      */
     protected void waitForEvents() throws Exception {
-        foreignPermits.acquire();
+        long next = timerHeap.timeToNext(TimeUnit.NANOSECONDS);
+        if (next == -1) {
+            foreignPermits.acquire();
+        } else if (next > 0) {
+            foreignPermits.tryAcquire(next, TimeUnit.NANOSECONDS);
+        }
     }
 
     /**
@@ -424,7 +453,6 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
             this.dispatchable = dispatchable;
             this.name = name;
             this.currentOwner = (D) PriorityDispatcher.this;
-            this.currentOwner.contexts.add(this);
             if (persistent) {
                 this.tracker = pooledDispatcher.getLoadBalancer().createExecutionTracker((PooledDispatchContext<D>) this);
             } else {
@@ -433,6 +461,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
             updateEvent = createUpdateEvent();
             updateEvent[0] = new UpdateEvent(this);
             updateEvent[1] = new UpdateEvent(this);
+            currentOwner.takeOwnership(this);
         }
 
         @SuppressWarnings("unchecked")

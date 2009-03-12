@@ -28,6 +28,7 @@ import org.apache.activemq.flow.IFlowLimiter.UnThrottleListener;
  */
 public class FlowController<E> implements IFlowController<E> {
 
+    private static final Executor DEFAULT_EXECUTOR = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     // Sinks that are blocking us.
     private final HashSet<ISinkController<E>> blockingSinks = new HashSet<ISinkController<E>>();
 
@@ -77,6 +78,7 @@ public class FlowController<E> implements IFlowController<E> {
     private boolean throttleReg;
     private boolean notifyUnblock = false;
     private String name;
+    private Executor executor = DEFAULT_EXECUTOR;
 
     public FlowController() {
         this.unthrottleListener = new UnThrottleListener() {
@@ -226,14 +228,16 @@ public class FlowController<E> implements IFlowController<E> {
             if (okToAdd(elem)) {
                 ok = true;
                 if (limiter.add(elem)) {
-                    setUnThrottleListener();
                     blockSource(sourceController);
                 }
             } else {
                 // Add to overflow queue and block source:
                 overflowQueue.add(elem);
-                setUnThrottleListener();
-                blockSource(sourceController);
+                if (sourceController != null) {
+                    blockSource(sourceController);
+                } else if (!resuming) {
+                    setUnThrottleListener();
+                }
             }
         }
         if (ok) {
@@ -263,12 +267,10 @@ public class FlowController<E> implements IFlowController<E> {
             if (okToAdd(elem)) {
                 if (limiter.add(elem)) {
                     blockSource(sourceController);
-                    setUnThrottleListener();
                 }
                 ok = true;
             } else {
                 blockSource(sourceController);
-                setUnThrottleListener();
             }
         }
         if (ok) {
@@ -313,10 +315,14 @@ public class FlowController<E> implements IFlowController<E> {
             return;
         }
 
-        // If we are currently in the process of resuming we
-        // must wait for resume to complete, before we add to
-        // the blocked list:
-        waitForResume();
+        // TODO This could allow a single source to completely overflow the
+        // queue
+        // during resume
+        if (resuming) {
+            return;
+        }
+
+        setUnThrottleListener();
 
         if (!blockedSources.contains(source)) {
             // System.out.println("BLOCKING  : SINK[" + this + "], SOURCE[" +
@@ -361,28 +367,13 @@ public class FlowController<E> implements IFlowController<E> {
      */
     public final boolean addUnblockListener(FlowUnblockListener<E> listener) {
         synchronized (mutex) {
-            waitForResume();
-            if (limiter.getThrottled() || !overflowQueue.isEmpty()) {
+            if (!resuming && (limiter.getThrottled() || !overflowQueue.isEmpty())) {
+                setUnThrottleListener();
                 unblockListeners.add(listener);
                 return true;
             }
         }
         return false;
-    }
-
-    private final void waitForResume() {
-        boolean interrupted = false;
-        while (resuming) {
-            try {
-                mutex.wait();
-            } catch (InterruptedException e) {
-                interrupted = true;
-            }
-        }
-
-        if (interrupted) {
-            Thread.currentThread().interrupt();
-        }
     }
 
     /**
@@ -424,18 +415,12 @@ public class FlowController<E> implements IFlowController<E> {
             };
 
             try {
-                RESUME_SERVICE.execute(resume);
+                executor.execute(resume);
             } catch (RejectedExecutionException ree) {
                 // Must be shutting down, ignore this, leaving resumeScheduled
                 // true
             }
         }
-    }
-
-    private static Executor RESUME_SERVICE = Executors.newCachedThreadPool();
-
-    public static final void setFlowExecutor(Executor executor) {
-        RESUME_SERVICE = executor;
     }
 
     public String toString() {
@@ -444,5 +429,12 @@ public class FlowController<E> implements IFlowController<E> {
 
     public IFlowSink<E> getFlowSink() {
         return controllable.getFlowSink();
+    }
+
+    public void setExecutor(Executor executor) {
+        synchronized (mutex) {
+            this.executor = executor;
+        }
+
     }
 }

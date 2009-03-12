@@ -86,6 +86,28 @@ public class MultiFlowQueue<E> extends AbstractFlowQueue<E> {
         return true;
     }
 
+    public final E poll() {
+        synchronized (this) {
+            synchronized (this) {
+                SingleFlowQueue queue = peekReadyQueue();
+                if (queue == null) {
+                    return null;
+                }
+
+                E elem = queue.poll();
+                if (elem == null) {
+
+                    unreadyQueue(queue);
+                    return null;
+                }
+
+                // rotate to have fair dispatch.
+                queue.getList().rotate();
+                return elem;
+            }
+        }
+    }
+
     public final boolean isDispatchReady() {
         return !readyQueues.isEmpty();
     }

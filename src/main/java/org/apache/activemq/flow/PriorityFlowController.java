@@ -17,6 +17,7 @@
 package org.apache.activemq.flow;
 
 import java.util.ArrayList;
+import java.util.concurrent.Executor;
 
 public class PriorityFlowController<E> implements IFlowController<E> {
 
@@ -31,7 +32,7 @@ public class PriorityFlowController<E> implements IFlowController<E> {
         this.controllable = controllable;
         this.flow = flow;
         this.mutex = mutex;
-        this.limiter =  limiter;
+        this.limiter = limiter;
         this.controllers = new ArrayList<FlowController<E>>(limiter.getPriorities());
         for (int i = 0; i < limiter.getPriorities(); i++) {
             controllers.add(new FlowController<E>(controllable, flow, limiter.getPriorityLimter(i), mutex));
@@ -69,7 +70,7 @@ public class PriorityFlowController<E> implements IFlowController<E> {
     public void waitForFlowUnblock() throws InterruptedException {
         throw new UnsupportedOperationException();
     }
-    
+
     // /////////////////////////////////////////////////////////////////
     // ISourceController interface impl.
     // /////////////////////////////////////////////////////////////////
@@ -104,6 +105,12 @@ public class PriorityFlowController<E> implements IFlowController<E> {
         return false;
     }
 
+    public void setExecutor(Executor executor) {
+        for (IFlowController<E> controller : controllers) {
+            controller.setExecutor(executor);
+        }
+    }
+
     // /////////////////////////////////////////////////////////////////
     // Getters and Setters
     // /////////////////////////////////////////////////////////////////
@@ -111,4 +118,5 @@ public class PriorityFlowController<E> implements IFlowController<E> {
     public IFlowSink<E> getFlowSink() {
         return controllable.getFlowSink();
     }
+
 }

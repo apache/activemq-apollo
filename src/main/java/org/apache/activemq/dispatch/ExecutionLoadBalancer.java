@@ -16,23 +16,54 @@
  */
 package org.apache.activemq.dispatch;
 
+
+import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
 import org.apache.activemq.dispatch.PooledDispatcher.PooledDispatchContext;
 
 public interface ExecutionLoadBalancer<D extends IDispatcher> {
 
     public interface ExecutionTracker<D extends IDispatcher> {
+        
+        /**
+         * Should be called when a {@link DispatchContext#requestDispatch()} is called.
+         * This assists the load balancer in determining relationships between {@link DispatchContext}s
+         * @param caller The calling dispatcher
+         * @param context The context from which the dispatch is requested.
+         */
         public void onDispatchRequest(D caller, PooledDispatchContext<D> context);
 
+        /**
+         * Must be called by the dispatcher when a {@link DispatchContext} is closed.
+         */
         public void close();
     }
+    
+    /**
+     * Must be called by a dispatch thread when it starts
+     * @param dispatcher The dispatcher
+     */
+    public void onDispatcherStarted(D dispatcher);
 
-    public void addDispatcher(D dispatcher);
+    /**
+     * Must be called by a dispatch thread when it stops
+     * @param dispatcher The dispatcher
+     */
+    public void onDispatcherStopped(D dispatcher);
 
-    public void removeDispatcher(D dispatcher);
-
+    /**
+     * Gets an {@link ExecutionTracker} for the dispatch context. 
+     * @param context
+     * @return
+     */
     public ExecutionTracker<D> createExecutionTracker(PooledDispatchContext<D> context);
 
+    /**
+     * Starts execution tracking
+     */
     public void start();
 
+    /**
+     * Stops execution tracking
+     */
     public void stop();
 }

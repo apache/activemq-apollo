@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.flow;
 
+import java.util.concurrent.Executor;
+
 public interface ISinkController<E> {
     /**
      * Defines required attributes for an entity that can be flow controlled.
@@ -90,6 +92,19 @@ public interface ISinkController<E> {
      */
     public boolean addUnblockListener(FlowUnblockListener<E> listener);
 
+    /**
+     * Gets the {@link IFlowSink} that this controller is controlling. 
+     * @return The {@link IFlowSink} that this controller is controlling.
+     */
     public IFlowSink<E> getFlowSink();
+    
+    /**
+     * Sets the executor for this {@link ISinkController}. The executor is
+     * used to resume sources blocked by this controller. An exeuctor must be
+     * set prior to using the controller.
+     * 
+     * @param executor The executor.
+     */
+    public void setExecutor(Executor executor);
 
 }

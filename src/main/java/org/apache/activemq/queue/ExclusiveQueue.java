@@ -69,22 +69,29 @@ public class ExclusiveQueue<E> extends AbstractFlowQueue<E> {
     }
 
     public final boolean pollingDispatch() {
-        E elem = null;
-        synchronized (this) {
-            elem = queue.poll();
-            // FIXME the release should really be done after dispatch.
-            // doing it here saves us from having to resynchronize
-            // after dispatch, but release limiter space too soon.
-            if (autoRelease && elem != null) {
-                controller.elementDispatched(elem);
-            }
-        }
+        E elem = poll();
 
         if (elem != null) {
             drain.drain(elem, controller);
             return true;
         } else {
             return false;
+        }
+    }
+
+    public final E poll() {
+        synchronized (this) {
+            E elem = queue.poll();
+            // FIXME the release should really be done after dispatch.
+            // doing it here saves us from having to resynchronize
+            // after dispatch, but release limiter space too soon.
+            if (elem != null) {
+                if (autoRelease) {
+                    controller.elementDispatched(elem);
+                }
+                return elem;
+            }
+            return null;
         }
     }
 

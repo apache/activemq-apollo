@@ -106,7 +106,7 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
      */
     public void onDispatcherStarted(D d) {
         dispatcher.set(d);
-        loadBalancer.addDispatcher(d);
+        loadBalancer.onDispatcherStarted(d);
     }
 
     public ExecutionLoadBalancer<D> getLoadBalancer() {
@@ -122,7 +122,7 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
                 size--;
             }
         }
-        loadBalancer.removeDispatcher(d);
+        loadBalancer.onDispatcherStopped(d);
     }
 
     protected D chooseDispatcher() {

@@ -16,9 +16,9 @@
  */
 package org.apache.activemq.queue;
 
-import org.apache.activemq.flow.IFlowSink;
+import org.apache.activemq.flow.IFlowRelay;
 
-public interface IFlowQueue<E> extends IBlockingFlowSource<E>, IPollableFlowSource<E>, IAsynchronousFlowSource<E>, IFlowSink<E> {
+public interface IFlowQueue<E> extends IBlockingFlowSource<E>, IPollableFlowSource<E>, IAsynchronousFlowSource<E>, IFlowRelay<E> {
 
     public void setDispatchPriority(int priority);
 }

@@ -198,24 +198,29 @@ public class LoadBalancedFlowQueue<E> extends AbstractFlowQueue<E> {
             sink = readyConsumers.getHead().sink;
 
             // Get the next elem:
-            elem = queue.poll();
-            if (elem == null) {
-                return false;
-            }
+            elem = poll();
 
             readyConsumers.rotate();
-
-            // FIXME the release should really be done after dispatch.
-            // doing it here saves us from having to resynchronize
-            // after dispatch, but releases limiter space too soon.
-            if (autoRelease) {
-                sinkController.elementDispatched(elem);
-            }
-
         }
 
         sink.add(elem, sourceControler);
         return true;
+    }
+
+    public final E poll() {
+        synchronized (this) {
+            E elem = queue.poll();
+            // FIXME the release should really be done after dispatch.
+            // doing it here saves us from having to resynchronize
+            // after dispatch, but release limiter space too soon.
+            if (elem != null) {
+                if (autoRelease) {
+                    sinkController.elementDispatched(elem);
+                }
+                return elem;
+            }
+            return null;
+        }
     }
 
     public final void addSink(IFlowSink<E> sink) {

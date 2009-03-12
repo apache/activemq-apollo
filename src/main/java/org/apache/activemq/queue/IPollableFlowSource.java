@@ -52,4 +52,11 @@ public interface IPollableFlowSource<E> extends IFlowSource<E> {
      */
     public boolean isDispatchReady();
 
+    /**
+     * Polls for the next element
+     * 
+     * @return The next element or null if none are ready
+     */
+    public E poll();
+
 }

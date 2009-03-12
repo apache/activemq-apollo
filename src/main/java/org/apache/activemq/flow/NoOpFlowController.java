@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.flow;
 
+import java.util.concurrent.Executor;
 
 public class NoOpFlowController<E> implements ISinkController<E> {
     private final IFlowSource<E> source;
@@ -88,5 +89,9 @@ public class NoOpFlowController<E> implements ISinkController<E> {
 
     public IFlowSink<E> getFlowSink() {
         return null;
+    }
+
+    public void setExecutor(Executor executor) {
+        // Don't need an executor since we don't block.
     }
 }

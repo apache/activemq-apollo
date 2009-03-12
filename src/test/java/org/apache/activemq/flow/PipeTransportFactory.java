@@ -87,7 +87,7 @@ public class PipeTransportFactory extends TransportFactory {
         public void oneway(Object command) throws IOException {
 
             try {
-                if( wireFormat!=null ) {
+                if (wireFormat != null) {
                     pipe.write(wireFormat.marshal(command));
                 } else {
                     pipe.write(command);
@@ -110,11 +110,12 @@ public class PipeTransportFactory extends TransportFactory {
                         pipe.setReadReadyListener(this);
                         return true;
                     } else {
-                        if( wireFormat!=null ) {
-                            listener.onCommand(wireFormat.unmarshal((ByteSequence)o));
+                        if (wireFormat != null) {
+                            listener.onCommand(wireFormat.unmarshal((ByteSequence) o));
                         } else {
                             listener.onCommand(o);
                         }
+                        return false;
                     }
                 } catch (IOException e) {
                     listener.onException(e);
@@ -192,6 +193,10 @@ public class PipeTransportFactory extends TransportFactory {
         public void setWireFormat(WireFormat wireFormat) {
             this.wireFormat = wireFormat;
         }
+
+        public void setDispatchPriority(int priority) {
+            readContext.updatePriority(priority);
+        }
     }
 
     private class PipeTransportServer implements TransportServer {
@@ -243,7 +248,7 @@ public class PipeTransportFactory extends TransportFactory {
             rc.setRemoteAddress(remoteAddress);
             PipeTransport serverSide = new PipeTransport(pipe.connect());
             serverSide.setRemoteAddress(remoteAddress);
-            if( wireFormatFactory!=null ) {
+            if (wireFormatFactory != null) {
                 rc.setWireFormat(wireFormatFactory.createWireFormat());
                 serverSide.setWireFormat(wireFormatFactory.createWireFormat());
             }
@@ -268,7 +273,7 @@ public class PipeTransportFactory extends TransportFactory {
             PipeTransportServer server = new PipeTransportServer();
             server.setConnectURI(uri);
             server.setName(node);
-            if( options.containsKey("wireFormat") ) {
+            if (options.containsKey("wireFormat")) {
                 server.setWireFormatFactory(createWireFormatFactory(options));
             }
             servers.put(node, server);

@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.flow;
 
+import java.util.concurrent.Executor;
+
 public interface IFlowSink<E> extends IFlowResource {
     /**
      * Adds an element to the sink. If limiter space in the sink is overflowed
@@ -39,4 +41,15 @@ public interface IFlowSink<E> extends IFlowResource {
      * @return false if the element wasn't accepted.
      */
     public boolean offer(E elem, ISourceController<E> source);
+
+    /**
+     * Sets the executor to be used by the sink's {@link IFlowController}s.
+     * Implementors must set the provided executor for all of the controllers
+     * that it has open.
+     * 
+     * @param executor
+     *            The executor.
+     * @see ISinkController#setExecutor(Executor)
+     */
+    public void setFlowExecutor(Executor executor);
 }

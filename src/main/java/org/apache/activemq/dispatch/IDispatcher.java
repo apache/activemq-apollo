@@ -20,7 +20,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
-public interface IDispatcher {
+public interface IDispatcher extends Executor{
 
     /**
      * This interface is implemented by Dispatchable entities. A Dispatchable
@@ -114,6 +114,13 @@ public interface IDispatcher {
      */
     public DispatchContext register(Dispatchable dispatchable, String name);
 
+    /**
+     * Gets the number of dispatch priorities. Dispatch priorities are 0 based, 
+     * so if the number of dispatch priorities is 10, the maxium is 9.
+     * @return the number of dispatch priorities.
+     */
+    public int getDispatchPriorities();
+    
     /**
      * Creates an executor that will execute its tasks at the specified
      * priority.

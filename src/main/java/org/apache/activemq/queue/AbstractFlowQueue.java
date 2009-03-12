@@ -52,12 +52,10 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
 
     public final boolean dispatch() {
 
-        while (pollingDispatch())
-            ;
+        // while (pollingDispatch());
+        // return true;
 
-        return true;
-
-        // return !pollingDispatch();
+        return !pollingDispatch();
     }
 
     public final IFlowSink<E> getFlowSink() {
@@ -87,6 +85,7 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
         this.dispatcher = dispatcher;
         dispatchContext = dispatcher.register(this, getResourceName());
         dispatchContext.updatePriority(dispatchPriority);
+        super.setFlowExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
     }
 
     public synchronized final void setDispatchPriority(int priority) {
@@ -125,13 +124,6 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
         }
 
         synchronized (this) {
-            if (dispatchContext != null) {
-                if (!dispatching) {
-                    dispatching = true;
-                    dispatchContext.requestDispatch();
-                }
-                return;
-            }
 
             if (notifyReady) {
                 notify();

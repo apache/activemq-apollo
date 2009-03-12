@@ -23,7 +23,7 @@ import org.apache.activemq.dispatch.PooledDispatcher.PooledDispatchContext;
 
 public class SimpleLoadBalancer<D extends IDispatcher> implements ExecutionLoadBalancer<D> {
 
-    private final boolean DEBUG = false;
+    private final boolean DEBUG = true;
 
     public SimpleLoadBalancer() {
     }
@@ -44,11 +44,11 @@ public class SimpleLoadBalancer<D extends IDispatcher> implements ExecutionLoadB
         }
     }
 
-    public void addDispatcher(D dispatcher) {
+    public void onDispatcherStarted(D dispatcher) {
 
     }
 
-    public void removeDispatcher(D dispatcher) {
+    public void onDispatcherStopped(D dispatcher) {
 
     }
 
@@ -57,7 +57,7 @@ public class SimpleLoadBalancer<D extends IDispatcher> implements ExecutionLoadB
 
     public void stop() {
     }
-
+    
     public ExecutionTracker<D> createExecutionTracker(PooledDispatchContext<D> context) {
         return new SimpleExecutionTracker<D>(context);
     }

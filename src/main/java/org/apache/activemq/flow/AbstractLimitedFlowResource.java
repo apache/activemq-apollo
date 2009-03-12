@@ -18,8 +18,10 @@ package org.apache.activemq.flow;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.concurrent.Executor;
 
 public abstract class AbstractLimitedFlowResource<E> implements IFlowResource {
+    private Executor flowExecutor = null;
     private final HashSet<FlowLifeCycleListener> lifeCycleWatchers = new HashSet<FlowLifeCycleListener>();
     private final HashMap<Flow, IFlowController<E>> openControllers = new HashMap<Flow, IFlowController<E>>();
 
@@ -63,24 +65,35 @@ public abstract class AbstractLimitedFlowResource<E> implements IFlowResource {
      *            The new controller.
      */
     protected synchronized final void onFlowOpened(IFlowController<E> controller) {
-    	IFlowController<E> existing = openControllers.put(controller.getFlow(), controller);
+        IFlowController<E> existing = openControllers.put(controller.getFlow(), controller);
         if (existing != null && existing != controller) {
             // Put the existing controller back:
             openControllers.put(controller.getFlow(), existing);
             throw new IllegalStateException("Flow already opened" + existing);
         }
-
+        if (flowExecutor != null) {
+            controller.setExecutor(flowExecutor);
+        }
         for (FlowLifeCycleListener listener : lifeCycleWatchers) {
             listener.onFlowOpened(this, controller.getFlow());
         }
     }
 
     protected synchronized final void onFlowClosed(Flow flow) {
-    	IFlowController<E> existing = openControllers.remove(flow);
+        IFlowController<E> existing = openControllers.remove(flow);
 
         if (existing != null) {
             for (FlowLifeCycleListener listener : lifeCycleWatchers) {
                 listener.onFlowClosed(this, existing.getFlow());
+            }
+        }
+    }
+
+    public synchronized final void setFlowExecutor(Executor executor) {
+        if (executor != flowExecutor) {
+            flowExecutor = executor;
+            for (IFlowController<E> controller : openControllers.values()) {
+                controller.setExecutor(flowExecutor);
             }
         }
     }

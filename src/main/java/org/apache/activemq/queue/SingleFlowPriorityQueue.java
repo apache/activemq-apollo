@@ -88,23 +88,28 @@ public class SingleFlowPriorityQueue<E> extends AbstractFlowQueue<E> {
     }
 
     public boolean pollingDispatch() {
-        PriorityNode elem = null;
-        synchronized (this) {
-            elem = queue.poll();
-            updatePriority();
-            // FIXME the release should really be done after dispatch.
-            // doing it here saves us from having to resynchronize
-            // after dispatch, but release limiter space too soon.
-            if (autoRelease && elem != null) {
-                controller.elementDispatched(elem.elem);
-            }
-        }
-
+        E elem = poll();
         if (elem != null) {
-            drain.drain(elem.elem, controller);
+            drain.drain(elem, controller);
             return true;
         } else {
             return false;
+        }
+    }
+
+    public final E poll() {
+        synchronized (this) {
+            PriorityNode node = queue.poll();
+            // FIXME the release should really be done after dispatch.
+            // doing it here saves us from having to resynchronize
+            // after dispatch, but release limiter space too soon.
+            if (node != null) {
+                if (autoRelease) {
+                    controller.elementDispatched(node.elem);
+                }
+                return node.elem;
+            }
+            return null;
         }
     }
 

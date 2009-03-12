@@ -9,7 +9,7 @@ import org.apache.activemq.metric.MetricCounter;
 import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.TransportFactory;
 
-public class RemoteConsumer extends RemoteConnection{
+public class RemoteConsumer extends ClientConnection {
 
     private final MetricCounter consumerRate = new MetricCounter();
 
@@ -18,52 +18,35 @@ public class RemoteConsumer extends RemoteConnection{
     private Destination destination;
     private String selector;
 
-    private boolean schedualWait;
-    
+    private boolean schedualWait = true;
+
     public void start() throws Exception {
         consumerRate.name("Consumer " + name + " Rate");
         totalConsumerRate.add(consumerRate);
-
-        URI uri = broker.getConnectURI();
-        transport = TransportFactory.compositeConnect(uri);
-        if(transport instanceof DispatchableTransport)
-        {
-            DispatchableTransport dt = ((DispatchableTransport)transport);
-            dt.setName(name);
-            dt.setDispatcher(getDispatcher());
-            schedualWait = true;
-        }
-        transport.setTransportListener(this);
-        transport.start();
-        
-        // Let the remote side know our name.
-        transport.oneway(name);
-        // Sending the destination acts as the subscribe.
-        transport.oneway(destination);
-        super.initialize();
+        super.start();
+        // subscribe:
+        write(destination);
     }
-    
+
     protected void messageReceived(final ISourceController<Message> controller, final Message elem) {
-        if( schedualWait ) {
+        if (schedualWait) {
             if (thinkTime > 0) {
-                getDispatcher().schedule(new Runnable(){
+                getDispatcher().schedule(new Runnable() {
 
                     public void run() {
                         consumerRate.increment();
                         controller.elementDispatched(elem);
                     }
-                    
+
                 }, thinkTime, TimeUnit.MILLISECONDS);
-                
-            }
-            else
-            {
+
+            } else {
                 consumerRate.increment();
                 controller.elementDispatched(elem);
             }
 
         } else {
-            if( thinkTime>0 ) {
+            if (thinkTime > 0) {
                 try {
                     Thread.sleep(thinkTime);
                 } catch (InterruptedException e) {
@@ -72,6 +55,10 @@ public class RemoteConsumer extends RemoteConnection{
             consumerRate.increment();
             controller.elementDispatched(elem);
         }
+    }
+
+    public MetricCounter getRate() {
+        return consumerRate;
     }
 
     public void setName(String name) {
@@ -112,4 +99,5 @@ public class RemoteConsumer extends RemoteConnection{
 
     public void setSelector(String selector) {
         this.selector = selector;
-    }}
+    }
+}

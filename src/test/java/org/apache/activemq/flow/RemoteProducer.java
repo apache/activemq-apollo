@@ -1,6 +1,5 @@
 package org.apache.activemq.flow;
 
-import java.net.URI;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
@@ -9,11 +8,8 @@ import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.ISinkController.FlowUnblockListener;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
-import org.apache.activemq.transport.DispatchableTransport;
-import org.apache.activemq.transport.TransportFactory;
 
-public class RemoteProducer extends RemoteConnection implements Dispatchable, FlowUnblockListener<Message>{
-
+public class RemoteProducer extends ClientConnection implements Dispatchable, FlowUnblockListener<Message> {
 
     private final MetricCounter rate = new MetricCounter();
 
@@ -29,103 +25,83 @@ public class RemoteProducer extends RemoteConnection implements Dispatchable, Fl
     private DispatchContext dispatchContext;
 
     private String filler;
-    private int payloadSize = 20;
-    
+    private int payloadSize = 0;
+    IFlowController<Message> outboundController;
+
     public void start() throws Exception {
-        
-        if( payloadSize>0 ) {
+
+        if (payloadSize > 0) {
             StringBuilder sb = new StringBuilder(payloadSize);
-            for( int i=0; i < payloadSize; ++i) {
-                sb.append((char)('a'+(i%26)));
+            for (int i = 0; i < payloadSize; ++i) {
+                sb.append((char) ('a' + (i % 26)));
             }
             filler = sb.toString();
         }
-        
+
         rate.name("Producer " + name + " Rate");
         totalProducerRate.add(rate);
 
-        URI uri = broker.getConnectURI();
-        transport = TransportFactory.compositeConnect(uri);
-        transport.setTransportListener(this);
-        if(transport instanceof DispatchableTransport)
-        {
-            DispatchableTransport dt = ((DispatchableTransport)transport);
-            dt.setName(name + "-client-transport");
-            dt.setDispatcher(getDispatcher());
-        }
-        super.setTransport(transport);
-       
-        super.initialize();
-        transport.start();
-        // Let the remote side know our name.
-        transport.oneway(name);
+        super.start();
+        outboundController = outputQueue.getFlowController(outboundFlow);
         dispatchContext = getDispatcher().register(this, name + "-client");
         dispatchContext.requestDispatch();
     }
-    
-    public void stop() throws Exception
-    {
-    	dispatchContext.close(false);
-    	super.stop();
+
+    public void stop() throws Exception {
+        dispatchContext.close(false);
+        super.stop();
     }
 
-	public void onFlowUnblocked(ISinkController<Message> controller) {
-		dispatchContext.requestDispatch();
-	}
+    public void onFlowUnblocked(ISinkController<Message> controller) {
+        dispatchContext.requestDispatch();
+    }
 
-	public boolean dispatch() {
-		while(true)
-		{
-			
-			if(next == null)
-			{
-	            int priority = this.priority;
-	            if (priorityMod > 0) {
-	                priority = counter % priorityMod == 0 ? 0 : priority;
-	            }
-	
-	            next = new Message(messageIdGenerator.getAndIncrement(), producerId, createPayload(), null, destination, priority);
-	            if (property != null) {
-	                next.setProperty(property);
-	            }
-			}
-	        
-			//If flow controlled stop until flow control is lifted.
-			if(outboundController.isSinkBlocked())
-			{
-				if(outboundController.addUnblockListener(this))
-				{
-					return true;
-				}
-			}
-			
-	        getSink().add(next, null);
-	        rate.increment();
-	        next = null;
-		}
-	}
+    public boolean dispatch() {
+        while (true) {
+
+            if (next == null) {
+                int priority = this.priority;
+                if (priorityMod > 0) {
+                    priority = counter % priorityMod == 0 ? 0 : priority;
+                }
+
+                next = new Message(messageIdGenerator.getAndIncrement(), producerId, createPayload(), null, destination, priority);
+                if (property != null) {
+                    next.setProperty(property);
+                }
+            }
+
+            // If flow controlled stop until flow control is lifted.
+            if (outboundController.isSinkBlocked()) {
+                if (outboundController.addUnblockListener(this)) {
+                    return true;
+                }
+            }
+
+            getSink().add(next, null);
+            rate.increment();
+            next = null;
+            return false;
+        }
+    }
 
     private String createPayload() {
-        if( payloadSize>=0 ) {
+        if (payloadSize >= 0) {
             StringBuilder sb = new StringBuilder(payloadSize);
             sb.append(name);
             sb.append(':');
             sb.append(++counter);
             sb.append(':');
             int length = sb.length();
-            if( length <= payloadSize ) {
-                sb.append(filler.subSequence(0, payloadSize-length));
+            if (length <= payloadSize) {
+                sb.append(filler.subSequence(0, payloadSize - length));
                 return sb.toString();
             } else {
-               return sb.substring(0, payloadSize); 
+                return sb.substring(0, payloadSize);
             }
         } else {
-            return name+":"+(++counter);
+            return name + ":" + (++counter);
         }
-    }
-	
-	public void setName(String name) {
-        this.name = name;
     }
 
     public AtomicLong getMessageIdGenerator() {
@@ -195,5 +171,9 @@ public class RemoteProducer extends RemoteConnection implements Dispatchable, Fl
     public void setPayloadSize(int messageSize) {
         this.payloadSize = messageSize;
     }
-}
 
+    @Override
+    protected void messageReceived(ISourceController<Message> controller, Message elem) {
+        controller.elementDispatched(elem);
+    }
+}

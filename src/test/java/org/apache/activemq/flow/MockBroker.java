@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.dispatch.IDispatcher;
+import org.apache.activemq.dispatch.PriorityDispatcher;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.transport.DispatchableTransportServer;
 import org.apache.activemq.transport.Transport;
@@ -29,7 +30,7 @@ import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
 
-class MockBroker implements TransportAcceptListener {
+public class MockBroker implements TransportAcceptListener {
 
     public interface DeliveryTarget {
         public IFlowSink<Message> getSink();
@@ -39,17 +40,24 @@ class MockBroker implements TransportAcceptListener {
 
     final Router router = new Router();
 
-    final ArrayList<RemoteConnection> connections = new ArrayList<RemoteConnection>();
-    final ArrayList<RemoteProducer> producers = new ArrayList<RemoteProducer>();
-    final ArrayList<RemoteConsumer> consumers = new ArrayList<RemoteConsumer>();
+    final ArrayList<BrokerConnection> connections = new ArrayList<BrokerConnection>();
     final ArrayList<BrokerConnection> brokerConnections = new ArrayList<BrokerConnection>();
     final HashMap<Destination, MockQueue> queues = new HashMap<Destination, MockQueue>();
 
     private TransportServer transportServer;
     private String uri;
     private String name;
-    private IDispatcher dispatcher;
+    protected IDispatcher dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean();
+    private boolean useInputQueues = false;
+
+    public boolean isUseInputQueues() {
+        return useInputQueues;
+    }
+
+    public void setUseInputQueues(boolean useInputQueues) {
+        this.useInputQueues = useInputQueues;
+    }
 
     public String getName() {
         return name;
@@ -68,35 +76,34 @@ class MockBroker implements TransportAcceptListener {
         queues.put(queue.getDestination(), queue);
     }
 
-//    public void createClusterConnection(Destination destination) {
-//        RemoteConsumer c = new RemoteConsumer(this.mockBrokerTest, "consumer" + ++consumerCounter, this, destination);
-//        consumers.add(c);
-//        router.bind(c, destination);
-//    }
-//    public void createBrokerConnection(MockBroker target, Pipe<Message> pipe) {
-//        BrokerConnection bc = this.mockBrokerTest.new BrokerConnection(this, target, pipe);
-//        // Set up the pipe for polled access
-//        if (dispatchMode != AbstractTestConnection.BLOCKING) {
-//            pipe.setMode(Pipe.POLLING);
-//        }
-//        // Add subscriptions for the target's destinations:
-//        for (Destination d : target.router.lookupTable.keySet()) {
-//            router.bind(bc, d);
-//        }
-//        brokerConns.add(bc);
-//    }
+    // public void createClusterConnection(Destination destination) {
+    // RemoteConsumer c = new RemoteConsumer(this.mockBrokerTest, "consumer" +
+    // ++consumerCounter, this, destination);
+    // consumers.add(c);
+    // router.bind(c, destination);
+    // }
+    // public void createBrokerConnection(MockBroker target, Pipe<Message> pipe)
+    // {
+    // BrokerConnection bc = this.mockBrokerTest.new BrokerConnection(this,
+    // target, pipe);
+    // // Set up the pipe for polled access
+    // if (dispatchMode != AbstractTestConnection.BLOCKING) {
+    // pipe.setMode(Pipe.POLLING);
+    // }
+    // // Add subscriptions for the target's destinations:
+    // for (Destination d : target.router.lookupTable.keySet()) {
+    // router.bind(bc, d);
+    // }
+    // brokerConns.add(bc);
+    // }
 
-    final void stopServices() throws Exception {
+    public final void stopServices() throws Exception {
+        AbstractTestConnection.setInShutdown(true, dispatcher);
+
         stopping.set(true);
         transportServer.stop();
-        
-        for (RemoteProducer connection : producers) {
-            connection.stop();
-        }
-        for (RemoteConsumer connection : consumers) {
-            connection.stop();
-        }
-        for (RemoteConnection connection : connections) {
+
+        for (BrokerConnection connection : connections) {
             connection.stop();
         }
         for (BrokerConnection connection : brokerConnections) {
@@ -105,13 +112,10 @@ class MockBroker implements TransportAcceptListener {
         for (MockQueue queue : queues.values()) {
             queue.stop();
         }
-        dispatcher.shutdown();
-
     }
 
-    final void startServices() throws Exception {
-
-        dispatcher.start();
+    public final void startServices() throws Exception {
+        AbstractTestConnection.setInShutdown(false, dispatcher);
 
         transportServer = TransportFactory.bind(new URI(uri));
         transportServer.setAcceptListener(this);
@@ -124,25 +128,18 @@ class MockBroker implements TransportAcceptListener {
             queue.start();
         }
 
-        for (RemoteConsumer connection : consumers) {
-            connection.start();
-        }
-
-        for (RemoteProducer connection : producers) {
-            connection.start();
-        }
-
         for (BrokerConnection connection : brokerConnections) {
             connection.start();
         }
     }
 
     public void onAccept(final Transport transport) {
-        RemoteConnection connection = new RemoteConnection();
+        BrokerConnection connection = new BrokerConnection();
         connection.setBroker(this);
         connection.setTransport(transport);
         connection.setPriorityLevels(MockBrokerTest.PRIORITY_LEVELS);
         connection.setDispatcher(dispatcher);
+        connection.setUseInputQueue(useInputQueues);
         connections.add(connection);
         try {
             connection.start();
@@ -182,6 +179,48 @@ class MockBroker implements TransportAcceptListener {
 
     public boolean isStopping() {
         return stopping.get();
+    }
+
+    protected void createDispatcher() {
+        if (dispatcher == null) {
+            dispatcher = PriorityDispatcher.createPriorityDispatchPool("BrokerDispatcher", Message.MAX_PRIORITY, Runtime.getRuntime().availableProcessors());
+        }
+    }
+
+    /**
+     * Run the broker as a standalone app
+     * 
+     * @param args
+     *            The arguments.
+     */
+    public static void main(String[] args) {
+        if (args.length < 1) {
+            System.err.println("Must supply a bind uri");
+        }
+        String uri = args[0];
+
+        final MockBroker broker = new MockBroker();
+        broker.setUri(uri);
+        broker.setName("Broker");
+        broker.createDispatcher();
+        try {
+            broker.getDispatcher().start();
+            broker.startServices();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                try {
+                    broker.stopServices();
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
 }
