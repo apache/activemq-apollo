@@ -60,7 +60,6 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.selector.SelectorParser;
 import org.apache.activemq.state.CommandVisitor;
-import org.apache.activemq.transport.DispatchableTransport;
 
 public class OpenwireBrokerConnection extends BrokerConnection {
 
@@ -363,25 +362,20 @@ public class OpenwireBrokerConnection extends BrokerConnection {
                 }
             };
             queue = new SingleFlowRelay<MessageDelivery>(flow, name + "-outbound", limiter);
-            if (transport instanceof DispatchableTransport) {
-                queue.setDrain(new IFlowDrain<MessageDelivery>() {
-                    public void drain(MessageDelivery message, ISourceController<MessageDelivery> controller) {
-                        write(message);
-                    }
-                });
-
-            } else {
-                queue.setDrain(new IFlowDrain<MessageDelivery>() {
-                    public void drain(final MessageDelivery message, ISourceController<MessageDelivery> controller) {
-                        write(message);
-                    };
-                });
-            }
+            queue.setDrain(new IFlowDrain<MessageDelivery>() {
+                public void drain(final MessageDelivery message, ISourceController<MessageDelivery> controller) {
+                    Message msg = message.asType(Message.class);
+                    MessageDispatch md = new MessageDispatch();
+                    md.setConsumerId(info.getConsumerId());
+                    md.setMessage(msg);
+                    md.setDestination(msg.getDestination());
+                    write(md);
+                };
+            });
         }
 
         public IFlowSink<MessageDelivery> getSink() {
-            // TODO Auto-generated method stub
-            return null;
+            return queue;
         }
 
         public boolean match(MessageDelivery message) {

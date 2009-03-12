@@ -1,8 +1,8 @@
 package org.apache.activemq.broker.openwire;
 
-import static org.apache.activemq.broker.openwire.Openwire2Support.createConnectionInfo;
-import static org.apache.activemq.broker.openwire.Openwire2Support.createConsumerInfo;
-import static org.apache.activemq.broker.openwire.Openwire2Support.createSessionInfo;
+import static org.apache.activemq.broker.openwire.OpenwireSupport.createConnectionInfo;
+import static org.apache.activemq.broker.openwire.OpenwireSupport.createConsumerInfo;
+import static org.apache.activemq.broker.openwire.OpenwireSupport.createSessionInfo;
 
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
@@ -17,6 +17,7 @@ import org.apache.activemq.command.ActiveMQTopic;
 import org.apache.activemq.command.BrokerInfo;
 import org.apache.activemq.command.ConnectionInfo;
 import org.apache.activemq.command.ConsumerInfo;
+import org.apache.activemq.command.MessageDispatch;
 import org.apache.activemq.command.SessionInfo;
 import org.apache.activemq.command.WireFormatInfo;
 import org.apache.activemq.flow.Flow;
@@ -108,9 +109,9 @@ public class RemoteConsumer extends Connection {
             if (command.getClass() == WireFormatInfo.class) {
             } else if (command.getClass() == BrokerInfo.class) {
                 System.out.println("Consumer "+name+" connected to "+((BrokerInfo)command).getBrokerName());
-            } else if (command.getClass() == MessageDelivery.class) {
-                MessageDelivery msg = (MessageDelivery) command;
-                inboundController.add(msg, null);
+            } else if (command.getClass() == MessageDispatch.class) {
+                MessageDispatch msg = (MessageDispatch) command;
+                inboundController.add(new OpenWireMessageDelivery(msg.getMessage()), null);
             } else {
                 onException(new Exception("Unrecognized command: " + command));
             }

@@ -14,7 +14,7 @@ import org.apache.activemq.command.ProducerInfo;
 import org.apache.activemq.command.RemoveInfo;
 import org.apache.activemq.command.SessionInfo;
 
-public class Openwire2Support {
+public class OpenwireSupport {
     
     static private long idGenerator;
     static private long msgIdGenerator;

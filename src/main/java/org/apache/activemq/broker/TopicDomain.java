@@ -25,8 +25,8 @@ public class TopicDomain implements Domain {
         targets.add(target);
     }
 
-    public Collection<DeliveryTarget> route(MessageDelivery name) {
-        return topicsTargets.get(name);
+    public Collection<DeliveryTarget> route(MessageDelivery delivery) {
+        return topicsTargets.get(delivery.getDestination().getName());
     }
 
 }

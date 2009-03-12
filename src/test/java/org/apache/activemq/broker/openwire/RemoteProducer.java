@@ -1,9 +1,9 @@
 package org.apache.activemq.broker.openwire;
 
-import static org.apache.activemq.broker.openwire.Openwire2Support.createConnectionInfo;
-import static org.apache.activemq.broker.openwire.Openwire2Support.createMessage;
-import static org.apache.activemq.broker.openwire.Openwire2Support.createProducerInfo;
-import static org.apache.activemq.broker.openwire.Openwire2Support.createSessionInfo;
+import static org.apache.activemq.broker.openwire.OpenwireSupport.createConnectionInfo;
+import static org.apache.activemq.broker.openwire.OpenwireSupport.createMessage;
+import static org.apache.activemq.broker.openwire.OpenwireSupport.createProducerInfo;
+import static org.apache.activemq.broker.openwire.OpenwireSupport.createSessionInfo;
 
 import java.net.URI;
 import java.util.concurrent.atomic.AtomicLong;

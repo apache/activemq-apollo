@@ -21,8 +21,8 @@ public class QueueDomain implements Domain {
         queues.get(name).addConsumer(deliveryTarget);
     }
 
-    public Collection<DeliveryTarget> route(MessageDelivery name) {
-        Queue queue = queues.get(name);
+    public Collection<DeliveryTarget> route(MessageDelivery delivery) {
+        Queue queue = queues.get(delivery.getDestination().getName());
         if( queue!=null ) {
             ArrayList<DeliveryTarget> rc = new ArrayList<DeliveryTarget>(1);
             rc.add(queue);
