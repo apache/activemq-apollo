@@ -45,7 +45,7 @@ public abstract class AbstractLimitedFlowResource<E> implements IFlowResource {
         return resourceName;
     }
 
-    protected void setResourceName(String resourceName) {
+    public void setResourceName(String resourceName) {
         this.resourceName = resourceName;
     }
 
