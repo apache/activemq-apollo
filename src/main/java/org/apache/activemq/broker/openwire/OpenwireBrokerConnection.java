@@ -141,6 +141,8 @@ public class OpenwireBrokerConnection extends BrokerConnection {
                 }
 
                 public Response processMessageAck(MessageAck info) throws Exception {
+                    ConsumerContext ctx = consumers.get(info.getConsumerId());
+                    ctx.ack(info);
                     return ack(command);
                 }
 
@@ -372,6 +374,10 @@ public class OpenwireBrokerConnection extends BrokerConnection {
                     write(md);
                 };
             });
+        }
+
+        public void ack(MessageAck info) {
+            limiter.onProtocolCredit(info.getMessageCount());
         }
 
         public IFlowSink<MessageDelivery> getSink() {

@@ -21,10 +21,10 @@ abstract public class Connection implements TransportListener {
     protected String name;
 
     private int priorityLevels;
-    protected final int outputWindowSize = 1000;
-    protected final int outputResumeThreshold = 900;
-    protected final int inputWindowSize = 1000;
-    protected final int inputResumeThreshold = 500;
+    protected int outputWindowSize = 1000;
+    protected int outputResumeThreshold = 900;
+    protected int inputWindowSize = 1000;
+    protected int inputResumeThreshold = 500;
     
     private IDispatcher dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean();
@@ -62,29 +62,27 @@ abstract public class Connection implements TransportListener {
     }
     
     protected final void write(final Object o) {
-        synchronized (transport) {
-            if (blockingWriter==null) {
-                try {
-                    transport.oneway(o);
-                } catch (IOException e) {
-                    onException(e);
-                }
-            } else {
-                try {
-                    blockingWriter.execute(new Runnable() {
-                        public void run() {
-                            if (!stopping.get()) {
-                                try {
-                                    transport.oneway(o);
-                                } catch (IOException e) {
-                                    onException(e);
-                                }
+        if (blockingWriter==null) {
+            try {
+                transport.oneway(o);
+            } catch (IOException e) {
+                onException(e);
+            }
+        } else {
+            try {
+                blockingWriter.execute(new Runnable() {
+                    public void run() {
+                        if (!stopping.get()) {
+                            try {
+                                transport.oneway(o);
+                            } catch (IOException e) {
+                                onException(e);
                             }
                         }
-                    });
-                } catch (RejectedExecutionException re) {
-                    //Must be shutting down.
-                }
+                    }
+                });
+            } catch (RejectedExecutionException re) {
+                //Must be shutting down.
             }
         }
     }

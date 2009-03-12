@@ -93,7 +93,7 @@ public class RemoteProducer extends Connection implements Dispatchable, FlowUnbl
         sessionInfo = createSessionInfo(connectionInfo);
         transport.oneway(sessionInfo);
         producerInfo = createProducerInfo(sessionInfo);
-        producerInfo.setWindowSize(1024*4);
+        producerInfo.setWindowSize(outputWindowSize);
         transport.oneway(producerInfo);
         
         dispatchContext = getDispatcher().register(this, name + "-client");
@@ -101,11 +101,12 @@ public class RemoteProducer extends Connection implements Dispatchable, FlowUnbl
     }
     
     protected void initialize() {
-        Flow ouboundFlow = new Flow(name, false);
-        outboundLimiter = new WindowLimiter<MessageDelivery>(true, ouboundFlow, outputWindowSize, outputResumeThreshold);
-        outboundQueue = new SingleFlowRelay<MessageDelivery>(ouboundFlow, name + "-outbound", outboundLimiter);
+        Flow flow = new Flow(name, false);
+        outputResumeThreshold = outputWindowSize/2;
+        outboundLimiter = new WindowLimiter<MessageDelivery>(true, flow, outputWindowSize, outputResumeThreshold);
+        outboundQueue = new SingleFlowRelay<MessageDelivery>(flow, name + "-outbound", outboundLimiter);
         
-        outboundController = outboundQueue.getFlowController(ouboundFlow);
+        outboundController = outboundQueue.getFlowController(flow);
         outboundQueue.setDrain(new IFlowDrain<MessageDelivery>() {
             public void drain(MessageDelivery message, ISourceController<MessageDelivery> controller) {
                 Message msg = message.asType(Message.class);

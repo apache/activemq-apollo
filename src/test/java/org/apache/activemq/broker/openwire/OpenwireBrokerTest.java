@@ -117,9 +117,9 @@ public class OpenwireBrokerTest extends TestCase {
     }
     
     public void test_10_10_10() throws Exception {
-        producerCount = 2;
-        destCount = 2;
-        consumerCount = 2;
+        producerCount = 1;
+        destCount = 1;
+        consumerCount = 1;
 
         createConnections();
 

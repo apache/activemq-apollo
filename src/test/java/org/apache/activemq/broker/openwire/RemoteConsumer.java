@@ -13,10 +13,13 @@ import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
+import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.ActiveMQTopic;
 import org.apache.activemq.command.BrokerInfo;
 import org.apache.activemq.command.ConnectionInfo;
 import org.apache.activemq.command.ConsumerInfo;
+import org.apache.activemq.command.Message;
+import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.command.MessageDispatch;
 import org.apache.activemq.command.SessionInfo;
 import org.apache.activemq.command.WireFormatInfo;
@@ -25,7 +28,6 @@ import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.IFlowSource;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
@@ -48,12 +50,11 @@ public class RemoteConsumer extends Connection {
     private FlowController<MessageDelivery> inboundController;
 
     private ActiveMQDestination activemqDestination;
-
     private ConnectionInfo connectionInfo;
-
     private SessionInfo sessionInfo;
-
     private ConsumerInfo consumerInfo;
+
+    private Message lastMessage;
     
     public void start() throws Exception {
         consumerRate.name("Consumer " + name + " Rate");
@@ -87,7 +88,12 @@ public class RemoteConsumer extends Connection {
         
         // Setup the input processing..
         Flow flow = new Flow(name, false);
-        SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(inputWindowSize, inputResumeThreshold);
+        WindowLimiter<MessageDelivery> limiter = new WindowLimiter<MessageDelivery>(false, flow, inputWindowSize, inputResumeThreshold) {
+            protected void sendCredit(int credit) {
+                MessageAck ack = OpenwireSupport.createAck(consumerInfo, lastMessage, credit, MessageAck.STANDARD_ACK_TYPE);
+                write(ack);
+            }
+        };
         inboundController = new FlowController<MessageDelivery>(new FlowControllable<MessageDelivery>() {
             public void flowElemAccepted(ISourceController<MessageDelivery> controller, MessageDelivery elem) {
                 messageReceived(controller, elem);
@@ -111,6 +117,7 @@ public class RemoteConsumer extends Connection {
                 System.out.println("Consumer "+name+" connected to "+((BrokerInfo)command).getBrokerName());
             } else if (command.getClass() == MessageDispatch.class) {
                 MessageDispatch msg = (MessageDispatch) command;
+                lastMessage = msg.getMessage();
                 inboundController.add(new OpenWireMessageDelivery(msg.getMessage()), null);
             } else {
                 onException(new Exception("Unrecognized command: " + command));
@@ -124,12 +131,10 @@ public class RemoteConsumer extends Connection {
         if( schedualWait ) {
             if (thinkTime > 0) {
                 getDispatcher().schedule(new Runnable(){
-
                     public void run() {
                         consumerRate.increment();
                         controller.elementDispatched(elem);
                     }
-                    
                 }, thinkTime, TimeUnit.MILLISECONDS);
                 
             }
