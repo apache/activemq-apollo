@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import junit.framework.TestCase;
@@ -38,7 +39,7 @@ import org.apache.activemq.queue.Mapper;
 
 public class OpenwireBrokerTest extends TestCase {
 
-    protected static final int PERFORMANCE_SAMPLES = 3000000;
+    protected static final int PERFORMANCE_SAMPLES = 3;
 
     protected static final int IO_WORK_AMOUNT = 0;
     protected static final int FANIN_COUNT = 10;
@@ -77,7 +78,8 @@ public class OpenwireBrokerTest extends TestCase {
     protected ArrayList<Broker> brokers = new ArrayList<Broker>();
     protected IDispatcher dispatcher;
     protected final AtomicLong msgIdGenerator = new AtomicLong();
-
+    protected final AtomicBoolean stopping = new AtomicBoolean();
+    
     final ArrayList<RemoteProducer> producers = new ArrayList<RemoteProducer>();
     final ArrayList<RemoteConsumer> consumers = new ArrayList<RemoteConsumer>();
 
@@ -116,22 +118,6 @@ public class OpenwireBrokerTest extends TestCase {
         return PriorityDispatcher.createPriorityDispatchPool("BrokerDispatcher", Broker.MAX_PRIORITY, asyncThreadPoolSize);
     }
     
-    public void test_10_10_10() throws Exception {
-        producerCount = 1;
-        destCount = 1;
-        consumerCount = 1;
-
-        createConnections();
-
-        // Start 'em up.
-        startServices();
-        try {
-            reportRates();
-        } finally {
-            stopServices();
-        }
-    }
-
     public void test_1_1_0() throws Exception {
         producerCount = 1;
         destCount = 1;
@@ -226,6 +212,23 @@ public class OpenwireBrokerTest extends TestCase {
             stopServices();
         }
     }
+
+    public void test_10_10_10() throws Exception {
+        producerCount = 10;
+        destCount = 10;
+        consumerCount = 10;
+
+        createConnections();
+
+        // Start 'em up.
+        startServices();
+        try {
+            reportRates();
+        } finally {
+            stopServices();
+        }
+    }
+
 
     /**
      * Tests 2 producers sending to 1 destination with 2 consumres, but with
@@ -414,7 +417,14 @@ public class OpenwireBrokerTest extends TestCase {
     }
 
     private RemoteConsumer createConsumer(int i, Destination destination) throws URISyntaxException {
-        RemoteConsumer consumer = new RemoteConsumer();
+        RemoteConsumer consumer = new RemoteConsumer() {
+            public void onException(Exception error) {
+                if( !stopping.get() ) {
+                    System.err.println("Consumer Async Error:");
+                    error.printStackTrace();
+                }
+            }
+        };
         consumer.setUri(new URI(rcvBroker.getUri()));
         consumer.setDestination(destination);
         consumer.setName("consumer" + (i + 1));
@@ -424,7 +434,14 @@ public class OpenwireBrokerTest extends TestCase {
     }
 
     private RemoteProducer createProducer(int id, Destination destination) throws URISyntaxException {
-        RemoteProducer producer = new RemoteProducer();
+        RemoteProducer producer = new RemoteProducer() {
+            public void onException(Exception error) {
+                if( !stopping.get() ) {
+                    System.err.println("Producer Async Error:");
+                    error.printStackTrace();
+                }
+            }
+        };
         producer.setUri(new URI(sendBroker.getUri()));
         producer.setProducerId(id + 1);
         producer.setName("producer" + (id + 1));
@@ -455,14 +472,15 @@ public class OpenwireBrokerTest extends TestCase {
     }
 
     private void stopServices() throws Exception {
+        stopping.set(true);
+        for (Broker broker : brokers) {
+            broker.stop();
+        }
         for (RemoteProducer connection : producers) {
             connection.stop();
         }
         for (RemoteConsumer connection : consumers) {
             connection.stop();
-        }
-        for (Broker broker : brokers) {
-            broker.stop();
         }
         if (dispatcher != null) {
             dispatcher.shutdown();

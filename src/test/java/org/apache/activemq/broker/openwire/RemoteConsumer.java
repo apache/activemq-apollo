@@ -78,7 +78,7 @@ public class RemoteConsumer extends Connection {
         sessionInfo = createSessionInfo(connectionInfo);
         transport.oneway(sessionInfo);
         consumerInfo = createConsumerInfo(sessionInfo, activemqDestination);
-        consumerInfo.setPrefetchSize(1000);
+        consumerInfo.setPrefetchSize(inputWindowSize);
         transport.oneway(consumerInfo);
         
     }
@@ -87,6 +87,7 @@ public class RemoteConsumer extends Connection {
         
         // Setup the input processing..
         final Flow flow = new Flow("client-"+name+"-inbound", false);
+        inputResumeThreshold = inputWindowSize/2;
         WindowLimiter<MessageDelivery> limiter = new WindowLimiter<MessageDelivery>(false, flow, inputWindowSize, inputResumeThreshold) {
             protected void sendCredit(int credit) {
                 MessageAck ack = OpenwireSupport.createAck(consumerInfo, lastMessage, credit, MessageAck.STANDARD_ACK_TYPE);

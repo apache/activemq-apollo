@@ -356,7 +356,7 @@ public class OpenwireBrokerConnection extends BrokerConnection {
             selector = parseSelector(info);
 
             Flow flow = new Flow("broker-"+name+"-outbound", false);
-            limiter = new WindowLimiter<MessageDelivery>(true, flow, info.getPrefetchSize(), info.getPrefetchSize() / 2) {
+            limiter = new WindowLimiter<MessageDelivery>(true, flow, info.getPrefetchSize(), info.getPrefetchSize()/2) {
                 public int getElementSize(MessageDelivery m) {
                     return 1;
                 }
@@ -375,7 +375,9 @@ public class OpenwireBrokerConnection extends BrokerConnection {
         }
 
         public void ack(MessageAck info) {
-            limiter.onProtocolCredit(info.getMessageCount());
+            synchronized(queue) {
+                limiter.onProtocolCredit(info.getMessageCount());
+            }
         }
 
         public IFlowSink<MessageDelivery> getSink() {

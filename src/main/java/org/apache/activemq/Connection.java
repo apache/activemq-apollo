@@ -88,16 +88,14 @@ abstract public class Connection implements TransportListener {
     }
     
     public void onException(IOException error) {
-        onException((Exception) error);
-    }
-
-    public void onException(Exception error) {
         if (!isStopping()) {
-            System.out.println("RemoteConnection error: " + error);
-            error.printStackTrace();
+            onException((Exception) error);
         }
     }
 
+    public void onException(Exception error) {
+    }
+    
     public boolean isStopping(){ 
         return stopping.get();
     }
