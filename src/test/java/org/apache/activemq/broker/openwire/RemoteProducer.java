@@ -88,7 +88,7 @@ public class RemoteProducer extends Connection implements Dispatchable, FlowUnbl
             activemqDestination = new ActiveMQTopic(destination.getName().toString());
         }
         
-        connectionInfo = createConnectionInfo();
+        connectionInfo = createConnectionInfo(name);
         transport.oneway(connectionInfo);
         sessionInfo = createSessionInfo(connectionInfo);
         transport.oneway(sessionInfo);
@@ -101,10 +101,10 @@ public class RemoteProducer extends Connection implements Dispatchable, FlowUnbl
     }
     
     protected void initialize() {
-        Flow flow = new Flow(name, false);
+        Flow flow = new Flow("client-"+name+"-outbound", false);
         outputResumeThreshold = outputWindowSize/2;
         outboundLimiter = new WindowLimiter<MessageDelivery>(true, flow, outputWindowSize, outputResumeThreshold);
-        outboundQueue = new SingleFlowRelay<MessageDelivery>(flow, name + "-outbound", outboundLimiter);
+        outboundQueue = new SingleFlowRelay<MessageDelivery>(flow, flow.getFlowName(), outboundLimiter);
         
         outboundController = outboundQueue.getFlowController(flow);
         outboundQueue.setDrain(new IFlowDrain<MessageDelivery>() {

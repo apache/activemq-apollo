@@ -13,7 +13,6 @@ import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.ActiveMQTopic;
 import org.apache.activemq.command.BrokerInfo;
 import org.apache.activemq.command.ConnectionInfo;
@@ -74,7 +73,7 @@ public class RemoteConsumer extends Connection {
             activemqDestination = new ActiveMQTopic(destination.getName().toString());
         }
         
-        connectionInfo = createConnectionInfo();
+        connectionInfo = createConnectionInfo(name);
         transport.oneway(connectionInfo);
         sessionInfo = createSessionInfo(connectionInfo);
         transport.oneway(sessionInfo);
@@ -87,7 +86,7 @@ public class RemoteConsumer extends Connection {
     protected void initialize() {
         
         // Setup the input processing..
-        Flow flow = new Flow(name, false);
+        final Flow flow = new Flow("client-"+name+"-inbound", false);
         WindowLimiter<MessageDelivery> limiter = new WindowLimiter<MessageDelivery>(false, flow, inputWindowSize, inputResumeThreshold) {
             protected void sendCredit(int credit) {
                 MessageAck ack = OpenwireSupport.createAck(consumerInfo, lastMessage, credit, MessageAck.STANDARD_ACK_TYPE);
@@ -99,7 +98,7 @@ public class RemoteConsumer extends Connection {
                 messageReceived(controller, elem);
             }
             public String toString() {
-                return name;
+                return flow.getFlowName();
             }
             public IFlowSink<MessageDelivery> getFlowSink() {
                 return null;

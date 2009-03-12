@@ -325,8 +325,7 @@ public class FlowController<E> implements IFlowController<E> {
         setUnThrottleListener();
 
         if (!blockedSources.contains(source)) {
-            // System.out.println("BLOCKING  : SINK[" + this + "], SOURCE[" +
-            // source + "]");
+//            System.out.println("BLOCKING  : SINK[" + this + "], SOURCE[" + source + "]");
             blockedSources.add(source);
             source.onFlowBlock(this);
         }
@@ -391,9 +390,7 @@ public class FlowController<E> implements IFlowController<E> {
                     String was = Thread.currentThread().getName();
                     try {
                         for (ISourceController<E> source : blockedSources) {
-                            // System.out.println("UNBLOCKING: SINK[" +
-                            // FlowController.this + "], SOURCE[" + source +
-                            // "]");
+//                            System.out.println("UNBLOCKING: SINK[" + FlowController.this + "], SOURCE[" + source + "]");
                             source.onFlowResume(FlowController.this);
                         }
                         for (FlowUnblockListener<E> listener : unblockListeners) {

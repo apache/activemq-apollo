@@ -308,18 +308,16 @@ public class OpenwireBrokerConnection extends BrokerConnection {
     
     class ProducerContext {
 
-        private final ProducerInfo info;
         private IFlowController<MessageDelivery> controller;
         private String name;
 
         public ProducerContext(final ProducerInfo info) {
-            this.info = info;
             this.name = info.getProducerId().toString();
 
             // Openwire only uses credit windows at the producer level for
             // producers that request the feature.
             if (info.getWindowSize() > 0) {
-                Flow flow = new Flow(info.getProducerId().toString(), false);
+                final Flow flow = new Flow("broker-"+name+"-inbound", false);
                 WindowLimiter<MessageDelivery> limiter = new WindowLimiter<MessageDelivery>(false, flow, info.getWindowSize(), info.getWindowSize() / 2) {
                     @Override
                     protected void sendCredit(int credit) {
@@ -334,7 +332,7 @@ public class OpenwireBrokerConnection extends BrokerConnection {
                     }
 
                     public String toString() {
-                        return name;
+                        return flow.getFlowName();
                     }
                 }, flow, limiter, inboundMutex);
             } else {
@@ -357,13 +355,13 @@ public class OpenwireBrokerConnection extends BrokerConnection {
             this.name = info.getConsumerId().toString();
             selector = parseSelector(info);
 
-            Flow flow = new Flow(name, false);
+            Flow flow = new Flow("broker-"+name+"-outbound", false);
             limiter = new WindowLimiter<MessageDelivery>(true, flow, info.getPrefetchSize(), info.getPrefetchSize() / 2) {
                 public int getElementSize(MessageDelivery m) {
                     return 1;
                 }
             };
-            queue = new SingleFlowRelay<MessageDelivery>(flow, name + "-outbound", limiter);
+            queue = new SingleFlowRelay<MessageDelivery>(flow, flow.getFlowName(), limiter);
             queue.setDrain(new IFlowDrain<MessageDelivery>() {
                 public void drain(final MessageDelivery message, ISourceController<MessageDelivery> controller) {
                     Message msg = message.asType(Message.class);
@@ -450,7 +448,7 @@ public class OpenwireBrokerConnection extends BrokerConnection {
     protected void initialize() {
 
         // Setup the inbound processing..
-        Flow flow = new Flow(name, false);
+        final Flow flow = new Flow("broker-"+name+"-inbound", false);
         SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(inputWindowSize, inputResumeThreshold);
         inboundController = new FlowController<MessageDelivery>(new FlowControllableAdapter() {
             public void flowElemAccepted(ISourceController<MessageDelivery> controller, MessageDelivery elem) {
@@ -458,7 +456,7 @@ public class OpenwireBrokerConnection extends BrokerConnection {
             }
 
             public String toString() {
-                return name;
+                return flow.getFlowName();
             }
         }, flow, limiter, inboundMutex);
 

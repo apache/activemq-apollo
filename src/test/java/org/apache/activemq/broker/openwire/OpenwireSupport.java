@@ -42,9 +42,14 @@ public class OpenwireSupport {
         return info;
     }
 
+    
     public static ConnectionInfo createConnectionInfo() throws Exception {
+        return createConnectionInfo("connection:"+ (++idGenerator));
+    }
+
+    public static ConnectionInfo createConnectionInfo(String name) throws Exception {
         ConnectionInfo info = new ConnectionInfo();
-        info.setConnectionId(new ConnectionId("connection:" + (++idGenerator)));
+        info.setConnectionId(new ConnectionId(name));
         info.setClientId(info.getConnectionId().getValue());
         return info;
     }
