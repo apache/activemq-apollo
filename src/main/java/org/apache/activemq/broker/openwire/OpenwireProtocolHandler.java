@@ -23,11 +23,13 @@ import java.util.HashMap;
 import javax.jms.InvalidSelectorException;
 import javax.jms.JMSException;
 
+import org.apache.activemq.WindowLimiter;
 import org.apache.activemq.broker.BrokerConnection;
 import org.apache.activemq.broker.DeliveryTarget;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;
+import org.apache.activemq.broker.BrokerConnection.ProtocolHandler;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.BrokerId;
 import org.apache.activemq.command.BrokerInfo;
@@ -72,21 +74,45 @@ import org.apache.activemq.flow.IFlowSource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
+import org.apache.activemq.openwire.OpenWireFormat;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.selector.SelectorParser;
 import org.apache.activemq.state.CommandVisitor;
+import org.apache.activemq.transport.WireFormatNegotiator;
+import org.apache.activemq.wireformat.WireFormat;
 
-public class OpenwireBrokerConnection extends BrokerConnection {
+public class OpenwireProtocolHandler implements ProtocolHandler {
 
     protected final HashMap<ProducerId, ProducerContext> producers = new HashMap<ProducerId, ProducerContext>();
     protected final HashMap<ConsumerId, ConsumerContext> consumers = new HashMap<ConsumerId, ConsumerContext>();
 
     protected final Object inboundMutex = new Object();
     protected IFlowController<MessageDelivery> inboundController;
-//    private SingleFlowRelay<MessageDelivery> outboundQueue;
+    
+    protected BrokerConnection connection;
+    private OpenWireFormat wireFormat; 
+    
+    public void start() throws Exception {
+        // Setup the inbound processing..
+        final Flow flow = new Flow("broker-"+connection.getName()+"-inbound", false);
+        SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(connection.getInputWindowSize(), connection.getInputResumeThreshold());
+        inboundController = new FlowController<MessageDelivery>(new FlowControllableAdapter() {
+            public void flowElemAccepted(ISourceController<MessageDelivery> controller, MessageDelivery elem) {
+                route(controller, elem);
+            }
+        
+            public String toString() {
+                return flow.getFlowName();
+            }
+        }, flow, limiter, inboundMutex);
+    }
+
+    public void stop() throws Exception {
+    }
 
     public void onCommand(Object o) {
+        
         final Command command = (Command) o;
         boolean responseRequired = command.isResponseRequired();
         try {
@@ -111,7 +137,7 @@ public class OpenwireBrokerConnection extends BrokerConnection {
                 public Response processAddConsumer(ConsumerInfo info) throws Exception {
                     ConsumerContext ctx = new ConsumerContext(info);
                     consumers.put(info.getConsumerId(), ctx);
-                    broker.getRouter().bind(convert(info.getDestination()), ctx);
+                    connection.getBroker().getRouter().bind(convert(info.getDestination()), ctx);
                     return ack(command);
                 }
 
@@ -171,6 +197,19 @@ public class OpenwireBrokerConnection extends BrokerConnection {
                 // Control Methods
                 // /////////////////////////////////////////////////////////////////
                 public Response processWireFormat(WireFormatInfo info) throws Exception {
+                    
+                    // Negotiate the openwire encoding options.
+                    WireFormatNegotiator wfn = new WireFormatNegotiator(connection.getTransport(), wireFormat, 1);
+                    wfn.sendWireFormat();
+                    wfn.negociate(info);
+                    
+                    // Now that the encoding is negotiated.. let the client know the details about this
+                    // broker.
+                    BrokerInfo brokerInfo = new BrokerInfo();
+                    brokerInfo.setBrokerId(new BrokerId(connection.getBroker().getName()));
+                    brokerInfo.setBrokerName(connection.getBroker().getName());
+                    brokerInfo.setBrokerURL(connection.getBroker().getBindUri());
+                    connection.write(brokerInfo);
                     return ack(command);
                 }
 
@@ -278,11 +317,26 @@ public class OpenwireBrokerConnection extends BrokerConnection {
             if (responseRequired) {
                 ExceptionResponse response = new ExceptionResponse(e);
                 response.setCorrelationId(command.getCommandId());
-                write(response);
+                connection.write(response);
             } else {
-                onException(e);
+                connection.onException(e);
             }
 
+        }
+    }
+    
+    public void onException(Exception error) {
+        if( !connection.isStopping() ) {
+            error.printStackTrace();
+            new Thread(){
+                @Override
+                public void run() {
+                    try {
+                        connection.stop();
+                    } catch (Exception ignore) {
+                    }
+                }
+            }.start();
         }
     }
 
@@ -294,19 +348,9 @@ public class OpenwireBrokerConnection extends BrokerConnection {
         if (command.isResponseRequired()) {
             Response rc = new Response();
             rc.setCorrelationId(command.getCommandId());
-            write(rc);
+            connection.write(rc);
         }
         return null;
-    }
-
-    @Override
-    public void start() throws Exception {
-        super.start();
-        BrokerInfo info = new BrokerInfo();
-        info.setBrokerId(new BrokerId(broker.getName()));
-        info.setBrokerName(broker.getName());
-        info.setBrokerURL(broker.getUri());
-        write(info);
     }
 
     static class FlowControllableAdapter implements FlowControllable<MessageDelivery> {
@@ -338,7 +382,7 @@ public class OpenwireBrokerConnection extends BrokerConnection {
                     @Override
                     protected void sendCredit(int credit) {
                         ProducerAck ack = new ProducerAck(info.getProducerId(), credit);
-                        write(ack);
+                        connection.write(ack);
                     }
                 };
 
@@ -364,7 +408,7 @@ public class OpenwireBrokerConnection extends BrokerConnection {
         private BooleanExpression selector;
 
         private SingleFlowRelay<MessageDelivery> queue;
-        public ProtocolLimiter<MessageDelivery> limiter;
+        public WindowLimiter<MessageDelivery> limiter;
 
         public ConsumerContext(final ConsumerInfo info) throws InvalidSelectorException {
             this.info = info;
@@ -385,7 +429,7 @@ public class OpenwireBrokerConnection extends BrokerConnection {
                     md.setConsumerId(info.getConsumerId());
                     md.setMessage(msg);
                     md.setDestination(msg.getDestination());
-                    write(md);
+                    connection.write(md);
                 };
             });
         }
@@ -424,7 +468,7 @@ public class OpenwireBrokerConnection extends BrokerConnection {
         // Consider doing some caching of this target list. Most producers
         // always send to
         // the same destination.
-        Collection<DeliveryTarget> targets = broker.getRouter().route(elem);
+        Collection<DeliveryTarget> targets = connection.getBroker().getRouter().route(elem);
 
         final Message message = ((OpenWireMessageDelivery) elem).getMessage();
         if (targets != null) {
@@ -461,31 +505,6 @@ public class OpenwireBrokerConnection extends BrokerConnection {
             }
         }
         controller.elementDispatched(elem);
-    }
-
-    protected void initialize() {
-
-        // Setup the inbound processing..
-        final Flow flow = new Flow("broker-"+name+"-inbound", false);
-        SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(inputWindowSize, inputResumeThreshold);
-        inboundController = new FlowController<MessageDelivery>(new FlowControllableAdapter() {
-            public void flowElemAccepted(ISourceController<MessageDelivery> controller, MessageDelivery elem) {
-                route(controller, elem);
-            }
-
-            public String toString() {
-                return flow.getFlowName();
-            }
-        }, flow, limiter, inboundMutex);
-
-//        Flow ouboundFlow = new Flow(name, false);
-//        SizeLimiter<MessageDelivery> outboundLimiter = new SizeLimiter<MessageDelivery>(outputWindowSize, outputResumeThreshold);
-//        outboundQueue = new SingleFlowRelay<MessageDelivery>(ouboundFlow, name + "-outbound", outboundLimiter);
-//        outboundQueue.setDrain(new IFlowDrain<MessageDelivery>() {
-//            public void drain(final MessageDelivery message, ISourceController<MessageDelivery> controller) {
-//                write(message);
-//            };
-//        });
     }
 
     static public Destination convert(ActiveMQDestination dest) {
@@ -529,6 +548,18 @@ public class OpenwireBrokerConnection extends BrokerConnection {
             }
         }
         return rc;
+    }
+
+    public BrokerConnection getConnection() {
+        return connection;
+    }
+
+    public void setConnection(BrokerConnection connection) {
+        this.connection = connection;
+    }
+
+    public void setWireFormat(WireFormat wireFormat) {
+        this.wireFormat = (OpenWireFormat) wireFormat;
     }
 
 }

@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.jms.JMSException;
 
 import org.apache.activemq.Connection;
+import org.apache.activemq.WindowLimiter;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;

@@ -34,7 +34,7 @@ public class OpenWireMessageDelivery implements MessageDelivery {
 
     public Destination getDestination() {
         if( destination == null ) {
-            destination = OpenwireBrokerConnection.convert(message.getDestination());
+            destination = OpenwireProtocolHandler.convert(message.getDestination());
         }
         return destination;
     }

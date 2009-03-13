@@ -8,6 +8,7 @@ import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.activemq.Connection;
+import org.apache.activemq.WindowLimiter;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;

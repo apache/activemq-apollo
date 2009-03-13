@@ -22,11 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.dispatch.IDispatcher;
-import org.apache.activemq.flow.Flow;
-import org.apache.activemq.flow.IFlowLimiter;
-import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
@@ -77,7 +73,7 @@ abstract public class Connection implements TransportListener {
     protected void initialize() {
     }
     
-    protected final void write(final Object o) {
+    public final void write(final Object o) {
         if (blockingWriter==null) {
             try {
                 transport.oneway(o);
@@ -158,57 +154,8 @@ abstract public class Connection implements TransportListener {
         return inputResumeThreshold;
     }
 
-    protected interface ProtocolLimiter<E> extends IFlowLimiter<E> {
-        public void onProtocolCredit(int credit);
-    }
-
-    protected class WindowLimiter<E> extends SizeLimiter<E> implements ProtocolLimiter<E> {
-        final Flow flow;
-        final boolean clientMode;
-        private int available;
-
-        public WindowLimiter(boolean clientMode, Flow flow, int capacity, int resumeThreshold) {
-            super(capacity, resumeThreshold);
-            this.clientMode = clientMode;
-            this.flow = flow;
-        }
-
-        public void reserve(E elem) {
-            super.reserve(elem);
-//            if (!clientMode) {
-//                 System.out.println(name + " Reserved " + this);
-//            }
-        }
-
-        public void releaseReserved(E elem) {
-            super.reserve(elem);
-//            if (!clientMode) {
-//                System.out.println(name + " Released Reserved " + this);
-//            }
-        }
-
-        protected void remove(int size) {
-            super.remove(size);
-            if (!clientMode) {
-                available += size;
-                if (available >= capacity - resumeThreshold) {
-                    sendCredit(available);
-                    available = 0;
-                }
-            }
-        }
-
-        protected void sendCredit(int credit) {
-            throw new UnsupportedOperationException("Please override this method to provide and implemenation.");
-        }
-
-        public void onProtocolCredit(int credit) {
-            remove(credit);
-        }
-
-        public int getElementSize(MessageDelivery m) {
-            return m.getFlowLimiterSize();
-        }
+    public Transport getTransport() {
+        return transport;
     }
 
 }

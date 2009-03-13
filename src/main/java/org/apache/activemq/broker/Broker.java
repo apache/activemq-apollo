@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.Connection;
-import org.apache.activemq.broker.openwire.OpenwireBrokerConnection;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.transport.DispatchableTransportServer;
 import org.apache.activemq.transport.Transport;
@@ -41,7 +40,8 @@ public class Broker implements TransportAcceptListener {
     final HashMap<Destination, Queue> queues = new HashMap<Destination, Queue>();
 
     private TransportServer transportServer;
-    private String uri;
+    private String bindUri;
+    private String connectUri;
     private String name;
     private IDispatcher dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean();
@@ -72,7 +72,7 @@ public class Broker implements TransportAcceptListener {
 
     public final void start() throws Exception {
         dispatcher.start();
-        transportServer = TransportFactory.bind(new URI(uri));
+        transportServer = TransportFactory.bind(new URI(bindUri));
         transportServer.setAcceptListener(this);
         if (transportServer instanceof DispatchableTransportServer) {
             ((DispatchableTransportServer) transportServer).setDispatcher(dispatcher);
@@ -85,7 +85,7 @@ public class Broker implements TransportAcceptListener {
     }
 
     public void onAccept(final Transport transport) {
-        OpenwireBrokerConnection connection = new OpenwireBrokerConnection();
+        BrokerConnection connection = new BrokerConnection();
         connection.setBroker(this);
         connection.setTransport(transport);
         connection.setPriorityLevels(MAX_PRIORITY);
@@ -115,12 +115,12 @@ public class Broker implements TransportAcceptListener {
         this.dispatcher = dispatcher;
     }
 
-    public String getUri() {
-        return uri;
+    public String getBindUri() {
+        return bindUri;
     }
 
-    public void setUri(String uri) {
-        this.uri = uri;
+    public void setBindUri(String uri) {
+        this.bindUri = uri;
     }
 
     public boolean isStopping() {
@@ -129,6 +129,16 @@ public class Broker implements TransportAcceptListener {
 
     public Router getRouter() {
         return router;
+    }
+
+
+    public String getConnectUri() {
+        return connectUri;
+    }
+
+
+    public void setConnectUri(String connectUri) {
+        this.connectUri = connectUri;
     }
 
 }

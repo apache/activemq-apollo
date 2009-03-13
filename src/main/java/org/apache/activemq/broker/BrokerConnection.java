@@ -17,10 +17,22 @@
 package org.apache.activemq.broker;
 
 import org.apache.activemq.Connection;
+import org.apache.activemq.Service;
+import org.apache.activemq.broker.openwire.OpenwireProtocolHandler;
+import org.apache.activemq.openwire.OpenWireFormat;
+import org.apache.activemq.wireformat.WireFormat;
 
-abstract public class BrokerConnection extends Connection {
+public class BrokerConnection extends Connection {
     
     protected Broker broker;
+    private ProtocolHandler protocolHandler;
+
+    public interface ProtocolHandler extends Service {
+        public void setConnection(BrokerConnection connection);
+        public void onCommand(Object command);
+        public void onException(Exception error);
+        public void setWireFormat(WireFormat wf);
+    }
 
     public Broker getBroker() {
         return broker;
@@ -30,10 +42,52 @@ abstract public class BrokerConnection extends Connection {
         this.broker = broker;
     }
     
+    
     @Override
     public boolean isStopping() {
         return super.isStopping() || broker.isStopping();
     }
     
+    public void onCommand(Object command) {
+        if( protocolHandler!=null ) {
+            protocolHandler.onCommand(command);
+        } else {
+            try {
+                WireFormat wf = (WireFormat) command;
+                if( wf.getClass() == OpenWireFormat.class ) {
+                    protocolHandler = new OpenwireProtocolHandler();
+                    protocolHandler.setConnection(this);
+                    protocolHandler.setWireFormat(wf);
+                    protocolHandler.start();
+                }
+            } catch (Exception e) {
+                onException(e);
+            }
+        }
+    }
+    
+    @Override
+    public void onException(Exception error) {
+        if( protocolHandler!=null ) {
+            protocolHandler.onException(error);
+        } else {
+            error.printStackTrace();
+            try {
+                stop();
+            } catch (Exception ignore) {
+            }
+        }
+    }
+    
+    @Override
+    public void stop() throws Exception {
+        super.stop();
+        if( protocolHandler!=null ) {
+            try {
+                protocolHandler.stop();
+            } catch (Exception ignore) {
+            }
+        }
+    }
     
 }

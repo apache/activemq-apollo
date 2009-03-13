@@ -59,8 +59,10 @@ public class OpenwireBrokerTest extends TestCase {
     // set to force marshalling even in the NON tcp case.
     protected boolean forceMarshalling = false;
 
-    protected String sendBrokerURI;
-    protected String receiveBrokerURI;
+    protected String sendBrokerBindURI;
+    protected String receiveBrokerBindURI;
+    protected String sendBrokerConnectURI;
+    protected String receiveBrokerConnectURI;
 
     // Set's the number of threads to use:
     protected final int asyncThreadPoolSize = Runtime.getRuntime().availableProcessors();
@@ -101,16 +103,20 @@ public class OpenwireBrokerTest extends TestCase {
         dispatcher = createDispatcher();
         dispatcher.start();
         if (tcp) {
-            sendBrokerURI = "tcp://localhost:10000";
-            receiveBrokerURI = "tcp://localhost:20000";
+            sendBrokerBindURI = "tcp://localhost:10000?wireFormat=multi";
+            receiveBrokerBindURI = "tcp://localhost:20000?wireFormat=multi";
+            sendBrokerConnectURI = "tcp://localhost:10000";
+            receiveBrokerConnectURI = "tcp://localhost:20000";
         } else {
             if (forceMarshalling) {
-                sendBrokerURI = "pipe://SendBroker";
-                receiveBrokerURI = "pipe://ReceiveBroker";
+                sendBrokerBindURI = "pipe://SendBroker";
+                receiveBrokerBindURI = "pipe://ReceiveBroker";
             } else {
-                sendBrokerURI = "pipe://SendBroker";
-                receiveBrokerURI = "pipe://ReceiveBroker";
+                sendBrokerBindURI = "pipe://SendBroker";
+                receiveBrokerBindURI = "pipe://ReceiveBroker";
             }
+            sendBrokerConnectURI = sendBrokerBindURI;
+            receiveBrokerConnectURI = receiveBrokerBindURI;
         }
     }
 
@@ -370,12 +376,12 @@ public class OpenwireBrokerTest extends TestCase {
     private void createConnections() throws IOException, URISyntaxException {
 
         if (multibroker) {
-            sendBroker = createBroker("SendBroker", sendBrokerURI);
-            rcvBroker = createBroker("RcvBroker", receiveBrokerURI);
+            sendBroker = createBroker("SendBroker", sendBrokerBindURI, sendBrokerConnectURI);
+            rcvBroker = createBroker("RcvBroker", receiveBrokerBindURI, receiveBrokerConnectURI);
             brokers.add(sendBroker);
             brokers.add(rcvBroker);
         } else {
-            sendBroker = rcvBroker = createBroker("Broker", sendBrokerURI);
+            sendBroker = rcvBroker = createBroker("Broker", sendBrokerBindURI, sendBrokerConnectURI);
             brokers.add(sendBroker);
         }
 
@@ -425,7 +431,7 @@ public class OpenwireBrokerTest extends TestCase {
                 }
             }
         };
-        consumer.setUri(new URI(rcvBroker.getUri()));
+        consumer.setUri(new URI(rcvBroker.getConnectUri()));
         consumer.setDestination(destination);
         consumer.setName("consumer" + (i + 1));
         consumer.setTotalConsumerRate(totalConsumerRate);
@@ -442,7 +448,7 @@ public class OpenwireBrokerTest extends TestCase {
                 }
             }
         };
-        producer.setUri(new URI(sendBroker.getUri()));
+        producer.setUri(new URI(sendBroker.getConnectUri()));
         producer.setProducerId(id + 1);
         producer.setName("producer" + (id + 1));
         producer.setDestination(destination);
@@ -463,10 +469,11 @@ public class OpenwireBrokerTest extends TestCase {
         return queue;
     }
 
-    private Broker createBroker(String name, String uri) {
+    private Broker createBroker(String name, String bindURI, String connectUri) {
         Broker broker = new Broker();
         broker.setName(name);
-        broker.setUri(uri);
+        broker.setBindUri(bindURI);
+        broker.setConnectUri(connectUri);
         broker.setDispatcher(dispatcher);
         return broker;
     }
