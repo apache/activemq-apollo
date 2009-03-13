@@ -5,6 +5,7 @@ package org.apache.activemq.broker;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import org.apache.activemq.protobuf.AsciiBuffer;
 
@@ -39,8 +40,25 @@ final public class Router {
     }
 
     public Collection<DeliveryTarget> route(MessageDelivery msg) {
-        Domain domain = domains.get(msg.getDestination().getDomain());
-        return domain.route(msg);
+        return route(msg.getDestination(), msg);
+    }
+
+    private Collection<DeliveryTarget> route(Destination destination, MessageDelivery msg) {
+        // Handles routing to composite/multi destinations.
+        Collection<Destination> destinationList = destination.getDestinations();
+        if( destinationList == null ) {
+            Domain domain = domains.get(destination.getDomain());
+            return domain.route(destination.getName(), msg);
+        } else {
+            HashSet<DeliveryTarget> rc = new HashSet<DeliveryTarget>();
+            for (Destination d : destinationList) {
+                Collection<DeliveryTarget> t = route(d, msg);
+                if( t!=null ) {
+                    rc.addAll(t);
+                }
+            }            
+            return rc;
+        }
     }
 
 }

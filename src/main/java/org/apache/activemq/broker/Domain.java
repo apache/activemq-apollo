@@ -12,12 +12,12 @@ import org.apache.activemq.protobuf.AsciiBuffer;
  */
 public interface Domain {
 
-    public void add(AsciiBuffer name, Object value);
+    public void add(AsciiBuffer destinationName, Object destination);
     
-    public Object remove(AsciiBuffer name);
+    public Object remove(AsciiBuffer destinationName);
 
-    public void bind(AsciiBuffer name, DeliveryTarget dt);
+    public void bind(AsciiBuffer destinationName, DeliveryTarget deliveryTarget);
 
-    public Collection<DeliveryTarget> route(MessageDelivery msg);
+    public Collection<DeliveryTarget> route(AsciiBuffer destinationName, MessageDelivery message);
     
 }
