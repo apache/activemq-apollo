@@ -16,10 +16,15 @@
  */
 package org.apache.activemq.broker;
 
+import java.beans.ExceptionListener;
+import java.io.IOException;
+
 import org.apache.activemq.Connection;
 import org.apache.activemq.Service;
 import org.apache.activemq.broker.openwire.OpenwireProtocolHandler;
+import org.apache.activemq.broker.stomp.StompProtocolHandler;
 import org.apache.activemq.openwire.OpenWireFormat;
+import org.apache.activemq.transport.stomp.StompWireFormat;
 import org.apache.activemq.wireformat.WireFormat;
 
 public class BrokerConnection extends Connection {
@@ -34,6 +39,19 @@ public class BrokerConnection extends Connection {
         public void setWireFormat(WireFormat wf);
     }
 
+    
+    public BrokerConnection() {
+        setExceptionListener(new ExceptionListener(){
+            public void exceptionThrown(Exception error) {
+                error.printStackTrace();
+                try {
+                    stop();
+                } catch (Exception ignore) {
+                }
+            }
+        });
+    }
+    
     public Broker getBroker() {
         return broker;
     }
@@ -53,28 +71,29 @@ public class BrokerConnection extends Connection {
             protocolHandler.onCommand(command);
         } else {
             try {
+                
+                // TODO: need to make this more extensible and dynamic.  Perhaps 
+                // we should lookup the ProtocolHandler via a FactoryFinder
                 WireFormat wf = (WireFormat) command;
                 if( wf.getClass() == OpenWireFormat.class ) {
                     protocolHandler = new OpenwireProtocolHandler();
-                    protocolHandler.setConnection(this);
-                    protocolHandler.setWireFormat(wf);
-                    protocolHandler.start();
+                } else if( wf.getClass() == StompWireFormat.class ) {
+                    protocolHandler = new StompProtocolHandler();
+                } else {
+                    throw new IOException("No protocol handler available for: "+wf.getClass());
                 }
+                
+                protocolHandler.setConnection(this);
+                protocolHandler.setWireFormat(wf);
+                protocolHandler.start();
+                
+                setExceptionListener(new ExceptionListener(){
+                    public void exceptionThrown(Exception error) {
+                        protocolHandler.onException(error);
+                    }
+                });
             } catch (Exception e) {
                 onException(e);
-            }
-        }
-    }
-    
-    @Override
-    public void onException(Exception error) {
-        if( protocolHandler!=null ) {
-            protocolHandler.onException(error);
-        } else {
-            error.printStackTrace();
-            try {
-                stop();
-            } catch (Exception ignore) {
             }
         }
     }

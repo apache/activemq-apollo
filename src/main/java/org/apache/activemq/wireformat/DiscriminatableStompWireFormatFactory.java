@@ -16,17 +16,48 @@
  */
 package org.apache.activemq.wireformat;
 
+import java.io.UnsupportedEncodingException;
+
+import org.apache.activemq.transport.stomp.Stomp;
 import org.apache.activemq.transport.stomp.StompWireFormatFactory;
 import org.apache.activemq.util.ByteSequence;
 
 public class DiscriminatableStompWireFormatFactory extends StompWireFormatFactory implements DiscriminatableWireFormatFactory {
 
+    static byte MAGIC[] = toBytes(Stomp.Commands.CONNECT);
+    
+    static private byte[] toBytes(String value) {
+        try {
+            return value.getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
     public boolean matchesWireformatHeader(ByteSequence byteSequence) {
+        byte[] data = byteSequence.data;
+        if( byteSequence.length >= MAGIC.length) {
+            int offset = byteSequence.length - MAGIC.length;
+            for(int i=0; i < byteSequence.length; i++) {
+                // Newlines are allowed to precede the STOMP connect command.
+                if( i < offset ) {
+                    if( data[i]!='\n' && data[i]!='\r' ) {
+                        return false;
+                    }
+                } else {
+                    if( data[i]!=MAGIC[i-offset] ) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
         return false;
     }
 
+
     public int maxWireformatHeaderLength() {
-        return 100;
+        return MAGIC.length+10;
     }
 
 }

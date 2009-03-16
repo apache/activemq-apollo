@@ -37,6 +37,11 @@
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-core</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.thoughtworks.xstream</groupId>
+      <artifactId>xstream</artifactId>
+      <optional>true</optional>
+    </dependency>        
     
     <dependency>
       <groupId>junit</groupId>

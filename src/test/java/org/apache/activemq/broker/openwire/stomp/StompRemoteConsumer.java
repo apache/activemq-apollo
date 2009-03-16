@@ -1,0 +1,88 @@
+package org.apache.activemq.broker.openwire.stomp;
+
+import java.io.IOException;
+import java.util.HashMap;
+
+import org.apache.activemq.broker.MessageDelivery;
+import org.apache.activemq.broker.RemoteConsumer;
+import org.apache.activemq.broker.Router;
+import org.apache.activemq.broker.stomp.StompMessageDelivery;
+import org.apache.activemq.flow.Flow;
+import org.apache.activemq.flow.FlowController;
+import org.apache.activemq.flow.IFlowSink;
+import org.apache.activemq.flow.IFlowSource;
+import org.apache.activemq.flow.ISourceController;
+import org.apache.activemq.flow.SizeLimiter;
+import org.apache.activemq.flow.ISinkController.FlowControllable;
+import org.apache.activemq.transport.stomp.Stomp;
+import org.apache.activemq.transport.stomp.StompFrame;
+
+public class StompRemoteConsumer extends RemoteConsumer {
+
+    protected final Object inboundMutex = new Object();
+    private FlowController<MessageDelivery> inboundController;
+    private String stompDestination;
+    
+
+    protected void setupSubscription() throws Exception, IOException {
+        if( destination.getDomain().equals( Router.QUEUE_DOMAIN ) ) {
+            stompDestination = "/queue/"+destination.getName().toString();
+        } else {
+            stompDestination = "/topic/"+destination.getName().toString();
+        }
+        
+        StompFrame frame = new StompFrame(Stomp.Commands.CONNECT);
+        transport.oneway(frame);
+        
+        HashMap<String, String> headers = new HashMap<String, String>();
+        headers.put(Stomp.Headers.Subscribe.DESTINATION, stompDestination);
+        headers.put(Stomp.Headers.Subscribe.ID, "0001");
+        headers.put(Stomp.Headers.Subscribe.ACK_MODE, Stomp.Headers.Subscribe.AckModeValues.AUTO);
+        
+        frame = new StompFrame(Stomp.Commands.SUBSCRIBE, headers);
+        transport.oneway(frame);
+        
+    }
+    
+    protected void initialize() {
+        // Setup the input processing..
+        final Flow flow = new Flow("client-"+name+"-inbound", false);
+        inputResumeThreshold = inputWindowSize/2;
+        SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(inputWindowSize, inputResumeThreshold);
+        inboundController = new FlowController<MessageDelivery>(new FlowControllable<MessageDelivery>() {
+            public void flowElemAccepted(ISourceController<MessageDelivery> controller, MessageDelivery elem) {
+                messageReceived(controller, elem);
+            }
+            public String toString() {
+                return flow.getFlowName();
+            }
+            public IFlowSink<MessageDelivery> getFlowSink() {
+                return null;
+            }
+            public IFlowSource<MessageDelivery> getFlowSource() {
+                return null;
+            }
+        }, flow, limiter, inboundMutex);
+    }
+    
+    public void onCommand(Object command) {
+        try {
+            if (command.getClass() == StompFrame.class) {
+                StompFrame frame = (StompFrame) command;
+                if( Stomp.Responses.MESSAGE.equals(frame.getAction()) ) {
+                    StompMessageDelivery md = new StompMessageDelivery(frame, getDestination());
+                    while(!inboundController.offer(md, null) ) {
+                        inboundController.waitForFlowUnblock();
+                    }
+                } else if( Stomp.Responses.CONNECTED.equals(frame.getAction()) ) {
+                } else {
+                    onException(new Exception("Unrecognized stomp command: " + frame.getAction()));
+                }
+            } else {
+                onException(new Exception("Unrecognized command: " + command));
+            }
+        } catch (Exception e) {
+            onException(e);
+        }
+    }
+}

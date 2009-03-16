@@ -35,4 +35,6 @@ public interface MessageDelivery {
 
     public <T> T asType(Class<T> type);
 
+    public boolean isPersistent();
+
 }

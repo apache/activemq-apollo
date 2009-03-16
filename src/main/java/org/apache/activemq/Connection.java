@@ -16,6 +16,7 @@
  */
 package org.apache.activemq;
 
+import java.beans.ExceptionListener;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,7 +42,9 @@ abstract public class Connection implements TransportListener {
     private IDispatcher dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean();
     private  ExecutorService blockingWriter;
-
+    private ExceptionListener exceptionListener;
+    
+    
     public void setTransport(Transport transport) {
         this.transport = transport;
     }
@@ -99,13 +102,16 @@ abstract public class Connection implements TransportListener {
         }
     }
     
-    public void onException(IOException error) {
+    final public void onException(IOException error) {
         if (!isStopping()) {
             onException((Exception) error);
         }
     }
 
-    public void onException(Exception error) {
+    final public void onException(Exception error) {
+        if( exceptionListener!=null ) {
+            exceptionListener.exceptionThrown(error);
+        }
     }
     
     public boolean isStopping(){ 
@@ -156,6 +162,14 @@ abstract public class Connection implements TransportListener {
 
     public Transport getTransport() {
         return transport;
+    }
+
+    public ExceptionListener getExceptionListener() {
+        return exceptionListener;
+    }
+
+    public void setExceptionListener(ExceptionListener exceptionListener) {
+        this.exceptionListener = exceptionListener;
     }
 
 }

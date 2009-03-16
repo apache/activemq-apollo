@@ -81,4 +81,8 @@ public class OpenWireMessageDelivery implements MessageDelivery {
         return null;
     }
 
+    public boolean isPersistent() {
+        return message.isPersistent();
+    }
+
 }
