@@ -23,6 +23,8 @@ public class StompRemoteConsumer extends RemoteConsumer {
     private FlowController<MessageDelivery> inboundController;
     private String stompDestination;
     
+    public StompRemoteConsumer() {
+    }
 
     protected void setupSubscription() throws Exception, IOException {
         if( destination.getDomain().equals( Router.QUEUE_DOMAIN ) ) {

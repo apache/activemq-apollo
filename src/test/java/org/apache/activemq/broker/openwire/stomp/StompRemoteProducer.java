@@ -19,6 +19,9 @@ public class StompRemoteProducer extends RemoteProducer {
 
     private String stompDestination;
 
+    StompRemoteProducer() {
+    }
+    
     protected void setupProducer() throws Exception, IOException {
         if( destination.getDomain().equals( Router.QUEUE_DOMAIN ) ) {
             stompDestination = "/queue/"+destination.getName().toString();
@@ -40,9 +43,13 @@ public class StompRemoteProducer extends RemoteProducer {
         
         outboundController = outboundQueue.getFlowController(flow);
         outboundQueue.setDrain(new IFlowDrain<MessageDelivery>() {
-            public void drain(MessageDelivery message, ISourceController<MessageDelivery> controller) {
+            public void drain(final MessageDelivery message, final ISourceController<MessageDelivery> controller) {
                 StompFrame msg = message.asType(StompFrame.class);
-                write(msg);
+                write(msg, new Runnable(){
+                    public void run() {
+                        controller.elementDispatched(message);
+                    }
+                });
             }
         });
     }
@@ -77,7 +84,11 @@ public class StompRemoteProducer extends RemoteProducer {
             headers.put(property, property);
         }
         
-        StompFrame fram = new StompFrame(Stomp.Commands.SEND, headers, toContent(createPayload()));
+        byte[] content = toContent(createPayload());
+        
+        headers.put(Stomp.Headers.CONTENT_LENGTH, ""+content.length);
+        
+        StompFrame fram = new StompFrame(Stomp.Commands.SEND, headers, content);
         next = new StompMessageDelivery(fram, getDestination());
     }
 

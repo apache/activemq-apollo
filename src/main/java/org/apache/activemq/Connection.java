@@ -38,10 +38,11 @@ abstract public class Connection implements TransportListener {
     protected int outputResumeThreshold = 900;
     protected int inputWindowSize = 1000;
     protected int inputResumeThreshold = 500;
+    protected boolean useAsyncWriteThread = true;
     
     private IDispatcher dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean();
-    private  ExecutorService blockingWriter;
+    private ExecutorService blockingWriter;
     private ExceptionListener exceptionListener;
     
     
@@ -58,7 +59,9 @@ abstract public class Connection implements TransportListener {
             }
             dt.setDispatcher(getDispatcher());
         } else {
-            blockingWriter = Executors.newSingleThreadExecutor();
+            if( useAsyncWriteThread ) {
+                blockingWriter = Executors.newSingleThreadExecutor();
+            }
         }
         transport.start();
     }
@@ -77,9 +80,16 @@ abstract public class Connection implements TransportListener {
     }
     
     public final void write(final Object o) {
+        write(o, null);
+    }
+    
+    public final void write(final Object o, final Runnable onCompleted) {
         if (blockingWriter==null) {
             try {
                 transport.oneway(o);
+                if( onCompleted!=null ) {
+                    onCompleted.run();
+                }
             } catch (IOException e) {
                 onException(e);
             }
@@ -90,6 +100,9 @@ abstract public class Connection implements TransportListener {
                         if (!stopping.get()) {
                             try {
                                 transport.oneway(o);
+                                if( onCompleted!=null ) {
+                                    onCompleted.run();
+                                }
                             } catch (IOException e) {
                                 onException(e);
                             }
@@ -170,6 +183,14 @@ abstract public class Connection implements TransportListener {
 
     public void setExceptionListener(ExceptionListener exceptionListener) {
         this.exceptionListener = exceptionListener;
+    }
+
+    public boolean isUseAsyncWriteThread() {
+        return useAsyncWriteThread;
+    }
+
+    public void setUseAsyncWriteThread(boolean useAsyncWriteThread) {
+        this.useAsyncWriteThread = useAsyncWriteThread;
     }
 
 }

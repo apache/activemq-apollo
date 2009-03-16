@@ -34,7 +34,6 @@ public class StompMessageDelivery implements MessageDelivery {
     public StompMessageDelivery(StompFrame frame, Destination destiantion) {
         this.frame = frame;
         this.destination = destiantion;
-        this.frame.setAction(Stomp.Responses.MESSAGE);
         this.receiptId = frame.getHeaders().remove(Stomp.Headers.RECEIPT_REQUESTED);
     }
 

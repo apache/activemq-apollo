@@ -105,6 +105,7 @@ public class StompProtocolHandler implements ProtocolHandler {
                 String dest = frame.getHeaders().get(Stomp.Headers.Send.DESTINATION);
                 Destination destination = translator(frame).convertToDestination(StompProtocolHandler.this, dest);
                 
+                frame.setAction(Stomp.Responses.MESSAGE);
                 StompMessageDelivery md = new StompMessageDelivery(frame, destination);
                 while (!inboundController.offer(md, null)) {
                     inboundController.waitForFlowUnblock();
@@ -165,9 +166,13 @@ public class StompProtocolHandler implements ProtocolHandler {
         limiter = new SizeLimiter<MessageDelivery>(connection.getOutputWindowSize(), connection.getOutputWindowSize());
         outboundQueue = new SingleFlowRelay<MessageDelivery>(outboundFlow, outboundFlow.getFlowName(), limiter);
         outboundQueue.setDrain(new IFlowDrain<MessageDelivery>() {
-            public void drain(final MessageDelivery message, ISourceController<MessageDelivery> controller) {
+            public void drain(final MessageDelivery message, final ISourceController<MessageDelivery> controller) {
                 StompFrame msg = message.asType(StompFrame.class);
-                connection.write(msg);
+                connection.write(msg, new Runnable() {
+                    public void run() {
+                        controller.elementDispatched(message);
+                    }
+                });
             };
         });
 
@@ -187,6 +192,9 @@ public class StompProtocolHandler implements ProtocolHandler {
             actionHander.onStompFrame(command);
         } catch (Exception error) {
             try {
+                
+                error.printStackTrace();
+                
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 PrintWriter stream = new PrintWriter(new OutputStreamWriter(baos, "UTF-8"));
                 error.printStackTrace(stream);
@@ -343,22 +351,25 @@ public class StompProtocolHandler implements ProtocolHandler {
             if (stompMessage == null) {
                 return false;
             }
-
-            Message msg = message.asType(Message.class);
-            if (msg == null) {
-                return false;
-            }
-
-            // TODO: abstract the Selector bits so that it is not openwire specific.
-            MessageEvaluationContext selectorContext = new MessageEvaluationContext();
-            selectorContext.setMessageReference(msg);
-            selectorContext.setDestination(msg.getDestination());
-            try {
-                return (selector == null || selector.matches(selectorContext));
-            } catch (JMSException e) {
-                e.printStackTrace();
-                return false;
-            }
+            
+            return true;
+            
+//          TODO: implement selector bits.
+//            Message msg = message.asType(Message.class);
+//            if (msg == null) {
+//                return false;
+//            }
+//
+//            // TODO: abstract the Selector bits so that it is not openwire specific.
+//            MessageEvaluationContext selectorContext = new MessageEvaluationContext();
+//            selectorContext.setMessageReference(msg);
+//            selectorContext.setDestination(msg.getDestination());
+//            try {
+//                return (selector == null || selector.matches(selectorContext));
+//            } catch (JMSException e) {
+//                e.printStackTrace();
+//                return false;
+//            }
         }
 
     }
