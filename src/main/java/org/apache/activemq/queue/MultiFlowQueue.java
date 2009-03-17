@@ -48,11 +48,11 @@ public class MultiFlowQueue<E> extends AbstractFlowQueue<E> {
         throw new UnsupportedOperationException();
     }
 
-    public boolean offer(E elem, ISourceController<E> source) {
+    public boolean offer(E elem, ISourceController<?> source) {
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    public synchronized void add(E elem, ISourceController<E> source) {
+    public synchronized void add(E elem, ISourceController<?> source) {
         SingleFlowQueue queue = flowQueues.get(source.getFlow());
         if (queue == null) {
             queue = new SingleFlowQueue(source.getFlow(), new SizeLimiter<E>(perFlowWindow, resumeThreshold));
@@ -139,7 +139,7 @@ public class MultiFlowQueue<E> extends AbstractFlowQueue<E> {
             this.controller = new FlowController<E>(this, flow, limiter, MultiFlowQueue.this);
         }
 
-        final void enqueue(E elem, ISourceController<E> source) {
+        final void enqueue(E elem, ISourceController<?> source) {
             controller.add(elem, source);
         }
 

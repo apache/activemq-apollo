@@ -50,7 +50,7 @@ public class LoadBalancedFlowQueue<E> extends AbstractFlowQueue<E> {
             return LoadBalancedFlowQueue.this;
         }
 
-        public void onFlowBlock(ISinkController<E> sink) {
+        public void onFlowBlock(ISinkController<?> sink) {
             synchronized (LoadBalancedFlowQueue.this) {
                 SinkNode node = consumers.get(sink);
                 if (node != null) {
@@ -61,7 +61,7 @@ public class LoadBalancedFlowQueue<E> extends AbstractFlowQueue<E> {
 
         }
 
-        public void onFlowResume(ISinkController<E> sink) {
+        public void onFlowResume(ISinkController<?> sink) {
             synchronized (LoadBalancedFlowQueue.this) {
                 SinkNode node = consumers.get(sink);
                 if (node != null) {
@@ -108,14 +108,14 @@ public class LoadBalancedFlowQueue<E> extends AbstractFlowQueue<E> {
         super.onFlowOpened(sinkController);
     }
 
-    public boolean offer(E elem, ISourceController<E> source) {
+    public boolean offer(E elem, ISourceController<?> source) {
         return sinkController.offer(elem, source);
     }
 
     /**
      * Performs a limited add to the queue.
      */
-    public final void add(E elem, ISourceController<E> source) {
+    public final void add(E elem, ISourceController<?> source) {
         sinkController.add(elem, source);
     }
 

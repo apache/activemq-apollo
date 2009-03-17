@@ -28,7 +28,7 @@ public interface IFlowSink<E> extends IFlowResource {
      * @param source
      *            The source's flow controller.
      */
-    public void add(E elem, ISourceController<E> source);
+    public void add(E elem, ISourceController<?> source);
 
     /**
      * Offers an element to the sink. If there is no room available the source's
@@ -40,7 +40,7 @@ public interface IFlowSink<E> extends IFlowResource {
      *            The source's controller.
      * @return false if the element wasn't accepted.
      */
-    public boolean offer(E elem, ISourceController<E> source);
+    public boolean offer(E elem, ISourceController<?> source);
 
     /**
      * Sets the executor to be used by the sink's {@link IFlowController}s.

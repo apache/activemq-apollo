@@ -51,7 +51,7 @@ public interface ISinkController<E> {
      * @param controller
      *            the source flow controller.
      */
-    public boolean offer(E elem, ISourceController<E> sourceController);
+    public boolean offer(E elem, ISourceController<?> sourceController);
 
     /**
      * Adds an element to the sink associated with this resource if space is
@@ -64,7 +64,7 @@ public interface ISinkController<E> {
      * @param controller
      *            the source flow controller.
      */
-    public void add(E elem, ISourceController<E> controller);
+    public void add(E elem, ISourceController<?> controller);
 
     /**
      * Called to check if this FlowController is currently being blocked

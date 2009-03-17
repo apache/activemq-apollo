@@ -41,19 +41,19 @@ public interface ISourceController<E> {
     /**
      * This is called when a particular flow is blocked for a resource
      * 
-     * @param sink
-     *            The sink blocking this source
+     * @param sinkController
+     *            The sink controller blocking this source
      */
-    public void onFlowBlock(ISinkController<E> sink);
+    public void onFlowBlock(ISinkController<?> sinkController);
 
     /**
      * Callback used with FlowControllers to get a notification that an
      * IFlowController has been resumed.
      * 
-     * @param controller
-     *            The IFlowController that was unblocked.
+     * @param sinkController
+     *            The sink controller that was unblocked.
      */
-    public void onFlowResume(ISinkController<E> sink);
+    public void onFlowResume(ISinkController<?> sinkController);
 
     public boolean isSourceBlocked();
 

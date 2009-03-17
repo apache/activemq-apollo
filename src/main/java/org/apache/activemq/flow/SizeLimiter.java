@@ -18,14 +18,14 @@ package org.apache.activemq.flow;
 
 public class SizeLimiter<E> extends AbstractLimiter<E> {
 
-    protected int capacity;
-    protected int resumeThreshold;
+    protected long capacity;
+    protected long resumeThreshold;
 
-    private int size;
+    private long size;
     private boolean throttled;
-    private int reserved;
+    private long reserved;
 
-    public SizeLimiter(int capacity, int resumeThreshold) {
+    public SizeLimiter(long capacity, long resumeThreshold) {
         this.capacity = capacity;
         throttled = false;
         this.resumeThreshold = resumeThreshold;
@@ -50,13 +50,13 @@ public class SizeLimiter<E> extends AbstractLimiter<E> {
 
     public void releaseReserved() {
         if (reserved > 0) {
-            int res = reserved;
+            long res = reserved;
             reserved = 0;
             remove(res);
         }
     }
 
-    protected void remove(int s) {
+    public void remove(long s) {
         this.size -= s;
         if (size < 0) {
             Exception ie = new IllegalStateException("Size Negative!" + size);
@@ -91,16 +91,39 @@ public class SizeLimiter<E> extends AbstractLimiter<E> {
         return !throttled;
     }
 
-    public int getCapacity() {
+    public long getCapacity() {
         return capacity;
     }
 
-    public int getResumeThreshold() {
+    public long getResumeThreshold() {
         return resumeThreshold;
     }
 
-    public int getSize() {
+    public long getSize() {
         return size;
+    }
+
+    public void setCapacity(long capacity) {
+        if (capacity < resumeThreshold) {
+            throw new IllegalArgumentException("capacity less than resume threshold");
+        }
+
+        this.capacity = capacity;
+
+        if (this.size >= capacity) {
+            throttled = true;
+        }
+    }
+
+    public void setResumeThreshold(long size) {
+
+        if (capacity < resumeThreshold) {
+            throw new IllegalArgumentException("capacity less than resume threshold");
+        }
+        if (throttled && this.size <= resumeThreshold) {
+            throttled = false;
+            notifyUnThrottleListeners();
+        }
     }
 
     public String toString() {

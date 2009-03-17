@@ -23,11 +23,11 @@ public class SingleFlowRelay<E> extends AbstractLimitedFlowSource<E> implements 
         super.onFlowOpened(controller);
     }
 
-    public void add(E elem, ISourceController<E> source) {
+    public void add(E elem, ISourceController<?> source) {
         controller.add(elem, source);
     }
 
-    public boolean offer(E elem, ISourceController<E> source) {
+    public boolean offer(E elem, ISourceController<?> source) {
         return controller.offer(elem, source);
     }
 

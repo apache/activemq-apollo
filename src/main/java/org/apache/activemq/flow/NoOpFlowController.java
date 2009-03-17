@@ -63,11 +63,11 @@ public class NoOpFlowController<E> implements ISinkController<E> {
         return "DISABLED Flow Controller for: " + source;
     }
 
-    public boolean offer(E elem, ISourceController<E> sourceController) {
+    public boolean offer(E elem, ISourceController<?> sourceController) {
         throw new UnsupportedOperationException();
     }
 
-    public void add(E elem, ISourceController<E> controller) {
+    public void add(E elem, ISourceController<?> controller) {
         throw new UnsupportedOperationException();
     }
 

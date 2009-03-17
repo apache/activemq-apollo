@@ -94,13 +94,13 @@ abstract public class PartitionedQueue<P, K, V> extends AbstractLimitedFlowResou
         return partitionMapper;
     }
 
-    public void add(V value, ISourceController<V> source) {
+    public void add(V value, ISourceController<?> source) {
         P partitionKey = partitionMapper.map(value);
         IQueue<K, V> partition = getPartition(partitionKey);
         partition.add(value, source);
     }
 
-    public boolean offer(V value, ISourceController<V> source) {
+    public boolean offer(V value, ISourceController<?> source) {
         P partitionKey = partitionMapper.map(value);
         IQueue<K, V> partition = getPartition(partitionKey);
         return partition.offer(value, source);

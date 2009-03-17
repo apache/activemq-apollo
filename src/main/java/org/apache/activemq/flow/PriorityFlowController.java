@@ -43,12 +43,12 @@ public class PriorityFlowController<E> implements IFlowController<E> {
     // ISinkController interface impl.
     // /////////////////////////////////////////////////////////////////
 
-    public boolean offer(E elem, ISourceController<E> controller) {
+    public boolean offer(E elem, ISourceController<?> controller) {
         int prio = limiter.getPriorityMapper().map(elem);
         return controllers.get(prio).offer(elem, controller);
     }
 
-    public void add(E elem, ISourceController<E> controller) {
+    public void add(E elem, ISourceController<?> controller) {
         int prio = limiter.getPriorityMapper().map(elem);
         controllers.get(prio).add(elem, controller);
     }
@@ -89,13 +89,13 @@ public class PriorityFlowController<E> implements IFlowController<E> {
         return controllable.getFlowSource();
     }
 
-    public void onFlowBlock(ISinkController<E> sink) {
+    public void onFlowBlock(ISinkController<?> sink) {
         for (int i = 0; i < controllers.size(); i++) {
             controllers.get(i).onFlowBlock(sink);
         }
     }
 
-    public void onFlowResume(ISinkController<E> sink) {
+    public void onFlowResume(ISinkController<?> sink) {
         for (int i = 0; i < controllers.size(); i++) {
             controllers.get(i).onFlowBlock(sink);
         }

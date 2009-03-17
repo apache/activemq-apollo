@@ -109,13 +109,13 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
         }
     }
 
-    public void add(V value, ISourceController<V> source) {
+    public void add(V value, ISourceController<?> source) {
         int prio = priorityMapper.map(value);
         IQueue<K, V> partition = getPartition(prio);
         partition.add(value, source);
     }
 
-    public boolean offer(V value, ISourceController<V> source) {
+    public boolean offer(V value, ISourceController<?> source) {
         int prio = priorityMapper.map(value);
         IQueue<K, V> partition = getPartition(prio);
         return partition.offer(value, source);

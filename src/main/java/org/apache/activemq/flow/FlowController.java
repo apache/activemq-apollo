@@ -30,10 +30,10 @@ public class FlowController<E> implements IFlowController<E> {
 
     private static final Executor DEFAULT_EXECUTOR = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     // Sinks that are blocking us.
-    private final HashSet<ISinkController<E>> blockingSinks = new HashSet<ISinkController<E>>();
+    private final HashSet<ISinkController<?>> blockingSinks = new HashSet<ISinkController<?>>();
 
     // Holds the sources that this limiter is currently blocking
-    private final HashSet<ISourceController<E>> blockedSources = new HashSet<ISourceController<E>>();
+    private final HashSet<ISourceController<?>> blockedSources = new HashSet<ISourceController<?>>();
 
     // Holds the sources that this limiter is currently blocking
     private final HashSet<FlowUnblockListener<E>> unblockListeners = new HashSet<FlowUnblockListener<E>>();
@@ -122,7 +122,7 @@ public class FlowController<E> implements IFlowController<E> {
     /**
      * Should be called by a resource anytime it's limits are exceeded.
      */
-    public final void onFlowBlock(ISinkController<E> sinkController) {
+    public final void onFlowBlock(ISinkController<?> sinkController) {
         synchronized (mutex) {
             if (!blockingSinks.add(sinkController)) {
                 throw new IllegalStateException(sinkController + " has already blocked: " + this);
@@ -135,7 +135,7 @@ public class FlowController<E> implements IFlowController<E> {
         }
     }
 
-    public final void onFlowResume(ISinkController<E> sinkController) {
+    public final void onFlowResume(ISinkController<?> sinkController) {
         synchronized (mutex) {
             if (!blockingSinks.remove(sinkController)) {
                 throw new IllegalStateException(sinkController + " can't resume unblocked " + this);
@@ -217,7 +217,7 @@ public class FlowController<E> implements IFlowController<E> {
      * @param controller
      *            the source flow controller.
      */
-    public void add(E elem, ISourceController<E> sourceController) {
+    public void add(E elem, ISourceController<?> sourceController) {
         boolean ok = false;
         synchronized (mutex) {
             // If we don't have an fc sink, then just increment the limiter.
@@ -255,7 +255,7 @@ public class FlowController<E> implements IFlowController<E> {
      * @param controller
      *            the source flow controller.
      */
-    public boolean offer(E elem, ISourceController<E> sourceController) {
+    public boolean offer(E elem, ISourceController<?> sourceController) {
         boolean ok = false;
         synchronized (mutex) {
             // If we don't have an fc sink, then just increment the limiter.
@@ -310,7 +310,7 @@ public class FlowController<E> implements IFlowController<E> {
      * @param source
      *            The {@link ISinkController} of the source to be blocked.
      */
-    protected void blockSource(final ISourceController<E> source) {
+    protected void blockSource(final ISourceController<?> source) {
         if (source == null) {
             return;
         }
@@ -389,7 +389,7 @@ public class FlowController<E> implements IFlowController<E> {
                     }
                     String was = Thread.currentThread().getName();
                     try {
-                        for (ISourceController<E> source : blockedSources) {
+                        for (ISourceController<?> source : blockedSources) {
 //                            System.out.println("UNBLOCKING: SINK[" + FlowController.this + "], SOURCE[" + source + "]");
                             source.onFlowResume(FlowController.this);
                         }

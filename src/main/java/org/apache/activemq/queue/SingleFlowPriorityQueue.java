@@ -53,14 +53,14 @@ public class SingleFlowPriorityQueue<E> extends AbstractFlowQueue<E> {
         super.onFlowOpened(controller);
     }
 
-    public boolean offer(E elem, ISourceController<E> source) {
+    public boolean offer(E elem, ISourceController<?> source) {
         return controller.offer(elem, source);
     }
 
     /**
      * Performs a limited add to the queue.
      */
-    public final void add(E elem, ISourceController<E> source) {
+    public final void add(E elem, ISourceController<?> source) {
         controller.add(elem, source);
     }
 

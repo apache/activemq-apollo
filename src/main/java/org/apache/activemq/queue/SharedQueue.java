@@ -49,7 +49,6 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
 
     private final FlowController<V> sinkController;
     private final Object mutex;
-    private final AbstractFlowQueue whoToWakeup = this;
 
     protected Mapper<K, V> keyMapper;
     private long directs;
@@ -63,11 +62,11 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         public void elementDispatched(V elem) {
         }
 
-        public void onFlowBlock(ISinkController<V> sink) {
+        public void onFlowBlock(ISinkController<?> sink) {
         }
 
-        public void onFlowResume(ISinkController<V> sinkController) {
-            IFlowSink<V> sink = sinkController.getFlowSink();
+        public void onFlowResume(ISinkController<?> sinkController) {
+            IFlowSink<V> sink = (IFlowSink<V>)sinkController.getFlowSink();
             synchronized (mutex) {
                 SubscriptionNode node = sinks.get(sink);
                 if (node != null) {
@@ -75,13 +74,13 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                     boolean notify = false;
                     if (node.cursor == null) {
                         readyDirectSubs.addLast(node);
-                        // System.out.println("Subscription state change: un-ready direct -> ready direct: "+node);
+                        //System.out.println("Subscription state change: un-ready direct -> ready direct: "+node);
                     } else {
                         if (readyPollingSubs.isEmpty()) {
                             notify = !store.isEmpty();
                         }
                         readyPollingSubs.addLast(node);
-                        // System.out.println("Subscription state change: un-ready polling -> ready polling: "+node);
+                        //System.out.println("Subscription state change: un-ready polling -> ready polling: "+node);
                     }
 
                     if (notify) {
@@ -108,6 +107,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
 
     public SharedQueue(String name, IFlowLimiter<V> limiter) {
         this(name, limiter, new Object());
+        autoRelease = true;
     }
 
     /**
@@ -126,14 +126,14 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         super.onFlowOpened(sinkController);
     }
 
-    public boolean offer(V elem, ISourceController<V> source) {
+    public boolean offer(V elem, ISourceController<?> source) {
         return sinkController.offer(elem, source);
     }
 
     /**
      * Performs a limited add to the queue.
      */
-    public final void add(V value, ISourceController<V> source) {
+    public final void add(V value, ISourceController<?> source) {
         sinkController.add(value, source);
     }
 
@@ -170,7 +170,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                         sub.resumeAt(node);
                         unreadyPollingSubs.addLast(sub);
                         matchCount++;
-                        // System.out.println("Subscription state change: un-ready direct -> un-ready polling: "+sub);
+                        //System.out.println("Subscription state change: un-ready direct -> un-ready polling: "+sub);
                     }
                     sub = next;
                 }
@@ -182,7 +182,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                     subNode.unlink();
                     subNode.resumeAt(node);
                     unreadyPollingSubs.addLast(subNode);
-                    // System.out.println("Subscription state change: ready direct -> un-ready polling: "+subNode);
+                    //System.out.println("Subscription state change: ready direct -> un-ready polling: "+subNode);
                 }
                 matchCount += matches.size();
 
@@ -294,7 +294,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                     }
                     return true;
                 } else {
-                    // System.out.println("Subscription state change: ready polling -> un-ready polling: "+subNode);
+                    //System.out.println("Subscription state change: ready polling -> un-ready polling: "+subNode);
                     // Subscription is no longer ready..
                     subNode.cursorUnPeek(storeNode);
                     subNode.unlink();
