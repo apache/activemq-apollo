@@ -16,13 +16,9 @@
  */
 package org.apache.activemq.broker.store.kahadb;
 
-import java.io.DataInput;
 import java.io.DataInputStream;
-import java.io.DataOutput;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -30,7 +26,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -39,6 +34,10 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.broker.ConnectionContext;
+import org.apache.activemq.broker.store.kahadb.Operation.AddOpperation;
+import org.apache.activemq.broker.store.kahadb.Operation.RemoveOpperation;
+import org.apache.activemq.broker.store.kahadb.StoredDBState.DBStateMarshaller;
+import org.apache.activemq.broker.store.kahadb.StoredDestinationState.StoredDestinationMarshaller;
 import org.apache.activemq.broker.store.kahadb.data.KahaAddMessageCommand;
 import org.apache.activemq.broker.store.kahadb.data.KahaCommitCommand;
 import org.apache.activemq.broker.store.kahadb.data.KahaDestination;
@@ -53,19 +52,11 @@ import org.apache.activemq.broker.store.kahadb.data.KahaSubscriptionCommand;
 import org.apache.activemq.broker.store.kahadb.data.KahaTraceCommand;
 import org.apache.activemq.broker.store.kahadb.data.KahaTransactionInfo;
 import org.apache.activemq.broker.store.kahadb.data.KahaXATransactionId;
-import org.apache.activemq.broker.store.kahadb.data.KahaAddMessageCommand.KahaAddMessageCommandBean;
-import org.apache.activemq.broker.store.kahadb.data.KahaCommitCommand.KahaCommitCommandBean;
 import org.apache.activemq.broker.store.kahadb.data.KahaDestination.DestinationType;
 import org.apache.activemq.broker.store.kahadb.data.KahaDestination.KahaDestinationBean;
 import org.apache.activemq.broker.store.kahadb.data.KahaEntryType.KahaEntryTypeCreatable;
 import org.apache.activemq.broker.store.kahadb.data.KahaLocalTransactionId.KahaLocalTransactionIdBean;
 import org.apache.activemq.broker.store.kahadb.data.KahaLocation.KahaLocationBean;
-import org.apache.activemq.broker.store.kahadb.data.KahaPrepareCommand.KahaPrepareCommandBean;
-import org.apache.activemq.broker.store.kahadb.data.KahaRemoveDestinationCommand.KahaRemoveDestinationCommandBean;
-import org.apache.activemq.broker.store.kahadb.data.KahaRemoveMessageCommand.KahaRemoveMessageCommandBean;
-import org.apache.activemq.broker.store.kahadb.data.KahaRollbackCommand.KahaRollbackCommandBean;
-import org.apache.activemq.broker.store.kahadb.data.KahaSubscriptionCommand.KahaSubscriptionCommandBean;
-import org.apache.activemq.broker.store.kahadb.data.KahaSubscriptionCommand.KahaSubscriptionCommandBuffer;
 import org.apache.activemq.broker.store.kahadb.data.KahaTraceCommand.KahaTraceCommandBean;
 import org.apache.activemq.broker.store.kahadb.data.KahaTransactionInfo.KahaTransactionInfoBean;
 import org.apache.activemq.broker.store.kahadb.data.KahaXATransactionId.KahaXATransactionIdBean;
@@ -77,23 +68,15 @@ import org.apache.activemq.command.ActiveMQTopic;
 import org.apache.activemq.command.ConnectionId;
 import org.apache.activemq.command.LocalTransactionId;
 import org.apache.activemq.command.Message;
-import org.apache.activemq.command.MessageAck;
-import org.apache.activemq.command.MessageId;
-import org.apache.activemq.command.SubscriptionInfo;
 import org.apache.activemq.command.TransactionId;
 import org.apache.activemq.command.XATransactionId;
 import org.apache.activemq.openwire.OpenWireFormat;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.protobuf.MessageBuffer;
 import org.apache.activemq.protobuf.PBMessage;
-import org.apache.activemq.store.AbstractMessageStore;
-import org.apache.activemq.store.MessageRecoveryListener;
 import org.apache.activemq.store.MessageStore;
 import org.apache.activemq.store.TopicMessageStore;
-import org.apache.activemq.store.TransactionRecoveryListener;
 import org.apache.activemq.store.TransactionStore;
-import org.apache.activemq.usage.MemoryUsage;
-import org.apache.activemq.usage.SystemUsage;
 import org.apache.activemq.util.Callback;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.commons.logging.Log;
@@ -110,81 +93,20 @@ import org.apache.kahadb.util.DataByteArrayInputStream;
 import org.apache.kahadb.util.DataByteArrayOutputStream;
 import org.apache.kahadb.util.LockFile;
 import org.apache.kahadb.util.LongMarshaller;
-import org.apache.kahadb.util.Marshaller;
 import org.apache.kahadb.util.StringMarshaller;
 
-public class MessageDatabase {
+public class KahaDBStore {
 
-    private static final Log LOG = LogFactory.getLog(MessageDatabase.class);
+    private static final Log LOG = LogFactory.getLog(KahaDBStore.class);
     private static final int DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
-
     public static final int CLOSED_STATE = 1;
     public static final int OPEN_STATE = 2;
     
-
-    protected class Metadata {
-        protected Page<Metadata> page;
-        protected int state;
-        protected BTreeIndex<String, StoredDestination> destinations;
-        protected Location lastUpdate;
-        protected Location firstInProgressTransactionLocation;
-
-        public void read(DataInput is) throws IOException {
-            state = is.readInt();
-            destinations = new BTreeIndex<String, StoredDestination>(pageFile, is.readLong());
-            if (is.readBoolean()) {
-                lastUpdate = LocationMarshaller.INSTANCE.readPayload(is);
-            } else {
-                lastUpdate = null;
-            }
-            if (is.readBoolean()) {
-                firstInProgressTransactionLocation = LocationMarshaller.INSTANCE.readPayload(is);
-            } else {
-                firstInProgressTransactionLocation = null;
-            }
-        }
-
-        public void write(DataOutput os) throws IOException {
-            os.writeInt(state);
-            os.writeLong(destinations.getPageId());
-
-            if (lastUpdate != null) {
-                os.writeBoolean(true);
-                LocationMarshaller.INSTANCE.writePayload(lastUpdate, os);
-            } else {
-                os.writeBoolean(false);
-            }
-
-            if (firstInProgressTransactionLocation != null) {
-                os.writeBoolean(true);
-                LocationMarshaller.INSTANCE.writePayload(firstInProgressTransactionLocation, os);
-            } else {
-                os.writeBoolean(false);
-            }
-        }
-    }
-
-    class MetadataMarshaller implements Marshaller<Metadata> {
-        public Class<Metadata> getType() {
-            return Metadata.class;
-        }
-
-        public Metadata readPayload(DataInput dataIn) throws IOException {
-            Metadata rc = new Metadata();
-            rc.read(dataIn);
-            return rc;
-        }
-
-        public void writePayload(Metadata object, DataOutput dataOut) throws IOException {
-            object.write(dataOut);
-        }
-    }
-
     protected PageFile pageFile;
     protected Journal journal;
-    protected Metadata metadata = new Metadata();
-
-    protected MetadataMarshaller metadataMarshaller = new MetadataMarshaller();
+    
+    protected StoredDBState dbstate = new StoredDBState(this);
+    protected DBStateMarshaller dbstateMarshaller = new DBStateMarshaller(this);
 
     protected boolean failIfDatabaseIsLocked;
 
@@ -201,375 +123,10 @@ public class MessageDatabase {
     protected AtomicBoolean started = new AtomicBoolean();
     protected AtomicBoolean opened = new AtomicBoolean();
     private LockFile lockFile;
-    private WireFormat wireFormat = new OpenWireFormat();
-
-    public MessageDatabase() {
-    }
-
-    public void setBrokerName(String brokerName) {
-    }
-    public void setUsageManager(SystemUsage usageManager) {
-    }
+    WireFormat wireFormat = new OpenWireFormat();
 
     public TransactionStore createTransactionStore() throws IOException {
-        return new TransactionStore(){
-            
-            public void commit(TransactionId txid, boolean wasPrepared) throws IOException {
-                store(new KahaCommitCommandBean().setTransactionInfo(createTransactionInfo(txid)), true);
-            }
-            public void prepare(TransactionId txid) throws IOException {
-                store(new KahaPrepareCommandBean().setTransactionInfo(createTransactionInfo(txid)), true);
-            }
-            public void rollback(TransactionId txid) throws IOException {
-                store(new KahaRollbackCommandBean().setTransactionInfo(createTransactionInfo(txid)), false);
-            }
-            public void recover(TransactionRecoveryListener listener) throws IOException {
-                for (Map.Entry<TransactionId, ArrayList<Operation>> entry : preparedTransactions.entrySet()) {
-                    XATransactionId xid = (XATransactionId)entry.getKey();
-                    ArrayList<Message> messageList = new ArrayList<Message>();
-                    ArrayList<MessageAck> ackList = new ArrayList<MessageAck>();
-                    
-                    for (Operation op : entry.getValue()) {
-                        if( op.getClass() == AddOpperation.class ) {
-                            AddOpperation addOp = (AddOpperation)op;
-                            Message msg = (Message)wireFormat.unmarshal( new DataInputStream(addOp.getCommand().getMessage().newInput()) );
-                            messageList.add(msg);
-                        } else {
-                            RemoveOpperation rmOp = (RemoveOpperation)op;
-                            MessageAck ack = (MessageAck)wireFormat.unmarshal( new DataInputStream(rmOp.getCommand().getAck().newInput()) );
-                            ackList.add(ack);
-                        }
-                    }
-                    
-                    Message[] addedMessages = new Message[messageList.size()];
-                    MessageAck[] acks = new MessageAck[ackList.size()];
-                    messageList.toArray(addedMessages);
-                    ackList.toArray(acks);
-                    listener.recover(xid, addedMessages, acks);
-                }
-            }
-            public void start() throws Exception {
-            }
-            public void stop() throws Exception {
-            }
-        };
-    }
-
-    public class KahaDBMessageStore extends AbstractMessageStore {
-        protected KahaDestination dest;
-
-        public KahaDBMessageStore(ActiveMQDestination destination) {
-            super(destination);
-            this.dest = convert( destination );
-        }
-
-        public ActiveMQDestination getDestination() {
-            return destination;
-        }
-
-        public void addMessage(ConnectionContext context, Message message) throws IOException {
-            KahaAddMessageCommandBean command = new KahaAddMessageCommandBean();
-            command.setDestination(dest);
-            command.setMessageId(message.getMessageId().toString());
-            command.setTransactionInfo( createTransactionInfo(message.getTransactionId()) );
-
-            org.apache.activemq.util.ByteSequence packet = wireFormat.marshal(message);
-            command.setMessage(new Buffer(packet.getData(), packet.getOffset(), packet.getLength()));
-
-            store(command, isEnableJournalDiskSyncs() && message.isResponseRequired());
-            
-        }
-        
-        public void removeMessage(ConnectionContext context, MessageAck ack) throws IOException {
-            KahaRemoveMessageCommandBean command = new KahaRemoveMessageCommandBean();
-            command.setDestination(dest);
-            command.setMessageId(ack.getLastMessageId().toString());
-            command.setTransactionInfo(createTransactionInfo(ack.getTransactionId()) );
-            store(command, isEnableJournalDiskSyncs() && ack.isResponseRequired());
-        }
-
-        public void removeAllMessages(ConnectionContext context) throws IOException {
-            KahaRemoveDestinationCommandBean command = new KahaRemoveDestinationCommandBean();
-            command.setDestination(dest);
-            store(command, true);
-        }
-
-        public Message getMessage(MessageId identity) throws IOException {
-            final String key = identity.toString();
-            
-            // Hopefully one day the page file supports concurrent read operations... but for now we must
-            // externally synchronize...
-            Location location;
-            synchronized(indexMutex) {
-                location = pageFile.tx().execute(new Transaction.CallableClosure<Location, IOException>(){
-                    public Location execute(Transaction tx) throws IOException {
-                        StoredDestination sd = getStoredDestination(dest, tx);
-                        Long sequence = sd.messageIdIndex.get(tx, key);
-                        if( sequence ==null ) {
-                            return null;
-                        }
-                        return sd.orderIndex.get(tx, sequence).location;
-                    }
-                });
-            }
-            if( location == null ) {
-                return null;
-            }
-            
-            return loadMessage(location);
-        }
-        
-        public int getMessageCount() throws IOException {
-            synchronized(indexMutex) {
-                return pageFile.tx().execute(new Transaction.CallableClosure<Integer, IOException>(){
-                    public Integer execute(Transaction tx) throws IOException {
-                        // Iterate through all index entries to get a count of messages in the destination.
-                        StoredDestination sd = getStoredDestination(dest, tx);
-                        int rc=0;
-                        for (Iterator<Entry<Location, Long>> iterator = sd.locationIndex.iterator(tx); iterator.hasNext();) {
-                            iterator.next();
-                            rc++;
-                        }
-                        return rc;
-                    }
-                });
-            }
-        }
-
-        public void recover(final MessageRecoveryListener listener) throws Exception {
-            synchronized(indexMutex) {
-                pageFile.tx().execute(new Transaction.Closure<Exception>(){
-                    public void execute(Transaction tx) throws Exception {
-                        StoredDestination sd = getStoredDestination(dest, tx);
-                        for (Iterator<Entry<Long, MessageKeys>> iterator = sd.orderIndex.iterator(tx); iterator.hasNext();) {
-                            Entry<Long, MessageKeys> entry = iterator.next();
-                            listener.recoverMessage( loadMessage(entry.getValue().location) );
-                        }
-                    }
-                });
-            }
-        }
-
-        long cursorPos=0;
-        
-        public void recoverNextMessages(final int maxReturned, final MessageRecoveryListener listener) throws Exception {
-            synchronized(indexMutex) {
-                pageFile.tx().execute(new Transaction.Closure<Exception>(){
-                    public void execute(Transaction tx) throws Exception {
-                        StoredDestination sd = getStoredDestination(dest, tx);
-                        Entry<Long, MessageKeys> entry=null;
-                        int counter = 0;
-                        for (Iterator<Entry<Long, MessageKeys>> iterator = sd.orderIndex.iterator(tx, cursorPos); iterator.hasNext();) {
-                            entry = iterator.next();
-                            listener.recoverMessage( loadMessage(entry.getValue().location ) );
-                            counter++;
-                            if( counter >= maxReturned ) {
-                                break;
-                            }
-                        }
-                        if( entry!=null ) {
-                            cursorPos = entry.getKey()+1;
-                        }
-                    }
-                });
-            }
-        }
-
-        public void resetBatching() {
-            cursorPos=0;
-        }
-
-        
-        @Override
-        public void setBatch(MessageId identity) throws IOException {
-            final String key = identity.toString();
-            
-            // Hopefully one day the page file supports concurrent read operations... but for now we must
-            // externally synchronize...
-            Long location;
-            synchronized(indexMutex) {
-                location = pageFile.tx().execute(new Transaction.CallableClosure<Long, IOException>(){
-                    public Long execute(Transaction tx) throws IOException {
-                        StoredDestination sd = getStoredDestination(dest, tx);
-                        return sd.messageIdIndex.get(tx, key);
-                    }
-                });
-            }
-            if( location!=null ) {
-                cursorPos=location+1;
-            }
-            
-        }
-
-        public void setMemoryUsage(MemoryUsage memoeyUSage) {
-        }
-        public void start() throws Exception {
-        }
-        public void stop() throws Exception {
-        }
-        
-    }
-        
-    class KahaDBTopicMessageStore extends KahaDBMessageStore implements TopicMessageStore {
-        public KahaDBTopicMessageStore(ActiveMQTopic destination) {
-            super(destination);
-        }
-        
-        public void acknowledge(ConnectionContext context, String clientId, String subscriptionName, MessageId messageId) throws IOException {
-            KahaRemoveMessageCommandBean command = new KahaRemoveMessageCommandBean();
-            command.setDestination(dest);
-            command.setSubscriptionKey(subscriptionKey(clientId, subscriptionName));
-            command.setMessageId(messageId.toString());
-            // We are not passed a transaction info.. so we can't participate in a transaction.
-            // Looks like a design issue with the TopicMessageStore interface.  Also we can't recover the original ack
-            // to pass back to the XA recover method.
-            // command.setTransactionInfo();
-            store(command, false);
-        }
-
-        public void addSubsciption(SubscriptionInfo subscriptionInfo, boolean retroactive) throws IOException {
-            String subscriptionKey = subscriptionKey(subscriptionInfo.getClientId(), subscriptionInfo.getSubscriptionName());
-            KahaSubscriptionCommandBean command = new KahaSubscriptionCommandBean();
-            command.setDestination(dest);
-            command.setSubscriptionKey(subscriptionKey);
-            command.setRetroactive(retroactive);
-            org.apache.activemq.util.ByteSequence packet = wireFormat.marshal(subscriptionInfo);
-            command.setSubscriptionInfo(new Buffer(packet.getData(), packet.getOffset(), packet.getLength()));
-            store(command, isEnableJournalDiskSyncs() && true);
-        }
-
-        public void deleteSubscription(String clientId, String subscriptionName) throws IOException {
-            KahaSubscriptionCommandBean command = new KahaSubscriptionCommandBean();
-            command.setDestination(dest);
-            command.setSubscriptionKey(subscriptionKey(clientId, subscriptionName));
-            store(command, isEnableJournalDiskSyncs() && true);
-        }
-
-        public SubscriptionInfo[] getAllSubscriptions() throws IOException {
-            
-            final ArrayList<SubscriptionInfo> subscriptions = new ArrayList<SubscriptionInfo>();
-            synchronized(indexMutex) {
-                pageFile.tx().execute(new Transaction.Closure<IOException>(){
-                    public void execute(Transaction tx) throws IOException {
-                        StoredDestination sd = getStoredDestination(dest, tx);
-                        for (Iterator<Entry<String, KahaSubscriptionCommand>> iterator = sd.subscriptions.iterator(tx); iterator.hasNext();) {
-                            Entry<String, KahaSubscriptionCommand> entry = iterator.next();
-                            SubscriptionInfo info = (SubscriptionInfo)wireFormat.unmarshal( new DataInputStream(entry.getValue().getSubscriptionInfo().newInput()) );
-                            subscriptions.add(info);
-
-                        }
-                    }
-                });
-            }
-            
-            SubscriptionInfo[]rc=new SubscriptionInfo[subscriptions.size()];
-            subscriptions.toArray(rc);
-            return rc;
-        }
-
-        public SubscriptionInfo lookupSubscription(String clientId, String subscriptionName) throws IOException {
-            final String subscriptionKey = subscriptionKey(clientId, subscriptionName);
-            synchronized(indexMutex) {
-                return pageFile.tx().execute(new Transaction.CallableClosure<SubscriptionInfo, IOException>(){
-                    public SubscriptionInfo execute(Transaction tx) throws IOException {
-                        StoredDestination sd = getStoredDestination(dest, tx);
-                        KahaSubscriptionCommand command = sd.subscriptions.get(tx, subscriptionKey);
-                        if( command ==null ) {
-                            return null;
-                        }
-                        return (SubscriptionInfo)wireFormat.unmarshal( new DataInputStream(command.getSubscriptionInfo().newInput()) );
-                    }
-                });
-            }
-        }
-       
-        public int getMessageCount(String clientId, String subscriptionName) throws IOException {
-            final String subscriptionKey = subscriptionKey(clientId, subscriptionName);
-            synchronized(indexMutex) {
-                return pageFile.tx().execute(new Transaction.CallableClosure<Integer, IOException>(){
-                    public Integer execute(Transaction tx) throws IOException {
-                        StoredDestination sd = getStoredDestination(dest, tx);
-                        Long cursorPos = sd.subscriptionAcks.get(tx, subscriptionKey);
-                        if ( cursorPos==null ) {
-                            // The subscription might not exist.
-                            return 0;
-                        }
-                        cursorPos += 1;
-                        
-                        int counter = 0;
-                        for (Iterator<Entry<Long, MessageKeys>> iterator = sd.orderIndex.iterator(tx, cursorPos); iterator.hasNext();) {
-                            iterator.next();
-                            counter++;
-                        }
-                        return counter;
-                    }
-                });
-            }        
-        }
-
-        public void recoverSubscription(String clientId, String subscriptionName, final MessageRecoveryListener listener) throws Exception {
-            final String subscriptionKey = subscriptionKey(clientId, subscriptionName);
-            synchronized(indexMutex) {
-                pageFile.tx().execute(new Transaction.Closure<Exception>(){
-                    public void execute(Transaction tx) throws Exception {
-                        StoredDestination sd = getStoredDestination(dest, tx);
-                        Long cursorPos = sd.subscriptionAcks.get(tx, subscriptionKey);
-                        cursorPos += 1;
-                        
-                        for (Iterator<Entry<Long, MessageKeys>> iterator = sd.orderIndex.iterator(tx, cursorPos); iterator.hasNext();) {
-                            Entry<Long, MessageKeys> entry = iterator.next();
-                            listener.recoverMessage( loadMessage(entry.getValue().location ) );
-                        }
-                    }
-                });
-            }
-        }
-
-        public void recoverNextMessages(String clientId, String subscriptionName, final int maxReturned, final MessageRecoveryListener listener) throws Exception {
-            final String subscriptionKey = subscriptionKey(clientId, subscriptionName);
-            synchronized(indexMutex) {
-                pageFile.tx().execute(new Transaction.Closure<Exception>(){
-                    public void execute(Transaction tx) throws Exception {
-                        StoredDestination sd = getStoredDestination(dest, tx);
-                        Long cursorPos = sd.subscriptionCursors.get(subscriptionKey);
-                        if( cursorPos == null ) {
-                            cursorPos = sd.subscriptionAcks.get(tx, subscriptionKey);
-                            cursorPos += 1;
-                        }
-                        
-                        Entry<Long, MessageKeys> entry=null;
-                        int counter = 0;
-                        for (Iterator<Entry<Long, MessageKeys>> iterator = sd.orderIndex.iterator(tx, cursorPos); iterator.hasNext();) {
-                            entry = iterator.next();
-                            listener.recoverMessage( loadMessage(entry.getValue().location ) );
-                            counter++;
-                            if( counter >= maxReturned ) {
-                                break;
-                            }
-                        }
-                        if( entry!=null ) {
-                            sd.subscriptionCursors.put(subscriptionKey, cursorPos+1);
-                        }
-                    }
-                });
-            }
-        }
-
-        public void resetBatching(String clientId, String subscriptionName) {
-            try {
-                final String subscriptionKey = subscriptionKey(clientId, subscriptionName);
-                synchronized(indexMutex) {
-                    pageFile.tx().execute(new Transaction.Closure<IOException>(){
-                        public void execute(Transaction tx) throws IOException {
-                            StoredDestination sd = getStoredDestination(dest, tx);
-                            sd.subscriptionCursors.remove(subscriptionKey);
-                        }
-                    });
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        return new KahaDBTransactionStore(this);
     }
 
     String subscriptionKey(String clientId, String subscriptionName){
@@ -577,11 +134,11 @@ public class MessageDatabase {
     }
     
     public MessageStore createQueueMessageStore(ActiveMQQueue destination) throws IOException {
-        return new KahaDBMessageStore(destination);
+        return new KahaDBMessageStore(this, destination);
     }
 
     public TopicMessageStore createTopicMessageStore(ActiveMQTopic destination) throws IOException {
-        return new KahaDBTopicMessageStore(destination);
+        return new KahaDBTopicMessageStore(this, destination);
     }
 
     /**
@@ -606,15 +163,14 @@ public class MessageDatabase {
         deleteAllMessages=true;
     }
     
-    
     public Set<ActiveMQDestination> getDestinations() {
         try {
             final HashSet<ActiveMQDestination> rc = new HashSet<ActiveMQDestination>();
             synchronized(indexMutex) {
                 pageFile.tx().execute(new Transaction.Closure<IOException>(){
                     public void execute(Transaction tx) throws IOException {
-                        for (Iterator<Entry<String, StoredDestination>> iterator = metadata.destinations.iterator(tx); iterator.hasNext();) {
-                            Entry<String, StoredDestination> entry = iterator.next();
+                        for (Iterator<Entry<String, StoredDestinationState>> iterator = dbstate.destinations.iterator(tx); iterator.hasNext();) {
+                            Entry<String, StoredDestinationState> entry = iterator.next();
                             rc.add(convert(entry.getKey()));
                         }
                     }
@@ -773,22 +329,22 @@ public class MessageDatabase {
                 public void execute(Transaction tx) throws IOException {
                     if (pageFile.getPageCount() == 0) {
                         // First time this is created.. Initialize the metadata
-                        Page<Metadata> page = tx.allocate();
+                        Page<StoredDBState> page = tx.allocate();
                         assert page.getPageId() == 0;
-                        page.set(metadata);
-                        metadata.page = page;
-                        metadata.state = CLOSED_STATE;
-                        metadata.destinations = new BTreeIndex<String, StoredDestination>(pageFile, tx.allocate().getPageId());
+                        page.set(dbstate);
+                        dbstate.page = page;
+                        dbstate.state = CLOSED_STATE;
+                        dbstate.destinations = new BTreeIndex<String, StoredDestinationState>(pageFile, tx.allocate().getPageId());
 
-                        tx.store(metadata.page, metadataMarshaller, true);
+                        tx.store(dbstate.page, dbstateMarshaller, true);
                     } else {
-                        Page<Metadata> page = tx.load(0, metadataMarshaller);
-                        metadata = page.get();
-                        metadata.page = page;
+                        Page<StoredDBState> page = tx.load(0, dbstateMarshaller);
+                        dbstate = page.get();
+                        dbstate.page = page;
                     }
-                    metadata.destinations.setKeyMarshaller(StringMarshaller.INSTANCE);
-                    metadata.destinations.setValueMarshaller(new StoredDestinationMarshaller());
-                    metadata.destinations.load(tx);
+                    dbstate.destinations.setKeyMarshaller(StringMarshaller.INSTANCE);
+                    dbstate.destinations.setValueMarshaller(new StoredDestinationMarshaller(KahaDBStore.this));
+                    dbstate.destinations.load(tx);
                 }
             });
             pageFile.flush();
@@ -798,9 +354,9 @@ public class MessageDatabase {
             storedDestinations.clear();
             pageFile.tx().execute(new Transaction.Closure<IOException>() {
                 public void execute(Transaction tx) throws IOException {
-                    for (Iterator<Entry<String, StoredDestination>> iterator = metadata.destinations.iterator(tx); iterator.hasNext();) {
-                        Entry<String, StoredDestination> entry = iterator.next();
-                        StoredDestination sd = loadStoredDestination(tx, entry.getKey(), entry.getValue().subscriptions!=null);
+                    for (Iterator<Entry<String, StoredDestinationState>> iterator = dbstate.destinations.iterator(tx); iterator.hasNext();) {
+                        Entry<String, StoredDestinationState> entry = iterator.next();
+                        StoredDestinationState sd = loadStoredDestination(tx, entry.getKey(), entry.getValue().subscriptions!=null);
                         storedDestinations.put(entry.getKey(), sd);
                     }
                 }
@@ -877,7 +433,7 @@ public class MessageDatabase {
 	
 	            pageFile.unload();
 	            pageFile.delete();
-	            metadata = new Metadata();
+	            dbstate = new StoredDBState(this);
 	            
 	            LOG.info("Persistence store purged.");
 	            deleteAllMessages = false;
@@ -895,7 +451,7 @@ public class MessageDatabase {
 		if( opened.compareAndSet(true, false)) {
 	        synchronized (indexMutex) {
 	            pageFile.unload();
-	            metadata = new Metadata();
+	            dbstate = new StoredDBState(this);
 	        }
 	        journal.close();
 	        checkpointThread.join();
@@ -907,12 +463,12 @@ public class MessageDatabase {
     public void unload() throws IOException, InterruptedException {
         synchronized (indexMutex) {
             if( pageFile.isLoaded() ) {
-                metadata.state = CLOSED_STATE;
-                metadata.firstInProgressTransactionLocation = getFirstInProgressTxLocation();
+                dbstate.state = CLOSED_STATE;
+                dbstate.firstInProgressTransactionLocation = getFirstInProgressTxLocation();
     
                 pageFile.tx().execute(new Transaction.Closure<IOException>() {
                     public void execute(Transaction tx) throws IOException {
-                        tx.store(metadata.page, metadataMarshaller, true);
+                        tx.store(dbstate.page, dbstateMarshaller, true);
                     }
                 });
                 close();
@@ -955,7 +511,7 @@ public class MessageDatabase {
 		        int redoCounter = 0;
 		        while (recoveryPosition != null) {
 		            KahaEntryTypeCreatable message = load(recoveryPosition);
-		            metadata.lastUpdate = recoveryPosition;
+		            dbstate.lastUpdate = recoveryPosition;
 		            process(message, recoveryPosition);
 		            redoCounter++;
 		            recoveryPosition = journal.getNextLocation(recoveryPosition);
@@ -981,7 +537,7 @@ public class MessageDatabase {
         long undoCounter=0;
         
         // Go through all the destinations to see if they have messages past the lastAppendLocation
-        for (StoredDestination sd : storedDestinations.values()) {
+        for (StoredDestinationState sd : storedDestinations.values()) {
         	
             final ArrayList<Long> matches = new ArrayList<Long>();
             // Find all the Locations that are >= than the last Append Location.
@@ -1023,7 +579,7 @@ public class MessageDatabase {
 	        }
 	        while (nextRecoveryPosition != null) {
 	        	lastRecoveryPosition = nextRecoveryPosition;
-	            metadata.lastUpdate = lastRecoveryPosition;
+	            dbstate.lastUpdate = lastRecoveryPosition;
 	            KahaEntryTypeCreatable message = load(lastRecoveryPosition);
 	            process(message, lastRecoveryPosition);            
 	            nextRecoveryPosition = journal.getNextLocation(lastRecoveryPosition);
@@ -1032,20 +588,20 @@ public class MessageDatabase {
 	}
 	
     public Location getLastUpdatePosition() throws IOException {
-        return metadata.lastUpdate;
+        return dbstate.lastUpdate;
     }
     
 	private Location getRecoveryPosition() throws IOException {
 		
         // If we need to recover the transactions..
-        if (metadata.firstInProgressTransactionLocation != null) {
-            return metadata.firstInProgressTransactionLocation;
+        if (dbstate.firstInProgressTransactionLocation != null) {
+            return dbstate.firstInProgressTransactionLocation;
         }
         
         // Perhaps there were no transactions...
-        if( metadata.lastUpdate!=null) {
+        if( dbstate.lastUpdate!=null) {
             // Start replay at the record after the last one recorded in the index file.
-            return journal.getNextLocation(metadata.lastUpdate);
+            return journal.getNextLocation(dbstate.lastUpdate);
         }
         
         // This loads the first position.
@@ -1117,7 +673,7 @@ public class MessageDatabase {
     	}
 
         synchronized (indexMutex) {
-        	metadata.lastUpdate = location;
+        	dbstate.lastUpdate = location;
         }
         return location;
     }
@@ -1181,7 +737,7 @@ public class MessageDatabase {
         if (command.hasTransactionInfo()) {
             synchronized (indexMutex) {
                 ArrayList<Operation> inflightTx = getInflightTx(command.getTransactionInfo(), location);
-                inflightTx.add(new AddOpperation(command, location));
+                inflightTx.add(new AddOpperation(this, command, location));
             }
         } else {
             synchronized (indexMutex) {
@@ -1198,7 +754,7 @@ public class MessageDatabase {
         if (command.hasTransactionInfo()) {
             synchronized (indexMutex) {
                 ArrayList<Operation> inflightTx = getInflightTx(command.getTransactionInfo(), location);
-                inflightTx.add(new RemoveOpperation(command, location));
+                inflightTx.add(new RemoveOpperation(this, command, location));
             }
         } else {
             synchronized (indexMutex) {
@@ -1281,8 +837,8 @@ public class MessageDatabase {
     protected final Object indexMutex = new Object();
 	private final HashSet<Integer> journalFilesBeingReplicated = new HashSet<Integer>();
 
-    private void upadateIndex(Transaction tx, KahaAddMessageCommand command, Location location) throws IOException {
-        StoredDestination sd = getStoredDestination(command.getDestination(), tx);
+    void upadateIndex(Transaction tx, KahaAddMessageCommand command, Location location) throws IOException {
+        StoredDestinationState sd = getStoredDestination(command.getDestination(), tx);
 
         // Skip adding the message to the index if this is a topic and there are
         // no subscriptions.
@@ -1305,8 +861,8 @@ public class MessageDatabase {
         
     }
 
-    private void updateIndex(Transaction tx, KahaRemoveMessageCommand command, Location ackLocation) throws IOException {
-        StoredDestination sd = getStoredDestination(command.getDestination(), tx);
+    void updateIndex(Transaction tx, KahaRemoveMessageCommand command, Location ackLocation) throws IOException {
+        StoredDestinationState sd = getStoredDestination(command.getDestination(), tx);
         if (!command.hasSubscriptionKey()) {
             
             // In the queue case we just remove the message from the index..
@@ -1336,7 +892,7 @@ public class MessageDatabase {
     }
 
     private void updateIndex(Transaction tx, KahaRemoveDestinationCommand command, Location location) throws IOException {
-        StoredDestination sd = getStoredDestination(command.getDestination(), tx);
+        StoredDestinationState sd = getStoredDestination(command.getDestination(), tx);
         sd.orderIndex.clear(tx);
         sd.orderIndex.unload(tx);
         tx.free(sd.orderIndex.getPageId());
@@ -1361,11 +917,11 @@ public class MessageDatabase {
 
         String key = key(command.getDestination());
         storedDestinations.remove(key);
-        metadata.destinations.remove(tx, key);
+        dbstate.destinations.remove(tx, key);
     }
 
     private void updateIndex(Transaction tx, KahaSubscriptionCommand command, Location location) throws IOException {
-        StoredDestination sd = getStoredDestination(command.getDestination(), tx);
+        StoredDestinationState sd = getStoredDestination(command.getDestination(), tx);
 
         // If set then we are creating it.. otherwise we are destroying the sub
         if (command.hasSubscriptionInfo()) {
@@ -1398,9 +954,9 @@ public class MessageDatabase {
 
         LOG.debug("Checkpoint started.");
         
-        metadata.state = OPEN_STATE;
-        metadata.firstInProgressTransactionLocation = getFirstInProgressTxLocation();
-        tx.store(metadata.page, metadataMarshaller, true);
+        dbstate.state = OPEN_STATE;
+        dbstate.firstInProgressTransactionLocation = getFirstInProgressTxLocation();
+        tx.store(dbstate.page, dbstateMarshaller, true);
         pageFile.flush();
 
         if( cleanup ) {
@@ -1413,9 +969,9 @@ public class MessageDatabase {
         	}
         	
         	// Don't GC files after the first in progress tx
-        	Location firstTxLocation = metadata.lastUpdate;
-            if( metadata.firstInProgressTransactionLocation!=null ) {
-                firstTxLocation = metadata.firstInProgressTransactionLocation;
+        	Location firstTxLocation = dbstate.lastUpdate;
+            if( dbstate.firstInProgressTransactionLocation!=null ) {
+                firstTxLocation = dbstate.firstInProgressTransactionLocation;
             }
             
             if( firstTxLocation!=null ) {
@@ -1430,7 +986,7 @@ public class MessageDatabase {
             }
 
             // Go through all the destinations to see if any of them can remove GC candidates.
-            for (StoredDestination sd : storedDestinations.values()) {
+            for (StoredDestinationState sd : storedDestinations.values()) {
             	if( gcCandidateSet.isEmpty() ) {
                 	break;
                 }
@@ -1494,131 +1050,11 @@ public class MessageDatabase {
     // /////////////////////////////////////////////////////////////////
 
 
-	private final HashMap<String, StoredDestination> storedDestinations = new HashMap<String, StoredDestination>();
+	private final HashMap<String, StoredDestinationState> storedDestinations = new HashMap<String, StoredDestinationState>();
 
-    class StoredSubscription {
-        SubscriptionInfo subscriptionInfo;
-        String lastAckId;
-        Location lastAckLocation;
-        Location cursor;
-    }
-    
-    static class MessageKeys {
-        final String messageId;
-        final Location location;
-        
-        public MessageKeys(String messageId, Location location) {
-            this.messageId=messageId;
-            this.location=location;
-        }
-        
-        @Override
-        public String toString() {
-            return "["+messageId+","+location+"]";
-        }
-    }
-    
-    static protected class MessageKeysMarshaller implements Marshaller<MessageKeys> {
-        static final MessageKeysMarshaller INSTANCE = new MessageKeysMarshaller();
-        
-        public Class<MessageKeys> getType() {
-            return MessageKeys.class;
-        }
-
-        public MessageKeys readPayload(DataInput dataIn) throws IOException {
-            return new MessageKeys(dataIn.readUTF(), LocationMarshaller.INSTANCE.readPayload(dataIn));
-        }
-
-        public void writePayload(MessageKeys object, DataOutput dataOut) throws IOException {
-            dataOut.writeUTF(object.messageId);
-            LocationMarshaller.INSTANCE.writePayload(object.location, dataOut);
-        }
-    }
-    
-    static class StoredDestination {
-        long nextMessageId;
-        BTreeIndex<Long, MessageKeys> orderIndex;
-        BTreeIndex<Location, Long> locationIndex;
-        BTreeIndex<String, Long> messageIdIndex;
-
-        // These bits are only set for Topics
-        BTreeIndex<String, KahaSubscriptionCommand> subscriptions;
-        BTreeIndex<String, Long> subscriptionAcks;
-        HashMap<String, Long> subscriptionCursors;
-        TreeMap<Long, HashSet<String>> ackPositions;
-    }
-
-    protected class StoredDestinationMarshaller implements Marshaller<StoredDestination> {
-        public Class<StoredDestination> getType() {
-            return StoredDestination.class;
-        }
-
-        public StoredDestination readPayload(DataInput dataIn) throws IOException {
-            StoredDestination value = new StoredDestination();
-            value.orderIndex = new BTreeIndex<Long, MessageKeys>(pageFile, dataIn.readLong());
-            value.locationIndex = new BTreeIndex<Location, Long>(pageFile, dataIn.readLong());
-            value.messageIdIndex = new BTreeIndex<String, Long>(pageFile, dataIn.readLong());
-
-            if (dataIn.readBoolean()) {
-                value.subscriptions = new BTreeIndex<String, KahaSubscriptionCommand>(pageFile, dataIn.readLong());
-                value.subscriptionAcks = new BTreeIndex<String, Long>(pageFile, dataIn.readLong());
-            }
-            return value;
-        }
-
-        public void writePayload(StoredDestination value, DataOutput dataOut) throws IOException {
-            dataOut.writeLong(value.orderIndex.getPageId());
-            dataOut.writeLong(value.locationIndex.getPageId());
-            dataOut.writeLong(value.messageIdIndex.getPageId());
-            if (value.subscriptions != null) {
-                dataOut.writeBoolean(true);
-                dataOut.writeLong(value.subscriptions.getPageId());
-                dataOut.writeLong(value.subscriptionAcks.getPageId());
-            } else {
-                dataOut.writeBoolean(false);
-            }
-        }
-    }
-
-    static class LocationMarshaller implements Marshaller<Location> {
-        final static LocationMarshaller INSTANCE = new LocationMarshaller();
-
-        public Class<Location> getType() {
-            return Location.class;
-        }
-
-        public Location readPayload(DataInput dataIn) throws IOException {
-            Location rc = new Location();
-            rc.setDataFileId(dataIn.readInt());
-            rc.setOffset(dataIn.readInt());
-            return rc;
-        }
-
-        public void writePayload(Location object, DataOutput dataOut) throws IOException {
-            dataOut.writeInt(object.getDataFileId());
-            dataOut.writeInt(object.getOffset());
-        }
-    }
-
-    static class KahaSubscriptionCommandMarshaller implements Marshaller<KahaSubscriptionCommand> {
-        final static KahaSubscriptionCommandMarshaller INSTANCE = new KahaSubscriptionCommandMarshaller();
-
-        public Class<KahaSubscriptionCommand> getType() {
-            return KahaSubscriptionCommand.class;
-        }
-
-        public KahaSubscriptionCommand readPayload(DataInput dataIn) throws IOException {
-            return KahaSubscriptionCommandBuffer.parseFramed((InputStream)dataIn);
-        }
-
-        public void writePayload(KahaSubscriptionCommand object, DataOutput dataOut) throws IOException {
-            object.freeze().writeFramed((OutputStream)dataOut);
-        }
-    }
-
-    protected StoredDestination getStoredDestination(KahaDestination destination, Transaction tx) throws IOException {
+    protected StoredDestinationState getStoredDestination(KahaDestination destination, Transaction tx) throws IOException {
         String key = key(destination);
-        StoredDestination rc = storedDestinations.get(key);
+        StoredDestinationState rc = storedDestinations.get(key);
         if (rc == null) {
             boolean topic = destination.getType() == KahaDestination.DestinationType.TOPIC || destination.getType() == KahaDestination.DestinationType.TEMP_TOPIC;
             rc = loadStoredDestination(tx, key, topic);
@@ -1637,12 +1073,12 @@ public class MessageDatabase {
      * @return
      * @throws IOException
      */
-    private StoredDestination loadStoredDestination(Transaction tx, String key, boolean topic) throws IOException {
+    private StoredDestinationState loadStoredDestination(Transaction tx, String key, boolean topic) throws IOException {
         // Try to load the existing indexes..
-        StoredDestination rc = metadata.destinations.get(tx, key);
+        StoredDestinationState rc = dbstate.destinations.get(tx, key);
         if (rc == null) {
             // Brand new destination.. allocate indexes for it.
-            rc = new StoredDestination();
+            rc = new StoredDestinationState();
             rc.orderIndex = new BTreeIndex<Long, MessageKeys>(pageFile, tx.allocate());
             rc.locationIndex = new BTreeIndex<Location, Long>(pageFile, tx.allocate());
             rc.messageIdIndex = new BTreeIndex<String, Long>(pageFile, tx.allocate());
@@ -1651,12 +1087,12 @@ public class MessageDatabase {
                 rc.subscriptions = new BTreeIndex<String, KahaSubscriptionCommand>(pageFile, tx.allocate());
                 rc.subscriptionAcks = new BTreeIndex<String, Long>(pageFile, tx.allocate());
             }
-            metadata.destinations.put(tx, key, rc);
+            dbstate.destinations.put(tx, key, rc);
         }
 
         // Configure the marshalers and load.
         rc.orderIndex.setKeyMarshaller(LongMarshaller.INSTANCE);
-        rc.orderIndex.setValueMarshaller(MessageKeysMarshaller.INSTANCE);
+        rc.orderIndex.setValueMarshaller(MessageKeys.MARSHALLER);
         rc.orderIndex.load(tx);
 
         // Figure out the next key using the last entry in the destination.
@@ -1701,7 +1137,7 @@ public class MessageDatabase {
      * @param messageSequence
      * @param subscriptionKey
      */
-    private void addAckLocation(StoredDestination sd, Long messageSequence, String subscriptionKey) {
+    private void addAckLocation(StoredDestinationState sd, Long messageSequence, String subscriptionKey) {
         HashSet<String> hs = sd.ackPositions.get(messageSequence);
         if (hs == null) {
             hs = new HashSet<String>();
@@ -1717,7 +1153,7 @@ public class MessageDatabase {
      * @param sequenceId
      * @throws IOException
      */
-    private void removeAckLocation(Transaction tx, StoredDestination sd, String subscriptionKey, Long sequenceId) throws IOException {
+    private void removeAckLocation(Transaction tx, StoredDestinationState sd, String subscriptionKey, Long sequenceId) throws IOException {
         // Remove the sub from the previous location set..
         if (sequenceId != null) {
             HashSet<String> hs = sd.ackPositions.get(sequenceId);
@@ -1792,58 +1228,6 @@ public class MessageDatabase {
             return rc;
         }
     }
-
-    abstract class Operation {
-        final Location location;
-
-        public Operation(Location location) {
-            this.location = location;
-        }
-
-        public Location getLocation() {
-            return location;
-        }
-
-        abstract public void execute(Transaction tx) throws IOException;
-    }
-
-    class AddOpperation extends Operation {
-        final KahaAddMessageCommand command;
-
-        public AddOpperation(KahaAddMessageCommand command, Location location) {
-            super(location);
-            this.command = command;
-        }
-
-        public void execute(Transaction tx) throws IOException {
-            upadateIndex(tx, command, location);
-        }
-
-        public KahaAddMessageCommand getCommand() {
-            return command;
-        }
-    }
-
-    class RemoveOpperation extends Operation {
-        final KahaRemoveMessageCommand command;
-
-        public RemoveOpperation(KahaRemoveMessageCommand command, Location location) {
-            super(location);
-            this.command = command;
-        }
-
-        public void execute(Transaction tx) throws IOException {
-            updateIndex(tx, command, location);
-        }
-
-        public KahaRemoveMessageCommand getCommand() {
-            return command;
-        }
-    }
-
-    // /////////////////////////////////////////////////////////////////
-    // Initialization related implementation methods.
-    // /////////////////////////////////////////////////////////////////
 
     private PageFile createPageFile() {
         PageFile index = new PageFile(directory, "db");
