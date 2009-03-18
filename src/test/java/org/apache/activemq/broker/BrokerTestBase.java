@@ -26,6 +26,11 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import junit.framework.TestCase;
 
+import org.apache.activemq.broker.Destination;
+import org.apache.activemq.broker.MessageBroker;
+import org.apache.activemq.broker.MessageDelivery;
+import org.apache.activemq.broker.Queue;
+import org.apache.activemq.broker.Router;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.PriorityDispatcher;
 import org.apache.activemq.metric.MetricAggregator;
@@ -71,9 +76,9 @@ public abstract class BrokerTestBase extends TestCase {
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
     protected MetricAggregator totalConsumerRate = new MetricAggregator().name("Aggregate Consumer Rate").unit("items");
 
-    protected Broker sendBroker;
-    protected Broker rcvBroker;
-    protected ArrayList<Broker> brokers = new ArrayList<Broker>();
+    protected MessageBroker sendBroker;
+    protected MessageBroker rcvBroker;
+    protected ArrayList<MessageBroker> brokers = new ArrayList<MessageBroker>();
     protected IDispatcher dispatcher;
     protected final AtomicLong msgIdGenerator = new AtomicLong();
     protected final AtomicBoolean stopping = new AtomicBoolean();
@@ -117,7 +122,7 @@ public abstract class BrokerTestBase extends TestCase {
     }
 
     protected IDispatcher createDispatcher() {
-        return PriorityDispatcher.createPriorityDispatchPool("BrokerDispatcher", Broker.MAX_PRIORITY, asyncThreadPoolSize);
+        return PriorityDispatcher.createPriorityDispatchPool("BrokerDispatcher", MessageBroker.MAX_PRIORITY, asyncThreadPoolSize);
     }
     
     public void test_1_1_0() throws Exception {
@@ -390,10 +395,10 @@ public abstract class BrokerTestBase extends TestCase {
             dests[i] = bean;
             if (ptp) {
                 Queue queue = createQueue(sendBroker, dests[i]);
-                sendBroker.addQueue(queue);
+                sendBroker.getDefaultVirtualHost().addQueue(queue);
                 if (multibroker) {
                     queue = createQueue(rcvBroker, dests[i]);
-                    rcvBroker.addQueue(queue);
+                    rcvBroker.getDefaultVirtualHost().addQueue(queue);
                 }
             }
         }
@@ -460,7 +465,7 @@ public abstract class BrokerTestBase extends TestCase {
 
     abstract protected RemoteProducer cerateProducer();
 
-    private Queue createQueue(Broker broker, Destination destination) {
+    private Queue createQueue(MessageBroker broker, Destination destination) {
         Queue queue = new Queue();
         queue.setBroker(broker);
         queue.setDestination(destination);
@@ -471,8 +476,8 @@ public abstract class BrokerTestBase extends TestCase {
         return queue;
     }
 
-    private Broker createBroker(String name, String bindURI, String connectUri) {
-        Broker broker = new Broker();
+    private MessageBroker createBroker(String name, String bindURI, String connectUri) {
+        MessageBroker broker = new MessageBroker();
         broker.setName(name);
         broker.setBindUri(bindURI);
         broker.setConnectUri(connectUri);
@@ -482,7 +487,7 @@ public abstract class BrokerTestBase extends TestCase {
 
     private void stopServices() throws Exception {
         stopping.set(true);
-        for (Broker broker : brokers) {
+        for (MessageBroker broker : brokers) {
             broker.stop();
         }
         for (RemoteProducer connection : producers) {
@@ -497,7 +502,7 @@ public abstract class BrokerTestBase extends TestCase {
     }
 
     private void startServices() throws Exception {
-        for (Broker broker : brokers) {
+        for (MessageBroker broker : brokers) {
             broker.start();
         }
         for (RemoteConsumer connection : consumers) {

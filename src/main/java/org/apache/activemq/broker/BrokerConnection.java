@@ -26,7 +26,7 @@ import org.apache.activemq.wireformat.MultiWireFormatFactory.WireFormatConnected
 
 public class BrokerConnection extends Connection {
     
-    protected Broker broker;
+    protected MessageBroker broker;
     private ProtocolHandler protocolHandler;
 
     public BrokerConnection() {
@@ -41,11 +41,11 @@ public class BrokerConnection extends Connection {
         });
     }
     
-    public Broker getBroker() {
+    public MessageBroker getBroker() {
         return broker;
     }
 
-    public void setBroker(Broker broker) {
+    public void setBroker(MessageBroker broker) {
         this.broker = broker;
     }
     

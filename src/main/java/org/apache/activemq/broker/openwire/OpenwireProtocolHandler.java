@@ -91,7 +91,8 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
     protected IFlowController<MessageDelivery> inboundController;
     
     protected BrokerConnection connection;
-    private OpenWireFormat wireFormat; 
+    private OpenWireFormat wireFormat;
+    private Router router; 
     
     public void start() throws Exception {
         // Setup the inbound processing..
@@ -137,7 +138,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
                 public Response processAddConsumer(ConsumerInfo info) throws Exception {
                     ConsumerContext ctx = new ConsumerContext(info);
                     consumers.put(info.getConsumerId(), ctx);
-                    connection.getBroker().getRouter().bind(convert(info.getDestination()), ctx);
+                    router.bind(convert(info.getDestination()), ctx);
                     return ack(command);
                 }
 
@@ -468,7 +469,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
         // Consider doing some caching of this target list. Most producers
         // always send to
         // the same destination.
-        Collection<DeliveryTarget> targets = connection.getBroker().getRouter().route(elem);
+        Collection<DeliveryTarget> targets = router.route(elem);
 
         final Message message = ((OpenWireMessageDelivery) elem).getMessage();
         if (targets != null) {
@@ -556,6 +557,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
 
     public void setConnection(BrokerConnection connection) {
         this.connection = connection;
+        this.router = connection.getBroker().getDefaultVirtualHost().getRouter();
     }
 
     public void setWireFormat(WireFormat wireFormat) {

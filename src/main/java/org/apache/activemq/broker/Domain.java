@@ -18,6 +18,8 @@ package org.apache.activemq.broker;
 
 import java.util.Collection;
 
+import org.apache.activemq.broker.DeliveryTarget;
+import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 /**

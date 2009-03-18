@@ -20,6 +20,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 
+import org.apache.activemq.broker.DeliveryTarget;
+import org.apache.activemq.broker.Domain;
+import org.apache.activemq.broker.MessageDelivery;
+import org.apache.activemq.broker.Queue;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 public class QueueDomain implements Domain {

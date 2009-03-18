@@ -78,6 +78,7 @@ public class StompProtocolHandler implements ProtocolHandler {
     private SingleFlowRelay<MessageDelivery> outboundQueue;
 
     private HashMap<AsciiBuffer, ConsumerContext> allSentMessageIds = new HashMap<AsciiBuffer, ConsumerContext>();
+    private Router router;
 
     protected FrameTranslator translator(StompFrame frame) {
         try {
@@ -113,7 +114,7 @@ public class StompProtocolHandler implements ProtocolHandler {
             public void onStompFrame(StompFrame frame) throws Exception {
                 ConsumerContext ctx = new ConsumerContext(frame);
                 consumers.put(ctx.stompDestination, ctx);
-                connection.getBroker().getRouter().bind(ctx.destination, ctx);
+                router.bind(ctx.destination, ctx);
                 ack(frame);
             }
         });
@@ -407,7 +408,7 @@ public class StompProtocolHandler implements ProtocolHandler {
         // Consider doing some caching of this target list. Most producers
         // always send to
         // the same destination.
-        Collection<DeliveryTarget> targets = connection.getBroker().getRouter().route(messageDelivery);
+        Collection<DeliveryTarget> targets = router.route(messageDelivery);
         final StompMessageDelivery smd = ((StompMessageDelivery) messageDelivery);
         String receiptId = smd.getReceiptId();
         if (targets != null) {
@@ -481,6 +482,7 @@ public class StompProtocolHandler implements ProtocolHandler {
 
     public void setConnection(BrokerConnection connection) {
         this.connection = connection;
+        this.router = connection.getBroker().getDefaultVirtualHost().getRouter();
     }
 
     public void setWireFormat(WireFormat wireFormat) {

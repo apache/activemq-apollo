@@ -18,26 +18,27 @@ package org.apache.activemq.broker;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.Connection;
 import org.apache.activemq.dispatch.IDispatcher;
+import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.transport.DispatchableTransportServer;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
 
-public class Broker implements TransportAcceptListener {
+public class MessageBroker implements TransportAcceptListener {
 
     public static final int MAX_USER_PRIORITY = 10;
     public static final int MAX_PRIORITY = MAX_USER_PRIORITY + 1;
-    
-    final Router router = new Router();
 
     final ArrayList<Connection> clientConnections = new ArrayList<Connection>();
-    final HashMap<Destination, Queue> queues = new HashMap<Destination, Queue>();
+    private final LinkedHashMap<AsciiBuffer, VirtualHost> virtualHosts = new LinkedHashMap<AsciiBuffer, VirtualHost>();
+    private VirtualHost defaultVirtualHost;
 
     private TransportServer transportServer;
     private String bindUri;
@@ -50,21 +51,16 @@ public class Broker implements TransportAcceptListener {
         return name;
     }
 
-
-    public void addQueue(Queue queue) {
-        Domain domain = router.getDomain(queue.getDestination().getDomain());
-        domain.add(queue.getDestination().getName(), queue);
-    }
-
     public final void stop() throws Exception {
         stopping.set(true);
         transportServer.stop();
-        
+
         for (Connection connection : clientConnections) {
             connection.stop();
         }
-        for (Queue queue : queues.values()) {
-            queue.stop();
+
+        for (VirtualHost virtualHost : virtualHosts.values()) {
+            virtualHost.stop();
         }
         dispatcher.shutdown();
 
@@ -72,6 +68,11 @@ public class Broker implements TransportAcceptListener {
 
     public final void start() throws Exception {
         dispatcher.start();
+
+        for (VirtualHost virtualHost : virtualHosts.values()) {
+            virtualHost.start();
+        }
+
         transportServer = TransportFactory.bind(new URI(bindUri));
         transportServer.setAcceptListener(this);
         if (transportServer instanceof DispatchableTransportServer) {
@@ -79,9 +80,6 @@ public class Broker implements TransportAcceptListener {
         }
         transportServer.start();
 
-        for (Queue queue : queues.values()) {
-            queue.start();
-        }
     }
 
     public void onAccept(final Transport transport) {
@@ -127,18 +125,83 @@ public class Broker implements TransportAcceptListener {
         return stopping.get();
     }
 
-    public Router getRouter() {
-        return router;
-    }
-
-
     public String getConnectUri() {
         return connectUri;
     }
 
-
     public void setConnectUri(String connectUri) {
         this.connectUri = connectUri;
+    }
+
+    // /////////////////////////////////////////////////////////////////
+    // Virtual Host Related Opperations 
+    // /////////////////////////////////////////////////////////////////
+    public VirtualHost getDefaultVirtualHost() {
+        synchronized (virtualHosts) {
+            if( defaultVirtualHost==null ) {
+                defaultVirtualHost = new VirtualHost();
+            }
+            return defaultVirtualHost;
+        }
+    }
+
+    public void setDefaultVirtualHost(VirtualHost defaultVirtualHost) {
+        synchronized (virtualHosts) {
+            this.defaultVirtualHost = defaultVirtualHost;
+        }
+    }
+
+    public void addVirtualHost(VirtualHost host) throws Exception {
+        synchronized (virtualHosts) {
+            // Make sure it's valid.
+            ArrayList<AsciiBuffer> hostNames = host.getHostNames();
+            if (hostNames.isEmpty()) {
+                throw new Exception("Virtual host must be configured with at least one host name.");
+            }
+            for (AsciiBuffer name : hostNames) {
+                if (virtualHosts.containsKey(name)) {
+                    throw new Exception("Virtual host with host name " + name + " already exists.");
+                }
+            }
+
+            // Register it.
+            for (AsciiBuffer name : hostNames) {
+                virtualHosts.put(name, host);
+            }
+
+            // The first virtual host defined is the default virtual host.
+            if (virtualHosts.size() == 1) {
+                setDefaultVirtualHost(host);
+            }
+        }
+    }
+
+    public synchronized void removeVirtualHost(VirtualHost host) throws Exception {
+        synchronized (virtualHosts) {
+            for (AsciiBuffer name : host.getHostNames()) {
+                virtualHosts.remove(name);
+            }
+            // Was the default virtual host removed? Set the default to the next virtual host.
+            if( host == defaultVirtualHost ) {
+                if( virtualHosts.isEmpty() ) {
+                    defaultVirtualHost = null;
+                } else {
+                    defaultVirtualHost = virtualHosts.values().iterator().next();
+                }
+            }
+        }
+    }
+
+    public VirtualHost getVirtualHost(AsciiBuffer name) {
+        synchronized (virtualHosts) {
+            return virtualHosts.get(name);
+        }
+    }
+
+    public synchronized Collection<VirtualHost> getVirtualHosts() {
+        synchronized (virtualHosts) {
+            return new ArrayList<VirtualHost>(virtualHosts.values());
+        }
     }
 
 }

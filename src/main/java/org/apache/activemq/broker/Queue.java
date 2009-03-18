@@ -18,6 +18,9 @@ package org.apache.activemq.broker;
 
 import java.util.HashMap;
 
+import org.apache.activemq.broker.DeliveryTarget;
+import org.apache.activemq.broker.Destination;
+import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.PrioritySizeLimiter;
@@ -35,7 +38,7 @@ public class Queue implements DeliveryTarget {
     HashMap<DeliveryTarget, Subscription<MessageDelivery>> subs = new HashMap<DeliveryTarget, Subscription<MessageDelivery>>();
     private Destination destination;
     private IQueue<AsciiBuffer, MessageDelivery> queue;
-    private Broker broker;
+    private MessageBroker broker;
     
     private Mapper<Integer, MessageDelivery> partitionMapper;
     private Mapper<AsciiBuffer, MessageDelivery> keyExtractor;
@@ -65,8 +68,8 @@ public class Queue implements DeliveryTarget {
     };
     
     private IQueue<AsciiBuffer, MessageDelivery> createSharedFlowQueue() {
-        if (Broker.MAX_PRIORITY > 1) {
-            PrioritySizeLimiter<MessageDelivery> limiter = new PrioritySizeLimiter<MessageDelivery>(100, 1, Broker.MAX_PRIORITY);
+        if (MessageBroker.MAX_PRIORITY > 1) {
+            PrioritySizeLimiter<MessageDelivery> limiter = new PrioritySizeLimiter<MessageDelivery>(100, 1, MessageBroker.MAX_PRIORITY);
             limiter.setPriorityMapper(PRIORITY_MAPPER);
             SharedPriorityQueue<AsciiBuffer, MessageDelivery> queue = new SharedPriorityQueue<AsciiBuffer, MessageDelivery>(destination.getName().toString(), limiter);
             queue.setKeyMapper(keyExtractor);
@@ -141,11 +144,11 @@ public class Queue implements DeliveryTarget {
         return true;
     }
 
-    public Broker getBroker() {
+    public MessageBroker getBroker() {
         return broker;
     }
 
-    public void setBroker(Broker broker) {
+    public void setBroker(MessageBroker broker) {
         this.broker = broker;
     }
 

@@ -20,6 +20,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import org.apache.activemq.broker.DeliveryTarget;
+import org.apache.activemq.broker.Destination;
+import org.apache.activemq.broker.Domain;
+import org.apache.activemq.broker.MessageDelivery;
+import org.apache.activemq.broker.QueueDomain;
+import org.apache.activemq.broker.TopicDomain;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 final public class Router {

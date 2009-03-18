@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.broker;
 
+import org.apache.activemq.broker.Destination;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 public interface MessageDelivery {

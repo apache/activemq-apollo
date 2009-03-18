@@ -18,6 +18,7 @@ package org.apache.activemq.broker;
 
 import java.util.Collection;
 
+import org.apache.activemq.broker.Destination;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 public interface Destination {

@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.broker;
 
+import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.flow.IFlowSink;
 
 public interface DeliveryTarget {

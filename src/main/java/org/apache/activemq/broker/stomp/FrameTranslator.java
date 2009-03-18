@@ -23,6 +23,8 @@ import java.util.Map;
 import javax.jms.JMSException;
 
 import org.apache.activemq.broker.Destination;
+import org.apache.activemq.broker.stomp.FrameTranslator;
+import org.apache.activemq.broker.stomp.StompProtocolHandler;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.activemq.transport.stomp.ProtocolException;
