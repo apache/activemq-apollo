@@ -14,20 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.wireformat;
+package org.apache.activemq.broker.protocol;
 
-import org.apache.activemq.util.ByteSequence;
+import java.io.IOException;
 
-/**
- * This should actually get merged into the WireFormatFactory class.  But to avoid change to much in the core right,
- * now it's an additional interface. 
- * 
- */
-public interface DiscriminatableWireFormatFactory extends WireFormatFactory {
+import org.apache.activemq.util.FactoryFinder;
 
-    int maxWireformatHeaderLength();
+public class ProtocolHandlerFactory {
 
-    boolean matchesWireformatHeader(ByteSequence byteSequence);
-
-    String wireformatName();
+    static private final FactoryFinder PROTOCOL_HANDLER_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/broker/protocol/");
+    
+    public static ProtocolHandler createProtocolHandler(String type) throws IllegalAccessException, InstantiationException, IOException, ClassNotFoundException {
+        return (ProtocolHandler) PROTOCOL_HANDLER_FINDER.newInstance(type);
+    }
+    
 }

@@ -28,7 +28,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.jms.InvalidSelectorException;
-import javax.jms.JMSException;
 
 import org.apache.activemq.WindowLimiter;
 import org.apache.activemq.broker.BrokerConnection;
@@ -36,11 +35,9 @@ import org.apache.activemq.broker.DeliveryTarget;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;
-import org.apache.activemq.broker.BrokerConnection.ProtocolHandler;
+import org.apache.activemq.broker.protocol.ProtocolHandler;
 import org.apache.activemq.command.ActiveMQDestination;
-import org.apache.activemq.command.Message;
 import org.apache.activemq.filter.BooleanExpression;
-import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;

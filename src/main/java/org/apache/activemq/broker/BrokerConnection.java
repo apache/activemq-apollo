@@ -17,29 +17,18 @@
 package org.apache.activemq.broker;
 
 import java.beans.ExceptionListener;
-import java.io.IOException;
 
 import org.apache.activemq.Connection;
-import org.apache.activemq.Service;
-import org.apache.activemq.broker.openwire.OpenwireProtocolHandler;
-import org.apache.activemq.broker.stomp.StompProtocolHandler;
-import org.apache.activemq.openwire.OpenWireFormat;
-import org.apache.activemq.transport.stomp.StompWireFormat;
-import org.apache.activemq.wireformat.WireFormat;
+import org.apache.activemq.broker.protocol.ProtocolHandler;
+import org.apache.activemq.broker.protocol.ProtocolHandlerFactory;
+import org.apache.activemq.util.IOExceptionSupport;
+import org.apache.activemq.wireformat.MultiWireFormatFactory.WireFormatConnected;
 
 public class BrokerConnection extends Connection {
     
     protected Broker broker;
     private ProtocolHandler protocolHandler;
 
-    public interface ProtocolHandler extends Service {
-        public void setConnection(BrokerConnection connection);
-        public void onCommand(Object command);
-        public void onException(Exception error);
-        public void setWireFormat(WireFormat wf);
-    }
-
-    
     public BrokerConnection() {
         setExceptionListener(new ExceptionListener(){
             public void exceptionThrown(Exception error) {
@@ -71,20 +60,17 @@ public class BrokerConnection extends Connection {
             protocolHandler.onCommand(command);
         } else {
             try {
-                
-                // TODO: need to make this more extensible and dynamic.  Perhaps 
-                // we should lookup the ProtocolHandler via a FactoryFinder
-                WireFormat wf = (WireFormat) command;
-                if( wf.getClass() == OpenWireFormat.class ) {
-                    protocolHandler = new OpenwireProtocolHandler();
-                } else if( wf.getClass() == StompWireFormat.class ) {
-                    protocolHandler = new StompProtocolHandler();
-                } else {
-                    throw new IOException("No protocol handler available for: "+wf.getClass());
+
+                WireFormatConnected wfconnected = (WireFormatConnected) command;
+                String wfName = wfconnected.getWireFormatFactory().wireformatName();
+                try {
+                    protocolHandler = ProtocolHandlerFactory.createProtocolHandler(wfName);
+                } catch(Exception e) {
+                    throw IOExceptionSupport.create("No protocol handler available for: "+wfName, e);
                 }
                 
                 protocolHandler.setConnection(this);
-                protocolHandler.setWireFormat(wf);
+                protocolHandler.setWireFormat(wfconnected.getWireFormat());
                 protocolHandler.start();
                 
                 setExceptionListener(new ExceptionListener(){

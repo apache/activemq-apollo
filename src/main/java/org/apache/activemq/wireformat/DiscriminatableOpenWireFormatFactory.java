@@ -39,4 +39,8 @@ public class DiscriminatableOpenWireFormatFactory extends OpenWireFormatFactory 
         return 4+MAGIC.length;
     }
 
+    public String wireformatName() {
+        return "openwire";
+    }
+
 }

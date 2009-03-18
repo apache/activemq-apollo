@@ -29,7 +29,7 @@ import org.apache.activemq.broker.DeliveryTarget;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;
-import org.apache.activemq.broker.BrokerConnection.ProtocolHandler;
+import org.apache.activemq.broker.protocol.ProtocolHandler;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.BrokerId;
 import org.apache.activemq.command.BrokerInfo;

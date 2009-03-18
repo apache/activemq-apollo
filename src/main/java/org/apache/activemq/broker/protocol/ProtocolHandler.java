@@ -14,20 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.wireformat;
+package org.apache.activemq.broker.protocol;
 
-import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.Service;
+import org.apache.activemq.broker.BrokerConnection;
+import org.apache.activemq.wireformat.WireFormat;
 
-/**
- * This should actually get merged into the WireFormatFactory class.  But to avoid change to much in the core right,
- * now it's an additional interface. 
- * 
- */
-public interface DiscriminatableWireFormatFactory extends WireFormatFactory {
-
-    int maxWireformatHeaderLength();
-
-    boolean matchesWireformatHeader(ByteSequence byteSequence);
-
-    String wireformatName();
+public interface ProtocolHandler extends Service {
+    public void setConnection(BrokerConnection connection);
+    public void onCommand(Object command);
+    public void onException(Exception error);
+    public void setWireFormat(WireFormat wf);
 }

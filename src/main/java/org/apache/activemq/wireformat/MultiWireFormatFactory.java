@@ -27,9 +27,37 @@ import java.util.ArrayList;
 import org.apache.activemq.util.ByteArrayInputStream;
 import org.apache.activemq.util.ByteArrayOutputStream;
 import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.FactoryFinder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public class MultiWireFormatFactory implements WireFormatFactory{
+    
+    private static final Log LOG = LogFactory.getLog(MultiWireFormatFactory.class);
+    
+    private static final FactoryFinder WIREFORMAT_FACTORY_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/wireformat/");
 
+    private String wireFormats="openwire,stomp";
+    private ArrayList<DiscriminatableWireFormatFactory> wireFormatFactories;
+    
+    static public class WireFormatConnected {
+        final private DiscriminatableWireFormatFactory wireFormatFactory;
+        final private WireFormat wireFormat;
+        
+        public WireFormatConnected(DiscriminatableWireFormatFactory wireFormatFactory, WireFormat wireFormat) {
+            this.wireFormatFactory = wireFormatFactory;
+            this.wireFormat = wireFormat;
+        }
+
+        public DiscriminatableWireFormatFactory getWireFormatFactory() {
+            return wireFormatFactory;
+        }
+
+        public WireFormat getWireFormat() {
+            return wireFormat;
+        }
+    }
+    
     static class MultiWireFormat implements WireFormat {
 
         ArrayList<DiscriminatableWireFormatFactory> wireFormatFactories = new ArrayList<DiscriminatableWireFormatFactory>();
@@ -64,7 +92,7 @@ public class MultiWireFormatFactory implements WireFormatFactory{
                     if( wff.matchesWireformatHeader(baos.toByteSequence()) ) {
                         wireFormat = wff.createWireFormat();
                         peeked = new ByteArrayInputStream(baos.toByteSequence());
-                        return wireFormat;
+                        return new WireFormatConnected(wff, wireFormat);
                     }
                 }
                 
@@ -112,11 +140,28 @@ public class MultiWireFormatFactory implements WireFormatFactory{
         
     public WireFormat createWireFormat() {
         MultiWireFormat rc = new MultiWireFormat();
-        ArrayList<DiscriminatableWireFormatFactory> wireFormatFactories = new ArrayList<DiscriminatableWireFormatFactory>();
-        wireFormatFactories.add(new DiscriminatableStompWireFormatFactory());
-        wireFormatFactories.add(new DiscriminatableOpenWireFormatFactory());
+        if( wireFormatFactories == null ) {
+            wireFormatFactories = new ArrayList<DiscriminatableWireFormatFactory>();
+            String[] formats = getWireFormats().split("\\,");
+            for (int i = 0; i < formats.length; i++) {
+                try {
+                    wireFormatFactories.add((DiscriminatableWireFormatFactory)WIREFORMAT_FACTORY_FINDER.newInstance(formats[i]));
+                } catch (Exception e) {
+                    LOG.warn("Invalid wireformat '"+formats[i]+"': "+e.getMessage());
+                }
+            }
+        }
         rc.setWireFormatFactories(wireFormatFactories);
         return rc;
     }
+
+    public String getWireFormats() {
+        return wireFormats;
+    }
+
+    public void setWireFormats(String formats) {
+        this.wireFormats = formats;
+    }
+
 
 }

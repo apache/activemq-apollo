@@ -60,4 +60,8 @@ public class DiscriminatableStompWireFormatFactory extends StompWireFormatFactor
         return MAGIC.length+10;
     }
 
+    public String wireformatName() {
+        return "stomp";
+    }
+
 }
