@@ -11,7 +11,7 @@ import org.apache.activemq.protobuf.Buffer;
  * system.
  */
 public interface Store {
-    
+
     /**
      * This interface is used to execute transacted code.
      * 
@@ -56,7 +56,30 @@ public interface Store {
         }
     }
 
-    public <R, T extends Exception> R execute(Callback<R,T> callback) throws T;
+    /**
+     * Executes user supplied {@link Callback}.  If the {@link Callback} does not throw
+     * any Exceptions, all updates to the store are committed to the store as a single 
+     * unit of work, otherwise they are rolled back. 
+     * 
+     * When this method returns, the transaction may be buffered by the Store implementation
+     * it increase performance throughput.  The onFlush parameter can be used to know when
+     * the transaction does get flushed is guaranteed to not be lost if a system crash occurs.
+     * 
+     * You can force the flushing of all previously buffered transactions using the {@link #flush} method.
+     * 
+     * Any exceptions thrown by the  {@link Callback} are propagated by this method.
+     * 
+     * @param <T>
+     * @param closure
+     * @param onFlush if not null, it's {@link Runnable#run()} method is called once he transaction has been store on disk.
+     */
+    public <R, T extends Exception> R execute(Callback<R,T> callback, Runnable onFlush) throws T;
+
+    /**
+     * Flushes all committed buffered transactions.
+     */
+    public void flush();
+
 
     interface RecordKey {
         
@@ -86,7 +109,7 @@ public interface Store {
                 super(message);
             }
         }
-
+        
         // Message related methods.
         public RecordKey messageAdd(AsciiBuffer messageId, Buffer message);
         public RecordKey messageGetKey(AsciiBuffer messageId);

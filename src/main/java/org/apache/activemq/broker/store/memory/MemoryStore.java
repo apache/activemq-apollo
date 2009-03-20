@@ -218,7 +218,14 @@ public class MemoryStore implements Store {
         }
     }
 
-    public <R, T extends Exception> R execute(Callback<R, T> callback) throws T {
-        return callback.execute(session);
+    public <R, T extends Exception> R execute(Callback<R, T> callback, Runnable runnable) throws T {
+        R rc = callback.execute(session);
+        if( runnable!=null ) {
+            runnable.run();
+        }
+        return rc;
+    }
+
+    public void flush() {
     }
 }

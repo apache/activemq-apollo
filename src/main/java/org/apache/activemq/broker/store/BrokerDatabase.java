@@ -189,7 +189,7 @@ public class BrokerDatabase {
                                 }
                             }
                         }
-                    });
+                    }, null);
                     // Wait for the operations to commit.
                     for (Operation processed : processedQueue) {
                         processed.onCommit();
