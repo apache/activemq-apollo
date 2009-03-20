@@ -106,12 +106,12 @@ public class MemoryStore implements Store {
             return list.iterator();
         }
 
-        public Iterator<Buffer> queueListMessagesQueue(AsciiBuffer queue, RecordKey firstRecord, int max) {
-            ArrayList<Buffer> list = new ArrayList<Buffer>(max);
-            TreeMap<RecordKey, Buffer> messages = queues.get(queue.toString());
+        public Iterator<RecordKey> queueListMessagesQueue(AsciiBuffer queue, RecordKey firstRecord, int max) {
+            ArrayList<RecordKey> list = new ArrayList<RecordKey>(max);
+            TreeMap<RecordKey, Buffer> messages = queues.get(queue);
             if (messages != null) {
                 for (RecordKey key : messages.tailMap(firstRecord).keySet() ) {
-                    list.add(messages.get(key));
+                    list.add(key);
                     if (list.size() == max) {
                         break;
                     }
@@ -121,7 +121,7 @@ public class MemoryStore implements Store {
         }
 
         public boolean queueRemove(AsciiBuffer queue) {
-            TreeMap<RecordKey, Buffer> messages = queues.get(queue.toString());
+            TreeMap<RecordKey, Buffer> messages = queues.get(queue);
             if (messages != null) {
                 Iterator<RecordKey> msgKeys = messages.keySet().iterator();
                 while (msgKeys.hasNext()) {
@@ -132,7 +132,7 @@ public class MemoryStore implements Store {
                         // Can't happen.
                     }
                 }
-                queues.remove(queue.toString());
+                queues.remove(queue);
 
                 return true;
             }
@@ -189,7 +189,27 @@ public class MemoryStore implements Store {
             throw new UnsupportedOperationException();
         }
 
-        public RecordKey messageChunkOpen(AsciiBuffer messageId, Buffer txid, Buffer message) {
+        public RecordKey messageChunkOpen(AsciiBuffer messageId, Buffer message) {
+            throw new UnsupportedOperationException();
+        }
+
+        public void transactionAdd(AsciiBuffer txid) {
+            throw new UnsupportedOperationException();
+        }
+
+        public void transactionAddMessage(AsciiBuffer txid, RecordKey messageKey) {
+            throw new UnsupportedOperationException();
+        }
+
+        public Iterator<AsciiBuffer> transactionList(AsciiBuffer first) {
+            throw new UnsupportedOperationException();
+        }
+
+        public boolean transactionRemove(AsciiBuffer txid) {
+            throw new UnsupportedOperationException();
+        }
+
+        public void transactionRemoveMessage(AsciiBuffer txid, AsciiBuffer queue, RecordKey messageKey) {
             throw new UnsupportedOperationException();
         }
 

@@ -110,24 +110,32 @@ public interface Store {
             }
         }
         
+        
         // Message related methods.
         public RecordKey messageAdd(AsciiBuffer messageId, Buffer message);
         public RecordKey messageGetKey(AsciiBuffer messageId);
         public Buffer messageGet(RecordKey key);
 
         // Message Chunking related methods.
-        public RecordKey messageChunkOpen(AsciiBuffer messageId, Buffer txid, Buffer message);
+        public RecordKey messageChunkOpen(AsciiBuffer messageId, Buffer message);
         public void messageChunkAdd(RecordKey key, Buffer message);
         public void messageChunkClose(RecordKey key);
         public Buffer messageChunkGet(RecordKey key, int offset, int max);
 
+        // / Transaction related methods.
+        public Iterator<AsciiBuffer> transactionList(AsciiBuffer first);
+        public void transactionAdd(AsciiBuffer txid);
+        public boolean transactionRemove(AsciiBuffer txid);
+        public void transactionAddMessage(AsciiBuffer txid, RecordKey messageKey);
+        public void transactionRemoveMessage(AsciiBuffer txid, AsciiBuffer queue, RecordKey messageKey);
+        
         // / Queue related methods.
         public Iterator<AsciiBuffer> queueList(AsciiBuffer first);
         public void queueAdd(AsciiBuffer queue);
         public boolean queueRemove(AsciiBuffer queue);
         public void queueAddMessage(AsciiBuffer queue, RecordKey key, Buffer attachment) throws QueueNotFoundException, DuplicateKeyException;
         public void queueRemoveMessage(AsciiBuffer queue, RecordKey key) throws QueueNotFoundException;
-        public Iterator<Buffer> queueListMessagesQueue(AsciiBuffer queue, RecordKey firstRecord, int max);
+        public Iterator<RecordKey> queueListMessagesQueue(AsciiBuffer queue, RecordKey firstRecord, int max);
 
         // We could use this to associate additional data to a message on a
         // queue like which consumer a message has been dispatched to.
