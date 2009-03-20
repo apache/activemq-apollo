@@ -32,9 +32,6 @@ public interface MessageDelivery {
 
     public AsciiBuffer getProducerId();
 
-    public void setCompletionCallback(Runnable runnable);
-    public Runnable getCompletionCallback();
-
     public <T> T asType(Class<T> type);
 
     public boolean isPersistent();
@@ -46,6 +43,17 @@ public interface MessageDelivery {
     public void setTrackingNumber(long tracking);
     
     public long getTrackingNumber();
+    
+    /**
+     * Returns true if this message requires acknowledgement.
+     */
+    public boolean isResponseRequired();
+    
+    /**
+     * Called when the message's persistence requirements have
+     * been met. This method must not block. 
+     */
+    public void onMessagePersisted();
 
     /**
      * Returns the message's buffer representation.

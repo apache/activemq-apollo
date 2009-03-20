@@ -26,20 +26,21 @@ import org.apache.activemq.broker.Domain;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.QueueDomain;
 import org.apache.activemq.broker.TopicDomain;
+import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 final public class Router {
-    
+
     public static final AsciiBuffer TOPIC_DOMAIN = new AsciiBuffer("topic");
     public static final AsciiBuffer QUEUE_DOMAIN = new AsciiBuffer("queue");
-    
+
     private final HashMap<AsciiBuffer, Domain> domains = new HashMap<AsciiBuffer, Domain>();
-    
+
     public Router() {
         domains.put(QUEUE_DOMAIN, new QueueDomain());
         domains.put(TOPIC_DOMAIN, new TopicDomain());
     }
-    
+
     public Domain getDomain(AsciiBuffer name) {
         return domains.get(name);
     }
@@ -52,30 +53,61 @@ final public class Router {
         return domains.remove(name);
     }
 
-    
     public synchronized void bind(Destination destination, DeliveryTarget dt) {
         Domain domain = domains.get(destination.getDomain());
         domain.bind(destination.getName(), dt);
     }
 
-    public Collection<DeliveryTarget> route(MessageDelivery msg) {
-        return route(msg.getDestination(), msg);
+    public void route(final MessageDelivery msg, ISourceController<?> controller) {
+
+        Collection<DeliveryTarget> targets = route(msg.getDestination(), msg);
+
+        // TODO:
+        // Consider doing some caching of this target list. Most producers
+        // always send to the same destination.
+        if (targets != null) {
+
+            if (msg.isResponseRequired()) {
+                // We need to ack the message once we ensure we won't loose it.
+                // We know we won't loose it once it's persisted or delivered to
+                // a consumer
+                // Setup a callback to get notifed once one of those happens.
+                if (!msg.isPersistent()) {
+                    // Let the client know the broker got the message.
+                    msg.onMessagePersisted();
+                }
+            }
+
+            // Deliver the message to all the targets..
+            for (DeliveryTarget dt : targets) {
+                if (dt.match(msg)) {
+                    dt.getSink().add(msg, controller);
+                }
+            }
+
+        } else {
+            // Let the client know we got the message even though there
+            // were no valid targets to deliver the message to.
+            if (msg.isResponseRequired()) {
+                msg.onMessagePersisted();
+            }
+        }
     }
 
     private Collection<DeliveryTarget> route(Destination destination, MessageDelivery msg) {
         // Handles routing to composite/multi destinations.
         Collection<Destination> destinationList = destination.getDestinations();
-        if( destinationList == null ) {
+        if (destinationList == null) {
             Domain domain = domains.get(destination.getDomain());
             return domain.route(destination.getName(), msg);
         } else {
             HashSet<DeliveryTarget> rc = new HashSet<DeliveryTarget>();
             for (Destination d : destinationList) {
                 Collection<DeliveryTarget> t = route(d, msg);
-                if( t!=null ) {
+                if (t != null) {
                     rc.addAll(t);
                 }
-            }            
+            }
             return rc;
         }
     }

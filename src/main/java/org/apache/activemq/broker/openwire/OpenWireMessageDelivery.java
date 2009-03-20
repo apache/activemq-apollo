@@ -27,22 +27,30 @@ public class OpenWireMessageDelivery implements MessageDelivery {
     private final Message message;
     private Destination destination;
     private AsciiBuffer producerId;
-    private Runnable completionCallback;
     private long tracking;
+    private PersistListener persistListener = null;
+
+    public interface PersistListener {
+        public void onMessagePersisted(OpenWireMessageDelivery delivery);
+    }
 
     public OpenWireMessageDelivery(Message message) {
         this.message = message;
     }
 
+    public void setPersistListener(PersistListener listener) {
+        persistListener = listener;
+    }
+
     public Destination getDestination() {
-        if( destination == null ) {
+        if (destination == null) {
             destination = OpenwireProtocolHandler.convert(message.getDestination());
         }
         return destination;
     }
 
     public int getFlowLimiterSize() {
-        return message.getSize();
+        return 1;
     }
 
     public int getPriority() {
@@ -54,7 +62,7 @@ public class OpenWireMessageDelivery implements MessageDelivery {
     }
 
     public AsciiBuffer getProducerId() {
-        if( producerId == null ) {
+        if (producerId == null) {
             producerId = new AsciiBuffer(message.getProducerId().toString());
         }
         return producerId;
@@ -64,20 +72,12 @@ public class OpenWireMessageDelivery implements MessageDelivery {
         return message;
     }
 
-    public Runnable getCompletionCallback() {
-        return completionCallback;
-    }
-
-    public void setCompletionCallback(Runnable completionCallback) {
-        this.completionCallback = completionCallback;
-    }
-
     public <T> T asType(Class<T> type) {
-        if( type == Message.class ) {
+        if (type == Message.class) {
             return type.cast(message);
         }
         // TODO: is this right?
-        if( message.getClass().isAssignableFrom(type) ) {
+        if (message.getClass().isAssignableFrom(type)) {
             return type.cast(message);
         }
         return null;
@@ -94,7 +94,7 @@ public class OpenWireMessageDelivery implements MessageDelivery {
     public long getTrackingNumber() {
         return tracking;
     }
-    
+
     /**
      * Returns the message's buffer representation.
      * 
@@ -102,6 +102,17 @@ public class OpenWireMessageDelivery implements MessageDelivery {
      */
     public Buffer getMessageBuffer() {
         throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    public final void onMessagePersisted() {
+        if (persistListener != null) {
+            persistListener.onMessagePersisted(this);
+            persistListener = null;
+        }
+    }
+
+    public final boolean isResponseRequired() {
+        return message.isResponseRequired();
     }
 
 }

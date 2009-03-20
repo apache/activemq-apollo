@@ -7,7 +7,7 @@ import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.SizeLimiter;
 
-public class WindowLimiter<E> extends SizeLimiter<E>  {
+public class WindowLimiter<E extends MessageDelivery> extends SizeLimiter<E>  {
         final Flow flow;
         final boolean clientMode;
         private int available;
@@ -54,7 +54,7 @@ public class WindowLimiter<E> extends SizeLimiter<E>  {
             remove(credit);
         }
 
-        public int getElementSize(MessageDelivery m) {
+        public int getElementSize(E m) {
             return m.getFlowLimiterSize();
         }
     }

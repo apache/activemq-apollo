@@ -57,8 +57,7 @@ import org.apache.activemq.util.ByteArrayOutputStream;
 import org.apache.activemq.util.FactoryFinder;
 import org.apache.activemq.wireformat.WireFormat;
 
-
-public class StompProtocolHandler implements ProtocolHandler {
+public class StompProtocolHandler implements ProtocolHandler, StompMessageDelivery.PersistListener {
 
     interface ActionHander {
         public void onStompFrame(StompFrame frame) throws Exception;
@@ -68,11 +67,12 @@ public class StompProtocolHandler implements ProtocolHandler {
     protected final HashMap<String, ConsumerContext> consumers = new HashMap<String, ConsumerContext>();
 
     protected final Object inboundMutex = new Object();
-    protected IFlowController<MessageDelivery> inboundController;
-    
+    protected IFlowController<StompMessageDelivery> inboundController;
+
     protected BrokerConnection connection;
-    
-    // TODO: need to update the FrameTranslator to normalize to new broker API objects instead of to the openwire command set.
+
+    // TODO: need to update the FrameTranslator to normalize to new broker API
+    // objects instead of to the openwire command set.
     private final FrameTranslator translator = new LegacyFrameTranslator();
     private final FactoryFinder FRAME_TRANSLATOR_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/broker/stomp/frametranslator/");
     private SingleFlowRelay<MessageDelivery> outboundQueue;
@@ -90,19 +90,19 @@ public class StompProtocolHandler implements ProtocolHandler {
         }
         return translator;
     }
-    
+
     public StompProtocolHandler() {
-        actionHandlers.put(Stomp.Commands.CONNECT, new ActionHander(){
+        actionHandlers.put(Stomp.Commands.CONNECT, new ActionHander() {
             public void onStompFrame(StompFrame frame) throws Exception {
                 StompFrame response = new StompFrame(Stomp.Responses.CONNECTED);
                 connection.write(response);
             }
         });
-        actionHandlers.put(Stomp.Commands.SEND, new ActionHander(){
+        actionHandlers.put(Stomp.Commands.SEND, new ActionHander() {
             public void onStompFrame(StompFrame frame) throws Exception {
                 String dest = frame.getHeaders().get(Stomp.Headers.Send.DESTINATION);
                 Destination destination = translator(frame).convertToDestination(StompProtocolHandler.this, dest);
-                
+
                 frame.setAction(Stomp.Responses.MESSAGE);
                 StompMessageDelivery md = new StompMessageDelivery(frame, destination);
                 while (!inboundController.offer(md, null)) {
@@ -110,7 +110,7 @@ public class StompProtocolHandler implements ProtocolHandler {
                 }
             }
         });
-        actionHandlers.put(Stomp.Commands.SUBSCRIBE, new ActionHander(){
+        actionHandlers.put(Stomp.Commands.SUBSCRIBE, new ActionHander() {
             public void onStompFrame(StompFrame frame) throws Exception {
                 ConsumerContext ctx = new ConsumerContext(frame);
                 consumers.put(ctx.stompDestination, ctx);
@@ -118,51 +118,55 @@ public class StompProtocolHandler implements ProtocolHandler {
                 ack(frame);
             }
         });
-        actionHandlers.put(Stomp.Commands.UNSUBSCRIBE, new ActionHander(){
+        actionHandlers.put(Stomp.Commands.UNSUBSCRIBE, new ActionHander() {
             public void onStompFrame(StompFrame frame) throws Exception {
             }
         });
-        actionHandlers.put(Stomp.Commands.ACK, new ActionHander(){
+        actionHandlers.put(Stomp.Commands.ACK, new ActionHander() {
             public void onStompFrame(StompFrame frame) throws Exception {
                 frame.getHeaders().get(Stomp.Headers.Ack.MESSAGE_ID);
             }
         });
-        actionHandlers.put(Stomp.Commands.DISCONNECT, new ActionHander(){
+        actionHandlers.put(Stomp.Commands.DISCONNECT, new ActionHander() {
             public void onStompFrame(StompFrame frame) throws Exception {
             }
         });
-        
-        actionHandlers.put(Stomp.Commands.ABORT_TRANSACTION, new ActionHander(){
+
+        actionHandlers.put(Stomp.Commands.ABORT_TRANSACTION, new ActionHander() {
             public void onStompFrame(StompFrame frame) throws Exception {
             }
         });
-        actionHandlers.put(Stomp.Commands.BEGIN_TRANSACTION, new ActionHander(){
+        actionHandlers.put(Stomp.Commands.BEGIN_TRANSACTION, new ActionHander() {
             public void onStompFrame(StompFrame frame) throws Exception {
             }
         });
-        actionHandlers.put(Stomp.Commands.COMMIT_TRANSACTION, new ActionHander(){
+        actionHandlers.put(Stomp.Commands.COMMIT_TRANSACTION, new ActionHander() {
             public void onStompFrame(StompFrame frame) throws Exception {
             }
         });
     }
-    
+
     public void start() throws Exception {
         // Setup the inbound processing..
-        final Flow inboundFlow = new Flow("broker-"+connection.getName()+"-inbound", false);
-        SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(connection.getInputWindowSize(), connection.getInputResumeThreshold());
-        inboundController = new FlowController<MessageDelivery>(new FlowControllableAdapter() {
-            public void flowElemAccepted(ISourceController<MessageDelivery> controller, MessageDelivery elem) {
-                route(controller, elem);
+        final Flow inboundFlow = new Flow("broker-" + connection.getName() + "-inbound", false);
+        SizeLimiter<StompMessageDelivery> inLimiter = new SizeLimiter<StompMessageDelivery>(connection.getInputWindowSize(), connection.getInputResumeThreshold());
+        inboundController = new FlowController<StompMessageDelivery>(new FlowControllableAdapter() {
+            public void flowElemAccepted(ISourceController<StompMessageDelivery> controller, StompMessageDelivery elem) {
+                if (elem.isResponseRequired()) {
+                    elem.setPersistListener(StompProtocolHandler.this);
+                }
+                router.route(elem, controller);
+                controller.elementDispatched(elem);
             }
-        
+
             public String toString() {
                 return inboundFlow.getFlowName();
             }
-        }, inboundFlow, limiter, inboundMutex);
-        
-        Flow outboundFlow = new Flow("broker-"+connection.getName()+"-outbound", false);
-        limiter = new SizeLimiter<MessageDelivery>(connection.getOutputWindowSize(), connection.getOutputWindowSize());
-        outboundQueue = new SingleFlowRelay<MessageDelivery>(outboundFlow, outboundFlow.getFlowName(), limiter);
+        }, inboundFlow, inLimiter, inboundMutex);
+
+        Flow outboundFlow = new Flow("broker-" + connection.getName() + "-outbound", false);
+        SizeLimiter<MessageDelivery> outLimiter = new SizeLimiter<MessageDelivery>(connection.getOutputWindowSize(), connection.getOutputWindowSize());
+        outboundQueue = new SingleFlowRelay<MessageDelivery>(outboundFlow, outboundFlow.getFlowName(), outLimiter);
         outboundQueue.setDrain(new IFlowDrain<MessageDelivery>() {
             public void drain(final MessageDelivery message, final ISourceController<MessageDelivery> controller) {
                 StompFrame msg = message.asType(StompFrame.class);
@@ -180,19 +184,19 @@ public class StompProtocolHandler implements ProtocolHandler {
     }
 
     public void onCommand(Object o) {
-        StompFrame command = (StompFrame)o;
+        StompFrame command = (StompFrame) o;
         try {
             String action = command.getAction();
             ActionHander actionHander = actionHandlers.get(action);
-            if( actionHander == null ) {
-                throw new IOException("Unsupported command: "+action);
+            if (actionHander == null) {
+                throw new IOException("Unsupported command: " + action);
             }
             actionHander.onStompFrame(command);
         } catch (Exception error) {
             try {
-                
+
                 error.printStackTrace();
-                
+
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 PrintWriter stream = new PrintWriter(new OutputStreamWriter(baos, "UTF-8"));
                 error.printStackTrace(stream);
@@ -215,11 +219,11 @@ public class StompProtocolHandler implements ProtocolHandler {
             }
         }
     }
-    
+
     public void onException(Exception error) {
-        if( !connection.isStopping() ) {
+        if (!connection.isStopping()) {
             try {
-                
+
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 PrintWriter stream = new PrintWriter(new OutputStreamWriter(baos, "UTF-8"));
                 error.printStackTrace(stream);
@@ -227,7 +231,7 @@ public class StompProtocolHandler implements ProtocolHandler {
 
                 sendError(error.getMessage(), baos.toByteArray());
                 connection.stop();
-                
+
             } catch (Exception ignore) {
             }
         }
@@ -236,15 +240,15 @@ public class StompProtocolHandler implements ProtocolHandler {
     // /////////////////////////////////////////////////////////////////
     // Internal Support Methods
     // /////////////////////////////////////////////////////////////////
-    static class FlowControllableAdapter implements FlowControllable<MessageDelivery> {
-        public void flowElemAccepted(ISourceController<MessageDelivery> controller, MessageDelivery elem) {
+    static class FlowControllableAdapter implements FlowControllable<StompMessageDelivery> {
+        public void flowElemAccepted(ISourceController<StompMessageDelivery> controller, StompMessageDelivery elem) {
         }
 
-        public IFlowSink<MessageDelivery> getFlowSink() {
+        public IFlowSink<StompMessageDelivery> getFlowSink() {
             return null;
         }
 
-        public IFlowSource<MessageDelivery> getFlowSource() {
+        public IFlowSource<StompMessageDelivery> getFlowSource() {
             return null;
         }
     }
@@ -260,14 +264,14 @@ public class StompProtocolHandler implements ProtocolHandler {
         private String stompDestination;
         private Destination destination;
         private String ackMode;
-        
+
         private LinkedHashMap<AsciiBuffer, AsciiBuffer> sentMessageIds = new LinkedHashMap<AsciiBuffer, AsciiBuffer>();
 
         private boolean durable;
 
         public ConsumerContext(final StompFrame subscribe) throws Exception {
             translator = translator(subscribe);
-            
+
             Map<String, String> headers = subscribe.getHeaders();
             stompDestination = headers.get(Stomp.Headers.Subscribe.DESTINATION);
             destination = translator.convertToDestination(StompProtocolHandler.this, stompDestination);
@@ -278,17 +282,17 @@ public class StompProtocolHandler implements ProtocolHandler {
                 ackMode = StompSubscription.CLIENT_ACK;
             } else if (Stomp.Headers.Subscribe.AckModeValues.INDIVIDUAL.equals(ackMode)) {
                 ackMode = StompSubscription.INDIVIDUAL_ACK;
-                sendError(StompSubscription.INDIVIDUAL_ACK+" not supported.");
+                sendError(StompSubscription.INDIVIDUAL_ACK + " not supported.");
                 connection.stop();
                 return;
             } else {
                 ackMode = StompSubscription.AUTO_ACK;
             }
-            
+
             selector = parseSelector(subscribe);
 
-            if( ackMode != StompSubscription.AUTO_ACK ) {
-                Flow flow = new Flow("broker-"+subscriptionId+"-outbound", false);
+            if (ackMode != StompSubscription.AUTO_ACK) {
+                Flow flow = new Flow("broker-" + subscriptionId + "-outbound", false);
                 limiter = new WindowLimiter<MessageDelivery>(true, flow, 1000, 500) {
                     public int getElementSize(MessageDelivery m) {
                         return 1;
@@ -298,8 +302,8 @@ public class StompProtocolHandler implements ProtocolHandler {
                 queue.setDrain(new IFlowDrain<MessageDelivery>() {
                     public void drain(final MessageDelivery message, ISourceController<MessageDelivery> controller) {
                         StompFrame frame = message.asType(StompFrame.class);
-                        if (ackMode == StompSubscription.CLIENT_ACK || ackMode==StompSubscription.INDIVIDUAL_ACK) {
-                            synchronized(allSentMessageIds) {
+                        if (ackMode == StompSubscription.CLIENT_ACK || ackMode == StompSubscription.INDIVIDUAL_ACK) {
+                            synchronized (allSentMessageIds) {
                                 AsciiBuffer msgId = message.getMsgId();
                                 sentMessageIds.put(msgId, msgId);
                                 allSentMessageIds.put(msgId, ConsumerContext.this);
@@ -311,26 +315,26 @@ public class StompProtocolHandler implements ProtocolHandler {
             } else {
                 queue = outboundQueue;
             }
-            
+
         }
 
         public void ack(StompFrame info) throws Exception {
-            if (ackMode == StompSubscription.CLIENT_ACK || ackMode==StompSubscription.INDIVIDUAL_ACK) {
+            if (ackMode == StompSubscription.CLIENT_ACK || ackMode == StompSubscription.INDIVIDUAL_ACK) {
                 int credits = 0;
-                synchronized(allSentMessageIds) {
+                synchronized (allSentMessageIds) {
                     AsciiBuffer mid = new AsciiBuffer(info.getHeaders().get(Stomp.Headers.Ack.MESSAGE_ID));
                     for (Iterator<AsciiBuffer> iterator = sentMessageIds.keySet().iterator(); iterator.hasNext();) {
                         AsciiBuffer next = iterator.next();
                         iterator.remove();
                         allSentMessageIds.remove(next);
                         credits++;
-                        if( next.equals(mid) ) {
+                        if (next.equals(mid)) {
                             break;
                         }
                     }
-                        
+
                 }
-                synchronized(queue) {
+                synchronized (queue) {
                     limiter.onProtocolCredit(credits);
                 }
 
@@ -351,27 +355,29 @@ public class StompProtocolHandler implements ProtocolHandler {
             if (stompMessage == null) {
                 return false;
             }
-            
+
             return true;
-            
-//          TODO: implement selector bits.
-//            Message msg = message.asType(Message.class);
-//            if (msg == null) {
-//                return false;
-//            }
-//
-//            // TODO: abstract the Selector bits so that it is not openwire specific.
-//            MessageEvaluationContext selectorContext = new MessageEvaluationContext();
-//            selectorContext.setMessageReference(msg);
-//            selectorContext.setDestination(msg.getDestination());
-//            try {
-//                return (selector == null || selector.matches(selectorContext));
-//            } catch (JMSException e) {
-//                e.printStackTrace();
-//                return false;
-//            }
+
+            // TODO: implement selector bits.
+            // Message msg = message.asType(Message.class);
+            // if (msg == null) {
+            // return false;
+            // }
+            //
+            // // TODO: abstract the Selector bits so that it is not openwire
+            // specific.
+            // MessageEvaluationContext selectorContext = new
+            // MessageEvaluationContext();
+            // selectorContext.setMessageReference(msg);
+            // selectorContext.setDestination(msg.getDestination());
+            // try {
+            // return (selector == null || selector.matches(selectorContext));
+            // } catch (JMSException e) {
+            // e.printStackTrace();
+            // return false;
+            // }
         }
-        
+
         public boolean isDurable() {
             return durable;
         }
@@ -381,11 +387,11 @@ public class StompProtocolHandler implements ProtocolHandler {
         }
 
     }
-    
+
     private void sendError(String message) {
         sendError(message, StompFrame.NO_DATA);
     }
-    
+
     private void sendError(String message, String details) {
         try {
             sendError(message, details.getBytes("UTF-8"));
@@ -393,6 +399,7 @@ public class StompProtocolHandler implements ProtocolHandler {
             throw new RuntimeException(e);
         }
     }
+
     private void sendError(String message, byte[] details) {
         HashMap<String, String> headers = new HashMap<String, String>();
         headers.put(Stomp.Headers.Error.MESSAGE, message);
@@ -400,9 +407,16 @@ public class StompProtocolHandler implements ProtocolHandler {
         connection.write(errorMessage);
     }
 
-    private void ack(StompFrame frame) {
+    //Callback from MessageDelivery when message's persistence guarantees are met. 
+    public void onMessagePersisted(StompMessageDelivery delivery) {
+        //TODO this method must not block:
+        ack(delivery.getStomeFame());
+    }
+
+    void ack(StompFrame frame) {
         ack(frame.getHeaders().get(Stomp.Headers.RECEIPT_REQUESTED));
     }
+
     private void ack(String receiptId) {
         if (receiptId != null) {
             StompFrame receipt = new StompFrame();
@@ -411,49 +425,6 @@ public class StompProtocolHandler implements ProtocolHandler {
             receipt.getHeaders().put(Stomp.Headers.Response.RECEIPT_ID, receiptId);
             connection.write(receipt);
         }
-    }
-
-    protected void route(ISourceController<MessageDelivery> controller, MessageDelivery messageDelivery) {
-        // TODO:
-        // Consider doing some caching of this target list. Most producers
-        // always send to
-        // the same destination.
-        Collection<DeliveryTarget> targets = router.route(messageDelivery);
-        final StompMessageDelivery smd = ((StompMessageDelivery) messageDelivery);
-        String receiptId = smd.getReceiptId();
-        if (targets != null) {
-            if (receiptId!=null) {
-                // We need to ack the message once we ensure we won't loose it.
-                // We know we won't loose it once it's persisted or delivered to
-                // a consumer
-                // Setup a callback to get notifed once one of those happens.
-                if (messageDelivery.isPersistent()) {
-                    messageDelivery.setCompletionCallback(new Runnable() {
-                        public void run() {
-                            ack(smd.getStomeFame());
-                        }
-                    });
-                } else {
-                    // Let the client know the broker got the message.
-                    ack(smd.getStomeFame());
-                }
-            }
-
-            // Deliver the message to all the targets..
-            for (DeliveryTarget dt : targets) {
-                if (dt.match(messageDelivery)) {
-                    dt.getSink().add(messageDelivery, controller);
-                }
-            }
-
-        } else {
-            // Let the client know we got the message even though there
-            // were no valid targets to deliver the message to.
-            if (receiptId!=null) {
-                ack(receiptId);
-            }
-        }
-        controller.elementDispatched(messageDelivery);
     }
 
     static public Destination convert(ActiveMQDestination dest) {
@@ -476,11 +447,11 @@ public class StompProtocolHandler implements ProtocolHandler {
         }
         return new Destination.SingleDestination(domain, new AsciiBuffer(dest.getPhysicalName()));
     }
-    
+
     private static BooleanExpression parseSelector(StompFrame frame) throws InvalidSelectorException {
         BooleanExpression rc = null;
         String selector = frame.getHeaders().get(Stomp.Headers.Subscribe.SELECTOR);
-        if( selector !=null ) { 
+        if (selector != null) {
             rc = SelectorParser.parse(selector);
         }
         return rc;
@@ -512,5 +483,4 @@ public class StompProtocolHandler implements ProtocolHandler {
         // TODO Auto-generated method stub
         return null;
     }
-
 }

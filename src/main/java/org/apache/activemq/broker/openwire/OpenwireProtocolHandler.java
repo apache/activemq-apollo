@@ -29,6 +29,7 @@ import org.apache.activemq.broker.DeliveryTarget;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;
+import org.apache.activemq.broker.openwire.OpenWireMessageDelivery.PersistListener;
 import org.apache.activemq.broker.protocol.ProtocolHandler;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.BrokerId;
@@ -82,13 +83,13 @@ import org.apache.activemq.state.CommandVisitor;
 import org.apache.activemq.transport.WireFormatNegotiator;
 import org.apache.activemq.wireformat.WireFormat;
 
-public class OpenwireProtocolHandler implements ProtocolHandler {
+public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener {
 
     protected final HashMap<ProducerId, ProducerContext> producers = new HashMap<ProducerId, ProducerContext>();
     protected final HashMap<ConsumerId, ConsumerContext> consumers = new HashMap<ConsumerId, ConsumerContext>();
 
     protected final Object inboundMutex = new Object();
-    protected IFlowController<MessageDelivery> inboundController;
+    protected IFlowController<OpenWireMessageDelivery> inboundController;
 
     protected BrokerConnection connection;
     private OpenWireFormat wireFormat;
@@ -97,10 +98,14 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
     public void start() throws Exception {
         // Setup the inbound processing..
         final Flow flow = new Flow("broker-" + connection.getName() + "-inbound", false);
-        SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(connection.getInputWindowSize(), connection.getInputResumeThreshold());
-        inboundController = new FlowController<MessageDelivery>(new FlowControllableAdapter() {
-            public void flowElemAccepted(ISourceController<MessageDelivery> controller, MessageDelivery elem) {
-                route(controller, elem);
+        SizeLimiter<OpenWireMessageDelivery> limiter = new SizeLimiter<OpenWireMessageDelivery>(connection.getInputWindowSize(), connection.getInputResumeThreshold());
+        inboundController = new FlowController<OpenWireMessageDelivery>(new FlowControllableAdapter() {
+            public void flowElemAccepted(ISourceController<OpenWireMessageDelivery> controller, OpenWireMessageDelivery elem) {
+                if (elem.isResponseRequired()) {
+                    elem.setPersistListener(OpenwireProtocolHandler.this);
+                }
+                router.route(elem, controller);
+                controller.elementDispatched(elem);
             }
 
             public String toString() {
@@ -341,12 +346,15 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
             }.start();
         }
     }
+    
 
-    // /////////////////////////////////////////////////////////////////
-    // Internal Support Methods
-    // /////////////////////////////////////////////////////////////////
+    public void onMessagePersisted(OpenWireMessageDelivery delivery) {
+        // TODO This method should not block:
+        // Either add to output queue, or spin off in a separate thread. 
+        ack(delivery.getMessage());
+    }
 
-    private Response ack(Command command) {
+    Response ack(Command command) {
         if (command.isResponseRequired()) {
             Response rc = new Response();
             rc.setCorrelationId(command.getCommandId());
@@ -355,22 +363,26 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
         return null;
     }
 
-    static class FlowControllableAdapter implements FlowControllable<MessageDelivery> {
-        public void flowElemAccepted(ISourceController<MessageDelivery> controller, MessageDelivery elem) {
+    // /////////////////////////////////////////////////////////////////
+    // Internal Support Methods
+    // /////////////////////////////////////////////////////////////////
+
+    static class FlowControllableAdapter implements FlowControllable<OpenWireMessageDelivery> {
+        public void flowElemAccepted(ISourceController<OpenWireMessageDelivery> controller, OpenWireMessageDelivery elem) {
         }
 
-        public IFlowSink<MessageDelivery> getFlowSink() {
+        public IFlowSink<OpenWireMessageDelivery> getFlowSink() {
             return null;
         }
 
-        public IFlowSource<MessageDelivery> getFlowSource() {
+        public IFlowSource<OpenWireMessageDelivery> getFlowSource() {
             return null;
         }
     }
 
     class ProducerContext {
 
-        private IFlowController<MessageDelivery> controller;
+        private IFlowController<OpenWireMessageDelivery> controller;
         private String name;
 
         public ProducerContext(final ProducerInfo info) {
@@ -380,7 +392,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
             // producers that request the feature.
             if (info.getWindowSize() > 0) {
                 final Flow flow = new Flow("broker-" + name + "-inbound", false);
-                WindowLimiter<MessageDelivery> limiter = new WindowLimiter<MessageDelivery>(false, flow, info.getWindowSize(), info.getWindowSize() / 2) {
+                WindowLimiter<OpenWireMessageDelivery> limiter = new WindowLimiter<OpenWireMessageDelivery>(false, flow, info.getWindowSize(), info.getWindowSize() / 2) {
                     @Override
                     protected void sendCredit(int credit) {
                         ProducerAck ack = new ProducerAck(info.getProducerId(), credit);
@@ -388,9 +400,10 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
                     }
                 };
 
-                controller = new FlowController<MessageDelivery>(new FlowControllableAdapter() {
-                    public void flowElemAccepted(ISourceController<MessageDelivery> controller, MessageDelivery elem) {
-                        route(controller, elem);
+                controller = new FlowController<OpenWireMessageDelivery>(new FlowControllableAdapter() {
+                    public void flowElemAccepted(ISourceController<OpenWireMessageDelivery> controller, OpenWireMessageDelivery msg) {
+                        router.route(msg, controller);
+                        controller.elementDispatched(msg);
                     }
 
                     public String toString() {
@@ -409,7 +422,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
         private String name;
         private BooleanExpression selector;
         private boolean durable;
-        
+
         private SingleFlowRelay<MessageDelivery> queue;
         public WindowLimiter<MessageDelivery> limiter;
 
@@ -474,50 +487,6 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
 
     }
 
-    protected void route(ISourceController<MessageDelivery> controller, MessageDelivery elem) {
-        // TODO:
-        // Consider doing some caching of this target list. Most producers
-        // always send to
-        // the same destination.
-        Collection<DeliveryTarget> targets = router.route(elem);
-
-        final Message message = ((OpenWireMessageDelivery) elem).getMessage();
-        if (targets != null) {
-
-            if (message.isResponseRequired()) {
-                // We need to ack the message once we ensure we won't loose it.
-                // We know we won't loose it once it's persisted or delivered to
-                // a consumer
-                // Setup a callback to get notifed once one of those happens.
-                if (message.isPersistent()) {
-                    elem.setCompletionCallback(new Runnable() {
-                        public void run() {
-                            ack(message);
-                        }
-                    });
-                } else {
-                    // Let the client know the broker got the message.
-                    ack(message);
-                }
-            }
-
-            // Deliver the message to all the targets..
-            for (DeliveryTarget dt : targets) {
-                if (dt.match(elem)) {
-                    dt.getSink().add(elem, controller);
-                }
-            }
-
-        } else {
-            // Let the client know we got the message even though there
-            // were no valid targets to deliver the message to.
-            if (message.isResponseRequired()) {
-                ack(message);
-            }
-        }
-        controller.elementDispatched(elem);
-    }
-
     static public Destination convert(ActiveMQDestination dest) {
         if (dest.isComposite()) {
             ActiveMQDestination[] compositeDestinations = dest.getCompositeDestinations();
@@ -573,5 +542,4 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
     public void setWireFormat(WireFormat wireFormat) {
         this.wireFormat = (OpenWireFormat) wireFormat;
     }
-
 }

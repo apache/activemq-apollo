@@ -366,8 +366,7 @@ public class BrokerDatabase {
         }
 
         public void onCommit() {
-            // Notify that we've saved the message.
-            delivery.getCompletionCallback().run();
+            delivery.onMessagePersisted();
         }
 
     }

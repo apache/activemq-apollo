@@ -32,11 +32,20 @@ public class StompMessageDelivery implements MessageDelivery {
     private int priority = Integer.MIN_VALUE;
     private AsciiBuffer msgId;
     private long tracking = -1;
+    private PersistListener persistListener = null;
+
+    public interface PersistListener {
+        public void onMessagePersisted(StompMessageDelivery delivery);
+    }
 
     public StompMessageDelivery(StompFrame frame, Destination destiantion) {
         this.frame = frame;
         this.destination = destiantion;
         this.receiptId = frame.getHeaders().remove(Stomp.Headers.RECEIPT_REQUESTED);
+    }
+
+    public void setPersistListener(PersistListener listener) {
+        persistListener = listener;
     }
 
     public Destination getDestination() {
@@ -48,21 +57,21 @@ public class StompMessageDelivery implements MessageDelivery {
     }
 
     public int getPriority() {
-        if( priority == Integer.MIN_VALUE ) {
+        if (priority == Integer.MIN_VALUE) {
             String p = frame.getHeaders().get(Stomp.Headers.Message.PRORITY);
             try {
                 priority = (p == null) ? 4 : Integer.parseInt(p);
             } catch (NumberFormatException e) {
                 priority = 4;
-            } 
+            }
         }
         return priority;
     }
 
     public AsciiBuffer getMsgId() {
-        if( msgId == null ) {
+        if (msgId == null) {
             String p = frame.getHeaders().get(Stomp.Headers.Message.MESSAGE_ID);
-            if( p!=null ) {
+            if (p != null) {
                 msgId = new AsciiBuffer(p);
             }
         }
@@ -82,7 +91,7 @@ public class StompMessageDelivery implements MessageDelivery {
     }
 
     public <T> T asType(Class<T> type) {
-        if( type == StompFrame.class ) {
+        if (type == StompFrame.class) {
             return type.cast(frame);
         }
         return null;
@@ -102,22 +111,31 @@ public class StompMessageDelivery implements MessageDelivery {
     }
 
     public long getTrackingNumber() {
-        return tracking ;
+        return tracking;
     }
 
     public void setTrackingNumber(long tracking) {
         this.tracking = tracking;
     }
-    
+
     /**
      * Returns the message's buffer representation.
+     * 
      * @return
      */
-    public Buffer getMessageBuffer()
-    {
-        //Todo use asType() instead?
+    public Buffer getMessageBuffer() {
+        // Todo use asType() instead?
         throw new UnsupportedOperationException("not yet implemented");
     }
-   
 
+    public boolean isResponseRequired() {
+        return receiptId != null;
+    }
+
+    public void onMessagePersisted() {
+        if (persistListener != null) {
+            persistListener.onMessagePersisted(this);
+            persistListener = null;
+        }
+    }
 }
