@@ -19,6 +19,7 @@ package org.apache.activemq.broker.stomp;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.transport.stomp.Stomp;
 import org.apache.activemq.transport.stomp.StompFrame;
 
@@ -30,6 +31,7 @@ public class StompMessageDelivery implements MessageDelivery {
     private String receiptId;
     private int priority = Integer.MIN_VALUE;
     private AsciiBuffer msgId;
+    private long tracking = -1;
 
     public StompMessageDelivery(StompFrame frame, Destination destiantion) {
         this.frame = frame;
@@ -98,5 +100,24 @@ public class StompMessageDelivery implements MessageDelivery {
         String p = frame.getHeaders().get(Stomp.Headers.Send.PERSISTENT);
         return "true".equals(p);
     }
+
+    public long getTrackingNumber() {
+        return tracking ;
+    }
+
+    public void setTrackingNumber(long tracking) {
+        this.tracking = tracking;
+    }
+    
+    /**
+     * Returns the message's buffer representation.
+     * @return
+     */
+    public Buffer getMessageBuffer()
+    {
+        //Todo use asType() instead?
+        throw new UnsupportedOperationException("not yet implemented");
+    }
+   
 
 }

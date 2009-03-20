@@ -18,6 +18,7 @@ public class WindowLimiter<E> extends SizeLimiter<E>  {
             this.flow = flow;
         }
 
+        @Override
         public void reserve(E elem) {
             super.reserve(elem);
 //            if (!clientMode) {
@@ -25,14 +26,16 @@ public class WindowLimiter<E> extends SizeLimiter<E>  {
 //            }
         }
 
+        /*
         public void releaseReserved(E elem) {
             super.reserve(elem);
 //            if (!clientMode) {
 //                System.out.println(name + " Released Reserved " + this);
 //            }
-        }
-
-        protected void remove(int size) {
+        }*/
+        
+        @Override
+        public void remove(long size) {
             super.remove(size);
             if (!clientMode) {
                 available += size;

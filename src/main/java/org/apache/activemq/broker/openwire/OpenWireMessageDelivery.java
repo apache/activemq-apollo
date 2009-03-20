@@ -20,6 +20,7 @@ import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.command.Message;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.protobuf.Buffer;
 
 public class OpenWireMessageDelivery implements MessageDelivery {
 
@@ -27,6 +28,7 @@ public class OpenWireMessageDelivery implements MessageDelivery {
     private Destination destination;
     private AsciiBuffer producerId;
     private Runnable completionCallback;
+    private long tracking;
 
     public OpenWireMessageDelivery(Message message) {
         this.message = message;
@@ -83,6 +85,23 @@ public class OpenWireMessageDelivery implements MessageDelivery {
 
     public boolean isPersistent() {
         return message.isPersistent();
+    }
+
+    public void setTrackingNumber(long tracking) {
+        this.tracking = tracking;
+    }
+
+    public long getTrackingNumber() {
+        return tracking;
+    }
+    
+    /**
+     * Returns the message's buffer representation.
+     * 
+     * @return
+     */
+    public Buffer getMessageBuffer() {
+        throw new UnsupportedOperationException("Not yet implemented");
     }
 
 }

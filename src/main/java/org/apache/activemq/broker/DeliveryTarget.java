@@ -18,6 +18,7 @@ package org.apache.activemq.broker;
 
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.flow.IFlowSink;
+import org.apache.activemq.protobuf.AsciiBuffer;
 
 public interface DeliveryTarget {
     
@@ -25,4 +26,7 @@ public interface DeliveryTarget {
     
     public boolean match(MessageDelivery message);
     
+    public boolean isDurable();
+    
+    public AsciiBuffer getPersistentQueueName();
 }

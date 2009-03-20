@@ -197,13 +197,13 @@ public class KahaDBStore {
         }
     }
 
-    public void beginTransaction(ConnectionContext context) throws IOException {
+    public void beginTransaction() throws IOException {
         throw new IOException("Not yet implemented.");
     }
-    public void commitTransaction(ConnectionContext context) throws IOException {
+    public void commitTransaction() throws IOException {
         throw new IOException("Not yet implemented.");
     }
-    public void rollbackTransaction(ConnectionContext context) throws IOException {
+    public void rollbackTransaction() throws IOException {
         throw new IOException("Not yet implemented.");
     }
     

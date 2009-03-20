@@ -164,7 +164,7 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
         outboundLimiter = createProtocolLimiter(true, outboundFlow, outputWindowSize, outputResumeThreshold);
 
         if (transport.narrow(DispatchableTransport.class) == null) {
-            blockingTransport = false;
+            blockingTransport = true;
             blockingWriter = Executors.newSingleThreadExecutor();
         }
 
@@ -408,7 +408,8 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
             this.flow = flow;
         }
 
-        protected void remove(int size) {
+        @Override
+        public void remove(long size) {
             super.remove(size);
             if (!clientMode) {
                 available += size;

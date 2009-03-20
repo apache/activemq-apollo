@@ -18,6 +18,7 @@ package org.apache.activemq.broker;
 
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.protobuf.Buffer;
 
 public interface MessageDelivery {
 
@@ -37,5 +38,18 @@ public interface MessageDelivery {
     public <T> T asType(Class<T> type);
 
     public boolean isPersistent();
+    
+    /**
+     * Assigns a tracking number to this MessageDelivery. Tracking numbers
+     * are assigned sequentially and are unique within the broker. 
+     */
+    public void setTrackingNumber(long tracking);
+    
+    public long getTrackingNumber();
 
+    /**
+     * Returns the message's buffer representation.
+     * @return
+     */
+    public Buffer getMessageBuffer();
 }

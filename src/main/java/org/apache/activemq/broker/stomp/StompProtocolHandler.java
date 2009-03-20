@@ -263,6 +263,8 @@ public class StompProtocolHandler implements ProtocolHandler {
         
         private LinkedHashMap<AsciiBuffer, AsciiBuffer> sentMessageIds = new LinkedHashMap<AsciiBuffer, AsciiBuffer>();
 
+        private boolean durable;
+
         public ConsumerContext(final StompFrame subscribe) throws Exception {
             translator = translator(subscribe);
             
@@ -368,6 +370,14 @@ public class StompProtocolHandler implements ProtocolHandler {
 //                e.printStackTrace();
 //                return false;
 //            }
+        }
+        
+        public boolean isDurable() {
+            return durable;
+        }
+
+        public AsciiBuffer getPersistentQueueName() {
+            return null;
         }
 
     }

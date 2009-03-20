@@ -89,20 +89,20 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
 
     protected final Object inboundMutex = new Object();
     protected IFlowController<MessageDelivery> inboundController;
-    
+
     protected BrokerConnection connection;
     private OpenWireFormat wireFormat;
-    private Router router; 
-    
+    private Router router;
+
     public void start() throws Exception {
         // Setup the inbound processing..
-        final Flow flow = new Flow("broker-"+connection.getName()+"-inbound", false);
+        final Flow flow = new Flow("broker-" + connection.getName() + "-inbound", false);
         SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(connection.getInputWindowSize(), connection.getInputResumeThreshold());
         inboundController = new FlowController<MessageDelivery>(new FlowControllableAdapter() {
             public void flowElemAccepted(ISourceController<MessageDelivery> controller, MessageDelivery elem) {
                 route(controller, elem);
             }
-        
+
             public String toString() {
                 return flow.getFlowName();
             }
@@ -113,7 +113,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
     }
 
     public void onCommand(Object o) {
-        
+
         final Command command = (Command) o;
         boolean responseRequired = command.isResponseRequired();
         try {
@@ -198,13 +198,14 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
                 // Control Methods
                 // /////////////////////////////////////////////////////////////////
                 public Response processWireFormat(WireFormatInfo info) throws Exception {
-                    
+
                     // Negotiate the openwire encoding options.
                     WireFormatNegotiator wfn = new WireFormatNegotiator(connection.getTransport(), wireFormat, 1);
                     wfn.sendWireFormat();
                     wfn.negociate(info);
-                    
-                    // Now that the encoding is negotiated.. let the client know the details about this
+
+                    // Now that the encoding is negotiated.. let the client know
+                    // the details about this
                     // broker.
                     BrokerInfo brokerInfo = new BrokerInfo();
                     brokerInfo.setBrokerId(new BrokerId(connection.getBroker().getName()));
@@ -294,8 +295,8 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
 
                 // /////////////////////////////////////////////////////////////////
                 // Methods for cluster operations
-                //    These commands are sent to the broker when it's acting like a 
-                //    client to another broker.
+                // These commands are sent to the broker when it's acting like a
+                // client to another broker.
                 // /////////////////////////////////////////////////////////////////
                 public Response processBrokerInfo(BrokerInfo info) throws Exception {
                     throw new UnsupportedOperationException();
@@ -308,11 +309,11 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
                 public Response processMessageDispatchNotification(MessageDispatchNotification info) throws Exception {
                     throw new UnsupportedOperationException();
                 }
-                
+
                 public Response processProducerAck(ProducerAck info) throws Exception {
                     return ack(command);
                 }
-                
+
             });
         } catch (Exception e) {
             if (responseRequired) {
@@ -325,11 +326,11 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
 
         }
     }
-    
+
     public void onException(Exception error) {
-        if( !connection.isStopping() ) {
+        if (!connection.isStopping()) {
             error.printStackTrace();
-            new Thread(){
+            new Thread() {
                 @Override
                 public void run() {
                     try {
@@ -366,7 +367,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
             return null;
         }
     }
-    
+
     class ProducerContext {
 
         private IFlowController<MessageDelivery> controller;
@@ -378,7 +379,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
             // Openwire only uses credit windows at the producer level for
             // producers that request the feature.
             if (info.getWindowSize() > 0) {
-                final Flow flow = new Flow("broker-"+name+"-inbound", false);
+                final Flow flow = new Flow("broker-" + name + "-inbound", false);
                 WindowLimiter<MessageDelivery> limiter = new WindowLimiter<MessageDelivery>(false, flow, info.getWindowSize(), info.getWindowSize() / 2) {
                     @Override
                     protected void sendCredit(int credit) {
@@ -407,7 +408,8 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
         private final ConsumerInfo info;
         private String name;
         private BooleanExpression selector;
-
+        private boolean durable;
+        
         private SingleFlowRelay<MessageDelivery> queue;
         public WindowLimiter<MessageDelivery> limiter;
 
@@ -416,8 +418,8 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
             this.name = info.getConsumerId().toString();
             selector = parseSelector(info);
 
-            Flow flow = new Flow("broker-"+name+"-outbound", false);
-            limiter = new WindowLimiter<MessageDelivery>(true, flow, info.getPrefetchSize(), info.getPrefetchSize()/2) {
+            Flow flow = new Flow("broker-" + name + "-outbound", false);
+            limiter = new WindowLimiter<MessageDelivery>(true, flow, info.getPrefetchSize(), info.getPrefetchSize() / 2) {
                 public int getElementSize(MessageDelivery m) {
                     return 1;
                 }
@@ -436,7 +438,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
         }
 
         public void ack(MessageAck info) {
-            synchronized(queue) {
+            synchronized (queue) {
                 limiter.onProtocolCredit(info.getMessageCount());
             }
         }
@@ -460,6 +462,14 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
                 e.printStackTrace();
                 return false;
             }
+        }
+
+        public boolean isDurable() {
+            return durable;
+        }
+
+        public AsciiBuffer getPersistentQueueName() {
+            return null;
         }
 
     }
@@ -528,7 +538,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler {
         }
         return new Destination.SingleDestination(domain, new AsciiBuffer(dest.getPhysicalName()));
     }
-    
+
     private static BooleanExpression parseSelector(ConsumerInfo info) throws InvalidSelectorException {
         BooleanExpression rc = null;
         if (info.getSelector() != null) {

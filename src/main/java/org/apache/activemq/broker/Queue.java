@@ -172,4 +172,13 @@ public class Queue implements DeliveryTarget {
         this.destination = destination;
     }
 
+    public AsciiBuffer getPersistentQueueName() {
+        // TODO Auto-generated method stub
+        return destination.getName();
+    }
+
+    public boolean isDurable() {
+        return true;
+    }
+
 }
