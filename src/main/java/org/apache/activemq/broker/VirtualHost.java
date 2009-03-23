@@ -20,8 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.activemq.Service;
-import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.memory.MemoryStore;
+import org.apache.activemq.broker.store.BrokerDatabase;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 /**
@@ -32,7 +31,7 @@ public class VirtualHost implements Service {
     final private HashMap<Destination, Queue> queues = new HashMap<Destination, Queue>();
     private ArrayList<AsciiBuffer> hostNames = new ArrayList<AsciiBuffer>();
     private Router router;
-    private Store store = new MemoryStore();
+    private BrokerDatabase database = new BrokerDatabase();
     
     public VirtualHost() {
         setRouter(new Router());
@@ -76,12 +75,12 @@ public class VirtualHost implements Service {
         domain.add(queue.getDestination().getName(), queue);
     }
 
-    public Store getStore() {
-        return store;
+    public BrokerDatabase getDatabase() {
+        return database;
     }
 
-    public void setStore(Store store) {
-        this.store = store;
+    public void setDatabase(BrokerDatabase store) {
+        this.database = store;
     }
 
 

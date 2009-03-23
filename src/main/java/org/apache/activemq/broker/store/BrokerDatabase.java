@@ -28,6 +28,7 @@ import org.apache.activemq.broker.store.Store.Callback;
 import org.apache.activemq.broker.store.Store.Session;
 import org.apache.activemq.broker.store.Store.Session.MessageRecord;
 import org.apache.activemq.broker.store.Store.Session.QueueNotFoundException;
+import org.apache.activemq.broker.store.memory.MemoryStore;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
@@ -39,7 +40,7 @@ import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
 public class BrokerDatabase {
 
-    private Store store;
+    private Store store = new MemoryStore();
     private final Flow databaseFlow = new Flow("database", false);
 
     private final SizeLimiter<Operation> storeLimiter;
@@ -60,7 +61,7 @@ public class BrokerDatabase {
         public void onDatabaseException(IOException ioe);
     }
 
-    public BrokerDatabase(Store store) {
+    public BrokerDatabase() {
         storeLimiter = new SizeLimiter<Operation>(1024 * 512, 0) {
             public int getElementSize(Operation op) {
                 return op.getLimiterSize();
