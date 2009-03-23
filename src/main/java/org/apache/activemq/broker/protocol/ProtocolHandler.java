@@ -18,11 +18,16 @@ package org.apache.activemq.broker.protocol;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.broker.BrokerConnection;
+import org.apache.activemq.broker.MessageDelivery;
+import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.wireformat.WireFormat;
 
 public interface ProtocolHandler extends Service {
+    
     public void setConnection(BrokerConnection connection);
     public void onCommand(Object command);
     public void onException(Exception error);
     public void setWireFormat(WireFormat wf);
+    
+    public MessageDelivery createMessageDelivery(Store.Session.MessageRecord record);
 }

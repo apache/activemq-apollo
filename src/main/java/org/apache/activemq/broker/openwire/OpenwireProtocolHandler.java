@@ -17,7 +17,6 @@
 package org.apache.activemq.broker.openwire;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 
 import javax.jms.InvalidSelectorException;
@@ -31,6 +30,7 @@ import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;
 import org.apache.activemq.broker.openwire.OpenWireMessageDelivery.PersistListener;
 import org.apache.activemq.broker.protocol.ProtocolHandler;
+import org.apache.activemq.broker.store.Store.Session.MessageRecord;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.BrokerId;
 import org.apache.activemq.command.BrokerInfo;
@@ -541,5 +541,9 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
     public void setWireFormat(WireFormat wireFormat) {
         this.wireFormat = (OpenWireFormat) wireFormat;
+    }
+
+    public MessageDelivery createMessageDelivery(MessageRecord record) {
+        throw new UnsupportedOperationException();
     }
 }

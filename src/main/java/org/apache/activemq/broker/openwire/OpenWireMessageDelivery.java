@@ -18,9 +18,9 @@ package org.apache.activemq.broker.openwire;
 
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
+import org.apache.activemq.broker.store.Store.Session.MessageRecord;
 import org.apache.activemq.command.Message;
 import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.protobuf.Buffer;
 
 public class OpenWireMessageDelivery implements MessageDelivery {
 
@@ -29,7 +29,6 @@ public class OpenWireMessageDelivery implements MessageDelivery {
     private final Message message;
     private Destination destination;
     private AsciiBuffer producerId;
-    private long tracking;
     private PersistListener persistListener = null;
 
     public interface PersistListener {
@@ -89,23 +88,6 @@ public class OpenWireMessageDelivery implements MessageDelivery {
         return message.isPersistent();
     }
 
-    public void setTrackingNumber(long tracking) {
-        this.tracking = tracking;
-    }
-
-    public long getTrackingNumber() {
-        return tracking;
-    }
-
-    /**
-     * Returns the message's buffer representation.
-     * 
-     * @return
-     */
-    public Buffer getMessageBuffer() {
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
-
     public final void onMessagePersisted() {
         if (persistListener != null) {
             persistListener.onMessagePersisted(this);
@@ -117,12 +99,15 @@ public class OpenWireMessageDelivery implements MessageDelivery {
         return message.isResponseRequired();
     }
 
-    public AsciiBuffer getEncoding() {
-        return ENCODING;
-    }
 
-    public long getStreamId() {
-        return 0;
+    public MessageRecord createMessageRecord() {
+        MessageRecord record = new MessageRecord();
+        record.setEncoding(ENCODING);
+        // TODO: Serialize it..
+        // record.setBuffer()
+        // record.setStreamKey(stream);
+        record.setMessageId(getMsgId());
+        return record;
     }
 
 }

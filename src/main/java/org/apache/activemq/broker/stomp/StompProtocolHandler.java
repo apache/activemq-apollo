@@ -21,7 +21,6 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -36,6 +35,7 @@ import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;
 import org.apache.activemq.broker.protocol.ProtocolHandler;
+import org.apache.activemq.broker.store.Store.Session.MessageRecord;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.flow.Flow;
@@ -482,5 +482,9 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
     public ActiveMQDestination createTempTopic(String name) {
         // TODO Auto-generated method stub
         return null;
+    }
+    
+    public MessageDelivery createMessageDelivery(MessageRecord record) {
+        throw new UnsupportedOperationException();
     }
 }

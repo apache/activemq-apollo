@@ -26,6 +26,7 @@ import org.apache.activemq.broker.DeliveryTarget;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store.Callback;
 import org.apache.activemq.broker.store.Store.Session;
+import org.apache.activemq.broker.store.Store.Session.MessageRecord;
 import org.apache.activemq.broker.store.Store.Session.QueueNotFoundException;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.ISourceController;
@@ -341,12 +342,7 @@ public class BrokerDatabase {
         protected void doExcecute(Session session) {
             // TODO need to get at protocol buffer.
             
-            Session.MessageRecord record = new Session.MessageRecord();
-            record.setMessageId(delivery.getMsgId());
-            record.setEncoding(delivery.getEncoding());
-            record.setBuffer(delivery.getMessageBuffer());
-            record.setStreamKey(delivery.getStreamId());
-            
+            MessageRecord record = delivery.createMessageRecord();
             Long key = session.messageAdd(record);
             for(DeliveryTarget target : targets)
             {
