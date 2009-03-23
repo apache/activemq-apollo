@@ -60,4 +60,8 @@ public interface MessageDelivery {
      * @return
      */
     public Buffer getMessageBuffer();
+
+    public AsciiBuffer getEncoding();
+
+    public long getStreamId();
 }

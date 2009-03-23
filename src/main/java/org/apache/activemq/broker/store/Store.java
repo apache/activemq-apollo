@@ -80,11 +80,6 @@ public interface Store {
      */
     public void flush();
 
-
-    interface RecordKey {
-        
-    }
-    
     /**
      * This interface allows you to query and update the Store.
      * 
@@ -112,30 +107,95 @@ public interface Store {
         
         
         // Message related methods.
-        public RecordKey messageAdd(AsciiBuffer messageId, Buffer message);
-        public RecordKey messageGetKey(AsciiBuffer messageId);
-        public Buffer messageGet(RecordKey key);
+        public static class MessageRecord {
+            Long key;
+            AsciiBuffer messageId;
+            AsciiBuffer encoding;
+            Buffer buffer;
+            Long streamKey;
+            
+            public Long getKey() {
+                return key;
+            }
+            public void setKey(Long key) {
+                this.key = key;
+            }
+            public AsciiBuffer getMessageId() {
+                return messageId;
+            }
+            public void setMessageId(AsciiBuffer messageId) {
+                this.messageId = messageId;
+            }
+            public AsciiBuffer getEncoding() {
+                return encoding;
+            }
+            public void setEncoding(AsciiBuffer encoding) {
+                this.encoding = encoding;
+            }
+            public Buffer getBuffer() {
+                return buffer;
+            }
+            public void setBuffer(Buffer buffer) {
+                this.buffer = buffer;
+            }
+            public Long getStreamKey() {
+                return streamKey;
+            }
+            public void setStreamKey(Long stream) {
+                this.streamKey = stream;
+            }
+        }
 
-        // Message Chunking related methods.
-        public RecordKey messageChunkOpen(AsciiBuffer messageId, Buffer message);
-        public void messageChunkAdd(RecordKey key, Buffer message);
-        public void messageChunkClose(RecordKey key);
-        public Buffer messageChunkGet(RecordKey key, int offset, int max);
+        public Long messageAdd(MessageRecord message);
+        public Long messageGetKey(AsciiBuffer messageId);
+        public MessageRecord messageGetRecord(Long key);
 
-        // / Transaction related methods.
-        public Iterator<AsciiBuffer> transactionList(AsciiBuffer first);
+        public Long streamOpen();
+        public void streamWrite(Long key, Buffer message);
+        public void streamClose(Long key);
+        public Buffer streamRead(Long key, int offset, int max);
+        public boolean streamRemove(Long key);
+
+        // Transaction related methods.
+        public Iterator<AsciiBuffer> transactionList(AsciiBuffer first, int max);
         public void transactionAdd(AsciiBuffer txid);
-        public boolean transactionRemove(AsciiBuffer txid);
-        public void transactionAddMessage(AsciiBuffer txid, RecordKey messageKey);
-        public void transactionRemoveMessage(AsciiBuffer txid, AsciiBuffer queue, RecordKey messageKey);
+        public void transactionAddMessage(AsciiBuffer txid, Long messageKey);
+        public void transactionRemoveMessage(AsciiBuffer txid, AsciiBuffer queueName, Long messageKey);
+        public boolean transactionCommit(AsciiBuffer txid);
+        public boolean transactionRollback(AsciiBuffer txid);
         
-        // / Queue related methods.
-        public Iterator<AsciiBuffer> queueList(AsciiBuffer first);
-        public void queueAdd(AsciiBuffer queue);
-        public boolean queueRemove(AsciiBuffer queue);
-        public void queueAddMessage(AsciiBuffer queue, RecordKey key, Buffer attachment) throws QueueNotFoundException, DuplicateKeyException;
-        public void queueRemoveMessage(AsciiBuffer queue, RecordKey key) throws QueueNotFoundException;
-        public Iterator<RecordKey> queueListMessagesQueue(AsciiBuffer queue, RecordKey firstRecord, int max);
+        // Queue related methods.
+        public Iterator<AsciiBuffer> queueList(AsciiBuffer firstQueueName, int max);
+        public void queueAdd(AsciiBuffer queueName);
+        public boolean queueRemove(AsciiBuffer queueName);
+        
+        public static class QueueRecord {
+            Long queueKey;
+            Long messageKey;
+            Buffer attachment;
+            
+            public Long getQueueKey() {
+                return queueKey;
+            }
+            public void setQueueKey(Long queueKey) {
+                this.queueKey = queueKey;
+            }
+            public Long getMessageKey() {
+                return messageKey;
+            }
+            public void setMessageKey(Long messageKey) {
+                this.messageKey = messageKey;
+            }
+            public Buffer getAttachment() {
+                return attachment;
+            }
+            public void setAttachment(Buffer attachment) {
+                this.attachment = attachment;
+            }
+        }
+        public Long queueAddMessage(AsciiBuffer queueName, QueueRecord record) throws QueueNotFoundException;
+        public void queueRemoveMessage(AsciiBuffer queueName, Long queueKey) throws QueueNotFoundException;
+        public Iterator<QueueRecord> queueListMessagesQueue(AsciiBuffer queueName, Long firstQueueKey, int max);
 
         // We could use this to associate additional data to a message on a
         // queue like which consumer a message has been dispatched to.

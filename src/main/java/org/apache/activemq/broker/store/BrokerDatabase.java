@@ -25,15 +25,11 @@ import java.util.concurrent.Semaphore;
 import org.apache.activemq.broker.DeliveryTarget;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store.Callback;
-import org.apache.activemq.broker.store.Store.RecordKey;
 import org.apache.activemq.broker.store.Store.Session;
-import org.apache.activemq.broker.store.Store.Session.DuplicateKeyException;
 import org.apache.activemq.broker.store.Store.Session.QueueNotFoundException;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
-import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.ExclusiveQueue;
 import org.apache.activemq.queue.IPollableFlowSource;
 import org.apache.activemq.queue.IPollableFlowSource.FlowReadyListener;
@@ -330,11 +326,9 @@ public class BrokerDatabase {
     private class AddMessageOperation extends OperationBase {
         private final MessageDelivery delivery;
         private final Collection<DeliveryTarget> targets;
-        private final Buffer messageBuffer;
         
         public AddMessageOperation(MessageDelivery delivery, Collection<DeliveryTarget> targets) {
             this.delivery = delivery;
-            this.messageBuffer = delivery.getMessageBuffer();
             this.targets = targets;
             
         }
@@ -346,16 +340,22 @@ public class BrokerDatabase {
         @Override
         protected void doExcecute(Session session) {
             // TODO need to get at protocol buffer.
-            RecordKey key = session.messageAdd(delivery.getMsgId(), messageBuffer);
+            
+            Session.MessageRecord record = new Session.MessageRecord();
+            record.setMessageId(delivery.getMsgId());
+            record.setEncoding(delivery.getEncoding());
+            record.setBuffer(delivery.getMessageBuffer());
+            record.setStreamKey(delivery.getStreamId());
+            
+            Long key = session.messageAdd(record);
             for(DeliveryTarget target : targets)
             {
                 try {
-                    session.queueAddMessage(new AsciiBuffer(target.getPersistentQueueName()), key, null);
+                    Session.QueueRecord queueRecord = new Session.QueueRecord();
+                    queueRecord.setAttachment(null);
+                    queueRecord.setMessageKey(key);
+                    session.queueAddMessage(target.getPersistentQueueName(), queueRecord);
                 } catch (QueueNotFoundException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                } catch (DuplicateKeyException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
             }

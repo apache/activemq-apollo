@@ -31,124 +31,105 @@ public class MemoryStore implements Store {
     MemorySession session = new MemorySession();
 
     private class MemorySession implements Session {
-        private HashMap<RecordKey, Buffer> messages = new HashMap<RecordKey, Buffer>();
-        private HashMap<AsciiBuffer, TreeMap<RecordKey, Buffer>> queues = new HashMap<AsciiBuffer, TreeMap<RecordKey, Buffer>>();
-
-        // private HashMap<String, LinkedList<RecordKey>> queues = new
-        // HashMap<String, LinkedList<RecordKey>>();
-
-        public void beginTx() {
-
+        
+        long messageSequence;
+        
+        private HashMap<Long, MessageRecord> messages = new HashMap<Long, MessageRecord>();
+        private HashMap<AsciiBuffer, Long> messagesKeys = new HashMap<AsciiBuffer, Long>();
+        
+        private class StoredQueue {
+            long sequence;
+            TreeMap<Long, QueueRecord> records = new TreeMap<Long, QueueRecord>();
         }
+        
+        private TreeMap<AsciiBuffer, StoredQueue> queues = new TreeMap<AsciiBuffer, StoredQueue>();
 
-        public void commitTx() {
-
-        }
-
-        public void rollback() {
-            throw new UnsupportedOperationException();
-        }
 
         // //////////////////////////////////////////////////////////////////////////////
         // Message related methods.
         // ///////////////////////////////////////////////////////////////////////////////
-        public RecordKey messageAdd(AsciiBuffer messageId, Buffer message) {
-            RecordKey key = new MemoryRecordKey(messageId);
-            messages.put(key, message);
+        public Long messageAdd(MessageRecord record) {
+            Long key = ++messageSequence;
+            record.setKey(key);
+            messages.put(key, record);
+            messagesKeys.put(record.getMessageId(), key);
             return key;
         }
-
-        public Buffer messageGet(RecordKey key) {
-            return messages.get(key);
-        }
  
-        public RecordKey messageGetKey(AsciiBuffer messageId) {
-            MemoryRecordKey key = new MemoryRecordKey(messageId);
-            return messages.containsKey(key) ? key : null;
+        public Long messageGetKey(AsciiBuffer messageId) {
+            return messagesKeys.get(messageId);
+        }
+
+        public MessageRecord messageGetRecord(Long key) {
+            return messages.get(key);
         }
 
         // //////////////////////////////////////////////////////////////////////////////
         // Queue related methods.
         // ///////////////////////////////////////////////////////////////////////////////
-        public void queueAdd(AsciiBuffer queue) {
-            TreeMap<RecordKey, Buffer> messages = queues.get(queue);
-            if (messages == null) {
-                messages = new TreeMap<RecordKey, Buffer>();
-                queues.put(queue, messages);
+        public void queueAdd(AsciiBuffer queueName) {
+            StoredQueue queue = queues.get(queueName);
+            if (queue == null) {
+                queue = new StoredQueue();
+                queues.put(queueName, queue);
             }
         }
 
-        public void queueAddMessage(AsciiBuffer queue, RecordKey key, Buffer attachment) throws QueueNotFoundException, DuplicateKeyException {
-            TreeMap<RecordKey, Buffer> messages = queues.get(queue);
-            if (messages != null) {
-                if (messages.put(key, attachment) != null) {
-                    throw new DuplicateKeyException("");
-                }
+        public Long queueAddMessage(AsciiBuffer queueName, QueueRecord record) throws QueueNotFoundException {
+            StoredQueue queue = queues.get(queueName);
+            if (queue != null) {
+                Long key = ++queue.sequence;
+                record.setQueueKey(key);
+                queue.records.put(key, record);
+                return key;
             } else {
-                throw new QueueNotFoundException(queue.toString());
+                throw new QueueNotFoundException(queueName.toString());
             }
         }
 
-        public void queueRemoveMessage(AsciiBuffer queue, RecordKey key) throws QueueNotFoundException {
-            TreeMap<RecordKey, Buffer> messages = queues.get(queue);
-            if (messages != null) {
-                messages.remove(key);
-            } else {
-                throw new QueueNotFoundException(queue.toString());
+        public void queueRemoveMessage(AsciiBuffer queueName, Long queueKey) throws QueueNotFoundException {
+            StoredQueue queue = queues.get(queueName);
+            if (queue == null) {
+                throw new QueueNotFoundException(queueName.toString());
             }
+            queue.records.remove(queueKey);
         }
 
-        public Iterator<AsciiBuffer> queueList(AsciiBuffer first) {
+        public Iterator<AsciiBuffer> queueList(AsciiBuffer firstQueueName, int max) {
             ArrayList<AsciiBuffer> list = new ArrayList<AsciiBuffer>(queues.size());
-            for (AsciiBuffer queue : queues.keySet()) {
+            for (AsciiBuffer queue : queues.tailMap(firstQueueName).keySet()) {
+                if( list.size() >= max ) {
+                    break;
+                }
                 list.add(queue);
             }
             return list.iterator();
         }
 
-        public Iterator<RecordKey> queueListMessagesQueue(AsciiBuffer queue, RecordKey firstRecord, int max) {
-            ArrayList<RecordKey> list = new ArrayList<RecordKey>(max);
-            TreeMap<RecordKey, Buffer> messages = queues.get(queue);
-            if (messages != null) {
-                for (RecordKey key : messages.tailMap(firstRecord).keySet() ) {
-                    list.add(key);
-                    if (list.size() == max) {
+        public Iterator<QueueRecord> queueListMessagesQueue(AsciiBuffer queueName, Long firstQueueKey, int max) {
+            ArrayList<QueueRecord> list = new ArrayList<QueueRecord>(max);
+            StoredQueue queue = queues.get(queueName);
+            if (queue != null) {
+                for (Long key : queue.records.tailMap(firstQueueKey).keySet() ) {
+                    if (list.size() >= max) {
                         break;
                     }
+                    list.add(queue.records.get(key));
                 }
             }
             return list.iterator();
         }
 
-        public boolean queueRemove(AsciiBuffer queue) {
-            TreeMap<RecordKey, Buffer> messages = queues.get(queue);
-            if (messages != null) {
-                Iterator<RecordKey> msgKeys = messages.keySet().iterator();
-                while (msgKeys.hasNext()) {
-                    RecordKey msgKey = msgKeys.next();
-                    try {
-                        queueRemoveMessage(queue, msgKey);
-                    } catch (QueueNotFoundException e) {
-                        // Can't happen.
-                    }
-                }
-                queues.remove(queue);
-
+        public boolean queueRemove(AsciiBuffer queueName) {
+            StoredQueue queue = queues.get(queueName);
+            if (queue != null) {
+                queue.records.clear();
+                queues.remove(queueName);
                 return true;
             }
             return false;
         }
 
-        /*
-         * public void queueUpdateMessageAttachment(AsciiBuffer queue, RecordKey
-         * key, Buffer attachment) { // TODO Auto-generated method stub }
-         * 
-         * public Buffer queueGetMessageAttachment(AsciiBuffer queue, RecordKey
-         * key) throws QueueNotFoundException { TreeMap<RecordKey, Buffer>
-         * messages = queues.get(queue); if (messages != null) {
-         * messages.add(key); } else { throw new
-         * QueueNotFoundException(queue.toString()); } }
-         */
 
         // //////////////////////////////////////////////////////////////////////////////
         // Simple Key Value related methods could come in handy to store misc
@@ -175,67 +156,47 @@ public class MemoryStore implements Store {
         }
 
         // ///////////////////////////////////////////////////////////////////////////////
-        // Message Chunking related methods
+        // Stream related methods
         // ///////////////////////////////////////////////////////////////////////////////
-        public void messageChunkAdd(RecordKey key, Buffer message) {
+        public Long streamOpen() {
+            throw new UnsupportedOperationException();
+        }
+        public void streamWrite(Long key, Buffer message) {
+            throw new UnsupportedOperationException();
+        }
+        public void streamClose(Long key) {
+            throw new UnsupportedOperationException();
+        }
+        public Buffer streamRead(Long key, int offset, int max) {
+            throw new UnsupportedOperationException();
+        }
+        public boolean streamRemove(Long key) {
             throw new UnsupportedOperationException();
         }
 
-        public void messageChunkClose(RecordKey key) {
+        // ///////////////////////////////////////////////////////////////////////////////
+        // Transaction related methods
+        // ///////////////////////////////////////////////////////////////////////////////
+        public Iterator<AsciiBuffer> transactionList(AsciiBuffer first, int max) {
             throw new UnsupportedOperationException();
         }
-
-        public Buffer messageChunkGet(RecordKey key, int offset, int max) {
-            throw new UnsupportedOperationException();
-        }
-
-        public RecordKey messageChunkOpen(AsciiBuffer messageId, Buffer message) {
-            throw new UnsupportedOperationException();
-        }
-
         public void transactionAdd(AsciiBuffer txid) {
             throw new UnsupportedOperationException();
         }
-
-        public void transactionAddMessage(AsciiBuffer txid, RecordKey messageKey) {
+        public void transactionAddMessage(AsciiBuffer txid, Long messageKey) {
+            throw new UnsupportedOperationException();
+        }
+        public void transactionRemoveMessage(AsciiBuffer txid, AsciiBuffer queue, Long messageKey) {
+            throw new UnsupportedOperationException();
+        }
+        public boolean transactionCommit(AsciiBuffer txid) {
+            throw new UnsupportedOperationException();
+        }
+        public boolean transactionRollback(AsciiBuffer txid) {
             throw new UnsupportedOperationException();
         }
 
-        public Iterator<AsciiBuffer> transactionList(AsciiBuffer first) {
-            throw new UnsupportedOperationException();
-        }
 
-        public boolean transactionRemove(AsciiBuffer txid) {
-            throw new UnsupportedOperationException();
-        }
-
-        public void transactionRemoveMessage(AsciiBuffer txid, AsciiBuffer queue, RecordKey messageKey) {
-            throw new UnsupportedOperationException();
-        }
-
-    }
-
-    final private class MemoryRecordKey implements RecordKey {
-        final AsciiBuffer messageId;
-
-        MemoryRecordKey(AsciiBuffer messageId) {
-            this.messageId = messageId;
-        }
-        
-        @Override
-        public int hashCode() {
-            return messageId.hashCode();
-        }
-        
-        @Override
-        public boolean equals(Object obj) {
-            if( obj == null || obj.getClass()!=MemoryRecordKey.class )
-                return false;
-            if( this == obj )
-                return true;
-            MemoryRecordKey key = (MemoryRecordKey)obj;
-            return messageId.equals(key.messageId);
-        }
     }
 
     public <R, T extends Exception> R execute(Callback<R, T> callback, Runnable runnable) throws T {

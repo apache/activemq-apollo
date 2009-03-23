@@ -25,6 +25,8 @@ import org.apache.activemq.transport.stomp.StompFrame;
 
 public class StompMessageDelivery implements MessageDelivery {
 
+    static final private AsciiBuffer ENCODING = new AsciiBuffer("stomp");
+
     private final StompFrame frame;
     private Destination destination;
     private Runnable completionCallback;
@@ -137,5 +139,13 @@ public class StompMessageDelivery implements MessageDelivery {
             persistListener.onMessagePersisted(this);
             persistListener = null;
         }
+    }
+
+    public AsciiBuffer getEncoding() {
+        return ENCODING;
+    }
+
+    public long getStreamId() {
+        return 0;
     }
 }

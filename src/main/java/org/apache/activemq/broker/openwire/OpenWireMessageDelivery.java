@@ -24,6 +24,8 @@ import org.apache.activemq.protobuf.Buffer;
 
 public class OpenWireMessageDelivery implements MessageDelivery {
 
+    static final private AsciiBuffer ENCODING = new AsciiBuffer("openwire");
+
     private final Message message;
     private Destination destination;
     private AsciiBuffer producerId;
@@ -113,6 +115,14 @@ public class OpenWireMessageDelivery implements MessageDelivery {
 
     public final boolean isResponseRequired() {
         return message.isResponseRequired();
+    }
+
+    public AsciiBuffer getEncoding() {
+        return ENCODING;
+    }
+
+    public long getStreamId() {
+        return 0;
     }
 
 }
