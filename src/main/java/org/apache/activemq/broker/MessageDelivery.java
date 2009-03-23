@@ -18,6 +18,7 @@ package org.apache.activemq.broker;
 
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.protobuf.Buffer;
 
 public interface MessageDelivery {
 
@@ -47,4 +48,6 @@ public interface MessageDelivery {
     public void onMessagePersisted();
     
     public Store.Session.MessageRecord createMessageRecord();
+
+    public Buffer getTransactionId();
 }

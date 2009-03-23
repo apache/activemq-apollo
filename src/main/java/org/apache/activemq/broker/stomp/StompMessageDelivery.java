@@ -20,6 +20,7 @@ import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store.Session.MessageRecord;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.transport.stomp.Stomp;
 import org.apache.activemq.transport.stomp.StompFrame;
 
@@ -130,5 +131,10 @@ public class StompMessageDelivery implements MessageDelivery {
         // record.setStreamKey(stream);
         record.setMessageId(getMsgId());
         return record;
+    }
+
+    public Buffer getTransactionId() {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

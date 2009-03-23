@@ -177,25 +177,24 @@ public class MemoryStore implements Store {
         // ///////////////////////////////////////////////////////////////////////////////
         // Transaction related methods
         // ///////////////////////////////////////////////////////////////////////////////
-        public Iterator<AsciiBuffer> transactionList(AsciiBuffer first, int max) {
+        public Iterator<Buffer> transactionList(Buffer first, int max) {
             throw new UnsupportedOperationException();
         }
-        public void transactionAdd(AsciiBuffer txid) {
+        public void transactionAdd(Buffer txid) {
             throw new UnsupportedOperationException();
         }
-        public void transactionAddMessage(AsciiBuffer txid, Long messageKey) {
+        public void transactionAddMessage(Buffer txid, Long messageKey) {
             throw new UnsupportedOperationException();
         }
-        public void transactionRemoveMessage(AsciiBuffer txid, AsciiBuffer queue, Long messageKey) {
+        public void transactionRemoveMessage(Buffer txid, AsciiBuffer queue, Long messageKey) {
             throw new UnsupportedOperationException();
         }
-        public boolean transactionCommit(AsciiBuffer txid) {
+        public boolean transactionCommit(Buffer txid) {
             throw new UnsupportedOperationException();
         }
-        public boolean transactionRollback(AsciiBuffer txid) {
+        public boolean transactionRollback(Buffer txid) {
             throw new UnsupportedOperationException();
         }
-
 
     }
 

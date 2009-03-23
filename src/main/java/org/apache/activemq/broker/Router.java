@@ -26,8 +26,12 @@ import org.apache.activemq.broker.Domain;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.QueueDomain;
 import org.apache.activemq.broker.TopicDomain;
+import org.apache.activemq.broker.store.Store.Callback;
+import org.apache.activemq.broker.store.Store.Session;
+import org.apache.activemq.broker.store.Store.VoidCallback;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.protobuf.Buffer;
 
 final public class Router {
 
@@ -35,6 +39,7 @@ final public class Router {
     public static final AsciiBuffer QUEUE_DOMAIN = new AsciiBuffer("queue");
 
     private final HashMap<AsciiBuffer, Domain> domains = new HashMap<AsciiBuffer, Domain>();
+    private VirtualHost virtualHost;
 
     public Router() {
         domains.put(QUEUE_DOMAIN, new QueueDomain());
@@ -60,6 +65,28 @@ final public class Router {
 
     public void route(final MessageDelivery msg, ISourceController<?> controller) {
 
+//        final Buffer transactionId = msg.getTransactionId();
+//        if( msg.isPersistent() ) {
+//            VoidCallback<RuntimeException> tx = new VoidCallback<RuntimeException>() {
+//                @Override
+//                public void run(Session session) throws RuntimeException {
+//                    Long messageKey = session.messageAdd(msg.createMessageRecord());
+//                    if( transactionId!=null ) {
+//                        session.transactionAddMessage(transactionId, messageKey);
+//                    }
+//                }
+//            };
+//            Runnable onFlush = new Runnable() {
+//                public void run() {
+//                    if( msg.isResponseRequired() ) {
+//                        // Let the client know the broker got the message.
+//                        msg.onMessagePersisted();
+//                    }
+//                }
+//            };
+//            virtualHost.getStore().execute(tx, onFlush);
+//        }
+//        
         Collection<DeliveryTarget> targets = route(msg.getDestination(), msg);
 
         // TODO:
@@ -70,8 +97,7 @@ final public class Router {
             if (msg.isResponseRequired()) {
                 // We need to ack the message once we ensure we won't loose it.
                 // We know we won't loose it once it's persisted or delivered to
-                // a consumer
-                // Setup a callback to get notifed once one of those happens.
+                // a consumer Setup a callback to get notifed once one of those happens.
                 if (!msg.isPersistent()) {
                     // Let the client know the broker got the message.
                     msg.onMessagePersisted();
@@ -110,6 +136,14 @@ final public class Router {
             }
             return rc;
         }
+    }
+
+    public void setVirtualHost(VirtualHost virtualHost) {
+        this.virtualHost = virtualHost;
+    }
+
+    public VirtualHost getVirtualHost() {
+        return virtualHost;
     }
 
 }

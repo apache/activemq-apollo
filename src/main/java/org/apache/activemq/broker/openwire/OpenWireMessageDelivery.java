@@ -21,6 +21,7 @@ import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store.Session.MessageRecord;
 import org.apache.activemq.command.Message;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.protobuf.Buffer;
 
 public class OpenWireMessageDelivery implements MessageDelivery {
 
@@ -108,6 +109,11 @@ public class OpenWireMessageDelivery implements MessageDelivery {
         // record.setStreamKey(stream);
         record.setMessageId(getMsgId());
         return record;
+    }
+
+    public Buffer getTransactionId() {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }

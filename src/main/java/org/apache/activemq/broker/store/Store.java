@@ -157,12 +157,12 @@ public interface Store {
         public boolean streamRemove(Long key);
 
         // Transaction related methods.
-        public Iterator<AsciiBuffer> transactionList(AsciiBuffer first, int max);
-        public void transactionAdd(AsciiBuffer txid);
-        public void transactionAddMessage(AsciiBuffer txid, Long messageKey);
-        public void transactionRemoveMessage(AsciiBuffer txid, AsciiBuffer queueName, Long messageKey);
-        public boolean transactionCommit(AsciiBuffer txid);
-        public boolean transactionRollback(AsciiBuffer txid);
+        public Iterator<Buffer> transactionList(Buffer first, int max);
+        public void transactionAdd(Buffer txid);
+        public void transactionAddMessage(Buffer txid, Long messageKey);
+        public void transactionRemoveMessage(Buffer txid, AsciiBuffer queueName, Long messageKey);
+        public boolean transactionCommit(Buffer txid);
+        public boolean transactionRollback(Buffer txid);
         
         // Queue related methods.
         public Iterator<AsciiBuffer> queueList(AsciiBuffer firstQueueName, int max);

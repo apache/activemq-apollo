@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.activemq.Service;
+import org.apache.activemq.broker.store.Store;
+import org.apache.activemq.broker.store.memory.MemoryStore;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 /**
@@ -27,10 +29,15 @@ import org.apache.activemq.protobuf.AsciiBuffer;
  */
 public class VirtualHost implements Service {
     
+    final private HashMap<Destination, Queue> queues = new HashMap<Destination, Queue>();
     private ArrayList<AsciiBuffer> hostNames = new ArrayList<AsciiBuffer>();
-    private Router router = new Router();
-    private HashMap<Destination, Queue> queues = new HashMap<Destination, Queue>();
-
+    private Router router;
+    private Store store = new MemoryStore();
+    
+    public VirtualHost() {
+        setRouter(new Router());
+    }
+    
     public AsciiBuffer getHostName() {
         if( hostNames.size() > 0 ) {
             hostNames.get(0);
@@ -48,7 +55,11 @@ public class VirtualHost implements Service {
     public Router getRouter() {
         return router;
     }
-    
+    public void setRouter(Router router) {
+        this.router.setVirtualHost(this);
+        this.router = router;
+    }
+
     public void start() throws Exception {
         for (Queue queue : queues.values()) {
             queue.start();
@@ -63,6 +74,14 @@ public class VirtualHost implements Service {
     public void addQueue(Queue queue) {
         Domain domain = router.getDomain(queue.getDestination().getDomain());
         domain.add(queue.getDestination().getName(), queue);
+    }
+
+    public Store getStore() {
+        return store;
+    }
+
+    public void setStore(Store store) {
+        this.store = store;
     }
 
 
