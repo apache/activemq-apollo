@@ -109,12 +109,12 @@ message KahaLocation {
 
 message KahaQueueDef {
 	enum DestinationType {
-	    EXCLUSIVE = 0
-	    SHARED = 1
+	    EXCLUSIVE = 0;
+	    SHARED = 1;
   	}
   	
 	required string name = 1;
-	required int64 id = 2
+	required int64 id = 2;
 	optional int64 size = 3;
 	optional int64 save_extent = 4;
 	optional int64 resume_threshold = 5;

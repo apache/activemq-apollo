@@ -26,4 +26,14 @@ public class MemoryStoreTest extends StoreTestBase {
         return new MemoryStore();
     }
 
+    @Override
+    protected boolean isStorePersistent() {
+        return false;
+    }
+
+    @Override
+    protected boolean isStoreTransactional() {
+        return false;
+    }
+
 }

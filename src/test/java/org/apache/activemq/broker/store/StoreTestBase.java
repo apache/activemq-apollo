@@ -29,8 +29,10 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 public abstract class StoreTestBase extends TestCase {
 
     private Store store;
-
+    
     abstract protected Store createStore();
+    abstract protected boolean isStoreTransactional();
+    abstract protected boolean isStorePersistent();
 
     @Override
     protected void setUp() throws Exception {
@@ -116,15 +118,22 @@ public abstract class StoreTestBase extends TestCase {
         } catch (IOException e) {
         }
         
-//        store.execute(new VoidCallback<Exception>() {
-//            @Override
-//            public void run(Session session) throws Exception {
-//                Iterator<AsciiBuffer> list = session.queueList(null, 100);
-//                assertFalse(list.hasNext());
-//            }
-//        }, null);
+        // If the store implementation is transactional, then the work done should 
+        // have been rolled back.
+        if( isStoreTransactional() ) {
+            store.execute(new VoidCallback<Exception>() {
+                @Override
+                public void run(Session session) throws Exception {
+                    Iterator<AsciiBuffer> list = session.queueList(null, 100);
+                    assertFalse(list.hasNext());
+                }
+            }, null);
+        }
 
     }
+    
+    
+    
     
     static void assertEquals(MessageRecord expected, MessageRecord actual) {
         assertEquals(expected.getBuffer(), actual.getBuffer());

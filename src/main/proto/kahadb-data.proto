@@ -1,0 +1,132 @@
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+package org.apache.activemq.broker.store.kahadb;
+
+option java_multiple_files = false;
+option java_outer_classname = "Data";
+
+enum Type {
+  //| option java_create_message="true";
+  MESSAGE_ADD = 1;
+  QUEUE_ADD = 2;
+  QUEUE_ADD_MESSAGE = 3;
+  QUEUE_REMOVE_MESSAGE = 4;
+  TRANSACTION_BEGIN = 5;
+  TRANSACTION_ADD_MESSAGE = 6;
+  TRANSACTION_REMOVE_MESSAGE = 7;
+  TRANSACTION_COMMIT = 8;
+  TRANSACTION_ROLLBACK = 9;
+  MAP_ADD = 10;
+  MAP_REMOVE = 11;
+  MAP_ENTRY_PUT = 12;
+  MAP_ENTRY_REMOVE = 13;
+  STREAM_OPEN = 14;
+  STREAM_WRITE = 15;
+  STREAM_CLOSE = 16;
+  STREAM_REMOVE = 17;
+}
+
+///////////////////////////////////////////////////////////////
+// Message related operations.
+///////////////////////////////////////////////////////////////
+
+message MessageAdd {
+  optional int64 messageKey=1;
+  optional bytes messageId = 2 [java_override_type = "AsciiBuffer"];
+  optional bytes encoding = 3 [java_override_type = "AsciiBuffer"];
+  optional bytes buffer = 4;
+  optional int64 streamKey=5;
+}  
+
+///////////////////////////////////////////////////////////////
+// Queue related operations.
+///////////////////////////////////////////////////////////////
+
+message QueueAdd {
+  optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
+}  
+message QueueRemove {
+  optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
+}  
+message QueueAddMessage {
+  optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
+  optional int64 queueKey=2;
+  optional int64 messageKey=3;
+  optional bytes attachment = 4;
+}  
+message QueueRemoveMessage {
+  optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
+  optional int64 queueKey=2;
+}  
+
+///////////////////////////////////////////////////////////////
+// Map related operations.
+///////////////////////////////////////////////////////////////
+message MapAdd {
+  optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
+}  
+message MapRemove {
+  optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
+}  
+message MapEntryPut {
+  optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
+  optional bytes key = 2 [java_override_type = "AsciiBuffer"];
+  optional bytes value = 3;
+} 
+message MapEntryRemove {
+  optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
+  optional bytes key = 2 [java_override_type = "AsciiBuffer"];
+}
+
+///////////////////////////////////////////////////////////////
+// Stream related operations.
+///////////////////////////////////////////////////////////////
+message StreamOpen {
+  optional int64 streamKey=1;
+}
+message StreamWrite {
+  optional int64 streamKey=1;
+  optional bytes data = 2;
+}
+message StreamClose {
+  optional int64 streamKey=1;
+}
+message StreamRemove {
+  optional int64 streamKey=1;
+}
+
+///////////////////////////////////////////////////////////////
+// Transaction related operations.
+///////////////////////////////////////////////////////////////
+message TransactionBegin {
+  optional bytes txid = 1;
+}
+message TransactionAddMessage {
+  optional bytes txid = 1;
+  optional int64 messageKey=2;
+}
+message TransactionRemoveMessage {
+  optional bytes txid = 1;
+  optional bytes queueName = 2 [java_override_type = "AsciiBuffer"];
+  optional int64 messageKey=3;
+}
+message TransactionCommit {
+  optional bytes txid = 1;
+}
+message TransactionRollback {
+  optional bytes txid = 1;
+}

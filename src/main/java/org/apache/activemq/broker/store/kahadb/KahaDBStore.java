@@ -33,7 +33,8 @@ import java.util.TreeSet;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.broker.ConnectionContext;
+import org.apache.activemq.broker.store.Store;
+import org.apache.activemq.broker.store.Store.Session;
 import org.apache.activemq.broker.store.kahadb.Operation.AddOpperation;
 import org.apache.activemq.broker.store.kahadb.Operation.RemoveOpperation;
 import org.apache.activemq.broker.store.kahadb.StoredDBState.DBStateMarshaller;
@@ -71,13 +72,13 @@ import org.apache.activemq.command.Message;
 import org.apache.activemq.command.TransactionId;
 import org.apache.activemq.command.XATransactionId;
 import org.apache.activemq.openwire.OpenWireFormat;
+import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.protobuf.MessageBuffer;
 import org.apache.activemq.protobuf.PBMessage;
 import org.apache.activemq.store.MessageStore;
 import org.apache.activemq.store.TopicMessageStore;
 import org.apache.activemq.store.TransactionStore;
-import org.apache.activemq.util.Callback;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -95,7 +96,7 @@ import org.apache.kahadb.util.LockFile;
 import org.apache.kahadb.util.LongMarshaller;
 import org.apache.kahadb.util.StringMarshaller;
 
-public class KahaDBStore {
+public class KahaDBStore implements Store {
 
     private static final Log LOG = LogFactory.getLog(KahaDBStore.class);
     private static final int DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
@@ -631,7 +632,7 @@ public class KahaDBStore {
     }
 
     
-	public void checkpoint(Callback closure) throws Exception {
+	public void checkpoint(org.apache.activemq.util.Callback closure) throws Exception {
         synchronized (indexMutex) {
             pageFile.tx().execute(new Transaction.Closure<IOException>() {
                 public void execute(Transaction tx) throws IOException {
@@ -1327,5 +1328,120 @@ public class KahaDBStore {
 
     public void setFailIfDatabaseIsLocked(boolean failIfDatabaseIsLocked) {
         this.failIfDatabaseIsLocked = failIfDatabaseIsLocked;
+    }
+
+    ///////////////////////////////////////////////////////////////////
+    // Store interface
+    ///////////////////////////////////////////////////////////////////
+    class KahaDBSession implements Session {
+
+        public void commit() {
+        }
+        
+        ///////////////////////////////////////////////////////////////
+        // Message related methods.
+        ///////////////////////////////////////////////////////////////
+        public Long messageAdd(MessageRecord message) {
+            return null;
+        }
+        public Long messageGetKey(AsciiBuffer messageId) {
+            return null;
+        }
+        public MessageRecord messageGetRecord(Long key) {
+            return null;
+        }
+
+        ///////////////////////////////////////////////////////////////
+        // Queue related methods.
+        ///////////////////////////////////////////////////////////////
+        public void queueAdd(AsciiBuffer queueName) {
+        }
+        public boolean queueRemove(AsciiBuffer queueName) {
+            return false;
+        }
+        public Iterator<AsciiBuffer> queueList(AsciiBuffer firstQueueName, int max) {
+            return null;
+        }
+        public Long queueAddMessage(AsciiBuffer queueName, QueueRecord record) throws KeyNotFoundException {
+            return null;
+        }
+        public void queueRemoveMessage(AsciiBuffer queueName, Long queueKey) throws KeyNotFoundException {
+        }
+        public Iterator<QueueRecord> queueListMessagesQueue(AsciiBuffer queueName, Long firstQueueKey, int max) throws KeyNotFoundException {
+            return null;
+        }
+        
+        
+        ///////////////////////////////////////////////////////////////
+        // Map related methods.
+        ///////////////////////////////////////////////////////////////
+        public boolean mapAdd(AsciiBuffer map) {
+            return false;
+        }
+        public boolean mapRemove(AsciiBuffer map) {
+            return false;
+        }
+        public Iterator<AsciiBuffer> mapList(AsciiBuffer first, int max) {
+            return null;
+        }
+        public Buffer mapEntryPut(AsciiBuffer map, AsciiBuffer key, Buffer value) throws KeyNotFoundException {
+            return null;
+        }
+        public Buffer mapEntryGet(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException {
+            return null;
+        }
+        public Buffer mapEntryRemove(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException {
+            return null;
+        }
+        public Iterator<AsciiBuffer> mapEntryListKeys(AsciiBuffer map, AsciiBuffer first, int max) throws KeyNotFoundException {
+            return null;
+        }
+
+        ///////////////////////////////////////////////////////////////
+        // Stream related methods.
+        ///////////////////////////////////////////////////////////////
+        public Long streamOpen() {
+            return null;
+        }
+        public void streamWrite(Long streamKey, Buffer message) throws KeyNotFoundException {
+        }
+        public void streamClose(Long streamKey) throws KeyNotFoundException {
+        }
+        public Buffer streamRead(Long streamKey, int offset, int max) throws KeyNotFoundException {
+            return null;
+        }
+        public boolean streamRemove(Long streamKey) {
+            return false;
+        }
+
+        ///////////////////////////////////////////////////////////////
+        // Transaction related methods.
+        ///////////////////////////////////////////////////////////////
+        public void transactionAdd(Buffer txid) {
+        }
+        public void transactionAddMessage(Buffer txid, Long messageKey) throws KeyNotFoundException {
+        }
+        public void transactionCommit(Buffer txid) throws KeyNotFoundException {
+        }
+        public Iterator<Buffer> transactionList(Buffer first, int max) {
+            return null;
+        }
+        public void transactionRemoveMessage(Buffer txid, AsciiBuffer queueName, Long messageKey) throws KeyNotFoundException {
+        }
+        public void transactionRollback(Buffer txid) throws KeyNotFoundException {
+        }
+        
+    }
+    public <R, T extends Exception> R execute(Callback<R, T> callback, Runnable onFlush) throws T {
+        KahaDBSession session = new KahaDBSession();
+        R rc = callback.execute(session);
+        session.commit();
+        if( onFlush!=null ) {
+            onFlush.run();
+        }
+        return rc;
+    }
+
+    public void flush() {
     }
 }

@@ -30,7 +30,12 @@ import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.util.ByteArrayOutputStream;
 import org.apache.activemq.util.ByteSequence;
 
-
+/**
+ * An in memory implementation of the {@link Store} interface.
+ * It does not properly roll back operations if an error occurs in 
+ * the middle of a transaction and it does not persist changes across
+ * restarts.
+ */
 public class MemoryStore implements Store {
 
     private MemorySession session = new MemorySession();
@@ -137,7 +142,7 @@ public class MemoryStore implements Store {
         
         private HashMap<Long, MessageRecord> messages = new HashMap<Long, MessageRecord>();
         private HashMap<AsciiBuffer, Long> messagesKeys = new HashMap<AsciiBuffer, Long>();
-        private TreeMap<AsciiBuffer, TreeMap<Buffer,Buffer>> maps = new TreeMap<AsciiBuffer, TreeMap<Buffer,Buffer>>();
+        private TreeMap<AsciiBuffer, TreeMap<AsciiBuffer,Buffer>> maps = new TreeMap<AsciiBuffer, TreeMap<AsciiBuffer,Buffer>>();
         private TreeMap<Long, Stream> streams = new TreeMap<Long, Stream>();
         private TreeMap<AsciiBuffer, StoredQueue> queues = new TreeMap<AsciiBuffer, StoredQueue>();
         private TreeMap<Buffer, Transaction> transactions = new TreeMap<Buffer, Transaction>();
@@ -201,7 +206,7 @@ public class MemoryStore implements Store {
             if( maps.containsKey(mapName) ) {
                 return false;
             }
-            maps.put(mapName, new TreeMap<Buffer, Buffer>());
+            maps.put(mapName, new TreeMap<AsciiBuffer, Buffer>());
             return true;
         }
         public boolean mapRemove(AsciiBuffer mapName) {
@@ -210,16 +215,16 @@ public class MemoryStore implements Store {
         public Iterator<AsciiBuffer> mapList(AsciiBuffer first, int max) {
             return list(maps, first, max);
         }        
-        public Buffer mapGet(AsciiBuffer mapName, AsciiBuffer key) throws KeyNotFoundException {
+        public Buffer mapEntryGet(AsciiBuffer mapName, AsciiBuffer key) throws KeyNotFoundException {
             return get(maps, mapName).get(key);
         }
-        public Buffer mapRemove(AsciiBuffer mapName, AsciiBuffer key) throws KeyNotFoundException {
+        public Buffer mapEntryRemove(AsciiBuffer mapName, AsciiBuffer key) throws KeyNotFoundException {
             return get(maps, mapName).remove(key);
         }
-        public Buffer mapSet(AsciiBuffer mapName, AsciiBuffer key, Buffer value) throws KeyNotFoundException {
+        public Buffer mapEntryPut(AsciiBuffer mapName, AsciiBuffer key, Buffer value) throws KeyNotFoundException {
             return get(maps, mapName).put(key, value);
         }
-        public Iterator<Buffer> mapListKeys(AsciiBuffer mapName, AsciiBuffer first, int max) throws KeyNotFoundException {
+        public Iterator<AsciiBuffer> mapEntryListKeys(AsciiBuffer mapName, AsciiBuffer first, int max) throws KeyNotFoundException {
             return list(get(maps, mapName), first, max);
         }
 

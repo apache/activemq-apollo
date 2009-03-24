@@ -228,10 +228,10 @@ public interface Store extends Service {
         public boolean mapAdd(AsciiBuffer map);
         public boolean mapRemove(AsciiBuffer map);
         
-        public Buffer mapSet(AsciiBuffer map, AsciiBuffer key, Buffer value) throws KeyNotFoundException;
-        public Buffer mapGet(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException;
-        public Buffer mapRemove(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException;
-        public Iterator<Buffer> mapListKeys(AsciiBuffer map, AsciiBuffer first, int max) throws KeyNotFoundException;
+        public Buffer mapEntryPut(AsciiBuffer map, AsciiBuffer key, Buffer value) throws KeyNotFoundException;
+        public Buffer mapEntryGet(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException;
+        public Buffer mapEntryRemove(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException;
+        public Iterator<AsciiBuffer> mapEntryListKeys(AsciiBuffer map, AsciiBuffer first, int max) throws KeyNotFoundException;
 
     }
 }
