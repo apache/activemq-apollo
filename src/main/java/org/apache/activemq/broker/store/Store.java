@@ -1,7 +1,24 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.activemq.broker.store;
 
 import java.util.Iterator;
 
+import org.apache.activemq.Service;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 
@@ -10,7 +27,7 @@ import org.apache.activemq.protobuf.Buffer;
  * Interface to persistently store and access data needed by the messaging
  * system.
  */
-public interface Store {
+public interface Store extends Service {
 
     /**
      * This interface is used to execute transacted code.
@@ -97,10 +114,10 @@ public interface Store {
             }
         }
 
-        public class QueueNotFoundException extends Exception {
+        public class KeyNotFoundException extends Exception {
             private static final long serialVersionUID = 1L;
 
-            public QueueNotFoundException(String message) {
+            public KeyNotFoundException(String message) {
                 super(message);
             }
         }
@@ -151,18 +168,18 @@ public interface Store {
         public MessageRecord messageGetRecord(Long key);
 
         public Long streamOpen();
-        public void streamWrite(Long key, Buffer message);
-        public void streamClose(Long key);
-        public Buffer streamRead(Long key, int offset, int max);
-        public boolean streamRemove(Long key);
+        public void streamWrite(Long streamKey, Buffer message) throws KeyNotFoundException;
+        public void streamClose(Long streamKey) throws KeyNotFoundException;
+        public Buffer streamRead(Long streamKey, int offset, int max) throws KeyNotFoundException;
+        public boolean streamRemove(Long streamKey);
 
         // Transaction related methods.
         public Iterator<Buffer> transactionList(Buffer first, int max);
         public void transactionAdd(Buffer txid);
-        public void transactionAddMessage(Buffer txid, Long messageKey);
-        public void transactionRemoveMessage(Buffer txid, AsciiBuffer queueName, Long messageKey);
-        public boolean transactionCommit(Buffer txid);
-        public boolean transactionRollback(Buffer txid);
+        public void transactionAddMessage(Buffer txid, Long messageKey) throws KeyNotFoundException;
+        public void transactionRemoveMessage(Buffer txid, AsciiBuffer queueName, Long messageKey) throws KeyNotFoundException;
+        public void transactionCommit(Buffer txid) throws KeyNotFoundException;
+        public void transactionRollback(Buffer txid) throws KeyNotFoundException;
         
         // Queue related methods.
         public Iterator<AsciiBuffer> queueList(AsciiBuffer firstQueueName, int max);
@@ -193,9 +210,9 @@ public interface Store {
                 this.attachment = attachment;
             }
         }
-        public Long queueAddMessage(AsciiBuffer queueName, QueueRecord record) throws QueueNotFoundException;
-        public void queueRemoveMessage(AsciiBuffer queueName, Long queueKey) throws QueueNotFoundException;
-        public Iterator<QueueRecord> queueListMessagesQueue(AsciiBuffer queueName, Long firstQueueKey, int max);
+        public Long queueAddMessage(AsciiBuffer queueName, QueueRecord record) throws KeyNotFoundException;
+        public void queueRemoveMessage(AsciiBuffer queueName, Long queueKey) throws KeyNotFoundException;
+        public Iterator<QueueRecord> queueListMessagesQueue(AsciiBuffer queueName, Long firstQueueKey, int max) throws KeyNotFoundException;
 
         // We could use this to associate additional data to a message on a
         // queue like which consumer a message has been dispatched to.
@@ -208,10 +225,13 @@ public interface Store {
         // / Simple Key Value related methods could come in handy to store misc
         // data.
         public Iterator<AsciiBuffer> mapList(AsciiBuffer first, int max);
-        public Buffer mapSet(AsciiBuffer map, Buffer key, Buffer value);
-        public Buffer mapGet(AsciiBuffer map, Buffer key);
-        public Buffer mapRemove(AsciiBuffer map, Buffer key);
-        public Iterator<Buffer> mapListKeys(AsciiBuffer map, Buffer first, int max);
+        public boolean mapAdd(AsciiBuffer map);
+        public boolean mapRemove(AsciiBuffer map);
+        
+        public Buffer mapSet(AsciiBuffer map, AsciiBuffer key, Buffer value) throws KeyNotFoundException;
+        public Buffer mapGet(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException;
+        public Buffer mapRemove(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException;
+        public Iterator<Buffer> mapListKeys(AsciiBuffer map, AsciiBuffer first, int max) throws KeyNotFoundException;
 
     }
 }

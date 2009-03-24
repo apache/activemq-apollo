@@ -27,7 +27,7 @@ import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store.Callback;
 import org.apache.activemq.broker.store.Store.Session;
 import org.apache.activemq.broker.store.Store.Session.MessageRecord;
-import org.apache.activemq.broker.store.Store.Session.QueueNotFoundException;
+import org.apache.activemq.broker.store.Store.Session.KeyNotFoundException;
 import org.apache.activemq.broker.store.memory.MemoryStore;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.ISourceController;
@@ -352,7 +352,7 @@ public class BrokerDatabase {
                     queueRecord.setAttachment(null);
                     queueRecord.setMessageKey(key);
                     session.queueAddMessage(target.getPersistentQueueName(), queueRecord);
-                } catch (QueueNotFoundException e) {
+                } catch (KeyNotFoundException e) {
                     e.printStackTrace();
                 }
             }
