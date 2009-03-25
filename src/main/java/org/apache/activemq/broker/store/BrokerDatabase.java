@@ -19,21 +19,27 @@ package org.apache.activemq.broker.store;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Semaphore;
 
-import org.apache.activemq.broker.DeliveryTarget;
+import org.apache.activemq.broker.BrokerMessageDelivery;
 import org.apache.activemq.broker.MessageDelivery;
+import org.apache.activemq.broker.protocol.ProtocolHandler;
+import org.apache.activemq.broker.protocol.ProtocolHandlerFactory;
 import org.apache.activemq.broker.store.Store.Callback;
 import org.apache.activemq.broker.store.Store.Session;
 import org.apache.activemq.broker.store.Store.Session.MessageRecord;
 import org.apache.activemq.broker.store.Store.Session.KeyNotFoundException;
+import org.apache.activemq.broker.store.Store.Session.QueueRecord;
 import org.apache.activemq.broker.store.memory.MemoryStore;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.queue.ExclusiveQueue;
 import org.apache.activemq.queue.IPollableFlowSource;
+import org.apache.activemq.queue.PersistentQueue;
 import org.apache.activemq.queue.IPollableFlowSource.FlowReadyListener;
 
 import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
@@ -51,6 +57,8 @@ public class BrokerDatabase {
     private final FlowReadyListener<Operation> enqueueListener;
     private DatabaseListener listener;
 
+    private HashMap<String, ProtocolHandler> protocolHandlers = new HashMap<String, ProtocolHandler>();
+
     public interface DatabaseListener {
         /**
          * Called if there is a catastrophic problem with the database.
@@ -59,6 +67,21 @@ public class BrokerDatabase {
          *            The causing exception.
          */
         public void onDatabaseException(IOException ioe);
+    }
+
+    /**
+     * Holder of a restored message to be passed to a
+     * {@link MessageRestoreListener}. This allows the demarshalling to be done
+     * by the listener instead of the the database worker.
+     * 
+     * @author cmacnaug
+     */
+    public interface RestoredMessage {
+        MessageDelivery getMessageDelivery();
+    }
+
+    public interface MessageRestoreListener {
+        public void messagesRestored(Collection<RestoredMessage> msgs);
     }
 
     public BrokerDatabase() {
@@ -114,8 +137,47 @@ public class BrokerDatabase {
         }
     }
 
-    public void persistReceivedMessage(MessageDelivery delivery, Collection<DeliveryTarget> targets, ISourceController<?> source) {
-        add(new AddMessageOperation(delivery, targets), source, true);
+    /**
+     * Saves a message for all of the recipients in the
+     * {@link BrokerMessageDelivery}.
+     * 
+     * @param delivery
+     *            The delivery.
+     * @param source
+     *            The source's controller.
+     */
+    public void persistReceivedMessage(BrokerMessageDelivery delivery, ISourceController<?> source) {
+        add(new AddMessageOperation(delivery), source, true);
+    }
+
+    /**
+     * Saves a Message for a single queue.
+     * 
+     * @param delivery
+     *            The delivery
+     * @param queue
+     *            The queue
+     * @param source
+     *            The source initiating the save or null, if there isn't one.
+     */
+    public void saveMessage(MessageDelivery delivery, PersistentQueue<MessageDelivery> queue, ISourceController<?> source) {
+        add(new AddMessageOperation(delivery, queue), source, false);
+    }
+
+    /**
+     * Deletes the given message from the store for the given queue.
+     * 
+     * @param delivery
+     *            The delivery.
+     * @param queue
+     *            The queue.
+     */
+    public void deleteMessage(MessageDelivery delivery, PersistentQueue<MessageDelivery> queue) {
+        opQueue.add(new DeleteMessageOperation(delivery, queue), null);
+    }
+
+    public void restoreMessages(PersistentQueue<MessageDelivery> queue, long first, int max, MessageRestoreListener listener) {
+        opQueue.add(new RestoreMessageOperation(queue, first, max, listener), null);
     }
 
     /**
@@ -156,25 +218,27 @@ public class BrokerDatabase {
                     continue;
                 }
             }
-            
+
             // The first operation we get, triggers a store transaction.
             if (firstOp != null) {
                 final ArrayList<Operation> processedQueue = new ArrayList<Operation>();
                 try {
-                    store.execute(new Store.VoidCallback<Exception>(){
+                    store.execute(new Store.VoidCallback<Exception>() {
                         @Override
                         public void run(Session session) throws Exception {
-                            
-                            // Try to execute the operation against the session...
+
+                            // Try to execute the operation against the
+                            // session...
                             try {
                                 firstOp.execute(session);
                                 processedQueue.add(firstOp);
                             } catch (CancellationException ignore) {
                             }
 
-                            // See if we can batch up some additional operations in 
-                            // this transaction.  
-                            
+                            // See if we can batch up some additional operations
+                            // in
+                            // this transaction.
+
                             Operation op;
                             synchronized (opQueue) {
                                 op = opQueue.poll();
@@ -205,7 +269,7 @@ public class BrokerDatabase {
                     for (Operation processed : processedQueue) {
                         processed.onRollback(e);
                     }
-                    
+
                 }
             }
         }
@@ -321,50 +385,183 @@ public class BrokerDatabase {
         public void onCommit() {
         }
 
-        public void onRollback() {
+        /**
+         * Called after {@link #execute(Session)} is called and the the
+         * operation has been rolled back.
+         */
+        public void onRollback(Throwable error) {
+
+        }
+    }
+
+    private class DeleteMessageOperation extends OperationBase {
+        private final MessageDelivery delivery;
+        private PersistentQueue<MessageDelivery> queue;
+
+        public DeleteMessageOperation(MessageDelivery delivery, PersistentQueue<MessageDelivery> queue) {
+            this.delivery = delivery;
+            this.queue = queue;
+        }
+
+        @Override
+        public int getLimiterSize() {
+            // Might consider bumping this up to avoid too much accumulation?
+            return 0;
+        }
+
+        @Override
+        protected void doExcecute(Session session) {
+            try {
+                session.queueRemoveMessage(queue.getPeristentQueueName(), delivery.getStoreTracking());
+            } catch (KeyNotFoundException e) {
+                // TODO Probably doesn't always mean an error, it is possible
+                // that
+                // the queue has been deleted, in which case its messages will
+                // have been deleted, too.
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onRollback(Throwable error) {
+        }
+
+        @Override
+        public void onCommit() {
+            delivery.onMessagePersisted();
+        }
+    }
+
+    private class RestoreMessageOperation extends OperationBase {
+        private PersistentQueue<MessageDelivery> queue;
+        private long firstKey;
+        private int maxRecords;
+        private MessageRestoreListener listener;
+        private Collection<RestoredMessage> msgs = null;
+
+        RestoreMessageOperation(PersistentQueue<MessageDelivery> queue, long firstKey, int maxRecords, MessageRestoreListener listener) {
+            this.queue = queue;
+            this.firstKey = firstKey;
+            this.maxRecords = maxRecords;
+            this.listener = listener;
+        }
+
+        @Override
+        protected void doExcecute(Session session) {
+
+            Iterator<QueueRecord> records = null;
+            try {
+                records = session.queueListMessagesQueue(queue.getPeristentQueueName(), firstKey, maxRecords);
+
+            } catch (KeyNotFoundException e) {
+                msgs = new ArrayList<RestoredMessage>(0);
+                return;
+            }
+
+            while (records.hasNext()) {
+                RestoredMessageImpl rm = new RestoredMessageImpl();
+                // TODO should update jms redelivery here.
+                rm.qRecord = records.next();
+                rm.mRecord = session.messageGetRecord(rm.qRecord.messageKey);
+                rm.handler = protocolHandlers.get(rm.mRecord.encoding.toString());
+                if (rm.handler == null) {
+                    try {
+                        rm.handler = ProtocolHandlerFactory.createProtocolHandler(rm.mRecord.encoding.toString());
+                        protocolHandlers.put(rm.mRecord.encoding.toString(), rm.handler);
+                    } catch (Throwable thrown) {
+                        throw new RuntimeException("Unknown message format" + rm.mRecord.encoding.toString(), thrown);
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void onRollback(Throwable error) {
+        }
+
+        @Override
+        public void onCommit() {
+            listener.messagesRestored(msgs);
         }
     }
 
     private class AddMessageOperation extends OperationBase {
+
+        private final BrokerMessageDelivery brokerDelivery;
+
         private final MessageDelivery delivery;
-        private final Collection<DeliveryTarget> targets;
-        
-        public AddMessageOperation(MessageDelivery delivery, Collection<DeliveryTarget> targets) {
+        private final PersistentQueue<MessageDelivery> target;
+
+        public AddMessageOperation(BrokerMessageDelivery delivery) {
+            this.brokerDelivery = delivery;
             this.delivery = delivery;
-            this.targets = targets;
-            
+            target = null;
         }
 
+        public AddMessageOperation(MessageDelivery delivery, PersistentQueue<MessageDelivery> target) {
+            this.brokerDelivery = null;
+            this.delivery = delivery;
+            this.target = target;
+        }
+
+        @Override
         public int getLimiterSize() {
             return delivery.getFlowLimiterSize();
         }
 
         @Override
         protected void doExcecute(Session session) {
-            // TODO need to get at protocol buffer.
-            
-            MessageRecord record = delivery.createMessageRecord();
-            Long key = session.messageAdd(record);
-            for(DeliveryTarget target : targets)
-            {
+
+            if (target == null) {
+                MessageRecord record = delivery.createMessageRecord();
+                Long key = session.messageAdd(record);
+                brokerDelivery.beginStore(key);
+
+                for (PersistentQueue<MessageDelivery> target : brokerDelivery.getPersistentQueues()) {
+                    try {
+                        Session.QueueRecord queueRecord = new Session.QueueRecord();
+                        queueRecord.setAttachment(null);
+                        queueRecord.setMessageKey(key);
+                        session.queueAddMessage(target.getPeristentQueueName(), queueRecord);
+
+                    } catch (KeyNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } else {
+
+                MessageRecord record = delivery.createMessageRecord();
+                Long key = session.messageAdd(record);
                 try {
                     Session.QueueRecord queueRecord = new Session.QueueRecord();
                     queueRecord.setAttachment(null);
                     queueRecord.setMessageKey(key);
-                    session.queueAddMessage(target.getPersistentQueueName(), queueRecord);
+                    session.queueAddMessage(target.getPeristentQueueName(), queueRecord);
                 } catch (KeyNotFoundException e) {
                     e.printStackTrace();
                 }
             }
         }
 
+        @Override
         public void onRollback(Throwable error) {
-            // TODO Auto-generated method stub
+            error.printStackTrace();
         }
 
+        @Override
         public void onCommit() {
             delivery.onMessagePersisted();
         }
 
+    }
+
+    private class RestoredMessageImpl implements RestoredMessage {
+        QueueRecord qRecord;
+        MessageRecord mRecord;
+        ProtocolHandler handler;
+
+        public MessageDelivery getMessageDelivery() {
+            return handler.createMessageDelivery(mRecord);
+        }
     }
 }

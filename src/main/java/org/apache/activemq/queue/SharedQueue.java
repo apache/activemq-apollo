@@ -126,15 +126,8 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         super.onFlowOpened(sinkController);
     }
 
-    public boolean offer(V elem, ISourceController<?> source) {
-        return sinkController.offer(elem, source);
-    }
-
-    /**
-     * Performs a limited add to the queue.
-     */
-    public final void add(V value, ISourceController<?> source) {
-        sinkController.add(value, source);
+    protected final ISinkController<V> getSinkController(V elem, ISourceController<?> source) {
+        return sinkController;
     }
 
     /**

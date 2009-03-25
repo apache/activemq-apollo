@@ -63,32 +63,35 @@ final public class Router {
         domain.bind(destination.getName(), dt);
     }
 
-    public void route(final MessageDelivery msg, ISourceController<?> controller) {
+    public void route(final BrokerMessageDelivery msg, ISourceController<?> controller) {
 
-//        final Buffer transactionId = msg.getTransactionId();
-//        if( msg.isPersistent() ) {
-//            VoidCallback<RuntimeException> tx = new VoidCallback<RuntimeException>() {
-//                @Override
-//                public void run(Session session) throws RuntimeException {
-//                    Long messageKey = session.messageAdd(msg.createMessageRecord());
-//                    if( transactionId!=null ) {
-//                        session.transactionAddMessage(transactionId, messageKey);
-//                    }
-//                }
-//            };
-//            Runnable onFlush = new Runnable() {
-//                public void run() {
-//                    if( msg.isResponseRequired() ) {
-//                        // Let the client know the broker got the message.
-//                        msg.onMessagePersisted();
-//                    }
-//                }
-//            };
-//            virtualHost.getStore().execute(tx, onFlush);
-//        }
-//        
+        // final Buffer transactionId = msg.getTransactionId();
+        // if( msg.isPersistent() ) {
+        // VoidCallback<RuntimeException> tx = new
+        // VoidCallback<RuntimeException>() {
+        // @Override
+        // public void run(Session session) throws RuntimeException {
+        // Long messageKey = session.messageAdd(msg.createMessageRecord());
+        // if( transactionId!=null ) {
+        // session.transactionAddMessage(transactionId, messageKey);
+        // }
+        // }
+        // };
+        // Runnable onFlush = new Runnable() {
+        // public void run() {
+        // if( msg.isResponseRequired() ) {
+        // // Let the client know the broker got the message.
+        // msg.onMessagePersisted();
+        // }
+        // }
+        // };
+        // virtualHost.getStore().execute(tx, onFlush);
+        // }
+        //        
         Collection<DeliveryTarget> targets = route(msg.getDestination(), msg);
 
+        msg.store = getVirtualHost().getDatabase();
+        
         // TODO:
         // Consider doing some caching of this target list. Most producers
         // always send to the same destination.
@@ -97,19 +100,23 @@ final public class Router {
             if (msg.isResponseRequired()) {
                 // We need to ack the message once we ensure we won't loose it.
                 // We know we won't loose it once it's persisted or delivered to
-                // a consumer Setup a callback to get notifed once one of those happens.
+                // a consumer Setup a callback to get notifed once one of those
+                // happens.
                 if (!msg.isPersistent()) {
                     // Let the client know the broker got the message.
                     msg.onMessagePersisted();
                 }
             }
 
-            // Deliver the message to all the targets..
+            //The sinks will request persistence via MessageDelivery.persist()
+            //if they require persistence:
             for (DeliveryTarget dt : targets) {
                 if (dt.match(msg)) {
                     dt.getSink().add(msg, controller);
                 }
             }
+            
+            msg.persistIfNeeded(controller);
 
         } else {
             // Let the client know we got the message even though there

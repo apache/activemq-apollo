@@ -55,8 +55,8 @@ public class VirtualHost implements Service {
         return router;
     }
     public void setRouter(Router router) {
-        this.router.setVirtualHost(this);
         this.router = router;
+        this.router.setVirtualHost(this);
     }
 
     public void start() throws Exception {

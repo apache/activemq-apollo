@@ -25,7 +25,10 @@ import org.apache.activemq.dispatch.IDispatcher.Dispatchable;
 import org.apache.activemq.flow.AbstractLimitedFlowSource;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.IFlowSource;
+import org.apache.activemq.flow.ISinkController;
+import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
+import org.apache.activemq.protobuf.AsciiBuffer;
 
 /**
  * Base class for a {@link Dispatchable} {@link FlowControllable}
@@ -33,7 +36,7 @@ import org.apache.activemq.flow.ISinkController.FlowControllable;
  * 
  * @param <E>
  */
-public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> implements FlowControllable<E>, IFlowQueue<E>, Dispatchable {
+public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> implements PersistentQueue<E>, FlowControllable<E>, IFlowQueue<E>, Dispatchable {
 
     protected IDispatcher dispatcher;
     protected DispatchContext dispatchContext;
@@ -41,6 +44,8 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
     private boolean notifyReady = false;
     protected boolean dispatching = false;
     protected int dispatchPriority = 0;
+    protected QueueStoreHelper<E> storeHelper;
+    AsciiBuffer persistentQueueName;
 
     AbstractFlowQueue() {
         super();
@@ -49,6 +54,30 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
     protected AbstractFlowQueue(String name) {
         super(name);
     }
+
+    public final void add(E elem, ISourceController<?> source) {
+        checkSave(elem, source);
+        getSinkController(elem, source).add(elem, source);
+    }
+
+    public final boolean offer(E elem, ISourceController<?> source) {
+        if(getSinkController(elem, source).offer(elem, source))
+        {
+            checkSave(elem, source);
+            return true;
+        }
+        return false;
+    }
+    
+    private void checkSave(E elem, ISourceController<?> source) 
+    {
+        if(storeHelper != null && isElementPersistent(elem))
+        {
+            storeHelper.save(elem, true);
+        }
+    }
+
+    protected abstract ISinkController<E> getSinkController(E elem, ISourceController<?> source);
 
     public final boolean dispatch() {
 
@@ -147,7 +176,60 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
         notifyReady = false;
     }
 
+    /**
+     * Enables persistence for this queue.
+     */
+    public void enablePersistence(QueueStoreHelper<E> storeHelper) {
+        this.storeHelper = storeHelper;
+    }
+
+    /**
+     * Called when an element is added from the queue's store.
+     * 
+     * @param elem
+     *            The element
+     * @param controller
+     *            The store controller.
+     */
+    public void addFromStore(E elem, ISourceController<?> controller) {
+        add(elem, controller);
+    }
+
+    /**
+     * Called when there are no more elements to be loaded from the store.
+     */
+    public void onQueueLoadComplete() {
+
+    }
+
+    /**
+     * Subclasses should override this if they require persistence 
+     * requires saving to the store.
+     * 
+     * @param elem
+     *            The element to check.
+     */
+    public boolean isElementPersistent(E elem) {
+        return false;
+    }
+
     public String toString() {
         return getResourceName();
     }
+
+    /**
+     * Returns the queue name used to indentify the queue in the store
+     * 
+     * @return
+     */
+    public AsciiBuffer getPeristentQueueName() {
+        if (persistentQueueName == null) {
+            String name = getResourceName();
+            if (name != null) {
+                persistentQueueName = new AsciiBuffer(name);
+            }
+        }
+        return persistentQueueName;
+    }
+
 }

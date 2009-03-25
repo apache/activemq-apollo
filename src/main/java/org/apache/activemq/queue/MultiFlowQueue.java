@@ -24,6 +24,7 @@ import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowLimiter;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.IFlowSource;
+import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.kahadb.util.LinkedNode;
@@ -48,20 +49,16 @@ public class MultiFlowQueue<E> extends AbstractFlowQueue<E> {
         throw new UnsupportedOperationException();
     }
 
-    public boolean offer(E elem, ISourceController<?> source) {
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
-
-    public synchronized void add(E elem, ISourceController<?> source) {
+    protected synchronized final ISinkController<E> getSinkController(E elem, ISourceController<?> source) {
         SingleFlowQueue queue = flowQueues.get(source.getFlow());
         if (queue == null) {
             queue = new SingleFlowQueue(source.getFlow(), new SizeLimiter<E>(perFlowWindow, resumeThreshold));
             flowQueues.put(source.getFlow(), queue);
             super.onFlowOpened(queue.controller);
         }
-        queue.enqueue(elem, source);
+        return queue.controller;
     }
-
+    
     public boolean pollingDispatch() {
         SingleFlowQueue queue = null;
         E elem = null;
@@ -88,23 +85,21 @@ public class MultiFlowQueue<E> extends AbstractFlowQueue<E> {
 
     public final E poll() {
         synchronized (this) {
-            synchronized (this) {
-                SingleFlowQueue queue = peekReadyQueue();
-                if (queue == null) {
-                    return null;
-                }
-
-                E elem = queue.poll();
-                if (elem == null) {
-
-                    unreadyQueue(queue);
-                    return null;
-                }
-
-                // rotate to have fair dispatch.
-                queue.getList().rotate();
-                return elem;
+            SingleFlowQueue queue = peekReadyQueue();
+            if (queue == null) {
+                return null;
             }
+
+            E elem = queue.poll();
+            if (elem == null) {
+
+                unreadyQueue(queue);
+                return null;
+            }
+
+            // rotate to have fair dispatch.
+            queue.getList().rotate();
+            return elem;
         }
     }
 

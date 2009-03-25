@@ -16,15 +16,15 @@
  */
 package org.apache.activemq.broker.stomp;
 
+import org.apache.activemq.broker.BrokerMessageDelivery;
 import org.apache.activemq.broker.Destination;
-import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store.Session.MessageRecord;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.transport.stomp.Stomp;
 import org.apache.activemq.transport.stomp.StompFrame;
 
-public class StompMessageDelivery implements MessageDelivery {
+public class StompMessageDelivery extends BrokerMessageDelivery {
 
     static final private AsciiBuffer ENCODING = new AsciiBuffer("stomp");
 

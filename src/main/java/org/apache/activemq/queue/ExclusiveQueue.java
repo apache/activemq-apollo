@@ -21,6 +21,7 @@ import java.util.LinkedList;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowLimiter;
+import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
 
 public class ExclusiveQueue<E> extends AbstractFlowQueue<E> {
@@ -41,15 +42,9 @@ public class ExclusiveQueue<E> extends AbstractFlowQueue<E> {
         super.onFlowOpened(controller);
     }
 
-    public boolean offer(E elem, ISourceController<?> source) {
-        return controller.offer(elem, source);
-    }
 
-    /**
-     * Performs a limited add to the queue.
-     */
-    public final void add(E elem, ISourceController<?> source) {
-        controller.add(elem, source);
+    protected final ISinkController<E> getSinkController(E elem, ISourceController<?> source) {
+        return controller;
     }
 
     /**

@@ -19,6 +19,7 @@ package org.apache.activemq.queue;
 import org.apache.activemq.dispatch.PriorityLinkedList;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
+import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.PriorityFlowController;
 import org.apache.activemq.flow.PrioritySizeLimiter;
@@ -57,15 +58,8 @@ public class ExclusivePriorityQueue<E> extends AbstractFlowQueue<E> implements I
 
     }
 
-    public boolean offer(E elem, ISourceController<?> source) {
-        return controller.offer(elem, source);
-    }
-
-    /**
-     * Performs a limited add to the queue.
-     */
-    public final void add(E elem, ISourceController<?> source) {
-        controller.add(elem, source);
+    protected final ISinkController<E> getSinkController(E elem, ISourceController<?> source) {
+        return controller;
     }
 
     /**

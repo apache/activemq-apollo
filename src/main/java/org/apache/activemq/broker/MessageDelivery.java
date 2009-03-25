@@ -19,6 +19,7 @@ package org.apache.activemq.broker;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.queue.PersistentQueue;
 
 public interface MessageDelivery {
 
@@ -37,17 +38,34 @@ public interface MessageDelivery {
     public boolean isPersistent();
 
     /**
+     * @return True if this message was read from the store.
+     */
+    public boolean isFromStore();
+
+    /**
      * Returns true if this message requires acknowledgement.
      */
     public boolean isResponseRequired();
-    
+
     /**
-     * Called when the message's persistence requirements have
-     * been met. This method must not block. 
+     * Called when the message's persistence requirements have been met. This
+     * method must not block.
      */
     public void onMessagePersisted();
-    
+
     public Store.Session.MessageRecord createMessageRecord();
 
     public Buffer getTransactionId();
+
+    public void persist(PersistentQueue<MessageDelivery> queue);
+
+    public void delete(PersistentQueue<MessageDelivery> queue);
+    
+    /**
+     * Gets the tracking number used to identify this message in the message
+     * store.
+     * 
+     * @return The store tracking or -1 if not set.
+     */
+    public long getStoreTracking();
 }

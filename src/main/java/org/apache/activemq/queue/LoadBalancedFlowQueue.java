@@ -108,17 +108,10 @@ public class LoadBalancedFlowQueue<E> extends AbstractFlowQueue<E> {
         super.onFlowOpened(sinkController);
     }
 
-    public boolean offer(E elem, ISourceController<?> source) {
-        return sinkController.offer(elem, source);
+    protected final ISinkController<E> getSinkController(E elem, ISourceController<?> source) {
+        return sinkController;
     }
-
-    /**
-     * Performs a limited add to the queue.
-     */
-    public final void add(E elem, ISourceController<?> source) {
-        sinkController.add(elem, source);
-    }
-
+    
     /**
      * Called when the controller accepts a message for this queue.
      */

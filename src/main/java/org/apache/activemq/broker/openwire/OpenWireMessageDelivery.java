@@ -16,14 +16,14 @@
  */
 package org.apache.activemq.broker.openwire;
 
+import org.apache.activemq.broker.BrokerMessageDelivery;
 import org.apache.activemq.broker.Destination;
-import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store.Session.MessageRecord;
 import org.apache.activemq.command.Message;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 
-public class OpenWireMessageDelivery implements MessageDelivery {
+public class OpenWireMessageDelivery extends BrokerMessageDelivery {
 
     static final private AsciiBuffer ENCODING = new AsciiBuffer("openwire");
 
