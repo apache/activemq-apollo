@@ -29,6 +29,63 @@ import org.apache.activemq.protobuf.Buffer;
  */
 public interface Store extends Service {
 
+    public class FatalStoreException extends RuntimeException {
+        private static final long serialVersionUID = 1122460895970375737L;
+
+        public FatalStoreException() {
+        }
+
+        public FatalStoreException(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        public FatalStoreException(String message) {
+            super(message);
+        }
+
+        public FatalStoreException(Throwable cause) {
+            super(cause);
+        }
+    }
+    
+    public class DuplicateKeyException extends Exception {
+        private static final long serialVersionUID = -477567614452245482L;
+
+        public DuplicateKeyException() {
+        }
+
+        public DuplicateKeyException(String message) {
+            super(message);
+        }
+        public DuplicateKeyException(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        public DuplicateKeyException(Throwable cause) {
+            super(cause);
+        }
+    }
+
+    public class KeyNotFoundException extends Exception {
+        private static final long serialVersionUID = -2570252319033659546L;
+
+        public KeyNotFoundException() {
+            super();
+        }
+
+        public KeyNotFoundException(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        public KeyNotFoundException(String message) {
+            super(message);
+        }
+
+        public KeyNotFoundException(Throwable cause) {
+            super(cause);
+        }
+    }
+    
     /**
      * This interface is used to execute transacted code.
      * 
@@ -72,7 +129,72 @@ public interface Store extends Service {
             return null;
         }
     }
+    
+    public static class QueueRecord {
+        Long queueKey;
+        Long messageKey;
+        Buffer attachment;
+        
+        public Long getQueueKey() {
+            return queueKey;
+        }
+        public void setQueueKey(Long queueKey) {
+            this.queueKey = queueKey;
+        }
+        public Long getMessageKey() {
+            return messageKey;
+        }
+        public void setMessageKey(Long messageKey) {
+            this.messageKey = messageKey;
+        }
+        public Buffer getAttachment() {
+            return attachment;
+        }
+        public void setAttachment(Buffer attachment) {
+            this.attachment = attachment;
+        }
+    }
 
+    // Message related methods.
+    public static class MessageRecord {
+        Long key;
+        AsciiBuffer messageId;
+        AsciiBuffer encoding;
+        Buffer buffer;
+        Long streamKey;
+        
+        public Long getKey() {
+            return key;
+        }
+        public void setKey(Long key) {
+            this.key = key;
+        }
+        public AsciiBuffer getMessageId() {
+            return messageId;
+        }
+        public void setMessageId(AsciiBuffer messageId) {
+            this.messageId = messageId;
+        }
+        public AsciiBuffer getEncoding() {
+            return encoding;
+        }
+        public void setEncoding(AsciiBuffer encoding) {
+            this.encoding = encoding;
+        }
+        public Buffer getBuffer() {
+            return buffer;
+        }
+        public void setBuffer(Buffer buffer) {
+            this.buffer = buffer;
+        }
+        public Long getStreamKey() {
+            return streamKey;
+        }
+        public void setStreamKey(Long stream) {
+            this.streamKey = stream;
+        }
+    }
+    
     /**
      * Executes user supplied {@link Callback}.  If the {@link Callback} does not throw
      * any Exceptions, all updates to the store are committed to the store as a single 
@@ -90,7 +212,7 @@ public interface Store extends Service {
      * @param closure
      * @param onFlush if not null, it's {@link Runnable#run()} method is called once he transaction has been store on disk.
      */
-    public <R, T extends Exception> R execute(Callback<R,T> callback, Runnable onFlush) throws T;
+    public <R, T extends Exception> R execute(Callback<R,T> callback, Runnable onFlush) throws T, FatalStoreException;
 
     /**
      * Flushes all committed buffered transactions.
@@ -105,64 +227,7 @@ public interface Store extends Service {
      * 
      */
     public interface Session {
-
-        public class DuplicateKeyException extends Exception {
-            private static final long serialVersionUID = 1L;
-
-            public DuplicateKeyException(String message) {
-                super(message);
-            }
-        }
-
-        public class KeyNotFoundException extends Exception {
-            private static final long serialVersionUID = 1L;
-
-            public KeyNotFoundException(String message) {
-                super(message);
-            }
-        }
         
-        
-        // Message related methods.
-        public static class MessageRecord {
-            Long key;
-            AsciiBuffer messageId;
-            AsciiBuffer encoding;
-            Buffer buffer;
-            Long streamKey;
-            
-            public Long getKey() {
-                return key;
-            }
-            public void setKey(Long key) {
-                this.key = key;
-            }
-            public AsciiBuffer getMessageId() {
-                return messageId;
-            }
-            public void setMessageId(AsciiBuffer messageId) {
-                this.messageId = messageId;
-            }
-            public AsciiBuffer getEncoding() {
-                return encoding;
-            }
-            public void setEncoding(AsciiBuffer encoding) {
-                this.encoding = encoding;
-            }
-            public Buffer getBuffer() {
-                return buffer;
-            }
-            public void setBuffer(Buffer buffer) {
-                this.buffer = buffer;
-            }
-            public Long getStreamKey() {
-                return streamKey;
-            }
-            public void setStreamKey(Long stream) {
-                this.streamKey = stream;
-            }
-        }
-
         public Long messageAdd(MessageRecord message);
         public Long messageGetKey(AsciiBuffer messageId);
         public MessageRecord messageGetRecord(Long key);
@@ -186,48 +251,14 @@ public interface Store extends Service {
         public void queueAdd(AsciiBuffer queueName);
         public boolean queueRemove(AsciiBuffer queueName);
         
-        public static class QueueRecord {
-            Long queueKey;
-            Long messageKey;
-            Buffer attachment;
-            
-            public Long getQueueKey() {
-                return queueKey;
-            }
-            public void setQueueKey(Long queueKey) {
-                this.queueKey = queueKey;
-            }
-            public Long getMessageKey() {
-                return messageKey;
-            }
-            public void setMessageKey(Long messageKey) {
-                this.messageKey = messageKey;
-            }
-            public Buffer getAttachment() {
-                return attachment;
-            }
-            public void setAttachment(Buffer attachment) {
-                this.attachment = attachment;
-            }
-        }
+
         public Long queueAddMessage(AsciiBuffer queueName, QueueRecord record) throws KeyNotFoundException;
         public void queueRemoveMessage(AsciiBuffer queueName, Long queueKey) throws KeyNotFoundException;
         public Iterator<QueueRecord> queueListMessagesQueue(AsciiBuffer queueName, Long firstQueueKey, int max) throws KeyNotFoundException;
 
-        // We could use this to associate additional data to a message on a
-        // queue like which consumer a message has been dispatched to.
-        // public void queueSetMessageAttachment(AsciiBuffer queue, RecordKey
-        // key, Buffer attachment) throws QueueNotFoundException;
-
-        // public Buffer queueGetMessageAttachment(AsciiBuffer queue, RecordKey
-        // key) throws QueueNotFoundException;
-
-        // / Simple Key Value related methods could come in handy to store misc
-        // data.
         public Iterator<AsciiBuffer> mapList(AsciiBuffer first, int max);
         public boolean mapAdd(AsciiBuffer map);
         public boolean mapRemove(AsciiBuffer map);
-        
         public Buffer mapEntryPut(AsciiBuffer map, AsciiBuffer key, Buffer value) throws KeyNotFoundException;
         public Buffer mapEntryGet(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException;
         public Buffer mapEntryRemove(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException;

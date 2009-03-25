@@ -21,24 +21,31 @@ option java_outer_classname = "Data";
 
 enum Type {
   //| option java_create_message="true";
-  MESSAGE_ADD = 1;
-  QUEUE_ADD = 2;
-  QUEUE_ADD_MESSAGE = 3;
-  QUEUE_REMOVE_MESSAGE = 4;
-  TRANSACTION_BEGIN = 5;
-  TRANSACTION_ADD_MESSAGE = 6;
-  TRANSACTION_REMOVE_MESSAGE = 7;
-  TRANSACTION_COMMIT = 8;
-  TRANSACTION_ROLLBACK = 9;
-  MAP_ADD = 10;
-  MAP_REMOVE = 11;
-  MAP_ENTRY_PUT = 12;
-  MAP_ENTRY_REMOVE = 13;
-  STREAM_OPEN = 14;
-  STREAM_WRITE = 15;
-  STREAM_CLOSE = 16;
-  STREAM_REMOVE = 17;
+  MESSAGE_ADD = 0;
+  QUEUE_ADD = 10;
+  QUEUE_REMOVE = 11;
+  QUEUE_ADD_MESSAGE = 12;
+  QUEUE_REMOVE_MESSAGE = 13;
+  TRANSACTION_BEGIN = 20;
+  TRANSACTION_ADD_MESSAGE = 21;
+  TRANSACTION_REMOVE_MESSAGE = 22;
+  TRANSACTION_COMMIT = 23;
+  TRANSACTION_ROLLBACK = 24;
+  MAP_ADD = 30;
+  MAP_REMOVE = 31;
+  MAP_ENTRY_PUT = 32;
+  MAP_ENTRY_REMOVE = 33;
+  STREAM_OPEN = 40;
+  STREAM_WRITE = 41;
+  STREAM_CLOSE = 42;
+  STREAM_REMOVE = 43;
+  
+  TRACE = 100;
 }
+
+message Trace {
+  optional bytes message = 2 [java_override_type = "AsciiBuffer"];
+}  
 
 ///////////////////////////////////////////////////////////////
 // Message related operations.

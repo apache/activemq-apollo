@@ -20,16 +20,17 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.util.Marshaller;
 
 public class MessageKeys {
     public static final MessageKeysMarshaller MARSHALLER = new MessageKeysMarshaller();
 
-    final String messageId;
+    final AsciiBuffer messageId;
     final Location location;
     
-    public MessageKeys(String messageId, Location location) {
+    public MessageKeys(AsciiBuffer messageId, Location location) {
         this.messageId=messageId;
         this.location=location;
     }
@@ -46,12 +47,14 @@ public class MessageKeys {
         }
 
         public MessageKeys readPayload(DataInput dataIn) throws IOException {
-            return new MessageKeys(dataIn.readUTF(), LocationMarshaller.INSTANCE.readPayload(dataIn));
+            byte data[] = new byte[dataIn.readShort()];
+            return new MessageKeys(new AsciiBuffer(data), Marshallers.LOCATION_MARSHALLER.readPayload(dataIn));
         }
 
         public void writePayload(MessageKeys object, DataOutput dataOut) throws IOException {
-            dataOut.writeUTF(object.messageId);
-            LocationMarshaller.INSTANCE.writePayload(object.location, dataOut);
+            dataOut.writeShort(object.messageId.length);
+            dataOut.write(object.messageId.data, object.messageId.offset, object.messageId.length);
+            Marshallers.LOCATION_MARSHALLER.writePayload(object.location, dataOut);
         }
     }
 }

@@ -35,7 +35,7 @@ import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;
 import org.apache.activemq.broker.protocol.ProtocolHandler;
-import org.apache.activemq.broker.store.Store.Session.MessageRecord;
+import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.flow.Flow;

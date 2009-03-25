@@ -23,8 +23,6 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.Store.Session.KeyNotFoundException;
-import org.apache.activemq.broker.store.Store.Session.QueueRecord;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.util.ByteArrayOutputStream;

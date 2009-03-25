@@ -21,9 +21,9 @@ import java.util.Iterator;
 
 import junit.framework.TestCase;
 
+import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.broker.store.Store.Session;
 import org.apache.activemq.broker.store.Store.VoidCallback;
-import org.apache.activemq.broker.store.Store.Session.MessageRecord;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 public abstract class StoreTestBase extends TestCase {

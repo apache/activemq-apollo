@@ -19,62 +19,51 @@ package org.apache.activemq.broker.store.kahadb;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.TreeMap;
+import java.util.Map.Entry;
 
-import org.apache.activemq.broker.store.kahadb.data.KahaSubscriptionCommand;
 import org.apache.kahadb.index.BTreeIndex;
-import org.apache.kahadb.journal.Location;
+import org.apache.kahadb.page.Transaction;
+import org.apache.kahadb.util.LongMarshaller;
 import org.apache.kahadb.util.Marshaller;
 
 public class StoredDestinationState {
-    long nextMessageId;
-    BTreeIndex<Long, MessageKeys> orderIndex;
-    BTreeIndex<Location, Long> locationIndex;
-    BTreeIndex<String, Long> messageIdIndex;
-
-    // These bits are only set for Topics
-    BTreeIndex<String, KahaSubscriptionCommand> subscriptions;
-    BTreeIndex<String, Long> subscriptionAcks;
-    HashMap<String, Long> subscriptionCursors;
-    TreeMap<Long, HashSet<String>> ackPositions;
     
-    public static class StoredDestinationMarshaller implements Marshaller<StoredDestinationState> {
-        private final KahaDBStore store;
+    long nextMessageId;
+    BTreeIndex<Long, Long> orderIndex;
 
-        public StoredDestinationMarshaller(KahaDBStore store) {
-            this.store = store;
+    public void allocate(Transaction tx) throws IOException {
+        orderIndex = new BTreeIndex<Long, Long>(tx.allocate());
+    }
+    
+    public void load(Transaction tx) throws IOException {
+        orderIndex.setPageFile(tx.getPageFile());
+        orderIndex.setKeyMarshaller(LongMarshaller.INSTANCE);
+        orderIndex.setValueMarshaller(LongMarshaller.INSTANCE);
+        orderIndex.load(tx);
+
+        // Figure out the next key using the last entry in the destination.
+        Entry<Long, Long> lastEntry = orderIndex.getLast(tx);
+        if( lastEntry!=null ) {
+            nextMessageId = lastEntry.getKey()+1;
         }
+    }
 
+    public final static StoredDestinationMarshaller MARSHALLER = new StoredDestinationMarshaller();
+    public static class StoredDestinationMarshaller implements Marshaller<StoredDestinationState> {
+        
         public Class<StoredDestinationState> getType() {
             return StoredDestinationState.class;
         }
 
         public StoredDestinationState readPayload(DataInput dataIn) throws IOException {
             StoredDestinationState value = new StoredDestinationState();
-            value.orderIndex = new BTreeIndex<Long, MessageKeys>(store.pageFile, dataIn.readLong());
-            value.locationIndex = new BTreeIndex<Location, Long>(store.pageFile, dataIn.readLong());
-            value.messageIdIndex = new BTreeIndex<String, Long>(store.pageFile, dataIn.readLong());
-
-            if (dataIn.readBoolean()) {
-                value.subscriptions = new BTreeIndex<String, KahaSubscriptionCommand>(store.pageFile, dataIn.readLong());
-                value.subscriptionAcks = new BTreeIndex<String, Long>(store.pageFile, dataIn.readLong());
-            }
+            value.orderIndex = new BTreeIndex<Long, Long>(dataIn.readLong());
             return value;
         }
 
         public void writePayload(StoredDestinationState value, DataOutput dataOut) throws IOException {
             dataOut.writeLong(value.orderIndex.getPageId());
-            dataOut.writeLong(value.locationIndex.getPageId());
-            dataOut.writeLong(value.messageIdIndex.getPageId());
-            if (value.subscriptions != null) {
-                dataOut.writeBoolean(true);
-                dataOut.writeLong(value.subscriptions.getPageId());
-                dataOut.writeLong(value.subscriptionAcks.getPageId());
-            } else {
-                dataOut.writeBoolean(false);
-            }
         }
     }
+
 }

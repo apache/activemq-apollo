@@ -20,78 +20,76 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.kahadb.index.BTreeIndex;
 import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.page.Page;
+import org.apache.kahadb.page.Transaction;
 import org.apache.kahadb.util.Marshaller;
 
 public class StoredDBState {
     
-    protected final KahaDBStore store;
     protected Page<StoredDBState> page;
     protected int state;
-    protected BTreeIndex<String, StoredDestinationState> destinations;
+    protected BTreeIndex<AsciiBuffer, StoredDestinationState> destinations;
     protected Location lastUpdate;
-    protected Location firstInProgressTransactionLocation;
 
-    public StoredDBState(KahaDBStore store) {
-        this.store = store;
-    }
+    // We index the messages 3 ways: by sequence id, by journal location, and by message id.
+    long nextMessageId;
+    protected BTreeIndex<Long, MessageKeys> orderIndex;
+    protected BTreeIndex<Location, Long> locationIndex;
+    protected BTreeIndex<AsciiBuffer, Long> messageIdIndex;
 
-
-    public void read(DataInput is) throws IOException {
-        state = is.readInt();
-        destinations = new BTreeIndex<String, StoredDestinationState>(store.pageFile, is.readLong());
-        if (is.readBoolean()) {
-            lastUpdate = LocationMarshaller.INSTANCE.readPayload(is);
-        } else {
-            lastUpdate = null;
-        }
-        if (is.readBoolean()) {
-            firstInProgressTransactionLocation = LocationMarshaller.INSTANCE.readPayload(is);
-        } else {
-            firstInProgressTransactionLocation = null;
-        }
-    }
 
     public void write(DataOutput os) throws IOException {
-        os.writeInt(state);
-        os.writeLong(destinations.getPageId());
 
-        if (lastUpdate != null) {
-            os.writeBoolean(true);
-            LocationMarshaller.INSTANCE.writePayload(lastUpdate, os);
-        } else {
-            os.writeBoolean(false);
-        }
-
-        if (firstInProgressTransactionLocation != null) {
-            os.writeBoolean(true);
-            LocationMarshaller.INSTANCE.writePayload(firstInProgressTransactionLocation, os);
-        } else {
-            os.writeBoolean(false);
-        }
     }
     
+    public final static DBStateMarshaller MARSHALLER = new DBStateMarshaller();
     static public class DBStateMarshaller implements Marshaller<StoredDBState> {
-        private final KahaDBStore store;
-
-        public DBStateMarshaller(KahaDBStore store) {
-            this.store = store;
-        }
-
         public Class<StoredDBState> getType() {
             return StoredDBState.class;
         }
 
-        public StoredDBState readPayload(DataInput dataIn) throws IOException {
-            StoredDBState rc = new StoredDBState(this.store);
-            rc.read(dataIn);
+        public StoredDBState readPayload(DataInput is) throws IOException {
+            StoredDBState rc = new StoredDBState();
+            rc.state = is.readInt();
+            rc.destinations = new BTreeIndex<AsciiBuffer, StoredDestinationState>(is.readLong());
+            if (is.readBoolean()) {
+                rc.lastUpdate = Marshallers.LOCATION_MARSHALLER.readPayload(is);
+            } else {
+                rc.lastUpdate = null;
+            }
             return rc;
         }
 
-        public void writePayload(StoredDBState object, DataOutput dataOut) throws IOException {
-            object.write(dataOut);
+        public void writePayload(StoredDBState object, DataOutput os) throws IOException {
+            os.writeInt(object.state);
+            os.writeLong(object.destinations.getPageId());
+            if (object.lastUpdate != null) {
+                os.writeBoolean(true);
+                Marshallers.LOCATION_MARSHALLER.writePayload(object.lastUpdate, os);
+            } else {
+                os.writeBoolean(false);
+            }
         }
+    }
+
+    public void allocate(Transaction tx) throws IOException {
+        // First time this is created.. Initialize a new pagefile.
+        page = tx.allocate();
+        assert page.getPageId() == 0;
+        page.set(this);
+        
+        state = KahaDBStore.CLOSED_STATE;
+        destinations = new BTreeIndex<AsciiBuffer, StoredDestinationState>(tx.getPageFile(), tx.allocate().getPageId());
+        tx.store(page, MARSHALLER, true);
+    }
+    
+    public void load(Transaction tx) throws IOException {
+        destinations.setPageFile(tx.getPageFile());
+        destinations.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
+        destinations.setValueMarshaller(StoredDestinationState.MARSHALLER);
+        destinations.load(tx);
     }
 }

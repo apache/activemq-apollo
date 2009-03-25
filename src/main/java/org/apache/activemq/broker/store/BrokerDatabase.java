@@ -29,10 +29,10 @@ import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.protocol.ProtocolHandler;
 import org.apache.activemq.broker.protocol.ProtocolHandlerFactory;
 import org.apache.activemq.broker.store.Store.Callback;
+import org.apache.activemq.broker.store.Store.KeyNotFoundException;
+import org.apache.activemq.broker.store.Store.MessageRecord;
+import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.broker.store.Store.Session;
-import org.apache.activemq.broker.store.Store.Session.MessageRecord;
-import org.apache.activemq.broker.store.Store.Session.KeyNotFoundException;
-import org.apache.activemq.broker.store.Store.Session.QueueRecord;
 import org.apache.activemq.broker.store.memory.MemoryStore;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.ISourceController;
@@ -519,7 +519,7 @@ public class BrokerDatabase {
 
                 for (PersistentQueue<MessageDelivery> target : brokerDelivery.getPersistentQueues()) {
                     try {
-                        Session.QueueRecord queueRecord = new Session.QueueRecord();
+                        QueueRecord queueRecord = new QueueRecord();
                         queueRecord.setAttachment(null);
                         queueRecord.setMessageKey(key);
                         session.queueAddMessage(target.getPeristentQueueName(), queueRecord);
@@ -533,7 +533,7 @@ public class BrokerDatabase {
                 MessageRecord record = delivery.createMessageRecord();
                 Long key = session.messageAdd(record);
                 try {
-                    Session.QueueRecord queueRecord = new Session.QueueRecord();
+                    QueueRecord queueRecord = new QueueRecord();
                     queueRecord.setAttachment(null);
                     queueRecord.setMessageKey(key);
                     session.queueAddMessage(target.getPeristentQueueName(), queueRecord);

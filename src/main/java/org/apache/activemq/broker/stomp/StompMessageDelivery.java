@@ -18,7 +18,7 @@ package org.apache.activemq.broker.stomp;
 
 import org.apache.activemq.broker.BrokerMessageDelivery;
 import org.apache.activemq.broker.Destination;
-import org.apache.activemq.broker.store.Store.Session.MessageRecord;
+import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.transport.stomp.Stomp;

@@ -53,7 +53,7 @@ public interface MessageDelivery {
      */
     public void onMessagePersisted();
 
-    public Store.Session.MessageRecord createMessageRecord();
+    public Store.MessageRecord createMessageRecord();
 
     public Buffer getTransactionId();
 
