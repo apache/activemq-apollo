@@ -32,6 +32,7 @@ import org.apache.kahadb.index.BTreeIndex;
 import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.page.Page;
 import org.apache.kahadb.page.Transaction;
+import org.apache.kahadb.util.LongMarshaller;
 import org.apache.kahadb.util.Marshaller;
 
 public class RootEntity {
@@ -44,6 +45,9 @@ public class RootEntity {
         public RootEntity readPayload(DataInput is) throws IOException {
             RootEntity rc = new RootEntity();
             rc.state = is.readInt();
+            rc.messageKeyIndex = new BTreeIndex<Long, MessageKeys>(is.readLong());
+            rc.locationIndex = new BTreeIndex<Location, Long>(is.readLong());
+            rc.messageIdIndex = new BTreeIndex<AsciiBuffer, Long>(is.readLong());
             rc.destinationIndex = new BTreeIndex<AsciiBuffer, DestinationEntity>(is.readLong());
             if (is.readBoolean()) {
                 rc.lastUpdate = Marshallers.LOCATION_MARSHALLER.readPayload(is);
@@ -55,6 +59,9 @@ public class RootEntity {
 
         public void writePayload(RootEntity object, DataOutput os) throws IOException {
             os.writeInt(object.state);
+            os.writeLong(object.messageKeyIndex.getPageId());
+            os.writeLong(object.locationIndex.getPageId());
+            os.writeLong(object.messageIdIndex.getPageId());
             os.writeLong(object.destinationIndex.getPageId());
             if (object.lastUpdate != null) {
                 os.writeBoolean(true);
@@ -94,6 +101,10 @@ public class RootEntity {
         assert pageId == 0;
         
         state = KahaDBStore.CLOSED_STATE;
+        
+        messageKeyIndex = new BTreeIndex<Long, MessageKeys>(tx.getPageFile(), tx.allocate().getPageId());
+        locationIndex = new BTreeIndex<Location, Long>(tx.getPageFile(), tx.allocate().getPageId());
+        messageIdIndex = new BTreeIndex<AsciiBuffer, Long>(tx.getPageFile(), tx.allocate().getPageId());
         destinationIndex = new BTreeIndex<AsciiBuffer, DestinationEntity>(tx.getPageFile(), tx.allocate().getPageId());
 
         page.set(this);
@@ -101,6 +112,21 @@ public class RootEntity {
     }
     
     public void load(Transaction tx) throws IOException {
+        messageKeyIndex.setPageFile(tx.getPageFile());
+        messageKeyIndex.setKeyMarshaller(LongMarshaller.INSTANCE);
+        messageKeyIndex.setValueMarshaller(MessageKeys.MARSHALLER);
+        messageKeyIndex.load(tx);
+
+        locationIndex.setPageFile(tx.getPageFile());
+        locationIndex.setKeyMarshaller(Marshallers.LOCATION_MARSHALLER);
+        locationIndex.setValueMarshaller(LongMarshaller.INSTANCE);
+        locationIndex.load(tx);
+
+        messageIdIndex.setPageFile(tx.getPageFile());
+        messageIdIndex.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
+        messageIdIndex.setValueMarshaller(LongMarshaller.INSTANCE);
+        messageIdIndex.load(tx);
+        
         destinationIndex.setPageFile(tx.getPageFile());
         destinationIndex.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
         destinationIndex.setValueMarshaller(DestinationEntity.MARSHALLER);
@@ -129,7 +155,7 @@ public class RootEntity {
     }
 
     public void messageAdd(Transaction tx, MessageAdd command, Location location) throws IOException {
-        long id = nextMessageKey++;
+        long id = command.getMessageKey();
         Long previous = locationIndex.put(tx, location, id);
         if( previous == null ) {
             messageIdIndex.put(tx, command.getMessageId(), id);

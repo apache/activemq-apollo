@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -134,6 +135,10 @@ public class KahaDBStore implements Store {
 	 */
 	public void open() throws IOException {
 		if( opened.compareAndSet(false, true) ) {
+		    if( directory ==null ) {
+		        throw new IllegalArgumentException("The directory property must be set.");
+		    }
+		    
             File lockFileName = new File(directory, "lock");
             lockFile = new LockFile(lockFileName, true);
 	        if (failIfDatabaseIsLocked) {
@@ -230,19 +235,19 @@ public class KahaDBStore implements Store {
 	}
 	
     public void unload() throws IOException, InterruptedException {
-        indexLock.writeLock().lock();
-        try {
-            if( pageFile.isLoaded() ) {
+        if (pageFile.isLoaded()) {
+            indexLock.writeLock().lock();
+            try {
                 rootEntity.setState(CLOSED_STATE);
                 pageFile.tx().execute(new Transaction.Closure<IOException>() {
                     public void execute(Transaction tx) throws IOException {
                         rootEntity.store(tx);
                     }
                 });
-                close();
+            } finally {
+                indexLock.writeLock().unlock();
             }
-        } finally {
-            indexLock.writeLock().unlock();
+            close();
         }
     }
 
@@ -269,7 +274,7 @@ public class KahaDBStore implements Store {
 		        int redoCounter = 0;
 		        while (recoveryPosition != null) {
 		            final TypeCreatable message = load(recoveryPosition);
-		            final Location location = lastRecoveryPosition;
+		            final Location location = recoveryPosition;
 		            rootEntity.setLastUpdate(recoveryPosition);
 		            
 	                pageFile.tx().execute(new Transaction.Closure<IOException>() {
@@ -520,7 +525,7 @@ public class KahaDBStore implements Store {
     public Location store(TypeCreatable data) throws IOException {
         return store(data, false);
     }
-
+    
     /**
      * All updated are are funneled through this method. The updates a converted
      * to a PBMessage which is logged to the journal and then the data from
@@ -537,9 +542,11 @@ public class KahaDBStore implements Store {
         message.writeUnframed(os);
 
         long start = System.currentTimeMillis();
-        final Location location = journal.write(os.toByteSequence(), sync);
+        final Location location;
+        synchronized(journal) {
+            location = journal.write(os.toByteSequence(), sync);
+        }
         long start2 = System.currentTimeMillis();
-        
         
         try {
             indexLock.writeLock().lock();
@@ -560,6 +567,74 @@ public class KahaDBStore implements Store {
         return location;
     }
     
+    
+    public void store(List<TypeCreatable> batch) throws IOException {
+        store(batch, false);
+    }
+    
+    // ArrayList<TypeCreatable>
+    /**
+     * All updated are are funneled through this method. The updates a converted
+     * to a PBMessage which is logged to the journal and then the data from
+     * the PBMessage is used to update the index just like it would be done
+     * during a recovery process.
+     * @throws IOException 
+     */
+    @SuppressWarnings("unchecked")
+    public void store(final List<TypeCreatable> batch, boolean sync) throws IOException {
+        if( batch.isEmpty() ) {
+            return;
+        }
+        if( batch.size()==1 ) {
+            store(batch.get(0), sync);
+            return;
+        }
+        
+        
+        ArrayList<ByteSequence> encodedData = new ArrayList<ByteSequence>(batch.size());
+        for (TypeCreatable data : batch) {
+            final MessageBuffer message = ((PBMessage) data).freeze();
+            int size = message.serializedSizeUnframed();
+            DataByteArrayOutputStream os = new DataByteArrayOutputStream(size + 1);
+            os.writeByte(data.toType().getNumber());
+            message.writeUnframed(os);
+            encodedData.add(os.toByteSequence());
+        }
+        
+
+        final ArrayList<Location> locations = new ArrayList<Location>(batch.size());
+        long start = System.currentTimeMillis();
+        synchronized(journal) {
+            for (ByteSequence bs : encodedData) {
+                Location location = journal.write(bs, sync);
+                locations.add(location);
+            }
+        }
+        long start2 = System.currentTimeMillis();
+        
+        try {
+            indexLock.writeLock().lock();
+            pageFile.tx().execute(new Transaction.Closure<IOException>() {
+                public void execute(Transaction tx) throws IOException {
+                    for( int i=0; i < batch.size(); i++) {
+                        TypeCreatable data = batch.get(i);
+                        MessageBuffer message = ((PBMessage) data).freeze();
+                        Location location = locations.get(i);
+                        updateIndex(tx, data.toType(), message, location);
+                        rootEntity.setLastUpdate(location);
+                    }
+                }
+            });
+        } finally {
+            indexLock.writeLock().unlock();
+        }
+
+        long end = System.currentTimeMillis();
+        if( end-start > 100 ) { 
+            LOG.warn("KahaDB long enqueue time: Journal Add Took: "+(start2-start)+" ms, Index Update took "+(end-start2)+" ms");
+        }
+    }
+
     /**
      * Loads a previously stored PBMessage
      * 
@@ -653,17 +728,54 @@ public class KahaDBStore implements Store {
             return tx;
         }
         
+        public void close() {
+            try {
+                if( tx!=null ) {
+                    tx.rollback();
+                }
+            } catch (IOException e) {
+                throw new FatalStoreException(e);
+            } finally {
+                if( tx!=null ) {
+                    indexLock.readLock().unlock();
+                    tx=null;
+                }
+            }
+        }
+
+        public void commit() {
+            try {
+                if( tx!=null ) {
+                    tx.commit();
+                }
+                store(updates);
+            } catch (IOException e) {
+                throw new FatalStoreException(e);
+            } finally {
+                if( tx!=null ) {
+                    indexLock.readLock().unlock();
+                    tx=null;
+                }
+            }
+        }
+        
         ///////////////////////////////////////////////////////////////
         // Message related methods.
         ///////////////////////////////////////////////////////////////
         public Long messageAdd(MessageRecord message) {
             Long id = rootEntity.nextMessageKey();
             MessageAddBean bean = new MessageAddBean();
-            bean.setBuffer(message.getBuffer());
-            bean.setEncoding(message.getEncoding());
+            bean.setMessageKey(id);
             bean.setMessageId(message.getMessageId());
-            bean.setMessageKey(id); 
-            bean.setStreamKey(message.getStreamKey());
+            bean.setEncoding(message.getEncoding());
+            Buffer buffer = message.getBuffer();
+            if( buffer!=null ) {
+                bean.setBuffer(buffer);
+            }            
+            Long streamKey = message.getStreamKey();
+            if( streamKey !=null ) {
+                bean.setStreamKey(streamKey);
+            }
             updates.add(bean);
             return id;
         }
@@ -678,7 +790,18 @@ public class KahaDBStore implements Store {
                 throw new KeyNotFoundException("message key: "+key);
             }
             try {
-                return (MessageRecord) load(location);
+                MessageAdd bean = (MessageAdd) load(location);
+                MessageRecord rc = new MessageRecord();
+                rc.setKey(bean.getMessageKey());
+                rc.setMessageId(bean.getMessageId());
+                rc.setEncoding(bean.getEncoding());
+                if( bean.hasBuffer() ) {
+                    rc.setBuffer(bean.getBuffer());
+                }
+                if( bean.hasStreamKey() ) {
+                    rc.setStreamKey(bean.getStreamKey());
+                }
+                return rc;
             } catch (IOException e) {
                 throw new FatalStoreException(e);
             }
@@ -787,13 +910,17 @@ public class KahaDBStore implements Store {
         }
         public void transactionRollback(Buffer txid) throws KeyNotFoundException {
         }
-        
     }
     
     public <R, T extends Exception> R execute(final Callback<R, T> callback, final Runnable onFlush) throws T {
         KahaDBSession session = new KahaDBSession();
-        R rc = callback.execute(session);
-        return rc;
+        try {
+            R rc = callback.execute(session);
+            session.commit();
+            return rc;
+        } finally {
+            session.close();
+        }
     }
 
     public void flush() {

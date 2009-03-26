@@ -21,10 +21,12 @@ import java.util.Iterator;
 
 import junit.framework.TestCase;
 
+import org.apache.activemq.broker.store.Store.Callback;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.broker.store.Store.Session;
 import org.apache.activemq.broker.store.Store.VoidCallback;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.protobuf.Buffer;
 
 public abstract class StoreTestBase extends TestCase {
 
@@ -49,32 +51,16 @@ public abstract class StoreTestBase extends TestCase {
 
     public void testMessageAdd() throws Exception {
         final MessageRecord expected = new MessageRecord();
-        expected.setBuffer(new AsciiBuffer("buffer"));
+        expected.setBuffer(new Buffer("buffer"));
         expected.setEncoding(new AsciiBuffer("encoding"));
         expected.setMessageId(new AsciiBuffer("1000"));
 
-        store.execute(new VoidCallback<Exception>() {
-            @Override
-            public void run(Session session) throws Exception {
-                Long messageKey = session.messageAdd(expected);
-                MessageRecord actual = session.messageGetRecord(messageKey);
-                assertEquals(expected, actual);
-            }
-        }, null);
-    }
-    
-    public void testMessageAddAndGet() throws Exception {
-        final MessageRecord expected = new MessageRecord();
-        expected.setBuffer(new AsciiBuffer("buffer"));
-        expected.setEncoding(new AsciiBuffer("encoding"));
-        expected.setMessageId(new AsciiBuffer("1000"));
-
-        final Long messageKey = store.execute(new Store.Callback<Long, Exception>() {
+        final Long messageKey = store.execute(new Callback<Long, Exception>() {
             public Long execute(Session session) throws Exception {
                 return session.messageAdd(expected);
             }
         }, null);
-        
+
         store.execute(new VoidCallback<Exception>() {
             @Override
             public void run(Session session) throws Exception {
@@ -83,7 +69,6 @@ public abstract class StoreTestBase extends TestCase {
             }
         }, null);
     }
-    
     
     public void testQueueAdd() throws Exception {
         final AsciiBuffer expected = new AsciiBuffer("test");
