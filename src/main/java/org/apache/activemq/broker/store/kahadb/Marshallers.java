@@ -20,6 +20,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.kahadb.journal.Location;
@@ -27,6 +28,34 @@ import org.apache.kahadb.util.Marshaller;
 
 public class Marshallers {
     
+    public final static Marshaller<QueueRecord> QUEUE_RECORD_MARSHALLER = new Marshaller<QueueRecord>() {
+        
+        public Class<QueueRecord> getType() {
+            return QueueRecord.class;
+        }
+    
+        public QueueRecord readPayload(DataInput dataIn) throws IOException {
+            QueueRecord rc = new QueueRecord();
+            rc.setQueueKey(dataIn.readLong());
+            rc.setMessageKey(dataIn.readLong());
+            if( dataIn.readBoolean() ) {
+                rc.setAttachment(BUFFER_MARSHALLER.readPayload(dataIn));
+            }
+            return rc;
+        }
+    
+        public void writePayload(QueueRecord object, DataOutput dataOut) throws IOException {
+            dataOut.writeLong(object.getQueueKey());
+            dataOut.writeLong(object.getMessageKey());
+            if( object.getAttachment()!=null ) {
+                dataOut.writeBoolean(true);
+                BUFFER_MARSHALLER.writePayload(object.getAttachment(), dataOut);
+            } else {
+                dataOut.writeBoolean(false);
+            }
+        }
+    };
+
     public final static Marshaller<Location> LOCATION_MARSHALLER = new Marshaller<Location>() {
     
         public Class<Location> getType() {

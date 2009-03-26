@@ -18,19 +18,19 @@ package org.apache.activemq.broker.store.kahadb;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
-import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.kahadb.Data.MessageAdd;
 import org.apache.activemq.broker.store.kahadb.Data.QueueAdd;
+import org.apache.activemq.broker.store.kahadb.Data.QueueAddMessage;
+import org.apache.activemq.broker.store.kahadb.Data.QueueRemove;
 import org.apache.activemq.broker.store.kahadb.Data.QueueRemoveMessage;
 import org.apache.activemq.broker.store.kahadb.Data.Trace;
 import org.apache.activemq.broker.store.kahadb.Data.Type;
@@ -46,7 +46,6 @@ import org.apache.activemq.protobuf.MessageBuffer;
 import org.apache.activemq.protobuf.PBMessage;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.kahadb.index.BTreeVisitor;
 import org.apache.kahadb.journal.Journal;
 import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.page.Page;
@@ -67,7 +66,7 @@ public class KahaDBStore implements Store {
     protected PageFile pageFile;
     protected Journal journal;
     
-    protected StoredDBState dbstate = new StoredDBState();
+    protected RootEntity rootEntity = new RootEntity();
 
     protected boolean failIfDatabaseIsLocked;
     protected boolean deleteAllMessages;
@@ -86,9 +85,8 @@ public class KahaDBStore implements Store {
     private Location nextRecoveryPosition;
     private Location lastRecoveryPosition;
 
-    protected final Object indexMutex = new Object();
+    protected final ReentrantReadWriteLock indexLock = new ReentrantReadWriteLock();
     private final HashSet<Integer> journalFilesBeingReplicated = new HashSet<Integer>();
-    private final HashMap<AsciiBuffer, StoredDestinationState> storedDestinations = new HashMap<AsciiBuffer, StoredDestinationState>();
 
     ///////////////////////////////////////////////////////////////////
     // Lifecylce methods
@@ -106,50 +104,30 @@ public class KahaDBStore implements Store {
     }
 
 	private void loadPageFile() throws IOException {
-		synchronized (indexMutex) {
+	    indexLock.writeLock().lock();
+		try {
 		    final PageFile pageFile = getPageFile();
             pageFile.load();
             pageFile.tx().execute(new Transaction.Closure<IOException>() {
                 public void execute(Transaction tx) throws IOException {
                     if (pageFile.getPageCount() == 0) {
-                        dbstate.allocate(tx);
+                        rootEntity.allocate(tx);
                     } else {
-                        Page<StoredDBState> page = tx.load(0, StoredDBState.MARSHALLER);
-                        dbstate = page.get();
-                        dbstate.page = page;
+                        Page<RootEntity> page = tx.load(0, RootEntity.MARSHALLER);
+                        rootEntity = page.get();
+                        rootEntity.setPageId(0);
                     }
-                    dbstate.load(tx);
+                    rootEntity.load(tx);
                 }
             });
             pageFile.flush();
 
-            // Keep a cache of the StoredDestinations
-            storedDestinations.clear();
-            pageFile.tx().execute(new Transaction.Closure<IOException>() {
-                public void execute(Transaction tx) throws IOException {
-                    for (Iterator<Entry<AsciiBuffer, StoredDestinationState>> iterator = dbstate.destinations.iterator(tx); iterator.hasNext();) {
-                        Entry<AsciiBuffer, StoredDestinationState> entry = iterator.next();
-                        StoredDestinationState sd = loadStoredDestination(tx, entry.getKey());
-                        storedDestinations.put(entry.getKey(), sd);
-                    }
-                }
-            });
+        } finally {
+            indexLock.writeLock().unlock();
         }
 	}
 	
 	
-    private StoredDestinationState loadStoredDestination(Transaction tx, AsciiBuffer key) throws IOException {
-        // Try to load the existing indexes..
-        StoredDestinationState rc = dbstate.destinations.get(tx, key);
-        if (rc == null) {
-            // Brand new destination.. allocate indexes for it.
-            rc = new StoredDestinationState();
-            rc.allocate(tx);
-            dbstate.destinations.put(tx, key, rc);
-        }
-        rc.load(tx);
-        return rc;
-    }
     
 	/**
 	 * @throws IOException
@@ -211,8 +189,8 @@ public class KahaDBStore implements Store {
 	}
 	
     public void load() throws IOException {
-    	
-        synchronized (indexMutex) {
+    	indexLock.writeLock().lock();
+        try {
 	    	open();
 	    	
 	        if (deleteAllMessages) {
@@ -220,7 +198,7 @@ public class KahaDBStore implements Store {
 	
 	            pageFile.unload();
 	            pageFile.delete();
-	            dbstate = new StoredDBState();
+	            rootEntity = new RootEntity();
 	            
 	            LOG.info("Persistence store purged.");
 	            deleteAllMessages = false;
@@ -228,15 +206,21 @@ public class KahaDBStore implements Store {
 	            loadPageFile();
 	        }
 	        store( new Trace.TraceBean().setMessage(new AsciiBuffer("LOADED " + new Date())));
+        } finally {
+            indexLock.writeLock().unlock();
         }
 
     }
 
 	public void close() throws IOException, InterruptedException {
 		if( opened.compareAndSet(true, false)) {
-	        synchronized (indexMutex) {
+		    
+	        indexLock.writeLock().lock();
+	        try {
 	            pageFile.unload();
-	            dbstate = new StoredDBState();
+	            rootEntity = new RootEntity();
+	        } finally {
+	            indexLock.writeLock().unlock();
 	        }
 	        journal.close();
 	        checkpointThread.join();
@@ -246,16 +230,19 @@ public class KahaDBStore implements Store {
 	}
 	
     public void unload() throws IOException, InterruptedException {
-        synchronized (indexMutex) {
+        indexLock.writeLock().lock();
+        try {
             if( pageFile.isLoaded() ) {
-                dbstate.state = CLOSED_STATE;
+                rootEntity.setState(CLOSED_STATE);
                 pageFile.tx().execute(new Transaction.Closure<IOException>() {
                     public void execute(Transaction tx) throws IOException {
-                        tx.store(dbstate.page, StoredDBState.MARSHALLER, true);
+                        rootEntity.store(tx);
                     }
                 });
                 close();
             }
+        } finally {
+            indexLock.writeLock().unlock();
         }
     }
 
@@ -273,7 +260,8 @@ public class KahaDBStore implements Store {
      * @throws IllegalStateException
      */
     private void recover() throws IllegalStateException, IOException {
-        synchronized (indexMutex) {
+        indexLock.writeLock().lock();
+        try {
 	        long start = System.currentTimeMillis();
 	        
 	        Location recoveryPosition = getRecoveryPosition();
@@ -282,7 +270,7 @@ public class KahaDBStore implements Store {
 		        while (recoveryPosition != null) {
 		            final TypeCreatable message = load(recoveryPosition);
 		            final Location location = lastRecoveryPosition;
-		            dbstate.lastUpdate = recoveryPosition;
+		            rootEntity.setLastUpdate(recoveryPosition);
 		            
 	                pageFile.tx().execute(new Transaction.Closure<IOException>() {
 	                    public void execute(Transaction tx) throws IOException {
@@ -303,11 +291,14 @@ public class KahaDBStore implements Store {
                     recoverIndex(tx);
                 }
             });
+        } finally {
+            indexLock.writeLock().unlock();
         }
     }
     
     public void incrementalRecover() throws IOException {
-        synchronized (indexMutex) {
+        indexLock.writeLock().lock();
+        try {
             if( nextRecoveryPosition == null ) {
                 if( lastRecoveryPosition==null ) {
                     nextRecoveryPosition = getRecoveryPosition();
@@ -317,7 +308,7 @@ public class KahaDBStore implements Store {
             }
             while (nextRecoveryPosition != null) {
                 lastRecoveryPosition = nextRecoveryPosition;
-                dbstate.lastUpdate = lastRecoveryPosition;
+                rootEntity.setLastUpdate(lastRecoveryPosition);
                 final TypeCreatable message = load(lastRecoveryPosition);
                 final Location location = lastRecoveryPosition;
                 
@@ -329,6 +320,8 @@ public class KahaDBStore implements Store {
 
                 nextRecoveryPosition = journal.getNextLocation(lastRecoveryPosition);
             }
+        } finally {
+            indexLock.writeLock().unlock();
         }
     }
     
@@ -370,14 +363,14 @@ public class KahaDBStore implements Store {
 	}
 	
     public Location getLastUpdatePosition() throws IOException {
-        return dbstate.lastUpdate;
+        return rootEntity.getLastUpdate();
     }
     
 	private Location getRecoveryPosition() throws IOException {
 		
-        if( dbstate.lastUpdate!=null) {
+        if( rootEntity.getLastUpdate()!=null) {
             // Start replay at the record after the last one recorded in the index file.
-            return journal.getNextLocation(dbstate.lastUpdate);
+            return journal.getNextLocation(rootEntity.getLastUpdate());
         }
         
         // This loads the first position.
@@ -387,7 +380,8 @@ public class KahaDBStore implements Store {
     protected void checkpointCleanup(final boolean cleanup) {
         try {
         	long start = System.currentTimeMillis();
-            synchronized (indexMutex) {
+            indexLock.writeLock().lock();
+            try {
             	if( !opened.get() ) {
             		return;
             	}
@@ -396,6 +390,8 @@ public class KahaDBStore implements Store {
                         checkpointUpdate(tx, cleanup);
                     }
                 });
+            } finally {
+                indexLock.writeLock().unlock();
             }
         	long end = System.currentTimeMillis();
         	if( end-start > 100 ) { 
@@ -408,13 +404,16 @@ public class KahaDBStore implements Store {
 
     
 	public void checkpoint(org.apache.activemq.util.Callback closure) throws Exception {
-        synchronized (indexMutex) {
+        indexLock.writeLock().lock();
+        try {
             pageFile.tx().execute(new Transaction.Closure<IOException>() {
                 public void execute(Transaction tx) throws IOException {
                     checkpointUpdate(tx, false);
                 }
             });
             closure.execute();
+        } finally {
+            indexLock.writeLock().unlock();
         }
 	}
     
@@ -426,8 +425,8 @@ public class KahaDBStore implements Store {
 
         LOG.debug("Checkpoint started.");
         
-        dbstate.state = OPEN_STATE;
-        tx.store(dbstate.page, StoredDBState.MARSHALLER, true);
+        rootEntity.setState(OPEN_STATE);
+        rootEntity.store(tx);
         pageFile.flush();
 
         if( cleanup ) {
@@ -440,7 +439,7 @@ public class KahaDBStore implements Store {
         	}
         	
         	// Don't GC files after the first in progress tx
-        	Location firstTxLocation = dbstate.lastUpdate;
+        	Location firstTxLocation = rootEntity.getLastUpdate();
             
             if( firstTxLocation!=null ) {
             	while( !gcCandidateSet.isEmpty() ) {
@@ -453,52 +452,52 @@ public class KahaDBStore implements Store {
             	}
             }
 
-            // Go through all the destinations to see if any of them can remove GC candidates.
-            for (StoredDestinationState sd : storedDestinations.values()) {
-            	if( gcCandidateSet.isEmpty() ) {
-                	break;
-                }
-                
-                // Use a visitor to cut down the number of pages that we load
-                dbstate.locationIndex.visit(tx, new BTreeVisitor<Location, Long>() {
-                    int last=-1;
-                    public boolean isInterestedInKeysBetween(Location first, Location second) {
-                    	if( first==null ) {
-                    		SortedSet<Integer> subset = gcCandidateSet.headSet(second.getDataFileId()+1);
-                    		if( !subset.isEmpty() && subset.last() == second.getDataFileId() ) {
-                    			subset.remove(second.getDataFileId());
-                    		}
-							return !subset.isEmpty();
-                    	} else if( second==null ) {
-                    		SortedSet<Integer> subset = gcCandidateSet.tailSet(first.getDataFileId());
-                    		if( !subset.isEmpty() && subset.first() == first.getDataFileId() ) {
-                    			subset.remove(first.getDataFileId());
-                    		}
-							return !subset.isEmpty();
-                    	} else {
-                    		SortedSet<Integer> subset = gcCandidateSet.subSet(first.getDataFileId(), second.getDataFileId()+1);
-                    		if( !subset.isEmpty() && subset.first() == first.getDataFileId() ) {
-                    			subset.remove(first.getDataFileId());
-                    		}
-                    		if( !subset.isEmpty() && subset.last() == second.getDataFileId() ) {
-                    			subset.remove(second.getDataFileId());
-                    		}
-							return !subset.isEmpty();
-                    	}
-                    }
-    
-                    public void visit(List<Location> keys, List<Long> values) {
-                    	for (Location l : keys) {
-                            int fileId = l.getDataFileId();
-							if( last != fileId ) {
-                        		gcCandidateSet.remove(fileId);
-                                last = fileId;
-                            }
-						}                        
-                    }
-    
-                });
-            }
+//            // Go through all the destinations to see if any of them can remove GC candidates.
+//            for (StoredDestinationState sd : storedDestinations.values()) {
+//            	if( gcCandidateSet.isEmpty() ) {
+//                	break;
+//                }
+//                
+//                // Use a visitor to cut down the number of pages that we load
+//                dbstate.locationIndex.visit(tx, new BTreeVisitor<Location, Long>() {
+//                    int last=-1;
+//                    public boolean isInterestedInKeysBetween(Location first, Location second) {
+//                    	if( first==null ) {
+//                    		SortedSet<Integer> subset = gcCandidateSet.headSet(second.getDataFileId()+1);
+//                    		if( !subset.isEmpty() && subset.last() == second.getDataFileId() ) {
+//                    			subset.remove(second.getDataFileId());
+//                    		}
+//							return !subset.isEmpty();
+//                    	} else if( second==null ) {
+//                    		SortedSet<Integer> subset = gcCandidateSet.tailSet(first.getDataFileId());
+//                    		if( !subset.isEmpty() && subset.first() == first.getDataFileId() ) {
+//                    			subset.remove(first.getDataFileId());
+//                    		}
+//							return !subset.isEmpty();
+//                    	} else {
+//                    		SortedSet<Integer> subset = gcCandidateSet.subSet(first.getDataFileId(), second.getDataFileId()+1);
+//                    		if( !subset.isEmpty() && subset.first() == first.getDataFileId() ) {
+//                    			subset.remove(first.getDataFileId());
+//                    		}
+//                    		if( !subset.isEmpty() && subset.last() == second.getDataFileId() ) {
+//                    			subset.remove(second.getDataFileId());
+//                    		}
+//							return !subset.isEmpty();
+//                    	}
+//                    }
+//    
+//                    public void visit(List<Location> keys, List<Long> values) {
+//                    	for (Location l : keys) {
+//                            int fileId = l.getDataFileId();
+//							if( last != fileId ) {
+//                        		gcCandidateSet.remove(fileId);
+//                                last = fileId;
+//                            }
+//						}                        
+//                    }
+//    
+//                });
+//            }
 
             if( !gcCandidateSet.isEmpty() ) {
 	            LOG.debug("Cleanup removing the data files: "+gcCandidateSet);
@@ -541,21 +540,22 @@ public class KahaDBStore implements Store {
         final Location location = journal.write(os.toByteSequence(), sync);
         long start2 = System.currentTimeMillis();
         
-        synchronized (indexMutex) {
+        
+        try {
+            indexLock.writeLock().lock();
             pageFile.tx().execute(new Transaction.Closure<IOException>() {
                 public void execute(Transaction tx) throws IOException {
                     updateIndex(tx, data.toType(), message, location);
                 }
             });
+            rootEntity.setLastUpdate(location);
+        } finally {
+            indexLock.writeLock().unlock();
         }
 
         long end = System.currentTimeMillis();
         if( end-start > 100 ) { 
             LOG.warn("KahaDB long enqueue time: Journal Add Took: "+(start2-start)+" ms, Index Update took "+(end-start2)+" ms");
-        }
-
-        synchronized (indexMutex) {
-            dbstate.lastUpdate = location;
         }
         return location;
     }
@@ -581,20 +581,24 @@ public class KahaDBStore implements Store {
     }
 
     @SuppressWarnings("unchecked")
-    public void updateIndex(Transaction tx, Type type, MessageBuffer message, Location location) {
+    public void updateIndex(Transaction tx, Type type, MessageBuffer command, Location location) throws IOException {
         switch (type) {
         case MESSAGE_ADD:
-            messageAdd(tx, (MessageAdd)message, location);
+            messageAdd(tx, (MessageAdd)command, location);
             return;
         case QUEUE_ADD:
-            queueAdd(tx, (QueueAdd)message, location);
+            queueAdd(tx, (QueueAdd)command, location);
+            return;
+        case QUEUE_REMOVE:
+            queueRemove(tx, (QueueRemove)command, location);
             return;
         case QUEUE_ADD_MESSAGE:
-            queueAddMessage(tx, (QueueAdd)message, location);
+            queueAddMessage(tx, (QueueAddMessage)command, location);
             return;
         case QUEUE_REMOVE_MESSAGE:
-            queueRemoveMessage(tx, (QueueRemoveMessage)message, location);
+            queueRemoveMessage(tx, (QueueRemoveMessage)command, location);
             return;
+            
         case TRANSACTION_BEGIN:
         case TRANSACTION_ADD_MESSAGE:
         case TRANSACTION_REMOVE_MESSAGE:
@@ -612,90 +616,116 @@ public class KahaDBStore implements Store {
         }
     }
 
-    private void messageAdd(Transaction tx, MessageAdd message, Location location) {
+    private void messageAdd(Transaction tx, MessageAdd command, Location location) throws IOException {
+        rootEntity.messageAdd(tx, command, location);
     }
-    private void queueAdd(Transaction tx, QueueAdd message, Location location) {
+    
+    private void queueAdd(Transaction tx, QueueAdd command, Location location) throws IOException {
+        rootEntity.queueAdd(tx, command.getQueueName());
     }
-    private void queueAddMessage(Transaction tx, QueueAdd message, Location location) {
+    
+    private void queueRemove(Transaction tx, QueueRemove command, Location location) throws IOException {
+        rootEntity.queueRemove(tx, command.getQueueName());
     }
-    private void queueRemoveMessage(Transaction tx, QueueRemoveMessage message, Location location) {
+    
+    private void queueAddMessage(Transaction tx, QueueAddMessage command, Location location) throws IOException {
+        DestinationEntity destination = rootEntity.getDestination(command.getQueueName());
+        if( destination!=null ) {
+            destination.add(tx, command);
+        }
+    }
+    private void queueRemoveMessage(Transaction tx, QueueRemoveMessage command, Location location) throws IOException {
+        DestinationEntity destination = rootEntity.getDestination(command.getQueueName());
+        if( destination!=null ) {
+            destination.remove(tx, command.getQueueKey());
+        }
     }
 
     class KahaDBSession implements Session {
+        ArrayList<TypeCreatable> updates = new ArrayList<TypeCreatable>();
+
+        private Transaction tx; 
+        private Transaction tx() {
+            if( tx ==null ) {
+                indexLock.readLock().lock();
+                tx = pageFile.tx();
+            }
+            return tx;
+        }
         
         ///////////////////////////////////////////////////////////////
         // Message related methods.
         ///////////////////////////////////////////////////////////////
         public Long messageAdd(MessageRecord message) {
+            Long id = rootEntity.nextMessageKey();
+            MessageAddBean bean = new MessageAddBean();
+            bean.setBuffer(message.getBuffer());
+            bean.setEncoding(message.getEncoding());
+            bean.setMessageId(message.getMessageId());
+            bean.setMessageKey(id); 
+            bean.setStreamKey(message.getStreamKey());
+            updates.add(bean);
+            return id;
+        }
+        
+        public Long messageGetKey(AsciiBuffer messageId) {
+            return rootEntity.messageGetKey(tx(), messageId);
+        }
+        
+        public MessageRecord messageGetRecord(Long key) throws KeyNotFoundException {
+            Location location = rootEntity.messageGetLocation(tx(), key);
+            if( location ==null ) {
+                throw new KeyNotFoundException("message key: "+key);
+            }
             try {
-                Long id = dbstate.nextMessageId++;
-                MessageAddBean bean = new MessageAddBean();
-                bean.setBuffer(message.getBuffer());
-                bean.setEncoding(message.getEncoding());
-                bean.setMessageId(message.getMessageId());
-                bean.setMessageKey(id); 
-                bean.setStreamKey(message.getStreamKey());
-                store(bean);
-                return id;
+                return (MessageRecord) load(location);
             } catch (IOException e) {
                 throw new FatalStoreException(e);
             }
-        }
-        public Long messageGetKey(AsciiBuffer messageId) {
-            return null;
-        }
-        public MessageRecord messageGetRecord(Long key) {
-            return null;
         }
 
         ///////////////////////////////////////////////////////////////
         // Queue related methods.
         ///////////////////////////////////////////////////////////////
         public void queueAdd(AsciiBuffer queueName) {
-            try {
-                store(new QueueAddBean().setQueueName(queueName));
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
-            }
+            updates.add(new QueueAddBean().setQueueName(queueName));
         }
-        public boolean queueRemove(AsciiBuffer queueName) {
-            try {
-                store(new QueueRemoveBean().setQueueName(queueName));
-                return false;
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
-            }
+        public void queueRemove(AsciiBuffer queueName) {
+            updates.add(new QueueRemoveBean().setQueueName(queueName));
         }
         public Iterator<AsciiBuffer> queueList(AsciiBuffer firstQueueName, int max) {
-            return null;
+            return rootEntity.queueList(tx(), firstQueueName, max);
         }
         public Long queueAddMessage(AsciiBuffer queueName, QueueRecord record) throws KeyNotFoundException {
-            try {
-                Long queueKey = 1L;
-                QueueAddMessageBean bean = new QueueAddMessageBean();
-                bean.setQueueName(queueName);
-                bean.setAttachment(record.getAttachment());
-                bean.setMessageKey(record.getMessageKey());
-                bean.setQueueKey(queueKey);
-                store(bean);
-                return queueKey;
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
+            DestinationEntity destination = rootEntity.getDestination(queueName);
+            if( destination ==null ) {
+                throw new KeyNotFoundException("queue key: "+queueName);
             }
+            Long queueKey = destination.nextQueueKey();
+            QueueAddMessageBean bean = new QueueAddMessageBean();
+            bean.setQueueName(queueName);
+            bean.setAttachment(record.getAttachment());
+            bean.setMessageKey(record.getMessageKey());
+            bean.setQueueKey(queueKey);
+            updates.add(bean);
+            return queueKey;
         }
         public void queueRemoveMessage(AsciiBuffer queueName, Long queueKey) throws KeyNotFoundException {
+            QueueRemoveMessageBean bean = new QueueRemoveMessageBean();
+            bean.setQueueKey(queueKey);
+            bean.setQueueName(queueName);
+            updates.add(bean);
+        }
+        public Iterator<QueueRecord> queueListMessagesQueue(AsciiBuffer queueName, Long firstQueueKey, int max) throws KeyNotFoundException {
+            DestinationEntity destination = rootEntity.getDestination(queueName);
+            if( destination ==null ) {
+                throw new KeyNotFoundException("queue key: "+queueName);
+            }
             try {
-                QueueRemoveMessageBean bean = new QueueRemoveMessageBean();
-                bean.setQueueKey(queueKey);
-                bean.setQueueName(queueName);
-                store(bean);
+                return destination.listMessages(tx, firstQueueKey, max);
             } catch (IOException e) {
                 throw new FatalStoreException(e);
             }
-
-        }
-        public Iterator<QueueRecord> queueListMessagesQueue(AsciiBuffer queueName, Long firstQueueKey, int max) throws KeyNotFoundException {
-            return null;
         }
         
         

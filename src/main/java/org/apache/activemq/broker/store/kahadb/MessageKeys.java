@@ -25,7 +25,6 @@ import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.util.Marshaller;
 
 public class MessageKeys {
-    public static final MessageKeysMarshaller MARSHALLER = new MessageKeysMarshaller();
 
     final AsciiBuffer messageId;
     final Location location;
@@ -40,8 +39,7 @@ public class MessageKeys {
         return "["+messageId+","+location+"]";
     }
     
-    public static class MessageKeysMarshaller implements Marshaller<MessageKeys> {
-        
+    public static final Marshaller<MessageKeys> MARSHALLER = new Marshaller<MessageKeys>() {
         public Class<MessageKeys> getType() {
             return MessageKeys.class;
         }
@@ -56,5 +54,5 @@ public class MessageKeys {
             dataOut.write(object.messageId.data, object.messageId.offset, object.messageId.length);
             Marshallers.LOCATION_MARSHALLER.writePayload(object.location, dataOut);
         }
-    }
+    };
 }

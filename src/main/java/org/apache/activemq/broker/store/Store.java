@@ -230,7 +230,7 @@ public interface Store extends Service {
         
         public Long messageAdd(MessageRecord message);
         public Long messageGetKey(AsciiBuffer messageId);
-        public MessageRecord messageGetRecord(Long key);
+        public MessageRecord messageGetRecord(Long key) throws KeyNotFoundException;
 
         public Long streamOpen();
         public void streamWrite(Long streamKey, Buffer message) throws KeyNotFoundException;
@@ -249,7 +249,7 @@ public interface Store extends Service {
         // Queue related methods.
         public Iterator<AsciiBuffer> queueList(AsciiBuffer firstQueueName, int max);
         public void queueAdd(AsciiBuffer queueName);
-        public boolean queueRemove(AsciiBuffer queueName);
+        public void queueRemove(AsciiBuffer queueName);
         
 
         public Long queueAddMessage(AsciiBuffer queueName, QueueRecord record) throws KeyNotFoundException;

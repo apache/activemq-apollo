@@ -175,13 +175,11 @@ public class MemoryStore implements Store {
                 queues.put(queueName, queue);
             }
         }
-        public boolean queueRemove(AsciiBuffer queueName) {
+        public void queueRemove(AsciiBuffer queueName) {
             StoredQueue queue = queues.get(queueName);
             if (queue != null) {
                 queues.remove(queueName);
-                return true;
             }
-            return false;
         }
         public Iterator<AsciiBuffer> queueList(AsciiBuffer firstQueueName, int max) {
             return list(queues, firstQueueName, max);

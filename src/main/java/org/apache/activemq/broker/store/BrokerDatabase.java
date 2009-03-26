@@ -462,15 +462,18 @@ public class BrokerDatabase {
                 RestoredMessageImpl rm = new RestoredMessageImpl();
                 // TODO should update jms redelivery here.
                 rm.qRecord = records.next();
-                rm.mRecord = session.messageGetRecord(rm.qRecord.messageKey);
-                rm.handler = protocolHandlers.get(rm.mRecord.encoding.toString());
-                if (rm.handler == null) {
-                    try {
-                        rm.handler = ProtocolHandlerFactory.createProtocolHandler(rm.mRecord.encoding.toString());
-                        protocolHandlers.put(rm.mRecord.encoding.toString(), rm.handler);
-                    } catch (Throwable thrown) {
-                        throw new RuntimeException("Unknown message format" + rm.mRecord.encoding.toString(), thrown);
+                try {
+                    rm.mRecord = session.messageGetRecord(rm.qRecord.messageKey);
+                    rm.handler = protocolHandlers.get(rm.mRecord.encoding.toString());
+                    if (rm.handler == null) {
+                        try {
+                            rm.handler = ProtocolHandlerFactory.createProtocolHandler(rm.mRecord.encoding.toString());
+                            protocolHandlers.put(rm.mRecord.encoding.toString(), rm.handler);
+                        } catch (Throwable thrown) {
+                            throw new RuntimeException("Unknown message format" + rm.mRecord.encoding.toString(), thrown);
+                        }
                     }
+                } catch (KeyNotFoundException shouldNotHappen) {
                 }
             }
         }
