@@ -21,12 +21,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.broker.store.kahadb.Data.QueueAddMessage;
 import org.apache.kahadb.index.BTreeIndex;
-import org.apache.kahadb.index.BTreeVisitor;
 import org.apache.kahadb.page.Transaction;
 import org.apache.kahadb.util.LongMarshaller;
 import org.apache.kahadb.util.Marshaller;
@@ -103,21 +103,21 @@ public class DestinationEntity {
 
     public Iterator<QueueRecord> listMessages(Transaction tx, Long firstQueueKey, final int max) throws IOException {
         final ArrayList<QueueRecord> rc = new ArrayList<QueueRecord>(max);
-        queueIndex.visit(tx, new BTreeVisitor.GTEVisitor<Long, QueueRecord>(firstQueueKey) {
-            @Override
-            public boolean isInterestedInKeysBetween(Long first, Long second) {
-                if (rc.size() >= max)
-                    return false;
-                return super.isInterestedInKeysBetween(first, second);
+        
+        Iterator<Entry<Long, QueueRecord>> iterator;
+        if( firstQueueKey!=null ) {
+            iterator = queueIndex.iterator(tx, firstQueueKey);
+        } else {
+            iterator = queueIndex.iterator(tx);
+        }
+        while (iterator.hasNext()) {
+            if( rc.size() >= max ) {
+                break;
             }
-
-            @Override
-            protected void matched(Long key, QueueRecord value) {
-                if (rc.size() >= max)
-                    return;
-                rc.add(value);
-            }
-        });
+            Map.Entry<Long, QueueRecord> entry = iterator.next();
+            rc.add(entry.getValue());
+        }
+        
         return rc.iterator();
     }
 

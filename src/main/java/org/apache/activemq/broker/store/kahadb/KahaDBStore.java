@@ -748,7 +748,6 @@ public class KahaDBStore implements Store {
                 if( tx!=null ) {
                     tx.commit();
                 }
-                store(updates);
             } catch (IOException e) {
                 throw new FatalStoreException(e);
             } finally {
@@ -756,6 +755,12 @@ public class KahaDBStore implements Store {
                     indexLock.readLock().unlock();
                     tx=null;
                 }
+            }
+            
+            try {
+                store(updates);
+            } catch (IOException e) {
+                throw new FatalStoreException(e);
             }
         }
         
@@ -827,9 +832,11 @@ public class KahaDBStore implements Store {
             Long queueKey = destination.nextQueueKey();
             QueueAddMessageBean bean = new QueueAddMessageBean();
             bean.setQueueName(queueName);
-            bean.setAttachment(record.getAttachment());
-            bean.setMessageKey(record.getMessageKey());
             bean.setQueueKey(queueKey);
+            bean.setMessageKey(record.getMessageKey());
+            if( record.getAttachment()!=null ) {
+                bean.setAttachment(record.getAttachment());
+            }
             updates.add(bean);
             return queueKey;
         }
@@ -845,7 +852,7 @@ public class KahaDBStore implements Store {
                 throw new KeyNotFoundException("queue key: "+queueName);
             }
             try {
-                return destination.listMessages(tx, firstQueueKey, max);
+                return destination.listMessages(tx(), firstQueueKey, max);
             } catch (IOException e) {
                 throw new FatalStoreException(e);
             }
