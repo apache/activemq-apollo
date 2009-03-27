@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.broker.store.Store.Callback;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.broker.store.Store.Session;
@@ -35,7 +34,10 @@ import org.apache.activemq.protobuf.Buffer;
 
 public abstract class StorePerformanceBase extends TestCase {
 
-    private static final int PERFORMANCE_SAMPLES = 30000;
+    private static int PERFORMANCE_SAMPLES = 3;
+    private static boolean SYNC_TO_DISK = false;
+    
+    
     private Store store;
     private AsciiBuffer queueName;
 
@@ -99,6 +101,14 @@ public abstract class StorePerformanceBase extends TestCase {
                     messageRecord.setEncoding(new AsciiBuffer("encoding"));
                     messageRecord.setBuffer(buffer);
 
+                    Runnable onFlush = new Runnable(){
+                        public void run() {
+                            rate.increment();
+                            synchronized(wakeupMutex){
+                                wakeupMutex.notify();
+                            }
+                        }
+                    };
                     store.execute(new VoidCallback<Exception>() {
                         @Override
                         public void run(Session session) throws Exception {
@@ -107,11 +117,12 @@ public abstract class StorePerformanceBase extends TestCase {
                             queueRecord.setMessageKey(messageKey);
                             session.queueAddMessage(queueName, queueRecord);
                         }
-                    }, null);
-                    rate.increment();
-                    synchronized(wakeupMutex){
-                        wakeupMutex.notify();
+                    }, onFlush);
+                    
+                    if( SYNC_TO_DISK ) {
+                        store.flush();
                     }
+
                     
                     if( sleep>0 ) {
                         Thread.sleep(sleep);
@@ -146,23 +157,33 @@ public abstract class StorePerformanceBase extends TestCase {
         public void run() {
             try {
                 while( !stopped.get() ) {
-                    ArrayList<MessageRecord> records = store.execute(new Callback<ArrayList<MessageRecord>, Exception>() {
-                        public ArrayList<MessageRecord> execute(Session session) throws Exception {
-                            ArrayList<MessageRecord> rc = new ArrayList<MessageRecord>(1000);
+                    final ArrayList<MessageRecord> records = new ArrayList<MessageRecord>(1000);;
+                    Runnable onFlush = new Runnable(){
+                        public void run() {
+                            rate.increment(records.size());
+                            if( records.isEmpty() ) {
+                                synchronized(wakeupMutex){
+                                    try {
+                                        wakeupMutex.wait(500);
+                                    } catch (InterruptedException e) {
+                                    }
+                                }
+                            }
+                        }
+                    };
+                    store.execute(new VoidCallback<Exception>() {
+                        @Override
+                        public void run(Session session) throws Exception {
                             Iterator<QueueRecord> queueRecords = session.queueListMessagesQueue(queueName, null, 1000);
                             for (Iterator<QueueRecord> iterator = queueRecords; iterator.hasNext();) {
                                 QueueRecord r = iterator.next();
-                                rc.add(session.messageGetRecord(r.getMessageKey()));
+                                records.add(session.messageGetRecord(r.getMessageKey()));
                                 session.queueRemoveMessage(queueName, r.queueKey);
                             }
-                            return rc;
                         }
-                    }, null);
-                    rate.increment(records.size());
-                    if( records.isEmpty() ) {
-                        synchronized(wakeupMutex){
-                            wakeupMutex.wait(500);
-                        }
+                    }, onFlush);
+                    if( SYNC_TO_DISK ) {
+                        store.flush();
                     }
                 }
             } catch (Exception e) {
