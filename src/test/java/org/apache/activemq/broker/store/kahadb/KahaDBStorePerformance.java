@@ -31,14 +31,4 @@ public class KahaDBStorePerformance extends StorePerformanceBase {
         return rc;
     }
 
-    @Override
-    protected boolean isStorePersistent() {
-        return true;
-    }
-
-    @Override
-    protected boolean isStoreTransactional() {
-        return true;
-    }
-
 }

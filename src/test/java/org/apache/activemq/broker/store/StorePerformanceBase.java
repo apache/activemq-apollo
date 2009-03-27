@@ -35,7 +35,7 @@ import org.apache.activemq.protobuf.Buffer;
 public abstract class StorePerformanceBase extends TestCase {
 
     private static int PERFORMANCE_SAMPLES = 3;
-    private static boolean SYNC_TO_DISK = false;
+    private static boolean SYNC_TO_DISK = true;
     
     
     private Store store;
@@ -44,9 +44,10 @@ public abstract class StorePerformanceBase extends TestCase {
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
     protected MetricAggregator totalConsumerRate = new MetricAggregator().name("Aggregate Consumer Rate").unit("items");
 
+    protected ArrayList<Consumer> consumers = new ArrayList<Consumer>();
+    protected ArrayList<Producer> producers = new ArrayList<Producer>();
+
     abstract protected Store createStore();
-    abstract protected boolean isStoreTransactional();
-    abstract protected boolean isStorePersistent();
 
     @Override
     protected void setUp() throws Exception {
@@ -64,6 +65,15 @@ public abstract class StorePerformanceBase extends TestCase {
 
     @Override
     protected void tearDown() throws Exception {
+        for (Consumer c : consumers) {
+            c.stop();
+        }
+        consumers.clear();
+        for (Producer p : producers) {
+            p.stop();
+        }
+        producers.clear();
+        
         if (store != null) {
             store.stop();
         }
@@ -193,17 +203,31 @@ public abstract class StorePerformanceBase extends TestCase {
     }
     
     public void test1_1_1() throws Exception {
-
-        Producer p = new  Producer("1");
-        Consumer c = new  Consumer("1");
-        p.start();
-        c.start();
-        
+        startProducers(1);
+        startConsumers(1);
         reportRates();
-        
-        p.stop();
-        c.stop();
-        
+    }
+    
+    public void test10_1_1() throws Exception {
+        startProducers(10);
+        startConsumers(1);
+        reportRates();
+    }
+
+    private void startProducers(int count) {
+        for (int i = 0; i < count; i++) {
+            Producer p = new  Producer(""+(i+1));
+            producers.add(p);
+            p.start();
+        }
+    }
+    
+    private void startConsumers(int count) {
+        for (int i = 0; i < count; i++) {
+            Consumer c = new  Consumer(""+(i+1));
+            consumers.add(c);
+            c.start();
+        }
     }
     
     private void reportRates() throws InterruptedException {
