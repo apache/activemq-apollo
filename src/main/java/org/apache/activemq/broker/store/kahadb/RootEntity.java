@@ -36,7 +36,7 @@ import org.apache.kahadb.util.LongMarshaller;
 import org.apache.kahadb.util.Marshaller;
 
 public class RootEntity {
-    
+
     public final static Marshaller<RootEntity> MARSHALLER = new Marshaller<RootEntity>() {
         public Class<RootEntity> getType() {
             return RootEntity.class;
@@ -45,10 +45,10 @@ public class RootEntity {
         public RootEntity readPayload(DataInput is) throws IOException {
             RootEntity rc = new RootEntity();
             rc.state = is.readInt();
-            rc.messageKeyIndex = new BTreeIndex<Long, MessageKeys>(is.readLong());
-            rc.locationIndex = new BTreeIndex<Location, Long>(is.readLong());
-            rc.messageIdIndex = new BTreeIndex<AsciiBuffer, Long>(is.readLong());
+            rc.messageKeyIndex = new BTreeIndex<Long, Location>(is.readLong());
+            //rc.locationIndex = new BTreeIndex<Location, Long>(is.readLong());
             rc.destinationIndex = new BTreeIndex<AsciiBuffer, DestinationEntity>(is.readLong());
+            rc.messageRefsIndex = new BTreeIndex<Long, Long>(is.readLong());
             if (is.readBoolean()) {
                 rc.lastUpdate = Marshallers.LOCATION_MARSHALLER.readPayload(is);
             } else {
@@ -60,9 +60,9 @@ public class RootEntity {
         public void writePayload(RootEntity object, DataOutput os) throws IOException {
             os.writeInt(object.state);
             os.writeLong(object.messageKeyIndex.getPageId());
-            os.writeLong(object.locationIndex.getPageId());
-            os.writeLong(object.messageIdIndex.getPageId());
+            //os.writeLong(object.locationIndex.getPageId());
             os.writeLong(object.destinationIndex.getPageId());
+            os.writeLong(object.messageRefsIndex.getPageId());
             if (object.lastUpdate != null) {
                 os.writeBoolean(true);
                 Marshallers.LOCATION_MARSHALLER.writePayload(object.lastUpdate, os);
@@ -82,116 +82,140 @@ public class RootEntity {
 
     // Message Indexes
     private long nextMessageKey;
-    private BTreeIndex<Long, MessageKeys> messageKeyIndex;
-    private BTreeIndex<Location, Long> locationIndex;
-    private BTreeIndex<AsciiBuffer, Long> messageIdIndex;
+    private BTreeIndex<Long, Location> messageKeyIndex;
+    //private BTreeIndex<Location, Long> locationIndex;
+    private BTreeIndex<Long, Long> messageRefsIndex; // Maps message key to ref count:
 
     // The destinations
     private BTreeIndex<AsciiBuffer, DestinationEntity> destinationIndex;
     private final TreeMap<AsciiBuffer, DestinationEntity> destinations = new TreeMap<AsciiBuffer, DestinationEntity>();
 
-    ///////////////////////////////////////////////////////////////////
+    // /////////////////////////////////////////////////////////////////
     // Lifecycle Methods.
-    ///////////////////////////////////////////////////////////////////
-    
+    // /////////////////////////////////////////////////////////////////
+
     public void allocate(Transaction tx) throws IOException {
         // First time this is created.. Initialize a new pagefile.
         Page<RootEntity> page = tx.allocate();
         pageId = page.getPageId();
         assert pageId == 0;
-        
+
         state = KahaDBStore.CLOSED_STATE;
-        
-        messageKeyIndex = new BTreeIndex<Long, MessageKeys>(tx.getPageFile(), tx.allocate().getPageId());
-        locationIndex = new BTreeIndex<Location, Long>(tx.getPageFile(), tx.allocate().getPageId());
-        messageIdIndex = new BTreeIndex<AsciiBuffer, Long>(tx.getPageFile(), tx.allocate().getPageId());
+
+        messageKeyIndex = new BTreeIndex<Long, Location>(tx.getPageFile(), tx.allocate().getPageId());
+        //locationIndex = new BTreeIndex<Location, Long>(tx.getPageFile(), tx.allocate().getPageId());
         destinationIndex = new BTreeIndex<AsciiBuffer, DestinationEntity>(tx.getPageFile(), tx.allocate().getPageId());
+        messageRefsIndex = new BTreeIndex<Long, Long>(tx.getPageFile(), tx.allocate().getPageId());
 
         page.set(this);
         tx.store(page, MARSHALLER, true);
     }
-    
+
     public void load(Transaction tx) throws IOException {
         messageKeyIndex.setPageFile(tx.getPageFile());
         messageKeyIndex.setKeyMarshaller(LongMarshaller.INSTANCE);
-        messageKeyIndex.setValueMarshaller(MessageKeys.MARSHALLER);
+        messageKeyIndex.setValueMarshaller(Marshallers.LOCATION_MARSHALLER);
         messageKeyIndex.load(tx);
 
-        locationIndex.setPageFile(tx.getPageFile());
-        locationIndex.setKeyMarshaller(Marshallers.LOCATION_MARSHALLER);
-        locationIndex.setValueMarshaller(LongMarshaller.INSTANCE);
-        locationIndex.load(tx);
+        //locationIndex.setPageFile(tx.getPageFile());
+        //locationIndex.setKeyMarshaller(Marshallers.LOCATION_MARSHALLER);
+        //locationIndex.setValueMarshaller(LongMarshaller.INSTANCE);
+        //locationIndex.load(tx);
 
-        messageIdIndex.setPageFile(tx.getPageFile());
-        messageIdIndex.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
-        messageIdIndex.setValueMarshaller(LongMarshaller.INSTANCE);
-        messageIdIndex.load(tx);
-        
         destinationIndex.setPageFile(tx.getPageFile());
         destinationIndex.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
         destinationIndex.setValueMarshaller(DestinationEntity.MARSHALLER);
         destinationIndex.load(tx);
-        
+
+        messageRefsIndex.setPageFile(tx.getPageFile());
+        messageRefsIndex.setKeyMarshaller(LongMarshaller.INSTANCE);
+        messageRefsIndex.setValueMarshaller(LongMarshaller.INSTANCE);
+        messageRefsIndex.load(tx);
+
         // Keep the StoredDestinations loaded
         destinations.clear();
         for (Iterator<Entry<AsciiBuffer, DestinationEntity>> iterator = destinationIndex.iterator(tx); iterator.hasNext();) {
             Entry<AsciiBuffer, DestinationEntity> entry = iterator.next();
             entry.getValue().load(tx);
             destinations.put(entry.getKey(), entry.getValue());
-        }        
+        }
     }
-    
+
     public void store(Transaction tx) throws IOException {
         Page<RootEntity> page = tx.load(pageId, null);
         page.set(this);
         tx.store(page, RootEntity.MARSHALLER, true);
     }
 
-    ///////////////////////////////////////////////////////////////////
+    // /////////////////////////////////////////////////////////////////
     // Message Methods.
-    ///////////////////////////////////////////////////////////////////
+    // /////////////////////////////////////////////////////////////////
     public Long nextMessageKey() {
         return nextMessageKey++;
     }
 
     public void messageAdd(Transaction tx, MessageAdd command, Location location) throws IOException {
         long id = command.getMessageKey();
-        Long previous = locationIndex.put(tx, location, id);
-        if( previous == null ) {
-            messageIdIndex.put(tx, command.getMessageId(), id);
-            messageKeyIndex.put(tx, id, new MessageKeys(command.getMessageId(), location));
-        } else {
-            // Message existed.. undo the index update we just did.  Chances
+        Location previous = messageKeyIndex.put(tx, id, location);
+        if (previous != null) {
+            // Message existed.. undo the index update we just did. Chances
             // are it's a transaction replay.
-            locationIndex.put(tx, location, previous);
-        }
-    }
-
-    public Long messageGetKey(Transaction tx, AsciiBuffer messageId) {
-        try {
-            return messageIdIndex.get(tx, messageId);
-        } catch (IOException e) {
-            throw new Store.FatalStoreException(e);
+            messageKeyIndex.put(tx, id, previous);
         }
     }
     
+    public void messageRemove(Transaction tx, Long messageKey) throws IOException {
+        //Location location = messageKeyIndex.remove(tx, messageKey);
+        messageKeyIndex.remove(tx, messageKey);
+        //if (location != null) {
+        //    locationIndex.remove(tx, location);
+        //}
+    }
+
     public Location messageGetLocation(Transaction tx, Long messageKey) {
         try {
-            MessageKeys t = messageKeyIndex.get(tx, messageKey);
-            if( t==null ) {
-                return null;
-            }
-            return t.location;
+            return messageKeyIndex.get(tx, messageKey);
         } catch (IOException e) {
             throw new Store.FatalStoreException(e);
         }
     }
 
-    ///////////////////////////////////////////////////////////////////
+    public void addMessageRef(Transaction tx, AsciiBuffer queueName, Long messageKey) {
+        try {
+            Long refs = messageRefsIndex.get(tx, messageKey);
+            if (refs == null) {
+                messageRefsIndex.put(tx, messageKey, new Long(1));
+            } else {
+                messageRefsIndex.put(tx, messageKey, new Long(1 + refs.longValue()));
+            }
+        } catch (IOException e) {
+            throw new Store.FatalStoreException(e);
+        }
+
+    }
+
+    public void removeMessageRef(Transaction tx, AsciiBuffer queueName, Long messageKey) {
+        try {
+            Long refs = messageRefsIndex.get(tx, messageKey);
+            if (refs != null) {
+                if (refs.longValue() <= 1) {
+                    messageRefsIndex.remove(tx, messageKey);
+                    //If this is the last record remove, the message
+                    messageRemove(tx, messageKey);
+                } else {
+                    messageRefsIndex.put(tx, messageKey, new Long(refs.longValue() - 1));
+                }
+            }
+        } catch (IOException e) {
+            throw new Store.FatalStoreException(e);
+        }
+    }
+
+    // /////////////////////////////////////////////////////////////////
     // Queue Methods.
-    ///////////////////////////////////////////////////////////////////
+    // /////////////////////////////////////////////////////////////////
     public void queueAdd(Transaction tx, AsciiBuffer queueName) throws IOException {
-        if( destinationIndex.get(tx, queueName)==null ) {
+        if (destinationIndex.get(tx, queueName) == null) {
             DestinationEntity rc = new DestinationEntity();
             rc.allocate(tx);
             destinationIndex.put(tx, queueName, rc);
@@ -202,7 +226,15 @@ public class RootEntity {
 
     public void queueRemove(Transaction tx, AsciiBuffer queueName) throws IOException {
         DestinationEntity destination = destinations.get(queueName);
-        if( destination!=null ) {
+        if (destination != null) {
+            //Remove the message references. 
+            //TODO this should probably be optimized. 
+            Iterator<Entry<Long, Long>> messages = destination.listTrackingNums(tx);
+            while(messages.hasNext())
+            {
+                Long messageKey = messages.next().getKey();
+                removeMessageRef(tx, queueName, messageKey);
+            }
             destinationIndex.remove(tx, queueName);
             destinations.remove(queueName);
             destination.deallocate(tx);
@@ -212,16 +244,16 @@ public class RootEntity {
     public DestinationEntity getDestination(AsciiBuffer queueName) {
         return destinations.get(queueName);
     }
-    
+
     public Iterator<AsciiBuffer> queueList(Transaction tx, AsciiBuffer firstQueueName, int max) {
         return list(destinations, firstQueueName, max);
     }
-    
-    static private <Key,Value> Iterator<Key> list(TreeMap<Key, Value> map, Key first, int max) {
+
+    static private <Key, Value> Iterator<Key> list(TreeMap<Key, Value> map, Key first, int max) {
         ArrayList<Key> rc = new ArrayList<Key>(max);
-        Set<Key> keys = (first==null ? map : map.tailMap(first)).keySet();
+        Set<Key> keys = (first == null ? map : map.tailMap(first)).keySet();
         for (Key buffer : keys) {
-            if( rc.size() >= max ) {
+            if (rc.size() >= max) {
                 break;
             }
             rc.add(buffer);
@@ -252,6 +284,5 @@ public class RootEntity {
     public void setLastUpdate(Location lastUpdate) {
         this.lastUpdate = lastUpdate;
     }
-
 
 }

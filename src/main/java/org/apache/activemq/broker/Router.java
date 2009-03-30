@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.broker;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,12 +27,9 @@ import org.apache.activemq.broker.Domain;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.QueueDomain;
 import org.apache.activemq.broker.TopicDomain;
-import org.apache.activemq.broker.store.Store.Callback;
-import org.apache.activemq.broker.store.Store.Session;
-import org.apache.activemq.broker.store.Store.VoidCallback;
+import org.apache.activemq.broker.store.BrokerDatabase;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.protobuf.Buffer;
 
 final public class Router {
 
@@ -40,6 +38,7 @@ final public class Router {
 
     private final HashMap<AsciiBuffer, Domain> domains = new HashMap<AsciiBuffer, Domain>();
     private VirtualHost virtualHost;
+    private BrokerDatabase database;
 
     public Router() {
         domains.put(QUEUE_DOMAIN, new QueueDomain());
@@ -90,8 +89,9 @@ final public class Router {
         //        
         Collection<DeliveryTarget> targets = route(msg.getDestination(), msg);
 
-        msg.store = getVirtualHost().getDatabase();
-        
+        msg.store = database;
+        msg.setStoreTracking(msg.store.allocateStoreTracking());
+
         // TODO:
         // Consider doing some caching of this target list. Most producers
         // always send to the same destination.
@@ -108,15 +108,26 @@ final public class Router {
                 }
             }
 
-            //The sinks will request persistence via MessageDelivery.persist()
-            //if they require persistence:
+            // The sinks will request persistence via MessageDelivery.persist()
+            // if they require persistence:
             for (DeliveryTarget dt : targets) {
-                if (dt.match(msg)) {
-                    dt.getSink().add(msg, controller);
-                }
+                dt.deliver(msg, controller);
+                //if (dt.match(msg)) {
+                //    
+                //    dt.getSink().add(msg, controller);
+                //}
             }
             
-            msg.persistIfNeeded(controller);
+            try {
+                msg.persistIfNeeded(controller);
+            } catch (IOException ioe) {
+                //TODO: Error serializing the message, this should trigger an error
+                //This is a pretty severe error as we've already delivered
+                //the message to the recipients. If we send an error response
+                //back it could result in a duplicate. Does this mean that we
+                //should persist the message prior to sending to the recips?
+                ioe.printStackTrace();
+            }
 
         } else {
             // Let the client know we got the message even though there
@@ -147,10 +158,15 @@ final public class Router {
 
     public void setVirtualHost(VirtualHost virtualHost) {
         this.virtualHost = virtualHost;
+        this.database = virtualHost.getDatabase();
     }
 
     public VirtualHost getVirtualHost() {
         return virtualHost;
+    }
+
+    public void setDatabase(BrokerDatabase database) {
+        this.database = database;
     }
 
 }

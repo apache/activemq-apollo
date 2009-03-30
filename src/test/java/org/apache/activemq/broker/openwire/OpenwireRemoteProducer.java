@@ -38,28 +38,28 @@ public class OpenwireRemoteProducer extends RemoteProducer {
     private WindowLimiter<MessageDelivery> outboundLimiter;
 
     protected void setupProducer() throws Exception, IOException {
-        if( destination.getDomain().equals( Router.QUEUE_DOMAIN ) ) {
+        if (destination.getDomain().equals(Router.QUEUE_DOMAIN)) {
             activemqDestination = new ActiveMQQueue(destination.getName().toString());
         } else {
             activemqDestination = new ActiveMQTopic(destination.getName().toString());
         }
-        
+
         connectionInfo = createConnectionInfo(name);
         transport.oneway(connectionInfo);
         sessionInfo = createSessionInfo(connectionInfo);
         transport.oneway(sessionInfo);
         producerInfo = createProducerInfo(sessionInfo);
         producerInfo.setWindowSize(outputWindowSize);
-        transport.oneway(producerInfo);        
+        transport.oneway(producerInfo);
     }
-    
+
     protected void initialize() {
-        Flow flow = new Flow("client-"+name+"-outbound", false);
-        outputResumeThreshold = outputWindowSize/2;
+        Flow flow = new Flow("client-" + name + "-outbound", false);
+        outputResumeThreshold = outputWindowSize / 2;
         outboundLimiter = new WindowLimiter<MessageDelivery>(true, flow, outputWindowSize, outputResumeThreshold);
         SingleFlowRelay<MessageDelivery> outboundQueue = new SingleFlowRelay<MessageDelivery>(flow, flow.getFlowName(), outboundLimiter);
         this.outboundQueue = outboundQueue;
-        
+
         outboundController = outboundQueue.getFlowController(flow);
         outboundQueue.setDrain(new IFlowDrain<MessageDelivery>() {
             public void drain(MessageDelivery message, ISourceController<MessageDelivery> controller) {
@@ -68,12 +68,12 @@ public class OpenwireRemoteProducer extends RemoteProducer {
             }
         });
     }
-    
+
     public void onCommand(Object command) {
         try {
             if (command.getClass() == WireFormatInfo.class) {
             } else if (command.getClass() == BrokerInfo.class) {
-                System.out.println("Producer "+name+" connected to "+((BrokerInfo)command).getBrokerName());
+                System.out.println("Producer " + name + " connected to " + ((BrokerInfo) command).getBrokerName());
             } else if (command.getClass() == ProducerAck.class) {
                 ProducerAck fc = (ProducerAck) command;
                 synchronized (outboundQueue) {
@@ -86,7 +86,7 @@ public class OpenwireRemoteProducer extends RemoteProducer {
             onException(e);
         }
     }
-    
+
     protected void createNextMessage() {
         int priority = this.priority;
         if (priorityMod > 0) {
@@ -94,6 +94,9 @@ public class OpenwireRemoteProducer extends RemoteProducer {
         }
 
         ActiveMQTextMessage msg = createMessage(producerInfo, activemqDestination, priority, createPayload());
+        if (persistentDelivery) {
+            msg.setPersistent(true);
+        }
         if (property != null) {
             try {
                 msg.setStringProperty(property, property);
@@ -104,4 +107,3 @@ public class OpenwireRemoteProducer extends RemoteProducer {
         next = new OpenWireMessageDelivery(msg);
     }
 }
-

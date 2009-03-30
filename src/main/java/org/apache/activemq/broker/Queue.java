@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.broker;
 
+import java.io.IOException;
 import java.util.HashMap;
 
 import org.apache.activemq.broker.DeliveryTarget;
@@ -51,6 +52,10 @@ public class Queue implements DeliveryTarget {
                 protected IQueue<AsciiBuffer, MessageDelivery> cratePartition(Integer partitionKey) {
                     return createSharedFlowQueue();
                 }
+
+                public boolean isElementPersistent(MessageDelivery elem) {
+                    return elem.isPersistent();
+                }
             };
             queue.setPartitionMapper(partitionMapper);
             queue.setResourceName(destination.getName().toString());
@@ -74,6 +79,9 @@ public class Queue implements DeliveryTarget {
             SharedPriorityQueue<AsciiBuffer, MessageDelivery> queue = new SharedPriorityQueue<AsciiBuffer, MessageDelivery>(destination.getName().toString(), limiter);
             queue.setKeyMapper(keyExtractor);
             queue.setAutoRelease(true);
+            //DBQueueStore<AsciiBuffer> store = new DBQueueStore<AsciiBuffer>(broker.getDefaultVirtualHost().getDatabase(), queue, broker.getDispatcher());
+            //store.setKeyMapper(keyExtractor);
+            //queue.setStore(store);
             queue.setDispatcher(broker.getDispatcher());
             return queue;
         } else {
@@ -81,13 +89,26 @@ public class Queue implements DeliveryTarget {
             SharedQueue<AsciiBuffer, MessageDelivery> queue = new SharedQueue<AsciiBuffer, MessageDelivery>(destination.getName().toString(), limiter);
             queue.setKeyMapper(keyExtractor);
             queue.setAutoRelease(true);
+            //DBQueueStore<AsciiBuffer> store = new DBQueueStore<AsciiBuffer>(broker.getDefaultVirtualHost().getDatabase(), queue, broker.getDispatcher());
+            //store.setKeyMapper(keyExtractor);
+            //queue.setStore(store);
             queue.setDispatcher(broker.getDispatcher());
             return queue;
         }
     }
 
-    public final void deliver(ISourceController<MessageDelivery> source, MessageDelivery msg) {
-        queue.add(msg, source);
+    public final void deliver(MessageDelivery delivery, ISourceController<?> source) {
+        try {
+            if(delivery.isPersistent())
+            {
+                delivery.persist(destination.getName(), true);
+            }
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        
+        queue.add(delivery, source);
     }
     
     public final Destination getDestination() {
@@ -180,5 +201,4 @@ public class Queue implements DeliveryTarget {
     public boolean isDurable() {
         return true;
     }
-
 }

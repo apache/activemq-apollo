@@ -1,9 +1,11 @@
 package org.apache.activemq.broker.store;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.queue.PersistentQueue;
+import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.QueueStoreHelper;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.broker.MessageDelivery;
@@ -14,24 +16,29 @@ import org.apache.activemq.dispatch.IDispatcher.Dispatchable;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.IFlowRelay;
+import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowUnblockListener;
 
+
 public class MessageDeliveryStoreHelper implements QueueStoreHelper<MessageDelivery>, Dispatchable, BrokerDatabase.MessageRestoreListener {
 
     private final BrokerDatabase database;
-    private final PersistentQueue<MessageDelivery> queue;
+    private final AsciiBuffer queue;
     private final DispatchContext dispatchContext;
     private final ConcurrentLinkedQueue<RestoredMessage> restoredMsgs = new ConcurrentLinkedQueue<RestoredMessage>();
     private final IFlowRelay<MessageDelivery> restoreRelay;
     private final SizeLimiter<MessageDelivery> restoreLimiter;
     private final IFlowController<MessageDelivery> controller;
     private final FlowUnblockListener<MessageDelivery> unblockListener;
+    private final IFlowSink<MessageDelivery> targetSink;
 
     private int RESTORE_BATCH_SIZE = 50;
     
-    private boolean restoreComplete;
+    private AtomicBoolean started = new AtomicBoolean(false);
+    private AtomicBoolean restoreComplete = new AtomicBoolean(false);
+    private AtomicBoolean storeLoaded = new AtomicBoolean(false);
 
     private static enum State {
         STOPPED, RESTORING, RESTORED
@@ -39,10 +46,11 @@ public class MessageDeliveryStoreHelper implements QueueStoreHelper<MessageDeliv
 
     private State state = State.RESTORING;
 
-    MessageDeliveryStoreHelper(BrokerDatabase database, PersistentQueue<MessageDelivery> queue, IDispatcher dispatcher) {
+    MessageDeliveryStoreHelper(BrokerDatabase database, AsciiBuffer queueName, IFlowSink<MessageDelivery> sink, IDispatcher dispatcher) {
         this.database = database;
-        this.queue = queue;
-        Flow flow = new Flow("MessageRestorer-" + queue.getPeristentQueueName(), false);
+        this.queue = queueName;
+        this.targetSink = sink;
+        Flow flow = new Flow("MessageRestorer-" + queue, false);
         restoreLimiter = new SizeLimiter<MessageDelivery>(1000, 500) {
             @Override
             public int getElementSize(MessageDelivery msg) {
@@ -64,17 +72,16 @@ public class MessageDeliveryStoreHelper implements QueueStoreHelper<MessageDeliv
         elem.delete(queue);
     }
 
-    public void save(MessageDelivery elem, boolean flush) {
-        elem.persist(queue);
+    public void save(MessageDelivery elem, boolean flush) throws IOException {
+        elem.persist(queue, !flush);
     }
 
     public boolean hasStoredElements() {
-        // TODO Auto-generated method stub
-        return false;
+        return !restoreComplete.get();
     }
 
     public void startLoadingQueue() {
-        // TODO Auto-generated method stub
+        database.restoreMessages(queue, 0, RESTORE_BATCH_SIZE, this);
     }
 
     public void stopLoadingQueue() {
@@ -84,7 +91,7 @@ public class MessageDeliveryStoreHelper implements QueueStoreHelper<MessageDeliv
     public boolean dispatch() {
 
         RestoredMessage restored = restoredMsgs.poll();
-        if (restored == null || restoreComplete) {
+        if (restored == null || restoreComplete.get()) {
             return true;
         }
 
@@ -93,20 +100,24 @@ public class MessageDeliveryStoreHelper implements QueueStoreHelper<MessageDeliv
                 return true;
             }
         } else {
-            queue.addFromStore(restored.getMessageDelivery(), controller);
+            try {
+                targetSink.add(restored.getMessageDelivery(), controller);
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
 
         return false;
     }
 
     public void messagesRestored(Collection<RestoredMessage> msgs) {
-        synchronized (restoredMsgs) {
-            if (!msgs.isEmpty()) {
-                restoredMsgs.addAll(msgs);
-            } else {
-
-            }
+        if (!msgs.isEmpty()) {
+            restoredMsgs.addAll(msgs);
+        } else {
+            storeLoaded.set(true);
         }
+        dispatchContext.requestDispatch();
 
         dispatchContext.requestDispatch();
     }

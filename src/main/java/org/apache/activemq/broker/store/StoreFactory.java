@@ -14,22 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker;
+package org.apache.activemq.broker.store;
 
-import org.apache.activemq.broker.MessageDelivery;
-import org.apache.activemq.flow.IFlowSink;
-import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.protobuf.AsciiBuffer;
+import java.io.IOException;
 
-public interface DeliveryTarget {
-    
-    public void deliver(MessageDelivery delivery, ISourceController<?> source);
-    
-    public IFlowSink<MessageDelivery> getSink();
-    
-    public boolean match(MessageDelivery message);
-    
-    public boolean isDurable();
-    
-    public AsciiBuffer getPersistentQueueName();
+import org.apache.activemq.util.FactoryFinder;
+
+public class StoreFactory {
+
+    static private final FactoryFinder STORE_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/broker/store/");
+
+    public static Store createStore(String type) throws IllegalAccessException, InstantiationException, IOException, ClassNotFoundException {
+        return (Store) STORE_FINDER.newInstance(type);
+    }
 }

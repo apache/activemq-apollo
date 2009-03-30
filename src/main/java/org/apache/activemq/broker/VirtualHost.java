@@ -31,10 +31,11 @@ public class VirtualHost implements Service {
     final private HashMap<Destination, Queue> queues = new HashMap<Destination, Queue>();
     private ArrayList<AsciiBuffer> hostNames = new ArrayList<AsciiBuffer>();
     private Router router;
-    private BrokerDatabase database = new BrokerDatabase();
+    private BrokerDatabase database;
     
     public VirtualHost() {
-        setRouter(new Router());
+        this.router = new Router();
+        this.router.setVirtualHost(this);
     }
     
     public AsciiBuffer getHostName() {
@@ -53,10 +54,6 @@ public class VirtualHost implements Service {
     
     public Router getRouter() {
         return router;
-    }
-    public void setRouter(Router router) {
-        this.router = router;
-        this.router.setVirtualHost(this);
     }
 
     public void start() throws Exception {
@@ -81,6 +78,7 @@ public class VirtualHost implements Service {
 
     public void setDatabase(BrokerDatabase store) {
         this.database = store;
+        router.setDatabase(database);
     }
 
 

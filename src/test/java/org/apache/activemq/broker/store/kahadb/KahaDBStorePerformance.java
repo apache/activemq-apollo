@@ -26,7 +26,7 @@ public class KahaDBStorePerformance extends StorePerformanceBase {
     @Override
     protected Store createStore() {
         KahaDBStore rc = new KahaDBStore();
-        rc.setDirectory(new File("target/test-data/kahadb-store-performance"));
+        rc.setStoreDirectory(new File("target/test-data/kahadb-store-performance"));
         rc.setDeleteAllMessages(true);
         return rc;
     }

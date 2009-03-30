@@ -85,8 +85,8 @@ public class PriorityFlowController<E> implements IFlowController<E> {
         return flow;
     }
 
-    public IFlowSource<E> getFlowSource() {
-        return controllable.getFlowSource();
+    public IFlowResource getFlowResource() {
+        return controllable.getFlowResource();
     }
 
     public void onFlowBlock(ISinkController<?> sink) {
@@ -110,13 +110,4 @@ public class PriorityFlowController<E> implements IFlowController<E> {
             controller.setExecutor(executor);
         }
     }
-
-    // /////////////////////////////////////////////////////////////////
-    // Getters and Setters
-    // /////////////////////////////////////////////////////////////////
-
-    public IFlowSink<E> getFlowSink() {
-        return controllable.getFlowSink();
-    }
-
 }

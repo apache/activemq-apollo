@@ -18,7 +18,7 @@ package org.apache.activemq.queue;
 
 import org.apache.activemq.flow.IFlowSink;
 
-public interface IQueue<K, V> extends IFlowSink<V> {
+public interface IQueue<K, V> extends IFlowSink<V>, PersistentQueue<V>{
 
     public void addSubscription(Subscription<V> sub);
 
@@ -27,5 +27,7 @@ public interface IQueue<K, V> extends IFlowSink<V> {
     public boolean removeByValue(V value);
 
     public boolean removeByKey(K key);
+    
+    public void setStore(Store<K, V> store);
 
 }

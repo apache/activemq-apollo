@@ -38,12 +38,13 @@ import org.apache.activemq.broker.protocol.ProtocolHandler;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.filter.BooleanExpression;
+import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.IFlowDrain;
+import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.IFlowSink;
-import org.apache.activemq.flow.IFlowSource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
@@ -63,11 +64,10 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         public void onStompFrame(StompFrame frame) throws Exception;
     }
 
+    private InboundContext inboundContext;
+
     protected final HashMap<String, ActionHander> actionHandlers = new HashMap<String, ActionHander>();
     protected final HashMap<String, ConsumerContext> consumers = new HashMap<String, ConsumerContext>();
-
-    protected final Object inboundMutex = new Object();
-    protected IFlowController<StompMessageDelivery> inboundController;
 
     protected BrokerConnection connection;
 
@@ -99,15 +99,14 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
             }
         });
         actionHandlers.put(Stomp.Commands.SEND, new ActionHander() {
+            
             public void onStompFrame(StompFrame frame) throws Exception {
                 String dest = frame.getHeaders().get(Stomp.Headers.Send.DESTINATION);
                 Destination destination = translator(frame).convertToDestination(StompProtocolHandler.this, dest);
 
                 frame.setAction(Stomp.Responses.MESSAGE);
                 StompMessageDelivery md = new StompMessageDelivery(frame, destination);
-                while (!inboundController.offer(md, null)) {
-                    inboundController.waitForFlowUnblock();
-                }
+                inboundContext.onReceive(md);
             }
         });
         actionHandlers.put(Stomp.Commands.SUBSCRIBE, new ActionHander() {
@@ -147,22 +146,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
     }
 
     public void start() throws Exception {
-        // Setup the inbound processing..
-        final Flow inboundFlow = new Flow("broker-" + connection.getName() + "-inbound", false);
-        SizeLimiter<StompMessageDelivery> inLimiter = new SizeLimiter<StompMessageDelivery>(connection.getInputWindowSize(), connection.getInputResumeThreshold());
-        inboundController = new FlowController<StompMessageDelivery>(new FlowControllableAdapter() {
-            public void flowElemAccepted(ISourceController<StompMessageDelivery> controller, StompMessageDelivery elem) {
-                if (elem.isResponseRequired()) {
-                    elem.setPersistListener(StompProtocolHandler.this);
-                }
-                router.route(elem, controller);
-                controller.elementDispatched(elem);
-            }
-
-            public String toString() {
-                return inboundFlow.getFlowName();
-            }
-        }, inboundFlow, inLimiter, inboundMutex);
+        inboundContext = new InboundContext();
 
         Flow outboundFlow = new Flow("broker-" + connection.getName() + "-outbound", false);
         SizeLimiter<MessageDelivery> outLimiter = new SizeLimiter<MessageDelivery>(connection.getOutputWindowSize(), connection.getOutputWindowSize());
@@ -240,16 +224,40 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
     // /////////////////////////////////////////////////////////////////
     // Internal Support Methods
     // /////////////////////////////////////////////////////////////////
-    static class FlowControllableAdapter implements FlowControllable<StompMessageDelivery> {
-        public void flowElemAccepted(ISourceController<StompMessageDelivery> controller, StompMessageDelivery elem) {
+
+    class InboundContext extends AbstractLimitedFlowResource<StompMessageDelivery> {
+        protected final Object inboundMutex = new Object();
+        protected IFlowController<StompMessageDelivery> inboundController;
+
+        InboundContext() {
+            super("broker-" + connection.getName() + "-inbound");
+            // Setup the inbound processing..
+            final Flow inboundFlow = new Flow(getResourceName(), false);
+            SizeLimiter<StompMessageDelivery> inLimiter = new SizeLimiter<StompMessageDelivery>(connection.getInputWindowSize(), connection.getInputResumeThreshold());
+            inboundController = new FlowController<StompMessageDelivery>(new FlowControllable<StompMessageDelivery>() {
+                public void flowElemAccepted(ISourceController<StompMessageDelivery> controller, StompMessageDelivery elem) {
+                    if (elem.isResponseRequired()) {
+                        elem.setPersistListener(StompProtocolHandler.this);
+                    }
+                    router.route(elem, controller);
+                    controller.elementDispatched(elem);
+                }
+
+                public String toString() {
+                    return inboundFlow.getFlowName();
+                }
+
+                public IFlowResource getFlowResource() {
+                    return InboundContext.this;
+                }
+            }, inboundFlow, inLimiter, inboundMutex);
+            super.onFlowOpened(inboundController);
         }
 
-        public IFlowSink<StompMessageDelivery> getFlowSink() {
-            return null;
-        }
-
-        public IFlowSource<StompMessageDelivery> getFlowSource() {
-            return null;
+        public void onReceive(StompMessageDelivery md) throws InterruptedException {
+            while (!inboundController.offer(md, null)) {
+                inboundController.waitForFlowUnblock();
+            }
         }
     }
 
@@ -268,6 +276,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         private LinkedHashMap<AsciiBuffer, AsciiBuffer> sentMessageIds = new LinkedHashMap<AsciiBuffer, AsciiBuffer>();
 
         private boolean durable;
+        private AsciiBuffer durableQueueName;
 
         public ConsumerContext(final StompFrame subscribe) throws Exception {
             translator = translator(subscribe);
@@ -378,6 +387,24 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
             // }
         }
 
+        public void deliver(MessageDelivery delivery, ISourceController<?> source) {
+            if (!match(delivery)) {
+                return;
+            }
+
+            if (isDurable() && delivery.isPersistent()) {
+                try {
+                    delivery.persist(durableQueueName, true);
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+
+            queue.add(delivery, source);
+
+        }
+
         public boolean isDurable() {
             return durable;
         }
@@ -407,9 +434,10 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         connection.write(errorMessage);
     }
 
-    //Callback from MessageDelivery when message's persistence guarantees are met. 
+    // Callback from MessageDelivery when message's persistence guarantees are
+    // met.
     public void onMessagePersisted(StompMessageDelivery delivery) {
-        //TODO this method must not block:
+        // TODO this method must not block:
         ack(delivery.getStomeFame());
     }
 
@@ -483,7 +511,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         // TODO Auto-generated method stub
         return null;
     }
-    
+
     public MessageDelivery createMessageDelivery(MessageRecord record) {
         throw new UnsupportedOperationException();
     }

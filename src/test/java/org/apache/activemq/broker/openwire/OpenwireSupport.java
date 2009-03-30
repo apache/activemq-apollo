@@ -19,12 +19,13 @@ public class OpenwireSupport {
     static private long idGenerator;
     static private long msgIdGenerator;
 
-    public static ConsumerInfo createConsumerInfo(SessionInfo sessionInfo, ActiveMQDestination destination) throws Exception {
+    public static ConsumerInfo createConsumerInfo(SessionInfo sessionInfo, ActiveMQDestination destination, String subscriptionName) throws Exception {
         ConsumerInfo info = new ConsumerInfo(sessionInfo, ++idGenerator);
         info.setBrowser(false);
         info.setDestination(destination);
         info.setPrefetchSize(1000);
         info.setDispatchAsync(false);
+        info.setSubscriptionName(subscriptionName);
         return info;
     }
 

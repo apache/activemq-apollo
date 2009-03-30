@@ -16,56 +16,86 @@
  */
 package org.apache.activemq.broker;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 
 import org.apache.activemq.broker.store.BrokerDatabase;
+import org.apache.activemq.broker.store.BrokerDatabase.OperationContext;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.queue.PersistentQueue;
+import org.apache.activemq.protobuf.AsciiBuffer;
 
 public abstract class BrokerMessageDelivery implements MessageDelivery {
 
-    HashSet<PersistentQueue<MessageDelivery>> persistentTargets;
-    // Indicates whether or not the message has already been saved
-    // if it hasn't in memory updates can be done.
+    HashSet<AsciiBuffer> persistentTargets;
+    // Indicates whether or not the message has been saved to the
+    // database, if not then in memory updates can be done.
     boolean saved = false;
     long storeTracking = -1;
     BrokerDatabase store;
+    boolean fromStore = false;
+    boolean enableFlushDelay = true;
+    OperationContext saveContext;
+    boolean cancelled = false;
 
-    public final boolean isFromStore() {
-        return false;
+    public void setFromStore(boolean val) {
+        fromStore = true;
     }
 
-    public final void persist(PersistentQueue<MessageDelivery> queue) {
+    public final boolean isFromStore() {
+        return fromStore;
+    }
+
+    public final void persist(AsciiBuffer queue, boolean delayable) throws IOException {
 
         synchronized (this) {
             if (!saved) {
                 if (persistentTargets == null) {
-                    persistentTargets = new HashSet<PersistentQueue<MessageDelivery>>();
+                    persistentTargets = new HashSet<AsciiBuffer>();
                 }
                 persistentTargets.add(queue);
                 return;
             }
-        }
-        
-        //TODO probably need to pass in the saving queue's source controller here
-        //and treat it like it is dispatching to the saver queue. 
-        store.saveMessage(this, queue, null);
-    }
-
-    public final void delete(PersistentQueue<MessageDelivery> queue) {
-        synchronized (this) {
-            if (!saved) {
-                persistentTargets.remove(queue);
-                return;
+            if (!delayable) {
+                enableFlushDelay = false;
             }
         }
 
-        store.deleteMessage(this, queue);
+        // TODO probably need to pass in the saving queue's source controller
+        // here and treat it like it is dispatching to the saver queue.
+        store.saveMessage(this, queue, null);
     }
 
-    public synchronized void beginStore(long storeTracking) {
-        saved = true;
+    public final void delete(AsciiBuffer queue) {
+        boolean firePersistListener = false;
+        synchronized (this) {
+            if (!saved) {
+                persistentTargets.remove(queue);
+                if (persistentTargets.isEmpty()) {
+                    if (saveContext != null) {
+
+                        if (!cancelled) {
+                            if (saveContext.cancel()) {
+                                cancelled = true;
+                                firePersistListener = true;
+                            }
+
+                            saved = true;
+                        }
+                    }
+                }
+            } else {
+                store.deleteMessage(this, queue);
+            }
+        }
+
+        if (firePersistListener) {
+            onMessagePersisted();
+        }
+
+    }
+
+    public void setStoreTracking(long storeTracking) {
         this.storeTracking = storeTracking;
     }
 
@@ -73,21 +103,47 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
         return storeTracking;
     }
 
-    public Collection<PersistentQueue<MessageDelivery>> getPersistentQueues() {
+    public Collection<AsciiBuffer> getPersistentQueues() {
         return persistentTargets;
     }
 
-    public void persistIfNeeded(ISourceController<?> controller) {
-        boolean saveNeeded = false;
+    public void beginStore() {
         synchronized (this) {
-            if (persistentTargets.isEmpty()) {
+            saved = true;
+        }
+    }
+
+    public void persistIfNeeded(ISourceController<?> controller) throws IOException {
+        boolean firePersistListener = false;
+        synchronized (this) {
+            boolean saveNeeded = true;
+            if (persistentTargets == null || persistentTargets.isEmpty()) {
                 saveNeeded = false;
                 saved = true;
             }
+
+            // If any of the targets requested save then save the message
+            // Note that this could be the case even if the message isn't
+            // persistent if a target requested that the message be spooled
+            // for some other reason such as queue memory overflow.
+            if (saveNeeded) {
+                saveContext = store.persistReceivedMessage(this, controller);
+            }
+            // If none of the targets required persistence, then fire the
+            // persist listener:
+            else if (isResponseRequired() && isPersistent()) {
+                firePersistListener = true;
+            }
         }
 
-        if (saveNeeded) {
-            store.persistReceivedMessage(this, controller);
+        if (firePersistListener) {
+            onMessagePersisted();
         }
+
+    }
+
+    public boolean isFlushDelayable() {
+        // TODO Auto-generated method stub
+        return enableFlushDelay;
     }
 }

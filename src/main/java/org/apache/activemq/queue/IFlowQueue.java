@@ -20,5 +20,19 @@ import org.apache.activemq.flow.IFlowRelay;
 
 public interface IFlowQueue<E> extends IBlockingFlowSource<E>, IPollableFlowSource<E>, IAsynchronousFlowSource<E>, IFlowRelay<E> {
 
+    public interface FlowQueueListener {
+        
+        /**
+         * Called when there is a queue error
+         * 
+         * @param queue The queue triggering the exception
+         * @param thrown The exception. 
+         */
+        public void onQueueException(IFlowQueue<?> queue, Throwable thrown);
+    }
+
+    public void setFlowQueueListener(FlowQueueListener listener);
+    
     public void setDispatchPriority(int priority);
+
 }

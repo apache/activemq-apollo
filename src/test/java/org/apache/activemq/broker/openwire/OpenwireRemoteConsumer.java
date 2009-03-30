@@ -24,12 +24,9 @@ import org.apache.activemq.command.SessionInfo;
 import org.apache.activemq.command.WireFormatInfo;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
-import org.apache.activemq.flow.IFlowSink;
-import org.apache.activemq.flow.IFlowSource;
+import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
-import org.apache.activemq.transport.InactivityMonitor;
-import org.apache.activemq.transport.tcp.TcpTransport;
 
 public class OpenwireRemoteConsumer extends RemoteConsumer {
 
@@ -60,10 +57,7 @@ public class OpenwireRemoteConsumer extends RemoteConsumer {
             public String toString() {
                 return flow.getFlowName();
             }
-            public IFlowSink<MessageDelivery> getFlowSink() {
-                return null;
-            }
-            public IFlowSource<MessageDelivery> getFlowSource() {
+            public IFlowResource getFlowResource() {
                 return null;
             }
         }, flow, limiter, inboundMutex);
@@ -81,7 +75,7 @@ public class OpenwireRemoteConsumer extends RemoteConsumer {
         transport.oneway(connectionInfo);
         sessionInfo = createSessionInfo(connectionInfo);
         transport.oneway(sessionInfo);
-        consumerInfo = createConsumerInfo(sessionInfo, activemqDestination);
+        consumerInfo = createConsumerInfo(sessionInfo, activemqDestination, isDurable() ? name : null);
         consumerInfo.setPrefetchSize(inputWindowSize);
         transport.oneway(consumerInfo);
     }

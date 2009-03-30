@@ -87,8 +87,8 @@ public class NoOpFlowController<E> implements ISinkController<E> {
         return false;
     }
 
-    public IFlowSink<E> getFlowSink() {
-        return null;
+    public IFlowResource getFlowResource() {
+        return source;
     }
 
     public void setExecutor(Executor executor) {

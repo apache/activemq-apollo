@@ -17,6 +17,7 @@
 package org.apache.activemq.broker;
 
 import java.beans.ExceptionListener;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -31,6 +32,8 @@ import org.apache.activemq.broker.MessageBroker;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Queue;
 import org.apache.activemq.broker.Router;
+import org.apache.activemq.broker.store.Store;
+import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.PriorityDispatcher;
 import org.apache.activemq.metric.MetricAggregator;
@@ -48,6 +51,10 @@ public abstract class BrokerTestBase extends TestCase {
 
     protected static final int PRIORITY_LEVELS = 10;
     protected static final boolean USE_INPUT_QUEUES = true;
+
+    protected final boolean USE_KAHA_DB = true;
+    protected final boolean PERSISTENT = true;
+    protected final boolean DURABLE = true;
 
     // Set to put senders and consumers on separate brokers.
     protected boolean multibroker = false;
@@ -82,7 +89,7 @@ public abstract class BrokerTestBase extends TestCase {
     protected IDispatcher dispatcher;
     protected final AtomicLong msgIdGenerator = new AtomicLong();
     protected final AtomicBoolean stopping = new AtomicBoolean();
-    
+
     final ArrayList<RemoteProducer> producers = new ArrayList<RemoteProducer>();
     final ArrayList<RemoteConsumer> consumers = new ArrayList<RemoteConsumer>();
 
@@ -124,7 +131,7 @@ public abstract class BrokerTestBase extends TestCase {
     protected IDispatcher createDispatcher() {
         return PriorityDispatcher.createPriorityDispatchPool("BrokerDispatcher", MessageBroker.MAX_PRIORITY, asyncThreadPoolSize);
     }
-    
+
     public void test_1_1_0() throws Exception {
         producerCount = 1;
         destCount = 1;
@@ -235,7 +242,6 @@ public abstract class BrokerTestBase extends TestCase {
             stopServices();
         }
     }
-
 
     /**
      * Tests 2 producers sending to 1 destination with 2 consumres, but with
@@ -374,7 +380,7 @@ public abstract class BrokerTestBase extends TestCase {
         }
     }
 
-    private void createConnections() throws IOException, URISyntaxException {
+    private void createConnections() throws Exception, IOException, URISyntaxException {
 
         if (multibroker) {
             sendBroker = createBroker("SendBroker", sendBrokerBindURI, sendBrokerConnectURI);
@@ -406,12 +412,14 @@ public abstract class BrokerTestBase extends TestCase {
         for (int i = 0; i < producerCount; i++) {
             Destination destination = dests[i % destCount];
             RemoteProducer producer = createProducer(i, destination);
+            producer.setPersistentDelivery(PERSISTENT);
             producers.add(producer);
         }
 
         for (int i = 0; i < consumerCount; i++) {
             Destination destination = dests[i % destCount];
             RemoteConsumer consumer = createConsumer(i, destination);
+            consumer.setDurable(DURABLE);
             consumers.add(consumer);
         }
 
@@ -425,9 +433,9 @@ public abstract class BrokerTestBase extends TestCase {
 
     private RemoteConsumer createConsumer(int i, Destination destination) throws URISyntaxException {
         RemoteConsumer consumer = createConsumer();
-        consumer.setExceptionListener(new ExceptionListener(){
+        consumer.setExceptionListener(new ExceptionListener() {
             public void exceptionThrown(Exception error) {
-                if( !stopping.get() ) {
+                if (!stopping.get()) {
                     System.err.println("Consumer Async Error:");
                     error.printStackTrace();
                 }
@@ -445,9 +453,9 @@ public abstract class BrokerTestBase extends TestCase {
 
     private RemoteProducer createProducer(int id, Destination destination) throws URISyntaxException {
         RemoteProducer producer = cerateProducer();
-        producer.setExceptionListener(new ExceptionListener(){
+        producer.setExceptionListener(new ExceptionListener() {
             public void exceptionThrown(Exception error) {
-                if( !stopping.get() ) {
+                if (!stopping.get()) {
                     System.err.println("Producer Async Error:");
                     error.printStackTrace();
                 }
@@ -476,13 +484,27 @@ public abstract class BrokerTestBase extends TestCase {
         return queue;
     }
 
-    private MessageBroker createBroker(String name, String bindURI, String connectUri) {
+    private MessageBroker createBroker(String name, String bindURI, String connectUri) throws Exception {
         MessageBroker broker = new MessageBroker();
         broker.setName(name);
         broker.setBindUri(bindURI);
         broker.setConnectUri(connectUri);
         broker.setDispatcher(dispatcher);
+        broker.setStore(createStore(broker));
         return broker;
+    }
+
+    protected Store createStore(MessageBroker broker) throws Exception {
+        Store store = null;
+        if (USE_KAHA_DB) {
+            store = StoreFactory.createStore("kaha-db");
+        } else {
+            store = StoreFactory.createStore("memory");
+        }
+
+        store.setStoreDirectory(new File("target/test-data/broker-test/" +  broker.getName()));
+        store.setDeleteAllMessages(true);
+        return store;
     }
 
     private void stopServices() throws Exception {

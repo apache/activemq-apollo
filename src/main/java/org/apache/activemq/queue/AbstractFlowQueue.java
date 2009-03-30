@@ -23,8 +23,7 @@ import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
 import org.apache.activemq.dispatch.IDispatcher.Dispatchable;
 import org.apache.activemq.flow.AbstractLimitedFlowSource;
-import org.apache.activemq.flow.IFlowSink;
-import org.apache.activemq.flow.IFlowSource;
+import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
@@ -45,6 +44,14 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
     protected boolean dispatching = false;
     protected int dispatchPriority = 0;
     protected QueueStoreHelper<E> storeHelper;
+    protected FlowQueueListener listener = new FlowQueueListener()
+    {
+        public void onQueueException(IFlowQueue<?> queue, Throwable thrown) {
+            System.out.println("Exception in queue: " + thrown.getMessage());
+            thrown.printStackTrace();
+        }
+    };
+    
     AsciiBuffer persistentQueueName;
 
     AbstractFlowQueue() {
@@ -55,26 +62,33 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
         super(name);
     }
 
+    public void setFlowQueueListener(FlowQueueListener listener) {
+        this.listener = listener;
+    }
+
     public final void add(E elem, ISourceController<?> source) {
         checkSave(elem, source);
         getSinkController(elem, source).add(elem, source);
     }
 
     public final boolean offer(E elem, ISourceController<?> source) {
-        if(getSinkController(elem, source).offer(elem, source))
-        {
+        if (getSinkController(elem, source).offer(elem, source)) {
             checkSave(elem, source);
             return true;
         }
         return false;
     }
-    
-    private void checkSave(E elem, ISourceController<?> source) 
-    {
-        if(storeHelper != null && isElementPersistent(elem))
-        {
-            storeHelper.save(elem, true);
-        }
+
+    private final void checkSave(E elem, ISourceController<?> source) {
+        //TODO This is currently handled externally to the queue
+        //but it would be nice to move it in here
+        /*if (storeHelper != null && isElementPersistent(elem)) {
+            try {
+                storeHelper.save(elem, true);
+            } catch (IOException e) {
+                listener.onQueueException(this, e);
+            }
+        }*/
     }
 
     protected abstract ISinkController<E> getSinkController(E elem, ISourceController<?> source);
@@ -87,13 +101,7 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
         return !pollingDispatch();
     }
 
-    public final IFlowSink<E> getFlowSink() {
-        // TODO Auto-generated method stub
-        return this;
-    }
-
-    public final IFlowSource<E> getFlowSource() {
-        // TODO Auto-generated method stub
+    public final IFlowResource getFlowResource() {
         return this;
     }
 
@@ -196,15 +204,8 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
     }
 
     /**
-     * Called when there are no more elements to be loaded from the store.
-     */
-    public void onQueueLoadComplete() {
-
-    }
-
-    /**
-     * Subclasses should override this if they require persistence 
-     * requires saving to the store.
+     * Subclasses should override this if they require persistence requires
+     * saving to the store.
      * 
      * @param elem
      *            The element to check.

@@ -23,6 +23,8 @@ import java.util.LinkedHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.Connection;
+import org.apache.activemq.broker.store.BrokerDatabase;
+import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.transport.DispatchableTransportServer;
@@ -45,6 +47,7 @@ public class MessageBroker implements TransportAcceptListener {
     private String connectUri;
     private String name;
     private IDispatcher dispatcher;
+    private BrokerDatabase database;
     private final AtomicBoolean stopping = new AtomicBoolean();
 
     public String getName() {
@@ -62,12 +65,19 @@ public class MessageBroker implements TransportAcceptListener {
         for (VirtualHost virtualHost : virtualHosts.values()) {
             virtualHost.stop();
         }
+        database.stop();
         dispatcher.shutdown();
 
     }
 
     public final void start() throws Exception {
         dispatcher.start();
+        if (database != null) {
+            database.start();
+        } else {
+            throw new Exception("Store not initialized");
+        }
+        addVirtualHost(getDefaultVirtualHost());
 
         for (VirtualHost virtualHost : virtualHosts.values()) {
             virtualHost.start();
@@ -134,12 +144,16 @@ public class MessageBroker implements TransportAcceptListener {
     }
 
     // /////////////////////////////////////////////////////////////////
-    // Virtual Host Related Opperations 
+    // Virtual Host Related Opperations
     // /////////////////////////////////////////////////////////////////
     public VirtualHost getDefaultVirtualHost() {
         synchronized (virtualHosts) {
-            if( defaultVirtualHost==null ) {
+            if (defaultVirtualHost == null) {
                 defaultVirtualHost = new VirtualHost();
+                defaultVirtualHost.setDatabase(database);
+                ArrayList<AsciiBuffer> names = new ArrayList<AsciiBuffer>(1);
+                names.add(new AsciiBuffer("default"));
+                defaultVirtualHost.setHostNames(names);
             }
             return defaultVirtualHost;
         }
@@ -174,6 +188,7 @@ public class MessageBroker implements TransportAcceptListener {
                 setDefaultVirtualHost(host);
             }
         }
+        host.setDatabase(database);
     }
 
     public synchronized void removeVirtualHost(VirtualHost host) throws Exception {
@@ -181,9 +196,10 @@ public class MessageBroker implements TransportAcceptListener {
             for (AsciiBuffer name : host.getHostNames()) {
                 virtualHosts.remove(name);
             }
-            // Was the default virtual host removed? Set the default to the next virtual host.
-            if( host == defaultVirtualHost ) {
-                if( virtualHosts.isEmpty() ) {
+            // Was the default virtual host removed? Set the default to the next
+            // virtual host.
+            if (host == defaultVirtualHost) {
+                if (virtualHosts.isEmpty()) {
                     defaultVirtualHost = null;
                 } else {
                     defaultVirtualHost = virtualHosts.values().iterator().next();
@@ -202,6 +218,10 @@ public class MessageBroker implements TransportAcceptListener {
         synchronized (virtualHosts) {
             return new ArrayList<VirtualHost>(virtualHosts.values());
         }
+    }
+
+    public void setStore(Store store) {
+        database = new BrokerDatabase(store, dispatcher);
     }
 
 }

@@ -202,8 +202,8 @@ public class FlowController<E> implements IFlowController<E> {
         }
     }
 
-    public IFlowSource<E> getFlowSource() {
-        return controllable.getFlowSource();
+    public IFlowResource getFlowResource() {
+        return controllable.getFlowResource();
     }
 
     /**
@@ -387,7 +387,6 @@ public class FlowController<E> implements IFlowController<E> {
                     synchronized (mutex) {
                         resuming = true;
                     }
-                    String was = Thread.currentThread().getName();
                     try {
                         for (ISourceController<?> source : blockedSources) {
 //                            System.out.println("UNBLOCKING: SINK[" + FlowController.this + "], SOURCE[" + source + "]");
@@ -424,8 +423,8 @@ public class FlowController<E> implements IFlowController<E> {
         return name;
     }
 
-    public IFlowSink<E> getFlowSink() {
-        return controllable.getFlowSink();
+    public IFlowResource getFlowSink() {
+        return controllable.getFlowResource();
     }
 
     public void setExecutor(Executor executor) {

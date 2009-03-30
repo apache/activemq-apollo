@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.broker.protocol;
 
+import java.io.IOException;
+
 import org.apache.activemq.Service;
 import org.apache.activemq.broker.BrokerConnection;
 import org.apache.activemq.broker.MessageDelivery;
@@ -29,5 +31,6 @@ public interface ProtocolHandler extends Service {
     public void onException(Exception error);
     public void setWireFormat(WireFormat wf);
     
-    public MessageDelivery createMessageDelivery(MessageRecord record);
+    public MessageDelivery createMessageDelivery(MessageRecord record) throws IOException;
+
 }

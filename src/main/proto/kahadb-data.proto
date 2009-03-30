@@ -77,7 +77,7 @@ message QueueAddMessage {
 }  
 message QueueRemoveMessage {
   optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
-  optional int64 queueKey=2;
+  optional int64 messageKey=2;
 }  
 
 ///////////////////////////////////////////////////////////////

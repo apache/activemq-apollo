@@ -31,9 +31,11 @@ import org.apache.activemq.protobuf.Buffer;
 public abstract class StoreTestBase extends TestCase {
 
     private Store store;
-    
+
     abstract protected Store createStore();
+
     abstract protected boolean isStoreTransactional();
+
     abstract protected boolean isStorePersistent();
 
     @Override
@@ -69,7 +71,7 @@ public abstract class StoreTestBase extends TestCase {
             }
         }, null);
     }
-    
+
     public void testQueueAdd() throws Exception {
         final AsciiBuffer expected = new AsciiBuffer("test");
         store.execute(new VoidCallback<Exception>() {
@@ -78,7 +80,7 @@ public abstract class StoreTestBase extends TestCase {
                 session.queueAdd(expected);
             }
         }, null);
-        
+
         store.execute(new VoidCallback<Exception>() {
             @Override
             public void run(Session session) throws Exception {
@@ -89,7 +91,7 @@ public abstract class StoreTestBase extends TestCase {
             }
         }, null);
     }
-    
+
     public void testStoreExecuteExceptionPassthrough() throws Exception {
         try {
             store.execute(new VoidCallback<Exception>() {
@@ -102,10 +104,11 @@ public abstract class StoreTestBase extends TestCase {
             fail("Expected IOException");
         } catch (IOException e) {
         }
-        
-        // If the store implementation is transactional, then the work done should 
+
+        // If the store implementation is transactional, then the work done
+        // should
         // have been rolled back.
-        if( isStoreTransactional() ) {
+        if (isStoreTransactional()) {
             store.execute(new VoidCallback<Exception>() {
                 @Override
                 public void run(Session session) throws Exception {
@@ -116,10 +119,7 @@ public abstract class StoreTestBase extends TestCase {
         }
 
     }
-    
-    
-    
-    
+
     static void assertEquals(MessageRecord expected, MessageRecord actual) {
         assertEquals(expected.getBuffer(), actual.getBuffer());
         assertEquals(expected.getEncoding(), actual.getEncoding());

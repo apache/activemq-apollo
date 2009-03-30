@@ -22,8 +22,7 @@ import java.util.LinkedList;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowLimiter;
-import org.apache.activemq.flow.IFlowSink;
-import org.apache.activemq.flow.IFlowSource;
+import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
@@ -138,11 +137,7 @@ public class MultiFlowQueue<E> extends AbstractFlowQueue<E> {
             controller.add(elem, source);
         }
 
-        public IFlowSource<E> getFlowSource() {
-            return MultiFlowQueue.this;
-        }
-
-        public IFlowSink<E> getFlowSink() {
+        public IFlowResource getFlowResource() {
             return MultiFlowQueue.this;
         }
 

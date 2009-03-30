@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.queue;
 
+import java.io.IOException;
+
 public interface QueueStoreHelper<E> {
 
     /**
@@ -48,7 +50,8 @@ public interface QueueStoreHelper<E> {
     /**
      * Saves an element to the store. 
      * @param elem The element to be saved. 
+     * @throws IOException 
      */
-    public void save(E elem, boolean flush);
+    public void save(E elem, boolean flush) throws IOException;
     
 }

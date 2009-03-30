@@ -21,28 +21,6 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 
 public interface PersistentQueue<E> {
 
-    /**
-     * When the memory size of the queue exceeds this limit, elements are
-     * spooled to disk.
-     * 
-     * @param extent
-     *            The save extent.
-     * 
-     *            public PersistentQueue<E> setSaveExent(long extent);
-     */
-
-    /**
-     * Gets the save extent associated with the queue.
-     * 
-     * @return the save extent
-     * 
-     *         public long getSaveExent(long extent);
-     */
-
-    /**
-     * Enables persistence for this queue.
-     */
-    public void enablePersistence(QueueStoreHelper<E> storeHelper);
 
     /**
      * Called when an element is added from the queue's store.
@@ -53,11 +31,6 @@ public interface PersistentQueue<E> {
      *            The store controller.
      */
     public void addFromStore(E elem, ISourceController<?> controller);
-
-    /**
-     * Called when there are no more elements to be loaded from the store.
-     */
-    public void onQueueLoadComplete();
 
     /**
      * Implementors implement this to indicate whether or not the given element
@@ -73,5 +46,5 @@ public interface PersistentQueue<E> {
      * @return
      */
     public AsciiBuffer getPeristentQueueName();
-
+    
 }

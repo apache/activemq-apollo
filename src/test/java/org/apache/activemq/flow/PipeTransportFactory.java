@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.command.BrokerInfo;
 import org.apache.activemq.dispatch.IDispatcher;
@@ -29,7 +30,6 @@ import org.apache.activemq.util.URISupport;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 
-import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicInteger;
 
 public class PipeTransportFactory extends TransportFactory {
 

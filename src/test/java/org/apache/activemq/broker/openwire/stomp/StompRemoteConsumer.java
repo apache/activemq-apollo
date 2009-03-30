@@ -9,8 +9,7 @@ import org.apache.activemq.broker.Router;
 import org.apache.activemq.broker.stomp.StompMessageDelivery;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
-import org.apache.activemq.flow.IFlowSink;
-import org.apache.activemq.flow.IFlowSource;
+import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
@@ -58,10 +57,7 @@ public class StompRemoteConsumer extends RemoteConsumer {
             public String toString() {
                 return flow.getFlowName();
             }
-            public IFlowSink<MessageDelivery> getFlowSink() {
-                return null;
-            }
-            public IFlowSource<MessageDelivery> getFlowSource() {
+            public IFlowResource getFlowResource() {
                 return null;
             }
         }, flow, limiter, inboundMutex);

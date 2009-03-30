@@ -107,6 +107,7 @@ public abstract class StorePerformanceBase extends TestCase {
                 for( long i=0; !stopped.get(); i++ ) {
                     
                     final MessageRecord messageRecord = new MessageRecord();
+                    messageRecord.setKey(store.allocateStoreTracking());
                     messageRecord.setMessageId(new AsciiBuffer(""+i));
                     messageRecord.setEncoding(new AsciiBuffer("encoding"));
                     messageRecord.setBuffer(buffer);
@@ -188,7 +189,7 @@ public abstract class StorePerformanceBase extends TestCase {
                             for (Iterator<QueueRecord> iterator = queueRecords; iterator.hasNext();) {
                                 QueueRecord r = iterator.next();
                                 records.add(session.messageGetRecord(r.getMessageKey()));
-                                session.queueRemoveMessage(queueName, r.queueKey);
+                                session.queueRemoveMessage(queueName, r.messageKey);
                             }
                         }
                     }, onFlush);

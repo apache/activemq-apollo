@@ -26,7 +26,7 @@ public class KahaDBStoreTest extends StoreTestBase {
     @Override
     protected Store createStore() {
         KahaDBStore rc = new KahaDBStore();
-        rc.setDirectory(new File("target/test-data/kahadb-store-test"));
+        rc.setStoreDirectory(new File("target/test-data/kahadb-store-test"));
         rc.setDeleteAllMessages(true);
         return rc;
     }

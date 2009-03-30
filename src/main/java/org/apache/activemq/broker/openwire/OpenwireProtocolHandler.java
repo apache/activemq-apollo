@@ -16,8 +16,10 @@
  */
 package org.apache.activemq.broker.openwire;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 
 import javax.jms.InvalidSelectorException;
 import javax.jms.JMSException;
@@ -51,6 +53,7 @@ import org.apache.activemq.command.Message;
 import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.command.MessageDispatch;
 import org.apache.activemq.command.MessageDispatchNotification;
+import org.apache.activemq.command.MessageId;
 import org.apache.activemq.command.MessagePull;
 import org.apache.activemq.command.ProducerAck;
 import org.apache.activemq.command.ProducerId;
@@ -66,21 +69,25 @@ import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.filter.LogicExpression;
 import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.filter.NoLocalExpression;
+import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.IFlowDrain;
+import org.apache.activemq.flow.IFlowLimiter;
+import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.IFlowSink;
-import org.apache.activemq.flow.IFlowSource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.openwire.OpenWireFormat;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.selector.SelectorParser;
 import org.apache.activemq.state.CommandVisitor;
 import org.apache.activemq.transport.WireFormatNegotiator;
+import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.wireformat.WireFormat;
 
 public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener {
@@ -88,30 +95,13 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
     protected final HashMap<ProducerId, ProducerContext> producers = new HashMap<ProducerId, ProducerContext>();
     protected final HashMap<ConsumerId, ConsumerContext> consumers = new HashMap<ConsumerId, ConsumerContext>();
 
-    protected final Object inboundMutex = new Object();
-    protected IFlowController<OpenWireMessageDelivery> inboundController;
-
     protected BrokerConnection connection;
     private OpenWireFormat wireFormat;
+    private OpenWireFormat storeWireFormat;
     private Router router;
 
     public void start() throws Exception {
-        // Setup the inbound processing..
-        final Flow flow = new Flow("broker-" + connection.getName() + "-inbound", false);
-        SizeLimiter<OpenWireMessageDelivery> limiter = new SizeLimiter<OpenWireMessageDelivery>(connection.getInputWindowSize(), connection.getInputResumeThreshold());
-        inboundController = new FlowController<OpenWireMessageDelivery>(new FlowControllableAdapter() {
-            public void flowElemAccepted(ISourceController<OpenWireMessageDelivery> controller, OpenWireMessageDelivery elem) {
-                if (elem.isResponseRequired()) {
-                    elem.setPersistListener(OpenwireProtocolHandler.this);
-                }
-                router.route(elem, controller);
-                controller.elementDispatched(elem);
-            }
 
-            public String toString() {
-                return flow.getFlowName();
-            }
-        }, flow, limiter, inboundMutex);
     }
 
     public void stop() throws Exception {
@@ -172,6 +162,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                     ProducerContext producerContext = producers.get(producerId);
 
                     OpenWireMessageDelivery md = new OpenWireMessageDelivery(info);
+                    md.setStoreWireFormat(storeWireFormat);
 
                     // Only producers that are not using a window will block,
                     // and if it blocks.
@@ -346,11 +337,10 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             }.start();
         }
     }
-    
 
     public void onMessagePersisted(OpenWireMessageDelivery delivery) {
         // TODO This method should not block:
-        // Either add to output queue, or spin off in a separate thread. 
+        // Either add to output queue, or spin off in a separate thread.
         ack(delivery.getMessage());
     }
 
@@ -367,52 +357,44 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
     // Internal Support Methods
     // /////////////////////////////////////////////////////////////////
 
-    static class FlowControllableAdapter implements FlowControllable<OpenWireMessageDelivery> {
-        public void flowElemAccepted(ISourceController<OpenWireMessageDelivery> controller, OpenWireMessageDelivery elem) {
-        }
+    class ProducerContext extends AbstractLimitedFlowResource<OpenWireMessageDelivery> {
 
-        public IFlowSink<OpenWireMessageDelivery> getFlowSink() {
-            return null;
-        }
-
-        public IFlowSource<OpenWireMessageDelivery> getFlowSource() {
-            return null;
-        }
-    }
-
-    class ProducerContext {
-
+        protected final Object inboundMutex = new Object();
         private IFlowController<OpenWireMessageDelivery> controller;
         private String name;
 
         public ProducerContext(final ProducerInfo info) {
-            this.name = info.getProducerId().toString();
+            super(info.getProducerId().toString());
+            final Flow flow = new Flow("broker-" + name + "-inbound", false);
 
             // Openwire only uses credit windows at the producer level for
             // producers that request the feature.
+            IFlowLimiter<OpenWireMessageDelivery> limiter;
             if (info.getWindowSize() > 0) {
-                final Flow flow = new Flow("broker-" + name + "-inbound", false);
-                WindowLimiter<OpenWireMessageDelivery> limiter = new WindowLimiter<OpenWireMessageDelivery>(false, flow, info.getWindowSize(), info.getWindowSize() / 2) {
+                limiter = new WindowLimiter<OpenWireMessageDelivery>(false, flow, info.getWindowSize(), info.getWindowSize() / 2) {
                     @Override
                     protected void sendCredit(int credit) {
                         ProducerAck ack = new ProducerAck(info.getProducerId(), credit);
                         connection.write(ack);
                     }
                 };
-
-                controller = new FlowController<OpenWireMessageDelivery>(new FlowControllableAdapter() {
-                    public void flowElemAccepted(ISourceController<OpenWireMessageDelivery> controller, OpenWireMessageDelivery msg) {
-                        router.route(msg, controller);
-                        controller.elementDispatched(msg);
-                    }
-
-                    public String toString() {
-                        return flow.getFlowName();
-                    }
-                }, flow, limiter, inboundMutex);
             } else {
-                controller = inboundController;
+
+                limiter = new SizeLimiter<OpenWireMessageDelivery>(connection.getInputWindowSize(), connection.getInputResumeThreshold());
             }
+
+            controller = new FlowController<OpenWireMessageDelivery>(new FlowControllable<OpenWireMessageDelivery>() {
+                public void flowElemAccepted(ISourceController<OpenWireMessageDelivery> controller, OpenWireMessageDelivery msg) {
+                    router.route(msg, controller);
+                    controller.elementDispatched(msg);
+                }
+
+                public IFlowResource getFlowResource() {
+                    return ProducerContext.this;
+                }
+            }, flow, limiter, inboundMutex);
+
+            super.onFlowOpened(controller);
         }
     }
 
@@ -422,13 +404,27 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         private String name;
         private BooleanExpression selector;
         private boolean durable;
+        private AsciiBuffer durableQueueName;
 
         private SingleFlowRelay<MessageDelivery> queue;
         public WindowLimiter<MessageDelivery> limiter;
 
+        HashMap<MessageId, MessageDelivery> pendingMessages = new HashMap<MessageId, MessageDelivery>();
+        LinkedList<MessageId> pendingMessageIds = new LinkedList<MessageId>();
+
         public ConsumerContext(final ConsumerInfo info) throws InvalidSelectorException {
             this.info = info;
             this.name = info.getConsumerId().toString();
+            durable = info.isDurable();
+            if (durable) {
+                durableQueueName = new AsciiBuffer(info.getSubscriptionName());
+                try {
+                    connection.getBroker().getDefaultVirtualHost().getDatabase().addQueue(durableQueueName);
+                } catch (Throwable thrown) {
+                    thrown.printStackTrace();
+                }
+            }
+
             selector = parseSelector(info);
 
             Flow flow = new Flow("broker-" + name + "-outbound", false);
@@ -445,6 +441,13 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                     md.setConsumerId(info.getConsumerId());
                     md.setMessage(msg);
                     md.setDestination(msg.getDestination());
+                    // Add to the pending list if persistent and we are durable:
+                    if (isDurable() && message.isPersistent()) {
+                        synchronized (queue) {
+                            pendingMessages.put(msg.getMessageId(), message);
+                            pendingMessageIds.add(msg.getMessageId());
+                        }
+                    }
                     connection.write(md);
                 };
             });
@@ -452,12 +455,42 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
         public void ack(MessageAck info) {
             synchronized (queue) {
+                if (isDurable()) {
+                    MessageId id = info.getLastMessageId();
+                    while (!pendingMessageIds.isEmpty()) {
+                        MessageId pendingId = pendingMessageIds.peekFirst();
+                        MessageDelivery delivery = pendingMessages.remove(pendingId);
+                        delivery.delete(durableQueueName);
+                        pendingMessageIds.removeFirst();
+                        if (pendingId.equals(id)) {
+                            break;
+                        }
+                    }
+
+                }
                 limiter.onProtocolCredit(info.getMessageCount());
             }
         }
 
         public IFlowSink<MessageDelivery> getSink() {
             return queue;
+        }
+
+        public final void deliver(MessageDelivery delivery, ISourceController<?> source) {
+            if (!match(delivery)) {
+                return;
+            }
+
+            if (isDurable() && delivery.isPersistent()) {
+                try {
+                    delivery.persist(durableQueueName, true);
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+
+            queue.add(delivery, source);
         }
 
         public boolean match(MessageDelivery message) {
@@ -541,9 +574,17 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
     public void setWireFormat(WireFormat wireFormat) {
         this.wireFormat = (OpenWireFormat) wireFormat;
+        this.storeWireFormat = this.wireFormat.copy();
+        storeWireFormat.setCacheEnabled(false);
+        storeWireFormat.setTightEncodingEnabled(false);
+        storeWireFormat.setSizePrefixDisabled(false);
     }
 
-    public MessageDelivery createMessageDelivery(MessageRecord record) {
-        throw new UnsupportedOperationException();
+    public MessageDelivery createMessageDelivery(MessageRecord record) throws IOException {
+        Buffer buf = record.getBuffer();
+        Message message = (Message) storeWireFormat.unmarshal(new ByteSequence(buf.data, buf.offset, buf.length));
+        OpenWireMessageDelivery delivery = new OpenWireMessageDelivery(message);
+        delivery.setStoreWireFormat(storeWireFormat);
+        return delivery;
     }
 }

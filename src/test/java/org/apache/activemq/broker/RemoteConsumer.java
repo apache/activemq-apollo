@@ -20,6 +20,7 @@ abstract public class RemoteConsumer extends Connection {
     protected long thinkTime;
     protected Destination destination;
     protected String selector;
+    protected boolean durable;
     protected URI uri;
 
     private boolean schedualWait;
@@ -81,6 +82,14 @@ abstract public class RemoteConsumer extends Connection {
 
     public void setTotalConsumerRate(MetricAggregator totalConsumerRate) {
         this.totalConsumerRate = totalConsumerRate;
+    }
+    
+    public boolean isDurable() {
+        return durable;
+    }
+
+    public void setDurable(boolean durable) {
+        this.durable = durable;
     }
 
     public Destination getDestination() {

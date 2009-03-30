@@ -20,17 +20,21 @@ class MockQueue implements MockBroker.DeliveryTarget {
     private Destination destination;
     private IQueue<Long, Message> queue;
     private MockBroker broker;
-    
+
     private Mapper<Integer, Message> partitionMapper;
     private Mapper<Long, Message> keyExtractor;
 
     private IQueue<Long, Message> createQueue() {
 
-        if (partitionMapper!=null) {
+        if (partitionMapper != null) {
             PartitionedQueue<Integer, Long, Message> queue = new PartitionedQueue<Integer, Long, Message>() {
                 @Override
                 protected IQueue<Long, Message> cratePartition(Integer partitionKey) {
                     return createSharedFlowQueue();
+                }
+
+                public boolean isElementPersistent(Message message) {
+                    return false;
                 }
             };
             queue.setPartitionMapper(partitionMapper);
@@ -63,7 +67,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
     public final void deliver(ISourceController<Message> source, Message msg) {
         queue.add(msg, source);
     }
-    
+
     public final Destination getDestination() {
         return destination;
     }

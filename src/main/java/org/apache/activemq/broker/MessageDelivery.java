@@ -16,10 +16,11 @@
  */
 package org.apache.activemq.broker;
 
+import java.io.IOException;
+
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
-import org.apache.activemq.queue.PersistentQueue;
 
 public interface MessageDelivery {
 
@@ -53,13 +54,19 @@ public interface MessageDelivery {
      */
     public void onMessagePersisted();
 
-    public Store.MessageRecord createMessageRecord();
+    public Store.MessageRecord createMessageRecord() throws IOException;
 
     public Buffer getTransactionId();
 
-    public void persist(PersistentQueue<MessageDelivery> queue);
+    public void persist(AsciiBuffer queue, boolean delayable) throws IOException;
 
-    public void delete(PersistentQueue<MessageDelivery> queue);
+    public void delete(AsciiBuffer queue);
+    
+    /**
+     * Sets the unique storage tracking number. 
+     * @param tracking The tracking number. 
+     */
+    public void setStoreTracking(long tracking);
     
     /**
      * Gets the tracking number used to identify this message in the message

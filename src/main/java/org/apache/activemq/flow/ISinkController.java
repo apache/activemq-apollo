@@ -25,11 +25,19 @@ public interface ISinkController<E> {
      * @param <E>
      */
     public interface FlowControllable<E> {
-        public void flowElemAccepted(ISourceController<E> controller, E elem);
+        
+        /**
+         * Called by a flow controller when it accepts a element. 
+         * @param source The source controller
+         * @param elem
+         */
+        public void flowElemAccepted(ISourceController<E> source, E elem);
 
-        public IFlowSink<E> getFlowSink();
-
-        public IFlowSource<E> getFlowSource();
+        /**
+         * Gets the resource being flow controlled;
+         * @return The resource being flow controlled.
+         */
+        public IFlowResource getFlowResource();
     }
 
     /**
@@ -93,10 +101,10 @@ public interface ISinkController<E> {
     public boolean addUnblockListener(FlowUnblockListener<E> listener);
 
     /**
-     * Gets the {@link IFlowSink} that this controller is controlling. 
-     * @return The {@link IFlowSink} that this controller is controlling.
+     * Gets the {@link IFlowResource} that this controller is controlling. 
+     * @return The {@link IFlowResource} that this controller is controlling.
      */
-    public IFlowSink<E> getFlowSink();
+    public IFlowResource getFlowResource();
     
     /**
      * Sets the executor for this {@link ISinkController}. The executor is

@@ -25,11 +25,10 @@ package org.apache.activemq.flow;
 public interface ISourceController<E> {
 
     /**
-     * Returns the source that this FlowController is controlling.
-     * 
-     * @return The source that the flow controller is controlling.
+     * Gets the {@link IFlowResource} that this controller is controlling. 
+     * @return The {@link IFlowResource} that this controller is controlling.
      */
-    public IFlowSource<E> getFlowSource();
+    public IFlowResource getFlowResource();
 
     /**
      * Gets the flow that this controller is controlling.

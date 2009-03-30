@@ -16,12 +16,16 @@
  */
 package org.apache.activemq.broker.openwire;
 
+import java.io.IOException;
+
 import org.apache.activemq.broker.BrokerMessageDelivery;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.command.Message;
+import org.apache.activemq.openwire.OpenWireFormat;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.util.ByteSequence;
 
 public class OpenWireMessageDelivery extends BrokerMessageDelivery {
 
@@ -30,6 +34,7 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
     private final Message message;
     private Destination destination;
     private AsciiBuffer producerId;
+    private OpenWireFormat storeWireFormat;
     private PersistListener persistListener = null;
 
     public interface PersistListener {
@@ -60,7 +65,7 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
     }
 
     public AsciiBuffer getMsgId() {
-        return null;
+        return new AsciiBuffer(message.getMessageId().toString());
     }
 
     public AsciiBuffer getProducerId() {
@@ -100,13 +105,12 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
         return message.isResponseRequired();
     }
 
-
-    public MessageRecord createMessageRecord() {
+    public MessageRecord createMessageRecord() throws IOException {
         MessageRecord record = new MessageRecord();
         record.setEncoding(ENCODING);
-        // TODO: Serialize it..
-        // record.setBuffer()
-        // record.setStreamKey(stream);
+        ByteSequence bytes = storeWireFormat.marshal(message);
+        record.setBuffer(new Buffer(bytes.getData(), bytes.getOffset(), bytes.getLength()));
+        record.setStreamKey((long) 0);
         record.setMessageId(getMsgId());
         return record;
     }
@@ -116,4 +120,7 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
         return null;
     }
 
+    public void setStoreWireFormat(OpenWireFormat wireFormat) {
+        this.storeWireFormat = wireFormat;
+    }
 }

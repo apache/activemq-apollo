@@ -23,6 +23,7 @@ import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.PrioritySizeLimiter;
+import org.apache.activemq.protobuf.AsciiBuffer;
 
 public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> implements IQueue<K, V> {
 
@@ -33,6 +34,7 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
     private boolean autoRelease;
     private IDispatcher dispatcher;
     private final PrioritySizeLimiter<V> limiter;
+    private Store<K, V> store;
 
     public SharedPriorityQueue(String name, PrioritySizeLimiter<V> limiter) {
         super(name);
@@ -41,6 +43,10 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
         for (int i = 0; i < limiter.getPriorities(); i++) {
             partitions.add(null);
         }
+    }
+
+    public void setStore(Store<K, V> store) {
+        this.store = store;
     }
 
     public void setResourceName(String resourceName) {
@@ -98,12 +104,14 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
                 queue.setDispatcher(dispatcher);
                 queue.setDispatchPriority(prio);
                 queue.setKeyMapper(keyMapper);
+                queue.setStore(store);
                 partitions.set(prio, queue);
                 onFlowOpened(queue.getFlowControler());
 
                 for (Subscription<V> sub : subscriptions) {
                     queue.addSubscription(sub);
                 }
+
             }
             return queue;
         }
@@ -131,5 +139,19 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
 
     public void setDispatcher(IDispatcher dispatcher) {
         this.dispatcher = dispatcher;
+    }
+
+    public void addFromStore(V elem, ISourceController<?> controller) {
+        // TODO Auto-generated method stub
+
+    }
+
+    public AsciiBuffer getPeristentQueueName() {
+        // TODO Auto-generated method stub
+        return new AsciiBuffer(this.getResourceName());
+    }
+
+    public boolean isElementPersistent(V elem) {
+        return false;
     }
 }

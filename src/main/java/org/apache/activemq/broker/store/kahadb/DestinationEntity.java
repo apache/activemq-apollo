@@ -42,28 +42,35 @@ public class DestinationEntity {
         public DestinationEntity readPayload(DataInput dataIn) throws IOException {
             DestinationEntity value = new DestinationEntity();
             value.queueIndex = new BTreeIndex<Long, QueueRecord>(dataIn.readLong());
+            value.trackingIndex = new BTreeIndex<Long, Long>(dataIn.readLong());
             return value;
         }
 
         public void writePayload(DestinationEntity value, DataOutput dataOut) throws IOException {
             dataOut.writeLong(value.queueIndex.getPageId());
+            dataOut.writeLong(value.trackingIndex.getPageId());
         }
     };
 
     private long nextQueueKey;
     private BTreeIndex<Long, QueueRecord> queueIndex;
-
+    private BTreeIndex<Long, Long> trackingIndex;
+    
     ///////////////////////////////////////////////////////////////////
     // Lifecycle Methods.
     ///////////////////////////////////////////////////////////////////
     public void allocate(Transaction tx) throws IOException {
         queueIndex = new BTreeIndex<Long, QueueRecord>(tx.allocate());
+        trackingIndex = new BTreeIndex<Long, Long>(tx.allocate());
     }
     
     public void deallocate(Transaction tx) throws IOException {
         queueIndex.clear(tx);
+        trackingIndex.clear(tx);
+        tx.free(trackingIndex.getPageId());
         tx.free(queueIndex.getPageId());
         queueIndex=null;
+        trackingIndex=null;
     }
     
     public void load(Transaction tx) throws IOException {
@@ -80,6 +87,14 @@ public class DestinationEntity {
                 nextQueueKey = lastEntry.getKey()+1;
             }
         }
+        
+        if( trackingIndex.getPageFile()==null ) {
+            
+            trackingIndex.setPageFile(tx.getPageFile());
+            trackingIndex.setKeyMarshaller(LongMarshaller.INSTANCE);
+            trackingIndex.setValueMarshaller(LongMarshaller.INSTANCE);
+            trackingIndex.load(tx);
+        }
     }
     
     ///////////////////////////////////////////////////////////////////
@@ -95,10 +110,17 @@ public class DestinationEntity {
         value.setMessageKey(command.getMessageKey());
         value.setQueueKey(command.getQueueKey());
         queueIndex.put(tx, value.getQueueKey(), value);
+        trackingIndex.put(tx, command.getMessageKey(), command.getQueueKey());
     }
 
-    public void remove(Transaction tx, long queueKey) throws IOException {
-        queueIndex.remove(tx, queueKey);
+    public boolean remove(Transaction tx, long msgKey) throws IOException {
+        Long queueKey = trackingIndex.remove(tx, msgKey);
+        if(queueKey != null)
+        {
+            queueIndex.remove(tx, queueKey);
+            return true;
+        }
+        return false;
     }
 
     public Iterator<QueueRecord> listMessages(Transaction tx, Long firstQueueKey, final int max) throws IOException {
@@ -119,6 +141,10 @@ public class DestinationEntity {
         }
         
         return rc.iterator();
+    }
+
+    public Iterator<Entry<Long, Long>> listTrackingNums(Transaction tx) throws IOException {
+        return trackingIndex.iterator(tx);
     }
 
 

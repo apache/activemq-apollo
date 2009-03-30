@@ -22,12 +22,15 @@ import java.util.HashSet;
 
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.ISourceController;
+import org.apache.activemq.protobuf.AsciiBuffer;
 
 abstract public class PartitionedQueue<P, K, V> extends AbstractLimitedFlowResource<V> implements IQueue<K, V> {
 
     private HashSet<Subscription<V>> subscriptions = new HashSet<Subscription<V>>();
     private HashMap<P, IQueue<K, V>> partitions = new HashMap<P, IQueue<K, V>>();
     private Mapper<P, V> partitionMapper;
+    private Store<K, V> store;
+    private AsciiBuffer queueName;
 
     public IQueue<K, V> getPartition(P partitionKey) {
         synchronized (partitions) {
@@ -41,6 +44,10 @@ abstract public class PartitionedQueue<P, K, V> extends AbstractLimitedFlowResou
             }
             return rc;
         }
+    }
+
+    public void setStore(Store<K, V> store) {
+        this.store = store;
     }
 
     abstract protected IQueue<K, V> cratePartition(P partitionKey);
@@ -104,5 +111,17 @@ abstract public class PartitionedQueue<P, K, V> extends AbstractLimitedFlowResou
         P partitionKey = partitionMapper.map(value);
         IQueue<K, V> partition = getPartition(partitionKey);
         return partition.offer(value, source);
+    }
+
+    public void addFromStore(V elem, ISourceController<?> controller) {
+        throw new UnsupportedOperationException();
+
+    }
+
+    public AsciiBuffer getPeristentQueueName() {
+        if (queueName == null) {
+            queueName = new AsciiBuffer(getResourceName());
+        }
+        return queueName;
     }
 }

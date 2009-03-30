@@ -6,8 +6,7 @@ import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.IFlowLimiter;
 import org.apache.activemq.flow.IFlowRelay;
-import org.apache.activemq.flow.IFlowSink;
-import org.apache.activemq.flow.IFlowSource;
+import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 
@@ -35,13 +34,7 @@ public class SingleFlowRelay<E> extends AbstractLimitedFlowSource<E> implements 
         drain.drain(elem, controller);
     }
 
-    public IFlowSink<E> getFlowSink() {
-        // TODO Auto-generated method stub
-        return this;
-    }
-
-    public IFlowSource<E> getFlowSource() {
-        // TODO Auto-generated method stub
+    public IFlowResource getFlowResource() {
         return this;
     }
 

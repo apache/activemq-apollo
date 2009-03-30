@@ -27,6 +27,7 @@ import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.activemq.broker.store.Store;
@@ -97,6 +98,7 @@ public class KahaDBStore implements Store {
     private LockFile lockFile;
     private Location nextRecoveryPosition;
     private Location lastRecoveryPosition;
+    private AtomicLong trackingGen = new AtomicLong(0);
 
     protected final ReentrantReadWriteLock indexLock = new ReentrantReadWriteLock();
     private final HashSet<Integer> journalFilesBeingReplicated = new HashSet<Integer>();
@@ -120,6 +122,13 @@ public class KahaDBStore implements Store {
         if (started.compareAndSet(true, false)) {
             unload();
         }
+    }
+
+    /**
+     * @return a unique sequential store tracking number.
+     */
+    public long allocateStoreTracking() {
+        return trackingGen.incrementAndGet();
     }
 
     private void loadPageFile() throws IOException {
@@ -703,7 +712,6 @@ public class KahaDBStore implements Store {
      * @return
      * @throws IOException
      */
-    @SuppressWarnings("unchecked")
     public TypeCreatable load(Location location) throws IOException {
         ByteSequence data = journal.read(location);
         return load(location, data);
@@ -772,13 +780,16 @@ public class KahaDBStore implements Store {
         DestinationEntity destination = rootEntity.getDestination(command.getQueueName());
         if (destination != null) {
             destination.add(tx, command);
+            rootEntity.addMessageRef(tx, command.getQueueName(), command.getMessageKey());
         }
     }
 
     private void queueRemoveMessage(Transaction tx, QueueRemoveMessage command, Location location) throws IOException {
         DestinationEntity destination = rootEntity.getDestination(command.getQueueName());
         if (destination != null) {
-            destination.remove(tx, command.getQueueKey());
+            if (destination.remove(tx, command.getMessageKey())) {
+                rootEntity.removeMessageRef(tx, command.getQueueName(), command.getMessageKey());
+            }
         }
     }
 
@@ -852,10 +863,6 @@ public class KahaDBStore implements Store {
             return id;
         }
 
-        public Long messageGetKey(AsciiBuffer messageId) {
-            return rootEntity.messageGetKey(tx(), messageId);
-        }
-
         public MessageRecord messageGetRecord(Long key) throws KeyNotFoundException {
             Location location = rootEntity.messageGetLocation(tx(), key);
             if (location == null) {
@@ -911,9 +918,9 @@ public class KahaDBStore implements Store {
             return queueKey;
         }
 
-        public void queueRemoveMessage(AsciiBuffer queueName, Long queueKey) throws KeyNotFoundException {
+        public void queueRemoveMessage(AsciiBuffer queueName, Long messageKey) throws KeyNotFoundException {
             QueueRemoveMessageBean bean = new QueueRemoveMessageBean();
-            bean.setQueueKey(queueKey);
+            bean.setMessageKey(messageKey);
             bean.setQueueName(queueName);
             updates.add(bean);
         }
@@ -1026,11 +1033,11 @@ public class KahaDBStore implements Store {
                     }
                 });
             }
-            
-            // Keep trying waiting for the flush to happen unless the store 
+
+            // Keep trying waiting for the flush to happen unless the store
             // has been stopped.
-            while(started.get()) {
-                if( done.await(100, TimeUnit.MILLISECONDS) ) {
+            while (started.get()) {
+                if (done.await(100, TimeUnit.MILLISECONDS)) {
                     return;
                 }
             }
@@ -1061,7 +1068,7 @@ public class KahaDBStore implements Store {
         return directory;
     }
 
-    public void setDirectory(File directory) {
+    public void setStoreDirectory(File directory) {
         this.directory = directory;
     }
 

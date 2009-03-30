@@ -22,6 +22,7 @@ abstract public class RemoteProducer extends Connection implements Dispatchable,
 
     protected AtomicLong messageIdGenerator;
     protected int priority;
+    protected boolean persistentDelivery;
     protected int priorityMod;
     protected int counter;
     protected int producerId;
@@ -117,6 +118,14 @@ abstract public class RemoteProducer extends Connection implements Dispatchable,
         } else {
             return name+":"+(++counter);
         }
+    }
+    
+    public boolean isPersistentDelivery() {
+        return persistentDelivery;
+    }
+
+    public void setPersistentDelivery(boolean persistentDelivery) {
+        this.persistentDelivery = persistentDelivery;
     }
 	
 	public void setName(String name) {
