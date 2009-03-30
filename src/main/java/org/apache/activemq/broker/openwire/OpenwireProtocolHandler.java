@@ -458,7 +458,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 if (isDurable()) {
                     MessageId id = info.getLastMessageId();
                     while (!pendingMessageIds.isEmpty()) {
-                        MessageId pendingId = pendingMessageIds.peekFirst();
+                        MessageId pendingId = pendingMessageIds.getFirst();
                         MessageDelivery delivery = pendingMessages.remove(pendingId);
                         delivery.delete(durableQueueName);
                         pendingMessageIds.removeFirst();
