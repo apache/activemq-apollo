@@ -45,14 +45,16 @@ public class MessageKeys {
         }
 
         public MessageKeys readPayload(DataInput dataIn) throws IOException {
+            Location location = Marshallers.LOCATION_MARSHALLER.readPayload(dataIn);
             byte data[] = new byte[dataIn.readShort()];
-            return new MessageKeys(new AsciiBuffer(data), Marshallers.LOCATION_MARSHALLER.readPayload(dataIn));
+            dataIn.readFully(data);
+            return new MessageKeys(new AsciiBuffer(data), location);
         }
 
         public void writePayload(MessageKeys object, DataOutput dataOut) throws IOException {
+            Marshallers.LOCATION_MARSHALLER.writePayload(object.location, dataOut);
             dataOut.writeShort(object.messageId.length);
             dataOut.write(object.messageId.data, object.messageId.offset, object.messageId.length);
-            Marshallers.LOCATION_MARSHALLER.writePayload(object.location, dataOut);
         }
     };
 }
