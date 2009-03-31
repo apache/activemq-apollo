@@ -276,7 +276,7 @@ public interface Store extends Service {
      */
     public interface Session {
 
-        public Long messageAdd(MessageRecord message);
+        public void messageAdd(MessageRecord message);
 
         public MessageRecord messageGetRecord(Long key) throws KeyNotFoundException;
 

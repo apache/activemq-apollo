@@ -459,7 +459,7 @@ public class KahaDBStore implements Store {
                 indexLock.writeLock().unlock();
             }
             long end = System.currentTimeMillis();
-            if (end - start > 100) {
+            if (end - start > 1000) {
                 LOG.warn("KahaDB Cleanup took " + (end - start));
             }
         } catch (IOException e) {
@@ -487,7 +487,9 @@ public class KahaDBStore implements Store {
      */
     private void checkpointUpdate(Transaction tx, boolean cleanup) throws IOException {
 
-        LOG.debug("Checkpoint started.");
+        if (LOG.isErrorEnabled()) {
+            LOG.debug("Checkpoint started.");
+        }
 
         rootEntity.setState(OPEN_STATE);
         rootEntity.store(tx);
@@ -575,12 +577,16 @@ public class KahaDBStore implements Store {
             // }
 
             if (!gcCandidateSet.isEmpty()) {
-                LOG.debug("Cleanup removing the data files: " + gcCandidateSet);
+                if (LOG.isErrorEnabled()) {
+                    LOG.debug("Cleanup removing the data files: " + gcCandidateSet);
+                }
                 journal.removeDataFiles(gcCandidateSet);
             }
         }
 
-        LOG.debug("Checkpoint done.");
+        if (LOG.isErrorEnabled()) {
+            LOG.debug("Checkpoint done.");
+        }
     }
 
     public HashSet<Integer> getJournalFilesBeingReplicated() {
@@ -632,7 +638,7 @@ public class KahaDBStore implements Store {
         }
 
         long end = System.currentTimeMillis();
-        if (end - start > 100) {
+        if (end - start > 1000) {
             LOG.warn("KahaDB long enqueue time: Journal Add Took: " + (start2 - start) + " ms, Index Update took " + (end - start2) + " ms");
         }
         return location;
@@ -700,7 +706,7 @@ public class KahaDBStore implements Store {
         }
 
         long end = System.currentTimeMillis();
-        if (end - start > 100) {
+        if (end - start > 1000) {
             LOG.warn("KahaDB long enqueue time: Journal Add Took: " + (start2 - start) + " ms, Index Update took " + (end - start2) + " ms");
         }
     }
@@ -845,10 +851,12 @@ public class KahaDBStore implements Store {
         // /////////////////////////////////////////////////////////////
         // Message related methods.
         // /////////////////////////////////////////////////////////////
-        public Long messageAdd(MessageRecord message) {
-            Long id = rootEntity.nextMessageKey();
+        public void messageAdd(MessageRecord message) {
+            if (message.getKey() < 0) {
+                throw new IllegalArgumentException("Key not set");
+            }
             MessageAddBean bean = new MessageAddBean();
-            bean.setMessageKey(id);
+            bean.setMessageKey(message.getKey());
             bean.setMessageId(message.getMessageId());
             bean.setEncoding(message.getEncoding());
             Buffer buffer = message.getBuffer();
@@ -860,7 +868,6 @@ public class KahaDBStore implements Store {
                 bean.setStreamKey(streamKey);
             }
             updates.add(bean);
-            return id;
         }
 
         public MessageRecord messageGetRecord(Long key) throws KeyNotFoundException {

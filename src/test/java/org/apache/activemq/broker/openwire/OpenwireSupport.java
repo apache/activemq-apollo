@@ -1,5 +1,7 @@
 package org.apache.activemq.broker.openwire;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import javax.jms.MessageNotWriteableException;
 
 import org.apache.activemq.command.ActiveMQDestination;
@@ -17,7 +19,7 @@ import org.apache.activemq.command.SessionInfo;
 public class OpenwireSupport {
     
     static private long idGenerator;
-    static private long msgIdGenerator;
+    static private AtomicLong msgIdGenerator = new AtomicLong(0);
 
     public static ConsumerInfo createConsumerInfo(SessionInfo sessionInfo, ActiveMQDestination destination, String subscriptionName) throws Exception {
         ConsumerInfo info = new ConsumerInfo(sessionInfo, ++idGenerator);
@@ -63,7 +65,7 @@ public class OpenwireSupport {
         ActiveMQTextMessage message = new ActiveMQTextMessage();
         message.setJMSPriority(priority);
         message.setProducerId(producerInfo.getProducerId());
-        message.setMessageId(new MessageId(producerInfo, ++msgIdGenerator));
+        message.setMessageId(new MessageId(producerInfo, msgIdGenerator.incrementAndGet()));
         message.setDestination(destination);
         message.setPersistent(false);
         if( payload!=null ) {

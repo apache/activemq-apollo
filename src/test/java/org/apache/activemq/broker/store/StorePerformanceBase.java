@@ -123,9 +123,9 @@ public abstract class StorePerformanceBase extends TestCase {
                     store.execute(new VoidCallback<Exception>() {
                         @Override
                         public void run(Session session) throws Exception {
-                            Long messageKey = session.messageAdd(messageRecord);
+                            session.messageAdd(messageRecord);
                             QueueRecord queueRecord = new Store.QueueRecord();
-                            queueRecord.setMessageKey(messageKey);
+                            queueRecord.setMessageKey(messageRecord.getKey());
                             session.queueAddMessage(queueName, queueRecord);
                         }
                     }, onFlush);

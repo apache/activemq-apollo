@@ -177,7 +177,7 @@ public class MemoryStore implements Store {
         // //////////////////////////////////////////////////////////////////////////////
         // Message related methods.
         // ///////////////////////////////////////////////////////////////////////////////
-        public Long messageAdd(MessageRecord record) {
+        public void messageAdd(MessageRecord record) {
             long key = record.getKey();
             if (key < 0) {
                 throw new IllegalArgumentException("Key not set");
@@ -187,9 +187,6 @@ public class MemoryStore implements Store {
             if (old != null) {
                 messages.put(key, old);
             }
-
-            // messagesKeys.put(record.getMessageId(), key);
-            return key;
         }
 
         public void messageRemove(Long key) {

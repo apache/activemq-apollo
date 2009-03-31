@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -47,6 +46,8 @@ import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.kahadb.util.LinkedNode;
+import org.apache.kahadb.util.LinkedNodeList;
 
 public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.Operation> {
 
@@ -58,11 +59,12 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
     private final IDispatcher dispatcher;
     private Thread flushThread;
-    private final ConcurrentLinkedQueue<OperationBase> opQueue;
     private AtomicBoolean running = new AtomicBoolean(false);
     private DatabaseListener listener;
 
     private HashMap<String, ProtocolHandler> protocolHandlers = new HashMap<String, ProtocolHandler>();
+
+    private final LinkedNodeList<OperationBase> opQueue;
     private AtomicBoolean notify = new AtomicBoolean(false);
     private Semaphore opsReady = new Semaphore(0);
     private long opSequenceNumber;
@@ -72,7 +74,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     // num scheduled for delay
     private long delayedFlushPointer = 0; // The last delayable sequence num
     // requested.
-    private final long FLUSH_DELAY_MS = 5;
+    private final long FLUSH_DELAY_MS = 100;
     private final Runnable flushDelayCallback;
 
     public interface DatabaseListener {
@@ -103,7 +105,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     public BrokerDatabase(Store store, IDispatcher dispatcher) {
         this.store = store;
         this.dispatcher = dispatcher;
-        this.opQueue = new ConcurrentLinkedQueue<OperationBase>();
+        this.opQueue = new LinkedNodeList<OperationBase>();
         storeLimiter = new SizeLimiter<OperationBase>(5000, 0) {
 
             @Override
@@ -204,26 +206,27 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         return op;
     }
 
-    private synchronized final void addToOpQueue(OperationBase op) {
+    private final void addToOpQueue(OperationBase op) {
         if (!running.get()) {
             throw new IllegalStateException("BrokerDatabase not started");
         }
-        op.opSequenceNumber = opSequenceNumber++;
-        opQueue.add(op);
-        if (op.flushRequested) {
-            if (op.isDelayable() && FLUSH_DELAY_MS > 0) {
-                scheduleDelayedFlush(op.opSequenceNumber);
-            } else {
-                updateFlushPointer(op.opSequenceNumber);
+
+        synchronized (opQueue) {
+            op.opSequenceNumber = opSequenceNumber++;
+            opQueue.addLast(op);
+            if (op.flushRequested) {
+                if (op.isDelayable() && FLUSH_DELAY_MS > 0) {
+                    scheduleDelayedFlush(op.opSequenceNumber);
+                } else {
+                    updateFlushPointer(op.opSequenceNumber);
+                }
             }
-        }
-        if (notify.get()) {
-            opsReady.release();
         }
     }
 
     private void updateFlushPointer(long seqNumber) {
         if (seqNumber > flushPointer) {
+            flushPointer = seqNumber;
             if (notify.get()) {
                 opsReady.release();
             }
@@ -246,27 +249,40 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
     }
 
-    private synchronized final void flushDelayCallback() {
-        if (flushPointer < requestedDelayedFlushPointer) {
-            updateFlushPointer(requestedDelayedFlushPointer);
-            requestedDelayedFlushPointer = -1;
-            // Schedule next delay if needed:
-            scheduleDelayedFlush(delayedFlushPointer);
+    private final void flushDelayCallback() {
+        synchronized (opQueue) {
+            if (flushPointer < requestedDelayedFlushPointer) {
+                updateFlushPointer(requestedDelayedFlushPointer);
+                requestedDelayedFlushPointer = -1;
+                // Schedule next delay if needed:
+                if (delayedFlushPointer > flushPointer) {
+                    scheduleDelayedFlush(delayedFlushPointer);
+                } else {
+                    delayedFlushPointer = -1;
+                }
+            }
         }
     }
 
     private final OperationBase getNextOp(boolean wait) {
         if (!wait) {
-            return opQueue.poll();
+            synchronized (opQueue) {
+                OperationBase op = opQueue.getHead();
+                if (op != null && op.opSequenceNumber <= flushPointer) {
+                    op.unlink();
+                    return op;
+                }
+            }
+            return null;
         } else {
-            OperationBase op = opQueue.poll();
+            OperationBase op = getNextOp(false);
             if (op == null) {
                 notify.set(true);
-                op = opQueue.poll();
+                op = getNextOp(false);
                 try {
                     while (running.get() && op == null) {
                         opsReady.acquireUninterruptibly();
-                        op = opQueue.poll();
+                        op = getNextOp(false);
                     }
                 } finally {
                     notify.set(false);
@@ -289,17 +305,44 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
             if (firstOp == null) {
                 continue;
             }
-            counter.count = 1;
+            counter.count = 0;
 
             // The first operation we get, triggers a store transaction.
             if (firstOp != null) {
                 final LinkedList<Operation> processedQueue = new LinkedList<Operation>();
                 try {
 
+                    Operation op = firstOp;
                     // TODO the recursion here leads to a rather large stack,
                     // refactor.
+                    while (op != null) {
+                        final Operation toExec = op;
+                        counter.count++;
+                        //System.out.println("Executing " + op);
+                        store.execute(new Store.VoidCallback<Exception>() {
+                            @Override
+                            public void run(Session session) throws Exception {
 
-                    executeOps(firstOp, processedQueue, counter);
+                                // Try to execute the operation against the
+                                // session...
+                                try {
+                                    if (toExec.execute(session)) {
+                                        processedQueue.add(toExec);
+                                    } else {
+                                        counter.count--;
+                                    }
+                                } catch (CancellationException ignore) {
+                                    //System.out.println("Cancelled" + toExec);
+                                }
+                            }
+                        }, null);
+                        if (counter.count < 1000) {
+                            op = getNextOp(false);
+                        } else {
+                            op = null;
+                        }
+                    }
+                    // executeOps(firstOp, processedQueue, counter);
 
                     // If we procecessed some ops, flush and post process:
                     if (!processedQueue.isEmpty()) {
@@ -337,35 +380,24 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         }
     }
 
-    private final void executeOps(final OperationBase op, final LinkedList<Operation> processedQueue, final OpCounter counter) throws FatalStoreException, Exception {
-        store.execute(new Store.VoidCallback<Exception>() {
-            @Override
-            public void run(Session session) throws Exception {
-
-                // Try to execute the operation against the
-                // session...
-                try {
-                    if (op.execute(session)) {
-                        processedQueue.add(op);
-                    } else {
-                        counter.count--;
-                    }
-                } catch (CancellationException ignore) {
-                    System.out.println("Cancelled" + op);
-                }
-
-                // See if we can batch up some additional operations
-                // in this transaction.
-                if (counter.count < 100) {
-                    OperationBase next = getNextOp(false);
-                    if (next != null) {
-                        counter.count++;
-                        executeOps(next, processedQueue, counter);
-                    }
-                }
-            }
-        }, null);
-    }
+    /*
+     * private final void executeOps(final OperationBase op, final
+     * LinkedList<Operation> processedQueue, final OpCounter counter) throws
+     * FatalStoreException, Exception { store.execute(new
+     * Store.VoidCallback<Exception>() {
+     * 
+     * @Override public void run(Session session) throws Exception {
+     * 
+     * // Try to execute the operation against the // session... try { if
+     * (op.execute(session)) { processedQueue.add(op); } else { counter.count--;
+     * } } catch (CancellationException ignore) { System.out.println("Cancelled"
+     * + op); }
+     * 
+     * // See if we can batch up some additional operations // in this
+     * transaction. if (counter.count < 100) { OperationBase next =
+     * getNextOp(false); if (next != null) { counter.count++; executeOps(next,
+     * processedQueue, counter); } } } }, null); }
+     */
 
     /**
      * Adds a queue to the database
@@ -546,7 +578,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      * This is a convenience base class that can be used to implement
      * Operations. It handles operation cancellation for you.
      */
-    private abstract class OperationBase implements Operation {
+    private abstract class OperationBase extends LinkedNode<OperationBase> implements Operation {
         public boolean flushRequested = false;
         public long opSequenceNumber = -1;
 
@@ -557,9 +589,9 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         public boolean cancel() {
             if (executePending.compareAndSet(true, false)) {
                 cancelled.set(true);
-                //System.out.println("Cancelled: " + this);
+                // System.out.println("Cancelled: " + this);
                 synchronized (opQueue) {
-                    opQueue.remove(this);
+                    unlink();
                     storeController.elementDispatched(this);
                 }
                 return true;
@@ -622,6 +654,10 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         public void onRollback(Throwable error) {
             error.printStackTrace();
         }
+
+        public String toString() {
+            return "DBOp seq: " + opSequenceNumber + "P/C/E: " + executePending.get() + "/" + cancelled() + "/" + executed();
+        }
     }
 
     private class QueueAddOperation extends OperationBase {
@@ -676,18 +712,18 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         public void onCommit() {
 
         }
-        
+
         public String toString() {
             return "QueueDelete: " + queue.toString();
         }
     }
 
     private class DeleteMessageOperation extends OperationBase {
-        private final MessageDelivery delivery;
+        private final long storeTracking;
         private AsciiBuffer queue;
 
         public DeleteMessageOperation(MessageDelivery delivery, AsciiBuffer queue) {
-            this.delivery = delivery;
+            this.storeTracking = delivery.getStoreTracking();
             this.queue = queue;
         }
 
@@ -700,7 +736,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         @Override
         protected void doExcecute(Session session) {
             try {
-                session.queueRemoveMessage(queue, delivery.getStoreTracking());
+                session.queueRemoveMessage(queue, storeTracking);
             } catch (KeyNotFoundException e) {
                 // TODO Probably doesn't always mean an error, it is possible
                 // that
@@ -714,9 +750,9 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         public void onCommit() {
 
         }
-        
+
         public String toString() {
-            return "MessageDelete: " + queue.toString() + delivery.getStoreTracking();
+            return "MessageDelete: " + queue.toString() + " tracking: " + storeTracking;
         }
     }
 
@@ -770,7 +806,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         public void onCommit() {
             listener.messagesRestored(msgs);
         }
-        
+
         public String toString() {
             return "MessageRestore: " + queue.toString() + " first: " + firstKey + " max: " + maxRecords;
         }
@@ -782,7 +818,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
         private final MessageDelivery delivery;
         private final AsciiBuffer target;
-        private final MessageRecord record;
+        private MessageRecord record;
 
         private final boolean delayable;
 
@@ -790,8 +826,10 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
             this.brokerDelivery = delivery;
             this.delivery = delivery;
             target = null;
-            this.record = delivery.createMessageRecord();
             this.delayable = delivery.isFlushDelayable();
+            if (!delayable) {
+                this.record = delivery.createMessageRecord();
+            }
         }
 
         public AddMessageOperation(MessageDelivery delivery, AsciiBuffer target) throws IOException {
@@ -805,12 +843,12 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         public boolean isDelayable() {
             return delayable;
         }
-        
+
         @Override
         public int getLimiterSize() {
             return delivery.getFlowLimiterSize();
         }
-        
+
         @Override
         protected void doExcecute(Session session) {
 
@@ -819,6 +857,13 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
                 Collection<AsciiBuffer> targets = brokerDelivery.getPersistentQueues();
 
                 if (!targets.isEmpty()) {
+                    if (record == null) {
+                        try {
+                            record = delivery.createMessageRecord();
+                        } catch (IOException e) {
+                            throw new FatalStoreException("Error marshalling message", e);
+                        }
+                    }
                     record.setKey(delivery.getStoreTracking());
                     session.messageAdd(record);
 
@@ -840,11 +885,11 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
                 }
             } else {
 
-                Long key = session.messageAdd(record);
+                session.messageAdd(record);
                 try {
                     QueueRecord queueRecord = new QueueRecord();
                     queueRecord.setAttachment(null);
-                    queueRecord.setMessageKey(key);
+                    queueRecord.setMessageKey(record.getKey());
                     session.queueAddMessage(target, queueRecord);
                 } catch (KeyNotFoundException e) {
                     e.printStackTrace();
@@ -858,7 +903,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         }
 
         public String toString() {
-            return "AddOperation " + delivery.getStoreTracking() + " seq: " + opSequenceNumber + "P/C/E" + super.executePending.get() + "/" + cancelled() + "/" + executed();
+            return "AddOperation " + delivery.getStoreTracking() + super.toString();
         }
     }
 

@@ -444,22 +444,33 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                     // Add to the pending list if persistent and we are durable:
                     if (isDurable() && message.isPersistent()) {
                         synchronized (queue) {
-                            pendingMessages.put(msg.getMessageId(), message);
+                            Object old = pendingMessages.put(msg.getMessageId(), message);
+                            if(old != null)
+                            {
+                                new Exception("Duplicate message id: " + msg.getMessageId()).printStackTrace();
+                            }
                             pendingMessageIds.add(msg.getMessageId());
+                            connection.write(md);
                         }
                     }
-                    connection.write(md);
+                    else
+                    {
+                        connection.write(md);
+                    }
                 };
             });
         }
-
         public void ack(MessageAck info) {
+            //TODO: The pending message queue could probably be optimized to avoid having
+            //to create a new list here. 
+            LinkedList<MessageDelivery> acked = new LinkedList<MessageDelivery>();            
             synchronized (queue) {
                 if (isDurable()) {
                     MessageId id = info.getLastMessageId();
                     while (!pendingMessageIds.isEmpty()) {
                         MessageId pendingId = pendingMessageIds.getFirst();
                         MessageDelivery delivery = pendingMessages.remove(pendingId);
+                        acked.add(delivery);
                         delivery.delete(durableQueueName);
                         pendingMessageIds.removeFirst();
                         if (pendingId.equals(id)) {
@@ -469,6 +480,13 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
                 }
                 limiter.onProtocolCredit(info.getMessageCount());
+            }
+            
+            //Delete outside of synchronization on queue to avoid contention with enqueueing
+            //threads. 
+            for(MessageDelivery delivery : acked)
+            {
+                delivery.delete(durableQueueName);
             }
         }
 

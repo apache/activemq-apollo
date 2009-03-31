@@ -56,17 +56,18 @@ public abstract class StoreTestBase extends TestCase {
         expected.setBuffer(new Buffer("buffer"));
         expected.setEncoding(new AsciiBuffer("encoding"));
         expected.setMessageId(new AsciiBuffer("1000"));
-
-        final Long messageKey = store.execute(new Callback<Long, Exception>() {
-            public Long execute(Session session) throws Exception {
-                return session.messageAdd(expected);
+        expected.setKey(store.allocateStoreTracking());
+        
+        store.execute(new VoidCallback<Exception>() {
+            public void run(Session session) throws Exception {
+                session.messageAdd(expected);
             }
         }, null);
 
         store.execute(new VoidCallback<Exception>() {
             @Override
             public void run(Session session) throws Exception {
-                MessageRecord actual = session.messageGetRecord(messageKey);
+                MessageRecord actual = session.messageGetRecord(expected.getKey());
                 assertEquals(expected, actual);
             }
         }, null);
