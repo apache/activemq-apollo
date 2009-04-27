@@ -49,6 +49,8 @@ import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.protobuf.InvalidProtocolBufferException;
 import org.apache.activemq.protobuf.MessageBuffer;
 import org.apache.activemq.protobuf.PBMessage;
+import org.apache.activemq.queue.QueueStore;
+import org.apache.activemq.queue.QueueStore.QueueDescriptor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.kahadb.journal.Journal;
@@ -102,6 +104,7 @@ public class KahaDBStore implements Store {
 
     protected final ReentrantReadWriteLock indexLock = new ReentrantReadWriteLock();
     private final HashSet<Integer> journalFilesBeingReplicated = new HashSet<Integer>();
+    private boolean recovering;
 
     private static class UoWOperation {
         public TypeCreatable bean;
@@ -114,7 +117,14 @@ public class KahaDBStore implements Store {
     // /////////////////////////////////////////////////////////////////
     public void start() throws Exception {
         if (started.compareAndSet(false, true)) {
-            load();
+            try
+            {
+                load();
+            }
+            catch (Exception e)
+            {
+                LOG.error("Error loading store", e);
+            }
         }
     }
 
@@ -216,6 +226,7 @@ public class KahaDBStore implements Store {
             };
             checkpointThread.start();
             recover();
+            trackingGen.set(rootEntity.getLastMessageTracking() + 1);
         }
     }
 
@@ -267,6 +278,11 @@ public class KahaDBStore implements Store {
                 rootEntity.setState(CLOSED_STATE);
                 pageFile.tx().execute(new Transaction.Closure<IOException>() {
                     public void execute(Transaction tx) throws IOException {
+                        // Set the last update to the next update (otherwise
+                        // we'll replay the last update
+                        // since location marshaller doesn't marshal the
+                        // location's size:
+                        rootEntity.setLastUpdate(journal.getNextLocation(rootEntity.getLastUpdate()));
                         rootEntity.store(tx);
                     }
                 });
@@ -294,7 +310,7 @@ public class KahaDBStore implements Store {
         indexLock.writeLock().lock();
         try {
             long start = System.currentTimeMillis();
-
+            recovering = true;
             ArrayList<UoWOperation> uow = null;
             Location recoveryPosition = getRecoveryPosition();
             if (recoveryPosition != null) {
@@ -352,6 +368,7 @@ public class KahaDBStore implements Store {
                 }
             });
         } finally {
+            recovering = false;
             indexLock.writeLock().unlock();
         }
     }
@@ -359,6 +376,7 @@ public class KahaDBStore implements Store {
     public void incrementalRecover() throws IOException {
         indexLock.writeLock().lock();
         try {
+            recovering = true;
             if (nextRecoveryPosition == null) {
                 if (lastRecoveryPosition == null) {
                     nextRecoveryPosition = getRecoveryPosition();
@@ -381,6 +399,7 @@ public class KahaDBStore implements Store {
                 nextRecoveryPosition = journal.getNextLocation(lastRecoveryPosition);
             }
         } finally {
+            recovering = false;
             indexLock.writeLock().unlock();
         }
     }
@@ -492,6 +511,10 @@ public class KahaDBStore implements Store {
         }
 
         rootEntity.setState(OPEN_STATE);
+        // Set the last update to the next update (otherwise we'll replay the
+        // last update
+        // since location marshaller doesn't marshal the location's size:
+        rootEntity.setLastUpdate(journal.getNextLocation(rootEntity.getLastUpdate()));
         rootEntity.store(tx);
         pageFile.flush();
 
@@ -633,6 +656,7 @@ public class KahaDBStore implements Store {
                 }
             });
             rootEntity.setLastUpdate(location);
+
         } finally {
             indexLock.writeLock().unlock();
         }
@@ -736,6 +760,8 @@ public class KahaDBStore implements Store {
 
     @SuppressWarnings("unchecked")
     public void updateIndex(Transaction tx, Type type, MessageBuffer command, Location location) throws IOException {
+        // System.out.println("Updating index" + type.toString() + " loc: " +
+        // location);
         switch (type) {
         case MESSAGE_ADD:
             messageAdd(tx, (MessageAdd) command, location);
@@ -775,23 +801,44 @@ public class KahaDBStore implements Store {
     }
 
     private void queueAdd(Transaction tx, QueueAdd command, Location location) throws IOException {
-        rootEntity.queueAdd(tx, command.getQueueName());
+        QueueStore.QueueDescriptor qd = new QueueStore.QueueDescriptor();
+        qd.setQueueName(command.getQueueName());
+        qd.setApplicationType((short) command.getApplicationType());
+        qd.setQueueType((short) command.getQueueType());
+        if (command.hasParentName()) {
+            qd.setParent(command.getParentName());
+            qd.setPartitionId(command.getPartitionId());
+        }
+
+        rootEntity.queueAdd(tx, qd);
     }
 
     private void queueRemove(Transaction tx, QueueRemove command, Location location) throws IOException {
-        rootEntity.queueRemove(tx, command.getQueueName());
+        QueueStore.QueueDescriptor qd = new QueueStore.QueueDescriptor();
+        qd.setQueueName(command.getQueueName());
+        rootEntity.queueRemove(tx, qd);
     }
 
     private void queueAddMessage(Transaction tx, QueueAddMessage command, Location location) throws IOException {
-        DestinationEntity destination = rootEntity.getDestination(command.getQueueName());
+        QueueStore.QueueDescriptor qd = new QueueStore.QueueDescriptor();
+        qd.setQueueName(command.getQueueName());
+        DestinationEntity destination = rootEntity.getDestination(qd);
         if (destination != null) {
-            destination.add(tx, command);
+            try {
+                destination.add(tx, command);
+            } catch (DuplicateKeyException e) {
+                if (!recovering) {
+                    throw new FatalStoreException(e);
+                }
+            }
             rootEntity.addMessageRef(tx, command.getQueueName(), command.getMessageKey());
         }
     }
 
     private void queueRemoveMessage(Transaction tx, QueueRemoveMessage command, Location location) throws IOException {
-        DestinationEntity destination = rootEntity.getDestination(command.getQueueName());
+        QueueStore.QueueDescriptor qd = new QueueStore.QueueDescriptor();
+        qd.setQueueName(command.getQueueName());
+        DestinationEntity destination = rootEntity.getDestination(qd);
         if (destination != null) {
             if (destination.remove(tx, command.getMessageKey())) {
                 rootEntity.removeMessageRef(tx, command.getQueueName(), command.getMessageKey());
@@ -851,6 +898,7 @@ public class KahaDBStore implements Store {
         // /////////////////////////////////////////////////////////////
         // Message related methods.
         // /////////////////////////////////////////////////////////////
+
         public void messageAdd(MessageRecord message) {
             if (message.getKey() < 0) {
                 throw new IllegalArgumentException("Key not set");
@@ -859,6 +907,7 @@ public class KahaDBStore implements Store {
             bean.setMessageKey(message.getKey());
             bean.setMessageId(message.getMessageId());
             bean.setEncoding(message.getEncoding());
+            bean.setMessageSize(message.getSize());
             Buffer buffer = message.getBuffer();
             if (buffer != null) {
                 bean.setBuffer(buffer);
@@ -881,6 +930,7 @@ public class KahaDBStore implements Store {
                 rc.setKey(bean.getMessageKey());
                 rc.setMessageId(bean.getMessageId());
                 rc.setEncoding(bean.getEncoding());
+                rc.setSize(bean.getMessageSize());
                 if (bean.hasBuffer()) {
                     rc.setBuffer(bean.getBuffer());
                 }
@@ -896,49 +946,65 @@ public class KahaDBStore implements Store {
         // /////////////////////////////////////////////////////////////
         // Queue related methods.
         // /////////////////////////////////////////////////////////////
-        public void queueAdd(AsciiBuffer queueName) {
-            updates.add(new QueueAddBean().setQueueName(queueName));
-        }
-
-        public void queueRemove(AsciiBuffer queueName) {
-            updates.add(new QueueRemoveBean().setQueueName(queueName));
-        }
-
-        public Iterator<AsciiBuffer> queueList(AsciiBuffer firstQueueName, int max) {
-            return rootEntity.queueList(tx(), firstQueueName, max);
-        }
-
-        public Long queueAddMessage(AsciiBuffer queueName, QueueRecord record) throws KeyNotFoundException {
-            DestinationEntity destination = rootEntity.getDestination(queueName);
-            if (destination == null) {
-                throw new KeyNotFoundException("queue key: " + queueName);
+        public void queueAdd(QueueStore.QueueDescriptor descriptor) {
+            QueueAddBean update = new QueueAddBean();
+            update.setQueueName(descriptor.getQueueName());
+            update.setQueueType(descriptor.getQueueType());
+            update.setApplicationType(descriptor.getApplicationType());
+            AsciiBuffer parent = descriptor.getParent();
+            if (parent != null) {
+                update.setParentName(parent);
+                update.setPartitionId(descriptor.getPartitionKey());
             }
-            Long queueKey = destination.nextQueueKey();
+            updates.add(update);
+        }
+
+        public void queueRemove(QueueStore.QueueDescriptor descriptor) {
+            updates.add(new QueueRemoveBean().setQueueName(descriptor.getQueueName()));
+        }
+
+        public Iterator<QueueQueryResult> queueListByType(short type, QueueStore.QueueDescriptor firstQueue, int max) {
+            try {
+                return rootEntity.queueList(tx(), type, firstQueue, max);
+            } catch (IOException e) {
+                throw new FatalStoreException(e);
+            }
+        }
+
+        public Iterator<QueueQueryResult> queueList(QueueStore.QueueDescriptor firstQueue, int max) {
+            try {
+                return rootEntity.queueList(tx(), (short) -1, firstQueue, max);
+            } catch (IOException e) {
+                throw new FatalStoreException(e);
+            }
+        }
+
+        public void queueAddMessage(QueueStore.QueueDescriptor queue, QueueRecord record) throws KeyNotFoundException {
             QueueAddMessageBean bean = new QueueAddMessageBean();
-            bean.setQueueName(queueName);
-            bean.setQueueKey(queueKey);
+            bean.setQueueName(queue.getQueueName());
+            bean.setQueueKey(record.getQueueKey());
             bean.setMessageKey(record.getMessageKey());
+            bean.setMessageSize(record.getSize());
             if (record.getAttachment() != null) {
                 bean.setAttachment(record.getAttachment());
             }
             updates.add(bean);
-            return queueKey;
         }
 
-        public void queueRemoveMessage(AsciiBuffer queueName, Long messageKey) throws KeyNotFoundException {
+        public void queueRemoveMessage(QueueStore.QueueDescriptor queue, Long messageKey) throws KeyNotFoundException {
             QueueRemoveMessageBean bean = new QueueRemoveMessageBean();
             bean.setMessageKey(messageKey);
-            bean.setQueueName(queueName);
+            bean.setQueueName(queue.getQueueName());
             updates.add(bean);
         }
 
-        public Iterator<QueueRecord> queueListMessagesQueue(AsciiBuffer queueName, Long firstQueueKey, int max) throws KeyNotFoundException {
-            DestinationEntity destination = rootEntity.getDestination(queueName);
+        public Iterator<QueueRecord> queueListMessagesQueue(QueueStore.QueueDescriptor queue, Long firstQueueKey, Long maxQueueKey, int max) throws KeyNotFoundException {
+            DestinationEntity destination = rootEntity.getDestination(queue);
             if (destination == null) {
-                throw new KeyNotFoundException("queue key: " + queueName);
+                throw new KeyNotFoundException("queue key: " + queue);
             }
             try {
-                return destination.listMessages(tx(), firstQueueKey, max);
+                return destination.listMessages(tx(), firstQueueKey, maxQueueKey, max);
             } catch (IOException e) {
                 throw new FatalStoreException(e);
             }
@@ -1012,7 +1078,7 @@ public class KahaDBStore implements Store {
             return null;
         }
 
-        public void transactionRemoveMessage(Buffer txid, AsciiBuffer queueName, Long messageKey) throws KeyNotFoundException {
+        public void transactionRemoveMessage(Buffer txid, QueueStore.QueueDescriptor queueName, Long messageKey) throws KeyNotFoundException {
         }
 
         public void transactionRollback(Buffer txid) throws KeyNotFoundException {

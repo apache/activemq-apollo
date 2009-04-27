@@ -17,76 +17,121 @@
 package org.apache.activemq.broker;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Set;
+import java.util.Map.Entry;
 
 import org.apache.activemq.broker.store.BrokerDatabase;
 import org.apache.activemq.broker.store.BrokerDatabase.OperationContext;
+import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.queue.QueueStore;
+import org.apache.activemq.queue.QueueStore.QueueDescriptor;
 
 public abstract class BrokerMessageDelivery implements MessageDelivery {
 
-    HashSet<AsciiBuffer> persistentTargets;
-    // Indicates whether or not the message has been saved to the
-    // database, if not then in memory updates can be done.
-    boolean saved = false;
+    // True while the message is being dispatched to the delivery targets:
+    boolean dispatching = false;
+
+    // A non null pending save indicates that the message is the
+    // saver queue and that the message
+    OperationContext pendingSave;
+
+    // List of persistent targets for which the message should be saved
+    // when dispatch is complete:
+    HashMap<QueueStore.QueueDescriptor, Long> persistentTargets;
+
     long storeTracking = -1;
     BrokerDatabase store;
     boolean fromStore = false;
     boolean enableFlushDelay = true;
-    OperationContext saveContext;
-    boolean cancelled = false;
+    private int limiterSize = -1;
 
-    public void setFromStore(boolean val) {
+    public void setFromDatabase(BrokerDatabase database, MessageRecord mRecord) {
         fromStore = true;
+        store = database;
+        storeTracking = mRecord.getKey();
+        limiterSize = mRecord.getSize();
     }
+
+    public final int getFlowLimiterSize() {
+        if (limiterSize == -1) {
+            limiterSize = getMemorySize();
+        }
+        return limiterSize;
+    }
+
+    /**
+     * Subclass must implement this to return their current memory size
+     * estimate.
+     * 
+     * @return The memory size of the message.
+     */
+    public abstract int getMemorySize();
 
     public final boolean isFromStore() {
         return fromStore;
     }
 
-    public final void persist(AsciiBuffer queue, boolean delayable) throws IOException {
-
+    public final void persist(QueueStore.QueueDescriptor queue, ISourceController<?> controller, long queueSequence, boolean delayable) throws IOException {
         synchronized (this) {
-            if (!saved) {
+            // Can flush of this message to the store be delayed?
+            if (enableFlushDelay && !delayable) {
+                enableFlushDelay = false;
+            }
+            // If this message is being dispatched then add the queue to the
+            // list of queues for which to save the message when dispatch is
+            // finished:
+            if (dispatching) {
                 if (persistentTargets == null) {
-                    persistentTargets = new HashSet<AsciiBuffer>();
+                    persistentTargets = new HashMap<QueueStore.QueueDescriptor, Long>();
                 }
-                persistentTargets.add(queue);
+                persistentTargets.put(queue, queueSequence);
                 return;
             }
-            if (!delayable) {
-                enableFlushDelay = false;
+            // Otherwise, if it is still in the saver queue, we can add this
+            // queue to the queue list:
+            else if (pendingSave != null) {
+                persistentTargets.put(queue, queueSequence);
+                if (!delayable) {
+                    pendingSave.requestFlush();
+                }
+                return;
             }
         }
 
-        // TODO probably need to pass in the saving queue's source controller
-        // here and treat it like it is dispatching to the saver queue.
-        store.saveMessage(this, queue, null);
+        store.saveMessage(this, queue, queueSequence, controller);
     }
 
-    public final void delete(AsciiBuffer queue) {
+    public final void acknowledge(QueueStore.QueueDescriptor queue) {
         boolean firePersistListener = false;
+        boolean deleted = false;
         synchronized (this) {
-            if (!saved) {
+            // If the message hasn't been saved to the database
+            // then we don't need to issue a delete:
+            if (dispatching || pendingSave != null) {
+
+                // Remove the queue:
                 persistentTargets.remove(queue);
-                if (persistentTargets.isEmpty()) {
-                    if (saveContext != null) {
+                deleted = true;
 
-                        if (!cancelled) {
-                            if (saveContext.cancel()) {
-                                cancelled = true;
-                                firePersistListener = true;
-                            }
-
-                            saved = true;
+                // We get a save context when we place the message in the
+                // database queue. If it has been added to the queue,
+                // and we've removed the last queue, see if we can cancel
+                // the save:
+                if (pendingSave != null && persistentTargets.isEmpty()) {
+                    if (pendingSave.cancel()) {
+                        pendingSave = null;
+                        if (isPersistent()) {
+                            firePersistListener = true;
                         }
                     }
                 }
-            } else {
-                store.deleteMessage(this, queue);
             }
+        }
+
+        if (!deleted) {
+            store.deleteMessage(this, queue);
         }
 
         if (firePersistListener) {
@@ -95,51 +140,50 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
 
     }
 
-    public void setStoreTracking(long storeTracking) {
-        this.storeTracking = storeTracking;
+    public void beginDispatch(BrokerDatabase database) {
+        this.store = database;
+        dispatching = true;
+        if (storeTracking == -1) {
+            storeTracking = database.allocateStoreTracking();
+        }
     }
 
     public long getStoreTracking() {
         return storeTracking;
     }
 
-    public Collection<AsciiBuffer> getPersistentQueues() {
-        return persistentTargets;
+    public Set<Entry<QueueDescriptor, Long>> getPersistentQueues() {
+        return persistentTargets.entrySet();
     }
 
     public void beginStore() {
         synchronized (this) {
-            saved = true;
+            pendingSave = null;
         }
     }
 
-    public void persistIfNeeded(ISourceController<?> controller) throws IOException {
+    public void finishDispatch(ISourceController<?> controller) throws IOException {
         boolean firePersistListener = false;
         synchronized (this) {
-            boolean saveNeeded = true;
-            if (persistentTargets == null || persistentTargets.isEmpty()) {
-                saveNeeded = false;
-                saved = true;
-            }
-
             // If any of the targets requested save then save the message
             // Note that this could be the case even if the message isn't
             // persistent if a target requested that the message be spooled
             // for some other reason such as queue memory overflow.
-            if (saveNeeded) {
-                saveContext = store.persistReceivedMessage(this, controller);
+            if (persistentTargets != null && !persistentTargets.isEmpty()) {
+                pendingSave = store.persistReceivedMessage(this, controller);
             }
+
             // If none of the targets required persistence, then fire the
             // persist listener:
-            else if (isResponseRequired() && isPersistent()) {
+            if (pendingSave == null || !isPersistent()) {
                 firePersistListener = true;
             }
+            dispatching = false;
         }
 
         if (firePersistListener) {
             onMessagePersisted();
         }
-
     }
 
     public boolean isFlushDelayable() {

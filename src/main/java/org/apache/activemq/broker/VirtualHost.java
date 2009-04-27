@@ -20,66 +20,105 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.activemq.Service;
-import org.apache.activemq.broker.store.BrokerDatabase;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.queue.IQueue;
 
 /**
  * @author chirino
  */
 public class VirtualHost implements Service {
-    
-    final private HashMap<Destination, Queue> queues = new HashMap<Destination, Queue>();
+
+    final private BrokerQueueStore queueStore;
+    final private MessageBroker broker;
+    final private HashMap<AsciiBuffer, Queue> queues = new HashMap<AsciiBuffer, Queue>();
     private ArrayList<AsciiBuffer> hostNames = new ArrayList<AsciiBuffer>();
     private Router router;
-    private BrokerDatabase database;
-    
-    public VirtualHost() {
+    private boolean started;
+
+    public VirtualHost(MessageBroker broker) {
+        this.broker = broker;
         this.router = new Router();
         this.router.setVirtualHost(this);
+        this.queueStore = new BrokerQueueStore();
     }
-    
+
     public AsciiBuffer getHostName() {
-        if( hostNames.size() > 0 ) {
+        if (hostNames.size() > 0) {
             hostNames.get(0);
         }
         return null;
     }
-    
+
     public ArrayList<AsciiBuffer> getHostNames() {
         return hostNames;
     }
+
     public void setHostNames(ArrayList<AsciiBuffer> hostNames) {
         this.hostNames = hostNames;
     }
-    
+
     public Router getRouter() {
         return router;
     }
 
-    public void start() throws Exception {
+    public synchronized void start() throws Exception {
+
+        if (started) {
+            return;
+        }
+
+        router.setDatabase(broker.getDatabase());
+
+        queueStore.setDatabase(broker.getDatabase());
+        queueStore.setDispatcher(broker.getDispatcher());
+        queueStore.loadQueues();
+        // Create Queue instances
+        for (IQueue<Long, MessageDelivery> iQueue : queueStore.getSharedQueues()) {
+            Queue queue = new Queue(iQueue);
+            Domain domain = router.getDomain(Router.QUEUE_DOMAIN);
+            Destination dest = new Destination.SingleDestination(Router.QUEUE_DOMAIN, iQueue.getDescriptor().getQueueName());
+            queue.setDestination(dest);
+            domain.add(dest.getName(), queue);
+            queues.put(dest.getName(), queue);
+        }
         for (Queue queue : queues.values()) {
             queue.start();
         }
+        started = true;
     }
-    public void stop() throws Exception {
+
+    public synchronized void stop() throws Exception {
+        if (!started) {
+            return;
+        }
         for (Queue queue : queues.values()) {
             queue.stop();
         }
+        started = false;
     }
 
-    public void addQueue(Queue queue) {
-        Domain domain = router.getDomain(queue.getDestination().getDomain());
-        domain.add(queue.getDestination().getName(), queue);
+    public synchronized Queue createQueue(Destination dest) throws Exception {
+        if(!started)
+        {
+            //Queues from the store must be loaded before we can create new ones:
+            throw new IllegalStateException("Can't create queue on unstarted host");
+        }
+        
+        Queue queue = queues.get(dest);
+        // If the queue doesn't exist create it:
+        if (queue == null) {
+            IQueue<Long, MessageDelivery> iQueue = queueStore.createSharedQueue(dest.getName().toString());
+            queue = new Queue(iQueue);
+            queue.setDestination(dest);
+            Domain domain = router.getDomain(Router.QUEUE_DOMAIN);
+            domain.add(dest.getName(), queue);
+            queues.put(dest.getName(), queue);
+        }
+        queue.start();
+        return queue;
     }
 
-    public BrokerDatabase getDatabase() {
-        return database;
+    public BrokerQueueStore getQueueStore() {
+        return queueStore;
     }
-
-    public void setDatabase(BrokerDatabase store) {
-        this.database = store;
-        router.setDatabase(database);
-    }
-
-
 }

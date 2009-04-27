@@ -22,7 +22,7 @@ import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Message.MessageBean;
 import org.apache.activemq.flow.Commands.Message.MessageBuffer;
 import org.apache.activemq.protobuf.UTF8Buffer;
-import org.apache.activemq.queue.Mapper;
+import org.apache.activemq.util.Mapper;
 
 public class Message implements Serializable {
 

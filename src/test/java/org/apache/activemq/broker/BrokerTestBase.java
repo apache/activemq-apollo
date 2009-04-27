@@ -29,8 +29,6 @@ import junit.framework.TestCase;
 
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageBroker;
-import org.apache.activemq.broker.MessageDelivery;
-import org.apache.activemq.broker.Queue;
 import org.apache.activemq.broker.Router;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
@@ -39,7 +37,6 @@ import org.apache.activemq.dispatch.PriorityDispatcher;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.queue.Mapper;
 
 public abstract class BrokerTestBase extends TestCase {
 
@@ -53,6 +50,7 @@ public abstract class BrokerTestBase extends TestCase {
     protected static final boolean USE_INPUT_QUEUES = true;
 
     protected final boolean USE_KAHA_DB = true;
+    protected final boolean PURGE_STORE = true;
     protected final boolean PERSISTENT = true;
     protected final boolean DURABLE = true;
 
@@ -93,19 +91,6 @@ public abstract class BrokerTestBase extends TestCase {
     final ArrayList<RemoteProducer> producers = new ArrayList<RemoteProducer>();
     final ArrayList<RemoteConsumer> consumers = new ArrayList<RemoteConsumer>();
 
-    static public final Mapper<AsciiBuffer, MessageDelivery> KEY_MAPPER = new Mapper<AsciiBuffer, MessageDelivery>() {
-        public AsciiBuffer map(MessageDelivery element) {
-            return element.getMsgId();
-        }
-    };
-    static public final Mapper<Integer, MessageDelivery> PARTITION_MAPPER = new Mapper<Integer, MessageDelivery>() {
-        public Integer map(MessageDelivery element) {
-            // we modulo 10 to have at most 10 partitions which the producers
-            // gets split across.
-            return (int) (element.getProducerId().hashCode() % 10);
-        }
-    };
-
     @Override
     protected void setUp() throws Exception {
         dispatcher = createDispatcher();
@@ -139,7 +124,7 @@ public abstract class BrokerTestBase extends TestCase {
         createConnections();
 
         // Start 'em up.
-        startServices();
+        startClients();
         try {
             reportRates();
         } finally {
@@ -155,7 +140,7 @@ public abstract class BrokerTestBase extends TestCase {
         createConnections();
 
         // Start 'em up.
-        startServices();
+        startClients();
         try {
             reportRates();
         } finally {
@@ -171,7 +156,7 @@ public abstract class BrokerTestBase extends TestCase {
         createConnections();
 
         // Start 'em up.
-        startServices();
+        startClients();
         try {
             reportRates();
         } finally {
@@ -187,7 +172,7 @@ public abstract class BrokerTestBase extends TestCase {
         createConnections();
 
         // Start 'em up.
-        startServices();
+        startClients();
         try {
             reportRates();
         } finally {
@@ -203,7 +188,7 @@ public abstract class BrokerTestBase extends TestCase {
         createConnections();
 
         // Start 'em up.
-        startServices();
+        startClients();
         try {
             reportRates();
         } finally {
@@ -219,7 +204,7 @@ public abstract class BrokerTestBase extends TestCase {
         createConnections();
 
         // Start 'em up.
-        startServices();
+        startClients();
         try {
             reportRates();
         } finally {
@@ -235,7 +220,7 @@ public abstract class BrokerTestBase extends TestCase {
         createConnections();
 
         // Start 'em up.
-        startServices();
+        startClients();
         try {
             reportRates();
         } finally {
@@ -259,7 +244,7 @@ public abstract class BrokerTestBase extends TestCase {
         consumers.get(0).setThinkTime(50);
 
         // Start 'em up.
-        startServices();
+        startClients();
         try {
             reportRates();
         } finally {
@@ -282,7 +267,7 @@ public abstract class BrokerTestBase extends TestCase {
         }
 
         // Start 'em up.
-        startServices();
+        startClients();
         try {
             reportRates();
         } finally {
@@ -310,7 +295,7 @@ public abstract class BrokerTestBase extends TestCase {
         consumers.get(0).setThinkTime(1);
 
         // Start 'em up.
-        startServices();
+        startClients();
         try {
 
             System.out.println("Checking rates for test: " + getName());
@@ -349,7 +334,7 @@ public abstract class BrokerTestBase extends TestCase {
         consumers.get(0).setThinkTime(1);
 
         // Start 'em up.
-        startServices();
+        startClients();
         try {
 
             System.out.println("Checking rates for test: " + getName());
@@ -391,6 +376,8 @@ public abstract class BrokerTestBase extends TestCase {
             sendBroker = rcvBroker = createBroker("Broker", sendBrokerBindURI, sendBrokerConnectURI);
             brokers.add(sendBroker);
         }
+        
+        startBrokers();
 
         Destination[] dests = new Destination[destCount];
 
@@ -400,11 +387,9 @@ public abstract class BrokerTestBase extends TestCase {
             bean.setDomain(ptp ? Router.QUEUE_DOMAIN : Router.TOPIC_DOMAIN);
             dests[i] = bean;
             if (ptp) {
-                Queue queue = createQueue(sendBroker, dests[i]);
-                sendBroker.getDefaultVirtualHost().addQueue(queue);
+                sendBroker.getDefaultVirtualHost().createQueue(dests[i]);
                 if (multibroker) {
-                    queue = createQueue(rcvBroker, dests[i]);
-                    rcvBroker.getDefaultVirtualHost().addQueue(queue);
+                    rcvBroker.getDefaultVirtualHost().createQueue(dests[i]);
                 }
             }
         }
@@ -473,17 +458,6 @@ public abstract class BrokerTestBase extends TestCase {
 
     abstract protected RemoteProducer cerateProducer();
 
-    private Queue createQueue(MessageBroker broker, Destination destination) {
-        Queue queue = new Queue();
-        queue.setBroker(broker);
-        queue.setDestination(destination);
-        queue.setKeyExtractor(KEY_MAPPER);
-        if (usePartitionedQueue) {
-            queue.setPartitionMapper(PARTITION_MAPPER);
-        }
-        return queue;
-    }
-
     private MessageBroker createBroker(String name, String bindURI, String connectUri) throws Exception {
         MessageBroker broker = new MessageBroker();
         broker.setName(name);
@@ -502,8 +476,8 @@ public abstract class BrokerTestBase extends TestCase {
             store = StoreFactory.createStore("memory");
         }
 
-        store.setStoreDirectory(new File("target/test-data/broker-test/" +  broker.getName()));
-        store.setDeleteAllMessages(true);
+        store.setStoreDirectory(new File("sub/test-data/broker-test/" +  broker.getName()));
+        store.setDeleteAllMessages(PURGE_STORE);
         return store;
     }
 
@@ -523,10 +497,15 @@ public abstract class BrokerTestBase extends TestCase {
         }
     }
 
-    private void startServices() throws Exception {
+    private void startBrokers() throws Exception
+    {
         for (MessageBroker broker : brokers) {
             broker.start();
         }
+    }
+    
+    private void startClients() throws Exception {
+        
         for (RemoteConsumer connection : consumers) {
             connection.start();
         }

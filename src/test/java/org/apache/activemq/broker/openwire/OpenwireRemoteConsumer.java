@@ -84,7 +84,7 @@ public class OpenwireRemoteConsumer extends RemoteConsumer {
         try {
             if (command.getClass() == WireFormatInfo.class) {
             } else if (command.getClass() == BrokerInfo.class) {
-                System.out.println("Consumer "+name+" connected to "+((BrokerInfo)command).getBrokerName());
+                //System.out.println("Consumer "+name+" connected to "+((BrokerInfo)command).getBrokerName());
             } else if (command.getClass() == MessageDispatch.class) {
                 MessageDispatch msg = (MessageDispatch) command;
                 lastMessage = msg.getMessage();

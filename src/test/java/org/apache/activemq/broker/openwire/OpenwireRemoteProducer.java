@@ -73,7 +73,7 @@ public class OpenwireRemoteProducer extends RemoteProducer {
         try {
             if (command.getClass() == WireFormatInfo.class) {
             } else if (command.getClass() == BrokerInfo.class) {
-                System.out.println("Producer " + name + " connected to " + ((BrokerInfo) command).getBrokerName());
+                //System.out.println("Producer " + name + " connected to " + ((BrokerInfo) command).getBrokerName());
             } else if (command.getClass() == ProducerAck.class) {
                 ProducerAck fc = (ProducerAck) command;
                 synchronized (outboundQueue) {

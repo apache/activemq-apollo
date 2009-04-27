@@ -25,11 +25,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.jms.InvalidSelectorException;
 
 import org.apache.activemq.WindowLimiter;
 import org.apache.activemq.broker.BrokerConnection;
+import org.apache.activemq.broker.BrokerMessageDelivery;
 import org.apache.activemq.broker.DeliveryTarget;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
@@ -49,6 +51,7 @@ import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.selector.SelectorParser;
 import org.apache.activemq.transport.stomp.Stomp;
@@ -99,7 +102,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
             }
         });
         actionHandlers.put(Stomp.Commands.SEND, new ActionHander() {
-            
+
             public void onStompFrame(StompFrame frame) throws Exception {
                 String dest = frame.getHeaders().get(Stomp.Headers.Send.DESTINATION);
                 Destination destination = translator(frame).convertToDestination(StompProtocolHandler.this, dest);
@@ -276,7 +279,8 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         private LinkedHashMap<AsciiBuffer, AsciiBuffer> sentMessageIds = new LinkedHashMap<AsciiBuffer, AsciiBuffer>();
 
         private boolean durable;
-        private AsciiBuffer durableQueueName;
+        private QueueStore.QueueDescriptor durableQueueId;
+        private AtomicLong deliverySequence = new AtomicLong(0);
 
         public ConsumerContext(final StompFrame subscribe) throws Exception {
             translator = translator(subscribe);
@@ -359,6 +363,10 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
             return queue;
         }
 
+        public boolean hasSelector() {
+            return false;
+        }
+
         public boolean match(MessageDelivery message) {
             StompFrame stompMessage = message.asType(StompFrame.class);
             if (stompMessage == null) {
@@ -394,7 +402,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
 
             if (isDurable() && delivery.isPersistent()) {
                 try {
-                    delivery.persist(durableQueueName, true);
+                    delivery.persist(durableQueueId, null, deliverySequence.incrementAndGet(), true);
                 } catch (IOException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
@@ -512,7 +520,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         return null;
     }
 
-    public MessageDelivery createMessageDelivery(MessageRecord record) {
+    public BrokerMessageDelivery createMessageDelivery(MessageRecord record) {
         throw new UnsupportedOperationException();
     }
 }

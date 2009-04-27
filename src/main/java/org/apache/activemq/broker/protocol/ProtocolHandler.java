@@ -20,7 +20,7 @@ import java.io.IOException;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.broker.BrokerConnection;
-import org.apache.activemq.broker.MessageDelivery;
+import org.apache.activemq.broker.BrokerMessageDelivery;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.wireformat.WireFormat;
 
@@ -31,6 +31,6 @@ public interface ProtocolHandler extends Service {
     public void onException(Exception error);
     public void setWireFormat(WireFormat wf);
     
-    public MessageDelivery createMessageDelivery(MessageRecord record) throws IOException;
+    public BrokerMessageDelivery createMessageDelivery(MessageRecord record) throws IOException;
 
 }

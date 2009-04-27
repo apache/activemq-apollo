@@ -48,6 +48,7 @@ public class MessageBroker implements TransportAcceptListener {
     private String name;
     private IDispatcher dispatcher;
     private BrokerDatabase database;
+    
     private final AtomicBoolean stopping = new AtomicBoolean();
 
     public String getName() {
@@ -123,6 +124,14 @@ public class MessageBroker implements TransportAcceptListener {
         this.dispatcher = dispatcher;
     }
 
+    public BrokerDatabase getDatabase() {
+        return database;
+    }
+
+    public void setDatabase(BrokerDatabase database) {
+        this.database = database;
+    }
+    
     public String getBindUri() {
         return bindUri;
     }
@@ -149,8 +158,7 @@ public class MessageBroker implements TransportAcceptListener {
     public VirtualHost getDefaultVirtualHost() {
         synchronized (virtualHosts) {
             if (defaultVirtualHost == null) {
-                defaultVirtualHost = new VirtualHost();
-                defaultVirtualHost.setDatabase(database);
+                defaultVirtualHost = new VirtualHost(this);
                 ArrayList<AsciiBuffer> names = new ArrayList<AsciiBuffer>(1);
                 names.add(new AsciiBuffer("default"));
                 defaultVirtualHost.setHostNames(names);
@@ -188,7 +196,6 @@ public class MessageBroker implements TransportAcceptListener {
                 setDefaultVirtualHost(host);
             }
         }
-        host.setDatabase(database);
     }
 
     public synchronized void removeVirtualHost(VirtualHost host) throws Exception {

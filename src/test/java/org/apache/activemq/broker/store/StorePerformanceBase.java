@@ -31,6 +31,7 @@ import org.apache.activemq.metric.MetricCounter;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.queue.QueueStore;
 
 public abstract class StorePerformanceBase extends TestCase {
 
@@ -39,7 +40,7 @@ public abstract class StorePerformanceBase extends TestCase {
     
     
     private Store store;
-    private AsciiBuffer queueName;
+    private QueueStore.QueueDescriptor queueId;
 
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
     protected MetricAggregator totalConsumerRate = new MetricAggregator().name("Aggregate Consumer Rate").unit("items");
@@ -54,11 +55,12 @@ public abstract class StorePerformanceBase extends TestCase {
         store = createStore();
         store.start();
         
-        queueName = new AsciiBuffer("test");
+        queueId = new QueueStore.QueueDescriptor();
+        queueId.setQueueName(new AsciiBuffer("test"));
         store.execute(new VoidCallback<Exception>() {
             @Override
             public void run(Session session) throws Exception {
-                session.queueAdd(queueName);
+                session.queueAdd(queueId);
             }
         }, null);
     }
@@ -111,6 +113,7 @@ public abstract class StorePerformanceBase extends TestCase {
                     messageRecord.setMessageId(new AsciiBuffer(""+i));
                     messageRecord.setEncoding(new AsciiBuffer("encoding"));
                     messageRecord.setBuffer(buffer);
+                    messageRecord.setSize(buffer.getLength());
 
                     Runnable onFlush = new Runnable(){
                         public void run() {
@@ -120,13 +123,16 @@ public abstract class StorePerformanceBase extends TestCase {
                             }
                         }
                     };
+                    final long queueKey = i + 1;
                     store.execute(new VoidCallback<Exception>() {
                         @Override
                         public void run(Session session) throws Exception {
                             session.messageAdd(messageRecord);
                             QueueRecord queueRecord = new Store.QueueRecord();
                             queueRecord.setMessageKey(messageRecord.getKey());
-                            session.queueAddMessage(queueName, queueRecord);
+                            queueRecord.setQueueKey(queueKey);
+                            queueRecord.setSize(messageRecord.getSize());
+                            session.queueAddMessage(queueId, queueRecord);
                         }
                     }, onFlush);
                     
@@ -185,11 +191,11 @@ public abstract class StorePerformanceBase extends TestCase {
                     store.execute(new VoidCallback<Exception>() {
                         @Override
                         public void run(Session session) throws Exception {
-                            Iterator<QueueRecord> queueRecords = session.queueListMessagesQueue(queueName, null, 1000);
+                            Iterator<QueueRecord> queueRecords = session.queueListMessagesQueue(queueId, 0L, -1L, 1000);
                             for (Iterator<QueueRecord> iterator = queueRecords; iterator.hasNext();) {
                                 QueueRecord r = iterator.next();
                                 records.add(session.messageGetRecord(r.getMessageKey()));
-                                session.queueRemoveMessage(queueName, r.messageKey);
+                                session.queueRemoveMessage(queueId, r.messageKey);
                             }
                         }
                     }, onFlush);

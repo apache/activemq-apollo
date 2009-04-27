@@ -21,7 +21,7 @@ import java.util.concurrent.Executor;
 public interface IFlowSink<E> extends IFlowResource {
     /**
      * Adds an element to the sink. If limiter space in the sink is overflowed
-     * by the element then it will block the source controller.
+     * by the element then it will restoreBlock the source controller.
      * 
      * @param elem
      *            The element to add to the sink.

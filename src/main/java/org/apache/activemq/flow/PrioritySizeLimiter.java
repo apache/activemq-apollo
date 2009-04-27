@@ -18,7 +18,7 @@ package org.apache.activemq.flow;
 
 import java.util.ArrayList;
 
-import org.apache.activemq.queue.Mapper;
+import org.apache.activemq.util.Mapper;
 
 public class PrioritySizeLimiter<E> {
 
@@ -38,7 +38,7 @@ public class PrioritySizeLimiter<E> {
 
     private Mapper<Integer, E> priorityMapper = sizeMapper;
 
-    private class Priority extends AbstractLimiter<E> {
+    private class Priority extends AbstractLimiter<E> implements IFlowSizeLimiter<E> {
         final int priority;
         int size;
         int reserved;
@@ -48,8 +48,15 @@ public class PrioritySizeLimiter<E> {
             this.priority = priority;
         }
 
-        public boolean add(E elem) {
-            int elementSize = sizeMapper.map(elem);
+        public long getSize() {
+            return size;
+        }
+
+        public long getCapacity() {
+            return capacity;
+        }
+
+        public boolean add(int count, long elementSize) {
             totalSize += elementSize;
             size += elementSize;
             if (totalSize >= capacity) {
@@ -62,6 +69,10 @@ public class PrioritySizeLimiter<E> {
                 highestPriority = priority;
             }
             return throttled;
+        }
+
+        public boolean add(E elem) {
+            return add(1, sizeMapper.map(elem));
         }
 
         public boolean canAdd(E elem) {
@@ -135,6 +146,18 @@ public class PrioritySizeLimiter<E> {
         public void reserve(E elem) {
             reserved += sizeMapper.map(elem);
         }
+
+        public int getElementSize(E elem) {
+            return sizeMapper.map(elem);
+        }
+    }
+
+    public long getCapacity() {
+        return capacity;
+    }
+    
+    public long getSize() {
+        return totalSize;
     }
 
     public PrioritySizeLimiter(int capacity, int resumeThreshold, int priorities) {
@@ -145,7 +168,7 @@ public class PrioritySizeLimiter<E> {
         }
     }
 
-    public IFlowLimiter<E> getPriorityLimter(int priority) {
+    public IFlowSizeLimiter<E> getPriorityLimter(int priority) {
         return priorities.get(priority);
     }
 

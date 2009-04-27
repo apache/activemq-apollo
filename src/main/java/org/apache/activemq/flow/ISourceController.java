@@ -54,8 +54,6 @@ public interface ISourceController<E> {
      */
     public void onFlowResume(ISinkController<?> sinkController);
 
-    public boolean isSourceBlocked();
-
     /**
      * Must be called once the elements have been sent to downstream sinks.
      * 

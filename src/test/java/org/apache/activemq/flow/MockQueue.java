@@ -8,11 +8,12 @@ import java.util.HashMap;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.MockBroker.DeliveryTarget;
 import org.apache.activemq.queue.IQueue;
-import org.apache.activemq.queue.Mapper;
 import org.apache.activemq.queue.PartitionedQueue;
+import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.SharedPriorityQueue;
 import org.apache.activemq.queue.SharedQueue;
 import org.apache.activemq.queue.Subscription;
+import org.apache.activemq.util.Mapper;
 
 class MockQueue implements MockBroker.DeliveryTarget {
 
@@ -23,22 +24,21 @@ class MockQueue implements MockBroker.DeliveryTarget {
 
     private Mapper<Integer, Message> partitionMapper;
     private Mapper<Long, Message> keyExtractor;
+    private final MockStoreAdapater store = new MockStoreAdapater();
 
     private IQueue<Long, Message> createQueue() {
 
         if (partitionMapper != null) {
-            PartitionedQueue<Integer, Long, Message> queue = new PartitionedQueue<Integer, Long, Message>() {
+            PartitionedQueue<Long, Message> queue = new PartitionedQueue<Long, Message>(destination.getName().toString()) {
                 @Override
-                protected IQueue<Long, Message> cratePartition(Integer partitionKey) {
+                public IQueue<Long, Message> createPartition(int partitionKey) {
                     return createSharedFlowQueue();
-                }
-
-                public boolean isElementPersistent(Message message) {
-                    return false;
                 }
             };
             queue.setPartitionMapper(partitionMapper);
             queue.setResourceName(destination.getName().toString());
+            queue.setStore(store);
+            queue.initialize(0, 0, 0, 0);
             return queue;
         } else {
             return createSharedFlowQueue();
@@ -53,6 +53,8 @@ class MockQueue implements MockBroker.DeliveryTarget {
             queue.setKeyMapper(keyExtractor);
             queue.setAutoRelease(true);
             queue.setDispatcher(broker.getDispatcher());
+            queue.setStore(store);
+            queue.initialize(0, 0, 0, 0);
             return queue;
         } else {
             SizeLimiter<Message> limiter = new SizeLimiter<Message>(100, 1);
@@ -60,6 +62,8 @@ class MockQueue implements MockBroker.DeliveryTarget {
             queue.setKeyMapper(keyExtractor);
             queue.setAutoRelease(true);
             queue.setDispatcher(broker.getDispatcher());
+            queue.setStore(store);
+            queue.initialize(0, 0, 0, 0);
             return queue;
         }
     }
@@ -76,6 +80,10 @@ class MockQueue implements MockBroker.DeliveryTarget {
         Subscription<Message> sub = new Subscription<Message>() {
             public boolean isPreAcquired() {
                 return true;
+            }
+            
+            public boolean isBrowser() {
+                return false;
             }
 
             public boolean matches(Message message) {
@@ -94,6 +102,14 @@ class MockQueue implements MockBroker.DeliveryTarget {
             public String toString() {
                 return getSink().toString();
             }
+
+            public boolean hasSelector() {
+                return dt.hasSelector();
+            }
+
+            public boolean offer(Message elem, ISourceController<Message> controller, SubscriptionDeliveryCallback ackCallback) {
+                return getSink().offer(elem, controller);
+            }
         };
         subs.put(dt, sub);
         queue.addSubscription(sub);
@@ -109,6 +125,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
 
     public void start() throws Exception {
         queue = createQueue();
+        queue.start();
     }
 
     public void stop() throws Exception {
@@ -116,6 +133,10 @@ class MockQueue implements MockBroker.DeliveryTarget {
 
     public IFlowSink<Message> getSink() {
         return queue;
+    }
+
+    public boolean hasSelector() {
+        return false;
     }
 
     public boolean match(Message message) {
@@ -148,6 +169,42 @@ class MockQueue implements MockBroker.DeliveryTarget {
 
     public void setDestination(Destination destination) {
         this.destination = destination;
+    }
+
+    static final class MockStoreAdapater implements QueueStore<Long, Message> {
+
+        MockStoreAdapater() {
+
+        }
+
+        public final void deleteQueueElement(QueueStore.QueueDescriptor descriptor, Message elem) {
+
+        }
+
+        public final boolean isElemPersistent(Message elem) {
+            return false;
+        }
+
+        public final boolean isFromStore(Message elem) {
+            return false;
+        }
+
+        public final void persistQueueElement(QueueStore.QueueDescriptor descriptor, ISourceController<?> controller, Message elem, long sequence, boolean delayable) throws Exception {
+            // Noop;
+        }
+
+        public final void restoreQueueElements(QueueStore.QueueDescriptor queue, long firstSequence, long maxSequence, int maxCount, QueueStore.RestoreListener<Message> listener) {
+            throw new UnsupportedOperationException("Mock broker doesn't support persistence");
+        }
+
+        public final void addQueue(QueueStore.QueueDescriptor queue) {
+
+        }
+
+        public final void deleteQueue(QueueStore.QueueDescriptor queue) {
+
+        }
+
     }
 
 }

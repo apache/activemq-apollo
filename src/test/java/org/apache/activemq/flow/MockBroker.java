@@ -35,6 +35,11 @@ public class MockBroker implements TransportAcceptListener {
     public interface DeliveryTarget {
         public IFlowSink<Message> getSink();
 
+        /**
+         * @return true if this sub has a selector
+         */
+        public boolean hasSelector();
+        
         public boolean match(Message message);
     }
 

@@ -89,37 +89,26 @@ final public class Router {
         //        
         Collection<DeliveryTarget> targets = route(msg.getDestination(), msg);
 
-        msg.store = database;
-        msg.setStoreTracking(msg.store.allocateStoreTracking());
+        //Set up the delivery for persistence:
+        msg.beginDispatch(database);
 
-        // TODO:
-        // Consider doing some caching of this target list. Most producers
-        // always send to the same destination.
-        if (targets != null) {
-
-            if (msg.isResponseRequired()) {
-                // We need to ack the message once we ensure we won't loose it.
-                // We know we won't loose it once it's persisted or delivered to
-                // a consumer Setup a callback to get notifed once one of those
-                // happens.
-                if (!msg.isPersistent()) {
-                    // Let the client know the broker got the message.
-                    msg.onMessagePersisted();
+        try
+        {
+            // TODO:
+            // Consider doing some caching of this sub list. Most producers
+            // always send to the same destination.
+            if (targets != null) {
+                // The sinks will request persistence via MessageDelivery.persist()
+                // if they require persistence:
+                for (DeliveryTarget dt : targets) {
+                    dt.deliver(msg, controller);
                 }
             }
-
-            // The sinks will request persistence via MessageDelivery.persist()
-            // if they require persistence:
-            for (DeliveryTarget dt : targets) {
-                dt.deliver(msg, controller);
-                //if (dt.match(msg)) {
-                //    
-                //    dt.getSink().add(msg, controller);
-                //}
-            }
-            
+        }
+        finally
+        {
             try {
-                msg.persistIfNeeded(controller);
+                msg.finishDispatch(controller);
             } catch (IOException ioe) {
                 //TODO: Error serializing the message, this should trigger an error
                 //This is a pretty severe error as we've already delivered
@@ -127,13 +116,6 @@ final public class Router {
                 //back it could result in a duplicate. Does this mean that we
                 //should persist the message prior to sending to the recips?
                 ioe.printStackTrace();
-            }
-
-        } else {
-            // Let the client know we got the message even though there
-            // were no valid targets to deliver the message to.
-            if (msg.isResponseRequired()) {
-                msg.onMessagePersisted();
             }
         }
     }
@@ -158,7 +140,6 @@ final public class Router {
 
     public void setVirtualHost(VirtualHost virtualHost) {
         this.virtualHost = virtualHost;
-        this.database = virtualHost.getDatabase();
     }
 
     public VirtualHost getVirtualHost() {

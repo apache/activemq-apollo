@@ -20,37 +20,119 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.queue.QueueStore.QueueDescriptor;
+import org.apache.activemq.util.Mapper;
 
-abstract public class PartitionedQueue<P, K, V> extends AbstractLimitedFlowResource<V> implements IQueue<K, V> {
+abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource<V> implements IPartitionedQueue<K, V> {
 
     private HashSet<Subscription<V>> subscriptions = new HashSet<Subscription<V>>();
-    private HashMap<P, IQueue<K, V>> partitions = new HashMap<P, IQueue<K, V>>();
-    private Mapper<P, V> partitionMapper;
-    private Store<K, V> store;
-    private AsciiBuffer queueName;
+    private HashMap<Integer, IQueue<K, V>> partitions = new HashMap<Integer, IQueue<K, V>>();
+    protected Mapper<Integer, V> partitionMapper;
+    private QueueStore<K, V> store;
+    protected IDispatcher dispatcher;
+    private boolean started;
+    protected QueueStore.QueueDescriptor queueDescriptor;
 
-    public IQueue<K, V> getPartition(P partitionKey) {
+    public PartitionedQueue(String name) {
+        super(name);
+        queueDescriptor = new QueueStore.QueueDescriptor();
+        queueDescriptor.setQueueName(new AsciiBuffer(getResourceName()));
+        queueDescriptor.setQueueType(QueueDescriptor.PARTITIONED);
+    }
+
+    public QueueStore.QueueDescriptor getDescriptor() {
+        return queueDescriptor;
+    }
+
+    public IQueue<K, V> getPartition(int partitionKey) {
+        boolean save = false;
+        IQueue<K, V> rc = null;
         synchronized (partitions) {
-            IQueue<K, V> rc = partitions.get(partitionKey);
+            rc = partitions.get(partitionKey);
             if (rc == null) {
-                rc = cratePartition(partitionKey);
+                rc = createPartition(partitionKey);
                 partitions.put(partitionKey, rc);
                 for (Subscription<V> sub : subscriptions) {
                     rc.addSubscription(sub);
                 }
             }
-            return rc;
+        }
+        if (save) {
+            store.addQueue(rc.getDescriptor());
+        }
+
+        return rc;
+    }
+
+    public int getEnqueuedCount() {
+        synchronized (partitions) {
+            int count = 0;
+            for (IQueue<K, V> queue : partitions.values()) {
+                if (queue != null) {
+                    count += queue.getEnqueuedCount();
+                }
+            }
+            return count;
         }
     }
 
-    public void setStore(Store<K, V> store) {
+    public synchronized long getEnqueuedSize() {
+        synchronized (partitions) {
+            long size = 0;
+            for (IQueue<K, V> queue : partitions.values()) {
+                if (queue != null) {
+                    size += queue.getEnqueuedSize();
+                }
+            }
+            return size;
+        }
+    }
+
+    public void setStore(QueueStore<K, V> store) {
         this.store = store;
     }
 
-    abstract protected IQueue<K, V> cratePartition(P partitionKey);
+    abstract public IQueue<K, V> createPartition(int partitionKey);
+
+    public void addPartition(int partitionKey, IQueue<K, V> queue) {
+        synchronized (partitions) {
+            partitions.put(partitionKey, queue);
+            for (Subscription<V> sub : subscriptions) {
+                queue.addSubscription(sub);
+            }
+        }
+    }
+
+    public void initialize(long sequenceMin, long sequenceMax, int count, long size) {
+        // No-op, only partitions should have stored values.
+        if (count > 0 || size > 0) {
+            throw new IllegalArgumentException("Partioned queues do not themselves hold values");
+        }
+    }
+
+    public synchronized void start() {
+        if (!started) {
+            started = true;
+            for (IQueue<K, V> partition : partitions.values()) {
+                if (partition != null)
+                    partition.start();
+            }
+        }
+    }
+
+    public synchronized void stop() {
+        if (started) {
+            started = false;
+            for (IQueue<K, V> partition : partitions.values()) {
+                if (partition != null)
+                    partition.stop();
+            }
+        }
+    }
 
     public void addSubscription(Subscription<V> sub) {
         synchronized (partitions) {
@@ -75,53 +157,33 @@ abstract public class PartitionedQueue<P, K, V> extends AbstractLimitedFlowResou
         return false;
     }
 
-    public boolean removeByKey(K key) {
-        synchronized (partitions) {
-            Collection<IQueue<K, V>> values = partitions.values();
-            for (IQueue<K, V> queue : values) {
-                if (queue.removeByKey(key)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public boolean removeByValue(V value) {
-        P partitionKey = partitionMapper.map(value);
-        IQueue<K, V> partition = getPartition(partitionKey);
-        return partition.removeByValue(value);
-    }
-
-    public void setPartitionMapper(Mapper<P, V> partitionMapper) {
+    public void setPartitionMapper(Mapper<Integer, V> partitionMapper) {
         this.partitionMapper = partitionMapper;
     }
 
-    public Mapper<P, V> getPartitionMapper() {
+    public Mapper<Integer, V> getPartitionMapper() {
         return partitionMapper;
     }
 
     public void add(V value, ISourceController<?> source) {
-        P partitionKey = partitionMapper.map(value);
+        int partitionKey = partitionMapper.map(value);
         IQueue<K, V> partition = getPartition(partitionKey);
         partition.add(value, source);
     }
 
     public boolean offer(V value, ISourceController<?> source) {
-        P partitionKey = partitionMapper.map(value);
+        int partitionKey = partitionMapper.map(value);
         IQueue<K, V> partition = getPartition(partitionKey);
         return partition.offer(value, source);
     }
 
-    public void addFromStore(V elem, ISourceController<?> controller) {
-        throw new UnsupportedOperationException();
-
-    }
-
-    public AsciiBuffer getPeristentQueueName() {
-        if (queueName == null) {
-            queueName = new AsciiBuffer(getResourceName());
+    public void setDispatcher(IDispatcher dispatcher) {
+        this.dispatcher = dispatcher;
+        synchronized (partitions) {
+            Collection<IQueue<K, V>> values = partitions.values();
+            for (IQueue<K, V> queue : values) {
+                queue.setDispatcher(dispatcher);
+            }
         }
-        return queueName;
     }
 }

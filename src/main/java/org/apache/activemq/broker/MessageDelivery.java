@@ -19,8 +19,10 @@ package org.apache.activemq.broker;
 import java.io.IOException;
 
 import org.apache.activemq.broker.store.Store;
+import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.queue.QueueStore;
 
 public interface MessageDelivery {
 
@@ -50,7 +52,7 @@ public interface MessageDelivery {
 
     /**
      * Called when the message's persistence requirements have been met. This
-     * method must not block.
+     * method must not restoreBlock.
      */
     public void onMessagePersisted();
 
@@ -58,16 +60,31 @@ public interface MessageDelivery {
 
     public Buffer getTransactionId();
 
-    public void persist(AsciiBuffer queue, boolean delayable) throws IOException;
-
-    public void delete(AsciiBuffer queue);
-    
     /**
-     * Sets the unique storage tracking number. 
-     * @param tracking The tracking number. 
+     * Asynchronously persists a message in the store.
+     * 
+     * @param queue
+     *            The queue against which to save the message.
+     * @param controller
+     *            The source of the message.
+     * @param sequenceNumber
+     *            The sequence number of the message in the queue
+     * @param delayable
+     *            Can be set to indicate that flush of the message can be
+     *            delayed in the hopes that an acknowledgement will negate the
+     *            need for a delete
+     * @throws IOException If there is an exception serializing the message. 
      */
-    public void setStoreTracking(long tracking);
-    
+    public void persist(QueueStore.QueueDescriptor queue, ISourceController<?> controller, long sequenceNumber, boolean delayable) throws IOException;
+
+    /**
+     * Acknowledges the message for a particular queue. This will cause it to be 
+     * deleted from the message store. 
+     * 
+     * @param queue The queue for which to acknowledge the message.
+     */
+    public void acknowledge(QueueStore.QueueDescriptor queue);
+
     /**
      * Gets the tracking number used to identify this message in the message
      * store.

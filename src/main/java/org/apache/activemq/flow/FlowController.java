@@ -94,7 +94,10 @@ public class FlowController<E> implements IFlowController<E> {
         this.flow = flow;
         this.limiter = limiter == null ? new SizeLimiter<E>(0, 0) : limiter;
         this.mutex = mutex;
-        this.name = controllable.toString();
+        if(controllable != null)
+        {
+            this.name = controllable.toString();
+        }
     }
 
     public final IFlowLimiter<E> getLimiter() {
@@ -177,12 +180,6 @@ public class FlowController<E> implements IFlowController<E> {
         }
     }
 
-    public final boolean isSourceBlocked() {
-        synchronized (mutex) {
-            return blocked;
-        }
-    }
-
     /**
      * Waits for a flow to become unblocked.
      * 
@@ -203,7 +200,11 @@ public class FlowController<E> implements IFlowController<E> {
     }
 
     public IFlowResource getFlowResource() {
-        return controllable.getFlowResource();
+        if (controllable != null) {
+            return controllable.getFlowResource();
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -231,7 +232,7 @@ public class FlowController<E> implements IFlowController<E> {
                     blockSource(sourceController);
                 }
             } else {
-                // Add to overflow queue and block source:
+                // Add to overflow queue and restoreBlock source:
                 overflowQueue.add(elem);
                 if (sourceController != null) {
                     blockSource(sourceController);
@@ -325,7 +326,8 @@ public class FlowController<E> implements IFlowController<E> {
         setUnThrottleListener();
 
         if (!blockedSources.contains(source)) {
-//            System.out.println("BLOCKING  : SINK[" + this + "], SOURCE[" + source + "]");
+            // System.out.println("BLOCKING  : SINK[" + this + "], SOURCE[" +
+            // source + "]");
             blockedSources.add(source);
             source.onFlowBlock(this);
         }
@@ -389,7 +391,9 @@ public class FlowController<E> implements IFlowController<E> {
                     }
                     try {
                         for (ISourceController<?> source : blockedSources) {
-//                            System.out.println("UNBLOCKING: SINK[" + FlowController.this + "], SOURCE[" + source + "]");
+                            // System.out.println("UNBLOCKING: SINK[" +
+                            // FlowController.this + "], SOURCE[" + source +
+                            // "]");
                             source.onFlowResume(FlowController.this);
                         }
                         for (FlowUnblockListener<E> listener : unblockListeners) {
@@ -421,10 +425,6 @@ public class FlowController<E> implements IFlowController<E> {
 
     public String toString() {
         return name;
-    }
-
-    public IFlowResource getFlowSink() {
-        return controllable.getFlowResource();
     }
 
     public void setExecutor(Executor executor) {

@@ -24,122 +24,36 @@ import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.flow.PrioritySizeLimiter;
-import org.apache.activemq.flow.SizeLimiter;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.IQueue;
-import org.apache.activemq.queue.Mapper;
-import org.apache.activemq.queue.PartitionedQueue;
-import org.apache.activemq.queue.SharedPriorityQueue;
-import org.apache.activemq.queue.SharedQueue;
+import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.Subscription;
+import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
 
 public class Queue implements DeliveryTarget {
 
     HashMap<DeliveryTarget, Subscription<MessageDelivery>> subs = new HashMap<DeliveryTarget, Subscription<MessageDelivery>>();
     private Destination destination;
-    private IQueue<AsciiBuffer, MessageDelivery> queue;
-    private MessageBroker broker;
-    
-    private Mapper<Integer, MessageDelivery> partitionMapper;
-    private Mapper<AsciiBuffer, MessageDelivery> keyExtractor;
+    private IQueue<Long, MessageDelivery> queue;
+    private VirtualHost virtualHost;
 
-    private IQueue<AsciiBuffer, MessageDelivery> createQueue() {
-
-        if (partitionMapper!=null) {
-            PartitionedQueue<Integer, AsciiBuffer, MessageDelivery> queue = new PartitionedQueue<Integer, AsciiBuffer, MessageDelivery>() {
-                @Override
-                protected IQueue<AsciiBuffer, MessageDelivery> cratePartition(Integer partitionKey) {
-                    return createSharedFlowQueue();
-                }
-
-                public boolean isElementPersistent(MessageDelivery elem) {
-                    return elem.isPersistent();
-                }
-            };
-            queue.setPartitionMapper(partitionMapper);
-            queue.setResourceName(destination.getName().toString());
-            return queue;
-        } else {
-            return createSharedFlowQueue();
-        }
+    Queue(IQueue<Long, MessageDelivery> queue)
+    {
+        this.queue = queue;
     }
-
-
-    public static final Mapper<Integer, MessageDelivery> PRIORITY_MAPPER = new Mapper<Integer, MessageDelivery>() {
-        public Integer map(MessageDelivery element) {
-            return element.getPriority();
-        }
-    };
     
-    private IQueue<AsciiBuffer, MessageDelivery> createSharedFlowQueue() {
-        if (MessageBroker.MAX_PRIORITY > 1) {
-            PrioritySizeLimiter<MessageDelivery> limiter = new PrioritySizeLimiter<MessageDelivery>(100, 1, MessageBroker.MAX_PRIORITY);
-            limiter.setPriorityMapper(PRIORITY_MAPPER);
-            SharedPriorityQueue<AsciiBuffer, MessageDelivery> queue = new SharedPriorityQueue<AsciiBuffer, MessageDelivery>(destination.getName().toString(), limiter);
-            queue.setKeyMapper(keyExtractor);
-            queue.setAutoRelease(true);
-            //DBQueueStore<AsciiBuffer> store = new DBQueueStore<AsciiBuffer>(broker.getDefaultVirtualHost().getDatabase(), queue, broker.getDispatcher());
-            //store.setKeyMapper(keyExtractor);
-            //queue.setStore(store);
-            queue.setDispatcher(broker.getDispatcher());
-            return queue;
-        } else {
-            SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(100, 1);
-            SharedQueue<AsciiBuffer, MessageDelivery> queue = new SharedQueue<AsciiBuffer, MessageDelivery>(destination.getName().toString(), limiter);
-            queue.setKeyMapper(keyExtractor);
-            queue.setAutoRelease(true);
-            //DBQueueStore<AsciiBuffer> store = new DBQueueStore<AsciiBuffer>(broker.getDefaultVirtualHost().getDatabase(), queue, broker.getDispatcher());
-            //store.setKeyMapper(keyExtractor);
-            //queue.setStore(store);
-            queue.setDispatcher(broker.getDispatcher());
-            return queue;
-        }
-    }
-
     public final void deliver(MessageDelivery delivery, ISourceController<?> source) {
-        try {
-            if(delivery.isPersistent())
-            {
-                delivery.persist(destination.getName(), true);
-            }
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        
         queue.add(delivery, source);
-    }
-    
-    public final Destination getDestination() {
-        return destination;
     }
 
     public final void addConsumer(final DeliveryTarget dt) {
-        Subscription<MessageDelivery> sub = new Subscription<MessageDelivery>() {
-            public boolean isPreAcquired() {
-                return true;
-            }
+        Subscription<MessageDelivery> sub = new QueueSubscription(dt);
 
-            public boolean matches(MessageDelivery message) {
-                return dt.match(message);
-            }
-
-            public boolean isRemoveOnDispatch() {
-                return true;
-            }
-
-            public IFlowSink<MessageDelivery> getSink() {
-                return dt.getSink();
-            }
-
-            @Override
-            public String toString() {
-                return getSink().toString();
-            }
-        };
-        subs.put(dt, sub);
-        queue.addSubscription(sub);
+        Subscription<MessageDelivery> old = subs.put(dt, sub);
+        if (old == null) {
+            queue.addSubscription(sub);
+        } else {
+            subs.put(dt, old);
+        }
     }
 
     public boolean removeSubscirption(final DeliveryTarget dt) {
@@ -151,54 +65,108 @@ public class Queue implements DeliveryTarget {
     }
 
     public void start() throws Exception {
-        queue = createQueue();
+        queue.start();
     }
 
     public void stop() throws Exception {
+        if (queue != null) {
+            queue.stop();
+        }
     }
 
     public IFlowSink<MessageDelivery> getSink() {
         return queue;
     }
 
+    public boolean hasSelector() {
+        return false;
+    }
+
     public boolean match(MessageDelivery message) {
         return true;
     }
 
-    public MessageBroker getBroker() {
-        return broker;
+    public VirtualHost getBroker() {
+        return virtualHost;
     }
 
-    public void setBroker(MessageBroker broker) {
-        this.broker = broker;
-    }
-
-    public Mapper<Integer, MessageDelivery> getPartitionMapper() {
-        return partitionMapper;
-    }
-
-    public void setPartitionMapper(Mapper<Integer, MessageDelivery> partitionMapper) {
-        this.partitionMapper = partitionMapper;
-    }
-
-    public Mapper<AsciiBuffer, MessageDelivery> getKeyExtractor() {
-        return keyExtractor;
-    }
-
-    public void setKeyExtractor(Mapper<AsciiBuffer, MessageDelivery> keyExtractor) {
-        this.keyExtractor = keyExtractor;
+    public void setVirtualHost(VirtualHost virtualHost) {
+        this.virtualHost = virtualHost;
     }
 
     public void setDestination(Destination destination) {
         this.destination = destination;
     }
 
-    public AsciiBuffer getPersistentQueueName() {
-        // TODO Auto-generated method stub
-        return destination.getName();
+    public final Destination getDestination() {
+        return destination;
+    }
+    
+    public boolean isDurable()
+    {
+        return true;
     }
 
-    public boolean isDurable() {
-        return true;
+    public static class QueueSubscription implements Subscription<MessageDelivery> {
+        final DeliveryTarget target;
+
+        public QueueSubscription(DeliveryTarget dt) {
+            this.target = dt;
+        }
+
+        public boolean isPreAcquired() {
+            return true;
+        }
+
+        public boolean matches(MessageDelivery message) {
+            return target.match(message);
+        }
+
+        public boolean hasSelector() {
+            return target.hasSelector();
+        }
+
+        public boolean isRemoveOnDispatch() {
+            return false;
+        }
+
+        public IFlowSink<MessageDelivery> getSink() {
+            return target.getSink();
+        }
+
+        @Override
+        public String toString() {
+            return target.getSink().toString();
+        }
+
+        public boolean offer(MessageDelivery elem, ISourceController<MessageDelivery> controller, SubscriptionDeliveryCallback callback) {
+            return target.getSink().offer(new QueueDelivery(elem, callback), controller);
+        }
+
+        public boolean isBrowser() {
+            return false;
+        }
+    }
+
+    private static class QueueDelivery extends MessageDeliveryWrapper {
+        private final SubscriptionDeliveryCallback callback;
+
+        QueueDelivery(MessageDelivery delivery, SubscriptionDeliveryCallback callback) {
+            super(delivery);
+            this.callback = callback;
+        }
+
+        @Override
+        public void persist(QueueStore.QueueDescriptor queue, ISourceController<?> controller, long sequenceNumber, boolean delayable) throws IOException {
+            // We override this for queue deliveries as the sub needn't
+            // persist the message
+        }
+
+        public void acknowledge(QueueStore.QueueDescriptor queue) {
+            if (callback != null) {
+                callback.acknowledge();
+            }
+        }
+
     }
 }

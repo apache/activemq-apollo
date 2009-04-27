@@ -24,10 +24,10 @@ import org.apache.activemq.wireformat.WireFormat;
 public interface StatefulWireFormat extends WireFormat{
 
     /**
-     * Writes a command to the target buffer, returning false if
-     * the command couldn't entirely fit into the target. 
+     * Writes a command to the sub buffer, returning false if
+     * the command couldn't entirely fit into the sub. 
      * @param command
-     * @param target
+     * @param sub
      * @return
      */
     public boolean marshal(Object command, ByteBuffer target) throws IOException;

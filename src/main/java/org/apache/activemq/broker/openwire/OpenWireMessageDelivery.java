@@ -36,6 +36,7 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
     private AsciiBuffer producerId;
     private OpenWireFormat storeWireFormat;
     private PersistListener persistListener = null;
+    private final int size;
 
     public interface PersistListener {
         public void onMessagePersisted(OpenWireMessageDelivery delivery);
@@ -43,6 +44,7 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
 
     public OpenWireMessageDelivery(Message message) {
         this.message = message;
+        this.size = message.getSize();
     }
 
     public void setPersistListener(PersistListener listener) {
@@ -56,7 +58,8 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
         return destination;
     }
 
-    public int getFlowLimiterSize() {
+    public int getMemorySize() {
+        //return size;
         return 1;
     }
 
@@ -112,6 +115,7 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
         record.setBuffer(new Buffer(bytes.getData(), bytes.getOffset(), bytes.getLength()));
         record.setStreamKey((long) 0);
         record.setMessageId(getMsgId());
+        record.setSize(getFlowLimiterSize());
         return record;
     }
 

@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.flow;
 
-public class SizeLimiter<E> extends AbstractLimiter<E> {
+public class SizeLimiter<E> extends AbstractLimiter<E> implements IFlowSizeLimiter<E> {
 
     protected long capacity;
     protected long resumeThreshold;
@@ -32,8 +32,11 @@ public class SizeLimiter<E> extends AbstractLimiter<E> {
     }
 
     public boolean add(E elem) {
-        this.size += getElementSize(elem);
+        return add(1, getElementSize(elem));
+    }
 
+    public boolean add(int count, long size) {
+        this.size += size;
         if (this.size >= capacity) {
             throttled = true;
         }

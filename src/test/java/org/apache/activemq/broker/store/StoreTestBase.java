@@ -21,18 +21,21 @@ import java.util.Iterator;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.broker.store.Store.Callback;
+import org.apache.activemq.broker.store.Store.FatalStoreException;
 import org.apache.activemq.broker.store.Store.MessageRecord;
+import org.apache.activemq.broker.store.Store.QueueQueryResult;
+import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.broker.store.Store.Session;
 import org.apache.activemq.broker.store.Store.VoidCallback;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.queue.QueueStore;
 
 public abstract class StoreTestBase extends TestCase {
 
     private Store store;
 
-    abstract protected Store createStore();
+    abstract protected Store createStore(boolean delete);
 
     abstract protected boolean isStoreTransactional();
 
@@ -40,7 +43,7 @@ public abstract class StoreTestBase extends TestCase {
 
     @Override
     protected void setUp() throws Exception {
-        store = createStore();
+        store = createStore(true);
         store.start();
     }
 
@@ -57,6 +60,7 @@ public abstract class StoreTestBase extends TestCase {
         expected.setEncoding(new AsciiBuffer("encoding"));
         expected.setMessageId(new AsciiBuffer("1000"));
         expected.setKey(store.allocateStoreTracking());
+        expected.setSize(expected.getBuffer().getLength());
         
         store.execute(new VoidCallback<Exception>() {
             public void run(Session session) throws Exception {
@@ -74,7 +78,10 @@ public abstract class StoreTestBase extends TestCase {
     }
 
     public void testQueueAdd() throws Exception {
-        final AsciiBuffer expected = new AsciiBuffer("test");
+        final QueueStore.QueueDescriptor expected = new QueueStore.QueueDescriptor();
+        expected.setQueueName(new AsciiBuffer("testQueue"));
+        expected.setApplicationType((short)1);
+        
         store.execute(new VoidCallback<Exception>() {
             @Override
             public void run(Session session) throws Exception {
@@ -82,23 +89,102 @@ public abstract class StoreTestBase extends TestCase {
             }
         }, null);
 
+        //Test that the queue was created:
+        checkQueue(expected, 0, 0);
+        
+        if(isStorePersistent())
+        {
+            //Restart the store and make sure the queue is still there
+            store.stop();
+            store = createStore(false);
+            store.start();
+            
+            //Test that the queue was persisted
+            checkQueue(expected, 0, 0);
+        }
+    }
+    
+    public void testQueueMessageAdd() throws Exception {
+        final QueueStore.QueueDescriptor queue = new QueueStore.QueueDescriptor();
+        queue.setQueueName(new AsciiBuffer("testQueue"));
+        queue.setApplicationType((short)1);
+        
+        final MessageRecord message = new MessageRecord();
+        message.setBuffer(new Buffer("buffer"));
+        message.setEncoding(new AsciiBuffer("encoding"));
+        message.setMessageId(new AsciiBuffer("1000"));
+        message.setKey(store.allocateStoreTracking());
+        message.setSize(message.getBuffer().getLength());
+        
+        final QueueRecord qRecord = new QueueRecord();
+        qRecord.setMessageKey(message.getKey());
+        qRecord.setQueueKey(1L);
+        qRecord.setSize(message.getSize());
+        
         store.execute(new VoidCallback<Exception>() {
             @Override
             public void run(Session session) throws Exception {
-                Iterator<AsciiBuffer> list = session.queueList(null, 100);
+                session.queueAdd(queue);
+                session.messageAdd(message);
+                session.queueAddMessage(queue, qRecord);
+            }
+        }, null);
+
+        checkQueue(queue, message.getSize(), 1);
+        checkMessageRestore(queue, qRecord, message);
+        
+        //Restart the store and make sure the queue is still there
+        if(isStorePersistent())
+        {
+            store.stop();
+            store = createStore(false);
+            store.start();
+            
+            //Test that the queue was persisted
+            checkQueue(queue, message.getSize(), 1);
+            checkMessageRestore(queue, qRecord, message);
+        }
+    }
+
+    private void checkQueue(final QueueStore.QueueDescriptor queue, final long expectedSize, final long expectedCount) throws FatalStoreException, Exception
+    {
+        store.execute(new VoidCallback<Exception>() {
+            @Override
+            public void run(Session session) throws Exception {
+                Iterator<QueueQueryResult> list = session.queueList(null, 100);
                 assertTrue(list.hasNext());
-                AsciiBuffer actual = list.next();
-                assertEquals(expected, actual);
+                QueueQueryResult actual = list.next();
+                assertEquals(queue, actual.getDescriptor());
+                assertEquals(expectedSize, actual.getSize());
+                assertEquals(expectedCount, actual.getCount());
             }
         }, null);
     }
-
+    
+    private void checkMessageRestore(final QueueStore.QueueDescriptor queue, final QueueRecord qRecord, final MessageRecord message ) throws FatalStoreException, Exception
+    {
+        store.execute(new VoidCallback<Exception>() {
+            @Override
+            public void run(Session session) throws Exception {
+                Iterator<QueueRecord> qRecords = session.queueListMessagesQueue(queue, 0L, -1L, -1);
+                assertTrue(qRecords.hasNext());
+                QueueRecord qr = qRecords.next();
+                assertEquals(qRecord.getQueueKey(), qr.getQueueKey());
+                assertEquals(qRecord.getMessageKey(), message.getKey());
+                MessageRecord record = session.messageGetRecord(qr.getMessageKey());
+                assertEquals(record, message);
+            }
+        }, null);
+    }
+    
     public void testStoreExecuteExceptionPassthrough() throws Exception {
         try {
             store.execute(new VoidCallback<Exception>() {
                 @Override
                 public void run(Session session) throws Exception {
-                    session.queueAdd(new AsciiBuffer("test"));
+                    QueueStore.QueueDescriptor qd = new QueueStore.QueueDescriptor();
+                    qd.setQueueName(new AsciiBuffer("test"));
+                    session.queueAdd(qd);
                     throw new IOException("Expected");
                 }
             }, null);
@@ -113,12 +199,11 @@ public abstract class StoreTestBase extends TestCase {
             store.execute(new VoidCallback<Exception>() {
                 @Override
                 public void run(Session session) throws Exception {
-                    Iterator<AsciiBuffer> list = session.queueList(null, 100);
+                    Iterator<QueueQueryResult> list = session.queueList(null, 100);
                     assertFalse(list.hasNext());
                 }
             }, null);
         }
-
     }
 
     static void assertEquals(MessageRecord expected, MessageRecord actual) {
@@ -126,6 +211,17 @@ public abstract class StoreTestBase extends TestCase {
         assertEquals(expected.getEncoding(), actual.getEncoding());
         assertEquals(expected.getMessageId(), actual.getMessageId());
         assertEquals(expected.getStreamKey(), actual.getStreamKey());
+        assertEquals(expected.getSize(), actual.getSize());
+    }
+    
+    static void assertEquals(QueueStore.QueueDescriptor expected, QueueStore.QueueDescriptor actual) {
+        assertEquals(expected.getParent(), actual.getParent());
+        assertEquals(expected.getQueueType(), actual.getQueueType());
+        assertEquals(expected.getApplicationType(), actual.getApplicationType());
+        assertEquals(expected.getPartitionKey(), actual.getPartitionKey());
+        assertEquals(expected.getQueueName(), actual.getQueueName());
+        //TODO test partitions?
+        
     }
 
 }

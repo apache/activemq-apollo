@@ -57,6 +57,7 @@ message MessageAdd {
   optional bytes encoding = 3 [java_override_type = "AsciiBuffer"];
   optional bytes buffer = 4;
   optional int64 streamKey=5;
+  optional int32 messageSize=6;
 }  
 
 ///////////////////////////////////////////////////////////////
@@ -65,6 +66,10 @@ message MessageAdd {
 
 message QueueAdd {
   optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
+  optional int32 applicationType = 2; 
+  optional bytes parentName = 3 [java_override_type = "AsciiBuffer"];
+  optional int32 queueType = 4;
+  optional int32 partitionId = 5;
 }  
 message QueueRemove {
   optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
@@ -74,6 +79,7 @@ message QueueAddMessage {
   optional int64 queueKey=2;
   optional int64 messageKey=3;
   optional bytes attachment = 4;
+  optional int32 messageSize=5;
 }  
 message QueueRemoveMessage {
   optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];

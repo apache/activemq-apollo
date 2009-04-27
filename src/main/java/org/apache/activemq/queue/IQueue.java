@@ -16,18 +16,43 @@
  */
 package org.apache.activemq.queue;
 
+import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.IFlowSink;
 
-public interface IQueue<K, V> extends IFlowSink<V>, PersistentQueue<V>{
+public interface IQueue<K, V> extends IFlowSink<V>{
 
+    /**
+     * Called to initialize the queue with values from the queue store.
+     * 
+     * @param sequenceMin
+     *            The lowest sequence number in the store.
+     * @param sequenceMax
+     *            The max sequence number in the store.
+     * @param count
+     *            The number of messages in the queue
+     * @param size
+     *            The size of the messages in the queue
+     */
+    public void initialize(long sequenceMin, long sequenceMax, int count, long size);
+    
+    public QueueStore.QueueDescriptor getDescriptor();
+    
+    public int getEnqueuedCount();
+    
+    public long getEnqueuedSize();
+    
     public void addSubscription(Subscription<V> sub);
 
     public boolean removeSubscription(Subscription<V> sub);
-
-    public boolean removeByValue(V value);
-
-    public boolean removeByKey(K key);
     
-    public void setStore(Store<K, V> store);
-
+    public void setStore(QueueStore<K, V> store);
+    
+    public void setDispatcher(IDispatcher dispatcher);
+    
+    public void start();
+    
+    public void stop();
+    
+    
+ 
 }

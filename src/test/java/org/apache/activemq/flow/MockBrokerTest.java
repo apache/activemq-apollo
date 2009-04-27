@@ -26,11 +26,11 @@ import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Destination.DestinationBean;
 import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
 import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.queue.Mapper;
+import org.apache.activemq.util.Mapper;
 
 public class MockBrokerTest extends TestCase {
 
-    protected static final int PERFORMANCE_SAMPLES = 5;
+    protected static final int PERFORMANCE_SAMPLES = 3;
     protected static final int SAMPLING_FREQUENCY = 5;
 
     protected static final int FANIN_COUNT = 10;

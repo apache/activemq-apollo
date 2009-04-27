@@ -17,11 +17,14 @@
 package org.apache.activemq.broker.store;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.Iterator;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.queue.QueueStore;
+import org.apache.activemq.queue.QueueStore.QueueDescriptor;
 
 /**
  * Interface to persistently store and access data needed by the messaging
@@ -163,6 +166,33 @@ public interface Store extends Service {
         Long queueKey;
         Long messageKey;
         Buffer attachment;
+        int size;
+        boolean redelivered;
+        long tte;
+        
+        public boolean isRedelivered() {
+            return redelivered;
+        }
+
+        public void setRedelivered(boolean redelivered) {
+            this.redelivered = redelivered;
+        }
+
+        public long getTte() {
+            return tte;
+        }
+
+        public void setTte(long tte) {
+            this.tte = tte;
+        }
+
+        public int getSize() {
+            return size;
+        }
+
+        public void setSize(int size) {
+            this.size = size;
+        }
 
         public Long getQueueKey() {
             return queueKey;
@@ -194,6 +224,16 @@ public interface Store extends Service {
         Long key = (long) -1;
         AsciiBuffer messageId;
         AsciiBuffer encoding;
+        int size;
+
+        public int getSize() {
+            return size;
+        }
+
+        public void setSize(int size) {
+            this.size = size;
+        }
+
         Buffer buffer;
         Long streamKey;
 
@@ -236,6 +276,48 @@ public interface Store extends Service {
         public void setStreamKey(Long stream) {
             this.streamKey = stream;
         }
+    }
+
+    /**
+     * Result Holder for queue related queries.
+     */
+    public interface QueueQueryResult {
+
+        /**
+         * @return the descriptor for the queue.
+         */
+        public QueueStore.QueueDescriptor getDescriptor();
+
+        /**
+         * Gets the count of elements in this queue. Note that this does not
+         * include counts for elements held in child partitions.
+         * 
+         * @return the number of elements in the queue.
+         */
+        public int getCount();
+
+        /**
+         * Gets the size of elements in this queue. Note that this does not
+         * include size of elements held in child partitions.
+         * 
+         * @return the total size of elements in the queue
+         */
+        public long getSize();
+
+        /**
+         * @return the first sequence number in the queue.
+         */
+        public long getFirstSequence();
+        
+        /**
+         * @return the last sequence number in the queue.
+         */
+        public long getLastSequence();
+        
+        /**
+         * @return The results for this queue's partitions
+         */
+        public Collection<QueueQueryResult> getPartitions();
     }
 
     /**
@@ -297,24 +379,81 @@ public interface Store extends Service {
 
         public void transactionAddMessage(Buffer txid, Long messageKey) throws KeyNotFoundException;
 
-        public void transactionRemoveMessage(Buffer txid, AsciiBuffer queueName, Long messageKey) throws KeyNotFoundException;
+        public void transactionRemoveMessage(Buffer txid, QueueStore.QueueDescriptor queueName, Long messageKey) throws KeyNotFoundException;
 
         public void transactionCommit(Buffer txid) throws KeyNotFoundException;
 
         public void transactionRollback(Buffer txid) throws KeyNotFoundException;
 
-        // Queue related methods.
-        public Iterator<AsciiBuffer> queueList(AsciiBuffer firstQueueName, int max);
+        /**
+         * Gets a list of queues. The returned iterator returns top-level queues
+         * (e.g. queues without a parent). The child queues are accessible via
+         * {@link QueueQueryResult#getPartitions()}.
+         * 
+         * @param firstQueueName
+         *            If null starts the query at the first queue.
+         * @param max
+         *            The maximum number of queues to return
+         * @return The list of queues.
+         */
+        public Iterator<QueueQueryResult> queueList(QueueStore.QueueDescriptor firstQueueName, int max);
 
-        public void queueAdd(AsciiBuffer queueName);
+        /**
+         * Gets a list of queues for which
+         * {@link QueueDescriptor#getQueueType()} matches the specified type.
+         * The returned iterator returns top-level queues (e.g. queues without a
+         * parent). The child queues are accessible via
+         * {@link QueueQueryResult#getPartitions()}.
+         * 
+         * @param firstQueueName
+         *            If null starts the query at the first queue.
+         * @param max
+         *            The maximum number of queues to return
+         * @param type
+         *            The type of queue to consider
+         * @return The list of queues.
+         */
+        public Iterator<QueueQueryResult> queueListByType(short type, QueueStore.QueueDescriptor firstQueueName, int max);
 
-        public void queueRemove(AsciiBuffer queueName);
+        /**
+         * Adds a queue. If {@link QueueDescriptor#getParent()} is specified
+         * then the parent queue must exist.
+         * 
+         * @param queue
+         *            The queue to add.
+         * 
+         * @throws KeyNotFoundException
+         *             if the descriptor specifies a non existent parent
+         */
+        public void queueAdd(QueueStore.QueueDescriptor queue) throws KeyNotFoundException;
 
-        public Long queueAddMessage(AsciiBuffer queueName, QueueRecord record) throws KeyNotFoundException;
+        /**
+         * Deletes a queue and all of it's messages. If it has any child
+         * partitions they are deleted as well.
+         * 
+         * @param queue
+         *            The queue to delete
+         */
+        public void queueRemove(QueueStore.QueueDescriptor queue);
 
-        public void queueRemoveMessage(AsciiBuffer queueName, Long messageKey) throws KeyNotFoundException;
+        /**
+         * Adds a reference to the message for the given queue. The associated
+         * queue record contains the sequence number of the message in this
+         * queue and the store tracking number of the associated message.
+         * 
+         * @param queue
+         *            The queue descriptor
+         * @param record
+         *            The queue record
+         * @throws KeyNotFoundException
+         *             If there is no message associated with
+         *             {@link QueueRecord#getMessageKey()}
+         */
+        public void queueAddMessage(QueueStore.QueueDescriptor queue, QueueRecord record) throws KeyNotFoundException;
 
-        public Iterator<QueueRecord> queueListMessagesQueue(AsciiBuffer queueName, Long firstQueueKey, int max) throws KeyNotFoundException;
+        public void queueRemoveMessage(QueueStore.QueueDescriptor queue, Long messageKey) throws KeyNotFoundException;
+
+        public Iterator<QueueRecord> queueListMessagesQueue(QueueStore.QueueDescriptor queue, Long firstQueueKey, Long maxSequence, int max) throws KeyNotFoundException;
 
         public Iterator<AsciiBuffer> mapList(AsciiBuffer first, int max);
 

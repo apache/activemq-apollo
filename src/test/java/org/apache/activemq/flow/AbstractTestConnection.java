@@ -293,6 +293,10 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
         return outputQueue;
     }
 
+    public final boolean hasSelector() {
+        return false;
+    }
+
     public boolean match(Message message) {
         return true;
     }
@@ -365,7 +369,6 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
         }
 
         public void addCommand(Object object) {
-            boolean notify = false;
             synchronized (outputQueue) {
                 outputCommandQueue.add(object);
                 notifyTransport();
@@ -521,7 +524,7 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
 
         private float targetRate = 200000;
         private final int quantum = 10000;
-        private final float lambda = .0001f;
+        //private final float lambda = .0001f;
         boolean increase = true;
 
         private static final boolean DEBUG = false;

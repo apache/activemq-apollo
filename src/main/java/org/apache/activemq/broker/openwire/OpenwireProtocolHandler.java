@@ -20,12 +20,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.jms.InvalidSelectorException;
 import javax.jms.JMSException;
 
 import org.apache.activemq.WindowLimiter;
 import org.apache.activemq.broker.BrokerConnection;
+import org.apache.activemq.broker.BrokerMessageDelivery;
 import org.apache.activemq.broker.DeliveryTarget;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
@@ -83,6 +85,7 @@ import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.openwire.OpenWireFormat;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.selector.SelectorParser;
 import org.apache.activemq.state.CommandVisitor;
@@ -99,6 +102,10 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
     private OpenWireFormat wireFormat;
     private OpenWireFormat storeWireFormat;
     private Router router;
+
+    public OpenwireProtocolHandler() {
+        setStoreWireFormat(new OpenWireFormat());
+    }
 
     public void start() throws Exception {
 
@@ -133,7 +140,6 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 public Response processAddConsumer(ConsumerInfo info) throws Exception {
                     ConsumerContext ctx = new ConsumerContext(info);
                     consumers.put(info.getConsumerId(), ctx);
-                    router.bind(convert(info.getDestination()), ctx);
                     return ack(command);
                 }
 
@@ -403,11 +409,13 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         private final ConsumerInfo info;
         private String name;
         private BooleanExpression selector;
-        private boolean durable;
-        private AsciiBuffer durableQueueName;
+        private boolean isDurable;
+        private boolean isQueueReceiver;
+        private QueueStore.QueueDescriptor durableQueueId;
 
         private SingleFlowRelay<MessageDelivery> queue;
         public WindowLimiter<MessageDelivery> limiter;
+        private AtomicLong deliverySequence = new AtomicLong(0);
 
         HashMap<MessageId, MessageDelivery> pendingMessages = new HashMap<MessageId, MessageDelivery>();
         LinkedList<MessageId> pendingMessageIds = new LinkedList<MessageId>();
@@ -415,11 +423,13 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         public ConsumerContext(final ConsumerInfo info) throws InvalidSelectorException {
             this.info = info;
             this.name = info.getConsumerId().toString();
-            durable = info.isDurable();
-            if (durable) {
-                durableQueueName = new AsciiBuffer(info.getSubscriptionName());
+
+            isDurable = info.isDurable();
+            if (isDurable) {
+                durableQueueId = new QueueStore.QueueDescriptor();
+                durableQueueId.setQueueName(new AsciiBuffer(info.getSubscriptionName()));
                 try {
-                    connection.getBroker().getDefaultVirtualHost().getDatabase().addQueue(durableQueueName);
+                    connection.getBroker().getDefaultVirtualHost().getQueueStore().addQueue(durableQueueId);
                 } catch (Throwable thrown) {
                     thrown.printStackTrace();
                 }
@@ -442,36 +452,42 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                     md.setMessage(msg);
                     md.setDestination(msg.getDestination());
                     // Add to the pending list if persistent and we are durable:
-                    if (isDurable() && message.isPersistent()) {
+                    if (message.isPersistent() && (isDurable() || isQueueReceiver())) {
                         synchronized (queue) {
                             Object old = pendingMessages.put(msg.getMessageId(), message);
-                            if(old != null)
-                            {
+                            if (old != null) {
                                 new Exception("Duplicate message id: " + msg.getMessageId()).printStackTrace();
                             }
                             pendingMessageIds.add(msg.getMessageId());
                             connection.write(md);
                         }
-                    }
-                    else
-                    {
+                    } else {
+                        if (isQueueReceiver()) {
+                            message.acknowledge(durableQueueId);
+                        }
                         connection.write(md);
                     }
                 };
             });
+
+            // Subscribe
+            if (info.getDestination().isQueue()) {
+                isQueueReceiver = true;
+            }
+            router.bind(convert(info.getDestination()), this);
         }
+
         public void ack(MessageAck info) {
-            //TODO: The pending message queue could probably be optimized to avoid having
-            //to create a new list here. 
-            LinkedList<MessageDelivery> acked = new LinkedList<MessageDelivery>();            
+            // TODO: The pending message queue could probably be optimized to
+            // avoid having to create a new list here.
+            LinkedList<MessageDelivery> acked = new LinkedList<MessageDelivery>();
             synchronized (queue) {
-                if (isDurable()) {
+                if (isDurable() || isQueueReceiver()) {
                     MessageId id = info.getLastMessageId();
                     while (!pendingMessageIds.isEmpty()) {
                         MessageId pendingId = pendingMessageIds.getFirst();
                         MessageDelivery delivery = pendingMessages.remove(pendingId);
                         acked.add(delivery);
-                        delivery.delete(durableQueueName);
                         pendingMessageIds.removeFirst();
                         if (pendingId.equals(id)) {
                             break;
@@ -481,12 +497,11 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 }
                 limiter.onProtocolCredit(info.getMessageCount());
             }
-            
-            //Delete outside of synchronization on queue to avoid contention with enqueueing
-            //threads. 
-            for(MessageDelivery delivery : acked)
-            {
-                delivery.delete(durableQueueName);
+
+            // Delete outside of synchronization on queue to avoid contention
+            // with enqueueing threads.
+            for (MessageDelivery delivery : acked) {
+                delivery.acknowledge(durableQueueId);
             }
         }
 
@@ -501,14 +516,18 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
             if (isDurable() && delivery.isPersistent()) {
                 try {
-                    delivery.persist(durableQueueName, true);
+                    delivery.persist(durableQueueId, null, deliverySequence.incrementAndGet(), true);
                 } catch (IOException e) {
-                    // TODO Auto-generated catch block
+                    // TODO Auto-generated catch restoreBlock
                     e.printStackTrace();
                 }
             }
 
             queue.add(delivery, source);
+        }
+
+        public boolean hasSelector() {
+            return selector != null;
         }
 
         public boolean match(MessageDelivery message) {
@@ -529,7 +548,11 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         }
 
         public boolean isDurable() {
-            return durable;
+            return isDurable;
+        }
+
+        public boolean isQueueReceiver() {
+            return isQueueReceiver;
         }
 
         public AsciiBuffer getPersistentQueueName() {
@@ -550,8 +573,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         AsciiBuffer domain;
         if (dest.isQueue()) {
             domain = Router.QUEUE_DOMAIN;
-        }
-        if (dest.isTopic()) {
+        } else if (dest.isTopic()) {
             domain = Router.TOPIC_DOMAIN;
         } else {
             throw new IllegalArgumentException("Unsupported domain type: " + dest);
@@ -592,13 +614,18 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
     public void setWireFormat(WireFormat wireFormat) {
         this.wireFormat = (OpenWireFormat) wireFormat;
-        this.storeWireFormat = this.wireFormat.copy();
+        setStoreWireFormat(this.wireFormat.copy());
+    }
+
+    private void setStoreWireFormat(OpenWireFormat wireFormat) {
+        this.storeWireFormat = wireFormat;
+        storeWireFormat.setVersion(OpenWireFormat.DEFAULT_VERSION);
         storeWireFormat.setCacheEnabled(false);
         storeWireFormat.setTightEncodingEnabled(false);
         storeWireFormat.setSizePrefixDisabled(false);
     }
 
-    public MessageDelivery createMessageDelivery(MessageRecord record) throws IOException {
+    public BrokerMessageDelivery createMessageDelivery(MessageRecord record) throws IOException {
         Buffer buf = record.getBuffer();
         Message message = (Message) storeWireFormat.unmarshal(new ByteSequence(buf.data, buf.offset, buf.length));
         OpenWireMessageDelivery delivery = new OpenWireMessageDelivery(message);

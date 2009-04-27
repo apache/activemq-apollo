@@ -27,7 +27,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.dispatch.ExecutionLoadBalancer.ExecutionTracker;
 import org.apache.activemq.dispatch.PooledDispatcher.PooledDispatchContext;
-import org.apache.activemq.queue.Mapper;
+import org.apache.activemq.util.Mapper;
+import org.apache.activemq.util.PriorityLinkedList;
 import org.apache.kahadb.util.LinkedNode;
 import org.apache.kahadb.util.LinkedNodeList;
 

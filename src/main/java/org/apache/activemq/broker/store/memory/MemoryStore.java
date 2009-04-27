@@ -17,8 +17,10 @@
 package org.apache.activemq.broker.store.memory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -26,14 +28,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.io.File;
 
 import org.apache.activemq.broker.store.Store;
+import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.queue.QueueStore;
+import org.apache.activemq.queue.QueueStore.QueueDescriptor;
 import org.apache.activemq.util.ByteArrayOutputStream;
 import org.apache.activemq.util.ByteSequence;
 
-
 /**
- * An in memory implementation of the {@link Store} interface. It does not
+ * An in memory implementation of the {@link QueueStore} interface. It does not
  * properly roll back operations if an error occurs in the middle of a
  * transaction and it does not persist changes across restarts.
  */
@@ -85,45 +89,137 @@ public class MemoryStore implements Store {
     }
 
     static private class StoredQueue {
-        long sequence;
+        QueueStore.QueueDescriptor descriptor;
+
         TreeMap<Long, QueueRecord> records = new TreeMap<Long, QueueRecord>();
         // Maps tracking to sequence number:
         HashMap<Long, Long> trackingMap = new HashMap<Long, Long>();
+        int count = 0;
+        long size = 0;
+        HashMap<QueueStore.QueueDescriptor, StoredQueue> partitions;
+        StoredQueue parent;
 
-        public Long add(QueueRecord record) {
-            long sequenceKey = ++sequence;
-            record.setQueueKey(sequenceKey);
-            records.put(sequenceKey, record);
+        StoredQueue(QueueStore.QueueDescriptor descriptor) {
+            this.descriptor = descriptor.copy();
+        }
+
+        public void add(QueueRecord record) {
+            records.put(record.getQueueKey(), record);
             trackingMap.put(record.getMessageKey(), record.getQueueKey());
-            return sequenceKey;
+            count++;
+            size += record.getSize();
         }
 
         public boolean remove(Long msgKey) {
             Long sequenceKey = trackingMap.remove(msgKey);
             if (sequenceKey != null) {
-                records.remove(sequenceKey);
+                QueueRecord record = records.remove(sequenceKey);
+                count--;
+                size -= record.getSize();
                 return true;
             }
             return false;
         }
 
-        public Iterator<QueueRecord> list(Long firstQueueKey, int max) {
-            ArrayList<QueueRecord> list = new ArrayList<QueueRecord>(max);
+        public Iterator<QueueRecord> list(Long firstQueueKey, long maxSequence, int max) {
+            Collection<QueueRecord> list;
+            if (max < 0) {
+                list = new LinkedList<QueueRecord>();
+            } else {
+                list = new ArrayList<QueueRecord>(max);
+            }
+            
             for (Long key : records.tailMap(firstQueueKey).keySet()) {
-                if (list.size() >= max) {
+                if ((max >= 0 && list.size() >= max) || (maxSequence >= 0 && key > maxSequence)) {
                     break;
                 }
                 list.add(records.get(key));
             }
             return list.iterator();
         }
+
+        public int getCount() {
+            return count;
+        }
+
+        public long getSize() {
+            return size;
+        }
+
+        public void setParent(StoredQueue parent) {
+            this.parent = parent;
+            if (parent == null) {
+                this.descriptor.setParent(null);
+            } else {
+                this.descriptor.setParent(parent.getQueueName());
+            }
+        }
+
+        public StoredQueue getParent() {
+            return parent;
+        }
+
+        public void addPartition(StoredQueue child) {
+            if (partitions == null) {
+                partitions = new HashMap<QueueStore.QueueDescriptor, StoredQueue>();
+            }
+
+            partitions.put(child.getDescriptor(), child);
+        }
+
+        public boolean removePartition(StoredQueue name) {
+            if (partitions == null) {
+                return false;
+            }
+
+            StoredQueue old = partitions.remove(name);
+            if (old != null) {
+                return true;
+            }
+            return false;
+        }
+
+        public Iterator<StoredQueue> getPartitions() {
+            if (partitions == null) {
+                return null;
+            }
+
+            return partitions.values().iterator();
+        }
+
+        public AsciiBuffer getQueueName() {
+            return descriptor.getQueueName();
+        }
+
+        public QueueStore.QueueDescriptor getDescriptor() {
+            return descriptor;
+        }
+
+        public QueueQueryResultImpl query() {
+            QueueQueryResultImpl result = new QueueQueryResultImpl();
+            result.count = count;
+            result.size = size;
+            result.firstSequence = records.isEmpty() ? 0 : records.firstEntry().getValue().getQueueKey();
+            result.lastSequence = records.isEmpty() ? 0 : records.lastEntry().getValue().getQueueKey();
+            result.desc = descriptor.copy();
+            if (this.partitions != null) {
+                ArrayList<QueueQueryResult> childResults = new ArrayList<QueueQueryResult>(partitions.size());
+                for (StoredQueue child : partitions.values()) {
+                    childResults.add(child.query());
+                }
+                result.partitions = childResults;
+            }
+
+            return result;
+        }
+
     }
 
     static private class RemoveOp {
-        AsciiBuffer queue;
+        QueueStore.QueueDescriptor queue;
         Long messageKey;
 
-        public RemoveOp(AsciiBuffer queue, Long messageKey) {
+        public RemoveOp(QueueStore.QueueDescriptor queue, Long messageKey) {
             this.queue = queue;
             this.messageKey = messageKey;
         }
@@ -149,7 +245,7 @@ public class MemoryStore implements Store {
             adds.add(messageKey);
         }
 
-        public void removeMessage(AsciiBuffer queue, Long messageKey) {
+        public void removeMessage(QueueStore.QueueDescriptor queue, Long messageKey) {
             removes.add(new RemoveOp(queue, messageKey));
         }
     }
@@ -160,6 +256,42 @@ public class MemoryStore implements Store {
 
         public MessageRecordHolder(MessageRecord record) {
             this.record = record;
+        }
+    }
+
+    private static class QueueQueryResultImpl implements QueueQueryResult {
+
+        QueueStore.QueueDescriptor desc;
+        Collection<QueueQueryResult> partitions;
+        long size;
+        int count;
+        long firstSequence;
+        long lastSequence;
+
+        public QueueStore.QueueDescriptor getDescriptor() {
+            return desc;
+        }
+
+        public Collection<QueueQueryResult> getPartitions() {
+            return partitions;
+        }
+
+        public long getSize() {
+            return size;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public long getFirstSequence() {
+            // TODO Auto-generated method stub
+            return firstSequence;
+        }
+
+        public long getLastSequence() {
+            // TODO Auto-generated method stub
+            return lastSequence;
         }
     }
 
@@ -204,49 +336,114 @@ public class MemoryStore implements Store {
         // //////////////////////////////////////////////////////////////////////////////
         // Queue related methods.
         // ///////////////////////////////////////////////////////////////////////////////
-        public void queueAdd(AsciiBuffer queueName) {
-            StoredQueue queue = queues.get(queueName);
+        public void queueAdd(QueueStore.QueueDescriptor desc) throws KeyNotFoundException {
+            StoredQueue queue = queues.get(desc.getQueueName());
             if (queue == null) {
-                queue = new StoredQueue();
-                queues.put(queueName, queue);
+                queue = new StoredQueue(desc);
+                // Add to the parent:
+                AsciiBuffer parent = desc.getParent();
+
+                // If the parent doesn't exist create it:
+                if (parent != null) {
+                    StoredQueue parentQueue = queues.get(parent);
+                    if (parentQueue == null) {
+                        throw new KeyNotFoundException("No parent " + parent + " for " + desc.getQueueName().toString());
+                    }
+
+                    parentQueue.addPartition(queue);
+                    queue.setParent(parentQueue);
+                }
+
+                // Add the queue:
+                queues.put(desc.getQueueName(), queue);
             }
         }
 
-        public void queueRemove(AsciiBuffer queueName) {
-            StoredQueue queue = queues.get(queueName);
+        public void queueRemove(QueueStore.QueueDescriptor desc) {
+            StoredQueue queue = queues.get(desc.getQueueName());
             if (queue != null) {
-                queues.remove(queueName);
+                // Remove message references:
+                for (QueueRecord record : queue.records.values()) {
+                    deleteMessageReference(record.getMessageKey());
+                }
+
+                // Remove parent reference:
+                StoredQueue parent = queue.getParent();
+                if (parent != null) {
+                    parent.removePartition(queue);
+                }
+
+                // Delete partitions
+                Iterator<StoredQueue> partitions = queue.getPartitions();
+                if (partitions != null) {
+                    while (partitions.hasNext()) {
+                        QueueStore.QueueDescriptor child = partitions.next().getDescriptor();
+                        queueRemove(child);
+                    }
+                }
+
+                // Remove the queue:
+                queues.remove(desc.getQueueName());
             }
         }
 
-        public Iterator<AsciiBuffer> queueList(AsciiBuffer firstQueueName, int max) {
-            return list(queues, firstQueueName, max);
+        // Queue related methods.
+        public Iterator<QueueQueryResult> queueListByType(short type, QueueStore.QueueDescriptor firstQueue, int max) {
+            return queueListInternal(firstQueue, type, max);
         }
 
-        public Long queueAddMessage(AsciiBuffer queueName, QueueRecord record) throws KeyNotFoundException {
-            Long sequenceKey = get(queues, queueName).add(record);
+        public Iterator<QueueQueryResult> queueList(QueueStore.QueueDescriptor firstQueue, int max) {
+            return queueListInternal(firstQueue, (short) -1, max);
+        }
+
+        private Iterator<QueueQueryResult> queueListInternal(QueueStore.QueueDescriptor firstQueue, short type, int max) {
+            Collection<StoredQueue> tailResults;
+            LinkedList<QueueQueryResult> results = new LinkedList<QueueQueryResult>();
+            if (firstQueue == null) {
+                tailResults = queues.values();
+            } else {
+                tailResults = queues.tailMap(firstQueue.getQueueName()).values();
+            }
+
+            for (StoredQueue sq : tailResults) {
+                if (max >=0 && results.size() >= max) {
+                    break;
+                }
+                if (type != -1 && sq.descriptor.getApplicationType() != type) {
+                    continue;
+                }
+                results.add(sq.query());
+            }
+
+            return results.iterator();
+        }
+
+        public void queueAddMessage(QueueStore.QueueDescriptor queue, QueueRecord record) throws KeyNotFoundException {
+            get(queues, queue.getQueueName()).add(record);
             MessageRecordHolder holder = messages.get(record.getMessageKey());
             if (holder != null) {
                 holder.refs++;
             }
-            return sequenceKey;
-
         }
 
-        public void queueRemoveMessage(AsciiBuffer queueName, Long msgKey) throws KeyNotFoundException {
-            if (get(queues, queueName).remove(msgKey)) {
-                MessageRecordHolder holder = messages.get(msgKey);
-                if (holder != null) {
-                    holder.refs--;
-                    if (holder.refs <= 0) {
-                        messages.remove(msgKey);
-                    }
+        public void queueRemoveMessage(QueueStore.QueueDescriptor queue, Long msgKey) throws KeyNotFoundException {
+            if (get(queues, queue.getQueueName()).remove(msgKey)) {
+                deleteMessageReference(msgKey);
+            }
+        }
+
+        private void deleteMessageReference(Long msgKey) {
+            MessageRecordHolder holder = messages.get(msgKey);
+            if (holder != null) {
+                holder.refs--;
+                if (holder.refs <= 0) {
+                    messages.remove(msgKey);
                 }
             }
         }
 
-        public Iterator<QueueRecord> queueListMessagesQueue(AsciiBuffer queueName, Long firstQueueKey, int max) throws KeyNotFoundException {
-            return get(queues, queueName).list(firstQueueKey, max);
+        public Iterator<QueueRecord> queueListMessagesQueue(QueueStore.QueueDescriptor queue, Long firstQueueKey, Long maxQueueKey, int max) throws KeyNotFoundException {
+            return get(queues, queue.getQueueName()).list(firstQueueKey, maxQueueKey, max);
         }
 
         // //////////////////////////////////////////////////////////////////////////////
@@ -337,7 +534,7 @@ public class MemoryStore implements Store {
             }
         }
 
-        public void transactionRemoveMessage(Buffer txid, AsciiBuffer queue, Long messageKey) throws KeyNotFoundException {
+        public void transactionRemoveMessage(Buffer txid, QueueStore.QueueDescriptor queue, Long messageKey) throws KeyNotFoundException {
             get(transactions, txid).removeMessage(queue, messageKey);
             MessageRecordHolder holder = messages.get(messageKey);
             if (holder != null) {
@@ -347,7 +544,6 @@ public class MemoryStore implements Store {
                 }
             }
         }
-
     }
 
     public void start() throws Exception {
@@ -401,7 +597,7 @@ public class MemoryStore implements Store {
 
     public void setDeleteAllMessages(boolean val) {
         // TODO Auto-generated method stub
-        
+
     }
 
 }

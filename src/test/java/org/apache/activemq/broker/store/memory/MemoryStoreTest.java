@@ -22,7 +22,7 @@ import org.apache.activemq.broker.store.StoreTestBase;
 public class MemoryStoreTest extends StoreTestBase {
 
     @Override
-    protected Store createStore() {
+    protected Store createStore(boolean delete) {
         return new MemoryStore();
     }
 

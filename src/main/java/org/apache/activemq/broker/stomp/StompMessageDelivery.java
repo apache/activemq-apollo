@@ -54,7 +54,7 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
         return destination;
     }
 
-    public int getFlowLimiterSize() {
+    public int getMemorySize() {
         return frame.getContent().length;
     }
 

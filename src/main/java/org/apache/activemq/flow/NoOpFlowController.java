@@ -92,6 +92,6 @@ public class NoOpFlowController<E> implements ISinkController<E> {
     }
 
     public void setExecutor(Executor executor) {
-        // Don't need an executor since we don't block.
+        // Don't need an executor since we don't restoreBlock.
     }
 }
