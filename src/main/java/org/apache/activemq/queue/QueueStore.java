@@ -27,12 +27,14 @@ public interface QueueStore<K, V> {
     public interface SaveableQueueElement<V> {
         /**
          * Gets the element to save.
+         * 
          * @return
          */
         public V getElement();
 
         /**
          * Gets the sequence number of the element in the queue
+         * 
          * @return
          */
         public long getSequenceNumber();
@@ -57,10 +59,15 @@ public interface QueueStore<K, V> {
      */
     public interface RestoredElement<V> {
         /**
-         * @return Gets the restored element
+         * @return Gets the restored element (possibly null if not requested)
          * @throws Exception
          */
         public V getElement() throws Exception;
+
+        /**
+         * @return The element size.
+         */
+        int getElementSize();
 
         /**
          * Returns the sequence number of this element in the queue
@@ -217,14 +224,17 @@ public interface QueueStore<K, V> {
     }
 
     /**
-     * Loads a batch of messages for the specified queue. The loaded messages
-     * are given the provided {@link MessageRestoreListener}.
+     * Loads a series of elements for the specified queue. The loaded messages
+     * are given to the provided {@link MessageRestoreListener}.
      * <p>
      * <b><i>NOTE:</i></b> This method uses the queue sequence number for the
      * message not the store tracking number.
      * 
      * @param queue
      *            The queue for which to load messages
+     * @param recordOnly
+     *            True if only the record data should be returned (excluding the
+     *            element itself)
      * @param firstSequence
      *            The first queue sequence number to load (-1 starts at
      *            beginning)
@@ -236,7 +246,7 @@ public interface QueueStore<K, V> {
      *            The listener to which restored elements should be passed.
      * @return The {@link OperationContext} associated with the operation
      */
-    public void restoreQueueElements(QueueDescriptor queue, long firstSequence, long maxSequence, int maxCount, RestoreListener<V> listener);
+    public void restoreQueueElements(QueueDescriptor queue, boolean recordOnly, long firstSequence, long maxSequence, int maxCount, RestoreListener<V> listener);
 
     /**
      * Asynchronously deletes an element from the store.

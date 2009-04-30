@@ -75,7 +75,8 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     private AtomicBoolean notify = new AtomicBoolean(false);
     private Semaphore opsReady = new Semaphore(0);
     private long opSequenceNumber;
-    private long flushPointer = -1; // The last seq num for which flush was requested    
+    private long flushPointer = -1; // The last seq num for which flush was
+    // requested
     private long requestedDelayedFlushPointer = -1; // Set to the last sequence
     // num scheduled for delay
     private long delayedFlushPointer = 0; // The last delayable sequence num
@@ -144,11 +145,10 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     public synchronized void stop() throws Exception {
         if (flushThread != null) {
 
-            synchronized(opQueue)
-            {
+            synchronized (opQueue) {
                 updateFlushPointer(opSequenceNumber + 1);
             }
-            
+
             running.set(false);
             boolean interrupted = false;
             while (true) {
@@ -262,10 +262,10 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         synchronized (opQueue) {
             if (flushPointer < requestedDelayedFlushPointer) {
                 updateFlushPointer(requestedDelayedFlushPointer);
-                
+
             }
-            
-            //If another delayed flush has been scheduled schedule it:
+
+            // If another delayed flush has been scheduled schedule it:
             requestedDelayedFlushPointer = -1;
             // Schedule next delay if needed:
             if (delayedFlushPointer > flushPointer) {
@@ -273,7 +273,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
             } else {
                 delayedFlushPointer = -1;
             }
-            
+
         }
     }
 
@@ -345,7 +345,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
                                 }
                             }, null);
                         }
-                        
+
                         if (count < 1000) {
                             op = getNextOp(false);
                         } else {
@@ -486,6 +486,8 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      * 
      * @param queue
      *            The queue for which to load messages
+     * @param recordsOnly
+     *            True if message body shouldn't be restored
      * @param first
      *            The first queue sequence number to load (-1 starts at
      *            begining)
@@ -497,8 +499,8 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      *            The listener to which messags should be passed.
      * @return The {@link OperationContext} associated with the operation
      */
-    public OperationContext restoreMessages(QueueStore.QueueDescriptor queue, long first, long maxSequence, int maxCount, RestoreListener<MessageDelivery> listener) {
-        return add(new RestoreMessageOperation(queue, first, maxCount, maxSequence, listener), null, true);
+    public OperationContext restoreMessages(QueueStore.QueueDescriptor queue, boolean recordsOnly, long first, long maxSequence, int maxCount, RestoreListener<MessageDelivery> listener) {
+        return add(new RestoreMessageOperation(queue, recordsOnly, first, maxCount, maxSequence, listener), null, true);
     }
 
     private void onDatabaseException(IOException ioe) {
@@ -668,7 +670,8 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
          *             operations.
          */
         public void execute(Session session) throws Exception, RuntimeException {
-            if(DEBUG) System.out.println("Executing " + this);
+            if (DEBUG)
+                System.out.println("Executing " + this);
             doExcecute(session);
         }
 
@@ -813,11 +816,13 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         private long firstKey;
         private int maxRecords;
         private long maxSequence;
+        private boolean recordsOnly;
         private RestoreListener<MessageDelivery> listener;
         private Collection<RestoredElement<MessageDelivery>> msgs = null;
 
-        RestoreMessageOperation(QueueStore.QueueDescriptor queue, long firstKey, int maxRecords, long maxSequence, RestoreListener<MessageDelivery> listener) {
+        RestoreMessageOperation(QueueStore.QueueDescriptor queue, boolean recordsOnly, long firstKey, int maxRecords, long maxSequence, RestoreListener<MessageDelivery> listener) {
             this.queue = queue;
+            this.recordsOnly = recordsOnly;
             this.firstKey = firstKey;
             this.maxRecords = maxRecords;
             this.maxSequence = maxSequence;
@@ -853,15 +858,12 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
                     qRecord = records.next();
                     rm.nextSequence = qRecord.getQueueKey();
                 } else {
-                     // Look up the next sequence number:
+                    // Look up the next sequence number:
                     try {
                         records = session.queueListMessagesQueue(queue, qRecord.getQueueKey() + 1, -1L, 1);
-                        if(!records.hasNext())
-                        {
+                        if (!records.hasNext()) {
                             rm.nextSequence = -1;
-                        }
-                        else
-                        {
+                        } else {
                             rm.nextSequence = records.next().queueKey;
                         }
                     } catch (KeyNotFoundException e) {
@@ -870,24 +872,28 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
                     qRecord = null;
                 }
 
-                try {
-                    rm.mRecord = session.messageGetRecord(rm.qRecord.messageKey);
-                    rm.handler = protocolHandlers.get(rm.mRecord.encoding.toString());
-                    if (rm.handler == null) {
-                        try {
-                            rm.handler = ProtocolHandlerFactory.createProtocolHandler(rm.mRecord.encoding.toString());
-                            protocolHandlers.put(rm.mRecord.encoding.toString(), rm.handler);
-                        } catch (Throwable thrown) {
-                            throw new RuntimeException("Unknown message format" + rm.mRecord.encoding.toString(), thrown);
+                if (!recordsOnly) {
+                    try {
+                        rm.mRecord = session.messageGetRecord(rm.qRecord.messageKey);
+                        rm.handler = protocolHandlers.get(rm.mRecord.encoding.toString());
+                        if (rm.handler == null) {
+                            try {
+                                rm.handler = ProtocolHandlerFactory.createProtocolHandler(rm.mRecord.encoding.toString());
+                                protocolHandlers.put(rm.mRecord.encoding.toString(), rm.handler);
+                            } catch (Throwable thrown) {
+                                throw new RuntimeException("Unknown message format" + rm.mRecord.encoding.toString(), thrown);
+                            }
                         }
+                        msgs.add(rm);
+                    } catch (KeyNotFoundException shouldNotHappen) {
+                        shouldNotHappen.printStackTrace();
                     }
+                } else {
                     msgs.add(rm);
-                } catch (KeyNotFoundException shouldNotHappen) {
-                    shouldNotHappen.printStackTrace();
                 }
             }
 
-            if(DEBUG)
+            if (DEBUG)
                 System.out.println("Restored: " + count + " messages");
         }
 
@@ -1007,24 +1013,59 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         QueueRecord qRecord;
         MessageRecord mRecord;
         ProtocolHandler handler;
-        long nextSequence = -1;
+        long nextSequence;
 
         public MessageDelivery getElement() throws IOException {
+            if (mRecord == null) {
+                return null;
+            }
+
             BrokerMessageDelivery delivery = handler.createMessageDelivery(mRecord);
             delivery.setFromDatabase(BrokerDatabase.this, mRecord);
             return delivery;
         }
 
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.queue.QueueStore.RestoredElement#getSequenceNumber
+         * ()
+         */
         public long getSequenceNumber() {
             return qRecord.getQueueKey();
         }
 
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.queue.QueueStore.RestoredElement#getStoreTracking
+         * ()
+         */
         public long getStoreTracking() {
             return qRecord.getMessageKey();
         }
 
+        /*
+         * (non-Javadoc)
+         * 
+         * @seeorg.apache.activemq.queue.QueueStore.RestoredElement#
+         * getNextSequenceNumber()
+         */
         public long getNextSequenceNumber() {
             return nextSequence;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.queue.QueueStore.RestoredElement#getElementSize()
+         */
+        public int getElementSize() {
+            // TODO Auto-generated method stub
+            return qRecord.getSize();
         }
 
     }

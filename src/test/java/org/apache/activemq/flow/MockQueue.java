@@ -193,7 +193,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
             // Noop;
         }
 
-        public final void restoreQueueElements(QueueStore.QueueDescriptor queue, long firstSequence, long maxSequence, int maxCount, QueueStore.RestoreListener<Message> listener) {
+        public final void restoreQueueElements(QueueStore.QueueDescriptor queue, boolean recordsOnly, long firstSequence, long maxSequence, int maxCount, QueueStore.RestoreListener<Message> listener) {
             throw new UnsupportedOperationException("Mock broker doesn't support persistence");
         }
 

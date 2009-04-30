@@ -58,7 +58,7 @@ public abstract class BrokerTestBase extends TestCase {
     protected boolean multibroker = false;
 
     // Set to mockup up ptp:
-    protected boolean ptp = false;
+    protected boolean ptp = true;
 
     // Set to use tcp IO
     protected boolean tcp = true;

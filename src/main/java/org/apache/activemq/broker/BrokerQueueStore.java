@@ -222,9 +222,9 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         elem.persist(descriptor, controller, sequence, delayable);
     }
 
-    public final void restoreQueueElements(QueueStore.QueueDescriptor queue, long firstSequence, long maxSequence, int maxCount,
+    public final void restoreQueueElements(QueueStore.QueueDescriptor queue, boolean recordsOnly, long firstSequence, long maxSequence, int maxCount,
             org.apache.activemq.queue.QueueStore.RestoreListener<MessageDelivery> listener) {
-        database.restoreMessages(queue, firstSequence, maxSequence, maxCount, listener);
+        database.restoreMessages(queue, recordsOnly, firstSequence, maxSequence, maxCount, listener);
     }
 
     public final void addQueue(QueueStore.QueueDescriptor queue) {

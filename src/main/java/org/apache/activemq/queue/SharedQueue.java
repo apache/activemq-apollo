@@ -59,7 +59,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
     // which is used for tracking page in requests. A trailing
     // consumer will request messages from at most one restoreBlock
     // at a time from the database.
-    private static final int RESTORE_BLOCK_SIZE = 50;
+    private static final int RESTORE_BLOCK_SIZE = 1000;
 
     private static final int ACCEPTED = 0;
     private static final int NO_MATCH = 1;
@@ -93,9 +93,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
     private final IFlowSizeLimiter<V> sizeLimiter;
 
     // Memory Limiter and controller operate against the liveCursor.
-    private static final long DEFAULT_MEMORY_LIMIT = 1536;
-    private final IFlowSizeLimiter<QueueElement> memoryLimiter;
-    private final FlowController<QueueElement> memoryController;
+    private static final long DEFAULT_MEMORY_LIMIT = 1000;
     private boolean useMemoryLimiter;
 
     private int totalQueueCount;
@@ -109,7 +107,6 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
 
     SharedQueue(String name, IFlowSizeLimiter<V> limiter, Object mutex) {
         super(name);
-        liveCursor = new Cursor(name);
         this.mutex = mutex == null ? new Object() : mutex;
 
         flow = new Flow(getResourceName(), false);
@@ -122,24 +119,12 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         sizeController.useOverFlowQueue(false);
         super.onFlowOpened(sizeController);
 
-        if (DEFAULT_MEMORY_LIMIT < limiter.getCapacity()) {
-            memoryLimiter = new SizeLimiter<QueueElement>(DEFAULT_MEMORY_LIMIT, DEFAULT_MEMORY_LIMIT) {
-                public int getElementSize(QueueElement qe) {
-                    return qe.size;
-                };
-            };
+        liveCursor = new Cursor(name);
 
-            memoryController = new FlowController<QueueElement>(null, flow, memoryLimiter, mutex) {
-                @Override
-                public IFlowResource getFlowResource() {
-                    return SharedQueue.this;
-                }
-            };
+        if (DEFAULT_MEMORY_LIMIT < limiter.getCapacity()) {
             useMemoryLimiter = true;
         } else {
             useMemoryLimiter = false;
-            memoryLimiter = null;
-            memoryController = null;
         }
 
         loader = new ElementLoader();
@@ -211,7 +196,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
 
             if (!started) {
                 started = true;
-                liveCursor.getNext();
+                liveCursor.activate();
                 if (isDispatchReady()) {
                     notifyReady();
                 }
@@ -248,7 +233,8 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
             if (!store.isFromStore(elem) && store.isElemPersistent(elem)) {
                 try {
                     // TODO Revisit delayability criteria (basically,
-                    // opened, unblocked receivers)
+                    // opened, unblocked receivers, that aren't too far
+                    // from this element)
                     store.persistQueueElement(queueDescriptor, source, elem, qe.sequence, true);
 
                 } catch (Exception e) {
@@ -257,10 +243,9 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                 }
             }
 
-            //Add it to our queue:
+            // Add it to our queue:
             queue.add(qe);
             totalQueueCount++;
-            
             // Check with the loader to see if it needs to be paged out:
             loader.elementAdded(qe, source);
 
@@ -335,7 +320,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                 }
 
                 // Request page in if the next element is paged out:
-                next = liveCursor.getNext();
+                liveCursor.getNext();
             }
             return isDispatchReady();
         }
@@ -410,6 +395,9 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         SubscriptionContext(Subscription<V> target) {
             this.cursor = new Cursor(target.toString());
             this.sub = target;
+            // TODO If this consumer doesn't have a selector
+            // and there are other consumers without a selector
+            // we can join the live cursor as well.
             if (queue.isEmpty()) {
                 cursor.reset(liveCursor.sequence);
             } else {
@@ -503,7 +491,6 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
             if (sub.offer(qe.elem, this, callback)) {
                 if (!sub.isBrowser()) {
                     qe.setAcquired(this);
-                    loader.releaseMemory(qe);
 
                     // If this came from the live cursor, update it
                     // if we acquired the element:
@@ -570,14 +557,73 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
     class Cursor implements Comparable<Cursor> {
 
         private final String name;
+        private boolean activated = false;;
+
+        // The next element for this cursor
         QueueElement current = null;
+        // The current sequence number for this cursor,
+        // used when inactive or pointing to an element
+        // sequence number beyond the queue's limit.
         long sequence = -1;
-        boolean paging = false;
-        long restoreBlock = -1;
-        long requestedBlock = -1;
+
+        // The cursor is holding references for all
+        // elements between first and last inclusive:
+        QueueElement firstRef = null;
+        QueueElement lastRef = null;
+
+        // Each cursor can optionally be memory limited
+        // When the limiter is set the cursor is able to
+        // keep as many elements in memory as its limiter
+        // allows.
+        private final IFlowSizeLimiter<QueueElement> memoryLimiter;
+        private final IFlowController<QueueElement> memoryController;
 
         public Cursor(String name) {
             this.name = name;
+            if (DEFAULT_MEMORY_LIMIT < sizeLimiter.getCapacity()) {
+                memoryLimiter = new SizeLimiter<QueueElement>(DEFAULT_MEMORY_LIMIT, DEFAULT_MEMORY_LIMIT) {
+                    public int getElementSize(QueueElement qe) {
+                        return qe.size;
+                    };
+                };
+
+                memoryController = new FlowController<QueueElement>(null, flow, memoryLimiter, mutex) {
+                    @Override
+                    public IFlowResource getFlowResource() {
+                        return SharedQueue.this;
+                    }
+                };
+            } else {
+                memoryLimiter = null;
+                memoryController = null;
+            }
+        }
+
+        /**
+         * Offers a queue element to the cursor's memory limiter The cursor will
+         * return true if it has room for it in memory.
+         * 
+         * @param qe
+         *            The element for which to check.
+         * @return
+         */
+        public boolean offer(QueueElement qe) {
+            if (activated && memoryLimiter != null) {
+                if (current == null) {
+                    getNext();
+                }
+                checkPageIn();
+                if (lastRef != null) {
+                    // Return true if we absorbed it:
+                    if (qe.sequence <= lastRef.sequence && qe.sequence >= firstRef.sequence) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            // Always accept an element if not memory
+            // limited providing we're active:
+            return activated;
         }
 
         public final void reset(long sequence) {
@@ -585,40 +631,101 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
             current = null;
         }
 
+        public void activate() {
+            activated = true;
+            getNext();
+        }
+
         public void deactivate() {
-            if (paging) {
-                loader.removeBlockInterest(this);
-                requestedBlock = -1;
+            activated = false;
+
+            // Release all of our references:
+            long block = -1;
+            while (firstRef != null) {
+                block = firstRef.restoreBlock;
+                firstRef.releaseCursorRef(this);
+                memoryLimiter.remove(firstRef);
+
+                if (firstRef == lastRef) {
+                    loader.releaseBlock(this, block);
+                    firstRef = lastRef = null;
+                } else {
+                    firstRef = firstRef.getNext();
+                    if (firstRef.restoreBlock != block) {
+                        loader.releaseBlock(this, block);
+                    }
+                }
             }
+
+            // Let go of our current ref:
             current = null;
+        }
+
+        /**
+         * Makes sure elements are paged in
+         */
+        private final void checkPageIn() {
+            if (!activated)
+                return;
+
+            if (memoryLimiter != null) {
+
+                // Release memory references up to our sequence number
+                long block = -1;
+                while (firstRef != null && firstRef.getSequence() < sequence) {
+                    block = firstRef.restoreBlock;
+                    firstRef.releaseCursorRef(this);
+                    memoryLimiter.remove(firstRef);
+
+                    if (firstRef == lastRef) {
+                        firstRef = lastRef = null;
+                    } else {
+                        firstRef = firstRef.getNext();
+                        // If we're passing into a new block
+                        // release the old one:
+                        if (firstRef.restoreBlock != block) {
+                            loader.releaseBlock(this, block);
+                        }
+                    }
+                }
+
+                // Now add refs for as many elements as we can hold:
+                QueueElement next = null;
+
+                if (lastRef == null) {
+                    next = current;
+                } else {
+                    next = lastRef.getNext();
+                }
+
+                while (next != null && !memoryLimiter.getThrottled()) {
+                    if (next.isLoaded()) {
+                        next.addCursorRef(this);
+                        if (firstRef == null) {
+                            firstRef = next;
+                        }
+                        memoryLimiter.add(next);
+                        lastRef = next;
+                        next = lastRef.getNext();
+                    } else {
+                        // TODO track our currently requested block to avoid
+                        // calling this
+                        // repeatedly
+                        loader.loadBlock(this, next.restoreBlock);
+                        break;
+                    }
+                }
+            }
+            // Otherwise we still need to ensure the block has been loaded:
+            else if (current != null && !current.isLoaded()) {
+                loader.loadBlock(this, current.restoreBlock);
+            }
         }
 
         private final void updateSequence(final long newSequence) {
             this.sequence = newSequence;
-            // long newBlock = sequence / RESTORE_BLOCK_SIZE;
-            // if (newBlock != restoreBlock) {
-            // restoreBlock = newBlock;
-            // }
-
             if (DEBUG && sequence > nextSequenceNumber) {
                 new Exception(this + "cursor overflow").printStackTrace();
-            }
-        }
-
-        private final void checkPageIn() {
-            if (current != null && current.isPagedOut()) {
-                if (current.restoreBlock != requestedBlock) {
-                    if (paging) {
-                        loader.removeBlockInterest(this);
-                    }
-                    requestedBlock = current.restoreBlock;
-                    paging = true;
-                    loader.addBlockInterest(this, current);
-                }
-            } else if (paging && requestedBlock != sequence / RESTORE_BLOCK_SIZE) {
-                loader.removeBlockInterest(this);
-                requestedBlock = -1;
-                paging = false;
             }
         }
 
@@ -627,6 +734,9 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
          *         for dispatch
          */
         public final boolean isReady() {
+            if (!activated)
+                return false;
+
             getNext();
             // Possible when the queue is empty
             if (current == null || current.isAcquired() || current.isPagedOut()) {
@@ -641,6 +751,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
          */
         public final void skip(QueueElement elem) {
             QueueElement next = elem.isLinked() ? elem.getNext() : null;
+
             if (next != null) {
                 updateSequence(next.sequence);
                 current = next;
@@ -660,10 +771,8 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                 current = queue.getTail();
             }
 
-            // Get a pointer to the next element (make sure
-            // that our next pointer is linked, it could have
-            // been paged out):
-            if (current == null || !current.isLinked()) {
+            // Get a pointer to the next element
+            if (current == null) {
                 current = queue.upper(sequence, true);
                 if (current == null) {
                     return null;
@@ -717,8 +826,11 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
     class QueueElement extends SortedLinkedListNode<QueueElement> implements Subscription.SubscriptionDeliveryCallback {
 
         V elem;
+
         SubscriptionContext owner;
         final long sequence;
+        int size = -1;
+
         long restoreBlock;
 
         // When a queue element is paged out, the first element
@@ -726,10 +838,16 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         // and size of paged out elements.
         int pagedOutCount = 0;
         long pagedOutSize = 0;
-        int size = 0;
+
+        // Cursors that have referenced this element,
+        // When this drops to 0 we can page out the
+        // element.
+        int cursorRefs = 0;
+        boolean acked = false;
 
         public QueueElement(V elem, long sequence) {
             this.elem = elem;
+
             if (elem != null) {
                 size = sizeLimiter.getElementSize(elem);
             }
@@ -737,20 +855,49 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
             this.restoreBlock = sequence / RESTORE_BLOCK_SIZE;
         }
 
-        public void setAcquired(SubscriptionContext owner) {
+        public QueueElement(RestoredElement<V> restored) throws Exception {
+            this(restored.getElement(), restored.getSequenceNumber());
+            this.size = restored.getElementSize();
+        }
+
+        @Override
+        public final long getSequence() {
+            return sequence;
+        }
+
+        public final void addCursorRef(Cursor cursor) {
+            cursorRefs++;
+            if (elem == null) {
+                // If this is the first request for this
+                // element request a load:
+                if (cursorRefs == 1) {
+                    loader.pageIn(this);
+                }
+            }
+        }
+
+        public final void releaseCursorRef(Cursor cursor) {
+            cursorRefs--;
+            if (cursorRefs == 0) {
+                // TODO need a controller:
+                unload(cursor.memoryController);
+            }
+        }
+
+        public final void setAcquired(SubscriptionContext owner) {
             this.owner = owner;
-            sizeController.elementDispatched(elem);
         }
 
         public final void acknowledge() {
             synchronized (mutex) {
-                unlink();
+                acked = true;
+                owner = null;
                 totalQueueCount--;
-                if (isPagedOut()) {
-                    return;
-                } else if (store.isElemPersistent(elem) || store.isFromStore(elem)) {
+                sizeController.elementDispatched(elem);
+                if (store.isElemPersistent(elem) || store.isFromStore(elem)) {
                     store.deleteQueueElement(queueDescriptor, elem);
                 }
+                unload(null);
             }
         }
 
@@ -762,78 +909,87 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         }
 
         /**
-         * Pages this element out to free memory.
-         * 
-         * Memory is freed if upon the return of this call the passed in
-         * sizeController was not blocked. If the sizeController was blocked
-         * then memory is not freed until it is next unblocked.
+         * Attempts to unlink this element from the queue
          */
-        private void pageOut(ISourceController<?> controller) {
-            // See if we can page this out to save memory:
-            //
-            // Disqualifiers:
-            // - If this is already paged out then nothing to do
-            // - We don't page out acquired elements, the memory
-            // is accounted for by the owner, and we keep them
-            // in memory here, to make sure we don't try to pull
-            // it back in for another consumer
-            // - If there is a cursor active in this element's
-            // restore block don't page out, memory is accounted
-            // for in the cursor's sizeLimiter
-            if (pagedOutCount > 0 || owner != null || loader.inLoadQueue(this)) {
+        public final void unload(ISourceController<?> controller) {
+            // Unlink this element from the queue. Don't unlink
+            // if the element is acquired or if it is in the load
+            // queue.
+            if (cursorRefs > 0 || loader.inLoadQueue(this) || owner != null) {
                 return;
             }
 
-            // If the element is not persistent then we'll need to request a
-            // save:
-            if (!store.isFromStore(elem) && !store.isElemPersistent(elem)) {
-                try {
-                    store.persistQueueElement(queueDescriptor, controller, elem, sequence, false);
-                } catch (Exception e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-            }
-
-            pagedOutCount = 1;
-            pagedOutSize = size;
-            elem = null;
-
-            // Collapse adjacent paged out elements:
             QueueElement next = getNext();
             QueueElement prev = getPrevious();
-            // If the next element is paged out
-            // replace it with this
-            if (next != null && next.pagedOutCount > 0) {
-                pagedOutCount += next.pagedOutCount;
-                pagedOutSize += next.pagedOutSize;
-                next.unlink();
-            }
-            // If the previous elem is paged out unlink this
-            // entry:
-            if (prev != null && prev.pagedOutCount > 0) {
-                prev.pagedOutCount += pagedOutCount;
-                prev.pagedOutSize += pagedOutSize;
+
+            // If acked unlink this element from the queue, and link
+            // together adjacent paged out entries:
+            if (acked) {
                 unlink();
+                // If both next and previous entries are unloaded,
+                // then collapse them:
+                if (next != null && prev != null && next.pagedOutCount > 0 && prev.pagedOutCount > 0) {
+                    prev.pagedOutCount += next.pagedOutCount;
+                    prev.pagedOutSize += next.pagedOutSize;
+                    next.unlink();
+                }
+            }
+            // Otherwise page out this element
+            else if (elem != null) {
+                // If the element is not persistent then we'll need to request a
+                // save:
+                if (!store.isFromStore(elem) && !store.isElemPersistent(elem)) {
+                    try {
+                        store.persistQueueElement(queueDescriptor, controller, elem, sequence, false);
+                    } catch (Exception e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+
+                pagedOutCount = 1;
+                pagedOutSize = size;
+                elem = null;
+
+                // If the next element is unloaded
+                // replace it with this
+                if (next != null && next.pagedOutCount > 0) {
+                    pagedOutCount += next.pagedOutCount;
+                    pagedOutSize += next.pagedOutSize;
+                    next.unlink();
+                }
+
+                // If the previous elem is paged out unlink this
+                // entry:
+                if (prev != null && prev.pagedOutCount > 0) {
+                    prev.pagedOutCount += pagedOutCount;
+                    prev.pagedOutSize += pagedOutSize;
+                    unlink();
+                }
             }
 
             if (DEBUG)
                 System.out.println("Paged out element: " + this);
+
         }
 
         /**
-         * Called to relink a paged in element after this element.
+         * Called to relink a loaded element after this element.
          * 
          * @param qe
          *            The paged in element to relink.
          */
-        public QueueElement pagedIn(QueueElement qe, long nextSequence) {
+        public final QueueElement loadAfter(QueueElement qe, long nextSequence) {
             QueueElement ret = qe;
             // See if we have a pointer to a paged out element:
             if (sequence == qe.sequence) {
                 // Already paged in? Shouldn't be.
                 if (!isPagedOut()) {
-                    throw new IllegalStateException("Can't page in an already paged in element");
+                    // throw new
+                    // IllegalStateException("Can't page in an already paged in element");
+                    if (DEBUG) {
+                        System.out.println("Paged in already paged in element: " + this);
+                    }
                 } else {
                     // Otherwise set this element to the paged in one
                     // and add a new QueueElement to hold any additional
@@ -856,16 +1012,15 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                             e.printStackTrace();
                         }
                     }
-                    ret = this;
                 }
+                ret = this;
             } else {
                 // Otherwise simply link this element into the list:
-                 queue.add(qe);
+                queue.add(qe);
                 // Decrement pagedOutCount counter of previous element:
                 if (qe.prev != null && qe.prev.pagedOutCount > 0) {
-                    if(qe.prev.pagedOutCount > 1)
-                    {
-                        throw new IllegalStateException("Skipped paged in element");    
+                    if (qe.prev.pagedOutCount > 1) {
+                        throw new IllegalStateException("Skipped paged in element");
                     }
                     pagedOutCount = qe.pagedOutCount - 1;
                     qe.prev.pagedOutCount = 0;
@@ -879,21 +1034,20 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
             return ret;
         }
 
-        public boolean isPagedOut() {
+        public final boolean isPagedOut() {
             return elem == null;
         }
 
-        public boolean isAcquired() {
+        public final boolean isLoaded() {
+            return pagedOutCount == 0;
+        }
+
+        public final boolean isAcquired() {
             return owner != null;
         }
 
         public String toString() {
             return "QueueElement " + sequence + " pagedOutCount: " + pagedOutCount + " owner: " + owner;
-        }
-
-        @Override
-        public long getSequence() {
-            return sequence;
         }
     }
 
@@ -905,8 +1059,8 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
      * redelivered status of elements.
      * 
      * If the queue's memory limit is less than the queue size then this class
-     * tracks cursor activity in the queue, loading elements into memory as they
-     * are needed.
+     * tracks cursor activity in the queue, loading/unloading elements into
+     * memory as they are needed.
      * 
      * @author cmacnaug
      */
@@ -920,6 +1074,13 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         }
 
         /**
+         * @param queueElement
+         */
+        public void pageIn(QueueElement qe) {
+            store.restoreQueueElements(queueDescriptor, false, qe.sequence, qe.sequence, 1, this);
+        }
+
+        /**
          * Must be called after an element is added to the queue to enforce
          * memory limits
          * 
@@ -929,79 +1090,97 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
          *            The source of the message
          */
         public final void elementAdded(QueueElement qe, ISourceController<V> source) {
+
             if (useMemoryLimiter) {
-                if (!qe.isPagedOut()) {
-                    memoryController.add(qe, source);
 
-                    if (memoryLimiter.getThrottled()) {
+                // Check with the live cursor to see if it is willing to
+                // absorb the element. If so that's good enough.
+                if (liveCursor.offer(qe)) {
+                    return;
+                }
 
-                        qe.pageOut(memoryController);
-                        // If we paged it out release memory:
-                        if (qe.isPagedOut()) {
-                            releaseMemory(qe);
-                        }
+                // Find a cursor willing to accept the element:
+                HashSet<Cursor> active = requestedBlocks.get(qe.sequence);
+
+                // If there are none, unload the element:
+                if (active == null) {
+                    qe.unload(source);
+                    return;
+                }
+
+                // See if a cursor is willing to hang on to the
+                // element:
+                boolean accepted = false;
+                for (Cursor cursor : active) {
+                    // Already checked the live cursor above:
+                    if (cursor == liveCursor) {
+                        continue;
                     }
+
+                    if (cursor.offer(qe)) {
+                        accepted = true;
+                    }
+                }
+
+                // If no cursor accepted it, then page out the element:
+                // keeping the element loaded.
+                if (!accepted) {
+                    qe.unload(source);
                 }
             }
         }
 
-        //Updates memory when an element is loaded from the database:
+        // Updates memory when an element is loaded from the database:
         private final void elementLoaded(QueueElement qe) {
-            if (useMemoryLimiter) {
-                memoryController.add(qe, null);
-            }
+            // TODO track the rate of loaded elements vs those that
+            // are added to the queue. We'll want to throttle back
+            // enqueueing sources to a rate less than the restore
+            // rate so we can stay out of the store.
         }
 
-        public final void releaseMemory(QueueElement qe) {
-            if (useMemoryLimiter) {
-                memoryController.elementDispatched(qe);
-            }
-        }
-
-        public void addBlockInterest(Cursor cursor, QueueElement element) {
-            HashSet<Cursor> cursors = requestedBlocks.get(cursor.requestedBlock);
+        public void loadBlock(Cursor cursor, long block) {
+            HashSet<Cursor> cursors = requestedBlocks.get(block);
             if (cursors == null) {
                 cursors = new HashSet<Cursor>();
-                requestedBlocks.put(cursor.requestedBlock, cursors);
+                requestedBlocks.put(block, cursors);
 
                 // Max sequence number is the end of this restoreBlock:
-                long maxSequence = (cursor.requestedBlock * RESTORE_BLOCK_SIZE) + RESTORE_BLOCK_SIZE;
+                long firstSequence = block * RESTORE_BLOCK_SIZE;
+                long maxSequence = block * RESTORE_BLOCK_SIZE + RESTORE_BLOCK_SIZE - 1;
                 // Don't pull in more than is paged out:
-                int maxCount = Math.min(element.pagedOutCount, RESTORE_BLOCK_SIZE);
-                if(DEBUG)
-                    System.out.println(cursor + " requesting restoreBlock:" + cursor.requestedBlock + " from " + element.getSequence() + " to " + maxSequence + " max: " + maxCount);
-                store.restoreQueueElements(queueDescriptor, element.getSequence(), maxSequence, maxCount, this);
+                // int maxCount = Math.min(element.pagedOutCount,
+                // RESTORE_BLOCK_SIZE);
+                int maxCount = RESTORE_BLOCK_SIZE;
+                if (DEBUG)
+                    System.out.println(cursor + " requesting restoreBlock:" + block + " from " + firstSequence + " to " + maxSequence + " max: " + maxCount + " queueMax: " + nextSequenceNumber);
+
+                // If we are memory limited only pull in queue records, don't
+                // bring in the payload.
+                // Each active cursor will have to pull in messages based on
+                // available memory.
+                store.restoreQueueElements(queueDescriptor, useMemoryLimiter, firstSequence, maxSequence, maxCount, this);
             }
             cursors.add(cursor);
         }
 
-        public void removeBlockInterest(Cursor cursor) {
-            long block = cursor.requestedBlock;
+        public void releaseBlock(Cursor cursor, long block) {
             HashSet<Cursor> cursors = requestedBlocks.get(block);
             if (cursors == null) {
-                if (DEBUG)
+                if (true || DEBUG)
                     System.out.println(this + " removeBlockInterest, no consumers " + cursor);
             } else {
                 if (cursors.remove(cursor)) {
                     if (cursors.isEmpty()) {
-                        requestedBlocks.remove(cursor.requestedBlock);
-                        //If this is the last cursor active in this block page out the block:
-                        if(useMemoryLimiter)
-                        {
-                            QueueElement qe = queue.upper(RESTORE_BLOCK_SIZE * cursor.requestedBlock, true);
-                            while(qe != null && qe.restoreBlock == block)
-                            {
+                        requestedBlocks.remove(block);
+                        // If this is the last cursor active in this block page
+                        // out the block:
+                        if (useMemoryLimiter) {
+                            QueueElement qe = queue.upper(RESTORE_BLOCK_SIZE * block, true);
+                            while (qe != null && qe.restoreBlock == block) {
                                 QueueElement next = qe.getNext();
-                                if(!qe.isPagedOut())
-                                {
-                                    qe.pageOut(memoryController);
-                                    // If we paged it out release memory:
-                                    if (qe.isPagedOut()) {
-                                        System.out.println(this + " removeBlockInterest, released memory for: " + this);
-                                        releaseMemory(qe);
-                                    }
-                                    qe = next;
-                                }
+                                // TODO use the cursor's flow controller:
+                                qe.unload(null);
+                                qe = next;
                             }
                         }
                     }
@@ -1010,7 +1189,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                         System.out.println(this + " removeBlockInterest, no cursor " + cursor);
                 }
             }
-            
+
         }
 
         /**
@@ -1033,11 +1212,25 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                 // boolean trailingRestore = false;
                 for (QueueStore.RestoredElement<V> restored : restoredElems) {
                     try {
-                        V delivery = restored.getElement();
-                        QueueElement qe = new QueueElement(delivery, restored.getSequenceNumber());
+                        // V delivery = restored.getElement();
+                        // TODO Might be better to change the loadAfter
+                        // signature to directly take the RestoredElement:
+                        // This would avoid creating an QueueElement that might
+                        // not be needed if the element is already paged it:
+                        QueueElement qe = new QueueElement(restored);
                         QueueElement lower = queue.lower(qe.sequence, true);
-                        qe = lower.pagedIn(qe, restored.getNextSequenceNumber());
+                        qe = lower.loadAfter(qe, restored.getNextSequenceNumber());
                         loader.elementLoaded(qe);
+
+                        // If we are memory limited remove the request block
+                        // entry
+                        // as soon as we load the block:
+                        if (!useMemoryLimiter) {
+                            requestedBlocks.remove(qe.restoreBlock);
+                        }
+
+                        if (DEBUG)
+                            System.out.println(this + " Loaded loaded" + qe);
 
                     } catch (Exception ioe) {
                         ioe.printStackTrace();
@@ -1068,7 +1261,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         }
 
         public String toString() {
-            return "MsgRetriever " + SharedQueue.this;
+            return "QueueLoader " + SharedQueue.this;
         }
     }
 
