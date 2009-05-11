@@ -37,8 +37,10 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
     private IDispatcher dispatcher;
     private final PrioritySizeLimiter<V> limiter;
     private QueueStore<K, V> store;
+    private PersistencePolicy<V> persistencePolicy;
     private boolean started;
     private QueueStore.QueueDescriptor queueDescriptor;
+    private Mapper<Long, V> expirationMapper;
 
     public SharedPriorityQueue(String name, PrioritySizeLimiter<V> limiter) {
         super(name);
@@ -77,6 +79,18 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
         if (count > 0 || size > 0) {
             throw new IllegalArgumentException("Partioned queues do not themselves hold values");
         }
+        if (expirationMapper == null) {
+            expirationMapper = new Mapper<Long, V>() {
+
+                public Long map(V element) {
+                    return -1L;
+                }
+
+            };
+        }
+        if (persistencePolicy == null) {
+            persistencePolicy = new PersistencePolicy.NON_PERSISTENT_POLICY<V>();
+        }
     }
 
     public synchronized int getEnqueuedCount() {
@@ -95,6 +109,14 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
 
     public void setStore(QueueStore<K, V> store) {
         this.store = store;
+    }
+
+    public void setPersistencePolicy(PersistencePolicy<V> persistencePolicy) {
+        this.persistencePolicy = persistencePolicy;
+    }
+
+    public void setExpirationMapper(Mapper<Long, V> expirationMapper) {
+        this.expirationMapper = expirationMapper;
     }
 
     public void setResourceName(String resourceName) {
@@ -140,6 +162,8 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
                 queue.setDispatchPriority(prio);
                 queue.setKeyMapper(keyMapper);
                 queue.setStore(store);
+                queue.setPersistencePolicy(persistencePolicy);
+                queue.setExpirationMapper(expirationMapper);
                 queue.getDescriptor().setParent(queueDescriptor.getQueueName());
                 queue.getDescriptor().setPartitionId(prio);
                 partitions.set(prio, queue);

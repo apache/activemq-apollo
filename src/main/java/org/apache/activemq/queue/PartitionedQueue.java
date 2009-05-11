@@ -96,6 +96,14 @@ abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource
         this.store = store;
     }
 
+    public void setPersistencePolicy(PersistencePolicy<V> persistencePolicy) {
+        // No-Op for now.
+    }
+
+    public void setExpirationMapper(Mapper<Long, V> expirationMapper) {
+        // No-Op for now.
+    }
+
     abstract public IQueue<K, V> createPartition(int partitionKey);
 
     public void addPartition(int partitionKey, IQueue<K, V> queue) {

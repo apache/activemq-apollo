@@ -27,6 +27,7 @@ import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.Subscription;
+import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
 
 public class Queue implements DeliveryTarget {
@@ -36,11 +37,10 @@ public class Queue implements DeliveryTarget {
     private IQueue<Long, MessageDelivery> queue;
     private VirtualHost virtualHost;
 
-    Queue(IQueue<Long, MessageDelivery> queue)
-    {
+    Queue(IQueue<Long, MessageDelivery> queue) {
         this.queue = queue;
     }
-    
+
     public final void deliver(MessageDelivery delivery, ISourceController<?> source) {
         queue.add(delivery, source);
     }
@@ -101,9 +101,8 @@ public class Queue implements DeliveryTarget {
     public final Destination getDestination() {
         return destination;
     }
-    
-    public boolean isDurable()
-    {
+
+    public boolean isDurable() {
         return true;
     }
 
@@ -112,10 +111,6 @@ public class Queue implements DeliveryTarget {
 
         public QueueSubscription(DeliveryTarget dt) {
             this.target = dt;
-        }
-
-        public boolean isPreAcquired() {
-            return true;
         }
 
         public boolean matches(MessageDelivery message) {
@@ -157,7 +152,7 @@ public class Queue implements DeliveryTarget {
         }
 
         @Override
-        public void persist(QueueStore.QueueDescriptor queue, ISourceController<?> controller, long sequenceNumber, boolean delayable) throws IOException {
+        public void persist(SaveableQueueElement<MessageDelivery> elem, ISourceController<?> controller, boolean delayable) {
             // We override this for queue deliveries as the sub needn't
             // persist the message
         }

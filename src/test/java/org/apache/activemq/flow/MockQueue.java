@@ -9,6 +9,7 @@ import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.MockBroker.DeliveryTarget;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.PartitionedQueue;
+import org.apache.activemq.queue.PersistencePolicy;
 import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.SharedPriorityQueue;
 import org.apache.activemq.queue.SharedQueue;
@@ -25,7 +26,8 @@ class MockQueue implements MockBroker.DeliveryTarget {
     private Mapper<Integer, Message> partitionMapper;
     private Mapper<Long, Message> keyExtractor;
     private final MockStoreAdapater store = new MockStoreAdapater();
-
+    private static final PersistencePolicy<Message> NO_PERSISTENCE = new PersistencePolicy.NON_PERSISTENT_POLICY<Message>();
+    
     private IQueue<Long, Message> createQueue() {
 
         if (partitionMapper != null) {
@@ -38,6 +40,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
             queue.setPartitionMapper(partitionMapper);
             queue.setResourceName(destination.getName().toString());
             queue.setStore(store);
+            queue.setPersistencePolicy(NO_PERSISTENCE);
             queue.initialize(0, 0, 0, 0);
             return queue;
         } else {
@@ -54,6 +57,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
             queue.setAutoRelease(true);
             queue.setDispatcher(broker.getDispatcher());
             queue.setStore(store);
+            queue.setPersistencePolicy(NO_PERSISTENCE);
             queue.initialize(0, 0, 0, 0);
             return queue;
         } else {
@@ -63,6 +67,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
             queue.setAutoRelease(true);
             queue.setDispatcher(broker.getDispatcher());
             queue.setStore(store);
+            queue.setPersistencePolicy(NO_PERSISTENCE);
             queue.initialize(0, 0, 0, 0);
             return queue;
         }
@@ -78,9 +83,6 @@ class MockQueue implements MockBroker.DeliveryTarget {
 
     public final void addConsumer(final DeliveryTarget dt) {
         Subscription<Message> sub = new Subscription<Message>() {
-            public boolean isPreAcquired() {
-                return true;
-            }
             
             public boolean isBrowser() {
                 return false;
@@ -181,15 +183,11 @@ class MockQueue implements MockBroker.DeliveryTarget {
 
         }
 
-        public final boolean isElemPersistent(Message elem) {
-            return false;
-        }
-
         public final boolean isFromStore(Message elem) {
             return false;
         }
 
-        public final void persistQueueElement(QueueStore.QueueDescriptor descriptor, ISourceController<?> controller, Message elem, long sequence, boolean delayable) throws Exception {
+        public final void persistQueueElement(SaveableQueueElement<Message> elem, ISourceController<?> controller, boolean delayable) {
             // Noop;
         }
 

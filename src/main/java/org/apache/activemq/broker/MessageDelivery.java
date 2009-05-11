@@ -16,18 +16,20 @@
  */
 package org.apache.activemq.broker;
 
-import java.io.IOException;
-
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.QueueStore;
+import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 
 public interface MessageDelivery {
 
     public Destination getDestination();
 
+    /**
+     * @return the message priority.
+     */
     public int getPriority();
 
     public int getFlowLimiterSize();
@@ -38,7 +40,16 @@ public interface MessageDelivery {
 
     public <T> T asType(Class<T> type);
 
+    /**
+     * @return if the delivery is persistent
+     */
     public boolean isPersistent();
+
+    /**
+     * @return a positive value indicates that the delivery has an expiration
+     *         time.
+     */
+    public long getExpiration();
 
     /**
      * @return True if this message was read from the store.
@@ -46,7 +57,7 @@ public interface MessageDelivery {
     public boolean isFromStore();
 
     /**
-     * Returns true if this message requires acknowledgement.
+     * Returns true if this message requires acknowledgment.
      */
     public boolean isResponseRequired();
 
@@ -56,32 +67,46 @@ public interface MessageDelivery {
      */
     public void onMessagePersisted();
 
-    public Store.MessageRecord createMessageRecord() throws IOException;
+    /**
+     * @return A message record for the element that can be persisted to the
+     *         message store.
+     */
+    public Store.MessageRecord createMessageRecord();
 
+    /**
+     * @return if the message is part of a transaction this returns the
+     *         transaction id.
+     */
     public Buffer getTransactionId();
 
     /**
-     * Asynchronously persists a message in the store.
+     * Called by a queue to request that the element be persisted. The save is
+     * done asynchronously, and depending on the state of the message delivery
+     * may not even be issued to the underlying persistence store until a later
+     * date. As such callers should use the acknowledge method to delete this
+     * message rather than directly issuing a delete through the message store
+     * itself. Direct delete from the message store is only safe once the
+     * message has been saved to the store, so callers should request
+     * notification of the save via the
+     * {@link SaveableQueueElement#requestSaveNotify()} method before attempting
+     * to acces the store directly.
      * 
-     * @param queue
-     *            The queue against which to save the message.
+     * @param elem
+     *            The element to save
      * @param controller
-     *            The source of the message.
-     * @param sequenceNumber
-     *            The sequence number of the message in the queue
+     *            A flow controller to use in the event that there isn't room in
+     *            the database.
      * @param delayable
-     *            Can be set to indicate that flush of the message can be
-     *            delayed in the hopes that an acknowledgement will negate the
-     *            need for a delete
-     * @throws IOException If there is an exception serializing the message. 
+     *            Whether or not the save operation can be delayed.
      */
-    public void persist(QueueStore.QueueDescriptor queue, ISourceController<?> controller, long sequenceNumber, boolean delayable) throws IOException;
+    public void persist(SaveableQueueElement<MessageDelivery> elem, ISourceController<?> controller, boolean delayable);
 
     /**
-     * Acknowledges the message for a particular queue. This will cause it to be 
-     * deleted from the message store. 
+     * Acknowledges the message for a particular queue. This will cause it to be
+     * deleted from the message store.
      * 
-     * @param queue The queue for which to acknowledge the message.
+     * @param queue
+     *            The queue for which to acknowledge the message.
      */
     public void acknowledge(QueueStore.QueueDescriptor queue);
 

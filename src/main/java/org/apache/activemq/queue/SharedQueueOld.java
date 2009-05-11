@@ -134,7 +134,6 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
         super.onFlowOpened(sinkController);
     }
 
-
     public int getEnqueuedCount() {
         synchronized (mutex) {
             return store.size();
@@ -146,7 +145,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
             return limiter.getSize();
         }
     }
-    
+
     public synchronized void start() {
         if (!started) {
             started = true;
@@ -161,11 +160,23 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
     }
 
     public void initialize(long sequenceMin, long sequenceMax, int count, long size) {
-        // TODO - this queue is not persistent, so we can ignore this.
+        // this queue is not persistent, so we can ignore this.
     }
-    
+
     public void setStore(QueueStore<K, V> store) {
-        //No-op
+        // No-op
+    }
+
+    public void setPersistencePolicy(PersistencePolicy<V> persistencePolicy) {
+        // this queue is not persistent, so we can ignore this.
+    }
+
+    
+    /* (non-Javadoc)
+     * @see org.apache.activemq.queue.IQueue#setExpirationMapper(org.apache.activemq.util.Mapper)
+     */
+    public void setExpirationMapper(Mapper<Long, V> expirationMapper) {
+        //not implemented.
     }
 
     protected final ISinkController<V> getSinkController(V elem, ISourceController<?> source) {
@@ -273,7 +284,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
     public QueueStore.QueueDescriptor getDescriptor() {
         return queueDescriptor;
     }
-    
+
     public boolean pollingDispatch() {
 
         // System.out.println("polling dispatch");
@@ -326,7 +337,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
             synchronized (mutex) {
                 if (accepted) {
                     subNode.cursorNext();
-                    if (subNode.subscription.isPreAcquired() && subNode.subscription.isRemoveOnDispatch()) {
+                    if (/*subNode.subscription.isPreAcquired() &&*/ subNode.subscription.isRemoveOnDispatch()) {
                         StoreNode<K, V> removed = store.remove(storeNode.getKey());
                         assert removed != null : "Since the node was aquired.. it should not have been removed by anyone else.";
                         sinkController.elementDispatched(storeNode.getValue());
@@ -406,23 +417,23 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
                     continue;
                 }
 
-                if (subscription.isPreAcquired()) {
+                //if (subscription.isPreAcquired()) {
                     if (elemNode.acquire(subscription)) {
                         return elemNode;
                     } else {
                         cursor.next();
                         continue;
                     }
-                }
+                //}
             }
             cursor = null;
             return null;
         }
 
         public void cursorUnPeek(StoreNode<K, V> node) {
-            if (subscription.isPreAcquired()) {
+            //if (subscription.isPreAcquired()) {
                 node.unacquire();
-            }
+            //}
         }
 
         @Override
@@ -447,7 +458,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
     public FlowController<V> getFlowControler() {
         return this.sinkController;
     }
-    
+
     public interface StoreNode<K, V> {
 
         public boolean acquire(Subscription<V> ownerId);
@@ -466,9 +477,8 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
         public void setNext(StoreNode<K, V> node);
 
     }
-    
-    private class TreeMemoryStore
-    {
+
+    private class TreeMemoryStore {
         AtomicLong counter = new AtomicLong();
 
         class MemoryStoreNode implements StoreNode<K, V> {

@@ -87,6 +87,8 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.SingleFlowRelay;
+import org.apache.activemq.queue.QueueStore.QueueDescriptor;
+import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 import org.apache.activemq.selector.SelectorParser;
 import org.apache.activemq.state.CommandVisitor;
 import org.apache.activemq.transport.WireFormatNegotiator;
@@ -509,15 +511,43 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             return queue;
         }
 
-        public final void deliver(MessageDelivery delivery, ISourceController<?> source) {
+        public final void deliver(final MessageDelivery delivery, ISourceController<?> source) {
             if (!match(delivery)) {
                 return;
             }
 
             if (isDurable() && delivery.isPersistent()) {
                 try {
-                    delivery.persist(durableQueueId, null, deliverySequence.incrementAndGet(), true);
-                } catch (IOException e) {
+
+                    final long sequence = deliverySequence.incrementAndGet();
+                    //TODO saveable queue element here is temporary: We should replace this 
+                    //with an actual queue implementation:
+                    delivery.persist(new SaveableQueueElement<MessageDelivery>() {
+
+                        public MessageDelivery getElement() {
+                            // TODO Auto-generated method stub
+                            return delivery;
+                        }
+
+                        public QueueDescriptor getQueueDescriptor() {
+                            // TODO Auto-generated method stub
+                            return durableQueueId;
+                        }
+
+                        public long getSequenceNumber() {
+                            return sequence;
+                        }
+
+                        public void notifySave() {
+                            //noop
+                        }
+                        public boolean requestSaveNotify() {
+                            // TODO Auto-generated method stub
+                            return false;
+                        }
+
+                    }, null, true);
+                } catch (Exception e) {
                     // TODO Auto-generated catch restoreBlock
                     e.printStackTrace();
                 }

@@ -27,6 +27,7 @@ import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.QueueStore.QueueDescriptor;
+import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 
 public abstract class BrokerMessageDelivery implements MessageDelivery {
 
@@ -39,7 +40,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
 
     // List of persistent targets for which the message should be saved
     // when dispatch is complete:
-    HashMap<QueueStore.QueueDescriptor, Long> persistentTargets;
+    HashMap<QueueStore.QueueDescriptor, SaveableQueueElement<MessageDelivery>> persistentTargets;
 
     long storeTracking = -1;
     BrokerDatabase store;
@@ -73,7 +74,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
         return fromStore;
     }
 
-    public final void persist(QueueStore.QueueDescriptor queue, ISourceController<?> controller, long queueSequence, boolean delayable) throws IOException {
+    public final void persist(SaveableQueueElement<MessageDelivery> elem, ISourceController<?> controller, boolean delayable){
         synchronized (this) {
             // Can flush of this message to the store be delayed?
             if (enableFlushDelay && !delayable) {
@@ -84,15 +85,15 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
             // finished:
             if (dispatching) {
                 if (persistentTargets == null) {
-                    persistentTargets = new HashMap<QueueStore.QueueDescriptor, Long>();
+                    persistentTargets = new HashMap<QueueStore.QueueDescriptor, SaveableQueueElement<MessageDelivery>>();
                 }
-                persistentTargets.put(queue, queueSequence);
+                persistentTargets.put(elem.getQueueDescriptor(), elem);
                 return;
             }
             // Otherwise, if it is still in the saver queue, we can add this
             // queue to the queue list:
             else if (pendingSave != null) {
-                persistentTargets.put(queue, queueSequence);
+                persistentTargets.put(elem.getQueueDescriptor(), elem);
                 if (!delayable) {
                     pendingSave.requestFlush();
                 }
@@ -100,7 +101,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
             }
         }
 
-        store.saveMessage(this, queue, queueSequence, controller);
+        store.saveMessage(elem, controller, delayable);
     }
 
     public final void acknowledge(QueueStore.QueueDescriptor queue) {
@@ -152,7 +153,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
         return storeTracking;
     }
 
-    public Set<Entry<QueueDescriptor, Long>> getPersistentQueues() {
+    public Set<Entry<QueueDescriptor, SaveableQueueElement<MessageDelivery>>> getPersistentQueues() {
         return persistentTargets.entrySet();
     }
 

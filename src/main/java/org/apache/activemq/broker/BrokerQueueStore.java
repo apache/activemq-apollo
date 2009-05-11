@@ -31,6 +31,7 @@ import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.queue.IPartitionedQueue;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.PartitionedQueue;
+import org.apache.activemq.queue.PersistencePolicy;
 import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.SharedPriorityQueue;
 import org.apache.activemq.queue.SharedQueue;
@@ -50,12 +51,33 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
 
     private final short PARTITION_TYPE = 0;
     private final short SHARED_QUEUE_TYPE = 1;
-    //private final short SUBSCRIBER_QUEUE_TYPE = 2;
+    // private final short SUBSCRIBER_QUEUE_TYPE = 2;
 
     private final HashMap<String, IQueue<Long, MessageDelivery>> sharedQueues = new HashMap<String, IQueue<Long, MessageDelivery>>();
-    //private final HashMap<String, IFlowQueue<MessageDelivery>> subscriberQueues = new HashMap<String, IFlowQueue<MessageDelivery>>();
+    // private final HashMap<String, IFlowQueue<MessageDelivery>>
+    // subscriberQueues = new HashMap<String, IFlowQueue<MessageDelivery>>();
 
     private Mapper<Integer, MessageDelivery> partitionMapper;
+    
+    private static final Mapper<Long, MessageDelivery> EXPIRATION_MAPPER = new Mapper<Long, MessageDelivery>() {
+        public Long map(MessageDelivery element) {
+            return element.getExpiration();
+        }
+    };
+
+    private static final PersistencePolicy<MessageDelivery> SHARED_QUEUE_PERSISTENCE_POLICY = new PersistencePolicy<MessageDelivery>() {
+        public boolean isPersistent(MessageDelivery elem) {
+            return elem.isPersistent();
+        }
+
+        public boolean isPageOutPlaceHolders() {
+            return false;
+        }
+
+        public boolean isPagingEnabled() {
+            return false;
+        }
+    };
 
     public static final Mapper<Integer, MessageDelivery> PRIORITY_MAPPER = new Mapper<Integer, MessageDelivery>() {
         public Integer map(MessageDelivery element) {
@@ -202,6 +224,8 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         ret.getDescriptor().setApplicationType(PARTITION_TYPE);
         ret.setDispatcher(dispatcher);
         ret.setStore(this);
+        ret.setPersistencePolicy(SHARED_QUEUE_PERSISTENCE_POLICY);
+        ret.setExpirationMapper(EXPIRATION_MAPPER);
 
         return ret;
     }
@@ -210,16 +234,12 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         elem.acknowledge(descriptor);
     }
 
-    public final boolean isElemPersistent(MessageDelivery elem) {
-        return elem.isPersistent();
-    }
-
     public final boolean isFromStore(MessageDelivery elem) {
         return elem.isFromStore();
     }
 
-    public final void persistQueueElement(QueueStore.QueueDescriptor descriptor, ISourceController<?> controller, MessageDelivery elem, long sequence, boolean delayable) throws Exception {
-        elem.persist(descriptor, controller, sequence, delayable);
+    public final void persistQueueElement(SaveableQueueElement<MessageDelivery> elem, ISourceController<?> controller, boolean delayable) {
+        elem.getElement().persist(elem, controller, delayable);
     }
 
     public final void restoreQueueElements(QueueStore.QueueDescriptor queue, boolean recordsOnly, long firstSequence, long maxSequence, int maxCount,

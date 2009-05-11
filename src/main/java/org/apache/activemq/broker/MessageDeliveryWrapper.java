@@ -23,71 +23,180 @@ import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.QueueStore;
+import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 
+/**
+ * @author cmacnaug
+ *
+ */
 public class MessageDeliveryWrapper implements MessageDelivery {
 
     private final MessageDelivery delegate;
-    
+
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     public void acknowledge(QueueStore.QueueDescriptor queue) {
         delegate.acknowledge(queue);
     }
 
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     public <T> T asType(Class<T> type) {
         return delegate.asType(type);
     }
 
-    public MessageRecord createMessageRecord() throws IOException {
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
+    public MessageRecord createMessageRecord() {
         return delegate.createMessageRecord();
     }
 
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     public Destination getDestination() {
         return delegate.getDestination();
     }
 
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     public int getFlowLimiterSize() {
         return delegate.getFlowLimiterSize();
     }
 
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     public AsciiBuffer getMsgId() {
         return delegate.getMsgId();
     }
 
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     public int getPriority() {
         return delegate.getPriority();
     }
 
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     public AsciiBuffer getProducerId() {
         return delegate.getProducerId();
     }
 
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     public long getStoreTracking() {
         return delegate.getStoreTracking();
     }
 
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     public Buffer getTransactionId() {
         return delegate.getTransactionId();
     }
 
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     public boolean isFromStore() {
         return delegate.isFromStore();
     }
 
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     public boolean isPersistent() {
         return delegate.isPersistent();
     }
+    
+    
+    /** (non-Javadoc)
+     * @see org.apache.activemq.broker.MessageDelivery#getExpiration()
+     */
+    public long getExpiration() {
+        return delegate.getExpiration();
+    }
 
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     public boolean isResponseRequired() {
         return delegate.isResponseRequired();
     }
 
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     public void onMessagePersisted() {
         delegate.onMessagePersisted();
     }
 
-    public void persist(QueueStore.QueueDescriptor queue, ISourceController<?> controller, long sequenceNumber, boolean delayable) throws IOException {
-        delegate.persist(queue, controller, sequenceNumber, delayable);
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
+    public void persist(SaveableQueueElement<MessageDelivery> elem, ISourceController<?> controller, boolean delayable) {
+        delegate.persist(elem, controller, delayable);
     }
 
+    /**
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     *      org.apache.activemq.flow.ISourceController, boolean)
+     */
     MessageDeliveryWrapper(MessageDelivery delivery) {
         delegate = delivery;
     }

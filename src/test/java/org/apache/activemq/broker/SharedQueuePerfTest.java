@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.jms.JMSException;
@@ -80,6 +81,8 @@ public class SharedQueuePerfTest extends TestCase {
         return PriorityDispatcher.createPriorityDispatchPool("TestDispatcher", MessageBroker.MAX_PRIORITY, Runtime.getRuntime().availableProcessors());
     }
 
+    protected int consumerStartDelay = 0;
+
     protected void startServices() throws Exception {
         dispatcher = createDispatcher();
         dispatcher.start();
@@ -120,8 +123,20 @@ public class SharedQueuePerfTest extends TestCase {
         stopServices();
     }
 
-    
     public void testSharedQueue_1_1_1() throws Exception {
+        startServices();
+        try {
+            createQueues(1);
+            createProducers(1);
+            createConsumers(1);
+            doTest();
+
+        } finally {
+            cleanup();
+        }
+    }
+
+    public void testSharedQueue_1_1_1_Restore() throws Exception {
         startServices();
         try {
             createQueues(1);
@@ -146,7 +161,7 @@ public class SharedQueuePerfTest extends TestCase {
             cleanup();
         }
     }
-    
+
     public void testSharedQueue_10_1_10() throws Exception {
         startServices();
         try {
@@ -159,8 +174,7 @@ public class SharedQueuePerfTest extends TestCase {
             cleanup();
         }
     }
-    
-    
+
     public void testSharedQueue_10_1_1() throws Exception {
         startServices();
         try {
@@ -173,7 +187,7 @@ public class SharedQueuePerfTest extends TestCase {
             cleanup();
         }
     }
-    
+
     public void testSharedQueue_1_1_10() throws Exception {
         startServices();
         try {
@@ -196,11 +210,26 @@ public class SharedQueuePerfTest extends TestCase {
                 queue.start();
             }
     
-            // Start consumers:
-            for (Consumer consumer : consumers) {
-                consumer.start();
+            Runnable startConsumers = new Runnable()
+            {
+                public void run()
+                {
+                    // Start consumers:
+                    for (Consumer consumer : consumers) {
+                        consumer.start();
+                    }
+                }
+            };
+            
+            if(consumerStartDelay > 0)
+            {
+                dispatcher.schedule(startConsumers, consumerStartDelay, TimeUnit.SECONDS);
             }
-    
+            else
+            {
+                startConsumers.run();
+            }
+            
             // Start producers:
             for (Producer producer : producers) {
                 producer.start();
@@ -370,9 +399,8 @@ public class SharedQueuePerfTest extends TestCase {
         public void onFlowUnblocked(ISinkController<OpenWireMessageDelivery> controller) {
             dispatchContext.requestDispatch();
         }
-        
-        public String toString()
-        {
+
+        public String toString() {
             return name + " on " + targetQueue.getResourceName();
         }
     }
@@ -458,9 +486,8 @@ public class SharedQueuePerfTest extends TestCase {
         public boolean match(MessageDelivery message) {
             return true;
         }
-        
-        public String toString()
-        {
+
+        public String toString() {
             return name + " on " + sourceQueue.getResourceName();
         }
     }

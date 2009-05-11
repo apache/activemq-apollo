@@ -25,17 +25,22 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 public interface QueueStore<K, V> {
 
     public interface SaveableQueueElement<V> {
+
         /**
-         * Gets the element to save.
-         * 
-         * @return
+         * @return the descriptor of the queue for which the element should be
+         *         saved.
+         */
+        public QueueDescriptor getQueueDescriptor();
+
+        /**
+         * @return the element to save.
          */
         public V getElement();
 
         /**
-         * Gets the sequence number of the element in the queue
+         * @return the sequence number of the element in the queue
          * 
-         * @return
+         * 
          */
         public long getSequenceNumber();
 
@@ -43,14 +48,13 @@ public interface QueueStore<K, V> {
          * @return a return value of true will cause {@link #notifySave()} to
          *         called when this element is persisted
          */
-        public boolean requestNotify();
+        public boolean requestSaveNotify();
 
         /**
          * Called when the element has been saved.
-         * 
-         * @return
          */
-        public boolean notifySave();
+        public void notifySave();
+
     }
 
     /**
@@ -68,6 +72,12 @@ public interface QueueStore<K, V> {
          * @return The element size.
          */
         int getElementSize();
+
+        /**
+         * @return A positive values indicating the expiration time if this
+         *         element is expirable.
+         */
+        long getExpiration();
 
         /**
          * Returns the sequence number of this element in the queue
@@ -261,32 +271,17 @@ public interface QueueStore<K, V> {
     /**
      * Asynchronously saves the given element to the store
      * 
-     * @param descriptor
-     *            The descriptor for the queue.
+     * @param elem
+     *            The element to save
      * @param controller
      *            A flow controller to use in the event that there isn't room in
      *            the database.
-     * @param elem
-     *            The element to save
-     * @param sequence
-     *            The sequence number for the saved element
      * @param delayable
      *            Whether or not the save operation can be delayed.
      * @throws Exception
      *             If there is an error saving the element.
      */
-    public void persistQueueElement(QueueDescriptor descriptor, ISourceController<?> controller, V elem, long sequence, boolean delayable) throws Exception;
-
-    /**
-     * Tests whether or not the given element is persistent. When a message is
-     * added to a persistent queue it should be saved via
-     * {@link #persistQueueElement(QueueDescriptor, Object, long, boolean)}
-     * 
-     * @param elem
-     *            The element to check.
-     * @return True if the element requires persistence.
-     */
-    public boolean isElemPersistent(V elem);
+    public void persistQueueElement(SaveableQueueElement<V> elem, ISourceController<?> controller, boolean delayable);
 
     /**
      * Tests whether or not the given element came from the store. If so, a
@@ -299,16 +294,18 @@ public interface QueueStore<K, V> {
     public boolean isFromStore(V elem);
 
     /**
-     * Adds a queue to the store.
+     * Asynchronously adds a queue to the store.
      * 
      * @param queue
+     *            The descriptor for the queue being added.
      */
     public void addQueue(QueueDescriptor queue);
 
     /**
-     * Deletes a queue from the store.
+     * Asynchronously deletes a queue and all of it's records from the store.
      * 
      * @param queue
+     *            The descriptor for the queue to be deleted.
      */
     public void deleteQueue(QueueDescriptor queue);
 

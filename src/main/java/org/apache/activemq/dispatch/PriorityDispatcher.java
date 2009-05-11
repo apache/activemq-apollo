@@ -29,6 +29,7 @@ import org.apache.activemq.dispatch.ExecutionLoadBalancer.ExecutionTracker;
 import org.apache.activemq.dispatch.PooledDispatcher.PooledDispatchContext;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.PriorityLinkedList;
+import org.apache.activemq.util.TimerHeap;
 import org.apache.kahadb.util.LinkedNode;
 import org.apache.kahadb.util.LinkedNodeList;
 
@@ -40,7 +41,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
     private boolean threaded = false;
     protected final int MAX_USER_PRIORITY;
     protected final HashSet<PriorityDispatchContext> contexts = new HashSet<PriorityDispatchContext>();
-    
+
     // Set if this dispatcher is part of a dispatch pool:
     protected final PooledDispatcher<D> pooledDispatcher;
 
@@ -53,7 +54,12 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
     private int foreignToggle = 0;
 
     // Timed Execution List
-    protected final TimerHeap timerHeap = new TimerHeap();
+    protected final TimerHeap<Runnable> timerHeap = new TimerHeap<Runnable>() {
+        @Override
+        protected final void execute(Runnable ready) {
+            ready.run();
+        }
+    };
 
     protected final String name;
     private final AtomicBoolean foreignAvailable = new AtomicBoolean(false);
@@ -403,11 +409,11 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
      */
     public void schedule(final Runnable runnable, final long delay, final TimeUnit timeUnit) {
         if (getCurrentDispatcher() == this) {
-            timerHeap.add(runnable, delay, timeUnit);
+            timerHeap.addRelative(runnable, delay, timeUnit);
         } else {
             new ForeignEvent() {
                 public void execute() {
-                    timerHeap.add(runnable, delay, timeUnit);
+                    timerHeap.addRelative(runnable, delay, timeUnit);
                 }
             }.addToList();
         }

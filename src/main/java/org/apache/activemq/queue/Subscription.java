@@ -35,7 +35,7 @@ public interface Subscription<E> {
          * the element and that it should be placed back on the queue. 
          * 
          * The provided source controller will be blocked if there 
-         * is not enough space available on the sub queue to
+         * is not enough space available on the queue to
          * reenqueue the element.
          * 
          * It is illegal to call this method after a prior call to 
@@ -58,8 +58,6 @@ public interface Subscription<E> {
      * @return True if this is a subscription browser. 
      */
     public boolean isBrowser();
-
-    public boolean isPreAcquired();
 
     /**
      * Returns true if the Subscription has a selector. If true

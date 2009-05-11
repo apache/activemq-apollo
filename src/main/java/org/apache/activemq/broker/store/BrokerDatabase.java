@@ -52,6 +52,7 @@ import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.QueueStore.QueueDescriptor;
 import org.apache.activemq.queue.QueueStore.RestoreListener;
 import org.apache.activemq.queue.QueueStore.RestoredElement;
+import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 import org.apache.kahadb.util.LinkedNode;
 import org.apache.kahadb.util.LinkedNodeList;
 
@@ -81,7 +82,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     // num scheduled for delay
     private long delayedFlushPointer = 0; // The last delayable sequence num
     // requested.
-    private final long FLUSH_DELAY_MS = 50;
+    private final long FLUSH_DELAY_MS = 5;
     private final Runnable flushDelayCallback;
 
     public interface DatabaseListener {
@@ -356,8 +357,11 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
                     // If we procecessed some ops, flush and post process:
                     if (!processedQueue.isEmpty()) {
-                        // Sync the store:
+                        
+                        //System.out.println("Flushing queue after processing: " + processedQueue.size() + " - " + processedQueue);
+                        //Sync the store:
                         store.flush();
+                        
 
                         // Post process operations
                         long release = 0;
@@ -442,17 +446,15 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      *             If there is an error marshalling the message.
      * @return The {@link OperationContext} associated with the operation
      */
-    public OperationContext persistReceivedMessage(BrokerMessageDelivery delivery, ISourceController<?> source) throws IOException {
-        return add(new AddMessageOperation(delivery), source, delivery.isFlushDelayable());
+    public OperationContext persistReceivedMessage(BrokerMessageDelivery delivery, ISourceController<?> source) {
+        return add(new AddMessageOperation(delivery), source, true);
     }
 
     /**
      * Saves a Message for a single queue.
      * 
-     * @param delivery
-     *            The delivery
-     * @param queue
-     *            The queue
+     * @param queueElement
+     *            The element to save.
      * @param source
      *            The source initiating the save or null, if there isn't one.
      * @throws IOException
@@ -460,8 +462,8 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      * 
      * @return The {@link OperationContext} associated with the operation
      */
-    public OperationContext saveMessage(MessageDelivery delivery, QueueStore.QueueDescriptor queue, long queueSequence, ISourceController<?> source) throws IOException {
-        return add(new AddMessageOperation(delivery, queue, queueSequence), source, false);
+    public OperationContext saveMessage(SaveableQueueElement<MessageDelivery> queueElement, ISourceController<?> source, boolean delayable) {
+        return add(new AddMessageOperation(queueElement), source, delayable);
     }
 
     /**
@@ -807,7 +809,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         }
 
         public String toString() {
-            return "MessageDelete: " + queue.toString() + " tracking: " + storeTracking;
+            return "MessageDelete: " + queue.getQueueName().toString() + " tracking: " + storeTracking + " " + super.toString();
         }
     }
 
@@ -903,38 +905,34 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         }
 
         public String toString() {
-            return "MessageRestore: " + queue.toString() + " first: " + firstKey + " max: " + maxRecords;
+            return "MessageRestore: " + queue.getQueueName().toString() + " first: " + firstKey + " max: " + maxRecords;
         }
     }
 
     private class AddMessageOperation extends OperationBase {
 
         private final BrokerMessageDelivery brokerDelivery;
-
+        private final SaveableQueueElement<MessageDelivery> singleElement;
         private final MessageDelivery delivery;
-        private final long queueSequence;
-        private final QueueStore.QueueDescriptor target;
         private MessageRecord record;
-
+        private LinkedList<SaveableQueueElement<MessageDelivery>> notifyTargets;
         private final boolean delayable;
 
-        public AddMessageOperation(BrokerMessageDelivery delivery) throws IOException {
+        public AddMessageOperation(BrokerMessageDelivery delivery) {
             this.brokerDelivery = delivery;
+            this.singleElement = null;
             this.delivery = delivery;
-            this.queueSequence = -1;
-            target = null;
             this.delayable = delivery.isFlushDelayable();
             if (!delayable) {
                 this.record = delivery.createMessageRecord();
             }
         }
 
-        public AddMessageOperation(MessageDelivery delivery, QueueStore.QueueDescriptor target, long queueSequence) throws IOException {
+        public AddMessageOperation(SaveableQueueElement<MessageDelivery> queueElement) {
             this.brokerDelivery = null;
-            this.delivery = delivery;
-            this.target = target;
-            this.queueSequence = queueSequence;
-            this.record = delivery.createMessageRecord();
+            singleElement = queueElement;
+            delivery = queueElement.getElement();
+            this.record = singleElement.getElement().createMessageRecord();
             delayable = false;
         }
 
@@ -950,32 +948,38 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         @Override
         protected void doExcecute(Session session) {
 
-            if (target == null) {
+            if (singleElement == null) {
                 brokerDelivery.beginStore();
-                Set<Entry<QueueDescriptor, Long>> targets = brokerDelivery.getPersistentQueues();
+                Set<Entry<QueueDescriptor, SaveableQueueElement<MessageDelivery>>> targets = brokerDelivery.getPersistentQueues();
 
                 if (!targets.isEmpty()) {
                     if (record == null) {
-                        try {
-                            record = delivery.createMessageRecord();
-                        } catch (IOException e) {
-                            throw new FatalStoreException("Error marshalling message", e);
+                        record = brokerDelivery.createMessageRecord();
+                        if (record == null) {
+                            throw new RuntimeException("Error creating message record for " + brokerDelivery.getMsgId());
                         }
                     }
-                    record.setKey(delivery.getStoreTracking());
+                    record.setKey(brokerDelivery.getStoreTracking());
                     session.messageAdd(record);
 
-                    for (Entry<QueueDescriptor, Long> target : brokerDelivery.getPersistentQueues()) {
+                    for (Entry<QueueDescriptor, SaveableQueueElement<MessageDelivery>> target : targets) {
                         try {
                             QueueRecord queueRecord = new QueueRecord();
                             queueRecord.setAttachment(null);
                             queueRecord.setMessageKey(record.getKey());
                             queueRecord.setSize(brokerDelivery.getFlowLimiterSize());
-                            queueRecord.setQueueKey(target.getValue());
+                            queueRecord.setQueueKey(target.getValue().getSequenceNumber());
                             session.queueAddMessage(target.getKey(), queueRecord);
 
                         } catch (KeyNotFoundException e) {
                             e.printStackTrace();
+                        }
+
+                        if (target.getValue().requestSaveNotify()) {
+                            if (notifyTargets == null) {
+                                notifyTargets = new LinkedList<SaveableQueueElement<MessageDelivery>>();
+                            }
+                            notifyTargets.add(target.getValue());
                         }
                     }
                 } else {
@@ -991,8 +995,8 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
                     queueRecord.setAttachment(null);
                     queueRecord.setMessageKey(record.getKey());
                     queueRecord.setSize(brokerDelivery.getFlowLimiterSize());
-                    queueRecord.setQueueKey(queueSequence);
-                    session.queueAddMessage(target, queueRecord);
+                    queueRecord.setQueueKey(singleElement.getSequenceNumber());
+                    session.queueAddMessage(singleElement.getQueueDescriptor(), queueRecord);
                 } catch (KeyNotFoundException e) {
                     e.printStackTrace();
                 }
@@ -1001,7 +1005,18 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
         @Override
         public void onCommit() {
+
+            // Notify that the message was persisted.
             delivery.onMessagePersisted();
+
+            // Notify any of the targets that requested notify on save:
+            if (singleElement != null && singleElement.requestSaveNotify()) {
+                singleElement.notifySave();
+            } else if (notifyTargets != null) {
+                for (SaveableQueueElement<MessageDelivery> notify : notifyTargets) {
+                    notify.notifySave();
+                }
+            }
         }
 
         public String toString() {
@@ -1066,6 +1081,16 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         public int getElementSize() {
             // TODO Auto-generated method stub
             return qRecord.getSize();
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.queue.QueueStore.RestoredElement#getExpiration()
+         */
+        public long getExpiration() {
+            return qRecord.getTte();
         }
 
     }

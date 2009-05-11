@@ -35,6 +35,7 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
     private int priority = Integer.MIN_VALUE;
     private AsciiBuffer msgId;
     private PersistListener persistListener = null;
+    private long tte = Long.MIN_VALUE;
 
     public interface PersistListener {
         public void onMessagePersisted(StompMessageDelivery delivery);
@@ -69,6 +70,24 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
         }
         return priority;
     }
+    
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.broker.MessageDelivery#getTTE()
+     */
+    public long getExpiration() {
+        if (tte == Long.MIN_VALUE) {
+            String t = frame.getHeaders().get(Stomp.Headers.Message.EXPIRATION_TIME);
+            try {
+                tte = (t == null) ? -1 : Long.parseLong(t);
+            } catch (NumberFormatException e) {
+                tte = 1;
+            }
+        }
+        return tte;
+    }
+    
 
     public AsciiBuffer getMsgId() {
         if (msgId == null) {
@@ -137,4 +156,6 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
         // TODO Auto-generated method stub
         return null;
     }
+
+    
 }
