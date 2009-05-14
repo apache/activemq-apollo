@@ -22,8 +22,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Set;
-import java.util.Map.Entry;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -64,6 +62,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
     private final SizeLimiter<OperationBase> storeLimiter;
     private final FlowController<OperationBase> storeController;
+    private final int FLUSH_QUEUE_SIZE = 10000 * 1024;
 
     private final IDispatcher dispatcher;
     private Thread flushThread;
@@ -82,7 +81,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     // num scheduled for delay
     private long delayedFlushPointer = 0; // The last delayable sequence num
     // requested.
-    private final long FLUSH_DELAY_MS = 5;
+    private final long FLUSH_DELAY_MS = 10;
     private final Runnable flushDelayCallback;
 
     public interface DatabaseListener {
@@ -99,7 +98,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         this.store = store;
         this.dispatcher = dispatcher;
         this.opQueue = new LinkedNodeList<OperationBase>();
-        storeLimiter = new SizeLimiter<OperationBase>(10000, 5000) {
+        storeLimiter = new SizeLimiter<OperationBase>(FLUSH_QUEUE_SIZE, 0) {
 
             @Override
             public int getElementSize(OperationBase op) {
@@ -357,16 +356,17 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
                     // If we procecessed some ops, flush and post process:
                     if (!processedQueue.isEmpty()) {
-                        
-                        //System.out.println("Flushing queue after processing: " + processedQueue.size() + " - " + processedQueue);
-                        //Sync the store:
+
+                        if (DEBUG)
+                            System.out.println("Flushing queue after processing: " + processedQueue.size() + " - " + processedQueue);
+                        // Sync the store:
                         store.flush();
-                        
 
                         // Post process operations
                         long release = 0;
                         for (Operation processed : processedQueue) {
                             processed.onCommit();
+                            // System.out.println("Processed" + processed);
                             release += processed.getLimiterSize();
                         }
 
@@ -619,6 +619,8 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         final protected AtomicBoolean cancelled = new AtomicBoolean(false);
         final protected AtomicBoolean executed = new AtomicBoolean(false);
 
+        public static final int BASE_MEM_SIZE = 20;
+
         public boolean cancel() {
             if (executePending.compareAndSet(true, false)) {
                 cancelled.set(true);
@@ -680,7 +682,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         abstract protected void doExcecute(Session session);
 
         public int getLimiterSize() {
-            return 0;
+            return BASE_MEM_SIZE;
         }
 
         public boolean isDelayable() {
@@ -722,12 +724,6 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         }
 
         @Override
-        public int getLimiterSize() {
-            // Might consider bumping this up to avoid too much accumulation?
-            return 0;
-        }
-
-        @Override
         protected void doExcecute(Session session) {
             try {
                 session.queueAdd(qd);
@@ -752,12 +748,6 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
         QueueDeleteOperation(QueueStore.QueueDescriptor queue) {
             qd = queue;
-        }
-
-        @Override
-        public int getLimiterSize() {
-            // Might consider bumping this up to avoid too much accumulation?
-            return 0;
         }
 
         @Override
@@ -787,7 +777,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         @Override
         public int getLimiterSize() {
             // Might consider bumping this up to avoid too much accumulation?
-            return 1;
+            return BASE_MEM_SIZE + 8;
         }
 
         @Override
@@ -829,6 +819,11 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
             this.maxRecords = maxRecords;
             this.maxSequence = maxSequence;
             this.listener = listener;
+        }
+
+        @Override
+        public int getLimiterSize() {
+            return BASE_MEM_SIZE + 44;
         }
 
         @Override
@@ -942,7 +937,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
         @Override
         public int getLimiterSize() {
-            return delivery.getFlowLimiterSize();
+            return delivery.getFlowLimiterSize() + BASE_MEM_SIZE + 40;
         }
 
         @Override
@@ -950,9 +945,9 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
             if (singleElement == null) {
                 brokerDelivery.beginStore();
-                Set<Entry<QueueDescriptor, SaveableQueueElement<MessageDelivery>>> targets = brokerDelivery.getPersistentQueues();
+                Collection<SaveableQueueElement<MessageDelivery>> targets = brokerDelivery.getPersistentQueues();
 
-                if (!targets.isEmpty()) {
+                if (targets != null && !targets.isEmpty()) {
                     if (record == null) {
                         record = brokerDelivery.createMessageRecord();
                         if (record == null) {
@@ -962,24 +957,24 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
                     record.setKey(brokerDelivery.getStoreTracking());
                     session.messageAdd(record);
 
-                    for (Entry<QueueDescriptor, SaveableQueueElement<MessageDelivery>> target : targets) {
+                    for (SaveableQueueElement<MessageDelivery> target : targets) {
                         try {
                             QueueRecord queueRecord = new QueueRecord();
                             queueRecord.setAttachment(null);
                             queueRecord.setMessageKey(record.getKey());
                             queueRecord.setSize(brokerDelivery.getFlowLimiterSize());
-                            queueRecord.setQueueKey(target.getValue().getSequenceNumber());
-                            session.queueAddMessage(target.getKey(), queueRecord);
+                            queueRecord.setQueueKey(target.getSequenceNumber());
+                            session.queueAddMessage(target.getQueueDescriptor(), queueRecord);
 
                         } catch (KeyNotFoundException e) {
                             e.printStackTrace();
                         }
 
-                        if (target.getValue().requestSaveNotify()) {
+                        if (target.requestSaveNotify()) {
                             if (notifyTargets == null) {
                                 notifyTargets = new LinkedList<SaveableQueueElement<MessageDelivery>>();
                             }
-                            notifyTargets.add(target.getValue());
+                            notifyTargets.add(target);
                         }
                     }
                 } else {

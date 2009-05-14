@@ -221,11 +221,6 @@ public class FlowController<E> implements IFlowController<E> {
     public void add(E elem, ISourceController<?> sourceController) {
         boolean ok = false;
         synchronized (mutex) {
-            // If we don't have an fc sink, then just increment the limiter.
-            if (controllable == null) {
-                limiter.add(elem);
-                return;
-            }
             if (okToAdd(elem)) {
                 ok = true;
                 if (limiter.add(elem)) {
@@ -241,7 +236,7 @@ public class FlowController<E> implements IFlowController<E> {
                 }
             }
         }
-        if (ok) {
+        if (ok && controllable != null) {
             controllable.flowElemAccepted(this, elem);
         }
     }
@@ -259,12 +254,6 @@ public class FlowController<E> implements IFlowController<E> {
     public boolean offer(E elem, ISourceController<?> sourceController) {
         boolean ok = false;
         synchronized (mutex) {
-            // If we don't have an fc sink, then just increment the limiter.
-            if (controllable == null) {
-                limiter.add(elem);
-                return true;
-            }
-
             if (okToAdd(elem)) {
                 if (limiter.add(elem)) {
                     blockSource(sourceController);
@@ -274,7 +263,7 @@ public class FlowController<E> implements IFlowController<E> {
                 blockSource(sourceController);
             }
         }
-        if (ok) {
+        if (ok && controllable != null) {
             controllable.flowElemAccepted(this, elem);
         }
         return ok;

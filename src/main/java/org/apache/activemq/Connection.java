@@ -34,10 +34,10 @@ abstract public class Connection implements TransportListener {
     protected String name;
 
     private int priorityLevels;
-    protected int outputWindowSize = 1000;
-    protected int outputResumeThreshold = 900;
-    protected int inputWindowSize = 1000;
-    protected int inputResumeThreshold = 500;
+    protected int outputWindowSize = 1024 * 1024;
+    protected int outputResumeThreshold = 900 * 1024;
+    protected int inputWindowSize = 1024 * 1024;
+    protected int inputResumeThreshold = 512 * 1024;
     protected boolean useAsyncWriteThread = true;
     
     private IDispatcher dispatcher;

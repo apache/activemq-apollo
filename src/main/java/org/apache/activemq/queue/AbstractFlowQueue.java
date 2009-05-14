@@ -40,7 +40,6 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
     protected DispatchContext dispatchContext;
     protected final Collection<IPollableFlowSource.FlowReadyListener<E>> readyListeners = new ArrayList<IPollableFlowSource.FlowReadyListener<E>>();
     private boolean notifyReady = false;
-    protected boolean dispatching = false;
     protected int dispatchPriority = 0;
     protected FlowQueueListener listener = new FlowQueueListener()
     {
@@ -62,11 +61,11 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
         this.listener = listener;
     }
 
-    public final void add(E elem, ISourceController<?> source) {
+    public void add(E elem, ISourceController<?> source) {
         getSinkController(elem, source).add(elem, source);
     }
 
-    public final boolean offer(E elem, ISourceController<?> source) {
+    public boolean offer(E elem, ISourceController<?> source) {
         return getSinkController(elem, source).offer(elem, source);
     }
 

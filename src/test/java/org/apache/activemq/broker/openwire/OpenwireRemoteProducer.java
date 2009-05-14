@@ -101,8 +101,16 @@ public class OpenwireRemoteProducer extends RemoteProducer {
             try {
                 msg.setStringProperty(property, property);
             } catch (JMSException e) {
-                new RuntimeException(e);
+                throw new RuntimeException(e);
             }
+        }
+        
+        //Call the before marshal method to sync the content so we get an 
+        //accurate size:
+        try {
+            msg.beforeMarshall(null);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         next = new OpenWireMessageDelivery(msg);
     }

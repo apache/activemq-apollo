@@ -26,7 +26,7 @@ public abstract class AbstractLimiter<E> implements IFlowLimiter<E> {
     public AbstractLimiter() {
     }
 
-    public final void addUnThrottleListener(UnThrottleListener l) {
+    public void addUnThrottleListener(UnThrottleListener l) {
         throttleListeners.add(l);
 
         if (!resuming && !getThrottled()) {
@@ -34,7 +34,7 @@ public abstract class AbstractLimiter<E> implements IFlowLimiter<E> {
         }
     }
 
-    public final void notifyUnThrottleListeners() {
+    protected final void notifyUnThrottleListeners() {
         resuming = true;
         while (!getThrottled() && !throttleListeners.isEmpty()) {
             UnThrottleListener l = throttleListeners.remove();

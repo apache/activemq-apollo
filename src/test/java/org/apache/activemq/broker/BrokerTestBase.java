@@ -40,7 +40,7 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 
 public abstract class BrokerTestBase extends TestCase {
 
-    protected static final int PERFORMANCE_SAMPLES = 3;
+    protected static final int PERFORMANCE_SAMPLES = 5;
 
     protected static final int IO_WORK_AMOUNT = 0;
     protected static final int FANIN_COUNT = 10;
@@ -118,6 +118,9 @@ public abstract class BrokerTestBase extends TestCase {
     }
 
     public void test_1_1_0() throws Exception {
+        if (ptp) {
+            return;
+        }
         producerCount = 1;
         destCount = 1;
 
@@ -376,7 +379,7 @@ public abstract class BrokerTestBase extends TestCase {
             sendBroker = rcvBroker = createBroker("Broker", sendBrokerBindURI, sendBrokerConnectURI);
             brokers.add(sendBroker);
         }
-        
+
         startBrokers();
 
         Destination[] dests = new Destination[destCount];
@@ -476,7 +479,7 @@ public abstract class BrokerTestBase extends TestCase {
             store = StoreFactory.createStore("memory");
         }
 
-        store.setStoreDirectory(new File("sub/test-data/broker-test/" +  broker.getName()));
+        store.setStoreDirectory(new File("sub/test-data/broker-test/" + broker.getName()));
         store.setDeleteAllMessages(PURGE_STORE);
         return store;
     }
@@ -497,15 +500,14 @@ public abstract class BrokerTestBase extends TestCase {
         }
     }
 
-    private void startBrokers() throws Exception
-    {
+    private void startBrokers() throws Exception {
         for (MessageBroker broker : brokers) {
             broker.start();
         }
     }
-    
+
     private void startClients() throws Exception {
-        
+
         for (RemoteConsumer connection : consumers) {
             connection.start();
         }

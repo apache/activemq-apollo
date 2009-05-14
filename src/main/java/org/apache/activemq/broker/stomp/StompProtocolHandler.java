@@ -310,7 +310,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
                 Flow flow = new Flow("broker-" + subscriptionId + "-outbound", false);
                 limiter = new WindowLimiter<MessageDelivery>(true, flow, 1000, 500) {
                     public int getElementSize(MessageDelivery m) {
-                        return 1;
+                        return m.getFlowLimiterSize();
                     }
                 };
                 queue = new SingleFlowRelay<MessageDelivery>(flow, flow.getFlowName(), limiter);

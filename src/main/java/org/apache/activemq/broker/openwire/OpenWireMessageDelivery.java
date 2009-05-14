@@ -59,8 +59,7 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
     }
 
     public int getMemorySize() {
-        //return size;
-        return 1;
+        return size;
     }
 
     public int getPriority() {

@@ -58,10 +58,22 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
     // subscriberQueues = new HashMap<String, IFlowQueue<MessageDelivery>>();
 
     private Mapper<Integer, MessageDelivery> partitionMapper;
+
+    private static final int DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD = 100 * 1024 * 1;;
+    private static final int DEFAULT_SHARED_QUEUE_RESUME_THRESHOLD = 1;
+    // Be default we don't page out elements to disk.
+    private static final int DEFAULT_SHARED_QUEUE_SIZE = DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD;
+    //private static final int DEFAULT_SHARED_QUEUE_SIZE = 1024 * 1024 * 10;
     
     private static final Mapper<Long, MessageDelivery> EXPIRATION_MAPPER = new Mapper<Long, MessageDelivery>() {
         public Long map(MessageDelivery element) {
             return element.getExpiration();
+        }
+    };
+
+    private static final Mapper<Integer, MessageDelivery> SIZE_MAPPER = new Mapper<Integer, MessageDelivery>() {
+        public Integer map(MessageDelivery element) {
+            return element.getFlowLimiterSize();
         }
     };
 
@@ -71,11 +83,29 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         }
 
         public boolean isPageOutPlaceHolders() {
-            return false;
+            return true;
         }
 
         public boolean isPagingEnabled() {
-            return false;
+            return DEFAULT_SHARED_QUEUE_SIZE > DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD;
+        }
+
+        public int getPagingInMemorySize() {
+            return DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD;
+        }
+
+        public int getDisconnectedThrottleRate() {
+            // By default don't throttle consumers when disconnected.
+            return 0;
+        }
+
+        public boolean isThrottleSourcesToMemoryLimit() {
+            // Keep the queue in memory.
+            return true;
+        }
+
+        public int getRecoveryBias() {
+            return 8;
         }
     };
 
@@ -194,8 +224,9 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
             break;
         }
         case QueueDescriptor.SHARED_PRIORITY: {
-            PrioritySizeLimiter<MessageDelivery> limiter = new PrioritySizeLimiter<MessageDelivery>(100, 1, MessageBroker.MAX_PRIORITY);
+            PrioritySizeLimiter<MessageDelivery> limiter = new PrioritySizeLimiter<MessageDelivery>(DEFAULT_SHARED_QUEUE_SIZE, DEFAULT_SHARED_QUEUE_RESUME_THRESHOLD, MessageBroker.MAX_PRIORITY);
             limiter.setPriorityMapper(PRIORITY_MAPPER);
+            limiter.setSizeMapper(SIZE_MAPPER);
             SharedPriorityQueue<Long, MessageDelivery> queue = new SharedPriorityQueue<Long, MessageDelivery>(name, limiter);
             ret = queue;
             queue.setKeyMapper(KEY_MAPPER);
@@ -203,7 +234,13 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
             break;
         }
         case QueueDescriptor.SHARED: {
-            SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(100, 1);
+            SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(DEFAULT_SHARED_QUEUE_SIZE, DEFAULT_SHARED_QUEUE_RESUME_THRESHOLD){
+                @Override
+                public int getElementSize(MessageDelivery elem) {
+                    return elem.getFlowLimiterSize();
+                }
+            };
+            
             if (!USE_OLD_QUEUE) {
                 SharedQueue<Long, MessageDelivery> sQueue = new SharedQueue<Long, MessageDelivery>(name, limiter);
                 sQueue.setKeyMapper(KEY_MAPPER);

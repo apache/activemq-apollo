@@ -31,6 +31,7 @@ import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.command.ActiveMQBytesMessage;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
+import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.MessageId;
 import org.apache.activemq.command.ProducerId;
 import org.apache.activemq.dispatch.IDispatcher;
@@ -68,7 +69,7 @@ public class SharedQueuePerfTest extends TestCase {
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
     private static final boolean PERSISTENT = true;
-    private static final boolean PURGE_STORE = false;
+    private static final boolean PURGE_STORE = true;
 
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
     protected MetricAggregator totalConsumerRate = new MetricAggregator().name("Aggregate Consumer Rate").unit("items");
@@ -111,7 +112,7 @@ public class SharedQueuePerfTest extends TestCase {
             store = StoreFactory.createStore("memory");
         }
 
-        store.setStoreDirectory(new File("test-data/shared-message-queue-test/"));
+        store.setStoreDirectory(new File("test-data/shared-queue-perf-test/"));
         store.setDeleteAllMessages(PURGE_STORE);
         return store;
     }
@@ -121,6 +122,7 @@ public class SharedQueuePerfTest extends TestCase {
         producers.clear();
         queues.clear();
         stopServices();
+        consumerStartDelay = 0;
     }
 
     public void testSharedQueue_1_1_1() throws Exception {
@@ -141,6 +143,7 @@ public class SharedQueuePerfTest extends TestCase {
         try {
             createQueues(1);
             createProducers(1);
+            consumerStartDelay = 10;
             createConsumers(1);
             doTest();
 
@@ -202,56 +205,48 @@ public class SharedQueuePerfTest extends TestCase {
     }
 
     private void doTest() throws Exception {
-        
-        try
-        {
+
+        try {
             // Start queues:
             for (IQueue<Long, MessageDelivery> queue : queues) {
                 queue.start();
             }
-    
-            Runnable startConsumers = new Runnable()
-            {
-                public void run()
-                {
+
+            Runnable startConsumers = new Runnable() {
+                public void run() {
                     // Start consumers:
                     for (Consumer consumer : consumers) {
                         consumer.start();
                     }
                 }
             };
-            
-            if(consumerStartDelay > 0)
-            {
+
+            if (consumerStartDelay > 0) {
                 dispatcher.schedule(startConsumers, consumerStartDelay, TimeUnit.SECONDS);
-            }
-            else
-            {
+            } else {
                 startConsumers.run();
             }
-            
+
             // Start producers:
             for (Producer producer : producers) {
                 producer.start();
             }
             reportRates();
-        }
-        finally
-        {
+        } finally {
             // Stop producers:
             for (Producer producer : producers) {
                 producer.stop();
             }
-            
+
             // Stop consumers:
             for (Consumer consumer : consumers) {
                 consumer.stop();
             }
-            
+
             // Stop queues:
             for (IQueue<Long, MessageDelivery> queue : queues) {
                 queue.stop();
-            }        
+            }
         }
     }
 
@@ -303,7 +298,7 @@ public class SharedQueuePerfTest extends TestCase {
         protected final IFlowRelay<OpenWireMessageDelivery> outboundQueue;
         protected OpenWireMessageDelivery next;
         private int priority;
-        private final byte[] payload;
+        private final String payload;
         private int sequenceNumber;
         private final ActiveMQDestination destination;
         private final IQueue<Long, MessageDelivery> targetQueue;
@@ -316,14 +311,21 @@ public class SharedQueuePerfTest extends TestCase {
             rate.name("Producer " + name + " Rate");
             totalProducerRate.add(rate);
             dispatchContext = dispatcher.register(this, name);
-            payload = new byte[1024];
+            // create a 1024 byte payload (2 bytes per char):
+            payload = new String(new byte[512]);
             producerId = new ProducerId(name);
             wireFormat = new OpenWireFormat();
             wireFormat.setCacheEnabled(false);
             wireFormat.setSizePrefixDisabled(false);
             wireFormat.setVersion(OpenWireFormat.DEFAULT_VERSION);
 
-            SizeLimiter<OpenWireMessageDelivery> limiter = new SizeLimiter<OpenWireMessageDelivery>(1000, 500);
+            SizeLimiter<OpenWireMessageDelivery> limiter = new SizeLimiter<OpenWireMessageDelivery>(1000 * 1024, 500 * 1024) {
+                @Override
+                public int getElementSize(OpenWireMessageDelivery elem) {
+                    return elem.getFlowLimiterSize();
+                }
+            };
+
             Flow flow = new Flow(name, true);
             outboundQueue = new SingleFlowRelay<OpenWireMessageDelivery>(flow, name, limiter);
             outboundQueue.setFlowExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
@@ -384,14 +386,14 @@ public class SharedQueuePerfTest extends TestCase {
         }
 
         private void createNextMessage() throws JMSException {
-            ActiveMQBytesMessage message = new ActiveMQBytesMessage();
+            ActiveMQTextMessage message = new ActiveMQTextMessage();
             message.setJMSPriority(priority);
             message.setProducerId(producerId);
             message.setMessageId(new MessageId(name, ++sequenceNumber));
             message.setDestination(destination);
             message.setPersistent(PERSISTENT);
             if (payload != null) {
-                message.writeBytes(payload);
+                message.setText(payload);
             }
             next = new OpenWireMessageDelivery(message);
         }
@@ -414,12 +416,14 @@ public class SharedQueuePerfTest extends TestCase {
         private final ExclusiveQueue<MessageDelivery> queue;
         private final IQueue<Long, MessageDelivery> sourceQueue;
         private final QueueStore.QueueDescriptor queueDescriptor;
+        private int limit = 20000;
+        private int count = 0;
 
         public Consumer(String name, IQueue<Long, MessageDelivery> sourceQueue) {
             this.sourceQueue = sourceQueue;
             this.name = name;
             Flow flow = new Flow(name + "-outbound", false);
-            limiter = new SizeLimiter<MessageDelivery>(1024, 512) {
+            limiter = new SizeLimiter<MessageDelivery>(1024 * 1024, 512 * 1024) {
                 public int getElementSize(MessageDelivery m) {
                     return m.getFlowLimiterSize();
                 }
@@ -439,6 +443,10 @@ public class SharedQueuePerfTest extends TestCase {
                 public void drain(MessageDelivery elem, ISourceController<MessageDelivery> controller) {
                     elem.acknowledge(queueDescriptor);
                     rate.increment();
+                    /*
+                    if (count++ == limit) {
+                        queue.stop();
+                    }*/
                 }
             });
 

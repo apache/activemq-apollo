@@ -27,6 +27,7 @@ import org.apache.activemq.flow.ISourceController;
 public class ExclusiveQueue<E> extends AbstractFlowQueue<E> {
     private final LinkedList<E> queue = new LinkedList<E>();
     private final FlowController<E> controller;
+    private boolean started = true;
 
     /**
      * Creates a flow queue that can handle multiple flows.
@@ -42,7 +43,6 @@ public class ExclusiveQueue<E> extends AbstractFlowQueue<E> {
         super.onFlowOpened(controller);
     }
 
-
     protected final ISinkController<E> getSinkController(E elem, ISourceController<?> source) {
         return controller;
     }
@@ -52,7 +52,17 @@ public class ExclusiveQueue<E> extends AbstractFlowQueue<E> {
      */
     public synchronized void flowElemAccepted(ISourceController<E> controller, E elem) {
         queue.add(elem);
-        notifyReady();
+        if (started) {
+            notifyReady();
+        }
+    }
+
+    public synchronized void start() {
+        started = true;
+    }
+
+    public synchronized void stop() {
+        started = false;
     }
 
     public FlowController<E> getFlowController(Flow flow) {
@@ -60,7 +70,7 @@ public class ExclusiveQueue<E> extends AbstractFlowQueue<E> {
     }
 
     public final boolean isDispatchReady() {
-        return !queue.isEmpty();
+        return !queue.isEmpty() && started;
     }
 
     public final boolean pollingDispatch() {
@@ -76,6 +86,10 @@ public class ExclusiveQueue<E> extends AbstractFlowQueue<E> {
 
     public final E poll() {
         synchronized (this) {
+            if (!started) {
+                return null;
+            }
+
             E elem = queue.poll();
             // FIXME the release should really be done after dispatch.
             // doing it here saves us from having to resynchronize

@@ -167,11 +167,13 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
                 queue.getDescriptor().setParent(queueDescriptor.getQueueName());
                 queue.getDescriptor().setPartitionId(prio);
                 partitions.set(prio, queue);
-                onFlowOpened(queue.getFlowControler());
                 if (initialize) {
                     store.addQueue(queue.getDescriptor());
                     queue.initialize(0, 0, 0, 0);
+                    onFlowOpened(queue.getFlowControler());
                 }
+                
+                
                 if (started) {
                     queue.start();
                 }
@@ -191,14 +193,12 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
 
     public void add(V value, ISourceController<?> source) {
         int prio = priorityMapper.map(value);
-        IQueue<K, V> partition = getPartition(prio, true);
-        partition.add(value, source);
+        getPartition(prio, true).add(value, source);
     }
 
     public boolean offer(V value, ISourceController<?> source) {
         int prio = priorityMapper.map(value);
-        IQueue<K, V> partition = getPartition(prio, true);
-        return partition.offer(value, source);
+        return getPartition(prio, true).offer(value, source);
     }
 
     public void setKeyMapper(Mapper<K, V> keyMapper) {

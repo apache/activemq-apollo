@@ -13,6 +13,7 @@ import org.apache.activemq.queue.PersistencePolicy;
 import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.SharedPriorityQueue;
 import org.apache.activemq.queue.SharedQueue;
+import org.apache.activemq.queue.SharedQueueOld;
 import org.apache.activemq.queue.Subscription;
 import org.apache.activemq.util.Mapper;
 
@@ -27,6 +28,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
     private Mapper<Long, Message> keyExtractor;
     private final MockStoreAdapater store = new MockStoreAdapater();
     private static final PersistencePolicy<Message> NO_PERSISTENCE = new PersistencePolicy.NON_PERSISTENT_POLICY<Message>();
+    private static final boolean USE_OLD_QUEUE = false;
     
     private IQueue<Long, Message> createQueue() {
 
@@ -61,15 +63,27 @@ class MockQueue implements MockBroker.DeliveryTarget {
             queue.initialize(0, 0, 0, 0);
             return queue;
         } else {
-            SizeLimiter<Message> limiter = new SizeLimiter<Message>(100, 1);
-            SharedQueue<Long, Message> queue = new SharedQueue<Long, Message>(destination.getName().toString(), limiter);
-            queue.setKeyMapper(keyExtractor);
-            queue.setAutoRelease(true);
-            queue.setDispatcher(broker.getDispatcher());
-            queue.setStore(store);
-            queue.setPersistencePolicy(NO_PERSISTENCE);
-            queue.initialize(0, 0, 0, 0);
-            return queue;
+            if (USE_OLD_QUEUE) {
+                SizeLimiter<Message> limiter = new SizeLimiter<Message>(100, 1);
+                SharedQueueOld<Long, Message> queue = new SharedQueueOld<Long, Message>(destination.getName().toString(), limiter);
+                queue.setKeyMapper(keyExtractor);
+                queue.setAutoRelease(true);
+                queue.setDispatcher(broker.getDispatcher());
+                queue.setStore(store);
+                queue.setPersistencePolicy(NO_PERSISTENCE);
+                queue.initialize(0, 0, 0, 0);
+                return queue;
+            } else {
+                SizeLimiter<Message> limiter = new SizeLimiter<Message>(100, 1);
+                SharedQueue<Long, Message> queue = new SharedQueue<Long, Message>(destination.getName().toString(), limiter);
+                queue.setKeyMapper(keyExtractor);
+                queue.setAutoRelease(true);
+                queue.setDispatcher(broker.getDispatcher());
+                queue.setStore(store);
+                queue.setPersistencePolicy(NO_PERSISTENCE);
+                queue.initialize(0, 0, 0, 0);
+                return queue;
+            }
         }
     }
 
@@ -83,7 +97,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
 
     public final void addConsumer(final DeliveryTarget dt) {
         Subscription<Message> sub = new Subscription<Message>() {
-            
+
             public boolean isBrowser() {
                 return false;
             }

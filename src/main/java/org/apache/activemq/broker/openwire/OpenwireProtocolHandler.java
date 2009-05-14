@@ -442,7 +442,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             Flow flow = new Flow("broker-" + name + "-outbound", false);
             limiter = new WindowLimiter<MessageDelivery>(true, flow, info.getPrefetchSize(), info.getPrefetchSize() / 2) {
                 public int getElementSize(MessageDelivery m) {
-                    return 1;
+                    return m.getFlowLimiterSize();
                 }
             };
             queue = new SingleFlowRelay<MessageDelivery>(flow, flow.getFlowName(), limiter);

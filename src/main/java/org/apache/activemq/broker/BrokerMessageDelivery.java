@@ -17,6 +17,8 @@
 package org.apache.activemq.broker;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -41,6 +43,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
     // List of persistent targets for which the message should be saved
     // when dispatch is complete:
     HashMap<QueueStore.QueueDescriptor, SaveableQueueElement<MessageDelivery>> persistentTargets;
+    SaveableQueueElement<MessageDelivery> singleTarget;
 
     long storeTracking = -1;
     BrokerDatabase store;
@@ -74,7 +77,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
         return fromStore;
     }
 
-    public final void persist(SaveableQueueElement<MessageDelivery> elem, ISourceController<?> controller, boolean delayable){
+    public final void persist(SaveableQueueElement<MessageDelivery> elem, ISourceController<?> controller, boolean delayable) {
         synchronized (this) {
             // Can flush of this message to the store be delayed?
             if (enableFlushDelay && !delayable) {
@@ -84,16 +87,13 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
             // list of queues for which to save the message when dispatch is
             // finished:
             if (dispatching) {
-                if (persistentTargets == null) {
-                    persistentTargets = new HashMap<QueueStore.QueueDescriptor, SaveableQueueElement<MessageDelivery>>();
-                }
-                persistentTargets.put(elem.getQueueDescriptor(), elem);
+                addPersistentTarget(elem);
                 return;
             }
             // Otherwise, if it is still in the saver queue, we can add this
             // queue to the queue list:
             else if (pendingSave != null) {
-                persistentTargets.put(elem.getQueueDescriptor(), elem);
+                addPersistentTarget(elem);
                 if (!delayable) {
                     pendingSave.requestFlush();
                 }
@@ -112,15 +112,14 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
             // then we don't need to issue a delete:
             if (dispatching || pendingSave != null) {
 
-                // Remove the queue:
-                persistentTargets.remove(queue);
                 deleted = true;
 
+                removePersistentTarget(queue);
                 // We get a save context when we place the message in the
                 // database queue. If it has been added to the queue,
                 // and we've removed the last queue, see if we can cancel
                 // the save:
-                if (pendingSave != null && persistentTargets.isEmpty()) {
+                if (pendingSave != null && !hasPersistentTargets()) {
                     if (pendingSave.cancel()) {
                         pendingSave = null;
                         if (isPersistent()) {
@@ -153,13 +152,54 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
         return storeTracking;
     }
 
-    public Set<Entry<QueueDescriptor, SaveableQueueElement<MessageDelivery>>> getPersistentQueues() {
-        return persistentTargets.entrySet();
+    public synchronized Collection<SaveableQueueElement<MessageDelivery>> getPersistentQueues() {
+        if (singleTarget != null) {
+            ArrayList<SaveableQueueElement<MessageDelivery>> list = new ArrayList<SaveableQueueElement<MessageDelivery>>(1);
+            list.add(singleTarget);
+            return list;
+        } else if (persistentTargets != null) {
+            return persistentTargets.values();
+        }
+        return null;
     }
 
     public void beginStore() {
         synchronized (this) {
             pendingSave = null;
+        }
+    }
+
+    private final boolean hasPersistentTargets() {
+        return (persistentTargets != null && !persistentTargets.isEmpty()) || singleTarget != null;
+    }
+
+    private final void removePersistentTarget(QueueDescriptor queue) {
+        if (persistentTargets != null) {
+            persistentTargets.remove(queue);
+            return;
+        }
+
+        if (singleTarget != null && singleTarget.getQueueDescriptor().equals(queue)) {
+            singleTarget = null;
+        }
+    }
+
+    private final void addPersistentTarget(SaveableQueueElement<MessageDelivery> elem) {
+        if (persistentTargets != null) {
+            persistentTargets.put(elem.getQueueDescriptor(), elem);
+            return;
+        }
+
+        if (singleTarget == null) {
+            singleTarget = elem;
+            return;
+        }
+
+        if (elem.getQueueDescriptor() != singleTarget.getQueueDescriptor()) {
+            persistentTargets = new HashMap<QueueStore.QueueDescriptor, SaveableQueueElement<MessageDelivery>>();
+            persistentTargets.put(elem.getQueueDescriptor(), elem);
+            persistentTargets.put(singleTarget.getQueueDescriptor(), singleTarget);
+            singleTarget = null;
         }
     }
 
@@ -170,7 +210,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
             // Note that this could be the case even if the message isn't
             // persistent if a target requested that the message be spooled
             // for some other reason such as queue memory overflow.
-            if (persistentTargets != null && !persistentTargets.isEmpty()) {
+            if (hasPersistentTargets()) {
                 pendingSave = store.persistReceivedMessage(this, controller);
             }
 
