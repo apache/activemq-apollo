@@ -61,6 +61,7 @@ public class StompRemoteConsumer extends RemoteConsumer {
                 return null;
             }
         }, flow, limiter, inboundMutex);
+        inboundController.setExecutor(getDispatcher().createPriorityExecutor(getDispatcher().getDispatchPriorities() - 1));
     }
     
     public void onCommand(Object command) {

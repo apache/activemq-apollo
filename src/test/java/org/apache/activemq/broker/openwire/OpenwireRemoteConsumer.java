@@ -61,6 +61,7 @@ public class OpenwireRemoteConsumer extends RemoteConsumer {
                 return null;
             }
         }, flow, limiter, inboundMutex);
+        inboundController.setExecutor(getDispatcher().createPriorityExecutor(getDispatcher().getDispatchPriorities() - 1));
         
     }
     

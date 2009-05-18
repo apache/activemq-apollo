@@ -68,7 +68,7 @@ public class SharedQueuePerfTest extends TestCase {
     BrokerDatabase database;
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
-    private static final boolean PERSISTENT = true;
+    private static final boolean PERSISTENT = false;
     private static final boolean PURGE_STORE = true;
 
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
@@ -130,20 +130,6 @@ public class SharedQueuePerfTest extends TestCase {
         try {
             createQueues(1);
             createProducers(1);
-            createConsumers(1);
-            doTest();
-
-        } finally {
-            cleanup();
-        }
-    }
-
-    public void testSharedQueue_1_1_1_Restore() throws Exception {
-        startServices();
-        try {
-            createQueues(1);
-            createProducers(1);
-            consumerStartDelay = 10;
             createConsumers(1);
             doTest();
 

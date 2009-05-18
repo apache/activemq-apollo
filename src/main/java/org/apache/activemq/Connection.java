@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.dispatch.IDispatcher;
@@ -39,13 +40,12 @@ abstract public class Connection implements TransportListener {
     protected int inputWindowSize = 1024 * 1024;
     protected int inputResumeThreshold = 512 * 1024;
     protected boolean useAsyncWriteThread = true;
-    
+
     private IDispatcher dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean();
     private ExecutorService blockingWriter;
     private ExceptionListener exceptionListener;
-    
-    
+
     public void setTransport(Transport transport) {
         this.transport = transport;
     }
@@ -59,8 +59,12 @@ abstract public class Connection implements TransportListener {
             }
             dt.setDispatcher(getDispatcher());
         } else {
-            if( useAsyncWriteThread ) {
-                blockingWriter = Executors.newSingleThreadExecutor();
+            if (useAsyncWriteThread) {
+                blockingWriter = Executors.newSingleThreadExecutor(new ThreadFactory() {
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "Writer-" + name);
+                    }
+                });
             }
         }
         transport.start();
@@ -76,18 +80,33 @@ abstract public class Connection implements TransportListener {
         }
     }
 
+    public void setName(String name) {
+        this.name = name;
+        if (blockingWriter != null) {
+            blockingWriter.execute(new Runnable() {
+                public void run() {
+                    Thread.currentThread().setName("Writer-" + Connection.this.name);
+                }
+            });
+        }
+    }
+
+    public String getName() {
+        return name;
+    }
+
     protected void initialize() {
     }
-    
+
     public final void write(final Object o) {
         write(o, null);
     }
-    
+
     public final void write(final Object o, final Runnable onCompleted) {
-        if (blockingWriter==null) {
+        if (blockingWriter == null) {
             try {
                 transport.oneway(o);
-                if( onCompleted!=null ) {
+                if (onCompleted != null) {
                     onCompleted.run();
                 }
             } catch (IOException e) {
@@ -100,7 +119,7 @@ abstract public class Connection implements TransportListener {
                         if (!stopping.get()) {
                             try {
                                 transport.oneway(o);
-                                if( onCompleted!=null ) {
+                                if (onCompleted != null) {
                                     onCompleted.run();
                                 }
                             } catch (IOException e) {
@@ -110,11 +129,11 @@ abstract public class Connection implements TransportListener {
                     }
                 });
             } catch (RejectedExecutionException re) {
-                //Must be shutting down.
+                // Must be shutting down.
             }
         }
     }
-    
+
     final public void onException(IOException error) {
         if (!isStopping()) {
             onException((Exception) error);
@@ -122,12 +141,12 @@ abstract public class Connection implements TransportListener {
     }
 
     final public void onException(Exception error) {
-        if( exceptionListener!=null ) {
+        if (exceptionListener != null) {
             exceptionListener.exceptionThrown(error);
         }
     }
-    
-    public boolean isStopping(){ 
+
+    public boolean isStopping() {
         return stopping.get();
     }
 
@@ -135,10 +154,6 @@ abstract public class Connection implements TransportListener {
     }
 
     public void transportResumed() {
-    }
-
-    public String getName() {
-        return name;
     }
 
     public int getPriorityLevels() {

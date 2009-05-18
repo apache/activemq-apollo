@@ -106,7 +106,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
                 return dt.match(message);
             }
 
-            public boolean isRemoveOnDispatch() {
+            public boolean isRemoveOnDispatch(Message message) {
                 return true;
             }
 

@@ -28,6 +28,7 @@ import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.PrioritySizeLimiter;
 import org.apache.activemq.flow.SizeLimiter;
+import org.apache.activemq.queue.ExclusivePersistentQueue;
 import org.apache.activemq.queue.IPartitionedQueue;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.PartitionedQueue;
@@ -49,22 +50,6 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
     private BrokerDatabase database;
     private IDispatcher dispatcher;
 
-    private final short PARTITION_TYPE = 0;
-    private final short SHARED_QUEUE_TYPE = 1;
-    // private final short SUBSCRIBER_QUEUE_TYPE = 2;
-
-    private final HashMap<String, IQueue<Long, MessageDelivery>> sharedQueues = new HashMap<String, IQueue<Long, MessageDelivery>>();
-    // private final HashMap<String, IFlowQueue<MessageDelivery>>
-    // subscriberQueues = new HashMap<String, IFlowQueue<MessageDelivery>>();
-
-    private Mapper<Integer, MessageDelivery> partitionMapper;
-
-    private static final int DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD = 100 * 1024 * 1;;
-    private static final int DEFAULT_SHARED_QUEUE_RESUME_THRESHOLD = 1;
-    // Be default we don't page out elements to disk.
-    private static final int DEFAULT_SHARED_QUEUE_SIZE = DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD;
-    //private static final int DEFAULT_SHARED_QUEUE_SIZE = 1024 * 1024 * 10;
-    
     private static final Mapper<Long, MessageDelivery> EXPIRATION_MAPPER = new Mapper<Long, MessageDelivery>() {
         public Long map(MessageDelivery element) {
             return element.getExpiration();
@@ -77,7 +62,25 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         }
     };
 
+    private final short PARTITION_TYPE = 0;
+    private final short SHARED_QUEUE_TYPE = 1;
+    private final short DURABLE_QUEUE_TYPE = 2;
+
+    private final HashMap<String, IQueue<Long, MessageDelivery>> sharedQueues = new HashMap<String, IQueue<Long, MessageDelivery>>();
+    private final HashMap<String, ExclusivePersistentQueue<Long, MessageDelivery>> durableQueues = new HashMap<String, ExclusivePersistentQueue<Long, MessageDelivery>>();
+
+    private Mapper<Integer, MessageDelivery> partitionMapper;
+
+    private static final int DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD = 100 * 1024 * 1;
+    private static final int DEFAULT_SHARED_QUEUE_RESUME_THRESHOLD = 1;
+    // Be default we don't page out elements to disk.
+    private static final int DEFAULT_SHARED_QUEUE_SIZE = DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD;
+    //private static final int DEFAULT_SHARED_QUEUE_SIZE = 1024 * 1024 * 10;
+
     private static final PersistencePolicy<MessageDelivery> SHARED_QUEUE_PERSISTENCE_POLICY = new PersistencePolicy<MessageDelivery>() {
+
+        private static final boolean PAGING_ENABLED = DEFAULT_SHARED_QUEUE_SIZE > DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD;
+
         public boolean isPersistent(MessageDelivery elem) {
             return elem.isPersistent();
         }
@@ -87,11 +90,16 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         }
 
         public boolean isPagingEnabled() {
-            return DEFAULT_SHARED_QUEUE_SIZE > DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD;
+            return PAGING_ENABLED;
         }
 
         public int getPagingInMemorySize() {
             return DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD;
+        }
+
+        public boolean isThrottleSourcesToMemoryLimit() {
+            // Keep the queue in memory.
+            return true;
         }
 
         public int getDisconnectedThrottleRate() {
@@ -99,9 +107,44 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
             return 0;
         }
 
+        public int getRecoveryBias() {
+            return 8;
+        }
+    };
+
+    private static final int DEFAULT_DURABLE_QUEUE_PAGING_THRESHOLD = 100 * 1024 * 1;
+    private static final int DEFAULT_DURABLE_QUEUE_RESUME_THRESHOLD = 1;
+    // Be default we don't page out elements to disk.
+    private static final int DEFAULT_DURABLE_QUEUE_SIZE = DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD;
+
+    private static final PersistencePolicy<MessageDelivery> DURABLE_QUEUE_PERSISTENCE_POLICY = new PersistencePolicy<MessageDelivery>() {
+
+        private static final boolean PAGING_ENABLED = DEFAULT_DURABLE_QUEUE_SIZE > DEFAULT_DURABLE_QUEUE_PAGING_THRESHOLD;
+
+        public boolean isPersistent(MessageDelivery elem) {
+            return elem.isPersistent();
+        }
+
+        public boolean isPageOutPlaceHolders() {
+            return true;
+        }
+
+        public boolean isPagingEnabled() {
+            return PAGING_ENABLED;
+        }
+
+        public int getPagingInMemorySize() {
+            return DEFAULT_DURABLE_QUEUE_PAGING_THRESHOLD;
+        }
+
         public boolean isThrottleSourcesToMemoryLimit() {
             // Keep the queue in memory.
             return true;
+        }
+
+        public int getDisconnectedThrottleRate() {
+            // By default don't throttle consumers when disconnected.
+            return 0;
         }
 
         public int getRecoveryBias() {
@@ -147,6 +190,16 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
             sharedQueues.put(queue.getDescriptor().getQueueName().toString(), queue);
             LOG.info("Loaded Queue " + queue.getResourceName() + " Messages: " + queue.getEnqueuedCount() + " Size: " + queue.getEnqueuedSize());
         }
+
+        // Load durable queues
+        results = database.listQueues(DURABLE_QUEUE_TYPE);
+        while (results.hasNext()) {
+            QueueQueryResult loaded = results.next();
+            ExclusivePersistentQueue<Long, MessageDelivery> queue = createRestoredDurableQueue(loaded);
+            durableQueues.put(queue.getDescriptor().getQueueName().toString(), queue);
+            LOG.info("Loaded Durable " + queue.getResourceName() + " Messages: " + queue.getEnqueuedCount() + " Size: " + queue.getEnqueuedSize());
+            
+        }
     }
 
     private IQueue<Long, MessageDelivery> createRestoredQueue(IPartitionedQueue<Long, MessageDelivery> parent, QueueQueryResult loaded) throws IOException {
@@ -178,11 +231,48 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
 
     }
 
+    private ExclusivePersistentQueue<Long, MessageDelivery> createRestoredDurableQueue(QueueQueryResult loaded) throws IOException {
+
+        ExclusivePersistentQueue<Long, MessageDelivery> queue = createDurableQueueInternal(loaded.getDescriptor().getQueueName().toString(), loaded.getDescriptor().getQueueType());
+        queue.initialize(loaded.getFirstSequence(), loaded.getLastSequence(), loaded.getCount(), loaded.getSize());
+
+        //TODO implement this for priority queue:
+        // Create the child queues
+        /*
+         * Collection<QueueQueryResult> children = loaded.getPartitions(); if
+         * (children != null) { try { IPartitionedQueue<Long, MessageDelivery>
+         * pQueue = (IPartitionedQueue<Long, MessageDelivery>) queue; for
+         * (QueueQueryResult child : children) { createRestoredQueue(pQueue,
+         * child); } } catch (ClassCastException cce) {
+         * LOG.error("Loaded partition for unpartitionable queue: " +
+         * queue.getResourceName()); throw cce; } }
+         */
+
+        return queue;
+
+    }
+
     public Collection<IQueue<Long, MessageDelivery>> getSharedQueues() {
         Collection<IQueue<Long, MessageDelivery>> c = sharedQueues.values();
         ArrayList<IQueue<Long, MessageDelivery>> ret = new ArrayList<IQueue<Long, MessageDelivery>>(c.size());
         ret.addAll(c);
         return ret;
+    }
+
+    public ExclusivePersistentQueue<Long, MessageDelivery> createDurableQueue(String name) {
+        ExclusivePersistentQueue<Long, MessageDelivery> queue = null;
+        synchronized (this) {
+            queue = durableQueues.get(name);
+            if (queue == null) {
+                queue = createDurableQueueInternal(name, USE_PRIORITY_QUEUES ? QueueDescriptor.SHARED_PRIORITY : QueueDescriptor.SHARED);
+                queue.getDescriptor().setApplicationType(DURABLE_QUEUE_TYPE);
+                queue.initialize(0, 0, 0, 0);
+                durableQueues.put(name, queue);
+                addQueue(queue.getDescriptor());
+            }
+        }
+
+        return queue;
     }
 
     public IQueue<Long, MessageDelivery> createSharedQueue(String name) {
@@ -199,6 +289,23 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
             }
         }
 
+        return queue;
+    }
+
+    private ExclusivePersistentQueue<Long, MessageDelivery> createDurableQueueInternal(final String name, short type) {
+        ExclusivePersistentQueue<Long, MessageDelivery> queue;
+        
+        SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(DEFAULT_DURABLE_QUEUE_SIZE, DEFAULT_DURABLE_QUEUE_RESUME_THRESHOLD) {
+            @Override
+            public int getElementSize(MessageDelivery elem) {
+                return elem.getFlowLimiterSize();
+            }
+        };
+        queue = new ExclusivePersistentQueue<Long, MessageDelivery>(name, limiter);
+        queue.setDispatcher(dispatcher);
+        queue.setStore(this);
+        queue.setPersistencePolicy(DURABLE_QUEUE_PERSISTENCE_POLICY);
+        queue.setExpirationMapper(EXPIRATION_MAPPER);
         return queue;
     }
 
@@ -234,13 +341,13 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
             break;
         }
         case QueueDescriptor.SHARED: {
-            SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(DEFAULT_SHARED_QUEUE_SIZE, DEFAULT_SHARED_QUEUE_RESUME_THRESHOLD){
+            SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(DEFAULT_SHARED_QUEUE_SIZE, DEFAULT_SHARED_QUEUE_RESUME_THRESHOLD) {
                 @Override
                 public int getElementSize(MessageDelivery elem) {
                     return elem.getFlowLimiterSize();
                 }
             };
-            
+
             if (!USE_OLD_QUEUE) {
                 SharedQueue<Long, MessageDelivery> sQueue = new SharedQueue<Long, MessageDelivery>(name, limiter);
                 sQueue.setKeyMapper(KEY_MAPPER);

@@ -54,7 +54,7 @@ import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 import org.apache.kahadb.util.LinkedNode;
 import org.apache.kahadb.util.LinkedNodeList;
 
-public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.Operation> {
+public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.OperationBase> {
 
     private static final boolean DEBUG = false;
     private final Store store;
@@ -118,7 +118,8 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
         }, databaseFlow, storeLimiter, opQueue);
         storeController.useOverFlowQueue(false);
-
+        super.onFlowOpened(storeController);
+        
         flushDelayCallback = new Runnable() {
             public void run() {
                 flushDelayCallback();

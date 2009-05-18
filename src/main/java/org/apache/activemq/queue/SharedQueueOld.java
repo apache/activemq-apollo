@@ -337,7 +337,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
             synchronized (mutex) {
                 if (accepted) {
                     subNode.cursorNext();
-                    if (/*subNode.subscription.isPreAcquired() &&*/ subNode.subscription.isRemoveOnDispatch()) {
+                    if (/*subNode.subscription.isPreAcquired() &&*/ subNode.subscription.isRemoveOnDispatch(storeNode.getValue())) {
                         StoreNode<K, V> removed = store.remove(storeNode.getKey());
                         assert removed != null : "Since the node was aquired.. it should not have been removed by anyone else.";
                         sinkController.elementDispatched(storeNode.getValue());

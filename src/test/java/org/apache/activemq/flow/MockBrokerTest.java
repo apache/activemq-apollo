@@ -43,7 +43,7 @@ public class MockBrokerTest extends TestCase {
     protected boolean multibroker = false;
 
     // Set to mockup up ptp:
-    protected boolean ptp = true;
+    protected boolean ptp = false;
 
     // Set to use tcp IO
     protected boolean tcp = false;

@@ -121,8 +121,8 @@ public class Queue implements DeliveryTarget {
             return target.hasSelector();
         }
 
-        public boolean isRemoveOnDispatch() {
-            return false;
+        public boolean isRemoveOnDispatch(MessageDelivery delivery) {
+            return !delivery.isPersistent();
         }
 
         public IFlowSink<MessageDelivery> getSink() {

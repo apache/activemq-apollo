@@ -47,12 +47,11 @@ public interface Subscription<E> {
     }
 
     /**
-     * True if the message should be removed from the queue when it is
-     * dispatched to this subscription.
+     * True if the element should be removed on dispatch to the subscriptions.
      * 
      * @return true if the element should be removed on dispatch
      */
-    public boolean isRemoveOnDispatch();
+    public boolean isRemoveOnDispatch(E elem);
     
     /**
      * @return True if this is a subscription browser. 

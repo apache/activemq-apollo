@@ -128,10 +128,6 @@ abstract public class RemoteProducer extends Connection implements Dispatchable,
         this.persistentDelivery = persistentDelivery;
     }
 	
-	public void setName(String name) {
-        this.name = name;
-    }
-
     public AtomicLong getMessageIdGenerator() {
         return messageIdGenerator;
     }

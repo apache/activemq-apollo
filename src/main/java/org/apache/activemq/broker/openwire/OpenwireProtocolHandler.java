@@ -32,6 +32,7 @@ import org.apache.activemq.broker.DeliveryTarget;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;
+import org.apache.activemq.broker.VirtualHost;
 import org.apache.activemq.broker.openwire.OpenWireMessageDelivery.PersistListener;
 import org.apache.activemq.broker.protocol.ProtocolHandler;
 import org.apache.activemq.broker.store.Store.MessageRecord;
@@ -104,6 +105,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
     private OpenWireFormat wireFormat;
     private OpenWireFormat storeWireFormat;
     private Router router;
+    private VirtualHost host;
 
     public OpenwireProtocolHandler() {
         setStoreWireFormat(new OpenWireFormat());
@@ -127,6 +129,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 // Methods that keep track of the client state
                 // /////////////////////////////////////////////////////////////////
                 public Response processAddConnection(ConnectionInfo info) throws Exception {
+                    connection.setName(info.getClientId());
                     return ack(command);
                 }
 
@@ -525,12 +528,10 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                     delivery.persist(new SaveableQueueElement<MessageDelivery>() {
 
                         public MessageDelivery getElement() {
-                            // TODO Auto-generated method stub
                             return delivery;
                         }
 
                         public QueueDescriptor getQueueDescriptor() {
-                            // TODO Auto-generated method stub
                             return durableQueueId;
                         }
 
@@ -542,7 +543,6 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                             //noop
                         }
                         public boolean requestSaveNotify() {
-                            // TODO Auto-generated method stub
                             return false;
                         }
 
@@ -639,7 +639,8 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
     public void setConnection(BrokerConnection connection) {
         this.connection = connection;
-        this.router = connection.getBroker().getDefaultVirtualHost().getRouter();
+        this.host = connection.getBroker().getDefaultVirtualHost();
+        this.router = host.getRouter();
     }
 
     public void setWireFormat(WireFormat wireFormat) {

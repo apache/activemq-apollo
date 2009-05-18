@@ -72,10 +72,6 @@ abstract public class RemoteConsumer extends Connection {
         }
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public MetricAggregator getTotalConsumerRate() {
         return totalConsumerRate;
     }
