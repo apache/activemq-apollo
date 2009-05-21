@@ -20,7 +20,7 @@ import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
-import org.apache.activemq.queue.QueueStore;
+import org.apache.activemq.queue.QueueStore.QueueDescriptor;
 import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 
 public interface MessageDelivery {
@@ -108,7 +108,7 @@ public interface MessageDelivery {
      * @param queue
      *            The queue for which to acknowledge the message.
      */
-    public void acknowledge(QueueStore.QueueDescriptor queue);
+    public void acknowledge(QueueDescriptor queue);
 
     /**
      * Gets the tracking number used to identify this message in the message

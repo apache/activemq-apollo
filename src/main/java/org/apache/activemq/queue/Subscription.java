@@ -94,7 +94,26 @@ public interface Subscription<E> {
      *         {@link ISourceController#onFlowBlock(ISinkController)} prior to
      *         returning false.
      */
-    public boolean offer(E element, ISourceController<E> controller, SubscriptionDeliveryCallback callback);
+    public boolean offer(E element, ISourceController<?> controller, SubscriptionDeliveryCallback callback);
+    
+    /**
+     * Pushes an item to the subscription. If the subscription is not remove on
+     * dispatch, then it must call acknowledge method on the callback when it
+     * has acknowledged the message.
+     * 
+     * @param element
+     *            The delivery container the offered element.
+     * @param controller
+     *            The queue's controller, which must be used if the added
+     *            element exceeds the subscription's buffer limits.
+     * @param callback
+     *            The {@link SubscriptionDeliveryCallback} associated with the element
+     * @return true if the element was accepted false otherwise, if false is
+     *         returned the caller must have called
+     *         {@link ISourceController#onFlowBlock(ISinkController)} prior to
+     *         returning false.
+     */
+    public void add(E element, ISourceController<?> controller, SubscriptionDeliveryCallback callback);
 
     @Deprecated
     public IFlowSink<E> getSink();

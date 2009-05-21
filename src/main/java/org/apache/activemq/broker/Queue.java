@@ -16,52 +16,37 @@
  */
 package org.apache.activemq.broker;
 
-import java.io.IOException;
-import java.util.HashMap;
-
 import org.apache.activemq.broker.DeliveryTarget;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
-import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.queue.IQueue;
-import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.Subscription;
-import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
-import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
 
 public class Queue implements DeliveryTarget {
 
-    HashMap<DeliveryTarget, Subscription<MessageDelivery>> subs = new HashMap<DeliveryTarget, Subscription<MessageDelivery>>();
     private Destination destination;
-    private IQueue<Long, MessageDelivery> queue;
+    private final IQueue<Long, MessageDelivery> queue;
     private VirtualHost virtualHost;
 
     Queue(IQueue<Long, MessageDelivery> queue) {
         this.queue = queue;
     }
+    
 
-    public final void deliver(MessageDelivery delivery, ISourceController<?> source) {
-        queue.add(delivery, source);
+    /* (non-Javadoc)
+     * @see org.apache.activemq.broker.DeliveryTarget#deliver(org.apache.activemq.broker.MessageDelivery, org.apache.activemq.flow.ISourceController)
+     */
+    public void deliver(MessageDelivery message, ISourceController<?> source) {
+        queue.add(message, source);
+    }
+    
+    public final void addSubscription(final Subscription<MessageDelivery> sub) {
+        queue.addSubscription(sub);
     }
 
-    public final void addConsumer(final DeliveryTarget dt) {
-        Subscription<MessageDelivery> sub = new QueueSubscription(dt);
-
-        Subscription<MessageDelivery> old = subs.put(dt, sub);
-        if (old == null) {
-            queue.addSubscription(sub);
-        } else {
-            subs.put(dt, old);
-        }
-    }
-
-    public boolean removeSubscirption(final DeliveryTarget dt) {
-        Subscription<MessageDelivery> sub = subs.remove(dt);
-        if (sub != null) {
-            return queue.removeSubscription(sub);
-        }
-        return false;
+    public boolean removeSubscription(final Subscription<MessageDelivery> sub) {
+        return queue.removeSubscription(sub);
     }
 
     public void start() throws Exception {
@@ -74,15 +59,11 @@ public class Queue implements DeliveryTarget {
         }
     }
 
-    public IFlowSink<MessageDelivery> getSink() {
-        return queue;
-    }
-
     public boolean hasSelector() {
         return false;
     }
 
-    public boolean match(MessageDelivery message) {
+    public boolean matches(MessageDelivery message) {
         return true;
     }
 
@@ -106,62 +87,28 @@ public class Queue implements DeliveryTarget {
         return true;
     }
 
-    public static class QueueSubscription implements Subscription<MessageDelivery> {
-        final DeliveryTarget target;
+    public static class QueueSubscription implements BrokerSubscription {
+        Subscription<MessageDelivery> subscription;
+        final Queue queue;
 
-        public QueueSubscription(DeliveryTarget dt) {
-            this.target = dt;
+        public QueueSubscription(Queue queue) {
+            this.queue = queue;
         }
 
-        public boolean matches(MessageDelivery message) {
-            return target.match(message);
+        /* (non-Javadoc)
+         * @see org.apache.activemq.broker.BrokerSubscription#connect(org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext)
+         */
+        public void connect(Subscription<MessageDelivery> subscription) throws UserAlreadyConnectedException {
+            this.subscription = subscription;
+            queue.addSubscription(subscription);
         }
 
-        public boolean hasSelector() {
-            return target.hasSelector();
-        }
-
-        public boolean isRemoveOnDispatch(MessageDelivery delivery) {
-            return !delivery.isPersistent();
-        }
-
-        public IFlowSink<MessageDelivery> getSink() {
-            return target.getSink();
-        }
-
-        @Override
-        public String toString() {
-            return target.getSink().toString();
-        }
-
-        public boolean offer(MessageDelivery elem, ISourceController<MessageDelivery> controller, SubscriptionDeliveryCallback callback) {
-            return target.getSink().offer(new QueueDelivery(elem, callback), controller);
-        }
-
-        public boolean isBrowser() {
-            return false;
+        /* (non-Javadoc)
+         * @see org.apache.activemq.broker.BrokerSubscription#disconnect(org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext)
+         */
+        public void disconnect(Subscription<MessageDelivery> context) {
+            queue.removeSubscription(subscription);
         }
     }
 
-    private static class QueueDelivery extends MessageDeliveryWrapper {
-        private final SubscriptionDeliveryCallback callback;
-
-        QueueDelivery(MessageDelivery delivery, SubscriptionDeliveryCallback callback) {
-            super(delivery);
-            this.callback = callback;
-        }
-
-        @Override
-        public void persist(SaveableQueueElement<MessageDelivery> elem, ISourceController<?> controller, boolean delayable) {
-            // We override this for queue deliveries as the sub needn't
-            // persist the message
-        }
-
-        public void acknowledge(QueueStore.QueueDescriptor queue) {
-            if (callback != null) {
-                callback.acknowledge();
-            }
-        }
-
-    }
 }

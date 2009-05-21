@@ -26,9 +26,11 @@ public interface IFlowDrain<E> {
     /**
 	 * Used by a FlowSource that is being dispatched to drain it's elements.
 	 * The implementor is responsible for calling {@link ISourceController#elementDispatched(Object)
-	 * when the element has been dispatched to all downstream sinks if IFlowSource
-	 * @param elem
-	 * @param controller
+	 * when the element has been dispatched to all downstream sinks unless the 
+	 * IFlowSource#getAutoRelease() is set to true.
+	 * 
+	 * @param elem The element being drained
+	 * @param controller The source's controller
 	 */
     public void drain(E elem, ISourceController<E> controller);
 }

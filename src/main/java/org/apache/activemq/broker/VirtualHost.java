@@ -20,7 +20,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.activemq.Service;
+import org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.queue.ExclusivePersistentQueue;
 import org.apache.activemq.queue.IQueue;
 
 /**
@@ -31,6 +33,7 @@ public class VirtualHost implements Service {
     final private BrokerQueueStore queueStore;
     final private MessageBroker broker;
     final private HashMap<AsciiBuffer, Queue> queues = new HashMap<AsciiBuffer, Queue>();
+    final private HashMap<String, DurableSubscription> durableSubs = new HashMap<String, DurableSubscription>();
     private ArrayList<AsciiBuffer> hostNames = new ArrayList<AsciiBuffer>();
     private Router router;
     private boolean started;
@@ -98,12 +101,11 @@ public class VirtualHost implements Service {
     }
 
     public synchronized Queue createQueue(Destination dest) throws Exception {
-        if(!started)
-        {
+        if (!started) {
             //Queues from the store must be loaded before we can create new ones:
             throw new IllegalStateException("Can't create queue on unstarted host");
         }
-        
+
         Queue queue = queues.get(dest);
         // If the queue doesn't exist create it:
         if (queue == null) {
@@ -120,5 +122,29 @@ public class VirtualHost implements Service {
 
     public BrokerQueueStore getQueueStore() {
         return queueStore;
+    }
+
+    public BrokerSubscription createSubscription(ConsumerContext consumer) {
+        Destination destination = consumer.getDestination();
+        BrokerSubscription sub = null;
+        if(destination.getDomain().equals(Router.TOPIC_DOMAIN))
+        {
+            if (consumer.isDurable()) {
+                sub = durableSubs.get(consumer.getSubscriptionName());
+                if (sub == null) {
+                    ExclusivePersistentQueue<Long, MessageDelivery> queue = queueStore.createDurableQueue(consumer.getSubscriptionName());
+                    queue.start();
+                    DurableSubscription dsub = new DurableSubscription(this, destination, consumer.getSelectorExpression(), queue);
+                    durableSubs.put(consumer.getSubscriptionName(), dsub);
+                    sub = dsub;
+                }
+            } else if (consumer.getDestination().getDomain().equals(Router.TOPIC_DOMAIN)) {
+                sub = new TopicSubscription(this, destination, consumer.getSelectorExpression());
+            }
+        } else {
+            Queue queue = queues.get(destination.getName());
+            sub = new Queue.QueueSubscription(queue);
+        }
+        return sub;
     }
 }

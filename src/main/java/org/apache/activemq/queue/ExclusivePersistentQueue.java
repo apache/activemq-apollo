@@ -28,12 +28,13 @@ import org.apache.activemq.queue.CursoredQueue.Cursor;
 import org.apache.activemq.queue.CursoredQueue.QueueElement;
 import org.apache.activemq.queue.QueueStore.PersistentQueue;
 import org.apache.activemq.queue.QueueStore.QueueDescriptor;
+import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
 import org.apache.activemq.util.Mapper;
 
 public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> implements PersistentQueue<K, E> {
     private CursoredQueue<E> queue;
     private final FlowController<E> controller;
-    private IFlowSizeLimiter<E> limiter;
+    private final IFlowSizeLimiter<E> limiter;
     private boolean started = true;
     private Cursor<E> cursor;
     private final QueueDescriptor queueDescriptor;
@@ -41,9 +42,12 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
     private QueueStore<K, E> queueStore;
     private Mapper<Long, E> expirationMapper;
     private boolean initialized;
+    private Subscription<E> subscription;
+    private ISourceController<E> sourceController;
+    protected boolean subBlocked = false;
 
     /**
-     * Creates a flow queue that can handle multiple flows.
+     * 
      * 
      * @param flow
      *            The {@link Flow}
@@ -55,12 +59,46 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
     public ExclusivePersistentQueue(String name, IFlowSizeLimiter<E> limiter) {
         super(name);
         this.queueDescriptor = new QueueStore.QueueDescriptor();
+        this.limiter = limiter;
         queueDescriptor.setQueueName(new AsciiBuffer(super.getResourceName()));
         queueDescriptor.setQueueType(QueueDescriptor.EXCLUSIVE);
 
         //TODO flow should be serialized as part of the subscription. 
         this.controller = new FlowController<E>(null, new Flow(name, false), limiter, this);
+        this.controller.useOverFlowQueue(false);
         super.onFlowOpened(controller);
+
+        sourceController = new ISourceController<E>() {
+
+            public void elementDispatched(E elem) {
+                // TODO Auto-generated method stub
+            }
+
+            public Flow getFlow() {
+                // TODO Auto-generated method stub
+                return controller.getFlow();
+            }
+
+            public IFlowResource getFlowResource() {
+                // TODO Auto-generated method stub
+                return ExclusivePersistentQueue.this;
+            }
+
+            public void onFlowBlock(ISinkController<?> sinkController) {
+                synchronized (ExclusivePersistentQueue.this) {
+                    subBlocked = true;
+                }
+            }
+
+            public void onFlowResume(ISinkController<?> sinkController) {
+                synchronized (ExclusivePersistentQueue.this) {
+                    subBlocked = false;
+                    if (isDispatchReady()) {
+                        notifyReady();
+                    }
+                }
+            }
+        };
     }
 
     /*
@@ -106,11 +144,7 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
         };
 
         queue.initialize(sequenceMin, sequenceMax, count, size);
-        initialized = true;
-    }
-    
-    public void connect(Subscription<E> sub)
-    {
+
         //Open a cursor for the queue:
         FlowController<QueueElement<E>> memoryController = null;
         if (persistencePolicy.isPagingEnabled()) {
@@ -131,9 +165,32 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
         }
 
         cursor = queue.openCursor(getResourceName(), memoryController, true, true);
+        cursor.reset(sequenceMin);
+        cursor.activate();
+
+        initialized = true;
     }
-    
-    
+
+    public synchronized void addSubscription(Subscription<E> sub) {
+        if (subscription != null) {
+            if (subscription != sub) {
+                //TODO change this to something other than a runtime exception:
+                throw new IllegalStateException();
+            }
+            return;
+        }
+        this.subscription = sub;
+        subBlocked = false;
+        if (isDispatchReady()) {
+            notifyReady();
+        }
+    }
+
+    public synchronized void removeSubscription(Subscription<E> sub) {
+        if (sub == subscription) {
+            sub = null;
+        }
+    }
 
     protected final ISinkController<E> getSinkController(E elem, ISourceController<?> source) {
         return controller;
@@ -167,7 +224,7 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
 
     private final void accepted(ISourceController<?> source, E elem) {
         queue.add(source, elem);
-        if (started) {
+        if (isDispatchReady()) {
             notifyReady();
         }
     }
@@ -197,39 +254,72 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
     }
 
     public final boolean isDispatchReady() {
-        return started && !cursor.isReady();
-    }
-
-    public final boolean pollingDispatch() {
-        E elem = poll();
-
-        if (elem != null) {
-            drain.drain(elem, controller);
+        if (started && subscription != null && !subBlocked && cursor.isReady()) {
             return true;
-        } else {
-            return false;
         }
+
+        if (queue.needsDispatch()) {
+            return true;
+        }
+
+        return false;
     }
 
-    public final E poll() {
-        synchronized (this) {
-            if (!started) {
-                return null;
-            }
-
+    private QueueElement last = null;
+    public synchronized final boolean pollingDispatch() {
+        queue.dispatch();
+        if (started && subscription != null && !subBlocked) {
             QueueElement<E> qe = cursor.getNext();
-
-            // FIXME the release should really be done after dispatch.
-            // doing it here saves us from having to resynchronize
-            // after dispatch, but release limiter space too soon.
             if (qe != null) {
-                if (autoRelease) {
-                    controller.elementDispatched(qe.getElement());
+                // If the sub doesn't remove on dispatch set an ack listener:
+                SubscriptionDeliveryCallback callback = subscription.isRemoveOnDispatch(qe.elem) ? null : qe;
+
+                if(qe.acquired || limiter.getSize() == 0 || (last != null && last.sequence >= qe.sequence))
+                {
+                    System.out.println("Offering" + qe + limiter.getSize());
                 }
-                return qe.getElement();
+                
+                // See if the sink has room:
+                if (subscription.offer(qe.elem, sourceController, callback)) {
+                    if(limiter.getElementSize(qe.getElement()) > 1048)
+                    {
+                        System.out.println("Offering" + qe);
+                    }
+                    qe.setAcquired(true);
+                    controller.elementDispatched(qe.getElement());
+                    last = qe;
+                    // If remove on dispatch acknowledge now:
+                    if (callback == null) {
+                        qe.acknowledge();
+                    }
+                }
             }
-            return null;
         }
+
+        return isDispatchReady();
+    }
+
+    public E poll() {
+        throw new UnsupportedOperationException("poll not supported for exclusive queue");
+        //        
+        //        synchronized (this) {
+        //            if (!started) {
+        //                return null;
+        //            }
+        //
+        //            QueueElement<E> qe = cursor.getNext();
+        //
+        //            // FIXME the release should really be done after dispatch.
+        //            // doing it here saves us from having to resynchronize
+        //            // after dispatch, but release limiter space too soon.
+        //            if (qe != null) {
+        //                if (autoRelease) {
+        //                    controller.elementDispatched(qe.getElement());
+        //                }
+        //                return qe.getElement();
+        //            }
+        //            return null;
+        //        }
     }
 
     @Override
@@ -280,8 +370,7 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
      * @return The size of the elements in this queue or -1 if not yet known.
      */
     public synchronized long getEnqueuedSize() {
-        if(!initialized)
-        {
+        if (!initialized) {
             return -1;
         }
         return limiter.getSize();
@@ -291,8 +380,7 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
      * @return The count of the elements in this queue or -1 if not yet known.
      */
     public synchronized long getEnqueuedCount() {
-        if(!initialized)
-        {
+        if (!initialized) {
             return -1;
         }
         return queue.getEnqueuedCount();

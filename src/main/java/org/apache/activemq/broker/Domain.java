@@ -34,8 +34,10 @@ public interface Domain {
     
     public Object remove(AsciiBuffer destinationName);
 
-    public void bind(AsciiBuffer destinationName, DeliveryTarget deliveryTarget);
-
+    public void bind(AsciiBuffer destinationName, DeliveryTarget target);
+    
+    public void unbind(AsciiBuffer destinationName, DeliveryTarget target);
+    
     public Collection<DeliveryTarget> route(AsciiBuffer destinationName, MessageDelivery message);
     
 }

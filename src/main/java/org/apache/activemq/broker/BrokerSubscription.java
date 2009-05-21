@@ -16,14 +16,16 @@
  */
 package org.apache.activemq.broker;
 
-import org.apache.activemq.broker.MessageDelivery;
-import org.apache.activemq.flow.ISourceController;
+import org.apache.activemq.queue.Subscription;
 
-public interface DeliveryTarget {
+public interface BrokerSubscription {
+
+    public void connect(Subscription<MessageDelivery> subscription) throws UserAlreadyConnectedException ;
+
+    public void disconnect(Subscription<MessageDelivery> subscription);
     
-    public void deliver(MessageDelivery message, ISourceController<?> source);
-    
-    public boolean hasSelector();
-    
-    public boolean matches(MessageDelivery message);
+    @SuppressWarnings("serial")
+    public class UserAlreadyConnectedException extends Exception {
+
+    }
 }

@@ -27,7 +27,6 @@ import org.apache.activemq.broker.Queue;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 public class QueueDomain implements Domain {
-    
     final HashMap<AsciiBuffer, Queue> queues = new HashMap<AsciiBuffer, Queue>();
 
     public void add(AsciiBuffer name, Object queue) {
@@ -37,8 +36,12 @@ public class QueueDomain implements Domain {
         return queues.remove(name);
     }
 
-    public void bind(AsciiBuffer name, DeliveryTarget deliveryTarget) {
-        queues.get(name).addConsumer(deliveryTarget);
+    public void bind(AsciiBuffer name, DeliveryTarget subscription) {
+        
+    }
+    
+    public void unbind(AsciiBuffer name, DeliveryTarget subscription) {
+        
     }
 
     public Collection<DeliveryTarget> route(AsciiBuffer name, MessageDelivery delivery) {

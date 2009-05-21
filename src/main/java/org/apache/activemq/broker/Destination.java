@@ -19,6 +19,9 @@ package org.apache.activemq.broker;
 import java.util.Collection;
 
 import org.apache.activemq.broker.Destination;
+import org.apache.activemq.command.ActiveMQDestination;
+import org.apache.activemq.command.ActiveMQQueue;
+import org.apache.activemq.command.ActiveMQTopic;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 public interface Destination {
@@ -26,7 +29,8 @@ public interface Destination {
     AsciiBuffer getDomain();
     AsciiBuffer getName();
     Collection<Destination> getDestinations();
-    
+    public ActiveMQDestination asActiveMQDestination();
+
     public class SingleDestination implements Destination {
 
         private AsciiBuffer domain;
@@ -67,6 +71,18 @@ public interface Destination {
         private void setDomain(String domain) {
             setDomain(new AsciiBuffer(domain));
         }
+
+        public ActiveMQDestination asActiveMQDestination() {
+            if(domain.equals(Router.TOPIC_DOMAIN))
+            {
+                return new ActiveMQTopic(name.toString());
+            }
+            else if(domain.equals(Router.QUEUE_DOMAIN))
+            {
+                return new ActiveMQQueue(name.toString());
+            }
+            return null;
+        }
     }
     
     public class MultiDestination implements Destination {
@@ -95,7 +111,12 @@ public interface Destination {
         public AsciiBuffer getName() {
             return null;
         }
+        
+        public ActiveMQDestination asActiveMQDestination() {
+            throw new UnsupportedOperationException("Not yet implemented");
+        }
 
     }
+    
     
 }

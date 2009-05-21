@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.broker;
 
-import java.io.IOException;
-
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;

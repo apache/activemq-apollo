@@ -24,6 +24,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.jms.JMSException;
+
+import org.apache.activemq.broker.BrokerSubscription.UserAlreadyConnectedException;
+import org.apache.activemq.broker.Queue.QueueSubscription;
 import org.apache.activemq.broker.openwire.OpenWireMessageDelivery;
 import org.apache.activemq.broker.store.BrokerDatabase;
 import org.apache.activemq.broker.store.Store;
@@ -38,7 +41,9 @@ import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.PriorityDispatcher;
 import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
 import org.apache.activemq.dispatch.IDispatcher.Dispatchable;
+import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
+import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.IFlowDrain;
 import org.apache.activemq.flow.IFlowRelay;
@@ -57,6 +62,7 @@ import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.queue.Subscription;
+import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
 
 import junit.framework.TestCase;
 
@@ -68,7 +74,7 @@ public class SharedQueuePerfTest extends TestCase {
     BrokerDatabase database;
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
-    private static final boolean PERSISTENT = false;
+    private static final boolean PERSISTENT = true;
     private static final boolean PURGE_STORE = true;
 
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
@@ -393,15 +399,13 @@ public class SharedQueuePerfTest extends TestCase {
         }
     }
 
-    class Consumer implements DeliveryTarget {
-        private final HashMap<IQueue<Long, MessageDelivery>, Subscription<MessageDelivery>> subscriptions = new HashMap<IQueue<Long, MessageDelivery>, Subscription<MessageDelivery>>();
+    class Consumer extends AbstractLimitedFlowResource<MessageDelivery> implements Subscription<MessageDelivery>, IFlowSink<MessageDelivery> {
         private AtomicBoolean stopped = new AtomicBoolean(true);
         protected final MetricCounter rate = new MetricCounter();
         private final String name;
         private final SizeLimiter<MessageDelivery> limiter;
-        private final ExclusiveQueue<MessageDelivery> queue;
+        private final FlowController<MessageDelivery> controller;
         private final IQueue<Long, MessageDelivery> sourceQueue;
-        private final QueueStore.QueueDescriptor queueDescriptor;
         private int limit = 20000;
         private int count = 0;
 
@@ -415,26 +419,9 @@ public class SharedQueuePerfTest extends TestCase {
                 }
             };
 
-            queue = new ExclusiveQueue<MessageDelivery>(flow, flow.getFlowName(), limiter);
-            queue.setFlowExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
-            queue.setDispatcher(dispatcher);
-            queue.setAutoRelease(true);
-
-            queueDescriptor = new QueueStore.QueueDescriptor();
-            queueDescriptor.setQueueName(new AsciiBuffer(queue.getResourceName()));
-            queueDescriptor.setParent(null);
-
-            queue.setDrain(new IFlowDrain<MessageDelivery>() {
-
-                public void drain(MessageDelivery elem, ISourceController<MessageDelivery> controller) {
-                    elem.acknowledge(queueDescriptor);
-                    rate.increment();
-                    /*
-                    if (count++ == limit) {
-                        queue.stop();
-                    }*/
-                }
-            });
+            controller = new FlowController<MessageDelivery>(null, flow, limiter, this);
+            controller.useOverFlowQueue(false);
+            controller.setExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
 
             rate.name("Consumer " + name + " Rate");
             totalConsumerRate.add(rate);
@@ -446,43 +433,122 @@ public class SharedQueuePerfTest extends TestCase {
         }
 
         private void subscribe(IQueue<Long, MessageDelivery> source) {
-            Subscription<MessageDelivery> subscription = subscriptions.get(sourceQueue);
-
-            subscriptions.get(sourceQueue);
-            if (subscription == null) {
-                subscription = new Queue.QueueSubscription(this);
-                subscriptions.put(sourceQueue, subscription);
-            }
-            source.addSubscription(subscription);
+            source.addSubscription(this);
         }
 
         public void stop() throws InterruptedException {
-            sourceQueue.removeSubscription(subscriptions.get(sourceQueue));
+            sourceQueue.removeSubscription(this);
             stopped.set(true);
-        }
-
-        public void deliver(MessageDelivery delivery, ISourceController<?> source) {
-            queue.add(delivery, source);
-        }
-
-        public IFlowSink<MessageDelivery> getSink() {
-            return queue;
-        }
-
-        public boolean isDurable() {
-            return false;
-        }
-
-        public boolean hasSelector() {
-            return false;
-        }
-
-        public boolean match(MessageDelivery message) {
-            return true;
         }
 
         public String toString() {
             return name + " on " + sourceQueue.getResourceName();
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see org.apache.activemq.queue.Subscription#add(java.lang.Object,
+         * org.apache.activemq.flow.ISourceController,
+         * org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback)
+         */
+        public void add(MessageDelivery element, ISourceController<?> source, SubscriptionDeliveryCallback callback) {
+            controller.add(element, source);
+            addInternal(element, source, callback);
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see org.apache.activemq.queue.Subscription#offer(java.lang.Object,
+         * org.apache.activemq.flow.ISourceController,
+         * org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback)
+         */
+        public boolean offer(MessageDelivery element, ISourceController<?> source, SubscriptionDeliveryCallback callback) {
+            if (controller.offer(element, source)) {
+                addInternal(element, source, callback);
+            }
+            return false;
+        }
+
+        /**
+         * @param element
+         * @param source
+         * @param callback
+         */
+        private void addInternal(MessageDelivery element, ISourceController<?> source, SubscriptionDeliveryCallback callback) {
+            rate.increment();
+            synchronized (this) {
+                controller.elementDispatched(element);
+            }
+            callback.acknowledge();
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see org.apache.activemq.queue.Subscription#getSink()
+         */
+        public IFlowSink<MessageDelivery> getSink() {
+            return this;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see org.apache.activemq.queue.Subscription#hasSelector()
+         */
+        public boolean hasSelector() {
+            return false;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see org.apache.activemq.queue.Subscription#isBrowser()
+         */
+        public boolean isBrowser() {
+            return false;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.queue.Subscription#isRemoveOnDispatch(java.lang
+         * .Object)
+         */
+        public boolean isRemoveOnDispatch(MessageDelivery elem) {
+            return false;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see org.apache.activemq.queue.Subscription#matches(java.lang.Object)
+         */
+        public boolean matches(MessageDelivery elem) {
+            return true;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see org.apache.activemq.flow.IFlowSink#add(java.lang.Object,
+         * org.apache.activemq.flow.ISourceController)
+         */
+        public void add(MessageDelivery elem, ISourceController<?> source) {
+            add(elem, source, null);
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see org.apache.activemq.flow.IFlowSink#offer(java.lang.Object,
+         * org.apache.activemq.flow.ISourceController)
+         */
+        public boolean offer(MessageDelivery elem, ISourceController<?> source) {
+            return offer(elem, source, null);
         }
     }
 }

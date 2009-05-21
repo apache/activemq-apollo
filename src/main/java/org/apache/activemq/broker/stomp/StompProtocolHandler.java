@@ -25,14 +25,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 import javax.jms.InvalidSelectorException;
 
 import org.apache.activemq.WindowLimiter;
 import org.apache.activemq.broker.BrokerConnection;
 import org.apache.activemq.broker.BrokerMessageDelivery;
-import org.apache.activemq.broker.DeliveryTarget;
+import org.apache.activemq.broker.BrokerSubscription;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;
@@ -51,10 +50,7 @@ import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.SingleFlowRelay;
-import org.apache.activemq.queue.QueueStore.QueueDescriptor;
-import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 import org.apache.activemq.selector.SelectorParser;
 import org.apache.activemq.transport.stomp.Stomp;
 import org.apache.activemq.transport.stomp.StompFrame;
@@ -118,7 +114,6 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
             public void onStompFrame(StompFrame frame) throws Exception {
                 ConsumerContext ctx = new ConsumerContext(frame);
                 consumers.put(ctx.stompDestination, ctx);
-                router.bind(ctx.destination, ctx);
                 ack(frame);
             }
         });
@@ -266,10 +261,11 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         }
     }
 
-    class ConsumerContext implements DeliveryTarget {
+    class ConsumerContext extends AbstractLimitedFlowResource<MessageDelivery> implements ProtocolHandler.ConsumerContext {
 
         private BooleanExpression selector;
-
+        private String selectorString;
+        
         private SingleFlowRelay<MessageDelivery> queue;
         public WindowLimiter<MessageDelivery> limiter;
         private FrameTranslator translator;
@@ -278,11 +274,9 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         private Destination destination;
         private String ackMode;
 
-        private LinkedHashMap<AsciiBuffer, AsciiBuffer> sentMessageIds = new LinkedHashMap<AsciiBuffer, AsciiBuffer>();
+        private LinkedHashMap<AsciiBuffer, SubscriptionDeliveryCallback> sentMessageIds = new LinkedHashMap<AsciiBuffer, SubscriptionDeliveryCallback>();
 
         private boolean durable;
-        private QueueStore.QueueDescriptor durableQueueId;
-        private AtomicLong deliverySequence = new AtomicLong(0);
 
         public ConsumerContext(final StompFrame subscribe) throws Exception {
             translator = translator(subscribe);
@@ -291,7 +285,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
             stompDestination = headers.get(Stomp.Headers.Subscribe.DESTINATION);
             destination = translator.convertToDestination(StompProtocolHandler.this, stompDestination);
             subscriptionId = headers.get(Stomp.Headers.Subscribe.ID);
-
+            
             ackMode = headers.get(Stomp.Headers.Subscribe.ACK_MODE);
             if (Stomp.Headers.Subscribe.AckModeValues.CLIENT.equals(ackMode)) {
                 ackMode = StompSubscription.CLIENT_ACK;
@@ -304,33 +298,25 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
                 ackMode = StompSubscription.AUTO_ACK;
             }
 
-            selector = parseSelector(subscribe);
+            selectorString = subscribe.getHeaders().get(Stomp.Headers.Subscribe.SELECTOR);
+            selector = parseSelector(selectorString);
 
             if (ackMode != StompSubscription.AUTO_ACK) {
                 Flow flow = new Flow("broker-" + subscriptionId + "-outbound", false);
-                limiter = new WindowLimiter<MessageDelivery>(true, flow, 1000, 500) {
+                limiter = new WindowLimiter<MessageDelivery>(true, flow, connection.getOutputWindowSize(), connection.getOutputResumeThreshold()) {
                     public int getElementSize(MessageDelivery m) {
                         return m.getFlowLimiterSize();
                     }
                 };
-                queue = new SingleFlowRelay<MessageDelivery>(flow, flow.getFlowName(), limiter);
-                queue.setDrain(new IFlowDrain<MessageDelivery>() {
-                    public void drain(final MessageDelivery message, ISourceController<MessageDelivery> controller) {
-                        StompFrame frame = message.asType(StompFrame.class);
-                        if (ackMode == StompSubscription.CLIENT_ACK || ackMode == StompSubscription.INDIVIDUAL_ACK) {
-                            synchronized (allSentMessageIds) {
-                                AsciiBuffer msgId = message.getMsgId();
-                                sentMessageIds.put(msgId, msgId);
-                                allSentMessageIds.put(msgId, ConsumerContext.this);
-                            }
-                        }
-                        connection.write(frame);
-                    };
-                });
+                
+              //FIXME need to keep track of actual size:
+              //And Create a flow controller:
             } else {
                 queue = outboundQueue;
             }
-
+            
+            BrokerSubscription sub = router.getVirtualHost().createSubscription(this);
+            sub.connect(this);
         }
 
         public void ack(StompFrame info) throws Exception {
@@ -342,6 +328,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
                         AsciiBuffer next = iterator.next();
                         iterator.remove();
                         allSentMessageIds.remove(next);
+                        //FIXME need to keep track of actual size:
                         credits++;
                         if (next.equals(mid)) {
                             break;
@@ -369,7 +356,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
             return false;
         }
 
-        public boolean match(MessageDelivery message) {
+        public boolean matches(MessageDelivery message) {
             StompFrame stompMessage = message.asType(StompFrame.class);
             if (stompMessage == null) {
                 return false;
@@ -396,60 +383,109 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
             // return false;
             // }
         }
-
-        public void deliver(final MessageDelivery delivery, ISourceController<?> source) {
-            if (!match(delivery)) {
-                return;
-            }
-
-            if (isDurable() && delivery.isPersistent()) {
-                try {
-                    final long sequence = deliverySequence.incrementAndGet();
-                    //TODO saveable queue element here is temporary: We should replace this 
-                    //with an actual queue implementation:
-                    delivery.persist(new SaveableQueueElement<MessageDelivery>() {
-
-                        public MessageDelivery getElement() {
-                            // TODO Auto-generated method stub
-                            return delivery;
-                        }
-
-                        public QueueDescriptor getQueueDescriptor() {
-                            // TODO Auto-generated method stub
-                            return durableQueueId;
-                        }
-
-                        public long getSequenceNumber() {
-                            return sequence;
-                        }
-
-                        public void notifySave() {
-                            //noop
-                        }
-                        public boolean requestSaveNotify() {
-                            // TODO Auto-generated method stub
-                            return false;
-                        }
-
-                    }, null, true);
-                } catch (Exception e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+        
+        /* (non-Javadoc)
+         * @see org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext#send(org.apache.activemq.broker.MessageDelivery, org.apache.activemq.flow.ISourceController, org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback)
+         */
+        public void add(MessageDelivery message, ISourceController<?> controller, SubscriptionDeliveryCallback callback) {
+            addInternal(message, controller, callback);
+        }
+        
+        /* (non-Javadoc)
+         * @see org.apache.activemq.queue.Subscription#offer(java.lang.Object, org.apache.activemq.flow.ISourceController, org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback)
+         */
+        public boolean offer(MessageDelivery message, ISourceController<?> controller, SubscriptionDeliveryCallback callback) {
+            //FIXME need a controller:
+            return false;
+        }
+        
+        private void addInternal(MessageDelivery message, ISourceController<?> controller, SubscriptionDeliveryCallback callback)
+        {
+            StompFrame frame = message.asType(StompFrame.class);
+            if (ackMode == StompSubscription.CLIENT_ACK || ackMode == StompSubscription.INDIVIDUAL_ACK) {
+                synchronized (allSentMessageIds) {
+                    AsciiBuffer msgId = message.getMsgId();
+                    sentMessageIds.put(msgId, callback);
+                    allSentMessageIds.put(msgId, ConsumerContext.this);
                 }
             }
-
-            queue.add(delivery, source);
-
+            connection.write(frame);
         }
-
+        
         public boolean isDurable() {
             return durable;
         }
 
-        public AsciiBuffer getPersistentQueueName() {
-            return null;
+        /* (non-Javadoc)
+         * @see org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext#getConnection()
+         */
+        public BrokerConnection getConnection() {
+            return connection;
         }
 
+        /* (non-Javadoc)
+         * @see org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext#getDestination()
+         */
+        public Destination getDestination() {
+            return destination;
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext#getFullSelector()
+         */
+        public BooleanExpression getSelectorExpression() {
+            return selector;
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext#getSelector()
+         */
+        public String getSelector() {
+            return selectorString;
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext#getSubscriptionName()
+         */
+        public String getSubscriptionName() {
+            return subscriptionId;
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext#getConsumerId()
+         */
+        public String getConsumerId() {
+            return subscriptionId;
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.queue.Subscription#isBrowser()
+         */
+        public boolean isBrowser() {
+            return false;
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.queue.Subscription#isRemoveOnDispatch(java.lang.Object)
+         */
+        public boolean isRemoveOnDispatch(MessageDelivery elem) {
+            //TODO fix this.
+            return true;
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.flow.IFlowSink#add(java.lang.Object, org.apache.activemq.flow.ISourceController)
+         */
+        public void add(MessageDelivery elem, ISourceController<?> source) {
+            add(elem, source, null);
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.flow.IFlowSink#offer(java.lang.Object, org.apache.activemq.flow.ISourceController)
+         */
+        public boolean offer(MessageDelivery elem, ISourceController<?> source) {
+            return offer(elem, source, null);
+        }
     }
 
     private void sendError(String message) {
@@ -513,9 +549,8 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         return new Destination.SingleDestination(domain, new AsciiBuffer(dest.getPhysicalName()));
     }
 
-    private static BooleanExpression parseSelector(StompFrame frame) throws InvalidSelectorException {
+    private static BooleanExpression parseSelector(String selector) throws InvalidSelectorException {
         BooleanExpression rc = null;
-        String selector = frame.getHeaders().get(Stomp.Headers.Subscribe.SELECTOR);
         if (selector != null) {
             rc = SelectorParser.parse(selector);
         }

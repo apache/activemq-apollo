@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.concurrent.atomic.AtomicLong;
 
 import javax.jms.InvalidSelectorException;
 import javax.jms.JMSException;
@@ -28,11 +27,12 @@ import javax.jms.JMSException;
 import org.apache.activemq.WindowLimiter;
 import org.apache.activemq.broker.BrokerConnection;
 import org.apache.activemq.broker.BrokerMessageDelivery;
-import org.apache.activemq.broker.DeliveryTarget;
+import org.apache.activemq.broker.BrokerSubscription;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.Router;
 import org.apache.activemq.broker.VirtualHost;
+import org.apache.activemq.broker.BrokerSubscription.UserAlreadyConnectedException;
 import org.apache.activemq.broker.openwire.OpenWireMessageDelivery.PersistListener;
 import org.apache.activemq.broker.protocol.ProtocolHandler;
 import org.apache.activemq.broker.store.Store.MessageRecord;
@@ -76,7 +76,6 @@ import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
-import org.apache.activemq.flow.IFlowDrain;
 import org.apache.activemq.flow.IFlowLimiter;
 import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.IFlowSink;
@@ -86,10 +85,6 @@ import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.openwire.OpenWireFormat;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
-import org.apache.activemq.queue.QueueStore;
-import org.apache.activemq.queue.SingleFlowRelay;
-import org.apache.activemq.queue.QueueStore.QueueDescriptor;
-import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 import org.apache.activemq.selector.SelectorParser;
 import org.apache.activemq.state.CommandVisitor;
 import org.apache.activemq.transport.WireFormatNegotiator;
@@ -409,158 +404,109 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         }
     }
 
-    class ConsumerContext implements DeliveryTarget {
+    class ConsumerContext extends AbstractLimitedFlowResource<MessageDelivery> implements ProtocolHandler.ConsumerContext {
 
         private final ConsumerInfo info;
         private String name;
         private BooleanExpression selector;
         private boolean isDurable;
         private boolean isQueueReceiver;
-        private QueueStore.QueueDescriptor durableQueueId;
 
-        private SingleFlowRelay<MessageDelivery> queue;
-        public WindowLimiter<MessageDelivery> limiter;
-        private AtomicLong deliverySequence = new AtomicLong(0);
+        private final FlowController<MessageDelivery> controller;
+        private final WindowLimiter<MessageDelivery> limiter;
 
-        HashMap<MessageId, MessageDelivery> pendingMessages = new HashMap<MessageId, MessageDelivery>();
+        HashMap<MessageId, SubscriptionDeliveryCallback> pendingMessages = new HashMap<MessageId, SubscriptionDeliveryCallback>();
         LinkedList<MessageId> pendingMessageIds = new LinkedList<MessageId>();
 
-        public ConsumerContext(final ConsumerInfo info) throws InvalidSelectorException {
+        public ConsumerContext(final ConsumerInfo info) throws InvalidSelectorException, UserAlreadyConnectedException {
             this.info = info;
             this.name = info.getConsumerId().toString();
 
-            isDurable = info.isDurable();
-            if (isDurable) {
-                durableQueueId = new QueueStore.QueueDescriptor();
-                durableQueueId.setQueueName(new AsciiBuffer(info.getSubscriptionName()));
-                try {
-                    connection.getBroker().getDefaultVirtualHost().getQueueStore().addQueue(durableQueueId);
-                } catch (Throwable thrown) {
-                    thrown.printStackTrace();
-                }
-            }
-
-            selector = parseSelector(info);
-
             Flow flow = new Flow("broker-" + name + "-outbound", false);
+            if (info.isDurable())
+
+                selector = parseSelector(info);
             limiter = new WindowLimiter<MessageDelivery>(true, flow, info.getPrefetchSize(), info.getPrefetchSize() / 2) {
                 public int getElementSize(MessageDelivery m) {
                     return m.getFlowLimiterSize();
                 }
             };
-            queue = new SingleFlowRelay<MessageDelivery>(flow, flow.getFlowName(), limiter);
-            queue.setDrain(new IFlowDrain<MessageDelivery>() {
-                public void drain(final MessageDelivery message, ISourceController<MessageDelivery> controller) {
-                    Message msg = message.asType(Message.class);
-                    MessageDispatch md = new MessageDispatch();
-                    md.setConsumerId(info.getConsumerId());
-                    md.setMessage(msg);
-                    md.setDestination(msg.getDestination());
-                    // Add to the pending list if persistent and we are durable:
-                    if (message.isPersistent() && (isDurable() || isQueueReceiver())) {
-                        synchronized (queue) {
-                            Object old = pendingMessages.put(msg.getMessageId(), message);
-                            if (old != null) {
-                                new Exception("Duplicate message id: " + msg.getMessageId()).printStackTrace();
-                            }
-                            pendingMessageIds.add(msg.getMessageId());
-                            connection.write(md);
-                        }
-                    } else {
-                        if (isQueueReceiver()) {
-                            message.acknowledge(durableQueueId);
-                        }
-                        connection.write(md);
-                    }
-                };
-            });
 
-            // Subscribe
-            if (info.getDestination().isQueue()) {
-                isQueueReceiver = true;
+            controller = new FlowController<MessageDelivery>(null, flow, limiter, this);
+            controller.useOverFlowQueue(false);
+            controller.setExecutor(connection.getDispatcher().createPriorityExecutor(connection.getDispatcher().getDispatchPriorities() - 1));
+            super.onFlowOpened(controller);
+            
+            BrokerSubscription sub = host.createSubscription(this);
+            sub.connect(this);
+        }
+
+        public boolean offer(final MessageDelivery message, ISourceController<?> source, SubscriptionDeliveryCallback callback) {
+            if (!controller.offer(message, source)) {
+                return false;
+            } else {
+                sendInternal(message, controller, callback);
+                return true;
             }
-            router.bind(convert(info.getDestination()), this);
+        }
+
+        public void add(final MessageDelivery message, ISourceController<?> source, SubscriptionDeliveryCallback callback) {
+            controller.add(message, source);
+            sendInternal(message, controller, callback);
+        }
+
+        private void sendInternal(final MessageDelivery message, ISourceController<?> controller, SubscriptionDeliveryCallback callback) {
+            Message msg = message.asType(Message.class);
+            MessageDispatch md = new MessageDispatch();
+            md.setConsumerId(info.getConsumerId());
+            md.setMessage(msg);
+            md.setDestination(msg.getDestination());
+            // Add to the pending list if persistent and we are durable:
+            if (callback != null) {
+                synchronized (this) {
+                    Object old = pendingMessages.put(msg.getMessageId(), callback);
+                    if (old != null) {
+                        new Exception("Duplicate message id: " + msg.getMessageId()).printStackTrace();
+                    }
+                    pendingMessageIds.add(msg.getMessageId());
+                    connection.write(md);
+                }
+            } else {
+                connection.write(md);
+            }
         }
 
         public void ack(MessageAck info) {
             // TODO: The pending message queue could probably be optimized to
             // avoid having to create a new list here.
-            LinkedList<MessageDelivery> acked = new LinkedList<MessageDelivery>();
-            synchronized (queue) {
-                if (isDurable() || isQueueReceiver()) {
-                    MessageId id = info.getLastMessageId();
+            LinkedList<SubscriptionDeliveryCallback> acked = new LinkedList<SubscriptionDeliveryCallback>();
+            synchronized (this) {
+                MessageId id = info.getLastMessageId();
+                if (isDurable() || isQueueReceiver())
                     while (!pendingMessageIds.isEmpty()) {
                         MessageId pendingId = pendingMessageIds.getFirst();
-                        MessageDelivery delivery = pendingMessages.remove(pendingId);
-                        acked.add(delivery);
+                        SubscriptionDeliveryCallback callback = pendingMessages.remove(pendingId);
+                        acked.add(callback);
                         pendingMessageIds.removeFirst();
                         if (pendingId.equals(id)) {
                             break;
                         }
                     }
-
-                }
                 limiter.onProtocolCredit(info.getMessageCount());
             }
 
             // Delete outside of synchronization on queue to avoid contention
             // with enqueueing threads.
-            for (MessageDelivery delivery : acked) {
-                delivery.acknowledge(durableQueueId);
+            for (SubscriptionDeliveryCallback callback : acked) {
+                callback.acknowledge();
             }
-        }
-
-        public IFlowSink<MessageDelivery> getSink() {
-            return queue;
-        }
-
-        public final void deliver(final MessageDelivery delivery, ISourceController<?> source) {
-            if (!match(delivery)) {
-                return;
-            }
-
-            if (isDurable() && delivery.isPersistent()) {
-                try {
-
-                    final long sequence = deliverySequence.incrementAndGet();
-                    //TODO saveable queue element here is temporary: We should replace this 
-                    //with an actual queue implementation:
-                    delivery.persist(new SaveableQueueElement<MessageDelivery>() {
-
-                        public MessageDelivery getElement() {
-                            return delivery;
-                        }
-
-                        public QueueDescriptor getQueueDescriptor() {
-                            return durableQueueId;
-                        }
-
-                        public long getSequenceNumber() {
-                            return sequence;
-                        }
-
-                        public void notifySave() {
-                            //noop
-                        }
-                        public boolean requestSaveNotify() {
-                            return false;
-                        }
-
-                    }, null, true);
-                } catch (Exception e) {
-                    // TODO Auto-generated catch restoreBlock
-                    e.printStackTrace();
-                }
-            }
-
-            queue.add(delivery, source);
         }
 
         public boolean hasSelector() {
             return selector != null;
         }
 
-        public boolean match(MessageDelivery message) {
+        public boolean matches(MessageDelivery message) {
             Message msg = message.asType(Message.class);
             if (msg == null) {
                 return false;
@@ -578,15 +524,137 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         }
 
         public boolean isDurable() {
-            return isDurable;
+            return info.isDurable();
         }
 
         public boolean isQueueReceiver() {
             return isQueueReceiver;
         }
 
-        public AsciiBuffer getPersistentQueueName() {
-            return null;
+        /*
+         * (non-Javadoc)
+         * 
+         * @see org.apache.activemq.queue.Subscription#isBrowser()
+         */
+        public boolean isBrowser() {
+            return info.isBrowser();
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.queue.Subscription#isRemoveOnDispatch(java.lang
+         * .Object)
+         */
+        public boolean isRemoveOnDispatch(MessageDelivery elem) {
+            return !elem.isPersistent() || !(isDurable || isQueueReceiver);
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext
+         * #getDestination()
+         */
+        public Destination getDestination() {
+            return convert(info.getDestination());
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext
+         * #getJMSSelector()
+         */
+        public String getSelectorString() {
+            return info.getSelector();
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext
+         * #getSubscriptionName()
+         */
+        public String getSubscriptionName() {
+            return info.getSubscriptionName();
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext
+         * #getFullSelector()
+         */
+        public BooleanExpression getSelectorExpression() {
+            return selector;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext
+         * #getJMSSelector()
+         */
+        public String getSelector() {
+            return info.getSelector();
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext
+         * #getConnection()
+         */
+        public BrokerConnection getConnection() {
+            return connection;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext
+         * #getConsumerId()
+         */
+        public String getConsumerId() {
+            return name;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see org.apache.activemq.queue.Subscription#getSink()
+         */
+        public IFlowSink<MessageDelivery> getSink() {
+            return this;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see org.apache.activemq.flow.IFlowSink#add(java.lang.Object,
+         * org.apache.activemq.flow.ISourceController)
+         */
+        public void add(MessageDelivery message, ISourceController<?> source) {
+            add(message, source, null);
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see org.apache.activemq.flow.IFlowSink#offer(java.lang.Object,
+         * org.apache.activemq.flow.ISourceController)
+         */
+        public boolean offer(MessageDelivery message, ISourceController<?> source) {
+            return offer(message, source, null);
         }
 
     }

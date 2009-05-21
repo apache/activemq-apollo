@@ -57,36 +57,18 @@ final public class Router {
         return domains.remove(name);
     }
 
-    public synchronized void bind(Destination destination, DeliveryTarget dt) {
+    public synchronized void bind(Destination destination, DeliveryTarget target) {
         Domain domain = domains.get(destination.getDomain());
-        domain.bind(destination.getName(), dt);
+        domain.bind(destination.getName(), target);
+    }
+    
+    public synchronized void unbind(Destination destination, DeliveryTarget target) {
+        Domain domain = domains.get(destination.getDomain());
+        domain.unbind(destination.getName(), target);
     }
 
     public void route(final BrokerMessageDelivery msg, ISourceController<?> controller) {
 
-        // final Buffer transactionId = msg.getTransactionId();
-        // if( msg.isPersistent() ) {
-        // VoidCallback<RuntimeException> tx = new
-        // VoidCallback<RuntimeException>() {
-        // @Override
-        // public void run(Session session) throws RuntimeException {
-        // Long messageKey = session.messageAdd(msg.createMessageRecord());
-        // if( transactionId!=null ) {
-        // session.transactionAddMessage(transactionId, messageKey);
-        // }
-        // }
-        // };
-        // Runnable onFlush = new Runnable() {
-        // public void run() {
-        // if( msg.isResponseRequired() ) {
-        // // Let the client know the broker got the message.
-        // msg.onMessagePersisted();
-        // }
-        // }
-        // };
-        // virtualHost.getStore().execute(tx, onFlush);
-        // }
-        //        
         Collection<DeliveryTarget> targets = route(msg.getDestination(), msg);
 
         //Set up the delivery for persistence:
@@ -100,8 +82,8 @@ final public class Router {
             if (targets != null) {
                 // The sinks will request persistence via MessageDelivery.persist()
                 // if they require persistence:
-                for (DeliveryTarget dt : targets) {
-                    dt.deliver(msg, controller);
+                for (DeliveryTarget target : targets) {
+                    target.deliver(msg, controller);
                 }
             }
         }

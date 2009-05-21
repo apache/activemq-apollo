@@ -54,10 +54,8 @@ public abstract class CursoredQueue<V> {
     private long nextSequenceNumber = 0;
     private int totalQueueCount;
 
-    // For now each queue element is assigned a restoreBlock number
-    // which is used for tracking page in requests. A trailing
-    // consumer will request messages from at most one restoreBlock
-    // at a time from the database.
+    //Dictates the chunk size of messages or place holders
+    //pulled in from the database:
     private static final int RESTORE_BLOCK_SIZE = 1000;
     private final PersistencePolicy<V> persistencePolicy;
     private final Mapper<Long, V> expirationMapper;
@@ -65,6 +63,7 @@ public abstract class CursoredQueue<V> {
     private final QueueStore<?, V> queueStore;
     private final ElementLoader loader;
     public final QueueDescriptor queueDescriptor;
+    private final Object mutex;
 
     public CursoredQueue(PersistencePolicy<V> persistencePolicy, Mapper<Long, V> expirationMapper, Flow flow, QueueDescriptor queueDescriptor, QueueStore<?, V> store, Object mutex) {
         this.persistencePolicy = persistencePolicy;
@@ -99,8 +98,6 @@ public abstract class CursoredQueue<V> {
             queue.add(qe);
         }
     }
-
-    private final Object mutex;
 
     protected abstract void requestDispatch();
 
@@ -699,7 +696,8 @@ public abstract class CursoredQueue<V> {
         }
 
         /**
-         * @param l
+         * @param l Set the highest sequence number to which this 
+         * cursor can advance.
          */
         public void setLimit(long l) {
             limit = l;
@@ -1346,18 +1344,20 @@ public abstract class CursoredQueue<V> {
             // element loaded (until it is deleted)
             if (!persistencePolicy.isPagingEnabled()) {
                 qe.addHardRef();
-                // Persist the element if required:
-                if (persistencePolicy.isPersistent(qe.elem)) {
-                    // For now base decision on whether to delay flush on
-                    // whether or not there are consumers ready:
-                    // TODO should actually change this to active cursors:
-                    boolean delayable = !openCursors.isEmpty();
-                    qe.save(source, delayable);
-                }
             }
+            
+            // Persist the element if required:
+            if (persistencePolicy.isPersistent(qe.elem)) {
+                // For now base decision on whether to delay flush on
+                // whether or not there are consumers ready:
+                // TODO should actually change this to active cursors:
+                boolean delayable = !openCursors.isEmpty();
+                qe.save(source, delayable);
+            }
+            
             // Check with cursors to see if any of them have room for it
             // in memory:
-            else {
+            if(persistencePolicy.isPagingEnabled()) {
 
                 // Otherwise check with any other open cursor to see if
                 // it can hang on to the element:
@@ -1394,6 +1394,8 @@ public abstract class CursoredQueue<V> {
                     qe.unload(source);
                 }
             }
+            
+            
 
         }
 
@@ -1552,6 +1554,7 @@ public abstract class CursoredQueue<V> {
             synchronized (fromDatabase) {
                 fromDatabase.addAll(msgs);
             }
+            requestDispatch();
         }
 
         public String toString() {

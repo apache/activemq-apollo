@@ -26,11 +26,12 @@ import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 public class TopicDomain implements Domain {
-    
+
     final HashMap<AsciiBuffer, ArrayList<DeliveryTarget>> topicsTargets = new HashMap<AsciiBuffer, ArrayList<DeliveryTarget>>();
 
     public void add(AsciiBuffer name, Object queue) {
     }
+
     public Object remove(AsciiBuffer name) {
         return null;
     }
@@ -44,7 +45,17 @@ public class TopicDomain implements Domain {
         targets.add(target);
     }
 
-    public Collection<DeliveryTarget> route(AsciiBuffer name, MessageDelivery delivery) {
+    public void unbind(AsciiBuffer name, DeliveryTarget target) {
+        ArrayList<DeliveryTarget> targets = topicsTargets.get(name);
+        if (targets != null) {
+            targets.remove(target);
+            if (targets.isEmpty()) {
+                topicsTargets.remove(topicsTargets);
+            }
+        }
+    }
+
+    public Collection<DeliveryTarget> route(AsciiBuffer name, MessageDelivery message) {
         return topicsTargets.get(name);
     }
 

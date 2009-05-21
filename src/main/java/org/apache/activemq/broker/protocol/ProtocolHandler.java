@@ -21,16 +21,40 @@ import java.io.IOException;
 import org.apache.activemq.Service;
 import org.apache.activemq.broker.BrokerConnection;
 import org.apache.activemq.broker.BrokerMessageDelivery;
+import org.apache.activemq.broker.Destination;
+import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store.MessageRecord;
+import org.apache.activemq.filter.BooleanExpression;
+import org.apache.activemq.flow.IFlowSink;
+import org.apache.activemq.queue.Subscription;
 import org.apache.activemq.wireformat.WireFormat;
 
 public interface ProtocolHandler extends Service {
-    
+
     public void setConnection(BrokerConnection connection);
+
+    public BrokerConnection getConnection();
+
     public void onCommand(Object command);
+
     public void onException(Exception error);
+
     public void setWireFormat(WireFormat wf);
-    
+
     public BrokerMessageDelivery createMessageDelivery(MessageRecord record) throws IOException;
+
+    public interface ConsumerContext extends Subscription<MessageDelivery>, IFlowSink<MessageDelivery>{
+        public String getConsumerId();
+        
+        public Destination getDestination();
+
+        public String getSelector();
+        
+        public BooleanExpression getSelectorExpression();
+        
+        public boolean isDurable();
+        
+        public String getSubscriptionName();
+    }
 
 }

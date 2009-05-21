@@ -123,8 +123,12 @@ class MockQueue implements MockBroker.DeliveryTarget {
                 return dt.hasSelector();
             }
 
-            public boolean offer(Message elem, ISourceController<Message> controller, SubscriptionDeliveryCallback ackCallback) {
+            public boolean offer(Message elem, ISourceController<?> controller, SubscriptionDeliveryCallback ackCallback) {
                 return getSink().offer(elem, controller);
+            }
+            
+            public void add(Message elem, ISourceController<?> controller, SubscriptionDeliveryCallback ackCallback) {
+                getSink().add(elem, controller);
             }
         };
         subs.put(dt, sub);
