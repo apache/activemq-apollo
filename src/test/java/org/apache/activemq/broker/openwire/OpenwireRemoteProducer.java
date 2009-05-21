@@ -26,8 +26,8 @@ import org.apache.activemq.command.ProducerInfo;
 import org.apache.activemq.command.SessionInfo;
 import org.apache.activemq.command.WireFormatInfo;
 import org.apache.activemq.flow.Flow;
-import org.apache.activemq.flow.IFlowDrain;
 import org.apache.activemq.flow.ISourceController;
+import org.apache.activemq.queue.QueueDispatchTarget;
 import org.apache.activemq.queue.SingleFlowRelay;
 
 public class OpenwireRemoteProducer extends RemoteProducer {
@@ -61,7 +61,7 @@ public class OpenwireRemoteProducer extends RemoteProducer {
         this.outboundQueue = outboundQueue;
 
         outboundController = outboundQueue.getFlowController(flow);
-        outboundQueue.setDrain(new IFlowDrain<MessageDelivery>() {
+        outboundQueue.setDrain(new QueueDispatchTarget<MessageDelivery>() {
             public void drain(MessageDelivery message, ISourceController<MessageDelivery> controller) {
                 Message msg = message.asType(Message.class);
                 write(msg);

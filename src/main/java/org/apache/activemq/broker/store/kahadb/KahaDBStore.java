@@ -50,7 +50,6 @@ import org.apache.activemq.protobuf.InvalidProtocolBufferException;
 import org.apache.activemq.protobuf.MessageBuffer;
 import org.apache.activemq.protobuf.PBMessage;
 import org.apache.activemq.queue.QueueStore;
-import org.apache.activemq.queue.QueueStore.QueueDescriptor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.kahadb.journal.Journal;

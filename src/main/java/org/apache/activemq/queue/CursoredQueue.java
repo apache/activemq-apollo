@@ -27,7 +27,6 @@ import java.util.Map.Entry;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
-import org.apache.activemq.flow.IFlowSizeLimiter;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.queue.QueueStore.QueueDescriptor;
 import org.apache.activemq.queue.QueueStore.RestoreListener;
@@ -37,8 +36,6 @@ import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.SortedLinkedList;
 import org.apache.activemq.util.SortedLinkedListNode;
-
-import com.sun.jmx.mbeanserver.OpenConverter;
 
 /**
  * @author cmacnaug

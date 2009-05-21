@@ -34,5 +34,4 @@ public interface IFlowQueue<E> extends IBlockingFlowSource<E>, IPollableFlowSour
     public void setFlowQueueListener(FlowQueueListener listener);
     
     public void setDispatchPriority(int priority);
-
 }

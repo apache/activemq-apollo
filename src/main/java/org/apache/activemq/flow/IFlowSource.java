@@ -29,35 +29,4 @@ public interface IFlowSource<E> extends IFlowResource {
      * @return The flow controller for the specified flow.
      */
     public IFlowController<E> getFlowController(Flow flow);
-
-    /**
-     * If set to true the source will automatically release limiter space
-     * associated with {@link IFlowElem}s as they are dispacthed. If set to
-     * false then the {@link IFlowDrain} must release space via a call to
-     * {@link ISourceController#elementDispatched(IFlowElem)}.
-     * 
-     * @param autoRelease
-     *            If the source should release limiter space for elements.
-     */
-    public void setAutoRelease(boolean autoRelease);
-
-/**
-	 * Returns whether or not this {@link IFlowSource} is set to automatically
-	 * release elements via {@link FlowController#elementDispatched(Object) during
-	 * dispatch. When auto release is set the caller <i>must</i> not call 
-	 * {@link FlowController#elementDispatched(Object). 
-	 * 
-	 * @return true if auto release is set, false otherwise. 
-	 */
-    public boolean getAutoRelease();
-
-    /**
-     * Sets the default drain for elements from this flow source. It will be
-     * invoked to dispatch elements from the source.
-     * 
-     * @param drain
-     *            The drain.
-     */
-    public void setDrain(IFlowDrain<E> drain);
-
 }

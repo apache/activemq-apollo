@@ -19,19 +19,15 @@ package org.apache.activemq.broker;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.jms.JMSException;
 
-import org.apache.activemq.broker.BrokerSubscription.UserAlreadyConnectedException;
-import org.apache.activemq.broker.Queue.QueueSubscription;
 import org.apache.activemq.broker.openwire.OpenWireMessageDelivery;
 import org.apache.activemq.broker.store.BrokerDatabase;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
-import org.apache.activemq.command.ActiveMQBytesMessage;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTextMessage;
@@ -45,8 +41,6 @@ import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
-import org.apache.activemq.flow.IFlowDrain;
-import org.apache.activemq.flow.IFlowRelay;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
@@ -56,13 +50,11 @@ import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.openwire.OpenWireFormat;
-import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.queue.ExclusiveQueue;
+import org.apache.activemq.queue.AbstractFlowRelay;
 import org.apache.activemq.queue.IQueue;
-import org.apache.activemq.queue.QueueStore;
+import org.apache.activemq.queue.QueueDispatchTarget;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.queue.Subscription;
-import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
 
 import junit.framework.TestCase;
 
@@ -287,7 +279,7 @@ public class SharedQueuePerfTest extends TestCase {
         private final DispatchContext dispatchContext;
 
         protected IFlowController<OpenWireMessageDelivery> outboundController;
-        protected final IFlowRelay<OpenWireMessageDelivery> outboundQueue;
+        protected final AbstractFlowRelay<OpenWireMessageDelivery> outboundQueue;
         protected OpenWireMessageDelivery next;
         private int priority;
         private final String payload;
@@ -321,7 +313,7 @@ public class SharedQueuePerfTest extends TestCase {
             Flow flow = new Flow(name, true);
             outboundQueue = new SingleFlowRelay<OpenWireMessageDelivery>(flow, name, limiter);
             outboundQueue.setFlowExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
-            outboundQueue.setDrain(new IFlowDrain<OpenWireMessageDelivery>() {
+            outboundQueue.setDrain(new QueueDispatchTarget<OpenWireMessageDelivery>() {
 
                 public void drain(OpenWireMessageDelivery elem, ISourceController<OpenWireMessageDelivery> controller) {
 
@@ -357,7 +349,6 @@ public class SharedQueuePerfTest extends TestCase {
                 try {
                     createNextMessage();
                 } catch (JMSException e) {
-                    // TODO Auto-generated catch restoreBlock
                     e.printStackTrace();
                     stopped.set(true);
                     return true;
@@ -406,8 +397,6 @@ public class SharedQueuePerfTest extends TestCase {
         private final SizeLimiter<MessageDelivery> limiter;
         private final FlowController<MessageDelivery> controller;
         private final IQueue<Long, MessageDelivery> sourceQueue;
-        private int limit = 20000;
-        private int count = 0;
 
         public Consumer(String name, IQueue<Long, MessageDelivery> sourceQueue) {
             this.sourceQueue = sourceQueue;

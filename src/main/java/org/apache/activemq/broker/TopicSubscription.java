@@ -60,7 +60,8 @@ public class TopicSubscription implements BrokerSubscription, DeliveryTarget {
      * org.apache.activemq.broker.BrokerSubscription#connect(org.apache.activemq
      * .broker.protocol.ProtocolHandler.ConsumerContext)
      */
-    public synchronized void connect(Subscription<MessageDelivery> context) throws UserAlreadyConnectedException {
+    public synchronized void connect(Subscription<MessageDelivery> subsription) throws UserAlreadyConnectedException {
+        connectedSub = subsription;
         host.getRouter().bind(destination, this);
     }
 

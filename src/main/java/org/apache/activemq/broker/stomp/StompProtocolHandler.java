@@ -43,13 +43,13 @@ import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
-import org.apache.activemq.flow.IFlowDrain;
 import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.queue.QueueDispatchTarget;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.selector.SelectorParser;
 import org.apache.activemq.transport.stomp.Stomp;
@@ -151,7 +151,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         Flow outboundFlow = new Flow("broker-" + connection.getName() + "-outbound", false);
         SizeLimiter<MessageDelivery> outLimiter = new SizeLimiter<MessageDelivery>(connection.getOutputWindowSize(), connection.getOutputWindowSize());
         outboundQueue = new SingleFlowRelay<MessageDelivery>(outboundFlow, outboundFlow.getFlowName(), outLimiter);
-        outboundQueue.setDrain(new IFlowDrain<MessageDelivery>() {
+        outboundQueue.setDrain(new QueueDispatchTarget<MessageDelivery>() {
             public void drain(final MessageDelivery message, final ISourceController<MessageDelivery> controller) {
                 StompFrame msg = message.asType(StompFrame.class);
                 connection.write(msg, new Runnable() {

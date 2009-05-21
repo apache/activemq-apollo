@@ -71,16 +71,14 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
         sourceController = new ISourceController<E>() {
 
             public void elementDispatched(E elem) {
-                // TODO Auto-generated method stub
+                // No Op
             }
 
             public Flow getFlow() {
-                // TODO Auto-generated method stub
                 return controller.getFlow();
             }
 
             public IFlowResource getFlowResource() {
-                // TODO Auto-generated method stub
                 return ExclusivePersistentQueue.this;
             }
 
@@ -265,7 +263,6 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
         return false;
     }
 
-    private QueueElement last = null;
     public synchronized final boolean pollingDispatch() {
         queue.dispatch();
         if (started && subscription != null && !subBlocked) {
@@ -274,20 +271,10 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
                 // If the sub doesn't remove on dispatch set an ack listener:
                 SubscriptionDeliveryCallback callback = subscription.isRemoveOnDispatch(qe.elem) ? null : qe;
 
-                if(qe.acquired || limiter.getSize() == 0 || (last != null && last.sequence >= qe.sequence))
-                {
-                    System.out.println("Offering" + qe + limiter.getSize());
-                }
-                
                 // See if the sink has room:
                 if (subscription.offer(qe.elem, sourceController, callback)) {
-                    if(limiter.getElementSize(qe.getElement()) > 1048)
-                    {
-                        System.out.println("Offering" + qe);
-                    }
                     qe.setAcquired(true);
                     controller.elementDispatched(qe.getElement());
-                    last = qe;
                     // If remove on dispatch acknowledge now:
                     if (callback == null) {
                         qe.acknowledge();

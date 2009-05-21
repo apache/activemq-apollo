@@ -8,9 +8,9 @@ import org.apache.activemq.broker.RemoteProducer;
 import org.apache.activemq.broker.Router;
 import org.apache.activemq.broker.stomp.StompMessageDelivery;
 import org.apache.activemq.flow.Flow;
-import org.apache.activemq.flow.IFlowDrain;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
+import org.apache.activemq.queue.QueueDispatchTarget;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.transport.stomp.Stomp;
 import org.apache.activemq.transport.stomp.StompFrame;
@@ -42,7 +42,7 @@ public class StompRemoteProducer extends RemoteProducer {
         this.outboundQueue = outboundQueue;
         
         outboundController = outboundQueue.getFlowController(flow);
-        outboundQueue.setDrain(new IFlowDrain<MessageDelivery>() {
+        outboundQueue.setDrain(new QueueDispatchTarget<MessageDelivery>() {
             public void drain(final MessageDelivery message, final ISourceController<MessageDelivery> controller) {
                 StompFrame msg = message.asType(StompFrame.class);
                 write(msg, new Runnable(){

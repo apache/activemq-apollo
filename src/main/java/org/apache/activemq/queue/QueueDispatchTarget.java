@@ -16,22 +16,22 @@
  */
 package org.apache.activemq.queue;
 
-import org.apache.activemq.dispatch.IDispatcher;
-import org.apache.activemq.flow.IFlowSource;
+import org.apache.activemq.flow.ISourceController;
 
-public interface IAsynchronousFlowSource<E> {
-
+/**
+ * @author cmacnaug
+ *
+ */
+public interface QueueDispatchTarget<E> {
+    
     /**
-     * Sets an asynchronous dispatcher for this source. As elements become
-     * available they will be dispatched to the worker pool.
+     * Used by a FlowSource that is being dispatched to drain it's elements.
+     * The implementor is responsible for calling {@link ISourceController#elementDispatched(Object)
+     * when the element has been dispatched to all downstream sinks unless the 
+     * IFlowSource#getAutoRelease() is set to true.
      * 
-     * @param workers
-     *            The executor thread pool.
-     * @param dispatcher
-     *            The dispatcher to handle messages.
-     * @param controller
-     *            The controller for the flow to process in the worker pool.
+     * @param elem The element being drained
+     * @param controller The source's controller
      */
-    public void setDispatcher(IDispatcher workers);
-
+    public void drain(E elem, ISourceController<E> controller);
 }

@@ -22,8 +22,6 @@ import java.util.Collection;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
 import org.apache.activemq.dispatch.IDispatcher.Dispatchable;
-import org.apache.activemq.flow.AbstractLimitedFlowSource;
-import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
@@ -34,21 +32,20 @@ import org.apache.activemq.flow.ISinkController.FlowControllable;
  * 
  * @param <E>
  */
-public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> implements FlowControllable<E>, IFlowQueue<E>, Dispatchable {
+public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implements FlowControllable<E>, IFlowQueue<E>, Dispatchable {
 
     protected IDispatcher dispatcher;
     protected DispatchContext dispatchContext;
-    protected final Collection<IPollableFlowSource.FlowReadyListener<E>> readyListeners = new ArrayList<IPollableFlowSource.FlowReadyListener<E>>();
+    protected Collection<IPollableFlowSource.FlowReadyListener<E>> readyListeners;
     private boolean notifyReady = false;
     protected int dispatchPriority = 0;
-    protected FlowQueueListener listener = new FlowQueueListener()
-    {
+    protected FlowQueueListener listener = new FlowQueueListener() {
         public void onQueueException(IFlowQueue<?> queue, Throwable thrown) {
             System.out.println("Exception in queue: " + thrown.getMessage());
             thrown.printStackTrace();
         }
     };
-    
+
     AbstractFlowQueue() {
         super();
     }
@@ -77,10 +74,6 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
         // return true;
 
         return !pollingDispatch();
-    }
-
-    public final IFlowResource getFlowResource() {
-        return this;
     }
 
     protected final FlowControllable<E> getFlowControllableHook() {
@@ -112,6 +105,9 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
 
     public synchronized void addFlowReadyListener(IPollableFlowSource.FlowReadyListener<E> watcher) {
 
+        if (readyListeners == null) {
+            readyListeners = new ArrayList<IPollableFlowSource.FlowReadyListener<E>>();
+        }
         readyListeners.add(watcher);
         if (isDispatchReady()) {
             notifyReady();
@@ -144,6 +140,10 @@ public abstract class AbstractFlowQueue<E> extends AbstractLimitedFlowSource<E> 
                 notify();
             }
 
+            if (readyListeners == null) {
+                return;
+            }
+            
             if (!readyListeners.isEmpty()) {
                 for (FlowReadyListener<E> listener : readyListeners) {
                     listener.onFlowReady(this);

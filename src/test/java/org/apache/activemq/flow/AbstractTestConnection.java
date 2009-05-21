@@ -15,8 +15,11 @@ import org.apache.activemq.flow.Commands.FlowControl;
 import org.apache.activemq.flow.Commands.FlowControl.FlowControlBean;
 import org.apache.activemq.flow.Commands.FlowControl.FlowControlBuffer;
 import org.apache.activemq.flow.MockBroker.DeliveryTarget;
+import org.apache.activemq.queue.AbstractFlowRelay;
 import org.apache.activemq.queue.ExclusiveQueue;
+import org.apache.activemq.queue.IFlowQueue;
 import org.apache.activemq.queue.IPollableFlowSource;
+import org.apache.activemq.queue.QueueDispatchTarget;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.queue.IPollableFlowSource.FlowReadyListener;
 import org.apache.activemq.transport.AsyncTransport;
@@ -39,10 +42,10 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
     protected AsyncCommandQueue asyncCommandQueue;
 
     protected boolean useInputQueue = false;
-    protected IFlowRelay<Message> inputQueue;
+    protected AbstractFlowRelay<Message> inputQueue;
 
     protected Flow outboundFlow;
-    protected IFlowRelay<Message> outputQueue;
+    protected AbstractFlowRelay<Message> outputQueue;
     protected IPollableFlowSource<Message> outputSource;
     protected ProtocolLimiter<Message> outboundLimiter;
 
@@ -145,7 +148,7 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
             inputQueue = queue;
         }
         inputQueue.setFlowExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
-        inputQueue.setDrain(new IFlowDrain<Message>() {
+        inputQueue.setDrain(new QueueDispatchTarget<Message>() {
 
             public void drain(Message message, ISourceController<Message> controller) {
                 messageReceived(controller, message);
@@ -170,7 +173,7 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
 
         if (!USE_OUTPUT_QUEUE || asyncTransport == null || blockingTransport) {
             outputQueue = new SingleFlowRelay<Message>(outboundFlow, name + "-outbound", outboundLimiter);
-            outputQueue.setDrain(new IFlowDrain<Message>() {
+            outputQueue.setDrain(new QueueDispatchTarget<Message>() {
                 public void drain(final Message message, ISourceController<Message> controller) {
                     write(message);
                 };

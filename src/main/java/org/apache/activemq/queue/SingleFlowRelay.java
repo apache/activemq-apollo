@@ -1,16 +1,13 @@
 package org.apache.activemq.queue;
 
-import org.apache.activemq.flow.AbstractLimitedFlowSource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.IFlowLimiter;
-import org.apache.activemq.flow.IFlowRelay;
-import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 
-public class SingleFlowRelay<E> extends AbstractLimitedFlowSource<E> implements IFlowRelay<E>, FlowControllable<E> {
+public class SingleFlowRelay<E> extends AbstractFlowRelay<E> implements FlowControllable<E> {
 
     private final IFlowController<E> controller;
 
@@ -32,14 +29,14 @@ public class SingleFlowRelay<E> extends AbstractLimitedFlowSource<E> implements 
 
     public void flowElemAccepted(ISourceController<E> controller, E elem) {
         drain.drain(elem, controller);
-    }
-
-    public IFlowResource getFlowResource() {
-        return this;
+        if (autoRelease) {
+            controller.elementDispatched(elem);
+        }
     }
 
     @Override
     public String toString() {
         return getResourceName();
     }
+
 }

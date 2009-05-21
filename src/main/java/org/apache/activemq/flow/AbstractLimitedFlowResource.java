@@ -22,7 +22,7 @@ import java.util.concurrent.Executor;
 
 public abstract class AbstractLimitedFlowResource<E> implements IFlowResource {
     private Executor flowExecutor = null;
-    private final HashSet<FlowLifeCycleListener> lifeCycleWatchers = new HashSet<FlowLifeCycleListener>();
+    private HashSet<FlowLifeCycleListener> lifeCycleListeners = null;
     private final HashMap<Flow, IFlowController<E>> openControllers = new HashMap<Flow, IFlowController<E>>();
 
     private final long resourceId = RESOURCE_COUNTER.incrementAndGet();
@@ -50,10 +50,20 @@ public abstract class AbstractLimitedFlowResource<E> implements IFlowResource {
     }
 
     public synchronized final void addFlowLifeCycleListener(FlowLifeCycleListener listener) {
-        lifeCycleWatchers.add(listener);
+        if (lifeCycleListeners == null) {
+            lifeCycleListeners = new HashSet<FlowLifeCycleListener>();
+        }
+        lifeCycleListeners.add(listener);
         // Notify the watchers of all flows that are already open:
         for (IFlowController<E> controller : openControllers.values()) {
             listener.onFlowOpened(this, controller.getFlow());
+        }
+    }
+
+    public synchronized void removeFlowLifeCycleListener(FlowLifeCycleListener listener) {
+        lifeCycleListeners.remove(listener);
+        if (lifeCycleListeners.isEmpty()) {
+            lifeCycleListeners = null;
         }
     }
 
@@ -74,8 +84,10 @@ public abstract class AbstractLimitedFlowResource<E> implements IFlowResource {
         if (flowExecutor != null) {
             controller.setExecutor(flowExecutor);
         }
-        for (FlowLifeCycleListener listener : lifeCycleWatchers) {
-            listener.onFlowOpened(this, controller.getFlow());
+        if (lifeCycleListeners != null) {
+            for (FlowLifeCycleListener listener : lifeCycleListeners) {
+                listener.onFlowOpened(this, controller.getFlow());
+            }
         }
     }
 
@@ -83,7 +95,7 @@ public abstract class AbstractLimitedFlowResource<E> implements IFlowResource {
         IFlowController<E> existing = openControllers.remove(flow);
 
         if (existing != null) {
-            for (FlowLifeCycleListener listener : lifeCycleWatchers) {
+            for (FlowLifeCycleListener listener : lifeCycleListeners) {
                 listener.onFlowClosed(this, existing.getFlow());
             }
         }
@@ -96,10 +108,6 @@ public abstract class AbstractLimitedFlowResource<E> implements IFlowResource {
                 controller.setExecutor(flowExecutor);
             }
         }
-    }
-
-    public synchronized void removeFlowLifeCycleListener(FlowLifeCycleListener listener) {
-        lifeCycleWatchers.remove(listener);
     }
 
     /**
