@@ -26,14 +26,11 @@ import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.QueueStore;
 import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.util.Marshaller;
+import org.apache.kahadb.util.VariableMarshaller;
 
 public class Marshallers {
 
-    public final static Marshaller<QueueRecord> QUEUE_RECORD_MARSHALLER = new Marshaller<QueueRecord>() {
-
-        public Class<QueueRecord> getType() {
-            return QueueRecord.class;
-        }
+    public final static Marshaller<QueueRecord> QUEUE_RECORD_MARSHALLER = new VariableMarshaller<QueueRecord>() {
 
         public QueueRecord readPayload(DataInput dataIn) throws IOException {
             QueueRecord rc = new QueueRecord();
@@ -72,10 +69,6 @@ public class Marshallers {
 
     public final static Marshaller<Location> LOCATION_MARSHALLER = new Marshaller<Location>() {
 
-        public Class<Location> getType() {
-            return Location.class;
-        }
-
         public Location readPayload(DataInput dataIn) throws IOException {
             Location rc = new Location();
             rc.setDataFileId(dataIn.readInt());
@@ -87,13 +80,22 @@ public class Marshallers {
             dataOut.writeInt(object.getDataFileId());
             dataOut.writeInt(object.getOffset());
         }
+
+        public boolean isDeepCopySupported() {
+            return true;
+        }
+
+        public Location deepCopy(Location source) {
+            return new Location(source);
+        }
+
+        public int getFixedSize() {
+            return 8;
+        }
+
     };
 
-    public final static Marshaller<AsciiBuffer> ASCII_BUFFER_MARSHALLER = new Marshaller<AsciiBuffer>() {
-
-        public Class<AsciiBuffer> getType() {
-            return AsciiBuffer.class;
-        }
+    public final static Marshaller<AsciiBuffer> ASCII_BUFFER_MARSHALLER = new VariableMarshaller<AsciiBuffer>() {
 
         public AsciiBuffer readPayload(DataInput dataIn) throws IOException {
             byte data[] = new byte[dataIn.readShort()];
@@ -107,11 +109,7 @@ public class Marshallers {
         }
     };
 
-    public final static Marshaller<Buffer> BUFFER_MARSHALLER = new Marshaller<Buffer>() {
-
-        public Class<Buffer> getType() {
-            return Buffer.class;
-        }
+    public final static Marshaller<Buffer> BUFFER_MARSHALLER = new VariableMarshaller<Buffer>() {
 
         public Buffer readPayload(DataInput dataIn) throws IOException {
             byte data[] = new byte[dataIn.readShort()];
@@ -125,11 +123,7 @@ public class Marshallers {
         }
     };
 
-    public final static Marshaller<QueueStore.QueueDescriptor> QUEUE_DESCRIPTOR_MARSHALLER = new Marshaller<QueueStore.QueueDescriptor>() {
-
-        public Class<QueueStore.QueueDescriptor> getType() {
-            return QueueStore.QueueDescriptor.class;
-        }
+    public final static Marshaller<QueueStore.QueueDescriptor> QUEUE_DESCRIPTOR_MARSHALLER = new VariableMarshaller<QueueStore.QueueDescriptor>() {
 
         public QueueStore.QueueDescriptor readPayload(DataInput dataIn) throws IOException {
             QueueStore.QueueDescriptor descriptor = new QueueStore.QueueDescriptor();

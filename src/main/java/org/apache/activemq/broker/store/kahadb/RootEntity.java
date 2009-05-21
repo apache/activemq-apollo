@@ -37,14 +37,11 @@ import org.apache.kahadb.page.Page;
 import org.apache.kahadb.page.Transaction;
 import org.apache.kahadb.util.LongMarshaller;
 import org.apache.kahadb.util.Marshaller;
+import org.apache.kahadb.util.VariableMarshaller;
 
 public class RootEntity {
 
-    public final static Marshaller<RootEntity> MARSHALLER = new Marshaller<RootEntity>() {
-        public Class<RootEntity> getType() {
-            return RootEntity.class;
-        }
-
+    public final static Marshaller<RootEntity> MARSHALLER = new VariableMarshaller<RootEntity>() {
         public RootEntity readPayload(DataInput is) throws IOException {
             RootEntity rc = new RootEntity();
             rc.state = is.readInt();

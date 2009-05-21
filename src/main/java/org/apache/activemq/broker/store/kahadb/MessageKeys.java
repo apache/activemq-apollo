@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.util.Marshaller;
+import org.apache.kahadb.util.VariableMarshaller;
 
 public class MessageKeys {
 
@@ -39,11 +40,7 @@ public class MessageKeys {
         return "["+messageId+","+location+"]";
     }
     
-    public static final Marshaller<MessageKeys> MARSHALLER = new Marshaller<MessageKeys>() {
-        public Class<MessageKeys> getType() {
-            return MessageKeys.class;
-        }
-
+    public static final Marshaller<MessageKeys> MARSHALLER = new VariableMarshaller<MessageKeys>() {
         public MessageKeys readPayload(DataInput dataIn) throws IOException {
             Location location = Marshallers.LOCATION_MARSHALLER.readPayload(dataIn);
             byte data[] = new byte[dataIn.readShort()];

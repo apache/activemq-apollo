@@ -37,14 +37,11 @@ import org.apache.kahadb.page.Page;
 import org.apache.kahadb.page.Transaction;
 import org.apache.kahadb.util.LongMarshaller;
 import org.apache.kahadb.util.Marshaller;
+import org.apache.kahadb.util.VariableMarshaller;
 
 public class DestinationEntity {
 
-    public final static Marshaller<DestinationEntity> MARSHALLER = new Marshaller<DestinationEntity>() {
-
-        public Class<DestinationEntity> getType() {
-            return DestinationEntity.class;
-        }
+    public final static Marshaller<DestinationEntity> MARSHALLER = new VariableMarshaller<DestinationEntity>() {
 
         public DestinationEntity readPayload(DataInput dataIn) throws IOException {
             DestinationEntity value = new DestinationEntity();
@@ -61,14 +58,10 @@ public class DestinationEntity {
             Marshallers.QUEUE_DESCRIPTOR_MARSHALLER.writePayload(value.descriptor, dataOut);
             dataOut.writeLong(value.metaData.getPageId());
         }
+
     };
 
-    public final static Marshaller<DestinationMetaData> META_DATA_MARSHALLER = new Marshaller<DestinationMetaData>() {
-
-        public Class<DestinationMetaData> getType() {
-            return DestinationMetaData.class;
-        }
-
+    public final static Marshaller<DestinationMetaData> META_DATA_MARSHALLER = new VariableMarshaller<DestinationMetaData>() {
         public DestinationMetaData readPayload(DataInput dataIn) throws IOException {
             DestinationMetaData value = new DestinationMetaData();
             value.count = dataIn.readInt();
