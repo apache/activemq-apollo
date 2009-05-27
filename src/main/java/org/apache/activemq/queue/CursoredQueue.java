@@ -17,11 +17,11 @@
 package org.apache.activemq.queue;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.TreeMap;
 import java.util.Map.Entry;
 
 import org.apache.activemq.flow.Flow;
@@ -33,9 +33,11 @@ import org.apache.activemq.queue.QueueStore.RestoreListener;
 import org.apache.activemq.queue.QueueStore.RestoredElement;
 import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
+import org.apache.activemq.util.Comparators;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.SortedLinkedList;
 import org.apache.activemq.util.SortedLinkedListNode;
+import org.apache.activemq.util.TreeMap;
 
 /**
  * @author cmacnaug
@@ -61,7 +63,7 @@ public abstract class CursoredQueue<V> {
     private final ElementLoader loader;
     public final QueueDescriptor queueDescriptor;
     private final Object mutex;
-
+    
     public CursoredQueue(PersistencePolicy<V> persistencePolicy, Mapper<Long, V> expirationMapper, Flow flow, QueueDescriptor queueDescriptor, QueueStore<?, V> store, Object mutex) {
         this.persistencePolicy = persistencePolicy;
         this.mutex = mutex;
@@ -1114,7 +1116,7 @@ public abstract class CursoredQueue<V> {
 
         private static final int MAX_CACHE_SIZE = 500;
         private long uncachedMin = Long.MAX_VALUE;
-        TreeMap<Long, HashSet<QueueElement<V>>> expirationCache = new TreeMap<Long, HashSet<QueueElement<V>>>();
+        TreeMap<Long, HashSet<QueueElement<V>>> expirationCache = new TreeMap<Long, HashSet<QueueElement<V>>>(Comparators.LONG_COMPARATOR);
         private int cacheSize = 0;
 
         public final boolean needsDispatch() {

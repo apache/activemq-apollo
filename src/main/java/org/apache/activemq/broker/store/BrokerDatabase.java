@@ -384,12 +384,16 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
                     for (Operation processed : processedQueue) {
                         processed.onRollback(e);
                     }
-                    onDatabaseException(new IOException(e));
+                    IOException ioe = new IOException(e.getMessage());
+                    ioe.initCause(e);
+                    onDatabaseException(ioe);
                 } catch (Exception e) {
                     for (Operation processed : processedQueue) {
                         processed.onRollback(e);
                     }
-                    onDatabaseException(new IOException(e));
+                    IOException ioe = new IOException(e.getMessage());
+                    ioe.initCause(e);
+                    onDatabaseException(ioe);
                 }
             }
         }
@@ -611,7 +615,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      * This is a convenience base class that can be used to implement
      * Operations. It handles operation cancellation for you.
      */
-    private abstract class OperationBase extends LinkedNode<OperationBase> implements Operation {
+    abstract class OperationBase extends LinkedNode<OperationBase> implements Operation {
         public boolean flushRequested = false;
         public long opSequenceNumber = -1;
 

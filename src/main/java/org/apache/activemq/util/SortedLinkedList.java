@@ -17,7 +17,6 @@
 package org.apache.activemq.util;
 
 import java.util.ArrayList;
-import java.util.TreeMap;
 import java.util.Map.Entry;
 
 public class SortedLinkedList<T extends SortedLinkedListNode<T>> {
@@ -25,9 +24,9 @@ public class SortedLinkedList<T extends SortedLinkedListNode<T>> {
     protected final TreeMap<Long, T> index;
     T head;
     int size;
-
+   
     public SortedLinkedList() {
-        index = new TreeMap<Long, T>();
+        index = new TreeMap<Long, T>(Comparators.LONG_COMPARATOR);
     }
 
     public boolean isEmpty() {
@@ -152,5 +151,4 @@ public class SortedLinkedList<T extends SortedLinkedListNode<T>> {
         }
         return rc;
     }
-
 }

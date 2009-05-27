@@ -18,6 +18,7 @@ package org.apache.activemq.broker.store.memory;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -33,6 +34,7 @@ import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.util.ByteArrayOutputStream;
 import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.Comparators;
 
 /**
  * An in memory implementation of the {@link QueueStore} interface. It does not
@@ -89,7 +91,7 @@ public class MemoryStore implements Store {
     static private class StoredQueue {
         QueueStore.QueueDescriptor descriptor;
 
-        TreeMap<Long, QueueRecord> records = new TreeMap<Long, QueueRecord>();
+        TreeMap<Long, QueueRecord> records = new TreeMap<Long, QueueRecord>(Comparators.LONG_COMPARATOR);
         // Maps tracking to sequence number:
         HashMap<Long, Long> trackingMap = new HashMap<Long, Long>();
         int count = 0;
@@ -197,8 +199,8 @@ public class MemoryStore implements Store {
             QueueQueryResultImpl result = new QueueQueryResultImpl();
             result.count = count;
             result.size = size;
-            result.firstSequence = records.isEmpty() ? 0 : records.firstEntry().getValue().getQueueKey();
-            result.lastSequence = records.isEmpty() ? 0 : records.lastEntry().getValue().getQueueKey();
+            result.firstSequence = records.isEmpty() ? 0 : records.get(records.firstKey()).getQueueKey();
+            result.lastSequence = records.isEmpty() ? 0 :  records.get(records.lastKey()).getQueueKey();
             result.desc = descriptor.copy();
             if (this.partitions != null) {
                 ArrayList<QueueQueryResult> childResults = new ArrayList<QueueQueryResult>(partitions.size());
@@ -300,7 +302,7 @@ public class MemoryStore implements Store {
         private HashMap<Long, MessageRecordHolder> messages = new HashMap<Long, MessageRecordHolder>();
 
         private TreeMap<AsciiBuffer, TreeMap<AsciiBuffer, Buffer>> maps = new TreeMap<AsciiBuffer, TreeMap<AsciiBuffer, Buffer>>();
-        private TreeMap<Long, Stream> streams = new TreeMap<Long, Stream>();
+        private TreeMap<Long, Stream> streams = new TreeMap<Long, Stream>(Comparators.LONG_COMPARATOR);
         private TreeMap<AsciiBuffer, StoredQueue> queues = new TreeMap<AsciiBuffer, StoredQueue>();
         private TreeMap<Buffer, Transaction> transactions = new TreeMap<Buffer, Transaction>();
 

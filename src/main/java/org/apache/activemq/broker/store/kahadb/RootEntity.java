@@ -159,7 +159,9 @@ public class RootEntity {
         try {
             constructQueueHierarchy();
         } catch (KeyNotFoundException e) {
-            throw new IOException("Inconsistent store", e);
+            IOException ioe = new IOException("Inconsistent store");
+            ioe.initCause(e);
+            throw ioe;
         }
     }
 

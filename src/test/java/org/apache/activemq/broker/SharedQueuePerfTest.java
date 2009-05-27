@@ -66,7 +66,7 @@ public class SharedQueuePerfTest extends TestCase {
     BrokerDatabase database;
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
-    private static final boolean PERSISTENT = true;
+    private static final boolean PERSISTENT = false;
     private static final boolean PURGE_STORE = true;
 
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
