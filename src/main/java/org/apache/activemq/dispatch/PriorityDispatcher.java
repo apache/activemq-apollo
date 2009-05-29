@@ -185,7 +185,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
         Thread joinThread = null;
         synchronized (this) {
             if (thread != null) {
-                dispatch(new RunnableAdapter() {
+                dispatchInternal(new RunnableAdapter() {
                     public void run() {
                         running = false;
                     }
@@ -215,8 +215,10 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
 
     public void run() {
 
-        // Inform the dispatcher that we have started:
-        pooledDispatcher.onDispatcherStarted((D) this);
+        if (pooledDispatcher != null) {
+            // Inform the dispatcher that we have started:
+            pooledDispatcher.onDispatcherStarted((D) this);
+        }
 
         PriorityDispatchContext pdc;
         try {
@@ -288,7 +290,9 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
         } catch (Throwable thrown) {
             thrown.printStackTrace();
         } finally {
-            pooledDispatcher.onDispatcherStopped((D) this);
+            if (pooledDispatcher != null) {
+                pooledDispatcher.onDispatcherStopped((D) this);
+            }
             cleanup();
         }
     }
@@ -368,6 +372,14 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
         return true;
     }
 
+    //Special dispatch method that allow high priority dispatch:
+    private final void dispatchInternal(Dispatchable dispatchable, int priority)
+    {
+        PriorityDispatchContext context = new PriorityDispatchContext(dispatchable, false, name);
+        context.priority = priority;
+        context.requestDispatch();
+    }
+    
     /*
      * (non-Javadoc)
      * 
@@ -424,7 +436,14 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
     }
 
     private final D getCurrentDispatcher() {
-        return pooledDispatcher.getCurrentDispatcher();
+        if (pooledDispatcher != null) {
+            return pooledDispatcher.getCurrentDispatcher();
+        } else if (Thread.currentThread() == thread) {
+            return (D) this;
+        } else {
+            return null;
+        }
+
     }
 
     private final PooledDispatchContext<D> getCurrentDispatchContext() {
@@ -460,7 +479,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
             this.dispatchable = dispatchable;
             this.name = name;
             this.currentOwner = (D) PriorityDispatcher.this;
-            if (persistent) {
+            if (persistent && pooledDispatcher != null) {
                 this.tracker = pooledDispatcher.getLoadBalancer().createExecutionTracker((PooledDispatchContext<D>) this);
             } else {
                 this.tracker = null;
@@ -549,7 +568,9 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
             if (closed) {
                 return;
             }
-
+            
+            priority = Math.min(priority, MAX_USER_PRIORITY);
+            
             if (this.priority == priority) {
                 return;
             }

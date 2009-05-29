@@ -32,15 +32,18 @@ public class Queue implements DeliveryTarget {
     Queue(IQueue<Long, MessageDelivery> queue) {
         this.queue = queue;
     }
-    
 
-    /* (non-Javadoc)
-     * @see org.apache.activemq.broker.DeliveryTarget#deliver(org.apache.activemq.broker.MessageDelivery, org.apache.activemq.flow.ISourceController)
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * org.apache.activemq.broker.DeliveryTarget#deliver(org.apache.activemq
+     * .broker.MessageDelivery, org.apache.activemq.flow.ISourceController)
      */
     public void deliver(MessageDelivery message, ISourceController<?> source) {
         queue.add(message, source);
     }
-    
+
     public final void addSubscription(final Subscription<MessageDelivery> sub) {
         queue.addSubscription(sub);
     }
@@ -56,6 +59,12 @@ public class Queue implements DeliveryTarget {
     public void stop() throws Exception {
         if (queue != null) {
             queue.stop();
+        }
+    }
+
+    public void shutdown(boolean sync) throws Exception {
+        if (queue != null) {
+            queue.shutdown(sync);
         }
     }
 
@@ -95,16 +104,24 @@ public class Queue implements DeliveryTarget {
             this.queue = queue;
         }
 
-        /* (non-Javadoc)
-         * @see org.apache.activemq.broker.BrokerSubscription#connect(org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext)
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.broker.BrokerSubscription#connect(org.apache.
+         * activemq.broker.protocol.ProtocolHandler.ConsumerContext)
          */
         public void connect(Subscription<MessageDelivery> subscription) throws UserAlreadyConnectedException {
             this.subscription = subscription;
             queue.addSubscription(subscription);
         }
 
-        /* (non-Javadoc)
-         * @see org.apache.activemq.broker.BrokerSubscription#disconnect(org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext)
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.broker.BrokerSubscription#disconnect(org.apache
+         * .activemq.broker.protocol.ProtocolHandler.ConsumerContext)
          */
         public void disconnect(Subscription<MessageDelivery> context) {
             queue.removeSubscription(subscription);

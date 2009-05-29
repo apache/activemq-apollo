@@ -16,8 +16,8 @@
  */
 package org.apache.activemq.queue;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -61,9 +61,9 @@ public abstract class CursoredQueue<V> {
     private final Expirator expirator;
     private final QueueStore<?, V> queueStore;
     private final ElementLoader loader;
-    public final QueueDescriptor queueDescriptor;
+    private final QueueDescriptor queueDescriptor;
     private final Object mutex;
-    
+
     public CursoredQueue(PersistencePolicy<V> persistencePolicy, Mapper<Long, V> expirationMapper, Flow flow, QueueDescriptor queueDescriptor, QueueStore<?, V> store, Object mutex) {
         this.persistencePolicy = persistencePolicy;
         this.mutex = mutex;
@@ -197,7 +197,8 @@ public abstract class CursoredQueue<V> {
     }
 
     /**
-     * @return The first sequence number in the queue (or the next sequence number if it is empty)
+     * @return The first sequence number in the queue (or the next sequence
+     *         number if it is empty)
      */
     public long getFirstSequence() {
         if (queue.isEmpty()) {
@@ -278,8 +279,7 @@ public abstract class CursoredQueue<V> {
 
         private boolean paused;
 
-        public Cursor(CursoredQueue<V> queue, String name, boolean skipAcquired, boolean pageInElements,
-                IFlowController<QueueElement<V>> memoryController) {
+        public Cursor(CursoredQueue<V> queue, String name, boolean skipAcquired, boolean pageInElements, IFlowController<QueueElement<V>> memoryController) {
             this.name = name;
             this.queue = queue.queue;
             this.loader = queue.loader;
@@ -336,13 +336,11 @@ public abstract class CursoredQueue<V> {
             return !paused && activated && pageInElements;
         }
 
-        public void close()
-        {
+        public void close() {
             deactivate();
             cQueue.openCursors.remove(this);
         }
-        
-        
+
         public final void reset(long sequence) {
             updateSequence(sequence);
             updateCurrent(null);
@@ -695,8 +693,9 @@ public abstract class CursoredQueue<V> {
         }
 
         /**
-         * @param l Set the highest sequence number to which this 
-         * cursor can advance.
+         * @param l
+         *            Set the highest sequence number to which this cursor can
+         *            advance.
          */
         public void setLimit(long l) {
             limit = l;
@@ -710,7 +709,7 @@ public abstract class CursoredQueue<V> {
         final CursoredQueue<V> queue;
 
         V elem;
-        int size = -1;
+        private int size = -1;
         long expiration = -1;
         boolean redelivered = false;
 
@@ -730,8 +729,8 @@ public abstract class CursoredQueue<V> {
         // Indicates whether the element has been saved in the store.
         boolean saved = false;
 
-        boolean deleted = false;
-        boolean acquired = false;
+        private boolean deleted = false;
+        private Subscription<V> owner = null;
 
         public QueueElement(V elem, long sequence, CursoredQueue<V> queue) {
             this.elem = elem;
@@ -762,6 +761,10 @@ public abstract class CursoredQueue<V> {
         @Override
         public final long getSequence() {
             return sequence;
+        }
+
+        public final int getLimiterSize() {
+            return size;
         }
 
         public final void addHardRef() {
@@ -799,8 +802,8 @@ public abstract class CursoredQueue<V> {
             assert softRefs >= 0;
         }
 
-        public final void setAcquired(boolean val) {
-            this.acquired = val;
+        public final void setAcquired(Subscription<V> owner) {
+            this.owner = owner;
         }
 
         public final void acknowledge() {
@@ -825,7 +828,7 @@ public abstract class CursoredQueue<V> {
         }
 
         public final void unacquire(ISourceController<?> source) {
-            acquired = false;
+            owner = null;
             if (isExpired()) {
                 acknowledge();
             } else {
@@ -843,7 +846,7 @@ public abstract class CursoredQueue<V> {
             // Don't page out of there is a hard ref to the element
             // or if it is acquired (since we need the element
             // during delete:
-            if (!deleted && (hardRefs > 0 || acquired)) {
+            if (!deleted && (hardRefs > 0 || isAcquired())) {
                 return;
             }
 
@@ -854,7 +857,7 @@ public abstract class CursoredQueue<V> {
                     if (!queue.getPersistencePolicy().isPersistent(elem)) {
                         save(controller, true);
                         if (DEBUG)
-                            System.out.println("Paged out element: " + this);
+                            System.out.println("Paging out non-pers element: " + this);
                     }
 
                     // If save is pending don't unload until the save has
@@ -864,6 +867,8 @@ public abstract class CursoredQueue<V> {
                     }
                 }
 
+                if (DEBUG)
+                    System.out.println("Paged out element: " + this);
                 elem = null;
             }
 
@@ -886,7 +891,7 @@ public abstract class CursoredQueue<V> {
                 // Otherwise as long as the element isn't acquired we can unload
                 // it. If it is acquired we keep the soft ref arount to remember
                 // that it is.
-                else if (!acquired && queue.getLoader().isPageOutPlaceHolders()) {
+                else if (!isAcquired() && queue.getLoader().isPageOutPlaceHolders()) {
 
                     loaded = false;
 
@@ -1008,7 +1013,11 @@ public abstract class CursoredQueue<V> {
         }
 
         public final boolean isAcquired() {
-            return acquired || deleted;
+            return owner != null;
+        }
+
+        public Subscription<V> getOwner() {
+            return owner;
         }
 
         public final long getExpiration() {
@@ -1099,7 +1108,7 @@ public abstract class CursoredQueue<V> {
         }
 
         public String toString() {
-            return "QueueElement " + sequence + " loaded: " + loaded + " elem loaded: " + !isPagedOut() + " aquired: " + acquired;
+            return "QueueElement " + sequence + " loaded: " + loaded + " elem loaded: " + !isPagedOut() + " owner: " + owner;
         }
 
     }
@@ -1344,7 +1353,7 @@ public abstract class CursoredQueue<V> {
             if (!persistencePolicy.isPagingEnabled()) {
                 qe.addHardRef();
             }
-            
+
             // Persist the element if required:
             if (persistencePolicy.isPersistent(qe.elem)) {
                 // For now base decision on whether to delay flush on
@@ -1353,10 +1362,10 @@ public abstract class CursoredQueue<V> {
                 boolean delayable = !openCursors.isEmpty();
                 qe.save(source, delayable);
             }
-            
+
             // Check with cursors to see if any of them have room for it
             // in memory:
-            if(persistencePolicy.isPagingEnabled()) {
+            if (persistencePolicy.isPagingEnabled()) {
 
                 // Otherwise check with any other open cursor to see if
                 // it can hang on to the element:
@@ -1393,8 +1402,6 @@ public abstract class CursoredQueue<V> {
                     qe.unload(source);
                 }
             }
-            
-            
 
         }
 
@@ -1444,7 +1451,7 @@ public abstract class CursoredQueue<V> {
         public void releaseBlock(Cursor<V> cursor, long block) {
             HashSet<Cursor<V>> cursors = reservedBlocks.get(block);
             if (cursors == null) {
-                if (true || DEBUG)
+                if (DEBUG)
                     System.out.println(this + " removeBlockInterest " + block + ", no cursors" + cursor);
             } else {
                 if (cursors.remove(cursor)) {
@@ -1558,6 +1565,19 @@ public abstract class CursoredQueue<V> {
 
         public String toString() {
             return "QueueLoader " + CursoredQueue.this;
+        }
+    }
+
+    /**
+     * @param sync
+     */
+    public void shutdown(boolean sync) {
+        stop();
+        if (!openCursors.isEmpty()) {
+            ArrayList<Cursor<V>> cursors = new ArrayList<Cursor<V>>(openCursors.size());
+            for (Cursor<V> cursor : cursors) {
+                cursor.close();
+            }
         }
     }
 }

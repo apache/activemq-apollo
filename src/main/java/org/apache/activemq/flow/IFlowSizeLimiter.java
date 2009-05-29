@@ -24,6 +24,8 @@ public interface IFlowSizeLimiter<E> extends IFlowLimiter<E> {
 
     public boolean add(int count, long size);
     
+    public void remove(int count, long size);
+    
     public long getCapacity();
     
     public long getSize();

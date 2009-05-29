@@ -22,6 +22,7 @@ import java.util.HashMap;
 import org.apache.activemq.Service;
 import org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.queue.AbstractFlowQueue;
 import org.apache.activemq.queue.ExclusivePersistentQueue;
 import org.apache.activemq.queue.IQueue;
 
@@ -95,8 +96,13 @@ public class VirtualHost implements Service {
             return;
         }
         for (Queue queue : queues.values()) {
-            queue.stop();
+            queue.shutdown(true);
         }
+        
+        for (AbstractFlowQueue<MessageDelivery> queue : queueStore.getDurableQueues()) {
+            queue.shutdown(true);
+        }
+        
         started = false;
     }
 

@@ -35,8 +35,8 @@ public class WindowLimiter<E extends MessageDelivery> extends SizeLimiter<E>  {
         }*/
         
         @Override
-        public void remove(long size) {
-            super.remove(size);
+        public void remove(int count, long size) {
+            super.remove(count, size);
             if (!clientMode) {
                 available += size;
                 if (available >= capacity - resumeThreshold) {
@@ -51,7 +51,7 @@ public class WindowLimiter<E extends MessageDelivery> extends SizeLimiter<E>  {
         }
 
         public void onProtocolCredit(int credit) {
-            remove(credit);
+            remove(1, credit);
         }
 
         public int getElementSize(E m) {

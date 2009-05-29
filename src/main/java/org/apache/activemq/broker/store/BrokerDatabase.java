@@ -371,7 +371,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
                         }
 
                         synchronized (opQueue) {
-                            this.storeLimiter.remove(release);
+                            this.storeLimiter.remove(1, release);
                         }
                     }
 

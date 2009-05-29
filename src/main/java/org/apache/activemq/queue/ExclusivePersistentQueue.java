@@ -35,7 +35,6 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
     private CursoredQueue<E> queue;
     private final FlowController<E> controller;
     private final IFlowSizeLimiter<E> limiter;
-    private boolean started = true;
     private Cursor<E> cursor;
     private final QueueDescriptor queueDescriptor;
     private PersistencePolicy<E> persistencePolicy;
@@ -123,7 +122,7 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
                 synchronized (ExclusivePersistentQueue.this) {
                     E elem = qe.getElement();
                     if (qe.delete()) {
-                        if (!qe.acquired) {
+                        if (!qe.isAcquired()) {
                             controller.elementDispatched(elem);
                         }
                     }
@@ -147,8 +146,9 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
         FlowController<QueueElement<E>> memoryController = null;
         if (persistencePolicy.isPagingEnabled()) {
             IFlowSizeLimiter<QueueElement<E>> limiter = new SizeLimiter<QueueElement<E>>(persistencePolicy.getPagingInMemorySize(), persistencePolicy.getPagingInMemorySize() / 2) {
+                @Override
                 public int getElementSize(QueueElement<E> qe) {
-                    return qe.size;
+                    return qe.getLimiterSize();
                 };
             };
 
@@ -232,18 +232,22 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
             throw new IllegalStateException("Not initialized");
         }
         if (!started) {
-            started = true;
-            if (isDispatchReady()) {
-                notifyReady();
-            }
+            super.start();
             queue.start();
         }
     }
 
     public synchronized void stop() {
         if (started) {
-            started = false;
+            super.stop();
             queue.stop();
+        }
+    }
+
+    public void shutdown(boolean sync) {
+        super.shutdown(sync);
+        synchronized (this) {
+            queue.shutdown(sync);
         }
     }
 
@@ -272,13 +276,15 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
                 SubscriptionDeliveryCallback callback = subscription.isRemoveOnDispatch(qe.elem) ? null : qe;
 
                 // See if the sink has room:
+                qe.setAcquired(subscription);
                 if (subscription.offer(qe.elem, sourceController, callback)) {
-                    qe.setAcquired(true);
                     controller.elementDispatched(qe.getElement());
                     // If remove on dispatch acknowledge now:
                     if (callback == null) {
                         qe.acknowledge();
                     }
+                } else {
+                    qe.setAcquired(null);
                 }
             }
         }

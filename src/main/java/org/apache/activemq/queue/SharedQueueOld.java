@@ -58,8 +58,6 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
     protected Mapper<K, V> keyMapper;
     private long directs;
 
-    private boolean started = false;
-
     private final ISourceController<V> sourceControler = new ISourceController<V>() {
 
         public Flow getFlow() {
@@ -144,19 +142,6 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
         synchronized (mutex) {
             return limiter.getSize();
         }
-    }
-
-    public synchronized void start() {
-        if (!started) {
-            started = true;
-            if (isDispatchReady()) {
-                super.notifyReady();
-            }
-        }
-    }
-
-    public synchronized void stop() {
-        started = false;
     }
 
     public void initialize(long sequenceMin, long sequenceMax, int count, long size) {

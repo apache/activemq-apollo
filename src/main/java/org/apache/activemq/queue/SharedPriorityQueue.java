@@ -17,6 +17,7 @@
 package org.apache.activemq.queue;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 
 import org.apache.activemq.dispatch.IDispatcher;
@@ -41,6 +42,8 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
     private boolean started;
     private QueueStore.QueueDescriptor queueDescriptor;
     private Mapper<Long, V> expirationMapper;
+    private int basePriority = 0;
+    private boolean shutdown = false;
 
     public SharedPriorityQueue(String name, PrioritySizeLimiter<V> limiter) {
         super(name);
@@ -56,6 +59,7 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
 
     public synchronized void start() {
         if (!started) {
+            checkShutdown();
             started = true;
             for (SharedQueue<K, V> partition : partitions) {
                 if (partition != null)
@@ -74,7 +78,26 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
         }
     }
 
+    public void shutdown(boolean sync) {
+        ArrayList<SharedQueue<K, V>> partitions = null;
+        synchronized (this) {
+            if (!shutdown) {
+                shutdown = true;
+                started = false;
+            }
+            partitions = this.partitions;
+        }
+
+        if (partitions != null) {
+            for (IQueue<K, V> partition : partitions) {
+                if (partition != null)
+                    partition.shutdown(sync);
+            }
+        }
+    }
+
     public void initialize(long sequenceMin, long sequenceMax, int count, long size) {
+        checkShutdown();
         // No-op, only partitions should have stored values.
         if (count > 0 || size > 0) {
             throw new IllegalArgumentException("Partioned queues do not themselves hold values");
@@ -94,6 +117,7 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
     }
 
     public synchronized int getEnqueuedCount() {
+        checkShutdown();
         int count = 0;
         for (SharedQueue<K, V> queue : partitions) {
             if (queue != null) {
@@ -125,6 +149,7 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
 
     public void addSubscription(Subscription<V> sub) {
         synchronized (this) {
+            checkShutdown();
             subscriptions.add(sub);
             for (SharedQueue<K, V> queue : partitions) {
                 if (queue != null) {
@@ -148,18 +173,41 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
         return false;
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.queue.IQueue#setDispatchPriority(int)
+     */
+    public void setDispatchPriority(int priority) {
+        synchronized (this) {
+            if (basePriority != priority) {
+                basePriority = priority;
+                if (shutdown) {
+                    return;
+                }
+                for (int i = 0; i < limiter.getPriorities(); i++) {
+                    SharedQueue<K, V> queue = partitions.get(i);
+                    if (queue != null) {
+                        queue.setDispatchPriority(basePriority + i);
+                    }
+                }
+            }
+        }
+    }
+
     public IQueue<K, V> createPartition(int prio) {
         return getPartition(prio, false);
     }
 
     private IQueue<K, V> getPartition(int prio, boolean initialize) {
         synchronized (this) {
+            checkShutdown();
             SharedQueue<K, V> queue = partitions.get(prio);
             if (queue == null) {
                 queue = new SharedQueue<K, V>(getResourceName() + "$" + prio, limiter.getPriorityLimter(prio), this);
                 queue.setAutoRelease(autoRelease);
                 queue.setDispatcher(dispatcher);
-                queue.setDispatchPriority(prio);
+                queue.setDispatchPriority(basePriority + prio);
                 queue.setKeyMapper(keyMapper);
                 queue.setStore(store);
                 queue.setPersistencePolicy(persistencePolicy);
@@ -172,8 +220,7 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
                     queue.initialize(0, 0, 0, 0);
                     onFlowOpened(queue.getFlowControler());
                 }
-                
-                
+
                 if (started) {
                     queue.start();
                 }
@@ -213,4 +260,11 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
         this.dispatcher = dispatcher;
         super.setFlowExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
     }
+
+    private void checkShutdown() {
+        if (shutdown) {
+            throw new IllegalStateException(this + " is shutdown");
+        }
+    }
+
 }

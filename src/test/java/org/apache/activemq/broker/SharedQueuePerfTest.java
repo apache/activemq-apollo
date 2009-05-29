@@ -68,6 +68,7 @@ public class SharedQueuePerfTest extends TestCase {
     private static final boolean USE_KAHA_DB = true;
     private static final boolean PERSISTENT = false;
     private static final boolean PURGE_STORE = true;
+    private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors();
 
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
     protected MetricAggregator totalConsumerRate = new MetricAggregator().name("Aggregate Consumer Rate").unit("items");
@@ -77,7 +78,11 @@ public class SharedQueuePerfTest extends TestCase {
     protected ArrayList<IQueue<Long, MessageDelivery>> queues = new ArrayList<IQueue<Long, MessageDelivery>>();
 
     protected IDispatcher createDispatcher() {
-        return PriorityDispatcher.createPriorityDispatchPool("TestDispatcher", MessageBroker.MAX_PRIORITY, Runtime.getRuntime().availableProcessors());
+        if (THREAD_POOL_SIZE > 1) {
+            return PriorityDispatcher.createPriorityDispatchPool("TestDispatcher", MessageBroker.MAX_PRIORITY, THREAD_POOL_SIZE);
+        } else {
+            return PriorityDispatcher.createPriorityDispatcher("TestDispatcher", MessageBroker.MAX_PRIORITY);
+        }
     }
 
     protected int consumerStartDelay = 0;
@@ -123,7 +128,7 @@ public class SharedQueuePerfTest extends TestCase {
         consumerStartDelay = 0;
     }
 
-    public void testSharedQueue_1_1_1() throws Exception {
+    public void test1_1_1() throws Exception {
         startServices();
         try {
             createQueues(1);
@@ -136,7 +141,7 @@ public class SharedQueuePerfTest extends TestCase {
         }
     }
 
-    public void testSharedQueue_10_10_10() throws Exception {
+    public void test10_10_10() throws Exception {
         startServices();
         try {
             createQueues(10);
@@ -149,7 +154,7 @@ public class SharedQueuePerfTest extends TestCase {
         }
     }
 
-    public void testSharedQueue_10_1_10() throws Exception {
+    public void test10_1_10() throws Exception {
         startServices();
         try {
             createQueues(1);
@@ -162,7 +167,7 @@ public class SharedQueuePerfTest extends TestCase {
         }
     }
 
-    public void testSharedQueue_10_1_1() throws Exception {
+    public void test10_1_1() throws Exception {
         startServices();
         try {
             createQueues(10);
@@ -175,7 +180,7 @@ public class SharedQueuePerfTest extends TestCase {
         }
     }
 
-    public void testSharedQueue_1_1_10() throws Exception {
+    public void test1_1_10() throws Exception {
         startServices();
         try {
             createQueues(10);
@@ -237,6 +242,7 @@ public class SharedQueuePerfTest extends TestCase {
     private final void createQueues(int count) {
         for (int i = 0; i < count; i++) {
             IQueue<Long, MessageDelivery> queue = queueStore.createSharedQueue("queue-" + (i + 1));
+            queue.setDispatchPriority(1);
             queues.add(queue);
         }
     }
@@ -403,6 +409,7 @@ public class SharedQueuePerfTest extends TestCase {
             this.name = name;
             Flow flow = new Flow(name + "-outbound", false);
             limiter = new SizeLimiter<MessageDelivery>(1024 * 1024, 512 * 1024) {
+                @Override
                 public int getElementSize(MessageDelivery m) {
                     return m.getFlowLimiterSize();
                 }
@@ -456,6 +463,7 @@ public class SharedQueuePerfTest extends TestCase {
         public boolean offer(MessageDelivery element, ISourceController<?> source, SubscriptionDeliveryCallback callback) {
             if (controller.offer(element, source)) {
                 addInternal(element, source, callback);
+                return true;
             }
             return false;
         }

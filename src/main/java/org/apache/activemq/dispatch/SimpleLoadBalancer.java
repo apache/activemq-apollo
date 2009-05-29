@@ -16,20 +16,93 @@
  */
 package org.apache.activemq.dispatch;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.dispatch.PooledDispatcher.PooledDispatchContext;
 
 public class SimpleLoadBalancer<D extends IDispatcher> implements ExecutionLoadBalancer<D> {
 
-    private final boolean DEBUG = false;
+    private final boolean DEBUG = true;
+
+    //TODO: Added plumbing for periodic rebalancing which we should
+    //consider implementing
+    private static final boolean ENABLE_UPDATES = false;
+    private final ArrayList<D> dispatchers = new ArrayList<D>();
+
+    private AtomicBoolean running = new AtomicBoolean(false);
+    private boolean needsUpdate = false;
+    private static final int FREQUENCY = 5000;
+    private boolean scheduled = false;
+    private final Runnable timerCallback;
 
     public SimpleLoadBalancer() {
+
+        timerCallback = new Runnable() {
+            public final void run() {
+                if (running.get()) {
+                    rebalance();
+                    synchronized (dispatchers) {
+                        scheduled = false;
+                        scheduleNext();
+                    }
+                }
+            }
+        };
+
     }
 
-    @SuppressWarnings("hiding")
-    private class ExecutionStats<D extends IDispatcher> {
+    private void rebalance() {
+        if (!needsUpdate) {
+            return;
+        }
+        // TODO Auto-generated method stub
+    }
+
+    public void start() {
+        if (running.compareAndSet(false, true)) {
+            scheduleNext();
+        }
+    }
+
+    private void scheduleNext() {
+        if (!ENABLE_UPDATES) {
+            return;
+        }
+        synchronized (dispatchers) {
+            if (!scheduled) {
+                if (!dispatchers.isEmpty()) {
+                    dispatchers.get(0).schedule(timerCallback, FREQUENCY, TimeUnit.MILLISECONDS);
+                    scheduled = true;
+                }
+            }
+        }
+    }
+
+    public void stop() {
+        running.compareAndSet(true, false);
+    }
+
+    public synchronized final void onDispatcherStarted(D dispatcher) {
+        dispatchers.add(dispatcher);
+        scheduleNext();
+    }
+
+    /**
+     * A Dispatcher must call this when exiting it's dispatch loop
+     */
+    public void onDispatcherStopped(D dispatcher) {
+        dispatchers.remove(dispatcher);
+    }
+
+    public ExecutionTracker<D> createExecutionTracker(PooledDispatchContext<D> context) {
+        return new SimpleExecutionTracker(context);
+    }
+
+    private static class ExecutionStats<D extends IDispatcher> {
         final PooledDispatchContext<D> target;
         final PooledDispatchContext<D> source;
         int count;
@@ -42,24 +115,6 @@ public class SimpleLoadBalancer<D extends IDispatcher> implements ExecutionLoadB
         public String toString() {
             return "Connection from: " + source + " to " + target;
         }
-    }
-
-    public void onDispatcherStarted(D dispatcher) {
-
-    }
-
-    public void onDispatcherStopped(D dispatcher) {
-
-    }
-
-    public void start() {
-    }
-
-    public void stop() {
-    }
-    
-    public ExecutionTracker<D> createExecutionTracker(PooledDispatchContext<D> context) {
-        return new SimpleExecutionTracker(context);
     }
 
     private class SimpleExecutionTracker implements ExecutionTracker<D> {
@@ -102,6 +157,7 @@ public class SimpleLoadBalancer<D extends IDispatcher> implements ExecutionLoadB
                     if (singleSource == null && sources.isEmpty()) {
                         singleSource = callingContext;
                         ExecutionStats<D> stats = new ExecutionStats<D>(callingContext, context);
+                        stats.count++;
                         sources.put(callingContext, stats);
 
                         // If this context only has a single source
@@ -121,6 +177,7 @@ public class SimpleLoadBalancer<D extends IDispatcher> implements ExecutionLoadB
                             stats = new ExecutionStats<D>(callingContext, context);
                             sources.put(callingContext, stats);
                         }
+                        stats.count++;
 
                         if (singleSource != null) {
                             singleSource = null;

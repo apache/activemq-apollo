@@ -44,7 +44,7 @@ public class SizeLimiter<E> extends AbstractLimiter<E> implements IFlowSizeLimit
     }
 
     public final void remove(E elem) {
-        remove(getElementSize(elem));
+        remove(1, getElementSize(elem));
     }
 
     public void reserve(E elem) {
@@ -55,11 +55,11 @@ public class SizeLimiter<E> extends AbstractLimiter<E> implements IFlowSizeLimit
         if (reserved > 0) {
             long res = reserved;
             reserved = 0;
-            remove(res);
+            remove(1, res);
         }
     }
 
-    public void remove(long s) {
+    public void remove(int count, long s) {
         this.size -= s;
         if (size < 0) {
             Exception ie = new IllegalStateException("Size Negative!" + size);

@@ -27,7 +27,6 @@ import org.apache.activemq.flow.ISourceController;
 public class ExclusiveQueue<E> extends AbstractFlowQueue<E> {
     private final LinkedList<E> queue = new LinkedList<E>();
     private final FlowController<E> controller;
-    private boolean started = true;
 
     /**
      * Creates a flow queue that can handle multiple flows.
@@ -55,14 +54,6 @@ public class ExclusiveQueue<E> extends AbstractFlowQueue<E> {
         if (started) {
             notifyReady();
         }
-    }
-
-    public synchronized void start() {
-        started = true;
-    }
-
-    public synchronized void stop() {
-        started = false;
     }
 
     public FlowController<E> getFlowController(Flow flow) {

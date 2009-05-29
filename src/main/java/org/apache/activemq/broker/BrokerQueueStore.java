@@ -71,7 +71,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
 
     private Mapper<Integer, MessageDelivery> partitionMapper;
 
-    private static final int DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD = 100 * 1024 * 1;
+    private static final int DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD = 1024 * 1024 * 1;
     private static final int DEFAULT_SHARED_QUEUE_RESUME_THRESHOLD = 1;
     // Be default we don't page out elements to disk.
     private static final int DEFAULT_SHARED_QUEUE_SIZE = DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD;
@@ -115,7 +115,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
     private static final int DEFAULT_DURABLE_QUEUE_PAGING_THRESHOLD = 100 * 1024 * 1;
     private static final int DEFAULT_DURABLE_QUEUE_RESUME_THRESHOLD = 1;
     // Be default we don't page out elements to disk.
-    private static final int DEFAULT_DURABLE_QUEUE_SIZE = DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD;
+    private static final int DEFAULT_DURABLE_QUEUE_SIZE = DEFAULT_DURABLE_QUEUE_PAGING_THRESHOLD;
 
     private static final PersistencePolicy<MessageDelivery> DURABLE_QUEUE_PERSISTENCE_POLICY = new PersistencePolicy<MessageDelivery>() {
 
@@ -198,7 +198,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
             ExclusivePersistentQueue<Long, MessageDelivery> queue = createRestoredDurableQueue(loaded);
             durableQueues.put(queue.getDescriptor().getQueueName().toString(), queue);
             LOG.info("Loaded Durable " + queue.getResourceName() + " Messages: " + queue.getEnqueuedCount() + " Size: " + queue.getEnqueuedSize());
-            
+
         }
     }
 
@@ -253,10 +253,12 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
     }
 
     public Collection<IQueue<Long, MessageDelivery>> getSharedQueues() {
-        Collection<IQueue<Long, MessageDelivery>> c = sharedQueues.values();
-        ArrayList<IQueue<Long, MessageDelivery>> ret = new ArrayList<IQueue<Long, MessageDelivery>>(c.size());
-        ret.addAll(c);
-        return ret;
+        synchronized (this) {
+            Collection<IQueue<Long, MessageDelivery>> c = sharedQueues.values();
+            ArrayList<IQueue<Long, MessageDelivery>> ret = new ArrayList<IQueue<Long, MessageDelivery>>(c.size());
+            ret.addAll(c);
+            return ret;
+        }
     }
 
     public ExclusivePersistentQueue<Long, MessageDelivery> createDurableQueue(String name) {
@@ -273,6 +275,15 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         }
 
         return queue;
+    }
+
+    public Collection<ExclusivePersistentQueue<Long, MessageDelivery>> getDurableQueues() {
+        synchronized (this) {
+            Collection<ExclusivePersistentQueue<Long, MessageDelivery>> c = durableQueues.values();
+            ArrayList<ExclusivePersistentQueue<Long, MessageDelivery>> ret = new ArrayList<ExclusivePersistentQueue<Long, MessageDelivery>>(c.size());
+            ret.addAll(c);
+            return ret;
+        }
     }
 
     public IQueue<Long, MessageDelivery> createSharedQueue(String name) {
@@ -294,7 +305,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
 
     private ExclusivePersistentQueue<Long, MessageDelivery> createDurableQueueInternal(final String name, short type) {
         ExclusivePersistentQueue<Long, MessageDelivery> queue;
-        
+
         SizeLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(DEFAULT_DURABLE_QUEUE_SIZE, DEFAULT_DURABLE_QUEUE_RESUME_THRESHOLD) {
             @Override
             public int getElementSize(MessageDelivery elem) {

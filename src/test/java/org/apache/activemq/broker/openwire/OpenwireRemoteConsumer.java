@@ -45,6 +45,7 @@ public class OpenwireRemoteConsumer extends RemoteConsumer {
         final Flow flow = new Flow("client-"+name+"-inbound", false);
         inputResumeThreshold = inputWindowSize/2;
         WindowLimiter<MessageDelivery> limiter = new WindowLimiter<MessageDelivery>(false, flow, inputWindowSize, inputResumeThreshold) {
+            @Override
             protected void sendCredit(int credit) {
                 MessageAck ack = OpenwireSupport.createAck(consumerInfo, lastMessage, credit, MessageAck.STANDARD_ACK_TYPE);
                 write(ack);

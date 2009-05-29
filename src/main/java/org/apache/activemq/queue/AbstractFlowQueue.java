@@ -45,6 +45,7 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
             thrown.printStackTrace();
         }
     };
+    protected boolean started;
 
     AbstractFlowQueue() {
         super();
@@ -78,6 +79,37 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
 
     protected final FlowControllable<E> getFlowControllableHook() {
         return this;
+    }
+
+    public synchronized void start() {
+        if (!started) {
+            started = true;
+            if (isDispatchReady()) {
+                notifyReady();
+            }
+        }
+    }
+
+    public synchronized void stop() {
+        started = false;
+    }
+    
+    /**
+     * Calls stop and cleans up resources associated with the queue.
+     * @param sync
+     */
+    public void shutdown(boolean sync) {
+        stop();
+        DispatchContext dc = null;
+        synchronized (this) {
+            dc = dispatchContext;
+            dispatchContext = null;
+            
+        }
+        
+        if (dc != null) {
+            dc.close(sync);
+        }
     }
 
     /**
@@ -143,7 +175,7 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
             if (readyListeners == null) {
                 return;
             }
-            
+
             if (!readyListeners.isEmpty()) {
                 for (FlowReadyListener<E> listener : readyListeners) {
                     listener.onFlowReady(this);

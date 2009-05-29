@@ -415,8 +415,8 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
         }
 
         @Override
-        public void remove(long size) {
-            super.remove(size);
+        public void remove(int count, long size) {
+            super.remove(count, size);
             if (!clientMode) {
                 available += size;
                 if (available >= capacity - resumeThreshold) {
@@ -430,7 +430,7 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
 
         public void onProtocolMessage(FlowControl m) {
             synchronized (outputQueue) {
-                remove(m.getCredit());
+                remove(1, m.getCredit());
             }
         }
 

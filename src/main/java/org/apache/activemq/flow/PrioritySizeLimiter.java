@@ -40,7 +40,7 @@ public class PrioritySizeLimiter<E> {
 
     private class Priority extends AbstractLimiter<E> implements IFlowSizeLimiter<E> {
         final int priority;
-        int size;
+        long size;
         int reserved;
         private boolean throttled;
 
@@ -99,16 +99,16 @@ public class PrioritySizeLimiter<E> {
             if (reserved > 0) {
                 int res = reserved;
                 reserved = 0;
-                remove(res);
+                remove(1, res);
             }
         }
 
         public void remove(E elem) {
             int size = sizeMapper.map(elem);
-            remove(size);
+            remove(1, size);
         }
 
-        protected void remove(int s) {
+        public void remove(int c, long s) {
             size -= s;
             totalSize -= s;
 

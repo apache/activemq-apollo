@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 import org.apache.activemq.dispatch.IDispatcher;
+import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
@@ -35,7 +36,9 @@ abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource
     private QueueStore<K, V> store;
     protected IDispatcher dispatcher;
     private boolean started;
+    private boolean shutdown = false;
     protected QueueStore.QueueDescriptor queueDescriptor;
+    private int basePriority = 0;
 
     public PartitionedQueue(String name) {
         super(name);
@@ -51,6 +54,7 @@ abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource
     public IQueue<K, V> getPartition(int partitionKey) {
         boolean save = false;
         IQueue<K, V> rc = null;
+        checkShutdown();
         synchronized (partitions) {
             rc = partitions.get(partitionKey);
             if (rc == null) {
@@ -68,19 +72,38 @@ abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource
         return rc;
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.apache.activemq.queue.IQueue#setDispatchPriority(int)
+     */
+    public void setDispatchPriority(int priority) {
+        synchronized (this) {
+            if (basePriority != priority) {
+                basePriority = priority;
+                if (!shutdown) {
+                    for (IQueue<K, V> queue : partitions.values()) {
+                        queue.setDispatchPriority(basePriority);
+                    }
+                }
+            }
+        }
+    }
+
     public int getEnqueuedCount() {
+        checkShutdown();
         synchronized (partitions) {
+
             int count = 0;
             for (IQueue<K, V> queue : partitions.values()) {
-                if (queue != null) {
-                    count += queue.getEnqueuedCount();
-                }
+                count += queue.getEnqueuedCount();
             }
             return count;
         }
     }
 
     public synchronized long getEnqueuedSize() {
+        checkShutdown();
         synchronized (partitions) {
             long size = 0;
             for (IQueue<K, V> queue : partitions.values()) {
@@ -107,10 +130,12 @@ abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource
     abstract public IQueue<K, V> createPartition(int partitionKey);
 
     public void addPartition(int partitionKey, IQueue<K, V> queue) {
+        checkShutdown();
         synchronized (partitions) {
             partitions.put(partitionKey, queue);
             for (Subscription<V> sub : subscriptions) {
                 queue.addSubscription(sub);
+                queue.setDispatchPriority(basePriority);
             }
         }
     }
@@ -124,6 +149,7 @@ abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource
 
     public synchronized void start() {
         if (!started) {
+            checkShutdown();
             started = true;
             for (IQueue<K, V> partition : partitions.values()) {
                 if (partition != null)
@@ -142,7 +168,27 @@ abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource
         }
     }
 
+    public void shutdown(boolean sync) {
+        HashMap<Integer, IQueue<K, V>> partitions = null;
+        synchronized (this) {
+            if (!shutdown) {
+                shutdown = true;
+                started = false;
+            }
+            partitions = this.partitions;
+            this.partitions = null;
+        }
+
+        if (partitions != null) {
+            for (IQueue<K, V> partition : partitions.values()) {
+                if (partition != null)
+                    partition.shutdown(sync);
+            }
+        }
+    }
+
     public void addSubscription(Subscription<V> sub) {
+        checkShutdown();
         synchronized (partitions) {
             subscriptions.add(sub);
             Collection<IQueue<K, V>> values = partitions.values();
@@ -153,6 +199,7 @@ abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource
     }
 
     public boolean removeSubscription(Subscription<V> sub) {
+        checkShutdown();
         synchronized (partitions) {
             if (subscriptions.remove(sub)) {
                 Collection<IQueue<K, V>> values = partitions.values();
@@ -186,12 +233,19 @@ abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource
     }
 
     public void setDispatcher(IDispatcher dispatcher) {
+        checkShutdown();
         this.dispatcher = dispatcher;
         synchronized (partitions) {
             Collection<IQueue<K, V>> values = partitions.values();
             for (IQueue<K, V> queue : values) {
                 queue.setDispatcher(dispatcher);
             }
+        }
+    }
+
+    private void checkShutdown() {
+        if (shutdown) {
+            throw new IllegalStateException(this + " is shutdown");
         }
     }
 }

@@ -427,6 +427,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
                 selector = parseSelector(info);
             limiter = new WindowLimiter<MessageDelivery>(true, flow, info.getPrefetchSize(), info.getPrefetchSize() / 2) {
+                @Override
                 public int getElementSize(MessageDelivery m) {
                     return m.getFlowLimiterSize();
                 }

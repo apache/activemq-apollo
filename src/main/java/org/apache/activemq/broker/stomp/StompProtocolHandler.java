@@ -304,6 +304,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
             if (ackMode != StompSubscription.AUTO_ACK) {
                 Flow flow = new Flow("broker-" + subscriptionId + "-outbound", false);
                 limiter = new WindowLimiter<MessageDelivery>(true, flow, connection.getOutputWindowSize(), connection.getOutputResumeThreshold()) {
+                    @Override
                     public int getElementSize(MessageDelivery m) {
                         return m.getFlowLimiterSize();
                     }

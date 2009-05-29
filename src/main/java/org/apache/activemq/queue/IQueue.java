@@ -21,7 +21,7 @@ import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.queue.QueueStore.PersistentQueue;
 import org.apache.activemq.util.Mapper;
 
-public interface IQueue<K, V> extends IFlowSink<V>, PersistentQueue<K,V>{
+public interface IQueue<K, V> extends IFlowSink<V>, PersistentQueue<K, V> {
 
     /**
      * @return the number of elements currently held by the queue.
@@ -51,14 +51,14 @@ public interface IQueue<K, V> extends IFlowSink<V>, PersistentQueue<K,V>{
     public boolean removeSubscription(Subscription<V> sub);
 
     /**
-     * Sets a mapper returning the expiration time for elements in this 
-     * queue. A positive value indicates that the message has an expiration
-     * time. 
+     * Sets a mapper returning the expiration time for elements in this queue. A
+     * positive value indicates that the message has an expiration time.
      * 
-     * @param expirationMapper The expiration mapper.
+     * @param expirationMapper
+     *            The expiration mapper.
      */
     public void setExpirationMapper(Mapper<Long, V> expirationMapper);
-    
+
     /**
      * Sets the dispatcher for the queue.
      * 
@@ -66,6 +66,18 @@ public interface IQueue<K, V> extends IFlowSink<V>, PersistentQueue<K,V>{
      *            The dispatcher to be used by the queue.
      */
     public void setDispatcher(IDispatcher dispatcher);
+
+    /**
+     * Sets the base dispatch priority for the queue. Setting to higher value
+     * will increase the preference with which the dispatcher dispatches the
+     * queue. If the queue itself is priority based, the queue may further
+     * increase it's dispatch priority based on the priority of elements that it
+     * holds.
+     * 
+     * @param priority
+     *            The base priority for the queue
+     */
+    public void setDispatchPriority(int priority);
 
     /**
      * Starts the queue.
@@ -80,5 +92,18 @@ public interface IQueue<K, V> extends IFlowSink<V>, PersistentQueue<K,V>{
      *            The dispatcher to be used by the queue.
      */
     public void stop();
+
+    /**
+     * The queue is stopped via {@link #stop()} then shutdown. Once shutdown an
+     * {@link IQueue} cannot be restarted. Attempts to manipulate the queue once
+     * the queue is shutdown will thrown an {@link IllegalStateException} unless
+     * otherwise documented.
+     * 
+     * @param sync
+     *            If true will cause the calling thread to block until all
+     *            resources held by the queue are cleaned up. Otherwise, the
+     *            queue shutdown will proceed asynchronously.
+     */
+    public void shutdown(boolean sync);
 
 }

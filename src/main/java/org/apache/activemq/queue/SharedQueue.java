@@ -56,7 +56,6 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
     // Limiter/Controller for the size of the queue:
     private FlowController<V> inputController;
     private final IFlowSizeLimiter<V> sizeLimiter;
-    private final boolean RELEASE_ON_ACQUISITION = true;
 
     private final QueueStore.QueueDescriptor queueDescriptor;
 
@@ -85,7 +84,6 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
     private final LinkedNodeList<SubscriptionContext> trailingConsumers = new LinkedNodeList<SubscriptionContext>();
 
     private boolean initialized = false;
-    private boolean started = false;
 
     private Mapper<Long, V> expirationMapper;
 
@@ -149,7 +147,6 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
 
                     @Override
                     protected int getElementSize(V elem) {
-                        // TODO Auto-generated method stub
                         return sizeLimiter.getElementSize(elem);
                     }
 
@@ -215,8 +212,9 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         FlowController<QueueElement<V>> controller = null;
         if (pageInElements && persistencePolicy.isPagingEnabled() && sizeLimiter.getCapacity() > persistencePolicy.getPagingInMemorySize()) {
             IFlowSizeLimiter<QueueElement<V>> limiter = new SizeLimiter<QueueElement<V>>(persistencePolicy.getPagingInMemorySize(), persistencePolicy.getPagingInMemorySize() / 2) {
+                @Override
                 public int getElementSize(QueueElement<V> qe) {
-                    return qe.size;
+                    return qe.getLimiterSize();
                 };
             };
 
@@ -264,11 +262,10 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
 
     final void acknowledge(QueueElement<V> qe) {
         synchronized (mutex) {
-            V elem = qe.getElement();
-            if (qe.delete()) {
-                if (!qe.acquired || !RELEASE_ON_ACQUISITION) {
-                    inputController.elementDispatched(elem);
-                }
+            qe.delete();
+            //If the element wasn't acqired release space:
+            if (!qe.isAcquired()) {
+                sizeLimiter.remove(1, qe.getLimiterSize());
             }
         }
     }
@@ -307,10 +304,10 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         }
     }
 
-    public void shutdown() {
+    public void shutdown(boolean sync) {
+        super.shutdown(sync);
         synchronized (mutex) {
-            stop();
-            sharedCursor.deactivate();
+            queue.shutdown(sync);
         }
     }
 
@@ -333,10 +330,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
     }
 
     public void flowElemAccepted(ISourceController<V> source, V elem) {
-        synchronized (mutex) {
-            // TODO should change flow controller to pass original source:
-            accepted(null, elem);
-        }
+        throw new UnsupportedOperationException("Flow Controller pass-through not supported");
     }
 
     private final void accepted(ISourceController<?> source, V elem) {
@@ -394,7 +388,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
             // Process shared consumers:
             if (!sharedConsumers.isEmpty()) {
                 QueueElement<V> next = sharedCursor.getNext();
-                
+
                 if (next != null) {
 
                     // See if there are any interested consumers:
@@ -639,21 +633,24 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                 return ACCEPTED;
             }
 
-            // If the sub doesn't remove on dispatch set an ack listener:
+            // If the sub doesn't remove on dispatch pass it the callback
             SubscriptionDeliveryCallback callback = sub.isRemoveOnDispatch(qe.elem) ? null : qe;
 
             // See if the sink has room:
+            qe.setAcquired(sub);
             if (sub.offer(qe.elem, this, callback)) {
                 if (!sub.isBrowser()) {
-                    qe.setAcquired(true);
-                    if (RELEASE_ON_ACQUISITION) {
-                        inputController.elementDispatched(qe.getElement());
-                    }
+
+                    sizeLimiter.remove(1, qe.getLimiterSize());
 
                     // If remove on dispatch acknowledge now:
                     if (callback == null) {
                         qe.acknowledge();
                     }
+                }
+                else
+                {
+                    qe.setAcquired(null);
                 }
 
                 // Advance our cursor:
@@ -661,6 +658,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
 
                 return ACCEPTED;
             } else {
+                qe.setAcquired(null);
                 // Remove from dispatch list until we are resumed:
                 if (DEBUG) {
                     System.out.println(this + " Declined: " + qe);
