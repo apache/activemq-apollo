@@ -30,7 +30,7 @@
   <name>ActiveMQ POM</name>
 
   <properties>
-    <activemq-version>5.3-SNAPSHOT</activemq-version>
+    <activemq-version>6.0-SNAPSHOT</activemq-version>
     <siteId>activemq-${activemq-version}</siteId>
     <projectName>Apache ActiveMQ</projectName>
     <!-- base url for site deployment.  See distribution management for full url.  Override this in settings.xml for staging -->
@@ -156,6 +156,61 @@
       <dependency>
         <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-all</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-bio</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-broker</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-dispatcher</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-flow</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-kaha</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-openwire</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-protocol</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-stomp</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-store</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-transport</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-util</artifactId>
         <version>${activemq-version}</version>
       </dependency>
 

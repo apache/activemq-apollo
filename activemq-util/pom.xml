@@ -32,13 +32,8 @@
   <name>ActiveMQ :: Util</name>
 
   <dependencies>
-  
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-core</artifactId>
-      <version>5.3-SNAPSHOT</version>
-    </dependency>   
-    
+        
+    <!-- Testing Dependencies -->    
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -50,65 +45,7 @@
       <artifactId>log4j</artifactId>
       <scope>test</scope>
     </dependency>
-  
-<!--   In case we want to look at mina..
-    <dependency>
-      <groupId>org.apache.mina</groupId>
-      <artifactId>mina-core</artifactId>
-      <version>2.0.0-M4</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-jcl</artifactId>
-    </dependency>
--->
-    
+      
   </dependencies>
-
-  <build>
-    <plugins>
-
-      <!-- Generate a test jar for the test cases in this package -->
-      <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>test-jar</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.activemq.protobuf</groupId>
-        <artifactId>activemq-protobuf</artifactId>
-        <configuration>
-          <type>alt</type>
-        </configuration>
-         <executions>
-          <execution>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <source>1.5</source>
-          <target>1.5</target>
-        </configuration>
-      </plugin>
-
-    </plugins>
-  </build>
 
 </project>

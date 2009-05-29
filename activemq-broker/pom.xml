@@ -35,44 +35,48 @@
   
     <dependency>
       <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-util</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-dispatcher</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-flow</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-protocol</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-transport</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-store</artifactId>
+    </dependency>
+
+    <!-- TODO: remove this dependency -->
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-core</artifactId>
       <version>5.3-SNAPSHOT</version>
     </dependency>
-    
-    <dependency>
-      <groupId>com.thoughtworks.xstream</groupId>
-      <artifactId>xstream</artifactId>
-      <optional>true</optional>
-    </dependency>        
-    
+
+    <!-- Testing Dependencies -->    
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-    
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
       <scope>test</scope>
     </dependency>
   
-<!--   In case we want to look at mina..
-    <dependency>
-      <groupId>org.apache.mina</groupId>
-      <artifactId>mina-core</artifactId>
-      <version>2.0.0-M4</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-jcl</artifactId>
-    </dependency>
--->
-    
   </dependencies>
 
   <build>
