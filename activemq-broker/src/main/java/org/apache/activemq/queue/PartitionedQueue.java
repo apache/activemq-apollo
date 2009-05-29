@@ -20,12 +20,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.queue.QueueStore.QueueDescriptor;
 import org.apache.activemq.util.Mapper;
 
 abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource<V> implements IPartitionedQueue<K, V> {
@@ -37,17 +37,17 @@ abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource
     protected IDispatcher dispatcher;
     private boolean started;
     private boolean shutdown = false;
-    protected QueueStore.QueueDescriptor queueDescriptor;
+    protected QueueDescriptor queueDescriptor;
     private int basePriority = 0;
 
     public PartitionedQueue(String name) {
         super(name);
-        queueDescriptor = new QueueStore.QueueDescriptor();
+        queueDescriptor = new QueueDescriptor();
         queueDescriptor.setQueueName(new AsciiBuffer(getResourceName()));
         queueDescriptor.setQueueType(QueueDescriptor.PARTITIONED);
     }
 
-    public QueueStore.QueueDescriptor getDescriptor() {
+    public QueueDescriptor getDescriptor() {
         return queueDescriptor;
     }
 

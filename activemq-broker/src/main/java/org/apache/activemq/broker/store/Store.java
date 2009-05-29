@@ -23,8 +23,6 @@ import java.util.Iterator;
 import org.apache.activemq.Service;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
-import org.apache.activemq.queue.QueueStore;
-import org.apache.activemq.queue.QueueStore.QueueDescriptor;
 
 /**
  * Interface to persistently store and access data needed by the messaging
@@ -286,7 +284,7 @@ public interface Store extends Service {
         /**
          * @return the descriptor for the queue.
          */
-        public QueueStore.QueueDescriptor getDescriptor();
+        public QueueDescriptor getDescriptor();
 
         /**
          * Gets the count of elements in this queue. Note that this does not
@@ -379,7 +377,7 @@ public interface Store extends Service {
 
         public void transactionAddMessage(Buffer txid, Long messageKey) throws KeyNotFoundException;
 
-        public void transactionRemoveMessage(Buffer txid, QueueStore.QueueDescriptor queueName, Long messageKey) throws KeyNotFoundException;
+        public void transactionRemoveMessage(Buffer txid, QueueDescriptor queueName, Long messageKey) throws KeyNotFoundException;
 
         public void transactionCommit(Buffer txid) throws KeyNotFoundException;
 
@@ -396,7 +394,7 @@ public interface Store extends Service {
          *            The maximum number of queues to return
          * @return The list of queues.
          */
-        public Iterator<QueueQueryResult> queueList(QueueStore.QueueDescriptor firstQueueName, int max);
+        public Iterator<QueueQueryResult> queueList(QueueDescriptor firstQueueName, int max);
 
         /**
          * Gets a list of queues for which
@@ -413,7 +411,7 @@ public interface Store extends Service {
          *            The type of queue to consider
          * @return The list of queues.
          */
-        public Iterator<QueueQueryResult> queueListByType(short type, QueueStore.QueueDescriptor firstQueueName, int max);
+        public Iterator<QueueQueryResult> queueListByType(short type, QueueDescriptor firstQueueName, int max);
 
         /**
          * Adds a queue. If {@link QueueDescriptor#getParent()} is specified
@@ -425,7 +423,7 @@ public interface Store extends Service {
          * @throws KeyNotFoundException
          *             if the descriptor specifies a non existent parent
          */
-        public void queueAdd(QueueStore.QueueDescriptor queue) throws KeyNotFoundException;
+        public void queueAdd(QueueDescriptor queue) throws KeyNotFoundException;
 
         /**
          * Deletes a queue and all of it's messages. If it has any child
@@ -434,7 +432,7 @@ public interface Store extends Service {
          * @param queue
          *            The queue to delete
          */
-        public void queueRemove(QueueStore.QueueDescriptor queue);
+        public void queueRemove(QueueDescriptor queue);
 
         /**
          * Adds a reference to the message for the given queue. The associated
@@ -449,11 +447,11 @@ public interface Store extends Service {
          *             If there is no message associated with
          *             {@link QueueRecord#getMessageKey()}
          */
-        public void queueAddMessage(QueueStore.QueueDescriptor queue, QueueRecord record) throws KeyNotFoundException;
+        public void queueAddMessage(QueueDescriptor queue, QueueRecord record) throws KeyNotFoundException;
 
-        public void queueRemoveMessage(QueueStore.QueueDescriptor queue, Long messageKey) throws KeyNotFoundException;
+        public void queueRemoveMessage(QueueDescriptor queue, Long messageKey) throws KeyNotFoundException;
 
-        public Iterator<QueueRecord> queueListMessagesQueue(QueueStore.QueueDescriptor queue, Long firstQueueKey, Long maxSequence, int max) throws KeyNotFoundException;
+        public Iterator<QueueRecord> queueListMessagesQueue(QueueDescriptor queue, Long firstQueueKey, Long maxSequence, int max) throws KeyNotFoundException;
 
         public Iterator<AsciiBuffer> mapList(AsciiBuffer first, int max);
 

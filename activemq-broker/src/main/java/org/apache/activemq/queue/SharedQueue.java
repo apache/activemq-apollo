@@ -18,6 +18,7 @@ package org.apache.activemq.queue;
 
 import java.util.HashMap;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
@@ -30,7 +31,6 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.CursoredQueue.Cursor;
 import org.apache.activemq.queue.CursoredQueue.CursorReadyListener;
 import org.apache.activemq.queue.CursoredQueue.QueueElement;
-import org.apache.activemq.queue.QueueStore.QueueDescriptor;
 import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
 import org.apache.activemq.util.Mapper;
 import org.apache.kahadb.util.LinkedNode;
@@ -57,7 +57,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
     private FlowController<V> inputController;
     private final IFlowSizeLimiter<V> sizeLimiter;
 
-    private final QueueStore.QueueDescriptor queueDescriptor;
+    private final QueueDescriptor queueDescriptor;
 
     private static final int ACCEPTED = 0;
     private static final int NO_MATCH = 1;
@@ -98,7 +98,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         this.mutex = mutex == null ? new Object() : mutex;
 
         flow = new Flow(getResourceName(), false);
-        queueDescriptor = new QueueStore.QueueDescriptor();
+        queueDescriptor = new QueueDescriptor();
         queueDescriptor.setQueueName(new AsciiBuffer(super.getResourceName()));
         queueDescriptor.setQueueType(QueueDescriptor.SHARED);
         this.sizeLimiter = sizeLimiter;
@@ -191,7 +191,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         }
     }
 
-    public QueueStore.QueueDescriptor getDescriptor() {
+    public QueueDescriptor getDescriptor() {
         return queueDescriptor;
     }
 

@@ -29,7 +29,6 @@ import org.apache.activemq.broker.store.Store.Session;
 import org.apache.activemq.broker.store.Store.VoidCallback;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
-import org.apache.activemq.queue.QueueStore;
 
 public abstract class StoreTestBase extends TestCase {
 
@@ -78,7 +77,7 @@ public abstract class StoreTestBase extends TestCase {
     }
 
     public void testQueueAdd() throws Exception {
-        final QueueStore.QueueDescriptor expected = new QueueStore.QueueDescriptor();
+        final QueueDescriptor expected = new QueueDescriptor();
         expected.setQueueName(new AsciiBuffer("testQueue"));
         expected.setApplicationType((short)1);
         
@@ -105,7 +104,7 @@ public abstract class StoreTestBase extends TestCase {
     }
     
     public void testQueueMessageAdd() throws Exception {
-        final QueueStore.QueueDescriptor queue = new QueueStore.QueueDescriptor();
+        final QueueDescriptor queue = new QueueDescriptor();
         queue.setQueueName(new AsciiBuffer("testQueue"));
         queue.setApplicationType((short)1);
         
@@ -146,7 +145,7 @@ public abstract class StoreTestBase extends TestCase {
         }
     }
 
-    private void checkQueue(final QueueStore.QueueDescriptor queue, final long expectedSize, final long expectedCount) throws FatalStoreException, Exception
+    private void checkQueue(final QueueDescriptor queue, final long expectedSize, final long expectedCount) throws FatalStoreException, Exception
     {
         store.execute(new VoidCallback<Exception>() {
             @Override
@@ -161,7 +160,7 @@ public abstract class StoreTestBase extends TestCase {
         }, null);
     }
     
-    private void checkMessageRestore(final QueueStore.QueueDescriptor queue, final QueueRecord qRecord, final MessageRecord message ) throws FatalStoreException, Exception
+    private void checkMessageRestore(final QueueDescriptor queue, final QueueRecord qRecord, final MessageRecord message ) throws FatalStoreException, Exception
     {
         store.execute(new VoidCallback<Exception>() {
             @Override
@@ -182,7 +181,7 @@ public abstract class StoreTestBase extends TestCase {
             store.execute(new VoidCallback<Exception>() {
                 @Override
                 public void run(Session session) throws Exception {
-                    QueueStore.QueueDescriptor qd = new QueueStore.QueueDescriptor();
+                    QueueDescriptor qd = new QueueDescriptor();
                     qd.setQueueName(new AsciiBuffer("test"));
                     session.queueAdd(qd);
                     throw new IOException("Expected");
@@ -214,7 +213,7 @@ public abstract class StoreTestBase extends TestCase {
         assertEquals(expected.getSize(), actual.getSize());
     }
     
-    static void assertEquals(QueueStore.QueueDescriptor expected, QueueStore.QueueDescriptor actual) {
+    static void assertEquals(QueueDescriptor expected, QueueDescriptor actual) {
         assertEquals(expected.getParent(), actual.getParent());
         assertEquals(expected.getQueueType(), actual.getQueueType());
         assertEquals(expected.getApplicationType(), actual.getApplicationType());

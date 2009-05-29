@@ -22,12 +22,11 @@ import java.util.Collection;
 import java.util.HashMap;
 
 import org.apache.activemq.broker.store.BrokerDatabase;
+import org.apache.activemq.broker.store.QueueDescriptor;
+import org.apache.activemq.broker.store.SaveableQueueElement;
 import org.apache.activemq.broker.store.BrokerDatabase.OperationContext;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.queue.QueueStore;
-import org.apache.activemq.queue.QueueStore.QueueDescriptor;
-import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 
 public abstract class BrokerMessageDelivery implements MessageDelivery {
 
@@ -40,7 +39,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
 
     // List of persistent targets for which the message should be saved
     // when dispatch is complete:
-    HashMap<QueueStore.QueueDescriptor, SaveableQueueElement<MessageDelivery>> persistentTargets;
+    HashMap<QueueDescriptor, SaveableQueueElement<MessageDelivery>> persistentTargets;
     SaveableQueueElement<MessageDelivery> singleTarget;
 
     long storeTracking = -1;
@@ -102,7 +101,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
         store.saveMessage(elem, controller, delayable);
     }
 
-    public final void acknowledge(QueueStore.QueueDescriptor queue) {
+    public final void acknowledge(QueueDescriptor queue) {
         boolean firePersistListener = false;
         boolean deleted = false;
         synchronized (this) {
@@ -194,7 +193,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
         }
 
         if (elem.getQueueDescriptor() != singleTarget.getQueueDescriptor()) {
-            persistentTargets = new HashMap<QueueStore.QueueDescriptor, SaveableQueueElement<MessageDelivery>>();
+            persistentTargets = new HashMap<QueueDescriptor, SaveableQueueElement<MessageDelivery>>();
             persistentTargets.put(elem.getQueueDescriptor(), elem);
             persistentTargets.put(singleTarget.getQueueDescriptor(), singleTarget);
             singleTarget = null;

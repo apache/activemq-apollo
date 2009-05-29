@@ -25,12 +25,12 @@ import java.util.LinkedList;
 import java.util.TreeMap;
 import java.util.Map.Entry;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.Store.KeyNotFoundException;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
 import org.apache.activemq.broker.store.kahadb.Data.MessageAdd;
 import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.queue.QueueStore;
 import org.apache.kahadb.index.BTreeIndex;
 import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.page.Page;
@@ -174,7 +174,7 @@ public class RootEntity {
      *             If the parent queue could not be found.
      */
     private void addToDestinationCache(DestinationEntity entity) throws KeyNotFoundException {
-        QueueStore.QueueDescriptor queue = entity.getDescriptor();
+        QueueDescriptor queue = entity.getDescriptor();
 
         // If loaded add a reference to us from the parent:
         if (loaded) {
@@ -191,7 +191,7 @@ public class RootEntity {
     }
 
     private void removeFromDestinationCache(DestinationEntity entity) {
-        QueueStore.QueueDescriptor queue = entity.getDescriptor();
+        QueueDescriptor queue = entity.getDescriptor();
 
         // If the queue is loaded remove the parent reference:
         if (loaded) {
@@ -210,7 +210,7 @@ public class RootEntity {
      */
     private void constructQueueHierarchy() throws KeyNotFoundException {
         for (DestinationEntity destination : destinations.values()) {
-            QueueStore.QueueDescriptor queue = destination.getDescriptor();
+            QueueDescriptor queue = destination.getDescriptor();
             if (queue.getParent() != null) {
                 DestinationEntity parent = destinations.get(queue.getParent());
                 if (parent == null) {
@@ -298,7 +298,7 @@ public class RootEntity {
     // /////////////////////////////////////////////////////////////////
     // Queue Methods.
     // /////////////////////////////////////////////////////////////////
-    public void queueAdd(Transaction tx, QueueStore.QueueDescriptor queue) throws IOException {
+    public void queueAdd(Transaction tx, QueueDescriptor queue) throws IOException {
         if (destinationIndex.get(tx, queue.getQueueName()) == null) {
             DestinationEntity rc = new DestinationEntity();
             rc.setQueueDescriptor(queue);
@@ -313,7 +313,7 @@ public class RootEntity {
         }
     }
 
-    public void queueRemove(Transaction tx, QueueStore.QueueDescriptor queue) throws IOException {
+    public void queueRemove(Transaction tx, QueueDescriptor queue) throws IOException {
         DestinationEntity destination = destinations.get(queue.getQueueName());
         if (destination != null) {
             // Remove the message references.
@@ -329,11 +329,11 @@ public class RootEntity {
         }
     }
 
-    public DestinationEntity getDestination(QueueStore.QueueDescriptor queue) {
+    public DestinationEntity getDestination(QueueDescriptor queue) {
         return destinations.get(queue.getQueueName());
     }
 
-    public Iterator<QueueQueryResult> queueList(Transaction tx, short type, QueueStore.QueueDescriptor firstQueue, int max) throws IOException {
+    public Iterator<QueueQueryResult> queueList(Transaction tx, short type, QueueDescriptor firstQueue, int max) throws IOException {
         LinkedList<QueueQueryResult> results = new LinkedList<QueueQueryResult>();
         Collection<DestinationEntity> values = (firstQueue == null ? destinations.values() : destinations.tailMap(firstQueue.getQueueName()).values());
 
@@ -394,14 +394,14 @@ public class RootEntity {
 
     private static class QueueQueryResultImpl implements QueueQueryResult {
 
-        QueueStore.QueueDescriptor desc;
+        QueueDescriptor desc;
         Collection<QueueQueryResult> partitions;
         long size;
         int count;
         long firstSequence;
         long lastSequence;
 
-        public QueueStore.QueueDescriptor getDescriptor() {
+        public QueueDescriptor getDescriptor() {
             return desc;
         }
 

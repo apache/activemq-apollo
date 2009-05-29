@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import java.io.File;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
@@ -89,17 +90,17 @@ public class MemoryStore implements Store {
     }
 
     static private class StoredQueue {
-        QueueStore.QueueDescriptor descriptor;
+        QueueDescriptor descriptor;
 
         TreeMap<Long, QueueRecord> records = new TreeMap<Long, QueueRecord>(Comparators.LONG_COMPARATOR);
         // Maps tracking to sequence number:
         HashMap<Long, Long> trackingMap = new HashMap<Long, Long>();
         int count = 0;
         long size = 0;
-        HashMap<QueueStore.QueueDescriptor, StoredQueue> partitions;
+        HashMap<QueueDescriptor, StoredQueue> partitions;
         StoredQueue parent;
 
-        StoredQueue(QueueStore.QueueDescriptor descriptor) {
+        StoredQueue(QueueDescriptor descriptor) {
             this.descriptor = descriptor.copy();
         }
 
@@ -161,7 +162,7 @@ public class MemoryStore implements Store {
 
         public void addPartition(StoredQueue child) {
             if (partitions == null) {
-                partitions = new HashMap<QueueStore.QueueDescriptor, StoredQueue>();
+                partitions = new HashMap<QueueDescriptor, StoredQueue>();
             }
 
             partitions.put(child.getDescriptor(), child);
@@ -191,7 +192,7 @@ public class MemoryStore implements Store {
             return descriptor.getQueueName();
         }
 
-        public QueueStore.QueueDescriptor getDescriptor() {
+        public QueueDescriptor getDescriptor() {
             return descriptor;
         }
 
@@ -216,10 +217,10 @@ public class MemoryStore implements Store {
     }
 
     static private class RemoveOp {
-        QueueStore.QueueDescriptor queue;
+        QueueDescriptor queue;
         Long messageKey;
 
-        public RemoveOp(QueueStore.QueueDescriptor queue, Long messageKey) {
+        public RemoveOp(QueueDescriptor queue, Long messageKey) {
             this.queue = queue;
             this.messageKey = messageKey;
         }
@@ -245,7 +246,7 @@ public class MemoryStore implements Store {
             adds.add(messageKey);
         }
 
-        public void removeMessage(QueueStore.QueueDescriptor queue, Long messageKey) {
+        public void removeMessage(QueueDescriptor queue, Long messageKey) {
             removes.add(new RemoveOp(queue, messageKey));
         }
     }
@@ -261,14 +262,14 @@ public class MemoryStore implements Store {
 
     private static class QueueQueryResultImpl implements QueueQueryResult {
 
-        QueueStore.QueueDescriptor desc;
+        QueueDescriptor desc;
         Collection<QueueQueryResult> partitions;
         long size;
         int count;
         long firstSequence;
         long lastSequence;
 
-        public QueueStore.QueueDescriptor getDescriptor() {
+        public QueueDescriptor getDescriptor() {
             return desc;
         }
 
@@ -336,7 +337,7 @@ public class MemoryStore implements Store {
         // //////////////////////////////////////////////////////////////////////////////
         // Queue related methods.
         // ///////////////////////////////////////////////////////////////////////////////
-        public void queueAdd(QueueStore.QueueDescriptor desc) throws KeyNotFoundException {
+        public void queueAdd(QueueDescriptor desc) throws KeyNotFoundException {
             StoredQueue queue = queues.get(desc.getQueueName());
             if (queue == null) {
                 queue = new StoredQueue(desc);
@@ -359,7 +360,7 @@ public class MemoryStore implements Store {
             }
         }
 
-        public void queueRemove(QueueStore.QueueDescriptor desc) {
+        public void queueRemove(QueueDescriptor desc) {
             StoredQueue queue = queues.get(desc.getQueueName());
             if (queue != null) {
                 // Remove message references:
@@ -377,7 +378,7 @@ public class MemoryStore implements Store {
                 Iterator<StoredQueue> partitions = queue.getPartitions();
                 if (partitions != null) {
                     while (partitions.hasNext()) {
-                        QueueStore.QueueDescriptor child = partitions.next().getDescriptor();
+                        QueueDescriptor child = partitions.next().getDescriptor();
                         queueRemove(child);
                     }
                 }
@@ -388,15 +389,15 @@ public class MemoryStore implements Store {
         }
 
         // Queue related methods.
-        public Iterator<QueueQueryResult> queueListByType(short type, QueueStore.QueueDescriptor firstQueue, int max) {
+        public Iterator<QueueQueryResult> queueListByType(short type, QueueDescriptor firstQueue, int max) {
             return queueListInternal(firstQueue, type, max);
         }
 
-        public Iterator<QueueQueryResult> queueList(QueueStore.QueueDescriptor firstQueue, int max) {
+        public Iterator<QueueQueryResult> queueList(QueueDescriptor firstQueue, int max) {
             return queueListInternal(firstQueue, (short) -1, max);
         }
 
-        private Iterator<QueueQueryResult> queueListInternal(QueueStore.QueueDescriptor firstQueue, short type, int max) {
+        private Iterator<QueueQueryResult> queueListInternal(QueueDescriptor firstQueue, short type, int max) {
             Collection<StoredQueue> tailResults;
             LinkedList<QueueQueryResult> results = new LinkedList<QueueQueryResult>();
             if (firstQueue == null) {
@@ -418,7 +419,7 @@ public class MemoryStore implements Store {
             return results.iterator();
         }
 
-        public void queueAddMessage(QueueStore.QueueDescriptor queue, QueueRecord record) throws KeyNotFoundException {
+        public void queueAddMessage(QueueDescriptor queue, QueueRecord record) throws KeyNotFoundException {
             get(queues, queue.getQueueName()).add(record);
             MessageRecordHolder holder = messages.get(record.getMessageKey());
             if (holder != null) {
@@ -426,7 +427,7 @@ public class MemoryStore implements Store {
             }
         }
 
-        public void queueRemoveMessage(QueueStore.QueueDescriptor queue, Long msgKey) throws KeyNotFoundException {
+        public void queueRemoveMessage(QueueDescriptor queue, Long msgKey) throws KeyNotFoundException {
             if (get(queues, queue.getQueueName()).remove(msgKey)) {
                 deleteMessageReference(msgKey);
             }
@@ -442,7 +443,7 @@ public class MemoryStore implements Store {
             }
         }
 
-        public Iterator<QueueRecord> queueListMessagesQueue(QueueStore.QueueDescriptor queue, Long firstQueueKey, Long maxQueueKey, int max) throws KeyNotFoundException {
+        public Iterator<QueueRecord> queueListMessagesQueue(QueueDescriptor queue, Long firstQueueKey, Long maxQueueKey, int max) throws KeyNotFoundException {
             return get(queues, queue.getQueueName()).list(firstQueueKey, maxQueueKey, max);
         }
 
@@ -534,7 +535,7 @@ public class MemoryStore implements Store {
             }
         }
 
-        public void transactionRemoveMessage(Buffer txid, QueueStore.QueueDescriptor queue, Long messageKey) throws KeyNotFoundException {
+        public void transactionRemoveMessage(Buffer txid, QueueDescriptor queue, Long messageKey) throws KeyNotFoundException {
             get(transactions, txid).removeMessage(queue, messageKey);
             MessageRecordHolder holder = messages.get(messageKey);
             if (holder != null) {

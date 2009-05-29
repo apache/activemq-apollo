@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.kahadb.Data.MessageAdd;
 import org.apache.activemq.broker.store.kahadb.Data.QueueAdd;
@@ -49,7 +50,6 @@ import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.protobuf.InvalidProtocolBufferException;
 import org.apache.activemq.protobuf.MessageBuffer;
 import org.apache.activemq.protobuf.PBMessage;
-import org.apache.activemq.queue.QueueStore;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.kahadb.journal.Journal;
@@ -800,7 +800,7 @@ public class KahaDBStore implements Store {
     }
 
     private void queueAdd(Transaction tx, QueueAdd command, Location location) throws IOException {
-        QueueStore.QueueDescriptor qd = new QueueStore.QueueDescriptor();
+        QueueDescriptor qd = new QueueDescriptor();
         qd.setQueueName(command.getQueueName());
         qd.setApplicationType((short) command.getApplicationType());
         qd.setQueueType((short) command.getQueueType());
@@ -813,13 +813,13 @@ public class KahaDBStore implements Store {
     }
 
     private void queueRemove(Transaction tx, QueueRemove command, Location location) throws IOException {
-        QueueStore.QueueDescriptor qd = new QueueStore.QueueDescriptor();
+        QueueDescriptor qd = new QueueDescriptor();
         qd.setQueueName(command.getQueueName());
         rootEntity.queueRemove(tx, qd);
     }
 
     private void queueAddMessage(Transaction tx, QueueAddMessage command, Location location) throws IOException {
-        QueueStore.QueueDescriptor qd = new QueueStore.QueueDescriptor();
+        QueueDescriptor qd = new QueueDescriptor();
         qd.setQueueName(command.getQueueName());
         DestinationEntity destination = rootEntity.getDestination(qd);
         if (destination != null) {
@@ -835,7 +835,7 @@ public class KahaDBStore implements Store {
     }
 
     private void queueRemoveMessage(Transaction tx, QueueRemoveMessage command, Location location) throws IOException {
-        QueueStore.QueueDescriptor qd = new QueueStore.QueueDescriptor();
+        QueueDescriptor qd = new QueueDescriptor();
         qd.setQueueName(command.getQueueName());
         DestinationEntity destination = rootEntity.getDestination(qd);
         if (destination != null) {
@@ -945,7 +945,7 @@ public class KahaDBStore implements Store {
         // /////////////////////////////////////////////////////////////
         // Queue related methods.
         // /////////////////////////////////////////////////////////////
-        public void queueAdd(QueueStore.QueueDescriptor descriptor) {
+        public void queueAdd(QueueDescriptor descriptor) {
             QueueAddBean update = new QueueAddBean();
             update.setQueueName(descriptor.getQueueName());
             update.setQueueType(descriptor.getQueueType());
@@ -958,11 +958,11 @@ public class KahaDBStore implements Store {
             updates.add(update);
         }
 
-        public void queueRemove(QueueStore.QueueDescriptor descriptor) {
+        public void queueRemove(QueueDescriptor descriptor) {
             updates.add(new QueueRemoveBean().setQueueName(descriptor.getQueueName()));
         }
 
-        public Iterator<QueueQueryResult> queueListByType(short type, QueueStore.QueueDescriptor firstQueue, int max) {
+        public Iterator<QueueQueryResult> queueListByType(short type, QueueDescriptor firstQueue, int max) {
             try {
                 return rootEntity.queueList(tx(), type, firstQueue, max);
             } catch (IOException e) {
@@ -970,7 +970,7 @@ public class KahaDBStore implements Store {
             }
         }
 
-        public Iterator<QueueQueryResult> queueList(QueueStore.QueueDescriptor firstQueue, int max) {
+        public Iterator<QueueQueryResult> queueList(QueueDescriptor firstQueue, int max) {
             try {
                 return rootEntity.queueList(tx(), (short) -1, firstQueue, max);
             } catch (IOException e) {
@@ -978,7 +978,7 @@ public class KahaDBStore implements Store {
             }
         }
 
-        public void queueAddMessage(QueueStore.QueueDescriptor queue, QueueRecord record) throws KeyNotFoundException {
+        public void queueAddMessage(QueueDescriptor queue, QueueRecord record) throws KeyNotFoundException {
             QueueAddMessageBean bean = new QueueAddMessageBean();
             bean.setQueueName(queue.getQueueName());
             bean.setQueueKey(record.getQueueKey());
@@ -990,14 +990,14 @@ public class KahaDBStore implements Store {
             updates.add(bean);
         }
 
-        public void queueRemoveMessage(QueueStore.QueueDescriptor queue, Long messageKey) throws KeyNotFoundException {
+        public void queueRemoveMessage(QueueDescriptor queue, Long messageKey) throws KeyNotFoundException {
             QueueRemoveMessageBean bean = new QueueRemoveMessageBean();
             bean.setMessageKey(messageKey);
             bean.setQueueName(queue.getQueueName());
             updates.add(bean);
         }
 
-        public Iterator<QueueRecord> queueListMessagesQueue(QueueStore.QueueDescriptor queue, Long firstQueueKey, Long maxQueueKey, int max) throws KeyNotFoundException {
+        public Iterator<QueueRecord> queueListMessagesQueue(QueueDescriptor queue, Long firstQueueKey, Long maxQueueKey, int max) throws KeyNotFoundException {
             DestinationEntity destination = rootEntity.getDestination(queue);
             if (destination == null) {
                 throw new KeyNotFoundException("queue key: " + queue);
@@ -1077,7 +1077,7 @@ public class KahaDBStore implements Store {
             return null;
         }
 
-        public void transactionRemoveMessage(Buffer txid, QueueStore.QueueDescriptor queueName, Long messageKey) throws KeyNotFoundException {
+        public void transactionRemoveMessage(Buffer txid, QueueDescriptor queueName, Long messageKey) throws KeyNotFoundException {
         }
 
         public void transactionRollback(Buffer txid) throws KeyNotFoundException {

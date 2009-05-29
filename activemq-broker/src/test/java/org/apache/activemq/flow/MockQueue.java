@@ -5,6 +5,9 @@ package org.apache.activemq.flow;
 
 import java.util.HashMap;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
+import org.apache.activemq.broker.store.RestoreListener;
+import org.apache.activemq.broker.store.SaveableQueueElement;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.MockBroker.DeliveryTarget;
 import org.apache.activemq.queue.IQueue;
@@ -197,7 +200,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
 
         }
 
-        public final void deleteQueueElement(QueueStore.QueueDescriptor descriptor, Message elem) {
+        public final void deleteQueueElement(QueueDescriptor descriptor, Message elem) {
 
         }
 
@@ -209,15 +212,15 @@ class MockQueue implements MockBroker.DeliveryTarget {
             // Noop;
         }
 
-        public final void restoreQueueElements(QueueStore.QueueDescriptor queue, boolean recordsOnly, long firstSequence, long maxSequence, int maxCount, QueueStore.RestoreListener<Message> listener) {
+        public final void restoreQueueElements(QueueDescriptor queue, boolean recordsOnly, long firstSequence, long maxSequence, int maxCount, RestoreListener<Message> listener) {
             throw new UnsupportedOperationException("Mock broker doesn't support persistence");
         }
 
-        public final void addQueue(QueueStore.QueueDescriptor queue) {
+        public final void addQueue(QueueDescriptor queue) {
 
         }
 
-        public final void deleteQueue(QueueStore.QueueDescriptor queue) {
+        public final void deleteQueue(QueueDescriptor queue) {
 
         }
 

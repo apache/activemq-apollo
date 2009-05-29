@@ -20,12 +20,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.PrioritySizeLimiter;
 import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.queue.QueueStore.QueueDescriptor;
 import org.apache.activemq.util.Mapper;
 
 public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> implements IPartitionedQueue<K, V> {
@@ -40,14 +40,14 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
     private QueueStore<K, V> store;
     private PersistencePolicy<V> persistencePolicy;
     private boolean started;
-    private QueueStore.QueueDescriptor queueDescriptor;
+    private QueueDescriptor queueDescriptor;
     private Mapper<Long, V> expirationMapper;
     private int basePriority = 0;
     private boolean shutdown = false;
 
     public SharedPriorityQueue(String name, PrioritySizeLimiter<V> limiter) {
         super(name);
-        queueDescriptor = new QueueStore.QueueDescriptor();
+        queueDescriptor = new QueueDescriptor();
         queueDescriptor.setQueueName(new AsciiBuffer(super.getResourceName()));
         queueDescriptor.setQueueType(QueueDescriptor.SHARED_PRIORITY);
         this.limiter = limiter;
@@ -234,7 +234,7 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
         }
     }
 
-    public QueueStore.QueueDescriptor getDescriptor() {
+    public QueueDescriptor getDescriptor() {
         return queueDescriptor;
     }
 

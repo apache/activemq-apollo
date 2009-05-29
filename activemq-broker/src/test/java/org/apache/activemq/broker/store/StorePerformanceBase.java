@@ -31,7 +31,6 @@ import org.apache.activemq.metric.MetricCounter;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
-import org.apache.activemq.queue.QueueStore;
 
 public abstract class StorePerformanceBase extends TestCase {
 
@@ -40,7 +39,7 @@ public abstract class StorePerformanceBase extends TestCase {
     
     
     private Store store;
-    private QueueStore.QueueDescriptor queueId;
+    private QueueDescriptor queueId;
 
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
     protected MetricAggregator totalConsumerRate = new MetricAggregator().name("Aggregate Consumer Rate").unit("items");
@@ -55,7 +54,7 @@ public abstract class StorePerformanceBase extends TestCase {
         store = createStore();
         store.start();
         
-        queueId = new QueueStore.QueueDescriptor();
+        queueId = new QueueDescriptor();
         queueId.setQueueName(new AsciiBuffer("test"));
         store.execute(new VoidCallback<Exception>() {
             @Override

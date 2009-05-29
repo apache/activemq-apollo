@@ -16,225 +16,15 @@
  */
 package org.apache.activemq.queue;
 
-import java.util.Collection;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
+import org.apache.activemq.broker.store.RestoreListener;
+import org.apache.activemq.broker.store.SaveableQueueElement;
 import org.apache.activemq.broker.store.BrokerDatabase.OperationContext;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.protobuf.AsciiBuffer;
 
 public interface QueueStore<K, V> {
 
-    public interface SaveableQueueElement<V> {
-
-        /**
-         * @return the descriptor of the queue for which the element should be
-         *         saved.
-         */
-        public QueueDescriptor getQueueDescriptor();
-
-        /**
-         * @return the element to save.
-         */
-        public V getElement();
-
-        /**
-         * @return the sequence number of the element in the queue
-         * 
-         * 
-         */
-        public long getSequenceNumber();
-
-        /**
-         * @return a return value of true will cause {@link #notifySave()} to
-         *         called when this element is persisted
-         */
-        public boolean requestSaveNotify();
-
-        /**
-         * Called when the element has been saved.
-         */
-        public void notifySave();
-
-    }
-
-    /**
-     * A holder for queue elements loaded from the store.
-     * 
-     */
-    public interface RestoredElement<V> {
-        /**
-         * @return Gets the restored element (possibly null if not requested)
-         * @throws Exception
-         */
-        public V getElement() throws Exception;
-
-        /**
-         * @return The element size.
-         */
-        int getElementSize();
-
-        /**
-         * @return A positive values indicating the expiration time if this
-         *         element is expirable.
-         */
-        long getExpiration();
-
-        /**
-         * Returns the sequence number of this element in the queue
-         * 
-         * @return the sequence number of this element
-         */
-        long getSequenceNumber();
-
-        /**
-         * Gets the tracking number of the stored message.
-         * 
-         * @return the next sequence number
-         */
-        long getStoreTracking();
-
-        /**
-         * Gets the next sequence number in the queue after this one or -1 if
-         * this is the last stored element
-         * 
-         * @return the next sequence number
-         */
-        long getNextSequenceNumber();
-    }
-
-    /**
-     * A callback to be used with {@link #elementsRestored(Collection)} to pass
-     * the results of a call to
-     * {@link QueueStore#restoreQueueElements(QueueDescriptor, long, long, int, RestoreListener)}
-     */
-    public interface RestoreListener<V> {
-
-        public void elementsRestored(Collection<RestoredElement<V>> restored);
-    }
-
-    public static class QueueDescriptor {
-
-        public static final short SHARED = 0;
-        public static final short SHARED_PRIORITY = 1;
-        public static final short PARTITIONED = 2;
-        public static final short EXCLUSIVE = 4;
-        public static final short EXCLUSIVE_PRIORITY = 5;
-        
-        AsciiBuffer queueName;
-        AsciiBuffer parent;
-        int partitionKey;
-        short applicationType;
-        short queueType = SHARED;
-
-        public QueueDescriptor() {
-        }
-
-        public QueueDescriptor(QueueDescriptor toCopy) {
-            if (toCopy == null) {
-                return;
-            }
-            queueName = toCopy.queueName;
-            applicationType = toCopy.applicationType;
-            queueType = toCopy.queueType;
-            partitionKey = toCopy.partitionKey;
-            parent = toCopy.parent;
-        }
-
-        public QueueDescriptor copy() {
-            return new QueueDescriptor(this);
-        }
-
-        public int getPartitionKey() {
-            return partitionKey;
-        }
-
-        public void setPartitionId(int key) {
-            this.partitionKey = key;
-        }
-
-        /**
-         * Sets the queue type which is useful for querying of queues. The value
-         * must not be less than 0.
-         * 
-         * @param type
-         *            The type of the queue.
-         */
-        public void setApplicationType(short type) {
-            if (type < 0) {
-                throw new IllegalArgumentException();
-            }
-            applicationType = type;
-        }
-
-        /**
-         * @param type
-         *            The type of the queue.
-         */
-        public short getApplicationType() {
-            return applicationType;
-        }
-
-        public short getQueueType() {
-            return queueType;
-        }
-
-        public void setQueueType(short type) {
-            queueType = type;
-        }
-
-        /**
-         * If this queue is a partition of a parent queue, this should be set to
-         * the parent queue's name.
-         * 
-         * @return The parent queue's name
-         */
-        public AsciiBuffer getParent() {
-            return parent;
-        }
-
-        /**
-         * If this queue is a partition of a parent queue, this should be set to
-         * the parent queue's name.
-         */
-        public void setParent(AsciiBuffer parent) {
-            this.parent = parent;
-        }
-
-        public AsciiBuffer getQueueName() {
-            return queueName;
-        }
-
-        public void setQueueName(AsciiBuffer queueName) {
-            this.queueName = queueName;
-        }
-
-        public int hashCode() {
-            return queueName.hashCode();
-        }
-
-        public boolean equals(Object o) {
-            if (o == null) {
-                return false;
-            }
-            if (o == this) {
-                return true;
-            }
-
-            if (o instanceof QueueDescriptor) {
-                return equals((QueueDescriptor) o);
-            } else {
-                return false;
-            }
-        }
-
-        public boolean equals(QueueDescriptor qd) {
-            if (qd.queueName.equals(queueName)) {
-                return true;
-            }
-            return false;
-        }
-    }
-    
     public interface PersistentQueue<K, V>
     {
         /**
@@ -276,7 +66,7 @@ public interface QueueStore<K, V> {
          * 
          * @return The queue descriptor.
          */
-        public QueueStore.QueueDescriptor getDescriptor();
+        public QueueDescriptor getDescriptor();
 
     }
 

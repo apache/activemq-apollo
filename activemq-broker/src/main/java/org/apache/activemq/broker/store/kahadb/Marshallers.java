@@ -20,10 +20,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
-import org.apache.activemq.queue.QueueStore;
 import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.util.Marshaller;
 import org.apache.kahadb.util.VariableMarshaller;
@@ -123,10 +123,10 @@ public class Marshallers {
         }
     };
 
-    public final static Marshaller<QueueStore.QueueDescriptor> QUEUE_DESCRIPTOR_MARSHALLER = new VariableMarshaller<QueueStore.QueueDescriptor>() {
+    public final static Marshaller<QueueDescriptor> QUEUE_DESCRIPTOR_MARSHALLER = new VariableMarshaller<QueueDescriptor>() {
 
-        public QueueStore.QueueDescriptor readPayload(DataInput dataIn) throws IOException {
-            QueueStore.QueueDescriptor descriptor = new QueueStore.QueueDescriptor();
+        public QueueDescriptor readPayload(DataInput dataIn) throws IOException {
+            QueueDescriptor descriptor = new QueueDescriptor();
             descriptor.setQueueType(dataIn.readShort());
             descriptor.setApplicationType(dataIn.readShort());
             descriptor.setQueueName(ASCII_BUFFER_MARSHALLER.readPayload(dataIn));
@@ -137,7 +137,7 @@ public class Marshallers {
             return descriptor;
         }
 
-        public void writePayload(QueueStore.QueueDescriptor object, DataOutput dataOut) throws IOException {
+        public void writePayload(QueueDescriptor object, DataOutput dataOut) throws IOException {
             dataOut.writeShort(object.getQueueType());
             dataOut.writeShort(object.getApplicationType());
             ASCII_BUFFER_MARSHALLER.writePayload(object.getQueueName(), dataOut);

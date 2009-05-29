@@ -24,14 +24,14 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map.Entry;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
+import org.apache.activemq.broker.store.RestoreListener;
+import org.apache.activemq.broker.store.RestoredElement;
+import org.apache.activemq.broker.store.SaveableQueueElement;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.queue.QueueStore.QueueDescriptor;
-import org.apache.activemq.queue.QueueStore.RestoreListener;
-import org.apache.activemq.queue.QueueStore.RestoredElement;
-import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
 import org.apache.activemq.util.Comparators;
 import org.apache.activemq.util.Mapper;
@@ -1315,7 +1315,7 @@ public abstract class CursoredQueue<V> {
      */
     private class ElementLoader implements RestoreListener<V> {
 
-        private LinkedList<QueueStore.RestoredElement<V>> fromDatabase = new LinkedList<QueueStore.RestoredElement<V>>();
+        private LinkedList<RestoredElement<V>> fromDatabase = new LinkedList<RestoredElement<V>>();
         private final HashMap<Long, HashSet<Cursor<V>>> reservedBlocks = new HashMap<Long, HashSet<Cursor<V>>>();
         private final HashSet<Cursor<V>> pagingCursors = new HashSet<Cursor<V>>();
 

@@ -23,6 +23,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowResource;
@@ -106,7 +107,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
 
     };
 
-    private QueueStore.QueueDescriptor queueDescriptor;
+    private QueueDescriptor queueDescriptor;
 
     public SharedQueueOld(String name, IFlowSizeLimiter<V> limiter) {
         this(name, limiter, new Object());
@@ -123,7 +124,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
      */
     public SharedQueueOld(String name, IFlowSizeLimiter<V> limiter, Object mutex) {
         super(name);
-        queueDescriptor = new QueueStore.QueueDescriptor();
+        queueDescriptor = new QueueDescriptor();
         queueDescriptor.setQueueName(new AsciiBuffer(super.getResourceName()));
         this.mutex = mutex;
         Flow flow = new Flow(name, false);
@@ -266,7 +267,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
         return accepted ? null : matches;
     }
 
-    public QueueStore.QueueDescriptor getDescriptor() {
+    public QueueDescriptor getDescriptor() {
         return queueDescriptor;
     }
 

@@ -27,11 +27,11 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.Store.DuplicateKeyException;
 import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.broker.store.kahadb.Data.QueueAddMessage;
-import org.apache.activemq.queue.QueueStore;
 import org.apache.kahadb.index.BTreeIndex;
 import org.apache.kahadb.page.Page;
 import org.apache.kahadb.page.Transaction;
@@ -83,7 +83,7 @@ public class DestinationEntity {
     private BTreeIndex<Long, Long> trackingIndex;
 
     // Descriptor for this queue:
-    private QueueStore.QueueDescriptor descriptor;
+    private QueueDescriptor descriptor;
 
     // Child Partitions:
     private HashSet<DestinationEntity> partitions;
@@ -162,11 +162,11 @@ public class DestinationEntity {
         return getMetaData(tx).count == 0 ? 0 : queueIndex.getLast(tx).getValue().getQueueKey();
     }
 
-    public void setQueueDescriptor(QueueStore.QueueDescriptor queue) {
+    public void setQueueDescriptor(QueueDescriptor queue) {
         descriptor = queue;
     }
 
-    public QueueStore.QueueDescriptor getDescriptor() {
+    public QueueDescriptor getDescriptor() {
         return descriptor;
     }
 

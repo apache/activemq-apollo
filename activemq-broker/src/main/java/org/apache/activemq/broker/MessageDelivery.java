@@ -16,12 +16,12 @@
  */
 package org.apache.activemq.broker;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
+import org.apache.activemq.broker.store.SaveableQueueElement;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
-import org.apache.activemq.queue.QueueStore.QueueDescriptor;
-import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 
 public interface MessageDelivery {
 

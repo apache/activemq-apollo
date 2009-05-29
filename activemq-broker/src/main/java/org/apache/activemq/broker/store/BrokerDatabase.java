@@ -46,10 +46,6 @@ import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
-import org.apache.activemq.queue.QueueStore;
-import org.apache.activemq.queue.QueueStore.RestoreListener;
-import org.apache.activemq.queue.QueueStore.RestoredElement;
-import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 import org.apache.kahadb.util.LinkedNode;
 import org.apache.kahadb.util.LinkedNodeList;
 
@@ -424,7 +420,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      * @param queue
      *            The queue to add.
      */
-    public void addQueue(QueueStore.QueueDescriptor queue) {
+    public void addQueue(QueueDescriptor queue) {
         add(new QueueAddOperation(queue), null, false);
     }
 
@@ -434,7 +430,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      * @param queue
      *            The queue to delete.
      */
-    public void deleteQueue(QueueStore.QueueDescriptor queue) {
+    public void deleteQueue(QueueDescriptor queue) {
         add(new QueueDeleteOperation(queue), null, false);
     }
 
@@ -479,7 +475,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      *            The queue.
      * @return The {@link OperationContext} associated with the operation
      */
-    public OperationContext deleteMessage(MessageDelivery delivery, QueueStore.QueueDescriptor queue) {
+    public OperationContext deleteMessage(MessageDelivery delivery, QueueDescriptor queue) {
         return add(new DeleteMessageOperation(delivery.getStoreTracking(), queue), null, false);
     }
 
@@ -505,7 +501,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      *            The listener to which messags should be passed.
      * @return The {@link OperationContext} associated with the operation
      */
-    public OperationContext restoreMessages(QueueStore.QueueDescriptor queue, boolean recordsOnly, long first, long maxSequence, int maxCount, RestoreListener<MessageDelivery> listener) {
+    public OperationContext restoreMessages(QueueDescriptor queue, boolean recordsOnly, long first, long maxSequence, int maxCount, RestoreListener<MessageDelivery> listener) {
         return add(new RestoreMessageOperation(queue, recordsOnly, first, maxCount, maxSequence, listener), null, true);
     }
 
@@ -721,9 +717,9 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
     private class QueueAddOperation extends OperationBase {
 
-        private QueueStore.QueueDescriptor qd;
+        private QueueDescriptor qd;
 
-        QueueAddOperation(QueueStore.QueueDescriptor queue) {
+        QueueAddOperation(QueueDescriptor queue) {
             qd = queue;
         }
 
@@ -748,9 +744,9 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
     private class QueueDeleteOperation extends OperationBase {
 
-        private QueueStore.QueueDescriptor qd;
+        private QueueDescriptor qd;
 
-        QueueDeleteOperation(QueueStore.QueueDescriptor queue) {
+        QueueDeleteOperation(QueueDescriptor queue) {
             qd = queue;
         }
 
@@ -771,9 +767,9 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
     private class DeleteMessageOperation extends OperationBase {
         private final long storeTracking;
-        private QueueStore.QueueDescriptor queue;
+        private QueueDescriptor queue;
 
-        public DeleteMessageOperation(long tracking, QueueStore.QueueDescriptor queue) {
+        public DeleteMessageOperation(long tracking, QueueDescriptor queue) {
             this.storeTracking = tracking;
             this.queue = queue;
         }
@@ -808,7 +804,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     }
 
     private class RestoreMessageOperation extends OperationBase {
-        private QueueStore.QueueDescriptor queue;
+        private QueueDescriptor queue;
         private long firstKey;
         private int maxRecords;
         private long maxSequence;
@@ -816,7 +812,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         private RestoreListener<MessageDelivery> listener;
         private Collection<RestoredElement<MessageDelivery>> msgs = null;
 
-        RestoreMessageOperation(QueueStore.QueueDescriptor queue, boolean recordsOnly, long firstKey, int maxRecords, long maxSequence, RestoreListener<MessageDelivery> listener) {
+        RestoreMessageOperation(QueueDescriptor queue, boolean recordsOnly, long firstKey, int maxRecords, long maxSequence, RestoreListener<MessageDelivery> listener) {
             this.queue = queue;
             this.recordsOnly = recordsOnly;
             this.firstKey = firstKey;

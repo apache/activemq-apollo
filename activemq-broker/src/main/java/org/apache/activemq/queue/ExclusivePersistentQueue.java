@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.queue;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowResource;
@@ -27,7 +28,6 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.CursoredQueue.Cursor;
 import org.apache.activemq.queue.CursoredQueue.QueueElement;
 import org.apache.activemq.queue.QueueStore.PersistentQueue;
-import org.apache.activemq.queue.QueueStore.QueueDescriptor;
 import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
 import org.apache.activemq.util.Mapper;
 
@@ -57,7 +57,7 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
      */
     public ExclusivePersistentQueue(String name, IFlowSizeLimiter<E> limiter) {
         super(name);
-        this.queueDescriptor = new QueueStore.QueueDescriptor();
+        this.queueDescriptor = new QueueDescriptor();
         this.limiter = limiter;
         queueDescriptor.setQueueName(new AsciiBuffer(super.getResourceName()));
         queueDescriptor.setQueueType(QueueDescriptor.EXCLUSIVE);

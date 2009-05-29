@@ -23,6 +23,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 import org.apache.activemq.broker.store.BrokerDatabase;
+import org.apache.activemq.broker.store.QueueDescriptor;
+import org.apache.activemq.broker.store.RestoreListener;
+import org.apache.activemq.broker.store.SaveableQueueElement;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.ISourceController;
@@ -385,7 +388,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         return ret;
     }
 
-    public final void deleteQueueElement(QueueStore.QueueDescriptor descriptor, MessageDelivery elem) {
+    public final void deleteQueueElement(QueueDescriptor descriptor, MessageDelivery elem) {
         elem.acknowledge(descriptor);
     }
 
@@ -397,16 +400,16 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         elem.getElement().persist(elem, controller, delayable);
     }
 
-    public final void restoreQueueElements(QueueStore.QueueDescriptor queue, boolean recordsOnly, long firstSequence, long maxSequence, int maxCount,
-            org.apache.activemq.queue.QueueStore.RestoreListener<MessageDelivery> listener) {
+    public final void restoreQueueElements(QueueDescriptor queue, boolean recordsOnly, long firstSequence, long maxSequence, int maxCount,
+            org.apache.activemq.broker.store.RestoreListener<MessageDelivery> listener) {
         database.restoreMessages(queue, recordsOnly, firstSequence, maxSequence, maxCount, listener);
     }
 
-    public final void addQueue(QueueStore.QueueDescriptor queue) {
+    public final void addQueue(QueueDescriptor queue) {
         database.addQueue(queue);
     }
 
-    public final void deleteQueue(QueueStore.QueueDescriptor queue) {
+    public final void deleteQueue(QueueDescriptor queue) {
         database.deleteQueue(queue);
     }
 }

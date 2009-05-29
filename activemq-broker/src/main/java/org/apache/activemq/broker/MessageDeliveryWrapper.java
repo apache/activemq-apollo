@@ -16,12 +16,12 @@
  */
 package org.apache.activemq.broker;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
+import org.apache.activemq.broker.store.SaveableQueueElement;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
-import org.apache.activemq.queue.QueueStore;
-import org.apache.activemq.queue.QueueStore.SaveableQueueElement;
 
 /**
  * @author cmacnaug
@@ -37,7 +37,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
      * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
-    public void acknowledge(QueueStore.QueueDescriptor queue) {
+    public void acknowledge(QueueDescriptor queue) {
         delegate.acknowledge(queue);
     }
 
