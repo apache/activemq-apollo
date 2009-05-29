@@ -21,22 +21,24 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>activemq-parent</artifactId>
-    <version>5.3-SNAPSHOT</version>
+    <version>6.0-SNAPSHOT</version>
   </parent>
 
-  <groupId>org.apache.activemq.flow</groupId>
-  <artifactId>activemq-flow</artifactId>
+  <groupId>org.apache.activemq</groupId>
+  <artifactId>activemq-broker</artifactId>
   <packaging>jar</packaging>
-  <version>1.0-SNAPSHOT</version>
+  <version>6.0-SNAPSHOT</version>
 
-  <name>ActiveMQ :: Flow</name>
+  <name>ActiveMQ :: Broker</name>
 
   <dependencies>
   
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-core</artifactId>
+      <version>5.3-SNAPSHOT</version>
     </dependency>
+    
     <dependency>
       <groupId>com.thoughtworks.xstream</groupId>
       <artifactId>xstream</artifactId>
