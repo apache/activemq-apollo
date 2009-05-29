@@ -1,0 +1,17 @@
+---
+title: Home
+in_menu: true
+sort_info: 1
+--- 
+
+# {project_name:}
+
+Eventually this could be flushed out so that it can become the project website.  For now we are using webgen to keep
+track of notes we make along the way.
+
+
+## Project Notes:
+
+ * [Architecture]({relocatable:/architecture.html})
+ * [TODO Items]({relocatable:/todo.html})
+ * [Module Organization]({relocatable:/module-organization.html})

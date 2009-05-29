@@ -1,0 +1,19 @@
+--- name:paths
+#
+# You cand define metainfo for mutliple pages in this file.
+#
+
+**/*.page: # <-- That means the following attributes get applied to all pages
+     # in the site.
+
+  # -------------------------------------------------------------------
+  # You can easily switch the site from one look to another here:
+  # -------------------------------------------------------------------
+  template: /styles/default/default.template
+  
+  # -------------------------------------------------------------------
+  # Define the project properties here, these can be accessed in the 
+  # pages using the {var:} syntax.
+  # -------------------------------------------------------------------
+  project_name: "ActiveMQ Apollo"
+  project_slogan: 'The Next Generation of Messaging Middleware'

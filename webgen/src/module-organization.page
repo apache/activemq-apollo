@@ -1,0 +1,67 @@
+---
+title: Module Organization
+--- pipeline:textile
+
+h2. Overview
+
+ActiveMQ 6.x Should
+
+* Not conflict with ActiveMQ 5.x if it's in the CLASSPATH
+* Have a module and package structure that is OSGi friendly for extending.
+* Not depend on ActiveMQ 5.x modules
+
+h2. Modules
+
+h3. Core Modules
+
+These modules define the basic architecture and extension points of ActiveMQ 6.x.  It should be a goal to keep these as small and concise as possible.
+
+Modules:
+* activemq-util: Common interfaces and utility classes
+* activemq-flow: Flow control model interfaces and implementation
+
+h3. WireFormat/Protocol Handler implementations
+
+Modules:
+ * activemq-protocol: Holds the WireFormat and Protocol Handler API interfaces
+ * activemq-openwire
+ * activemq-stomp
+ * activemq-amqp
+
+h3. Transport Layer implementations
+
+Modules:
+ * activemq-transport: Holds Transport API defintion and VM implementation.
+ * activemq-bio: Holds the blocking IO implementations
+ * activemq-nio: Holds the non-blocking IO implementations
+
+h3. Dispatcher implementations
+
+Modules:
+ * activemq-dispatcher : Dispatches API and default implementation
+ * activemq-dispatcher-nio : Holds an NIO aware dispatcher implementation
+
+h3. Data Store implementations
+
+Modules:
+ * activemq-store: Holds the Store API Definition and a memory based impelementation
+ * activemq-kaha
+
+h3. Broker Service: activemq-broker
+
+Provides:
+  * The APIs and implementations for configuring and starting broker instances ( via java/xml/spring etc.)
+
+h3. Client Library: activemq-client
+
+Provides:
+
+  * JMS client API implementation
+
+
+h3. Packages
+
+To avoid class conflicts, we should pick a new package base.  How does this sound: @org.apache.activemq.apollo@ ?
+
+
+
