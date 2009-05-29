@@ -120,6 +120,7 @@
     <module>activemq-store</module>
     <module>activemq-transport</module>
     <module>activemq-util</module>
+    <module>kahadb</module>
   </modules>
 
 <!--
@@ -158,6 +159,11 @@
         <artifactId>activemq-all</artifactId>
         <version>${activemq-version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-kahadb</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>      
       <dependency>
         <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-bio</artifactId>
