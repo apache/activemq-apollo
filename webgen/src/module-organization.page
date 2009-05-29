@@ -26,7 +26,6 @@ Modules:
  * activemq-protocol: Holds the WireFormat and Protocol Handler API interfaces
  * activemq-openwire
  * activemq-stomp
- * activemq-amqp
 
 h3. Transport Layer implementations
 

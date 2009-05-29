@@ -109,7 +109,17 @@
   </distributionManagement>
 
   <modules>
+    <module>activemq-bio</module>
     <module>activemq-broker</module>
+    <module>activemq-dispatcher</module>
+    <module>activemq-flow</module>
+    <module>activemq-kaha</module>
+    <module>activemq-openwire</module>
+    <module>activemq-protocol</module>
+    <module>activemq-stomp</module>
+    <module>activemq-store</module>
+    <module>activemq-transport</module>
+    <module>activemq-util</module>
   </modules>
 
 <!--
