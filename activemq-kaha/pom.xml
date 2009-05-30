@@ -36,7 +36,20 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-store</artifactId>
+      <optional>false</optional>
     </dependency>
+    
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>kahadb</artifactId>
+      <optional>false</optional>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.apache.activemq.protobuf</groupId>
+      <artifactId>activemq-protobuf</artifactId>
+      <optional>false</optional>
+    </dependency>  
   
     <!-- Testing Dependencies -->    
     <dependency>

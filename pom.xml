@@ -162,7 +162,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.activemq</groupId>
-        <artifactId>activemq-kahadb</artifactId>
+        <artifactId>kahadb</artifactId>
         <version>${activemq-version}</version>
       </dependency>      
       <dependency>
