@@ -53,6 +53,13 @@
   
     <!-- Testing Dependencies -->    
     <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-store</artifactId>
+      <version>${activemq-version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
