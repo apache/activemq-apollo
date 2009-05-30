@@ -32,7 +32,7 @@
   <name>ActiveMQ :: Util</name>
 
   <dependencies>
-        
+                
     <!-- Testing Dependencies -->    
     <dependency>
       <groupId>junit</groupId>
