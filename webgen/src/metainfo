@@ -15,5 +15,5 @@
   # Define the project properties here, these can be accessed in the 
   # pages using the {var:} syntax.
   # -------------------------------------------------------------------
-  project_name: "ActiveMQ Apollo"
+  project_name: "ActiveMQ Puma"
   project_slogan: 'The Next Generation of Messaging Middleware'

@@ -23,44 +23,44 @@ Modules:
 h3. WireFormat/Protocol Handler implementations
 
 Modules:
- * activemq-protocol: Holds the WireFormat and Protocol Handler API interfaces
- * activemq-openwire
- * activemq-stomp
+* activemq-protocol: Holds the WireFormat and Protocol Handler API interfaces
+* activemq-openwire
+* activemq-stomp
 
 h3. Transport Layer implementations
 
 Modules:
- * activemq-transport: Holds Transport API defintion and VM implementation.
- * activemq-bio: Holds the blocking IO implementations
- * activemq-nio: Holds the non-blocking IO implementations
+* activemq-transport: Holds Transport API defintion and VM implementation.
+* activemq-bio: Holds the blocking IO implementations
+* activemq-nio: Holds the non-blocking IO implementations
 
 h3. Dispatcher implementations
 
 Modules:
- * activemq-dispatcher : Dispatches API and default implementation
- * activemq-dispatcher-nio : Holds an NIO aware dispatcher implementation
+* activemq-dispatcher : Dispatches API and default implementation
+* activemq-dispatcher-nio : Holds an NIO aware dispatcher implementation
 
 h3. Data Store implementations
 
 Modules:
- * activemq-store: Holds the Store API Definition and a memory based impelementation
- * activemq-kaha
+* activemq-store: Holds the Store API Definition and a memory based impelementation
+* activemq-kaha
 
 h3. Broker Service: activemq-broker
 
 Provides:
-  * The APIs and implementations for configuring and starting broker instances ( via java/xml/spring etc.)
+* The APIs and implementations for configuring and starting broker instances ( via java/xml/spring etc.)
 
 h3. Client Library: activemq-client
 
 Provides:
 
-  * JMS client API implementation
+* JMS client API implementation
 
 
-h3. Packages
+h2. Packages
 
-To avoid class conflicts, we should pick a new package base.  How does this sound: @org.apache.activemq.apollo@ ?
+To avoid class conflicts, we should pick a new package base.  How does this sound: @org.apache.activemq.puma@ ?
 
 
 
