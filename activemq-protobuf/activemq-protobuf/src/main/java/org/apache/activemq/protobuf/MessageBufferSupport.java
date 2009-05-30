@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.util.Collection;
 
 
+
 final public class MessageBufferSupport {
 
     public static final String FORZEN_ERROR_MESSAGE = "Modification not allowed after object has been fozen.  Try modifying a copy of this object.";

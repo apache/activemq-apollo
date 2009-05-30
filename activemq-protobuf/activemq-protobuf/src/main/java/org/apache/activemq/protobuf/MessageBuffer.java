@@ -3,6 +3,7 @@ package org.apache.activemq.protobuf;
 import java.io.IOException;
 import java.io.OutputStream;
 
+
 public interface MessageBuffer<B, MB extends MessageBuffer> extends PBMessage<B, MB> {
    
     public int serializedSizeUnframed();

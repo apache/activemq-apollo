@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+
 abstract public class BaseMessage<T> implements Message<T> {
 
     protected int memoizedSerializedSize = -1;

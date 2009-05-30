@@ -19,6 +19,7 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+
 /**
  * Encodes and writes protocol message fields.
  * 

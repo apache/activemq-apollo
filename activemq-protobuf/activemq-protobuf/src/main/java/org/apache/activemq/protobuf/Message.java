@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+
 public interface Message<T> {
 
     public T clone() throws CloneNotSupportedException;

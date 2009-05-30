@@ -18,8 +18,8 @@ package com.google.protobuf;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.protobuf.CodedInputStream;
+import org.apache.activemq.protobuf.Buffer;
 
 import protobuf_unittest.UnittestProto.TestAllTypes;
 
