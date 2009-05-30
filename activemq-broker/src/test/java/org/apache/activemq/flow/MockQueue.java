@@ -5,9 +5,9 @@ package org.apache.activemq.flow;
 
 import java.util.HashMap;
 
+import org.apache.activemq.broker.db.RestoreListener;
+import org.apache.activemq.broker.db.SaveableQueueElement;
 import org.apache.activemq.broker.store.QueueDescriptor;
-import org.apache.activemq.broker.store.RestoreListener;
-import org.apache.activemq.broker.store.SaveableQueueElement;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.MockBroker.DeliveryTarget;
 import org.apache.activemq.queue.IQueue;

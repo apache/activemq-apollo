@@ -22,10 +22,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import org.apache.activemq.broker.store.BrokerDatabase;
+import org.apache.activemq.broker.db.BrokerDatabase;
+import org.apache.activemq.broker.db.RestoreListener;
+import org.apache.activemq.broker.db.SaveableQueueElement;
 import org.apache.activemq.broker.store.QueueDescriptor;
-import org.apache.activemq.broker.store.RestoreListener;
-import org.apache.activemq.broker.store.SaveableQueueElement;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.ISourceController;
@@ -401,7 +401,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
     }
 
     public final void restoreQueueElements(QueueDescriptor queue, boolean recordsOnly, long firstSequence, long maxSequence, int maxCount,
-            org.apache.activemq.broker.store.RestoreListener<MessageDelivery> listener) {
+            org.apache.activemq.broker.db.RestoreListener<MessageDelivery> listener) {
         database.restoreMessages(queue, recordsOnly, firstSequence, maxSequence, maxCount, listener);
     }
 

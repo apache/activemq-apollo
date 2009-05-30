@@ -17,10 +17,10 @@
 package org.apache.activemq.queue;
 
 
+import org.apache.activemq.broker.db.RestoreListener;
+import org.apache.activemq.broker.db.SaveableQueueElement;
+import org.apache.activemq.broker.db.BrokerDatabase.OperationContext;
 import org.apache.activemq.broker.store.QueueDescriptor;
-import org.apache.activemq.broker.store.RestoreListener;
-import org.apache.activemq.broker.store.SaveableQueueElement;
-import org.apache.activemq.broker.store.BrokerDatabase.OperationContext;
 import org.apache.activemq.flow.ISourceController;
 
 public interface QueueStore<K, V> {

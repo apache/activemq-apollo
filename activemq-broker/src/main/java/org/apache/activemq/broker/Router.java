@@ -27,7 +27,7 @@ import org.apache.activemq.broker.Domain;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.QueueDomain;
 import org.apache.activemq.broker.TopicDomain;
-import org.apache.activemq.broker.store.BrokerDatabase;
+import org.apache.activemq.broker.db.BrokerDatabase;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
 

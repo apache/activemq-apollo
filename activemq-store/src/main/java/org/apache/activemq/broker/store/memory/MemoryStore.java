@@ -16,9 +16,9 @@
  */
 package org.apache.activemq.broker.store.memory;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -26,19 +26,16 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import java.io.File;
-
 import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
-import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.util.ByteArrayOutputStream;
 import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.Comparators;
 
 /**
- * An in memory implementation of the {@link QueueStore} interface. It does not
+ * An in memory implementation of the {@link Store} interface. It does not
  * properly roll back operations if an error occurs in the middle of a
  * transaction and it does not persist changes across restarts.
  */

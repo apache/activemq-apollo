@@ -14,38 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store;
+package org.apache.activemq.broker.db;
 
+import java.util.Collection;
 
-public interface SaveableQueueElement<V> {
+/**
+ * A callback used with the {@link BrokerDatabase#restoreMessages(QueueDescriptor, boolean, long, long, int, RestoreListener)} method.
+ */
+public interface RestoreListener<V> {
 
-    /**
-     * @return the descriptor of the queue for which the element should be
-     *         saved.
-     */
-    public QueueDescriptor getQueueDescriptor();
-
-    /**
-     * @return the element to save.
-     */
-    public V getElement();
-
-    /**
-     * @return the sequence number of the element in the queue
-     * 
-     * 
-     */
-    public long getSequenceNumber();
-
-    /**
-     * @return a return value of true will cause {@link #notifySave()} to
-     *         called when this element is persisted
-     */
-    public boolean requestSaveNotify();
-
-    /**
-     * Called when the element has been saved.
-     */
-    public void notifySave();
-
+    public void elementsRestored(Collection<RestoredElement<V>> restored);
 }

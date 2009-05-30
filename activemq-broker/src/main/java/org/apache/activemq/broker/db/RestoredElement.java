@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store;
+package org.apache.activemq.broker.db;
 
 /**
  * A holder for queue elements loaded from the store.

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store;
+package org.apache.activemq.broker.db;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,6 +31,8 @@ import org.apache.activemq.broker.BrokerMessageDelivery;
 import org.apache.activemq.broker.MessageDelivery;
 import org.apache.activemq.broker.protocol.ProtocolHandler;
 import org.apache.activemq.broker.protocol.ProtocolHandlerFactory;
+import org.apache.activemq.broker.store.QueueDescriptor;
+import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.Store.Callback;
 import org.apache.activemq.broker.store.Store.FatalStoreException;
 import org.apache.activemq.broker.store.Store.KeyNotFoundException;
@@ -38,6 +40,7 @@ import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
 import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.broker.store.Store.Session;
+import org.apache.activemq.broker.store.Store.VoidCallback;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
@@ -861,7 +864,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
                         if (!records.hasNext()) {
                             rm.nextSequence = -1;
                         } else {
-                            rm.nextSequence = records.next().queueKey;
+                            rm.nextSequence = records.next().getQueueKey();
                         }
                     } catch (KeyNotFoundException e) {
                         rm.nextSequence = -1;
@@ -871,14 +874,14 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
                 if (!recordsOnly) {
                     try {
-                        rm.mRecord = session.messageGetRecord(rm.qRecord.messageKey);
-                        rm.handler = protocolHandlers.get(rm.mRecord.encoding.toString());
+                        rm.mRecord = session.messageGetRecord(rm.qRecord.getMessageKey());
+                        rm.handler = protocolHandlers.get(rm.mRecord.getEncoding().toString());
                         if (rm.handler == null) {
                             try {
-                                rm.handler = ProtocolHandlerFactory.createProtocolHandler(rm.mRecord.encoding.toString());
-                                protocolHandlers.put(rm.mRecord.encoding.toString(), rm.handler);
+                                rm.handler = ProtocolHandlerFactory.createProtocolHandler(rm.mRecord.getEncoding().toString());
+                                protocolHandlers.put(rm.mRecord.getEncoding().toString(), rm.handler);
                             } catch (Throwable thrown) {
-                                throw new RuntimeException("Unknown message format" + rm.mRecord.encoding.toString(), thrown);
+                                throw new RuntimeException("Unknown message format" + rm.mRecord.getEncoding().toString(), thrown);
                             }
                         }
                         msgs.add(rm);

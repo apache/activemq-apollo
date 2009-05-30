@@ -14,14 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store;
+package org.apache.activemq.protobuf.compiler;
 
-import java.util.Collection;
+import java.util.List;
 
-/**
- * A callback used with the {@link BrokerDatabase#restoreMessages(QueueDescriptor, boolean, long, long, int, RestoreListener)} method.
- */
-public interface RestoreListener<V> {
+public class OptionDescriptor {
 
-    public void elementsRestored(Collection<RestoredElement<V>> restored);
+    private String name;
+    private String value;
+
+    public OptionDescriptor() {
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
+
+    public void validate(List<String> errors) {
+        // TODO Auto-generated method stub
+        
+    }
+
 }
