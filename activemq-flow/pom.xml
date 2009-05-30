@@ -32,7 +32,13 @@
   <name>ActiveMQ :: Flow</name>
 
   <dependencies>
-
+  
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-util</artifactId>
+      <optional>false</optional>
+    </dependency>
+    
     <!-- Testing Dependencies -->    
     <dependency>
       <groupId>junit</groupId>
