@@ -115,7 +115,6 @@
     <module>activemq-flow</module>
     <module>activemq-kaha</module>
     <module>activemq-openwire</module>
-    <module>activemq-protocol</module>
     <module>activemq-stomp</module>
     <module>activemq-store</module>
     <module>activemq-transport</module>
@@ -193,11 +192,6 @@
       <dependency>
         <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-openwire</artifactId>
-        <version>${activemq-version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.activemq</groupId>
-        <artifactId>activemq-protocol</artifactId>
         <version>${activemq-version}</version>
       </dependency>
       <dependency>

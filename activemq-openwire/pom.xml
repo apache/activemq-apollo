@@ -35,7 +35,7 @@
 
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-protocol</artifactId>
+      <artifactId>activemq-broker</artifactId>
     </dependency>
 
     <!-- Testing Dependencies -->

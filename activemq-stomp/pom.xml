@@ -33,16 +33,9 @@
 
   <dependencies>
     
-    <!-- TODO: remove this dependency -->
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-core</artifactId>
-      <version>5.3-SNAPSHOT</version>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-protocol</artifactId>
+      <artifactId>activemq-broker</artifactId>
     </dependency>
 
     <dependency>
