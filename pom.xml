@@ -121,6 +121,9 @@
     <module>activemq-util</module>
     <module>kahadb</module>
     <module>activemq-protobuf</module>
+    <module>activemq-client</module>
+    <module>activemq-network</module>
+    <module>activemq-all</module>
   </modules>
 
 <!--
@@ -157,6 +160,16 @@
       <dependency>
         <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-all</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-network</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-client</artifactId>
         <version>${activemq-version}</version>
       </dependency>
       <dependency>
