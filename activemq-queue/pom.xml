@@ -41,12 +41,12 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-dispatcher</artifactId>
-      <optional>true</optional>
+      <optional>false</optional>
     </dependency>        
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-flow</artifactId>
-      <optional>true</optional>
+      <optional>false</optional>
     </dependency>        
   
     <!-- Testing Dependencies -->    
