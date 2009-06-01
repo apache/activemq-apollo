@@ -14,27 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.command;
+package org.apache.activemq.transport.discovery;
 
-/**
- * Represents a discovery event containing the details of the service
- * 
- * @openwire:marshaller code="40"
- * @version $Revision:$
- */
-public class DiscoveryEvent extends org.apache.activemq.transport.discovery.DiscoveryEvent implements DataStructure {
+public class DiscoveryEvent {
 
-    public static final byte DATA_STRUCTURE_TYPE = CommandTypes.DISCOVERY_EVENT;
+    protected String serviceName;
+    protected String brokerName;
 
     public DiscoveryEvent() {
     }
 
     public DiscoveryEvent(String serviceName) {
         this.serviceName = serviceName;
-    }
-
-    public byte getDataStructureType() {
-        return DATA_STRUCTURE_TYPE;
     }
 
     /**
