@@ -43,7 +43,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-flow</artifactId>
+      <artifactId>activemq-queue</artifactId>
     </dependency>
         
     <!-- Testing Dependencies -->    

@@ -38,23 +38,8 @@
       <artifactId>activemq-util</artifactId>
       <optional>false</optional>
     </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-dispatcher</artifactId>
-      <optional>true</optional>
-    </dependency>
     
     <!-- Testing Dependencies -->    
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-transport</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq.protobuf</groupId>
-      <artifactId>activemq-protobuf</artifactId>
-      <scope>test</scope>
-    </dependency>  
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
