@@ -38,6 +38,13 @@
       <artifactId>activemq-broker</artifactId>
     </dependency>
 
+    <!-- TODO: remove this dependency -->
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-core</artifactId>
+      <version>5.3-SNAPSHOT</version>
+    </dependency>
+
     <!-- Testing Dependencies -->
     <dependency>
       <groupId>org.apache.activemq</groupId>
