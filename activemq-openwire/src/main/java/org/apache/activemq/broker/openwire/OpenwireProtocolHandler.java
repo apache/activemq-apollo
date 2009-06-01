@@ -21,9 +21,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 
-import javax.jms.InvalidSelectorException;
-import javax.jms.JMSException;
-
 import org.apache.activemq.WindowLimiter;
 import org.apache.activemq.broker.BrokerConnection;
 import org.apache.activemq.broker.BrokerMessageDelivery;
@@ -69,8 +66,8 @@ import org.apache.activemq.command.ShutdownInfo;
 import org.apache.activemq.command.TransactionInfo;
 import org.apache.activemq.command.WireFormatInfo;
 import org.apache.activemq.filter.BooleanExpression;
+import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.filter.LogicExpression;
-import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.filter.NoLocalExpression;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
@@ -418,7 +415,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         HashMap<MessageId, SubscriptionDeliveryCallback> pendingMessages = new HashMap<MessageId, SubscriptionDeliveryCallback>();
         LinkedList<MessageId> pendingMessageIds = new LinkedList<MessageId>();
 
-        public ConsumerContext(final ConsumerInfo info) throws InvalidSelectorException, UserAlreadyConnectedException {
+        public ConsumerContext(final ConsumerInfo info) throws FilterException, UserAlreadyConnectedException {
             this.info = info;
             this.name = info.getConsumerId().toString();
 
@@ -513,12 +510,11 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 return false;
             }
 
-            MessageEvaluationContext selectorContext = new MessageEvaluationContext();
-            selectorContext.setMessageReference(msg);
+            OpenwireMessageEvaluationContext selectorContext = new OpenwireMessageEvaluationContext(msg);
             selectorContext.setDestination(info.getDestination());
             try {
                 return (selector == null || selector.matches(selectorContext));
-            } catch (JMSException e) {
+            } catch (FilterException e) {
                 e.printStackTrace();
                 return false;
             }
@@ -680,7 +676,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         return new Destination.SingleDestination(domain, new AsciiBuffer(dest.getPhysicalName()));
     }
 
-    private static BooleanExpression parseSelector(ConsumerInfo info) throws InvalidSelectorException {
+    private static BooleanExpression parseSelector(ConsumerInfo info) throws FilterException {
         BooleanExpression rc = null;
         if (info.getSelector() != null) {
             rc = SelectorParser.parse(info.getSelector());

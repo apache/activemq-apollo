@@ -22,6 +22,7 @@ import org.apache.activemq.broker.BrokerMessageDelivery;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.command.Message;
+import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.openwire.OpenWireFormat;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
@@ -138,5 +139,9 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
      */
     public long getExpiration() {
         return message.getExpiration();
+    }
+
+    public MessageEvaluationContext createMessageEvaluationContext() {
+        return new OpenwireMessageEvaluationContext();
     }
 }

@@ -42,10 +42,11 @@
       <artifactId>activemq-dispatcher</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-flow</artifactId>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
+      <version>1.1</version>
     </dependency>
-        
+    
     <!-- Testing Dependencies -->    
     <dependency>
       <groupId>junit</groupId>

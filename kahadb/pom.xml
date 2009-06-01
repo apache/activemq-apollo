@@ -27,7 +27,7 @@
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>kahadb</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
   <name>ActiveMQ :: KahaDB</name>
   <description>An Embedded Lightweight Non-Relational Database</description>
 

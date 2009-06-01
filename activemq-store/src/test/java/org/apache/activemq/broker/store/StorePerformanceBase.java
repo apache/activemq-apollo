@@ -31,6 +31,7 @@ import org.apache.activemq.metric.MetricCounter;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.queue.QueueDescriptor;
 
 public abstract class StorePerformanceBase extends TestCase {
 

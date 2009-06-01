@@ -19,6 +19,7 @@ package org.apache.activemq.broker.stomp;
 import org.apache.activemq.broker.BrokerMessageDelivery;
 import org.apache.activemq.broker.Destination;
 import org.apache.activemq.broker.store.Store.MessageRecord;
+import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.transport.stomp.Stomp;
@@ -155,6 +156,10 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
     public Buffer getTransactionId() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    public MessageEvaluationContext createMessageEvaluationContext() {
+        return new StompMessageEvaluationContext();
     }
 
     

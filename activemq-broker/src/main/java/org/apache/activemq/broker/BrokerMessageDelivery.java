@@ -21,12 +21,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 
-import org.apache.activemq.broker.db.BrokerDatabase;
-import org.apache.activemq.broker.db.SaveableQueueElement;
-import org.apache.activemq.broker.db.BrokerDatabase.OperationContext;
-import org.apache.activemq.broker.store.QueueDescriptor;
+import org.apache.activemq.broker.BrokerDatabase.OperationContext;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.flow.ISourceController;
+import org.apache.activemq.queue.QueueDescriptor;
+import org.apache.activemq.queue.SaveableQueueElement;
 
 public abstract class BrokerMessageDelivery implements MessageDelivery {
 

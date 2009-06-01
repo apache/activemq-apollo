@@ -29,6 +29,7 @@ import org.apache.activemq.broker.store.Store.Session;
 import org.apache.activemq.broker.store.Store.VoidCallback;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.queue.QueueDescriptor;
 
 public abstract class StoreTestBase extends TestCase {
 

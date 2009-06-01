@@ -38,8 +38,23 @@
       <artifactId>activemq-util</artifactId>
       <optional>false</optional>
     </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-dispatcher</artifactId>
+      <optional>true</optional>
+    </dependency>
     
     <!-- Testing Dependencies -->    
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-transport</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq.protobuf</groupId>
+      <artifactId>activemq-protobuf</artifactId>
+      <scope>test</scope>
+    </dependency>  
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -56,19 +71,20 @@
   <build>
     <plugins>
 
-      <!-- Generate a test jar for the test cases in this package -->
-      <!--
       <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-        <executions>
+        <groupId>org.apache.activemq.protobuf</groupId>
+        <artifactId>activemq-protobuf</artifactId>
+        <configuration>
+          <type>alt</type>
+        </configuration>
+         <executions>
           <execution>
             <goals>
-              <goal>test-jar</goal>
+              <goal>compile</goal>
             </goals>
           </execution>
         </executions>
       </plugin>
-      -->
 
     </plugins>
   </build>

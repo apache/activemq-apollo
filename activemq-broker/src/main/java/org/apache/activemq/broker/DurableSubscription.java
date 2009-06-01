@@ -16,10 +16,8 @@
  */
 package org.apache.activemq.broker;
 
-import javax.jms.JMSException;
-
-import org.apache.activemq.command.Message;
 import org.apache.activemq.filter.BooleanExpression;
+import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.ISourceController;
@@ -72,17 +70,11 @@ public class DurableSubscription implements BrokerSubscription, DeliveryTarget {
             return true;
         }
 
-        Message msg = message.asType(Message.class);
-        if (msg == null) {
-            return false;
-        }
-
-        MessageEvaluationContext selectorContext = new MessageEvaluationContext();
-        selectorContext.setMessageReference(msg);
-        selectorContext.setDestination(destination.asActiveMQDestination());
+        MessageEvaluationContext selectorContext = message.createMessageEvaluationContext();
+        selectorContext.setDestination(destination);
         try {
             return (selector.matches(selectorContext));
-        } catch (JMSException e) {
+        } catch (FilterException e) {
             e.printStackTrace();
             return false;
         }

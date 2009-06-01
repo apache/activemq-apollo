@@ -19,7 +19,6 @@ package org.apache.activemq.broker;
 import java.io.File;
 import java.util.ArrayList;
 
-import org.apache.activemq.broker.db.BrokerDatabase;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.dispatch.IDispatcher;

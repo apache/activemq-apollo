@@ -16,12 +16,13 @@
  */
 package org.apache.activemq.broker;
 
-import org.apache.activemq.broker.db.SaveableQueueElement;
-import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store.MessageRecord;
+import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.queue.QueueDescriptor;
+import org.apache.activemq.queue.SaveableQueueElement;
 
 /**
  * @author cmacnaug
@@ -189,6 +190,10 @@ public class MessageDeliveryWrapper implements MessageDelivery {
         delegate.persist(elem, controller, delayable);
     }
 
+    public MessageEvaluationContext createMessageEvaluationContext() {
+        return delegate.createMessageEvaluationContext();
+    }
+
     /**
      * (non-Javadoc)
      * 
@@ -198,4 +203,5 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     MessageDeliveryWrapper(MessageDelivery delivery) {
         delegate = delivery;
     }
+
 }

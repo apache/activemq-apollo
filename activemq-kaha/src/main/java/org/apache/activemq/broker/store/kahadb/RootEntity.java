@@ -25,12 +25,12 @@ import java.util.LinkedList;
 import java.util.TreeMap;
 import java.util.Map.Entry;
 
-import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.Store.KeyNotFoundException;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
 import org.apache.activemq.broker.store.kahadb.Data.MessageAdd;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.kahadb.index.BTreeIndex;
 import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.page.Page;

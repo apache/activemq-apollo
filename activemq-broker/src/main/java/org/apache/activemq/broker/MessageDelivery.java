@@ -16,12 +16,13 @@
  */
 package org.apache.activemq.broker;
 
-import org.apache.activemq.broker.db.SaveableQueueElement;
-import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store;
+import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.queue.QueueDescriptor;
+import org.apache.activemq.queue.SaveableQueueElement;
 
 public interface MessageDelivery {
 
@@ -117,4 +118,10 @@ public interface MessageDelivery {
      * @return The store tracking or -1 if not set.
      */
     public long getStoreTracking();
+    
+    /**
+     * Used to apply selectors against the message.
+     * @return
+     */
+    public MessageEvaluationContext createMessageEvaluationContext();
 }

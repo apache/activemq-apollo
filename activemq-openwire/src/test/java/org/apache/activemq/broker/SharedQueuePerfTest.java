@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.jms.JMSException;
 
-import org.apache.activemq.broker.db.BrokerDatabase;
 import org.apache.activemq.broker.openwire.OpenWireMessageDelivery;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;

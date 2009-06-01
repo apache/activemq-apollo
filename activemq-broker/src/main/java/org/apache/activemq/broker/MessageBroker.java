@@ -23,7 +23,6 @@ import java.util.LinkedHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.Connection;
-import org.apache.activemq.broker.db.BrokerDatabase;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.protobuf.AsciiBuffer;

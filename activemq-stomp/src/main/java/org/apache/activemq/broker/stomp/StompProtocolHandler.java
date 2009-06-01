@@ -26,8 +26,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import javax.jms.InvalidSelectorException;
-
 import org.apache.activemq.WindowLimiter;
 import org.apache.activemq.broker.BrokerConnection;
 import org.apache.activemq.broker.BrokerMessageDelivery;
@@ -39,6 +37,7 @@ import org.apache.activemq.broker.protocol.ProtocolHandler;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.filter.BooleanExpression;
+import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
@@ -550,7 +549,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         return new Destination.SingleDestination(domain, new AsciiBuffer(dest.getPhysicalName()));
     }
 
-    private static BooleanExpression parseSelector(String selector) throws InvalidSelectorException {
+    private static BooleanExpression parseSelector(String selector) throws FilterException {
         BooleanExpression rc = null;
         if (selector != null) {
             rc = SelectorParser.parse(selector);
