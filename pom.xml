@@ -125,6 +125,7 @@
     <module>activemq-network</module>
     <module>activemq-all</module>
     <module>activemq-selector</module>
+    <module>activemq-queue</module>
   </modules>
 
 <!--
@@ -141,8 +142,15 @@
       <id>apache.snapshots</id>
       <url>https://repository.apache.org/content/repositories/snapshots/</url>
     </pluginRepository>
+    <pluginRepository>
+      <id>elca-services</id>
+      <url>http://el4.elca-services.ch/el4j/maven2repository</url>
+      <releases>
+       <enabled>true</enabled>
+      </releases>
+    </pluginRepository>
   </pluginRepositories>
-
+  
   <repositories>
     <repository>
       <id>apache.snapshots</id>
@@ -161,6 +169,11 @@
       <dependency>
         <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-all</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-queue</artifactId>
         <version>${activemq-version}</version>
       </dependency>
       <dependency>
@@ -781,6 +794,11 @@
     <pluginManagement>
       <plugins>
         <plugin>
+          <groupId>ch.elca.el4j.maven.plugins</groupId>
+          <artifactId>maven-depgraph-plugin</artifactId>
+          <version>1.7</version>
+        </plugin>      
+        <plugin>
           <groupId>org.apache.activemq.protobuf</groupId>
           <artifactId>activemq-protobuf</artifactId>
           <version>1.1-SNAPSHOT</version>
@@ -919,6 +937,11 @@
       </plugins>
     </pluginManagement>
     <plugins>
+      <plugin>
+        <groupId>ch.elca.el4j.maven.plugins</groupId>
+        <artifactId>maven-depgraph-plugin</artifactId>
+        <version>1.7</version>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
