@@ -37,8 +37,11 @@
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-broker</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-openwire</artifactId>
+    </dependency>
 
-    <!-- TODO: remove this dependency -->
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-core</artifactId>

@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.filter;
 
-
-
 /**
  * MessageEvaluationContext is used to cache selection results. A message
  * usually has multiple selectors applied against it. Some selector have a high

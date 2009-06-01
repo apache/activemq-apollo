@@ -33,6 +33,17 @@
 
   <dependencies>
                 
+    <dependency>
+      <groupId>org.apache.geronimo.specs</groupId>
+      <artifactId>geronimo-jms_1.1_spec</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
+      <optional>true</optional>
+    </dependency>
+                
     <!-- Testing Dependencies -->    
     <dependency>
       <groupId>junit</groupId>

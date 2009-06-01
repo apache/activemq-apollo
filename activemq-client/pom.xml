@@ -39,15 +39,13 @@
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-dispatcher</artifactId>
+      <artifactId>activemq-openwire</artifactId>
     </dependency>
+
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-flow</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-transport</artifactId>
+      <artifactId>activemq-core</artifactId>
+      <version>5.3-SNAPSHOT</version>
     </dependency>
 
     <!-- Testing Dependencies -->    
