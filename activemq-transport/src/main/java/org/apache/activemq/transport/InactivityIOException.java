@@ -14,20 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq;
+package org.apache.activemq.transport;
 
-import javax.jms.JMSException;
+import java.io.IOException;
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+/**
+ * This is exception is thrown when the transport layer detects that the underlying socket has been inactive for 
+ * too long.
+ * 
+ * @version $Revision$
+ */
+public class InactivityIOException extends IOException {
+
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 5816001466763503220L;
+
+    public InactivityIOException() {
+        super();
+    }
+
+    /**
+     * @param message
+     */
+    public InactivityIOException(String message) {
+        super(message);
+    }
 
 
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
 }

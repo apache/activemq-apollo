@@ -17,17 +17,26 @@
 package org.apache.activemq;
 
 import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.MessageConsumer;
+import javax.jms.MessageProducer;
+import javax.jms.Session;
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+/**
+ * A plugin strategy for transforming a message before it is sent by the JMS client or before it is
+ * dispatched to the JMS consumer
+ *
+ * @version $Revision: 564271 $
+ */
+public interface MessageTransformer {
 
+    /**
+     * Transforms the given message inside the producer before it is sent to the JMS bus.
+     */
+    Message producerTransform(Session session, MessageProducer producer, Message message) throws JMSException;
 
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+    /**
+     * Transforms the given message inside the consumer before being dispatched to the client code
+     */
+    Message consumerTransform(Session session, MessageConsumer consumer, Message message)throws JMSException;
 }

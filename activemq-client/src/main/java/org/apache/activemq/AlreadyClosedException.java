@@ -18,16 +18,21 @@ package org.apache.activemq;
 
 import javax.jms.JMSException;
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+/**
+ * An exception which is closed if you try to access a resource which has already
+ * been closed
+ *
+ * @version $Revision: 1.2 $
+ */
+public class AlreadyClosedException extends JMSException {
 
+    private static final long serialVersionUID = -3203104889571618702L;
 
-public interface IConnection {
+    public AlreadyClosedException() {
+        super("this connection");
+    }
 
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+    public AlreadyClosedException(String description) {
+        super("Cannot use " + description + " as it has already been closed", "AMQ-1001");
+    }
 }

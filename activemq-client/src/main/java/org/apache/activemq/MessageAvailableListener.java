@@ -16,18 +16,20 @@
  */
 package org.apache.activemq;
 
-import javax.jms.JMSException;
+import javax.jms.MessageConsumer;
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+/**
+ * A listener which is notified if a message is available for processing via the
+ * receive methods. Typically on receiving this notification you can call 
+ * {@link MessageConsumer#receiveNoWait()} to get the new message immediately.
+ * 
+ * Note that this notification just indicates a message is available for synchronous consumption,
+ * it does not actually consume the message.
+ * 
+ * @version $Revision: 1.1 $
+ */
+public interface MessageAvailableListener {
 
+    void onMessageAvailable(MessageConsumer consumer);
 
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
 }

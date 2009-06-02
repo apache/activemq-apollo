@@ -16,18 +16,18 @@
  */
 package org.apache.activemq;
 
-import javax.jms.JMSException;
+/**
+ * Represents the JMS extension methods in Apache ActiveMQ
+ *
+ * @version $Revision: $
+ */
+public interface Message extends javax.jms.Message {
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+    /**
+     * Returns the MIME type of this mesage. This can be used in selectors to filter on
+     * the MIME types of the different JMS messages, or in the case of {@link org.apache.activemq.BlobMessage}
+     * it allows you to create a selector on the MIME type of the BLOB body
+     */
+    String getJMSXMimeType();
 
-
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
 }

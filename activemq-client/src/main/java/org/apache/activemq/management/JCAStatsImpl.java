@@ -14,20 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq;
-
-import javax.jms.JMSException;
-
-import org.apache.activemq.command.ActiveMQTempDestination;
+package org.apache.activemq.management;
 
 
-public interface IConnection {
+/**
+ * Statistics for a number of JCA connections and connection pools
+ *
+ * @version $Revision: 1.2 $
+ */
+public class JCAStatsImpl extends StatsImpl {
+    private JCAConnectionStatsImpl[] connectionStats;
+    private JCAConnectionPoolStatsImpl[] connectionPoolStats;
 
-    boolean isUseCompression();
+    public JCAStatsImpl(JCAConnectionStatsImpl[] connectionStats, JCAConnectionPoolStatsImpl[] connectionPoolStats) {
+        this.connectionStats = connectionStats;
+        this.connectionPoolStats = connectionPoolStats;
+    }
 
-    boolean isNestedMapAndListEnabled();
+    public JCAConnectionStatsImpl[] getConnections() {
+        return connectionStats;
+    }
 
-    boolean isObjectMessageSerializationDefered();
+    public JCAConnectionPoolStatsImpl[] getConnectionPools() {
+        return connectionPoolStats;
+    }
 
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+
 }

@@ -16,18 +16,8 @@
  */
 package org.apache.activemq;
 
-import javax.jms.JMSException;
+import org.apache.activemq.command.MessageDispatch;
 
-import org.apache.activemq.command.ActiveMQTempDestination;
-
-
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+public interface ActiveMQDispatcher {
+    void dispatch(MessageDispatch messageDispatch);
 }

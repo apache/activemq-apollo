@@ -14,20 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq;
+package org.apache.activemq.transaction;
 
-import javax.jms.JMSException;
+/**
+ * @version $Revision$
+ */
+public class Synchronization {
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+    public void beforeEnd() throws Exception {
+    }
 
+    public void afterCommit() throws Exception {
+    }
 
-public interface IConnection {
+    public void afterRollback() throws Exception {
+    }
 
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
 }

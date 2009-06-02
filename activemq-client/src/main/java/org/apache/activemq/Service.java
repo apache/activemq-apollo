@@ -16,18 +16,21 @@
  */
 package org.apache.activemq;
 
-import javax.jms.JMSException;
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+/**
+ * The core lifecyle interface for ActiveMQ components.
+ *  
+ * If there was a standard way to do so, it'd be good to register this 
+ * interface with Spring so it treats the start/stop methods as those of
+ * {@link org.springframework.beans.factory.InitializingBean} 
+ * and {@link org.springframework.beans.factory.DisposableBean}
+ * 
+ * @version $Revision: 1.1 $
+ */
+public interface Service {
 
-
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+    void start() throws Exception;
+    
+    void stop() throws Exception;
+    
 }

@@ -14,20 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq;
+package org.apache.activemq.management;
 
-import javax.jms.JMSException;
+/**
+ * Represents some statistic that is capable of being reset
+ *
+ * @version $Revision: 1.2 $
+ */
+public interface Resettable {
 
-import org.apache.activemq.command.ActiveMQTempDestination;
-
-
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+    /**
+     * Reset the statistic
+     */
+    void reset();
 }

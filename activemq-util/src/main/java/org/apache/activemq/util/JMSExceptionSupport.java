@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.util;
 
+import javax.jms.InvalidSelectorException;
 import javax.jms.JMSException;
 import javax.jms.MessageEOFException;
 import javax.jms.MessageFormatException;
@@ -86,4 +87,11 @@ public final class JMSExceptionSupport {
         exception.initCause(cause);
         return exception;
     }
+    
+    public static InvalidSelectorException createInvalidSelectorException(Exception e) {
+        InvalidSelectorException se = new InvalidSelectorException(e.getMessage());
+        se.initCause(e);
+        return se;
+    }
+    
 }

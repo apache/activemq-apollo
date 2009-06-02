@@ -16,18 +16,19 @@
  */
 package org.apache.activemq;
 
-import javax.jms.JMSException;
+import javax.jms.IllegalStateException;
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+/**
+ * An exception thrown when an operation is invoked on a service
+ * which has not yet been started.
+ *
+ * @version $Revision: 1.2 $
+ */
+public class NotStartedException extends IllegalStateException {
 
+    private static final long serialVersionUID = -4907909323529887659L;
 
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+    public NotStartedException() {
+        super("IllegalState: This service has not yet been started", "AMQ-1003");
+    }
 }

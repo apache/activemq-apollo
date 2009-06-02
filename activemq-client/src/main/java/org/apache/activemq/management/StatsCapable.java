@@ -14,20 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq;
-
-import javax.jms.JMSException;
-
-import org.apache.activemq.command.ActiveMQTempDestination;
+package org.apache.activemq.management;
 
 
-public interface IConnection {
+/**
+ * Represents an object which is capable of providing some stats
+ *
+ * @version $Revision: 1.2 $
+ */
+public interface StatsCapable {
 
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+    /**
+     * @return the Stats for this object
+     */
+    StatsImpl getStats();
 }

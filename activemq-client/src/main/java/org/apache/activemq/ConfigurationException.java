@@ -18,16 +18,15 @@ package org.apache.activemq;
 
 import javax.jms.JMSException;
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+/**
+ * An exception thrown when a service is not correctly configured
+ *
+ * @version $Revision: 1.2 $
+ */
+public class ConfigurationException extends JMSException {
+    private static final long serialVersionUID = 5639082552451065258L;
 
-
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+    public ConfigurationException(String description) {
+        super(description, "AMQ-1002");
+    }
 }

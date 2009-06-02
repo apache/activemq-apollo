@@ -16,18 +16,14 @@
  */
 package org.apache.activemq;
 
-import javax.jms.JMSException;
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+/**
+ * @version $Revision: 1.2 $
+ */
+public interface LocalTransactionEventListener {
+    void beginEvent();
 
+    void commitEvent();
 
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+    void rollbackEvent();
 }

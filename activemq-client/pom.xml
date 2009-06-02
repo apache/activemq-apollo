@@ -41,11 +41,13 @@
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-openwire</artifactId>
     </dependency>
-
     <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-core</artifactId>
-      <version>5.3-SNAPSHOT</version>
+      <groupId>org.apache.geronimo.specs</groupId>
+      <artifactId>geronimo-jms_1.1_spec</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.geronimo.specs</groupId>
+      <artifactId>geronimo-j2ee-management_1.0_spec</artifactId>
     </dependency>
 
     <!-- Testing Dependencies -->    

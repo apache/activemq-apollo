@@ -16,18 +16,17 @@
  */
 package org.apache.activemq;
 
-import javax.jms.JMSException;
+import javax.jms.IllegalStateException;
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+/**
+ * An exception thrown when attempt is made to use a connection when the connection has been closed.
+ *
+ * @version $Revision: 1.2 $
+ */
+public class ConnectionClosedException extends IllegalStateException {
+    private static final long serialVersionUID = -7681404582227153308L;
 
-
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+    public ConnectionClosedException() {
+        super("The connection is already closed", "AlreadyClosed");
+    }
 }

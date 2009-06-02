@@ -14,20 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq;
+package org.apache.activemq.advisory;
 
-import javax.jms.JMSException;
+import org.apache.activemq.command.ActiveMQDestination;
+import org.apache.activemq.command.ConsumerId;
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+/**
+ * An event generated when a consumer stops.
+ * 
+ * @version $Revision: 563921 $
+ */
+public class ConsumerStoppedEvent extends ConsumerEvent {
 
+    private static final long serialVersionUID = 5378835541037193206L;
 
-public interface IConnection {
+    public ConsumerStoppedEvent(ConsumerEventSource source, ActiveMQDestination destination, ConsumerId consumerId, int count) {
+        super(source, destination, consumerId, count);
+    }
 
-    boolean isUseCompression();
+    public boolean isStarted() {
+        return false;
+    }
 
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
 }

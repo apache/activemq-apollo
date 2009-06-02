@@ -14,20 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq;
+package org.apache.activemq.advisory;
 
-import javax.jms.JMSException;
-
-import org.apache.activemq.command.ActiveMQTempDestination;
-
-
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+/**
+ * Listen to the changes in destinations being created or destroyed
+ *
+ * @version $Revision: 634277 $
+ */
+public interface DestinationListener {
+    void onDestinationEvent(DestinationEvent event);
 }

@@ -17,17 +17,23 @@
 package org.apache.activemq;
 
 import javax.jms.JMSException;
+import javax.jms.Message;
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+/**
+ * A useful base class for message transformers.
+ *
+ * @version $Revision: 563921 $
+ */
+public abstract class MessageTransformerSupport implements MessageTransformer {
 
-
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+    /**
+     * Copies the standard JMS and user defined properties from the givem message to the specified message
+     *
+     * @param fromMessage the message to take the properties from
+     * @param toMesage the message to add the properties to
+     * @throws JMSException
+     */
+    protected void copyProperties(Message fromMessage, Message toMesage) throws JMSException {
+        ActiveMQMessageTransformation.copyProperties(fromMessage, toMesage);
+    }
 }

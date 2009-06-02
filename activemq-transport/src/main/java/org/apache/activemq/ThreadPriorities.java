@@ -16,18 +16,17 @@
  */
 package org.apache.activemq;
 
-import javax.jms.JMSException;
 
-import org.apache.activemq.command.ActiveMQTempDestination;
+/**
+* A holder for different thread priorites used in ActiveMQ
+* 
+* @version $Revision: 1.9 $
+*/
 
-
-public interface IConnection {
-
-    boolean isUseCompression();
-
-    boolean isNestedMapAndListEnabled();
-
-    boolean isObjectMessageSerializationDefered();
-
-    void deleteTempDestination(ActiveMQTempDestination activeMQTempDestination) throws JMSException;
+public interface ThreadPriorities {
+    int INBOUND_BROKER_CONNECTION = 6;
+    int OUT_BOUND_BROKER_DISPATCH = 6;
+    int INBOUND_CLIENT_CONNECTION = 7;
+    int INBOUND_CLIENT_SESSION = 7;
+    int BROKER_MANAGEMENT = 9;
 }
