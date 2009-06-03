@@ -655,6 +655,11 @@ public class FailoverTransport implements CompositeTransport {
         return true;
     }
     
+    public boolean isUseInactivityMonitor() {
+        //this is up to the underlying transport:
+        return false;
+    }
+    
    final boolean doReconnect() {
         Exception failure = null;
         synchronized (reconnectMutex) {

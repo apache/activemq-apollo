@@ -35,9 +35,7 @@ import java.util.concurrent.TimeUnit;
 import javax.net.ServerSocketFactory;
 
 import org.apache.activemq.Service;
-import org.apache.activemq.ThreadPriorities;
-import org.apache.activemq.command.BrokerInfo;
-import org.apache.activemq.openwire.OpenWireFormatFactory;
+//import org.apache.activemq.ThreadPriorities;
 import org.apache.activemq.transport.Transport;
 //import org.apache.activemq.transport.TransportLoggerFactory;
 import org.apache.activemq.transport.TransportServer;
@@ -64,7 +62,7 @@ public class TcpTransportServer extends TransportServerThreadSupport implements 
     private static final Log LOG = LogFactory.getLog(TcpTransportServer.class);
     protected ServerSocket serverSocket;
     protected int backlog = 5000;
-    protected WireFormatFactory wireFormatFactory = new OpenWireFormatFactory();
+    protected WireFormatFactory wireFormatFactory;
     protected final TcpTransportFactory transportFactory;
     protected long maxInactivityDuration = 30000;
     protected long maxInactivityDurationInitalDelay = 10000;
@@ -85,12 +83,14 @@ public class TcpTransportServer extends TransportServerThreadSupport implements 
     protected int socketBufferSize = 64 * 1024;
     protected int connectionTimeout =  30000;
 
-//    /**
-//     * Name of the LogWriter implementation to use.
-//     * Names are mapped to classes in the resources/META-INF/services/org/apache/activemq/transport/logwriters directory.
-//     * This parameter is most probably set in Connection or TransportConnector URIs.
-//     */
-//    protected String logWriterName = TransportLoggerFactory.defaultLogWriterName;
+    /**
+     * Name of the LogWriter implementation to use.
+     * Names are mapped to classes in the resources/META-INF/services/org/apache/activemq/transport/logwriters directory.
+     * This parameter is most probably set in Connection or TransportConnector URIs.
+     
+    protected String logWriterName = TransportLoggerFactory.defaultLogWriterName;
+    */
+    
     /**
      * Specifies if the TransportLogger will be manageable by JMX or not.
      * Also, as long as there is at least 1 TransportLogger which is manageable,
@@ -175,15 +175,6 @@ public class TcpTransportServer extends TransportServerThreadSupport implements 
         this.wireFormatFactory = wireFormatFactory;
     }
 
-    /**
-     * Associates a broker info with the transport server so that the transport
-     * can do discovery advertisements of the broker.
-     * 
-     * @param brokerInfo
-     */
-    public void setBrokerInfo(BrokerInfo brokerInfo) {
-    }
-
     public long getMaxInactivityDuration() {
         return maxInactivityDuration;
     }
@@ -215,7 +206,7 @@ public class TcpTransportServer extends TransportServerThreadSupport implements 
     public void setTrace(boolean trace) {
         this.trace = trace;
     }
-    
+//    
 //    public String getLogWriterName() {
 //        return logWriterName;
 //    }
@@ -369,7 +360,7 @@ public class TcpTransportServer extends TransportServerThreadSupport implements 
                     "ActiveMQ Transport Server Thread Handler: " + toString(),
                     getStackSize());
             socketHandlerThread.setDaemon(true);
-            socketHandlerThread.setPriority(ThreadPriorities.BROKER_MANAGEMENT-1);
+            //socketHandlerThread.setPriority(ThreadPriorities.BROKER_MANAGEMENT-1);
             socketHandlerThread.start();
         }
         super.doStart();
@@ -436,29 +427,29 @@ public class TcpTransportServer extends TransportServerThreadSupport implements 
         
     }    
 
-	public int getSoTimeout() {
-		return soTimeout;
-	}
+    public int getSoTimeout() {
+        return soTimeout;
+    }
 
-	public void setSoTimeout(int soTimeout) {
-		this.soTimeout = soTimeout;
-	}
+    public void setSoTimeout(int soTimeout) {
+        this.soTimeout = soTimeout;
+    }
 
-	public int getSocketBufferSize() {
-		return socketBufferSize;
-	}
+    public int getSocketBufferSize() {
+        return socketBufferSize;
+    }
 
-	public void setSocketBufferSize(int socketBufferSize) {
-		this.socketBufferSize = socketBufferSize;
-	}
+    public void setSocketBufferSize(int socketBufferSize) {
+        this.socketBufferSize = socketBufferSize;
+    }
 
-	public int getConnectionTimeout() {
-		return connectionTimeout;
-	}
+    public int getConnectionTimeout() {
+        return connectionTimeout;
+    }
 
-	public void setConnectionTimeout(int connectionTimeout) {
-		this.connectionTimeout = connectionTimeout;
-	}
+    public void setConnectionTimeout(int connectionTimeout) {
+        this.connectionTimeout = connectionTimeout;
+    }
 
     /**
      * @return the maximumConnections

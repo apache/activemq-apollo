@@ -39,19 +39,20 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.net.SocketFactory;
 
 import org.apache.activemq.Service;
-import org.apache.activemq.transport.Transport;
-//import org.apache.activemq.transport.TransportLoggerFactory;
+import org.apache.activemq.transport.Transport; //import org.apache.activemq.transport.TransportLoggerFactory;
 import org.apache.activemq.transport.TransportThreadSupport;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.ServiceStopper;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * An implementation of the {@link Transport} interface using raw tcp/ip
  * 
- * @author David Martin Clavo david(dot)martin(dot)clavo(at)gmail.com (logging improvement modifications)
+ * @author David Martin Clavo david(dot)martin(dot)clavo(at)gmail.com (logging
+ *         improvement modifications)
  * @version $Revision$
  */
 public class TcpTransport extends TransportThreadSupport implements Transport, Service, Runnable {
@@ -65,48 +66,50 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
     protected int soTimeout;
     protected int socketBufferSize = 64 * 1024;
     protected int ioBufferSize = 8 * 1024;
-    protected boolean closeAsync=true;
+    protected boolean closeAsync = true;
     protected Socket socket;
     protected DataOutputStream dataOut;
     protected DataInputStream dataIn;
     protected TcpBufferedOutputStream buffOut = null;
+
+    private static final boolean ASYNC_WRITE = false;
     /**
-     * trace=true -> the Transport stack where this TcpTransport
-     * object will be, will have a TransportLogger layer
-     * trace=false -> the Transport stack where this TcpTransport
-     * object will be, will NOT have a TransportLogger layer, and therefore
-     * will never be able to print logging messages.
-     * This parameter is most probably set in Connection or TransportConnector URIs.
+     * trace=true -> the Transport stack where this TcpTransport object will be,
+     * will have a TransportLogger layer trace=false -> the Transport stack
+     * where this TcpTransport object will be, will NOT have a TransportLogger
+     * layer, and therefore will never be able to print logging messages. This
+     * parameter is most probably set in Connection or TransportConnector URIs.
      */
     protected boolean trace = false;
-//    /**
-//     * Name of the LogWriter implementation to use.
-//     * Names are mapped to classes in the resources/META-INF/services/org/apache/activemq/transport/logwriters directory.
-//     * This parameter is most probably set in Connection or TransportConnector URIs.
-//     */
-//    protected String logWriterName = TransportLoggerFactory.defaultLogWriterName;
     /**
-     * Specifies if the TransportLogger will be manageable by JMX or not.
-     * Also, as long as there is at least 1 TransportLogger which is manageable,
-     * a TransportLoggerControl MBean will me created.
+     * Name of the LogWriter implementation to use. Names are mapped to classes
+     * in the
+     * resources/META-INF/services/org/apache/activemq/transport/logwriters
+     * directory. This parameter is most probably set in Connection or
+     * TransportConnector URIs.
+     */
+    //    protected String logWriterName = TransportLoggerFactory.defaultLogWriterName;
+    /**
+     * Specifies if the TransportLogger will be manageable by JMX or not. Also,
+     * as long as there is at least 1 TransportLogger which is manageable, a
+     * TransportLoggerControl MBean will me created.
      */
     protected boolean dynamicManagement = false;
     /**
      * startLogging=true -> the TransportLogger object of the Transport stack
-     * will initially write messages to the log.
-     * startLogging=false -> the TransportLogger object of the Transport stack
-     * will initially NOT write messages to the log.
-     * This parameter only has an effect if trace == true.
-     * This parameter is most probably set in Connection or TransportConnector URIs.
+     * will initially write messages to the log. startLogging=false -> the
+     * TransportLogger object of the Transport stack will initially NOT write
+     * messages to the log. This parameter only has an effect if trace == true.
+     * This parameter is most probably set in Connection or TransportConnector
+     * URIs.
      */
     protected boolean startLogging = true;
     /**
-     * Specifies the port that will be used by the JMX server to manage
-     * the TransportLoggers.
-     * This should only be set in an URI by a client (producer or consumer) since
-     * a broker will already create a JMX server.
-     * It is useful for people who test a broker and clients in the same machine
-     * and want to control both via JMX; a different port will be needed.
+     * Specifies the port that will be used by the JMX server to manage the
+     * TransportLoggers. This should only be set in an URI by a client (producer
+     * or consumer) since a broker will already create a JMX server. It is
+     * useful for people who test a broker and clients in the same machine and
+     * want to control both via JMX; a different port will be needed.
      */
     protected int jmxPort = 1099;
     protected boolean useLocalHost = true;
@@ -119,18 +122,20 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
     private Boolean tcpNoDelay;
     private Thread runnerThread;
 
+    protected boolean useActivityMonitor;
+
     /**
      * Connect to a remote Node - e.g. a Broker
      * 
      * @param wireFormat
      * @param socketFactory
      * @param remoteLocation
-     * @param localLocation - e.g. local InetAddress and local port
+     * @param localLocation
+     *            - e.g. local InetAddress and local port
      * @throws IOException
      * @throws UnknownHostException
      */
-    public TcpTransport(WireFormat wireFormat, SocketFactory socketFactory, URI remoteLocation,
-                        URI localLocation) throws UnknownHostException, IOException {
+    public TcpTransport(WireFormat wireFormat, SocketFactory socketFactory, URI remoteLocation, URI localLocation) throws UnknownHostException, IOException {
         this.wireFormat = wireFormat;
         this.socketFactory = socketFactory;
         try {
@@ -158,13 +163,48 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
         setDaemon(true);
     }
 
+    LinkedBlockingQueue<Object> outbound = new LinkedBlockingQueue<Object>();
+    private Thread onewayThread;
+
     /**
      * A one way asynchronous send
      */
     public void oneway(Object command) throws IOException {
         checkStarted();
-        wireFormat.marshal(command, dataOut);
-        dataOut.flush();
+        try {
+            if (ASYNC_WRITE) {
+                outbound.put(command);
+            } else {
+                wireFormat.marshal(command, dataOut);
+                dataOut.flush();
+            }
+        } catch (InterruptedException e) {
+            throw new InterruptedIOException();
+        }
+    }
+
+    protected void sendOneways() {
+        try {
+            LOG.debug("Started oneway thead");
+            while (!isStopped()) {
+                Object command = outbound.poll(500, TimeUnit.MILLISECONDS);
+                if (command != null) {
+                    try {
+                        // int count=0;
+                        while (command != null) {
+                            wireFormat.marshal(command, dataOut);
+                            // count++;
+                            command = outbound.poll();
+                        }
+                        // System.out.println(count);
+                        dataOut.flush();
+                    } catch (IOException e) {
+                        getTransportListener().onException(e);
+                    }
+                }
+            }
+        } catch (InterruptedException e) {
+        }
     }
 
     /**
@@ -179,7 +219,7 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
      */
     public void run() {
         LOG.trace("TCP consumer thread for " + this + " starting");
-        this.runnerThread=Thread.currentThread();
+        this.runnerThread = Thread.currentThread();
         try {
             while (!isStopped()) {
                 doRun();
@@ -187,12 +227,12 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
         } catch (IOException e) {
             stoppedLatch.get().countDown();
             onException(e);
-        } catch (Throwable e){
+        } catch (Throwable e) {
             stoppedLatch.get().countDown();
-            IOException ioe=new IOException("Unexpected error occured");
+            IOException ioe = new IOException("Unexpected error occured");
             ioe.initCause(e);
             onException(ioe);
-        }finally {
+        } finally {
             stoppedLatch.get().countDown();
         }
     }
@@ -220,14 +260,22 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
     public void setTrace(boolean trace) {
         this.trace = trace;
     }
-    
-//    public String getLogWriterName() {
-//        return logWriterName;
-//    }
-//
-//    public void setLogWriterName(String logFormat) {
-//        this.logWriterName = logFormat;
-//    }
+
+    void setUseInactivityMonitor(boolean val) {
+        useActivityMonitor = val;
+    }
+
+    public boolean isUseInactivityMonitor() {
+        return useActivityMonitor;
+    }
+
+    //    public String getLogWriterName() {
+    //        return logWriterName;
+    //    }
+    //
+    //    public void setLogWriterName(String logFormat) {
+    //        this.logWriterName = logFormat;
+    //    }
 
     public boolean isDynamicManagement() {
         return dynamicManagement;
@@ -252,7 +300,7 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
     public void setJmxPort(int jmxPort) {
         this.jmxPort = jmxPort;
     }
-    
+
     public int getMinmumWireFormatVersion() {
         return minmumWireFormatVersion;
     }
@@ -337,12 +385,13 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
     }
 
     /**
-     * @param ioBufferSize the ioBufferSize to set
+     * @param ioBufferSize
+     *            the ioBufferSize to set
      */
     public void setIoBufferSize(int ioBufferSize) {
         this.ioBufferSize = ioBufferSize;
     }
-    
+
     /**
      * @return the closeAsync
      */
@@ -351,7 +400,8 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
     }
 
     /**
-     * @param closeAsync the closeAsync to set
+     * @param closeAsync
+     *            the closeAsync to set
      */
     public void setCloseAsync(boolean closeAsync) {
         this.closeAsync = closeAsync;
@@ -399,6 +449,16 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
 
     protected void doStart() throws Exception {
         connect();
+        if (ASYNC_WRITE) {
+            onewayThread = new Thread() {
+                @Override
+                public void run() {
+                    sendOneways();
+                }
+            };
+            onewayThread.start();
+        }
+
         stoppedLatch.set(new CountDownLatch(1));
         super.doStart();
     }
@@ -413,8 +473,7 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
         InetSocketAddress remoteAddress = null;
 
         if (localLocation != null) {
-            localAddress = new InetSocketAddress(InetAddress.getByName(localLocation.getHost()),
-                                                 localLocation.getPort());
+            localAddress = new InetSocketAddress(InetAddress.getByName(localLocation.getHost()), localLocation.getPort());
         }
 
         if (remoteLocation != null) {
@@ -442,8 +501,7 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
             // For SSL sockets.. you can't create an unconnected socket :(
             // This means the timout option are not supported either.
             if (localAddress != null) {
-                socket = socketFactory.createSocket(remoteAddress.getAddress(), remoteAddress.getPort(),
-                                                    localAddress.getAddress(), localAddress.getPort());
+                socket = socketFactory.createSocket(remoteAddress.getAddress(), remoteAddress.getPort(), localAddress.getAddress(), localAddress.getPort());
             } else {
                 socket = socketFactory.createSocket(remoteAddress.getAddress(), remoteAddress.getPort());
             }
@@ -463,31 +521,34 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
         // closeStreams();
         if (socket != null) {
             if (closeAsync) {
-                //closing the socket can hang also 
+                // closing the socket can hang also
                 final CountDownLatch latch = new CountDownLatch(1);
-                
+
                 SOCKET_CLOSE.execute(new Runnable() {
-    
+
                     public void run() {
                         try {
                             socket.close();
                         } catch (IOException e) {
-                            LOG.debug("Caught exception closing socket",e);
-                        }finally {
+                            LOG.debug("Caught exception closing socket", e);
+                        } finally {
                             latch.countDown();
                         }
                     }
-                    
+
                 });
-                latch.await(1,TimeUnit.SECONDS);
-            }else {
+                latch.await(1, TimeUnit.SECONDS);
+            } else {
                 try {
                     socket.close();
                 } catch (IOException e) {
-                    LOG.debug("Caught exception closing socket",e);
+                    LOG.debug("Caught exception closing socket", e);
                 }
+
             }
-           
+            if (ASYNC_WRITE) {
+                onewayThread.join();
+            }
         }
     }
 
@@ -499,7 +560,7 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
         super.stop();
         CountDownLatch countDownLatch = stoppedLatch.get();
         if (countDownLatch != null && Thread.currentThread() != this.runnerThread) {
-            countDownLatch.await(1,TimeUnit.SECONDS);
+            countDownLatch.await(1, TimeUnit.SECONDS);
         }
     }
 
@@ -529,22 +590,21 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
         }
         return null;
     }
-    
+
     @Override
     public <T> T narrow(Class<T> target) {
         if (target == Socket.class) {
             return target.cast(socket);
-        } else if ( target == TcpBufferedOutputStream.class) {
+        } else if (target == TcpBufferedOutputStream.class) {
             return target.cast(buffOut);
         }
         return super.narrow(target);
     }
-    
 
     static {
-        SOCKET_CLOSE =   new ThreadPoolExecutor(0, Integer.MAX_VALUE, 10, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), new ThreadFactory() {
+        SOCKET_CLOSE = new ThreadPoolExecutor(0, Integer.MAX_VALUE, 10, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), new ThreadFactory() {
             public Thread newThread(Runnable runnable) {
-                Thread thread = new Thread(runnable, "TcpSocketClose: "+runnable);
+                Thread thread = new Thread(runnable, "TcpSocketClose: " + runnable);
                 thread.setPriority(Thread.MAX_PRIORITY);
                 thread.setDaemon(true);
                 return thread;

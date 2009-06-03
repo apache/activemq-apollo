@@ -51,7 +51,7 @@ public abstract class BrokerTestBase extends TestCase {
 
     protected final boolean USE_KAHA_DB = true;
     protected final boolean PURGE_STORE = true;
-    protected final boolean PERSISTENT = true;
+    protected final boolean PERSISTENT = false;
     protected final boolean DURABLE = true;
 
     // Set to put senders and consumers on separate brokers.
@@ -479,7 +479,7 @@ public abstract class BrokerTestBase extends TestCase {
             store = StoreFactory.createStore("memory");
         }
 
-        store.setStoreDirectory(new File("sub/test-data/broker-test/" + broker.getName()));
+        store.setStoreDirectory(new File("test-data/broker-test/" + broker.getName()));
         store.setDeleteAllMessages(PURGE_STORE);
         return store;
     }

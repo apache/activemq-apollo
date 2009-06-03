@@ -29,7 +29,6 @@ import org.apache.activemq.util.URISupport;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 
-
 public class PipeTransportFactory extends TransportFactory {
 
     private final HashMap<String, PipeTransportServer> servers = new HashMap<String, PipeTransportServer>();
@@ -152,6 +151,10 @@ public class PipeTransportFactory extends TransportFactory {
         }
 
         public boolean isFaultTolerant() {
+            return false;
+        }
+
+        public boolean isUseInactivityMonitor() {
             return false;
         }
 

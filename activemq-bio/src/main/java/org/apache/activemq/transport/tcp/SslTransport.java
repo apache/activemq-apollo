@@ -27,8 +27,8 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import org.apache.activemq.command.Command;
-import org.apache.activemq.command.ConnectionInfo;
+//import org.apache.activemq.command.Command;
+//import org.apache.activemq.command.ConnectionInfo;
 import org.apache.activemq.wireformat.WireFormat;
 
 /**
@@ -45,20 +45,27 @@ public class SslTransport extends TcpTransport {
     /**
      * Connect to a remote node such as a Broker.
      * 
-     * @param wireFormat The WireFormat to be used.
-     * @param socketFactory The socket factory to be used. Forcing SSLSockets
-     *                for obvious reasons.
-     * @param remoteLocation The remote location.
-     * @param localLocation The local location.
-     * @param needClientAuth If set to true, the underlying socket will need
-     *                client certificate authentication.
-     * @throws UnknownHostException If TcpTransport throws.
-     * @throws IOException If TcpTransport throws.
+     * @param wireFormat
+     *            The WireFormat to be used.
+     * @param socketFactory
+     *            The socket factory to be used. Forcing SSLSockets for obvious
+     *            reasons.
+     * @param remoteLocation
+     *            The remote location.
+     * @param localLocation
+     *            The local location.
+     * @param needClientAuth
+     *            If set to true, the underlying socket will need client
+     *            certificate authentication.
+     * @throws UnknownHostException
+     *             If TcpTransport throws.
+     * @throws IOException
+     *             If TcpTransport throws.
      */
     public SslTransport(WireFormat wireFormat, SSLSocketFactory socketFactory, URI remoteLocation, URI localLocation, boolean needClientAuth) throws IOException {
         super(wireFormat, socketFactory, remoteLocation, localLocation);
         if (this.socket != null) {
-            ((SSLSocket)this.socket).setNeedClientAuth(needClientAuth);
+            ((SSLSocket) this.socket).setNeedClientAuth(needClientAuth);
         }
     }
 
@@ -66,9 +73,12 @@ public class SslTransport extends TcpTransport {
      * Initialize from a ServerSocket. No access to needClientAuth is given
      * since it is already set within the provided socket.
      * 
-     * @param wireFormat The WireFormat to be used.
-     * @param socket The Socket to be used. Forcing SSL.
-     * @throws IOException If TcpTransport throws.
+     * @param wireFormat
+     *            The WireFormat to be used.
+     * @param socket
+     *            The Socket to be used. Forcing SSL.
+     * @throws IOException
+     *             If TcpTransport throws.
      */
     public SslTransport(WireFormat wireFormat, SSLSocket socket) throws IOException {
         super(wireFormat, socket);
@@ -78,30 +88,35 @@ public class SslTransport extends TcpTransport {
      * Overriding in order to add the client's certificates to ConnectionInfo
      * Commmands.
      * 
-     * @param command The Command coming in.
-     */
+     * @param command
+     *            The Command coming in.
+     
     public void doConsume(Object command) {
         // The instanceof can be avoided, but that would require modifying the
         // Command clas tree and that would require too much effort right
         // now.
-        if (command instanceof ConnectionInfo) {
-            ConnectionInfo connectionInfo = (ConnectionInfo)command;
-
-            SSLSocket sslSocket = (SSLSocket)this.socket;
-
-            SSLSession sslSession = sslSocket.getSession();
-
-            X509Certificate[] clientCertChain;
-            try {
-                clientCertChain = (X509Certificate[])sslSession.getPeerCertificates();
-            } catch (SSLPeerUnverifiedException e) {
-                clientCertChain = null;
-            }
-
-            connectionInfo.setTransportContext(clientCertChain);
-        }
+        //        if (command instanceof ConnectionInfo) {
+        //            ConnectionInfo connectionInfo = (ConnectionInfo)command;
+        //
+        //            SSLSocket sslSocket = (SSLSocket)this.socket;
+        //
+        //            SSLSession sslSession = sslSocket.getSession();
+        //
+        //            X509Certificate[] clientCertChain;
+        //            try {
+        //                clientCertChain = (X509Certificate[])sslSession.getPeerCertificates();
+        //            } catch (SSLPeerUnverifiedException e) {
+        //                clientCertChain = null;
+        //            }
+        //
+        //            connectionInfo.setTransportContext(clientCertChain);
+        //        }
 
         super.doConsume(command);
+    }*/
+
+    public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
+        return (X509Certificate[]) ((SSLSocket) this.socket).getSession().getPeerCertificates();
     }
 
     /**

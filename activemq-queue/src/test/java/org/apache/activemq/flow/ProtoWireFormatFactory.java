@@ -5,18 +5,20 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
 import org.apache.activemq.flow.Commands.FlowControl.FlowControlBuffer;
 import org.apache.activemq.flow.Commands.Message.MessageBuffer;
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.transport.Transport;
 import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.DataByteArrayInputStream;
+import org.apache.activemq.util.DataByteArrayOutputStream;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.wireformat.StatefulWireFormat;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
-import org.apache.activemq.util.DataByteArrayInputStream;
-import org.apache.activemq.util.DataByteArrayOutputStream;
 
 public class ProtoWireFormatFactory implements WireFormatFactory {
 
@@ -233,6 +235,10 @@ public class ProtoWireFormatFactory implements WireFormatFactory {
         public Object unmarshal(ByteSequence data) throws IOException {
             DataByteArrayInputStream is = new DataByteArrayInputStream(data);
             return unmarshal(is);
+        }
+
+        public Transport createTransportFilters(Transport transport, Map options) {
+           return transport;
         }
     }
 

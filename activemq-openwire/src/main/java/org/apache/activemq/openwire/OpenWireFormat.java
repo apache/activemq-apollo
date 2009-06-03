@@ -27,6 +27,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.activemq.command.CommandTypes;
 import org.apache.activemq.command.DataStructure;
 import org.apache.activemq.command.WireFormatInfo;
+import org.apache.activemq.transport.Transport;
+import org.apache.activemq.transport.InactivityMonitor;
+import org.apache.activemq.transport.WireFormatNegotiator;
 import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.ByteSequenceData;
 import org.apache.activemq.util.DataByteArrayInputStream;
@@ -62,7 +65,7 @@ public final class OpenWireFormat implements WireFormat {
     private DataByteArrayOutputStream bytesOut = new DataByteArrayOutputStream();
     private DataByteArrayInputStream bytesIn = new DataByteArrayInputStream();
     private WireFormatInfo preferedWireFormatInfo;
-    
+
     private AtomicBoolean receivingMessage = new AtomicBoolean(false);
 
     public OpenWireFormat() {
@@ -74,10 +77,8 @@ public final class OpenWireFormat implements WireFormat {
     }
 
     public int hashCode() {
-        return version ^ (cacheEnabled ? 0x10000000 : 0x20000000)
-               ^ (stackTraceEnabled ? 0x01000000 : 0x02000000)
-               ^ (tightEncodingEnabled ? 0x00100000 : 0x00200000)
-               ^ (sizePrefixDisabled ? 0x00010000 : 0x00020000);
+        return version ^ (cacheEnabled ? 0x10000000 : 0x20000000) ^ (stackTraceEnabled ? 0x01000000 : 0x02000000) ^ (tightEncodingEnabled ? 0x00100000 : 0x00200000)
+                ^ (sizePrefixDisabled ? 0x00010000 : 0x00020000);
     }
 
     public OpenWireFormat copy() {
@@ -96,16 +97,14 @@ public final class OpenWireFormat implements WireFormat {
         if (object == null) {
             return false;
         }
-        OpenWireFormat o = (OpenWireFormat)object;
-        return o.stackTraceEnabled == stackTraceEnabled && o.cacheEnabled == cacheEnabled
-               && o.version == version && o.tightEncodingEnabled == tightEncodingEnabled
-               && o.sizePrefixDisabled == sizePrefixDisabled;
+        OpenWireFormat o = (OpenWireFormat) object;
+        return o.stackTraceEnabled == stackTraceEnabled && o.cacheEnabled == cacheEnabled && o.version == version && o.tightEncodingEnabled == tightEncodingEnabled
+                && o.sizePrefixDisabled == sizePrefixDisabled;
     }
 
-
     public String toString() {
-        return "OpenWireFormat{version=" + version + ", cacheEnabled=" + cacheEnabled + ", stackTraceEnabled=" + stackTraceEnabled + ", tightEncodingEnabled="
-               + tightEncodingEnabled + ", sizePrefixDisabled=" + sizePrefixDisabled + "}";
+        return "OpenWireFormat{version=" + version + ", cacheEnabled=" + cacheEnabled + ", stackTraceEnabled=" + stackTraceEnabled + ", tightEncodingEnabled=" + tightEncodingEnabled
+                + ", sizePrefixDisabled=" + sizePrefixDisabled + "}";
         // return "OpenWireFormat{id="+id+",
         // tightEncodingEnabled="+tightEncodingEnabled+"}";
     }
@@ -120,12 +119,12 @@ public final class OpenWireFormat implements WireFormat {
             runMarshallCacheEvictionSweep();
         }
 
-//        MarshallAware ma = null;
-//        // If not using value caching, then the marshaled form is always the
-//        // same
-//        if (!cacheEnabled && ((DataStructure)command).isMarshallAware()) {
-//            ma = (MarshallAware)command;
-//        }
+        //        MarshallAware ma = null;
+        //        // If not using value caching, then the marshaled form is always the
+        //        // same
+        //        if (!cacheEnabled && ((DataStructure)command).isMarshallAware()) {
+        //            ma = (MarshallAware)command;
+        //        }
 
         ByteSequence sequence = null;
         // if( ma!=null ) {
@@ -137,9 +136,9 @@ public final class OpenWireFormat implements WireFormat {
             int size = 1;
             if (command != null) {
 
-                DataStructure c = (DataStructure)command;
+                DataStructure c = (DataStructure) command;
                 byte type = c.getDataStructureType();
-                DataStreamMarshaller dsm = (DataStreamMarshaller)dataMarshallers[type & 0xFF];
+                DataStreamMarshaller dsm = (DataStreamMarshaller) dataMarshallers[type & 0xFF];
                 if (dsm == null) {
                     throw new IOException("Unknown data type: " + type);
                 }
@@ -162,8 +161,8 @@ public final class OpenWireFormat implements WireFormat {
                     bytesOut.restart();
                     if (!sizePrefixDisabled) {
                         bytesOut.writeInt(0); // we don't know the final size
-                                                // yet but write this here for
-                                                // now.
+                        // yet but write this here for
+                        // now.
                     }
                     bytesOut.writeByte(type);
                     dsm.looseMarshal(this, c, bytesOut);
@@ -220,9 +219,9 @@ public final class OpenWireFormat implements WireFormat {
         int size = 1;
         if (o != null) {
 
-            DataStructure c = (DataStructure)o;
+            DataStructure c = (DataStructure) o;
             byte type = c.getDataStructureType();
-            DataStreamMarshaller dsm = (DataStreamMarshaller)dataMarshallers[type & 0xFF];
+            DataStreamMarshaller dsm = (DataStreamMarshaller) dataMarshallers[type & 0xFF];
             if (dsm == null) {
                 throw new IOException("Unknown data type: " + type);
             }
@@ -260,7 +259,7 @@ public final class OpenWireFormat implements WireFormat {
 
         } else {
             if (!sizePrefixDisabled) {
-            	dataOut.writeInt(size);
+                dataOut.writeInt(size);
             }
             dataOut.writeByte(NULL_TYPE);
         }
@@ -285,9 +284,9 @@ public final class OpenWireFormat implements WireFormat {
     public int tightMarshal1(Object o, BooleanStream bs) throws IOException {
         int size = 1;
         if (o != null) {
-            DataStructure c = (DataStructure)o;
+            DataStructure c = (DataStructure) o;
             byte type = c.getDataStructureType();
-            DataStreamMarshaller dsm = (DataStreamMarshaller)dataMarshallers[type & 0xFF];
+            DataStreamMarshaller dsm = (DataStreamMarshaller) dataMarshallers[type & 0xFF];
             if (dsm == null) {
                 throw new IOException("Unknown data type: " + type);
             }
@@ -308,9 +307,9 @@ public final class OpenWireFormat implements WireFormat {
         }
 
         if (o != null) {
-            DataStructure c = (DataStructure)o;
+            DataStructure c = (DataStructure) o;
             byte type = c.getDataStructureType();
-            DataStreamMarshaller dsm = (DataStreamMarshaller)dataMarshallers[type & 0xFF];
+            DataStreamMarshaller dsm = (DataStreamMarshaller) dataMarshallers[type & 0xFF];
             if (dsm == null) {
                 throw new IOException("Unknown data type: " + type);
             }
@@ -332,21 +331,13 @@ public final class OpenWireFormat implements WireFormat {
         try {
             mfClass = Class.forName(mfName, false, getClass().getClassLoader());
         } catch (ClassNotFoundException e) {
-            throw (IllegalArgumentException)new IllegalArgumentException("Invalid version: " + version
-                                                                         + ", could not load " + mfName)
-                .initCause(e);
+            throw (IllegalArgumentException) new IllegalArgumentException("Invalid version: " + version + ", could not load " + mfName).initCause(e);
         }
         try {
-            Method method = mfClass.getMethod("createMarshallerMap", new Class[] {OpenWireFormat.class});
-            dataMarshallers = (DataStreamMarshaller[])method.invoke(null, new Object[] {this});
+            Method method = mfClass.getMethod("createMarshallerMap", new Class[] { OpenWireFormat.class });
+            dataMarshallers = (DataStreamMarshaller[]) method.invoke(null, new Object[] { this });
         } catch (Throwable e) {
-            throw (IllegalArgumentException)new IllegalArgumentException(
-                                                                         "Invalid version: "
-                                                                             + version
-                                                                             + ", "
-                                                                             + mfName
-                                                                             + " does not properly implement the createMarshallerMap method.")
-                .initCause(e);
+            throw (IllegalArgumentException) new IllegalArgumentException("Invalid version: " + version + ", " + mfName + " does not properly implement the createMarshallerMap method.").initCause(e);
         }
         this.version = version;
     }
@@ -355,7 +346,7 @@ public final class OpenWireFormat implements WireFormat {
         byte dataType = dis.readByte();
         receivingMessage.set(true);
         if (dataType != NULL_TYPE) {
-            DataStreamMarshaller dsm = (DataStreamMarshaller)dataMarshallers[dataType & 0xFF];
+            DataStreamMarshaller dsm = (DataStreamMarshaller) dataMarshallers[dataType & 0xFF];
             if (dsm == null) {
                 throw new IOException("Unknown data type: " + dataType);
             }
@@ -396,15 +387,14 @@ public final class OpenWireFormat implements WireFormat {
         }
 
         byte type = o.getDataStructureType();
-        DataStreamMarshaller dsm = (DataStreamMarshaller)dataMarshallers[type & 0xFF];
+        DataStreamMarshaller dsm = (DataStreamMarshaller) dataMarshallers[type & 0xFF];
         if (dsm == null) {
             throw new IOException("Unknown data type: " + type);
         }
         return 1 + dsm.tightMarshal1(this, o, bs);
     }
 
-    public void tightMarshalNestedObject2(DataStructure o, DataOutput ds, BooleanStream bs)
-        throws IOException {
+    public void tightMarshalNestedObject2(DataStructure o, DataOutput ds, BooleanStream bs) throws IOException {
         if (!bs.readBoolean()) {
             return;
         }
@@ -423,7 +413,7 @@ public final class OpenWireFormat implements WireFormat {
 
         } else {
 
-            DataStreamMarshaller dsm = (DataStreamMarshaller)dataMarshallers[type & 0xFF];
+            DataStreamMarshaller dsm = (DataStreamMarshaller) dataMarshallers[type & 0xFF];
             if (dsm == null) {
                 throw new IOException("Unknown data type: " + type);
             }
@@ -436,7 +426,7 @@ public final class OpenWireFormat implements WireFormat {
         if (bs.readBoolean()) {
 
             byte dataType = dis.readByte();
-            DataStreamMarshaller dsm = (DataStreamMarshaller)dataMarshallers[dataType & 0xFF];
+            DataStreamMarshaller dsm = (DataStreamMarshaller) dataMarshallers[dataType & 0xFF];
             if (dsm == null) {
                 throw new IOException("Unknown data type: " + dataType);
             }
@@ -469,7 +459,7 @@ public final class OpenWireFormat implements WireFormat {
         if (dis.readBoolean()) {
 
             byte dataType = dis.readByte();
-            DataStreamMarshaller dsm = (DataStreamMarshaller)dataMarshallers[dataType & 0xFF];
+            DataStreamMarshaller dsm = (DataStreamMarshaller) dataMarshallers[dataType & 0xFF];
             if (dsm == null) {
                 throw new IOException("Unknown data type: " + dataType);
             }
@@ -487,7 +477,7 @@ public final class OpenWireFormat implements WireFormat {
         if (o != null) {
             byte type = o.getDataStructureType();
             dataOut.writeByte(type);
-            DataStreamMarshaller dsm = (DataStreamMarshaller)dataMarshallers[type & 0xFF];
+            DataStreamMarshaller dsm = (DataStreamMarshaller) dataMarshallers[type & 0xFF];
             if (dsm == null) {
                 throw new IOException("Unknown data type: " + type);
             }
@@ -529,7 +519,7 @@ public final class OpenWireFormat implements WireFormat {
         } else {
             // Use -1 to indicate that the value was not cached due to cache
             // being full.
-            return new Short((short)-1);
+            return new Short((short) -1);
         }
     }
 
@@ -595,9 +585,9 @@ public final class OpenWireFormat implements WireFormat {
     public WireFormatInfo getPreferedWireFormatInfo() {
         return preferedWireFormatInfo;
     }
-    
+
     public boolean inReceive() {
-    	return receivingMessage.get();
+        return receivingMessage.get();
     }
 
     public void renegotiateWireFormat(WireFormatInfo info) throws IOException {
@@ -618,12 +608,10 @@ public final class OpenWireFormat implements WireFormat {
         this.cacheEnabled = info.isCacheEnabled() && preferedWireFormatInfo.isCacheEnabled();
         info.setCacheEnabled(this.cacheEnabled);
 
-        this.tightEncodingEnabled = info.isTightEncodingEnabled()
-                                    && preferedWireFormatInfo.isTightEncodingEnabled();
+        this.tightEncodingEnabled = info.isTightEncodingEnabled() && preferedWireFormatInfo.isTightEncodingEnabled();
         info.setTightEncodingEnabled(this.tightEncodingEnabled);
 
-        this.sizePrefixDisabled = info.isSizePrefixDisabled()
-                                  && preferedWireFormatInfo.isSizePrefixDisabled();
+        this.sizePrefixDisabled = info.isSizePrefixDisabled() && preferedWireFormatInfo.isSizePrefixDisabled();
         info.setSizePrefixDisabled(this.sizePrefixDisabled);
 
         if (cacheEnabled) {
@@ -655,5 +643,15 @@ public final class OpenWireFormat implements WireFormat {
             return version1;
         }
         return version2;
+    }
+
+    public Transport createTransportFilters(Transport transport, Map options) {
+
+        if (transport.isUseInactivityMonitor()) {
+            transport = new InactivityMonitor(transport, this);
+        }
+
+        transport = new WireFormatNegotiator(transport, this, 1);
+        return transport;
     }
 }

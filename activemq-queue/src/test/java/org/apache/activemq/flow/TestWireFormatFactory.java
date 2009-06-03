@@ -7,7 +7,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.Map;
 
+import org.apache.activemq.transport.Transport;
 import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.wireformat.WireFormat;
@@ -56,6 +58,10 @@ public class TestWireFormatFactory implements WireFormatFactory {
         }
         public Object unmarshal(ByteSequence data) throws IOException {
             return null;
+        }
+
+        public Transport createTransportFilters(Transport transport, Map options) {
+           return transport;
         }
     }
 

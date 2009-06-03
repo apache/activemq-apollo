@@ -23,7 +23,10 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Map;
 
+import org.apache.activemq.transport.Transport;
+import org.apache.activemq.transport.TransportFilter;
 import org.apache.activemq.util.ByteArrayInputStream;
 import org.apache.activemq.util.ByteArrayOutputStream;
 import org.apache.activemq.util.ByteSequence;
@@ -135,6 +138,9 @@ public class MultiWireFormatFactory implements WireFormatFactory{
             for (DiscriminatableWireFormatFactory wff : wireFormatFactories) {
                 maxHeaderLength = Math.max( maxHeaderLength, wff.maxWireformatHeaderLength());
             }
+        }
+        public Transport createTransportFilters(Transport transport, Map options) {
+            return transport;
         }
     }
         

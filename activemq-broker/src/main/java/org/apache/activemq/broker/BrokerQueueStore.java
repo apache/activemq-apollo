@@ -117,8 +117,9 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
     private static final int DEFAULT_DURABLE_QUEUE_PAGING_THRESHOLD = 100 * 1024 * 1;
     private static final int DEFAULT_DURABLE_QUEUE_RESUME_THRESHOLD = 1;
     // Be default we don't page out elements to disk.
-    private static final int DEFAULT_DURABLE_QUEUE_SIZE = DEFAULT_DURABLE_QUEUE_PAGING_THRESHOLD;
-
+    //private static final int DEFAULT_DURABLE_QUEUE_SIZE = DEFAULT_DURABLE_QUEUE_PAGING_THRESHOLD;
+    private static final int DEFAULT_DURABLE_QUEUE_SIZE = 1024 * 1024 * 10;
+    
     private static final PersistencePolicy<MessageDelivery> DURABLE_QUEUE_PERSISTENCE_POLICY = new PersistencePolicy<MessageDelivery>() {
 
         private static final boolean PAGING_ENABLED = DEFAULT_DURABLE_QUEUE_SIZE > DEFAULT_DURABLE_QUEUE_PAGING_THRESHOLD;

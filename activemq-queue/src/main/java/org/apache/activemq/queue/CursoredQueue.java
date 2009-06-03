@@ -275,7 +275,7 @@ public abstract class CursoredQueue<V> {
 
         private boolean paused;
 
-        public Cursor(CursoredQueue<V> queue, String name, boolean skipAcquired, boolean pageInElements, IFlowController<QueueElement<V>> memoryController) {
+        private Cursor(CursoredQueue<V> queue, String name, boolean skipAcquired, boolean pageInElements, IFlowController<QueueElement<V>> memoryController) {
             this.name = name;
             this.queue = queue.queue;
             this.loader = queue.loader;
@@ -718,6 +718,8 @@ public abstract class CursoredQueue<V> {
         int softRefs = 0;
 
         // Indicates whether this element is loaded or a placeholder:
+        // A place holder indicates that one or more elements is paged
+        // out at and above this sequence number.
         boolean loaded = true;
 
         // Indicates that we have requested a save for the element
@@ -765,6 +767,7 @@ public abstract class CursoredQueue<V> {
 
         public final void addHardRef() {
             hardRefs++;
+
             // Page in the element (providing it wasn't removed):
             if (elem == null && !deleted) {
                 // If this is the first request for this
@@ -877,6 +880,7 @@ public abstract class CursoredQueue<V> {
                 // If deleted unlink this element from the queue, and link
                 // together adjacent paged out entries:
                 if (deleted) {
+                    loaded = false;
                     unlink();
                     // If both next and previous entries are unloaded,
                     // then collapse them:
@@ -1363,8 +1367,6 @@ public abstract class CursoredQueue<V> {
             // in memory:
             if (persistencePolicy.isPagingEnabled()) {
 
-                // Otherwise check with any other open cursor to see if
-                // it can hang on to the element:
                 Collection<Cursor<V>> active = null;
 
                 active = reservedBlocks.get(qe.restoreBlock);
@@ -1423,11 +1425,24 @@ public abstract class CursoredQueue<V> {
                     QueueElement<V> tail = queue.getTail();
                     // If we're at the end of the queue we don't need to
                     // load if we never paged out the block:
-                    if (tail != null && tail.isLoaded() && tail.restoreBlock == block && tail.isFirstInBlock()) {
-                        load = false;
-                    } else {
-                        load |= pageOutPlaceHolders;
+                    //                    if (tail != null && tail.isLoaded() && tail.restoreBlock == block && tail.isFirstInBlock()) {
+                    //                        load = false;
+                    //                    } else {
+                    //Otherwise add a soft ref for all element in the block that are already
+                    //loaded. 
+                    QueueElement<V> qe = queue.upper(RESTORE_BLOCK_SIZE * block, true);
+                    while (qe != null && qe.restoreBlock == block) {
+                        QueueElement<V> next = qe.getNext();
+                        if (qe.isLoaded()) {
+                            qe.addSoftRef();
+                        } else {
+                            //If we find an unloaded element
+                            //we'll need to load:
+                            load = true;
+                        }
+                        qe = next;
                     }
+                    //                    }
                 }
             }
             cursors.add(cursor);
@@ -1460,11 +1475,7 @@ public abstract class CursoredQueue<V> {
                             QueueElement<V> qe = queue.upper(RESTORE_BLOCK_SIZE * block, true);
                             while (qe != null && qe.restoreBlock == block) {
                                 QueueElement<V> next = qe.getNext();
-                                // If we page out place holders, release the
-                                // soft ref we added when we loaded the element:
-                                if (pageOutPlaceHolders) {
-                                    qe.releaseSoftRef();
-                                }
+                                qe.releaseSoftRef();
                                 qe = next;
                             }
                         }

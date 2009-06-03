@@ -26,13 +26,10 @@ import java.util.Map;
 import javax.net.ServerSocketFactory;
 import javax.net.SocketFactory;
 
-import org.apache.activemq.openwire.OpenWireFormat;
-import org.apache.activemq.transport.InactivityMonitor;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
 //import org.apache.activemq.transport.TransportLoggerFactory;
 import org.apache.activemq.transport.TransportServer;
-import org.apache.activemq.transport.WireFormatNegotiator;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.URISupport;
@@ -87,29 +84,26 @@ public class TcpTransportFactory extends TransportFactory {
         Map<String, Object> socketOptions = IntrospectionSupport.extractProperties(options, "socket.");
         tcpTransport.setSocketOptions(socketOptions);
         
-//        if (tcpTransport.isTrace()) {
+        if (tcpTransport.isTrace()) {
+            throw new UnsupportedOperationException("Trace not implemented");
 //            try {
 //                transport = TransportLoggerFactory.getInstance().createTransportLogger(transport, tcpTransport.getLogWriterName(),
 //                        tcpTransport.isDynamicManagement(), tcpTransport.isStartLogging(), tcpTransport.getJmxPort());
 //            } catch (Throwable e) {
 //                LOG.error("Could not create TransportLogger object for: " + tcpTransport.getLogWriterName() + ", reason: " + e, e);
 //            }
-//        }
-
+        }
+        
         boolean useInactivityMonitor = "true".equals(getOption(options, "useInactivityMonitor", "true"));
-        if (useInactivityMonitor && isUseInactivityMonitor(transport)) {
-            transport = new InactivityMonitor(transport, format);
-        }
+        tcpTransport.setUseInactivityMonitor(useInactivityMonitor && isUseInactivityMonitor(transport));
+        
 
-        // Only need the WireFormatNegotiator if using openwire
-        if (format instanceof OpenWireFormat) {
-            transport = new WireFormatNegotiator(transport, (OpenWireFormat)format, tcpTransport.getMinmumWireFormatVersion());
-        }
-
+        transport = format.createTransportFilters(transport, options);
+        
         return transport;
     }
 
-    private String getOption(Map options, String key, String def) {
+    protected String getOption(Map options, String key, String def) {
         String rc = (String) options.remove(key);
         if( rc == null ) {
             rc = def;

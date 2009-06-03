@@ -18,7 +18,7 @@ package org.apache.activemq.transport;
 
 import java.net.URI;
 
-import org.apache.activemq.ThreadPriorities;
+//import org.apache.activemq.ThreadPriorities;
 import org.apache.activemq.util.ServiceStopper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -72,7 +72,7 @@ public abstract class TransportServerThreadSupport extends TransportServerSuppor
         LOG.info("Listening for connections at: " + getConnectURI());
         runner = new Thread(null, this, "ActiveMQ Transport Server: " + toString(), stackSize);
         runner.setDaemon(daemon);
-        runner.setPriority(ThreadPriorities.BROKER_MANAGEMENT);
+        //runner.setPriority(ThreadPriorities.BROKER_MANAGEMENT);
         runner.start();
     }
 

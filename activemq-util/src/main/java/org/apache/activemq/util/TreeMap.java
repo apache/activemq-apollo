@@ -701,7 +701,7 @@ public class TreeMap<K, V> {
 
         while (currentNode != root && isBlack(currentNode)) {
             if (isLeftChild(currentNode)) {
-                TreeMapNode<K, V> siblingNode = getRight(currentNode.parent);
+                TreeMapNode<K, V> siblingNode = getRight(parent(currentNode));
 
                 if (isRed(siblingNode)) {
                     color(siblingNode, BLACK);
@@ -714,7 +714,7 @@ public class TreeMap<K, V> {
                 if (isBlack(getLeft(siblingNode)) && isBlack(getRight(siblingNode))) {
                     color(siblingNode, RED);
 
-                    currentNode = currentNode.parent;
+                    currentNode = parent(currentNode);
                 } else {
                     if (isBlack(getRight(siblingNode))) {
                         color(getLeft(siblingNode), BLACK);
@@ -732,7 +732,7 @@ public class TreeMap<K, V> {
                     currentNode = root;
                 }
             } else {
-                TreeMapNode<K, V> siblingNode = getRight(currentNode);
+                TreeMapNode<K, V> siblingNode = getLeft(parent(currentNode));
 
                 if (isRed(siblingNode)) {
                     color(siblingNode, BLACK);

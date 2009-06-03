@@ -219,7 +219,11 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 }
 
                 public Response processKeepAlive(KeepAliveInfo info) throws Exception {
-                    return ack(command);
+                    if (info.isResponseRequired()) {
+                        info.setResponseRequired(false);
+                        connection.write(info);
+                    }
+                    return null;
                 }
 
                 public Response processFlush(FlushCommand info) throws Exception {

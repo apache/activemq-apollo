@@ -106,18 +106,21 @@ public abstract class TransportSupport extends ServiceSupport implements Transpo
     public boolean isFaultTolerant() {
         return false;
     }
-    
-   
-	public void reconnect(URI uri) throws IOException {
-		throw new IOException("Not supported");
-	}
-	
-	public boolean isDisposed() {
-		return isStopped();
-	}
-	
-	public  boolean isConnected() {
-	    return isStarted();
-	}
+
+    public boolean isUseInactivityMonitor() {
+        return false;
+    }
+
+    public void reconnect(URI uri) throws IOException {
+        throw new IOException("Not supported");
+    }
+
+    public boolean isDisposed() {
+        return isStopped();
+    }
+
+    public boolean isConnected() {
+        return isStarted();
+    }
 
 }

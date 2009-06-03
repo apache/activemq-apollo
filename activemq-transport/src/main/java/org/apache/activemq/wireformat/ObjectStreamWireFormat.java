@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.util.Map;
 
+import org.apache.activemq.transport.Transport;
 import org.apache.activemq.util.ByteArrayInputStream;
 import org.apache.activemq.util.ByteArrayOutputStream;
 import org.apache.activemq.util.ByteSequence;
@@ -79,7 +81,8 @@ public class ObjectStreamWireFormat implements WireFormat {
 		// TODO implement the inactivity monitor
 		return false;
 	}
-    
-    
 
+    public Transport createTransportFilters(Transport transport, Map options) {
+        return transport;
+    }
 }

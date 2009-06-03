@@ -19,7 +19,10 @@ package org.apache.activemq.wireformat;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Map;
 
+import org.apache.activemq.transport.Transport;
+import org.apache.activemq.transport.TransportFilter;
 import org.apache.activemq.util.ByteSequence;
 
 
@@ -65,5 +68,14 @@ public interface WireFormat {
      * @return true if message is being received
      */
     boolean inReceive();
+    
+    /**
+     * Creates any transport filters appropriate for the given wire format:
+     * 
+     * @param transport The transport to filter.
+     * @param options The options with which the transport was created. 
+     * @return Either the given transport or a Transport filter wrapping the onw provided. 
+     */
+    Transport createTransportFilters(Transport transport, Map options);
     
 }

@@ -32,11 +32,8 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 
 import org.apache.activemq.broker.SslContext;
-import org.apache.activemq.openwire.OpenWireFormat;
-import org.apache.activemq.transport.InactivityMonitor;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportServer;
-import org.apache.activemq.transport.WireFormatNegotiator;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.URISupport;
@@ -100,12 +97,11 @@ public class SslTransportFactory extends TcpTransportFactory {
 //            }
 //        }
 
-        transport = new InactivityMonitor(transport, format);
+        boolean useInactivityMonitor = "true".equals(getOption(options, "useInactivityMonitor", "true"));
+        sslTransport.setUseInactivityMonitor(useInactivityMonitor && isUseInactivityMonitor(transport));
+        
 
-        // Only need the WireFormatNegotiator if using openwire
-        if (format instanceof OpenWireFormat) {
-            transport = new WireFormatNegotiator(transport, (OpenWireFormat)format, sslTransport.getMinmumWireFormatVersion());
-        }
+        transport = format.createTransportFilters(transport, options);
 
         return transport;
     }

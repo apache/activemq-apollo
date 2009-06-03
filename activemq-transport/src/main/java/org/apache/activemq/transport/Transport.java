@@ -138,6 +138,15 @@ public interface Transport extends Service {
     boolean isFaultTolerant();
     
     /**
+     * Indicates that the transport needs inactivity monitoring. This 
+     * is true for transports like tcp that may not otherwise detect
+     * a transport failure in a timely fashion. 
+     * 
+     * @return true if the transport requires inactivity monitoring.
+     */
+    boolean isUseInactivityMonitor();
+    
+    /**
      * @return true if the transport is disposed
      */
     boolean isDisposed();
