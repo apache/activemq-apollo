@@ -43,15 +43,12 @@
     </dependency>
 
     <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-core</artifactId>
-      <version>5.3-SNAPSHOT</version>
-    </dependency>
-
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+    </dependency>    
     <dependency>
       <groupId>com.thoughtworks.xstream</groupId>
       <artifactId>xstream</artifactId>
-      <optional>true</optional>
     </dependency>        
     
     <!-- Testing Dependencies -->
