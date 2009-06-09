@@ -36,7 +36,6 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-util</artifactId>
-      <optional>false</optional>
     </dependency>
     
     <!-- Testing Dependencies -->    

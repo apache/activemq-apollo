@@ -35,18 +35,6 @@
   
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-util</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-dispatcher</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-queue</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-transport</artifactId>
     </dependency>
     <dependency>
@@ -57,9 +45,11 @@
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-selector</artifactId>
     </dependency>
+
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-kaha</artifactId>
+      <optional>true</optional>
     </dependency>
 
     <!-- Testing Dependencies -->    
