@@ -17,12 +17,18 @@
 package org.apache.activemq.broker;
 
 import java.net.URI;
+import java.util.List;
 
+import org.apache.activemq.Service;
 import org.apache.activemq.broker.region.RegionBroker;
+import org.apache.activemq.usage.SystemUsage;
 
-public class BrokerService {
+public class BrokerService implements Service {
 
-    public Object getVmConnectorURI() {
+    public static final String DEFAULT_PORT = "61616";
+    public static final String DEFAULT_BROKER_NAME = "localhost";
+
+	public Object getVmConnectorURI() {
         // TODO Auto-generated method stub
         return null;
     }
@@ -60,5 +66,70 @@ public class BrokerService {
         // TODO Auto-generated method stub
         return null;
     }
+
+	public void start() throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void stop() throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void setPersistent(boolean b) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public TransportConnector addConnector(String uri) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public void setUseJmx(boolean b) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public <T> void setDestinations(T[] activeMQDestinations) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void addConnector(org.apache.activemq.broker.TransportConnector connector) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public List<TransportConnector> getTransportConnectors() {
+		return null;
+	}
+
+	public void setDestinationPolicy(org.apache.activemq.broker.region.policy.PolicyMap policyMap) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public SystemUsage getSystemUsage() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public <T> T getAdminView() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+    public void addShutdownHook(Runnable runnable) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public boolean isStarted() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
 
 }
