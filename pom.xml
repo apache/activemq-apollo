@@ -127,6 +127,7 @@
     <module>activemq-selector</module>
     <module>activemq-queue</module>
     <module>activemq-jmx</module>
+    <module>activemq-spring</module>
   </modules>
 
 <!--
@@ -250,6 +251,11 @@
       <dependency>
         <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-jmx</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-spring</artifactId>
         <version>${activemq-version}</version>
       </dependency>
       
