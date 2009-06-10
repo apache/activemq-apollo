@@ -126,6 +126,13 @@ public class Queue implements DeliveryTarget {
         public void disconnect(Subscription<MessageDelivery> context) {
             queue.removeSubscription(subscription);
         }
+        
+        /* (non-Javadoc)
+         * @see org.apache.activemq.broker.BrokerSubscription#getDestination()
+         */
+        public Destination getDestination() {
+            return queue.getDestination();
+        }
     }
 
 }

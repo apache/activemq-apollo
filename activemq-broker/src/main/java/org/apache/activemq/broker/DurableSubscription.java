@@ -38,9 +38,16 @@ public class DurableSubscription implements BrokerSubscription, DeliveryTarget {
         this.queue = queue;
         this.destination = destination;
         this.selector = selector;
+        //TODO If a durable subscribes to a queue 
         this.host.getRouter().bind(destination, this);
     }
-    
+
+    /* (non-Javadoc)
+     * @see org.apache.activemq.broker.BrokerSubscription#getDestination()
+     */
+    public Destination getDestination() {
+        return destination;
+    }
 
     /* (non-Javadoc)
      * @see org.apache.activemq.broker.DeliveryTarget#deliver(org.apache.activemq.broker.MessageDelivery, org.apache.activemq.flow.ISourceController)

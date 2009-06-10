@@ -531,11 +531,11 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
     static public Destination convert(ActiveMQDestination dest) {
         if (dest.isComposite()) {
             ActiveMQDestination[] compositeDestinations = dest.getCompositeDestinations();
-            ArrayList<Destination> d = new ArrayList<Destination>();
+            Destination.MultiDestination md = new Destination.MultiDestination();
             for (int i = 0; i < compositeDestinations.length; i++) {
-                d.add(convert(compositeDestinations[i]));
+                md.add(convert(compositeDestinations[i]));
             }
-            return new Destination.MultiDestination(d);
+            return md;
         }
         AsciiBuffer domain;
         if (dest.isQueue()) {

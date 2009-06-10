@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Map;
 
 import org.apache.activemq.transport.Transport;
-import org.apache.activemq.transport.TransportFilter;
 import org.apache.activemq.util.ByteArrayInputStream;
 import org.apache.activemq.util.ByteArrayOutputStream;
 import org.apache.activemq.util.ByteSequence;

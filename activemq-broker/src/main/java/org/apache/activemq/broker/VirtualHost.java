@@ -98,11 +98,11 @@ public class VirtualHost implements Service {
         for (Queue queue : queues.values()) {
             queue.shutdown(true);
         }
-        
+
         for (AbstractFlowQueue<MessageDelivery> queue : queueStore.getDurableQueues()) {
             queue.shutdown(true);
         }
-        
+
         started = false;
     }
 
@@ -133,23 +133,30 @@ public class VirtualHost implements Service {
     public BrokerSubscription createSubscription(ConsumerContext consumer) {
         Destination destination = consumer.getDestination();
         BrokerSubscription sub = null;
-        if(destination.getDomain().equals(Router.TOPIC_DOMAIN))
-        {
-            if (consumer.isDurable()) {
-                sub = durableSubs.get(consumer.getSubscriptionName());
-                if (sub == null) {
-                    ExclusivePersistentQueue<Long, MessageDelivery> queue = queueStore.createDurableQueue(consumer.getSubscriptionName());
-                    queue.start();
-                    DurableSubscription dsub = new DurableSubscription(this, destination, consumer.getSelectorExpression(), queue);
-                    durableSubs.put(consumer.getSubscriptionName(), dsub);
-                    sub = dsub;
-                }
-            } else if (consumer.getDestination().getDomain().equals(Router.TOPIC_DOMAIN)) {
-                sub = new TopicSubscription(this, destination, consumer.getSelectorExpression());
+
+        if (consumer.isDurable()) {
+            DurableSubscription dsub = durableSubs.get(consumer.getSubscriptionName());
+            if (dsub == null) {
+                ExclusivePersistentQueue<Long, MessageDelivery> queue = queueStore.createDurableQueue(consumer.getSubscriptionName());
+                queue.start();
+                dsub = new DurableSubscription(this, destination, consumer.getSelectorExpression(), queue);
+                durableSubs.put(consumer.getSubscriptionName(), dsub);
             }
+            sub = dsub;
         } else {
-            Queue queue = queues.get(destination.getName());
-            sub = new Queue.QueueSubscription(queue);
+            if(destination.getDestinations() != null)
+            {
+                sub = new MultiSubscription(this, destination, consumer.getSelectorExpression());
+            }
+            else
+            {
+                if (destination.getDomain().equals(Router.TOPIC_DOMAIN)) {
+                    sub = new TopicSubscription(this, destination, consumer.getSelectorExpression());
+                } else {
+                    Queue queue = queues.get(destination.getName());
+                    sub = new Queue.QueueSubscription(queue);
+                }
+            }
         }
         return sub;
     }

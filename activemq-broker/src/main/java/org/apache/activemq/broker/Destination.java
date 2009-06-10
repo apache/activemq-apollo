@@ -17,26 +17,31 @@
 package org.apache.activemq.broker;
 
 import java.util.Collection;
+import java.util.HashSet;
 
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 public interface Destination {
 
     AsciiBuffer getDomain();
+
     AsciiBuffer getName();
+
     Collection<Destination> getDestinations();
 
     public class SingleDestination implements Destination {
 
         private AsciiBuffer domain;
         private AsciiBuffer name;
-        
+
         public SingleDestination() {
         }
+
         public SingleDestination(AsciiBuffer domain, AsciiBuffer name) {
             setDomain(domain);
             setName(name);
         }
+
         public SingleDestination(String domain, String name) {
             setDomain(domain);
             setName(name);
@@ -53,50 +58,46 @@ public interface Destination {
         public AsciiBuffer getName() {
             return name;
         }
+
         public void setDomain(AsciiBuffer domain) {
             this.domain = domain;
         }
+
         public void setName(AsciiBuffer name) {
             this.name = name;
         }
-        
+
         private void setName(String name) {
             setName(new AsciiBuffer(name));
         }
+
         private void setDomain(String domain) {
             setDomain(new AsciiBuffer(domain));
         }
 
-//        public ActiveMQDestination asActiveMQDestination() {
-//            if(domain.equals(Router.TOPIC_DOMAIN))
-//            {
-//                return new ActiveMQTopic(name.toString());
-//            }
-//            else if(domain.equals(Router.QUEUE_DOMAIN))
-//            {
-//                return new ActiveMQQueue(name.toString());
-//            }
-//            return null;
-//        }
+        //        public ActiveMQDestination asActiveMQDestination() {
+        //            if(domain.equals(Router.TOPIC_DOMAIN))
+        //            {
+        //                return new ActiveMQTopic(name.toString());
+        //            }
+        //            else if(domain.equals(Router.QUEUE_DOMAIN))
+        //            {
+        //                return new ActiveMQQueue(name.toString());
+        //            }
+        //            return null;
+        //        }
     }
-    
+
     public class MultiDestination implements Destination {
 
-        private Collection<Destination> destinations;
-
+        private final HashSet<Destination> destinations = new HashSet<Destination>();
+        
         public MultiDestination() {
         }
 
-        public MultiDestination(Collection<Destination> destinations) {
-            this.destinations=destinations;
-        }
 
         public Collection<Destination> getDestinations() {
             return destinations;
-        }
-        
-        public void setDestinations(Collection<Destination> destinations) {
-            this.destinations = destinations;
         }
 
         public AsciiBuffer getDomain() {
@@ -106,12 +107,21 @@ public interface Destination {
         public AsciiBuffer getName() {
             return null;
         }
+
+        public void add(Destination d) {
+            destinations.add(d);
+            
+        }
         
-//        public ActiveMQDestination asActiveMQDestination() {
-//            throw new UnsupportedOperationException("Not yet implemented");
-//        }
+        public void remove(Destination d)
+        {
+            destinations.remove(d);
+        }
+
+        //        public ActiveMQDestination asActiveMQDestination() {
+        //            throw new UnsupportedOperationException("Not yet implemented");
+        //        }
 
     }
-    
-    
+
 }

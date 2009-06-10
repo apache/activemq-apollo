@@ -22,17 +22,26 @@ import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.queue.Subscription;
 
-class TopicSubscription implements BrokerSubscription, DeliveryTarget {
+/**
+ * MultiSubscription
+ * <p>
+ * Description:
+ * </p>
+ * 
+ * @author cmacnaug
+ * @version 1.0
+ */
+public class MultiSubscription implements BrokerSubscription, DeliveryTarget {
 
-    protected final BooleanExpression selector;
-    protected final Destination destination;
-    protected Subscription<MessageDelivery> connectedSub;
+    private final Destination destination;
     private final VirtualHost host;
+    private final BooleanExpression selector;
+    private Subscription<MessageDelivery> connectedSub;
 
-    TopicSubscription(VirtualHost host, Destination destination, BooleanExpression selector) {
+    MultiSubscription(VirtualHost host, Destination destination, BooleanExpression selector) {
+        this.destination = destination;
         this.host = host;
         this.selector = selector;
-        this.destination = destination;
     }
 
     /*
@@ -105,4 +114,5 @@ class TopicSubscription implements BrokerSubscription, DeliveryTarget {
     public Destination getDestination() {
         return destination;
     }
+
 }

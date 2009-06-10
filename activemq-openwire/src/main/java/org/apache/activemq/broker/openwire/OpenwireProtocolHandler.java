@@ -166,6 +166,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
                     OpenWireMessageDelivery md = new OpenWireMessageDelivery(info);
                     md.setStoreWireFormat(storeWireFormat);
+                    md.setPersistListener(OpenwireProtocolHandler.this);
 
                     // Only producers that are not using a window will block,
                     // and if it blocks.
@@ -663,11 +664,11 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
     static public Destination convert(ActiveMQDestination dest) {
         if (dest.isComposite()) {
             ActiveMQDestination[] compositeDestinations = dest.getCompositeDestinations();
-            ArrayList<Destination> d = new ArrayList<Destination>();
+            Destination.MultiDestination md = new Destination.MultiDestination();
             for (int i = 0; i < compositeDestinations.length; i++) {
-                d.add(convert(compositeDestinations[i]));
+                md.add(convert(compositeDestinations[i]));
             }
-            return new Destination.MultiDestination(d);
+            return md;
         }
         AsciiBuffer domain;
         if (dest.isQueue()) {

@@ -243,7 +243,6 @@ public abstract class TransportFactory {
         transport = compositeConfigure(transport, wf, options);
 
         transport = new MutexTransport(transport);
-//        transport = new ResponseCorrelator(transport);
 
         return transport;
     }

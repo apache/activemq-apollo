@@ -57,13 +57,27 @@ final public class Router {
     }
 
     public synchronized void bind(Destination destination, DeliveryTarget target) {
-        Domain domain = domains.get(destination.getDomain());
-        domain.bind(destination.getName(), target);
+        Collection<Destination> destinationList = destination.getDestinations();
+        if (destinationList == null) {
+            Domain domain = domains.get(destination.getDomain());
+            domain.bind(destination.getName(), target);
+        } else {
+            for (Destination d : destinationList) {
+                bind(d, target);
+            }
+        }
     }
-    
+
     public synchronized void unbind(Destination destination, DeliveryTarget target) {
-        Domain domain = domains.get(destination.getDomain());
-        domain.unbind(destination.getName(), target);
+        Collection<Destination> destinationList = destination.getDestinations();
+        if (destinationList == null) {
+            Domain domain = domains.get(destination.getDomain());
+            domain.unbind(destination.getName(), target);
+        } else {
+            for (Destination d : destinationList) {
+                unbind(d, target);
+            }
+        }
     }
 
     public void route(final BrokerMessageDelivery msg, ISourceController<?> controller) {
@@ -73,8 +87,7 @@ final public class Router {
         //Set up the delivery for persistence:
         msg.beginDispatch(database);
 
-        try
-        {
+        try {
             // TODO:
             // Consider doing some caching of this sub list. Most producers
             // always send to the same destination.
@@ -85,9 +98,7 @@ final public class Router {
                     target.deliver(msg, controller);
                 }
             }
-        }
-        finally
-        {
+        } finally {
             try {
                 msg.finishDispatch(controller);
             } catch (IOException ioe) {

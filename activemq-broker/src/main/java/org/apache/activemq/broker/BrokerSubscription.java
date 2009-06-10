@@ -24,6 +24,8 @@ public interface BrokerSubscription {
 
     public void disconnect(Subscription<MessageDelivery> subscription);
     
+    public Destination getDestination();
+    
     @SuppressWarnings("serial")
     public class UserAlreadyConnectedException extends Exception {
 
