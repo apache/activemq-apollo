@@ -3,9 +3,9 @@ package org.apache.activemq.broker;
 import java.net.URI;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.activemq.Connection;
-import org.apache.activemq.broker.Destination;
-import org.apache.activemq.broker.MessageDelivery;
+import org.apache.activemq.apollo.Connection;
+import org.apache.activemq.apollo.broker.Destination;
+import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
 import org.apache.activemq.dispatch.IDispatcher.Dispatchable;
 import org.apache.activemq.flow.IFlowController;

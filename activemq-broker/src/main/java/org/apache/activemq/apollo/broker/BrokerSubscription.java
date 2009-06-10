@@ -14,30 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker;
+package org.apache.activemq.apollo.broker;
 
-import java.util.Collection;
+import org.apache.activemq.queue.Subscription;
 
-import org.apache.activemq.broker.DeliveryTarget;
-import org.apache.activemq.broker.MessageDelivery;
-import org.apache.activemq.protobuf.AsciiBuffer;
+public interface BrokerSubscription {
 
-/**
- * Represents a messaging domain like pub/sub or point to point in JMS terms or an Exchange in
- * AMQP terms.
- * 
- * @author chirino
- */
-public interface Domain {
+    public void connect(Subscription<MessageDelivery> subscription) throws UserAlreadyConnectedException ;
 
-    public void add(AsciiBuffer destinationName, Object destination);
+    public void disconnect(Subscription<MessageDelivery> subscription);
     
-    public Object remove(AsciiBuffer destinationName);
+    public Destination getDestination();
+    
+    @SuppressWarnings("serial")
+    public class UserAlreadyConnectedException extends Exception {
 
-    public void bind(AsciiBuffer destinationName, DeliveryTarget target);
-    
-    public void unbind(AsciiBuffer destinationName, DeliveryTarget target);
-    
-    public Collection<DeliveryTarget> route(AsciiBuffer destinationName, MessageDelivery message);
-    
+    }
 }

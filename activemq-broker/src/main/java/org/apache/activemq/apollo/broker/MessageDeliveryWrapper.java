@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker;
+package org.apache.activemq.apollo.broker;
 
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.filter.MessageEvaluationContext;
@@ -35,7 +35,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public void acknowledge(QueueDescriptor queue) {
@@ -45,7 +45,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public <T> T asType(Class<T> type) {
@@ -55,7 +55,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public MessageRecord createMessageRecord() {
@@ -65,7 +65,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public Destination getDestination() {
@@ -75,7 +75,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public int getFlowLimiterSize() {
@@ -85,7 +85,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public AsciiBuffer getMsgId() {
@@ -95,7 +95,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public int getPriority() {
@@ -105,7 +105,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public AsciiBuffer getProducerId() {
@@ -115,7 +115,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public long getStoreTracking() {
@@ -125,7 +125,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public Buffer getTransactionId() {
@@ -135,7 +135,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public boolean isFromStore() {
@@ -145,7 +145,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public boolean isPersistent() {
@@ -154,7 +154,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     
     
     /** (non-Javadoc)
-     * @see org.apache.activemq.broker.MessageDelivery#getExpiration()
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#getExpiration()
      */
     public long getExpiration() {
         return delegate.getExpiration();
@@ -163,7 +163,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public boolean isResponseRequired() {
@@ -173,7 +173,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public void onMessagePersisted() {
@@ -183,7 +183,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     public void persist(SaveableQueueElement<MessageDelivery> elem, ISourceController<?> controller, boolean delayable) {
@@ -197,7 +197,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     /**
      * (non-Javadoc)
      * 
-     * @see org.apache.activemq.broker.MessageDelivery#persist(org.apache.activemq.queue.QueueStore.SaveableQueueElement,
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
     MessageDeliveryWrapper(MessageDelivery delivery) {

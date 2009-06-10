@@ -22,8 +22,8 @@ import java.util.Map;
 
 import javax.jms.JMSException;
 
-import org.apache.activemq.broker.Destination;
-import org.apache.activemq.broker.Router;
+import org.apache.activemq.apollo.broker.Destination;
+import org.apache.activemq.apollo.broker.Router;
 import org.apache.activemq.broker.stomp.FrameTranslator;
 import org.apache.activemq.broker.stomp.StompProtocolHandler;
 import org.apache.activemq.command.ActiveMQBytesMessage;

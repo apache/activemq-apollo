@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker;
+package org.apache.activemq.apollo.broker;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.activemq.Service;
-import org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext;
+import org.apache.activemq.apollo.broker.protocol.ProtocolHandler.ConsumerContext;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.AbstractFlowQueue;
 import org.apache.activemq.queue.ExclusivePersistentQueue;

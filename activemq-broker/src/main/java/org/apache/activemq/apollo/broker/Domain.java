@@ -14,18 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.protocol;
+package org.apache.activemq.apollo.broker;
 
-import java.io.IOException;
+import java.util.Collection;
 
-import org.apache.activemq.util.FactoryFinder;
+import org.apache.activemq.apollo.broker.DeliveryTarget;
+import org.apache.activemq.apollo.broker.MessageDelivery;
+import org.apache.activemq.protobuf.AsciiBuffer;
 
-public class ProtocolHandlerFactory {
+/**
+ * Represents a messaging domain like pub/sub or point to point in JMS terms or an Exchange in
+ * AMQP terms.
+ * 
+ * @author chirino
+ */
+public interface Domain {
 
-    static private final FactoryFinder PROTOCOL_HANDLER_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/broker/protocol/");
+    public void add(AsciiBuffer destinationName, Object destination);
     
-    public static ProtocolHandler createProtocolHandler(String type) throws IllegalAccessException, InstantiationException, IOException, ClassNotFoundException {
-        return (ProtocolHandler) PROTOCOL_HANDLER_FINDER.newInstance(type);
-    }
+    public Object remove(AsciiBuffer destinationName);
+
+    public void bind(AsciiBuffer destinationName, DeliveryTarget target);
+    
+    public void unbind(AsciiBuffer destinationName, DeliveryTarget target);
+    
+    public Collection<DeliveryTarget> route(AsciiBuffer destinationName, MessageDelivery message);
     
 }

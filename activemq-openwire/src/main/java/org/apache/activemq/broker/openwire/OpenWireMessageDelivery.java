@@ -18,8 +18,8 @@ package org.apache.activemq.broker.openwire;
 
 import java.io.IOException;
 
-import org.apache.activemq.broker.BrokerMessageDelivery;
-import org.apache.activemq.broker.Destination;
+import org.apache.activemq.apollo.broker.BrokerMessageDelivery;
+import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.command.Message;
 import org.apache.activemq.filter.MessageEvaluationContext;

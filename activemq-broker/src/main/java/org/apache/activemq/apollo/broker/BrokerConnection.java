@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker;
+package org.apache.activemq.apollo.broker;
 
 import java.beans.ExceptionListener;
 
-import org.apache.activemq.Connection;
-import org.apache.activemq.broker.protocol.ProtocolHandler;
-import org.apache.activemq.broker.protocol.ProtocolHandlerFactory;
+import org.apache.activemq.apollo.Connection;
+import org.apache.activemq.apollo.broker.protocol.ProtocolHandler;
+import org.apache.activemq.apollo.broker.protocol.ProtocolHandlerFactory;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.wireformat.MultiWireFormatFactory.WireFormatConnected;
 

@@ -16,8 +16,8 @@
  */
 package org.apache.activemq.broker.stomp;
 
-import org.apache.activemq.broker.BrokerMessageDelivery;
-import org.apache.activemq.broker.Destination;
+import org.apache.activemq.apollo.broker.BrokerMessageDelivery;
+import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.protobuf.AsciiBuffer;

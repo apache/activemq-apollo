@@ -14,16 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker;
+package org.apache.activemq.apollo.broker.protocol;
 
-import org.apache.activemq.broker.MessageDelivery;
-import org.apache.activemq.flow.ISourceController;
+import java.io.IOException;
 
-public interface DeliveryTarget {
+import org.apache.activemq.util.FactoryFinder;
+
+public class ProtocolHandlerFactory {
+
+    static private final FactoryFinder PROTOCOL_HANDLER_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/broker/protocol/");
     
-    public void deliver(MessageDelivery message, ISourceController<?> source);
+    public static ProtocolHandler createProtocolHandler(String type) throws IllegalAccessException, InstantiationException, IOException, ClassNotFoundException {
+        return (ProtocolHandler) PROTOCOL_HANDLER_FINDER.newInstance(type);
+    }
     
-    public boolean hasSelector();
-    
-    public boolean matches(MessageDelivery message);
 }

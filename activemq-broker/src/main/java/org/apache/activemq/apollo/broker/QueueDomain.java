@@ -14,16 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker;
+package org.apache.activemq.apollo.broker;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 
-import org.apache.activemq.broker.DeliveryTarget;
-import org.apache.activemq.broker.Domain;
-import org.apache.activemq.broker.MessageDelivery;
-import org.apache.activemq.broker.Queue;
+import org.apache.activemq.apollo.broker.DeliveryTarget;
+import org.apache.activemq.apollo.broker.Domain;
+import org.apache.activemq.apollo.broker.MessageDelivery;
+import org.apache.activemq.apollo.broker.Queue;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 public class QueueDomain implements Domain {

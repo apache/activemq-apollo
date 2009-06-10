@@ -14,20 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker;
+package org.apache.activemq.apollo.broker;
 
-import org.apache.activemq.queue.Subscription;
+import org.apache.activemq.apollo.broker.MessageDelivery;
+import org.apache.activemq.flow.ISourceController;
 
-public interface BrokerSubscription {
-
-    public void connect(Subscription<MessageDelivery> subscription) throws UserAlreadyConnectedException ;
-
-    public void disconnect(Subscription<MessageDelivery> subscription);
+public interface DeliveryTarget {
     
-    public Destination getDestination();
+    public void deliver(MessageDelivery message, ISourceController<?> source);
     
-    @SuppressWarnings("serial")
-    public class UserAlreadyConnectedException extends Exception {
-
-    }
+    public boolean hasSelector();
+    
+    public boolean matches(MessageDelivery message);
 }

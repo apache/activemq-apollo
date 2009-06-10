@@ -1,9 +1,9 @@
 /**
  * 
  */
-package org.apache.activemq;
+package org.apache.activemq.apollo;
 
-import org.apache.activemq.broker.MessageDelivery;
+import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.SizeLimiter;
 

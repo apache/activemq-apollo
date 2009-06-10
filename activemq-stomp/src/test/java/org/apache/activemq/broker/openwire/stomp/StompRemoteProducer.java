@@ -3,9 +3,9 @@ package org.apache.activemq.broker.openwire.stomp;
 import java.io.IOException;
 import java.util.HashMap;
 
-import org.apache.activemq.broker.MessageDelivery;
+import org.apache.activemq.apollo.broker.MessageDelivery;
+import org.apache.activemq.apollo.broker.Router;
 import org.apache.activemq.broker.RemoteProducer;
-import org.apache.activemq.broker.Router;
 import org.apache.activemq.broker.stomp.StompMessageDelivery;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.ISourceController;

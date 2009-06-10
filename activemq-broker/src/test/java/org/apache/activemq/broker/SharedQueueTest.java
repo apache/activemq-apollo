@@ -19,6 +19,10 @@ package org.apache.activemq.broker;
 import java.io.File;
 import java.util.ArrayList;
 
+import org.apache.activemq.apollo.broker.BrokerDatabase;
+import org.apache.activemq.apollo.broker.BrokerQueueStore;
+import org.apache.activemq.apollo.broker.MessageBroker;
+import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.dispatch.IDispatcher;

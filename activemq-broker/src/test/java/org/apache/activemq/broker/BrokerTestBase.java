@@ -27,9 +27,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.broker.Destination;
-import org.apache.activemq.broker.MessageBroker;
-import org.apache.activemq.broker.Router;
+import org.apache.activemq.apollo.broker.Destination;
+import org.apache.activemq.apollo.broker.MessageBroker;
+import org.apache.activemq.apollo.broker.Router;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.dispatch.IDispatcher;
