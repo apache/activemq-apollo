@@ -16,11 +16,10 @@
  */
 package org.apache.activemq.broker.region;
 
-import org.apache.activemq.command.ConsumerInfo;
 
 public class Subscription {
 
-    public ConsumerInfo getConsumerInfo() {
+    public <T> T getConsumerInfo() {
         // TODO Auto-generated method stub
         return null;
     }

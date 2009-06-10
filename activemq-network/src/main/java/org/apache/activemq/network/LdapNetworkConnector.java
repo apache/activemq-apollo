@@ -20,6 +20,7 @@ import java.net.URI;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.naming.CommunicationException;
@@ -36,6 +37,7 @@ import javax.naming.event.NamingEvent;
 import javax.naming.event.NamingExceptionEvent;
 import javax.naming.event.ObjectChangeListener;
 
+import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.util.URISupport;
 import org.apache.activemq.util.URISupport.CompositeData;
 import org.apache.commons.logging.Log;
@@ -330,7 +332,8 @@ public class      LdapNetworkConnector
       //      required to prevent remote broker exceptions upon connection
       connector.setLocalUri(getBrokerService().getVmConnectorURI());
       connector.setBrokerName(getBrokerService().getBrokerName());
-      connector.setDurableDestinations(getBrokerService().getBroker().getDurableDestinations());
+      Set<ActiveMQDestination> dests = getBrokerService().getBroker().getDurableDestinations();
+	  connector.setDurableDestinations(dests);
 
       // start network connector
       connectorMap.put(connectorURI, connector);

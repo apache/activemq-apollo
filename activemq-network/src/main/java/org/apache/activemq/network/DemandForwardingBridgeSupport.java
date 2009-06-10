@@ -981,7 +981,8 @@ public abstract class DemandForwardingBridgeSupport implements NetworkBridge, Br
         Collection<Subscription> currentSubs = 
             getRegionSubscriptions(consumerInfo.getDestination().isTopic());
         for (Subscription sub : currentSubs) {
-            List<ConsumerId> networkConsumers =  sub.getConsumerInfo().getNetworkConsumerIds();
+            ConsumerInfo ci = sub.getConsumerInfo();
+			List<ConsumerId> networkConsumers =  ci.getNetworkConsumerIds();
             if (!networkConsumers.isEmpty()) {
                 if (matchFound(candidateConsumers, networkConsumers)) {
                     if (LOG.isDebugEnabled()) {

@@ -16,13 +16,47 @@
  */
 package org.apache.activemq.broker;
 
-import java.util.Set;
+import java.net.URI;
 
-import org.apache.activemq.command.ActiveMQDestination;
+import org.apache.activemq.broker.region.RegionBroker;
 
-public class Broker {
+public class BrokerService {
 
-    public Set<ActiveMQDestination> getDurableDestinations() {
+    public Object getVmConnectorURI() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    public RegionBroker getRegionBroker() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    public boolean isUseJmx() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    public ManagementContext getManagementContext() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    public <T> T addNetworkConnector(URI connectorURI) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    public String getBrokerName() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    public Broker getBroker() {
+        return null;
+    }
+
+    public SslContext getSslContext() {
         // TODO Auto-generated method stub
         return null;
     }
