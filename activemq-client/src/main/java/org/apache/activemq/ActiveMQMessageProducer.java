@@ -30,10 +30,10 @@ import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ProducerAck;
 import org.apache.activemq.command.ProducerId;
 import org.apache.activemq.command.ProducerInfo;
+import org.apache.activemq.legacy.usage.MemoryUsage;
 import org.apache.activemq.management.JMSProducerStatsImpl;
 import org.apache.activemq.management.StatsCapable;
 import org.apache.activemq.management.StatsImpl;
-import org.apache.activemq.usage.MemoryUsage;
 import org.apache.activemq.util.IntrospectionSupport;
 
 /**

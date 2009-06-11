@@ -20,8 +20,6 @@ import javax.jms.DeliveryMode;
 
 import junit.framework.Test;
 
-import org.apache.activemq.broker.region.policy.PolicyEntry;
-import org.apache.activemq.broker.region.policy.VMPendingSubscriberMessageStoragePolicy;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ConnectionInfo;
 import org.apache.activemq.command.ConsumerInfo;
@@ -30,6 +28,9 @@ import org.apache.activemq.command.Message;
 import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.command.ProducerInfo;
 import org.apache.activemq.command.SessionInfo;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.broker.region.policy.PolicyEntry;
+import org.apache.activemq.legacy.broker.region.policy.VMPendingSubscriberMessageStoragePolicy;
 
 public class MessageExpirationTest extends BrokerTestSupport {
 

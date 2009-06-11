@@ -19,7 +19,7 @@ package org.apache.activemq;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

@@ -18,7 +18,7 @@ package org.apache.activemq.xbean;
 
 import java.util.HashMap;
 
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerService;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;

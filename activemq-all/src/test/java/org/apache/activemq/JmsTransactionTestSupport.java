@@ -33,8 +33,8 @@ import javax.jms.ObjectMessage;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
-import org.apache.activemq.broker.BrokerFactory;
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerFactory;
+import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.test.JmsResourceProvider;
 import org.apache.activemq.test.TestSupport;
 import org.apache.commons.logging.Log;

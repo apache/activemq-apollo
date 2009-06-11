@@ -30,7 +30,7 @@ import javax.jms.Topic;
 
 import junit.framework.TestCase;
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerService;
 
 /**
  * @author Peter Henning

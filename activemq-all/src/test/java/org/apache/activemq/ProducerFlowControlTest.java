@@ -29,13 +29,13 @@ import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
-import org.apache.activemq.broker.TransportConnector;
-import org.apache.activemq.broker.region.policy.PolicyEntry;
-import org.apache.activemq.broker.region.policy.PolicyMap;
-import org.apache.activemq.broker.region.policy.VMPendingQueueMessageStoragePolicy;
-import org.apache.activemq.broker.region.policy.VMPendingSubscriberMessageStoragePolicy;
-import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.command.ActiveMQQueue;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.broker.TransportConnector;
+import org.apache.activemq.legacy.broker.region.policy.PolicyEntry;
+import org.apache.activemq.legacy.broker.region.policy.PolicyMap;
+import org.apache.activemq.legacy.broker.region.policy.VMPendingQueueMessageStoragePolicy;
+import org.apache.activemq.legacy.broker.region.policy.VMPendingSubscriberMessageStoragePolicy;
 import org.apache.activemq.transport.tcp.TcpTransport;
 
 public class ProducerFlowControlTest extends JmsTestSupport {

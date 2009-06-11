@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.spring;
 
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerService;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 public class SpringTest extends SpringTestSupport {

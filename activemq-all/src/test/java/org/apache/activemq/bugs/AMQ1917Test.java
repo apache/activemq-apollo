@@ -19,8 +19,8 @@ import javax.jms.Session;
 import javax.jms.TextMessage;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.command.ActiveMQDestination;
+import org.apache.activemq.legacy.broker.BrokerService;
 
 
 public class AMQ1917Test extends TestCase {

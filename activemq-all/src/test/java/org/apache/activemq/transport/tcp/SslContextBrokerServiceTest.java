@@ -24,8 +24,8 @@ import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.textui.TestRunner;
 
-import org.apache.activemq.broker.TransportConnector;
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.broker.TransportConnector;
 import org.apache.activemq.transport.TransportBrokerTestSupport;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 

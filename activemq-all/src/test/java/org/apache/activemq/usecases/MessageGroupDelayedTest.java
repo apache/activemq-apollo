@@ -32,11 +32,11 @@ import junit.framework.Test;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.JmsTestSupport;
-import org.apache.activemq.broker.TransportConnector;
-import org.apache.activemq.broker.region.policy.PolicyEntry;
-import org.apache.activemq.broker.region.policy.PolicyMap;
-import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.command.ActiveMQQueue;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.broker.TransportConnector;
+import org.apache.activemq.legacy.broker.region.policy.PolicyEntry;
+import org.apache.activemq.legacy.broker.region.policy.PolicyMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

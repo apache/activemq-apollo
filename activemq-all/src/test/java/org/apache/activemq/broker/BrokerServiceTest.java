@@ -18,6 +18,8 @@ package org.apache.activemq.broker;
 
 import junit.framework.TestCase;
 
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.broker.TransportConnector;
 import org.apache.activemq.network.NetworkConnector;
 
 /**

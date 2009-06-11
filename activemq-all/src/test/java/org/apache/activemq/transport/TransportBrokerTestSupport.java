@@ -21,10 +21,10 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import org.apache.activemq.broker.TransportConnector;
-import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.broker.BrokerTest;
 import org.apache.activemq.broker.StubConnection;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.broker.TransportConnector;
 
 public abstract class TransportBrokerTestSupport extends BrokerTest {
 

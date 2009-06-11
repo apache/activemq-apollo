@@ -37,11 +37,11 @@ import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
-import org.apache.activemq.broker.BrokerRegistry;
-import org.apache.activemq.broker.TransportConnector;
-import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTextMessage;
+import org.apache.activemq.legacy.broker.BrokerRegistry;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.broker.TransportConnector;
 import org.apache.activemq.transport.stomp.StompTransportFilter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

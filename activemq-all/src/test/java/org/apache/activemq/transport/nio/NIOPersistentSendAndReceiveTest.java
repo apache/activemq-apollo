@@ -18,7 +18,7 @@ package org.apache.activemq.transport.nio;
 
 import javax.jms.DeliveryMode;
 
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerService;
 
 public class NIOPersistentSendAndReceiveTest extends NIOJmsSendAndReceiveTest {
     protected BrokerService broker;

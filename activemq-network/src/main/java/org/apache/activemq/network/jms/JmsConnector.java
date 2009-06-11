@@ -29,7 +29,7 @@ import javax.naming.NamingException;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.Service;
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.util.LRUCache;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

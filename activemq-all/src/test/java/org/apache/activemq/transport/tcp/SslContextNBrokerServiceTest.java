@@ -30,8 +30,8 @@ import javax.net.ssl.X509TrustManager;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.broker.TransportConnector;
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.broker.TransportConnector;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.context.support.ClassPathXmlApplicationContext;

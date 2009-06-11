@@ -17,7 +17,7 @@
 package org.apache.activemq.test;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerService;
 
 /**
  * @version $Revision: 1.3 $

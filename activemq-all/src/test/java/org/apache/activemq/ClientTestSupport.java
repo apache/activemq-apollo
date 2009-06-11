@@ -27,11 +27,7 @@ import javax.jms.JMSException;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.broker.Broker;
-import org.apache.activemq.broker.BrokerFactory;
-import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.broker.StubConnection;
-import org.apache.activemq.broker.TransportConnector;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ConnectionId;
 import org.apache.activemq.command.ConnectionInfo;
@@ -41,6 +37,10 @@ import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.command.MessageDispatch;
 import org.apache.activemq.command.RemoveInfo;
 import org.apache.activemq.command.SessionInfo;
+import org.apache.activemq.legacy.broker.Broker;
+import org.apache.activemq.legacy.broker.BrokerFactory;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.broker.TransportConnector;
 import org.apache.activemq.transport.TransportFactory;
 
 public class ClientTestSupport extends TestCase {
@@ -62,7 +62,7 @@ public class ClientTestSupport extends TestCase {
             connector = new TransportConnector(TransportFactory.bind(new URI(this.brokerURL))) {
                 // Hook into the connector so we can assert that the server
                 // accepted a connection.
-                protected org.apache.activemq.broker.Connection createConnection(org.apache.activemq.transport.Transport transport) throws IOException {
+                protected org.apache.activemq.legacy.broker.Connection createConnection(org.apache.activemq.transport.Transport transport) throws IOException {
                     connected.set(true);
                     return super.createConnection(transport);
                 }

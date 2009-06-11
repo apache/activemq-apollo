@@ -18,13 +18,13 @@ package org.apache.activemq.transport.stomp;
 
 import java.util.Map;
 
-import org.apache.activemq.broker.BrokerService;
-import org.apache.activemq.broker.BrokerServiceAware;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerServiceAware;
+import org.apache.activemq.legacy.xbean.XBeanBrokerService;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.tcp.SslTransportFactory;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.wireformat.WireFormat;
-import org.apache.activemq.xbean.XBeanBrokerService;
 import org.springframework.context.ApplicationContext;
 
 /**

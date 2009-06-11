@@ -19,6 +19,8 @@ package org.apache.activemq.broker;
 
 import java.util.LinkedList;
 import org.apache.activemq.command.ConnectionInfo;
+import org.apache.activemq.legacy.broker.ConnectionContext;
+import org.apache.activemq.legacy.broker.EmptyBroker;
 
 public class StubBroker extends EmptyBroker {
     public LinkedList<AddConnectionData> addConnectionData = new LinkedList<AddConnectionData>();

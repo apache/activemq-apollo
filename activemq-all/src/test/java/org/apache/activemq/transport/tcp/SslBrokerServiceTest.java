@@ -30,7 +30,7 @@ import javax.net.ssl.TrustManagerFactory;
 import junit.framework.Test;
 import junit.textui.TestRunner;
 
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.transport.TransportBrokerTestSupport;
 import org.apache.activemq.transport.TransportFactory;
 

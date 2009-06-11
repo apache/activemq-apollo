@@ -37,9 +37,9 @@ import javax.naming.NamingException;
 import junit.framework.Assert;
 import junit.framework.TestCase;
 
-import org.apache.activemq.broker.BrokerFactory;
-import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.command.ActiveMQTopic;
+import org.apache.activemq.legacy.broker.BrokerFactory;
+import org.apache.activemq.legacy.broker.BrokerService;
 
 /**
  * <p>

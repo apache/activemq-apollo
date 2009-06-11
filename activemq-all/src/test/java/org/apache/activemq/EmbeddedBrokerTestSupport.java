@@ -22,9 +22,9 @@ import javax.jms.Destination;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTopic;
+import org.apache.activemq.legacy.broker.BrokerService;
 import org.springframework.jms.core.JmsTemplate;
 
 /**

@@ -16,7 +16,8 @@
  */
 package org.apache.activemq.broker;
 
-import org.apache.activemq.store.PersistenceAdapter;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.store.PersistenceAdapter;
 
 public class BrokerRestartTestSupport extends BrokerTestSupport {
 

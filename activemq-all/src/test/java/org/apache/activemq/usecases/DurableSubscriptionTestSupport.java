@@ -30,8 +30,8 @@ import javax.jms.TopicSubscriber;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.TestSupport;
-import org.apache.activemq.store.PersistenceAdapter;
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.store.PersistenceAdapter;
 
 /**
  * @version $Revision: 1.1.1.1 $

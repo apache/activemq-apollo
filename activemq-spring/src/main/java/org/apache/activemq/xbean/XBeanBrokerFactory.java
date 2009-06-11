@@ -21,8 +21,8 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URI;
 
-import org.apache.activemq.broker.BrokerFactoryHandler;
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerFactoryHandler;
+import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.xbean.spring.context.ResourceXmlApplicationContext;

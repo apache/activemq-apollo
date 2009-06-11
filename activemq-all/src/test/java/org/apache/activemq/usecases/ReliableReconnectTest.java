@@ -32,9 +32,9 @@ import javax.jms.TextMessage;
 import javax.jms.Topic;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.broker.BrokerFactory;
-import org.apache.activemq.store.PersistenceAdapter;
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerFactory;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.store.PersistenceAdapter;
 import org.apache.activemq.test.TestSupport;
 import org.apache.activemq.util.IdGenerator;
 

@@ -35,10 +35,10 @@ import javax.jms.Topic;
 
 import junit.framework.Test;
 
-import org.apache.activemq.broker.BrokerFactory;
-import org.apache.activemq.broker.TransportConnector;
-import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.command.ActiveMQDestination;
+import org.apache.activemq.legacy.broker.BrokerFactory;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.broker.TransportConnector;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

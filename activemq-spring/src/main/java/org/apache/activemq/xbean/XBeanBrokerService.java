@@ -18,8 +18,8 @@ package org.apache.activemq.xbean;
 
 import java.io.IOException;
 
-import org.apache.activemq.broker.BrokerService;
-import org.apache.activemq.usage.SystemUsage;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.usage.SystemUsage;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;

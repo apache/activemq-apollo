@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.broker.region;
 
-import org.apache.activemq.usage.MemoryUsage;
+import org.apache.activemq.legacy.usage.MemoryUsage;
 
 
 /**

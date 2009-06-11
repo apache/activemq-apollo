@@ -24,6 +24,7 @@ import javax.jms.MessageProducer;
 import javax.jms.Session;
 
 import org.apache.activemq.EmbeddedBrokerTestSupport;
+import org.apache.activemq.legacy.broker.BrokerService;
 
 /**
  * 

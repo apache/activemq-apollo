@@ -24,6 +24,7 @@ import org.apache.activemq.xbean.XBeanBrokerFactory;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTopic;
+import org.apache.activemq.legacy.broker.BrokerService;
 
 /**
  * 

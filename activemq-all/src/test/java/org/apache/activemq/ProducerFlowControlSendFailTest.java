@@ -28,11 +28,11 @@ import javax.jms.ResourceAllocationException;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
-import org.apache.activemq.broker.region.policy.PolicyEntry;
-import org.apache.activemq.broker.region.policy.PolicyMap;
-import org.apache.activemq.broker.region.policy.VMPendingQueueMessageStoragePolicy;
-import org.apache.activemq.broker.region.policy.VMPendingSubscriberMessageStoragePolicy;
-import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.broker.region.policy.PolicyEntry;
+import org.apache.activemq.legacy.broker.region.policy.PolicyMap;
+import org.apache.activemq.legacy.broker.region.policy.VMPendingQueueMessageStoragePolicy;
+import org.apache.activemq.legacy.broker.region.policy.VMPendingSubscriberMessageStoragePolicy;
 
 public class ProducerFlowControlSendFailTest extends ProducerFlowControlTest {
 

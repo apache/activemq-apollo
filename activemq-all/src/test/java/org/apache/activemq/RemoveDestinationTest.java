@@ -30,11 +30,11 @@ import javax.management.ObjectName;
 
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.advisory.DestinationSource;
-import org.apache.activemq.broker.BrokerFactory;
-import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.broker.jmx.BrokerViewMBean;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQTopic;
+import org.apache.activemq.legacy.broker.BrokerFactory;
+import org.apache.activemq.legacy.broker.BrokerService;
 
 import junit.framework.TestCase;
 
