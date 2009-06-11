@@ -1,9 +1,12 @@
-package org.apache.activemq.flow;
+package org.apache.activemq.queue.perf;
 
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
 import org.apache.activemq.dispatch.IDispatcher.Dispatchable;
+import org.apache.activemq.flow.IFlowController;
+import org.apache.activemq.flow.ISinkController;
+import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.ISinkController.FlowUnblockListener;
 import org.apache.activemq.metric.MetricAggregator;

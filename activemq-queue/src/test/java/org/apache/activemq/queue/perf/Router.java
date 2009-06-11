@@ -1,15 +1,16 @@
 /**
  * 
  */
-package org.apache.activemq.flow;
+package org.apache.activemq.queue.perf;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 
+import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.Commands.Destination;
-import org.apache.activemq.flow.MockBroker.DeliveryTarget;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.queue.perf.MockBroker.DeliveryTarget;
 
 public class Router {
     final HashMap<AsciiBuffer, Collection<DeliveryTarget>> lookupTable = new HashMap<AsciiBuffer, Collection<DeliveryTarget>>();

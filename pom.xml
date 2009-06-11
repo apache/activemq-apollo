@@ -905,6 +905,15 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${org-apache-maven-surefire-plugin-version}</version>
+          <configuration>
+            <includes>
+              <include>**/*Test.java</include>
+              <include>**/*TestCase.java</include>
+            </includes>
+            <excludes>
+              <exclude>**/perf/**</exclude>
+            </excludes>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.felix</groupId>

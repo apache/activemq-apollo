@@ -1,5 +1,6 @@
-package org.apache.activemq.flow;
+package org.apache.activemq.queue.perf;
 
+import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.FlowControl;
 import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;

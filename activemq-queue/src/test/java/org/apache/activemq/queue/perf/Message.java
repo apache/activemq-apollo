@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.flow;
+package org.apache.activemq.queue.perf;
 
 import java.io.Serializable;
 
+import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Message.MessageBean;
 import org.apache.activemq.flow.Commands.Message.MessageBuffer;

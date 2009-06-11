@@ -1,12 +1,15 @@
 /**
  * 
  */
-package org.apache.activemq.flow;
+package org.apache.activemq.queue.perf;
 
 import java.util.HashMap;
 
+import org.apache.activemq.flow.IFlowSink;
+import org.apache.activemq.flow.ISourceController;
+import org.apache.activemq.flow.PrioritySizeLimiter;
+import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.Commands.Destination;
-import org.apache.activemq.flow.MockBroker.DeliveryTarget;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.PartitionedQueue;
 import org.apache.activemq.queue.PersistencePolicy;
@@ -18,6 +21,7 @@ import org.apache.activemq.queue.SharedPriorityQueue;
 import org.apache.activemq.queue.SharedQueue;
 import org.apache.activemq.queue.SharedQueueOld;
 import org.apache.activemq.queue.Subscription;
+import org.apache.activemq.queue.perf.MockBroker.DeliveryTarget;
 import org.apache.activemq.util.Mapper;
 
 class MockQueue implements MockBroker.DeliveryTarget {

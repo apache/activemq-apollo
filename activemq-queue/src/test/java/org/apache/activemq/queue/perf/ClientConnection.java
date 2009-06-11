@@ -1,4 +1,4 @@
-package org.apache.activemq.flow;
+package org.apache.activemq.queue.perf;
 
 import java.net.URI;
 

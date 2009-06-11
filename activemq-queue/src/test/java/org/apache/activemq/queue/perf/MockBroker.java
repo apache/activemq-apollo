@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.flow;
+package org.apache.activemq.queue.perf;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.PriorityDispatcher;
+import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.transport.DispatchableTransportServer;
 import org.apache.activemq.transport.Transport;
