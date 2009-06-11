@@ -89,7 +89,7 @@ public class SharedQueueTest extends TestCase {
             store = StoreFactory.createStore("memory");
         }
 
-        store.setStoreDirectory(new File("test-data/shared-queue-test/"));
+        store.setStoreDirectory(new File("target/test-data/shared-queue-test/"));
         store.setDeleteAllMessages(PURGE_STORE);
         return store;
     }

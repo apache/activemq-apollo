@@ -492,7 +492,7 @@ public abstract class BrokerTestBase extends TestCase {
             store = StoreFactory.createStore("memory");
         }
 
-        store.setStoreDirectory(new File("test-data/broker-test/" + broker.getName()));
+        store.setStoreDirectory(new File("target/test-data/broker-test/" + broker.getName()));
         store.setDeleteAllMessages(PURGE_STORE);
         return store;
     }
