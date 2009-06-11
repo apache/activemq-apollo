@@ -19,8 +19,13 @@ package org.apache.activemq.broker;
 import java.net.URI;
 import java.util.List;
 
+import javax.management.MBeanServer;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.TrustManager;
+
 import org.apache.activemq.Service;
 import org.apache.activemq.broker.region.RegionBroker;
+import org.apache.activemq.store.PersistenceAdapter;
 import org.apache.activemq.usage.SystemUsage;
 
 public class BrokerService implements Service {
@@ -28,8 +33,7 @@ public class BrokerService implements Service {
     public static final String DEFAULT_PORT = "61616";
     public static final String DEFAULT_BROKER_NAME = "localhost";
 
-	public Object getVmConnectorURI() {
-        // TODO Auto-generated method stub
+	public URI getVmConnectorURI() {
         return null;
     }
 
@@ -43,8 +47,7 @@ public class BrokerService implements Service {
         return false;
     }
 
-    public ManagementContext getManagementContext() {
-        // TODO Auto-generated method stub
+    public <T> T getManagementContext() {
         return null;
     }
 
@@ -129,6 +132,111 @@ public class BrokerService implements Service {
 	public boolean isStarted() {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+	public void setDeleteAllMessagesOnStartup(boolean b) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public PersistenceAdapter getPersistenceAdapter() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public void removeConnector(TransportConnector connector) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public <T> T addNetworkConnector(String string) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public <T> void removeNetworkConnector(T connector) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void waitUntilStopped() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public MBeanServer getMBeanServer() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public void setPopulateJMSXUserID(boolean b) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void setBrokerName(String brokerName) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void addConnector(URI tcpUri) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public TransportConnector addSslConnector(String bindLocation, KeyManager[] km, TrustManager[] tm, Object object) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public void setSystemUsage(SystemUsage memoryManager) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public <T> void addNetworkConnector(T nc) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void deleteAllMessages() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void setPersistenceAdapter(PersistenceAdapter createPersistenceAdapter) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void setDataDirectory(String string) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void waitUntilStarted() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void setUseShutdownHook(boolean b) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void setWaitForSlave(boolean b) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void setMasterConnectorURI(String masterUrl) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void setAdvisorySupport(boolean b) {
+		// TODO Auto-generated method stub
+		
 	}
 
 

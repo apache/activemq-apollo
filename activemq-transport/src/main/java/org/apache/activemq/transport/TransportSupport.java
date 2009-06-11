@@ -63,7 +63,7 @@ public abstract class TransportSupport extends ServiceSupport implements Transpo
         return null;
     }
 
-    public FutureResponse asyncRequest(Object command, ResponseCallback responseCallback) throws IOException {
+    public <T> FutureResponse<T> asyncRequest(Object command, ResponseCallback<T> responseCallback) throws IOException {
         throw new AssertionError("Unsupported Method");
     }
 

@@ -28,4 +28,9 @@ public class RegionBroker {
         return null;
     }
 
+	public void gc() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

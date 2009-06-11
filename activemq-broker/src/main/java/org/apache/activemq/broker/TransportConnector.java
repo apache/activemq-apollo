@@ -17,7 +17,9 @@
 package org.apache.activemq.broker;
 
 import java.io.IOException;
+import java.net.URI;
 
+import org.apache.activemq.Service;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportServer;
 
@@ -26,9 +28,13 @@ import org.apache.activemq.transport.TransportServer;
  * @org.apache.xbean.XBean
  * @version $Revision: 1.6 $
  */
-public class TransportConnector {
+public class TransportConnector implements Service {
 
 	public TransportConnector(TransportServer server) {
+		// TODO Auto-generated constructor stub
+	}
+
+	public TransportConnector() {
 		// TODO Auto-generated constructor stub
 	}
 
@@ -42,8 +48,38 @@ public class TransportConnector {
 		return null;
 	}
 
-	public String getConnectUri() {
+	public URI getConnectUri() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	public void stop() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void start() throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void setDiscoveryUri(URI uri) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public Object getUri() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public void setUri(URI uri) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void setName(String string) {
+		// TODO Auto-generated method stub
+		
 	}
 }

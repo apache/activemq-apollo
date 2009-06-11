@@ -18,11 +18,10 @@ package org.apache.activemq.broker;
 
 import java.util.Set;
 
-public class Broker {
+public interface Broker {
 
-	public <T> Set<T> getDurableDestinations() {
-        // TODO Auto-generated method stub
-        return null;
-    }
+	public <T> Set<T> getDurableDestinations();
+
+	public <T> Set<T> getDestinations(T destination);
 
 }

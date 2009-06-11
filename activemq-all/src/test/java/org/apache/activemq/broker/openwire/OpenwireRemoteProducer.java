@@ -11,9 +11,8 @@ import javax.jms.JMSException;
 
 import org.apache.activemq.apollo.WindowLimiter;
 import org.apache.activemq.apollo.broker.MessageDelivery;
-import org.apache.activemq.broker.RemoteProducer;
 import org.apache.activemq.apollo.broker.Router;
-import org.apache.activemq.broker.openwire.OpenWireMessageDelivery;
+import org.apache.activemq.broker.RemoteProducer;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTextMessage;

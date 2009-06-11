@@ -233,7 +233,7 @@ public abstract class NetworkConnector extends NetworkBridgeConfiguration implem
             return;
         }
 
-        MBeanServer mbeanServer = getBrokerService().getManagementContext().getMBeanServer();
+        MBeanServer mbeanServer = getBrokerService().getMBeanServer();
         if (mbeanServer != null) {
             NetworkBridgeViewMBean view = new NetworkBridgeView(bridge);
             try {
@@ -250,7 +250,7 @@ public abstract class NetworkConnector extends NetworkBridgeConfiguration implem
             return;
         }
 
-        MBeanServer mbeanServer = getBrokerService().getManagementContext().getMBeanServer();
+        MBeanServer mbeanServer = getBrokerService().getMBeanServer();
         if (mbeanServer != null) {
             try {
                 ObjectName objectName = createNetworkBridgeObjectName(bridge);

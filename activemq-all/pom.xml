@@ -65,11 +65,36 @@
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-spring</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-network</artifactId>
+    </dependency>
 
     <!-- Testing Dependencies -->    
     <dependency>
       <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-transport</artifactId>
+      <version>${activemq-version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-broker</artifactId>
+      <version>${activemq-version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-util</artifactId>
+      <version>${activemq-version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-spring</artifactId>
       <version>${activemq-version}</version>
       <type>test-jar</type>
       <scope>test</scope>

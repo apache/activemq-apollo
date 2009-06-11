@@ -14,15 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker;
+package org.apache.activemq.transport;
 
-import javax.management.MBeanServer;
+/**
+ * @version $Revision$
+ */
+public class QueueClusterTest extends TopicClusterTest {
 
-public class ManagementContext {
+    protected void setUp() throws Exception {
+        topic = false;
+        super.setUp();
+    }
 
-    public MBeanServer getMBeanServer() {
-        // TODO Auto-generated method stub
-        return null;
+    protected int expectedReceiveCount() {
+        return MESSAGE_COUNT * NUMBER_IN_CLUSTER;
     }
 
 }
