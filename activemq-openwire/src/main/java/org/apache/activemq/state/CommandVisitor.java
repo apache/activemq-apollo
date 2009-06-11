@@ -36,6 +36,7 @@ import org.apache.activemq.command.MessagePull;
 import org.apache.activemq.command.ProducerAck;
 import org.apache.activemq.command.ProducerId;
 import org.apache.activemq.command.ProducerInfo;
+import org.apache.activemq.command.RemoveInfo;
 import org.apache.activemq.command.RemoveSubscriptionInfo;
 import org.apache.activemq.command.Response;
 import org.apache.activemq.command.SessionId;
@@ -54,13 +55,13 @@ public interface CommandVisitor {
 
     Response processAddConsumer(ConsumerInfo info) throws Exception;
 
-    Response processRemoveConnection(ConnectionId id, long lastDeliveredSequenceId) throws Exception;
+    Response processRemoveConnection(RemoveInfo info, ConnectionId id, long lastDeliveredSequenceId) throws Exception;
 
-    Response processRemoveSession(SessionId id, long lastDeliveredSequenceId) throws Exception;
+    Response processRemoveSession(RemoveInfo info, SessionId id, long lastDeliveredSequenceId) throws Exception;
 
-    Response processRemoveProducer(ProducerId id) throws Exception;
+    Response processRemoveProducer(RemoveInfo info,ProducerId id) throws Exception;
 
-    Response processRemoveConsumer(ConsumerId id, long lastDeliveredSequenceId) throws Exception;
+    Response processRemoveConsumer(RemoveInfo info,ConsumerId id, long lastDeliveredSequenceId) throws Exception;
 
     Response processAddDestination(DestinationInfo info) throws Exception;
 

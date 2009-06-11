@@ -69,13 +69,13 @@ public class RemoveInfo extends BaseCommand {
     public Response visit(CommandVisitor visitor) throws Exception {
         switch (objectId.getDataStructureType()) {
         case ConnectionId.DATA_STRUCTURE_TYPE:
-            return visitor.processRemoveConnection((ConnectionId)objectId, lastDeliveredSequenceId);
+            return visitor.processRemoveConnection(this, (ConnectionId)objectId, lastDeliveredSequenceId);
         case SessionId.DATA_STRUCTURE_TYPE:
-            return visitor.processRemoveSession((SessionId)objectId, lastDeliveredSequenceId);
+            return visitor.processRemoveSession(this, (SessionId)objectId, lastDeliveredSequenceId);
         case ConsumerId.DATA_STRUCTURE_TYPE:
-            return visitor.processRemoveConsumer((ConsumerId)objectId, lastDeliveredSequenceId);
+            return visitor.processRemoveConsumer(this, (ConsumerId)objectId, lastDeliveredSequenceId);
         case ProducerId.DATA_STRUCTURE_TYPE:
-            return visitor.processRemoveProducer((ProducerId)objectId);
+            return visitor.processRemoveProducer(this, (ProducerId)objectId);
         default:
             throw new IOException("Unknown remove command type: " + objectId.getDataStructureType());
         }

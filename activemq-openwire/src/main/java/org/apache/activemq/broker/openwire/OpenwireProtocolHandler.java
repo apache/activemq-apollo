@@ -57,6 +57,7 @@ import org.apache.activemq.command.MessagePull;
 import org.apache.activemq.command.ProducerAck;
 import org.apache.activemq.command.ProducerId;
 import org.apache.activemq.command.ProducerInfo;
+import org.apache.activemq.command.RemoveInfo;
 import org.apache.activemq.command.RemoveSubscriptionInfo;
 import org.apache.activemq.command.Response;
 import org.apache.activemq.command.SessionId;
@@ -126,24 +127,29 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 return ack(info);
             }
 
-            public Response processRemoveConnection(ConnectionId info, long arg1) throws Exception {
+            public Response processRemoveConnection(RemoveInfo remove, ConnectionId info, long arg1) throws Exception {
+                ack(remove);
                 return null;
             }
 
-            public Response processRemoveSession(SessionId info, long arg1) throws Exception {
+            public Response processRemoveSession(RemoveInfo remove, SessionId info, long arg1) throws Exception {
+                ack(remove);
                 return null;
             }
 
-            public Response processRemoveProducer(ProducerId info) throws Exception {
+            public Response processRemoveProducer(RemoveInfo remove, ProducerId info) throws Exception {
                 producers.remove(info);
+                //TODO add close logic?
+                ack(remove);
                 return null;
             }
 
-            public Response processRemoveConsumer(ConsumerId info, long arg1) throws Exception {
+            public Response processRemoveConsumer(RemoveInfo remove, ConsumerId info, long arg1) throws Exception {
                 ConsumerContext ctx = consumers.remove(info);
-                if (ctx == null) {
-                    
+                if (ctx != null) {
+                    //TODO add close logic
                 }
+                ack(remove);
                 return null;
             }
 
@@ -320,14 +326,12 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
     public void onCommand(Object o) {
 
-        final Command command = (Command) o;
+        Command command = (Command) o;
         boolean responseRequired = command.isResponseRequired();
         try {
-            Response response = command.visit(visitor);
             
-            if (responseRequired && response == null) {
-                ack(command);
-            }
+            command.visit(visitor);
+            
             
         } catch (Exception e) {
             if (responseRequired) {
