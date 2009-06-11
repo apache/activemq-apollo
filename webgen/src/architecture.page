@@ -15,6 +15,7 @@
 # limitations under the License.
 
 title: Architectural Overview
+in_menu: true
 --- pipeline:textile
 
 h1. Overview

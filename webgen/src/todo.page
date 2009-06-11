@@ -15,6 +15,7 @@
 # limitations under the License.
 
 title: TODO
+in_menu: true
 --- pipeline:textile
 
 h2. Tasks

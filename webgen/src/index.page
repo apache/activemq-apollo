@@ -17,7 +17,13 @@
 title: Home
 in_menu: true
 sort_info: 1
---- 
+--- name:overview pipeline:haml,tags
+
+%h1 {project_name:}
+
+{project_slogan:}
+
+--- name:content
 
 # {project_name:}
 

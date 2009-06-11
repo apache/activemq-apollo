@@ -33,7 +33,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 p { margin-bottom:0px; }
 
-a { text-decoration: none; color:#0D4D82; }
+a { text-decoration: none; color:#830201; }
 a:hover { color: #820000; text-decoration: underline;}
 img {border: none;}
 
@@ -43,7 +43,7 @@ a.main { font-size: 12pt; }
 
 #navigation { width: 100%; float: left;
     font-family: HelveticaNeue,"Helvetica Neue",Helvetica,Arial,Verdana,sans-serif; 
-    background: #0D4D82; text-align:center; padding: 8px;
+    background: #830201; text-align:center; padding: 8px;
     color: white; font-size: 10pt; font-weight: bold;
     position: absolute;
     top: 0px;
@@ -113,7 +113,7 @@ a.main { font-size: 12pt; }
 #blog .wrapper { min-width: 600px; width: 600px; margin: 0 auto; }
 #blog h1 {
   font-family: HelveticaNeue,"Helvetica Neue",Helvetica,Arial,Verdana,sans-serif; 
-  font-size: 18pt; color: #0D4D82;
+  font-size: 18pt; color: #830201;
 }
 #blog h2 {
   border-bottom: thin dashed #DDD;
