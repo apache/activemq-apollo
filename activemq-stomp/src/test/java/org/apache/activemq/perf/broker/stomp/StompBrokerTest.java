@@ -1,4 +1,4 @@
-package org.apache.activemq.broker.openwire.stomp;
+package org.apache.activemq.perf.broker.stomp;
 
 import org.apache.activemq.broker.BrokerTestBase;
 import org.apache.activemq.broker.RemoteConsumer;

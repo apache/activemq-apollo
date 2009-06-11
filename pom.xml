@@ -911,6 +911,7 @@
               <include>**/*TestCase.java</include>
             </includes>
             <excludes>
+              <exclude>**/legacy/**</exclude>
               <exclude>**/perf/**</exclude>
             </excludes>
           </configuration>
