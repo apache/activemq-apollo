@@ -1,3 +1,4 @@
+---
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -12,22 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
---- name:paths
-#
-# You cand define metainfo for mutliple pages in this file.
-#
 
-**/*.page: # <-- That means the following attributes get applied to all pages
-     # in the site.
-
-  # -------------------------------------------------------------------
-  # You can easily switch the site from one look to another here:
-  # -------------------------------------------------------------------
-  template: /styles/activemq/main.template
-  
-  # -------------------------------------------------------------------
-  # Define the project properties here, these can be accessed in the 
-  # pages using the {var:} syntax.
-  # -------------------------------------------------------------------
-  project_name: "ActiveMQ Apollo"
-  project_slogan: 'The Next Generation of Messaging Middleware'
+template: main.template
+---
+<div class="post"> 
+  <h2>{title:}</h2>
+  <div class="details">Posted by {author:} on {created_at:} </div>
+  <webgen:block name='content'/>
+  <% if node.node_info[:page].blocks.has_key?('full_story') %>
+    <webgen:block name='full_story' />
+  <% end %>
+</div>
