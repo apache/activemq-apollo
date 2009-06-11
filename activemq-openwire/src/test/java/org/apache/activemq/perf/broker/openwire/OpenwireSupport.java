@@ -1,4 +1,4 @@
-package org.apache.activemq.broker.openwire;
+package org.apache.activemq.perf.broker.openwire;
 
 import java.util.concurrent.atomic.AtomicLong;
 

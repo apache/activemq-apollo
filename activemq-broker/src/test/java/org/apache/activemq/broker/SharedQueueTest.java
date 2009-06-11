@@ -19,6 +19,8 @@ package org.apache.activemq.broker;
 import java.io.File;
 import java.util.ArrayList;
 
+import junit.framework.TestCase;
+
 import org.apache.activemq.apollo.broker.BrokerDatabase;
 import org.apache.activemq.apollo.broker.BrokerQueueStore;
 import org.apache.activemq.apollo.broker.MessageBroker;
@@ -33,7 +35,7 @@ import org.apache.activemq.queue.IQueue;
  * @author cmacnaug
  * 
  */
-public class SharedQueueTest {
+public class SharedQueueTest extends TestCase {
 
 
     IDispatcher dispatcher;
@@ -51,6 +53,16 @@ public class SharedQueueTest {
 
     protected int consumerStartDelay = 0;
 
+    @Override
+    protected void setUp() throws Exception {
+    	startServices();
+    }
+    
+    @Override
+    protected void tearDown() throws Exception {
+    	stopServices();
+    }
+    
     protected void startServices() throws Exception {
         dispatcher = createDispatcher();
         dispatcher.start();
