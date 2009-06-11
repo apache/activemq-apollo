@@ -199,6 +199,13 @@ public class PipeTransportFactory extends TransportFactory {
         public void setDispatchPriority(int priority) {
             readContext.updatePriority(priority);
         }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.transport.Transport#getWireformat()
+         */
+        public WireFormat getWireformat() {
+            return wireFormat;
+        }
     }
 
     private class PipeTransportServer implements TransportServer {
@@ -267,7 +274,7 @@ public class PipeTransportFactory extends TransportFactory {
 
             String node = uri.getHost();
             if (servers.containsKey(node)) {
-                throw new IOException("Server allready bound: " + node);
+                throw new IOException("Server already bound: " + node);
             }
             PipeTransportServer server = new PipeTransportServer();
             server.setConnectURI(uri);
@@ -275,6 +282,7 @@ public class PipeTransportFactory extends TransportFactory {
             if (options.containsKey("wireFormat")) {
                 server.setWireFormatFactory(createWireFormatFactory(options));
             }
+                
             servers.put(node, server);
             return server;
         } catch (URISyntaxException e) {

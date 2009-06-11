@@ -39,7 +39,7 @@ import org.apache.activemq.wireformat.WireFormat;
 public class StompWireFormat implements WireFormat {
 
     private static final byte[] NO_DATA = new byte[] {};
-    private static final byte[] END_OF_FRAME = new byte[] {0, '\n'};
+    private static final byte[] END_OF_FRAME = new byte[] { 0, '\n' };
 
     private static final int MAX_COMMAND_LENGTH = 1024;
     private static final int MAX_HEADER_LENGTH = 1024 * 10;
@@ -47,6 +47,7 @@ public class StompWireFormat implements WireFormat {
     private static final int MAX_DATA_LENGTH = 1024 * 1024 * 100;
 
     private int version = 1;
+    public static final String WIREFORMAT_NAME = "stomp";
 
     public ByteSequence marshal(Object command) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -63,7 +64,7 @@ public class StompWireFormat implements WireFormat {
     }
 
     public void marshal(Object command, DataOutput os) throws IOException {
-        StompFrame stomp = (org.apache.activemq.transport.stomp.StompFrame)command;
+        StompFrame stomp = (org.apache.activemq.transport.stomp.StompFrame) command;
 
         StringBuffer buffer = new StringBuffer();
         buffer.append(stomp.getAction());
@@ -71,7 +72,7 @@ public class StompWireFormat implements WireFormat {
 
         // Output the headers.
         for (Iterator iter = stomp.getHeaders().entrySet().iterator(); iter.hasNext();) {
-            Map.Entry entry = (Map.Entry)iter.next();
+            Map.Entry entry = (Map.Entry) iter.next();
             buffer.append(entry.getKey());
             buffer.append(Stomp.Headers.SEPERATOR);
             buffer.append(entry.getValue());
@@ -200,14 +201,18 @@ public class StompWireFormat implements WireFormat {
         return version;
     }
 
+    public String getName() {
+        return WIREFORMAT_NAME;
+    }
+
     public void setVersion(int version) {
         this.version = version;
     }
 
-	public boolean inReceive() {
-		//TODO implement the inactivity monitor
-		return false;
-	}
+    public boolean inReceive() {
+        //TODO implement the inactivity monitor
+        return false;
+    }
 
     public Transport createTransportFilters(Transport transport, Map options) {
         if (transport.isUseInactivityMonitor()) {
@@ -215,7 +220,5 @@ public class StompWireFormat implements WireFormat {
         }
         return transport;
     }
-    
-    
 
 }

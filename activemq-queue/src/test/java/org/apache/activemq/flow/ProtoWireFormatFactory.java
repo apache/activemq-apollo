@@ -23,6 +23,8 @@ import org.apache.activemq.wireformat.WireFormatFactory;
 public class ProtoWireFormatFactory implements WireFormatFactory {
 
     public class TestWireFormat implements StatefulWireFormat {
+        public static final String WIREFORMAT_NAME = "proto";
+        
         private ByteBuffer currentOut;
         private byte outType;
         
@@ -240,10 +242,37 @@ public class ProtoWireFormatFactory implements WireFormatFactory {
         public Transport createTransportFilters(Transport transport, Map options) {
            return transport;
         }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.wireformat.WireFormat#getName()
+         */
+        public String getName() {
+            return WIREFORMAT_NAME;
+        }
     }
 
 	public WireFormat createWireFormat() {
 		return new TestWireFormat();
 	}	
+	
+	/* (non-Javadoc)
+     * @see org.apache.activemq.wireformat.WireFormatFactory#isDiscriminatable()
+     */
+    public boolean isDiscriminatable() {
+        return false;
+    }
 
+    /* (non-Javadoc)
+     * @see org.apache.activemq.wireformat.WireFormatFactory#matchesWireformatHeader(org.apache.activemq.util.ByteSequence)
+     */
+    public boolean matchesWireformatHeader(ByteSequence byteSequence) {
+        throw new UnsupportedOperationException();
+    }
+
+    /* (non-Javadoc)
+     * @see org.apache.activemq.wireformat.WireFormatFactory#maxWireformatHeaderLength()
+     */
+    public int maxWireformatHeaderLength() {
+        throw new UnsupportedOperationException();
+    }
 }

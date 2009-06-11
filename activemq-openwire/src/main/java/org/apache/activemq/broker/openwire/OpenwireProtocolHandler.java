@@ -17,7 +17,6 @@
 package org.apache.activemq.broker.openwire;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 
@@ -98,9 +97,218 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
     private OpenWireFormat storeWireFormat;
     private Router router;
     private VirtualHost host;
+    private final CommandVisitor visitor;
 
     public OpenwireProtocolHandler() {
         setStoreWireFormat(new OpenWireFormat());
+        visitor = new CommandVisitor() {
+
+            // /////////////////////////////////////////////////////////////////
+            // Methods that keep track of the client state
+            // /////////////////////////////////////////////////////////////////
+            public Response processAddConnection(ConnectionInfo info) throws Exception {
+                connection.setName(info.getClientId());
+                return ack(info);
+            }
+
+            public Response processAddSession(SessionInfo info) throws Exception {
+                return ack(info);
+            }
+
+            public Response processAddProducer(ProducerInfo info) throws Exception {
+                producers.put(info.getProducerId(), new ProducerContext(info));
+                return ack(info);
+            }
+
+            public Response processAddConsumer(ConsumerInfo info) throws Exception {
+                ConsumerContext ctx = new ConsumerContext(info);
+                consumers.put(info.getConsumerId(), ctx);
+                return ack(info);
+            }
+
+            public Response processRemoveConnection(ConnectionId info, long arg1) throws Exception {
+                return null;
+            }
+
+            public Response processRemoveSession(SessionId info, long arg1) throws Exception {
+                return null;
+            }
+
+            public Response processRemoveProducer(ProducerId info) throws Exception {
+                producers.remove(info);
+                return null;
+            }
+
+            public Response processRemoveConsumer(ConsumerId info, long arg1) throws Exception {
+                ConsumerContext ctx = consumers.remove(info);
+                if (ctx == null) {
+                    
+                }
+                return null;
+            }
+
+            // /////////////////////////////////////////////////////////////////
+            // Message Processing Methods.
+            // /////////////////////////////////////////////////////////////////
+            public Response processMessage(Message info) throws Exception {
+                ProducerId producerId = info.getProducerId();
+                ProducerContext producerContext = producers.get(producerId);
+
+                OpenWireMessageDelivery md = new OpenWireMessageDelivery(info);
+                md.setStoreWireFormat(storeWireFormat);
+                md.setPersistListener(OpenwireProtocolHandler.this);
+
+                // Only producers that are not using a window will block,
+                // and if it blocks.
+                // yes we block the connection's read thread. yes other
+                // sessions will not get
+                // serviced while we block here. The producer is depending
+                // on TCP flow
+                // control to slow him down so we have to stop ready from
+                // the socket at this
+                // point.
+                while (!producerContext.controller.offer(md, null)) {
+                    producerContext.controller.waitForFlowUnblock();
+                }
+                return null;
+            }
+
+            public Response processMessageAck(MessageAck info) throws Exception {
+                ConsumerContext ctx = consumers.get(info.getConsumerId());
+                ctx.ack(info);
+                return ack(info);
+            }
+
+            // Only used when client prefetch is set to zero.
+            public Response processMessagePull(MessagePull info) throws Exception {
+                return ack(info);
+            }
+
+            // /////////////////////////////////////////////////////////////////
+            // Control Methods
+            // /////////////////////////////////////////////////////////////////
+            public Response processWireFormat(WireFormatInfo info) throws Exception {
+
+                // Negotiate the openwire encoding options.
+                WireFormatNegotiator wfn = new WireFormatNegotiator(connection.getTransport(), wireFormat, 1);
+                wfn.sendWireFormat();
+                wfn.negociate(info);
+
+                // Now that the encoding is negotiated.. let the client know
+                // the details about this
+                // broker.
+                BrokerInfo brokerInfo = new BrokerInfo();
+                brokerInfo.setBrokerId(new BrokerId(connection.getBroker().getName()));
+                brokerInfo.setBrokerName(connection.getBroker().getName());
+                brokerInfo.setBrokerURL(connection.getBroker().getBindUri());
+                connection.write(brokerInfo);
+                return ack(info);
+            }
+
+            public Response processShutdown(ShutdownInfo info) throws Exception {
+                connection.setStopping();
+                return ack(info);
+            }
+
+            public Response processKeepAlive(KeepAliveInfo info) throws Exception {
+                if (info.isResponseRequired()) {
+                    info.setResponseRequired(false);
+                    connection.write(info);
+                }
+                return null;
+            }
+
+            public Response processFlush(FlushCommand info) throws Exception {
+                return ack(info);
+            }
+
+            public Response processConnectionControl(ConnectionControl info) throws Exception {
+                return ack(info);
+            }
+
+            public Response processConnectionError(ConnectionError info) throws Exception {
+                return ack(info);
+            }
+
+            public Response processConsumerControl(ConsumerControl info) throws Exception {
+                return ack(info);
+            }
+
+            // /////////////////////////////////////////////////////////////////
+            // Methods for server management
+            // /////////////////////////////////////////////////////////////////
+            public Response processAddDestination(DestinationInfo info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            public Response processRemoveDestination(DestinationInfo info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            public Response processRemoveSubscription(RemoveSubscriptionInfo info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            public Response processControlCommand(ControlCommand info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            // /////////////////////////////////////////////////////////////////
+            // Methods for transaction management
+            // /////////////////////////////////////////////////////////////////
+            public Response processBeginTransaction(TransactionInfo info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            public Response processCommitTransactionOnePhase(TransactionInfo info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            public Response processCommitTransactionTwoPhase(TransactionInfo info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            public Response processEndTransaction(TransactionInfo info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            public Response processForgetTransaction(TransactionInfo info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            public Response processPrepareTransaction(TransactionInfo info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            public Response processRecoverTransactions(TransactionInfo info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            public Response processRollbackTransaction(TransactionInfo info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            // /////////////////////////////////////////////////////////////////
+            // Methods for cluster operations
+            // These commands are sent to the broker when it's acting like a
+            // client to another broker.
+            // /////////////////////////////////////////////////////////////////
+            public Response processBrokerInfo(BrokerInfo info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            public Response processMessageDispatch(MessageDispatch info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            public Response processMessageDispatchNotification(MessageDispatchNotification info) throws Exception {
+                throw new UnsupportedOperationException();
+            }
+
+            public Response processProducerAck(ProducerAck info) throws Exception {
+                return ack(info);
+            }
+        };
     }
 
     public void start() throws Exception {
@@ -115,210 +323,12 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         final Command command = (Command) o;
         boolean responseRequired = command.isResponseRequired();
         try {
-            command.visit(new CommandVisitor() {
-
-                // /////////////////////////////////////////////////////////////////
-                // Methods that keep track of the client state
-                // /////////////////////////////////////////////////////////////////
-                public Response processAddConnection(ConnectionInfo info) throws Exception {
-                    connection.setName(info.getClientId());
-                    return ack(command);
-                }
-
-                public Response processAddSession(SessionInfo info) throws Exception {
-                    return ack(command);
-                }
-
-                public Response processAddProducer(ProducerInfo info) throws Exception {
-                    producers.put(info.getProducerId(), new ProducerContext(info));
-                    return ack(command);
-                }
-
-                public Response processAddConsumer(ConsumerInfo info) throws Exception {
-                    ConsumerContext ctx = new ConsumerContext(info);
-                    consumers.put(info.getConsumerId(), ctx);
-                    return ack(command);
-                }
-
-                public Response processRemoveConnection(ConnectionId info, long arg1) throws Exception {
-                    return ack(command);
-                }
-
-                public Response processRemoveSession(SessionId info, long arg1) throws Exception {
-                    return ack(command);
-                }
-
-                public Response processRemoveProducer(ProducerId info) throws Exception {
-                    producers.remove(info);
-                    return ack(command);
-                }
-
-                public Response processRemoveConsumer(ConsumerId info, long arg1) throws Exception {
-                    return ack(command);
-                }
-
-                // /////////////////////////////////////////////////////////////////
-                // Message Processing Methods.
-                // /////////////////////////////////////////////////////////////////
-                public Response processMessage(Message info) throws Exception {
-                    ProducerId producerId = info.getProducerId();
-                    ProducerContext producerContext = producers.get(producerId);
-
-                    OpenWireMessageDelivery md = new OpenWireMessageDelivery(info);
-                    md.setStoreWireFormat(storeWireFormat);
-                    md.setPersistListener(OpenwireProtocolHandler.this);
-
-                    // Only producers that are not using a window will block,
-                    // and if it blocks.
-                    // yes we block the connection's read thread. yes other
-                    // sessions will not get
-                    // serviced while we block here. The producer is depending
-                    // on TCP flow
-                    // control to slow him down so we have to stop ready from
-                    // the socket at this
-                    // point.
-                    while (!producerContext.controller.offer(md, null)) {
-                        producerContext.controller.waitForFlowUnblock();
-                    }
-                    return null;
-                }
-
-                public Response processMessageAck(MessageAck info) throws Exception {
-                    ConsumerContext ctx = consumers.get(info.getConsumerId());
-                    ctx.ack(info);
-                    return ack(command);
-                }
-
-                // Only used when client prefetch is set to zero.
-                public Response processMessagePull(MessagePull info) throws Exception {
-                    return ack(command);
-                }
-
-                // /////////////////////////////////////////////////////////////////
-                // Control Methods
-                // /////////////////////////////////////////////////////////////////
-                public Response processWireFormat(WireFormatInfo info) throws Exception {
-
-                    // Negotiate the openwire encoding options.
-                    WireFormatNegotiator wfn = new WireFormatNegotiator(connection.getTransport(), wireFormat, 1);
-                    wfn.sendWireFormat();
-                    wfn.negociate(info);
-
-                    // Now that the encoding is negotiated.. let the client know
-                    // the details about this
-                    // broker.
-                    BrokerInfo brokerInfo = new BrokerInfo();
-                    brokerInfo.setBrokerId(new BrokerId(connection.getBroker().getName()));
-                    brokerInfo.setBrokerName(connection.getBroker().getName());
-                    brokerInfo.setBrokerURL(connection.getBroker().getBindUri());
-                    connection.write(brokerInfo);
-                    return ack(command);
-                }
-
-                public Response processShutdown(ShutdownInfo info) throws Exception {
-                    return ack(command);
-                }
-
-                public Response processKeepAlive(KeepAliveInfo info) throws Exception {
-                    if (info.isResponseRequired()) {
-                        info.setResponseRequired(false);
-                        connection.write(info);
-                    }
-                    return null;
-                }
-
-                public Response processFlush(FlushCommand info) throws Exception {
-                    return ack(command);
-                }
-
-                public Response processConnectionControl(ConnectionControl info) throws Exception {
-                    return ack(command);
-                }
-
-                public Response processConnectionError(ConnectionError info) throws Exception {
-                    return ack(command);
-                }
-
-                public Response processConsumerControl(ConsumerControl info) throws Exception {
-                    return ack(command);
-                }
-
-                // /////////////////////////////////////////////////////////////////
-                // Methods for server management
-                // /////////////////////////////////////////////////////////////////
-                public Response processAddDestination(DestinationInfo info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                public Response processRemoveDestination(DestinationInfo info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                public Response processRemoveSubscription(RemoveSubscriptionInfo info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                public Response processControlCommand(ControlCommand info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                // /////////////////////////////////////////////////////////////////
-                // Methods for transaction management
-                // /////////////////////////////////////////////////////////////////
-                public Response processBeginTransaction(TransactionInfo info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                public Response processCommitTransactionOnePhase(TransactionInfo info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                public Response processCommitTransactionTwoPhase(TransactionInfo info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                public Response processEndTransaction(TransactionInfo info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                public Response processForgetTransaction(TransactionInfo info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                public Response processPrepareTransaction(TransactionInfo info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                public Response processRecoverTransactions(TransactionInfo info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                public Response processRollbackTransaction(TransactionInfo info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                // /////////////////////////////////////////////////////////////////
-                // Methods for cluster operations
-                // These commands are sent to the broker when it's acting like a
-                // client to another broker.
-                // /////////////////////////////////////////////////////////////////
-                public Response processBrokerInfo(BrokerInfo info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                public Response processMessageDispatch(MessageDispatch info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                public Response processMessageDispatchNotification(MessageDispatchNotification info) throws Exception {
-                    throw new UnsupportedOperationException();
-                }
-
-                public Response processProducerAck(ProducerAck info) throws Exception {
-                    return ack(command);
-                }
-
-            });
+            Response response = command.visit(visitor);
+            
+            if (responseRequired && response == null) {
+                ack(command);
+            }
+            
         } catch (Exception e) {
             if (responseRequired) {
                 ExceptionResponse response = new ExceptionResponse(e);
@@ -439,7 +449,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             controller.useOverFlowQueue(false);
             controller.setExecutor(connection.getDispatcher().createPriorityExecutor(connection.getDispatcher().getDispatchPriorities() - 1));
             super.onFlowOpened(controller);
-            
+
             BrokerSubscription sub = host.createSubscription(this);
             sub.connect(this);
         }

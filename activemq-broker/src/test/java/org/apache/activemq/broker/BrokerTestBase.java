@@ -40,7 +40,7 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 
 public abstract class BrokerTestBase extends TestCase {
 
-    protected static final int PERFORMANCE_SAMPLES = 5;
+    protected static final int PERFORMANCE_SAMPLES = 3;
 
     protected static final int IO_WORK_AMOUNT = 0;
     protected static final int FANIN_COUNT = 10;
@@ -63,7 +63,7 @@ public abstract class BrokerTestBase extends TestCase {
     // Set to use tcp IO
     protected boolean tcp = true;
     // set to force marshalling even in the NON tcp case.
-    protected boolean forceMarshalling = false;
+    protected boolean forceMarshalling = true;
 
     protected String sendBrokerBindURI;
     protected String receiveBrokerBindURI;
@@ -95,23 +95,36 @@ public abstract class BrokerTestBase extends TestCase {
     protected void setUp() throws Exception {
         dispatcher = createDispatcher();
         dispatcher.start();
+        
+        String brokerWireFormat = getRemoteWireFormat();
+        if(getSupportedWireFormats() != null)
+        {
+            brokerWireFormat= "multi&wireFormat.wireFormats=" + getSupportedWireFormats();
+        }
+        
         if (tcp) {
-            sendBrokerBindURI = "tcp://localhost:10000?wireFormat=multi";
-            receiveBrokerBindURI = "tcp://localhost:20000?wireFormat=multi";
-            sendBrokerConnectURI = "tcp://localhost:10000";
-            receiveBrokerConnectURI = "tcp://localhost:20000";
+            sendBrokerBindURI = "tcp://localhost:10000?wireFormat=" + brokerWireFormat;
+            receiveBrokerBindURI = "tcp://localhost:20000?wireFormat=" + brokerWireFormat;
+            sendBrokerConnectURI = "tcp://localhost:10000?wireFormat=" + getRemoteWireFormat();
+            receiveBrokerConnectURI = "tcp://localhost:20000" + getRemoteWireFormat();
         } else {
+            sendBrokerConnectURI = "pipe://SendBroker";
+            receiveBrokerConnectURI = "pipe://ReceiveBroker";
             if (forceMarshalling) {
-                sendBrokerBindURI = "pipe://SendBroker";
-                receiveBrokerBindURI = "pipe://ReceiveBroker";
+                sendBrokerBindURI = sendBrokerConnectURI + "?wireFormat=" + getRemoteWireFormat();
+                receiveBrokerBindURI = receiveBrokerConnectURI + "?wireFormat=" + getRemoteWireFormat();
             } else {
-                sendBrokerBindURI = "pipe://SendBroker";
-                receiveBrokerBindURI = "pipe://ReceiveBroker";
+                sendBrokerBindURI = sendBrokerConnectURI;
+                receiveBrokerBindURI = receiveBrokerConnectURI;
             }
-            sendBrokerConnectURI = sendBrokerBindURI;
-            receiveBrokerConnectURI = receiveBrokerBindURI;
         }
     }
+
+    protected String getSupportedWireFormats() {
+        return null;
+    }
+
+    protected abstract String getRemoteWireFormat();
 
     protected IDispatcher createDispatcher() {
         return PriorityDispatcher.createPriorityDispatchPool("BrokerDispatcher", MessageBroker.MAX_PRIORITY, asyncThreadPoolSize);

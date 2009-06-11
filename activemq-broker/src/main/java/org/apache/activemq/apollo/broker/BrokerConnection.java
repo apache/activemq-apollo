@@ -22,7 +22,7 @@ import org.apache.activemq.apollo.Connection;
 import org.apache.activemq.apollo.broker.protocol.ProtocolHandler;
 import org.apache.activemq.apollo.broker.protocol.ProtocolHandlerFactory;
 import org.apache.activemq.util.IOExceptionSupport;
-import org.apache.activemq.wireformat.MultiWireFormatFactory.WireFormatConnected;
+import org.apache.activemq.wireformat.WireFormat;
 
 public class BrokerConnection extends Connection {
     
@@ -60,17 +60,15 @@ public class BrokerConnection extends Connection {
             protocolHandler.onCommand(command);
         } else {
             try {
-
-                WireFormatConnected wfconnected = (WireFormatConnected) command;
-                String wfName = wfconnected.getWireFormatFactory().wireformatName();
+                WireFormat wireformat = transport.getWireformat();
                 try {
-                    protocolHandler = ProtocolHandlerFactory.createProtocolHandler(wfName);
+                    protocolHandler = ProtocolHandlerFactory.createProtocolHandler(wireformat.getName());
                 } catch(Exception e) {
-                    throw IOExceptionSupport.create("No protocol handler available for: "+wfName, e);
+                    throw IOExceptionSupport.create("No protocol handler available for: "+wireformat.getName(), e);
                 }
                 
                 protocolHandler.setConnection(this);
-                protocolHandler.setWireFormat(wfconnected.getWireFormat());
+                protocolHandler.setWireFormat(wireformat);
                 protocolHandler.start();
                 
                 setExceptionListener(new ExceptionListener(){

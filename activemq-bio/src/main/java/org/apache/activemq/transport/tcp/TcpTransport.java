@@ -611,4 +611,9 @@ public class TcpTransport extends TransportThreadSupport implements Transport, S
             }
         });
     }
+
+    public WireFormat getWireformat()
+    {
+        return wireFormat;
+    }
 }

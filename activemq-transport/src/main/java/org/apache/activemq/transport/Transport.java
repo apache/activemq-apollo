@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.URI;
 
 import org.apache.activemq.Service;
+import org.apache.activemq.wireformat.WireFormat;
 
 /**
  * Represents the client side of a transport allowing messages to be sent
@@ -155,6 +156,11 @@ public interface Transport extends Service {
      * @return true if the transport is connected
      */
     boolean isConnected();
+    
+    /**
+     * @return The wireformat for the connection.
+     */
+    WireFormat getWireformat();
     
     /**
      * reconnect to another location

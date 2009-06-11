@@ -19,6 +19,8 @@ package org.apache.activemq.transport;
 import java.io.IOException;
 import java.net.URI;
 
+import org.apache.activemq.wireformat.WireFormat;
+
 /**
  * @version $Revision: 1.5 $
  */
@@ -45,7 +47,8 @@ public class TransportFilter implements TransportListener, Transport {
 
     /**
      * @see org.apache.activemq.Service#start()
-     * @throws IOException if the next channel has not been set.
+     * @throws IOException
+     *             if the next channel has not been set.
      */
     public void start() throws Exception {
         if (next == null) {
@@ -126,19 +129,23 @@ public class TransportFilter implements TransportListener, Transport {
         return next.isFaultTolerant();
     }
 
-	public boolean isDisposed() {
-		return next.isDisposed();
-	}
-	
-	public boolean isConnected() {
+    public boolean isDisposed() {
+        return next.isDisposed();
+    }
+
+    public boolean isConnected() {
         return next.isConnected();
     }
 
-	public void reconnect(URI uri) throws IOException {
-		next.reconnect(uri);
-	}
+    public void reconnect(URI uri) throws IOException {
+        next.reconnect(uri);
+    }
 
     public boolean isUseInactivityMonitor() {
         return next.isUseInactivityMonitor();
+    }
+
+    public WireFormat getWireformat() {
+        return next.getWireformat();
     }
 }

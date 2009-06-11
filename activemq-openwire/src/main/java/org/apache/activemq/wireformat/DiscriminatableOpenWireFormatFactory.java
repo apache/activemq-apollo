@@ -19,14 +19,18 @@ package org.apache.activemq.wireformat;
 import org.apache.activemq.openwire.OpenWireFormatFactory;
 import org.apache.activemq.util.ByteSequence;
 
-public class DiscriminatableOpenWireFormatFactory extends OpenWireFormatFactory implements DiscriminatableWireFormatFactory {
+public class DiscriminatableOpenWireFormatFactory extends OpenWireFormatFactory {
 
-    private static final byte MAGIC[] = new byte[] {1, 'A', 'c', 't', 'i', 'v', 'e', 'M', 'Q'};
+    private static final byte MAGIC[] = new byte[] { 1, 'A', 'c', 't', 'i', 'v', 'e', 'M', 'Q' };
+
+    public boolean isDiscriminatable() {
+        return true;
+    }
 
     public boolean matchesWireformatHeader(ByteSequence byteSequence) {
-        if( byteSequence.length == 4+MAGIC.length ) {
-            for( int i=0; i < MAGIC.length; i++ ) {
-                if( byteSequence.data[i+4] != MAGIC[i] ) {
+        if (byteSequence.length == 4 + MAGIC.length) {
+            for (int i = 0; i < MAGIC.length; i++) {
+                if (byteSequence.data[i + 4] != MAGIC[i]) {
                     return false;
                 }
             }
@@ -36,11 +40,6 @@ public class DiscriminatableOpenWireFormatFactory extends OpenWireFormatFactory 
     }
 
     public int maxWireformatHeaderLength() {
-        return 4+MAGIC.length;
+        return 4 + MAGIC.length;
     }
-
-    public String wireformatName() {
-        return "openwire";
-    }
-
 }

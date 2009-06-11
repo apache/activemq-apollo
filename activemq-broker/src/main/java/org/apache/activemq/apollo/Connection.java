@@ -52,6 +52,7 @@ abstract public class Connection implements TransportListener {
 
     public void start() throws Exception {
         transport.setTransportListener(this);
+        
         if (transport instanceof DispatchableTransport) {
             DispatchableTransport dt = ((DispatchableTransport) transport);
             if (name != null) {
@@ -146,6 +147,10 @@ abstract public class Connection implements TransportListener {
         }
     }
 
+    public void setStopping() {
+        stopping.set(true);
+    }
+    
     public boolean isStopping() {
         return stopping.get();
     }

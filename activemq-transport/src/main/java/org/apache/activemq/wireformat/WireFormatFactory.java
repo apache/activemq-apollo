@@ -16,6 +16,36 @@
  */
 package org.apache.activemq.wireformat;
 
+import org.apache.activemq.util.ByteSequence;
+
 public interface WireFormatFactory {
-    WireFormat createWireFormat();    
+    
+    /**
+     * @return an instance of the wire format. 
+     * 
+     */
+    WireFormat createWireFormat();
+    
+    /**
+     * @return true if this wire format factory is isDiscriminatable. A discriminatable
+     * WireFormat's will first write a header to the stream 
+     */
+    boolean isDiscriminatable();
+    
+    /**
+     * @return Returns the maximum length of the header used to discriminate the wire format if it
+     * {@link #isDiscriminatable()}
+     * @throws UnsupportedOperationException If {@link #isDiscriminatable()} is false
+     */
+    int maxWireformatHeaderLength();
+
+    /**
+     * Called to test if this wireformat matches the provided header.
+     * 
+     * @param byteSequence The byte sequence representing the herader data read so far.
+     * @return True if the ByteSequence matches the wire format header.
+     */
+    boolean matchesWireformatHeader(ByteSequence byteSequence);
+
+    
 }

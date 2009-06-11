@@ -26,7 +26,7 @@ import org.apache.activemq.dispatch.PooledDispatcher.PooledDispatchContext;
 
 public class SimpleLoadBalancer<D extends IDispatcher> implements ExecutionLoadBalancer<D> {
 
-    private final boolean DEBUG = true;
+    private final boolean DEBUG = false;
 
     //TODO: Added plumbing for periodic rebalancing which we should
     //consider implementing

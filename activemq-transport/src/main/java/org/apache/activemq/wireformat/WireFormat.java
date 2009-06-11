@@ -65,6 +65,11 @@ public interface WireFormat {
     int getVersion();
     
     /**
+     * @return The name of the wireformat
+     */
+    String getName();
+    
+    /**
      * @return true if message is being received
      */
     boolean inReceive();

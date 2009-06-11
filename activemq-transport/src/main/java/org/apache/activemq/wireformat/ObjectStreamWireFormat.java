@@ -39,6 +39,7 @@ import org.apache.activemq.util.ClassLoadingAwareObjectInputStream;
  */
 public class ObjectStreamWireFormat implements WireFormat {
 
+    public static final String WIREFORMAT_NAME = "object";
     public ByteSequence marshal(Object command) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream ds = new DataOutputStream(baos);
@@ -52,7 +53,7 @@ public class ObjectStreamWireFormat implements WireFormat {
     }
 
     public void marshal(Object command, DataOutput ds) throws IOException {
-        ObjectOutputStream out = new ObjectOutputStream((OutputStream)ds);
+        ObjectOutputStream out = new ObjectOutputStream((OutputStream) ds);
         out.writeObject(command);
         out.flush();
         out.reset();
@@ -60,13 +61,13 @@ public class ObjectStreamWireFormat implements WireFormat {
 
     public Object unmarshal(DataInput ds) throws IOException {
         try {
-            ClassLoadingAwareObjectInputStream in = new ClassLoadingAwareObjectInputStream((InputStream)ds);
+            ClassLoadingAwareObjectInputStream in = new ClassLoadingAwareObjectInputStream((InputStream) ds);
             Object command;
             command = in.readObject();
             in.close();
             return command;
         } catch (ClassNotFoundException e) {
-            throw (IOException)new IOException("unmarshal failed: " + e).initCause(e);
+            throw (IOException) new IOException("unmarshal failed: " + e).initCause(e);
         }
     }
 
@@ -77,10 +78,14 @@ public class ObjectStreamWireFormat implements WireFormat {
         return 0;
     }
 
-	public boolean inReceive() {
-		// TODO implement the inactivity monitor
-		return false;
-	}
+    public String getName() {
+        return WIREFORMAT_NAME;
+    }
+
+    public boolean inReceive() {
+        // TODO implement the inactivity monitor
+        return false;
+    }
 
     public Transport createTransportFilters(Transport transport, Map options) {
         return transport;

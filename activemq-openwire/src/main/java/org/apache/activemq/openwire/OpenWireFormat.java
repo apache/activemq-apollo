@@ -44,6 +44,7 @@ import org.apache.activemq.wireformat.WireFormat;
 public final class OpenWireFormat implements WireFormat {
 
     public static final int DEFAULT_VERSION = CommandTypes.PROTOCOL_VERSION;
+    public static final String WIREFORMAT_NAME = "openwire"; 
 
     static final byte NULL_TYPE = CommandTypes.NULL;
     private static final int MARSHAL_CACHE_SIZE = Short.MAX_VALUE / 2;
@@ -112,6 +113,10 @@ public final class OpenWireFormat implements WireFormat {
 
     public int getVersion() {
         return version;
+    }
+    
+    public String getName() {
+        return WIREFORMAT_NAME;
     }
 
     public synchronized ByteSequence marshal(Object command) throws IOException {

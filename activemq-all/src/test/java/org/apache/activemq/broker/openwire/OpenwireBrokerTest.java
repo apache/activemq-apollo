@@ -15,6 +15,14 @@ public class OpenwireBrokerTest extends BrokerTestBase {
     protected RemoteConsumer createConsumer() {
         return new OpenwireRemoteConsumer();
     }
+
+    /* (non-Javadoc)
+     * @see org.apache.activemq.broker.BrokerTestBase#getRemoteWireFormat()
+     */
+    @Override
+    protected String getRemoteWireFormat() {
+         return "openwire";
+    }
     
 
 }

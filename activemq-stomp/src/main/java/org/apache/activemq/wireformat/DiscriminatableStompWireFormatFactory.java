@@ -22,9 +22,13 @@ import org.apache.activemq.transport.stomp.Stomp;
 import org.apache.activemq.transport.stomp.StompWireFormatFactory;
 import org.apache.activemq.util.ByteSequence;
 
-public class DiscriminatableStompWireFormatFactory extends StompWireFormatFactory implements DiscriminatableWireFormatFactory {
+public class DiscriminatableStompWireFormatFactory extends StompWireFormatFactory {
 
     static byte MAGIC[] = toBytes(Stomp.Commands.CONNECT);
+    
+    public boolean isDiscriminatable() {
+        return true;
+    }
     
     static private byte[] toBytes(String value) {
         try {
@@ -59,9 +63,4 @@ public class DiscriminatableStompWireFormatFactory extends StompWireFormatFactor
     public int maxWireformatHeaderLength() {
         return MAGIC.length+10;
     }
-
-    public String wireformatName() {
-        return "stomp";
-    }
-
 }
