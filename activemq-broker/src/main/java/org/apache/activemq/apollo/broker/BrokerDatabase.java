@@ -53,6 +53,8 @@ import org.apache.activemq.queue.SaveableQueueElement;
 import org.apache.kahadb.util.LinkedNode;
 import org.apache.kahadb.util.LinkedNodeList;
 
+import com.sun.xml.txw2.annotation.XmlElement;
+
 public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.OperationBase> {
 
     private static final boolean DEBUG = false;

@@ -913,6 +913,7 @@
             <excludes>
               <exclude>**/legacy/**</exclude>
               <exclude>**/perf/**</exclude>
+              <exclude>**/jaxb/**</exclude>
             </excludes>
           </configuration>
         </plugin>
