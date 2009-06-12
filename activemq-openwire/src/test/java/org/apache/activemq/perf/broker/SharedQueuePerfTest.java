@@ -26,7 +26,7 @@ import javax.jms.JMSException;
 
 import org.apache.activemq.apollo.broker.BrokerDatabase;
 import org.apache.activemq.apollo.broker.BrokerQueueStore;
-import org.apache.activemq.apollo.broker.MessageBroker;
+import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.broker.openwire.OpenWireMessageDelivery;
 import org.apache.activemq.broker.store.Store;
@@ -82,9 +82,9 @@ public class SharedQueuePerfTest extends TestCase {
 
     protected IDispatcher createDispatcher() {
         if (THREAD_POOL_SIZE > 1) {
-            return PriorityDispatcher.createPriorityDispatchPool("TestDispatcher", MessageBroker.MAX_PRIORITY, THREAD_POOL_SIZE);
+            return PriorityDispatcher.createPriorityDispatchPool("TestDispatcher", Broker.MAX_PRIORITY, THREAD_POOL_SIZE);
         } else {
-            return PriorityDispatcher.createPriorityDispatcher("TestDispatcher", MessageBroker.MAX_PRIORITY);
+            return PriorityDispatcher.createPriorityDispatcher("TestDispatcher", Broker.MAX_PRIORITY);
         }
     }
 

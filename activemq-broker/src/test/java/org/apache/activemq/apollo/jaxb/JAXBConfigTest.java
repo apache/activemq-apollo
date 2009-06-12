@@ -22,7 +22,7 @@ import java.net.URI;
 import junit.framework.TestCase;
 
 import org.apache.activemq.apollo.broker.BrokerFactory;
-import org.apache.activemq.apollo.broker.MessageBroker;
+import org.apache.activemq.apollo.broker.Broker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.After;
@@ -33,7 +33,7 @@ public class JAXBConfigTest extends TestCase {
 
     private static final Log LOG = LogFactory.getLog(JAXBConfigTest.class);
 	
-    MessageBroker broker;
+    Broker broker;
     
 	@Before
 	public void setUp() throws Exception {
@@ -49,7 +49,7 @@ public class JAXBConfigTest extends TestCase {
 		
 	}
 
-    protected MessageBroker createBroker() throws Exception {
+    protected Broker createBroker() throws Exception {
     	URI uri = new URI("jaxb:classpath:org/apache/activemq/apollo/jaxb/activemq.xml");
         LOG.info("Loading broker configuration from the classpath with URI: " + uri);
         return BrokerFactory.createBroker(uri);

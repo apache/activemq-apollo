@@ -2,12 +2,12 @@ package org.apache.activemq.apollo.jaxb;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.activemq.apollo.broker.MessageBroker;
+import org.apache.activemq.apollo.broker.Broker;
 
 @XmlRootElement(name="broker")
-public class Broker {
+public class BrokerXml {
 
-	public MessageBroker createMessageBroker() {
+	public Broker createMessageBroker() {
 		return null;
 	}
 

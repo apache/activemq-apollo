@@ -345,7 +345,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
             break;
         }
         case QueueDescriptor.SHARED_PRIORITY: {
-            PrioritySizeLimiter<MessageDelivery> limiter = new PrioritySizeLimiter<MessageDelivery>(DEFAULT_SHARED_QUEUE_SIZE, DEFAULT_SHARED_QUEUE_RESUME_THRESHOLD, MessageBroker.MAX_PRIORITY);
+            PrioritySizeLimiter<MessageDelivery> limiter = new PrioritySizeLimiter<MessageDelivery>(DEFAULT_SHARED_QUEUE_SIZE, DEFAULT_SHARED_QUEUE_RESUME_THRESHOLD, Broker.MAX_PRIORITY);
             limiter.setPriorityMapper(PRIORITY_MAPPER);
             limiter.setSizeMapper(SIZE_MAPPER);
             SharedPriorityQueue<Long, MessageDelivery> queue = new SharedPriorityQueue<Long, MessageDelivery>(name, limiter);

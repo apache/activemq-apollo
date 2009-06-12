@@ -28,7 +28,7 @@ public final class BrokerFactory {
     private static final FactoryFinder BROKER_FACTORY_HANDLER_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/apollo/broker/");
 
     public interface Handler {
-        MessageBroker createBroker(URI brokerURI) throws Exception;
+        Broker createBroker(URI brokerURI) throws Exception;
     }
 
     
@@ -49,7 +49,7 @@ public final class BrokerFactory {
      * @param brokerURI the URI scheme to configure the broker
      * @throws Exception
      */
-    public static MessageBroker createBroker(URI brokerURI) throws Exception {
+    public static Broker createBroker(URI brokerURI) throws Exception {
         return createBroker(brokerURI, false);
     }
 
@@ -62,12 +62,12 @@ public final class BrokerFactory {
      *                construction
      * @throws Exception
      */
-    public static MessageBroker createBroker(URI brokerURI, boolean startBroker) throws Exception {
+    public static Broker createBroker(URI brokerURI, boolean startBroker) throws Exception {
         if (brokerURI.getScheme() == null) {
             throw new IllegalArgumentException("Invalid broker URI, no scheme specified: " + brokerURI);
         }
         Handler handler = createHandler(brokerURI.getScheme());
-        MessageBroker broker = handler.createBroker(brokerURI);
+        Broker broker = handler.createBroker(brokerURI);
         if (startBroker) {
             broker.start();
         }
@@ -80,7 +80,7 @@ public final class BrokerFactory {
      * @param brokerURI the URI scheme to configure the broker
      * @throws Exception
      */
-    public static MessageBroker createBroker(String brokerURI) throws Exception {
+    public static Broker createBroker(String brokerURI) throws Exception {
         return createBroker(new URI(brokerURI));
     }
 
@@ -93,7 +93,7 @@ public final class BrokerFactory {
      *                construction
      * @throws Exception
      */
-    public static MessageBroker createBroker(String brokerURI, boolean startBroker) throws Exception {
+    public static Broker createBroker(String brokerURI, boolean startBroker) throws Exception {
         return createBroker(new URI(brokerURI), startBroker);
     }
 

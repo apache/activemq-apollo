@@ -32,14 +32,14 @@ import org.apache.activemq.queue.IQueue;
 public class VirtualHost implements Service {
 
     final private BrokerQueueStore queueStore;
-    final private MessageBroker broker;
+    final private Broker broker;
     final private HashMap<AsciiBuffer, Queue> queues = new HashMap<AsciiBuffer, Queue>();
     final private HashMap<String, DurableSubscription> durableSubs = new HashMap<String, DurableSubscription>();
     private ArrayList<AsciiBuffer> hostNames = new ArrayList<AsciiBuffer>();
     private Router router;
     private boolean started;
 
-    public VirtualHost(MessageBroker broker) {
+    public VirtualHost(Broker broker) {
         this.broker = broker;
         this.router = new Router();
         this.router.setVirtualHost(this);

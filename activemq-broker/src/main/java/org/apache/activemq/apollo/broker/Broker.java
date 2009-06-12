@@ -32,7 +32,7 @@ import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
 
-public class MessageBroker implements TransportAcceptListener {
+public class Broker implements TransportAcceptListener {
 
     public static final int MAX_USER_PRIORITY = 10;
     public static final int MAX_PRIORITY = MAX_USER_PRIORITY + 1;

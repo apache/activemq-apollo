@@ -23,13 +23,13 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
 
 import org.apache.activemq.apollo.broker.BrokerFactory;
-import org.apache.activemq.apollo.broker.MessageBroker;
+import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.util.URISupport;
 
 public class JAXBBrokerFactory implements BrokerFactory.Handler {
 
-	public MessageBroker createBroker(URI brokerURI) throws Exception {
-		JAXBContext context = JAXBContext.newInstance(Broker.class);
+	public Broker createBroker(URI brokerURI) throws Exception {
+		JAXBContext context = JAXBContext.newInstance(BrokerXml.class);
 		Unmarshaller unmarshaller = context.createUnmarshaller();
 
 		URL configURL;
@@ -43,8 +43,8 @@ public class JAXBBrokerFactory implements BrokerFactory.Handler {
 			configURL = URISupport.changeScheme(brokerURI, scheme).toURL();
 		}		
 		
-		Broker config = (Broker) unmarshaller.unmarshal(configURL);
-		return config.createMessageBroker();
+		BrokerXml xml = (BrokerXml) unmarshaller.unmarshal(configURL);
+		return xml.createMessageBroker();
 	}
 
 

@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import junit.framework.TestCase;
 
 import org.apache.activemq.apollo.broker.Destination;
-import org.apache.activemq.apollo.broker.MessageBroker;
+import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.Router;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
@@ -81,9 +81,9 @@ public abstract class BrokerTestBase extends TestCase {
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
     protected MetricAggregator totalConsumerRate = new MetricAggregator().name("Aggregate Consumer Rate").unit("items");
 
-    protected MessageBroker sendBroker;
-    protected MessageBroker rcvBroker;
-    protected ArrayList<MessageBroker> brokers = new ArrayList<MessageBroker>();
+    protected Broker sendBroker;
+    protected Broker rcvBroker;
+    protected ArrayList<Broker> brokers = new ArrayList<Broker>();
     protected IDispatcher dispatcher;
     protected final AtomicLong msgIdGenerator = new AtomicLong();
     protected final AtomicBoolean stopping = new AtomicBoolean();
@@ -127,7 +127,7 @@ public abstract class BrokerTestBase extends TestCase {
     protected abstract String getRemoteWireFormat();
 
     protected IDispatcher createDispatcher() {
-        return PriorityDispatcher.createPriorityDispatchPool("BrokerDispatcher", MessageBroker.MAX_PRIORITY, asyncThreadPoolSize);
+        return PriorityDispatcher.createPriorityDispatchPool("BrokerDispatcher", Broker.MAX_PRIORITY, asyncThreadPoolSize);
     }
 
     public void test_1_1_0() throws Exception {
@@ -474,8 +474,8 @@ public abstract class BrokerTestBase extends TestCase {
 
     abstract protected RemoteProducer createProducer();
 
-    private MessageBroker createBroker(String name, String bindURI, String connectUri) throws Exception {
-        MessageBroker broker = new MessageBroker();
+    private Broker createBroker(String name, String bindURI, String connectUri) throws Exception {
+        Broker broker = new Broker();
         broker.setName(name);
         broker.setBindUri(bindURI);
         broker.setConnectUri(connectUri);
@@ -484,7 +484,7 @@ public abstract class BrokerTestBase extends TestCase {
         return broker;
     }
 
-    protected Store createStore(MessageBroker broker) throws Exception {
+    protected Store createStore(Broker broker) throws Exception {
         Store store = null;
         if (USE_KAHA_DB) {
             store = StoreFactory.createStore("kaha-db");
@@ -499,7 +499,7 @@ public abstract class BrokerTestBase extends TestCase {
 
     private void stopServices() throws Exception {
         stopping.set(true);
-        for (MessageBroker broker : brokers) {
+        for (Broker broker : brokers) {
             broker.stop();
         }
         for (RemoteProducer connection : producers) {
@@ -514,7 +514,7 @@ public abstract class BrokerTestBase extends TestCase {
     }
 
     private void startBrokers() throws Exception {
-        for (MessageBroker broker : brokers) {
+        for (Broker broker : brokers) {
             broker.start();
         }
     }
