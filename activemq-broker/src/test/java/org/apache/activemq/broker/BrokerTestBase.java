@@ -453,7 +453,7 @@ public abstract class BrokerTestBase extends TestCase {
     abstract protected RemoteConsumer createConsumer();
 
     private RemoteProducer createProducer(int id, Destination destination) throws URISyntaxException {
-        RemoteProducer producer = cerateProducer();
+        RemoteProducer producer = createProducer();
         producer.setExceptionListener(new ExceptionListener() {
             public void exceptionThrown(Exception error) {
                 if (!stopping.get()) {
@@ -472,7 +472,7 @@ public abstract class BrokerTestBase extends TestCase {
         return producer;
     }
 
-    abstract protected RemoteProducer cerateProducer();
+    abstract protected RemoteProducer createProducer();
 
     private MessageBroker createBroker(String name, String bindURI, String connectUri) throws Exception {
         MessageBroker broker = new MessageBroker();

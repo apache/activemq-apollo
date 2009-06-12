@@ -7,7 +7,7 @@ import org.apache.activemq.broker.RemoteProducer;
 public class OpenwireBrokerTest extends BrokerTestBase {
 
     @Override
-    protected RemoteProducer cerateProducer() {
+    protected RemoteProducer createProducer() {
         return new OpenwireRemoteProducer();
     }
 
