@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.activemq.Service;
-import org.apache.activemq.apollo.broker.protocol.ProtocolHandler.ConsumerContext;
+import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.AbstractFlowQueue;
 import org.apache.activemq.queue.ExclusivePersistentQueue;

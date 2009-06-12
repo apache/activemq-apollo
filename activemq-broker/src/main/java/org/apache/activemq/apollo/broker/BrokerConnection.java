@@ -19,8 +19,6 @@ package org.apache.activemq.apollo.broker;
 import java.beans.ExceptionListener;
 
 import org.apache.activemq.apollo.Connection;
-import org.apache.activemq.apollo.broker.protocol.ProtocolHandler;
-import org.apache.activemq.apollo.broker.protocol.ProtocolHandlerFactory;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.wireformat.WireFormat;
 

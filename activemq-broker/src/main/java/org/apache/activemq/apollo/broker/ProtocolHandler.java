@@ -14,15 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.protocol;
+package org.apache.activemq.apollo.broker;
 
 import java.io.IOException;
 
 import org.apache.activemq.Service;
-import org.apache.activemq.apollo.broker.BrokerConnection;
-import org.apache.activemq.apollo.broker.BrokerMessageDelivery;
-import org.apache.activemq.apollo.broker.Destination;
-import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.flow.IFlowSink;

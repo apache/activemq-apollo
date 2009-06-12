@@ -27,8 +27,6 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.apollo.broker.protocol.ProtocolHandler;
-import org.apache.activemq.apollo.broker.protocol.ProtocolHandlerFactory;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.Store.Callback;
 import org.apache.activemq.broker.store.Store.FatalStoreException;
