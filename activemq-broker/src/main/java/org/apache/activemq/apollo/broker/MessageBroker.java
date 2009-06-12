@@ -22,9 +22,6 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlTransient;
-
 import org.apache.activemq.apollo.Connection;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.dispatch.IDispatcher;
@@ -35,7 +32,6 @@ import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
 
-@XmlRootElement(name="broker")
 public class MessageBroker implements TransportAcceptListener {
 
     public static final int MAX_USER_PRIORITY = 10;

@@ -27,12 +27,17 @@ public final class BrokerFactory {
 
     private static final FactoryFinder BROKER_FACTORY_HANDLER_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/apollo/broker/");
 
+    public interface Handler {
+        MessageBroker createBroker(URI brokerURI) throws Exception;
+    }
+
+    
     private BrokerFactory() {        
     }
     
-    public static BrokerFactoryHandler createBrokerFactoryHandler(String type) throws IOException {
+    public static Handler createHandler(String type) throws IOException {
         try {
-            return (BrokerFactoryHandler)BROKER_FACTORY_HANDLER_FINDER.newInstance(type);
+            return (Handler)BROKER_FACTORY_HANDLER_FINDER.newInstance(type);
         } catch (Throwable e) {
             throw IOExceptionSupport.create("Could not load " + type + " factory:" + e, e);
         }
@@ -61,7 +66,7 @@ public final class BrokerFactory {
         if (brokerURI.getScheme() == null) {
             throw new IllegalArgumentException("Invalid broker URI, no scheme specified: " + brokerURI);
         }
-        BrokerFactoryHandler handler = createBrokerFactoryHandler(brokerURI.getScheme());
+        Handler handler = createHandler(brokerURI.getScheme());
         MessageBroker broker = handler.createBroker(brokerURI);
         if (startBroker) {
             broker.start();

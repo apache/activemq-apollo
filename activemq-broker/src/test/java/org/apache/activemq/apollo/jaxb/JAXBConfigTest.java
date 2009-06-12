@@ -50,9 +50,9 @@ public class JAXBConfigTest extends TestCase {
 	}
 
     protected MessageBroker createBroker() throws Exception {
-        String uri = "org/apache/activemq/apollo/jaxb/activemq.xml";
+    	URI uri = new URI("jaxb:classpath:org/apache/activemq/apollo/jaxb/activemq.xml");
         LOG.info("Loading broker configuration from the classpath with URI: " + uri);
-        return BrokerFactory.createBroker(new URI("jaxb:" + uri));
+        return BrokerFactory.createBroker(uri);
     }
 	
 }
