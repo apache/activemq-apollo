@@ -16,11 +16,9 @@
  */
 package org.apache.activemq.transport;
 
-import org.apache.activemq.dispatch.IDispatcher;
+import org.apache.activemq.dispatch.DispatcherAware;
 
-public interface DispatchableTransport extends Transport {
-
-    public void setDispatcher(IDispatcher dispatcher);
+public interface DispatchableTransport extends Transport, DispatcherAware {
 
     public void setDispatchPriority(int priority);
 

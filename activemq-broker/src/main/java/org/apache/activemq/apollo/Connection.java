@@ -24,12 +24,13 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.activemq.Service;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
 
-abstract public class Connection implements TransportListener {
+abstract public class Connection implements TransportListener, Service {
 
     protected Transport transport;
     protected String name;

@@ -21,9 +21,9 @@ import java.util.ArrayList;
 
 import junit.framework.TestCase;
 
+import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerDatabase;
 import org.apache.activemq.apollo.broker.BrokerQueueStore;
-import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
@@ -66,7 +66,8 @@ public class SharedQueueTest extends TestCase {
     protected void startServices() throws Exception {
         dispatcher = createDispatcher();
         dispatcher.start();
-        database = new BrokerDatabase(createStore(), dispatcher);
+        database = new BrokerDatabase(createStore());
+        database.setDispatcher(dispatcher);
         database.start();
         queueStore = new BrokerQueueStore();
         queueStore.setDatabase(database);

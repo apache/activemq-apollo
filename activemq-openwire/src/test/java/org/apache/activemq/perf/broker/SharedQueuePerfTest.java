@@ -93,7 +93,8 @@ public class SharedQueuePerfTest extends TestCase {
     protected void startServices() throws Exception {
         dispatcher = createDispatcher();
         dispatcher.start();
-        database = new BrokerDatabase(createStore(), dispatcher);
+        database = new BrokerDatabase(createStore());
+        database.setDispatcher(dispatcher);
         database.start();
         queueStore = new BrokerQueueStore();
         queueStore.setDatabase(database);

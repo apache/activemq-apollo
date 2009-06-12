@@ -37,6 +37,7 @@ import org.apache.activemq.dispatch.PriorityDispatcher;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.transport.TransportFactory;
 
 public abstract class BrokerTestBase extends TestCase {
 
@@ -442,7 +443,7 @@ public abstract class BrokerTestBase extends TestCase {
                 }
             }
         });
-        consumer.setUri(new URI(rcvBroker.getConnectUri()));
+        consumer.setUri(new URI(rcvBroker.getConnectUris().get(0)));
         consumer.setDestination(destination);
         consumer.setName("consumer" + (i + 1));
         consumer.setTotalConsumerRate(totalConsumerRate);
@@ -462,7 +463,7 @@ public abstract class BrokerTestBase extends TestCase {
                 }
             }
         });
-        producer.setUri(new URI(sendBroker.getConnectUri()));
+        producer.setUri(new URI(sendBroker.getConnectUris().get(0)));
         producer.setProducerId(id + 1);
         producer.setName("producer" + (id + 1));
         producer.setDestination(destination);
@@ -477,8 +478,8 @@ public abstract class BrokerTestBase extends TestCase {
     private Broker createBroker(String name, String bindURI, String connectUri) throws Exception {
         Broker broker = new Broker();
         broker.setName(name);
-        broker.setBindUri(bindURI);
-        broker.setConnectUri(connectUri);
+        broker.addTransportServer(TransportFactory.bind(new URI(bindURI)));
+        broker.addConnectUri(connectUri);
         broker.setDispatcher(dispatcher);
         broker.setStore(createStore(broker));
         return broker;

@@ -21,11 +21,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.activemq.dispatch.DispatcherAware;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.PriorityDispatcher;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.Commands.Destination;
-import org.apache.activemq.transport.DispatchableTransportServer;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportFactory;
@@ -125,8 +125,8 @@ public class MockBroker implements TransportAcceptListener {
 
         transportServer = TransportFactory.bind(new URI(uri));
         transportServer.setAcceptListener(this);
-        if (transportServer instanceof DispatchableTransportServer) {
-            ((DispatchableTransportServer) transportServer).setDispatcher(dispatcher);
+        if (transportServer instanceof DispatcherAware) {
+            ((DispatcherAware) transportServer).setDispatcher(dispatcher);
         }
         transportServer.start();
 

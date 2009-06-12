@@ -27,6 +27,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.activemq.Service;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.Store.Callback;
 import org.apache.activemq.broker.store.Store.FatalStoreException;
@@ -36,6 +37,7 @@ import org.apache.activemq.broker.store.Store.QueueQueryResult;
 import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.broker.store.Store.Session;
 import org.apache.activemq.broker.store.Store.VoidCallback;
+import org.apache.activemq.dispatch.DispatcherAware;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
@@ -51,7 +53,7 @@ import org.apache.activemq.queue.SaveableQueueElement;
 import org.apache.kahadb.util.LinkedNode;
 import org.apache.kahadb.util.LinkedNodeList;
 
-public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.OperationBase> {
+public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.OperationBase> implements Service, DispatcherAware {
 
     private static final boolean DEBUG = false;
     private final Store store;
@@ -61,7 +63,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     private final FlowController<OperationBase> storeController;
     private final int FLUSH_QUEUE_SIZE = 10000 * 1024;
 
-    private final IDispatcher dispatcher;
+    private IDispatcher dispatcher;
     private Thread flushThread;
     private AtomicBoolean running = new AtomicBoolean(false);
     private DatabaseListener listener;
@@ -91,9 +93,8 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         public void onDatabaseException(IOException ioe);
     }
 
-    public BrokerDatabase(Store store, IDispatcher dispatcher) {
+    public BrokerDatabase(Store store) {
         this.store = store;
-        this.dispatcher = dispatcher;
         this.opQueue = new LinkedNodeList<OperationBase>();
         storeLimiter = new SizeLimiter<OperationBase>(FLUSH_QUEUE_SIZE, 0) {
 
@@ -1096,5 +1097,12 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         // TODO Auto-generated method stub
         return store.allocateStoreTracking();
     }
+
+	public IDispatcher getDispatcher() {
+		return dispatcher;
+	}
+	public void setDispatcher(IDispatcher dispatcher) {
+		this.dispatcher = dispatcher;
+	}
 
 }

@@ -206,7 +206,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 BrokerInfo brokerInfo = new BrokerInfo();
                 brokerInfo.setBrokerId(new BrokerId(connection.getBroker().getName()));
                 brokerInfo.setBrokerName(connection.getBroker().getName());
-                brokerInfo.setBrokerURL(connection.getBroker().getBindUri());
+                brokerInfo.setBrokerURL(connection.getBroker().getConnectUris().get(0));
                 connection.write(brokerInfo);
                 return ack(info);
             }
