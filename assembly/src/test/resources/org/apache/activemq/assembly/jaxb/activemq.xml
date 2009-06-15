@@ -15,5 +15,10 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<broker>
+<broker name="broker">
+
+    <transportServers>
+        <transportServer uri="tcp://localhost:61616?wireFormat=openwire"/>
+    </transportServers>
+
 </broker>
