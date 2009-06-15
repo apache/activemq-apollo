@@ -21,6 +21,8 @@ import java.util.HashMap;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
+import org.apache.activemq.broker.store.Store;
+import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.AbstractFlowQueue;
 import org.apache.activemq.queue.ExclusivePersistentQueue;
@@ -38,6 +40,7 @@ public class VirtualHost implements Service {
     private ArrayList<AsciiBuffer> hostNames = new ArrayList<AsciiBuffer>();
     private Router router;
     private boolean started;
+    private BrokerDatabase database;
 
     public VirtualHost(Broker broker) {
         this.broker = broker;
@@ -64,6 +67,16 @@ public class VirtualHost implements Service {
     public Router getRouter() {
         return router;
     }
+    
+    public BrokerDatabase getDatabase() {
+        return database;
+    }
+    public void setDatabase(BrokerDatabase database) {
+        this.database = database;
+    }
+    public void setStore(Store store) {
+        database = new BrokerDatabase(store);
+    }
 
     public synchronized void start() throws Exception {
 
@@ -71,9 +84,15 @@ public class VirtualHost implements Service {
             return;
         }
 
-        router.setDatabase(broker.getDatabase());
+		if ( database == null ) {
+			Store store = StoreFactory.createStore("kaha-db");
+			database = new BrokerDatabase(store);
+		}
+	    database.setDispatcher(broker.getDispatcher());
+	    database.start();
 
-        queueStore.setDatabase(broker.getDatabase());
+        router.setDatabase(database);
+        queueStore.setDatabase(database);
         queueStore.setDispatcher(broker.getDispatcher());
         queueStore.loadQueues();
         // Create Queue instances
@@ -102,7 +121,8 @@ public class VirtualHost implements Service {
         for (AbstractFlowQueue<MessageDelivery> queue : queueStore.getDurableQueues()) {
             queue.shutdown(true);
         }
-
+        
+        database.stop();
         started = false;
     }
 

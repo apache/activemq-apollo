@@ -24,8 +24,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.apollo.Connection;
-import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.dispatch.DispatcherAware;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.PriorityDispatcher;
@@ -51,7 +49,6 @@ public class Broker implements Service {
     private VirtualHost defaultVirtualHost;
 	private String name;
     private IDispatcher dispatcher;
-    private BrokerDatabase database;
     
     private final class BrokerAcceptListener implements TransportAcceptListener {
 		public void onAccept(final Transport transport) {
@@ -75,24 +72,34 @@ public class Broker implements Service {
 	}
 
 	enum State { 
-    	CONFIGURATION, STARTING, RUNNING, STOPPING {
+    	CONFIGURATION("CONFIGURATION"), STARTING("STARTING"), RUNNING("RUNNING"), STOPPING("STOPPING") {
     		@Override
     		public boolean isStopping() {
     			return true;
     		}
     	}
-    	, STOPPED {
+    	, STOPPED("STOPPED") {
     		@Override
     		public boolean isStopping() {
     			return true;
     		}
     	}, 
-    	UNKNOWN;
+    	UNKNOWN("UNKNOWN");
+    	
+    	private final String name;
+
+		private State(String name) {
+			this.name = name;
+    	}
     	
     	public boolean isStopping() {
     		return false;
     	}
     	
+    	@Override
+    	public String toString() {
+    		return name;
+    	}
     };
     
     private final AtomicReference<State> state = new AtomicReference<State>(State.CONFIGURATION);
@@ -104,7 +111,7 @@ public class Broker implements Service {
     public final void start() throws Exception {
 
 		if ( state.get()!=State.CONFIGURATION ) {
-    		throw new IllegalStateException("Can only start a broker that has never been started before");
+    		throw new IllegalStateException("Can only start a broker that is in the "+State.CONFIGURATION +" state.  Broker was "+state.get());
     	}
 
 		// Don't change the state to STARTING yet as we may need to 
@@ -113,20 +120,15 @@ public class Broker implements Service {
 			int threads = Runtime.getRuntime().availableProcessors();
 			dispatcher = PriorityDispatcher.createPriorityDispatchPool("Broker: "+getName(), Broker.MAX_PRIORITY, threads);
 		}
-		if ( database == null ) {
-			Store store = StoreFactory.createStore("kaha-db");
-			database = new BrokerDatabase(store);
-		}
+		
 	    addVirtualHost(getDefaultVirtualHost());
 
 	    // Ok now we are ready to start the broker up....
 		if ( !state.compareAndSet(State.CONFIGURATION, State.STARTING) ) {
-    		throw new IllegalStateException("Can only start a broker that has never been started before");
+    		throw new IllegalStateException("Can only start a broker that is in the "+State.CONFIGURATION +" state.  Broker was "+state.get());
     	}
     	try {
 		    dispatcher.start();
-		    database.setDispatcher(dispatcher);
-		    database.start();
 
 	    	synchronized(virtualHosts) {
 			    for (VirtualHost virtualHost : virtualHosts.values()) {
@@ -154,7 +156,7 @@ public class Broker implements Service {
 
     public final void stop() throws Exception {
     	if ( !state.compareAndSet(State.RUNNING, State.STOPPING) ) {
-    		throw new IllegalStateException("Can only stop a broker that is running");
+    		throw new IllegalStateException("Can only stop a broker that is in the "+State.RUNNING +" state.  Broker was "+state.get());
     	}
     	
     	synchronized(transportServers) {
@@ -170,7 +172,6 @@ public class Broker implements Service {
         for (VirtualHost virtualHost : virtualHosts.values()) {
         	stop(virtualHost);
         }
-        stop(database);
         dispatcher.shutdown();
     	state.set(State.STOPPED);
 
@@ -262,15 +263,12 @@ public class Broker implements Service {
     }
 
     public void setDefaultVirtualHost(VirtualHost defaultVirtualHost) {
-    	assertInConfigurationState();
     	synchronized (virtualHosts) {
             this.defaultVirtualHost = defaultVirtualHost;
         }
     }
 
     public void addVirtualHost(VirtualHost host) throws Exception {
-    	assertInConfigurationState();
-    	
         synchronized (virtualHosts) {
             // Make sure it's valid.
             ArrayList<AsciiBuffer> hostNames = host.getHostNames();
@@ -296,7 +294,6 @@ public class Broker implements Service {
     }
 
 	public synchronized void removeVirtualHost(VirtualHost host) throws Exception {
-    	assertInConfigurationState();
         synchronized (virtualHosts) {
             for (AsciiBuffer name : host.getHostNames()) {
                 virtualHosts.remove(name);
@@ -345,25 +342,13 @@ public class Broker implements Service {
         this.dispatcher = dispatcher;
     }
 
-    public BrokerDatabase getDatabase() {
-        return database;
-    }
-    public void setDatabase(BrokerDatabase database) {
-    	assertInConfigurationState();
-        this.database = database;
-    }
-    public void setStore(Store store) {
-    	assertInConfigurationState();
-        database = new BrokerDatabase(store);
-    }
- 
     // /////////////////////////////////////////////////////////////////
     // Helper Methods
     // /////////////////////////////////////////////////////////////////
 
     private void assertInConfigurationState() {
 		if( state.get() != State.CONFIGURATION ) {
-			throw new IllegalStateException("Broker is not in the configuration state.");
+			throw new IllegalStateException("Opperation only valid when broker is in the "+State.CONFIGURATION+" state. Broker was "+state.get());
 		}
 	}
     

@@ -481,7 +481,7 @@ public abstract class BrokerTestBase extends TestCase {
         broker.addTransportServer(TransportFactory.bind(new URI(bindURI)));
         broker.addConnectUri(connectUri);
         broker.setDispatcher(dispatcher);
-        broker.setStore(createStore(broker));
+        broker.getDefaultVirtualHost().setStore(createStore(broker));
         return broker;
     }
 
