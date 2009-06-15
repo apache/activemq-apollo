@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 
 import org.apache.activemq.apollo.WindowLimiter;
+import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerConnection;
 import org.apache.activemq.apollo.broker.BrokerMessageDelivery;
 import org.apache.activemq.apollo.broker.BrokerSubscription;
@@ -204,9 +205,12 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 // the details about this
                 // broker.
                 BrokerInfo brokerInfo = new BrokerInfo();
-                brokerInfo.setBrokerId(new BrokerId(connection.getBroker().getName()));
-                brokerInfo.setBrokerName(connection.getBroker().getName());
-                brokerInfo.setBrokerURL(connection.getBroker().getConnectUris().get(0));
+                Broker broker = connection.getBroker();
+				brokerInfo.setBrokerId(new BrokerId(broker.getName()));
+                brokerInfo.setBrokerName(broker.getName());
+                if( !broker.getConnectUris().isEmpty() ) {
+                	brokerInfo.setBrokerURL(broker.getConnectUris().get(0));
+                }
                 connection.write(brokerInfo);
                 return ack(info);
             }

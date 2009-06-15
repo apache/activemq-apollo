@@ -30,25 +30,27 @@ import javax.jms.Session;
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.ActiveMQMessageConsumer;
-import org.apache.activemq.apollo.CombinationTestSupport;
+import org.apache.activemq.apollo.AutoFailTestSupport;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.transport.vm.VMTransportFactory;
 import org.apache.activemq.broker.store.memory.MemoryStore;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-public class ActiveMQConnectionFactoryTest extends CombinationTestSupport {
+public class ActiveMQConnectionFactoryTest extends AutoFailTestSupport {
     private static final Log LOG = LogFactory.getLog(ActiveMQConnectionFactoryTest.class);
 
     private ActiveMQConnection connection;
     private Broker broker;
+    
+	static {
+		System.setProperty("org.apache.activemq.default.directory.prefix", "target/test-data/");
+	}
 
     public void testUseURIToSetUseClientIDPrefixOnConnectionFactory() throws URISyntaxException, JMSException {
-        ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory(
-                                                                     "vm://localhost?jms.clientIDPrefix=Cheese");
+        ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory("vm://localhost?jms.clientIDPrefix=Cheese");
         assertEquals("Cheese", cf.getClientIDPrefix());
 
         connection = (ActiveMQConnection)cf.createConnection();

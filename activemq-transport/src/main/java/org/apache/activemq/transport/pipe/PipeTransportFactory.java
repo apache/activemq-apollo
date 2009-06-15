@@ -6,6 +6,7 @@ import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +27,7 @@ import org.apache.activemq.transport.TransportServer;
 import org.apache.activemq.transport.pipe.Pipe.ReadReadyListener;
 import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.IOExceptionSupport;
+import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.URISupport;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
@@ -45,6 +47,8 @@ public class PipeTransportFactory extends TransportFactory {
         private DispatchContext readContext;
         private String name;
         private WireFormat wireFormat;
+        private boolean marshall;
+        private boolean trace;
 
         public PipeTransport(Pipe<Object> pipe) {
             this.pipe = pipe;
@@ -89,7 +93,7 @@ public class PipeTransportFactory extends TransportFactory {
         public void oneway(Object command) throws IOException {
 
             try {
-                if (wireFormat != null) {
+                if (wireFormat != null && marshall) {
                     pipe.write(wireFormat.marshal(command));
                 } else {
                     pipe.write(command);
@@ -115,7 +119,7 @@ public class PipeTransportFactory extends TransportFactory {
                     	if(o == EOF_TOKEN) {
                     		throw new EOFException();
                     	}                    	
-                        if (wireFormat != null) {
+                        if (wireFormat != null && marshall) {
                             listener.onCommand(wireFormat.unmarshal((ByteSequence) o));
                         } else {
                             listener.onCommand(o);
@@ -213,12 +217,17 @@ public class PipeTransportFactory extends TransportFactory {
             readContext.updatePriority(priority);
         }
 
-        /* (non-Javadoc)
-         * @see org.apache.activemq.transport.Transport#getWireformat()
-         */
         public WireFormat getWireformat() {
             return wireFormat;
         }
+
+		public boolean isTrace() {
+			return trace;
+		}
+
+		public void setTrace(boolean trace) {
+			this.trace = trace;
+		}
     }
 
     protected class PipeTransportServer implements TransportServer {
@@ -259,7 +268,7 @@ public class PipeTransportFactory extends TransportFactory {
             return name;
         }
 
-        public Transport connect() {
+        public PipeTransport connect() {
             int connectionId = connectionCounter.incrementAndGet();
             String remoteAddress = connectURI.toString() + "#" + connectionId;
             assert listener != null : "Server does not have an accept listener";
@@ -301,10 +310,7 @@ public class PipeTransportFactory extends TransportFactory {
 	            PipeTransportServer server = createTransportServer();
 	            server.setConnectURI(uri);
 	            server.setName(node);
-	            if (options.containsKey("wireFormat")) {
-	                server.setWireFormatFactory(createWireFormatFactory(options));
-	            }
-	                
+                server.setWireFormatFactory(createWireFormatFactory(options));
 	            servers.put(node, server);
 	            return server;
     		}
@@ -316,18 +322,7 @@ public class PipeTransportFactory extends TransportFactory {
 	protected PipeTransportServer createTransportServer() {
 		return new PipeTransportServer();
 	}
-
-    @Override
-    public Transport doCompositeConnect(URI location) throws Exception {
-        String name = location.getHost();
-		synchronized(servers) {
-	        PipeTransportServer server = lookup(name);
-	        if (server == null) {
-	            throw new IOException("Server is not bound: " + name);
-	        }
-	        return server.connect();
-		}
-    }
+	
 
 	static public PipeTransportServer lookup(String name) {
 		synchronized(servers) {
@@ -346,5 +341,47 @@ public class PipeTransportFactory extends TransportFactory {
 			servers.remove(server.getName());
 		}
     }
+	
+	public Transport compositeConfigure(Transport transport, WireFormat format, Map options) {
 
+        PipeTransport pipeTransport = (PipeTransport)transport.narrow(PipeTransport.class);
+        IntrospectionSupport.setProperties(pipeTransport, options);
+        
+        if (pipeTransport.isTrace()) {
+            throw new UnsupportedOperationException("Trace not implemented");
+//            try {
+//                transport = TransportLoggerFactory.getInstance().createTransportLogger(transport, pipeTransport.getLogWriterName(),
+//                        pipeTransport.isDynamicManagement(), pipeTransport.isStartLogging(), pipeTransport.getJmxPort());
+//            } catch (Throwable e) {
+//                LOG.error("Could not create TransportLogger object for: " + pipeTransport.getLogWriterName() + ", reason: " + e, e);
+//            }
+        }
+        
+        transport = format.createTransportFilters(transport, options);
+        return transport;
+    }
+
+    protected String getOption(Map options, String key, String def) {
+        String rc = (String) options.remove(key);
+        if( rc == null ) {
+            rc = def;
+        }
+        return rc;
+    }
+
+    protected Transport createTransport(URI location, WireFormat wf) throws UnknownHostException, IOException {
+        String name = location.getHost();
+		synchronized(servers) {
+	        PipeTransportServer server = lookup(name);
+	        if (server == null) {
+	            throw new IOException("Server is not bound: " + name);
+	        }
+	        PipeTransport transport = server.connect();
+	        transport.setWireFormat(wf);
+	        return transport;
+		}
+    }
+
+	
+    
 }

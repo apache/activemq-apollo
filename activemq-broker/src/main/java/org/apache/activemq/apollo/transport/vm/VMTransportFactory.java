@@ -18,6 +18,8 @@ package org.apache.activemq.apollo.transport.vm;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -28,7 +30,9 @@ import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
 import org.apache.activemq.transport.pipe.Pipe;
 import org.apache.activemq.transport.pipe.PipeTransportFactory;
+import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.util.URISupport;
+import org.apache.activemq.wireformat.WireFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -89,63 +93,69 @@ public class VMTransportFactory extends PipeTransportFactory {
 	private static final String DEFAULT_PIPE_NAME = Broker.DEFAULT_VIRTUAL_HOST_NAME.toString();
 
 	@Override
-	synchronized public Transport doCompositeConnect(URI location) throws Exception {
-
-		String brokerURI = null;
-		String name;
-		boolean create = true;
-
-		name = location.getHost();
-		if (name == null) {
-			name = DEFAULT_PIPE_NAME;
-		}
-
-		Map<String, String> options = URISupport.parseParamters(location);
-		String config = (String) options.remove("broker");
-		if (config != null) {
-			brokerURI = config;
-		}
-		if ("false".equals(options.remove("create"))) {
-			create = false;
-		}
-		if( !options.isEmpty() ) {
-			throw new IllegalArgumentException("Unrecognized vm transport parameters: "+options.keySet());
-		}
-
-
-		PipeTransportServer server = servers.get(name);
-		if (server == null && create) {
+    protected Transport createTransport(URI location, WireFormat wf) throws UnknownHostException, IOException {
+		try {
 			
-			// Create the broker on demand.
-			Broker broker;
-			if( brokerURI == null ) {
-				broker = new Broker();
-			} else {
-				broker = BrokerFactory.createBroker(brokerURI);
+			String brokerURI = null;
+			String name;
+			boolean create = true;
+
+			name = location.getHost();
+			if (name == null) {
+				name = DEFAULT_PIPE_NAME;
 			}
-			
-			// Remove the existing pipe severs if the broker is configured with one...  we want to make sure it 
-			// uses the one we explicitly configure here.
-			for (TransportServer s : broker.getTransportServers()) {
-				if (s instanceof PipeTransportServer && name.equals(((PipeTransportServer) s).getName())) {
-					broker.removeTransportServer(s);
+
+			Map<String, String> options = URISupport.parseParamters(location);
+			String config = (String) options.remove("broker");
+			if (config != null) {
+				brokerURI = config;
+			}
+			if ("false".equals(options.remove("create"))) {
+				create = false;
+			}
+
+
+			PipeTransportServer server = servers.get(name);
+			if (server == null && create) {
+				
+				// Create the broker on demand.
+				Broker broker;
+				if( brokerURI == null ) {
+					broker = new Broker();
+				} else {
+					broker = BrokerFactory.createBroker(brokerURI);
 				}
+				
+				// Remove the existing pipe severs if the broker is configured with one...  we want to make sure it 
+				// uses the one we explicitly configure here.
+				for (TransportServer s : broker.getTransportServers()) {
+					if (s instanceof PipeTransportServer && name.equals(((PipeTransportServer) s).getName())) {
+						broker.removeTransportServer(s);
+					}
+				}
+				
+				// We want to use a vm transport server impl.
+				VmTransportServer vmTransportServer = (VmTransportServer) TransportFactory.bind(new URI("vm://" + name));
+				vmTransportServer.setBroker(broker);
+				broker.addTransportServer(vmTransportServer);
+				broker.start();
+				
+				server = servers.get(name);
+			}
+
+			if (server == null) {
+				throw new IOException("Server is not bound: " + name);
 			}
 			
-			// We want to use a vm transport server impl.
-			VmTransportServer vmTransportServer = (VmTransportServer) TransportFactory.bind(new URI("vm://" + name));
-			vmTransportServer.setBroker(broker);
-			broker.addTransportServer(vmTransportServer);
-			broker.start();
+	        PipeTransport transport = server.connect();
+	        transport.setWireFormat(wf);
+	        return transport;
 			
-			server = servers.get(name);
+		} catch (URISyntaxException e) {
+			throw IOExceptionSupport.create(e);
+		} catch (Exception e) {
+			throw IOExceptionSupport.create(e);
 		}
-
-		if (server == null) {
-			throw new IOException("Server is not bound: " + name);
-		}
-		
-		return server.connect();
 	}
 
 

@@ -65,7 +65,7 @@ public class Pipe<E> {
     }
 
     public void write(E o) throws InterruptedException {
-        if (mode == BLOCKING) {
+        if (peer.mode == BLOCKING) {
             out.put(o);
             return;
         }

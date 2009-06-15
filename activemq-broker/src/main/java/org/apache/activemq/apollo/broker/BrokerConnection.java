@@ -34,7 +34,7 @@ public class BrokerConnection extends Connection {
     public BrokerConnection() {
         setExceptionListener(new ExceptionListener(){
             public void exceptionThrown(Exception error) {
-            	LOG.debug("Transport failed before messaging protocol was initialized.", error);
+            	LOG.info("Transport failed before messaging protocol was initialized.", error);
                 try {
                     stop();
                 } catch (Exception ignore) {
@@ -78,6 +78,9 @@ public class BrokerConnection extends Connection {
                         protocolHandler.onException(error);
                     }
                 });
+                
+                protocolHandler.onCommand(command);
+                
             } catch (Exception e) {
                 onException(e);
             }

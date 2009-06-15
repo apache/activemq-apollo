@@ -35,7 +35,7 @@ public class VMTransportTest extends TestCase {
 	}
 	
 	public void testAutoCreateBroker() throws Exception {
-		Transport connect = TransportFactory.compositeConnect(new URI("vm://test"));
+		Transport connect = TransportFactory.compositeConnect(new URI("vm://test?wireFormat=mock"));
 		assertNotNull(connect);
 		connect.stop();
 		System.out.println("done");
@@ -43,7 +43,7 @@ public class VMTransportTest extends TestCase {
 	
 	public void testNoAutoCreateBroker() throws Exception {
 		try {
-			TransportFactory.compositeConnect(new URI("vm://test?create=false"));
+			TransportFactory.compositeConnect(new URI("vm://test?create=false&wireFormat=mock"));
 			fail("Expected a IOException");
 		} catch (IOException e) {
 		}
@@ -51,7 +51,7 @@ public class VMTransportTest extends TestCase {
 	
 	public void testBadOptions() throws Exception {
 		try {
-			TransportFactory.compositeConnect(new URI("vm://test?crazy-option=false"));
+			TransportFactory.compositeConnect(new URI("vm://test?crazy-option=false&wireFormat=mock"));
 			fail("Expected a IllegalArgumentException");
 		} catch (IllegalArgumentException e) {
 		}
