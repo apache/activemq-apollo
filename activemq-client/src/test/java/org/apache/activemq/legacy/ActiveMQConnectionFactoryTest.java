@@ -31,9 +31,12 @@ import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.ActiveMQMessageConsumer;
 import org.apache.activemq.apollo.CombinationTestSupport;
-import org.apache.activemq.legacy.broker.BrokerRegistry;
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.broker.TransportConnector;
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.transport.vm.VMTransportFactory;
+import org.apache.activemq.broker.store.memory.MemoryStore;
+import org.apache.activemq.transport.TransportFactory;
+import org.apache.activemq.transport.TransportServer;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -41,7 +44,7 @@ public class ActiveMQConnectionFactoryTest extends CombinationTestSupport {
     private static final Log LOG = LogFactory.getLog(ActiveMQConnectionFactoryTest.class);
 
     private ActiveMQConnection connection;
-    private BrokerService broker;
+    private Broker broker;
 
     public void testUseURIToSetUseClientIDPrefixOnConnectionFactory() throws URISyntaxException, JMSException {
         ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory(
@@ -109,17 +112,17 @@ public class ActiveMQConnectionFactoryTest extends CombinationTestSupport {
         ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory("vm://localhost?broker.persistent=false");
         // Make sure the broker is not created until the connection is
         // instantiated.
-        assertNull(BrokerRegistry.getInstance().lookup("localhost"));
+        assertNull(VMTransportFactory.lookup("localhost"));
         connection = (ActiveMQConnection)cf.createConnection();
         // This should create the connection.
         assertNotNull(connection);
         // Verify the broker was created.
-        assertNotNull(BrokerRegistry.getInstance().lookup("localhost"));
+        assertNotNull(VMTransportFactory.lookup("localhost"));
 
         connection.close();
 
         // Verify the broker was destroyed.
-        assertNull(BrokerRegistry.getInstance().lookup("localhost"));
+        assertNull(VMTransportFactory.lookup("localhost"));
     }
 
     public void testGetBrokerName() throws URISyntaxException, JMSException {
@@ -189,15 +192,16 @@ public class ActiveMQConnectionFactoryTest extends CombinationTestSupport {
 
     protected void assertCreateConnection(String uri) throws Exception {
         // Start up a broker with a tcp connector.
-        broker = new BrokerService();
-        broker.setPersistent(false);
-        TransportConnector connector = broker.addConnector(uri);
+        broker = new Broker();
+        broker.getDefaultVirtualHost().setStore(new MemoryStore());
+        TransportServer server = TransportFactory.bind(new URI(uri));
+		broker.addTransportServer(server);
         broker.start();
 
         URI temp = new URI(uri);
         // URI connectURI = connector.getServer().getConnectURI();
         // TODO this sometimes fails when using the actual local host name
-        URI currentURI = connector.getServer().getConnectURI();
+        URI currentURI = server.getConnectURI();
 
         // sometimes the actual host name doesn't work in this test case
         // e.g. on OS X so lets use the original details but just use the actual

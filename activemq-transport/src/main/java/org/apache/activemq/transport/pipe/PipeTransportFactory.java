@@ -33,7 +33,7 @@ import org.apache.activemq.wireformat.WireFormatFactory;
 public class PipeTransportFactory extends TransportFactory {
     static private final Object EOF_TOKEN = new Object();
 
-    protected final HashMap<String, PipeTransportServer> servers = new HashMap<String, PipeTransportServer>();
+    static protected final HashMap<String, PipeTransportServer> servers = new HashMap<String, PipeTransportServer>();
 
     protected static class PipeTransport implements DispatchableTransport, Dispatchable, Runnable, ReadReadyListener<Object> {
 
@@ -290,23 +290,24 @@ public class PipeTransportFactory extends TransportFactory {
     }
 
     @Override
-    public synchronized TransportServer doBind(URI uri) throws IOException {
+    public TransportServer doBind(URI uri) throws IOException {
         try {
             Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
-
             String node = uri.getHost();
-            if (servers.containsKey(node)) {
-                throw new IOException("Server already bound: " + node);
-            }
-            PipeTransportServer server = createTransportServer();
-            server.setConnectURI(uri);
-            server.setName(node);
-            if (options.containsKey("wireFormat")) {
-                server.setWireFormatFactory(createWireFormatFactory(options));
-            }
-                
-            servers.put(node, server);
-            return server;
+    		synchronized(servers) {
+	            if (servers.containsKey(node)) {
+	                throw new IOException("Server already bound: " + node);
+	            }
+	            PipeTransportServer server = createTransportServer();
+	            server.setConnectURI(uri);
+	            server.setName(node);
+	            if (options.containsKey("wireFormat")) {
+	                server.setWireFormatFactory(createWireFormatFactory(options));
+	            }
+	                
+	            servers.put(node, server);
+	            return server;
+    		}
         } catch (URISyntaxException e) {
             throw IOExceptionSupport.create(e);
         }
@@ -316,18 +317,34 @@ public class PipeTransportFactory extends TransportFactory {
 		return new PipeTransportServer();
 	}
 
-	protected synchronized void unbind(PipeTransportServer server) {
-        servers.remove(server.getName());
+    @Override
+    public Transport doCompositeConnect(URI location) throws Exception {
+        String name = location.getHost();
+		synchronized(servers) {
+	        PipeTransportServer server = lookup(name);
+	        if (server == null) {
+	            throw new IOException("Server is not bound: " + name);
+	        }
+	        return server.connect();
+		}
     }
 
-    @Override
-    public synchronized Transport doCompositeConnect(URI location) throws Exception {
-        String name = location.getHost();
-        PipeTransportServer server = servers.get(name);
-        if (server == null) {
-            throw new IOException("Server is not bound: " + name);
-        }
-        return server.connect();
+	static public PipeTransportServer lookup(String name) {
+		synchronized(servers) {
+			return servers.get(name);
+    	}
+	}
+    
+    static public Map<String, PipeTransportServer> getServers() {
+    	synchronized(servers) {
+    		return new HashMap<String, PipeTransportServer>(servers);
+    	}
+    }
+
+	static public void unbind(PipeTransportServer server) {
+		synchronized(servers) {
+			servers.remove(server.getName());
+		}
     }
 
 }
