@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.assembly.jaxb;
+package org.apache.activemq.jaxb;
 
 
 import java.net.URI;
@@ -47,12 +47,11 @@ public class JAXBConfigTest extends TestCase {
 	@Test
 	public void testBrokerConfiguredCorrectly() throws Exception {
 		assertNotNull(broker);
-		assertEquals("broker", broker.getName());
 		assertEquals("tcp://localhost:61616?wireFormat=openwire", broker.getTransportServers().get(0).getConnectURI().toString());
 	}
 
     protected Broker createBroker() throws Exception {
-    	URI uri = new URI("jaxb:classpath:org/apache/activemq/assembly/jaxb/activemq.xml");
+    	URI uri = new URI("jaxb:classpath:activemq.xml");
         LOG.info("Loading broker configuration from the classpath with URI: " + uri);
         return BrokerFactory.createBroker(uri);
     }
