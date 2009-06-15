@@ -28,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 import javax.jms.DeliveryMode;
 import javax.jms.MessageNotWriteableException;
 
-import org.apache.activemq.legacy.CombinationTestSupport;
 import org.apache.activemq.legacy.broker.BrokerFactory;
 import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.legacy.broker.region.RegionBroker;
@@ -38,6 +37,7 @@ import org.apache.activemq.legacy.broker.region.policy.PolicyMap;
 import org.apache.activemq.legacy.broker.region.policy.RoundRobinDispatchPolicy;
 import org.apache.activemq.legacy.store.PersistenceAdapter;
 import org.apache.activemq.legacy.usage.SystemUsage;
+import org.apache.activemq.apollo.CombinationTestSupport;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.ConnectionId;

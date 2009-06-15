@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy;
+package org.apache.activemq.apollo;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 

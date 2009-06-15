@@ -27,11 +27,11 @@ import javax.management.ObjectName;
 import junit.framework.Test;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.apollo.CombinationTestSupport;
 import org.apache.activemq.broker.jmx.DestinationViewMBean;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTopic;
-import org.apache.activemq.legacy.CombinationTestSupport;
 import org.apache.activemq.legacy.broker.BrokerService;
 
 

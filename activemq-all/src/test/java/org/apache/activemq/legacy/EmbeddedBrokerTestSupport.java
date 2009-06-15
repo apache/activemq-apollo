@@ -23,6 +23,7 @@ import javax.jms.Destination;
 import junit.framework.TestCase;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.apollo.CombinationTestSupport;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTopic;
 import org.apache.activemq.legacy.broker.BrokerService;

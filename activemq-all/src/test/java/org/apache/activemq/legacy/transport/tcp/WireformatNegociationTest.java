@@ -24,9 +24,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.activemq.apollo.CombinationTestSupport;
 import org.apache.activemq.command.CommandTypes;
 import org.apache.activemq.command.WireFormatInfo;
-import org.apache.activemq.legacy.CombinationTestSupport;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportFactory;

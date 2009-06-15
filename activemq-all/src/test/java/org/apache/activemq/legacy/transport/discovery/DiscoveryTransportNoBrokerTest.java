@@ -20,7 +20,7 @@ import javax.jms.Connection;
 import javax.jms.JMSException;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.legacy.CombinationTestSupport;
+import org.apache.activemq.apollo.CombinationTestSupport;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

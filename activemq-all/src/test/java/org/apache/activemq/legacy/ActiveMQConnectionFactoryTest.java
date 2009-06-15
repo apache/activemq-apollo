@@ -30,6 +30,7 @@ import javax.jms.Session;
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.ActiveMQMessageConsumer;
+import org.apache.activemq.apollo.CombinationTestSupport;
 import org.apache.activemq.legacy.broker.BrokerRegistry;
 import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.legacy.broker.TransportConnector;
