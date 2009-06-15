@@ -220,10 +220,12 @@ public class Broker implements Service {
     		switch(state.get()) {
     		case RUNNING:
     			startTransportServerWrapException(server);
+    			break;
     		case CONFIGURATION:
         		this.transportServers.add(server);
+        		break;
     		default:
-    			throw new IllegalStateException("Cannot add a transport server when broker is: ");
+    			throw new IllegalStateException("Cannot add a transport server when broker is: " + state.get());
     		}
     	}
 	}
@@ -233,11 +235,13 @@ public class Broker implements Service {
     		switch(state.get()) {
     		case RUNNING:
     			stopTransportServerWrapException(server);
+    			break;
     		case STOPPED:
     		case CONFIGURATION:
         		this.transportServers.remove(server);
+        		break;
     		default:
-    			throw new IllegalStateException("Cannot add a transport server when broker is: ");
+    			throw new IllegalStateException("Cannot add a transport server when broker is: " + state.get());
     		}
     	}
 	}
