@@ -36,6 +36,8 @@ import org.apache.commons.logging.LogFactory;
 
 public class Broker implements Service {
 
+	public static final AsciiBuffer DEFAULT_VIRTUAL_HOST_NAME = new AsciiBuffer("default");
+
 	static final private Log LOG = LogFactory.getLog(Broker.class);
 	
     public static final int MAX_USER_PRIORITY = 10;
@@ -47,7 +49,6 @@ public class Broker implements Service {
 
     private final LinkedHashMap<AsciiBuffer, VirtualHost> virtualHosts = new LinkedHashMap<AsciiBuffer, VirtualHost>();
     private VirtualHost defaultVirtualHost;
-	private String name;
     private IDispatcher dispatcher;
     
     private final class BrokerAcceptListener implements TransportAcceptListener {
@@ -114,14 +115,15 @@ public class Broker implements Service {
     		throw new IllegalStateException("Can only start a broker that is in the "+State.CONFIGURATION +" state.  Broker was "+state.get());
     	}
 
+		addVirtualHost(getDefaultVirtualHost());
+
 		// Don't change the state to STARTING yet as we may need to 
 		// apply some default configuration to this broker instance before it's started.
 		if( dispatcher == null ) {
 			int threads = Runtime.getRuntime().availableProcessors();
-			dispatcher = PriorityDispatcher.createPriorityDispatchPool("Broker: "+getName(), Broker.MAX_PRIORITY, threads);
+			dispatcher = PriorityDispatcher.createPriorityDispatchPool("Broker: "+getDefaultVirtualHost().getHostName(), Broker.MAX_PRIORITY, threads);
 		}
 		
-	    addVirtualHost(getDefaultVirtualHost());
 
 	    // Ok now we are ready to start the broker up....
 		if ( !state.compareAndSet(State.CONFIGURATION, State.STARTING) ) {
@@ -132,6 +134,7 @@ public class Broker implements Service {
 
 	    	synchronized(virtualHosts) {
 			    for (VirtualHost virtualHost : virtualHosts.values()) {
+			    	virtualHost.setBroker(this);
 			        virtualHost.start();
 			    }
 	    	}
@@ -253,9 +256,9 @@ public class Broker implements Service {
     public VirtualHost getDefaultVirtualHost() {
         synchronized (virtualHosts) {
             if (defaultVirtualHost == null) {
-                defaultVirtualHost = new VirtualHost(this);
+                defaultVirtualHost = new VirtualHost();
                 ArrayList<AsciiBuffer> names = new ArrayList<AsciiBuffer>(1);
-                names.add(new AsciiBuffer("default"));
+                names.add(DEFAULT_VIRTUAL_HOST_NAME);
                 defaultVirtualHost.setHostNames(names);
             }
             return defaultVirtualHost;
@@ -268,16 +271,16 @@ public class Broker implements Service {
         }
     }
 
-    public void addVirtualHost(VirtualHost host) throws Exception {
+    public void addVirtualHost(VirtualHost host) {
         synchronized (virtualHosts) {
             // Make sure it's valid.
-            ArrayList<AsciiBuffer> hostNames = host.getHostNames();
+            List<AsciiBuffer> hostNames = host.getHostNames();
             if (hostNames.isEmpty()) {
-                throw new Exception("Virtual host must be configured with at least one host name.");
+                throw new IllegalArgumentException("Virtual host must be configured with at least one host name.");
             }
             for (AsciiBuffer name : hostNames) {
                 if (virtualHosts.containsKey(name)) {
-                    throw new Exception("Virtual host with host name " + name + " already exists.");
+                    throw new IllegalArgumentException("Virtual host with host name " + name + " already exists.");
                 }
             }
 
@@ -293,7 +296,7 @@ public class Broker implements Service {
         }
     }
 
-	public synchronized void removeVirtualHost(VirtualHost host) throws Exception {
+	public synchronized void removeVirtualHost(VirtualHost host) {
         synchronized (virtualHosts) {
             for (AsciiBuffer name : host.getHostNames()) {
                 virtualHosts.remove(name);
@@ -325,15 +328,6 @@ public class Broker implements Service {
     // /////////////////////////////////////////////////////////////////
     // Property Accessors
     // /////////////////////////////////////////////////////////////////
-
-    public String getName() {
-        return name;
-    }
-    public void setName(String name) {
-    	assertInConfigurationState();
-        this.name = name;
-    }
-
     public IDispatcher getDispatcher() {
         return dispatcher;
     }
@@ -387,6 +381,10 @@ public class Broker implements Service {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	public String getName() {
+		return getDefaultVirtualHost().getHostName().toString();
 	}
    
 }

@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.broker;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
@@ -33,35 +34,43 @@ import org.apache.activemq.queue.IQueue;
  */
 public class VirtualHost implements Service {
 
-    final private BrokerQueueStore queueStore;
-    final private Broker broker;
+    final private BrokerQueueStore queueStore = new BrokerQueueStore();
     final private HashMap<AsciiBuffer, Queue> queues = new HashMap<AsciiBuffer, Queue>();
     final private HashMap<String, DurableSubscription> durableSubs = new HashMap<String, DurableSubscription>();
+    final private Router router = new Router();
+    
     private ArrayList<AsciiBuffer> hostNames = new ArrayList<AsciiBuffer>();
-    private Router router;
+    private Broker broker;
     private boolean started;
     private BrokerDatabase database;
 
-    public VirtualHost(Broker broker) {
-        this.broker = broker;
-        this.router = new Router();
+    public VirtualHost() {
         this.router.setVirtualHost(this);
-        this.queueStore = new BrokerQueueStore();
     }
 
-    public AsciiBuffer getHostName() {
+    public VirtualHost(String name) {
+    	this();
+    	addHostName(new AsciiBuffer(name));
+	}
+
+	public AsciiBuffer getHostName() {
         if (hostNames.size() > 0) {
             hostNames.get(0);
         }
         return null;
     }
 
-    public ArrayList<AsciiBuffer> getHostNames() {
+    public List<AsciiBuffer> getHostNames() {
         return hostNames;
     }
-
-    public void setHostNames(ArrayList<AsciiBuffer> hostNames) {
-        this.hostNames = hostNames;
+    public void setHostNames(List<AsciiBuffer> hostNames) {
+        this.hostNames = new ArrayList<AsciiBuffer>(hostNames);
+    }
+    public void addHostName(AsciiBuffer hostName) {
+        this.hostNames.add(hostName);
+    }
+    public void removeHostName(AsciiBuffer hostName) {
+        this.hostNames.remove(hostName);
     }
 
     public Router getRouter() {
@@ -180,4 +189,12 @@ public class VirtualHost implements Service {
         }
         return sub;
     }
+
+	public Broker getBroker() {
+		return broker;
+	}
+
+	public void setBroker(Broker broker) {
+		this.broker = broker;
+	}
 }

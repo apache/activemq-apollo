@@ -30,6 +30,7 @@ import junit.framework.TestCase;
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.Router;
+import org.apache.activemq.apollo.broker.VirtualHost;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.dispatch.IDispatcher;
@@ -477,7 +478,7 @@ public abstract class BrokerTestBase extends TestCase {
 
     private Broker createBroker(String name, String bindURI, String connectUri) throws Exception {
         Broker broker = new Broker();
-        broker.setName(name);
+        broker.setDefaultVirtualHost(new VirtualHost(name));
         broker.addTransportServer(TransportFactory.bind(new URI(bindURI)));
         broker.addConnectUri(connectUri);
         broker.setDispatcher(dispatcher);

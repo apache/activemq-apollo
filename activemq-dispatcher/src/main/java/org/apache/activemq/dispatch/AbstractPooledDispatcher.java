@@ -178,4 +178,12 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
         return name;
     }
 
+	public String getName() {
+		return name;
+	}
+
+	public int getSize() {
+		return size;
+	}
+
 }

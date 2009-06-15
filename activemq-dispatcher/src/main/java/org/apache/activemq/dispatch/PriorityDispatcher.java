@@ -703,4 +703,8 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
             return name;
         }
     }
+
+	public String getName() {
+		return name;
+	}
 }

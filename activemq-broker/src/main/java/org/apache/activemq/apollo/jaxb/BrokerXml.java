@@ -16,32 +16,95 @@
  */
 package org.apache.activemq.apollo.jaxb;
 
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.transport.TransportFactory;
+import org.apache.activemq.transport.TransportServer;
 
 @XmlRootElement(name="broker")
+@XmlAccessorType(XmlAccessType.FIELD)
 public class BrokerXml {
 	
 	@XmlAttribute(name="name")
 	String name;
 	
-	@XmlElementWrapper(name="transportServers")
-	@XmlElement(name="transportServer")
-	CopyOnWriteArrayList<TransportServerXml> transportServers = new CopyOnWriteArrayList<TransportServerXml>();
-
+    @XmlElement(name="virtual-host")
+    private List<VirtualHostXml> virtualHosts = new ArrayList<VirtualHostXml>();
+    @XmlElement(name="transport-server")
+    private List<String> transportServers = new ArrayList<String>();
+    @XmlElement(name="connect-uri")
+    private List<String> connectUris = new ArrayList<String>();
+    @XmlElement(required = false)
+    private DispatcherXml dispatcher;
+	
+	
 	public Broker createMessageBroker() throws Exception {
-		Broker broker = new Broker();
-		broker.setName(name);
-		for (TransportServerXml transportServer : transportServers) {
-			broker.addTransportServer(transportServer.createTransportServer());
+		Broker rc = new Broker();
+		if( dispatcher!=null ) {
+			rc.setDispatcher(dispatcher.createDispatcher(this));
 		}
-		return broker;
+		for (VirtualHostXml element : virtualHosts) {
+			rc.addVirtualHost(element.createVirtualHost(this));
+		}
+		for (String element : transportServers) {
+			TransportServer server;
+			try {
+				server = TransportFactory.bind(new URI(element));
+			} catch (Exception e) {
+				throw new Exception("Unable to bind transport server '"+element+" due to: "+e.getMessage(), e);
+			}
+			rc.addTransportServer(server);
+		}
+		for (String element : connectUris) {
+			rc.addConnectUri(element);
+		}
+		
+		return rc;
 	}
+	
+	public VirtualHostXml getDefaultVirtualHost() {
+		return null;
+	}
+
+	public List<VirtualHostXml> getVirtualHosts() {
+		return virtualHosts;
+	}
+	public void setVirtualHosts(List<VirtualHostXml> virtualHosts) {
+		this.virtualHosts = virtualHosts;
+	}
+
+
+	public List<String> getTransportServers() {
+		return transportServers;
+	}
+	public void setTransportServers(List<String> transportServers) {
+		this.transportServers = transportServers;
+	}
+
+
+	public List<String> getConnectUris() {
+		return connectUris;
+	}
+	public void setConnectUris(List<String> connectUris) {
+		this.connectUris = connectUris;
+	}
+
+
+	public DispatcherXml getDispatcher() {
+		return dispatcher;
+	}
+	public void setDispatcher(DispatcherXml dispatcher) {
+		this.dispatcher = dispatcher;
+	}
+
 
 }
