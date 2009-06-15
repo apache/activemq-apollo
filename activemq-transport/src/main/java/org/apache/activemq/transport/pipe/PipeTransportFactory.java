@@ -1,5 +1,6 @@
 package org.apache.activemq.transport.pipe;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
@@ -30,6 +31,7 @@ import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 
 public class PipeTransportFactory extends TransportFactory {
+    static private final Object EOF_TOKEN = new Object();
 
     protected final HashMap<String, PipeTransportServer> servers = new HashMap<String, PipeTransportServer>();
 
@@ -59,11 +61,14 @@ public class PipeTransportFactory extends TransportFactory {
         }
 
         public void stop() throws Exception {
+        	pipe.write(EOF_TOKEN);
             if (readContext != null) {
                 readContext.close(true);
             } else {
                 stopping.set(true);
-                thread.join();
+                if( thread!=null ) {
+                	thread.join();
+                }
             }
         }
 
@@ -107,6 +112,9 @@ public class PipeTransportFactory extends TransportFactory {
                         pipe.setReadReadyListener(this);
                         return true;
                     } else {
+                    	if(o == EOF_TOKEN) {
+                    		throw new EOFException();
+                    	}                    	
                         if (wireFormat != null) {
                             listener.onCommand(wireFormat.unmarshal((ByteSequence) o));
                         } else {
@@ -126,9 +134,15 @@ public class PipeTransportFactory extends TransportFactory {
                 while (!stopping.get()) {
                     Object value = pipe.poll(500, TimeUnit.MILLISECONDS);
                     if (value != null) {
-                        listener.onCommand(value);
+                    	if(value == EOF_TOKEN) {
+                    		throw new EOFException();
+                    	} else {
+                    		listener.onCommand(value);
+                    	}
                     }
                 }
+            } catch (IOException e) {
+                listener.onException(e);
             } catch (InterruptedException e) {
             }
         }
@@ -302,7 +316,7 @@ public class PipeTransportFactory extends TransportFactory {
 		return new PipeTransportServer();
 	}
 
-    private synchronized void unbind(PipeTransportServer server) {
+	protected synchronized void unbind(PipeTransportServer server) {
         servers.remove(server.getName());
     }
 

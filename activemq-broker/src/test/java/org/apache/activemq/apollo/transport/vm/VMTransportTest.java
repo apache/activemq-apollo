@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.transport.vm;
 
+import java.io.IOException;
 import java.net.URI;
 
 import junit.framework.TestCase;
@@ -33,12 +34,27 @@ public class VMTransportTest extends TestCase {
 		System.setProperty("org.apache.activemq.default.directory.prefix", "target/test-data/");
 	}
 	
-	
 	public void testAutoCreateBroker() throws Exception {
-		
 		Transport connect = TransportFactory.compositeConnect(new URI("vm://test"));
 		assertNotNull(connect);
-		
+		connect.stop();
+		System.out.println("done");
+	}
+	
+	public void testNoAutoCreateBroker() throws Exception {
+		try {
+			TransportFactory.compositeConnect(new URI("vm://test?create=false"));
+			fail("Expected a IOException");
+		} catch (IOException e) {
+		}
+	}
+	
+	public void testBadOptions() throws Exception {
+		try {
+			TransportFactory.compositeConnect(new URI("vm://test?crazy-option=false"));
+			fail("Expected a IllegalArgumentException");
+		} catch (IllegalArgumentException e) {
+		}
 	}
 	
 }

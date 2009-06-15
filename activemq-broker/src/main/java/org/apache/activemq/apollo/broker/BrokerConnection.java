@@ -21,16 +21,20 @@ import java.beans.ExceptionListener;
 import org.apache.activemq.apollo.Connection;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.wireformat.WireFormat;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public class BrokerConnection extends Connection {
     
+	private static final Log LOG = LogFactory.getLog(BrokerConnection.class);
+	
     protected Broker broker;
     private ProtocolHandler protocolHandler;
 
     public BrokerConnection() {
         setExceptionListener(new ExceptionListener(){
             public void exceptionThrown(Exception error) {
-                error.printStackTrace();
+            	LOG.debug("Transport failed before messaging protocol was initialized.", error);
                 try {
                     stop();
                 } catch (Exception ignore) {

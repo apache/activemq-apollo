@@ -77,6 +77,7 @@ public class VMTransportFactory extends PipeTransportFactory {
 		private void stopBroker() {
 			try {
 				this.broker.stop();
+				unbind(this);
 			} catch (Exception e) {
 				LOG.error("Failed to stop the broker gracefully: "+e);
 				LOG.debug("Failed to stop the broker gracefully: ", e);
