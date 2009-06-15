@@ -29,6 +29,10 @@ import org.apache.activemq.transport.TransportFactory;
  */
 public class VMTransportTest extends TestCase {
 
+	static {
+		System.setProperty("org.apache.activemq.default.directory.prefix", "target/test-data/");
+	}
+	
 	
 	public void testAutoCreateBroker() throws Exception {
 		
