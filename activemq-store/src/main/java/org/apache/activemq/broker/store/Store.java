@@ -99,6 +99,12 @@ public interface Store extends Service {
     public void setStoreDirectory(File directory);
 
     /**
+     * Gets the store's root directory;
+     */ 
+    public File getStoreDirectory();
+
+    
+    /**
      * Indicates that all messages should be deleted on startup
      * 
      * @param val

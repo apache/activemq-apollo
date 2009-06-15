@@ -29,7 +29,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
-import org.apache.activemq.broker.SslContext;
+import org.apache.activemq.util.SslContext;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.io.Resource;
 

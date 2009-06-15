@@ -1140,6 +1140,9 @@ public class KahaDBStore implements Store {
         return directory;
     }
 
+	public File getStoreDirectory() {
+		return directory;
+	}
     public void setStoreDirectory(File directory) {
         this.directory = directory;
     }
@@ -1221,5 +1224,6 @@ public class KahaDBStore implements Store {
     public void setFailIfDatabaseIsLocked(boolean failIfDatabaseIsLocked) {
         this.failIfDatabaseIsLocked = failIfDatabaseIsLocked;
     }
+
 
 }

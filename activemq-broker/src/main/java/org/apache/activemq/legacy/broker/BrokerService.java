@@ -24,10 +24,10 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.TrustManager;
 
 import org.apache.activemq.Service;
-import org.apache.activemq.broker.SslContext;
 import org.apache.activemq.legacy.broker.region.RegionBroker;
 import org.apache.activemq.legacy.store.PersistenceAdapter;
 import org.apache.activemq.legacy.usage.SystemUsage;
+import org.apache.activemq.util.SslContext;
 
 /**
  * @deprecated The entire 'org.apache.activemq.legacy' package will hopefully go away soon.

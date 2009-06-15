@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.broker;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -31,6 +32,7 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportServer;
+import org.apache.activemq.util.IOHelper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -50,6 +52,7 @@ public class Broker implements Service {
     private final LinkedHashMap<AsciiBuffer, VirtualHost> virtualHosts = new LinkedHashMap<AsciiBuffer, VirtualHost>();
     private VirtualHost defaultVirtualHost;
     private IDispatcher dispatcher;
+    private File dataDirectory;
     
     private final class BrokerAcceptListener implements TransportAcceptListener {
 		public void onAccept(final Transport transport) {
@@ -114,6 +117,10 @@ public class Broker implements Service {
 		if ( state.get()!=State.CONFIGURATION ) {
     		throw new IllegalStateException("Can only start a broker that is in the "+State.CONFIGURATION +" state.  Broker was "+state.get());
     	}
+		
+		if( dataDirectory == null ) {
+			dataDirectory = new File(IOHelper.getDefaultDataDirectory());
+		}
 
 		addVirtualHost(getDefaultVirtualHost());
 
@@ -153,6 +160,7 @@ public class Broker implements Service {
     		// we need to handle failure during the startup to avoid 
     		// a partially started up broker.
         	state.set(State.UNKNOWN);
+        	throw e;
     	}
         
     }
@@ -385,6 +393,14 @@ public class Broker implements Service {
 
 	public String getName() {
 		return getDefaultVirtualHost().getHostName().toString();
+	}
+
+	public File getDataDirectory() {
+		return dataDirectory;
+	}
+
+	public void setDataDirectory(File dataDirectory) {
+		this.dataDirectory = dataDirectory;
 	}
    
 }

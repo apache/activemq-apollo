@@ -31,11 +31,11 @@ import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 
-import org.apache.activemq.broker.SslContext;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportServer;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.util.IntrospectionSupport;
+import org.apache.activemq.util.SslContext;
 import org.apache.activemq.util.URISupport;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.commons.logging.Log;
@@ -177,8 +177,8 @@ public class SslTransportFactory extends TcpTransportFactory {
      * @param tm
      * @param random
      * @deprecated "Do not use anymore... using static initializers like this method only allows the JVM to use 1 SSL configuration per broker."
-     * @see org.apache.activemq.broker.SslContext#setCurrentSslContext(SslContext)
-     * @see org.apache.activemq.broker.SslContext#getSSLContext()
+     * @see org.apache.activemq.util.SslContext#setCurrentSslContext(SslContext)
+     * @see org.apache.activemq.util.SslContext#getSSLContext()
      */
     public void setKeyAndTrustManagers(KeyManager[] km, TrustManager[] tm, SecureRandom random) {
         SslContext ctx = new SslContext(km, tm, random);

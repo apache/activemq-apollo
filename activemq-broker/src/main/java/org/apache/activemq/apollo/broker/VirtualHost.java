@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.broker;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +29,7 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.AbstractFlowQueue;
 import org.apache.activemq.queue.ExclusivePersistentQueue;
 import org.apache.activemq.queue.IQueue;
+import org.apache.activemq.util.IOHelper;
 
 /**
  * @author chirino
@@ -55,7 +57,7 @@ public class VirtualHost implements Service {
 
 	public AsciiBuffer getHostName() {
         if (hostNames.size() > 0) {
-            hostNames.get(0);
+        	return hostNames.get(0);
         }
         return null;
     }
@@ -95,8 +97,15 @@ public class VirtualHost implements Service {
 
 		if ( database == null ) {
 			Store store = StoreFactory.createStore("kaha-db");
+			if( store.getStoreDirectory() == null ) {
+				File baseDir = broker.getDataDirectory();
+				String hostName = getHostName().toString();
+				String subDir = IOHelper.toFileSystemDirectorySafeName(hostName);
+				store.setStoreDirectory( new File(baseDir, subDir ) );
+			}
 			database = new BrokerDatabase(store);
 		}
+		
 	    database.setDispatcher(broker.getDispatcher());
 	    database.start();
 

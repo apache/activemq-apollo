@@ -593,9 +593,14 @@ public class MemoryStore implements Store {
         // NOOP
     }
 
-    public void setDeleteAllMessages(boolean val) {
+	public File getStoreDirectory() {
+		return null;
+	}
+
+	public void setDeleteAllMessages(boolean val) {
         // TODO Auto-generated method stub
 
     }
+
 
 }

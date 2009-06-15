@@ -22,7 +22,6 @@ import java.net.URISyntaxException;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.activemq.broker.SslContext;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.discovery.DiscoveryAgent;
@@ -31,6 +30,7 @@ import org.apache.activemq.transport.discovery.DiscoveryEvent;
 import org.apache.activemq.transport.discovery.DiscoveryListener;
 import org.apache.activemq.util.ServiceStopper;
 import org.apache.activemq.util.ServiceSupport;
+import org.apache.activemq.util.SslContext;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

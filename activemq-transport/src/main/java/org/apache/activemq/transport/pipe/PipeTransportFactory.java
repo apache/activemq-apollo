@@ -31,10 +31,9 @@ import org.apache.activemq.wireformat.WireFormatFactory;
 
 public class PipeTransportFactory extends TransportFactory {
 
-    private final HashMap<String, PipeTransportServer> servers = new HashMap<String, PipeTransportServer>();
-    static final AtomicInteger connectionCounter = new AtomicInteger();
+    protected final HashMap<String, PipeTransportServer> servers = new HashMap<String, PipeTransportServer>();
 
-    private static class PipeTransport implements DispatchableTransport, Dispatchable, Runnable, ReadReadyListener<Object> {
+    protected static class PipeTransport implements DispatchableTransport, Dispatchable, Runnable, ReadReadyListener<Object> {
 
         private final Pipe<Object> pipe;
         private TransportListener listener;
@@ -208,11 +207,12 @@ public class PipeTransportFactory extends TransportFactory {
         }
     }
 
-    private class PipeTransportServer implements TransportServer {
-        private URI connectURI;
-        private TransportAcceptListener listener;
-        private String name;
-        private WireFormatFactory wireFormatFactory;
+    protected class PipeTransportServer implements TransportServer {
+    	protected URI connectURI;
+        protected TransportAcceptListener listener;
+        protected String name;
+        protected WireFormatFactory wireFormatFactory;
+        protected final AtomicInteger connectionCounter = new AtomicInteger();
 
         public URI getConnectURI() {
             return connectURI;
@@ -250,9 +250,9 @@ public class PipeTransportFactory extends TransportFactory {
             String remoteAddress = connectURI.toString() + "#" + connectionId;
             assert listener != null : "Server does not have an accept listener";
             Pipe<Object> pipe = new Pipe<Object>();
-            PipeTransport rc = new PipeTransport(pipe);
+            PipeTransport rc = createClientTransport(pipe);
             rc.setRemoteAddress(remoteAddress);
-            PipeTransport serverSide = new PipeTransport(pipe.connect());
+            PipeTransport serverSide = cerateServerTransport(pipe);
             serverSide.setRemoteAddress(remoteAddress);
             if (wireFormatFactory != null) {
                 rc.setWireFormat(wireFormatFactory.createWireFormat());
@@ -261,6 +261,14 @@ public class PipeTransportFactory extends TransportFactory {
             listener.onAccept(serverSide);
             return rc;
         }
+
+		protected PipeTransport createClientTransport(Pipe<Object> pipe) {
+			return new PipeTransport(pipe);
+		}
+
+		protected PipeTransport cerateServerTransport(Pipe<Object> pipe) {
+			return new PipeTransport(pipe.connect());
+		}
 
         public void setWireFormatFactory(WireFormatFactory wireFormatFactory) {
             this.wireFormatFactory = wireFormatFactory;
@@ -276,7 +284,7 @@ public class PipeTransportFactory extends TransportFactory {
             if (servers.containsKey(node)) {
                 throw new IOException("Server already bound: " + node);
             }
-            PipeTransportServer server = new PipeTransportServer();
+            PipeTransportServer server = createTransportServer();
             server.setConnectURI(uri);
             server.setName(node);
             if (options.containsKey("wireFormat")) {
@@ -289,6 +297,10 @@ public class PipeTransportFactory extends TransportFactory {
             throw IOExceptionSupport.create(e);
         }
     }
+
+	protected PipeTransportServer createTransportServer() {
+		return new PipeTransportServer();
+	}
 
     private synchronized void unbind(PipeTransportServer server) {
         servers.remove(server.getName());
