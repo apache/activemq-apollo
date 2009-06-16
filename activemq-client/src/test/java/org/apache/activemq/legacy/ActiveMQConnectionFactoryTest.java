@@ -171,7 +171,7 @@ public class ActiveMQConnectionFactoryTest extends AutoFailTestSupport {
     }
     
     public void testSetExceptionListener() throws Exception {
-        ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory("vm://localhost?broker.persistent=false");
+        ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml");
         connection = (ActiveMQConnection)cf.createConnection();
         assertNull(connection.getExceptionListener());
         

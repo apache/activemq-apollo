@@ -18,18 +18,8 @@
 <broker>
   <dispatcher name="test dispatcher" threads="4"/>
 
-  <transport-server>pipe://test1?wireFormat=mock</transport-server>
-
-  <connect-uri>pipe://test1</connect-uri>
-  <connect-uri>tcp://127.0.0.1:61616</connect-uri>
-
   <virtual-host>
-    <host-name>localhost</host-name>
-    <host-name>test.localhost</host-name>
-    
-    <store>
-      <memory-store/>
-    </store>
+    <host-name>default</host-name>
   </virtual-host>
   
 </broker>

@@ -29,7 +29,7 @@ import org.apache.activemq.util.URISupport;
 public class JAXBBrokerFactory implements BrokerFactory.Handler {
 
 	public Broker createBroker(URI brokerURI) throws Exception {
-		JAXBContext context = JAXBContext.newInstance(BrokerXml.class);
+		JAXBContext context = JAXBContext.newInstance("org.apache.activemq.apollo.jaxb");
 		Unmarshaller unmarshaller = context.createUnmarshaller();
 
 		URL configURL;

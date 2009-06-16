@@ -1105,4 +1105,8 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 		this.dispatcher = dispatcher;
 	}
 
+	public Store getStore() {
+		return store;
+	}
+
 }
