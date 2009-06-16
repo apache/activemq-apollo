@@ -36,7 +36,6 @@ import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
 import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.broker.store.Store.Session;
-import org.apache.activemq.broker.store.Store.VoidCallback;
 import org.apache.activemq.dispatch.DispatcherAware;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
@@ -117,7 +116,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         }, databaseFlow, storeLimiter, opQueue);
         storeController.useOverFlowQueue(false);
         super.onFlowOpened(storeController);
-        
+
         flushDelayCallback = new Runnable() {
             public void run() {
                 flushDelayCallback();
@@ -171,11 +170,9 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     }
 
     public Iterator<QueueQueryResult> listQueues(final short type) throws Exception {
-        // TODO Auto-generated method stub
         return store.execute(new Callback<Iterator<QueueQueryResult>, Exception>() {
 
             public Iterator<QueueQueryResult> execute(Session session) throws Exception {
-                // TODO Auto-generated method stub
                 return session.queueListByType(type, null, Integer.MAX_VALUE);
             }
 
@@ -307,7 +304,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
     private final void processOps() {
         int count = 0;
-
+        Session session = store.getSession();
         while (running.get()) {
             final OperationBase firstOp = getNextOp(true);
             if (firstOp == null) {
@@ -318,31 +315,34 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
             // The first operation we get, triggers a store transaction.
             if (firstOp != null) {
                 final LinkedList<Operation> processedQueue = new LinkedList<Operation>();
+                boolean locked = false;
                 try {
 
                     Operation op = firstOp;
-                    // TODO the recursion here leads to a rather large stack,
-                    // refactor.
                     while (op != null) {
                         final Operation toExec = op;
                         if (toExec.beginExecute()) {
+                            if (!locked) {
+                                session.acquireLock();
+                                locked = true;
+                            }
                             count++;
-
-                            store.execute(new Store.VoidCallback<Exception>() {
-                                @Override
-                                public void run(Session session) throws Exception {
-
-                                    // Try to execute the operation against the
-                                    // session...
-                                    try {
-                                        toExec.execute(session);
-                                        processedQueue.add(toExec);
-                                    } catch (CancellationException ignore) {
-                                        // System.out.println("Cancelled" +
-                                        // toExec);
-                                    }
-                                }
-                            }, null);
+                            op.execute(session);
+                            processedQueue.add(op);
+                            /*
+                             * store.execute(new Store.VoidCallback<Exception>()
+                             * {
+                             * 
+                             * @Override public void run(Session session) throws
+                             * Exception {
+                             * 
+                             * // Try to execute the operation against the //
+                             * session... try { toExec.execute(session);
+                             * processedQueue.add(toExec); } catch
+                             * (CancellationException ignore) { //
+                             * System.out.println("Cancelled" + // toExec); } }
+                             * }, null);
+                             */
                         }
 
                         if (count < 1000) {
@@ -356,6 +356,11 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
                     // If we procecessed some ops, flush and post process:
                     if (!processedQueue.isEmpty()) {
 
+                        if (locked) {
+                            session.commit();
+                            session.releaseLock();
+                            locked = false;
+                        }
                         if (DEBUG)
                             System.out.println("Flushing queue after processing: " + processedQueue.size() + " - " + processedQueue);
                         // Sync the store:
@@ -393,6 +398,16 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
                     IOException ioe = new IOException(e.getMessage());
                     ioe.initCause(e);
                     onDatabaseException(ioe);
+                } finally {
+                    if (locked) {
+                        try {
+                            session.releaseLock();
+                        } catch (Exception e) {
+                            IOException ioe = new IOException(e.getMessage());
+                            ioe.initCause(e);
+                            onDatabaseException(ioe);
+                        }
+                    }
                 }
             }
         }
@@ -1098,12 +1113,13 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         return store.allocateStoreTracking();
     }
 
-	public IDispatcher getDispatcher() {
-		return dispatcher;
-	}
-	public void setDispatcher(IDispatcher dispatcher) {
-		this.dispatcher = dispatcher;
-	}
+    public IDispatcher getDispatcher() {
+        return dispatcher;
+    }
+
+    public void setDispatcher(IDispatcher dispatcher) {
+        this.dispatcher = dispatcher;
+    }
 
 	public Store getStore() {
 		return store;

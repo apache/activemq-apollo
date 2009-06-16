@@ -18,7 +18,11 @@ package org.apache.activemq.broker.store;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import junit.framework.TestCase;
 
@@ -35,12 +39,13 @@ import org.apache.activemq.queue.QueueDescriptor;
 
 public abstract class StorePerformanceBase extends TestCase {
 
-    private static int PERFORMANCE_SAMPLES = 3;
+    private static int PERFORMANCE_SAMPLES = 5;
     private static boolean SYNC_TO_DISK = true;
-    
-    
+    private static final boolean USE_SHARED_WRITER = true;
+
     private Store store;
     private QueueDescriptor queueId;
+    private AtomicLong queueKey = new AtomicLong(0);
 
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
     protected MetricAggregator totalConsumerRate = new MetricAggregator().name("Aggregate Consumer Rate").unit("items");
@@ -50,11 +55,21 @@ public abstract class StorePerformanceBase extends TestCase {
 
     abstract protected Store createStore();
 
+    private SharedWriter writer = null;
+    private Semaphore writePermits = null;
+
     @Override
     protected void setUp() throws Exception {
         store = createStore();
         store.start();
-        
+
+        if (USE_SHARED_WRITER) {
+            writer = new SharedWriter();
+            writer.start();
+        }
+
+        writePermits = new Semaphore(1000);
+
         queueId = new QueueDescriptor();
         queueId.setQueueName(new AsciiBuffer("test"));
         store.execute(new VoidCallback<Exception>() {
@@ -75,14 +90,96 @@ public abstract class StorePerformanceBase extends TestCase {
             p.stop();
         }
         producers.clear();
-        
+
+        if (writer != null) {
+            writer.stop();
+        }
+
         if (store != null) {
             store.stop();
         }
     }
 
-    private final Object wakeupMutex = new Object(); 
-    
+    private final Object wakeupMutex = new Object();
+
+    class SharedWriter implements Runnable {
+        LinkedBlockingQueue<SharedQueueOp> queue = new LinkedBlockingQueue<SharedQueueOp>(1000);
+        private Thread thread;
+        private AtomicBoolean stopped = new AtomicBoolean();
+
+        public void start() {
+            thread = new Thread(this, "Writer");
+            thread.start();
+        }
+
+        public void stop() throws InterruptedException {
+            stopped.set(true);
+
+            //Add an op to trigger shutdown:
+            SharedQueueOp op = new SharedQueueOp() {
+                public void run() {
+                }
+            };
+            op.op = new Store.VoidCallback<Exception>() {
+
+                @Override
+                public void run(Session session) throws Exception {
+                    // TODO Auto-generated method stub
+                }
+            };
+
+            queue.put(op);
+            thread.join();
+        }
+
+        public void run() {
+            Session session = store.getSession();
+            try {
+                LinkedList<Runnable> processed = new LinkedList<Runnable>();
+                while (!stopped.get()) {
+                    SharedQueueOp op = queue.take();
+                    session.acquireLock();
+                    int ops = 0;
+                    while (op != null && ops < 1000) {
+                        op.op.execute(session);
+                        processed.add(op);
+                        op = queue.poll();
+                        ops++;
+                    }
+
+                    session.commit();
+                    session.releaseLock();
+
+                    if (SYNC_TO_DISK) {
+                        store.flush();
+                    }
+
+                    for (Runnable r : processed) {
+                        r.run();
+                    }
+                    processed.clear();
+                }
+
+            } catch (InterruptedException e) {
+                if (!stopped.get()) {
+                    e.printStackTrace();
+                }
+                return;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return;
+            }
+        }
+
+        public void addOp(SharedQueueOp op) throws InterruptedException {
+            queue.put(op);
+        }
+    }
+
+    abstract class SharedQueueOp implements Runnable {
+        VoidCallback<Exception> op;
+    }
+
     class Producer implements Runnable {
         private Thread thread;
         private AtomicBoolean stopped = new AtomicBoolean();
@@ -91,104 +188,122 @@ public abstract class StorePerformanceBase extends TestCase {
         private long sleep;
 
         public Producer(String name) {
-            this.name=name;
+            this.name = name;
         }
+
         public void start() {
             rate.name("Producer " + name + " Rate");
             totalProducerRate.add(rate);
-            thread = new Thread(this, "Producer"+ name);
+            thread = new Thread(this, "Producer" + name);
             thread.start();
         }
+
         public void stop() throws InterruptedException {
             stopped.set(true);
+            while (writePermits.hasQueuedThreads()) {
+                writePermits.release();
+            }
             thread.join();
         }
+
         public void run() {
             try {
                 Buffer buffer = new Buffer(new byte[1024]);
-                for( long i=0; !stopped.get(); i++ ) {
-                    
+                for (long i = 0; !stopped.get(); i++) {
+
+                    writePermits.acquireUninterruptibly();
+
                     final MessageRecord messageRecord = new MessageRecord();
                     messageRecord.setKey(store.allocateStoreTracking());
-                    messageRecord.setMessageId(new AsciiBuffer(""+i));
+                    messageRecord.setMessageId(new AsciiBuffer("" + i));
                     messageRecord.setEncoding(new AsciiBuffer("encoding"));
                     messageRecord.setBuffer(buffer);
                     messageRecord.setSize(buffer.getLength());
 
-                    Runnable onFlush = new Runnable(){
+                    SharedQueueOp op = new SharedQueueOp() {
                         public void run() {
                             rate.increment();
-                            synchronized(wakeupMutex){
+                            writePermits.release();
+                            synchronized (wakeupMutex) {
                                 wakeupMutex.notify();
                             }
                         }
                     };
-                    final long queueKey = i + 1;
-                    store.execute(new VoidCallback<Exception>() {
+
+                    op.op = new VoidCallback<Exception>() {
                         @Override
                         public void run(Session session) throws Exception {
                             session.messageAdd(messageRecord);
                             QueueRecord queueRecord = new Store.QueueRecord();
                             queueRecord.setMessageKey(messageRecord.getKey());
-                            queueRecord.setQueueKey(queueKey);
+                            queueRecord.setQueueKey(queueKey.incrementAndGet());
                             queueRecord.setSize(messageRecord.getSize());
                             session.queueAddMessage(queueId, queueRecord);
                         }
-                    }, onFlush);
-                    
-                    if( SYNC_TO_DISK ) {
-                        store.flush();
+                    };
+
+                    if (!USE_SHARED_WRITER) {
+                        store.execute(op.op, op);
+
+                        if (SYNC_TO_DISK) {
+                            store.flush();
+                        }
+
+                    } else {
+                        writer.addOp(op);
                     }
 
-                    
-                    if( sleep>0 ) {
+                    if (sleep > 0) {
                         Thread.sleep(sleep);
                     }
                 }
+            } catch (InterruptedException e) {
+                if (!stopped.get()) {
+                    e.printStackTrace();
+                }
+                return;
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
     }
-    
+
     class Consumer implements Runnable {
         private Thread thread;
         private AtomicBoolean stopped = new AtomicBoolean();
         protected final MetricCounter rate = new MetricCounter();
         private String name;
+        private final Semaphore queryWait = new Semaphore(0);
 
         public Consumer(String name) {
-            this.name=name;
+            this.name = name;
         }
+
         public void start() {
             rate.name("Consumer " + name + " Rate");
             totalConsumerRate.add(rate);
-            thread = new Thread(this, "Consumer " + name );
+            thread = new Thread(this, "Consumer " + name);
             thread.start();
         }
+
         public void stop() throws InterruptedException {
             stopped.set(true);
+            queryWait.release();
             thread.join();
         }
-        
+
         public void run() {
             try {
-                while( !stopped.get() ) {
-                    final ArrayList<MessageRecord> records = new ArrayList<MessageRecord>(1000);;
-                    Runnable onFlush = new Runnable(){
+                while (!stopped.get()) {
+                    final ArrayList<MessageRecord> records = new ArrayList<MessageRecord>(1000);
+                    SharedQueueOp op = new SharedQueueOp() {
                         public void run() {
                             rate.increment(records.size());
-                            if( records.isEmpty() ) {
-                                synchronized(wakeupMutex){
-                                    try {
-                                        wakeupMutex.wait(500);
-                                    } catch (InterruptedException e) {
-                                    }
-                                }
-                            }
+                            queryWait.release();
                         }
                     };
-                    store.execute(new VoidCallback<Exception>() {
+
+                    op.op = new VoidCallback<Exception>() {
                         @Override
                         public void run(Session session) throws Exception {
                             Iterator<QueueRecord> queueRecords = session.queueListMessagesQueue(queueId, 0L, -1L, 1000);
@@ -198,23 +313,45 @@ public abstract class StorePerformanceBase extends TestCase {
                                 session.queueRemoveMessage(queueId, r.messageKey);
                             }
                         }
-                    }, onFlush);
-                    if( SYNC_TO_DISK ) {
-                        store.flush();
+                    };
+
+                    if (!USE_SHARED_WRITER) {
+                        store.execute(op.op, op);
+                        if (SYNC_TO_DISK) {
+                            store.flush();
+                        }
+                    } else {
+                        writer.addOp(op);
                     }
+
+                    //queryWait.acquireUninterruptibly();
+                    if (records.isEmpty()) {
+                        //                        synchronized (wakeupMutex) {
+                        //                            try {
+                        //                                wakeupMutex.wait(500);
+                        //                            } catch (InterruptedException e) {
+                        //                            }
+                        //                        }
+                    }
+                    records.clear();
                 }
+            } catch (InterruptedException e) {
+                if (!stopped.get()) {
+                    e.printStackTrace();
+                }
+                return;
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
     }
-    
+
     public void test1_1_1() throws Exception {
         startProducers(1);
         startConsumers(1);
         reportRates();
     }
-    
+
     public void test10_1_1() throws Exception {
         startProducers(10);
         startConsumers(1);
@@ -223,20 +360,20 @@ public abstract class StorePerformanceBase extends TestCase {
 
     private void startProducers(int count) {
         for (int i = 0; i < count; i++) {
-            Producer p = new  Producer(""+(i+1));
+            Producer p = new Producer("" + (i + 1));
             producers.add(p);
             p.start();
         }
     }
-    
+
     private void startConsumers(int count) {
         for (int i = 0; i < count; i++) {
-            Consumer c = new  Consumer(""+(i+1));
+            Consumer c = new Consumer("" + (i + 1));
             consumers.add(c);
             c.start();
         }
     }
-    
+
     private void reportRates() throws InterruptedException {
         System.out.println("Checking rates for test: " + getName());
         for (int i = 0; i < PERFORMANCE_SAMPLES; i++) {
@@ -248,5 +385,5 @@ public abstract class StorePerformanceBase extends TestCase {
             totalConsumerRate.reset();
         }
     }
-    
+
 }

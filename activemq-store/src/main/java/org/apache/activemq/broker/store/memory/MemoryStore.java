@@ -25,8 +25,10 @@ import java.util.LinkedList;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.activemq.broker.store.Store;
+import org.apache.activemq.broker.store.Store.Session;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.QueueDescriptor;
@@ -43,12 +45,17 @@ public class MemoryStore implements Store {
 
     private MemorySession session = new MemorySession();
     private AtomicLong trackingGen = new AtomicLong(0);
+    private ReentrantLock updateLock = new ReentrantLock();
 
     /**
      * @return a unique sequential store tracking number.
      */
     public long allocateStoreTracking() {
         return trackingGen.incrementAndGet();
+    }
+
+    public boolean isTransactional() {
+        return false;
     }
 
     static private class Stream {
@@ -126,7 +133,7 @@ public class MemoryStore implements Store {
             } else {
                 list = new ArrayList<QueueRecord>(max);
             }
-            
+
             for (Long key : records.tailMap(firstQueueKey).keySet()) {
                 if ((max >= 0 && list.size() >= max) || (maxSequence >= 0 && key > maxSequence)) {
                     break;
@@ -198,7 +205,7 @@ public class MemoryStore implements Store {
             result.count = count;
             result.size = size;
             result.firstSequence = records.isEmpty() ? 0 : records.get(records.firstKey()).getQueueKey();
-            result.lastSequence = records.isEmpty() ? 0 :  records.get(records.lastKey()).getQueueKey();
+            result.lastSequence = records.isEmpty() ? 0 : records.get(records.lastKey()).getQueueKey();
             result.desc = descriptor.copy();
             if (this.partitions != null) {
                 ArrayList<QueueQueryResult> childResults = new ArrayList<QueueQueryResult>(partitions.size());
@@ -211,6 +218,14 @@ public class MemoryStore implements Store {
             return result;
         }
 
+    }
+    
+    /**
+     * @return A new store Session.
+     */
+    public Session getSession()
+    {
+        return session;
     }
 
     static private class RemoveOp {
@@ -283,12 +298,10 @@ public class MemoryStore implements Store {
         }
 
         public long getFirstSequence() {
-            // TODO Auto-generated method stub
             return firstSequence;
         }
 
         public long getLastSequence() {
-            // TODO Auto-generated method stub
             return lastSequence;
         }
     }
@@ -303,6 +316,44 @@ public class MemoryStore implements Store {
         private TreeMap<Long, Stream> streams = new TreeMap<Long, Stream>(Comparators.LONG_COMPARATOR);
         private TreeMap<AsciiBuffer, StoredQueue> queues = new TreeMap<AsciiBuffer, StoredQueue>();
         private TreeMap<Buffer, Transaction> transactions = new TreeMap<Buffer, Transaction>();
+
+        /**
+         * Commits work done on the Session, if {@link Store#isTransactional()} is true.
+         */
+        public void commit()
+        {
+            //NOOP
+        }
+
+        /**
+         * Rolls back work done on the Session
+         * since the last call to {@link #acquireLock()}
+         */
+        public void rollback()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
+         * Indicates callers intent to start a transaction. If the store
+         * is transaction, the caller must call {@link #commit()} when the 
+         * done operating on the Session prior to a mandatory call to 
+         * {@link #releaseLock()}
+         */
+        public void acquireLock()
+        {
+            updateLock.lock();
+        }
+
+        /**
+         * Indicates caller is done with the transaction, if 
+         * not committed then the transaction will be rolled back (providing
+         * the store is transactional.
+         */
+        public void releaseLock()
+        {
+            updateLock.unlock();
+        }
 
         // //////////////////////////////////////////////////////////////////////////////
         // Message related methods.
@@ -404,7 +455,7 @@ public class MemoryStore implements Store {
             }
 
             for (StoredQueue sq : tailResults) {
-                if (max >=0 && results.size() >= max) {
+                if (max >= 0 && results.size() >= max) {
                     break;
                 }
                 if (type != -1 && sq.descriptor.getApplicationType() != type) {
@@ -598,8 +649,7 @@ public class MemoryStore implements Store {
 	}
 
 	public void setDeleteAllMessages(boolean val) {
-        // TODO Auto-generated method stub
-
+        // NOOP
     }
 
 

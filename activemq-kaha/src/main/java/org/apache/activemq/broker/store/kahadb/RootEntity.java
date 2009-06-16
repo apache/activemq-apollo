@@ -425,4 +425,45 @@ public class RootEntity {
             return lastSequence;
         }
     }
+
+    /**
+     * @param lastAppendLocation
+     * @param tx
+     * @return the number of undone index entries
+     */
+    public int recoverIndex(Location lastAppendLocation, Transaction tx) {
+
+        //TODO check that none of the locations specified by the indexes
+        //are past the last update location in the journal. This can happen
+        //if the index is flushed before the journal. 
+        //
+        //Collection<DestinationEntity> values = destinations.values();
+        //for (DestinationEntity de : values) {
+        //    count += 
+        //}
+        // Go through all the destinations to see if they have messages past
+        // the lastAppendLocation
+        //for (StoredDestinationState sd : 
+        //          
+        // final ArrayList<Long> matches = new ArrayList<Long>();
+        // // Find all the Locations that are >= than the last Append Location.
+        // sd.locationIndex.visit(tx, new BTreeVisitor.GTEVisitor<Location,
+        // Long>(lastAppendLocation) {
+        // @Override
+        // protected void matched(Location key, Long value) {
+        // matches.add(value);
+        // }
+        // });
+        //            
+        //            
+        // for (Long sequenceId : matches) {
+        // MessageKeys keys = sd.orderIndex.remove(tx, sequenceId);
+        // sd.locationIndex.remove(tx, keys.location);
+        // sd.messageIdIndex.remove(tx, keys.messageId);
+        // undoCounter++;
+        // // TODO: do we need to modify the ack positions for the pub sub case?
+        // }
+        // }
+        return 0;
+    }
 }

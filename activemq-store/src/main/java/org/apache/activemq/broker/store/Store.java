@@ -118,6 +118,11 @@ public interface Store extends Service {
     public long allocateStoreTracking();
 
     /**
+     * @return A new store Session.
+     */
+    public Session getSession();
+    
+    /**
      * This interface is used to execute transacted code.
      * 
      * It is used by the {@link Store#execute(Callback)} method, often as
@@ -354,6 +359,12 @@ public interface Store extends Service {
      */
     public void flush();
 
+    
+    /**
+     * @return true if the store is transactional. 
+     */
+    public boolean isTransactional();
+    
     /**
      * This interface allows you to query and update the Store.
      * 
@@ -362,6 +373,31 @@ public interface Store extends Service {
      * 
      */
     public interface Session {
+        
+        /**
+         * Commits work done on the Session
+         */
+        public void commit();
+
+        /**
+         * Rolls back work done on the Session
+         * since the last call to {@link #acquireLock()}
+         * 
+         * @throw {@link UnsupportedOperationException} if the store is not transactional
+         */
+        public void rollback();
+
+        /**
+         * Indicates callers intent to start a transaction. 
+         */
+        public void acquireLock();
+
+        /**
+         * Indicates caller is done with the transaction, if 
+         * not committed then the transaction will be rolled back (providing
+         * the store is transactional.
+         */
+        public void releaseLock();
 
         public void messageAdd(MessageRecord message);
 
@@ -397,7 +433,7 @@ public interface Store extends Service {
          * 
          * @param firstQueueName
          *            If null starts the query at the first queue.
-         * @param max
+        * @param max
          *            The maximum number of queues to return
          * @return The list of queues.
          */

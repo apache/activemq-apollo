@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -67,12 +66,14 @@ public class KahaDBStore implements Store {
     private static final int BEGIN_UNIT_OF_WORK = -1;
     private static final int END_UNIT_OF_WORK = -2;
     private static final int FLUSH = -3;
+    private static final int CANCEL_UNIT_OF_WORK = -4;
 
     private static final Log LOG = LogFactory.getLog(KahaDBStore.class);
     private static final int DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
 
-    private static final ByteSequence BEGIN_UNIT_OF_WORK_DATA = new ByteSequence(new byte[] { END_UNIT_OF_WORK });
+    private static final ByteSequence BEGIN_UNIT_OF_WORK_DATA = new ByteSequence(new byte[] { BEGIN_UNIT_OF_WORK });
     private static final ByteSequence END_UNIT_OF_WORK_DATA = new ByteSequence(new byte[] { END_UNIT_OF_WORK });
+    private static final ByteSequence CANCEL_UNIT_OF_WORK_DATA = new ByteSequence(new byte[] { CANCEL_UNIT_OF_WORK });
     private static final ByteSequence FLUSH_DATA = new ByteSequence(new byte[] { FLUSH });
 
     public static final int CLOSED_STATE = 1;
@@ -116,12 +117,9 @@ public class KahaDBStore implements Store {
     // /////////////////////////////////////////////////////////////////
     public void start() throws Exception {
         if (started.compareAndSet(false, true)) {
-            try
-            {
+            try {
                 load();
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 LOG.error("Error loading store", e);
             }
         }
@@ -138,6 +136,10 @@ public class KahaDBStore implements Store {
      */
     public long allocateStoreTracking() {
         return trackingGen.incrementAndGet();
+    }
+
+    public boolean isTransactional() {
+        return true;
     }
 
     private void loadPageFile() throws IOException {
@@ -229,7 +231,7 @@ public class KahaDBStore implements Store {
         }
     }
 
-    public void load() throws IOException {
+    private void load() throws IOException {
         indexLock.writeLock().lock();
         try {
             open();
@@ -246,7 +248,7 @@ public class KahaDBStore implements Store {
 
                 loadPageFile();
             }
-            store(new Trace.TraceBean().setMessage(new AsciiBuffer("LOADED " + new Date())));
+            store(new Trace.TraceBean().setMessage(new AsciiBuffer("LOADED " + new Date())), null);
         } finally {
             indexLock.writeLock().unlock();
         }
@@ -260,10 +262,11 @@ public class KahaDBStore implements Store {
             try {
                 pageFile.unload();
                 rootEntity = new RootEntity();
+                journal.close();
             } finally {
                 indexLock.writeLock().unlock();
             }
-            journal.close();
+
             checkpointThread.join();
             lockFile.unlock();
             lockFile = null;
@@ -333,6 +336,8 @@ public class KahaDBStore implements Store {
                             redoCounter += uow.size();
                             uow = null;
                         }
+                    } else if (data.length == 1 && data.data[0] == CANCEL_UNIT_OF_WORK) {
+                        uow = null;
                     } else if (data.length == 1 && data.data[0] == FLUSH) {
                     } else {
                         final TypeCreatable message = load(recoveryPosition);
@@ -409,32 +414,8 @@ public class KahaDBStore implements Store {
         // in that case we need to removed references to messages that are not
         // in the journal
         final Location lastAppendLocation = journal.getLastAppendLocation();
-        long undoCounter = 0;
+        int undoCounter = rootEntity.recoverIndex(lastAppendLocation, tx);
 
-        // TODO
-        // // Go through all the destinations to see if they have messages past
-        // the lastAppendLocation
-        // for (StoredDestinationState sd : storedDestinations.values()) {
-        //        	
-        // final ArrayList<Long> matches = new ArrayList<Long>();
-        // // Find all the Locations that are >= than the last Append Location.
-        // sd.locationIndex.visit(tx, new BTreeVisitor.GTEVisitor<Location,
-        // Long>(lastAppendLocation) {
-        // @Override
-        // protected void matched(Location key, Long value) {
-        // matches.add(value);
-        // }
-        // });
-        //            
-        //            
-        // for (Long sequenceId : matches) {
-        // MessageKeys keys = sd.orderIndex.remove(tx, sequenceId);
-        // sd.locationIndex.remove(tx, keys.location);
-        // sd.messageIdIndex.remove(tx, keys.messageId);
-        // undoCounter++;
-        // // TODO: do we need to modify the ack positions for the pub sub case?
-        // }
-        // }
         long end = System.currentTimeMillis();
         if (undoCounter > 0) {
             // The rolledback operations are basically in flight journal writes.
@@ -442,10 +423,6 @@ public class KahaDBStore implements Store {
             // should do sync writes to the journal.
             LOG.info("Rolled back " + undoCounter + " operations from the index in " + ((end - start) / 1000.0f) + " seconds.");
         }
-    }
-
-    public Location getLastUpdatePosition() throws IOException {
-        return rootEntity.getLastUpdate();
     }
 
     private Location getRecoveryPosition() throws IOException {
@@ -620,8 +597,8 @@ public class KahaDBStore implements Store {
     // /////////////////////////////////////////////////////////////////
     long messageSequence;
 
-    public Location store(TypeCreatable data) throws IOException {
-        return store(data, null);
+    private Location store(TypeCreatable data, Transaction tx) throws IOException {
+        return store(data, null, tx);
     }
 
     /**
@@ -633,105 +610,48 @@ public class KahaDBStore implements Store {
      * @throws IOException
      */
     @SuppressWarnings("unchecked")
-    public Location store(final TypeCreatable data, Runnable onFlush) throws IOException {
+    private Location store(final TypeCreatable data, Runnable onFlush, Transaction tx) throws IOException {
         final MessageBuffer message = ((PBMessage) data).freeze();
         int size = message.serializedSizeUnframed();
         DataByteArrayOutputStream os = new DataByteArrayOutputStream(size + 1);
         os.writeByte(data.toType().getNumber());
         message.writeUnframed(os);
 
-        long start = System.currentTimeMillis();
-        final Location location;
-        synchronized (journal) {
-            location = journal.write(os.toByteSequence(), onFlush);
+        //If we aren't in a transaction acquire the index lock
+        if (tx == null) {
+            indexLock.writeLock().lock();
         }
-        long start2 = System.currentTimeMillis();
 
         try {
-            indexLock.writeLock().lock();
-            pageFile.tx().execute(new Transaction.Closure<IOException>() {
-                public void execute(Transaction tx) throws IOException {
-                    updateIndex(tx, data.toType(), message, location);
-                }
-            });
-            rootEntity.setLastUpdate(location);
 
-        } finally {
-            indexLock.writeLock().unlock();
-        }
-
-        long end = System.currentTimeMillis();
-        if (end - start > 1000) {
-            LOG.warn("KahaDB long enqueue time: Journal Add Took: " + (start2 - start) + " ms, Index Update took " + (end - start2) + " ms");
-        }
-        return location;
-    }
-
-    public void store(List<TypeCreatable> batch) throws IOException {
-        store(batch, null);
-    }
-
-    // ArrayList<TypeCreatable>
-    /**
-     * All updated are are funneled through this method. The updates a converted
-     * to a PBMessage which is logged to the journal and then the data from the
-     * PBMessage is used to update the index just like it would be done during a
-     * recovery process.
-     * 
-     * @throws IOException
-     */
-    @SuppressWarnings("unchecked")
-    public void store(final List<TypeCreatable> batch, Runnable onFlush) throws IOException {
-        if (batch.isEmpty()) {
-            return;
-        }
-        if (batch.size() == 1) {
-            store(batch.get(0), onFlush);
-            return;
-        }
-
-        final ArrayList<UoWOperation> uow = new ArrayList<UoWOperation>(batch.size());
-        for (TypeCreatable bean : batch) {
-            final MessageBuffer message = ((PBMessage) bean).freeze();
-            int size = message.serializedSizeUnframed();
-            DataByteArrayOutputStream os = new DataByteArrayOutputStream(size + 1);
-            os.writeByte(bean.toType().getNumber());
-            message.writeUnframed(os);
-            UoWOperation op = new UoWOperation();
-            op.bean = bean;
-            op.data = os.toByteSequence();
-            uow.add(op);
-        }
-
-        long start = System.currentTimeMillis();
-        synchronized (journal) {
-            journal.write(BEGIN_UNIT_OF_WORK_DATA, false);
-            for (UoWOperation op : uow) {
-                op.location = journal.write(op.data, false);
+            long start = System.currentTimeMillis();
+            final Location location;
+            synchronized (journal) {
+                location = journal.write(os.toByteSequence(), onFlush);
             }
-            journal.write(END_UNIT_OF_WORK_DATA, onFlush);
-        }
-        long start2 = System.currentTimeMillis();
+            long start2 = System.currentTimeMillis();
 
-        try {
-            indexLock.writeLock().lock();
-            pageFile.tx().execute(new Transaction.Closure<IOException>() {
-                public void execute(Transaction tx) throws IOException {
-                    for (UoWOperation op : uow) {
-                        MessageBuffer message = ((PBMessage) op.bean).freeze();
-                        updateIndex(tx, op.bean.toType(), message, op.location);
-                        rootEntity.setLastUpdate(op.location);
+            if (tx == null) {
+                pageFile.tx().execute(new Transaction.Closure<IOException>() {
+                    public void execute(Transaction tx) throws IOException {
+                        updateIndex(tx, data.toType(), message, location);
                     }
-                }
-            });
+                });
+            } else {
+                updateIndex(tx, data.toType(), message, location);
+            }
+
+            long end = System.currentTimeMillis();
+            if (end - start > 1000) {
+                LOG.warn("KahaDB long enqueue time: Journal Add Took: " + (start2 - start) + " ms, Index Update took " + (end - start2) + " ms");
+            }
+            return location;
+            
         } finally {
-            indexLock.writeLock().unlock();
+            if (tx == null)
+                indexLock.writeLock().unlock();
         }
 
-        long end = System.currentTimeMillis();
-        if (end - start > 1000) {
-            LOG.warn("KahaDB long enqueue time: Journal Add Took: " + (start2 - start) + " ms, Index Update took " + (end - start2) + " ms");
-        }
     }
 
     /**
@@ -741,7 +661,7 @@ public class KahaDBStore implements Store {
      * @return
      * @throws IOException
      */
-    public TypeCreatable load(Location location) throws IOException {
+    private TypeCreatable load(Location location) throws IOException {
         ByteSequence data = journal.read(location);
         return load(location, data);
     }
@@ -764,19 +684,19 @@ public class KahaDBStore implements Store {
         switch (type) {
         case MESSAGE_ADD:
             messageAdd(tx, (MessageAdd) command, location);
-            return;
+            break;
         case QUEUE_ADD:
             queueAdd(tx, (QueueAdd) command, location);
-            return;
+            break;
         case QUEUE_REMOVE:
             queueRemove(tx, (QueueRemove) command, location);
-            return;
+            break;
         case QUEUE_ADD_MESSAGE:
             queueAddMessage(tx, (QueueAddMessage) command, location);
-            return;
+            break;
         case QUEUE_REMOVE_MESSAGE:
             queueRemoveMessage(tx, (QueueRemoveMessage) command, location);
-            return;
+            break;
 
         case TRANSACTION_BEGIN:
         case TRANSACTION_ADD_MESSAGE:
@@ -793,6 +713,7 @@ public class KahaDBStore implements Store {
         case STREAM_REMOVE:
             throw new UnsupportedOperationException();
         }
+        rootEntity.setLastUpdate(location);
     }
 
     private void messageAdd(Transaction tx, MessageAdd command, Location location) throws IOException {
@@ -846,20 +767,25 @@ public class KahaDBStore implements Store {
     }
 
     class KahaDBSession implements Session {
-        ArrayList<TypeCreatable> updates = new ArrayList<TypeCreatable>();
+        TypeCreatable atomicUpdate = null;
+        int updateCount = 0;
 
         private Transaction tx;
 
         private Transaction tx() {
-            if (tx == null) {
-                indexLock.readLock().lock();
-                tx = pageFile.tx();
-            }
+            acquireLock();
             return tx;
         }
 
-        public void close() {
+        public final void commit() {
+            commit(null);
+        }
+
+        public final void rollback() {
             try {
+                if (updateCount > 1) {
+                    journal.write(CANCEL_UNIT_OF_WORK_DATA, false);
+                }
                 if (tx != null) {
                     tx.rollback();
                 }
@@ -867,30 +793,90 @@ public class KahaDBStore implements Store {
                 throw new FatalStoreException(e);
             } finally {
                 if (tx != null) {
-                    indexLock.readLock().unlock();
                     tx = null;
+                    updateCount = 0;
+                    atomicUpdate = null;
                 }
+            }
+        }
+
+        /**
+         * Indicates callers intent to start a transaction.
+         */
+        public final void acquireLock() {
+            if (tx == null) {
+                indexLock.writeLock().lock();
+                tx = pageFile.tx();
+            }
+        }
+
+        public final void releaseLock() {
+            try {
+                if (tx != null) {
+                    rollback();
+                }
+            } finally {
+                indexLock.writeLock().unlock();
             }
         }
 
         public void commit(Runnable onFlush) {
             try {
+
+                boolean flush = false;
+                if (atomicUpdate != null) {
+                    store(atomicUpdate, onFlush, tx);
+                } else if (updateCount > 1) {
+                    journal.write(END_UNIT_OF_WORK_DATA, onFlush);
+                } else {
+                    flush = onFlush != null;
+                }
+
                 if (tx != null) {
                     tx.commit();
                 }
+
+                if (flush) {
+                    onFlush.run();
+                }
+
             } catch (IOException e) {
                 throw new FatalStoreException(e);
             } finally {
-                if (tx != null) {
-                    indexLock.readLock().unlock();
-                    tx = null;
+                tx = null;
+                updateCount = 0;
+                atomicUpdate = null;
+            }
+        }
+
+        private void storeAtomic() {
+            if (atomicUpdate != null) {
+                try {
+                    journal.write(BEGIN_UNIT_OF_WORK_DATA, false);
+                    store(atomicUpdate, null, tx);
+                    atomicUpdate = null;
+                } catch (IOException ioe) {
+                    throw new FatalStoreException(ioe);
                 }
             }
+        }
 
+        private void addUpdate(TypeCreatable bean) {
             try {
-                store(updates, onFlush);
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
+                //As soon as we do more than one update we'll wrap in a unit of 
+                //work:
+                if (updateCount == 0) {
+                    atomicUpdate = bean;
+                    updateCount++;
+                    return;
+                }
+                storeAtomic();
+
+                updateCount++;
+                store(bean, null, tx);
+
+            } catch (IOException ioe) {
+                throw new FatalStoreException(ioe);
             }
         }
 
@@ -915,10 +901,12 @@ public class KahaDBStore implements Store {
             if (streamKey != null) {
                 bean.setStreamKey(streamKey);
             }
-            updates.add(bean);
+
+            addUpdate(bean);
         }
 
         public MessageRecord messageGetRecord(Long key) throws KeyNotFoundException {
+            storeAtomic();
             Location location = rootEntity.messageGetLocation(tx(), key);
             if (location == null) {
                 throw new KeyNotFoundException("message key: " + key);
@@ -955,14 +943,15 @@ public class KahaDBStore implements Store {
                 update.setParentName(parent);
                 update.setPartitionId(descriptor.getPartitionKey());
             }
-            updates.add(update);
+            addUpdate(update);
         }
 
         public void queueRemove(QueueDescriptor descriptor) {
-            updates.add(new QueueRemoveBean().setQueueName(descriptor.getQueueName()));
+            addUpdate(new QueueRemoveBean().setQueueName(descriptor.getQueueName()));
         }
 
         public Iterator<QueueQueryResult> queueListByType(short type, QueueDescriptor firstQueue, int max) {
+            storeAtomic();
             try {
                 return rootEntity.queueList(tx(), type, firstQueue, max);
             } catch (IOException e) {
@@ -971,6 +960,7 @@ public class KahaDBStore implements Store {
         }
 
         public Iterator<QueueQueryResult> queueList(QueueDescriptor firstQueue, int max) {
+            storeAtomic();
             try {
                 return rootEntity.queueList(tx(), (short) -1, firstQueue, max);
             } catch (IOException e) {
@@ -987,17 +977,18 @@ public class KahaDBStore implements Store {
             if (record.getAttachment() != null) {
                 bean.setAttachment(record.getAttachment());
             }
-            updates.add(bean);
+            addUpdate(bean);
         }
 
         public void queueRemoveMessage(QueueDescriptor queue, Long messageKey) throws KeyNotFoundException {
             QueueRemoveMessageBean bean = new QueueRemoveMessageBean();
             bean.setMessageKey(messageKey);
             bean.setQueueName(queue.getQueueName());
-            updates.add(bean);
+            addUpdate(bean);
         }
 
         public Iterator<QueueRecord> queueListMessagesQueue(QueueDescriptor queue, Long firstQueueKey, Long maxQueueKey, int max) throws KeyNotFoundException {
+            storeAtomic();
             DestinationEntity destination = rootEntity.getDestination(queue);
             if (destination == null) {
                 throw new KeyNotFoundException("queue key: " + queue);
@@ -1084,14 +1075,23 @@ public class KahaDBStore implements Store {
         }
     }
 
+    public Session getSession() {
+        return new KahaDBSession();
+    }
+
+    /**
+     * Convenienct method for executing a batch of work within a store
+     * transaction.
+     */
     public <R, T extends Exception> R execute(final Callback<R, T> callback, final Runnable onFlush) throws T {
         KahaDBSession session = new KahaDBSession();
+        session.acquireLock();
         try {
             R rc = callback.execute(session);
             session.commit(onFlush);
             return rc;
         } finally {
-            session.close();
+            session.releaseLock();
         }
     }
 
@@ -1136,13 +1136,28 @@ public class KahaDBStore implements Store {
         return manager;
     }
 
+    private PageFile getPageFile() {
+        if (pageFile == null) {
+            pageFile = createPageFile();
+        }
+        return pageFile;
+    }
+
+    private Journal getJournal() {
+        if (journal == null) {
+            journal = createJournal();
+        }
+        return journal;
+    }
+
     public File getDirectory() {
         return directory;
     }
 
-	public File getStoreDirectory() {
-		return directory;
-	}
+    public File getStoreDirectory() {
+        return directory;
+    }
+
     public void setStoreDirectory(File directory) {
         this.directory = directory;
     }
@@ -1203,20 +1218,6 @@ public class KahaDBStore implements Store {
         return journalMaxFileLength;
     }
 
-    public PageFile getPageFile() {
-        if (pageFile == null) {
-            pageFile = createPageFile();
-        }
-        return pageFile;
-    }
-
-    public Journal getJournal() {
-        if (journal == null) {
-            journal = createJournal();
-        }
-        return journal;
-    }
-
     public boolean isFailIfDatabaseIsLocked() {
         return failIfDatabaseIsLocked;
     }
@@ -1224,6 +1225,5 @@ public class KahaDBStore implements Store {
     public void setFailIfDatabaseIsLocked(boolean failIfDatabaseIsLocked) {
         this.failIfDatabaseIsLocked = failIfDatabaseIsLocked;
     }
-
 
 }
