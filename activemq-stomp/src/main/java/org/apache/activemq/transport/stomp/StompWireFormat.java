@@ -31,6 +31,7 @@ import org.apache.activemq.util.ByteArrayInputStream;
 import org.apache.activemq.util.ByteArrayOutputStream;
 import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.wireformat.WireFormat;
+import org.apache.activemq.wireformat.WireFormatFactory;
 
 /**
  * Implements marshalling and unmarsalling the <a
@@ -220,5 +221,9 @@ public class StompWireFormat implements WireFormat {
         }
         return transport;
     }
+
+	public WireFormatFactory getWireFormatFactory() {
+		return new StompWireFormatFactory();
+	}
 
 }

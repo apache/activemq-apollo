@@ -21,6 +21,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.apollo.broker.Broker;
@@ -57,18 +58,23 @@ public class VMTransportFactory extends PipeTransportFactory {
 		private Broker broker;
 
 		@Override
-		protected PipeTransport cerateServerTransport(Pipe<Object> pipe) {
-			return new PipeTransport(pipe.connect()) {
+		protected PipeTransport createClientTransport(Pipe<Object> pipe) {
+			return new PipeTransport(pipe) {
+				AtomicBoolean started = new AtomicBoolean();
 				@Override
 				public void start() throws Exception {
-					refs.incrementAndGet();
-					super.start();
+					if( started.compareAndSet(false, true) ) { 
+						refs.incrementAndGet();
+						super.start();
+					}
 				}
 				@Override
 				public void stop() throws Exception {
-					super.stop();
-					if( refs.decrementAndGet() == 0 ) {
-						stopBroker();
+					if( started.compareAndSet(true, false) ) { 
+						super.stop();
+						if( refs.decrementAndGet() == 0 ) {
+							stopBroker();
+						}
 					}
 				}
 			};
@@ -92,6 +98,15 @@ public class VMTransportFactory extends PipeTransportFactory {
 
 	private static final String DEFAULT_PIPE_NAME = Broker.DEFAULT_VIRTUAL_HOST_NAME.toString();
 
+	@Override
+	public Transport compositeConfigure(Transport transport, WireFormat format, Map options) {
+		// Wishing right now the options would have been passed to the createTransport(URI location, WireFormat wf) method so we did don't
+		// need to remove these here.
+		options.remove("create");
+		options.remove("broker");
+		return super.compositeConfigure(transport, format, options);
+	}
+	
 	@Override
     protected Transport createTransport(URI location, WireFormat wf) throws UnknownHostException, IOException {
 		try {
@@ -135,8 +150,9 @@ public class VMTransportFactory extends PipeTransportFactory {
 				}
 				
 				// We want to use a vm transport server impl.
-				VmTransportServer vmTransportServer = (VmTransportServer) TransportFactory.bind(new URI("vm://" + name));
+				VmTransportServer vmTransportServer = (VmTransportServer) TransportFactory.bind(new URI("vm://" + name+"?wireFormat=mock"));
 				vmTransportServer.setBroker(broker);
+				vmTransportServer.setWireFormatFactory(wf.getWireFormatFactory());
 				broker.addTransportServer(vmTransportServer);
 				broker.start();
 				

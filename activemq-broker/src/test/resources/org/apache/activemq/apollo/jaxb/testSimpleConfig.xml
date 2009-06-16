@@ -27,9 +27,7 @@
     <host-name>localhost</host-name>
     <host-name>test.localhost</host-name>
     
-    <store>
-      <memory-store/>
-    </store>
+    <memory-store/>
   </virtual-host>
   
 </broker>

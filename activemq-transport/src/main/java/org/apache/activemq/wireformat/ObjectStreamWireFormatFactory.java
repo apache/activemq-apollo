@@ -1,11 +1,8 @@
-package org.apache.activemq.queue.perf;
+package org.apache.activemq.wireformat;
 
 import org.apache.activemq.util.ByteSequence;
-import org.apache.activemq.wireformat.ObjectStreamWireFormat;
-import org.apache.activemq.wireformat.WireFormat;
-import org.apache.activemq.wireformat.WireFormatFactory;
 
-public class TestWireFormatFactory implements WireFormatFactory {
+public class ObjectStreamWireFormatFactory implements WireFormatFactory {
 
 	public WireFormat createWireFormat() {
 		return new ObjectStreamWireFormat();

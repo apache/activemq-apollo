@@ -27,15 +27,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.activemq.command.CommandTypes;
 import org.apache.activemq.command.DataStructure;
 import org.apache.activemq.command.WireFormatInfo;
+import org.apache.activemq.transport.InactivityMonitor;
 import org.apache.activemq.transport.ResponseCorrelator;
 import org.apache.activemq.transport.Transport;
-import org.apache.activemq.transport.InactivityMonitor;
 import org.apache.activemq.transport.WireFormatNegotiator;
 import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.ByteSequenceData;
 import org.apache.activemq.util.DataByteArrayInputStream;
 import org.apache.activemq.util.DataByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
+import org.apache.activemq.wireformat.WireFormatFactory;
 
 /**
  * 
@@ -661,4 +662,8 @@ public final class OpenWireFormat implements WireFormat {
         transport = new ResponseCorrelator(transport);
         return transport;
     }
+
+	public WireFormatFactory getWireFormatFactory() {
+		return new OpenWireFormatFactory();
+	}
 }

@@ -90,4 +90,8 @@ public class ObjectStreamWireFormat implements WireFormat {
     public Transport createTransportFilters(Transport transport, Map options) {
         return transport;
     }
+
+	public WireFormatFactory getWireFormatFactory() {
+		return new ObjectStreamWireFormatFactory();
+	}
 }

@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.activemq.transport.Transport;
-import org.apache.activemq.transport.TransportFilter;
 import org.apache.activemq.util.ByteSequence;
 
 
@@ -82,5 +81,10 @@ public interface WireFormat {
      * @return Either the given transport or a Transport filter wrapping the onw provided. 
      */
     Transport createTransportFilters(Transport transport, Map options);
-    
+
+    /**
+     * Returns a WireFormatFactory which can create WireFormat of this type.
+     * @return
+     */
+    WireFormatFactory getWireFormatFactory();
 }

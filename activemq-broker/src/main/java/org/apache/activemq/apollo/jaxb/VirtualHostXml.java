@@ -20,9 +20,8 @@ import java.util.ArrayList;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAnyElement;
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
+import javax.xml.bind.annotation.XmlElementRef;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlAdapter;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
@@ -49,19 +48,21 @@ public class VirtualHostXml {
     @XmlElement(name="host-name", required=true)
     private ArrayList<AsciiBuffer> hostNames = new ArrayList<AsciiBuffer>();
 
-    @XmlElementWrapper(name="store", required=false)
-    @XmlAnyElement
-    private ArrayList<StoreXml> store = new ArrayList<StoreXml>();
+    @XmlElementRef    
+    private StoreXml store;
     
 	public VirtualHost createVirtualHost(BrokerXml brokerXml) throws Exception {
 		VirtualHost rc = new VirtualHost();
 		rc.setHostNames(hostNames);
 		
-		if( !store.isEmpty() ) {
-			if( store.size() > 1 )  {
-				throw new Exception("Only one store is allowed.");
-			}
-			rc.setStore(store.get(0).createStore());
+//		if( !store.isEmpty() ) {
+//			if( store.size() > 1 )  {
+//				throw new Exception("Only one store is allowed.");
+//			}
+//			rc.setStore(store.get(0).createStore());
+//		}
+		if( store!=null ) {
+			rc.setStore(store.createStore());
 		}
 		return rc;
 	}

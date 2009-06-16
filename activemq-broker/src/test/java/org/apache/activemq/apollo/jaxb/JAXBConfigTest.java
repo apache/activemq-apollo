@@ -51,7 +51,7 @@ public class JAXBConfigTest extends TestCase {
 		
 		assertEquals(2, broker.getVirtualHosts().size());
 		
-		// assertNotNull(broker.getDefaultVirtualHost().getDatabase());
+//		 assertNotNull(broker.getDefaultVirtualHost().getDatabase());
 		
 	}
 

@@ -249,6 +249,10 @@ public class ProtoWireFormatFactory implements WireFormatFactory {
         public String getName() {
             return WIREFORMAT_NAME;
         }
+
+		public WireFormatFactory getWireFormatFactory() {
+			return new ProtoWireFormatFactory();
+		}
     }
 
 	public WireFormat createWireFormat() {

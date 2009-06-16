@@ -9,7 +9,7 @@ import org.apache.activemq.broker.store.memory.MemoryStore;
 
 @XmlRootElement(name="memory-store")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class MemoryStoreXml implements StoreXml {
+public class MemoryStoreXml extends StoreXml {
 
 	public Store createStore() {
 		MemoryStore rc = new MemoryStore();

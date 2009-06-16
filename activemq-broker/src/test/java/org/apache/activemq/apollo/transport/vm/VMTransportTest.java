@@ -36,9 +36,9 @@ public class VMTransportTest extends TestCase {
 	
 	public void testAutoCreateBroker() throws Exception {
 		Transport connect = TransportFactory.compositeConnect(new URI("vm://test?wireFormat=mock"));
+		connect.start();
 		assertNotNull(connect);
 		connect.stop();
-		System.out.println("done");
 	}
 	
 	public void testNoAutoCreateBroker() throws Exception {

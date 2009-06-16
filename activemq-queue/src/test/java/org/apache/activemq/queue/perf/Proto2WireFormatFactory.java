@@ -279,6 +279,10 @@ public class Proto2WireFormatFactory implements WireFormatFactory {
         public Transport createTransportFilters(Transport transport, Map options) {
            return transport;
         }
+
+		public WireFormatFactory getWireFormatFactory() {
+			return new Proto2WireFormatFactory();
+		}
     }
 
 	public WireFormat createWireFormat() {

@@ -93,6 +93,23 @@
   </dependencies>
 
   <build>
+  
+    <resources>
+      <resource>
+        <directory>target/schema</directory>
+        <includes>
+          <include>**/*</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>**/*</include>
+        </includes>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+      
     <plugins>
 
       <!-- Generate a test jar for the test cases in this package -->
@@ -106,6 +123,27 @@
           </execution>
         </executions>
       </plugin>
+
+      <plugin>
+        <groupId>com.sun.tools.jxc.maven2</groupId>
+        <artifactId>maven-jaxb-schemagen-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <configuration>
+              <destdir>${project.build.directory}/schema</destdir>
+              <srcdir>${project.build.directory}/schema-src</srcdir>
+              <schemas>
+                <schema>
+                  <namespace>http://activemq.apache.org/schema/activemq/apollo</namespace>
+                  <file>activemq-apollo.xsd</file>
+                </schema>
+              </schemas>
+              <!--<verbose>false</verbose>-->
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>  
 
     </plugins>
   </build>

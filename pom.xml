@@ -811,6 +811,11 @@
     <pluginManagement>
       <plugins>
         <plugin>
+          <groupId>com.sun.tools.jxc.maven2</groupId>
+          <artifactId>maven-jaxb-schemagen-plugin</artifactId>
+          <version>1.3-dev</version>
+        </plugin>
+        <plugin>
           <groupId>ch.elca.el4j.maven.plugins</groupId>
           <artifactId>maven-depgraph-plugin</artifactId>
           <version>1.7</version>

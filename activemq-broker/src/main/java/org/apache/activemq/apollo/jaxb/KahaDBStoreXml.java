@@ -12,7 +12,7 @@ import org.apache.activemq.broker.store.kahadb.KahaDBStore;
 
 @XmlRootElement(name="kahadb-store")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class KahaDBStoreXml implements StoreXml {
+public class KahaDBStoreXml extends StoreXml {
 
 	@XmlAttribute(name="checkpoint-interval", required=false)
 	private Long checkpointInterval;

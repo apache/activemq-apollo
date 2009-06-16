@@ -23,6 +23,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.activemq.transport.Transport;
@@ -127,7 +128,11 @@ public class MultiWireFormatFactory implements WireFormatFactory {
         }
 
         public Transport createTransportFilters(Transport transport, Map options) {
-            return transport;
+        	if( wireFormat==null ) {
+        		return transport;
+        	} else {
+        		return wireFormat.createTransportFilters(transport, options);
+        	}
         }
 
         public String getName() {
@@ -137,9 +142,20 @@ public class MultiWireFormatFactory implements WireFormatFactory {
                 return wireFormat.getName();
             }
         }
+
+		public WireFormatFactory getWireFormatFactory() {
+			return new MultiWireFormatFactory(wireFormatFactories);
+		}
     }
 
-    public WireFormat createWireFormat() {
+    public MultiWireFormatFactory() {
+    }
+    
+    public MultiWireFormatFactory(List<WireFormatFactory> factories) {
+    	setWireFormatFactories(factories);
+	}
+
+	public WireFormat createWireFormat() {
         MultiWireFormat rc = new MultiWireFormat();
         if (wireFormatFactories == null) {
             wireFormatFactories = new ArrayList<WireFormatFactory>();
@@ -199,6 +215,12 @@ public class MultiWireFormatFactory implements WireFormatFactory {
     public int maxWireformatHeaderLength() {
         throw new UnsupportedOperationException();
     }
+	public List<WireFormatFactory> getWireFormatFactories() {
+		return new ArrayList<WireFormatFactory>(wireFormatFactories);
+	}
+	public void setWireFormatFactories(List<WireFormatFactory> wireFormatFactories) {
+		this.wireFormatFactories = new ArrayList<WireFormatFactory>(wireFormatFactories);
+	}
 
 
 }

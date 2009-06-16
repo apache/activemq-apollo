@@ -1,12 +1,12 @@
 package org.apache.activemq.apollo.jaxb;
 
-import javax.xml.bind.annotation.XmlSeeAlso;
+import javax.xml.bind.annotation.XmlType;
 
 import org.apache.activemq.broker.store.Store;
 
-@XmlSeeAlso( {MemoryStoreXml.class, KahaDBStoreXml.class} )
-public interface StoreXml {
+@XmlType(name = "storeType")
+public abstract class StoreXml {
 
-	Store createStore();
+	abstract Store createStore();
 
 }

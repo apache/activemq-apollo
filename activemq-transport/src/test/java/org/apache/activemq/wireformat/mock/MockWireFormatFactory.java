@@ -47,6 +47,10 @@ public class MockWireFormatFactory implements WireFormatFactory {
 		public Object unmarshal(DataInput in) throws IOException {
 	        throw new UnsupportedOperationException();
 		}
+
+		public WireFormatFactory getWireFormatFactory() {
+			return new MockWireFormatFactory();
+		}
     }
 
 	public WireFormat createWireFormat() {
