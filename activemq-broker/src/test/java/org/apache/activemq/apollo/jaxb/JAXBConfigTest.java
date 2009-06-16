@@ -50,6 +50,9 @@ public class JAXBConfigTest extends TestCase {
 		assertEquals(expected, broker.getConnectUris());
 		
 		assertEquals(2, broker.getVirtualHosts().size());
+		
+		// assertNotNull(broker.getDefaultVirtualHost().getDatabase());
+		
 	}
 
     protected Broker createBroker() throws Exception {
