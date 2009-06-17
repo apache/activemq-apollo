@@ -296,9 +296,8 @@ public class Broker implements Service {
             for (AsciiBuffer name : hostNames) {
                 virtualHosts.put(name, host);
             }
-
             // The first virtual host defined is the default virtual host.
-            if (virtualHosts.size() == 1) {
+            if (defaultVirtualHost == null) {
                 setDefaultVirtualHost(host);
             }
         }

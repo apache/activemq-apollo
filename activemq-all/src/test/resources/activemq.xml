@@ -24,6 +24,8 @@
   <virtual-host>
     <host-name>localhost</host-name>
     <host-name>test.localhost</host-name>
+    
+    <kahadb-store/>
   </virtual-host>
 
 </broker>

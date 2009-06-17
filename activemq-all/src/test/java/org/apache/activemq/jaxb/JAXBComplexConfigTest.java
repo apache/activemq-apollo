@@ -23,15 +23,16 @@ import junit.framework.TestCase;
 
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
+import org.apache.activemq.broker.store.kahadb.KahaDBStore;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class JAXBConfigTest extends TestCase {
+public class JAXBComplexConfigTest extends TestCase {
 
-    private static final Log LOG = LogFactory.getLog(JAXBConfigTest.class);
+    private static final Log LOG = LogFactory.getLog(JAXBComplexConfigTest.class);
 	
     Broker broker;
     
@@ -48,6 +49,7 @@ public class JAXBConfigTest extends TestCase {
 	public void testBrokerConfiguredCorrectly() throws Exception {
 		assertNotNull(broker);
 		assertEquals("tcp://localhost:61616?wireFormat=openwire", broker.getTransportServers().get(0).getConnectURI().toString());
+		KahaDBStore store = (KahaDBStore)broker.getDefaultVirtualHost().getDatabase().getStore();
 	}
 
     protected Broker createBroker() throws Exception {
