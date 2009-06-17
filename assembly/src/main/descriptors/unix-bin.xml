@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+   
+    http://www.apache.org/licenses/LICENSE-2.0
+   
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<assembly>
+    <id></id> <!-- intentionally left blank -> http://jira.codehaus.org/browse/MASSEMBLY-301 -->
+
+    <formats>
+        <format>tar.gz</format>
+    </formats>
+    
+    <fileSets>
+
+        <!-- Expanded ServiceMix Runtime -->
+        <fileSet>
+            <directory>${basedir}/target/dependencies/unix/apache-servicemix-kernel-${servicemix.kernel.version}</directory>
+            <outputDirectory>/</outputDirectory>
+            <excludes>
+              <exclude>bin/**</exclude>
+              <exclude>demos/**</exclude>
+              <exclude>etc/org.apache.servicemix.features.cfg</exclude>
+              <exclude>LICENSE.txt</exclude>
+              <exclude>NOTICE.txt</exclude>
+              <exclude>README.txt</exclude>
+              <exclude>RELEASE-NOTES.txt</exclude>
+            </excludes>
+        </fileSet>
+
+        <!-- Copy over bin/servicemix separately to get the correct file mode -->
+        <fileSet>
+            <directory>${basedir}/target/dependencies/unix/apache-servicemix-kernel-${servicemix.kernel.version}</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+              <include>bin/*</include>
+            </includes>
+            <fileMode>0755</fileMode>
+        </fileSet>
+
+        <!-- Copy license and other files from root -->
+        <fileSet>
+            <directory>${basedir}/..</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>README.txt</include>
+                <include>RELEASE*.txt</include>
+            </includes>
+            <lineEnding>unix</lineEnding>
+        </fileSet>
+
+        <!--
+        <fileSet>
+            <directory>${basedir}/src/main/distribution/ant</directory>
+            <outputDirectory>/ant</outputDirectory>
+            <lineEnding>unix</lineEnding>
+        </fileSet>        
+      
+        <fileSet>
+            <directory>target/classes/etc</directory>
+            <outputDirectory>/etc/</outputDirectory>
+            <lineEnding>unix</lineEnding>
+        </fileSet>
+
+        <fileSet>
+            <directory>${basedir}/target/features-repo</directory>
+            <outputDirectory>system</outputDirectory>
+        </fileSet>
+  
+        <fileSet>
+            <directory>target/dependencies</directory>
+            <includes>
+                <include>servicemix-version.jar</include>
+            </includes>
+            <outputDirectory>/lib/</outputDirectory>
+        </fileSet>
+
+        <fileSet>
+            <directory>../examples</directory>
+            <outputDirectory>/examples/</outputDirectory>
+            <lineEnding>unix</lineEnding>
+            <excludes>
+                <exclude>**/target/**</exclude>
+            </excludes>
+        </fileSet>
+        -->
+
+    </fileSets>
+
+    <files>
+        <file>
+            <source>${basedir}/target/maven-shared-archive-resources/META-INF/LICENSE</source>
+            <outputDirectory>/</outputDirectory>
+            <destName>LICENSE.txt</destName>
+            <fileMode>0644</fileMode>
+            <lineEnding>unix</lineEnding>
+        </file>
+        <file>
+            <source>${basedir}/target/maven-shared-archive-resources/META-INF/NOTICE</source>
+            <outputDirectory>/</outputDirectory>
+            <destName>NOTICE.txt</destName>
+            <fileMode>0644</fileMode>
+            <lineEnding>unix</lineEnding>
+        </file>
+        <file>
+            <source>${basedir}/target/classes/features.xml</source>
+            <outputDirectory>system/org/apache/servicemix/nmr/${artifactId}/${version}</outputDirectory>
+            <destName>${artifactId}-${version}-features.xml</destName>
+            <fileMode>0644</fileMode>
+            <lineEnding>unix</lineEnding>
+        </file>
+
+    </files>
+
+</assembly>

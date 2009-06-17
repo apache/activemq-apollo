@@ -122,7 +122,8 @@ public class Broker implements Service {
 			dataDirectory = new File(IOHelper.getDefaultDataDirectory());
 		}
 
-		addVirtualHost(getDefaultVirtualHost());
+		// Create the default virtual host if not explicitly defined.
+		getDefaultVirtualHost();
 
 		// Don't change the state to STARTING yet as we may need to 
 		// apply some default configuration to this broker instance before it's started.
@@ -268,6 +269,7 @@ public class Broker implements Service {
                 ArrayList<AsciiBuffer> names = new ArrayList<AsciiBuffer>(1);
                 names.add(DEFAULT_VIRTUAL_HOST_NAME);
                 defaultVirtualHost.setHostNames(names);
+                addVirtualHost(defaultVirtualHost);
             }
             return defaultVirtualHost;
         }
