@@ -142,10 +142,13 @@
         <artifactId>maven-jaxb-schemagen-plugin</artifactId>
         <executions>
           <execution>
-            <phase>compile</phase>
+            <phase>process-sources</phase>
             <configuration>
               <destdir>${project.build.directory}/schema</destdir>
-              <srcdir>${project.build.directory}/schema-src</srcdir>
+              <includes>
+                <include>**/jaxb/package-info.java</include>
+                <include>**/jaxb/*Xml.java</include>
+              </includes>
               <schemas>
                 <schema>
                   <namespace>http://activemq.apache.org/schema/activemq/apollo</namespace>
@@ -154,6 +157,9 @@
               </schemas>
               <!--<verbose>false</verbose>-->
             </configuration>
+            <goals>
+              <goal>generate</goal>
+            </goals> 
           </execution>
         </executions>
       </plugin>  

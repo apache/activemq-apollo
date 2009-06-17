@@ -23,6 +23,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementRef;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.adapters.XmlAdapter;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
@@ -55,13 +56,7 @@ public class VirtualHostXml {
 		VirtualHost rc = new VirtualHost();
 		rc.setHostNames(hostNames);
 		
-//		if( !store.isEmpty() ) {
-//			if( store.size() > 1 )  {
-//				throw new Exception("Only one store is allowed.");
-//			}
-//			rc.setStore(store.get(0).createStore());
-//		}
-		if( store!=null ) {
+		if( store != null ) {
 			rc.setStore(store.createStore());
 		}
 		return rc;
