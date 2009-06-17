@@ -38,8 +38,8 @@ import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.QueueDescriptor;
 
 public abstract class StorePerformanceBase extends TestCase {
-
-    private static int PERFORMANCE_SAMPLES = 5;
+    
+    private static int PERFORMANCE_SAMPLES = 50;
     private static boolean SYNC_TO_DISK = true;
     private static final boolean USE_SHARED_WRITER = true;
 
@@ -56,26 +56,44 @@ public abstract class StorePerformanceBase extends TestCase {
     abstract protected Store createStore();
 
     private SharedWriter writer = null;
-    private Semaphore writePermits = null;
+    
+    private Semaphore enqueuePermits;
+    private Semaphore dequeuePermits;
 
     @Override
     protected void setUp() throws Exception {
         store = createStore();
+        //store.setDeleteAllMessages(false);
         store.start();
 
         if (USE_SHARED_WRITER) {
             writer = new SharedWriter();
             writer.start();
         }
-
-        writePermits = new Semaphore(1000);
-
+        
+        enqueuePermits = new Semaphore(20000000);
+        dequeuePermits = new Semaphore(0);
+        
         queueId = new QueueDescriptor();
         queueId.setQueueName(new AsciiBuffer("test"));
         store.execute(new VoidCallback<Exception>() {
             @Override
             public void run(Session session) throws Exception {
                 session.queueAdd(queueId);
+            }
+        }, null);
+        
+        store.execute(new VoidCallback<Exception>() {
+            @Override
+            public void run(Session session) throws Exception {
+                Iterator<Store.QueueQueryResult> qqrs = session.queueList(queueId, 1);
+                assertTrue(qqrs.hasNext());
+                Store.QueueQueryResult qqr = qqrs.next();
+                if(qqr.getSize() > 0)
+                {
+                    queueKey.set(qqr.getLastSequence() + 1);
+                    System.out.println("Recovered queue: " + qqr.getDescriptor().getQueueName() + " with " + qqr.getCount() + " messages");
+                }                   
             }
         }, null);
     }
@@ -99,8 +117,6 @@ public abstract class StorePerformanceBase extends TestCase {
             store.stop();
         }
     }
-
-    private final Object wakeupMutex = new Object();
 
     class SharedWriter implements Runnable {
         LinkedBlockingQueue<SharedQueueOp> queue = new LinkedBlockingQueue<SharedQueueOp>(1000);
@@ -200,8 +216,8 @@ public abstract class StorePerformanceBase extends TestCase {
 
         public void stop() throws InterruptedException {
             stopped.set(true);
-            while (writePermits.hasQueuedThreads()) {
-                writePermits.release();
+            while (enqueuePermits.hasQueuedThreads()) {
+                enqueuePermits.release();
             }
             thread.join();
         }
@@ -211,7 +227,7 @@ public abstract class StorePerformanceBase extends TestCase {
                 Buffer buffer = new Buffer(new byte[1024]);
                 for (long i = 0; !stopped.get(); i++) {
 
-                    writePermits.acquireUninterruptibly();
+                    enqueuePermits.acquire();
 
                     final MessageRecord messageRecord = new MessageRecord();
                     messageRecord.setKey(store.allocateStoreTracking());
@@ -223,10 +239,6 @@ public abstract class StorePerformanceBase extends TestCase {
                     SharedQueueOp op = new SharedQueueOp() {
                         public void run() {
                             rate.increment();
-                            writePermits.release();
-                            synchronized (wakeupMutex) {
-                                wakeupMutex.notify();
-                            }
                         }
                     };
 
@@ -239,6 +251,7 @@ public abstract class StorePerformanceBase extends TestCase {
                             queueRecord.setQueueKey(queueKey.incrementAndGet());
                             queueRecord.setSize(messageRecord.getSize());
                             session.queueAddMessage(queueId, queueRecord);
+                            dequeuePermits.release();
                         }
                     };
 
@@ -299,6 +312,7 @@ public abstract class StorePerformanceBase extends TestCase {
                     SharedQueueOp op = new SharedQueueOp() {
                         public void run() {
                             rate.increment(records.size());
+                            enqueuePermits.release(records.size());
                             queryWait.release();
                         }
                     };
@@ -324,15 +338,7 @@ public abstract class StorePerformanceBase extends TestCase {
                         writer.addOp(op);
                     }
 
-                    //queryWait.acquireUninterruptibly();
-                    if (records.isEmpty()) {
-                        //                        synchronized (wakeupMutex) {
-                        //                            try {
-                        //                                wakeupMutex.wait(500);
-                        //                            } catch (InterruptedException e) {
-                        //                            }
-                        //                        }
-                    }
+                    dequeuePermits.acquire();
                     records.clear();
                 }
             } catch (InterruptedException e) {
@@ -346,6 +352,12 @@ public abstract class StorePerformanceBase extends TestCase {
         }
     }
 
+    public void test1_1_0() throws Exception {
+        startProducers(1);
+        reportRates();
+    }
+    
+    
     public void test1_1_1() throws Exception {
         startProducers(1);
         startConsumers(1);

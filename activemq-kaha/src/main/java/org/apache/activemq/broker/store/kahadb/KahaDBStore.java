@@ -193,6 +193,17 @@ public class KahaDBStore implements Store {
                     }
                 }
             }
+            
+            if (deleteAllMessages) {
+                getJournal().start();
+                journal.delete();
+                journal.close();
+                journal = null;
+                getPageFile().delete();
+                rootEntity = new RootEntity();
+                LOG.info("Persistence store purged.");
+                deleteAllMessages = false;
+            }
 
             getJournal().start();
 
@@ -236,18 +247,7 @@ public class KahaDBStore implements Store {
         try {
             open();
 
-            if (deleteAllMessages) {
-                journal.delete();
-
-                pageFile.unload();
-                pageFile.delete();
-                rootEntity = new RootEntity();
-
-                LOG.info("Persistence store purged.");
-                deleteAllMessages = false;
-
-                loadPageFile();
-            }
+            
             store(new Trace.TraceBean().setMessage(new AsciiBuffer("LOADED " + new Date())), null);
         } finally {
             indexLock.writeLock().unlock();
@@ -439,8 +439,9 @@ public class KahaDBStore implements Store {
 
     protected void checkpointCleanup(final boolean cleanup) {
         try {
-            long start = System.currentTimeMillis();
             indexLock.writeLock().lock();
+            long start = System.currentTimeMillis();
+            
             try {
                 if (!opened.get()) {
                     return;
@@ -455,7 +456,11 @@ public class KahaDBStore implements Store {
             }
             long end = System.currentTimeMillis();
             if (end - start > 1000) {
-                LOG.warn("KahaDB Cleanup took " + (end - start));
+                if (cleanup) {
+                    LOG.warn("KahaDB Cleanup took " + (end - start));
+                } else {
+                    LOG.warn("KahaDB CheckPoint took " + (end - start));
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -503,77 +508,7 @@ public class KahaDBStore implements Store {
                 gcCandidateSet.removeAll(journalFilesBeingReplicated);
             }
 
-            // Don't GC files after the first in progress tx
-            Location firstTxLocation = rootEntity.getLastUpdate();
-
-            if (firstTxLocation != null) {
-                while (!gcCandidateSet.isEmpty()) {
-                    Integer last = gcCandidateSet.last();
-                    if (last >= firstTxLocation.getDataFileId()) {
-                        gcCandidateSet.remove(last);
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            // // Go through all the destinations to see if any of them can
-            // remove GC candidates.
-            // for (StoredDestinationState sd : storedDestinations.values()) {
-            // if( gcCandidateSet.isEmpty() ) {
-            // break;
-            // }
-            //                
-            // // Use a visitor to cut down the number of pages that we load
-            // dbstate.locationIndex.visit(tx, new BTreeVisitor<Location,
-            // Long>() {
-            // int last=-1;
-            // public boolean isInterestedInKeysBetween(Location first, Location
-            // second) {
-            // if( first==null ) {
-            // SortedSet<Integer> subset =
-            // gcCandidateSet.headSet(second.getDataFileId()+1);
-            // if( !subset.isEmpty() && subset.last() == second.getDataFileId()
-            // ) {
-            // subset.remove(second.getDataFileId());
-            // }
-            // return !subset.isEmpty();
-            // } else if( second==null ) {
-            // SortedSet<Integer> subset =
-            // gcCandidateSet.tailSet(first.getDataFileId());
-            // if( !subset.isEmpty() && subset.first() == first.getDataFileId()
-            // ) {
-            // subset.remove(first.getDataFileId());
-            // }
-            // return !subset.isEmpty();
-            // } else {
-            // SortedSet<Integer> subset =
-            // gcCandidateSet.subSet(first.getDataFileId(),
-            // second.getDataFileId()+1);
-            // if( !subset.isEmpty() && subset.first() == first.getDataFileId()
-            // ) {
-            // subset.remove(first.getDataFileId());
-            // }
-            // if( !subset.isEmpty() && subset.last() == second.getDataFileId()
-            // ) {
-            // subset.remove(second.getDataFileId());
-            // }
-            // return !subset.isEmpty();
-            // }
-            // }
-            //    
-            // public void visit(List<Location> keys, List<Long> values) {
-            // for (Location l : keys) {
-            // int fileId = l.getDataFileId();
-            // if( last != fileId ) {
-            // gcCandidateSet.remove(fileId);
-            // last = fileId;
-            // }
-            // }
-            // }
-            //    
-            // });
-            // }
+            rootEntity.removeGCCandidates(gcCandidateSet, tx);
 
             if (!gcCandidateSet.isEmpty()) {
                 if (LOG.isErrorEnabled()) {
@@ -646,7 +581,7 @@ public class KahaDBStore implements Store {
                 LOG.warn("KahaDB long enqueue time: Journal Add Took: " + (start2 - start) + " ms, Index Update took " + (end - start2) + " ms");
             }
             return location;
-            
+
         } finally {
             if (tx == null)
                 indexLock.writeLock().unlock();

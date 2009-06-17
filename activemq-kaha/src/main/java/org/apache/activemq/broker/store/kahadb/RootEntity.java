@@ -22,7 +22,10 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.SortedSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.Map.Entry;
 
 import org.apache.activemq.broker.store.Store;
@@ -32,14 +35,19 @@ import org.apache.activemq.broker.store.kahadb.Data.MessageAdd;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.kahadb.index.BTreeIndex;
+import org.apache.kahadb.index.BTreeVisitor;
 import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.page.Page;
 import org.apache.kahadb.page.Transaction;
+import org.apache.kahadb.util.IntegerMarshaller;
 import org.apache.kahadb.util.LongMarshaller;
 import org.apache.kahadb.util.Marshaller;
 import org.apache.kahadb.util.VariableMarshaller;
 
 public class RootEntity {
+
+    //TODO remove this one performance testing is complete. 
+    private static final boolean USE_LOC_INDEX = true;
 
     public final static Marshaller<RootEntity> MARSHALLER = new VariableMarshaller<RootEntity>() {
         public RootEntity readPayload(DataInput is) throws IOException {
@@ -47,7 +55,8 @@ public class RootEntity {
             rc.state = is.readInt();
             rc.maxMessageKey = is.readLong();
             rc.messageKeyIndex = new BTreeIndex<Long, Location>(is.readLong());
-            // rc.locationIndex = new BTreeIndex<Location, Long>(is.readLong());
+            if (USE_LOC_INDEX)
+                rc.locationIndex = new BTreeIndex<Integer, Long>(is.readLong());
             rc.destinationIndex = new BTreeIndex<AsciiBuffer, DestinationEntity>(is.readLong());
             rc.messageRefsIndex = new BTreeIndex<Long, Long>(is.readLong());
             if (is.readBoolean()) {
@@ -62,7 +71,8 @@ public class RootEntity {
             os.writeInt(object.state);
             os.writeLong(object.maxMessageKey);
             os.writeLong(object.messageKeyIndex.getPageId());
-            // os.writeLong(object.locationIndex.getPageId());
+            if (USE_LOC_INDEX)
+                os.writeLong(object.locationIndex.getPageId());
             os.writeLong(object.destinationIndex.getPageId());
             os.writeLong(object.messageRefsIndex.getPageId());
             if (object.lastUpdate != null) {
@@ -86,7 +96,7 @@ public class RootEntity {
     // Message Indexes
     private long maxMessageKey;
     private BTreeIndex<Long, Location> messageKeyIndex;
-    // private BTreeIndex<Location, Long> locationIndex;
+    private BTreeIndex<Integer, Long> locationIndex;
     private BTreeIndex<Long, Long> messageRefsIndex; // Maps message key to ref
     // count:
 
@@ -107,8 +117,8 @@ public class RootEntity {
         state = KahaDBStore.CLOSED_STATE;
 
         messageKeyIndex = new BTreeIndex<Long, Location>(tx.getPageFile(), tx.allocate().getPageId());
-        // locationIndex = new BTreeIndex<Location, Long>(tx.getPageFile(),
-        // tx.allocate().getPageId());
+        if (USE_LOC_INDEX)
+            locationIndex = new BTreeIndex<Integer, Long>(tx.getPageFile(), tx.allocate().getPageId());
         destinationIndex = new BTreeIndex<AsciiBuffer, DestinationEntity>(tx.getPageFile(), tx.allocate().getPageId());
         messageRefsIndex = new BTreeIndex<Long, Long>(tx.getPageFile(), tx.allocate().getPageId());
 
@@ -128,10 +138,13 @@ public class RootEntity {
                 maxMessageKey = last.getKey();
             }
         }
-        // locationIndex.setPageFile(tx.getPageFile());
-        // locationIndex.setKeyMarshaller(Marshallers.LOCATION_MARSHALLER);
-        // locationIndex.setValueMarshaller(LongMarshaller.INSTANCE);
-        // locationIndex.load(tx);
+
+        if (USE_LOC_INDEX) {
+            locationIndex.setPageFile(tx.getPageFile());
+            locationIndex.setKeyMarshaller(IntegerMarshaller.INSTANCE);
+            locationIndex.setValueMarshaller(LongMarshaller.INSTANCE);
+            locationIndex.load(tx);
+        }
 
         destinationIndex.setPageFile(tx.getPageFile());
         destinationIndex.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
@@ -245,15 +258,31 @@ public class RootEntity {
             // Message existed.. undo the index update we just did. Chances
             // are it's a transaction replay.
             messageKeyIndex.put(tx, id, previous);
+        } else {
+            if (USE_LOC_INDEX) {
+                Long refs = locationIndex.get(tx, location.getDataFileId());
+                if (refs == null) {
+                    locationIndex.put(tx, location.getDataFileId(), new Long(1));
+                } else {
+                    locationIndex.put(tx, location.getDataFileId(), new Long(refs.longValue() + 1));
+                }
+            }
         }
     }
 
     public void messageRemove(Transaction tx, Long messageKey) throws IOException {
         // Location location = messageKeyIndex.remove(tx, messageKey);
-        messageKeyIndex.remove(tx, messageKey);
-        // if (location != null) {
-        // locationIndex.remove(tx, location);
-        // }
+        Location location = messageKeyIndex.remove(tx, messageKey);
+        if (USE_LOC_INDEX && location != null) {
+            Long refs = locationIndex.get(tx, location.getDataFileId());
+            if (refs != null) {
+                if (refs.longValue() <= 1) {
+                    locationIndex.remove(tx, location.getDataFileId());
+                } else {
+                    locationIndex.put(tx, location.getDataFileId(), new Long(refs.longValue() - 1));
+                }
+            }
+        }
     }
 
     public Location messageGetLocation(Transaction tx, Long messageKey) {
@@ -436,34 +465,137 @@ public class RootEntity {
         //TODO check that none of the locations specified by the indexes
         //are past the last update location in the journal. This can happen
         //if the index is flushed before the journal. 
-        //
-        //Collection<DestinationEntity> values = destinations.values();
-        //for (DestinationEntity de : values) {
-        //    count += 
-        //}
-        // Go through all the destinations to see if they have messages past
-        // the lastAppendLocation
-        //for (StoredDestinationState sd : 
-        //          
-        // final ArrayList<Long> matches = new ArrayList<Long>();
-        // // Find all the Locations that are >= than the last Append Location.
-        // sd.locationIndex.visit(tx, new BTreeVisitor.GTEVisitor<Location,
-        // Long>(lastAppendLocation) {
-        // @Override
-        // protected void matched(Location key, Long value) {
-        // matches.add(value);
-        // }
-        // });
-        //            
-        //            
-        // for (Long sequenceId : matches) {
-        // MessageKeys keys = sd.orderIndex.remove(tx, sequenceId);
-        // sd.locationIndex.remove(tx, keys.location);
-        // sd.messageIdIndex.remove(tx, keys.messageId);
-        // undoCounter++;
-        // // TODO: do we need to modify the ack positions for the pub sub case?
-        // }
-        // }
-        return 0;
+        int count = 0;
+        
+        //TODO: It might be better to tie the the index update to the journal write
+        //so that we can be sure that all journal entries are on disk prior to 
+        //index update. 
+
+        //Scan MessageKey Index to find message keys past the last append 
+        //location:
+//        final ArrayList<Long> matches = new ArrayList<Long>();
+//        messageKeyIndex.visit(tx, new BTreeVisitor.GTEVisitor<Location, Long>(lastAppendLocation) {
+//
+//            @Override
+//            protected void matched(Location key, Long value) {
+//                matches.add(value);
+//            }
+//        });
+        
+        
+//        for (Long sequenceId : matches) {
+//        MessageKeys keys = sd.orderIndex.remove(tx, sequenceId);
+//        sd.locationIndex.remove(tx, keys.location);
+//        sd.messageIdIndex.remove(tx, keys.messageId);
+//        count++;
+//        }
+
+        //                 @Override
+        //                 protected void matched(Location key, Long value) {
+        //                 matches.add(value);
+        //                 }
+        //                 });
+        //                            
+        //                            
+        //                 for (Long sequenceId : matches) {
+        //                 MessageKeys keys = sd.orderIndex.remove(tx, sequenceId);
+        //                 sd.locationIndex.remove(tx, keys.location);
+        //                 sd.messageIdIndex.remove(tx, keys.messageId);
+        //                 undoCounter++;
+        //             })
+
+        //        for (DestinationEntity de : destinations.values()) {
+        //             final ArrayList<Long> matches = new ArrayList<Long>();
+        //             // Find all the Locations that are >= than the last Append Location.
+        //             sd.locationIndex.visit(tx, new BTreeVisitor.GTEVisitor<Location,
+        //                 Long>(lastAppendLocation) {
+        //                 @Override
+        //                 protected void matched(Location key, Long value) {
+        //                 matches.add(value);
+        //                 }
+        //                 });
+        //                            
+        //                            
+        //                 for (Long sequenceId : matches) {
+        //                 MessageKeys keys = sd.orderIndex.remove(tx, sequenceId);
+        //                 sd.locationIndex.remove(tx, keys.location);
+        //                 sd.messageIdIndex.remove(tx, keys.messageId);
+        //                 undoCounter++;
+        //             }
+        //        }
+        return count;
+    }
+
+    /**
+     * Go through indexes checking to
+     * 
+     * @param gcCandidateSet
+     * @throws IOException
+     */
+    final void removeGCCandidates(final TreeSet<Integer> gcCandidateSet, Transaction tx) throws IOException {
+
+        // Don't GC files after the first in progress tx
+        Location firstTxLocation = lastUpdate;
+
+        if (firstTxLocation != null) {
+            while (!gcCandidateSet.isEmpty()) {
+                Integer last = gcCandidateSet.last();
+                if (last >= firstTxLocation.getDataFileId()) {
+                    gcCandidateSet.remove(last);
+                } else {
+                    break;
+                }
+            }
+        }
+
+        if (gcCandidateSet.isEmpty()) {
+            return;
+        }
+
+        if (!USE_LOC_INDEX) {
+            return;
+        }
+
+        // Go through the location index to see if we can remove gc candidates:
+        // Use a visitor to cut down the number of pages that we load
+        locationIndex.visit(tx, new BTreeVisitor<Integer, Long>() {
+            int last = -1;
+
+            public boolean isInterestedInKeysBetween(Integer first, Integer second) {
+                if (first == null) {
+                    SortedSet<Integer> subset = gcCandidateSet.headSet(second + 1);
+                    if (!subset.isEmpty() && subset.last().equals(second)) {
+                        subset.remove(second);
+                    }
+                    return !subset.isEmpty();
+                } else if (second == null) {
+                    SortedSet<Integer> subset = gcCandidateSet.tailSet(first);
+                    if (!subset.isEmpty() && subset.first().equals(first)) {
+                        subset.remove(first);
+                    }
+                    return !subset.isEmpty();
+                } else {
+                    SortedSet<Integer> subset = gcCandidateSet.subSet(first, second + 1);
+                    if (!subset.isEmpty() && subset.first().equals(first)) {
+                        subset.remove(first);
+                    }
+                    if (!subset.isEmpty() && subset.last().equals(second)) {
+                        subset.remove(second);
+                    }
+                    return !subset.isEmpty();
+                }
+            }
+
+            public void visit(List<Integer> keys, List<Long> values) {
+                for (Integer l : keys) {
+                    int fileId = l;
+                    if (last != fileId) {
+                        gcCandidateSet.remove(fileId);
+                        last = fileId;
+                    }
+                }
+            }
+        });
+
     }
 }
