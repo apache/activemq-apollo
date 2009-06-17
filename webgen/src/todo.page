@@ -41,11 +41,29 @@ Lots of work still to be done here\!
 * Common interfaces for Connection/Session/*Consumer for the broker to interact with?
 * Threading model ... We should probably come up with a good abstract base class for the protocol handlers that helps to provide a threading model that will make synchronization between I/O events (exceptions etc), protocol events and message dispatch). 
 
-h2. Replication:
+h2. Standalone Broker Server
 
-* This should be handled by KahaDB replication
-* Still need to think about replication of non persistent messages, though ...e.g. messages that are never saved to disk but only replicated to peers.
-* Recovery time. Keep state fairly hot to achieve fast failover time, we'll want to keep optimizations in this area in mind (basically messages that are in memory on the active broker are kept in memory on the standby as well).
+The standalone broker would be probably best implemented as a set of OSGi services running in the Apache Karaf server.  Karaf is basically a small OSGi based micro server.
+* Implement Karaf 'features' bundles for the ActiveMQ sevices
+* Setup a customized binary distro of Karaf with the ActiveMQ features.  Ideally the Karaf distro is customized so that it displays ActiveMQ branding.
+
+h2. JMX / Management Integration
+
+In 5.x all the JMX bits are tightly coupled to the broker core implementation which made it hard to extend or provide alternative management interfaces to the broker.   What would be ideal is if the broker core did not depend on any management modules.  This would require all interesting broker resources to be easy to navigate to and be externally watched by the management modules.  Some more research would be needed in this area.
+
+h2. IoC / Container Integration
+
+h3. Spring Integration
+
+Need to make sure it easy to:
+* configure and embedded broker in Spring xml files
+* create connection factories (including the XA and pooled variants) in spring xml 
+
+We should put all the spring bits in the activemq-spring module to avoid tightly coupling the broker with Spring like was the case with the 5.x version of the broker.
+
+h3. J2EE Resource Adapter
+
+The 5.x Resource Adapter will need to get ported to support integrating with J2EE servers like Geronimio.
 
 h2. General Interface cleanliness
 
@@ -55,10 +73,15 @@ h2. Testing
 
 As much of the work to date has been largely experimental in nature, testing up to now has focussed mainly on end to end type performance tests, but more unit testing and functional testing of edge cases such as slow subscriber test etc are needed. 
 
-h1. Misc Tasks
+Almost all the 5.x tests have been copied over into the activemq-all module under a legacy package.  The build is configured not to run any of the legacy tests. We need to try to port legacy tests to the 6.x APIs and try to make them pass then move them out of the legacy package once they are passing so that they are run by the maven build.
+
+h2. Misc Tasks
 
 * InactivityMonitor needs to get inserted for OpenWire on the server side of MultiWireFormat negotiation.
 * BIO SSL Transport does not currently pass Client Certificate chain in OpenWire ConnectionInfo command. This used to be done by the SSL transport but this shouldn't have OpenWire dependencies; instead protocol handler should be able to retrieve it from the underlying transport as needed. 
 
+h2. General Cleanup / Abstraction Leaks / Smelly Stuff
 
+* TransportFactory Spaghetti Inheritance: It's way too complicated for folks implementing a TransportFactory to know which methods to override and to get it right.  Might be better to avoid the base class and just provide static utility methods.
+* Factories that take a URI should probably be changed to just take a String.  More generic, and easier to use from a end user perspective.  If a factory does require a String to be URI formated, it can under the covers still parse the string with a URI class.
 
