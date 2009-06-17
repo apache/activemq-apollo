@@ -59,18 +59,13 @@ public class VMTransportFactory extends PipeTransportFactory {
 
 		@Override
 		protected PipeTransport createClientTransport(Pipe<Object> pipe) {
+			refs.incrementAndGet();
+
 			return new PipeTransport(pipe) {
-				AtomicBoolean started = new AtomicBoolean();
-				@Override
-				public void start() throws Exception {
-					if( started.compareAndSet(false, true) ) { 
-						refs.incrementAndGet();
-						super.start();
-					}
-				}
+				AtomicBoolean stopped = new AtomicBoolean();
 				@Override
 				public void stop() throws Exception {
-					if( started.compareAndSet(true, false) ) { 
+					if( stopped.compareAndSet(false, true) ) { 
 						super.stop();
 						if( refs.decrementAndGet() == 0 ) {
 							stopBroker();

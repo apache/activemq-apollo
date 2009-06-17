@@ -24,6 +24,7 @@ import junit.framework.TestCase;
 
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
+import org.apache.activemq.broker.store.memory.MemoryStore;
 import org.apache.activemq.dispatch.AbstractPooledDispatcher;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,6 +53,8 @@ public class JAXBConfigTest extends TestCase {
 		assertEquals(2, broker.getVirtualHosts().size());
 		
 		assertNotNull(broker.getDefaultVirtualHost().getDatabase());
+		assertNotNull(broker.getDefaultVirtualHost().getDatabase().getStore());
+		assertTrue( broker.getDefaultVirtualHost().getDatabase().getStore() instanceof MemoryStore );
 		
 	}
 

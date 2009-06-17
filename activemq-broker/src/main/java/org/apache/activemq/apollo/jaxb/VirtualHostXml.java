@@ -49,7 +49,7 @@ public class VirtualHostXml {
     @XmlElement(name="host-name", required=true)
     private ArrayList<AsciiBuffer> hostNames = new ArrayList<AsciiBuffer>();
 
-    @XmlElementRef    
+    @XmlElementRef   
     private StoreXml store;
     
 	public VirtualHost createVirtualHost(BrokerXml brokerXml) throws Exception {

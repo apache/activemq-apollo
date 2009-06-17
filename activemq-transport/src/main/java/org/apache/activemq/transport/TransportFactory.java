@@ -138,6 +138,11 @@ public abstract class TransportFactory {
             Transport transport = createTransport(location, wf);
             Transport rc = configure(transport, wf, options);
             if (!options.isEmpty()) {
+            	// Release the transport resource as we are erroring out...
+            	try {
+            		rc.stop();
+            	} catch (Throwable cleanup) {
+            	}
                 throw new IllegalArgumentException("Invalid connect parameters: " + options);
             }
             return rc;

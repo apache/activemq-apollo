@@ -100,7 +100,7 @@ public class ActiveMQConnectionFactoryTest extends AutoFailTestSupport {
                                                                      "vm://localhost?jms.redeliveryPolicy.maximumRedeliveries=2");
         assertEquals("connection redeliveries", 2, cf.getRedeliveryPolicy().getMaximumRedeliveries());
 
-        ActiveMQConnection connection = (ActiveMQConnection)cf.createConnection();
+        connection = (ActiveMQConnection)cf.createConnection();
         assertEquals("connection redeliveries", 2, connection.getRedeliveryPolicy().getMaximumRedeliveries());
 
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
@@ -111,7 +111,7 @@ public class ActiveMQConnectionFactoryTest extends AutoFailTestSupport {
     }
 
     public void testCreateVMConnectionWithEmbdeddBroker() throws URISyntaxException, JMSException {
-        ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory("vm://localhost?broker.persistent=false");
+        ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml");
         // Make sure the broker is not created until the connection is
         // instantiated.
         assertNull(VMTransportFactory.lookup("localhost"));
@@ -128,7 +128,7 @@ public class ActiveMQConnectionFactoryTest extends AutoFailTestSupport {
     }
 
     public void testGetBrokerName() throws URISyntaxException, JMSException {
-        ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory("vm://localhost?broker.persistent=false");
+        ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml");
         connection = (ActiveMQConnection)cf.createConnection();
         connection.start();
 
@@ -138,16 +138,8 @@ public class ActiveMQConnectionFactoryTest extends AutoFailTestSupport {
         assertNotNull("No broker name available!", brokerName);
     }
 
-    public void testCreateTcpConnectionUsingAllocatedPort() throws Exception {
-        assertCreateConnection("tcp://localhost:0?wireFormat.tcpNoDelayEnabled=true");
-    }
-
-    public void testCreateTcpConnectionUsingKnownPort() throws Exception {
-        assertCreateConnection("tcp://localhost:61610?wireFormat.tcpNoDelayEnabled=true");
-    }
-
     public void testConnectionFailsToConnectToVMBrokerThatIsNotRunning() throws Exception {
-        ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory("vm://localhost?create=false");
+        ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory("vm://doesnotexist?create=false");
         try {
             factory.createConnection();
             fail("Expected connection failure.");
@@ -174,6 +166,7 @@ public class ActiveMQConnectionFactoryTest extends AutoFailTestSupport {
         ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml");
         connection = (ActiveMQConnection)cf.createConnection();
         assertNull(connection.getExceptionListener());
+        connection.close();
         
         ExceptionListener exListener = new ExceptionListener() {
 			public void onException(JMSException arg0) {
@@ -184,12 +177,20 @@ public class ActiveMQConnectionFactoryTest extends AutoFailTestSupport {
         connection = (ActiveMQConnection)cf.createConnection();
         assertNotNull(connection.getExceptionListener());
         assertEquals(exListener, connection.getExceptionListener());
+        connection.close();
         
         connection = (ActiveMQConnection)cf.createConnection();
         assertEquals(exListener, connection.getExceptionListener());
-        
         assertEquals(exListener, cf.getExceptionListener());
         
+    }
+    
+    public void testCreateTcpConnectionUsingAllocatedPort() throws Exception {
+        assertCreateConnection("tcp://localhost:0?wireFormat.tcpNoDelayEnabled=true");
+    }
+
+    public void testCreateTcpConnectionUsingKnownPort() throws Exception {
+        assertCreateConnection("tcp://localhost:61610?wireFormat.tcpNoDelayEnabled=true");
     }
 
     protected void assertCreateConnection(String uri) throws Exception {
