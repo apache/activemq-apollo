@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 
+import org.apache.activemq.Service;
 import org.apache.activemq.apollo.WindowLimiter;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerConnection;
@@ -127,6 +128,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             public Response processAddConsumer(ConsumerInfo info) throws Exception {
                 ConsumerContext ctx = new ConsumerContext(info);
                 consumers.put(info.getConsumerId(), ctx);
+                ctx.start();
                 return ack(info);
             }
 
@@ -150,7 +152,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             public Response processRemoveConsumer(RemoveInfo remove, ConsumerId info, long arg1) throws Exception {
                 ConsumerContext ctx = consumers.remove(info);
                 if (ctx != null) {
-                    //TODO add close logic
+                	ctx.stop();
                 }
                 ack(remove);
                 return null;
@@ -434,7 +436,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         }
     }
 
-    class ConsumerContext extends AbstractLimitedFlowResource<MessageDelivery> implements ProtocolHandler.ConsumerContext {
+    class ConsumerContext extends AbstractLimitedFlowResource<MessageDelivery> implements ProtocolHandler.ConsumerContext, Service {
 
         private final ConsumerInfo info;
         private String name;
@@ -445,8 +447,9 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         private final FlowController<MessageDelivery> controller;
         private final WindowLimiter<MessageDelivery> limiter;
 
-        HashMap<MessageId, SubscriptionDeliveryCallback> pendingMessages = new HashMap<MessageId, SubscriptionDeliveryCallback>();
-        LinkedList<MessageId> pendingMessageIds = new LinkedList<MessageId>();
+        private HashMap<MessageId, SubscriptionDeliveryCallback> pendingMessages = new HashMap<MessageId, SubscriptionDeliveryCallback>();
+        private LinkedList<MessageId> pendingMessageIds = new LinkedList<MessageId>();
+		private BrokerSubscription brokerSubscription;
 
         public ConsumerContext(final ConsumerInfo info) throws Exception {
             this.info = info;
@@ -465,10 +468,18 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             controller.useOverFlowQueue(false);
             controller.setExecutor(connection.getDispatcher().createPriorityExecutor(connection.getDispatcher().getDispatchPriorities() - 1));
             super.onFlowOpened(controller);
-
-            BrokerSubscription sub = host.createSubscription(this);
-            sub.connect(this);
         }
+
+        
+		public void start() throws Exception {
+            brokerSubscription = host.createSubscription(this);
+            brokerSubscription.connect(this);
+		}
+
+		public void stop() throws Exception {
+			brokerSubscription.disconnect(this);
+		}
+
 
         public boolean offer(final MessageDelivery message, ISourceController<?> source, SubscriptionDeliveryCallback callback) {
             if (!controller.offer(message, source)) {
