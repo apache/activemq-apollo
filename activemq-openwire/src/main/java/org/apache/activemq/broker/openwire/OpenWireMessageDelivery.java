@@ -33,7 +33,6 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
     static final private AsciiBuffer ENCODING = new AsciiBuffer("openwire");
 
     private final Message message;
-    private Destination destination;
     private AsciiBuffer producerId;
     private OpenWireFormat storeWireFormat;
     private PersistListener persistListener = null;
@@ -53,10 +52,7 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
     }
 
     public Destination getDestination() {
-        if (destination == null) {
-            destination = OpenwireProtocolHandler.convert(message.getDestination());
-        }
-        return destination;
+        return message.getDestination();
     }
 
     public int getMemorySize() {

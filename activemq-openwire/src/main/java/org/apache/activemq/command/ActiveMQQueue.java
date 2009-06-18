@@ -16,8 +16,14 @@
  */
 package org.apache.activemq.command;
 
+import java.util.Collection;
+
 import javax.jms.JMSException;
 import javax.jms.Queue;
+
+import org.apache.activemq.apollo.broker.Destination;
+import org.apache.activemq.apollo.broker.Router;
+import org.apache.activemq.protobuf.AsciiBuffer;
 
 /**
  * 
@@ -58,5 +64,10 @@ public class ActiveMQQueue extends ActiveMQDestination implements Queue {
     protected String getQualifiedPrefix() {
         return QUEUE_QUALIFIED_PREFIX;
     }
+
+	@Override
+	public AsciiBuffer getDomain() {
+		return Router.QUEUE_DOMAIN;
+	}
 
 }

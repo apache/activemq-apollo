@@ -17,6 +17,7 @@
 package org.apache.activemq.broker.openwire;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 
@@ -30,7 +31,6 @@ import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.apollo.broker.ProtocolHandler;
 import org.apache.activemq.apollo.broker.Router;
 import org.apache.activemq.apollo.broker.VirtualHost;
-import org.apache.activemq.apollo.broker.BrokerSubscription.UserAlreadyConnectedException;
 import org.apache.activemq.broker.openwire.OpenWireMessageDelivery.PersistListener;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.command.ActiveMQDestination;
@@ -81,7 +81,6 @@ import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.openwire.OpenWireFormat;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.selector.SelectorParser;
 import org.apache.activemq.state.CommandVisitor;
@@ -100,6 +99,8 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
     private Router router;
     private VirtualHost host;
     private final CommandVisitor visitor;
+    
+    ArrayList<ActiveMQDestination> temporaryDestinations = new ArrayList<ActiveMQDestination>(); 
 
     public OpenwireProtocolHandler() {
         setStoreWireFormat(new OpenWireFormat());
@@ -159,6 +160,10 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             // Message Processing Methods.
             // /////////////////////////////////////////////////////////////////
             public Response processMessage(Message info) throws Exception {
+            	if( info.getOriginalDestination() == null ) {
+            		info.setOriginalDestination(info.getDestination());
+            	}
+            	
                 ProducerId producerId = info.getProducerId();
                 ProducerContext producerContext = producers.get(producerId);
 
@@ -249,7 +254,14 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             // Methods for server management
             // /////////////////////////////////////////////////////////////////
             public Response processAddDestination(DestinationInfo info) throws Exception {
-                throw new UnsupportedOperationException();
+            	ActiveMQDestination destination = info.getDestination();
+				if( destination.isTemporary() ) {
+					// Keep track of it so that we can remove them this connection 
+					// shuts down.
+            		temporaryDestinations.add(destination);
+            	}
+            	host.createQueue(destination);
+                return ack(info);
             }
 
             public Response processRemoveDestination(DestinationInfo info) throws Exception {
@@ -577,7 +589,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
          * #getDestination()
          */
         public Destination getDestination() {
-            return convert(info.getDestination());
+            return info.getDestination();
         }
 
         /*
@@ -679,26 +691,6 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 			return true;
 		}
 
-    }
-
-    static public Destination convert(ActiveMQDestination dest) {
-        if (dest.isComposite()) {
-            ActiveMQDestination[] compositeDestinations = dest.getCompositeDestinations();
-            Destination.MultiDestination md = new Destination.MultiDestination();
-            for (int i = 0; i < compositeDestinations.length; i++) {
-                md.add(convert(compositeDestinations[i]));
-            }
-            return md;
-        }
-        AsciiBuffer domain;
-        if (dest.isQueue()) {
-            domain = Router.QUEUE_DOMAIN;
-        } else if (dest.isTopic()) {
-            domain = Router.TOPIC_DOMAIN;
-        } else {
-            throw new IllegalArgumentException("Unsupported domain type: " + dest);
-        }
-        return new Destination.SingleDestination(domain, new AsciiBuffer(dest.getPhysicalName()));
     }
 
     private static BooleanExpression parseSelector(ConsumerInfo info) throws FilterException {

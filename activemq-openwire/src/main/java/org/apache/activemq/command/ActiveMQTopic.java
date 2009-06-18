@@ -19,6 +19,9 @@ package org.apache.activemq.command;
 import javax.jms.JMSException;
 import javax.jms.Topic;
 
+import org.apache.activemq.apollo.broker.Router;
+import org.apache.activemq.protobuf.AsciiBuffer;
+
 /**
  * @org.apache.xbean.XBean element="topic" description="An ActiveMQ Topic
  *                         Destination"
@@ -56,5 +59,10 @@ public class ActiveMQTopic extends ActiveMQDestination implements Topic {
     protected String getQualifiedPrefix() {
         return TOPIC_QUALIFIED_PREFIX;
     }
+
+	@Override
+	public AsciiBuffer getDomain() {
+		return Router.TOPIC_DOMAIN;
+	}
 
 }

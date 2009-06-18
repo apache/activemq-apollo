@@ -4,7 +4,8 @@ package org.apache.activemq.protobuf;
 final public class AsciiBuffer extends Buffer {
 
     private int hashCode;
-
+    private String value;
+    
     public AsciiBuffer(Buffer other) {
         super(other);
     }
@@ -17,8 +18,9 @@ final public class AsciiBuffer extends Buffer {
         super(data);
     }
 
-    public AsciiBuffer(String input) {
-        super(encode(input));
+    public AsciiBuffer(String value) {
+        super(encode(value));
+        this.value = value;
     }
 
     public AsciiBuffer compact() {
@@ -30,7 +32,10 @@ final public class AsciiBuffer extends Buffer {
 
     public String toString()
     {
-        return decode(this);
+    	if( value == null ) {
+    		value = decode(this); 
+    	}
+        return value; 
     }
 
     @Override

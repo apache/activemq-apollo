@@ -19,6 +19,9 @@ package org.apache.activemq.command;
 import javax.jms.JMSException;
 import javax.jms.TemporaryTopic;
 
+import org.apache.activemq.apollo.broker.Router;
+import org.apache.activemq.protobuf.AsciiBuffer;
+
 /**
  * @openwire:marshaller code="103"
  * @version $Revision: 1.6 $
@@ -58,4 +61,9 @@ public class ActiveMQTempTopic extends ActiveMQTempDestination implements Tempor
     protected String getQualifiedPrefix() {
         return TEMP_TOPIC_QUALIFED_PREFIX;
     }
+
+	@Override
+	public AsciiBuffer getDomain() {
+		return Router.TEMP_TOPIC_DOMAIN;
+	}
 }

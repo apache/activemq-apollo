@@ -44,6 +44,74 @@ public class BrokerTest extends BrokerTestSupport {
     public boolean durableConsumer;
     protected static final int MAX_NULL_WAIT=500;
 
+    public void initCombosForTestCompositeSend() {
+        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
+                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
+        addCombinationValues("destinationType", new Object[] {Byte.valueOf(ActiveMQDestination.QUEUE_TYPE),
+                                                              Byte.valueOf(ActiveMQDestination.TOPIC_TYPE)});
+    }
+
+    public void testCompositeSend() throws Exception {
+
+        // Setup a first connection
+        StubConnection connection1 = createConnection();
+        ConnectionInfo connectionInfo1 = createConnectionInfo();
+        SessionInfo sessionInfo1 = createSessionInfo(connectionInfo1);
+        ProducerInfo producerInfo1 = createProducerInfo(sessionInfo1);
+        connection1.send(connectionInfo1);
+        connection1.send(sessionInfo1);
+        connection1.send(producerInfo1);
+
+        ActiveMQDestination destinationA = ActiveMQDestination.createDestination("A", destinationType);
+        ConsumerInfo consumerInfo1 = createConsumerInfo(sessionInfo1, destinationA);
+        consumerInfo1.setRetroactive(true);
+        consumerInfo1.setPrefetchSize(100);
+        connection1.request(consumerInfo1);
+
+        // Setup a second connection
+        StubConnection connection2 = createConnection();
+        ConnectionInfo connectionInfo2 = createConnectionInfo();
+        SessionInfo sessionInfo2 = createSessionInfo(connectionInfo2);
+        connection2.send(connectionInfo2);
+        connection2.send(sessionInfo2);
+
+        ActiveMQDestination destinationB = ActiveMQDestination.createDestination("B", destinationType);
+        ConsumerInfo consumerInfo2 = createConsumerInfo(sessionInfo2, destinationB);
+        consumerInfo2.setRetroactive(true);
+        consumerInfo2.setPrefetchSize(100);
+        connection2.request(consumerInfo2);
+
+        // Send the messages to the composite destination.
+        ActiveMQDestination compositeDestination = ActiveMQDestination.createDestination("A,B",
+                                                                                         destinationType);
+        for (int i = 0; i < 4; i++) {
+            connection1.request(createMessage(producerInfo1, compositeDestination, deliveryMode));
+        }
+
+        // The messages should have been delivered to both the A and B
+        // destination.
+        for (int i = 0; i < 4; i++) {
+            Message m1 = receiveMessage(connection1);
+            Message m2 = receiveMessage(connection2);
+
+            assertNotNull(m1);
+            assertNotNull(m2);
+
+            assertEquals(m1.getMessageId(), m2.getMessageId());
+            assertEquals(compositeDestination, m1.getOriginalDestination());
+            assertEquals(compositeDestination, m2.getOriginalDestination());
+
+            connection1.request(createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE));
+            connection2.request(createAck(consumerInfo2, m2, 1, MessageAck.STANDARD_ACK_TYPE));
+
+        }
+
+        assertNoMessagesLeft(connection1);
+        assertNoMessagesLeft(connection2);
+
+        connection1.send(closeConnectionInfo(connectionInfo1));
+        connection2.send(closeConnectionInfo(connectionInfo2));
+    }
 
     public void initCombosForTestQueueOnlyOnceDeliveryWith2Consumers() {
         addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
@@ -331,167 +399,6 @@ public class BrokerTest extends BrokerTestSupport {
         connection.send(closeConnectionInfo(connectionInfo));
     }
 
-    public void initCombosForTestTransactedAckWithPrefetchOfOne() {
-        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
-                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
-        addCombinationValues("destinationType",
-                             new Object[] {Byte.valueOf(ActiveMQDestination.QUEUE_TYPE),
-                                           Byte.valueOf(ActiveMQDestination.TOPIC_TYPE),
-                                           Byte.valueOf(ActiveMQDestination.TEMP_QUEUE_TYPE),
-                                           Byte.valueOf(ActiveMQDestination.TEMP_TOPIC_TYPE)});
-    }
-
-    public void testTransactedAckWithPrefetchOfOne() throws Exception {
-
-        // Setup a first connection
-        StubConnection connection1 = createConnection();
-        ConnectionInfo connectionInfo1 = createConnectionInfo();
-        SessionInfo sessionInfo1 = createSessionInfo(connectionInfo1);
-        ProducerInfo producerInfo1 = createProducerInfo(sessionInfo1);
-        connection1.send(connectionInfo1);
-        connection1.send(sessionInfo1);
-        connection1.send(producerInfo1);
-
-        destination = createDestinationInfo(connection1, connectionInfo1, destinationType);
-
-        ConsumerInfo consumerInfo1 = createConsumerInfo(sessionInfo1, destination);
-        consumerInfo1.setPrefetchSize(1);
-        connection1.send(consumerInfo1);
-
-        // Send the messages
-        for (int i = 0; i < 4; i++) {
-            Message message = createMessage(producerInfo1, destination, deliveryMode);
-            connection1.send(message);
-        }
-
-       
-
-        // Now get the messages.
-        for (int i = 0; i < 4; i++) {
-            // Begin the transaction.
-            LocalTransactionId txid = createLocalTransaction(sessionInfo1);
-            connection1.send(createBeginTransaction(connectionInfo1, txid));
-            Message m1 = receiveMessage(connection1);
-            assertNotNull(m1);
-            MessageAck ack = createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE);
-            ack.setTransactionId(txid);
-            connection1.send(ack);
-         // Commit the transaction.
-            connection1.send(createCommitTransaction1Phase(connectionInfo1, txid));
-        }
-        assertNoMessagesLeft(connection1);
-    }
-
-    public void initCombosForTestTransactedSend() {
-        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
-                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
-        addCombinationValues("destinationType",
-                             new Object[] {Byte.valueOf(ActiveMQDestination.QUEUE_TYPE),
-                                           Byte.valueOf(ActiveMQDestination.TOPIC_TYPE),
-                                           Byte.valueOf(ActiveMQDestination.TEMP_QUEUE_TYPE),
-                                           Byte.valueOf(ActiveMQDestination.TEMP_TOPIC_TYPE)});
-    }
-
-    public void testTransactedSend() throws Exception {
-
-        // Setup a first connection
-        StubConnection connection1 = createConnection();
-        ConnectionInfo connectionInfo1 = createConnectionInfo();
-        SessionInfo sessionInfo1 = createSessionInfo(connectionInfo1);
-        ProducerInfo producerInfo1 = createProducerInfo(sessionInfo1);
-        connection1.send(connectionInfo1);
-        connection1.send(sessionInfo1);
-        connection1.send(producerInfo1);
-
-        destination = createDestinationInfo(connection1, connectionInfo1, destinationType);
-
-        ConsumerInfo consumerInfo1 = createConsumerInfo(sessionInfo1, destination);
-        consumerInfo1.setPrefetchSize(100);
-        connection1.send(consumerInfo1);
-
-        // Begin the transaction.
-        LocalTransactionId txid = createLocalTransaction(sessionInfo1);
-        connection1.send(createBeginTransaction(connectionInfo1, txid));
-
-        // Send the messages
-        for (int i = 0; i < 4; i++) {
-            Message message = createMessage(producerInfo1, destination, deliveryMode);
-            message.setTransactionId(txid);
-            connection1.request(message);
-        }
-
-        // The point of this test is that message should not be delivered until
-        // send is committed.
-        assertNull(receiveMessage(connection1,MAX_NULL_WAIT));
-
-        // Commit the transaction.
-        connection1.send(createCommitTransaction1Phase(connectionInfo1, txid));
-
-        // Now get the messages.
-        for (int i = 0; i < 4; i++) {
-            Message m1 = receiveMessage(connection1);
-            assertNotNull(m1);
-        }
-
-        assertNoMessagesLeft(connection1);
-    }
-
-    public void initCombosForTestQueueTransactedAck() {
-        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
-                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
-        addCombinationValues("destinationType",
-                             new Object[] {Byte.valueOf(ActiveMQDestination.QUEUE_TYPE),
-                                           Byte.valueOf(ActiveMQDestination.TEMP_QUEUE_TYPE)});
-    }
-
-    public void testQueueTransactedAck() throws Exception {
-
-        // Setup a first connection
-        StubConnection connection1 = createConnection();
-        ConnectionInfo connectionInfo1 = createConnectionInfo();
-        SessionInfo sessionInfo1 = createSessionInfo(connectionInfo1);
-        ProducerInfo producerInfo1 = createProducerInfo(sessionInfo1);
-        connection1.send(connectionInfo1);
-        connection1.send(sessionInfo1);
-        connection1.send(producerInfo1);
-
-        destination = createDestinationInfo(connection1, connectionInfo1, destinationType);
-
-        ConsumerInfo consumerInfo1 = createConsumerInfo(sessionInfo1, destination);
-        consumerInfo1.setPrefetchSize(100);
-        connection1.send(consumerInfo1);
-
-        // Send the messages
-        for (int i = 0; i < 4; i++) {
-            Message message = createMessage(producerInfo1, destination, deliveryMode);
-            connection1.send(message);
-        }
-
-        // Begin the transaction.
-        LocalTransactionId txid = createLocalTransaction(sessionInfo1);
-        connection1.send(createBeginTransaction(connectionInfo1, txid));
-
-        // Acknowledge the first 2 messages.
-        for (int i = 0; i < 2; i++) {
-            Message m1 = receiveMessage(connection1);
-            assertNotNull("m1 is null for index: " + i, m1);
-            MessageAck ack = createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE);
-            ack.setTransactionId(txid);
-            connection1.request(ack);
-        }
-
-        // Commit the transaction.
-        connection1.send(createCommitTransaction1Phase(connectionInfo1, txid));
-
-        // The queue should now only have the remaining 2 messages
-        assertEquals(2, countMessagesInQueue(connection1, connectionInfo1, destination));
-    }
-
-    public void initCombosForTestConsumerCloseCausesRedelivery() {
-        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
-                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
-        addCombinationValues("destination", new Object[] {new ActiveMQQueue("TEST")});
-    }
 
     public void testConsumerCloseCausesRedelivery() throws Exception {
 
@@ -709,52 +616,6 @@ public class BrokerTest extends BrokerTestSupport {
         addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
                                                            Integer.valueOf(DeliveryMode.PERSISTENT)});
         addCombinationValues("durableConsumer", new Object[] {Boolean.TRUE, Boolean.FALSE});
-    }
-
-    public void testTopicRetroactiveConsumerSeeMessagesBeforeCreation() throws Exception {
-
-        ActiveMQDestination destination = new ActiveMQTopic("TEST");
-
-        // Setup a first connection
-        StubConnection connection1 = createConnection();
-        ConnectionInfo connectionInfo1 = createConnectionInfo();
-        connectionInfo1.setClientId("A");
-        SessionInfo sessionInfo1 = createSessionInfo(connectionInfo1);
-        ProducerInfo producerInfo1 = createProducerInfo(sessionInfo1);
-        connection1.send(connectionInfo1);
-        connection1.send(sessionInfo1);
-        connection1.send(producerInfo1);
-
-        // Send the messages
-        Message m = createMessage(producerInfo1, destination, deliveryMode);
-        connection1.send(m);
-
-        // Create the durable subscription.
-        ConsumerInfo consumerInfo1 = createConsumerInfo(sessionInfo1, destination);
-        if (durableConsumer) {
-            consumerInfo1.setSubscriptionName("test");
-        }
-        consumerInfo1.setPrefetchSize(100);
-        consumerInfo1.setRetroactive(true);
-        connection1.send(consumerInfo1);
-
-        connection1.send(createMessage(producerInfo1, destination, deliveryMode));
-        connection1.request(createMessage(producerInfo1, destination, deliveryMode));
-
-        // the behavior is VERY dependent on the recovery policy used.
-        // But the default broker settings try to make it as consistent as
-        // possible
-
-        // Subscription should see all messages sent.
-        Message m2 = receiveMessage(connection1);
-        assertNotNull(m2);
-        assertEquals(m.getMessageId(), m2.getMessageId());
-        for (int i = 0; i < 2; i++) {
-            m2 = receiveMessage(connection1);
-            assertNotNull(m2);
-        }
-
-        assertNoMessagesLeft(connection1);
     }
 
     //
@@ -1015,74 +876,6 @@ public class BrokerTest extends BrokerTestSupport {
         connection1.send(closeConnectionInfo(connectionInfo1));
     }
 
-    public void initCombosForTestCompositeSend() {
-        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
-                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
-        addCombinationValues("destinationType", new Object[] {Byte.valueOf(ActiveMQDestination.QUEUE_TYPE),
-                                                              Byte.valueOf(ActiveMQDestination.TOPIC_TYPE)});
-    }
-
-    public void testCompositeSend() throws Exception {
-
-        // Setup a first connection
-        StubConnection connection1 = createConnection();
-        ConnectionInfo connectionInfo1 = createConnectionInfo();
-        SessionInfo sessionInfo1 = createSessionInfo(connectionInfo1);
-        ProducerInfo producerInfo1 = createProducerInfo(sessionInfo1);
-        connection1.send(connectionInfo1);
-        connection1.send(sessionInfo1);
-        connection1.send(producerInfo1);
-
-        ActiveMQDestination destinationA = ActiveMQDestination.createDestination("A", destinationType);
-        ConsumerInfo consumerInfo1 = createConsumerInfo(sessionInfo1, destinationA);
-        consumerInfo1.setRetroactive(true);
-        consumerInfo1.setPrefetchSize(100);
-        connection1.request(consumerInfo1);
-
-        // Setup a second connection
-        StubConnection connection2 = createConnection();
-        ConnectionInfo connectionInfo2 = createConnectionInfo();
-        SessionInfo sessionInfo2 = createSessionInfo(connectionInfo2);
-        connection2.send(connectionInfo2);
-        connection2.send(sessionInfo2);
-
-        ActiveMQDestination destinationB = ActiveMQDestination.createDestination("B", destinationType);
-        ConsumerInfo consumerInfo2 = createConsumerInfo(sessionInfo2, destinationB);
-        consumerInfo2.setRetroactive(true);
-        consumerInfo2.setPrefetchSize(100);
-        connection2.request(consumerInfo2);
-
-        // Send the messages to the composite destination.
-        ActiveMQDestination compositeDestination = ActiveMQDestination.createDestination("A,B",
-                                                                                         destinationType);
-        for (int i = 0; i < 4; i++) {
-            connection1.request(createMessage(producerInfo1, compositeDestination, deliveryMode));
-        }
-
-        // The messages should have been delivered to both the A and B
-        // destination.
-        for (int i = 0; i < 4; i++) {
-            Message m1 = receiveMessage(connection1);
-            Message m2 = receiveMessage(connection2);
-
-            assertNotNull(m1);
-            assertNotNull(m2);
-
-            assertEquals(m1.getMessageId(), m2.getMessageId());
-            assertEquals(compositeDestination, m1.getOriginalDestination());
-            assertEquals(compositeDestination, m2.getOriginalDestination());
-
-            connection1.request(createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE));
-            connection2.request(createAck(consumerInfo2, m2, 1, MessageAck.STANDARD_ACK_TYPE));
-
-        }
-
-        assertNoMessagesLeft(connection1);
-        assertNoMessagesLeft(connection2);
-
-        connection1.send(closeConnectionInfo(connectionInfo1));
-        connection2.send(closeConnectionInfo(connectionInfo2));
-    }
 
     public void initCombosForTestConnectionCloseCascades() {
         addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
@@ -1739,6 +1532,215 @@ public class BrokerTest extends BrokerTestSupport {
         assertNotNull(m3);
         connection.request(createAck(consumerInfo, m3, 1, MessageAck.DELIVERED_ACK_TYPE));
     }
+    
+    public void initCombosForTestTransactedAckWithPrefetchOfOne() {
+        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
+                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
+        addCombinationValues("destinationType",
+                             new Object[] {Byte.valueOf(ActiveMQDestination.QUEUE_TYPE),
+                                           Byte.valueOf(ActiveMQDestination.TOPIC_TYPE),
+                                           Byte.valueOf(ActiveMQDestination.TEMP_QUEUE_TYPE),
+                                           Byte.valueOf(ActiveMQDestination.TEMP_TOPIC_TYPE)});
+    }
+
+    public void testTransactedAckWithPrefetchOfOne() throws Exception {
+
+        // Setup a first connection
+        StubConnection connection1 = createConnection();
+        ConnectionInfo connectionInfo1 = createConnectionInfo();
+        SessionInfo sessionInfo1 = createSessionInfo(connectionInfo1);
+        ProducerInfo producerInfo1 = createProducerInfo(sessionInfo1);
+        connection1.send(connectionInfo1);
+        connection1.send(sessionInfo1);
+        connection1.send(producerInfo1);
+
+        destination = createDestinationInfo(connection1, connectionInfo1, destinationType);
+
+        ConsumerInfo consumerInfo1 = createConsumerInfo(sessionInfo1, destination);
+        consumerInfo1.setPrefetchSize(1);
+        connection1.send(consumerInfo1);
+
+        // Send the messages
+        for (int i = 0; i < 4; i++) {
+            Message message = createMessage(producerInfo1, destination, deliveryMode);
+            connection1.send(message);
+        }
+
+       
+
+        // Now get the messages.
+        for (int i = 0; i < 4; i++) {
+            // Begin the transaction.
+            LocalTransactionId txid = createLocalTransaction(sessionInfo1);
+            connection1.send(createBeginTransaction(connectionInfo1, txid));
+            Message m1 = receiveMessage(connection1);
+            assertNotNull(m1);
+            MessageAck ack = createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE);
+            ack.setTransactionId(txid);
+            connection1.send(ack);
+         // Commit the transaction.
+            connection1.send(createCommitTransaction1Phase(connectionInfo1, txid));
+        }
+        assertNoMessagesLeft(connection1);
+    }
+
+    public void initCombosForTestTransactedSend() {
+        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
+                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
+        addCombinationValues("destinationType",
+                             new Object[] {Byte.valueOf(ActiveMQDestination.QUEUE_TYPE),
+                                           Byte.valueOf(ActiveMQDestination.TOPIC_TYPE),
+                                           Byte.valueOf(ActiveMQDestination.TEMP_QUEUE_TYPE),
+                                           Byte.valueOf(ActiveMQDestination.TEMP_TOPIC_TYPE)});
+    }
+
+    public void testTransactedSend() throws Exception {
+
+        // Setup a first connection
+        StubConnection connection1 = createConnection();
+        ConnectionInfo connectionInfo1 = createConnectionInfo();
+        SessionInfo sessionInfo1 = createSessionInfo(connectionInfo1);
+        ProducerInfo producerInfo1 = createProducerInfo(sessionInfo1);
+        connection1.send(connectionInfo1);
+        connection1.send(sessionInfo1);
+        connection1.send(producerInfo1);
+
+        destination = createDestinationInfo(connection1, connectionInfo1, destinationType);
+
+        ConsumerInfo consumerInfo1 = createConsumerInfo(sessionInfo1, destination);
+        consumerInfo1.setPrefetchSize(100);
+        connection1.send(consumerInfo1);
+
+        // Begin the transaction.
+        LocalTransactionId txid = createLocalTransaction(sessionInfo1);
+        connection1.send(createBeginTransaction(connectionInfo1, txid));
+
+        // Send the messages
+        for (int i = 0; i < 4; i++) {
+            Message message = createMessage(producerInfo1, destination, deliveryMode);
+            message.setTransactionId(txid);
+            connection1.request(message);
+        }
+
+        // The point of this test is that message should not be delivered until
+        // send is committed.
+        assertNull(receiveMessage(connection1,MAX_NULL_WAIT));
+
+        // Commit the transaction.
+        connection1.send(createCommitTransaction1Phase(connectionInfo1, txid));
+
+        // Now get the messages.
+        for (int i = 0; i < 4; i++) {
+            Message m1 = receiveMessage(connection1);
+            assertNotNull(m1);
+        }
+
+        assertNoMessagesLeft(connection1);
+    }
+
+    public void initCombosForTestQueueTransactedAck() {
+        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
+                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
+        addCombinationValues("destinationType",
+                             new Object[] {Byte.valueOf(ActiveMQDestination.QUEUE_TYPE),
+                                           Byte.valueOf(ActiveMQDestination.TEMP_QUEUE_TYPE)});
+    }
+
+    public void testQueueTransactedAck() throws Exception {
+
+        // Setup a first connection
+        StubConnection connection1 = createConnection();
+        ConnectionInfo connectionInfo1 = createConnectionInfo();
+        SessionInfo sessionInfo1 = createSessionInfo(connectionInfo1);
+        ProducerInfo producerInfo1 = createProducerInfo(sessionInfo1);
+        connection1.send(connectionInfo1);
+        connection1.send(sessionInfo1);
+        connection1.send(producerInfo1);
+
+        destination = createDestinationInfo(connection1, connectionInfo1, destinationType);
+
+        ConsumerInfo consumerInfo1 = createConsumerInfo(sessionInfo1, destination);
+        consumerInfo1.setPrefetchSize(100);
+        connection1.send(consumerInfo1);
+
+        // Send the messages
+        for (int i = 0; i < 4; i++) {
+            Message message = createMessage(producerInfo1, destination, deliveryMode);
+            connection1.send(message);
+        }
+
+        // Begin the transaction.
+        LocalTransactionId txid = createLocalTransaction(sessionInfo1);
+        connection1.send(createBeginTransaction(connectionInfo1, txid));
+
+        // Acknowledge the first 2 messages.
+        for (int i = 0; i < 2; i++) {
+            Message m1 = receiveMessage(connection1);
+            assertNotNull("m1 is null for index: " + i, m1);
+            MessageAck ack = createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE);
+            ack.setTransactionId(txid);
+            connection1.request(ack);
+        }
+
+        // Commit the transaction.
+        connection1.send(createCommitTransaction1Phase(connectionInfo1, txid));
+
+        // The queue should now only have the remaining 2 messages
+        assertEquals(2, countMessagesInQueue(connection1, connectionInfo1, destination));
+    }
+    
+    public void testTopicRetroactiveConsumerSeeMessagesBeforeCreation() throws Exception {
+
+        ActiveMQDestination destination = new ActiveMQTopic("TEST");
+
+        // Setup a first connection
+        StubConnection connection1 = createConnection();
+        ConnectionInfo connectionInfo1 = createConnectionInfo();
+        connectionInfo1.setClientId("A");
+        SessionInfo sessionInfo1 = createSessionInfo(connectionInfo1);
+        ProducerInfo producerInfo1 = createProducerInfo(sessionInfo1);
+        connection1.send(connectionInfo1);
+        connection1.send(sessionInfo1);
+        connection1.send(producerInfo1);
+
+        // Send the messages
+        Message m = createMessage(producerInfo1, destination, deliveryMode);
+        connection1.send(m);
+
+        // Create the durable subscription.
+        ConsumerInfo consumerInfo1 = createConsumerInfo(sessionInfo1, destination);
+        if (durableConsumer) {
+            consumerInfo1.setSubscriptionName("test");
+        }
+        consumerInfo1.setPrefetchSize(100);
+        consumerInfo1.setRetroactive(true);
+        connection1.send(consumerInfo1);
+
+        connection1.send(createMessage(producerInfo1, destination, deliveryMode));
+        connection1.request(createMessage(producerInfo1, destination, deliveryMode));
+
+        // the behavior is VERY dependent on the recovery policy used.
+        // But the default broker settings try to make it as consistent as
+        // possible
+
+        // Subscription should see all messages sent.
+        Message m2 = receiveMessage(connection1);
+        assertNotNull(m2);
+        assertEquals(m.getMessageId(), m2.getMessageId());
+        for (int i = 0; i < 2; i++) {
+            m2 = receiveMessage(connection1);
+            assertNotNull(m2);
+        }
+
+        assertNoMessagesLeft(connection1);
+    }
+
+    public void initCombosForTestConsumerCloseCausesRedelivery() {
+        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
+                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
+        addCombinationValues("destination", new Object[] {new ActiveMQQueue("TEST")});
+    }
+    
 
     public static Test suite() {
         return suite(BrokerTest.class);

@@ -22,6 +22,8 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -35,6 +37,7 @@ import javax.jms.TemporaryTopic;
 import javax.jms.Topic;
 
 import org.apache.activemq.jndi.JNDIBaseStorable;
+import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.URISupport;
 
@@ -42,7 +45,7 @@ import org.apache.activemq.util.URISupport;
  * @openwire:marshaller
  * @version $Revision: 1.10 $
  */
-public abstract class ActiveMQDestination extends JNDIBaseStorable implements DataStructure, Destination, Externalizable, Comparable {
+public abstract class ActiveMQDestination extends JNDIBaseStorable implements DataStructure, Destination, Externalizable, Comparable, org.apache.activemq.apollo.broker.Destination {
 
     public static final String PATH_SEPERATOR = ".";
     public static final char COMPOSITE_SEPERATOR = ',';
@@ -62,7 +65,7 @@ public abstract class ActiveMQDestination extends JNDIBaseStorable implements Da
 
     private static final long serialVersionUID = -3885260014960795889L;
 
-    protected String physicalName;
+    protected AsciiBuffer physicalName;
 
     protected transient ActiveMQDestination[] compositeDestinations;
     protected transient String[] destinationPaths;
@@ -80,6 +83,21 @@ public abstract class ActiveMQDestination extends JNDIBaseStorable implements Da
     public ActiveMQDestination(ActiveMQDestination composites[]) {
         setCompositeDestinations(composites);
     }
+
+    
+    public AsciiBuffer getName() {
+    	return physicalName;
+    }
+    
+    abstract public AsciiBuffer getDomain();
+    
+	public Collection<org.apache.activemq.apollo.broker.Destination> getDestinations() {
+		if( !isComposite() ) {
+			return null; 
+		}
+		List<org.apache.activemq.apollo.broker.Destination> t = (List)Arrays.asList(compositeDestinations);
+		return t;
+	}
 
 
     // static helper methods for working with destinations
@@ -185,12 +203,12 @@ public abstract class ActiveMQDestination extends JNDIBaseStorable implements Da
                 sb.append(destinations[i].getQualifiedName());
             }
         }
-        physicalName = sb.toString();
+        physicalName = new AsciiBuffer(sb.toString());
     }
 
     public String getQualifiedName() {
         if (isComposite()) {
-            return physicalName;
+            return physicalName.toString();
         }
         return getQualifiedPrefix() + physicalName;
     }
@@ -201,16 +219,16 @@ public abstract class ActiveMQDestination extends JNDIBaseStorable implements Da
      * @openwire:property version=1
      */
     public String getPhysicalName() {
-        return physicalName;
+        return physicalName.toString();
     }
 
-    public void setPhysicalName(String physicalName) {
-        final int len = physicalName.length();
+    public void setPhysicalName(String value) {
+        final int len = value.length();
         // options offset
         int p = -1;
         boolean composite = false;
         for (int i = 0; i < len; i++) {
-            char c = physicalName.charAt(i);
+            char c = value.charAt(i);
             if (c == '?') {
                 p = i;
                 break;
@@ -225,21 +243,21 @@ public abstract class ActiveMQDestination extends JNDIBaseStorable implements Da
         }
         // Strip off any options
         if (p >= 0) {
-            String optstring = physicalName.substring(p + 1);
-            physicalName = physicalName.substring(0, p);
+            String optstring = value.substring(p + 1);
+            value = value.substring(0, p);
             try {
                 options = URISupport.parseQuery(optstring);
             } catch (URISyntaxException e) {
-                throw new IllegalArgumentException("Invalid destination name: " + physicalName + ", it's options are not encoded properly: " + e);
+                throw new IllegalArgumentException("Invalid destination name: " + value + ", it's options are not encoded properly: " + e);
             }
         }
-        this.physicalName = physicalName;
+        this.physicalName = new AsciiBuffer(value);
         this.destinationPaths = null;
         this.hashValue = 0;
         if (composite) {
             // Check to see if it is a composite.
             List<String> l = new ArrayList<String>();
-            StringTokenizer iter = new StringTokenizer(physicalName, "" + COMPOSITE_SEPERATOR);
+            StringTokenizer iter = new StringTokenizer(value, "" + COMPOSITE_SEPERATOR);
             while (iter.hasMoreTokens()) {
                 String name = iter.nextToken().trim();
                 if (name.length() == 0) {
@@ -268,7 +286,7 @@ public abstract class ActiveMQDestination extends JNDIBaseStorable implements Da
         }
 
         List<String> l = new ArrayList<String>();
-        StringTokenizer iter = new StringTokenizer(physicalName, PATH_SEPERATOR);
+        StringTokenizer iter = new StringTokenizer(physicalName.toString(), PATH_SEPERATOR);
         while (iter.hasMoreTokens()) {
             String name = iter.nextToken().trim();
             if (name.length() == 0) {

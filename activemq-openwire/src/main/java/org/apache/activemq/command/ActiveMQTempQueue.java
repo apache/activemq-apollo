@@ -19,6 +19,9 @@ package org.apache.activemq.command;
 import javax.jms.JMSException;
 import javax.jms.TemporaryQueue;
 
+import org.apache.activemq.apollo.broker.Router;
+import org.apache.activemq.protobuf.AsciiBuffer;
+
 /**
  * @openwire:marshaller code="102"
  * @version $Revision: 1.6 $
@@ -58,5 +61,10 @@ public class ActiveMQTempQueue extends ActiveMQTempDestination implements Tempor
     protected String getQualifiedPrefix() {
         return TEMP_QUEUE_QUALIFED_PREFIX;
     }
+
+	@Override
+	public AsciiBuffer getDomain() {
+		return Router.TEMP_QUEUE_DOMAIN;
+	}
 
 }

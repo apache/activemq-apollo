@@ -34,6 +34,8 @@ final public class Router {
 
     public static final AsciiBuffer TOPIC_DOMAIN = new AsciiBuffer("topic");
     public static final AsciiBuffer QUEUE_DOMAIN = new AsciiBuffer("queue");
+    public static final AsciiBuffer TEMP_TOPIC_DOMAIN = new AsciiBuffer("temp-topic");
+    public static final AsciiBuffer TEMP_QUEUE_DOMAIN = new AsciiBuffer("temp-queue");
 
     private final HashMap<AsciiBuffer, Domain> domains = new HashMap<AsciiBuffer, Domain>();
     private VirtualHost virtualHost;
@@ -42,6 +44,8 @@ final public class Router {
     public Router() {
         domains.put(QUEUE_DOMAIN, new QueueDomain());
         domains.put(TOPIC_DOMAIN, new TopicDomain());
+        domains.put(TEMP_QUEUE_DOMAIN, new QueueDomain());
+        domains.put(TEMP_TOPIC_DOMAIN, new TopicDomain());
     }
 
     public Domain getDomain(AsciiBuffer name) {
