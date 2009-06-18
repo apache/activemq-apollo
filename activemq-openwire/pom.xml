@@ -59,9 +59,16 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-    	<groupId>org.apache.activemq</groupId>
-    	<artifactId>activemq-kaha</artifactId>
-    	<scope>test</scope>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-util</artifactId>
+      <version>${activemq-version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-kaha</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
