@@ -138,6 +138,6 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
     }
 
     public MessageEvaluationContext createMessageEvaluationContext() {
-        return new OpenwireMessageEvaluationContext();
+        return new OpenwireMessageEvaluationContext(message);
     }
 }

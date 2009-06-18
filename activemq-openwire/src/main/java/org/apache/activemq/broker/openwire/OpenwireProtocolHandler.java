@@ -453,9 +453,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             this.name = info.getConsumerId().toString();
 
             Flow flow = new Flow("broker-" + name + "-outbound", false);
-            if (info.isDurable())
-
-                selector = parseSelector(info);
+            selector = parseSelector(info);
             limiter = new WindowLimiter<MessageDelivery>(true, flow, info.getPrefetchSize(), info.getPrefetchSize() / 2) {
                 @Override
                 public int getElementSize(MessageDelivery m) {

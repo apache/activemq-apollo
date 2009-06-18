@@ -44,7 +44,7 @@ class TopicSubscription implements BrokerSubscription, DeliveryTarget {
      */
     public final void deliver(MessageDelivery message, ISourceController<?> source) {
         Subscription<MessageDelivery> s = connectedSub;
-        if (s != null) {
+        if (s != null && matches(message)) {
             s.add(message, source, null);
         }
     }
