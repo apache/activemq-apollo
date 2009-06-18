@@ -39,7 +39,8 @@ public interface ProtocolHandler extends Service {
 
     public BrokerMessageDelivery createMessageDelivery(MessageRecord record) throws IOException;
 
-    public interface ConsumerContext extends Subscription<MessageDelivery>, IFlowSink<MessageDelivery>{
+    public interface ConsumerContext extends Subscription<MessageDelivery>, IFlowSink<MessageDelivery> {
+    	
         public String getConsumerId();
         
         public Destination getDestination();
@@ -51,6 +52,13 @@ public interface ProtocolHandler extends Service {
         public boolean isDurable();
         
         public String getSubscriptionName();
+        
+        /**
+         * If the destination does not exist, should it automatically be created? 
+         * @return
+         */
+        public boolean autoCreateDestination();
+        
     }
 
 }

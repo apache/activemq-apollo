@@ -486,6 +486,10 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         public boolean offer(MessageDelivery elem, ISourceController<?> source) {
             return offer(elem, source, null);
         }
+
+		public boolean autoCreateDestination() {
+			return true;
+		}
     }
 
     private void sendError(String message) {

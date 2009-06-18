@@ -168,7 +168,7 @@ public class VirtualHost implements Service {
         return queueStore;
     }
 
-    public BrokerSubscription createSubscription(ConsumerContext consumer) {
+    public BrokerSubscription createSubscription(ConsumerContext consumer) throws Exception {
         Destination destination = consumer.getDestination();
         BrokerSubscription sub = null;
 
@@ -192,6 +192,13 @@ public class VirtualHost implements Service {
                     sub = new TopicSubscription(this, destination, consumer.getSelectorExpression());
                 } else {
                     Queue queue = queues.get(destination.getName());
+                    if( queue == null ) {
+                    	if( consumer.autoCreateDestination() ) {
+                    		queue = createQueue(destination);
+                    	} else {
+                    		throw new IllegalStateException("The queue does not exist: "+destination.getName());
+                    	}
+                    }
                     sub = new Queue.QueueSubscription(queue);
                 }
             }

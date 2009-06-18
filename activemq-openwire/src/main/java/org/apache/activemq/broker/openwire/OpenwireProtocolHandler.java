@@ -436,7 +436,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         HashMap<MessageId, SubscriptionDeliveryCallback> pendingMessages = new HashMap<MessageId, SubscriptionDeliveryCallback>();
         LinkedList<MessageId> pendingMessageIds = new LinkedList<MessageId>();
 
-        public ConsumerContext(final ConsumerInfo info) throws FilterException, UserAlreadyConnectedException {
+        public ConsumerContext(final ConsumerInfo info) throws Exception {
             this.info = info;
             this.name = info.getConsumerId().toString();
 
@@ -674,6 +674,10 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         public boolean offer(MessageDelivery message, ISourceController<?> source) {
             return offer(message, source, null);
         }
+
+		public boolean autoCreateDestination() {
+			return true;
+		}
 
     }
 
