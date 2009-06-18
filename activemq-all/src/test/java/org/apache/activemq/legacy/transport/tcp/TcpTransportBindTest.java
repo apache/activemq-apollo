@@ -25,7 +25,7 @@ import javax.jms.MessageConsumer;
 import javax.jms.Session;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.legacy.EmbeddedBrokerTestSupport;
+import org.apache.activemq.legacy.test4.EmbeddedBrokerTestSupport;
 
 public class TcpTransportBindTest extends EmbeddedBrokerTestSupport {
     final String addr = "tcp://localhost:61617";

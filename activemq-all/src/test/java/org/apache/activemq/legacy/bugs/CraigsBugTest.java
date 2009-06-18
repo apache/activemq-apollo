@@ -24,7 +24,7 @@ import javax.jms.Session;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.activemq.legacy.EmbeddedBrokerTestSupport;
+import org.apache.activemq.legacy.test4.EmbeddedBrokerTestSupport;
 
 /**
  * @version $Revision: $

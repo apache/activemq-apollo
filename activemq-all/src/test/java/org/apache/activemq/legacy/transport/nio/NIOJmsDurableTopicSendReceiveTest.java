@@ -17,8 +17,8 @@
 package org.apache.activemq.legacy.transport.nio;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.legacy.JmsDurableTopicSendReceiveTest;
 import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.legacy.test2.JmsDurableTopicSendReceiveTest;
 
 public class NIOJmsDurableTopicSendReceiveTest extends JmsDurableTopicSendReceiveTest {
     protected BrokerService broker;

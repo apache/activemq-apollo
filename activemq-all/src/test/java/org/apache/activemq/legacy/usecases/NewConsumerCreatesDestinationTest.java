@@ -23,7 +23,7 @@ import javax.jms.Session;
 
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.activemq.legacy.EmbeddedBrokerAndConnectionTestSupport;
+import org.apache.activemq.legacy.test4.EmbeddedBrokerAndConnectionTestSupport;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

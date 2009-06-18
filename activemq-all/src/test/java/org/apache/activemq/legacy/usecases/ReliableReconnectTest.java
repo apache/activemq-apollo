@@ -35,7 +35,7 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.legacy.broker.BrokerFactory;
 import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.legacy.store.PersistenceAdapter;
-import org.apache.activemq.legacy.test.TestSupport;
+import org.apache.activemq.legacy.test3.TestSupport;
 import org.apache.activemq.util.IdGenerator;
 
 /**

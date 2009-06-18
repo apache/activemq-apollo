@@ -28,7 +28,7 @@ import javax.jms.Session;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.command.ActiveMQTopic;
-import org.apache.activemq.legacy.test.JmsSendReceiveTestSupport;
+import org.apache.activemq.legacy.test3.JmsSendReceiveTestSupport;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

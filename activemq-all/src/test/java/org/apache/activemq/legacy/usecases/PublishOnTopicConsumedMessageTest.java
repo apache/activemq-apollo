@@ -21,7 +21,7 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageProducer;
 
-import org.apache.activemq.legacy.test.JmsTopicSendReceiveWithTwoConnectionsTest;
+import org.apache.activemq.legacy.test3.JmsTopicSendReceiveWithTwoConnectionsTest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
