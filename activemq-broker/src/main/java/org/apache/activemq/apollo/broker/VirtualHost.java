@@ -156,7 +156,7 @@ public class VirtualHost implements Service {
             IQueue<Long, MessageDelivery> iQueue = queueStore.createSharedQueue(dest.getName().toString());
             queue = new Queue(iQueue);
             queue.setDestination(dest);
-            Domain domain = router.getDomain(Router.QUEUE_DOMAIN);
+            Domain domain = router.getDomain(dest.getDomain());
             domain.add(dest.getName(), queue);
             queues.put(dest.getName(), queue);
         }
@@ -188,7 +188,7 @@ public class VirtualHost implements Service {
             }
             else
             {
-                if (destination.getDomain().equals(Router.TOPIC_DOMAIN)) {
+                if (destination.getDomain().equals(Router.TOPIC_DOMAIN) || destination.getDomain().equals(Router.TEMP_TOPIC_DOMAIN) ) {
                     sub = new TopicSubscription(this, destination, consumer.getSelectorExpression());
                 } else {
                     Queue queue = queues.get(destination.getName());
