@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.broker;
+package org.apache.activemq.legacy.openwireprotocol;
 
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -84,7 +84,7 @@ public class BrokerBenchmark extends BrokerTestSupport {
                     try {
 
                         // Consume the messages
-                        StubConnection connection = new StubConnection(broker);
+                        StubConnection connection = createConnection();
                         ConnectionInfo connectionInfo = createConnectionInfo();
                         connection.send(connectionInfo);
 
@@ -146,7 +146,7 @@ public class BrokerBenchmark extends BrokerTestSupport {
             new Thread() {
                 public void run() {
                     try {
-                        StubConnection connection = new StubConnection(broker);
+                        StubConnection connection = createConnection();;
                         ConnectionInfo connectionInfo = createConnectionInfo();
                         connection.send(connectionInfo);
 

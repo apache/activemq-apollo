@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.broker;
+package org.apache.activemq.legacy.openwireprotocol;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -28,16 +28,10 @@ import java.util.concurrent.TimeUnit;
 import javax.jms.DeliveryMode;
 import javax.jms.MessageNotWriteableException;
 
-import org.apache.activemq.legacy.broker.BrokerFactory;
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.broker.region.RegionBroker;
-import org.apache.activemq.legacy.broker.region.policy.FixedCountSubscriptionRecoveryPolicy;
-import org.apache.activemq.legacy.broker.region.policy.PolicyEntry;
-import org.apache.activemq.legacy.broker.region.policy.PolicyMap;
-import org.apache.activemq.legacy.broker.region.policy.RoundRobinDispatchPolicy;
-import org.apache.activemq.legacy.store.PersistenceAdapter;
-import org.apache.activemq.legacy.usage.SystemUsage;
+
 import org.apache.activemq.apollo.CombinationTestSupport;
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.ConnectionId;
@@ -55,8 +49,7 @@ import org.apache.activemq.command.SessionInfo;
 import org.apache.activemq.command.TransactionId;
 import org.apache.activemq.command.TransactionInfo;
 import org.apache.activemq.command.XATransactionId;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.activemq.transport.TransportFactory;
 
 public class BrokerTestSupport extends CombinationTestSupport {
 
@@ -66,45 +59,30 @@ public class BrokerTestSupport extends CombinationTestSupport {
      */
     public static final boolean FAST_NO_MESSAGE_LEFT_ASSERT = System.getProperty("FAST_NO_MESSAGE_LEFT_ASSERT", "true").equals("true");
 
-    protected RegionBroker regionBroker;
-    protected BrokerService broker;
+    protected Broker broker;
     protected long idGenerator;
     protected int msgIdGenerator;
     protected int txGenerator;
     protected int tempDestGenerator;
-    protected PersistenceAdapter persistenceAdapter;
 
     protected int maxWait = 4000;
-
-    protected SystemUsage memoryManager;
-
+    String PIPE_URI = "pipe://broker";
+	
     protected void setUp() throws Exception {
         super.setUp();
         broker = createBroker();
-        PolicyMap policyMap = new PolicyMap();
-        policyMap.setDefaultEntry(getDefaultPolicy());
-        broker.setDestinationPolicy(policyMap);
         broker.start();
     }
 
-    protected PolicyEntry getDefaultPolicy() {
-        PolicyEntry policy = new PolicyEntry();
-        policy.setDispatchPolicy(new RoundRobinDispatchPolicy());
-        policy.setSubscriptionRecoveryPolicy(new FixedCountSubscriptionRecoveryPolicy());
-        return policy;
-    }
-
-    protected BrokerService createBroker() throws Exception {
-        BrokerService broker = BrokerFactory.createBroker(new URI("broker:()/localhost?persistent=false"));
+    protected Broker createBroker() throws Exception {
+    	Broker broker = BrokerFactory.createBroker(new URI("jaxb:classpath:non-persistent-activemq.xml"));
+    	broker.addTransportServer(TransportFactory.bind(new URI(PIPE_URI)));
         return broker;
     }
 
     protected void tearDown() throws Exception {
         broker.stop();
         broker = null;
-        regionBroker = null;
-        persistenceAdapter = null;
-        memoryManager = null;
         super.tearDown();
     }
 
@@ -158,10 +136,6 @@ public class BrokerTestSupport extends CombinationTestSupport {
         ack.setLastMessageId(msg.getMessageId());
         ack.setMessageCount(count);
         return ack;
-    }
-
-    protected void gc() {
-        regionBroker.gc();
     }
 
     protected void profilerPause(String prompt) throws IOException {
@@ -309,7 +283,7 @@ public class BrokerTestSupport extends CombinationTestSupport {
     }
 
     protected StubConnection createConnection() throws Exception {
-        return new StubConnection(broker);
+        return new StubConnection(TransportFactory.connect(new URI(PIPE_URI)));
     }
 
     /**

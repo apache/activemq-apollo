@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.broker.advisory;
+package org.apache.activemq.legacy.openwireprotocol;
 
 import junit.framework.Test;
 
@@ -27,8 +27,6 @@ import org.apache.activemq.command.Message;
 import org.apache.activemq.command.ProducerInfo;
 import org.apache.activemq.command.RemoveInfo;
 import org.apache.activemq.command.SessionInfo;
-import org.apache.activemq.legacy.broker.BrokerTestSupport;
-import org.apache.activemq.legacy.broker.StubConnection;
 
 public class AdvisoryBrokerTest extends BrokerTestSupport {
      

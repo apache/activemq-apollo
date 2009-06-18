@@ -22,7 +22,7 @@
  * with SimpleQueueSender.  Specify a queue name on the command
  * line when you run the program.
  */
-package org.apache.activemq.legacy.demo;
+package org.apache.activemq.apollo.demo;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;

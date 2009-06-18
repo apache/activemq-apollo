@@ -403,5 +403,11 @@ public class Broker implements Service {
 	public void setDataDirectory(File dataDirectory) {
 		this.dataDirectory = dataDirectory;
 	}
+
+	public void waitUntilStopped() throws InterruptedException {
+		while( state.get() != State.STOPPED ) {
+			Thread.sleep(500);
+		}
+	}
    
 }

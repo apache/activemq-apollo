@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test.rollback;
+package org.apache.activemq.legacy.test4.rollback;
 
 import javax.jms.Connection;
 import javax.jms.Destination;

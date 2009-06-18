@@ -14,20 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.broker;
+package org.apache.activemq.legacy.openwireprotocol;
 
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.store.PersistenceAdapter;
+import java.io.IOException;
+import java.net.URISyntaxException;
+
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.broker.store.Store;
 
 public class BrokerRestartTestSupport extends BrokerTestSupport {
 
-    private PersistenceAdapter persistenceAdapter;
+	private Store store;
 
-    protected BrokerService createBroker() throws Exception {
-        BrokerService broker = new BrokerService();
-        //broker.setPersistent(false);
-        broker.setDeleteAllMessagesOnStartup(true);
-        persistenceAdapter = broker.getPersistenceAdapter();
+    protected Broker createBroker() throws Exception {
+    	Broker broker = super.createBroker();
+        store = broker.getDefaultVirtualHost().getDatabase().getStore();
         return broker;
     }
 
@@ -35,9 +36,9 @@ public class BrokerRestartTestSupport extends BrokerTestSupport {
      * @return
      * @throws Exception
      */
-    protected BrokerService createRestartedBroker() throws Exception {
-        BrokerService broker = new BrokerService();
-        //broker.setPersistenceAdapter(persistenceAdapter);
+    protected Broker createRestartedBroker() throws Exception {
+    	Broker broker = super.createBroker();
+    	broker.getDefaultVirtualHost().setStore(store);
         return broker;
     }
 

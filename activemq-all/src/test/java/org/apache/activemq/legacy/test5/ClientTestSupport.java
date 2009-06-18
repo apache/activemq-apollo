@@ -40,8 +40,8 @@ import org.apache.activemq.command.SessionInfo;
 import org.apache.activemq.legacy.broker.Broker;
 import org.apache.activemq.legacy.broker.BrokerFactory;
 import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.broker.StubConnection;
 import org.apache.activemq.legacy.broker.TransportConnector;
+import org.apache.activemq.legacy.openwireprotocol.StubConnection;
 import org.apache.activemq.transport.TransportFactory;
 
 public class ClientTestSupport extends TestCase {

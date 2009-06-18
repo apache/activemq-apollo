@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.legacy.broker;
+package org.apache.activemq.legacy.openwireprotocol;
 
 public class ProgressPrinter {
 

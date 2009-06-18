@@ -14,17 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy;
+package org.apache.activemq.apollo.demo;
+
+import java.net.URI;
 
 import javax.jms.Connection;
-import javax.jms.MessageConsumer;
 import javax.jms.Session;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.broker.jmx.ManagementContext;
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.broker.store.memory.MemoryStore;
 import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.demo.DefaultQueueSender;
+import org.apache.activemq.transport.TransportFactory;
 
 /**
  * A helper class which can be handy for running a broker in your IDE from the
@@ -43,23 +44,9 @@ public final class Main {
      */
     public static void main(String[] args) {
         try {
-            // TODO - this seems to break interceptors for some reason
-            // BrokerService broker = BrokerFactory.createBroker(new
-            // URI(brokerURI));
-            BrokerService broker = new BrokerService();
-            broker.setPersistent(false);
-
-            // for running on Java 5 without mx4j
-            ManagementContext managementContext = broker.getManagementContext();
-            managementContext.setFindTigerMbeanServer(true);
-            managementContext.setUseMBeanServer(true);
-            managementContext.setCreateConnector(false);
-
-            broker.setUseJmx(true);
-            // broker.setPlugins(new BrokerPlugin[] { new
-            // ConnectionDotFilePlugin(), new UDPTraceBrokerPlugin() });
-            broker.addConnector("tcp://localhost:61616");
-            broker.addConnector("stomp://localhost:61613");
+            Broker broker = new Broker();
+            broker.getDefaultVirtualHost().setStore(new MemoryStore());
+            broker.addTransportServer(TransportFactory.bind(new URI("tcp://localhost:61616")));
             broker.start();
 
             // lets publish some messages so that there is some stuff to browse

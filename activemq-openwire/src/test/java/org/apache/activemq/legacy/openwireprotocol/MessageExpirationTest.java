@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.broker;
+package org.apache.activemq.legacy.openwireprotocol;
 
 import javax.jms.DeliveryMode;
 
@@ -28,9 +28,6 @@ import org.apache.activemq.command.Message;
 import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.command.ProducerInfo;
 import org.apache.activemq.command.SessionInfo;
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.broker.region.policy.PolicyEntry;
-import org.apache.activemq.legacy.broker.region.policy.VMPendingSubscriberMessageStoragePolicy;
 
 public class MessageExpirationTest extends BrokerTestSupport {
 
@@ -54,19 +51,13 @@ public class MessageExpirationTest extends BrokerTestSupport {
                                                               Byte.valueOf(ActiveMQDestination.QUEUE_TYPE), Byte.valueOf(ActiveMQDestination.TOPIC_TYPE)});
     }
 
-    @Override
-    protected BrokerService createBroker() throws Exception {
-        BrokerService broker = new BrokerService();
-        broker.setPersistent(false);
-        return broker;
-    }
-
-    protected PolicyEntry getDefaultPolicy() {
-        PolicyEntry policy = super.getDefaultPolicy();
-        // disable spooling
-        policy.setPendingSubscriberPolicy(new VMPendingSubscriberMessageStoragePolicy());
-        return policy;
-    }
+//    TODO:
+//    protected PolicyEntry getDefaultPolicy() {
+//        PolicyEntry policy = super.getDefaultPolicy();
+//        // disable spooling
+//        policy.setPendingSubscriberPolicy(new VMPendingSubscriberMessageStoragePolicy());
+//        return policy;
+//    }
 
     public void XtestMessagesWaitingForUssageDecreaseExpire() throws Exception {
 
@@ -93,7 +84,8 @@ public class MessageExpirationTest extends BrokerTestSupport {
 
         // Reduce the limit so that only 1 message can flow through the broker
         // at a time.
-        broker.getSystemUsage().getMemoryUsage().setLimit(1);
+// TODO:        
+//        broker.getSystemUsage().getMemoryUsage().setLimit(1);
 
         final Message m1 = createMessage(producerInfo, destination, deliveryMode);
         final Message m2 = createMessage(producerInfo, destination, deliveryMode, 1000);

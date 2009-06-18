@@ -24,7 +24,7 @@
  * program.  By default, the program sends one message.  Specify
  * a number after the queue name to send that number of messages.
  */
-package org.apache.activemq.legacy.demo;
+package org.apache.activemq.apollo.demo;
 
 // START SNIPPET: demo
 

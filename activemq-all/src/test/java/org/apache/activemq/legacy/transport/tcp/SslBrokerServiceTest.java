@@ -30,6 +30,7 @@ import javax.net.ssl.TrustManagerFactory;
 import junit.framework.Test;
 import junit.textui.TestRunner;
 
+import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.legacy.transport.TransportBrokerTestSupport;
 import org.apache.activemq.transport.TransportFactory;
@@ -42,7 +43,7 @@ public class SslBrokerServiceTest extends TransportBrokerTestSupport {
     }
     
     @Override
-    protected BrokerService createBroker() throws Exception {
+    protected Broker createBroker() throws Exception {
         BrokerService service = new BrokerService();
         service.setPersistent(false);
         

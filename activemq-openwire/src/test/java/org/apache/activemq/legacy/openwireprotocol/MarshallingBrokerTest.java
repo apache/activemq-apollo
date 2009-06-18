@@ -14,15 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.broker;
+package org.apache.activemq.legacy.openwireprotocol;
 
-import java.io.IOException;
+import java.net.URI;
 
 import junit.framework.Test;
 
-import org.apache.activemq.command.Command;
-import org.apache.activemq.command.Response;
 import org.apache.activemq.openwire.OpenWireFormat;
+import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.wireformat.WireFormat;
 
 /**
@@ -45,23 +44,7 @@ public class MarshallingBrokerTest extends BrokerTest {
     }
 
     protected StubConnection createConnection() throws Exception {
-        return new StubConnection(broker) {
-            public Response request(Command command) throws Exception {
-                Response r = super.request((Command)wireFormat.unmarshal(wireFormat.marshal(command)));
-                if (r != null) {
-                    r = (Response)wireFormat.unmarshal(wireFormat.marshal(r));
-                }
-                return r;
-            }
-
-            public void send(Command command) throws Exception {
-                super.send((Command)wireFormat.unmarshal(wireFormat.marshal(command)));
-            }
-
-            protected void dispatch(Command command) throws InterruptedException, IOException {
-                super.dispatch((Command)wireFormat.unmarshal(wireFormat.marshal(command)));
-            };
-        };
+        return new StubConnection(TransportFactory.connect(new URI(PIPE_URI+"?marshall=true")));
     }
 
     public static Test suite() {

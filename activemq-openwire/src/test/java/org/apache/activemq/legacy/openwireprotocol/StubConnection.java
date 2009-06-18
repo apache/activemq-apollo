@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.broker;
+package org.apache.activemq.legacy.openwireprotocol;
 
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
@@ -27,11 +27,9 @@ import org.apache.activemq.command.ExceptionResponse;
 import org.apache.activemq.command.Message;
 import org.apache.activemq.command.Response;
 import org.apache.activemq.command.ShutdownInfo;
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.broker.Connection;
+
 import org.apache.activemq.transport.DefaultTransportListener;
 import org.apache.activemq.transport.Transport;
-import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.util.JMSExceptionSupport;
 import org.apache.activemq.util.ServiceSupport;
@@ -39,28 +37,15 @@ import org.apache.activemq.util.ServiceSupport;
 public class StubConnection implements Service {
 
     private final BlockingQueue<Object> dispatchQueue = new LinkedBlockingQueue<Object>();
-    private Connection connection;
     private Transport transport;
-    private boolean shuttingDown;
     private TransportListener listener;
     public AtomicReference<Throwable> error = new AtomicReference<Throwable>();
-
-    public StubConnection(BrokerService broker) throws Exception {
-        this(TransportFactory.connect(broker.getVmConnectorURI()));
-    }
-
-    public StubConnection(Connection connection) {
-        this.connection = connection;
-    }
 
     public StubConnection(Transport transport) throws Exception {
         this.transport = transport;
         transport.setTransportListener(new DefaultTransportListener() {
             public void onCommand(Object command) {
                 try {
-                    if (command.getClass() == ShutdownInfo.class) {
-                        shuttingDown = true;
-                    }
                     StubConnection.this.dispatch(command);
                 } catch (Exception e) {
                     onException(new IOException("" + e));
@@ -94,15 +79,7 @@ public class StubConnection implements Service {
             message.setProducerId(message.getMessageId().getProducerId());
         }
         command.setResponseRequired(false);
-        if (connection != null) {
-            Response response = connection.service(command);
-            if (response != null && response.isException()) {
-                ExceptionResponse er = (ExceptionResponse)response;
-                throw JMSExceptionSupport.create(er.getException());
-            }
-        } else if (transport != null) {
-            transport.oneway(command);
-        }
+        transport.oneway(command);
     }
 
     public Response request(Command command) throws Exception {
@@ -111,26 +88,12 @@ public class StubConnection implements Service {
             message.setProducerId(message.getMessageId().getProducerId());
         }
         command.setResponseRequired(true);
-        if (connection != null) {
-            Response response = connection.service(command);
-            if (response != null && response.isException()) {
-                ExceptionResponse er = (ExceptionResponse)response;
-                throw JMSExceptionSupport.create(er.getException());
-            }
-            return response;
-        } else if (transport != null) {
-            Response response = (Response)transport.request(command);
-            if (response != null && response.isException()) {
-                ExceptionResponse er = (ExceptionResponse)response;
-                throw JMSExceptionSupport.create(er.getException());
-            }
-            return response;
+        Response response = (Response)transport.request(command);
+        if (response != null && response.isException()) {
+            ExceptionResponse er = (ExceptionResponse)response;
+            throw JMSExceptionSupport.create(er.getException());
         }
-        return null;
-    }
-
-    public Connection getConnection() {
-        return connection;
+        return response;
     }
 
     public Transport getTransport() {
@@ -141,7 +104,6 @@ public class StubConnection implements Service {
     }
 
     public void stop() throws Exception {
-        shuttingDown = true;
         if (transport != null) {
             try {
                 transport.oneway(new ShutdownInfo());

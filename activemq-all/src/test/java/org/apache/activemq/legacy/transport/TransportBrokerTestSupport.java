@@ -21,10 +21,11 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.broker.BrokerTest;
-import org.apache.activemq.legacy.broker.StubConnection;
 import org.apache.activemq.legacy.broker.TransportConnector;
+import org.apache.activemq.legacy.openwireprotocol.BrokerTest;
+import org.apache.activemq.legacy.openwireprotocol.StubConnection;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
 
@@ -37,7 +38,7 @@ public abstract class TransportBrokerTestSupport extends BrokerTest {
         super.setUp();
     }
 
-    protected BrokerService createBroker() throws Exception {
+    protected Broker createBroker() throws Exception {
         BrokerService service = super.createBroker();
         connector = service.addConnector(getBindLocation());
         return service;
