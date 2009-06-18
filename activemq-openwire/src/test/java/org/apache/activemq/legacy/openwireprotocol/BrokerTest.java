@@ -43,7 +43,39 @@ public class BrokerTest extends BrokerTestSupport {
     public byte destinationType;
     public boolean durableConsumer;
     protected static final int MAX_NULL_WAIT=500;
+    public void initCombosForTestQueueSendThenAddConsumer() {
+        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
+                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
+        addCombinationValues("destinationType",
+                             new Object[] {Byte.valueOf(ActiveMQDestination.QUEUE_TYPE),
+                                           Byte.valueOf(ActiveMQDestination.TEMP_QUEUE_TYPE)});
+    }
 
+    public void testQueueSendThenAddConsumer() throws Exception {
+
+        // Start a producer
+        StubConnection connection = createConnection();
+        ConnectionInfo connectionInfo = createConnectionInfo();
+        SessionInfo sessionInfo = createSessionInfo(connectionInfo);
+        ProducerInfo producerInfo = createProducerInfo(sessionInfo);
+        connection.send(connectionInfo);
+        connection.send(sessionInfo);
+        connection.send(producerInfo);
+
+        destination = createDestinationInfo(connection, connectionInfo, destinationType);
+
+        // Send a message to the broker.
+        connection.send(createMessage(producerInfo, destination, deliveryMode));
+
+        // Start the consumer
+        ConsumerInfo consumerInfo = createConsumerInfo(sessionInfo, destination);
+        connection.send(consumerInfo);
+
+        // Make sure the message was delivered.
+        Message m = receiveMessage(connection);
+        assertNotNull(m);
+
+    }
     public void initCombosForTestCompositeSend() {
         addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
                                                            Integer.valueOf(DeliveryMode.PERSISTENT)});
@@ -1251,39 +1283,6 @@ public class BrokerTest extends BrokerTestSupport {
         assertNoMessagesLeft(connection);
     }
 
-    public void initCombosForTestQueueSendThenAddConsumer() {
-        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
-                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
-        addCombinationValues("destinationType",
-                             new Object[] {Byte.valueOf(ActiveMQDestination.QUEUE_TYPE),
-                                           Byte.valueOf(ActiveMQDestination.TEMP_QUEUE_TYPE)});
-    }
-
-    public void testQueueSendThenAddConsumer() throws Exception {
-
-        // Start a producer
-        StubConnection connection = createConnection();
-        ConnectionInfo connectionInfo = createConnectionInfo();
-        SessionInfo sessionInfo = createSessionInfo(connectionInfo);
-        ProducerInfo producerInfo = createProducerInfo(sessionInfo);
-        connection.send(connectionInfo);
-        connection.send(sessionInfo);
-        connection.send(producerInfo);
-
-        destination = createDestinationInfo(connection, connectionInfo, destinationType);
-
-        // Send a message to the broker.
-        connection.send(createMessage(producerInfo, destination, deliveryMode));
-
-        // Start the consumer
-        ConsumerInfo consumerInfo = createConsumerInfo(sessionInfo, destination);
-        connection.send(consumerInfo);
-
-        // Make sure the message was delivered.
-        Message m = receiveMessage(connection);
-        assertNotNull(m);
-
-    }
 
     public void initCombosForTestQueueAckRemovesMessage() {
         addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),

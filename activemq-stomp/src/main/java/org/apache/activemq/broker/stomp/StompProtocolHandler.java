@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -238,7 +237,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
                     if (elem.isResponseRequired()) {
                         elem.setPersistListener(StompProtocolHandler.this);
                     }
-                    router.route(elem, controller);
+                    router.route(elem, controller, true);
                     controller.elementDispatched(elem);
                 }
 

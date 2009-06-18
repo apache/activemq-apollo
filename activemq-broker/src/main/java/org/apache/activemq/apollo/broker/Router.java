@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.broker;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,9 +30,12 @@ import org.apache.activemq.apollo.broker.QueueDomain;
 import org.apache.activemq.apollo.broker.TopicDomain;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 final public class Router {
-
+	static final private Log LOG = LogFactory.getLog(Router.class); 
+	
     public static final AsciiBuffer TOPIC_DOMAIN = new AsciiBuffer("topic");
     public static final AsciiBuffer QUEUE_DOMAIN = new AsciiBuffer("queue");
     public static final AsciiBuffer TEMP_TOPIC_DOMAIN = new AsciiBuffer("temp-topic");
@@ -84,9 +88,9 @@ final public class Router {
         }
     }
 
-    public void route(final BrokerMessageDelivery msg, ISourceController<?> controller) {
+    public void route(final BrokerMessageDelivery msg, ISourceController<?> controller, boolean autoCreate) {
 
-        Collection<DeliveryTarget> targets = route(msg.getDestination(), msg);
+        Collection<DeliveryTarget> targets = route(msg.getDestination(), msg, autoCreate);
 
         //Set up the delivery for persistence:
         msg.beginDispatch(database);
@@ -116,16 +120,28 @@ final public class Router {
         }
     }
 
-    private Collection<DeliveryTarget> route(Destination destination, MessageDelivery msg) {
+    private Collection<DeliveryTarget> route(Destination destination, MessageDelivery msg, boolean autoCreate) {
         // Handles routing to composite/multi destinations.
         Collection<Destination> destinationList = destination.getDestinations();
         if (destinationList == null) {
             Domain domain = domains.get(destination.getDomain());
-            return domain.route(destination.getName(), msg);
+            Collection<DeliveryTarget> rc = domain.route(destination.getName(), msg);
+            // We can auto create queues in the queue domain..
+            if(rc==null && autoCreate && destination.getDomain().equals(Router.QUEUE_DOMAIN) ) {
+            	try {
+					Queue queue = virtualHost.createQueue(destination);
+					rc = new ArrayList<DeliveryTarget>(1);
+					rc.add(queue);
+				} catch (Exception e) {
+					LOG.error("Failed to auto create queue: "+destination.getName()+": "+e);
+					LOG.debug("Failed to auto create queue: "+destination.getName(),e);
+				}
+            }
+			return rc;
         } else {
             HashSet<DeliveryTarget> rc = new HashSet<DeliveryTarget>();
             for (Destination d : destinationList) {
-                Collection<DeliveryTarget> t = route(d, msg);
+                Collection<DeliveryTarget> t = route(d, msg, autoCreate);
                 if (t != null) {
                     rc.addAll(t);
                 }

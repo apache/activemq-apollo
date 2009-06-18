@@ -423,7 +423,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
             controller = new FlowController<OpenWireMessageDelivery>(new FlowControllable<OpenWireMessageDelivery>() {
                 public void flowElemAccepted(ISourceController<OpenWireMessageDelivery> controller, OpenWireMessageDelivery msg) {
-                    router.route(msg, controller);
+                    router.route(msg, controller, true);
                     controller.elementDispatched(msg);
                 }
 
