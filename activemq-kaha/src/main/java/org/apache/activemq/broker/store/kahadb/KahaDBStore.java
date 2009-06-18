@@ -193,7 +193,7 @@ public class KahaDBStore implements Store {
                     }
                 }
             }
-            
+
             if (deleteAllMessages) {
                 getJournal().start();
                 journal.delete();
@@ -247,7 +247,6 @@ public class KahaDBStore implements Store {
         try {
             open();
 
-            
             store(new Trace.TraceBean().setMessage(new AsciiBuffer("LOADED " + new Date())), null);
         } finally {
             indexLock.writeLock().unlock();
@@ -441,7 +440,7 @@ public class KahaDBStore implements Store {
         try {
             indexLock.writeLock().lock();
             long start = System.currentTimeMillis();
-            
+
             try {
                 if (!opened.get()) {
                     return;
@@ -718,11 +717,13 @@ public class KahaDBStore implements Store {
 
         public final void rollback() {
             try {
-                if (updateCount > 1) {
-                    journal.write(CANCEL_UNIT_OF_WORK_DATA, false);
-                }
                 if (tx != null) {
+                    if (updateCount > 1) {
+                        journal.write(CANCEL_UNIT_OF_WORK_DATA, false);
+                    }
                     tx.rollback();
+                } else {
+                    throw new IllegalStateException("Not in Transaction");
                 }
             } catch (IOException e) {
                 throw new FatalStoreException(e);

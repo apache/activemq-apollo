@@ -39,40 +39,48 @@ public class OpenwireRemoteConsumer extends RemoteConsumer {
     private ConsumerInfo consumerInfo;
 
     private Message lastMessage;
-    
+
     protected void initialize() {
+        inputWindowSize = 1000;
+        inputResumeThreshold = 500;
         // Setup the input processing..
-        final Flow flow = new Flow("client-"+name+"-inbound", false);
-        inputResumeThreshold = inputWindowSize/2;
+        final Flow flow = new Flow("client-" + name + "-inbound", false);
+        inputResumeThreshold = inputWindowSize / 2;
         WindowLimiter<MessageDelivery> limiter = new WindowLimiter<MessageDelivery>(false, flow, inputWindowSize, inputResumeThreshold) {
             @Override
             protected void sendCredit(int credit) {
                 MessageAck ack = OpenwireSupport.createAck(consumerInfo, lastMessage, credit, MessageAck.STANDARD_ACK_TYPE);
                 write(ack);
             }
+
+            public int getElementSize(MessageDelivery md) {
+                return 1;
+            }
         };
         inboundController = new FlowController<MessageDelivery>(new FlowControllable<MessageDelivery>() {
             public void flowElemAccepted(ISourceController<MessageDelivery> controller, MessageDelivery elem) {
                 messageReceived(controller, elem);
             }
+
             public String toString() {
                 return flow.getFlowName();
             }
+
             public IFlowResource getFlowResource() {
                 return null;
             }
         }, flow, limiter, inboundMutex);
         inboundController.setExecutor(getDispatcher().createPriorityExecutor(getDispatcher().getDispatchPriorities() - 1));
-        
+
     }
-    
+
     protected void setupSubscription() throws Exception, IOException {
-        if( destination.getDomain().equals( Router.QUEUE_DOMAIN ) ) {
+        if (destination.getDomain().equals(Router.QUEUE_DOMAIN)) {
             activemqDestination = new ActiveMQQueue(destination.getName().toString());
         } else {
             activemqDestination = new ActiveMQTopic(destination.getName().toString());
         }
-        
+
         connectionInfo = createConnectionInfo(name);
         transport.oneway(connectionInfo);
         sessionInfo = createSessionInfo(connectionInfo);
@@ -81,7 +89,7 @@ public class OpenwireRemoteConsumer extends RemoteConsumer {
         consumerInfo.setPrefetchSize(inputWindowSize);
         transport.oneway(consumerInfo);
     }
-    
+
     public void onCommand(Object command) {
         try {
             if (command.getClass() == WireFormatInfo.class) {

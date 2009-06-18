@@ -103,6 +103,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
     public OpenwireProtocolHandler() {
         setStoreWireFormat(new OpenWireFormat());
+        
         visitor = new CommandVisitor() {
 
             // /////////////////////////////////////////////////////////////////
@@ -333,10 +334,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         Command command = (Command) o;
         boolean responseRequired = command.isResponseRequired();
         try {
-            
             command.visit(visitor);
-            
-            
         } catch (Exception e) {
             if (responseRequired) {
                 ExceptionResponse response = new ExceptionResponse(e);
@@ -449,7 +447,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             limiter = new WindowLimiter<MessageDelivery>(true, flow, info.getPrefetchSize(), info.getPrefetchSize() / 2) {
                 @Override
                 public int getElementSize(MessageDelivery m) {
-                    return m.getFlowLimiterSize();
+                    return 1;
                 }
             };
 

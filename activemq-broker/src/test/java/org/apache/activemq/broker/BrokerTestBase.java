@@ -478,7 +478,6 @@ public abstract class BrokerTestBase extends TestCase {
 
     private Broker createBroker(String name, String bindURI, String connectUri) throws Exception {
         Broker broker = new Broker();
-        broker.setDefaultVirtualHost(new VirtualHost(name));
         broker.addTransportServer(TransportFactory.bind(new URI(bindURI)));
         broker.addConnectUri(connectUri);
         broker.setDispatcher(dispatcher);
