@@ -21,6 +21,7 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +50,7 @@ import org.apache.activemq.command.SessionInfo;
 import org.apache.activemq.command.TransactionId;
 import org.apache.activemq.command.TransactionInfo;
 import org.apache.activemq.command.XATransactionId;
+import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
 
 public class BrokerTestSupport extends CombinationTestSupport {
@@ -68,6 +70,9 @@ public class BrokerTestSupport extends CombinationTestSupport {
     protected int maxWait = 4000;
     String PIPE_URI = "pipe://broker";
 	
+    private ArrayList<StubConnection> connections = new ArrayList<StubConnection>();
+
+
     protected void setUp() throws Exception {
         super.setUp();
         broker = createBroker();
@@ -81,6 +86,15 @@ public class BrokerTestSupport extends CombinationTestSupport {
     }
 
     protected void tearDown() throws Exception {
+        for (Iterator<StubConnection> iter = connections.iterator(); iter.hasNext();) {
+            StubConnection connection = iter.next();
+            try {
+				connection.stop();
+			} catch (Exception e) {
+			}
+            iter.remove();
+        }
+
         broker.stop();
         broker = null;
         super.tearDown();
@@ -283,10 +297,16 @@ public class BrokerTestSupport extends CombinationTestSupport {
     }
 
     protected StubConnection createConnection() throws Exception {
-        return new StubConnection(TransportFactory.connect(new URI(PIPE_URI)));
+    	StubConnection connection = new StubConnection(createTransport());
+        connections.add(connection);
+        return connection;
     }
 
-    /**
+    protected Transport createTransport() throws URISyntaxException, Exception {
+		return TransportFactory.connect(new URI(PIPE_URI));
+	}
+
+	/**
      * @param connection
      * @return
      * @throws InterruptedException

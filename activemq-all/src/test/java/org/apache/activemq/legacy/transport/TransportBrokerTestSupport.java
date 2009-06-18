@@ -18,64 +18,35 @@ package org.apache.activemq.legacy.transport;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Iterator;
 
 import org.apache.activemq.apollo.broker.Broker;
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.broker.TransportConnector;
+import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.legacy.openwireprotocol.BrokerTest;
-import org.apache.activemq.legacy.openwireprotocol.StubConnection;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
 
 public abstract class TransportBrokerTestSupport extends BrokerTest {
 
-    protected TransportConnector connector;
-    private ArrayList<StubConnection> connections = new ArrayList<StubConnection>();
-
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
-
     protected Broker createBroker() throws Exception {
-        BrokerService service = super.createBroker();
-        connector = service.addConnector(getBindLocation());
-        return service;
+    	Broker broker = BrokerFactory.createBroker(new URI("jaxb:classpath:non-persistent-activemq.xml"));
+    	broker.addTransportServer(TransportFactory.bind(new URI(getBindLocation())));
+        return broker;
     }
     
     protected abstract String getBindLocation();
-
-    protected void tearDown() throws Exception {
-        for (Iterator<StubConnection> iter = connections.iterator(); iter.hasNext();) {
-            StubConnection connection = iter.next();
-            connection.stop();
-            iter.remove();
-        }
-        if( connector!=null ) {
-            connector.stop();
-        }
-        super.tearDown();
+    protected String getConnectLocation() {
+    	return null;
     }
 
-    protected URI getBindURI() throws URISyntaxException {
-        return new URI(getBindLocation());
-    }
-
-    protected StubConnection createConnection() throws Exception {
-        URI bindURI = getBindURI();
+    @Override
+    protected Transport createTransport() throws URISyntaxException, Exception {
+        String connectLocation = getConnectLocation();
+        if( connectLocation==null ) {
+        	connectLocation = getBindLocation();
+        }
+        URI connectURI = new URI(connectLocation);
         
-        // Note: on platforms like OS X we cannot bind to the actual hostname, so we
-        // instead use the original host name (typically localhost) to bind to 
-        
-        URI actualURI = connector.getServer().getConnectURI();
-        URI connectURI = new URI(actualURI.getScheme(), actualURI.getUserInfo(), bindURI.getHost(), actualURI.getPort(), actualURI.getPath(), actualURI
-                .getQuery(), actualURI.getFragment());
-
-        Transport transport = TransportFactory.connect(connectURI);
-        StubConnection connection = new StubConnection(transport);
-        connections.add(connection);
-        return connection;
+        return TransportFactory.connect(connectURI);    
     }
 
 }

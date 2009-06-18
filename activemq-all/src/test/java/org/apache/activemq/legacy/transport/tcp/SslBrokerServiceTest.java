@@ -20,6 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.security.KeyStore;
 
 import javax.net.ssl.KeyManager;
@@ -31,10 +32,9 @@ import junit.framework.Test;
 import junit.textui.TestRunner;
 
 import org.apache.activemq.apollo.broker.Broker;
-import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.legacy.transport.TransportBrokerTestSupport;
 import org.apache.activemq.transport.TransportFactory;
-import org.apache.activemq.transport.tcp.SslTransportFactory;
 
 public class SslBrokerServiceTest extends TransportBrokerTestSupport {
 
@@ -44,19 +44,20 @@ public class SslBrokerServiceTest extends TransportBrokerTestSupport {
     
     @Override
     protected Broker createBroker() throws Exception {
-        BrokerService service = new BrokerService();
-        service.setPersistent(false);
+    	Broker broker = BrokerFactory.createBroker(new URI("jaxb:classpath:non-persistent-activemq.xml"));
+    	broker.addTransportServer(TransportFactory.bind(new URI(getBindLocation())));
         
-        KeyManager[] km = getKeyManager();
-        TrustManager[] tm = getTrustManager();
-        connector = service.addSslConnector(getBindLocation(), km, tm, null);
+// TODO:    	
+//        KeyManager[] km = getKeyManager();
+//        TrustManager[] tm = getTrustManager();
+//        connector = service.addSslConnector(getBindLocation(), km, tm, null);
+//        
+//        // for client side
+//        SslTransportFactory sslFactory = new SslTransportFactory();
+//        sslFactory.setKeyAndTrustManagers(km, tm, null);
+//        TransportFactory.registerTransportFactory("ssl", sslFactory);
         
-        // for client side
-        SslTransportFactory sslFactory = new SslTransportFactory();
-        sslFactory.setKeyAndTrustManagers(km, tm, null);
-        TransportFactory.registerTransportFactory("ssl", sslFactory);
-        
-        return service;
+        return broker;
     }
     
 

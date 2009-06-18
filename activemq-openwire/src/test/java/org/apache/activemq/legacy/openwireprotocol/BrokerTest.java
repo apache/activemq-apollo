@@ -44,6 +44,7 @@ public class BrokerTest extends BrokerTestSupport {
     public boolean durableConsumer;
     protected static final int MAX_NULL_WAIT=500;
 
+
     public void initCombosForTestQueueOnlyOnceDeliveryWith2Consumers() {
         addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
                                                            Integer.valueOf(DeliveryMode.PERSISTENT)});
