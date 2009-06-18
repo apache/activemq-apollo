@@ -183,7 +183,7 @@
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>
-            <id>test</id>
+            <id>generate schema</id>
             <phase>process-sources</phase>
             <configuration>
                 <tasks>        
