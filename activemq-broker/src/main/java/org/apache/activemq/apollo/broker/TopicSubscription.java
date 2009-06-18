@@ -20,6 +20,7 @@ import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.flow.ISourceController;
+import org.apache.activemq.queue.ExclusivePersistentQueue;
 import org.apache.activemq.queue.Subscription;
 
 class TopicSubscription implements BrokerSubscription, DeliveryTarget {
@@ -28,6 +29,9 @@ class TopicSubscription implements BrokerSubscription, DeliveryTarget {
     protected final Destination destination;
     protected Subscription<MessageDelivery> connectedSub;
     private final VirtualHost host;
+    
+    //TODO: replace this with a base interface for queue which also support non persistent use case.
+	private ExclusivePersistentQueue<Long, MessageDelivery> queue;
 
     TopicSubscription(VirtualHost host, Destination destination, BooleanExpression selector) {
         this.host = host;
@@ -43,9 +47,8 @@ class TopicSubscription implements BrokerSubscription, DeliveryTarget {
      * .broker.MessageDelivery, org.apache.activemq.flow.ISourceController)
      */
     public final void deliver(MessageDelivery message, ISourceController<?> source) {
-        Subscription<MessageDelivery> s = connectedSub;
-        if (s != null && matches(message)) {
-            s.add(message, source, null);
+        if (matches(message)) {
+            queue.add(message, source);
         }
     }
 
@@ -58,29 +61,33 @@ class TopicSubscription implements BrokerSubscription, DeliveryTarget {
         return selector != null;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.apache.activemq.broker.BrokerSubscription#connect(org.apache.activemq
-     * .broker.protocol.ProtocolHandler.ConsumerContext)
-     */
-    public synchronized void connect(Subscription<MessageDelivery> subsription) throws UserAlreadyConnectedException {
-        connectedSub = subsription;
-        host.getRouter().bind(destination, this);
+    public synchronized void connect(final Subscription<MessageDelivery> subscription) throws UserAlreadyConnectedException {
+        if (this.connectedSub == null) {
+        	
+        	// Ok this is not ideal.  Perhaps not all topic subscriptions want this level of service.
+            queue = host.getQueueStore().createExclusivePersistentQueue();
+            queue.start();
+        	
+        	this.connectedSub = subscription;
+        	this.queue.addSubscription(connectedSub);
+    		this.host.getRouter().bind(destination, this);
+        } else if (connectedSub != subscription) {
+            throw new UserAlreadyConnectedException();
+        }
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.apache.activemq.broker.BrokerSubscription#disconnect(org.apache.activemq
-     * .broker.protocol.ProtocolHandler.ConsumerContext)
-     */
-    public synchronized void disconnect(Subscription<MessageDelivery> context) {
-        host.getRouter().unbind(destination, this);
-        connectedSub = null;
+    public synchronized void disconnect(final Subscription<MessageDelivery> subscription) {
+        if (connectedSub != null && connectedSub == subscription) {
+    		this.host.getRouter().unbind(destination, this);
+    		this.queue.removeSubscription(connectedSub);
+    		this.connectedSub = null;
+    		
+    		queue.stop();
+    		host.getQueueStore().deleteQueue(queue.getDescriptor());
+    		queue=null;
+        }
     }
+
 
     public boolean matches(MessageDelivery message) {
         if (selector == null) {

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
 import org.apache.activemq.dispatch.IDispatcher;
@@ -78,6 +79,8 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
     // Be default we don't page out elements to disk.
     private static final int DEFAULT_SHARED_QUEUE_SIZE = DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD;
     //private static final int DEFAULT_SHARED_QUEUE_SIZE = 1024 * 1024 * 10;
+    
+    private static long dynamicQueueCounter = 0;
 
     private static final PersistencePolicy<MessageDelivery> SHARED_QUEUE_PERSISTENCE_POLICY = new PersistencePolicy<MessageDelivery>() {
 
@@ -280,6 +283,21 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         return queue;
     }
 
+    
+    
+    public ExclusivePersistentQueue<Long, MessageDelivery> createExclusivePersistentQueue() {
+        ExclusivePersistentQueue<Long, MessageDelivery> queue = null;
+        synchronized (this) {
+            String name = "temp:"+(dynamicQueueCounter++);
+            queue = createDurableQueueInternal(name, USE_PRIORITY_QUEUES ? QueueDescriptor.SHARED_PRIORITY : QueueDescriptor.SHARED);
+            queue.getDescriptor().setApplicationType(DURABLE_QUEUE_TYPE);
+            queue.initialize(0, 0, 0, 0);
+            addQueue(queue.getDescriptor());
+        }
+        return queue;
+    }
+    
+    
     public Collection<ExclusivePersistentQueue<Long, MessageDelivery>> getDurableQueues() {
         synchronized (this) {
             Collection<ExclusivePersistentQueue<Long, MessageDelivery>> c = durableQueues.values();
