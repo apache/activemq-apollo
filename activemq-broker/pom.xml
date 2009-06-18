@@ -102,6 +102,11 @@
       <artifactId>log4j</artifactId>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>com.sun.xml.bind</groupId>
+      <artifactId>jaxb-xjc</artifactId>
+    </dependency>  
   
   </dependencies>
 
@@ -137,7 +142,15 @@
         </executions>
       </plugin>
 
-      <plugin>
+<!--
+
+    jaxb schemagen plugin does not work quite well for our use case (classpath problems),
+    so we're using it as an ant task (see below)
+    try to switch back to this in some future version
+
+-->
+<!--
+       <plugin>
         <groupId>com.sun.tools.jxc.maven2</groupId>
         <artifactId>maven-jaxb-schemagen-plugin</artifactId>
         <executions>
@@ -155,7 +168,6 @@
                   <file>activemq-apollo.xsd</file>
                 </schema>
               </schemas>
-              <!--<verbose>false</verbose>-->
             </configuration>
             <goals>
               <goal>generate</goal>
@@ -163,6 +175,36 @@
           </execution>
         </executions>
       </plugin>  
+-->
+      
+      
+       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>test</id>
+            <phase>process-sources</phase>
+            <configuration>
+                <tasks>        
+                <taskdef name="schemagen" classname="com.sun.tools.jxc.SchemaGenTask">
+                    <classpath refid="maven.compile.classpath"/>
+                </taskdef>
+                <mkdir dir="${project.build.directory}/schema"/>
+                <schemagen srcdir="${project.build.sourceDirectory}" destdir="${project.build.directory}/schema">
+                    <schema namespace="http://activemq.apache.org/schema/activemq/apollo" file="activemq-apollo.xsd" />
+                    <classpath refid="maven.compile.classpath"/>
+                    <include name="**/jaxb/package-info.java"/>
+                    <include name="**/jaxb/*Xml.java"/>
+                </schemagen>
+                </tasks>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
 
     </plugins>
   </build>

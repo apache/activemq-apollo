@@ -33,17 +33,6 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 @XmlRootElement(name = "virtual-host")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class VirtualHostXml {
-
-	public static class AsciiBufferAdapter extends XmlAdapter<String, AsciiBuffer> {
-		@Override
-		public String marshal(AsciiBuffer v) throws Exception {
-			return v.toString();
-		}
-		@Override
-		public AsciiBuffer unmarshal(String v) throws Exception {
-			return new AsciiBuffer(v);
-		}
-	}
 	
     @XmlJavaTypeAdapter(AsciiBufferAdapter.class)
     @XmlElement(name="host-name", required=true)

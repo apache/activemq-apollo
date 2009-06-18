@@ -75,6 +75,7 @@
     
     <jaxb-api-version>2.1</jaxb-api-version>
     <jaxb-version>2.1.6</jaxb-version>
+    <xjc-version>2.1.10.1</xjc-version>
     <stax-api-version>1.0.1</stax-api-version>
     <stax-version>1.2.0</stax-version>
     
@@ -409,6 +410,11 @@
           </exclusion>
         </exclusions>
       </dependency>
+      <dependency>
+        <groupId>com.sun.xml.bind</groupId>
+        <artifactId>jaxb-xjc</artifactId>
+        <version>${xjc-version}</version>
+      </dependency>  
 
       <!-- camel testing -->
       <dependency>
