@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.jaxb;
 
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 
@@ -56,6 +57,44 @@ public class JAXBConfigTest extends TestCase {
 		assertNotNull(broker.getDefaultVirtualHost().getDatabase().getStore());
 		assertTrue( broker.getDefaultVirtualHost().getDatabase().getStore() instanceof MemoryStore );
 		
+	}
+	
+	public void testUris() throws Exception {
+		boolean failed = false;
+		// non-existent classpath
+		try {
+			URI uri = new URI("jaxb:classpath:org/apache/activemq/apollo/jaxb/" + getName()+"-fail.xml");
+			BrokerFactory.createBroker(uri);
+		} catch (IOException e) {
+			failed = true;
+		}
+		if (!failed) {
+			fail("Creating broker from non-existing url does not throw an exception!");
+		}
+		failed = false;
+		//non-existent file
+		try {
+			URI uri = new URI("jaxb:file:/org/apache/activemq/apollo/jaxb/" + getName()+"-fail.xml");
+			BrokerFactory.createBroker(uri);
+		} catch (IOException e) {
+			failed = true;
+		}
+		if (!failed) {
+			fail("Creating broker from non-existing url does not throw an exception!");
+		}
+		//non-existent url
+		try {
+			URI uri = new URI("jaxb:http://localhost/" + getName()+".xml");
+			BrokerFactory.createBroker(uri);
+		} catch (IOException e) {
+			failed = true;
+		}
+		if (!failed) {
+			fail("Creating broker from non-existing url does not throw an exception!");
+		}		
+		// regular file
+		URI uri = new URI("jaxb:" + Thread.currentThread().getContextClassLoader().getResource("org/apache/activemq/apollo/jaxb/" + getName() + ".xml"));
+		BrokerFactory.createBroker(uri);
 	}
 
     protected Broker createBroker() throws Exception {

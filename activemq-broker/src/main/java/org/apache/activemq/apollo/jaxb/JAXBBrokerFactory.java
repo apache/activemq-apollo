@@ -16,14 +16,16 @@
  */
 package org.apache.activemq.apollo.jaxb;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 
 import javax.xml.bind.JAXBContext;
+import javax.xml.bind.UnmarshalException;
 import javax.xml.bind.Unmarshaller;
 
-import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.util.URISupport;
 
 public class JAXBBrokerFactory implements BrokerFactory.Handler {
@@ -36,15 +38,21 @@ public class JAXBBrokerFactory implements BrokerFactory.Handler {
 		brokerURI = URISupport.stripScheme(brokerURI);
 		String scheme = brokerURI.getScheme();
 		if( scheme==null || "file".equals(scheme) ) {
-			configURL = URISupport.changeScheme(brokerURI, "file").toURL();
+			configURL = URISupport.changeScheme(URISupport.stripScheme(brokerURI), "file").toURL();
 		} else if( "classpath".equals(scheme) ) {
 			configURL = Thread.currentThread().getContextClassLoader().getResource(brokerURI.getSchemeSpecificPart());
 		} else {
 			configURL = URISupport.changeScheme(brokerURI, scheme).toURL();
-		}		
-		
-		BrokerXml xml = (BrokerXml) unmarshaller.unmarshal(configURL);
-		return xml.createMessageBroker();
+		}
+		if (configURL == null) {
+			throw new IOException("Cannot create broker from non-existent URI: " + brokerURI);
+		}
+		try {
+			BrokerXml xml = (BrokerXml) unmarshaller.unmarshal(configURL);
+			return xml.createMessageBroker();
+		} catch (UnmarshalException e) {
+			throw new IOException("Cannot create broker from URI: " + brokerURI + ", reason: " + e.getCause());
+		}	
 	}
 
 
