@@ -17,12 +17,14 @@
 
 package org.apache.activemq.apollo.broker.wildcard;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.filter.MessageEvaluationContext;
+import org.apache.activemq.protobuf.AsciiBuffer;
 
 
 /**
@@ -32,8 +34,8 @@ import org.apache.activemq.filter.MessageEvaluationContext;
  */
 public abstract class DestinationFilter implements BooleanExpression {
 
-    public static final String ANY_DESCENDENT = ">";
-    public static final String ANY_CHILD = "*";
+    public static final AsciiBuffer ANY_DESCENDENT = new AsciiBuffer(">");
+    public static final AsciiBuffer ANY_CHILD = new AsciiBuffer("*");
     
 	public boolean matches(MessageEvaluationContext message) throws FilterException {
 		Destination destination = message.getDestination();
@@ -50,15 +52,15 @@ public abstract class DestinationFilter implements BooleanExpression {
         if (destinations!=null) {
             return new CompositeDestinationFilter(destination);
         }
-        String[] paths = DestinationPath.getDestinationPaths(destination);
-        int idx = paths.length - 1;
+        ArrayList<AsciiBuffer> paths = DestinationPath.parse(destination);
+        int idx = paths.size() - 1;
         if (idx >= 0) {
-            String lastPath = paths[idx];
+        	AsciiBuffer lastPath = paths.get(idx);
             if (lastPath.equals(ANY_DESCENDENT)) {
                 return new PrefixDestinationFilter(paths);
             } else {
                 while (idx >= 0) {
-                    lastPath = paths[idx--];
+                    lastPath = paths.get(idx--);
                     if (lastPath.equals(ANY_CHILD)) {
                         return new WildcardDestinationFilter(paths);
                     }

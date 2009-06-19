@@ -30,6 +30,11 @@ final public class UTF8Buffer extends Buffer {
         return this;
     }
 
+    @Override
+    protected UTF8Buffer createBuffer(byte[] data, int offset, int length) {
+		return new UTF8Buffer(data, offset, length);
+	}
+
     public String toString()
     {
         if( value==null ) {

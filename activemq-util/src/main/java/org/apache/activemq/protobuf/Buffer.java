@@ -44,7 +44,8 @@ public class Buffer implements Comparable<Buffer> {
         this(UTF8Buffer.encode(value));
     }
 
-    public final Buffer slice(int low, int high) {
+    @SuppressWarnings("unchecked")
+	public final <T extends Buffer> T slice(int low, int high) {
         int sz;
 
         if (high < 0) {
@@ -57,10 +58,14 @@ public class Buffer implements Comparable<Buffer> {
             sz = 0;
         }
 
-        return new Buffer(data, offset + low, sz);
+        return (T) createBuffer(data, offset + low, sz);
     }
 
-    public final byte[] getData() {
+    protected Buffer createBuffer(byte[] data, int offset, int length) {
+		return new Buffer(data, offset, length);
+	}
+
+	public final byte[] getData() {
         return data;
     }
 

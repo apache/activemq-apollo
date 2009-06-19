@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.broker.wildcard;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -24,6 +25,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.apache.activemq.apollo.broker.Destination;
+import org.apache.activemq.protobuf.AsciiBuffer;
 
 /**
  * A Map-like data structure allowing values to be indexed by
@@ -39,10 +41,10 @@ import org.apache.activemq.apollo.broker.Destination;
  * @version $Revision: 1.3 $
  */
 public class DestinationMap<Value> {
-    protected static final String ANY_DESCENDENT = DestinationFilter.ANY_DESCENDENT;
-    protected static final String ANY_CHILD = DestinationFilter.ANY_CHILD;
+    protected static final AsciiBuffer ANY_DESCENDENT = DestinationFilter.ANY_DESCENDENT;
+    protected static final AsciiBuffer ANY_CHILD = DestinationFilter.ANY_CHILD;
 
-    private DestinationMapNode<Value> root = new DestinationMapNode<Value>(null);
+    private final DestinationMapNode<Value> root = new DestinationMapNode<Value>(null);
 
     /**
      * Looks up the value(s) matching the given Destination key. For simple
@@ -74,8 +76,8 @@ public class DestinationMap<Value> {
             }
             return;
         }
-        String[] paths = DestinationPath.getDestinationPaths(key);
-        getRootNode(key).add(paths, 0, value);
+        ArrayList<AsciiBuffer> paths = DestinationPath.parse(key);
+        root.add(paths, 0, value);
     }
 
     /**
@@ -89,8 +91,8 @@ public class DestinationMap<Value> {
             }
             return;
         }
-        String[] paths = DestinationPath.getDestinationPaths(key);
-        getRootNode(key).remove(paths, 0, value);
+        ArrayList<AsciiBuffer> paths = DestinationPath.parse(key);
+        root.remove(paths, 0, value);
 
     }
 
@@ -113,9 +115,9 @@ public class DestinationMap<Value> {
     }
 
     protected Set<Value> findWildcardMatches(Destination key) {
-        String[] paths = DestinationPath.getDestinationPaths(key);
+    	ArrayList<AsciiBuffer> paths = DestinationPath.parse(key);
         HashSet<Value> answer = new HashSet<Value>();
-        getRootNode(key).appendMatchingValues(answer, paths, 0);
+        root.appendMatchingValues(answer, paths, 0);
         return answer;
     }
 
@@ -132,8 +134,8 @@ public class DestinationMap<Value> {
             }
             return rc;
         }
-        String[] paths = DestinationPath.getDestinationPaths(key);
-        getRootNode(key).removeAll(rc, paths, 0);
+        ArrayList<AsciiBuffer> paths = DestinationPath.parse(key);
+        root.removeAll(rc, paths, 0);
         return rc;
     }
 
@@ -152,12 +154,5 @@ public class DestinationMap<Value> {
         }
         SortedSet<Value> sortedSet = new TreeSet<Value>(set);
         return sortedSet.last();
-    }
-
-    /**
-     * Returns the root node for the given destination type
-     */
-    protected DestinationMapNode<Value> getRootNode(Destination key) {
-        return root;
     }
 }

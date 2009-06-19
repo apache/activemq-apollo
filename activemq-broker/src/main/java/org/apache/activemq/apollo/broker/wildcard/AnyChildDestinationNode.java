@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
 
+import org.apache.activemq.protobuf.AsciiBuffer;
+
 /**
  * An implementation of {@link DestinationNode} which navigates all the children of the given node
  * ignoring the name of the current path (so for navigating using * in a wildcard).
@@ -33,14 +35,14 @@ public class AnyChildDestinationNode<Value> implements DestinationNode<Value> {
         this.node = node;
     }
 
-    public void appendMatchingValues(Set<Value> answer, String[] paths, int startIndex) {
+    public void appendMatchingValues(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex) {
     	for (DestinationNode<Value> child : getChildNodes()) {
             child.appendMatchingValues(answer, paths, startIndex);
         }
     }
 
 
-    public void appendMatchingWildcards(Set<Value> answer, String[] paths, int startIndex) {
+    public void appendMatchingWildcards(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex) {
     	for (DestinationNode<Value> child : getChildNodes()) {
             child.appendMatchingWildcards(answer, paths, startIndex);
         }
@@ -53,7 +55,7 @@ public class AnyChildDestinationNode<Value> implements DestinationNode<Value> {
         }
     }
 
-    public DestinationNode<Value> getChild(String path) {
+    public DestinationNode<Value> getChild(AsciiBuffer path) {
         final Collection<DestinationNode<Value>> list = new ArrayList<DestinationNode<Value>>();
     	for (DestinationNode<Value> child : getChildNodes()) {
             DestinationNode<Value> answer = child.getChild(path);

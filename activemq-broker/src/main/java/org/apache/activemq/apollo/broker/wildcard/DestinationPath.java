@@ -18,9 +18,9 @@
 package org.apache.activemq.apollo.broker.wildcard;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.activemq.apollo.broker.Destination;
+import org.apache.activemq.protobuf.AsciiBuffer;
 
 /**
  * Helper class for decomposing a Destination into a number of paths
@@ -28,32 +28,32 @@ import org.apache.activemq.apollo.broker.Destination;
  * @version $Revision: 1.3 $
  */
 public final class DestinationPath {
-    protected static final char SEPARATOR = '.';
+    protected static final byte SEPARATOR = '.';
 
     private DestinationPath() {    
     }
     
-    public static String[] getDestinationPaths(String subject) {
-        List<String> list = new ArrayList<String>();
+    public static ArrayList<AsciiBuffer> parse(AsciiBuffer domain, AsciiBuffer subject) {
+    	ArrayList<AsciiBuffer> list = new ArrayList<AsciiBuffer>(10);
+        list.add(domain);
         int previous = 0;
-        int lastIndex = subject.length() - 1;
+        int lastIndex = subject.getLength() - 1;
         while (true) {
             int idx = subject.indexOf(SEPARATOR, previous);
             if (idx < 0) {
-                list.add(subject.substring(previous, lastIndex + 1));
+            	AsciiBuffer buffer = subject.slice(previous, lastIndex + 1);
+                list.add(buffer);
                 break;
             }
-            list.add(subject.substring(previous, idx));
+        	AsciiBuffer buffer = subject.slice(previous, idx);
+            list.add(buffer);
             previous = idx + 1;
         }
-        String[] answer = new String[list.size()];
-        list.toArray(answer);
-        return answer;
+        return list;
     }
 
-    public static String[] getDestinationPaths(Destination destination) {
-    	// TODO: avoid converting to string..
-        return getDestinationPaths(destination.getName().toString());
+    public static ArrayList<AsciiBuffer> parse(Destination destination) {
+        return parse(destination.getDomain(), destination.getName());
     }
 
     /**
@@ -62,13 +62,13 @@ public final class DestinationPath {
      * @param paths
      * @return
      */
-    public static String toString(String[] paths) {
+    public static String toString(ArrayList<AsciiBuffer> paths) {
         StringBuffer buffer = new StringBuffer();
-        for (int i = 0; i < paths.length; i++) {
+        for (int i = 0; i < paths.size(); i++) {
             if (i > 0) {
                 buffer.append(SEPARATOR);
             }
-            String path = paths[i];
+            AsciiBuffer path = paths.get(i);
             if (path == null) {
                 buffer.append("*");
             } else {

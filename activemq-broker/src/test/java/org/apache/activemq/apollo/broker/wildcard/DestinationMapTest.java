@@ -27,7 +27,6 @@ import junit.framework.TestCase;
 
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.Router;
-import org.apache.activemq.apollo.broker.wildcard.DestinationMap;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 public class DestinationMapTest extends TestCase {
@@ -45,6 +44,17 @@ public class DestinationMapTest extends TestCase {
     protected String v4 = "value4";
     protected String v5 = "value5";
     protected String v6 = "value6";
+
+    public void testQueueAndTopicWithSameName() throws Exception {
+        Destination q1 = new Destination.SingleDestination(Router.QUEUE_DOMAIN, new AsciiBuffer("foo"));
+        Destination t1 = new Destination.SingleDestination(Router.TOPIC_DOMAIN, new AsciiBuffer("foo"));
+
+        map.put(q1, v1);
+        map.put(t1, v2);
+
+        assertMapValue(q1, v1);
+        assertMapValue(t1, v2);
+    }
 
     public void testCompositeDestinations() throws Exception {
         Destination d1 = createDestination("TEST.BAR.D2");

@@ -24,20 +24,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.activemq.protobuf.AsciiBuffer;
+
 /**
  * An implementation class used to implement {@link DestinationMap}
  * 
  * @version $Revision: 1.2 $
  */
 public class DestinationMapNode<Value> implements DestinationNode<Value> {
-    protected static final String ANY_CHILD = DestinationMap.ANY_CHILD;
-    protected static final String ANY_DESCENDENT = DestinationMap.ANY_DESCENDENT;
+    protected static final AsciiBuffer ANY_CHILD = DestinationMap.ANY_CHILD;
+    protected static final AsciiBuffer ANY_DESCENDENT = DestinationMap.ANY_DESCENDENT;
 
     // we synchornize at the DestinationMap level
     private DestinationMapNode<Value> parent;
     private List<Value> values = new ArrayList<Value>();
-    private Map<String, DestinationNode<Value>> childNodes = new HashMap<String, DestinationNode<Value>>();
-    private String path = "Root";
+    private Map<AsciiBuffer, DestinationNode<Value>> childNodes = new HashMap<AsciiBuffer, DestinationNode<Value>>();
+    private AsciiBuffer path = new AsciiBuffer("Root");
     // private DestinationMapNode anyChild;
     private int pathLength;
 
@@ -54,7 +56,7 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
      * Returns the child node for the given named path or null if it does not
      * exist
      */
-    public DestinationMapNode<Value> getChild(String path) {
+    public DestinationMapNode<Value> getChild(AsciiBuffer path) {
         return (DestinationMapNode<Value>)childNodes.get(path);
     }
 
@@ -73,12 +75,12 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
      * Returns the child node for the given named path, lazily creating one if
      * it does not yet exist
      */
-    public DestinationMapNode<Value> getChildOrCreate(String path) {
-        DestinationMapNode<Value> answer = (DestinationMapNode<Value>)childNodes.get(path);
+    public DestinationMapNode<Value> getChildOrCreate(AsciiBuffer asciiBuffer) {
+        DestinationMapNode<Value> answer = (DestinationMapNode<Value>)childNodes.get(asciiBuffer);
         if (answer == null) {
             answer = createChildNode();
-            answer.path = path;
-            childNodes.put(path, answer);
+            answer.path = asciiBuffer;
+            childNodes.put(asciiBuffer, answer);
         }
         return answer;
     }
@@ -132,41 +134,41 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
         return answer;
     }
 
-    public void add(String[] paths, int idx, Value value) {
-        if (idx >= paths.length) {
+    public void add(ArrayList<AsciiBuffer> paths, int idx, Value value) {
+        if (idx >= paths.size()) {
             values.add(value);
         } else {
-            // if (idx == paths.length - 1) {
+            // if (idx == paths.size() - 1) {
             // getAnyChildNode().getValues().add(value);
             // }
             // else {
             // getAnyChildNode().add(paths, idx + 1, value);
             // }
-            getChildOrCreate(paths[idx]).add(paths, idx + 1, value);
+            getChildOrCreate(paths.get(idx)).add(paths, idx + 1, value);
         }
     }
 
-    public void remove(String[] paths, int idx, Value value) {
-        if (idx >= paths.length) {
+    public void remove(ArrayList<AsciiBuffer> paths, int idx, Value value) {
+        if (idx >= paths.size()) {
             values.remove(value);
             pruneIfEmpty();
         } else {
-            // if (idx == paths.length - 1) {
+            // if (idx == paths.size() - 1) {
             // getAnyChildNode().getValues().remove(value);
             // }
             // else {
             // getAnyChildNode().remove(paths, idx + 1, value);
             // }
-            getChildOrCreate(paths[idx]).remove(paths, ++idx, value);
+            getChildOrCreate(paths.get(idx)).remove(paths, ++idx, value);
         }
     }
 
-    public void removeAll(Set<Value> answer, String[] paths, int startIndex) {
+    public void removeAll(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex) {
         DestinationNode<Value> node = this;
-        int size = paths.length;
+        int size = paths.size();
         for (int i = startIndex; i < size && node != null; i++) {
 
-            String path = paths[i];
+            AsciiBuffer path = paths.get(i);
             if (path.equals(ANY_DESCENDENT)) {
                 answer.addAll(node.removeDesendentValues());
                 break;
@@ -211,7 +213,7 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
     /**
      * Matches any entries in the map containing wildcards
      */
-    public void appendMatchingWildcards(Set<Value> answer, String[] paths, int idx) {
+    public void appendMatchingWildcards(Set<Value> answer, ArrayList<AsciiBuffer> paths, int idx) {
         if (idx - 1 > pathLength) {
             return;
         }
@@ -225,12 +227,12 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
         }
     }
 
-    public void appendMatchingValues(Set<Value> answer, String[] paths, int startIndex) {
+    public void appendMatchingValues(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex) {
         DestinationNode<Value> node = this;
         boolean couldMatchAny = true;
-        int size = paths.length;
+        int size = paths.size();
         for (int i = startIndex; i < size && node != null; i++) {
-            String path = paths[i];
+            AsciiBuffer path = paths.get(i);
             if (path.equals(ANY_DESCENDENT)) {
                 answer.addAll(node.getDesendentValues());
                 couldMatchAny = false;
@@ -257,7 +259,7 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
         }
     }
 
-    public String getPath() {
+    public AsciiBuffer getPath() {
         return path;
     }
 

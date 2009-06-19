@@ -16,8 +16,11 @@
  */
 package org.apache.activemq.apollo.broker.wildcard;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
+
+import org.apache.activemq.protobuf.AsciiBuffer;
 
 /**
  * Represents a node in the {@link DestinationMap} tree
@@ -25,15 +28,15 @@ import java.util.Set;
  * @version $Revision: 563921 $
  */
 public interface DestinationNode<Value> {
-    void appendMatchingValues(Set<Value> answer, String[] paths, int startIndex);
+    void appendMatchingValues(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex);
 
-    void appendMatchingWildcards(Set<Value> answer, String[] paths, int startIndex);
+    void appendMatchingWildcards(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex);
 
     void appendDescendantValues(Set<Value> answer);
 
     Collection<Value> getDesendentValues();
 
-    DestinationNode<Value> getChild(String path);
+    DestinationNode<Value> getChild(AsciiBuffer path);
 
     Collection<Value> getValues();
 

@@ -30,6 +30,11 @@ final public class AsciiBuffer extends Buffer {
         return this;
     }
 
+    @Override
+    protected AsciiBuffer createBuffer(byte[] data, int offset, int length) {
+		return new AsciiBuffer(data, offset, length);
+	}
+    
     public String toString()
     {
     	if( value == null ) {

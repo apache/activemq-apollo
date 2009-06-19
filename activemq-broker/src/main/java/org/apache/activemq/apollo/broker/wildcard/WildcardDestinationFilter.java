@@ -17,7 +17,10 @@
 
 package org.apache.activemq.apollo.broker.wildcard;
 
+import java.util.ArrayList;
+
 import org.apache.activemq.apollo.broker.Destination;
+import org.apache.activemq.protobuf.AsciiBuffer;
 
 
 
@@ -28,30 +31,30 @@ import org.apache.activemq.apollo.broker.Destination;
  */
 public class WildcardDestinationFilter extends DestinationFilter {
 
-    private String[] prefixes;
+    private AsciiBuffer[] prefixes;
 
     /**
      * An array of paths containing * characters
      *
-     * @param prefixes
+     * @param paths
      */
-    public WildcardDestinationFilter(String[] prefixes) {
-        this.prefixes = new String[prefixes.length];
-        for (int i = 0; i < prefixes.length; i++) {
-            String prefix = prefixes[i];
-            if (!prefix.equals("*")) {
+    public WildcardDestinationFilter(ArrayList<AsciiBuffer> paths) {
+        this.prefixes = new AsciiBuffer[paths.size()];
+        for (int i = 0; i < paths.size(); i++) {
+        	AsciiBuffer prefix = paths.get(i);
+            if (!prefix.equals(DestinationFilter.ANY_CHILD)) {
                 this.prefixes[i] = prefix;
             }
         }
     }
 
     public boolean matches(Destination destination) {
-        String[] path = DestinationPath.getDestinationPaths(destination);
+        ArrayList<AsciiBuffer> path = DestinationPath.parse(destination);
         int length = prefixes.length;
-        if (path.length == length) {
+        if (path.size() == length) {
             for (int i = 0; i < length; i++) {
-                String prefix = prefixes[i];
-                if (prefix != null && !prefix.equals(path[i])) {
+            	AsciiBuffer prefix = prefixes[i];
+                if (prefix != null && !prefix.equals(path.get(i))) {
                     return false;
                 }
             }
@@ -62,7 +65,9 @@ public class WildcardDestinationFilter extends DestinationFilter {
 
 
     public String getText() {
-        return DestinationPath.toString(prefixes);
+    	ArrayList<AsciiBuffer> t = new ArrayList<AsciiBuffer>(prefixes.length);
+    	t.toArray(prefixes);
+        return DestinationPath.toString(t);
     }
 
     public String toString() {

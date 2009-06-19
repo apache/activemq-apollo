@@ -17,7 +17,10 @@
 
 package org.apache.activemq.apollo.broker.wildcard;
 
+import java.util.ArrayList;
+
 import org.apache.activemq.apollo.broker.Destination;
+import org.apache.activemq.protobuf.AsciiBuffer;
 
 
 /**
@@ -27,24 +30,24 @@ import org.apache.activemq.apollo.broker.Destination;
  */
 public class PrefixDestinationFilter extends DestinationFilter {
 
-    private String[] prefixes;
+    private ArrayList<AsciiBuffer> prefixes;
 
     /**
      * An array of paths, the last path is '>'
      *
-     * @param prefixes
+     * @param paths
      */
-    public PrefixDestinationFilter(String[] prefixes) {
-        this.prefixes = prefixes;
+    public PrefixDestinationFilter(ArrayList<AsciiBuffer> paths) {
+        this.prefixes = paths;
     }
 
     public boolean matches(Destination destination) {
-        String[] path = DestinationPath.getDestinationPaths(destination);
-        int length = prefixes.length;
-        if (path.length >= length) {
+        ArrayList<AsciiBuffer> path = DestinationPath.parse(destination);
+        int length = prefixes.size();
+        if (path.size() >= length) {
             int size = length - 1;
             for (int i = 0; i < size; i++) {
-                if (!prefixes[i].equals(path[i])) {
+                if (!prefixes.get(i).equals(path.get(i))) {
                     return false;
                 }
             }
