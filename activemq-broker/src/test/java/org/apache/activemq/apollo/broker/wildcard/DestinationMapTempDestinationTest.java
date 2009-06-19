@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.filter;
+package org.apache.activemq.apollo.broker.wildcard;
 
 import java.util.Set;
 
@@ -22,6 +22,7 @@ import junit.framework.TestCase;
 
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.Router;
+import org.apache.activemq.apollo.broker.wildcard.DestinationMap;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 public class DestinationMapTempDestinationTest extends TestCase {

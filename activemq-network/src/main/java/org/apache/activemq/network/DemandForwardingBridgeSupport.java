@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.advisory.AdvisorySupport;
+import org.apache.activemq.apollo.broker.wildcard.DestinationFilter;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.activemq.command.ActiveMQTempDestination;
@@ -58,7 +59,6 @@ import org.apache.activemq.command.Response;
 import org.apache.activemq.command.SessionInfo;
 import org.apache.activemq.command.ShutdownInfo;
 import org.apache.activemq.command.WireFormatInfo;
-import org.apache.activemq.filter.DestinationFilter;
 import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.legacy.broker.BrokerServiceAware;
 import org.apache.activemq.legacy.broker.TransportConnection;
@@ -896,9 +896,9 @@ public abstract class DemandForwardingBridgeSupport implements NetworkBridge, Br
             for (int i = 0; i < dests.length; i++) {
                 DestinationFilter exclusionFilter = filter;
                 ActiveMQDestination match = dests[i];
-                if (exclusionFilter instanceof org.apache.activemq.filter.SimpleDestinationFilter) {
+                if (exclusionFilter instanceof org.apache.activemq.apollo.broker.wildcard.SimpleDestinationFilter) {
                     DestinationFilter newFilter = DestinationFilter.parseFilter(match);
-                    if (!(newFilter instanceof org.apache.activemq.filter.SimpleDestinationFilter)) {
+                    if (!(newFilter instanceof org.apache.activemq.apollo.broker.wildcard.SimpleDestinationFilter)) {
                         exclusionFilter = newFilter;
                         match = destination;
                     }
@@ -913,9 +913,9 @@ public abstract class DemandForwardingBridgeSupport implements NetworkBridge, Br
             for (int i = 0; i < dests.length; i++) {
                 DestinationFilter inclusionFilter = filter;
                 ActiveMQDestination match = dests[i];
-                if (inclusionFilter instanceof org.apache.activemq.filter.SimpleDestinationFilter) {
+                if (inclusionFilter instanceof org.apache.activemq.apollo.broker.wildcard.SimpleDestinationFilter) {
                     DestinationFilter newFilter = DestinationFilter.parseFilter(match);
-                    if (!(newFilter instanceof org.apache.activemq.filter.SimpleDestinationFilter)) {
+                    if (!(newFilter instanceof org.apache.activemq.apollo.broker.wildcard.SimpleDestinationFilter)) {
                         inclusionFilter = newFilter;
                         match = destination;
                     }

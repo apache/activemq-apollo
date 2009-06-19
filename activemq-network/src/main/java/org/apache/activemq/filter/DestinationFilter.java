@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.filter;
 
+import org.apache.activemq.apollo.broker.wildcard.DestinationFilter;
 import org.apache.activemq.command.ActiveMQDestination;
 
 public class DestinationFilter {

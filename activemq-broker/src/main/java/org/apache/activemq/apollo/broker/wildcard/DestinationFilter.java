@@ -15,11 +15,14 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.filter;
+package org.apache.activemq.apollo.broker.wildcard;
 
 import java.util.Collection;
 
 import org.apache.activemq.apollo.broker.Destination;
+import org.apache.activemq.filter.BooleanExpression;
+import org.apache.activemq.filter.FilterException;
+import org.apache.activemq.filter.MessageEvaluationContext;
 
 
 /**

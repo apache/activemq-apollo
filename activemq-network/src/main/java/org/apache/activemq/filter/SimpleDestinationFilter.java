@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.filter;
 
+import org.apache.activemq.apollo.broker.wildcard.DestinationFilter;
+
 public class SimpleDestinationFilter extends DestinationFilter {
 
 }

@@ -14,30 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.activemq.apollo.broker.wildcard;
 
-package org.apache.activemq.filter;
-
-import org.apache.activemq.apollo.broker.Destination;
-
+import java.util.Collection;
+import java.util.Set;
 
 /**
- * Matches messages sent to an exact destination
+ * Represents a node in the {@link DestinationMap} tree
  *
- * @version $Revision: 1.3 $
+ * @version $Revision: 563921 $
  */
-public class SimpleDestinationFilter extends DestinationFilter {
+public interface DestinationNode<Value> {
+    void appendMatchingValues(Set<Value> answer, String[] paths, int startIndex);
 
-    private Destination destination;
+    void appendMatchingWildcards(Set<Value> answer, String[] paths, int startIndex);
 
-    public SimpleDestinationFilter(Destination destination) {
-        this.destination = destination;
-    }
+    void appendDescendantValues(Set<Value> answer);
 
-    public boolean matches(Destination destination) {
-        return this.destination.equals(destination);
-    }
+    Collection<Value> getDesendentValues();
 
-    public boolean isWildcard() {
-        return false;
-    }
+    DestinationNode<Value> getChild(String path);
+
+    Collection<Value> getValues();
+
+    Collection<DestinationNode<Value>> getChildren();
+
+    Collection<Value> removeDesendentValues();
+
+    Collection<Value> removeValues();
 }

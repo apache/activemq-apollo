@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.filter;
+package org.apache.activemq.apollo.broker.wildcard;
 
 import org.apache.activemq.apollo.broker.Destination;
 

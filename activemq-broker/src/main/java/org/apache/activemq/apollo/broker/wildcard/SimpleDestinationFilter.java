@@ -14,41 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.filter;
 
-import java.util.Collection;
+package org.apache.activemq.apollo.broker.wildcard;
 
 import org.apache.activemq.apollo.broker.Destination;
 
 
 /**
- * A {@link DestinationFilter} used for composite destinations
- * 
+ * Matches messages sent to an exact destination
+ *
  * @version $Revision: 1.3 $
  */
-public class CompositeDestinationFilter extends DestinationFilter {
+public class SimpleDestinationFilter extends DestinationFilter {
 
-    private DestinationFilter filters[];
+    private Destination destination;
 
-    public CompositeDestinationFilter(Destination destination) {
-    	Collection<Destination> destinations = destination.getDestinations();
-        filters = new DestinationFilter[destinations.size()];
-        int i=0;
-    	for (Destination childDestination : destinations) {
-            filters[i++] = DestinationFilter.parseFilter(childDestination);
-		}
+    public SimpleDestinationFilter(Destination destination) {
+        this.destination = destination;
     }
 
-    public boolean matches(Destination destination) throws FilterException {
-        for (int i = 0; i < filters.length; i++) {
-            if (filters[i].matches(destination)) {
-                return true;
-            }
-        }
-        return false;
+    public boolean matches(Destination destination) {
+        return this.destination.equals(destination);
     }
 
     public boolean isWildcard() {
-        return true;
+        return false;
     }
 }
