@@ -48,21 +48,23 @@ public abstract class PathFilter implements BooleanExpression {
     public abstract boolean matches(AsciiBuffer path);
 
     public static PathFilter parseFilter(AsciiBuffer path) {
-        ArrayList<AsciiBuffer> paths = PathSupport.parse(path);
-        int idx = paths.size() - 1;
-        if (idx >= 0) {
-        	AsciiBuffer lastPath = paths.get(idx);
-            if (lastPath.equals(ANY_DESCENDENT)) {
-                return new PrefixPathFilter(paths);
-            } else {
-                while (idx >= 0) {
-                    lastPath = paths.get(idx--);
-                    if (lastPath.equals(ANY_CHILD)) {
-                        return new WildcardPathFilter(paths);
-                    }
-                }
-            }
-        }
+    	if( containsWildCards(path) ) { 
+	        ArrayList<AsciiBuffer> paths = PathSupport.parse(path);
+	        int idx = paths.size() - 1;
+	        if (idx >= 0) {
+	        	AsciiBuffer lastPath = paths.get(idx);
+	            if (lastPath.equals(ANY_DESCENDENT)) {
+	                return new PrefixPathFilter(paths);
+	            } else {
+	                while (idx >= 0) {
+	                    lastPath = paths.get(idx--);
+	                    if (lastPath.equals(ANY_CHILD)) {
+	                        return new WildcardPathFilter(paths);
+	                    }
+	                }
+	            }
+	        }
+    	}
 
         // if none of the paths contain a wildcard then use equality
         return new SimplePathFilter(path);

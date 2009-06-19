@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import org.apache.activemq.apollo.broker.path.PathMap;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.commons.logging.Log;
@@ -36,36 +35,40 @@ final public class Router {
     public static final AsciiBuffer TEMP_TOPIC_DOMAIN = new AsciiBuffer("temp-topic");
     public static final AsciiBuffer TEMP_QUEUE_DOMAIN = new AsciiBuffer("temp-queue");
 
-    private final HashMap<AsciiBuffer, PathMap<DeliveryTarget>> domains = new HashMap<AsciiBuffer, PathMap<DeliveryTarget>>();
+    private final HashMap<AsciiBuffer, Domain> domains = new HashMap<AsciiBuffer, Domain>();
     
     private VirtualHost virtualHost;
     private BrokerDatabase database;
     
 
     public Router() {
-        domains.put(QUEUE_DOMAIN, new PathMap<DeliveryTarget>());
-        domains.put(TOPIC_DOMAIN, new PathMap<DeliveryTarget>());
-        domains.put(TEMP_QUEUE_DOMAIN, new PathMap<DeliveryTarget>());
-        domains.put(TEMP_TOPIC_DOMAIN, new PathMap<DeliveryTarget>());
+        domains.put(QUEUE_DOMAIN, new Domain());
+        domains.put(TOPIC_DOMAIN, new Domain());
+        domains.put(TEMP_QUEUE_DOMAIN, new Domain());
+        domains.put(TEMP_TOPIC_DOMAIN, new Domain());
     }
 
-    public PathMap<DeliveryTarget> getDomain(AsciiBuffer name) {
+    public Domain getDomain(Destination destination) {
+        return getDomain(destination.getDomain());
+    }
+
+    public Domain getDomain(AsciiBuffer name) {
         return domains.get(name);
     }
 
-    public PathMap<DeliveryTarget> putDomain(AsciiBuffer name, PathMap<DeliveryTarget> domain) {
+    public Domain putDomain(AsciiBuffer name, Domain domain) {
         return domains.put(name, domain);
     }
 
-    public PathMap<DeliveryTarget> removeDomain(AsciiBuffer name) {
+    public Domain removeDomain(AsciiBuffer name) {
         return domains.remove(name);
     }
 
     public synchronized void bind(Destination destination, DeliveryTarget target) {
         Collection<Destination> destinationList = destination.getDestinations();
         if (destinationList == null) {
-        	PathMap<DeliveryTarget> domain = domains.get(destination.getDomain());
-            domain.put(destination.getName(), target);
+        	Domain domain = getDomain(destination);
+            domain.bind(destination.getName(), target);
         } else {
             for (Destination d : destinationList) {
                 bind(d, target);
@@ -76,8 +79,8 @@ final public class Router {
     public synchronized void unbind(Destination destination, DeliveryTarget target) {
         Collection<Destination> destinationList = destination.getDestinations();
         if (destinationList == null) {
-        	PathMap<DeliveryTarget> domain = domains.get(destination.getDomain());
-            domain.remove(destination.getName(), target);
+        	Domain domain = getDomain(destination);
+            domain.unbind(destination.getName(), target);
         } else {
             for (Destination d : destinationList) {
                 unbind(d, target);
@@ -121,8 +124,8 @@ final public class Router {
         // Handles routing to composite/multi destinations.
         Collection<Destination> destinationList = destination.getDestinations();
         if (destinationList == null) {
-        	PathMap<DeliveryTarget> domain = domains.get(destination.getDomain());
-            Collection<DeliveryTarget> rc = domain.get(destination.getName());
+        	Domain domain = getDomain(destination);
+            Collection<DeliveryTarget> rc = domain.route(destination.getName(), msg);
             // We can auto create queues in the queue domain..
             if(rc.isEmpty() && autoCreate && destination.getDomain().equals(Router.QUEUE_DOMAIN) ) {
             	try {

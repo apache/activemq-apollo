@@ -117,10 +117,10 @@ public class VirtualHost implements Service {
         // Create Queue instances
         for (IQueue<Long, MessageDelivery> iQueue : queueStore.getSharedQueues()) {
             Queue queue = new Queue(iQueue);
-            PathMap<DeliveryTarget> domain = router.getDomain(Router.QUEUE_DOMAIN);
+            Domain domain = router.getDomain(Router.QUEUE_DOMAIN);
             Destination dest = new Destination.SingleDestination(Router.QUEUE_DOMAIN, iQueue.getDescriptor().getQueueName());
             queue.setDestination(dest);
-            domain.put(dest.getName(), queue);
+            domain.bind(dest.getName(), queue);
             queues.put(dest.getName(), queue);
         }
         for (Queue queue : queues.values()) {
@@ -157,8 +157,8 @@ public class VirtualHost implements Service {
             IQueue<Long, MessageDelivery> iQueue = queueStore.createSharedQueue(dest.getName().toString());
             queue = new Queue(iQueue);
             queue.setDestination(dest);
-            PathMap<DeliveryTarget> domain = router.getDomain(dest.getDomain());
-            domain.put(dest.getName(), queue);
+            Domain domain = router.getDomain(dest.getDomain());
+            domain.bind(dest.getName(), queue);
             queues.put(dest.getName(), queue);
         }
         queue.start();

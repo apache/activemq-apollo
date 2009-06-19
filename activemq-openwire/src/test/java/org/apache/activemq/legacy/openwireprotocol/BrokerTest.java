@@ -43,6 +43,73 @@ public class BrokerTest extends BrokerTestSupport {
     public byte destinationType;
     public boolean durableConsumer;
     protected static final int MAX_NULL_WAIT=500;
+    
+    public void initCombosForTestTopicNoLocal() {
+        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
+                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
+    }
+
+    public void testTopicNoLocal() throws Exception {
+
+        ActiveMQDestination destination = new ActiveMQTopic("TEST");
+
+        // Setup a first connection
+        StubConnection connection1 = createConnection();
+        ConnectionInfo connectionInfo1 = createConnectionInfo();
+        SessionInfo sessionInfo1 = createSessionInfo(connectionInfo1);
+        ProducerInfo producerInfo1 = createProducerInfo(sessionInfo1);
+        connection1.send(connectionInfo1);
+        connection1.send(sessionInfo1);
+        connection1.send(producerInfo1);
+
+        ConsumerInfo consumerInfo1 = createConsumerInfo(sessionInfo1, destination);
+        consumerInfo1.setRetroactive(true);
+        consumerInfo1.setPrefetchSize(100);
+        consumerInfo1.setNoLocal(true);
+        connection1.send(consumerInfo1);
+
+        // Setup a second connection
+        StubConnection connection2 = createConnection();
+        ConnectionInfo connectionInfo2 = createConnectionInfo();
+        SessionInfo sessionInfo2 = createSessionInfo(connectionInfo2);
+        ProducerInfo producerInfo2 = createProducerInfo(sessionInfo2);
+        connection2.send(connectionInfo2);
+        connection2.send(sessionInfo2);
+        connection2.send(producerInfo2);
+
+        ConsumerInfo consumerInfo2 = createConsumerInfo(sessionInfo2, destination);
+        consumerInfo2.setRetroactive(true);
+        consumerInfo2.setPrefetchSize(100);
+        consumerInfo2.setNoLocal(true);
+        connection2.send(consumerInfo2);
+
+        // Send the messages
+        connection1.send(createMessage(producerInfo1, destination, deliveryMode));
+        connection1.send(createMessage(producerInfo1, destination, deliveryMode));
+        connection1.send(createMessage(producerInfo1, destination, deliveryMode));
+        connection1.send(createMessage(producerInfo1, destination, deliveryMode));
+
+        // The 2nd connection should get the messages.
+        for (int i = 0; i < 4; i++) {
+            Message m1 = receiveMessage(connection2);
+            assertNotNull(m1);
+        }
+
+        // Send a message with the 2nd connection
+        Message message = createMessage(producerInfo2, destination, deliveryMode);
+        connection2.send(message);
+
+        // The first connection should not see the initial 4 local messages sent
+        // but should
+        // see the messages from connection 2.
+        Message m = receiveMessage(connection1);
+        assertNotNull(m);
+        assertEquals(message.getMessageId(), m.getMessageId());
+
+        assertNoMessagesLeft(connection1);
+        assertNoMessagesLeft(connection2);
+    }
+    
     public void initCombosForTestQueueSendThenAddConsumer() {
         addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
                                                            Integer.valueOf(DeliveryMode.PERSISTENT)});
@@ -1070,71 +1137,6 @@ public class BrokerTest extends BrokerTestSupport {
         assertNull(connection1.getDispatchQueue().poll(MAX_NULL_WAIT, TimeUnit.MILLISECONDS));
     }
 
-    public void initCombosForTestTopicNoLocal() {
-        addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
-                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
-    }
-
-    public void testTopicNoLocal() throws Exception {
-
-        ActiveMQDestination destination = new ActiveMQTopic("TEST");
-
-        // Setup a first connection
-        StubConnection connection1 = createConnection();
-        ConnectionInfo connectionInfo1 = createConnectionInfo();
-        SessionInfo sessionInfo1 = createSessionInfo(connectionInfo1);
-        ProducerInfo producerInfo1 = createProducerInfo(sessionInfo1);
-        connection1.send(connectionInfo1);
-        connection1.send(sessionInfo1);
-        connection1.send(producerInfo1);
-
-        ConsumerInfo consumerInfo1 = createConsumerInfo(sessionInfo1, destination);
-        consumerInfo1.setRetroactive(true);
-        consumerInfo1.setPrefetchSize(100);
-        consumerInfo1.setNoLocal(true);
-        connection1.send(consumerInfo1);
-
-        // Setup a second connection
-        StubConnection connection2 = createConnection();
-        ConnectionInfo connectionInfo2 = createConnectionInfo();
-        SessionInfo sessionInfo2 = createSessionInfo(connectionInfo2);
-        ProducerInfo producerInfo2 = createProducerInfo(sessionInfo2);
-        connection2.send(connectionInfo2);
-        connection2.send(sessionInfo2);
-        connection2.send(producerInfo2);
-
-        ConsumerInfo consumerInfo2 = createConsumerInfo(sessionInfo2, destination);
-        consumerInfo2.setRetroactive(true);
-        consumerInfo2.setPrefetchSize(100);
-        consumerInfo2.setNoLocal(true);
-        connection2.send(consumerInfo2);
-
-        // Send the messages
-        connection1.send(createMessage(producerInfo1, destination, deliveryMode));
-        connection1.send(createMessage(producerInfo1, destination, deliveryMode));
-        connection1.send(createMessage(producerInfo1, destination, deliveryMode));
-        connection1.send(createMessage(producerInfo1, destination, deliveryMode));
-
-        // The 2nd connection should get the messages.
-        for (int i = 0; i < 4; i++) {
-            Message m1 = receiveMessage(connection2);
-            assertNotNull(m1);
-        }
-
-        // Send a message with the 2nd connection
-        Message message = createMessage(producerInfo2, destination, deliveryMode);
-        connection2.send(message);
-
-        // The first connection should not see the initial 4 local messages sent
-        // but should
-        // see the messages from connection 2.
-        Message m = receiveMessage(connection1);
-        assertNotNull(m);
-        assertEquals(message.getMessageId(), m.getMessageId());
-
-        assertNoMessagesLeft(connection1);
-        assertNoMessagesLeft(connection2);
-    }
 
     public void initCombosForTopicDispatchIsBroadcast() {
         addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
