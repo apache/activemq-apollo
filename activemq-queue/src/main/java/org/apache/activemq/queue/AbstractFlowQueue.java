@@ -46,6 +46,7 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
         }
     };
     protected boolean started;
+    protected Subscription<E> sub;
 
     AbstractFlowQueue() {
         super();
@@ -58,16 +59,6 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
     public void setFlowQueueListener(FlowQueueListener listener) {
         this.listener = listener;
     }
-
-    public void add(E elem, ISourceController<?> source) {
-        getSinkController(elem, source).add(elem, source);
-    }
-
-    public boolean offer(E elem, ISourceController<?> source) {
-        return getSinkController(elem, source).offer(elem, source);
-    }
-
-    protected abstract ISinkController<E> getSinkController(E elem, ISourceController<?> source);
 
     public final boolean dispatch() {
 
@@ -93,9 +84,10 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
     public synchronized void stop() {
         started = false;
     }
-    
+
     /**
      * Calls stop and cleans up resources associated with the queue.
+     * 
      * @param sync
      */
     public void shutdown(boolean sync) {
@@ -104,12 +96,42 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
         synchronized (this) {
             dc = dispatchContext;
             dispatchContext = null;
-            
+
         }
-        
+
         if (dc != null) {
             dc.close(sync);
         }
+    }
+
+    /**
+     * Adds a subscription to the queue. When the queue is started and elements
+     * are available, they will be given to the subscription.
+     * 
+     * @param sub
+     *            The subscription to add to the queue.
+     */
+    public synchronized void addSubscription(Subscription<E> sub) {
+        if (sub == null) {
+            this.sub = sub;
+        } else if (sub != sub) {
+            //TODO change this to a checked exception.
+            throw new IllegalStateException("Sub already connected");
+        }
+    }
+
+    /**
+     * Removes a subscription from the queue.
+     * 
+     * @param sub
+     *            The subscription to remove.
+     */
+    public synchronized boolean removeSubscription(Subscription<E> sub) {
+        if (this.sub == sub) {
+            sub = null;
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -128,7 +150,7 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
         super.setFlowExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
     }
 
-    public synchronized final void setDispatchPriority(int priority) {
+    public synchronized void setDispatchPriority(int priority) {
         dispatchPriority = priority;
         if (dispatchContext != null) {
             dispatchContext.updatePriority(priority);
@@ -197,5 +219,4 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
     public String toString() {
         return getResourceName();
     }
-
 }

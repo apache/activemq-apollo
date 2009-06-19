@@ -183,9 +183,12 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
         }
     }
 
-    public synchronized void removeSubscription(Subscription<E> sub) {
+    public synchronized boolean removeSubscription(Subscription<E> sub) {
         if (sub == subscription) {
             sub = null;
+            return true;
+        } else {
+            return false;
         }
     }
 

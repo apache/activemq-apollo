@@ -58,10 +58,15 @@ public class ExclusivePriorityQueue<E> extends AbstractFlowQueue<E> implements I
 
     }
 
-    protected final ISinkController<E> getSinkController(E elem, ISourceController<?> source) {
-        return controller;
+    
+    public void add(E elem, ISourceController<?> source) {
+        controller.add(elem, source);
     }
 
+    public boolean offer(E elem, ISourceController<?> source) {
+        return controller.offer(elem, source);
+    }
+    
     /**
      * Called when the controller accepts a message for this queue.
      */
@@ -86,7 +91,12 @@ public class ExclusivePriorityQueue<E> extends AbstractFlowQueue<E> implements I
     public boolean pollingDispatch() {
         E elem = poll();
         if (elem != null) {
-            drain.drain(elem, controller);
+            if (sub != null) {
+                sub.add(elem, controller, null);
+            } else {
+                //TODO remove drain:
+                drain.drain(elem, controller);
+            }
             return true;
         } else {
             return false;

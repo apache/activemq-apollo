@@ -14,4 +14,4 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ## ---------------------------------------------------------------------------
-class=org.apache.activemq.flow.TestWireFormatFactory
+class=org.apache.activemq.queue.perf.Proto2WireFormatFactory

@@ -27,7 +27,7 @@ import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.util.Mapper;
 
-abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource<V> implements IPartitionedQueue<K, V> {
+abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implements IPartitionedQueue<K, V> {
 
     private HashSet<Subscription<V>> subscriptions = new HashSet<Subscription<V>>();
     private HashMap<Integer, IQueue<K, V>> partitions = new HashMap<Integer, IQueue<K, V>>();
@@ -246,5 +246,38 @@ abstract public class PartitionedQueue<K, V> extends AbstractLimitedFlowResource
         if (shutdown) {
             throw new IllegalStateException(this + " is shutdown");
         }
+    }
+    
+    /* (non-Javadoc)
+     * @see org.apache.activemq.queue.IPollableFlowSource#isDispatchReady()
+     */
+    public boolean isDispatchReady() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException();
+    }
+
+    /* (non-Javadoc)
+     * @see org.apache.activemq.queue.IPollableFlowSource#poll()
+     */
+    public V poll() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException();
+    }
+
+    /* (non-Javadoc)
+     * @see org.apache.activemq.queue.IPollableFlowSource#pollingDispatch()
+     */
+    public boolean pollingDispatch() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException();
+    }
+
+    /* (non-Javadoc)
+     * @see org.apache.activemq.flow.ISinkController.FlowControllable#flowElemAccepted(org.apache.activemq.flow.ISourceController, java.lang.Object)
+     */
+    public void flowElemAccepted(ISourceController<V> source, V elem) {
+        // TODO Remove
+        throw new UnsupportedOperationException();
+        
     }
 }

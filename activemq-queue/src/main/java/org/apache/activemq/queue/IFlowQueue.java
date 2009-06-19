@@ -16,9 +16,10 @@
  */
 package org.apache.activemq.queue;
 
+import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.IFlowRelay;
 
-public interface IFlowQueue<E> extends IBlockingFlowSource<E>, IPollableFlowSource<E>, IAsynchronousFlowSource<E>, IFlowRelay<E> {
+public interface IFlowQueue<E> extends IBlockingFlowSource<E>, IPollableFlowSource<E>, IFlowRelay<E> {
 
     public interface FlowQueueListener {
         
@@ -33,5 +34,40 @@ public interface IFlowQueue<E> extends IBlockingFlowSource<E>, IPollableFlowSour
 
     public void setFlowQueueListener(FlowQueueListener listener);
     
+    /**
+     * Adds a subscription to the queue. When the queue is started and elements
+     * are available, they will be given to the subscription.
+     * 
+     * @param sub
+     *            The subscription to add to the queue.
+     */
+    public void addSubscription(Subscription<E> sub);
+
+    /**
+     * Removes a subscription from the queue.
+     * 
+     * @param sub
+     *            The subscription to remove.
+     */
+    public boolean removeSubscription(Subscription<E> sub);
+    
+    /**
+     * Sets the dispatcher for the queue.
+     * 
+     * @param dispatcher
+     *            The dispatcher to be used by the queue.
+     */
+    public void setDispatcher(IDispatcher dispatcher);
+
+    /**
+     * Sets the base dispatch priority for the queue. Setting to higher value
+     * will increase the preference with which the dispatcher dispatches the
+     * queue. If the queue itself is priority based, the queue may further
+     * increase it's dispatch priority based on the priority of elements that it
+     * holds.
+     * 
+     * @param priority
+     *            The base priority for the queue
+     */
     public void setDispatchPriority(int priority);
 }

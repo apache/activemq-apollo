@@ -164,10 +164,14 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
         //not implemented.
     }
 
-    protected final ISinkController<V> getSinkController(V elem, ISourceController<?> source) {
-        return sinkController;
+    public void add(V elem, ISourceController<?> source) {
+        sinkController.add(elem, source);
     }
 
+    public boolean offer(V elem, ISourceController<?> source) {
+        return sinkController.offer(elem, source);
+    }
+    
     /**
      * Called when the controller accepts a message for this queue.
      */

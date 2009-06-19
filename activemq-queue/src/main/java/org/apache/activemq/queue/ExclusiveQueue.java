@@ -42,8 +42,12 @@ public class ExclusiveQueue<E> extends AbstractFlowQueue<E> {
         super.onFlowOpened(controller);
     }
 
-    protected final ISinkController<E> getSinkController(E elem, ISourceController<?> source) {
-        return controller;
+    public void add(E elem, ISourceController<?> source) {
+        controller.add(elem, source);
+    }
+
+    public boolean offer(E elem, ISourceController<?> source) {
+        return controller.offer(elem, source);
     }
 
     /**
@@ -68,7 +72,12 @@ public class ExclusiveQueue<E> extends AbstractFlowQueue<E> {
         E elem = poll();
 
         if (elem != null) {
-            drain.drain(elem, controller);
+            if (sub != null) {
+                sub.add(elem, controller, null);
+            } else {
+                drain.drain(elem, controller);
+            }
+
             return true;
         } else {
             return false;

@@ -246,11 +246,6 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         this.expirationMapper = expirationMapper;
     }
 
-    @Override
-    protected ISinkController<V> getSinkController(V elem, ISourceController<?> source) {
-        return inputController;
-    }
-
     public V poll() {
         throw new UnsupportedOperationException("poll not supported for shared queue");
     }

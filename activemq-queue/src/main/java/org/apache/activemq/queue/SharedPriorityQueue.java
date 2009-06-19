@@ -27,7 +27,7 @@ import org.apache.activemq.flow.PrioritySizeLimiter;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.util.Mapper;
 
-public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> implements IPartitionedQueue<K, V> {
+public class SharedPriorityQueue<K, V> extends AbstractFlowQueue<V> implements IPartitionedQueue<K, V> {
 
     private final HashSet<Subscription<V>> subscriptions = new HashSet<Subscription<V>>();
     private final Mapper<Integer, V> priorityMapper;
@@ -142,10 +142,8 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
         this.expirationMapper = expirationMapper;
     }
 
-    public void setResourceName(String resourceName) {
-        super.setResourceName(resourceName);
-    }
 
+    @Override
     public void addSubscription(Subscription<V> sub) {
         synchronized (this) {
             checkShutdown();
@@ -157,7 +155,8 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
             }
         }
     }
-
+    
+    @Override
     public boolean removeSubscription(Subscription<V> sub) {
         synchronized (this) {
             if (subscriptions.remove(sub)) {
@@ -264,6 +263,39 @@ public class SharedPriorityQueue<K, V> extends AbstractLimitedFlowResource<V> im
         if (shutdown) {
             throw new IllegalStateException(this + " is shutdown");
         }
+    }
+
+    /* (non-Javadoc)
+     * @see org.apache.activemq.queue.IPollableFlowSource#isDispatchReady()
+     */
+    public boolean isDispatchReady() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException();
+    }
+
+    /* (non-Javadoc)
+     * @see org.apache.activemq.queue.IPollableFlowSource#poll()
+     */
+    public V poll() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException();
+    }
+
+    /* (non-Javadoc)
+     * @see org.apache.activemq.queue.IPollableFlowSource#pollingDispatch()
+     */
+    public boolean pollingDispatch() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException();
+    }
+
+    /* (non-Javadoc)
+     * @see org.apache.activemq.flow.ISinkController.FlowControllable#flowElemAccepted(org.apache.activemq.flow.ISourceController, java.lang.Object)
+     */
+    public void flowElemAccepted(ISourceController<V> source, V elem) {
+        // TODO Remove
+        throw new UnsupportedOperationException();
+        
     }
 
 }

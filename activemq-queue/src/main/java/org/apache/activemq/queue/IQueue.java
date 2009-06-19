@@ -21,7 +21,7 @@ import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.queue.QueueStore.PersistentQueue;
 import org.apache.activemq.util.Mapper;
 
-public interface IQueue<K, V> extends IFlowSink<V>, PersistentQueue<K, V> {
+public interface IQueue<K, V> extends IFlowQueue<V>, PersistentQueue<K, V> {
 
     /**
      * @return the number of elements currently held by the queue.
@@ -32,23 +32,6 @@ public interface IQueue<K, V> extends IFlowSink<V>, PersistentQueue<K, V> {
      * @return the size of the elements currently held in the queue.
      */
     public long getEnqueuedSize();
-
-    /**
-     * Adds a subscription to the queue. When the queue is started and elements
-     * are available, they will be given to the subscription.
-     * 
-     * @param sub
-     *            The subscription to add to the queue.
-     */
-    public void addSubscription(Subscription<V> sub);
-
-    /**
-     * Removes a subscription from the queue.
-     * 
-     * @param sub
-     *            The subscription to remove.
-     */
-    public boolean removeSubscription(Subscription<V> sub);
 
     /**
      * Sets a mapper returning the expiration time for elements in this queue. A

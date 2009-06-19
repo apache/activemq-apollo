@@ -47,15 +47,23 @@ public class MultiFlowQueue<E> extends AbstractFlowQueue<E> {
         // so this shouldn't be called.
         throw new UnsupportedOperationException();
     }
+    
+    public synchronized void add(E elem, ISourceController<?> source) {
+        getQueue(elem, source).controller.add(elem, source);
+    }
 
-    protected synchronized final ISinkController<E> getSinkController(E elem, ISourceController<?> source) {
+    public synchronized boolean offer(E elem, ISourceController<?> source) {
+        return getQueue(elem, source).controller.offer(elem, source);
+    }
+
+    private synchronized final SingleFlowQueue getQueue(E elem, ISourceController<?> source) {
         SingleFlowQueue queue = flowQueues.get(source.getFlow());
         if (queue == null) {
             queue = new SingleFlowQueue(source.getFlow(), new SizeLimiter<E>(perFlowWindow, resumeThreshold));
             flowQueues.put(source.getFlow(), queue);
             super.onFlowOpened(queue.controller);
         }
-        return queue.controller;
+        return queue;
     }
     
     public boolean pollingDispatch() {
@@ -78,7 +86,11 @@ public class MultiFlowQueue<E> extends AbstractFlowQueue<E> {
             queue.getList().rotate();
         }
 
-        drain.drain(elem, queue.controller);
+        if (sub != null) {
+            sub.add(elem, queue.controller, null);
+        } else {
+            drain.drain(elem, queue.controller);
+        }
         return true;
     }
 
