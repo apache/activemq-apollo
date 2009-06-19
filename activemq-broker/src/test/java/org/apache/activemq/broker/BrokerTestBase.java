@@ -53,8 +53,8 @@ public abstract class BrokerTestBase extends TestCase {
 
     protected final boolean USE_KAHA_DB = true;
     protected final boolean PURGE_STORE = true;
-    protected final boolean PERSISTENT = true;
-    protected final boolean DURABLE = true;
+    protected final boolean PERSISTENT = false;
+    protected final boolean DURABLE = false;
 
     // Set to put senders and consumers on separate brokers.
     protected boolean multibroker = false;

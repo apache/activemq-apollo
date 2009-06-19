@@ -489,6 +489,13 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
 		public boolean autoCreateDestination() {
 			return true;
 		}
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.queue.Subscription#isExclusive()
+         */
+        public boolean isExclusive() {
+            return false;
+        }
     }
 
     private void sendError(String message) {

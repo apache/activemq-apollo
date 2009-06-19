@@ -36,7 +36,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
     private final MockStoreAdapater store = new MockStoreAdapater();
     private static final PersistencePolicy<Message> NO_PERSISTENCE = new PersistencePolicy.NON_PERSISTENT_POLICY<Message>();
     private static final boolean USE_OLD_QUEUE = false;
-    
+
     private IQueue<Long, Message> createQueue() {
 
         if (partitionMapper != null) {
@@ -117,6 +117,10 @@ class MockQueue implements MockBroker.DeliveryTarget {
                 return true;
             }
 
+            public boolean isExclusive() {
+                return false;
+            }
+
             public IFlowSink<Message> getSink() {
                 return dt.getSink();
             }
@@ -133,7 +137,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
             public boolean offer(Message elem, ISourceController<?> controller, SubscriptionDeliveryCallback ackCallback) {
                 return getSink().offer(elem, controller);
             }
-            
+
             public void add(Message elem, ISourceController<?> controller, SubscriptionDeliveryCallback ackCallback) {
                 getSink().add(elem, controller);
             }

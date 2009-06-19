@@ -21,23 +21,24 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 import org.apache.activemq.dispatch.IDispatcher;
-import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
-import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.util.Mapper;
 
 abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implements IPartitionedQueue<K, V> {
 
-    private HashSet<Subscription<V>> subscriptions = new HashSet<Subscription<V>>();
+    protected HashSet<Subscription<V>> subscriptions = new HashSet<Subscription<V>>();
     private HashMap<Integer, IQueue<K, V>> partitions = new HashMap<Integer, IQueue<K, V>>();
-    protected Mapper<Integer, V> partitionMapper;
-    private QueueStore<K, V> store;
+    protected QueueStore<K, V> store;
     protected IDispatcher dispatcher;
-    private boolean started;
-    private boolean shutdown = false;
+    protected boolean started;
+    protected boolean shutdown = false;
     protected QueueDescriptor queueDescriptor;
-    private int basePriority = 0;
+    protected PersistencePolicy<V> persistencePolicy;
+    protected Mapper<Long, V> expirationMapper;
+    protected Mapper<K, V> keyMapper;
+    protected Mapper<Integer, V> partitionMapper;
+    protected int basePriority = 0;
 
     public PartitionedQueue(String name) {
         super(name);
@@ -50,7 +51,7 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
         return queueDescriptor;
     }
 
-    public IQueue<K, V> getPartition(int partitionKey) {
+    protected IQueue<K, V> getPartition(int partitionKey) {
         boolean save = false;
         IQueue<K, V> rc = null;
         checkShutdown();
@@ -70,7 +71,10 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
 
         return rc;
     }
-
+    
+    
+    abstract public IQueue<K, V> createPartition(int partitionKey);
+    
     /*
      * (non-Javadoc)
      * 
@@ -81,20 +85,20 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
             if (basePriority != priority) {
                 basePriority = priority;
                 if (!shutdown) {
-                    for (IQueue<K, V> queue : partitions.values()) {
+                    for (IQueue<K, V> queue : getPartitions()) {
                         queue.setDispatchPriority(basePriority);
                     }
                 }
             }
         }
     }
-
+    
     public int getEnqueuedCount() {
         checkShutdown();
-        synchronized (partitions) {
+        synchronized (this) {
 
             int count = 0;
-            for (IQueue<K, V> queue : partitions.values()) {
+            for (IQueue<K, V> queue : getPartitions()) {
                 count += queue.getEnqueuedCount();
             }
             return count;
@@ -103,9 +107,9 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
 
     public synchronized long getEnqueuedSize() {
         checkShutdown();
-        synchronized (partitions) {
+        synchronized (this) {
             long size = 0;
-            for (IQueue<K, V> queue : partitions.values()) {
+            for (IQueue<K, V> queue : getPartitions()) {
                 if (queue != null) {
                     size += queue.getEnqueuedSize();
                 }
@@ -114,43 +118,44 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
         }
     }
 
+
     public void setStore(QueueStore<K, V> store) {
         this.store = store;
     }
 
     public void setPersistencePolicy(PersistencePolicy<V> persistencePolicy) {
-        // No-Op for now.
+        this.persistencePolicy = persistencePolicy;
     }
 
     public void setExpirationMapper(Mapper<Long, V> expirationMapper) {
-        // No-Op for now.
-    }
-
-    abstract public IQueue<K, V> createPartition(int partitionKey);
-
-    public void addPartition(int partitionKey, IQueue<K, V> queue) {
-        checkShutdown();
-        synchronized (partitions) {
-            partitions.put(partitionKey, queue);
-            for (Subscription<V> sub : subscriptions) {
-                queue.addSubscription(sub);
-                queue.setDispatchPriority(basePriority);
-            }
-        }
+        this.expirationMapper = expirationMapper;
     }
 
     public void initialize(long sequenceMin, long sequenceMax, int count, long size) {
+        checkShutdown();
         // No-op, only partitions should have stored values.
         if (count > 0 || size > 0) {
             throw new IllegalArgumentException("Partioned queues do not themselves hold values");
         }
+        if (expirationMapper == null) {
+            expirationMapper = new Mapper<Long, V>() {
+
+                public Long map(V element) {
+                    return -1L;
+                }
+            };
+        }
+        if (persistencePolicy == null) {
+            persistencePolicy = new PersistencePolicy.NON_PERSISTENT_POLICY<V>();
+        }
     }
+    
 
     public synchronized void start() {
         if (!started) {
             checkShutdown();
             started = true;
-            for (IQueue<K, V> partition : partitions.values()) {
+            for (IQueue<K, V> partition : getPartitions()) {
                 if (partition != null)
                     partition.start();
             }
@@ -160,26 +165,27 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
     public synchronized void stop() {
         if (started) {
             started = false;
-            for (IQueue<K, V> partition : partitions.values()) {
+            for (IQueue<K, V> partition : getPartitions()) {
                 if (partition != null)
                     partition.stop();
             }
         }
     }
 
+
     public void shutdown(boolean sync) {
-        HashMap<Integer, IQueue<K, V>> partitions = null;
+        Collection <IQueue<K, V>> partitions = null;
         synchronized (this) {
             if (!shutdown) {
                 shutdown = true;
                 started = false;
             }
-            partitions = this.partitions;
+            partitions = getPartitions();
             this.partitions = null;
         }
 
         if (partitions != null) {
-            for (IQueue<K, V> partition : partitions.values()) {
+            for (IQueue<K, V> partition : partitions) {
                 if (partition != null)
                     partition.shutdown(sync);
             }
@@ -188,9 +194,9 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
 
     public void addSubscription(Subscription<V> sub) {
         checkShutdown();
-        synchronized (partitions) {
+        synchronized (this) {
             subscriptions.add(sub);
-            Collection<IQueue<K, V>> values = partitions.values();
+            Collection<IQueue<K, V>> values = getPartitions();
             for (IQueue<K, V> queue : values) {
                 queue.addSubscription(sub);
             }
@@ -199,9 +205,9 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
 
     public boolean removeSubscription(Subscription<V> sub) {
         checkShutdown();
-        synchronized (partitions) {
+        synchronized (this) {
             if (subscriptions.remove(sub)) {
-                Collection<IQueue<K, V>> values = partitions.values();
+                Collection<IQueue<K, V>> values = getPartitions();
                 for (IQueue<K, V> queue : values) {
                     queue.removeSubscription(sub);
                 }
@@ -219,30 +225,42 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
         return partitionMapper;
     }
 
+    
     public void add(V value, ISourceController<?> source) {
         int partitionKey = partitionMapper.map(value);
-        IQueue<K, V> partition = getPartition(partitionKey);
-        partition.add(value, source);
+        getPartition(partitionKey).add(value, source);
     }
 
     public boolean offer(V value, ISourceController<?> source) {
         int partitionKey = partitionMapper.map(value);
-        IQueue<K, V> partition = getPartition(partitionKey);
-        return partition.offer(value, source);
+        return getPartition(partitionKey).offer(value, source);
+    }
+    
+    public void setKeyMapper(Mapper<K, V> keyMapper) {
+        this.keyMapper = keyMapper;
+    }
+
+    public void setAutoRelease(boolean autoRelease) {
+        this.autoRelease = autoRelease;
     }
 
     public void setDispatcher(IDispatcher dispatcher) {
         checkShutdown();
         this.dispatcher = dispatcher;
-        synchronized (partitions) {
-            Collection<IQueue<K, V>> values = partitions.values();
+        synchronized (this) {
+            Collection<IQueue<K, V>> values = getPartitions();
             for (IQueue<K, V> queue : values) {
                 queue.setDispatcher(dispatcher);
             }
         }
     }
+    
+    protected Collection<IQueue<K, V>> getPartitions()
+    {
+        return partitions.values();
+    }
 
-    private void checkShutdown() {
+    protected void checkShutdown() {
         if (shutdown) {
             throw new IllegalStateException(this + " is shutdown");
         }

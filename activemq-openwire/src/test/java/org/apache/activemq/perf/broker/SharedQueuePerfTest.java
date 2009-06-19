@@ -445,6 +445,10 @@ public class SharedQueuePerfTest extends TestCase {
             return name + " on " + sourceQueue.getResourceName();
         }
 
+        public boolean isExclusive() {
+            return false;
+        }
+
         /*
          * (non-Javadoc)
          * 

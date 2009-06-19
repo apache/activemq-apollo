@@ -786,9 +786,7 @@ public class BrokerTest extends BrokerTestSupport {
         connection2.request(consumerInfo2);
 
         // Second message should go to consumer 1 even though consumer 2 is
-        // ready
-        // for dispatch.
-        connection1.send(createMessage(producerInfo, destination, deliveryMode));
+        // ready for dispatch.
         connection1.send(createMessage(producerInfo, destination, deliveryMode));
 
         // Acknowledge the first 2 messages
@@ -802,6 +800,7 @@ public class BrokerTest extends BrokerTestSupport {
         connection1.send(closeConsumerInfo(consumerInfo1));
 
         // The last two messages should now go the the second consumer.
+        connection1.send(createMessage(producerInfo, destination, deliveryMode));
         connection1.send(createMessage(producerInfo, destination, deliveryMode));
 
         for (int i = 0; i < 2; i++) {

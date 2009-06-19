@@ -67,6 +67,9 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
     private QueueStore<K, V> store;
     private PersistencePolicy<V> persistencePolicy;
 
+    private SubscriptionContext exclusiveConsumer = null;
+    private int exclusiveConsumerCount = 0;
+
     // Open consumers:
     private final HashMap<Subscription<V>, SubscriptionContext> consumers = new HashMap<Subscription<V>, SubscriptionContext>();
     private int startedConsumers = 0;
@@ -172,8 +175,15 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
             SubscriptionContext context = new SubscriptionContext(subscription);
             SubscriptionContext old = consumers.put(subscription, context);
             if (old != null) {
+                context.close();
                 consumers.put(subscription, old);
             } else {
+                if (exclusiveConsumer == null) {
+                    if (context.isExclusive()) {
+                        exclusiveConsumer = context;
+                    }
+                }
+
                 context.start();
             }
         }
@@ -184,6 +194,29 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
             SubscriptionContext old = consumers.remove(subscription);
             if (old != null) {
                 old.close();
+
+                //Was this the exclusive consumer?
+                if (old == exclusiveConsumer) {
+                    if (exclusiveConsumerCount > 0) {
+                        for (SubscriptionContext context : consumers.values()) {
+                            if (context.isExclusive()) {
+                                exclusiveConsumer = context;
+                                //Update the dispatch list:
+                                context.updateDispatchList();
+                                break;
+                            }
+                        }
+                    } else {
+                        //Otherwise add the remaining subs to appropriate dispatch
+                        //lists:
+                        exclusiveConsumer = null;
+                        for (SubscriptionContext context : consumers.values()) {
+                            if (!context.sub.isBrowser()) {
+                                context.updateDispatchList();
+                            }
+                        }
+                    }
+                }
                 return true;
             }
             return false;
@@ -397,6 +430,9 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                         SubscriptionContext nextConsumer = consumer.getNext();
                         switch (consumer.offer(next)) {
                         case ACCEPTED:
+                            if (DEBUG)
+                                System.out.println("Dispatched " + next.getElement() + " to " + consumer);
+
                             // Rotate list so this one is last next time:
                             sharedConsumers.rotate();
                             interested = true;
@@ -469,6 +505,9 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         SubscriptionContext(Subscription<V> target) {
             this.sub = target;
             this.cursor = openCursor(target.toString(), true, !sub.isBrowser());
+            if (isExclusive()) {
+                exclusiveConsumerCount++;
+            }
             cursor.setCursorReadyListener(new CursorReadyListener() {
                 public void onElementReady() {
                     if (!isLinked()) {
@@ -478,10 +517,15 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
             });
         }
 
+        public boolean isExclusive() {
+            return sub.isExclusive() && !sub.isBrowser();
+        }
+
         public void start() {
             if (!isStarted) {
                 isStarted = true;
                 if (!sub.isBrowser()) {
+
                     if (sub.hasSelector()) {
                         activeSelectorSubs++;
                     }
@@ -504,6 +548,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
             // If started remove this from any dispatch list
             if (isStarted) {
                 if (!sub.isBrowser()) {
+
                     if (sub.hasSelector()) {
                         activeSelectorSubs--;
                     }
@@ -517,6 +562,10 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         }
 
         public void close() {
+            if (isExclusive()) {
+                exclusiveConsumerCount--;
+            }
+
             stop();
         }
 
@@ -550,13 +599,22 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                 return false;
             }
 
-            // TODO Even if there are subscriptions with selectors present
-            // we can still join the shared cursor as long as there is at
-            // least one ready selector-less sub.
             boolean join = false;
-            if (activeSelectorSubs == 0) {
+            //If we are the exlusive consumer then we join the shared
+            //cursor:
+            if (exclusiveConsumer == this) {
+                join = true;
+            }
+            //Otherwise if we aren't we won't be joining anything!
+            else if (exclusiveConsumer != null) {
+                return false;
+            } else if (activeSelectorSubs == 0) {
                 join = true;
             } else {
+
+                // TODO Even if there are subscriptions with selectors present
+                // we can still join the shared cursor as long as there is at
+                // least one ready selector-less sub.
                 cursor.getNext();
                 if (queue.isEmpty() || cursor.compareTo(sharedCursor) >= 0) {
                     join = true;
@@ -578,9 +636,14 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         /**
          * Adds to subscription to the appropriate dispatch list:
          */
-        private final void updateDispatchList() {
+        final void updateDispatchList() {
 
             if (!checkJoinShared()) {
+                //Otherwise if we're not the exclusive consumer
+                if (!sub.isBrowser() && exclusiveConsumer != null) {
+                    return;
+                }
+
                 // Make sure our cursor is activated:
                 cursor.activate();
                 // If our next element is paged out
@@ -641,9 +704,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                     if (callback == null) {
                         qe.acknowledge();
                     }
-                }
-                else
-                {
+                } else {
                     qe.setAcquired(null);
                 }
 

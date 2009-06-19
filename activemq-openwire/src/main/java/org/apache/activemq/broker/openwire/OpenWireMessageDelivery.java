@@ -107,7 +107,7 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
     public MessageRecord createMessageRecord() {
         MessageRecord record = new MessageRecord();
         record.setEncoding(ENCODING);
-        
+
         ByteSequence bytes;
         try {
             bytes = storeWireFormat.marshal(message);
@@ -130,7 +130,9 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
         this.storeWireFormat = wireFormat;
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see org.apache.activemq.broker.MessageDelivery#getTTE()
      */
     public long getExpiration() {
@@ -139,5 +141,9 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
 
     public MessageEvaluationContext createMessageEvaluationContext() {
         return new OpenwireMessageEvaluationContext(message);
+    }
+
+    public String toString() {
+        return message.getMessageId().toString();
     }
 }

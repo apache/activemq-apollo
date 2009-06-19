@@ -571,6 +571,10 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             return isQueueReceiver;
         }
 
+        public boolean isExclusive() {
+            return info.isExclusive();
+        }
+        
         /*
          * (non-Javadoc)
          * 
@@ -702,6 +706,10 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
         public boolean autoCreateDestination() {
             return true;
+        }
+
+        public String toString() {
+            return info.getConsumerId().toString();
         }
 
     }

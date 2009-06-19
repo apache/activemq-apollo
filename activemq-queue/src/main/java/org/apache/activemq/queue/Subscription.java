@@ -57,6 +57,15 @@ public interface Subscription<E> {
      * @return True if this is a subscription browser. 
      */
     public boolean isBrowser();
+    
+    /**
+     * Indicates that the subscription is exclusive. When there at least one 
+     * exclusive subscription on a shared queue, the queue will dispatch to
+     * only one such consumer while there is at least one connected.
+     * 
+     * @return True if the Subscription is exclusive.
+     */
+    public boolean isExclusive();
 
     /**
      * Returns true if the Subscription has a selector. If true
