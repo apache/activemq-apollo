@@ -35,7 +35,7 @@ import org.apache.activemq.ActiveMQConnectionFactory;
  */
 public class JmsResourceProvider {
 
-    private String serverUri = "vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml";
+    private String serverUri = "pipe://localhost";
     private boolean transacted;
     private int ackMode = Session.AUTO_ACKNOWLEDGE;
     private boolean isTopic;

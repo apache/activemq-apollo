@@ -35,8 +35,9 @@ import javax.jms.TextMessage;
 
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQPrefetchPolicy;
-import org.apache.activemq.legacy.broker.BrokerFactory;
-import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.broker.BrokerFactory;
+import org.apache.activemq.transport.TransportFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -58,7 +59,7 @@ public abstract class JmsTransactionTestSupport extends TestSupport implements M
     protected Destination destination;
     protected int batchCount = 10;
     protected int batchSize = 20;
-    protected BrokerService broker;
+    protected Broker broker;
 
     // for message listener test
     private List<Message> unackMessages = new ArrayList<Message>(MESSAGE_COUNT);
@@ -112,8 +113,10 @@ public abstract class JmsTransactionTestSupport extends TestSupport implements M
 
     /**
      */
-    protected BrokerService createBroker() throws Exception, URISyntaxException {
-        return BrokerFactory.createBroker(new URI("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml"));
+    protected Broker createBroker() throws Exception, URISyntaxException {
+        Broker broker = BrokerFactory.createBroker(new URI("jaxb:classpath:non-persistent-activemq.xml"));
+        broker.addTransportServer(TransportFactory.bind(new URI("pipe://localhost")));
+        return broker;
     }
 
     /*

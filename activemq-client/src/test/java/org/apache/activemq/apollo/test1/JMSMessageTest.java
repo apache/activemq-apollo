@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test1;
+package org.apache.activemq.apollo.test1;
 
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -39,7 +40,11 @@ import javax.jms.TextMessage;
 import junit.framework.Test;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.command.ActiveMQDestination;
+import org.apache.activemq.legacy.test1.JmsTestSupport;
+import org.apache.activemq.transport.TransportFactory;
 
 /**
  * Test cases used to test the JMS message consumer.
@@ -56,12 +61,19 @@ public class JMSMessageTest extends JmsTestSupport {
     public boolean durableConsumer;
     public String connectURL;
 
+    @Override
+    protected Broker createBroker() throws Exception {
+        Broker broker = BrokerFactory.createBroker(new URI("jaxb:classpath:non-persistent-activemq.xml"));
+        broker.addTransportServer(TransportFactory.bind(new URI(connectURL)));
+        return broker;
+    }
+    
     /**
      * Run all these tests in both marshaling and non-marshaling mode.
      */
     public void initCombos() {
-        addCombinationValues("connectURL", new Object[] {"vm://localhost?marshal=false",
-                                                         "vm://localhost?marshal=true"});
+        addCombinationValues("connectURL", new Object[] {"pipe://localhost?marshal=false",
+                                                         "pipe://localhost?marshal=true"});
         addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT),
                                                            Integer.valueOf(DeliveryMode.PERSISTENT)});
         addCombinationValues("destinationType", new Object[] {Byte.valueOf(ActiveMQDestination.QUEUE_TYPE)});

@@ -344,21 +344,24 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
     }
 
     public void onCommand(Object o) {
-
-        Command command = (Command) o;
-        boolean responseRequired = command.isResponseRequired();
+    	boolean responseRequired=false;
+    	int commandId=0;
         try {
+            Command command = (Command) o;
+            commandId = command.getCommandId();
+            responseRequired = command.isResponseRequired();
             //System.out.println(o);
             command.visit(visitor);
         } catch (Exception e) {
             if (responseRequired) {
                 ExceptionResponse response = new ExceptionResponse(e);
-                response.setCorrelationId(command.getCommandId());
+                response.setCorrelationId(commandId);
                 connection.write(response);
             } else {
                 connection.onException(e);
             }
-
+        } catch (Throwable e) {
+            connection.onException(new Exception(e));
         }
     }
 

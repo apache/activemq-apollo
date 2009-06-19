@@ -47,7 +47,7 @@ public class PipeTransportFactory extends TransportFactory {
         private DispatchContext readContext;
         private String name;
         private WireFormat wireFormat;
-        private boolean marshall;
+        private boolean marshal;
         private boolean trace;
 
         public PipeTransport(Pipe<Object> pipe) {
@@ -93,7 +93,7 @@ public class PipeTransportFactory extends TransportFactory {
         public void oneway(Object command) throws IOException {
 
             try {
-                if (wireFormat != null && marshall) {
+                if (wireFormat != null && marshal) {
                     pipe.write(wireFormat.marshal(command));
                 } else {
                     pipe.write(command);
@@ -119,7 +119,7 @@ public class PipeTransportFactory extends TransportFactory {
                     	if(o == EOF_TOKEN) {
                     		throw new EOFException();
                     	}                    	
-                        if (wireFormat != null && marshall) {
+                        if (wireFormat != null && marshal) {
                             listener.onCommand(wireFormat.unmarshal((ByteSequence) o));
                         } else {
                             listener.onCommand(o);
@@ -141,7 +141,11 @@ public class PipeTransportFactory extends TransportFactory {
                     	if(value == EOF_TOKEN) {
                     		throw new EOFException();
                     	} else {
-                    		listener.onCommand(value);
+                            if (wireFormat != null && marshal) {
+                                listener.onCommand(wireFormat.unmarshal((ByteSequence)value));
+                            } else {
+                                listener.onCommand(value);
+                            }
                     	}
                     }
                 }
@@ -228,6 +232,14 @@ public class PipeTransportFactory extends TransportFactory {
 		public void setTrace(boolean trace) {
 			this.trace = trace;
 		}
+
+		public boolean isMarshal() {
+			return marshal;
+		}
+
+		public void setMarshal(boolean marshall) {
+			this.marshal = marshall;
+		}
     }
 
     protected class PipeTransportServer implements TransportServer {
@@ -235,6 +247,7 @@ public class PipeTransportFactory extends TransportFactory {
         protected TransportAcceptListener listener;
         protected String name;
         protected WireFormatFactory wireFormatFactory;
+        protected boolean marshal;
         protected final AtomicInteger connectionCounter = new AtomicInteger();
 
         public URI getConnectURI() {
@@ -276,6 +289,7 @@ public class PipeTransportFactory extends TransportFactory {
             PipeTransport rc = createClientTransport(pipe);
             rc.setRemoteAddress(remoteAddress);
             PipeTransport serverSide = cerateServerTransport(pipe);
+            serverSide.setMarshal(marshal);
             serverSide.setRemoteAddress(remoteAddress);
             if (wireFormatFactory != null) {
                 rc.setWireFormat(wireFormatFactory.createWireFormat());
@@ -296,6 +310,14 @@ public class PipeTransportFactory extends TransportFactory {
         public void setWireFormatFactory(WireFormatFactory wireFormatFactory) {
             this.wireFormatFactory = wireFormatFactory;
         }
+
+		public boolean isMarshal() {
+			return marshal;
+		}
+
+		public void setMarshal(boolean marshal) {
+			this.marshal = marshal;
+		}
     }
 
     @Override
@@ -311,6 +333,13 @@ public class PipeTransportFactory extends TransportFactory {
 	            server.setConnectURI(uri);
 	            server.setName(node);
                 server.setWireFormatFactory(createWireFormatFactory(options));
+                IntrospectionSupport.setProperties(server, options);
+                
+                if (!options.isEmpty()) {
+                    throw new IllegalArgumentException("Invalid bind parameters: " + options);
+                }
+                
+                
 	            servers.put(node, server);
 	            return server;
     		}

@@ -39,11 +39,12 @@ import javax.jms.TopicSubscriber;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.apollo.CombinationTestSupport;
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTopic;
-import org.apache.activemq.legacy.broker.BrokerFactory;
-import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.util.MessageIdList;
 
 /**
@@ -66,12 +67,12 @@ public class JmsMultipleClientsTestSupport extends CombinationTestSupport {
     protected boolean topic;
     protected boolean persistent;
 
-    protected BrokerService broker;
     protected Destination destination;
     protected List<Connection> connections = Collections.synchronizedList(new ArrayList<Connection>());
     protected MessageIdList allMessagesList = new MessageIdList();
 
     private AtomicInteger producerLock;
+	private Broker broker;
 
     protected void startProducers(Destination dest, int msgCount) throws Exception {
         startProducers(createConnectionFactory(), dest, msgCount);
@@ -207,11 +208,13 @@ public class JmsMultipleClientsTestSupport extends CombinationTestSupport {
     }
 
     protected ConnectionFactory createConnectionFactory() throws Exception {
-        return new ActiveMQConnectionFactory("vm://localhost");
+        return new ActiveMQConnectionFactory("pipe://localhost");
     }
 
-    protected BrokerService createBroker() throws Exception {
-        return BrokerFactory.createBroker(new URI("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml"));
+    protected Broker createBroker() throws Exception {
+        Broker broker = BrokerFactory.createBroker(new URI("jaxb:classpath:non-persistent-activemq.xml"));
+        broker.addTransportServer(TransportFactory.bind(new URI("pipe://localhost")));
+        return broker;
     }
 
     protected void setUp() throws Exception {

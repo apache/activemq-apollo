@@ -17,10 +17,8 @@
 package org.apache.activemq.legacy.test6;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,10 +30,9 @@ import javax.jms.JMSException;
 
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.legacy.broker.BrokerFactory;
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.broker.region.policy.PolicyEntry;
-import org.apache.activemq.legacy.broker.region.policy.PolicyMap;
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.broker.BrokerFactory;
+import org.apache.activemq.transport.TransportFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -58,20 +55,23 @@ public class NioQueueSubscriptionTest extends QueueSubscriptionTest implements E
     }
     
     @Override
-    protected BrokerService createBroker() throws Exception {
-        BrokerService answer = BrokerFactory.createBroker(new URI("broker://nio://localhost:62621?useQueueForAccept=false&persistent=false&wiewformat.maxInactivityDuration=0"));
-        answer.setUseJmx(false);
-        answer.setDeleteAllMessagesOnStartup(true);
-        final List<PolicyEntry> policyEntries = new ArrayList<PolicyEntry>();
-        final PolicyEntry entry = new PolicyEntry();
-        entry.setQueue(">");
-        entry.setOptimizedDispatch(true);
-        policyEntries.add(entry);
-
-        final PolicyMap policyMap = new PolicyMap();
-        policyMap.setPolicyEntries(policyEntries);
-        answer.setDestinationPolicy(policyMap);
-        return answer;
+    protected Broker createBroker() throws Exception {
+        Broker broker = BrokerFactory.createBroker(new URI("jaxb:classpath:non-persistent-activemq.xml"));
+        broker.addTransportServer(TransportFactory.bind(new URI("nio://localhost:62621?useQueueForAccept=false&persistent=false&wiewformat.maxInactivityDuration=0")));
+        
+// TODO:    	
+//        answer.setUseJmx(false);
+//        answer.setDeleteAllMessagesOnStartup(true);
+//        final List<PolicyEntry> policyEntries = new ArrayList<PolicyEntry>();
+//        final PolicyEntry entry = new PolicyEntry();
+//        entry.setQueue(">");
+//        entry.setOptimizedDispatch(true);
+//        policyEntries.add(entry);
+//
+//        final PolicyMap policyMap = new PolicyMap();
+//        policyMap.setPolicyEntries(policyEntries);
+//        answer.setDestinationPolicy(policyMap);
+        return broker;
     }
     
     public void testLotsOfConcurrentConnections() throws Exception {

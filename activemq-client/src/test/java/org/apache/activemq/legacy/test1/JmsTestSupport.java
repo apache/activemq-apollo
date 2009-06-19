@@ -39,6 +39,7 @@ import org.apache.activemq.apollo.CombinationTestSupport;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.command.ActiveMQDestination;
+import org.apache.activemq.transport.TransportFactory;
 
 /**
  * Test cases used to test the JMS message consumer.
@@ -105,11 +106,13 @@ public class JmsTestSupport extends CombinationTestSupport {
     }
 
     protected ConnectionFactory createConnectionFactory() throws Exception {
-        return new ActiveMQConnectionFactory("vm://localhost");
+        return new ActiveMQConnectionFactory("pipe://localhost");
     }
 
     protected Broker createBroker() throws Exception {
-        return BrokerFactory.createBroker(new URI("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml"));
+        Broker broker = BrokerFactory.createBroker(new URI("jaxb:classpath:non-persistent-activemq.xml"));
+        broker.addTransportServer(TransportFactory.bind(new URI("pipe://localhost")));
+        return broker;
     }
 
     protected void setUp() throws Exception {
