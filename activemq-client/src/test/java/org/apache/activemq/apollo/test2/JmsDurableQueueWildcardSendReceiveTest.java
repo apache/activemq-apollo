@@ -14,24 +14,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test2;
+package org.apache.activemq.apollo.test2;
 
-import javax.jms.JMSException;
-import javax.jms.MessageConsumer;
-import javax.jms.Topic;
-import javax.jms.TopicSession;
+import javax.jms.DeliveryMode;
+
 
 
 /**
- * @version $Revision: 1.4 $
+ * @version $Revision: 1.2 $
  */
-public class JmsTopicSendReceiveSubscriberTest extends JmsTopicSendReceiveTest {
-    protected MessageConsumer createConsumer() throws JMSException {
-        if (durable) {
-            return super.createConsumer();
-        } else {
-            TopicSession topicSession = (TopicSession)session;
-            return topicSession.createSubscriber((Topic)consumerDestination, null, false);
-        }
+public class JmsDurableQueueWildcardSendReceiveTest extends JmsTopicSendReceiveTest {
+
+    /**
+     * Set up the test with a queue and persistent delivery mode.
+     * 
+     * @see junit.framework.TestCase#setUp()
+     */
+    protected void setUp() throws Exception {
+        topic = false;
+        deliveryMode = DeliveryMode.PERSISTENT;
+        super.setUp();
+    }
+
+    /**
+     * Returns the consumer subject.
+     */
+    protected String getConsumerSubject() {
+        return "FOO.>";
+    }
+
+    /**
+     * Returns the producer subject.
+     */
+    protected String getProducerSubject() {
+        return "FOO.BAR.HUMBUG";
     }
 }

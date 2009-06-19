@@ -23,7 +23,6 @@ import java.util.List;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
-import org.apache.activemq.apollo.broker.path.PathMap;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.protobuf.AsciiBuffer;
@@ -97,13 +96,7 @@ public class VirtualHost implements Service {
         }
 
 		if ( database == null ) {
-			Store store = StoreFactory.createStore("kaha-db");
-			if( store.getStoreDirectory() == null ) {
-				File baseDir = broker.getDataDirectory();
-				String hostName = getHostName().toString();
-				String subDir = IOHelper.toFileSystemDirectorySafeName(hostName);
-				store.setStoreDirectory( new File(baseDir, subDir ) );
-			}
+			Store store = createDefaultStore();
 			database = new BrokerDatabase(store);
 		}
 		
@@ -128,6 +121,17 @@ public class VirtualHost implements Service {
         }
         started = true;
     }
+
+	public Store createDefaultStore() throws Exception {
+		Store store = StoreFactory.createStore("kaha-db");
+		if( store.getStoreDirectory() == null ) {
+			File baseDir = broker.getDataDirectory();
+			String hostName = getHostName().toString();
+			String subDir = IOHelper.toFileSystemDirectorySafeName(hostName);
+			store.setStoreDirectory( new File(baseDir, subDir ) );
+		}
+		return store;
+	}
 
     public synchronized void stop() throws Exception {
         if (!started) {

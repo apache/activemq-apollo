@@ -14,15 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test2;
+package org.apache.activemq.apollo.test2;
+
+import javax.jms.JMSException;
+import javax.jms.MessageConsumer;
+import javax.jms.Topic;
+import javax.jms.TopicSession;
+
 
 
 /**
- * @version $Revision: 1.2 $
+ * @version $Revision: 1.4 $
  */
-public class JMSQueueRedeliverTest extends JmsTopicRedeliverTest {
-    protected void setUp() throws Exception {
-        topic = false;
-        super.setUp();
+public class JmsTopicSendReceiveSubscriberTest extends JmsTopicSendReceiveTest {
+    protected MessageConsumer createConsumer() throws JMSException {
+        if (durable) {
+            return super.createConsumer();
+        } else {
+            TopicSession topicSession = (TopicSession)session;
+            return topicSession.createSubscriber((Topic)consumerDestination, null, false);
+        }
     }
 }

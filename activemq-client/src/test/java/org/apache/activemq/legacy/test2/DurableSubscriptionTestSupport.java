@@ -29,8 +29,11 @@ import javax.jms.Topic;
 import javax.jms.TopicSubscriber;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.store.PersistenceAdapter;
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.test2.TestSupport;
+import org.apache.activemq.broker.store.Store;
+import org.apache.activemq.protobuf.AsciiBuffer;
+
 
 /**
  * @version $Revision: 1.1.1.1 $
@@ -41,7 +44,7 @@ public abstract class DurableSubscriptionTestSupport extends TestSupport {
     private Session session;
     private TopicSubscriber consumer;
     private MessageProducer producer;
-    private BrokerService broker;
+    private Broker broker;
 
     protected ActiveMQConnectionFactory createConnectionFactory() throws Exception {
         return new ActiveMQConnectionFactory("vm://durable-broker");
@@ -70,11 +73,11 @@ public abstract class DurableSubscriptionTestSupport extends TestSupport {
 
     private void createBroker() throws Exception {
         try {
-            broker = new BrokerService();
-            broker.setBrokerName("durable-broker");
-            broker.setDeleteAllMessagesOnStartup(true);
-            broker.setPersistenceAdapter(createPersistenceAdapter());
-            broker.setPersistent(true);
+            broker = new Broker();
+            broker.getDefaultVirtualHost().addHostName(new AsciiBuffer("durable-broker"));
+            Store store = createPersistenceAdapter();
+            store.setDeleteAllMessages(true);
+            broker.getDefaultVirtualHost().setStore(store);
             broker.start();
         } catch (Exception e) {
             e.printStackTrace();
@@ -85,13 +88,12 @@ public abstract class DurableSubscriptionTestSupport extends TestSupport {
 
     private void createRestartedBroker() throws Exception {
         try {
-            broker = new BrokerService();
-            broker.setBrokerName("durable-broker");
-            broker.setDeleteAllMessagesOnStartup(false);
-            broker.setPersistenceAdapter(createPersistenceAdapter());
-            broker.setPersistent(true);
+            broker = new Broker();
+            broker.getDefaultVirtualHost().addHostName(new AsciiBuffer("durable-broker"));
+            Store store = createPersistenceAdapter();
+            store.setDeleteAllMessages(true);
+            broker.getDefaultVirtualHost().setStore(store);
             broker.start();
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -108,7 +110,7 @@ public abstract class DurableSubscriptionTestSupport extends TestSupport {
         }
     }
 
-    protected abstract PersistenceAdapter createPersistenceAdapter() throws Exception;
+    protected abstract Store createPersistenceAdapter() throws Exception;
 
     public void testUnsubscribeSubscription() throws Exception {
         session = connection.createSession(false, javax.jms.Session.AUTO_ACKNOWLEDGE);

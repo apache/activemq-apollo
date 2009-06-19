@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test2;
+package org.apache.activemq.apollo.test2;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,7 +39,7 @@ import org.apache.commons.logging.LogFactory;
 /**
  * @version $Revision: 1.7 $
  */
-public class JmsSendReceiveTestSupport extends TestSupport implements MessageListener {
+abstract public class JmsSendReceiveTestSupport extends TestSupport implements MessageListener {
     private static final Log LOG = LogFactory.getLog(JmsSendReceiveTestSupport.class);
 
     protected int messageCount = 100;

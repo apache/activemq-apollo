@@ -17,6 +17,7 @@
 package org.apache.activemq.legacy.test2;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.apollo.test2.JmsTopicSendReceiveWithTwoConnectionsTest;
 
 /**
  * 

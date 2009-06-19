@@ -25,6 +25,7 @@ import javax.jms.Session;
 import javax.jms.TextMessage;
 import javax.jms.Topic;
 
+import org.apache.activemq.apollo.test2.JmsTopicSendReceiveTest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

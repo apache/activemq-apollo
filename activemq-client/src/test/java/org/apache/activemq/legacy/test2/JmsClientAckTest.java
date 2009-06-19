@@ -24,6 +24,8 @@ import javax.jms.MessageProducer;
 import javax.jms.Queue;
 import javax.jms.Session;
 
+import org.apache.activemq.apollo.test2.TestSupport;
+
 
 /**
  * @version $Revision: 1.4 $

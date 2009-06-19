@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.legacy.test2;
 
+import org.apache.activemq.apollo.test2.JmsTopicSelectorTest;
+
 
 /**
  * @version $Revision: 1.2 $

@@ -20,6 +20,7 @@ import javax.jms.Message;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
+import org.apache.activemq.apollo.test2.JmsTopicRedeliverTest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

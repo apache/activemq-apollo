@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test2;
+package org.apache.activemq.apollo.test2;
 
 import javax.jms.Connection;
 import javax.jms.JMSException;
@@ -25,10 +25,11 @@ import javax.jms.Queue;
 import javax.jms.Session;
 
 
+
 /**
- * @version $Revision: 1.2 $
+ * @version $Revision: 1.1.1.1 $
  */
-public class JmsAutoAckTest extends TestSupport {
+public class ConsumerReceiveWithTimeoutTest extends TestSupport {
 
     private Connection connection;
 
@@ -47,35 +48,42 @@ public class JmsAutoAckTest extends TestSupport {
         }
         super.tearDown();
     }
-    
+
     /**
-     * Tests if acknowleged messages are being consumed.
+     * Test to check if consumer thread wakes up inside a receive(timeout) after
+     * a message is dispatched to the consumer
      * 
      * @throws javax.jms.JMSException
      */
-    public void testAckedMessageAreConsumed() throws JMSException {
+    public void testConsumerReceiveBeforeMessageDispatched() throws JMSException {
+
         connection.start();
-        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        Queue queue = session.createQueue("test");
-        MessageProducer producer = session.createProducer(queue);
-        producer.send(session.createTextMessage("Hello"));
+
+        final Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        final Queue queue = session.createQueue("test");
+
+        Thread t = new Thread() {
+            public void run() {
+                try {
+                    // wait for 10 seconds to allow consumer.receive to be run
+                    // first
+                    Thread.sleep(10000);
+                    MessageProducer producer = session.createProducer(queue);
+                    producer.send(session.createTextMessage("Hello"));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        t.start();
 
         // Consume the message...
         MessageConsumer consumer = session.createConsumer(queue);
-        Message msg = consumer.receive(1000);
+        Message msg = consumer.receive(60000);
         assertNotNull(msg);
-        
-        // Reset the session.
         session.close();
-        session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        
-        // Attempt to Consume the message...
-        consumer = session.createConsumer(queue);
-        msg = consumer.receive(1000);
-        assertNull(msg);        
 
-        session.close();
     }
-    
 
 }

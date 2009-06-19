@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test2;
+package org.apache.activemq.apollo.test2;
 
 import javax.jms.Connection;
 import javax.jms.Destination;
@@ -99,7 +99,7 @@ public class JmsTopicRedeliverTest extends TestSupport {
      * Returns the consumer subject.
      * 
      * @return String - consumer subject
-     * @see org.apache.activemq.legacy.testsupport.test.TestSupport#getConsumerSubject()
+     * @see org.apache.activemq.apollo.test2.testsupport.test.TestSupport#getConsumerSubject()
      */
     protected String getConsumerSubject() {
         return "TEST";
@@ -109,7 +109,7 @@ public class JmsTopicRedeliverTest extends TestSupport {
      * Returns the producer subject.
      * 
      * @return String - producer subject
-     * @see org.apache.activemq.legacy.testsupport.test.TestSupport#getProducerSubject()
+     * @see org.apache.activemq.apollo.test2.testsupport.test.TestSupport#getProducerSubject()
      */
     protected String getProducerSubject() {
         return "TEST";

@@ -10,6 +10,7 @@ import javax.jms.Session;
 import javax.jms.TextMessage;
 
 import org.apache.activemq.ActiveMQSession;
+import org.apache.activemq.apollo.test2.TestSupport;
 
 /**
  * @version $Revision: 1.4 $

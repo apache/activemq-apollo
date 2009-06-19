@@ -14,16 +14,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.activemq.apollo.test2;
 
-package org.apache.activemq.legacy.test2;
+import javax.jms.DeliveryMode;
+
 
 
 /**
  * @version $Revision: 1.2 $
  */
-public class JmsQueueSelectorTest extends JmsTopicSelectorTest {
-    public void setUp() throws Exception {
-        topic = false;
+public class JmsDurableTopicWildcardSendReceiveTest extends JmsTopicSendReceiveTest {
+
+    /**
+     * Sets up a test with a topic destination, durable suscriber and persistent
+     * delivery mode.
+     * 
+     * @see junit.framework.TestCase#setUp()
+     */
+    protected void setUp() throws Exception {
+        topic = true;
+        durable = true;
+        deliveryMode = DeliveryMode.PERSISTENT;
         super.setUp();
+    }
+
+    /**
+     * Returns the consumer subject.
+     */
+    protected String getConsumerSubject() {
+        return "FOO.>";
+    }
+
+    /**
+     * Returns the producer subject.
+     */
+    protected String getProducerSubject() {
+        return "FOO.BAR.HUMBUG";
     }
 }

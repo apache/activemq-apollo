@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.legacy.test2;
+package org.apache.activemq.apollo.test2;
 
 import javax.jms.Connection;
 import javax.jms.DeliveryMode;

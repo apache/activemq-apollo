@@ -14,21 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test2;
+package org.apache.activemq.apollo.test2;
 
 import javax.jms.Connection;
+import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
-import javax.jms.MessageListener;
 import javax.jms.MessageProducer;
 import javax.jms.Queue;
 import javax.jms.Session;
 
 
+
 /**
  * @version $Revision: 1.2 $
  */
-public class JmsAutoAckListenerTest extends TestSupport implements MessageListener {
+public class JmsAutoAckTest extends TestSupport {
 
     private Connection connection;
 
@@ -47,13 +48,13 @@ public class JmsAutoAckListenerTest extends TestSupport implements MessageListen
         }
         super.tearDown();
     }
-
+    
     /**
      * Tests if acknowleged messages are being consumed.
      * 
      * @throws javax.jms.JMSException
      */
-    public void testAckedMessageAreConsumed() throws Exception {
+    public void testAckedMessageAreConsumed() throws JMSException {
         connection.start();
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
         Queue queue = session.createQueue("test");
@@ -62,20 +63,20 @@ public class JmsAutoAckListenerTest extends TestSupport implements MessageListen
 
         // Consume the message...
         MessageConsumer consumer = session.createConsumer(queue);
-        consumer.setMessageListener(this);
-
-        Thread.sleep(10000);
-        session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        // Attempt to Consume the message...check if message was acknowledge
-        consumer = session.createConsumer(queue);
         Message msg = consumer.receive(1000);
-        assertNull(msg);
+        assertNotNull(msg);
+        
+        // Reset the session.
+        session.close();
+        session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        
+        // Attempt to Consume the message...
+        consumer = session.createConsumer(queue);
+        msg = consumer.receive(1000);
+        assertNull(msg);        
 
         session.close();
     }
+    
 
-    public void onMessage(Message message) {
-        assertNotNull(message);
-
-    }
 }

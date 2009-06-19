@@ -14,21 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test2;
+package org.apache.activemq.apollo.test2;
 
 import javax.jms.Connection;
-import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
+import javax.jms.MessageListener;
 import javax.jms.MessageProducer;
 import javax.jms.Queue;
 import javax.jms.Session;
 
 
+
 /**
- * @version $Revision: 1.1.1.1 $
+ * @version $Revision: 1.2 $
  */
-public class ConsumerReceiveWithTimeoutTest extends TestSupport {
+public class JmsAutoAckListenerTest extends TestSupport implements MessageListener {
 
     private Connection connection;
 
@@ -49,40 +50,33 @@ public class ConsumerReceiveWithTimeoutTest extends TestSupport {
     }
 
     /**
-     * Test to check if consumer thread wakes up inside a receive(timeout) after
-     * a message is dispatched to the consumer
+     * Tests if acknowleged messages are being consumed.
      * 
      * @throws javax.jms.JMSException
      */
-    public void testConsumerReceiveBeforeMessageDispatched() throws JMSException {
-
+    public void testAckedMessageAreConsumed() throws Exception {
         connection.start();
-
-        final Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        final Queue queue = session.createQueue("test");
-
-        Thread t = new Thread() {
-            public void run() {
-                try {
-                    // wait for 10 seconds to allow consumer.receive to be run
-                    // first
-                    Thread.sleep(10000);
-                    MessageProducer producer = session.createProducer(queue);
-                    producer.send(session.createTextMessage("Hello"));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-
-        t.start();
+        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        Queue queue = session.createQueue("test");
+        MessageProducer producer = session.createProducer(queue);
+        producer.send(session.createTextMessage("Hello"));
 
         // Consume the message...
         MessageConsumer consumer = session.createConsumer(queue);
-        Message msg = consumer.receive(60000);
-        assertNotNull(msg);
-        session.close();
+        consumer.setMessageListener(this);
 
+        Thread.sleep(10000);
+        session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        // Attempt to Consume the message...check if message was acknowledge
+        consumer = session.createConsumer(queue);
+        Message msg = consumer.receive(1000);
+        assertNull(msg);
+
+        session.close();
     }
 
+    public void onMessage(Message message) {
+        assertNotNull(message);
+
+    }
 }
