@@ -19,7 +19,6 @@ package org.apache.activemq.apollo.broker.wildcard;
 import java.util.Collection;
 
 import org.apache.activemq.apollo.broker.Destination;
-import org.apache.activemq.filter.FilterException;
 
 
 /**
@@ -40,7 +39,7 @@ public class CompositeDestinationFilter extends DestinationFilter {
 		}
     }
 
-    public boolean matches(Destination destination) throws FilterException {
+    public boolean matches(Destination destination) {
         for (int i = 0; i < filters.length; i++) {
             if (filters[i].matches(destination)) {
                 return true;

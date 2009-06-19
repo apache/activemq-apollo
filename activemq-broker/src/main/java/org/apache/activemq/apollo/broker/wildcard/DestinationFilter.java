@@ -43,7 +43,7 @@ public abstract class DestinationFilter implements BooleanExpression {
 		return matches(message) ? Boolean.TRUE : Boolean.FALSE;
 	}
 	
-    public abstract boolean matches(Destination destination) throws FilterException;
+    public abstract boolean matches(Destination destination);
 
     public static DestinationFilter parseFilter(Destination destination) {
     	Collection<Destination> destinations = destination.getDestinations();
