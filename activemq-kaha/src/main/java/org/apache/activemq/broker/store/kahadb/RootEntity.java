@@ -39,7 +39,6 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.protobuf.InvalidProtocolBufferException;
 import org.apache.activemq.queue.QueueDescriptor;
-import org.apache.activemq.queue.Subscription;
 import org.apache.kahadb.index.BTreeIndex;
 import org.apache.kahadb.index.BTreeVisitor;
 import org.apache.kahadb.journal.Location;
@@ -50,7 +49,6 @@ import org.apache.kahadb.util.LongMarshaller;
 import org.apache.kahadb.util.Marshaller;
 import org.apache.kahadb.util.VariableMarshaller;
 
-import com.sun.xml.internal.bind.v2.util.FatalAdapter;
 
 public class RootEntity {
 
