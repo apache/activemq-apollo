@@ -39,6 +39,8 @@ enum Type {
   STREAM_WRITE = 41;
   STREAM_CLOSE = 42;
   STREAM_REMOVE = 43;
+  SUBSCRIPTION_ADD = 50;
+  SUBSCRIPTION_REMOVE = 51;
   
   TRACE = 100;
 }
@@ -85,6 +87,25 @@ message QueueRemoveMessage {
   optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
   optional int64 messageKey=2;
 }  
+
+
+///////////////////////////////////////////////////////////////
+// Client related operations.
+///////////////////////////////////////////////////////////////
+message SubscriptionAdd {
+  optional bytes name        = 1    [java_override_type = "AsciiBuffer"];
+  optional bytes selector    = 2    [java_override_type = "AsciiBuffer"];
+  optional bytes destination = 3    [java_override_type = "AsciiBuffer"];
+  optional bool  durable     = 4    [default = false];
+  optional int64 tte         = 5    [default = -1];
+  optional bytes attachment  = 6;
+  
+}
+
+message SubscriptionRemove {
+  optional bytes name = 1 [java_override_type = "AsciiBuffer"];
+}
+
 
 ///////////////////////////////////////////////////////////////
 // Map related operations.

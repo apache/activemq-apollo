@@ -30,11 +30,15 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.activemq.broker.store.Store;
+import org.apache.activemq.broker.store.Store.DuplicateKeyException;
+import org.apache.activemq.broker.store.Store.SubscriptionRecord;
 import org.apache.activemq.broker.store.kahadb.Data.MessageAdd;
 import org.apache.activemq.broker.store.kahadb.Data.QueueAdd;
 import org.apache.activemq.broker.store.kahadb.Data.QueueAddMessage;
 import org.apache.activemq.broker.store.kahadb.Data.QueueRemove;
 import org.apache.activemq.broker.store.kahadb.Data.QueueRemoveMessage;
+import org.apache.activemq.broker.store.kahadb.Data.SubscriptionAdd;
+import org.apache.activemq.broker.store.kahadb.Data.SubscriptionRemove;
 import org.apache.activemq.broker.store.kahadb.Data.Trace;
 import org.apache.activemq.broker.store.kahadb.Data.Type;
 import org.apache.activemq.broker.store.kahadb.Data.MessageAdd.MessageAddBean;
@@ -42,6 +46,8 @@ import org.apache.activemq.broker.store.kahadb.Data.QueueAdd.QueueAddBean;
 import org.apache.activemq.broker.store.kahadb.Data.QueueAddMessage.QueueAddMessageBean;
 import org.apache.activemq.broker.store.kahadb.Data.QueueRemove.QueueRemoveBean;
 import org.apache.activemq.broker.store.kahadb.Data.QueueRemoveMessage.QueueRemoveMessageBean;
+import org.apache.activemq.broker.store.kahadb.Data.SubscriptionAdd.SubscriptionAddBean;
+import org.apache.activemq.broker.store.kahadb.Data.SubscriptionRemove.SubscriptionRemoveBean;
 import org.apache.activemq.broker.store.kahadb.Data.Type.TypeCreatable;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
@@ -631,7 +637,12 @@ public class KahaDBStore implements Store {
         case QUEUE_REMOVE_MESSAGE:
             queueRemoveMessage(tx, (QueueRemoveMessage) command, location);
             break;
-
+        case SUBSCRIPTION_ADD:
+            rootEntity.addSubscription(tx, (SubscriptionAdd) command);
+            break;
+        case SUBSCRIPTION_REMOVE:
+            rootEntity.removeSubscription(tx, ((SubscriptionRemove) command).getName());
+            break;
         case TRANSACTION_BEGIN:
         case TRANSACTION_ADD_MESSAGE:
         case TRANSACTION_REMOVE_MESSAGE:
@@ -931,6 +942,75 @@ public class KahaDBStore implements Store {
             }
             try {
                 return destination.listMessages(tx(), firstQueueKey, maxQueueKey, max);
+            } catch (IOException e) {
+                throw new FatalStoreException(e);
+            }
+        }
+
+        ////////////////////////////////////////////////////////////////
+        //Client related methods
+        ////////////////////////////////////////////////////////////////
+
+        /**
+         * Adds a subscription to the store.
+         * 
+         * @throws DuplicateKeyException
+         *             if a subscription with the same name already exists
+         * 
+         */
+        public void addSubscription(SubscriptionRecord record) throws DuplicateKeyException {
+            storeAtomic();
+            SubscriptionRecord old;
+            try {
+                old = rootEntity.getSubscription(tx, record.getName());
+                if (old != null && !old.equals(record)) {
+                    throw new DuplicateKeyException("Subscription already exists: " + record.getName());
+                } else {
+                    updateSubscription(record);
+                }
+            } catch (IOException e) {
+                throw new FatalStoreException(e);
+            }
+        }
+
+        /**
+         * Updates a subscription in the store. If the subscription does not
+         * exist then it will simply be added.
+         */
+        public void updateSubscription(SubscriptionRecord record) {
+            SubscriptionAddBean update = new SubscriptionAddBean();
+            update.setName(record.getName());
+            update.setDestination(record.getDestination());
+            update.setDurable(record.getIsDurable());
+            
+            if (record.getAttachment() != null) {
+                update.setAttachment(record.getAttachment());
+            }
+            if (record.getSelector() != null) {
+                update.setSelector(record.getSelector());
+            }
+            if (record.getTte() != -1) {
+                update.setTte(record.getTte());
+            }
+            addUpdate(update);
+        }
+
+        /**
+         * Removes a subscription with the given name from the store.
+         */
+        public void removeSubscription(AsciiBuffer name) {
+            SubscriptionRemoveBean update = new SubscriptionRemoveBean();
+            update.setName(name);
+            addUpdate(update);
+        }
+
+        /**
+         * @return A list of subscriptions
+         */
+        public Iterator<SubscriptionRecord> listSubscriptions() {
+            storeAtomic();
+            try {
+                return rootEntity.listSubsriptions(tx);
             } catch (IOException e) {
                 throw new FatalStoreException(e);
             }

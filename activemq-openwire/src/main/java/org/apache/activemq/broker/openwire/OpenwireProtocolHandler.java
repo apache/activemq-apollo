@@ -360,8 +360,15 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             } else {
                 connection.onException(e);
             }
-        } catch (Throwable e) {
-            connection.onException(new Exception(e));
+        }
+        catch (Throwable t) {
+            if (responseRequired) {
+                ExceptionResponse response = new ExceptionResponse(t);
+                response.setCorrelationId(commandId);
+                connection.write(response);
+            } else {
+                connection.onException(new RuntimeException(t));
+            }
         }
     }
 

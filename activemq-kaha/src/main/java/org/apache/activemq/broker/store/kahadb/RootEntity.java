@@ -31,9 +31,15 @@ import java.util.Map.Entry;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.Store.KeyNotFoundException;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
+import org.apache.activemq.broker.store.Store.SubscriptionRecord;
 import org.apache.activemq.broker.store.kahadb.Data.MessageAdd;
+import org.apache.activemq.broker.store.kahadb.Data.SubscriptionAdd;
+import org.apache.activemq.broker.store.kahadb.Data.SubscriptionAdd.SubscriptionAddBuffer;
 import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.protobuf.InvalidProtocolBufferException;
 import org.apache.activemq.queue.QueueDescriptor;
+import org.apache.activemq.queue.Subscription;
 import org.apache.kahadb.index.BTreeIndex;
 import org.apache.kahadb.index.BTreeVisitor;
 import org.apache.kahadb.journal.Location;
@@ -44,21 +50,27 @@ import org.apache.kahadb.util.LongMarshaller;
 import org.apache.kahadb.util.Marshaller;
 import org.apache.kahadb.util.VariableMarshaller;
 
+import com.sun.xml.internal.bind.v2.util.FatalAdapter;
+
 public class RootEntity {
 
     //TODO remove this one performance testing is complete. 
     private static final boolean USE_LOC_INDEX = true;
 
+    private static final int VERSION = 0;
+
     public final static Marshaller<RootEntity> MARSHALLER = new VariableMarshaller<RootEntity>() {
         public RootEntity readPayload(DataInput is) throws IOException {
             RootEntity rc = new RootEntity();
             rc.state = is.readInt();
+            is.readInt(); //VERSION 
             rc.maxMessageKey = is.readLong();
             rc.messageKeyIndex = new BTreeIndex<Long, Location>(is.readLong());
             if (USE_LOC_INDEX)
                 rc.locationIndex = new BTreeIndex<Integer, Long>(is.readLong());
             rc.destinationIndex = new BTreeIndex<AsciiBuffer, DestinationEntity>(is.readLong());
             rc.messageRefsIndex = new BTreeIndex<Long, Long>(is.readLong());
+            rc.subscriptionIndex = new BTreeIndex<AsciiBuffer, Buffer>(is.readLong());
             if (is.readBoolean()) {
                 rc.lastUpdate = Marshallers.LOCATION_MARSHALLER.readPayload(is);
             } else {
@@ -69,12 +81,14 @@ public class RootEntity {
 
         public void writePayload(RootEntity object, DataOutput os) throws IOException {
             os.writeInt(object.state);
+            os.writeInt(VERSION);
             os.writeLong(object.maxMessageKey);
             os.writeLong(object.messageKeyIndex.getPageId());
             if (USE_LOC_INDEX)
                 os.writeLong(object.locationIndex.getPageId());
             os.writeLong(object.destinationIndex.getPageId());
             os.writeLong(object.messageRefsIndex.getPageId());
+            os.writeLong(object.subscriptionIndex.getPageId());
             if (object.lastUpdate != null) {
                 os.writeBoolean(true);
                 Marshallers.LOCATION_MARSHALLER.writePayload(object.lastUpdate, os);
@@ -104,6 +118,9 @@ public class RootEntity {
     private BTreeIndex<AsciiBuffer, DestinationEntity> destinationIndex;
     private final TreeMap<AsciiBuffer, DestinationEntity> destinations = new TreeMap<AsciiBuffer, DestinationEntity>();
 
+    // Subscriptions
+    private BTreeIndex<AsciiBuffer, Buffer> subscriptionIndex;
+
     // /////////////////////////////////////////////////////////////////
     // Lifecycle Methods.
     // /////////////////////////////////////////////////////////////////
@@ -121,7 +138,7 @@ public class RootEntity {
             locationIndex = new BTreeIndex<Integer, Long>(tx.getPageFile(), tx.allocate().getPageId());
         destinationIndex = new BTreeIndex<AsciiBuffer, DestinationEntity>(tx.getPageFile(), tx.allocate().getPageId());
         messageRefsIndex = new BTreeIndex<Long, Long>(tx.getPageFile(), tx.allocate().getPageId());
-
+        subscriptionIndex = new BTreeIndex<AsciiBuffer, Buffer>(tx.getPageFile(), tx.allocate().getPageId());
         page.set(this);
         tx.store(page, MARSHALLER, true);
     }
@@ -145,6 +162,11 @@ public class RootEntity {
             locationIndex.setValueMarshaller(LongMarshaller.INSTANCE);
             locationIndex.load(tx);
         }
+
+        subscriptionIndex.setPageFile(tx.getPageFile());
+        subscriptionIndex.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
+        subscriptionIndex.setValueMarshaller(Marshallers.BUFFER_MARSHALLER);
+        subscriptionIndex.load(tx);
 
         destinationIndex.setPageFile(tx.getPageFile());
         destinationIndex.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
@@ -325,6 +347,97 @@ public class RootEntity {
     }
 
     // /////////////////////////////////////////////////////////////////
+    // Client Methods.
+    // /////////////////////////////////////////////////////////////////
+
+    /**
+     * Returns a list of all of the stored subscriptions. 
+     * @param tx The transaction under which this is to be executed.
+     * @return a list of all of the stored subscriptions. 
+     * @throws IOException 
+     */
+    public Iterator<SubscriptionRecord> listSubsriptions(Transaction tx) throws IOException {
+        
+        final LinkedList<SubscriptionRecord> rc = new LinkedList<SubscriptionRecord>();
+        
+        subscriptionIndex.visit(tx, new BTreeVisitor<AsciiBuffer, Buffer>() {
+            public boolean isInterestedInKeysBetween(AsciiBuffer first, AsciiBuffer second) {
+                return true;
+            }
+
+            public void visit(List<AsciiBuffer> keys, List<Buffer> values) {
+                for (Buffer b : values) {
+                    try {
+                        rc.add(toSubscriptionRecord(b));
+                    } catch (InvalidProtocolBufferException e) {
+                        throw new Store.FatalStoreException(e);
+                    }
+                }
+            }
+        });
+        
+        return rc.iterator();
+    }
+
+    /**
+     * @param tx
+     * @param name
+     * @throws IOException
+     */
+    public void removeSubscription(Transaction tx, AsciiBuffer name) throws IOException {
+        subscriptionIndex.remove(tx, name);
+    }
+
+    /**
+     * @param tx
+     * @param name
+     * @throws IOException
+     */
+    public void addSubscription(Transaction tx, SubscriptionAdd subscription) throws IOException {
+        subscriptionIndex.put(tx, subscription.getName(), subscription.freeze().toFramedBuffer());
+    }
+
+    /**
+     * @param name
+     * @return
+     * @throws IOException
+     */
+    public SubscriptionRecord getSubscription(Transaction tx, AsciiBuffer name) throws IOException {
+        return toSubscriptionRecord(subscriptionIndex.get(tx, name));
+    }
+
+    /**
+     * Converts a Subscription buffer to a SubscriptionRecord.
+     * @param b The buffer
+     * @return The record.
+     * @throws InvalidProtocolBufferException
+     */
+    private static SubscriptionRecord toSubscriptionRecord(Buffer b) throws InvalidProtocolBufferException {
+        if (b == null) {
+            return null;
+        }
+        
+        SubscriptionRecord rc = null;
+        if (b != null) {
+            SubscriptionAddBuffer sab = SubscriptionAddBuffer.parseFramed(b);
+            if (sab != null) {
+                rc = new SubscriptionRecord();
+                rc.setName(sab.getName());
+                rc.setDestination(sab.getDestination());
+                rc.setIsDurable(sab.getDurable());
+                if (sab.hasAttachment())
+                    rc.setAttachment(sab.getAttachment());
+                if (sab.hasSelector())
+                    rc.setSelector(sab.getSelector());
+                if (sab.hasTte())
+                    rc.setTte(sab.getTte());
+
+            }
+        }
+        return rc;
+    }
+
+    // /////////////////////////////////////////////////////////////////
     // Queue Methods.
     // /////////////////////////////////////////////////////////////////
     public void queueAdd(Transaction tx, QueueDescriptor queue) throws IOException {
@@ -466,29 +579,28 @@ public class RootEntity {
         //are past the last update location in the journal. This can happen
         //if the index is flushed before the journal. 
         int count = 0;
-        
+
         //TODO: It might be better to tie the the index update to the journal write
         //so that we can be sure that all journal entries are on disk prior to 
         //index update. 
 
         //Scan MessageKey Index to find message keys past the last append 
         //location:
-//        final ArrayList<Long> matches = new ArrayList<Long>();
-//        messageKeyIndex.visit(tx, new BTreeVisitor.GTEVisitor<Location, Long>(lastAppendLocation) {
-//
-//            @Override
-//            protected void matched(Location key, Long value) {
-//                matches.add(value);
-//            }
-//        });
-        
-        
-//        for (Long sequenceId : matches) {
-//        MessageKeys keys = sd.orderIndex.remove(tx, sequenceId);
-//        sd.locationIndex.remove(tx, keys.location);
-//        sd.messageIdIndex.remove(tx, keys.messageId);
-//        count++;
-//        }
+        //        final ArrayList<Long> matches = new ArrayList<Long>();
+        //        messageKeyIndex.visit(tx, new BTreeVisitor.GTEVisitor<Location, Long>(lastAppendLocation) {
+        //
+        //            @Override
+        //            protected void matched(Location key, Long value) {
+        //                matches.add(value);
+        //            }
+        //        });
+
+        //        for (Long sequenceId : matches) {
+        //        MessageKeys keys = sd.orderIndex.remove(tx, sequenceId);
+        //        sd.locationIndex.remove(tx, keys.location);
+        //        sd.messageIdIndex.remove(tx, keys.messageId);
+        //        count++;
+        //        }
 
         //                 @Override
         //                 protected void matched(Location key, Long value) {
@@ -598,4 +710,5 @@ public class RootEntity {
         });
 
     }
+
 }

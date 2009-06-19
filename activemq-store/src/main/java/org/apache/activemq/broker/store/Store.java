@@ -100,10 +100,9 @@ public interface Store extends Service {
 
     /**
      * Gets the store's root directory;
-     */ 
+     */
     public File getStoreDirectory();
 
-    
     /**
      * Indicates that all messages should be deleted on startup
      * 
@@ -121,7 +120,7 @@ public interface Store extends Service {
      * @return A new store Session.
      */
     public Session getSession();
-    
+
     /**
      * This interface is used to execute transacted code.
      * 
@@ -172,6 +171,146 @@ public interface Store extends Service {
         }
     }
 
+    public static class SubscriptionRecord {
+
+        AsciiBuffer name;
+        AsciiBuffer selector;
+        AsciiBuffer destination;
+        boolean isDurable;
+        long tte = -1;
+        Buffer attachment;
+
+        /**
+         * @return the name.
+         */
+        public AsciiBuffer getName() {
+            return name;
+        }
+
+        /**
+         * @param name
+         *            the name to set
+         */
+        public void setName(AsciiBuffer name) {
+            this.name = name;
+        }
+
+        /**
+         * @return the selector
+         */
+        public AsciiBuffer getSelector() {
+            return selector;
+        }
+
+        /**
+         * @param selector
+         *            the selector to set.
+         */
+        public void setSelector(AsciiBuffer selector) {
+            this.selector = selector;
+        }
+
+        /**
+         * @return the destination
+         */
+        public AsciiBuffer getDestination() {
+            return destination;
+        }
+
+        /**
+         * @param destination
+         *            the destination to set
+         */
+        public void setDestination(AsciiBuffer destination) {
+            this.destination = destination;
+        }
+
+        /**
+         * @return the isDurable
+         */
+        public boolean getIsDurable() {
+            return isDurable;
+        }
+
+        /**
+         * @param isDurable
+         *            the isDurable to set
+         */
+        public void setIsDurable(boolean isDurable) {
+            this.isDurable = isDurable;
+        }
+
+        /**
+         * @return the tte
+         */
+        public long getTte() {
+            return tte;
+        }
+
+        /**
+         * @param tte
+         *            the tte to set
+         */
+        public void setTte(long tte) {
+            this.tte = tte;
+        }
+
+        /**
+         * @return the attachment
+         */
+        public Buffer getAttachment() {
+            return attachment;
+        }
+
+        /**
+         * @param attachment
+         *            the attachment to set
+         */
+        public void setAttachment(Buffer attachment) {
+            this.attachment = attachment;
+        }
+
+        public int hashCode() {
+            return name.hashCode();
+        }
+
+        public boolean equals(Object o) {
+            if (o instanceof SubscriptionRecord) {
+                return equals((SubscriptionRecord) o);
+            } else {
+                return false;
+            }
+        }
+
+        public boolean equals(SubscriptionRecord r) {
+            if (r == null) {
+                return false;
+            }
+            if (r.hashCode() != hashCode())
+                return false;
+
+            if (r.isDurable != isDurable)
+                return false;
+
+            if (r.tte != tte)
+                return false;
+
+            if (!name.equals(r.name))
+                return false;
+
+            if (!destination.equals(r.destination))
+                return false;
+            
+            if (!(selector == null ? r.selector == null : selector.equals(r.selector))) 
+                return false;
+            
+            if (!(attachment == null ? r.attachment == null : attachment.equals(r.attachment))) 
+                return false;
+            
+            return true;
+        }
+    }
+
     public static class QueueRecord {
         Long queueKey;
         Long messageKey;
@@ -179,7 +318,7 @@ public interface Store extends Service {
         int size;
         boolean redelivered;
         long tte;
-        
+
         public boolean isRedelivered() {
             return redelivered;
         }
@@ -318,12 +457,12 @@ public interface Store extends Service {
          * @return the first sequence number in the queue.
          */
         public long getFirstSequence();
-        
+
         /**
          * @return the last sequence number in the queue.
          */
         public long getLastSequence();
-        
+
         /**
          * @return The results for this queue's partitions
          */
@@ -359,12 +498,11 @@ public interface Store extends Service {
      */
     public void flush();
 
-    
     /**
-     * @return true if the store is transactional. 
+     * @return true if the store is transactional.
      */
     public boolean isTransactional();
-    
+
     /**
      * This interface allows you to query and update the Store.
      * 
@@ -373,59 +511,69 @@ public interface Store extends Service {
      * 
      */
     public interface Session {
-        
+
+        ////////////////////////////////////////////////////////////////
+        //Lock related methods:
+        ////////////////////////////////////////////////////////////////
+
         /**
          * Commits work done on the Session
          */
         public void commit();
 
         /**
-         * Rolls back work done on the Session
-         * since the last call to {@link #acquireLock()}
+         * Rolls back work done on the Session since the last call to
+         * {@link #acquireLock()}
          * 
-         * @throw {@link UnsupportedOperationException} if the store is not transactional
+         * @throw {@link UnsupportedOperationException} if the store is not
+         *        transactional
          */
         public void rollback();
 
         /**
-         * Indicates callers intent to start a transaction. 
+         * Indicates callers intent to start a transaction.
          */
         public void acquireLock();
 
         /**
-         * Indicates caller is done with the transaction, if 
-         * not committed then the transaction will be rolled back (providing
-         * the store is transactional.
+         * Indicates caller is done with the transaction, if not committed then
+         * the transaction will be rolled back (providing the store is
+         * transactional.
          */
         public void releaseLock();
 
-        public void messageAdd(MessageRecord message);
+        ////////////////////////////////////////////////////////////////
+        //Client related methods
+        ////////////////////////////////////////////////////////////////
 
-        public MessageRecord messageGetRecord(Long key) throws KeyNotFoundException;
+        /**
+         * Adds a subscription to the store.
+         * 
+         * @throws DuplicateKeyException
+         *             if a subscription with the same name already exists
+         * 
+         */
+        public void addSubscription(SubscriptionRecord record) throws DuplicateKeyException;
 
-        public Long streamOpen();
+        /**
+         * Updates a subscription in the store. If the subscription does not
+         * exist then it will simply be added.
+         */
+        public void updateSubscription(SubscriptionRecord record);
 
-        public void streamWrite(Long streamKey, Buffer message) throws KeyNotFoundException;
+        /**
+         * Removes a subscription with the given name from the store.
+         */
+        public void removeSubscription(AsciiBuffer name);
 
-        public void streamClose(Long streamKey) throws KeyNotFoundException;
+        /**
+         * @return A list of the stored subscriptions.
+         */
+        public Iterator<SubscriptionRecord> listSubscriptions();
 
-        public Buffer streamRead(Long streamKey, int offset, int max) throws KeyNotFoundException;
-
-        public boolean streamRemove(Long streamKey);
-
-        // Transaction related methods.
-        public Iterator<Buffer> transactionList(Buffer first, int max);
-
-        public void transactionAdd(Buffer txid);
-
-        public void transactionAddMessage(Buffer txid, Long messageKey) throws KeyNotFoundException;
-
-        public void transactionRemoveMessage(Buffer txid, QueueDescriptor queueName, Long messageKey) throws KeyNotFoundException;
-
-        public void transactionCommit(Buffer txid) throws KeyNotFoundException;
-
-        public void transactionRollback(Buffer txid) throws KeyNotFoundException;
-
+        ////////////////////////////////////////////////////////////////
+        //Queue related methods
+        ////////////////////////////////////////////////////////////////
         /**
          * Gets a list of queues. The returned iterator returns top-level queues
          * (e.g. queues without a parent). The child queues are accessible via
@@ -433,7 +581,7 @@ public interface Store extends Service {
          * 
          * @param firstQueueName
          *            If null starts the query at the first queue.
-        * @param max
+         * @param max
          *            The maximum number of queues to return
          * @return The list of queues.
          */
@@ -495,6 +643,43 @@ public interface Store extends Service {
         public void queueRemoveMessage(QueueDescriptor queue, Long messageKey) throws KeyNotFoundException;
 
         public Iterator<QueueRecord> queueListMessagesQueue(QueueDescriptor queue, Long firstQueueKey, Long maxSequence, int max) throws KeyNotFoundException;
+
+        ////////////////////////////////////////////////////////////////
+        //Message related methods
+        ////////////////////////////////////////////////////////////////
+        public void messageAdd(MessageRecord message);
+
+        public MessageRecord messageGetRecord(Long key) throws KeyNotFoundException;
+
+        public Long streamOpen();
+
+        public void streamWrite(Long streamKey, Buffer message) throws KeyNotFoundException;
+
+        public void streamClose(Long streamKey) throws KeyNotFoundException;
+
+        public Buffer streamRead(Long streamKey, int offset, int max) throws KeyNotFoundException;
+
+        public boolean streamRemove(Long streamKey);
+
+        ////////////////////////////////////////////////////////////////
+        //Transaction related methods 
+        //TODO these will probably go away in favor of just using a queue.
+        ////////////////////////////////////////////////////////////////
+        public Iterator<Buffer> transactionList(Buffer first, int max);
+
+        public void transactionAdd(Buffer txid);
+
+        public void transactionAddMessage(Buffer txid, Long messageKey) throws KeyNotFoundException;
+
+        public void transactionRemoveMessage(Buffer txid, QueueDescriptor queueName, Long messageKey) throws KeyNotFoundException;
+
+        public void transactionCommit(Buffer txid) throws KeyNotFoundException;
+
+        public void transactionRollback(Buffer txid) throws KeyNotFoundException;
+
+        ////////////////////////////////////////////////////////////////
+        //Map related methods 
+        ////////////////////////////////////////////////////////////////
 
         public Iterator<AsciiBuffer> mapList(AsciiBuffer first, int max);
 

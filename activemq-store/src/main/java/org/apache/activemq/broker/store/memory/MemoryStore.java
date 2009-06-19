@@ -28,7 +28,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.activemq.broker.store.Store;
+import org.apache.activemq.broker.store.Store.DuplicateKeyException;
 import org.apache.activemq.broker.store.Store.Session;
+import org.apache.activemq.broker.store.Store.SubscriptionRecord;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.QueueDescriptor;
@@ -219,12 +221,11 @@ public class MemoryStore implements Store {
         }
 
     }
-    
+
     /**
      * @return A new store Session.
      */
-    public Session getSession()
-    {
+    public Session getSession() {
         return session;
     }
 
@@ -317,41 +318,40 @@ public class MemoryStore implements Store {
         private TreeMap<AsciiBuffer, StoredQueue> queues = new TreeMap<AsciiBuffer, StoredQueue>();
         private TreeMap<Buffer, Transaction> transactions = new TreeMap<Buffer, Transaction>();
 
+        private HashMap<AsciiBuffer, SubscriptionRecord> subscriptions = new HashMap<AsciiBuffer, SubscriptionRecord>();
+
         /**
-         * Commits work done on the Session, if {@link Store#isTransactional()} is true.
+         * Commits work done on the Session, if {@link Store#isTransactional()}
+         * is true.
          */
-        public void commit()
-        {
+        public void commit() {
             //NOOP
         }
 
         /**
-         * Rolls back work done on the Session
-         * since the last call to {@link #acquireLock()}
+         * Rolls back work done on the Session since the last call to
+         * {@link #acquireLock()}
          */
-        public void rollback()
-        {
+        public void rollback() {
             throw new UnsupportedOperationException();
         }
 
         /**
-         * Indicates callers intent to start a transaction. If the store
-         * is transaction, the caller must call {@link #commit()} when the 
-         * done operating on the Session prior to a mandatory call to 
+         * Indicates callers intent to start a transaction. If the store is
+         * transaction, the caller must call {@link #commit()} when the done
+         * operating on the Session prior to a mandatory call to
          * {@link #releaseLock()}
          */
-        public void acquireLock()
-        {
+        public void acquireLock() {
             updateLock.lock();
         }
 
         /**
-         * Indicates caller is done with the transaction, if 
-         * not committed then the transaction will be rolled back (providing
-         * the store is transactional.
+         * Indicates caller is done with the transaction, if not committed then
+         * the transaction will be rolled back (providing the store is
+         * transactional.
          */
-        public void releaseLock()
-        {
+        public void releaseLock() {
             updateLock.unlock();
         }
 
@@ -380,6 +380,50 @@ public class MemoryStore implements Store {
                 return holder.record;
             }
             return null;
+        }
+
+        ////////////////////////////////////////////////////////////////
+        //Client related methods
+        ////////////////////////////////////////////////////////////////
+
+        /**
+         * Adds a subscription to the store.
+         * 
+         * @throws DuplicateKeyException
+         *             if a subscription with the same name already exists
+         * 
+         */
+        public void addSubscription(SubscriptionRecord record) throws DuplicateKeyException {
+            SubscriptionRecord old = subscriptions.put(record.getName(), record);
+            if (old != null && !old.equals(record)) {
+                subscriptions.put(old.getName(), old);
+                throw new DuplicateKeyException(record.getName() + " already exists!");
+            }
+        }
+
+        /**
+         * Updates a subscription in the store. If the subscription does not
+         * exist then it will simply be added.
+         */
+        public void updateSubscription(SubscriptionRecord record) {
+            subscriptions.put(record.getName(), record);
+        }
+
+        /**
+         * Removes a subscription with the given name from the store.
+         */
+        public void removeSubscription(AsciiBuffer name) {
+            subscriptions.remove(name);
+        }
+        
+        /**
+         * @return A list of subscriptions 
+         */
+        public Iterator<SubscriptionRecord> listSubscriptions()
+        {
+            ArrayList<SubscriptionRecord> rc = new ArrayList<SubscriptionRecord>(subscriptions.size());
+            rc.addAll(subscriptions.values());
+            return rc.iterator();
         }
 
         // //////////////////////////////////////////////////////////////////////////////
@@ -644,13 +688,12 @@ public class MemoryStore implements Store {
         // NOOP
     }
 
-	public File getStoreDirectory() {
-		return null;
-	}
-
-	public void setDeleteAllMessages(boolean val) {
-        // NOOP
+    public File getStoreDirectory() {
+        return null;
     }
 
+    public void setDeleteAllMessages(boolean val) {
+        // NOOP
+    }
 
 }
