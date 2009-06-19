@@ -211,7 +211,7 @@ public class JmsMultipleClientsTestSupport extends CombinationTestSupport {
     }
 
     protected BrokerService createBroker() throws Exception {
-        return BrokerFactory.createBroker(new URI("broker://()/localhost?persistent=false&useJmx=true"));
+        return BrokerFactory.createBroker(new URI("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml"));
     }
 
     protected void setUp() throws Exception {

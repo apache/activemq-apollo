@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.legacy.test1;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -31,11 +32,10 @@ import javax.jms.Session;
 import junit.framework.Test;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.broker.TransportConnector;
-import org.apache.activemq.legacy.broker.region.policy.PolicyEntry;
-import org.apache.activemq.legacy.broker.region.policy.PolicyMap;
+import org.apache.activemq.transport.TransportFactory;
+import org.apache.activemq.transport.TransportServer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -51,8 +51,7 @@ public class MessageGroupDelayedTest extends JmsTestSupport {
   public int consumersBeforeDispatchStarts;
   public int timeBeforeDispatchStarts;
   
-  BrokerService broker;
-  protected TransportConnector connector;
+  Broker broker;
   
   protected HashMap<String, Integer> messageCount = new HashMap<String, Integer>();
   protected HashMap<String, Set<String>> messageGroups = new HashMap<String, Set<String>>();
@@ -68,7 +67,9 @@ public class MessageGroupDelayedTest extends JmsTestSupport {
   public void setUp() throws Exception {
 	broker = createBroker();  
 	broker.start();
-    ActiveMQConnectionFactory connFactory = new ActiveMQConnectionFactory(connector.getConnectUri() + "?jms.prefetchPolicy.all=1");
+	
+	TransportServer server = broker.getTransportServers().get(0);
+    ActiveMQConnectionFactory connFactory = new ActiveMQConnectionFactory(server.getConnectURI() + "?jms.prefetchPolicy.all=1");
     connection = connFactory.createConnection();
     session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
     destination = new ActiveMQQueue("test-queue2");
@@ -76,22 +77,21 @@ public class MessageGroupDelayedTest extends JmsTestSupport {
     connection.start();
   }
   
-  protected BrokerService createBroker() throws Exception {
-      BrokerService service = new BrokerService();
-      service.setPersistent(false);
-      service.setUseJmx(false);
-
+  protected Broker createBroker() throws Exception {
+      Broker broker = super.createBroker();
+      broker.addTransportServer(TransportFactory.bind(new URI("tcp://localhost:0")));
+      
       // Setup a destination policy where it takes only 1 message at a time.
-      PolicyMap policyMap = new PolicyMap();
-      PolicyEntry policy = new PolicyEntry();
-      log.info("testing with consumersBeforeDispatchStarts=" + consumersBeforeDispatchStarts + " and timeBeforeDispatchStarts=" + timeBeforeDispatchStarts);
-      policy.setConsumersBeforeDispatchStarts(consumersBeforeDispatchStarts);
-      policy.setTimeBeforeDispatchStarts(timeBeforeDispatchStarts);
-      policyMap.setDefaultEntry(policy);
-      service.setDestinationPolicy(policyMap);
+// TODO:      
+//      PolicyMap policyMap = new PolicyMap();
+//      PolicyEntry policy = new PolicyEntry();
+//      log.info("testing with consumersBeforeDispatchStarts=" + consumersBeforeDispatchStarts + " and timeBeforeDispatchStarts=" + timeBeforeDispatchStarts);
+//      policy.setConsumersBeforeDispatchStarts(consumersBeforeDispatchStarts);
+//      policy.setTimeBeforeDispatchStarts(timeBeforeDispatchStarts);
+//      policyMap.setDefaultEntry(policy);
+//      service.setDestinationPolicy(policyMap);
 
-      connector = service.addConnector("tcp://localhost:0");
-      return service;
+      return broker;
   }
   
   public void tearDown() throws Exception {

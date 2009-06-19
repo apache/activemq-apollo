@@ -36,9 +36,9 @@ import javax.jms.Session;
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.apollo.CombinationTestSupport;
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.command.ActiveMQDestination;
-import org.apache.activemq.legacy.broker.BrokerFactory;
-import org.apache.activemq.legacy.broker.BrokerService;
 
 /**
  * Test cases used to test the JMS message consumer.
@@ -53,7 +53,7 @@ public class JmsTestSupport extends CombinationTestSupport {
 
     protected ConnectionFactory factory;
     protected ActiveMQConnection connection;
-    protected BrokerService broker;
+    protected Broker broker;
 
     protected List<Connection> connections = Collections.synchronizedList(new ArrayList<Connection>());
 
@@ -108,8 +108,8 @@ public class JmsTestSupport extends CombinationTestSupport {
         return new ActiveMQConnectionFactory("vm://localhost");
     }
 
-    protected BrokerService createBroker() throws Exception {
-        return BrokerFactory.createBroker(new URI("broker://()/localhost?persistent=false"));
+    protected Broker createBroker() throws Exception {
+        return BrokerFactory.createBroker(new URI("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml"));
     }
 
     protected void setUp() throws Exception {
@@ -128,8 +128,8 @@ public class JmsTestSupport extends CombinationTestSupport {
     }
 
     protected void tearDown() throws Exception {
-        for (Iterator iter = connections.iterator(); iter.hasNext();) {
-            Connection conn = (Connection)iter.next();
+        for (Iterator<Connection> iter = connections.iterator(); iter.hasNext();) {
+            Connection conn = iter.next();
             try {
                 conn.close();
             } catch (Throwable e) {

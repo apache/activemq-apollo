@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy;
+package org.apache.activemq.apollo;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +51,7 @@ public class JmsSessionRecoverTest extends TestCase {
      * @see junit.framework.TestCase#setUp()
      */
     protected void setUp() throws Exception {
-        factory = new ActiveMQConnectionFactory("vm://localhost?broker.persistent=false");
+        factory = new ActiveMQConnectionFactory("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml");
         connection = factory.createConnection();
     }
 

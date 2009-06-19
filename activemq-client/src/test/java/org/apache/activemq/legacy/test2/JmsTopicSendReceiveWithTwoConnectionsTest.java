@@ -95,7 +95,7 @@ public class JmsTopicSendReceiveWithTwoConnectionsTest extends JmsSendReceiveTes
     }
 
     protected ActiveMQConnectionFactory createConnectionFactory() throws Exception {
-        return new ActiveMQConnectionFactory("vm://localhost?broker.persistent=false");
+        return new ActiveMQConnectionFactory("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml");
     }
 
     protected void tearDown() throws Exception {

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy;
+package org.apache.activemq.apollo;
 
 import java.util.Vector;
 import java.util.concurrent.CountDownLatch;
@@ -43,7 +43,7 @@ public class JmsConsumerResetActiveListenerTest extends TestCase {
     private ActiveMQConnectionFactory factory;
    
     protected void setUp() throws Exception {
-        factory = new ActiveMQConnectionFactory("vm://localhost?broker.persistent=false");
+        factory = new ActiveMQConnectionFactory("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml");
         connection = factory.createConnection();
     }
 

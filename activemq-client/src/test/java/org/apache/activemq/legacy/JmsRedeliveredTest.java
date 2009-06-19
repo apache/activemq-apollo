@@ -68,7 +68,7 @@ public class JmsRedeliveredTest extends TestCase {
      */
     protected Connection createConnection() throws Exception {
         ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(
-                                                                          "vm://localhost?broker.persistent=false");
+                                                                          "vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml");
         return factory.createConnection();
     }
 

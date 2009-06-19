@@ -51,7 +51,7 @@ public class JmsTempDestinationTest extends TestCase {
     protected List<Connection> connections = Collections.synchronizedList(new ArrayList<Connection>());
 
     protected void setUp() throws Exception {
-        factory = new ActiveMQConnectionFactory("vm://localhost?broker.persistent=false");
+        factory = new ActiveMQConnectionFactory("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml");
         factory.setAlwaysSyncSend(true);
         connection = factory.createConnection();
         connections.add(connection);

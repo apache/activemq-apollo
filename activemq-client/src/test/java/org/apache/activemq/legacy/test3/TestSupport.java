@@ -177,7 +177,7 @@ public abstract class TestSupport extends TestCase {
      * @throws Exception
      */
     protected ActiveMQConnectionFactory createConnectionFactory() throws Exception {
-        return new ActiveMQConnectionFactory("vm://localhost?broker.persistent=false");
+        return new ActiveMQConnectionFactory("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml");
     }
 
     /**

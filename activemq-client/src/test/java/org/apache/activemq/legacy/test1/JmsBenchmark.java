@@ -39,11 +39,11 @@ import javax.jms.Session;
 import junit.framework.Test;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.activemq.legacy.broker.BrokerFactory;
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.broker.TransportConnector;
+import org.apache.activemq.transport.TransportFactory;
+import org.apache.activemq.transport.TransportServer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -78,12 +78,15 @@ public class JmsBenchmark extends JmsTestSupport {
         addCombinationValues("destination", new Object[] {new ActiveMQQueue("TEST")});
     }
 
-    protected BrokerService createBroker() throws Exception {
-        return BrokerFactory.createBroker(new URI("broker://(tcp://localhost:0)?persistent=false"));
+    protected Broker createBroker() throws Exception {
+    	Broker broker = super.createBroker();
+    	broker.addTransportServer(TransportFactory.bind(new URI("tcp://localhost:0")));
+        return broker;
     }
 
     protected ConnectionFactory createConnectionFactory() throws URISyntaxException, IOException {
-        return new ActiveMQConnectionFactory(((TransportConnector)broker.getTransportConnectors().get(0)).getServer().getConnectURI());
+    	TransportServer server = broker.getTransportServers().get(0);
+        return new ActiveMQConnectionFactory(server.getConnectURI());
     }
 
     /**

@@ -17,6 +17,7 @@
 package org.apache.activemq.legacy.test1;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -31,20 +32,16 @@ import javax.jms.TextMessage;
 
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.broker.TransportConnector;
-import org.apache.activemq.legacy.broker.region.policy.PolicyEntry;
-import org.apache.activemq.legacy.broker.region.policy.PolicyMap;
-import org.apache.activemq.legacy.broker.region.policy.VMPendingQueueMessageStoragePolicy;
-import org.apache.activemq.legacy.broker.region.policy.VMPendingSubscriberMessageStoragePolicy;
+import org.apache.activemq.transport.TransportFactory;
+import org.apache.activemq.transport.TransportServer;
 import org.apache.activemq.transport.tcp.TcpTransport;
 
 public class ProducerFlowControlTest extends JmsTestSupport {
 
     ActiveMQQueue queueA = new ActiveMQQueue("QUEUE.A");
     ActiveMQQueue queueB = new ActiveMQQueue("QUEUE.B");
-    protected TransportConnector connector;
     protected ActiveMQConnection connection;
     // used to test sendFailIfNoSpace on SystemUsage 
     protected final AtomicBoolean gotResourceException = new AtomicBoolean(false);
@@ -260,22 +257,21 @@ public class ProducerFlowControlTest extends JmsTestSupport {
         return done;
     }
 
-    protected BrokerService createBroker() throws Exception {
-        BrokerService service = new BrokerService();
-        service.setPersistent(false);
-        service.setUseJmx(false);
+    protected Broker createBroker() throws Exception {
+        Broker broker = super.createBroker();
+        broker.addTransportServer(TransportFactory.bind(new URI("tcp://localhost:0")));
+        
+// TODO:
+//        // Setup a destination policy where it takes only 1 message at a time.
+//        PolicyMap policyMap = new PolicyMap();
+//        PolicyEntry policy = new PolicyEntry();
+//        policy.setMemoryLimit(1);
+//        policy.setPendingSubscriberPolicy(new VMPendingSubscriberMessageStoragePolicy());
+//        policy.setPendingQueuePolicy(new VMPendingQueueMessageStoragePolicy());
+//        policyMap.setDefaultEntry(policy);
+//        service.setDestinationPolicy(policyMap);
 
-        // Setup a destination policy where it takes only 1 message at a time.
-        PolicyMap policyMap = new PolicyMap();
-        PolicyEntry policy = new PolicyEntry();
-        policy.setMemoryLimit(1);
-        policy.setPendingSubscriberPolicy(new VMPendingSubscriberMessageStoragePolicy());
-        policy.setPendingQueuePolicy(new VMPendingQueueMessageStoragePolicy());
-        policyMap.setDefaultEntry(policy);
-        service.setDestinationPolicy(policyMap);
-
-        connector = service.addConnector("tcp://localhost:0");
-        return service;
+        return broker;
     }
 
     public void setUp() throws Exception {
@@ -293,6 +289,7 @@ public class ProducerFlowControlTest extends JmsTestSupport {
     }
 
     protected ConnectionFactory createConnectionFactory() throws Exception {
-        return new ActiveMQConnectionFactory(connector.getConnectUri());
+    	TransportServer server = broker.getTransportServers().get(0);
+        return new ActiveMQConnectionFactory(server.getConnectURI());
     }
 }

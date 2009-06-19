@@ -113,7 +113,7 @@ public abstract class JmsTransactionTestSupport extends TestSupport implements M
     /**
      */
     protected BrokerService createBroker() throws Exception, URISyntaxException {
-        return BrokerFactory.createBroker(new URI("broker://()/localhost?persistent=false"));
+        return BrokerFactory.createBroker(new URI("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml"));
     }
 
     /*
