@@ -14,30 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker;
 
-import java.util.Collection;
+package org.apache.activemq.apollo.broker.path;
 
-import org.apache.activemq.apollo.broker.DeliveryTarget;
-import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 /**
- * Represents a messaging domain like pub/sub or point to point in JMS terms or an Exchange in
- * AMQP terms.
+ * Matches messages sent to an exact path
  * 
- * @author chirino
+ * @version $Revision: 1.3 $
  */
-public interface Domain {
+public class SimplePathFilter extends PathFilter {
 
-    public void add(AsciiBuffer destinationName, Object destination);
-    
-    public Object remove(AsciiBuffer destinationName);
+	private AsciiBuffer path;
 
-    public void bind(AsciiBuffer destinationName, DeliveryTarget target);
-    
-    public void unbind(AsciiBuffer destinationName, DeliveryTarget target);
-    
-    public Collection<DeliveryTarget> route(AsciiBuffer destinationName, MessageDelivery message);
-    
+	public SimplePathFilter(AsciiBuffer path) {
+		this.path = path;
+	}
+
+	public boolean matches(AsciiBuffer path) {
+		return this.path.equals(path);
+	}
+
+	public boolean isWildcard() {
+		return false;
+	}
 }

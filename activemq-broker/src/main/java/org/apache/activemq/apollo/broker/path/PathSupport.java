@@ -15,27 +15,25 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.broker.wildcard;
+package org.apache.activemq.apollo.broker.path;
 
 import java.util.ArrayList;
 
-import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 /**
- * Helper class for decomposing a Destination into a number of paths
+ * Helper class for decomposing a AsciiBuffer based path into it path component parts.
  * 
  * @version $Revision: 1.3 $
  */
-public final class DestinationPath {
+public final class PathSupport {
     protected static final byte SEPARATOR = '.';
 
-    private DestinationPath() {    
+    private PathSupport() {    
     }
     
-    public static ArrayList<AsciiBuffer> parse(AsciiBuffer domain, AsciiBuffer subject) {
+    public static ArrayList<AsciiBuffer> parse(AsciiBuffer subject) {
     	ArrayList<AsciiBuffer> list = new ArrayList<AsciiBuffer>(10);
-        list.add(domain);
         int previous = 0;
         int lastIndex = subject.getLength() - 1;
         while (true) {
@@ -50,10 +48,6 @@ public final class DestinationPath {
             previous = idx + 1;
         }
         return list;
-    }
-
-    public static ArrayList<AsciiBuffer> parse(Destination destination) {
-        return parse(destination.getDomain(), destination.getName());
     }
 
     /**

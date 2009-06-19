@@ -15,11 +15,10 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.broker.wildcard;
+package org.apache.activemq.apollo.broker.path;
 
 import java.util.ArrayList;
 
-import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 
@@ -29,7 +28,7 @@ import org.apache.activemq.protobuf.AsciiBuffer;
  *
  * @version $Revision: 1.2 $
  */
-public class WildcardDestinationFilter extends DestinationFilter {
+public class WildcardPathFilter extends PathFilter {
 
     private AsciiBuffer[] prefixes;
 
@@ -38,23 +37,23 @@ public class WildcardDestinationFilter extends DestinationFilter {
      *
      * @param paths
      */
-    public WildcardDestinationFilter(ArrayList<AsciiBuffer> paths) {
+    public WildcardPathFilter(ArrayList<AsciiBuffer> paths) {
         this.prefixes = new AsciiBuffer[paths.size()];
         for (int i = 0; i < paths.size(); i++) {
         	AsciiBuffer prefix = paths.get(i);
-            if (!prefix.equals(DestinationFilter.ANY_CHILD)) {
+            if (!prefix.equals(PathFilter.ANY_CHILD)) {
                 this.prefixes[i] = prefix;
             }
         }
     }
 
-    public boolean matches(Destination destination) {
-        ArrayList<AsciiBuffer> path = DestinationPath.parse(destination);
+    public boolean matches(AsciiBuffer path) {
+        ArrayList<AsciiBuffer> parts = PathSupport.parse(path);
         int length = prefixes.length;
-        if (path.size() == length) {
+        if (parts.size() == length) {
             for (int i = 0; i < length; i++) {
             	AsciiBuffer prefix = prefixes[i];
-                if (prefix != null && !prefix.equals(path.get(i))) {
+                if (prefix != null && !prefix.equals(parts.get(i))) {
                     return false;
                 }
             }
@@ -67,11 +66,11 @@ public class WildcardDestinationFilter extends DestinationFilter {
     public String getText() {
     	ArrayList<AsciiBuffer> t = new ArrayList<AsciiBuffer>(prefixes.length);
     	t.toArray(prefixes);
-        return DestinationPath.toString(t);
+        return PathSupport.toString(t);
     }
 
     public String toString() {
-        return super.toString() + "[destination: " + getText() + "]";
+        return super.toString() + "[path: " + getText() + "]";
     }
 
     public boolean isWildcard() {

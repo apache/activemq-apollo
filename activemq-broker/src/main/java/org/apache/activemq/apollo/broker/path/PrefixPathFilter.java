@@ -15,11 +15,10 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.broker.wildcard;
+package org.apache.activemq.apollo.broker.path;
 
 import java.util.ArrayList;
 
-import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 
@@ -28,7 +27,7 @@ import org.apache.activemq.protobuf.AsciiBuffer;
  *
  * @version $Revision: 1.2 $
  */
-public class PrefixDestinationFilter extends DestinationFilter {
+public class PrefixPathFilter extends PathFilter {
 
     private ArrayList<AsciiBuffer> prefixes;
 
@@ -37,17 +36,17 @@ public class PrefixDestinationFilter extends DestinationFilter {
      *
      * @param paths
      */
-    public PrefixDestinationFilter(ArrayList<AsciiBuffer> paths) {
+    public PrefixPathFilter(ArrayList<AsciiBuffer> paths) {
         this.prefixes = paths;
     }
 
-    public boolean matches(Destination destination) {
-        ArrayList<AsciiBuffer> path = DestinationPath.parse(destination);
+    public boolean matches(AsciiBuffer path) {
+        ArrayList<AsciiBuffer> parts = PathSupport.parse(path);
         int length = prefixes.size();
-        if (path.size() >= length) {
+        if (parts.size() >= length) {
             int size = length - 1;
             for (int i = 0; i < size; i++) {
-                if (!prefixes.get(i).equals(path.get(i))) {
+                if (!prefixes.get(i).equals(parts.get(i))) {
                     return false;
                 }
             }
@@ -57,11 +56,11 @@ public class PrefixDestinationFilter extends DestinationFilter {
     }
 
     public String getText() {
-        return DestinationPath.toString(prefixes);
+        return PathSupport.toString(prefixes);
     }
 
     public String toString() {
-        return super.toString() + "[destination: " + getText() + "]";
+        return super.toString() + "[path: " + getText() + "]";
     }
 
     public boolean isWildcard() {

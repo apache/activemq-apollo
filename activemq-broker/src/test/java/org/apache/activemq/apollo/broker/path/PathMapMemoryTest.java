@@ -14,24 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.wildcard;
+package org.apache.activemq.apollo.broker.path;
+
+import java.util.Set;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.apollo.broker.Destination;
-import org.apache.activemq.apollo.broker.Router;
-import org.apache.activemq.apollo.broker.wildcard.DestinationMap;
+import org.apache.activemq.apollo.broker.path.PathMap;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
-public class DestinationMapMemoryTest extends TestCase {
+public class PathMapMemoryTest extends TestCase {
 
-    public void testLongDestinationPath() throws Exception {
-    	Destination d1 = new Destination.SingleDestination(Router.TOPIC_DOMAIN, new AsciiBuffer("1.2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17.18"));
-        DestinationMap<String> map = new DestinationMap<String>();
+    public void testLongPath() throws Exception {
+    	AsciiBuffer d1 = new AsciiBuffer("1.2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17.18");
+        PathMap<String> map = new PathMap<String>();
         map.put(d1, "test");
     }
 
-    public void testVeryLongestinationPaths() throws Exception {
+    public void testVeryLongPaths() throws Exception {
 
         for (int i = 1; i < 100; i++) {
             String name = "1";
@@ -40,13 +40,29 @@ public class DestinationMapMemoryTest extends TestCase {
             }
             // System.out.println("Checking: " + name);
             try {
-            	Destination d1 = new Destination.SingleDestination(Router.TOPIC_DOMAIN, new AsciiBuffer(name));
-                DestinationMap<String> map = new DestinationMap<String>();
+            	AsciiBuffer d1 = new AsciiBuffer(name);
+                PathMap<String> map = new PathMap<String>();
                 map.put(d1, "test");
             } catch (Throwable e) {
                 fail("Destination name too long: " + name + " : " + e);
             }
         }
     }
+    
+    public void testLotsOfPaths() throws Exception {
+        PathMap<Object> map = new PathMap<Object>();
+        Object value = new Object();
+        int count = 1000;
+        for (int i = 0; i < count; i++) {
+            AsciiBuffer queue = new AsciiBuffer("connection:"+i);
+            map.put(queue, value);
+        }
+        for (int i = 0; i < count; i++) {
+            AsciiBuffer queue = new AsciiBuffer("connection:"+i);
+            map.remove(queue, value);
+            Set<Object> set = map.get(queue);
+            assertTrue(set.isEmpty());
+        }
+    }    
 
 }

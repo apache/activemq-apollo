@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.broker.wildcard;
+package org.apache.activemq.apollo.broker.path;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,18 +25,15 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.apollo.broker.Destination;
-import org.apache.activemq.apollo.broker.Router;
+import org.apache.activemq.apollo.broker.path.PathMap;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
-public class DestinationMapTest extends TestCase {
-    protected DestinationMap<String> map = new DestinationMap<String>();
+public class PathMapTest extends TestCase {
+    protected PathMap<String> map = new PathMap<String>();
 
-    protected Destination d1 = createDestination("TEST.D1");
-    protected Destination d2 = createDestination("TEST.BAR.D2");
-    protected Destination d3 = createDestination("TEST.BAR.D3");
-    protected Destination compositeDestination1 = createDestination("TEST.D1,TEST.BAR.D2");
-    protected Destination compositeDestination2 = createDestination("TEST.D1,TEST.BAR.D3");
+    protected AsciiBuffer d1 = createDestination("TEST.D1");
+    protected AsciiBuffer d2 = createDestination("TEST.BAR.D2");
+    protected AsciiBuffer d3 = createDestination("TEST.BAR.D3");
 
     protected String v1 = "value1";
     protected String v2 = "value2";
@@ -45,27 +42,16 @@ public class DestinationMapTest extends TestCase {
     protected String v5 = "value5";
     protected String v6 = "value6";
 
-    public void testQueueAndTopicWithSameName() throws Exception {
-        Destination q1 = new Destination.SingleDestination(Router.QUEUE_DOMAIN, new AsciiBuffer("foo"));
-        Destination t1 = new Destination.SingleDestination(Router.TOPIC_DOMAIN, new AsciiBuffer("foo"));
-
-        map.put(q1, v1);
-        map.put(t1, v2);
-
-        assertMapValue(q1, v1);
-        assertMapValue(t1, v2);
-    }
-
-    public void testCompositeDestinations() throws Exception {
-        Destination d1 = createDestination("TEST.BAR.D2");
-        Destination d2 = createDestination("TEST.BAR.D3");
+    public void testCompositePaths() throws Exception {
+        AsciiBuffer d1 = createDestination("TEST.BAR.D2");
+        AsciiBuffer d2 = createDestination("TEST.BAR.D3");
         map.put(d1, v1);
         map.put(d2, v2);
         map.get(createDestination("TEST.BAR.D2,TEST.BAR.D3"));
 
     }
 
-    public void testSimpleDestinations() throws Exception {
+    public void testSimplePaths() throws Exception {
         map.put(d1, v1);
         map.put(d2, v2);
         map.put(d3, v3);
@@ -85,28 +71,8 @@ public class DestinationMapTest extends TestCase {
         assertMapValue(d3, null);
     }
 
-    public void testSimpleAndCompositeDestinations() throws Exception {
-        map.put(d1, v1);
-        map.put(compositeDestination1, v2);
-        map.put(compositeDestination2, v3);
 
-        Set<String> set = map.get(d1);
-        System.out.println(set);
-        
-        
-        assertMapValue("TEST.D1", v1, v2, v3);
-        assertMapValue(d2, v2);
-        assertMapValue(d3, v3);
-        assertMapValue(compositeDestination1, v1, v2, v3);
-        assertMapValue(compositeDestination2, v1, v2, v3);
-
-        map.remove(compositeDestination1, v2);
-        map.remove(compositeDestination2, v3);
-
-        assertMapValue("TEST.D1", v1);
-    }
-
-    public void testLookupOneStepWildcardDestinations() throws Exception {
+    public void testLookupOneStepWildcardPaths() throws Exception {
         map.put(d1, v1);
         map.put(d2, v2);
         map.put(d3, v3);
@@ -131,7 +97,7 @@ public class DestinationMapTest extends TestCase {
         assertMapValue("TEST.BAR.*", v2, v3);
     }
 
-    public void testLookupMultiStepWildcardDestinations() throws Exception {
+    public void testLookupMultiStepWildcardPaths() throws Exception {
         map.put(d1, v1);
         map.put(d2, v2);
         map.put(d3, v3);
@@ -347,12 +313,12 @@ public class DestinationMapTest extends TestCase {
     }
 
     protected void remove(String name, String value) {
-        Destination destination = createDestination(name);
+        AsciiBuffer destination = createDestination(name);
         map.remove(destination, value);
     }
 
     protected void assertMapValue(String destinationName, Object expected) {
-        Destination destination = createDestination(destinationName);
+        AsciiBuffer destination = createDestination(destinationName);
         assertMapValue(destination, expected);
     }
 
@@ -364,7 +330,7 @@ public class DestinationMapTest extends TestCase {
         assertMapValue(destinationName, Arrays.asList(new Object[] {expected1, expected2, expected3}));
     }
     
-    protected void assertMapValue(Destination destination, Object expected1, Object expected2, Object expected3) {
+    protected void assertMapValue(AsciiBuffer destination, Object expected1, Object expected2, Object expected3) {
         assertMapValue(destination, Arrays.asList(new Object[] {expected1, expected2, expected3}));
     }
 
@@ -381,7 +347,7 @@ public class DestinationMapTest extends TestCase {
     }
 
     @SuppressWarnings("unchecked")
-    protected void assertMapValue(Destination destination, Object expected) {
+    protected void assertMapValue(AsciiBuffer destination, Object expected) {
         List expectedList = null;
         if (expected == null) {
             expectedList = Collections.EMPTY_LIST;
@@ -398,16 +364,7 @@ public class DestinationMapTest extends TestCase {
         assertEquals("map value for destinationName:  " + destination, expectedList, actual);
     }
 
-    protected Destination createDestination(String name) {
-    	String[] split = name.split(",");
-    	if( split.length == 1 ) {
-    		return new Destination.SingleDestination(Router.QUEUE_DOMAIN, new AsciiBuffer(name));
-    	} else {
-    		Destination.MultiDestination rc =  new Destination.MultiDestination();
-    		for (int i = 0; i < split.length; i++) {
-				rc.add(createDestination(split[i]));
-			}
-    		return rc;
-    	}
+    protected AsciiBuffer createDestination(String name) {
+   		return new AsciiBuffer(new AsciiBuffer(name));
     }
 }

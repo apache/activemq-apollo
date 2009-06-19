@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.activemq.apollo.broker.wildcard.DestinationFilter;
+import org.apache.activemq.apollo.broker.path.PathFilter;
 import org.apache.activemq.command.ConsumerId;
 import org.apache.activemq.command.ConsumerInfo;
 import org.apache.activemq.transport.Transport;
@@ -59,10 +59,10 @@ public class ConduitBridge extends DemandForwardingBridge {
     protected boolean addToAlreadyInterestedConsumers(ConsumerInfo info) {
         // search through existing subscriptions and see if we have a match
         boolean matched = false;
-        DestinationFilter filter = DestinationFilter.parseFilter(info.getDestination());
+        PathFilter filter = PathFilter.parseFilter(info.getDestination().getName());
         for (Iterator i = subscriptionMapByLocalId.values().iterator(); i.hasNext();) {
             DemandSubscription ds = (DemandSubscription)i.next();
-            if (filter.matches(ds.getLocalInfo().getDestination())) {
+            if (filter.matches(ds.getLocalInfo().getDestination().getName())) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug(configuration.getBrokerName() + " matched (add interest) to exsting sub for: " + ds.getRemoteInfo()
                             + " with sub: " + info);

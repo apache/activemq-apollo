@@ -19,7 +19,7 @@ package org.apache.activemq.network;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.activemq.apollo.broker.wildcard.DestinationFilter;
+import org.apache.activemq.apollo.broker.path.PathFilter;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ConsumerId;
 import org.apache.activemq.command.ConsumerInfo;
@@ -101,10 +101,10 @@ public class DurableConduitBridge extends ConduitBridge {
     }
 
     protected boolean doesConsumerExist(ActiveMQDestination dest) {
-        DestinationFilter filter = DestinationFilter.parseFilter(dest);
+        PathFilter filter = PathFilter.parseFilter(dest.getName());
         for (Iterator i = subscriptionMapByLocalId.values().iterator(); i.hasNext();) {
             DemandSubscription ds = (DemandSubscription)i.next();
-            if (filter.matches(ds.getLocalInfo().getDestination())) {
+            if (filter.matches(ds.getLocalInfo().getDestination().getName())) {
                 return true;
             }
         }

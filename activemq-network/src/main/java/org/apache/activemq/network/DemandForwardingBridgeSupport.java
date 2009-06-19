@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.advisory.AdvisorySupport;
-import org.apache.activemq.apollo.broker.wildcard.DestinationFilter;
+import org.apache.activemq.apollo.broker.path.PathFilter;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.activemq.command.ActiveMQTempDestination;
@@ -889,21 +889,21 @@ public abstract class DemandForwardingBridgeSupport implements NetworkBridge, Br
         	}
         } 
 
-        final DestinationFilter filter = DestinationFilter.parseFilter(destination);
+        final PathFilter filter = PathFilter.parseFilter(destination.getName());
         
         ActiveMQDestination[] dests = excludedDestinations;
         if (dests != null && dests.length > 0) {
             for (int i = 0; i < dests.length; i++) {
-                DestinationFilter exclusionFilter = filter;
+                PathFilter exclusionFilter = filter;
                 ActiveMQDestination match = dests[i];
-                if (exclusionFilter instanceof org.apache.activemq.apollo.broker.wildcard.SimpleDestinationFilter) {
-                    DestinationFilter newFilter = DestinationFilter.parseFilter(match);
-                    if (!(newFilter instanceof org.apache.activemq.apollo.broker.wildcard.SimpleDestinationFilter)) {
+                if (exclusionFilter instanceof org.apache.activemq.apollo.broker.path.SimplePathFilter) {
+                    PathFilter newFilter = PathFilter.parseFilter(match.getName());
+                    if (!(newFilter instanceof org.apache.activemq.apollo.broker.path.SimplePathFilter)) {
                         exclusionFilter = newFilter;
                         match = destination;
                     }
                 }
-                if (match != null && exclusionFilter.matches(match) && dests[i].getDestinationType() == destination.getDestinationType()) {
+                if (match != null && exclusionFilter.matches(match.getName()) && dests[i].getDestinationType() == destination.getDestinationType()) {
                     return false;
                 }
             }
@@ -911,16 +911,16 @@ public abstract class DemandForwardingBridgeSupport implements NetworkBridge, Br
         dests = dynamicallyIncludedDestinations;
         if (dests != null && dests.length > 0) {
             for (int i = 0; i < dests.length; i++) {
-                DestinationFilter inclusionFilter = filter;
+                PathFilter inclusionFilter = filter;
                 ActiveMQDestination match = dests[i];
-                if (inclusionFilter instanceof org.apache.activemq.apollo.broker.wildcard.SimpleDestinationFilter) {
-                    DestinationFilter newFilter = DestinationFilter.parseFilter(match);
-                    if (!(newFilter instanceof org.apache.activemq.apollo.broker.wildcard.SimpleDestinationFilter)) {
+                if (inclusionFilter instanceof org.apache.activemq.apollo.broker.path.SimplePathFilter) {
+                    PathFilter newFilter = PathFilter.parseFilter(match.getName());
+                    if (!(newFilter instanceof org.apache.activemq.apollo.broker.path.SimplePathFilter)) {
                         inclusionFilter = newFilter;
                         match = destination;
                     }
                 }
-                if (match != null && inclusionFilter.matches(match) && dests[i].getDestinationType() == destination.getDestinationType()) {
+                if (match != null && inclusionFilter.matches(match.getName()) && dests[i].getDestinationType() == destination.getDestinationType()) {
                     return true;
                 }
             }

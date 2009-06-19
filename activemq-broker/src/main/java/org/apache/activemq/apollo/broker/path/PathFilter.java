@@ -15,10 +15,9 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.broker.wildcard;
+package org.apache.activemq.apollo.broker.path;
 
 import java.util.ArrayList;
-import java.util.Collection;
 
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.filter.BooleanExpression;
@@ -28,47 +27,59 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 
 
 /**
- * Represents a filter which only operates on Destinations
+ * Represents a filter which only operates on a path
  * 
  * @version $Revision: 1.3 $
  */
-public abstract class DestinationFilter implements BooleanExpression {
+public abstract class PathFilter implements BooleanExpression {
 
     public static final AsciiBuffer ANY_DESCENDENT = new AsciiBuffer(">");
     public static final AsciiBuffer ANY_CHILD = new AsciiBuffer("*");
     
 	public boolean matches(MessageEvaluationContext message) throws FilterException {
 		Destination destination = message.getDestination();
-		return matches(destination);
+		return matches(destination.getName());
 	}
+	
 	public Object evaluate(MessageEvaluationContext message) throws FilterException {
 		return matches(message) ? Boolean.TRUE : Boolean.FALSE;
 	}
 	
-    public abstract boolean matches(Destination destination);
+    public abstract boolean matches(AsciiBuffer path);
 
-    public static DestinationFilter parseFilter(Destination destination) {
-    	Collection<Destination> destinations = destination.getDestinations();
-        if (destinations!=null) {
-            return new CompositeDestinationFilter(destination);
-        }
-        ArrayList<AsciiBuffer> paths = DestinationPath.parse(destination);
+    public static PathFilter parseFilter(AsciiBuffer path) {
+        ArrayList<AsciiBuffer> paths = PathSupport.parse(path);
         int idx = paths.size() - 1;
         if (idx >= 0) {
         	AsciiBuffer lastPath = paths.get(idx);
             if (lastPath.equals(ANY_DESCENDENT)) {
-                return new PrefixDestinationFilter(paths);
+                return new PrefixPathFilter(paths);
             } else {
                 while (idx >= 0) {
                     lastPath = paths.get(idx--);
                     if (lastPath.equals(ANY_CHILD)) {
-                        return new WildcardDestinationFilter(paths);
+                        return new WildcardPathFilter(paths);
                     }
                 }
             }
         }
 
         // if none of the paths contain a wildcard then use equality
-        return new SimpleDestinationFilter(destination);
+        return new SimplePathFilter(path);
     }
+    
+    public static boolean containsWildCards(AsciiBuffer path) {
+    	byte b1 = ANY_DESCENDENT.getData()[0];
+    	byte b2 = ANY_CHILD.getData()[0];
+    	
+    	byte[] data = path.getData();
+    	int length = path.getOffset()+path.getLength();
+		for (int i = path.getOffset(); i < length; i++) {
+			if( data[i] == b1 || data[i]==b2 ) {
+				return true;
+			}
+		}
+		return false;
+    }
+    
 }

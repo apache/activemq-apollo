@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.wildcard;
+package org.apache.activemq.apollo.broker.path;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,23 +27,22 @@ import java.util.Set;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 /**
- * An implementation class used to implement {@link DestinationMap}
+ * An implementation class used to implement {@link PathMap}
  * 
  * @version $Revision: 1.2 $
  */
-public class DestinationMapNode<Value> implements DestinationNode<Value> {
-    protected static final AsciiBuffer ANY_CHILD = DestinationMap.ANY_CHILD;
-    protected static final AsciiBuffer ANY_DESCENDENT = DestinationMap.ANY_DESCENDENT;
+public class PathMapNode<Value> implements PathNode<Value> {
+    protected static final AsciiBuffer ANY_CHILD = PathMap.ANY_CHILD;
+    protected static final AsciiBuffer ANY_DESCENDENT = PathMap.ANY_DESCENDENT;
 
-    // we synchornize at the DestinationMap level
-    private DestinationMapNode<Value> parent;
+    // we synchronize at the PathMap level
+    private PathMapNode<Value> parent;
     private List<Value> values = new ArrayList<Value>();
-    private Map<AsciiBuffer, DestinationNode<Value>> childNodes = new HashMap<AsciiBuffer, DestinationNode<Value>>();
+    private Map<AsciiBuffer, PathNode<Value>> childNodes = new HashMap<AsciiBuffer, PathNode<Value>>();
     private AsciiBuffer path = new AsciiBuffer("Root");
-    // private DestinationMapNode anyChild;
     private int pathLength;
 
-    public DestinationMapNode(DestinationMapNode<Value> parent) {
+    public PathMapNode(PathMapNode<Value> parent) {
         this.parent = parent;
         if (parent == null) {
             pathLength = 0;
@@ -56,14 +55,14 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
      * Returns the child node for the given named path or null if it does not
      * exist
      */
-    public DestinationMapNode<Value> getChild(AsciiBuffer path) {
-        return (DestinationMapNode<Value>)childNodes.get(path);
+    public PathMapNode<Value> getChild(AsciiBuffer path) {
+        return (PathMapNode<Value>)childNodes.get(path);
     }
 
     /**
      * Returns the child nodes
      */
-    public Collection<DestinationNode<Value>> getChildren() {
+    public Collection<PathNode<Value>> getChildren() {
         return childNodes.values();
     }
 
@@ -75,8 +74,8 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
      * Returns the child node for the given named path, lazily creating one if
      * it does not yet exist
      */
-    public DestinationMapNode<Value> getChildOrCreate(AsciiBuffer asciiBuffer) {
-        DestinationMapNode<Value> answer = (DestinationMapNode<Value>)childNodes.get(asciiBuffer);
+    public PathMapNode<Value> getChildOrCreate(AsciiBuffer asciiBuffer) {
+        PathMapNode<Value> answer = (PathMapNode<Value>)childNodes.get(asciiBuffer);
         if (answer == null) {
             answer = createChildNode();
             answer.path = asciiBuffer;
@@ -85,15 +84,6 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
         return answer;
     }
 
-    /**
-     * Returns the node which represents all children (i.e. the * node)
-     */
-    // public DestinationMapNode getAnyChildNode() {
-    // if (anyChild == null) {
-    // anyChild = createChildNode();
-    // }
-    // return anyChild;
-    // }
     /**
      * Returns a mutable List of the values available at this node in the tree
      */
@@ -164,7 +154,7 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
     }
 
     public void removeAll(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex) {
-        DestinationNode<Value> node = this;
+        PathNode<Value> node = this;
         int size = paths.size();
         for (int i = startIndex; i < size && node != null; i++) {
 
@@ -177,7 +167,7 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
             node.appendMatchingWildcards(answer, paths, i);
             if (path.equals(ANY_CHILD)) {
                 // node = node.getAnyChildNode();
-                node = new AnyChildDestinationNode<Value>(node);
+                node = new AnyChildPathNode<Value>(node);
             } else {
                 node = node.getChild(path);
             }
@@ -193,7 +183,7 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
         answer.addAll(values);
 
         // lets add all the children too
-        for (DestinationNode<Value> child : childNodes.values()) {
+        for (PathNode<Value> child : childNodes.values()) {
 			child.appendDescendantValues(answer);
         }
 
@@ -206,8 +196,8 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
     /**
      * Factory method to create a child node
      */
-    protected DestinationMapNode<Value> createChildNode() {
-        return new DestinationMapNode<Value>(this);
+    protected PathMapNode<Value> createChildNode() {
+        return new PathMapNode<Value>(this);
     }
 
     /**
@@ -217,7 +207,7 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
         if (idx - 1 > pathLength) {
             return;
         }
-        DestinationMapNode<Value> wildCardNode = getChild(ANY_CHILD);
+        PathMapNode<Value> wildCardNode = getChild(ANY_CHILD);
         if (wildCardNode != null) {
             wildCardNode.appendMatchingValues(answer, paths, idx + 1);
         }
@@ -228,7 +218,7 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
     }
 
     public void appendMatchingValues(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex) {
-        DestinationNode<Value> node = this;
+        PathNode<Value> node = this;
         boolean couldMatchAny = true;
         int size = paths.size();
         for (int i = startIndex; i < size && node != null; i++) {
@@ -242,7 +232,7 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
             node.appendMatchingWildcards(answer, paths, i);
 
             if (path.equals(ANY_CHILD)) {
-                node = new AnyChildDestinationNode<Value>(node);
+                node = new AnyChildPathNode<Value>(node);
             } else {
                 node = node.getChild(path);
             }
@@ -251,7 +241,7 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
             answer.addAll(node.getValues());
             if (couldMatchAny) {
                 // lets allow FOO.BAR to match the FOO.BAR.> entry in the map
-                DestinationNode<Value> child = node.getChild(ANY_DESCENDENT);
+                PathNode<Value> child = node.getChild(ANY_DESCENDENT);
                 if (child != null) {
                     answer.addAll(child.getValues());
                 }
@@ -269,7 +259,7 @@ public class DestinationMapNode<Value> implements DestinationNode<Value> {
         }
     }
 
-    protected void removeChild(DestinationMapNode<Value> node) {
+    protected void removeChild(PathMapNode<Value> node) {
         childNodes.remove(node.getPath());
         pruneIfEmpty();
     }

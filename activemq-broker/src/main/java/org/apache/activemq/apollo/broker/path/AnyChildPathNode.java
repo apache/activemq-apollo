@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.wildcard;
+package org.apache.activemq.apollo.broker.path;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,49 +23,49 @@ import java.util.Set;
 import org.apache.activemq.protobuf.AsciiBuffer;
 
 /**
- * An implementation of {@link DestinationNode} which navigates all the children of the given node
+ * An implementation of {@link PathNode} which navigates all the children of the given node
  * ignoring the name of the current path (so for navigating using * in a wildcard).
  *
  * @version $Revision: 563921 $
  */
-public class AnyChildDestinationNode<Value> implements DestinationNode<Value> {
-    private DestinationNode<Value> node;
+public class AnyChildPathNode<Value> implements PathNode<Value> {
+    private PathNode<Value> node;
 
-    public AnyChildDestinationNode(DestinationNode<Value> node) {
+    public AnyChildPathNode(PathNode<Value> node) {
         this.node = node;
     }
 
     public void appendMatchingValues(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex) {
-    	for (DestinationNode<Value> child : getChildNodes()) {
+    	for (PathNode<Value> child : getChildNodes()) {
             child.appendMatchingValues(answer, paths, startIndex);
         }
     }
 
 
     public void appendMatchingWildcards(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex) {
-    	for (DestinationNode<Value> child : getChildNodes()) {
+    	for (PathNode<Value> child : getChildNodes()) {
             child.appendMatchingWildcards(answer, paths, startIndex);
         }
     }
 
 
     public void appendDescendantValues(Set<Value> answer) {
-    	for (DestinationNode<Value> child : getChildNodes()) {
+    	for (PathNode<Value> child : getChildNodes()) {
             child.appendDescendantValues(answer);
         }
     }
 
-    public DestinationNode<Value> getChild(AsciiBuffer path) {
-        final Collection<DestinationNode<Value>> list = new ArrayList<DestinationNode<Value>>();
-    	for (DestinationNode<Value> child : getChildNodes()) {
-            DestinationNode<Value> answer = child.getChild(path);
+    public PathNode<Value> getChild(AsciiBuffer path) {
+        final Collection<PathNode<Value>> list = new ArrayList<PathNode<Value>>();
+    	for (PathNode<Value> child : getChildNodes()) {
+            PathNode<Value> answer = child.getChild(path);
             if (answer != null) {
                 list.add(answer);
             }
         }
         if (!list.isEmpty()) {
-            return new AnyChildDestinationNode<Value>(this) {
-                protected Collection<DestinationNode<Value>> getChildNodes() {
+            return new AnyChildPathNode<Value>(this) {
+                protected Collection<PathNode<Value>> getChildNodes() {
                     return list;
                 }
             };
@@ -75,7 +75,7 @@ public class AnyChildDestinationNode<Value> implements DestinationNode<Value> {
 
     public Collection<Value> getDesendentValues() {
         Collection<Value> answer = new ArrayList<Value>();
-    	for (DestinationNode<Value> child : getChildNodes()) {
+    	for (PathNode<Value> child : getChildNodes()) {
             answer.addAll(child.getDesendentValues());
         }
         return answer;
@@ -83,16 +83,16 @@ public class AnyChildDestinationNode<Value> implements DestinationNode<Value> {
 
     public Collection<Value> getValues() {
         Collection<Value> answer = new ArrayList<Value>();
-    	for (DestinationNode<Value> child : getChildNodes()) {
+    	for (PathNode<Value> child : getChildNodes()) {
             answer.addAll(child.getValues());
         }
         return answer;
     }
 
 
-    public Collection<DestinationNode<Value>> getChildren() {
-        Collection<DestinationNode<Value>>  answer = new ArrayList<DestinationNode<Value>> ();
-    	for (DestinationNode<Value> child : getChildNodes()) {
+    public Collection<PathNode<Value>> getChildren() {
+        Collection<PathNode<Value>>  answer = new ArrayList<PathNode<Value>> ();
+    	for (PathNode<Value> child : getChildNodes()) {
             answer.addAll(child.getChildren());
         }
         return answer;
@@ -100,7 +100,7 @@ public class AnyChildDestinationNode<Value> implements DestinationNode<Value> {
 
     public Collection<Value> removeDesendentValues() {
         Collection<Value> answer = new ArrayList<Value>();
-    	for (DestinationNode<Value> child : getChildNodes()) {
+    	for (PathNode<Value> child : getChildNodes()) {
             answer.addAll(child.removeDesendentValues());
         }
         return answer;
@@ -108,13 +108,13 @@ public class AnyChildDestinationNode<Value> implements DestinationNode<Value> {
 
     public Collection<Value> removeValues() {
         Collection<Value> answer = new ArrayList<Value>();
-    	for (DestinationNode<Value> child : getChildNodes()) {
+    	for (PathNode<Value> child : getChildNodes()) {
             answer.addAll(child.removeValues());
         }
         return answer;
     }
 
-    protected Collection<DestinationNode<Value>> getChildNodes() {
+    protected Collection<PathNode<Value>> getChildNodes() {
         return node.getChildren();
     }
 }

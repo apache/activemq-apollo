@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
+import org.apache.activemq.apollo.broker.path.PathMap;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.protobuf.AsciiBuffer;
@@ -116,10 +117,10 @@ public class VirtualHost implements Service {
         // Create Queue instances
         for (IQueue<Long, MessageDelivery> iQueue : queueStore.getSharedQueues()) {
             Queue queue = new Queue(iQueue);
-            Domain domain = router.getDomain(Router.QUEUE_DOMAIN);
+            PathMap<DeliveryTarget> domain = router.getDomain(Router.QUEUE_DOMAIN);
             Destination dest = new Destination.SingleDestination(Router.QUEUE_DOMAIN, iQueue.getDescriptor().getQueueName());
             queue.setDestination(dest);
-            domain.add(dest.getName(), queue);
+            domain.put(dest.getName(), queue);
             queues.put(dest.getName(), queue);
         }
         for (Queue queue : queues.values()) {
@@ -156,8 +157,8 @@ public class VirtualHost implements Service {
             IQueue<Long, MessageDelivery> iQueue = queueStore.createSharedQueue(dest.getName().toString());
             queue = new Queue(iQueue);
             queue.setDestination(dest);
-            Domain domain = router.getDomain(dest.getDomain());
-            domain.add(dest.getName(), queue);
+            PathMap<DeliveryTarget> domain = router.getDomain(dest.getDomain());
+            domain.put(dest.getName(), queue);
             queues.put(dest.getName(), queue);
         }
         queue.start();
