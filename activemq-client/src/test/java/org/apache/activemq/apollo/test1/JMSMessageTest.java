@@ -43,7 +43,6 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.command.ActiveMQDestination;
-import org.apache.activemq.legacy.test1.JmsTestSupport;
 import org.apache.activemq.transport.TransportFactory;
 
 /**

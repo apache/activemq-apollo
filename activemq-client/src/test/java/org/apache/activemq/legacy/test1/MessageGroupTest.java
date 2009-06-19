@@ -8,6 +8,7 @@ import javax.jms.Session;
 import javax.jms.TextMessage;
 
 import org.apache.activemq.apollo.CombinationTestSupport;
+import org.apache.activemq.apollo.test1.JmsTestSupport;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.commons.logging.Log;

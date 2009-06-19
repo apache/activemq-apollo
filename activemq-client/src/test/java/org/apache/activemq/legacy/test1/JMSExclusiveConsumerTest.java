@@ -23,6 +23,8 @@ import javax.jms.MessageProducer;
 import javax.jms.Session;
 
 import junit.framework.Test;
+
+import org.apache.activemq.apollo.test1.JmsTestSupport;
 import org.apache.activemq.command.ActiveMQQueue;
 
 /**

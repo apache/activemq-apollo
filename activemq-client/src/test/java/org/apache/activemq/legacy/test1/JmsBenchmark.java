@@ -40,6 +40,7 @@ import junit.framework.Test;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.test1.JmsTestSupport;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.transport.TransportFactory;
@@ -85,7 +86,7 @@ public class JmsBenchmark extends JmsTestSupport {
     }
 
     protected ConnectionFactory createConnectionFactory() throws URISyntaxException, IOException {
-    	TransportServer server = broker.getTransportServers().get(0);
+    	TransportServer server = broker.getTransportServers().get(1);
         return new ActiveMQConnectionFactory(server.getConnectURI());
     }
 

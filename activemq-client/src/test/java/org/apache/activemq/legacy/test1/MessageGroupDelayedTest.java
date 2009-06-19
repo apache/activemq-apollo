@@ -33,6 +33,7 @@ import junit.framework.Test;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.test1.JmsTestSupport;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;

@@ -33,6 +33,7 @@ import javax.jms.TextMessage;
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.test1.JmsTestSupport;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
@@ -289,7 +290,7 @@ public class ProducerFlowControlTest extends JmsTestSupport {
     }
 
     protected ConnectionFactory createConnectionFactory() throws Exception {
-    	TransportServer server = broker.getTransportServers().get(0);
+    	TransportServer server = broker.getTransportServers().get(1);
         return new ActiveMQConnectionFactory(server.getConnectURI());
     }
 }

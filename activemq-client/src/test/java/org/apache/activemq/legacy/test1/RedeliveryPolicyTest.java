@@ -24,6 +24,7 @@ import javax.jms.TextMessage;
 import junit.framework.Test;
 
 import org.apache.activemq.RedeliveryPolicy;
+import org.apache.activemq.apollo.test1.JmsTestSupport;
 import org.apache.activemq.command.ActiveMQQueue;
 
 /**

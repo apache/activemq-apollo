@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test1;
+package org.apache.activemq.apollo.test1.perf;
 
 import java.io.IOException;
 import java.net.URI;
@@ -37,9 +37,8 @@ import junit.framework.Test;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.test1.JmsTestSupport;
 import org.apache.activemq.command.ActiveMQDestination;
-import org.apache.activemq.legacy.broker.BrokerFactory;
-import org.apache.activemq.legacy.broker.TransportConnector;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
 import org.apache.commons.logging.Log;
@@ -93,7 +92,7 @@ public class LoadTestBurnIn extends JmsTestSupport {
     }
 
     protected ConnectionFactory createConnectionFactory() throws URISyntaxException, IOException {
-    	TransportServer server = broker.getTransportServers().get(0);
+    	TransportServer server = broker.getTransportServers().get(1);
         return new ActiveMQConnectionFactory(server.getConnectURI());
     }
     

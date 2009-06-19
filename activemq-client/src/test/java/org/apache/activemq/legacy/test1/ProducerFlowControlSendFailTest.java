@@ -110,7 +110,7 @@ public class ProducerFlowControlSendFailTest extends ProducerFlowControlTest {
     
 	@Override
 	protected ConnectionFactory createConnectionFactory() throws Exception {
-    	TransportServer server = broker.getTransportServers().get(0);
+    	TransportServer server = broker.getTransportServers().get(1);
 		ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(server.getConnectURI());
 		connectionFactory.setExceptionListener(new ExceptionListener() {
 				public void onException(JMSException arg0) {

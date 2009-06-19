@@ -29,6 +29,7 @@ import javax.jms.TextMessage;
 
 import junit.framework.Test;
 
+import org.apache.activemq.apollo.test1.JmsTestSupport;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQMessage;
 
