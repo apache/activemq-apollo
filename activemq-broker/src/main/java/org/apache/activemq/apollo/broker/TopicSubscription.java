@@ -16,22 +16,30 @@
  */
 package org.apache.activemq.apollo.broker;
 
+import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
 import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.filter.MessageEvaluationContext;
+import org.apache.activemq.flow.Flow;
+import org.apache.activemq.flow.IFlowLimiter;
 import org.apache.activemq.flow.ISourceController;
+import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.queue.ExclusivePersistentQueue;
+import org.apache.activemq.queue.ExclusiveQueue;
+import org.apache.activemq.queue.IFlowQueue;
 import org.apache.activemq.queue.Subscription;
 
 class TopicSubscription implements BrokerSubscription, DeliveryTarget {
 
+	static final boolean USE_PERSISTENT_QUEUES = true; 
+	
     protected final BooleanExpression selector;
     protected final Destination destination;
     protected Subscription<MessageDelivery> connectedSub;
     private final VirtualHost host;
     
     //TODO: replace this with a base interface for queue which also support non persistent use case.
-	private ExclusivePersistentQueue<Long, MessageDelivery> queue;
+	private IFlowQueue<MessageDelivery> queue;
 
     TopicSubscription(VirtualHost host, Destination destination, BooleanExpression selector) {
         this.host = host;
@@ -61,12 +69,16 @@ class TopicSubscription implements BrokerSubscription, DeliveryTarget {
         return selector != null;
     }
 
-    public synchronized void connect(final Subscription<MessageDelivery> subscription) throws UserAlreadyConnectedException {
+    public synchronized void connect(final ConsumerContext subscription) throws UserAlreadyConnectedException {
         if (this.connectedSub == null) {
         	
         	// Ok this is not ideal.  Perhaps not all topic subscriptions want this level of service.
-            queue = host.getQueueStore().createExclusivePersistentQueue();
-            queue.start();
+        	if( USE_PERSISTENT_QUEUES ) {
+        		queue = createPersistentQueue(subscription);
+        	} else {
+        		queue = createNonPersistentQueue(subscription);
+        	}
+    		queue.start();
         	
         	this.connectedSub = subscription;
         	this.queue.addSubscription(connectedSub);
@@ -76,20 +88,43 @@ class TopicSubscription implements BrokerSubscription, DeliveryTarget {
         }
     }
 
-    public synchronized void disconnect(final Subscription<MessageDelivery> subscription) {
+    private IFlowQueue<MessageDelivery> createNonPersistentQueue(ConsumerContext subscription) {
+		Flow flow = new Flow(subscription.getResourceName(), false);
+		String name = subscription.getResourceName();
+		IFlowLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(100, 50);
+		ExclusiveQueue<MessageDelivery> queue = new ExclusiveQueue<MessageDelivery>(flow, name, limiter);
+		queue.setDispatcher(host.getBroker().getDispatcher());
+		return queue;
+	}
+
+	private IFlowQueue<MessageDelivery> createPersistentQueue(ConsumerContext subscription) {
+        ExclusivePersistentQueue<Long, MessageDelivery> queue = host.getQueueStore().createExclusivePersistentQueue();
+        return queue;
+	}
+
+    @SuppressWarnings("unchecked")
+	private void destroyPersistentQueue(IFlowQueue<MessageDelivery> queue) {
+    	ExclusivePersistentQueue<Long, MessageDelivery> pq = (ExclusivePersistentQueue<Long, MessageDelivery>) queue;
+		host.getQueueStore().deleteQueue(pq.getDescriptor());
+	}
+
+	public synchronized void disconnect(final ConsumerContext subscription) {
         if (connectedSub != null && connectedSub == subscription) {
     		this.host.getRouter().unbind(destination, this);
     		this.queue.removeSubscription(connectedSub);
     		this.connectedSub = null;
     		
     		queue.stop();
-    		host.getQueueStore().deleteQueue(queue.getDescriptor());
+        	if( USE_PERSISTENT_QUEUES ) {
+        		destroyPersistentQueue(queue);
+        	}
     		queue=null;
         }
     }
 
 
-    public boolean matches(MessageDelivery message) {
+
+	public boolean matches(MessageDelivery message) {
         if (selector == null) {
             return true;
         }

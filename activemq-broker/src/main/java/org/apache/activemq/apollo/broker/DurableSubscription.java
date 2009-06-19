@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.broker;
 
+import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
 import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.filter.MessageEvaluationContext;
@@ -56,7 +57,7 @@ public class DurableSubscription implements BrokerSubscription, DeliveryTarget {
         queue.add(message, source);
     }
 
-    public synchronized void connect(final Subscription<MessageDelivery> subscription) throws UserAlreadyConnectedException {
+    public synchronized void connect(final ConsumerContext subscription) throws UserAlreadyConnectedException {
         if (this.connectedSub == null) {
             this.connectedSub = subscription;
             queue.addSubscription(connectedSub);
@@ -65,7 +66,7 @@ public class DurableSubscription implements BrokerSubscription, DeliveryTarget {
         }
     }
 
-    public synchronized void disconnect(final Subscription<MessageDelivery> subscription) {
+    public synchronized void disconnect(final ConsumerContext subscription) {
         if (connectedSub != null && connectedSub == subscription) {
             queue.removeSubscription(connectedSub);
             connectedSub = null;

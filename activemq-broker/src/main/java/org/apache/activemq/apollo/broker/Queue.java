@@ -16,9 +16,7 @@
  */
 package org.apache.activemq.apollo.broker;
 
-import org.apache.activemq.apollo.broker.DeliveryTarget;
-import org.apache.activemq.apollo.broker.Destination;
-import org.apache.activemq.apollo.broker.MessageDelivery;
+import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.Subscription;
@@ -111,7 +109,7 @@ public class Queue implements DeliveryTarget {
          * org.apache.activemq.broker.BrokerSubscription#connect(org.apache.
          * activemq.broker.protocol.ProtocolHandler.ConsumerContext)
          */
-        public void connect(Subscription<MessageDelivery> subscription) throws UserAlreadyConnectedException {
+        public void connect(ConsumerContext subscription) throws UserAlreadyConnectedException {
             this.subscription = subscription;
             queue.addSubscription(subscription);
         }
@@ -123,7 +121,7 @@ public class Queue implements DeliveryTarget {
          * org.apache.activemq.broker.BrokerSubscription#disconnect(org.apache
          * .activemq.broker.protocol.ProtocolHandler.ConsumerContext)
          */
-        public void disconnect(Subscription<MessageDelivery> context) {
+        public void disconnect(ConsumerContext context) {
             queue.removeSubscription(subscription);
         }
         

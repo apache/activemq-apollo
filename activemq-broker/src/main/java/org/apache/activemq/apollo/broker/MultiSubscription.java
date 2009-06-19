@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.broker;
 
+import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
 import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.filter.MessageEvaluationContext;
@@ -74,7 +75,7 @@ public class MultiSubscription implements BrokerSubscription, DeliveryTarget {
      * org.apache.activemq.broker.BrokerSubscription#connect(org.apache.activemq
      * .broker.protocol.ProtocolHandler.ConsumerContext)
      */
-    public synchronized void connect(Subscription<MessageDelivery> subsription) throws UserAlreadyConnectedException {
+    public synchronized void connect(ConsumerContext subsription) throws UserAlreadyConnectedException {
         connectedSub = subsription;
         host.getRouter().bind(destination, this);
     }
@@ -86,7 +87,7 @@ public class MultiSubscription implements BrokerSubscription, DeliveryTarget {
      * org.apache.activemq.broker.BrokerSubscription#disconnect(org.apache.activemq
      * .broker.protocol.ProtocolHandler.ConsumerContext)
      */
-    public synchronized void disconnect(Subscription<MessageDelivery> context) {
+    public synchronized void disconnect(ConsumerContext context) {
         host.getRouter().unbind(destination, this);
         connectedSub = null;
     }

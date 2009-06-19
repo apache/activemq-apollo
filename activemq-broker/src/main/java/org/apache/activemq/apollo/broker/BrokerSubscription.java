@@ -16,13 +16,13 @@
  */
 package org.apache.activemq.apollo.broker;
 
-import org.apache.activemq.queue.Subscription;
+import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
 
 public interface BrokerSubscription {
 
-    public void connect(Subscription<MessageDelivery> subscription) throws UserAlreadyConnectedException ;
+    public void connect(ConsumerContext subscription) throws UserAlreadyConnectedException ;
 
-    public void disconnect(Subscription<MessageDelivery> subscription);
+    public void disconnect(ConsumerContext subscription);
     
     public Destination getDestination();
     

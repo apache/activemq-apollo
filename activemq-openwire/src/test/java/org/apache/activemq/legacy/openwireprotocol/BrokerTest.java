@@ -92,7 +92,7 @@ public class BrokerTest extends BrokerTestSupport {
         // The 2nd connection should get the messages.
         for (int i = 0; i < 4; i++) {
             Message m1 = receiveMessage(connection2);
-            assertNotNull(m1);
+            assertNotNull("Message: "+i, m1);
         }
 
         // Send a message with the 2nd connection

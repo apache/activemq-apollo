@@ -70,4 +70,8 @@ public interface IFlowQueue<E> extends IBlockingFlowSource<E>, IPollableFlowSour
      *            The base priority for the queue
      */
     public void setDispatchPriority(int priority);
+    
+    public void start();
+
+    public void stop();    
 }
