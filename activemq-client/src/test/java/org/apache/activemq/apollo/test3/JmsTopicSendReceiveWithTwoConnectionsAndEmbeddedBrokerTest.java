@@ -14,17 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test3;
+package org.apache.activemq.apollo.test3;
+
+import java.net.URI;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.broker.BrokerFactory;
+import org.apache.activemq.transport.TransportFactory;
 
 /**
  * @version $Revision: 1.3 $
  */
 public class JmsTopicSendReceiveWithTwoConnectionsAndEmbeddedBrokerTest extends JmsTopicSendReceiveWithTwoConnectionsTest {
 
-    protected BrokerService broker;
+    protected Broker broker;
     protected String bindAddress = "tcp://localhost:61616";
 
     /**
@@ -52,15 +56,15 @@ public class JmsTopicSendReceiveWithTwoConnectionsAndEmbeddedBrokerTest extends 
      * 
      * @throws Exception
      */
-    protected BrokerService createBroker() throws Exception {
-        BrokerService answer = new BrokerService();
+    protected Broker createBroker() throws Exception {
+    	Broker answer = BrokerFactory.createBroker("jaxb:classpath:non-persistent-activemq.xml");
         configureBroker(answer);
         answer.start();
         return answer;
     }
 
-    protected void configureBroker(BrokerService answer) throws Exception {
-        answer.addConnector(bindAddress);
+    protected void configureBroker(Broker answer) throws Exception {
+        answer.addTransportServer(TransportFactory.bind(new URI(bindAddress)));
     }
 
     protected ActiveMQConnectionFactory createConnectionFactory() throws Exception {

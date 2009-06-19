@@ -14,24 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test3;
+package org.apache.activemq.apollo.test3;
 
-import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.MessageConsumer;
+
 
 /**
- * @version $Revision$
+ * @version $Revision: 1.2 $
  */
-public class JmsTopicSendReceiveWithTwoConnectionsAndByteSelectorTest extends JmsTopicSendReceiveWithTwoConnectionsTest {
-    
+public class JmsQueueSendReceiveTest extends JmsTopicSendReceiveTest {
 
-    protected void configureMessage(Message message) throws JMSException {
-        message.setByteProperty("dummy", (byte) 33);
+    /**
+     * Set up the test with a queue.
+     * 
+     * @see junit.framework.TestCase#setUp()
+     */
+    protected void setUp() throws Exception {
+        topic = false;
+        super.setUp();
     }
-
-    protected MessageConsumer createConsumer() throws JMSException {
-        return receiveSession.createConsumer(consumerDestination, "dummy = 33", false);
-    }
-
 }

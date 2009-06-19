@@ -19,8 +19,8 @@ package org.apache.activemq.legacy.usecases;
 import javax.jms.Destination;
 import javax.jms.Message;
 
+import org.apache.activemq.apollo.test3.JmsTopicSendReceiveWithTwoConnectionsTest;
 import org.apache.activemq.command.ActiveMQTopic;
-import org.apache.activemq.legacy.test3.JmsTopicSendReceiveWithTwoConnectionsTest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

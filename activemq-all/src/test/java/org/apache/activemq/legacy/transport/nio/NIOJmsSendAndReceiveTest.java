@@ -17,8 +17,8 @@
 package org.apache.activemq.legacy.transport.nio;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.apollo.test3.JmsTopicSendReceiveWithTwoConnectionsTest;
 import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.test3.JmsTopicSendReceiveWithTwoConnectionsTest;
 
 /**
  * @version $Revision$

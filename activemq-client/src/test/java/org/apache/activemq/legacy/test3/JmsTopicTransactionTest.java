@@ -16,6 +16,9 @@
  */
 package org.apache.activemq.legacy.test3;
 
+import org.apache.activemq.apollo.test3.JmsResourceProvider;
+import org.apache.activemq.apollo.test3.JmsTransactionTestSupport;
+
 
 
 /**
@@ -24,7 +27,7 @@ package org.apache.activemq.legacy.test3;
 public class JmsTopicTransactionTest extends JmsTransactionTestSupport {
 
     /**
-     * @see org.apache.activemq.legacy.test3.JmsTransactionTestSupport#getJmsResourceProvider()
+     * @see org.apache.activemq.apollo.test3.JmsTransactionTestSupport#getJmsResourceProvider()
      */
     protected JmsResourceProvider getJmsResourceProvider() {
         JmsResourceProvider p = new JmsResourceProvider();

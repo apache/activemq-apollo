@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test3;
+package org.apache.activemq.apollo.test3;
 
 import javax.jms.DeliveryMode;
 import javax.jms.Destination;
@@ -23,12 +23,14 @@ import javax.jms.Topic;
 
 
 
+
 /**
  * @version $Revision: 1.3 $
  */
-public class JmsQueueTopicCompositeSendReceiveTest extends JmsTopicSendReceiveTest {
+public class JmsTopicCompositeSendReceiveTest extends JmsTopicSendReceiveTest {
     private static final org.apache.commons.logging.Log LOG = org.apache.commons.logging.LogFactory
-            .getLog(JmsQueueTopicCompositeSendReceiveTest.class);
+            .getLog(JmsTopicCompositeSendReceiveTest.class);
+    
     Destination consumerDestination2;
     MessageConsumer consumer2;
 
@@ -39,7 +41,6 @@ public class JmsQueueTopicCompositeSendReceiveTest extends JmsTopicSendReceiveTe
      */
     protected void setUp() throws Exception {
         deliveryMode = DeliveryMode.NON_PERSISTENT;
-        topic = false;
         super.setUp();
         consumerDestination2 = consumeSession.createTopic("FOO.BAR.HUMBUG2");
         LOG.info("Created  consumer destination: " + consumerDestination2 + " of type: " + consumerDestination2.getClass());
@@ -56,7 +57,7 @@ public class JmsQueueTopicCompositeSendReceiveTest extends JmsTopicSendReceiveTe
      * Returns the consumer subject.
      *
      * @return String - consumer subject
-     * @see org.apache.activemq.legacy.test3.TestSupport#getConsumerSubject()
+     * @see org.apache.activemq.apollo.test3.TestSupport#getConsumerSubject()
      */
     protected String getConsumerSubject() {
         return "FOO.BAR.HUMBUG";
@@ -66,10 +67,10 @@ public class JmsQueueTopicCompositeSendReceiveTest extends JmsTopicSendReceiveTe
      * Returns the producer subject.
      *
      * @return String - producer subject
-     * @see org.apache.activemq.legacy.test3.TestSupport#getProducerSubject()
+     * @see org.apache.activemq.apollo.test3.TestSupport#getProducerSubject()
      */
     protected String getProducerSubject() {
-        return "queue://FOO.BAR.HUMBUG,topic://FOO.BAR.HUMBUG2";
+        return "FOO.BAR.HUMBUG,FOO.BAR.HUMBUG2";
     }
 
     /**

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test3;
+package org.apache.activemq.apollo.test3;
 
 import javax.jms.Connection;
 import javax.jms.DeliveryMode;
@@ -125,7 +125,7 @@ public class JmsTopicSendReceiveWithTwoConnectionsTest extends JmsSendReceiveTes
     /**
      * Creates an ActiveMQConnectionFactory.
      * 
-     * @see org.apache.activemq.legacy.test3.TestSupport#createConnectionFactory()
+     * @see org.apache.activemq.apollo.test3.TestSupport#createConnectionFactory()
      */
     protected ActiveMQConnectionFactory createConnectionFactory() throws Exception {
         return new ActiveMQConnectionFactory("vm://localhost?broker=jaxb:classpath:non-persistent-activemq.xml");

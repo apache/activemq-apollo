@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test3;
+package org.apache.activemq.apollo.test3;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionConsumer;
@@ -46,7 +46,7 @@ public class JmsResourceProvider {
     /**
      * Creates a connection factory.
      * 
-     * @see org.apache.activemq.legacy.test3.JmsResourceProvider#createConnectionFactory()
+     * @see org.apache.activemq.apollo.test3.JmsResourceProvider#createConnectionFactory()
      */
     public ConnectionFactory createConnectionFactory() throws Exception {
         return new ActiveMQConnectionFactory(serverUri);
@@ -55,7 +55,7 @@ public class JmsResourceProvider {
     /**
      * Creates a connection.
      * 
-     * @see org.apache.activemq.legacy.test3.JmsResourceProvider#createConnection(javax.jms.ConnectionFactory)
+     * @see org.apache.activemq.apollo.test3.JmsResourceProvider#createConnection(javax.jms.ConnectionFactory)
      */
     public Connection createConnection(ConnectionFactory cf) throws JMSException {
         Connection connection = cf.createConnection();
@@ -66,14 +66,14 @@ public class JmsResourceProvider {
     }
 
     /**
-     * @see org.apache.activemq.legacy.test3.JmsResourceProvider#createSession(javax.jms.Connection)
+     * @see org.apache.activemq.apollo.test3.JmsResourceProvider#createSession(javax.jms.Connection)
      */
     public Session createSession(Connection conn) throws JMSException {
         return conn.createSession(transacted, ackMode);
     }
 
     /**
-     * @see org.apache.activemq.legacy.test3.JmsResourceProvider#createConsumer(javax.jms.Session,
+     * @see org.apache.activemq.apollo.test3.JmsResourceProvider#createConsumer(javax.jms.Session,
      *      javax.jms.Destination)
      */
     public MessageConsumer createConsumer(Session session, Destination destination) throws JMSException {
@@ -96,7 +96,7 @@ public class JmsResourceProvider {
     /**
      * Creates a producer.
      * 
-     * @see org.apache.activemq.legacy.test3.JmsResourceProvider#createProducer(javax.jms.Session,
+     * @see org.apache.activemq.apollo.test3.JmsResourceProvider#createProducer(javax.jms.Session,
      *      javax.jms.Destination)
      */
     public MessageProducer createProducer(Session session, Destination destination) throws JMSException {
@@ -108,7 +108,7 @@ public class JmsResourceProvider {
     /**
      * Creates a destination, which can either a topic or a queue.
      * 
-     * @see org.apache.activemq.legacy.test3.JmsResourceProvider#createDestination(javax.jms.Session,
+     * @see org.apache.activemq.apollo.test3.JmsResourceProvider#createDestination(javax.jms.Session,
      *      java.lang.String)
      */
     public Destination createDestination(Session session, String name) throws JMSException {

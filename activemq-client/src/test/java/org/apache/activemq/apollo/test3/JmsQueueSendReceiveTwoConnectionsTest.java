@@ -14,16 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test3;
+package org.apache.activemq.apollo.test3;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * @version $Revision: 1.2 $
  */
-public class JmsQueueSendReceiveTest extends JmsTopicSendReceiveTest {
+public class JmsQueueSendReceiveTwoConnectionsTest extends JmsTopicSendReceiveWithTwoConnectionsTest {
 
     /**
-     * Set up the test with a queue.
+     * Set up the test with a queue and using two connections.
      * 
      * @see junit.framework.TestCase#setUp()
      */

@@ -25,7 +25,7 @@ import javax.jms.MessageProducer;
 import javax.jms.ObjectMessage;
 import javax.jms.Session;
 
-import org.apache.activemq.legacy.test3.TestSupport;
+import org.apache.activemq.apollo.test3.TestSupport;
 
 /**
  * @version $Revision: 1.1.1.1 $

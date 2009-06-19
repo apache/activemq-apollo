@@ -27,6 +27,8 @@ import javax.jms.QueueBrowser;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
+import org.apache.activemq.apollo.test3.JmsResourceProvider;
+import org.apache.activemq.apollo.test3.JmsTransactionTestSupport;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -37,7 +39,7 @@ public class JmsQueueTransactionTest extends JmsTransactionTestSupport {
     private static final Log LOG = LogFactory.getLog(JmsQueueTransactionTest.class);
 
     /**
-     * @see org.apache.activemq.legacy.test3.JmsTransactionTestSupport#getJmsResourceProvider()
+     * @see org.apache.activemq.apollo.test3.JmsTransactionTestSupport#getJmsResourceProvider()
      */
     protected JmsResourceProvider getJmsResourceProvider() {
         JmsResourceProvider p = new JmsResourceProvider();

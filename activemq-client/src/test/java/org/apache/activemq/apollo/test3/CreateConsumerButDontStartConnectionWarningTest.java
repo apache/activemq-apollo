@@ -14,23 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test3;
+package org.apache.activemq.apollo.test3;
+
+import javax.jms.JMSException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * @version $Revision: 1.2 $
+ * @version $Revision: 1.1 $
  */
-public class JmsQueueSendReceiveTwoConnectionsTest extends JmsTopicSendReceiveWithTwoConnectionsTest {
+public class CreateConsumerButDontStartConnectionWarningTest extends JmsQueueSendReceiveTest {
+    private static final transient Log LOG = LogFactory.getLog(CreateConsumerButDontStartConnectionWarningTest.class);
 
-    /**
-     * Set up the test with a queue and using two connections.
-     * 
-     * @see junit.framework.TestCase#setUp()
-     */
-    protected void setUp() throws Exception {
-        topic = false;
-        super.setUp();
+    @Override
+    protected void startConnection() throws JMSException {
+        // don't start the connection
+    }
+
+    @Override
+    protected void assertMessagesAreReceived() throws JMSException {
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            LOG.warn("Caught: " + e, e);
+        }
     }
 }

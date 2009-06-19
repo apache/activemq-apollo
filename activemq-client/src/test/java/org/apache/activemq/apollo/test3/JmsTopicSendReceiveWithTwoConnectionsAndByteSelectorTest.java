@@ -14,30 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test3;
+package org.apache.activemq.apollo.test3;
 
 import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.MessageConsumer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
- * @version $Revision: 1.1 $
+ * @version $Revision$
  */
-public class CreateConsumerButDontStartConnectionWarningTest extends JmsQueueSendReceiveTest {
-    private static final transient Log LOG = LogFactory.getLog(CreateConsumerButDontStartConnectionWarningTest.class);
+public class JmsTopicSendReceiveWithTwoConnectionsAndByteSelectorTest extends JmsTopicSendReceiveWithTwoConnectionsTest {
+    
 
-    @Override
-    protected void startConnection() throws JMSException {
-        // don't start the connection
+    protected void configureMessage(Message message) throws JMSException {
+        message.setByteProperty("dummy", (byte) 33);
     }
 
-    @Override
-    protected void assertMessagesAreReceived() throws JMSException {
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            LOG.warn("Caught: " + e, e);
-        }
+    protected MessageConsumer createConsumer() throws JMSException {
+        return receiveSession.createConsumer(consumerDestination, "dummy = 33", false);
     }
+
 }

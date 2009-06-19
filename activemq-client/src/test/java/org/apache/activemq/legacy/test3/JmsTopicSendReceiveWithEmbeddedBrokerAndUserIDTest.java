@@ -23,7 +23,8 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.test3.JmsTopicSendReceiveWithTwoConnectionsAndEmbeddedBrokerTest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -41,8 +42,9 @@ public class JmsTopicSendReceiveWithEmbeddedBrokerAndUserIDTest extends JmsTopic
         return answer;
     }
 
-    protected void configureBroker(BrokerService answer) throws Exception {
-        answer.setPopulateJMSXUserID(true);
+    protected void configureBroker(Broker answer) throws Exception {
+//    	TODO:
+//        answer.setPopulateJMSXUserID(true );
         super.configureBroker(answer);
     }
 

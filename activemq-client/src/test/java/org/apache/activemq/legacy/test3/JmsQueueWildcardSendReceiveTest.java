@@ -25,6 +25,7 @@ import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
+import org.apache.activemq.apollo.test3.JmsTopicSendReceiveTest;
 import org.apache.activemq.command.ActiveMQDestination;
 
 /**
@@ -52,7 +53,7 @@ public class JmsQueueWildcardSendReceiveTest extends JmsTopicSendReceiveTest {
      * Returns the consumer subject.
      * 
      * @return String - consumer subject
-     * @see org.apache.activemq.legacy.test3.TestSupport#getConsumerSubject()
+     * @see org.apache.activemq.apollo.test3.TestSupport#getConsumerSubject()
      */
     protected String getConsumerSubject() {
         return "FOO.>";
@@ -62,7 +63,7 @@ public class JmsQueueWildcardSendReceiveTest extends JmsTopicSendReceiveTest {
      * Returns the producer subject.
      * 
      * @return String - producer subject
-     * @see org.apache.activemq.legacy.test3.TestSupport#getProducerSubject()
+     * @see org.apache.activemq.apollo.test3.TestSupport#getProducerSubject()
      */
     protected String getProducerSubject() {
         return "FOO.BAR.HUMBUG";

@@ -29,8 +29,8 @@ import javax.jms.Topic;
 import javax.jms.TopicSubscriber;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.apollo.test3.JmsTopicSendReceiveTest;
 import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.test3.JmsTopicSendReceiveTest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

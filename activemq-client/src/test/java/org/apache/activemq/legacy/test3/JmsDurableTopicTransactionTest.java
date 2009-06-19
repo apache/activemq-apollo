@@ -18,6 +18,9 @@ package org.apache.activemq.legacy.test3;
 
 import javax.jms.DeliveryMode;
 
+import org.apache.activemq.apollo.test3.JmsResourceProvider;
+import org.apache.activemq.apollo.test3.JmsTransactionTestSupport;
+
 
 /**
  * @version $Revision: 1.2 $

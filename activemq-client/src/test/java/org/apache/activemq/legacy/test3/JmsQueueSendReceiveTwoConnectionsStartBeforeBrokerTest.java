@@ -16,11 +16,15 @@
  */
 package org.apache.activemq.legacy.test3;
 
+import java.net.URI;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.legacy.broker.BrokerService;
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.broker.BrokerFactory;
+import org.apache.activemq.apollo.test3.JmsQueueSendReceiveTwoConnectionsTest;
+import org.apache.activemq.transport.TransportFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -32,7 +36,7 @@ public class JmsQueueSendReceiveTwoConnectionsStartBeforeBrokerTest extends JmsQ
 
     private Queue<Exception> errors = new ConcurrentLinkedQueue<Exception>();
     private int delayBeforeStartingBroker = 1000;
-    private BrokerService broker;
+    private Broker broker;
 
     public void startBroker() {
         // Initialize the broker
@@ -45,9 +49,8 @@ public class JmsQueueSendReceiveTwoConnectionsStartBeforeBrokerTest extends JmsQ
 
         LOG.info("Now starting the broker");
         try {
-            broker = new BrokerService();
-            broker.setPersistent(false);
-            broker.addConnector("tcp://localhost:61616");
+            broker = BrokerFactory.createBroker("jaxb:classpath:non-persistent-activemq.xml");
+            broker.addTransportServer(TransportFactory.bind(new URI("tcp://localhost:61616")));
             broker.start();
         } catch (Exception e) {
             LOG.info("Caught: " + e);
