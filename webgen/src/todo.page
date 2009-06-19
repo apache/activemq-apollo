@@ -79,6 +79,8 @@ h2. Misc Tasks
 
 * InactivityMonitor needs to get inserted for OpenWire on the server side of MultiWireFormat negotiation.
 * BIO SSL Transport does not currently pass Client Certificate chain in OpenWire ConnectionInfo command. This used to be done by the SSL transport but this shouldn't have OpenWire dependencies; instead protocol handler should be able to retrieve it from the underlying transport as needed. 
+* Add javadoc to all classes
+* Add nice toString() methods to aid when debugging.
 
 h2. General Cleanup / Abstraction Leaks / Smelly Stuff
 

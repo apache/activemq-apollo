@@ -75,17 +75,10 @@ public interface Destination {
             setDomain(new AsciiBuffer(domain));
         }
 
-        //        public ActiveMQDestination asActiveMQDestination() {
-        //            if(domain.equals(Router.TOPIC_DOMAIN))
-        //            {
-        //                return new ActiveMQTopic(name.toString());
-        //            }
-        //            else if(domain.equals(Router.QUEUE_DOMAIN))
-        //            {
-        //                return new ActiveMQQueue(name.toString());
-        //            }
-        //            return null;
-        //        }
+        @Override
+        public String toString() {
+        	return ""+domain+":"+name;
+        }
     }
 
     public class MultiDestination implements Destination {
@@ -117,11 +110,11 @@ public interface Destination {
         {
             destinations.remove(d);
         }
-
-        //        public ActiveMQDestination asActiveMQDestination() {
-        //            throw new UnsupportedOperationException("Not yet implemented");
-        //        }
-
+        
+        @Override
+        public String toString() {
+        	return destinations.toString();
+        }
     }
 
 }

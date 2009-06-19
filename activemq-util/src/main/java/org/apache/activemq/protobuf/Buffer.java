@@ -179,6 +179,9 @@ public class Buffer implements Comparable<Buffer> {
     }
 
     public int compareTo(Buffer o) {
+    	if( this == o )
+    		return 0;
+    	
         int minLength = Math.min(length, o.length);
         if (offset == o.offset) {
             int pos = offset;
