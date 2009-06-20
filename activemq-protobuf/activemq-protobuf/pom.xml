@@ -16,33 +16,33 @@
   limitations under the License.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  
+
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.apache.activemq.protobuf</groupId>
-    <artifactId>activemq-protobuf-pom</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <groupId>org.apache.activemq</groupId>
+    <artifactId>activemq-parent</artifactId>
+    <version>6.0-SNAPSHOT</version>
   </parent>
 
   <groupId>org.apache.activemq.protobuf</groupId>
   <artifactId>activemq-protobuf</artifactId>
   <version>1.1-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
-  
+
   <name>ActiveMQ Protocol Buffers Implementation and Compiler</name>
 
   <description>
-    A Simpler Protocol Buffer Java API.  Includes a Proto to Java compiler.
+    A Simpler Protocol Buffer Java API. Includes a Proto to Java compiler.
   </description>
 
   <dependencies>
-    
+
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-util</artifactId>
       <version>6.0-SNAPSHOT</version>
     </dependency>
-    
+
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-plugin-api</artifactId>
@@ -55,37 +55,15 @@
       <version>2.0</version>
       <optional>true</optional>
     </dependency>
-    
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.4</version>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
-  
+
   <build>
     <plugins>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <source>1.5</source>
-          <target>1.5</target>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <includes>
-            <include>**/*Test.java</include>
-          </includes>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>javacc-maven-plugin</artifactId>
         <version>2.4.1</version>
-         <executions>
+        <executions>
           <execution>
             <id>javacc</id>
             <goals>
@@ -96,5 +74,5 @@
       </plugin>
     </plugins>
   </build>
-  
+
 </project>

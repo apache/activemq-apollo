@@ -14,11 +14,12 @@
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   See the License for the specific language governing permissions and
   limitations under the License.
---><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>4</version>
+    <version>6</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
@@ -27,6 +28,7 @@
   <version>6.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>ActiveMQ POM</name>
+  <inceptionYear>2005</inceptionYear>
 
   <properties>
     <activemq-version>6.0-SNAPSHOT</activemq-version>
@@ -65,32 +67,30 @@
     <junit-version>4.4</junit-version>
     <jxta-version>2.0</jxta-version>
     <log4j-version>1.2.14</log4j-version>
-    <nlog4j-version>1.2.25</nlog4j-version>
+    <nlog4j-version>1.5.2</nlog4j-version>
     <org-apache-derby-version>10.1.3.1</org-apache-derby-version>
-    <org-apache-maven-surefire-plugin-version>2.3</org-apache-maven-surefire-plugin-version>
     <p2psockets-version>1.1.2</p2psockets-version>
     <regexp-version>1.3</regexp-version>
     <rome-version>0.8</rome-version>
     <slf4j-version>1.5.0</slf4j-version>
-    
+
     <jaxb-api-version>2.1</jaxb-api-version>
     <jaxb-version>2.1.6</jaxb-version>
     <xjc-version>2.1.10.1</xjc-version>
     <stax-api-version>1.0.1</stax-api-version>
     <stax-version>1.2.0</stax-version>
-    
+
     <xalan-version>2.6.0</xalan-version>
     <xmlbeans-version>2.0.0-beta1</xmlbeans-version>
     <xmlpull-version>1.1.3.4d_b4_min</xmlpull-version>
     <xstream-version>1.3.1</xstream-version>
     <xbean-version>3.4</xbean-version>
     <felix-version>1.0.0</felix-version>
-    <dist-repo-url>scpexe://people.apache.org/www/people.apache.org/repo/m2-incubating-repository</dist-repo-url>
     <site-repo-url>scpexe://people.apache.org/www/activemq.apache.org/maven/</site-repo-url>
   </properties>
-  
+
   <prerequisites>
-    <maven>2.0.8</maven>
+    <maven>2.0.10</maven>
   </prerequisites>
 
   <url>http://activemq.apache.org</url>
@@ -126,7 +126,8 @@
     <module>activemq-transport</module>
     <module>activemq-util</module>
     <module>kahadb</module>
-    <module>activemq-protobuf</module>
+    <module>activemq-protobuf/activemq-protobuf</module>
+    <module>activemq-protobuf/activemq-protobuf-test</module>
     <module>activemq-client</module>
     <module>activemq-network</module>
     <module>activemq-all</module>
@@ -139,13 +140,11 @@
     -->
   </modules>
 
-<!--
   <scm>
-    <connection>scm:svn:https://svn.apache.org/repos/asf/activemq/trunk</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/activemq/trunk</developerConnection>
-    <url>http://svn.apache.org/viewvc/activemq/trunk/</url>
+    <connection>scm:svn:https://svn.apache.org/repos/asf/activemq/sandbox/activemq-flow</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/activemq/sandbox/activemq-flow</developerConnection>
+    <url>http://svn.apache.org/viewvc/activemq/sandbox/activemq-flow/</url>
   </scm>
--->
 
   <!-- This is only here since the activemq-protobuf plugin has not been released yet -->
   <pluginRepositories>
@@ -157,25 +156,15 @@
       <id>elca-services</id>
       <url>http://el4.elca-services.ch/el4j/maven2repository</url>
       <releases>
-       <enabled>true</enabled>
+        <enabled>true</enabled>
       </releases>
     </pluginRepository>
   </pluginRepositories>
-  
-  <repositories>
-    <repository>
-      <id>apache.snapshots</id>
-      <url>https://repository.apache.org/content/repositories/snapshots/</url>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-    </repository>
-  </repositories>
 
   <dependencyManagement>
     <dependencies>
       <!-- =============================== -->
-      <!-- ActiveMQ Dependencies -->
+      <!-- Internal ActiveMQ Dependencies -->
       <!-- =============================== -->
       <dependency>
         <groupId>org.apache.activemq</groupId>
@@ -206,7 +195,7 @@
         <groupId>org.apache.activemq</groupId>
         <artifactId>kahadb</artifactId>
         <version>${activemq-version}</version>
-      </dependency>      
+      </dependency>
       <dependency>
         <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-bio</artifactId>
@@ -267,7 +256,7 @@
         <artifactId>activemq-spring</artifactId>
         <version>${activemq-version}</version>
       </dependency>
-      
+
       <dependency>
         <groupId>org.apache.activemq.protobuf</groupId>
         <artifactId>activemq-protobuf</artifactId>
@@ -379,7 +368,7 @@
         <version>${camel-version}</version>
         <type>war</type>
       </dependency>
-      
+
       <dependency>
         <groupId>org.apache.hadoop.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
@@ -414,7 +403,7 @@
         <groupId>com.sun.xml.bind</groupId>
         <artifactId>jaxb-xjc</artifactId>
         <version>${xjc-version}</version>
-      </dependency>  
+      </dependency>
 
       <!-- camel testing -->
       <dependency>
@@ -482,7 +471,7 @@
         <artifactId>spring-aop</artifactId>
         <version>${spring-version}</version>
         <optional>true</optional>
-      </dependency>      
+      </dependency>
       <dependency>
         <groupId>org.springframework</groupId>
         <artifactId>spring-beans</artifactId>
@@ -506,14 +495,14 @@
         <artifactId>spring-jms</artifactId>
         <version>${spring-version}</version>
         <optional>true</optional>
-      </dependency>      
+      </dependency>
       <dependency>
         <groupId>org.springframework</groupId>
         <artifactId>spring-tx</artifactId>
         <version>${spring-version}</version>
         <optional>true</optional>
-      </dependency>      
-      
+      </dependency>
+
       <dependency>
         <groupId>org.springframework</groupId>
         <artifactId>spring-webmvc</artifactId>
@@ -815,16 +804,16 @@
 
 
       <dependency>
-          <groupId>org.apache.servicemix.kernel</groupId>
-          <artifactId>apache-servicemix-kernel</artifactId>
-          <version>${servicemix.kernel.version}</version>
-          <type>zip</type>
+        <groupId>org.apache.servicemix.kernel</groupId>
+        <artifactId>apache-servicemix-kernel</artifactId>
+        <version>${servicemix.kernel.version}</version>
+        <type>zip</type>
       </dependency>
       <dependency>
-          <groupId>org.apache.servicemix.kernel</groupId>
-          <artifactId>apache-servicemix-kernel</artifactId>
-          <version>${servicemix.kernel.version}</version>
-          <type>tar.gz</type>
+        <groupId>org.apache.servicemix.kernel</groupId>
+        <artifactId>apache-servicemix-kernel</artifactId>
+        <version>${servicemix.kernel.version}</version>
+        <type>tar.gz</type>
       </dependency>
 
     </dependencies>
@@ -842,7 +831,7 @@
           <groupId>ch.elca.el4j.maven.plugins</groupId>
           <artifactId>maven-depgraph-plugin</artifactId>
           <version>1.7</version>
-        </plugin>      
+        </plugin>
         <plugin>
           <groupId>org.apache.servicemix.tooling</groupId>
           <artifactId>features-maven-plugin</artifactId>
@@ -861,78 +850,10 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
-          <version>2.2-beta-2</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>2.0.2</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-eclipse-plugin</artifactId>
-          <version>2.4</version>
+          <version>2.2-beta-4</version>
           <configuration>
-            <downloadSources>true</downloadSources>
-            <downloadJavadocs>true</downloadJavadocs>
+            <tarLongFileMode>gnu</tarLongFileMode>
           </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-gpg-plugin</artifactId>
-          <version>1.0-alpha-4</version>
-          <executions>
-            <execution>
-              <goals>
-                <goal>sign</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-install-plugin</artifactId>
-          <version>2.2</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>2.2</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-javadoc-plugin</artifactId>
-          <version>2.4</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-release-plugin</artifactId>
-          <version>2.0-beta-7</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-remote-resources-plugin</artifactId>
-          <version>1.0</version>
-          <executions>
-            <execution>
-              <goals>
-                <goal>process</goal>
-              </goals>
-              <configuration>
-                <properties>
-                  <projectName>${projectName}</projectName>
-                </properties>
-                <resourceBundles>
-                  <resourceBundle>org.apache:apache-jar-resource-bundle:1.4</resourceBundle>
-                </resourceBundles>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-source-plugin</artifactId>
-          <version>2.0.4</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -942,8 +863,12 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>${org-apache-maven-surefire-plugin-version}</version>
           <configuration>
+            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+            <forkMode>once</forkMode>
+            <argLine>-enableassertions</argLine>
+            <failIfNoTests>false</failIfNoTests>
+            <workingDirectory>${project.build.directory}</workingDirectory>
             <includes>
               <include>**/*Test.java</include>
               <include>**/*TestCase.java</include>
@@ -961,9 +886,9 @@
           <version>${felix-version}</version>
         </plugin>
         <plugin>
-          <groupId>org.apache.geronimo.genesis.plugins</groupId>
-          <artifactId>tools-maven-plugin</artifactId>
-          <version>1.4</version>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>ianal-maven-plugin</artifactId>
+          <version>1.0-alpha-1</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -1005,13 +930,49 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
+        <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <archive>
-            <index>true</index>
-            <compress>true</compress>
-          </archive>
+          <source>1.5</source>
+          <target>1.5</target>
+          <optimize>true</optimize>
+          <debug>true</debug>
+          <showDeprecation>true</showDeprecation>
+          <showWarnings>true</showWarnings>
         </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>[2.0.10,)</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>ianal-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>verify-legal-files</goal>
+            </goals>
+            <configuration>
+              <strict>true</strict>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.felix</groupId>
@@ -1029,66 +990,6 @@
             <Implementation-Version>${project.version}</Implementation-Version>
           </instructions>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <source>1.5</source>
-          <target>1.5</target>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <forkMode>once</forkMode>
-          <redirectTestOutputToFile>true</redirectTestOutputToFile>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-eclipse-plugin</artifactId>
-        <configuration>
-          <outputDirectory>${basedir}/eclipse-classes</outputDirectory>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>rat-maven-plugin</artifactId>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.geronimo.genesis.plugins</groupId>
-        <artifactId>tools-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>verify-legal-files</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>verify-legal-files</goal>
-            </goals>
-            <configuration>
-              <!-- Fail the build if no legal files were found -->
-              <strict>true</strict>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-remote-resources-plugin</artifactId>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-stage-plugin</artifactId>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
       </plugin>
     </plugins>
   </build>
@@ -1141,7 +1042,8 @@
             <link>http://junit.sourceforge.net/javadoc/</link>
             <link>http://logging.apache.org/log4j/docs/api/</link>
           </links>
-          <stylesheetfile>${basedir}/../etc/css/stylesheet.css</stylesheetfile>
+          <!-- the stylesheet is missing from activemq 6.  This kind of cross-project file reference is a bad idea -->
+          <!--<stylesheetfile>${basedir}/../etc/css/stylesheet.css</stylesheetfile>-->
           <linksource>true</linksource>
           <maxmemory>900m</maxmemory>
           <source>1.5</source>
@@ -1165,134 +1067,50 @@
   <profiles>
 
     <profile>
-      <id>release</id>
-
+      <id>apache-release</id>
+      <activation>
+        <property>
+          <name>apache-release</name>
+        </property>
+      </activation>
       <build>
         <plugins>
-
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <phase>package</phase>
+                <configuration>
+                  <runOnlyAtExecutionRoot>true</runOnlyAtExecutionRoot>
+                  <descriptorRefs>
+                    <descriptorRef>
+                      source-release
+                    </descriptorRef>
+                  </descriptorRefs>
+                </configuration>
+              </execution>
+            </executions>
+            <dependencies>
+              <dependency>
+                <!-- apache version not yet released -->
+                <!--<groupId>org.apache</groupId>-->
+                <groupId>org.apache.geronimo.genesis</groupId>
+                <artifactId>apache-source-release-assembly-descriptor</artifactId>
+                <!-- apache version not yet known -->
+                <version>2.0</version>
+              </dependency>
+            </dependencies>
+          </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
               <test>false</test>
             </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-release-plugin</artifactId>
-            <configuration>
-              <useReleaseProfile>false</useReleaseProfile>
-              <goals>deploy</goals>
-              <arguments>-Prelease</arguments>
-              <autoVersionSubmodules>true</autoVersionSubmodules>
-            </configuration>
-          </plugin>
-
-          <!-- We want a source jar -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-source-plugin</artifactId>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-
-          <!-- We want to sign the artifact, the POM, and all attached artifacts -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <inherited>true</inherited>
-            <configuration>
-              <passphrase>${gpg.passphrase}</passphrase>
-            </configuration>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-
-          <!-- We want to deploy the artifact to a staging location for perusal -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-deploy-plugin</artifactId>
-            <inherited>true</inherited>
-            <configuration>
-                <altDeploymentRepository>${staging.altRepository}/${siteId}</altDeploymentRepository>
-              <updateReleaseInfo>true</updateReleaseInfo>
-            </configuration>
-          </plugin>
-
-          <!-- We want the JavaDoc JAR published with the release -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <inherited>true</inherited>
-            <configuration>
-              <source>1.5</source>
-            </configuration>
-            <executions>
-              <execution>
-                <id>attach-javadocs</id>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <profile>
-      <id>full</id>
-
-      <build>
-        <plugins>
-
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <test>false</test>
-            </configuration>
-          </plugin>
-
-          <!-- We want a source jar -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-source-plugin</artifactId>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-
-          <!-- We want the JavaDoc JAR published with the release -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <inherited>true</inherited>
-            <configuration>
-              <source>1.5</source>
-            </configuration>
-            <executions>
-              <execution>
-                <id>attach-javadocs</id>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
           </plugin>
         </plugins>
       </build>
