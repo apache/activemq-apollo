@@ -35,8 +35,6 @@ import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.command.ProducerInfo;
 import org.apache.activemq.command.SessionInfo;
 
-import com.sun.org.apache.xml.internal.serializer.utils.Messages;
-
 public class BrokerTest extends BrokerTestSupport {
 
     public ActiveMQDestination destination;
