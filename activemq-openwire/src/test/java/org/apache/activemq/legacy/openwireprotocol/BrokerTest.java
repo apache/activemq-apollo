@@ -35,6 +35,8 @@ import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.command.ProducerInfo;
 import org.apache.activemq.command.SessionInfo;
 
+import com.sun.org.apache.xml.internal.serializer.utils.Messages;
+
 public class BrokerTest extends BrokerTestSupport {
 
     public ActiveMQDestination destination;
@@ -624,16 +626,19 @@ public class BrokerTest extends BrokerTestSupport {
 
         ConsumerInfo consumerInfo1 = createConsumerInfo(sessionInfo1, destination);
         consumerInfo1.setPrefetchSize(1);
-        connection1.send(consumerInfo1);
+        connection1.request(consumerInfo1);
+        
+        ArrayList<Message> msgs = new ArrayList<Message>(4);
 
         // Send the messages.
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 1; i++) {
             Message message = createMessage(producerInfo, destination, deliveryMode);
             message.setGroupID("TEST-GROUP");
             message.setGroupSequence(i + 1);
+            msgs.add(i, message);
             connection1.request(message);
         }
-
+        
         // Setup a second connection
         StubConnection connection2 = createConnection();
         ConnectionInfo connectionInfo2 = createConnectionInfo();
@@ -643,13 +648,22 @@ public class BrokerTest extends BrokerTestSupport {
 
         ConsumerInfo consumerInfo2 = createConsumerInfo(sessionInfo2, destination);
         consumerInfo2.setPrefetchSize(1);
-        connection2.send(consumerInfo2);
+        connection2.request(consumerInfo2);
+        
+        // Send the messages.
+        for (int i = 1; i < 4; i++) {
+            Message message = createMessage(producerInfo, destination, deliveryMode);
+            message.setGroupID("TEST-GROUP");
+            message.setGroupSequence(i + 1);
+            msgs.add(i, message);
+            connection1.request(message);
+        }
 
         // All the messages should have been sent down connection 1.. just get
         // the first 3
         for (int i = 0; i < 3; i++) {
             Message m1 = receiveMessage(connection1);
-            assertNotNull("m1 is null for index: " + i, m1);
+            assertEquals("Unexpected Message Receipt: " + m1, m1.getMessageId(), msgs.get(i).getMessageId());
             connection1.send(createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE));
         }
 
@@ -657,9 +671,9 @@ public class BrokerTest extends BrokerTestSupport {
         connection1.request(closeConsumerInfo(consumerInfo1));
 
         // The last messages should now go the the second consumer.
-        for (int i = 0; i < 1; i++) {
+        for (int i = 3; i < 4; i++) {
             Message m1 = receiveMessage(connection2);
-            assertNotNull("m1 is null for index: " + i, m1);
+            assertEquals("Unexpected Message Receipt: " + m1, m1.getMessageId(), msgs.get(i).getMessageId());
             connection2.request(createAck(consumerInfo2, m1, 1, MessageAck.STANDARD_ACK_TYPE));
         }
 
