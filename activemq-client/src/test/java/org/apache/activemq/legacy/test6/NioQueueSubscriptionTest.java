@@ -32,6 +32,7 @@ import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
+import org.apache.activemq.apollo.perf.QueueSubscriptionTest;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
