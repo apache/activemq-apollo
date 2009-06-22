@@ -1253,6 +1253,7 @@ public abstract class CursoredQueue<V> {
                     for (QueueElement<V> qe : first.getValue()) {
                         qe.releaseSoftRef();
                         qe.acknowledge();
+                        expirationCache.remove(first.getKey());
                     }
                 }
             }
