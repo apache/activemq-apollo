@@ -85,11 +85,11 @@ public class MockBrokerTest extends TestCase {
             receiveBrokerURI = "tcp://localhost:20000?wireFormat=proto";
         } else {
             if (forceMarshalling) {
+                sendBrokerURI = "pipe://SendBroker?wireFormat=proto&marshal=true";
+                receiveBrokerURI = "pipe://ReceiveBroker?wireFormat=proto&marshal=true";
+            } else {
                 sendBrokerURI = "pipe://SendBroker?wireFormat=proto";
                 receiveBrokerURI = "pipe://ReceiveBroker?wireFormat=proto";
-            } else {
-                sendBrokerURI = "pipe://SendBroker";
-                receiveBrokerURI = "pipe://ReceiveBroker";
             }
         }
     }
