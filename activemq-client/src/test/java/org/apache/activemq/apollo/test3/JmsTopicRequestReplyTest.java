@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test3;
+package org.apache.activemq.apollo.test3;
 
 import java.util.List;
 import java.util.Vector;
@@ -29,7 +29,6 @@ import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
-import org.apache.activemq.apollo.test3.TestSupport;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

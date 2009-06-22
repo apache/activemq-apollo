@@ -105,7 +105,7 @@ public class ActiveMQConnectionFactory extends JNDIBaseStorable implements Conne
     private boolean exclusiveConsumer;
     private boolean nestedMapAndListEnabled = true;
     private boolean alwaysSyncSend;
-    private boolean watchTopicAdvisories = true;
+    private boolean watchTopicAdvisories = false;
     private int producerWindowSize = DEFAULT_PRODUCER_WINDOW_SIZE;
     private long warnAboutUnstartedConnectionTimeout = 500L;
     private int sendTimeout =0;
