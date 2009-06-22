@@ -522,6 +522,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         private HashMap<MessageId, SubscriptionDeliveryCallback> pendingMessages = new HashMap<MessageId, SubscriptionDeliveryCallback>();
         private LinkedList<MessageId> pendingMessageIds = new LinkedList<MessageId>();
         private BrokerSubscription brokerSubscription;
+        private int borrowedLimterCredits;
 
         public ConsumerContext(final ConsumerInfo info, ClientContext parent) throws Exception {
             super(info.getConsumerId().toString(), parent);
@@ -594,14 +595,18 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         public void ack(MessageAck info) {
             // TODO: The pending message queue could probably be optimized to
             // avoid having to create a new list here.
+            int flowCredit = info.getMessageCount();
             if( info.isDeliveredAck() ) {
-                // This ack is just trying to expand the flow control window size.
-                limiter.onProtocolCredit(info.getMessageCount());
+                // This ack is just trying to expand the flow control window size without actually 
+                // acking the message.  Keep track of how many limiter credits we borrow since they need
+                // to get paid back with real acks later.
+                borrowedLimterCredits += flowCredit;
+                limiter.onProtocolCredit(flowCredit);
             } else if(info.isStandardAck()) {
                 LinkedList<SubscriptionDeliveryCallback> acked = new LinkedList<SubscriptionDeliveryCallback>();
                 synchronized (this) {
                     MessageId id = info.getLastMessageId();
-                    if (isDurable() || isQueueReceiver())
+                    if (isDurable() || isQueueReceiver()) {
                         while (!pendingMessageIds.isEmpty()) {
                             MessageId pendingId = pendingMessageIds.getFirst();
                             SubscriptionDeliveryCallback callback = pendingMessages.remove(pendingId);
@@ -611,7 +616,22 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                                 break;
                             }
                         }
-                    limiter.onProtocolCredit(info.getMessageCount());
+                    }
+                    
+                    // Did we have DeliveredAcks previously sent?  Then the 
+                    // the flow window has already been credited.  We need to 
+                    // pay back the borrowed limiter credits before giving 
+                    // credits directly to the limiter.
+                    if(borrowedLimterCredits>0) {
+                        if( flowCredit > borrowedLimterCredits ) {
+                            flowCredit -= borrowedLimterCredits;
+                            borrowedLimterCredits=0;
+                        } else {
+                            borrowedLimterCredits -= flowCredit;
+                            flowCredit=0;
+                        }
+                    }
+                    limiter.onProtocolCredit(flowCredit);
                 }
 
                 // Delete outside of synchronization on queue to avoid contention
