@@ -14,12 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.openwireprotocol;
+package org.apache.activemq.openwire;
 
 import java.net.URI;
 
 import junit.framework.Test;
 
+import org.apache.activemq.legacy.openwireprotocol.StubConnection;
 import org.apache.activemq.openwire.OpenWireFormat;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.wireformat.WireFormat;
@@ -40,11 +41,13 @@ public class MarshallingBrokerTest extends BrokerTest {
         OpenWireFormat wf2 = new OpenWireFormat();
         wf2.setCacheEnabled(true);
 
-        addCombinationValues("wireFormat", new Object[] {wf1, wf2, });
+        addCombinationValues("wireFormat", new Object[] {wf1, wf2});
     }
 
-    protected StubConnection createConnection() throws Exception {
-        return new StubConnection(TransportFactory.connect(new URI(PIPE_URI+"?marshall=true")));
+    
+    @Override
+    protected String getBindURI() {
+        return PIPE_URI+"?marshal=true";
     }
 
     public static Test suite() {

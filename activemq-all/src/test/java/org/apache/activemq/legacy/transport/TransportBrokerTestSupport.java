@@ -21,7 +21,7 @@ import java.net.URISyntaxException;
 
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
-import org.apache.activemq.legacy.openwireprotocol.BrokerTest;
+import org.apache.activemq.openwire.BrokerTest;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
 

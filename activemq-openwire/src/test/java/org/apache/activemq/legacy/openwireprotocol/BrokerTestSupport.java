@@ -68,7 +68,7 @@ public class BrokerTestSupport extends CombinationTestSupport {
     protected int tempDestGenerator;
 
     protected int maxWait = 4000;
-    String PIPE_URI = "pipe://broker";
+    protected String PIPE_URI = "pipe://broker";
 	
     private ArrayList<StubConnection> connections = new ArrayList<StubConnection>();
 
@@ -81,8 +81,12 @@ public class BrokerTestSupport extends CombinationTestSupport {
 
     protected Broker createBroker() throws Exception {
     	Broker broker = BrokerFactory.createBroker(new URI("jaxb:classpath:non-persistent-activemq.xml"));
-    	broker.addTransportServer(TransportFactory.bind(new URI(PIPE_URI)));
+    	broker.addTransportServer(TransportFactory.bind(new URI(getConnectURI())));
         return broker;
+    }
+
+    protected String getBindURI() {
+        return PIPE_URI;
     }
 
     protected void tearDown() throws Exception {
@@ -303,8 +307,12 @@ public class BrokerTestSupport extends CombinationTestSupport {
     }
 
     protected Transport createTransport() throws URISyntaxException, Exception {
-		return TransportFactory.connect(new URI(PIPE_URI));
+		return TransportFactory.connect(new URI(getConnectURI()));
 	}
+
+    protected String getConnectURI() {
+        return getBindURI();
+    }
 
 	/**
      * @param connection
