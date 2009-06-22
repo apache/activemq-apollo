@@ -33,6 +33,7 @@ import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.apollo.broker.ProtocolHandler;
 import org.apache.activemq.apollo.broker.Router;
+import org.apache.activemq.apollo.broker.ProtocolHandler.AbstractClientContext;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.filter.BooleanExpression;
@@ -259,7 +260,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         }
     }
 
-    class ConsumerContext extends AbstractLimitedFlowResource<MessageDelivery> implements ProtocolHandler.ConsumerContext {
+    class ConsumerContext extends AbstractClientContext<MessageDelivery> implements ProtocolHandler.ConsumerContext {
 
         private BooleanExpression selector;
         private String selectorString;
@@ -277,6 +278,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         private boolean durable;
 
         public ConsumerContext(final StompFrame subscribe) throws Exception {
+            super(subscribe.getHeaders().get(Stomp.Headers.Subscribe.ID), null);
             translator = translator(subscribe);
 
             Map<String, String> headers = subscribe.getHeaders();

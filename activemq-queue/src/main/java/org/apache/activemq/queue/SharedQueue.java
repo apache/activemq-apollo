@@ -142,9 +142,16 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                 queue = new CursoredQueue<V>(persistencePolicy, expirationMapper, flow, queueDescriptor, store, mutex) {
 
                     @Override
-                    protected void acknowledge(QueueElement<V> elem) {
-                        SharedQueue.this.acknowledge(elem);
+                    protected void onElementRemoved(QueueElement<V> elem) {
+                        synchronized (mutex) {
+                            //If the element wasn't acqired release space:
+                            sizeLimiter.remove(1, elem.getLimiterSize());
+                        }
+                    }
 
+                    @Override
+                    protected Object getMutex() {
+                        return mutex;
                     }
 
                     @Override
@@ -155,6 +162,15 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                     @Override
                     protected void requestDispatch() {
                         notifyReady();
+                    }
+
+                    @Override
+                    protected void onElementReenqueued(QueueElement<V> qe, ISourceController<?> controller) {
+                        synchronized (SharedQueue.this) {
+                            if (isDispatchReady()) {
+                                notifyReady();
+                            }
+                        }
                     }
                 };
 
@@ -285,16 +301,6 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
 
     public IFlowController<V> getFlowControler() {
         return inputController;
-    }
-
-    final void acknowledge(QueueElement<V> qe) {
-        synchronized (mutex) {
-            qe.delete();
-            //If the element wasn't acqired release space:
-            if (!qe.isAcquired()) {
-                sizeLimiter.remove(1, qe.getLimiterSize());
-            }
-        }
     }
 
     /**
@@ -430,9 +436,6 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                         SubscriptionContext nextConsumer = consumer.getNext();
                         switch (consumer.offer(next)) {
                         case ACCEPTED:
-                            if (DEBUG)
-                                System.out.println("Dispatched " + next.getElement() + " to " + consumer);
-
                             // Rotate list so this one is last next time:
                             sharedConsumers.rotate();
                             interested = true;
@@ -539,6 +542,10 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                 } else {
                     cursor.reset(queue.getFirstSequence());
                 }
+                
+                if (DEBUG)
+                    System.out.println("Starting " + this + " at " + cursor);
+
 
                 updateDispatchList();
             }
@@ -686,7 +693,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
 
             // Check for expiration:
             if (qe.isExpired()) {
-                acknowledge(qe);
+                qe.acknowledge();
                 return ACCEPTED;
             }
 
@@ -696,9 +703,11 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
             // See if the sink has room:
             qe.setAcquired(sub);
             if (sub.offer(qe.elem, this, callback)) {
-                if (!sub.isBrowser()) {
+                if (DEBUG)
+                    System.out.println("Dispatched " + qe.getElement() + " to " + this);
 
-                    sizeLimiter.remove(1, qe.getLimiterSize());
+                
+                if (!sub.isBrowser()) {
 
                     // If remove on dispatch acknowledge now:
                     if (callback == null) {

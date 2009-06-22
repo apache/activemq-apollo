@@ -117,13 +117,22 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
         queue = new CursoredQueue<E>(persistencePolicy, expirationMapper, controller.getFlow(), queueDescriptor, queueStore, this) {
 
             @Override
-            protected void acknowledge(QueueElement<E> qe) {
+            protected Object getMutex() {
+                return ExclusivePersistentQueue.this;
+            }
+
+            @Override
+            protected void onElementRemoved(QueueElement<E> qe) {
                 synchronized (ExclusivePersistentQueue.this) {
-                    E elem = qe.getElement();
-                    if (qe.delete()) {
-                        if (!qe.isAcquired()) {
-                            controller.elementDispatched(elem);
-                        }
+                    limiter.remove(1, qe.getLimiterSize());
+                }
+            }
+
+            @Override
+            protected void onElementReenqueued(QueueElement<E> qe, ISourceController<?> source) {
+                synchronized (ExclusivePersistentQueue.this) {
+                    if (isDispatchReady()) {
+                        notifyReady();
                     }
                 }
             }
@@ -185,7 +194,8 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
 
     public synchronized boolean removeSubscription(Subscription<E> sub) {
         if (sub == subscription) {
-            sub = null;
+            subscription = null;
+            cursor.reset(queue.getFirstSequence());
             return true;
         } else {
             return false;
@@ -280,7 +290,6 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
                 // See if the sink has room:
                 qe.setAcquired(subscription);
                 if (subscription.offer(qe.elem, sourceController, callback)) {
-                    controller.elementDispatched(qe.getElement());
                     // If remove on dispatch acknowledge now:
                     if (callback == null) {
                         qe.acknowledge();

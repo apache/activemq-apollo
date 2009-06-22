@@ -1318,11 +1318,11 @@ public class BrokerTest extends BrokerTestSupport {
         assertNotNull(m);
         assertEquals(m.getMessageId(), message1.getMessageId());
 
-        assertTrue(countMessagesInQueue(connection, connectionInfo, destination) == 2);
+        assertEquals(countMessagesInQueue(connection, connectionInfo, destination), 2);
         connection.send(createAck(consumerInfo, m, 1, MessageAck.DELIVERED_ACK_TYPE));
-        assertTrue(countMessagesInQueue(connection, connectionInfo, destination) == 2);
+        assertEquals(countMessagesInQueue(connection, connectionInfo, destination), 2);
         connection.send(createAck(consumerInfo, m, 1, MessageAck.STANDARD_ACK_TYPE));
-        assertTrue(countMessagesInQueue(connection, connectionInfo, destination) == 1);
+        assertEquals(countMessagesInQueue(connection, connectionInfo, destination), 1);
 
     }
 

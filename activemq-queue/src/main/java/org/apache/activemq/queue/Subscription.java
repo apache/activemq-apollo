@@ -22,28 +22,33 @@ import org.apache.activemq.flow.ISourceController;
 public interface Subscription<E> {
 
     public interface SubscriptionDeliveryCallback {
-        
+
         /**
          * If {@link Subscription#isBrowser()} returns false this method
-         * indicates that the Subscription is finished with the element
-         * and that it can be removed from the queue. 
+         * indicates that the Subscription is finished with the element and that
+         * it can be removed from the queue.
          */
         public void acknowledge();
 
         /**
-         * Indicates that the subscription no longer has interest in
-         * the element and that it should be placed back on the queue. 
+         * Indicates that the subscription no longer has interest in the element
+         * and that it should be placed back on the queue.
          * 
-         * The provided source controller will be blocked if there 
-         * is not enough space available on the queue to
-         * reenqueue the element.
+         * The provided source controller will be blocked if there is not enough
+         * space available on the queue to reenqueue the element.
          * 
-         * It is illegal to call this method after a prior call to 
-         * {@link #acknowledge()}. 
+         * It is illegal to call this method after a prior call to
+         * {@link #acknowledge()}.
          * 
-         * @param source The source controller.
+         * @param source
+         *            The source controller.
          */
         public void unacquire(ISourceController<?> sourceController);
+
+        /**
+         * @return Returns true if the delivery is a redelivery
+         */
+        public boolean isRedelivery();
     }
 
     /**
@@ -52,25 +57,25 @@ public interface Subscription<E> {
      * @return true if the element should be removed on dispatch
      */
     public boolean isRemoveOnDispatch(E elem);
-    
+
     /**
-     * @return True if this is a subscription browser. 
+     * @return True if this is a subscription browser.
      */
     public boolean isBrowser();
-    
+
     /**
-     * Indicates that the subscription is exclusive. When there at least one 
-     * exclusive subscription on a shared queue, the queue will dispatch to
-     * only one such consumer while there is at least one connected.
+     * Indicates that the subscription is exclusive. When there at least one
+     * exclusive subscription on a shared queue, the queue will dispatch to only
+     * one such consumer while there is at least one connected.
      * 
      * @return True if the Subscription is exclusive.
      */
     public boolean isExclusive();
 
     /**
-     * Returns true if the Subscription has a selector. If true
-     * is returned the {@link #matches(Object)} will be called
-     * prior to an attempt to offer the message to {@link Subscription}
+     * Returns true if the Subscription has a selector. If true is returned the
+     * {@link #matches(Object)} will be called prior to an attempt to offer the
+     * message to {@link Subscription}
      * 
      * @return true if this {@link Subscription} has a selector.
      */
@@ -96,7 +101,8 @@ public interface Subscription<E> {
      *            The queue's controller, which must be used if the offered
      *            element exceeds the subscription's buffer limits.
      * @param callback
-     *            The {@link SubscriptionDeliveryCallback} associated with the element
+     *            The {@link SubscriptionDeliveryCallback} associated with the
+     *            element
      * 
      * @return true if the element was accepted false otherwise, if false is
      *         returned the caller must have called
@@ -104,7 +110,7 @@ public interface Subscription<E> {
      *         returning false.
      */
     public boolean offer(E element, ISourceController<?> controller, SubscriptionDeliveryCallback callback);
-    
+
     /**
      * Pushes an item to the subscription. If the subscription is not remove on
      * dispatch, then it must call acknowledge method on the callback when it
@@ -116,7 +122,8 @@ public interface Subscription<E> {
      *            The queue's controller, which must be used if the added
      *            element exceeds the subscription's buffer limits.
      * @param callback
-     *            The {@link SubscriptionDeliveryCallback} associated with the element
+     *            The {@link SubscriptionDeliveryCallback} associated with the
+     *            element
      * @return true if the element was accepted false otherwise, if false is
      *         returned the caller must have called
      *         {@link ISourceController#onFlowBlock(ISinkController)} prior to

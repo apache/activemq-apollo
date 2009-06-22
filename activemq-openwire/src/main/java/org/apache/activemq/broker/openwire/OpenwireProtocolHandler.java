@@ -91,6 +91,8 @@ import org.apache.activemq.wireformat.WireFormat;
 
 public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener {
 
+    protected final HashMap<ConnectionId, ClientContext> connections = new HashMap<ConnectionId, ClientContext>();
+    protected final HashMap<SessionId, ClientContext> sessions = new HashMap<SessionId, ClientContext>();
     protected final HashMap<ProducerId, ProducerContext> producers = new HashMap<ProducerId, ProducerContext>();
     protected final HashMap<ConsumerId, ConsumerContext> consumers = new HashMap<ConsumerId, ConsumerContext>();
 
@@ -111,48 +113,101 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             // /////////////////////////////////////////////////////////////////
             // Methods that keep track of the client state
             // /////////////////////////////////////////////////////////////////
-            public Response processAddConnection(ConnectionInfo info) throws Exception {
-                connection.setName(info.getClientId());
+            public Response processAddConnection(final ConnectionInfo info) throws Exception {
+                if (!connections.containsKey(info.getConnectionId())) {
+
+                    ClientContext connection = new AbstractClientContext<MessageDelivery>(info.getConnectionId().toString(), null) {
+                        ConnectionInfo connectionInfo = info;
+
+                        public void close() {
+                            super.close();
+                            connections.remove(connectionInfo.getConnectionId());
+                        }
+                    };
+                    connections.put(info.getConnectionId(), connection);
+                }
                 return ack(info);
             }
 
-            public Response processAddSession(SessionInfo info) throws Exception {
+            public Response processAddSession(final SessionInfo info) throws Exception {
+                ClientContext connection = connections.get(info.getSessionId().getParentId());
+                if (connection == null) {
+                    throw new IllegalStateException(host.getHostName() + " Cannot add a session to a connection that had not been registered: " + info.getSessionId().getParentId());
+                }
+
+                if (!sessions.containsKey(info.getSessionId())) {
+
+                    ClientContext session = new AbstractClientContext<MessageDelivery>(info.getSessionId().toString(), connection) {
+                        SessionInfo sessioninfo = info;
+
+                        public void close() {
+                            super.close();
+                            sessions.remove(sessioninfo.getSessionId());
+                        }
+                    };
+
+                    sessions.put(info.getSessionId(), session);
+                }
+
                 return ack(info);
             }
 
             public Response processAddProducer(ProducerInfo info) throws Exception {
-                producers.put(info.getProducerId(), new ProducerContext(info));
+                ClientContext session = sessions.get(info.getProducerId().getParentId());
+                if (session == null) {
+                    throw new IllegalStateException(host.getHostName() + " Cannot add a producer to a session that had not been registered: " + info.getProducerId().getParentId());
+                }
+                if (!producers.containsKey(info.getProducerId())) {
+                    ProducerContext producer = new ProducerContext(info, session);
+                }
                 return ack(info);
             }
 
             public Response processAddConsumer(ConsumerInfo info) throws Exception {
-                ConsumerContext ctx = new ConsumerContext(info);
-                consumers.put(info.getConsumerId(), ctx);
-                ctx.start();
+                ClientContext session = sessions.get(info.getConsumerId().getParentId());
+                if (session == null) {
+                    throw new IllegalStateException(host.getHostName() + " Cannot add a consumer to a session that had not been registered: " + info.getConsumerId().getParentId());
+                }
+
+                if (!consumers.containsKey(info.getConsumerId())) {
+                    ConsumerContext ctx = new ConsumerContext(info, session);
+                    ctx.start();
+                }
+
                 return ack(info);
             }
 
             public Response processRemoveConnection(RemoveInfo remove, ConnectionId info, long arg1) throws Exception {
+                ClientContext cc = connections.get(info);
+                if (cc != null) {
+                    cc.close();
+                }
                 ack(remove);
                 return null;
             }
 
             public Response processRemoveSession(RemoveInfo remove, SessionId info, long arg1) throws Exception {
+                ClientContext cc = sessions.get(info);
+                if (cc != null) {
+                    cc.close();
+                }
                 ack(remove);
                 return null;
             }
 
             public Response processRemoveProducer(RemoveInfo remove, ProducerId info) throws Exception {
-                producers.remove(info);
-                //TODO add close logic?
+                ClientContext cc = producers.get(info);
+                if (cc != null) {
+                    cc.close();
+                }
                 ack(remove);
                 return null;
             }
 
             public Response processRemoveConsumer(RemoveInfo remove, ConsumerId info, long arg1) throws Exception {
-                ConsumerContext ctx = consumers.remove(info);
-                if (ctx != null) {
-                    ctx.stop();
+                ClientContext cc = consumers.get(info);
+                if (cc != null) {
+                    cc.close();
                 }
                 ack(remove);
                 return null;
@@ -344,8 +399,8 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
     }
 
     public void onCommand(Object o) {
-    	boolean responseRequired=false;
-    	int commandId=0;
+        boolean responseRequired = false;
+        int commandId = 0;
         try {
             Command command = (Command) o;
             commandId = command.getCommandId();
@@ -360,8 +415,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             } else {
                 connection.onException(e);
             }
-        }
-        catch (Throwable t) {
+        } catch (Throwable t) {
             if (responseRequired) {
                 ExceptionResponse response = new ExceptionResponse(t);
                 response.setCorrelationId(commandId);
@@ -406,15 +460,17 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
     // Internal Support Methods
     // /////////////////////////////////////////////////////////////////
 
-    class ProducerContext extends AbstractLimitedFlowResource<OpenWireMessageDelivery> {
+    class ProducerContext extends AbstractClientContext<OpenWireMessageDelivery> {
 
         protected final Object inboundMutex = new Object();
         private IFlowController<OpenWireMessageDelivery> controller;
-        private String name;
+        private final ProducerInfo info;
 
-        public ProducerContext(final ProducerInfo info) {
-            super(info.getProducerId().toString());
-            final Flow flow = new Flow("broker-" + name + "-inbound", false);
+        public ProducerContext(final ProducerInfo info, ClientContext parent) {
+            super(info.getProducerId().toString(), parent);
+            this.info = info;
+            producers.put(info.getProducerId(), this);
+            final Flow flow = new Flow("broker-" + super.getResourceName() + "-inbound", false);
 
             // Openwire only uses credit windows at the producer level for
             // producers that request the feature.
@@ -445,9 +501,14 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
             super.onFlowOpened(controller);
         }
+
+        public void close() {
+            super.close();
+            producers.remove(info);
+        }
     }
 
-    class ConsumerContext extends AbstractLimitedFlowResource<MessageDelivery> implements ProtocolHandler.ConsumerContext, Service {
+    class ConsumerContext extends AbstractClientContext<MessageDelivery> implements ProtocolHandler.ConsumerContext {
 
         private final ConsumerInfo info;
         private String name;
@@ -462,9 +523,11 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         private LinkedList<MessageId> pendingMessageIds = new LinkedList<MessageId>();
         private BrokerSubscription brokerSubscription;
 
-        public ConsumerContext(final ConsumerInfo info) throws Exception {
+        public ConsumerContext(final ConsumerInfo info, ClientContext parent) throws Exception {
+            super(info.getConsumerId().toString(), parent);
             this.info = info;
             this.name = info.getConsumerId().toString();
+            consumers.put(info.getConsumerId(), this);
 
             Flow flow = new Flow("broker-" + name + "-outbound", false);
             selector = parseSelector(info);
@@ -476,7 +539,9 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             };
 
             isQueueReceiver = info.getDestination().isQueue();
-
+            if (info.getSubscriptionName() != null) {
+                isDurable = true;
+            }
             controller = new FlowController<MessageDelivery>(null, flow, limiter, this);
             controller.useOverFlowQueue(false);
             controller.setExecutor(connection.getDispatcher().createPriorityExecutor(connection.getDispatcher().getDispatchPriorities() - 1));
@@ -486,10 +551,6 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         public void start() throws Exception {
             brokerSubscription = host.createSubscription(this);
             brokerSubscription.connect(this);
-        }
-
-        public void stop() throws Exception {
-            brokerSubscription.disconnect(this);
         }
 
         public boolean offer(final MessageDelivery message, ISourceController<?> source, SubscriptionDeliveryCallback callback) {
@@ -514,6 +575,9 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             md.setDestination(msg.getDestination());
             // Add to the pending list if persistent and we are durable:
             if (callback != null) {
+                if (callback.isRedelivery()) {
+                    md.setRedeliveryCounter(1);
+                }
                 synchronized (this) {
                     Object old = pendingMessages.put(msg.getMessageId(), callback);
                     if (old != null) {
@@ -530,26 +594,29 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         public void ack(MessageAck info) {
             // TODO: The pending message queue could probably be optimized to
             // avoid having to create a new list here.
-            LinkedList<SubscriptionDeliveryCallback> acked = new LinkedList<SubscriptionDeliveryCallback>();
-            synchronized (this) {
-                MessageId id = info.getLastMessageId();
-                if (isDurable() || isQueueReceiver())
-                    while (!pendingMessageIds.isEmpty()) {
-                        MessageId pendingId = pendingMessageIds.getFirst();
-                        SubscriptionDeliveryCallback callback = pendingMessages.remove(pendingId);
-                        acked.add(callback);
-                        pendingMessageIds.removeFirst();
-                        if (pendingId.equals(id)) {
-                            break;
+            //if(info.isStandardAck())
+            {
+                LinkedList<SubscriptionDeliveryCallback> acked = new LinkedList<SubscriptionDeliveryCallback>();
+                synchronized (this) {
+                    MessageId id = info.getLastMessageId();
+                    if (isDurable() || isQueueReceiver())
+                        while (!pendingMessageIds.isEmpty()) {
+                            MessageId pendingId = pendingMessageIds.getFirst();
+                            SubscriptionDeliveryCallback callback = pendingMessages.remove(pendingId);
+                            acked.add(callback);
+                            pendingMessageIds.removeFirst();
+                            if (pendingId.equals(id)) {
+                                break;
+                            }
                         }
-                    }
-                limiter.onProtocolCredit(info.getMessageCount());
-            }
+                    limiter.onProtocolCredit(info.getMessageCount());
+                }
 
-            // Delete outside of synchronization on queue to avoid contention
-            // with enqueueing threads.
-            for (SubscriptionDeliveryCallback callback : acked) {
-                callback.acknowledge();
+                // Delete outside of synchronization on queue to avoid contention
+                // with enqueueing threads.
+                for (SubscriptionDeliveryCallback callback : acked) {
+                    callback.acknowledge();
+                }
             }
         }
 
@@ -584,7 +651,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         public boolean isExclusive() {
             return info.isExclusive();
         }
-        
+
         /*
          * (non-Javadoc)
          * 
@@ -722,6 +789,36 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             return info.getConsumerId().toString();
         }
 
+        public void close() {
+            brokerSubscription.disconnect(this);
+
+            if (isDurable() || isQueueReceiver()) {
+                LinkedList<SubscriptionDeliveryCallback> unacquired = null;
+
+                synchronized (this) {
+
+                    unacquired = new LinkedList<SubscriptionDeliveryCallback>();
+                    while (!pendingMessageIds.isEmpty()) {
+                        MessageId pendingId = pendingMessageIds.getLast();
+                        SubscriptionDeliveryCallback callback = pendingMessages.remove(pendingId);
+                        unacquired.add(callback);
+                        pendingMessageIds.removeLast();
+                    }
+                    limiter.onProtocolCredit(unacquired.size());
+                }
+
+                if (unacquired != null) {
+                    // Delete outside of synchronization on queue to avoid contention
+                    // with enqueueing threads.
+                    for (SubscriptionDeliveryCallback callback : unacquired) {
+                        callback.unacquire(controller);
+                    }
+                }
+            }
+
+            super.close();
+            consumers.remove(info.getConsumerId());
+        }
     }
 
     private static BooleanExpression parseSelector(ConsumerInfo info) throws FilterException {

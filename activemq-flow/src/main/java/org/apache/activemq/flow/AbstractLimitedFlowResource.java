@@ -120,4 +120,9 @@ public abstract class AbstractLimitedFlowResource<E> implements IFlowResource {
     public synchronized IFlowController<E> getFlowController(Flow flow) {
         return openControllers.get(flow);
     }
+    
+    public synchronized void close()
+    {
+        
+    }
 }

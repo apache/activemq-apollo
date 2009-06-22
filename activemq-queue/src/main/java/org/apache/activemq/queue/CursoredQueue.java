@@ -96,7 +96,11 @@ public abstract class CursoredQueue<V> {
 
     protected abstract void requestDispatch();
 
-    protected abstract void acknowledge(QueueElement<V> elem);
+    protected abstract Object getMutex();
+
+    protected abstract void onElementRemoved(QueueElement<V> qe);
+
+    protected abstract void onElementReenqueued(QueueElement<V> qe, ISourceController<?> controller);
 
     /**
      * Adds an element to the queue.
@@ -249,6 +253,11 @@ public abstract class CursoredQueue<V> {
         // used when inactive or pointing to an element
         // sequence number beyond the queue's limit.
         long sequence = -1;
+
+        //When an element on the queue is reenqueued, this
+        //is set to indicate that the cursor should go back 
+        //and consider the element:
+        long reenqueueSequence = -1;
 
         // The cursor is holding references for all
         // elements between first and last inclusive:
@@ -543,6 +552,12 @@ public abstract class CursoredQueue<V> {
         public final QueueElement<V> getNext() {
 
             try {
+
+                if (reenqueueSequence != -1) {
+                    reset(reenqueueSequence);
+                    reenqueueSequence = -1;
+                }
+
                 if (atEnd()) {
                     updateCurrent(null);
                     return null;
@@ -640,6 +655,16 @@ public abstract class CursoredQueue<V> {
             return true;
         }
 
+        public void onElementUnacquired(QueueElement<V> qe) {
+            if (qe.sequence < sequence) {
+                if (reenqueueSequence >= 0) {
+                    reenqueueSequence = Math.min(reenqueueSequence, qe.sequence);
+                } else {
+                    reenqueueSequence = qe.sequence;
+                }
+            }
+        }
+
         /**
          * 
          */
@@ -665,6 +690,10 @@ public abstract class CursoredQueue<V> {
         public boolean atEnd() {
             if (queue.isEmpty()) {
                 return true;
+            }
+
+            if (reenqueueSequence != -1) {
+                return false;
             }
 
             if (sequence > limit) {
@@ -806,7 +835,26 @@ public abstract class CursoredQueue<V> {
         }
 
         public final void acknowledge() {
-            queue.acknowledge(this);
+            synchronized (queue.getMutex()) {
+                delete();
+            }
+        }
+
+        public void unacquire(ISourceController<?> source) {
+            synchronized (queue.getMutex()) {
+                if (owner != null) {
+                    owner = null;
+                    if (!deleted) {
+                        redelivered = true;
+                        //TODO need to account for this memory space, and check 
+                        //load/unload:
+                        for (Cursor<V> c : queue.openCursors) {
+                            c.onElementUnacquired(this);
+                        }
+                    }
+                }
+                queue.requestDispatch();
+            }
         }
 
         public final boolean delete() {
@@ -819,22 +867,14 @@ public abstract class CursoredQueue<V> {
                 if (saved) {
                     queue.getQueueStore().deleteQueueElement(queue.getDescriptor(), elem);
                 }
+
                 elem = null;
                 unload(null);
+
+                queue.onElementRemoved(this);
                 return true;
             }
             return false;
-        }
-
-        public final void unacquire(ISourceController<?> source) {
-            owner = null;
-            if (isExpired()) {
-                acknowledge();
-            } else {
-                // TODO reset all cursors beyond this sequence number
-                // back to this element
-                throw new UnsupportedOperationException("Not yet implemented");
-            }
         }
 
         /**
@@ -916,6 +956,10 @@ public abstract class CursoredQueue<V> {
 
         }
 
+        public final boolean isRedelivery() {
+            return redelivered;
+        }
+
         private boolean unlinkable() {
             return softRefs == 0 && !loaded;
         }
@@ -954,6 +998,8 @@ public abstract class CursoredQueue<V> {
                     }
                     this.size = re.getElementSize();
                     this.expiration = re.getExpiration();
+                    //TODO Need to add redelivery to the store:
+                    //this.redelivered = re.getRedelivered();
                     // If the loader asked to add a soft ref do it:
                     if (softRef) {
                         addSoftRef();
@@ -1005,7 +1051,7 @@ public abstract class CursoredQueue<V> {
         }
 
         public final boolean isPagedOut() {
-            return elem == null;
+            return elem == null && !deleted;
         }
 
         public final boolean isLoaded() {
