@@ -699,7 +699,12 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
 
             // If the sub doesn't remove on dispatch pass it the callback
             SubscriptionDeliveryCallback callback = sub.isRemoveOnDispatch(qe.elem) ? null : qe;
-
+            // If the sub is a browser don't pass it a callback since it does not need to 
+            // delete messages
+            if( sub.isBrowser() ) { 
+                callback = null;
+            }
+            
             // See if the sink has room:
             qe.setAcquired(sub);
             if (sub.offer(qe.elem, this, callback)) {

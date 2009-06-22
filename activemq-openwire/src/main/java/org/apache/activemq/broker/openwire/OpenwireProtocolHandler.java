@@ -594,8 +594,10 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         public void ack(MessageAck info) {
             // TODO: The pending message queue could probably be optimized to
             // avoid having to create a new list here.
-            //if(info.isStandardAck())
-            {
+            if( info.isDeliveredAck() ) {
+                // This ack is just trying to expand the flow control window size.
+                limiter.onProtocolCredit(info.getMessageCount());
+            } else if(info.isStandardAck()) {
                 LinkedList<SubscriptionDeliveryCallback> acked = new LinkedList<SubscriptionDeliveryCallback>();
                 synchronized (this) {
                     MessageId id = info.getLastMessageId();
