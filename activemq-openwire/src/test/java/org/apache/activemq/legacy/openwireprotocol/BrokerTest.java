@@ -81,7 +81,7 @@ public class BrokerTest extends BrokerTestSupport {
         consumerInfo2.setRetroactive(true);
         consumerInfo2.setPrefetchSize(100);
         consumerInfo2.setNoLocal(true);
-        connection2.send(consumerInfo2);
+        connection2.request(consumerInfo2);
 
         // Send the messages
         connection1.send(createMessage(producerInfo1, destination, deliveryMode));
