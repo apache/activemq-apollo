@@ -1,17 +1,9 @@
-=========================================================================
-==  Apache Notice                                                      ==
-=========================================================================
+THIS NEEDS REVIEW BY A KNOWLEDGEABLE COMMITTER !!
 
-Apache ActiveMQ
-Copyright 2005-2008 The Apache Software Foundation
+ActiveMQ Protobuf
+Copyright 2005-2009 The Apache Software Foundation
 
 This product includes software developed by
 The Apache Software Foundation (http://www.apache.org/).
 
-=========================================================================
-==  Protocol Buffers Notice                                            ==
-=========================================================================
-
-This product includes software developed by the Protocol Buffers
-project (http://code.google.com/apis/protocolbuffers).
 

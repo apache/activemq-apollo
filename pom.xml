@@ -126,8 +126,7 @@
     <module>activemq-transport</module>
     <module>activemq-util</module>
     <module>kahadb</module>
-    <module>activemq-protobuf/activemq-protobuf</module>
-    <module>activemq-protobuf/activemq-protobuf-test</module>
+    <module>activemq-protobuf</module>
     <module>activemq-client</module>
     <module>activemq-network</module>
     <module>activemq-all</module>

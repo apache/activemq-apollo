@@ -16,28 +16,28 @@
   limitations under the License.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  
+
   <modelVersion>4.0.0</modelVersion>
-  
+
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>4</version>
+    <version>6</version>
   </parent>
 
   <groupId>org.apache.activemq.protobuf</groupId>
   <artifactId>activemq-protobuf-pom</artifactId>
   <version>1.1-SNAPSHOT</version>
-  
+
   <packaging>pom</packaging>
   <name>ActiveMQ Protocol Buffers POM</name>
 
   <description>
-    A Simpler Protocol Buffer Java API.  Comes with a built in proto file compiler and Java source code generator.
+    A Simpler Protocol Buffer Java API. Comes with a built in proto file compiler and Java source code generator.
   </description>
 
   <prerequisites>
-    <maven>2.0.8</maven>
+    <maven>2.0.10</maven>
   </prerequisites>
 
   <url>http://activemq.apache.org</url>
@@ -65,94 +65,55 @@
   </modules>
 
   <scm>
-    <connection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-protobuf/trunk</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-protobuf/trunk</developerConnection>
-    <url>http://svn.apache.org/viewvc/activemq/activemq-protobuf/trunk/</url>
+    <connection>scm:svn:https://svn.apache.org/repos/asf/activemq/sandbox/activemq-flow/activemq-protobuf</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/activemq/sandbox/activemq-flow/activemq-protobuf</developerConnection>
+    <url>http://svn.apache.org/viewvc/activemq/sandbox/activemq-flow/activemq-protobuf</url>
   </scm>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.4</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- internal protobuf dependencies -->
+      <dependency>
+        <groupId>org.apache.activemq.protobuf</groupId>
+        <artifactId>activemq-protobuf</artifactId>
+        <version>${version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq.protobuf</groupId>
+        <artifactId>activemq-protobuf-test</artifactId>
+        <version>${version}</version>
+      </dependency>
+
+
+    </dependencies>
+  </dependencyManagement>
 
   <build>
     <pluginManagement>
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>2.0.2</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-eclipse-plugin</artifactId>
-          <version>2.4</version>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>2.2-beta-4</version>
           <configuration>
-            <downloadSources>true</downloadSources>
-            <downloadJavadocs>true</downloadJavadocs>
+            <tarLongFileMode>gnu</tarLongFileMode>
           </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-gpg-plugin</artifactId>
-          <version>1.0-alpha-4</version>
-          <executions>
-            <execution>
-              <goals>
-                <goal>sign</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-install-plugin</artifactId>
-          <version>2.2</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>2.2</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-javadoc-plugin</artifactId>
-          <version>2.4</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-release-plugin</artifactId>
-          <version>2.0-beta-7</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-remote-resources-plugin</artifactId>
-          <version>1.0</version>
-          <executions>
-            <execution>
-              <goals>
-                <goal>process</goal>
-              </goals>
-              <configuration>
-                <properties>
-                  <projectName>${projectName}</projectName>
-                </properties>
-                <resourceBundles>
-                  <resourceBundle>org.apache:apache-jar-resource-bundle:1.4</resourceBundle>
-                </resourceBundles>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-source-plugin</artifactId>
-          <version>2.0.4</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-stage-plugin</artifactId>
-          <version>1.0-alpha-1</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.2</version>
+          <artifactId>maven-eclipse-plugin</artifactId>
+          <version>2.7</version>
+          <configuration>
+            <downloadSources>true</downloadSources>
+            <downloadJavadocs>true</downloadJavadocs>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.felix</groupId>
@@ -160,9 +121,9 @@
           <version>1.0.0</version>
         </plugin>
         <plugin>
-          <groupId>org.apache.geronimo.genesis.plugins</groupId>
-          <artifactId>tools-maven-plugin</artifactId>
-          <version>1.4</version>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>ianal-maven-plugin</artifactId>
+          <version>1.0-alpha-1</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -210,7 +171,45 @@
         <configuration>
           <source>1.5</source>
           <target>1.5</target>
+          <optimize>true</optimize>
+          <debug>true</debug>
+          <showDeprecation>true</showDeprecation>
+          <showWarnings>true</showWarnings>
         </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>[2.0.10,)</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>ianal-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>verify-legal-files</goal>
+            </goals>
+            <configuration>
+              <strict>true</strict>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -218,6 +217,11 @@
         <configuration>
           <forkMode>once</forkMode>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
+          <argLine>-enableassertions</argLine>
+          <failIfNoTests>false</failIfNoTests>
+          <includes>
+            <include>**/*Test.java</include>
+          </includes>
         </configuration>
       </plugin>
       <plugin>
@@ -232,35 +236,6 @@
         <artifactId>rat-maven-plugin</artifactId>
       </plugin>
 
-      <plugin>
-        <groupId>org.apache.geronimo.genesis.plugins</groupId>
-        <artifactId>tools-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>verify-legal-files</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>verify-legal-files</goal>
-            </goals>
-            <configuration>
-              <!-- Fail the build if no legal files were found -->
-              <strict>true</strict>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-remote-resources-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-stage-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
-      </plugin>
     </plugins>
   </build>
   <reporting>
@@ -297,78 +272,50 @@
 
   <profiles>
     <profile>
-      <id>release</id>
-
+      <id>apache-release</id>
+      <activation>
+        <property>
+          <name>apache-release</name>
+        </property>
+      </activation>
       <build>
         <plugins>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-release-plugin</artifactId>
-            <configuration>
-              <useReleaseProfile>false</useReleaseProfile>
-              <goals>deploy</goals>
-              <arguments>-Prelease</arguments>
-              <autoVersionSubmodules>true</autoVersionSubmodules>
-            </configuration>
-          </plugin>
-
-          <!-- We want a source jar -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-source-plugin</artifactId>
+            <artifactId>maven-assembly-plugin</artifactId>
             <executions>
               <execution>
                 <goals>
-                  <goal>jar</goal>
+                  <goal>single</goal>
                 </goals>
+                <phase>package</phase>
+                <configuration>
+                  <runOnlyAtExecutionRoot>true</runOnlyAtExecutionRoot>
+                  <descriptorRefs>
+                    <descriptorRef>
+                      source-release
+                    </descriptorRef>
+                  </descriptorRefs>
+                </configuration>
               </execution>
             </executions>
+            <dependencies>
+              <dependency>
+                <!-- apache version not yet released -->
+                <!--<groupId>org.apache</groupId>-->
+                <groupId>org.apache.geronimo.genesis</groupId>
+                <artifactId>apache-source-release-assembly-descriptor</artifactId>
+                <!-- apache version not yet known -->
+                <version>2.0</version>
+              </dependency>
+            </dependencies>
           </plugin>
-
-          <!-- We want to sign the artifact, the POM, and all attached artifacts -->
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <inherited>true</inherited>
+            <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
-              <passphrase>${gpg.passphrase}</passphrase>
+              <test>false</test>
             </configuration>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-
-          <!-- We want to deploy the artifact to a staging location for perusal -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-deploy-plugin</artifactId>
-            <inherited>true</inherited>
-            <configuration>
-                <altDeploymentRepository>${staging.altRepository}/${siteId}</altDeploymentRepository>
-              <updateReleaseInfo>true</updateReleaseInfo>
-            </configuration>
-          </plugin>
-
-          <!-- We want the JavaDoc JAR published with the release -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <inherited>true</inherited>
-            <configuration>
-              <source>1.5</source>
-            </configuration>
-            <executions>
-              <execution>
-                <id>attach-javadocs</id>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
           </plugin>
         </plugins>
       </build>
