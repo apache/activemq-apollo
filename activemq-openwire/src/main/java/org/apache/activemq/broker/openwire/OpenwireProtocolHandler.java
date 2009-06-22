@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 
-import org.apache.activemq.Service;
 import org.apache.activemq.apollo.WindowLimiter;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerConnection;
@@ -71,7 +70,6 @@ import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.filter.LogicExpression;
 import org.apache.activemq.filter.NoLocalExpression;
-import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
@@ -125,31 +123,36 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                         }
                     };
                     connections.put(info.getConnectionId(), connection);
+                    
+                    // Connections have an implicitly created "default" session identified by session id = -1
+                    SessionId sessionId = new SessionId(info.getConnectionId(), -1);
+                    addSession(sessionId, connection);
                 }
                 return ack(info);
             }
 
             public Response processAddSession(final SessionInfo info) throws Exception {
-                ClientContext connection = connections.get(info.getSessionId().getParentId());
+                final SessionId sessionId = info.getSessionId();
+                ClientContext connection = connections.get(sessionId.getParentId());
                 if (connection == null) {
-                    throw new IllegalStateException(host.getHostName() + " Cannot add a session to a connection that had not been registered: " + info.getSessionId().getParentId());
+                    throw new IllegalStateException(host.getHostName() + " Cannot add a session to a connection that had not been registered: " + sessionId.getParentId());
                 }
 
-                if (!sessions.containsKey(info.getSessionId())) {
-
-                    ClientContext session = new AbstractClientContext<MessageDelivery>(info.getSessionId().toString(), connection) {
-                        SessionInfo sessioninfo = info;
-
-                        public void close() {
-                            super.close();
-                            sessions.remove(sessioninfo.getSessionId());
-                        }
-                    };
-
-                    sessions.put(info.getSessionId(), session);
+                if (!sessions.containsKey(sessionId)) {
+                    addSession(sessionId, connection);
                 }
 
                 return ack(info);
+            }
+
+            private void addSession(final SessionId sessionId, ClientContext connection) {
+                ClientContext session = new AbstractClientContext<MessageDelivery>(sessionId.toString(), connection) {
+                    public void close() {
+                        super.close();
+                        sessions.remove(sessionId);
+                    }
+                };
+                sessions.put(sessionId, session);
             }
 
             public Response processAddProducer(ProducerInfo info) throws Exception {
