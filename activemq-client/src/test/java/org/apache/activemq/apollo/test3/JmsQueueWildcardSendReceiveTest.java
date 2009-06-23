@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.test3;
+package org.apache.activemq.apollo.test3;
 
 import javax.jms.DeliveryMode;
 import javax.jms.Destination;
@@ -25,7 +25,6 @@ import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
-import org.apache.activemq.apollo.test3.JmsTopicSendReceiveTest;
 import org.apache.activemq.command.ActiveMQDestination;
 
 /**

@@ -18,11 +18,13 @@ package org.apache.activemq.apollo.broker;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
+import org.apache.activemq.apollo.broker.path.PathFilter;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.protobuf.AsciiBuffer;
@@ -164,6 +166,10 @@ public class VirtualHost implements Service {
             Domain domain = router.getDomain(dest.getDomain());
             domain.bind(dest.getName(), queue);
             queues.put(dest.getName(), queue);
+            
+            for (QueueLifecyleListener l : queueLifecyleListeners) {
+                l.onCreate(queue);
+            }
         }
         queue.start();
         return queue;
@@ -174,41 +180,55 @@ public class VirtualHost implements Service {
     }
 
     public BrokerSubscription createSubscription(ConsumerContext consumer) throws Exception {
-        Destination destination = consumer.getDestination();
-        BrokerSubscription sub = null;
+        return createSubscription(consumer, consumer.getDestination());
+    }
 
-        if (consumer.isDurable()) {
-            DurableSubscription dsub = durableSubs.get(consumer.getSubscriptionName());
-            if (dsub == null) {
-                ExclusivePersistentQueue<Long, MessageDelivery> queue = queueStore.createDurableQueue(consumer.getSubscriptionName());
-                queue.start();
-                dsub = new DurableSubscription(this, destination, consumer.getSelectorExpression(), queue);
-                durableSubs.put(consumer.getSubscriptionName(), dsub);
+    public BrokerSubscription createSubscription(ConsumerContext consumer, Destination destination) throws Exception {
+        
+        // First handle composite destinations..  
+        Collection<Destination> destinations = destination.getDestinations();
+        if(destinations != null) {
+            ArrayList<BrokerSubscription> subs = new ArrayList<BrokerSubscription>(destinations.size());
+            for (Destination childDest : destinations) {
+                subs.add(createSubscription(consumer, childDest));
             }
-            sub = dsub;
-        } else {
-            if(destination.getDestinations() != null)
-            {
-                sub = new MultiSubscription(this, destination, consumer.getSelectorExpression());
-            }
-            else
-            {
-                if (destination.getDomain().equals(Router.TOPIC_DOMAIN) || destination.getDomain().equals(Router.TEMP_TOPIC_DOMAIN) ) {
-                    sub = new TopicSubscription(this, destination, consumer.getSelectorExpression());
-                } else {
-                    Queue queue = queues.get(destination.getName());
-                    if( queue == null ) {
-                    	if( consumer.autoCreateDestination() ) {
-                    		queue = createQueue(destination);
-                    	} else {
-                    		throw new IllegalStateException("The queue does not exist: "+destination.getName());
-                    	}
-                    }
-                    sub = new Queue.QueueSubscription(queue);
+            return new CompositeSubscription(destination, subs);
+        }
+                
+        // If it's a Topic...
+        if (destination.getDomain().equals(Router.TOPIC_DOMAIN) || destination.getDomain().equals(Router.TEMP_TOPIC_DOMAIN) ) {
+            
+            // It might be a durable subscription on the topic
+            if (consumer.isDurable()) {
+                DurableSubscription dsub = durableSubs.get(consumer.getSubscriptionName());
+                if (dsub == null) {
+                    ExclusivePersistentQueue<Long, MessageDelivery> queue = queueStore.createDurableQueue(consumer.getSubscriptionName());
+                    queue.start();
+                    dsub = new DurableSubscription(this, destination, consumer.getSelectorExpression(), queue);
+                    durableSubs.put(consumer.getSubscriptionName(), dsub);
                 }
+                return dsub;
+            }
+
+            // return a standard subscription
+            return new TopicSubscription(this, destination, consumer.getSelectorExpression());
+        }
+        
+        // It looks like a wild card subscription on a queue.. 
+        if( PathFilter.containsWildCards(destination.getName()) ){
+            return new WildcardQueueSubscription(this, destination, consumer);
+        }
+
+        // It has to be a Queue subscription then..
+        Queue queue = queues.get(destination.getName());
+        if( queue == null ) {
+            if( consumer.autoCreateDestination() ) {
+                queue = createQueue(destination);
+            } else {
+                throw new IllegalStateException("The queue does not exist: "+destination.getName());
             }
         }
-        return sub;
+        return new Queue.QueueSubscription(queue);
     }
 
 	public Broker getBroker() {
@@ -218,4 +238,30 @@ public class VirtualHost implements Service {
 	public void setBroker(Broker broker) {
 		this.broker = broker;
 	}
+	
+	interface QueueLifecyleListener {
+	    
+	    /**
+	     * A destination has bean created
+	     * @param destination
+	     */
+        public void onCreate(Queue queue);
+        
+        /**
+         * A destination has bean destroyed 
+         * @param destination
+         */
+        public void onDestroy(Queue queue);
+                
+	}
+	
+	ArrayList<QueueLifecyleListener> queueLifecyleListeners = new ArrayList<QueueLifecyleListener>();
+
+	synchronized public void addDestinationLifecyleListener(QueueLifecyleListener listener) {
+        queueLifecyleListeners.add(listener);
+    }
+
+    synchronized public void removeDestinationLifecyleListener(QueueLifecyleListener listener) {
+        queueLifecyleListeners.add(listener);
+    }
 }

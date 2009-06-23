@@ -20,7 +20,7 @@ import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
 
 public interface BrokerSubscription {
 
-    public void connect(ConsumerContext subscription) throws UserAlreadyConnectedException ;
+    public void connect(ConsumerContext subscription) throws Exception ;
 
     public void disconnect(ConsumerContext subscription);
     
