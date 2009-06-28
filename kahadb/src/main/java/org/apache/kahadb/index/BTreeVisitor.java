@@ -24,17 +24,21 @@ import java.util.List;
  * @param <Key>
  * @param <Value>
  */
-public interface BTreeVisitor<Key,Value> {
-    
+public interface BTreeVisitor<Key, Value> {
+
     /**
-     * Do you want to visit the range of BTree entries between the first and and second key?
+     * Do you want to visit the range of BTree entries between the first and and
+     * second key?
      * 
-     * @param first if null indicates the range of values before the second key. 
-     * @param second if null indicates the range of values after the first key.
-     * @return true if you want to visit the values between the first and second key.
+     * @param first
+     *            if null indicates the range of values before the second key.
+     * @param second
+     *            if null indicates the range of values after the first key.
+     * @return true if you want to visit the values between the first and second
+     *         key.
      */
     boolean isInterestedInKeysBetween(Key first, Key second);
-    
+
     /**
      * The keys and values of a BTree leaf node.
      * 
@@ -42,97 +46,155 @@ public interface BTreeVisitor<Key,Value> {
      * @param values
      */
     void visit(List<Key> keys, List<Value> values);
-    
-    
-    abstract class GTVisitor<Key extends Comparable<Key>, Value> implements BTreeVisitor<Key, Value>{
-		final private Key value;
 
-		public GTVisitor(Key value) {
-			this.value = value;
-		}
+    /**
+     * If the visitor wishes to
+     * 
+     * @return
+     */
+    boolean isSatiated();
 
-		public boolean isInterestedInKeysBetween(Key first, Key second) {
-        	return second==null || second.compareTo(value)>0;
-		}
+    abstract class GTVisitor<Key extends Comparable<? super Key>, Value> implements BTreeVisitor<Key, Value> {
+        final private Key value;
+        int matches = Integer.MAX_VALUE;
+        boolean limited;
 
-		public void visit(List<Key> keys, List<Value> values) {
-			for( int i=0; i < keys.size(); i++) {
-				Key key = keys.get(i);
-				if( key.compareTo(value)>0 ) {
-					matched(key, values.get(i));
-				}
-			}
-		}
+        public GTVisitor(Key value) {
+            this.value = value;
+        }
 
-		abstract protected void matched(Key key, Value value);
+        public GTVisitor(Key value, int limit) {
+            this.value = value;
+            limited = true;
+            matches = limit;
+        }
+
+        public boolean isInterestedInKeysBetween(Key first, Key second) {
+            return second == null || second.compareTo(value) > 0;
+        }
+
+        public void visit(List<Key> keys, List<Value> values) {
+            for (int i = 0; i < keys.size() && !isSatiated(); i++) {
+                Key key = keys.get(i);
+                if (key.compareTo(value) > 0) {
+                    matched(key, values.get(i));
+                    if (limited) matches--;
+                }
+            }
+        }
+
+        public boolean isSatiated() {
+            return limited && matches <= 0;
+        }
+
+        abstract protected void matched(Key key, Value value);
     }
-    
-    abstract class GTEVisitor<Key extends Comparable<Key>, Value> implements BTreeVisitor<Key, Value>{
-		final private Key value;
 
-		public GTEVisitor(Key value) {
-			this.value = value;
-		}
+    abstract class GTEVisitor<Key extends Comparable<? super Key>, Value> implements BTreeVisitor<Key, Value> {
+        final private Key value;
+        int matches = Integer.MAX_VALUE;
+        boolean limited;
 
-		public boolean isInterestedInKeysBetween(Key first, Key second) {
-        	return second==null || second.compareTo(value)>=0;
-		}
+        public GTEVisitor(Key value) {
+            this.value = value;
+        }
+        
+        public GTEVisitor(Key value, int limit) {
+            this.value = value;
+            limited = true;
+            matches = limit;
+        }
 
-		public void visit(List<Key> keys, List<Value> values) {
-			for( int i=0; i < keys.size(); i++) {
-				Key key = keys.get(i);
-				if( key.compareTo(value)>=0 ) {
-					matched(key, values.get(i));
-				}
-			}
-		}
+        public boolean isInterestedInKeysBetween(Key first, Key second) {
+            return second == null || second.compareTo(value) >= 0;
+        }
 
-		abstract protected void matched(Key key, Value value);
+        public void visit(List<Key> keys, List<Value> values) {
+            for (int i = 0; i < keys.size() && !isSatiated(); i++) {
+                Key key = keys.get(i);
+                if (key.compareTo(value) >= 0) {
+                    matched(key, values.get(i));
+                    if (limited) matches--;
+                }
+            }
+        }
+
+        public boolean isSatiated() {
+            return limited && matches <= 0;
+        }
+
+        abstract protected void matched(Key key, Value value);
     }
-    
-    abstract class LTVisitor<Key extends Comparable<Key>, Value> implements BTreeVisitor<Key, Value>{
-		final private Key value;
 
-		public LTVisitor(Key value) {
-			this.value = value;
-		}
+    abstract class LTVisitor<Key extends Comparable<? super Key>, Value> implements BTreeVisitor<Key, Value> {
+        final private Key value;
+        int matches = Integer.MAX_VALUE;
+        boolean limited;
 
-		public boolean isInterestedInKeysBetween(Key first, Key second) {
-        	return first==null || first.compareTo(value)<0;
-		}
+        public LTVisitor(Key value) {
+            this.value = value;
+        }
+        
+        public LTVisitor(Key value, int limit) {
+            this.value = value;
+            limited = true;
+            matches = limit;
+        }
 
-		public void visit(List<Key> keys, List<Value> values) {
-			for( int i=0; i < keys.size(); i++) {
-				Key key = keys.get(i);
-				if( key.compareTo(value)<0 ) {
-					matched(key, values.get(i));
-				}
-			}
-		}
+        public boolean isInterestedInKeysBetween(Key first, Key second) {
+            return first == null || first.compareTo(value) < 0;
+        }
 
-		abstract protected void matched(Key key, Value value);
+        public void visit(List<Key> keys, List<Value> values) {
+            for (int i = 0; i < keys.size() && !isSatiated(); i++) {
+                Key key = keys.get(i);
+                if (key.compareTo(value) < 0) {
+                    matched(key, values.get(i));
+                    if (limited) matches--;
+                }
+            }
+        }
+
+        public boolean isSatiated() {
+            return limited && matches <= 0;
+        }
+
+        abstract protected void matched(Key key, Value value);
     }
-    
-    abstract class LTEVisitor<Key extends Comparable<Key>, Value> implements BTreeVisitor<Key, Value>{
-		final private Key value;
 
-		public LTEVisitor(Key value) {
-			this.value = value;
-		}
+    abstract class LTEVisitor<Key extends Comparable<? super Key>, Value> implements BTreeVisitor<Key, Value> {
+        final private Key value;
+        int matches = Integer.MAX_VALUE;
+        boolean limited;
 
-		public boolean isInterestedInKeysBetween(Key first, Key second) {
-        	return first==null || first.compareTo(value)<=0;
-		}
+        public LTEVisitor(Key value) {
+            this.value = value;
+        }
 
-		public void visit(List<Key> keys, List<Value> values) {
-			for( int i=0; i < keys.size(); i++) {
-				Key key = keys.get(i);
-				if( key.compareTo(value)<=0 ) {
-					matched(key, values.get(i));
-				}
-			}
-		}
+        public LTEVisitor(Key value, int limit) {
+            this.value = value;
+            limited = true;
+            matches = limit;
+        }
+        
+        public boolean isInterestedInKeysBetween(Key first, Key second) {
+            return first == null || first.compareTo(value) <= 0;
+        }
 
-		abstract protected void matched(Key key, Value value);
+        public void visit(List<Key> keys, List<Value> values) {
+            for (int i = 0; i < keys.size() && !isSatiated(); i++) {
+                Key key = keys.get(i);
+                if (key.compareTo(value) <= 0) {
+                    matched(key, values.get(i));
+                    if (limited) matches--;
+                }
+            }
+        }
+
+        public boolean isSatiated() {
+            return limited && matches <= 0;
+        }
+
+        abstract protected void matched(Key key, Value value);
     }
 }

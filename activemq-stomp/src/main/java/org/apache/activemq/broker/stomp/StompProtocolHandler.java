@@ -273,7 +273,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         private Destination destination;
         private String ackMode;
 
-        private LinkedHashMap<AsciiBuffer, SubscriptionDeliveryCallback> sentMessageIds = new LinkedHashMap<AsciiBuffer, SubscriptionDeliveryCallback>();
+        private LinkedHashMap<AsciiBuffer, SubscriptionDelivery<MessageDelivery>> sentMessageIds = new LinkedHashMap<AsciiBuffer, SubscriptionDelivery<MessageDelivery>>();
 
         private boolean durable;
 
@@ -388,19 +388,19 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
         /* (non-Javadoc)
          * @see org.apache.activemq.broker.protocol.ProtocolHandler.ConsumerContext#send(org.apache.activemq.broker.MessageDelivery, org.apache.activemq.flow.ISourceController, org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback)
          */
-        public void add(MessageDelivery message, ISourceController<?> controller, SubscriptionDeliveryCallback callback) {
+        public void add(MessageDelivery message, ISourceController<?> controller, SubscriptionDelivery<MessageDelivery> callback) {
             addInternal(message, controller, callback);
         }
         
         /* (non-Javadoc)
          * @see org.apache.activemq.queue.Subscription#offer(java.lang.Object, org.apache.activemq.flow.ISourceController, org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback)
          */
-        public boolean offer(MessageDelivery message, ISourceController<?> controller, SubscriptionDeliveryCallback callback) {
+        public boolean offer(MessageDelivery message, ISourceController<?> controller, SubscriptionDelivery<MessageDelivery> callback) {
             //FIXME need a controller:
             return false;
         }
         
-        private void addInternal(MessageDelivery message, ISourceController<?> controller, SubscriptionDeliveryCallback callback)
+        private void addInternal(MessageDelivery message, ISourceController<?> controller, SubscriptionDelivery<MessageDelivery> callback)
         {
             StompFrame frame = message.asType(StompFrame.class);
             if (ackMode == StompSubscription.CLIENT_ACK || ackMode == StompSubscription.INDIVIDUAL_ACK) {

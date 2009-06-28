@@ -21,13 +21,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.PrioritySizeLimiter;
 import org.apache.activemq.flow.SizeLimiter;
+import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.ExclusivePersistentQueue;
 import org.apache.activemq.queue.IPartitionedQueue;
 import org.apache.activemq.queue.IQueue;
@@ -53,6 +54,48 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
     private BrokerDatabase database;
     private IDispatcher dispatcher;
 
+    private static HashMap<String, ProtocolHandler> protocolHandlers = new HashMap<String, ProtocolHandler>();
+    private static final BrokerDatabase.MessageRecordMarshaller<MessageDelivery> MESSAGE_MARSHALLER = new BrokerDatabase.MessageRecordMarshaller<MessageDelivery>() {
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.apollo.broker.BrokerDatabase.MessageRecordMarshaller
+         * #marshal(java.lang.Object)
+         */
+        public MessageRecord marshal(MessageDelivery element) {
+            return element.createMessageRecord();
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.apollo.broker.BrokerDatabase.MessageRecordMarshaller
+         * #unMarshall(org.apache.activemq.broker.store.Store.MessageRecord)
+         */
+        public MessageDelivery unMarshall(MessageRecord record, QueueDescriptor queue) {
+            ProtocolHandler handler = protocolHandlers.get(record.getEncoding().toString());
+            if (handler == null) {
+                try {
+                    handler = ProtocolHandlerFactory.createProtocolHandler(record.getEncoding().toString());
+                    protocolHandlers.put(record.getEncoding().toString(), handler);
+                } catch (Throwable thrown) {
+                    throw new RuntimeException("Unknown message format" + record.getEncoding().toString(), thrown);
+                }
+            }
+            try {
+                return handler.createMessageDelivery(record);
+            } catch (IOException ioe) {
+                throw new RuntimeException(ioe);
+            }
+        }
+    };
+
+    final BrokerDatabase.MessageRecordMarshaller<MessageDelivery> getMessageMarshaller() {
+        return MESSAGE_MARSHALLER;
+    }
+
     private static final Mapper<Long, MessageDelivery> EXPIRATION_MAPPER = new Mapper<Long, MessageDelivery>() {
         public Long map(MessageDelivery element) {
             return element.getExpiration();
@@ -63,14 +106,35 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         public Integer map(MessageDelivery element) {
             return element.getFlowLimiterSize();
         }
+    };    
+
+    public static final Mapper<Integer, MessageDelivery> PRIORITY_MAPPER = new Mapper<Integer, MessageDelivery>() {
+        public Integer map(MessageDelivery element) {
+            return element.getPriority();
+        }
     };
 
-    private final short PARTITION_TYPE = 0;
-    private final short SHARED_QUEUE_TYPE = 1;
-    private final short DURABLE_QUEUE_TYPE = 2;
+    static public final Mapper<Long, MessageDelivery> KEY_MAPPER = new Mapper<Long, MessageDelivery>() {
+        public Long map(MessageDelivery element) {
+            return element.getStoreTracking();
+        }
+    };
+
+    static public final Mapper<Integer, MessageDelivery> PARTITION_MAPPER = new Mapper<Integer, MessageDelivery>() {
+        public Integer map(MessageDelivery element) {
+            // we modulo 10 to have at most 10 partitions which the producers
+            // gets split across.
+            return (int) (element.getProducerId().hashCode() % 10);
+        }
+    };
+    
+    public static final short SUBPARTITION_TYPE = 0;
+    public static final short SHARED_QUEUE_TYPE = 1;
+    public static final short DURABLE_QUEUE_TYPE = 2;
+    public static short TRANSACTION_QUEUE_TYPE = 3;
 
     private final HashMap<String, IQueue<Long, MessageDelivery>> sharedQueues = new HashMap<String, IQueue<Long, MessageDelivery>>();
-    private final HashMap<String, ExclusivePersistentQueue<Long, MessageDelivery>> durableQueues = new HashMap<String, ExclusivePersistentQueue<Long, MessageDelivery>>();
+    private final HashMap<String, IQueue<Long, MessageDelivery>> durableQueues = new HashMap<String, IQueue<Long, MessageDelivery>>();
 
     private Mapper<Integer, MessageDelivery> partitionMapper;
 
@@ -79,7 +143,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
     // Be default we don't page out elements to disk.
     private static final int DEFAULT_SHARED_QUEUE_SIZE = DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD;
     //private static final int DEFAULT_SHARED_QUEUE_SIZE = 1024 * 1024 * 10;
-    
+
     private static long dynamicQueueCounter = 0;
 
     private static final PersistencePolicy<MessageDelivery> SHARED_QUEUE_PERSISTENCE_POLICY = new PersistencePolicy<MessageDelivery>() {
@@ -122,7 +186,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
     // Be default we don't page out elements to disk.
     //private static final int DEFAULT_DURABLE_QUEUE_SIZE = DEFAULT_DURABLE_QUEUE_PAGING_THRESHOLD;
     private static final int DEFAULT_DURABLE_QUEUE_SIZE = 1024 * 1024 * 10;
-    
+
     private static final PersistencePolicy<MessageDelivery> DURABLE_QUEUE_PERSISTENCE_POLICY = new PersistencePolicy<MessageDelivery>() {
 
         private static final boolean PAGING_ENABLED = DEFAULT_DURABLE_QUEUE_SIZE > DEFAULT_DURABLE_QUEUE_PAGING_THRESHOLD;
@@ -158,26 +222,6 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         }
     };
 
-    public static final Mapper<Integer, MessageDelivery> PRIORITY_MAPPER = new Mapper<Integer, MessageDelivery>() {
-        public Integer map(MessageDelivery element) {
-            return element.getPriority();
-        }
-    };
-
-    static public final Mapper<Long, MessageDelivery> KEY_MAPPER = new Mapper<Long, MessageDelivery>() {
-        public Long map(MessageDelivery element) {
-            return element.getStoreTracking();
-        }
-    };
-
-    static public final Mapper<Integer, MessageDelivery> PARTITION_MAPPER = new Mapper<Integer, MessageDelivery>() {
-        public Integer map(MessageDelivery element) {
-            // we modulo 10 to have at most 10 partitions which the producers
-            // gets split across.
-            return (int) (element.getProducerId().hashCode() % 10);
-        }
-    };
-
     public void setDatabase(BrokerDatabase database) {
         this.database = database;
     }
@@ -201,13 +245,13 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         results = database.listQueues(DURABLE_QUEUE_TYPE);
         while (results.hasNext()) {
             QueueQueryResult loaded = results.next();
-            ExclusivePersistentQueue<Long, MessageDelivery> queue = createRestoredDurableQueue(loaded);
+            IQueue<Long, MessageDelivery> queue = createRestoredDurableQueue(loaded);
             durableQueues.put(queue.getDescriptor().getQueueName().toString(), queue);
             LOG.info("Loaded Durable " + queue.getResourceName() + " Messages: " + queue.getEnqueuedCount() + " Size: " + queue.getEnqueuedSize());
 
         }
     }
-
+    
     private IQueue<Long, MessageDelivery> createRestoredQueue(IPartitionedQueue<Long, MessageDelivery> parent, QueueQueryResult loaded) throws IOException {
 
         IQueue<Long, MessageDelivery> queue;
@@ -237,7 +281,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
 
     }
 
-    private ExclusivePersistentQueue<Long, MessageDelivery> createRestoredDurableQueue(QueueQueryResult loaded) throws IOException {
+    private IQueue<Long, MessageDelivery> createRestoredDurableQueue(QueueQueryResult loaded) throws IOException {
 
         ExclusivePersistentQueue<Long, MessageDelivery> queue = createDurableQueueInternal(loaded.getDescriptor().getQueueName().toString(), loaded.getDescriptor().getQueueType());
         queue.initialize(loaded.getFirstSequence(), loaded.getLastSequence(), loaded.getCount(), loaded.getSize());
@@ -258,6 +302,11 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
 
     }
 
+    public IQueue<Long, MessageDelivery> getQueue(AsciiBuffer queueName) {
+        //TODO
+        return null;
+    }
+
     public Collection<IQueue<Long, MessageDelivery>> getSharedQueues() {
         synchronized (this) {
             Collection<IQueue<Long, MessageDelivery>> c = sharedQueues.values();
@@ -267,8 +316,8 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         }
     }
 
-    public ExclusivePersistentQueue<Long, MessageDelivery> createDurableQueue(String name) {
-        ExclusivePersistentQueue<Long, MessageDelivery> queue = null;
+    public IQueue<Long, MessageDelivery> createDurableQueue(String name) {
+        IQueue<Long, MessageDelivery> queue = null;
         synchronized (this) {
             queue = durableQueues.get(name);
             if (queue == null) {
@@ -283,12 +332,10 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         return queue;
     }
 
-    
-    
     public ExclusivePersistentQueue<Long, MessageDelivery> createExclusivePersistentQueue() {
         ExclusivePersistentQueue<Long, MessageDelivery> queue = null;
         synchronized (this) {
-            String name = "temp:"+(dynamicQueueCounter++);
+            String name = "temp:" + (dynamicQueueCounter++);
             queue = createDurableQueueInternal(name, USE_PRIORITY_QUEUES ? QueueDescriptor.SHARED_PRIORITY : QueueDescriptor.SHARED);
             queue.getDescriptor().setApplicationType(DURABLE_QUEUE_TYPE);
             queue.initialize(0, 0, 0, 0);
@@ -296,12 +343,11 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         }
         return queue;
     }
-    
-    
-    public Collection<ExclusivePersistentQueue<Long, MessageDelivery>> getDurableQueues() {
+
+    public Collection<IQueue<Long, MessageDelivery>> getDurableQueues() {
         synchronized (this) {
-            Collection<ExclusivePersistentQueue<Long, MessageDelivery>> c = durableQueues.values();
-            ArrayList<ExclusivePersistentQueue<Long, MessageDelivery>> ret = new ArrayList<ExclusivePersistentQueue<Long, MessageDelivery>>(c.size());
+            Collection<IQueue<Long, MessageDelivery>> c = durableQueues.values();
+            ArrayList<IQueue<Long, MessageDelivery>> ret = new ArrayList<IQueue<Long, MessageDelivery>>(c.size());
             ret.addAll(c);
             return ret;
         }
@@ -397,7 +443,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
             throw new IllegalArgumentException("Unknown queue type" + type);
         }
         }
-        ret.getDescriptor().setApplicationType(PARTITION_TYPE);
+        ret.getDescriptor().setApplicationType(SUBPARTITION_TYPE);
         ret.setDispatcher(dispatcher);
         ret.setStore(this);
         ret.setPersistencePolicy(SHARED_QUEUE_PERSISTENCE_POLICY);
@@ -419,8 +465,8 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
     }
 
     public final void restoreQueueElements(QueueDescriptor queue, boolean recordsOnly, long firstSequence, long maxSequence, int maxCount,
-            org.apache.activemq.queue.RestoreListener<MessageDelivery> listener) {
-        database.restoreMessages(queue, recordsOnly, firstSequence, maxSequence, maxCount, listener);
+            RestoreListener<MessageDelivery> listener) {
+        database.restoreQueueElements(queue, recordsOnly, firstSequence, maxSequence, maxCount, listener, MESSAGE_MARSHALLER);
     }
 
     public final void addQueue(QueueDescriptor queue) {

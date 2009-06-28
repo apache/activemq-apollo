@@ -226,7 +226,6 @@
         </dependency>
       </dependencies>
     </profile>
-    <!--
     <profile>
       <id>default-tools.jar</id>
       <activation>
@@ -246,7 +245,6 @@
         </dependency>
       </dependencies>
     </profile>
-  -->
   </profiles>
 
 </project>

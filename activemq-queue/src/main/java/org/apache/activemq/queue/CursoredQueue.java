@@ -28,7 +28,7 @@ import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
+import org.apache.activemq.queue.Subscription.SubscriptionDelivery;
 import org.apache.activemq.util.Comparators;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.SortedLinkedList;
@@ -727,7 +727,7 @@ public abstract class CursoredQueue<V> {
         }
     }
 
-    static class QueueElement<V> extends SortedLinkedListNode<QueueElement<V>> implements SubscriptionDeliveryCallback, SaveableQueueElement<V> {
+    static class QueueElement<V> extends SortedLinkedListNode<QueueElement<V>> implements SubscriptionDelivery<V>, SaveableQueueElement<V> {
 
         final long sequence;
         final long restoreBlock;
@@ -1155,6 +1155,13 @@ public abstract class CursoredQueue<V> {
 
         public String toString() {
             return "QueueElement " + sequence + " loaded: " + loaded + " elem loaded: " + !isPagedOut() + " owner: " + owner;
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.queue.Subscription.SubscriptionDelivery#getSourceQueueRemovalKey()
+         */
+        public long getSourceQueueRemovalKey() {
+            return sequence;
         }
 
     }

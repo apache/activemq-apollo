@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -45,6 +46,8 @@ import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
+import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.activemq.queue.RestoreListener;
 import org.apache.activemq.queue.RestoredElement;
@@ -67,8 +70,6 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     private AtomicBoolean running = new AtomicBoolean(false);
     private DatabaseListener listener;
 
-    private HashMap<String, ProtocolHandler> protocolHandlers = new HashMap<String, ProtocolHandler>();
-
     private final LinkedNodeList<OperationBase> opQueue;
     private AtomicBoolean notify = new AtomicBoolean(false);
     private Semaphore opsReady = new Semaphore(0);
@@ -90,6 +91,23 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
          *            The causing exception.
          */
         public void onDatabaseException(IOException ioe);
+    }
+
+    public static interface MessageRecordMarshaller<V> {
+        MessageRecord marshal(V element);
+
+        /**
+         * Called when a queue element is recovered from the store for a
+         * particular queue.
+         * 
+         * @param mRecord
+         *            The message record
+         * @param queue
+         *            The queue that the element is being restored to (or null
+         *            if not being restored for a queue)
+         * @return
+         */
+        V unMarshall(MessageRecord mRecord, QueueDescriptor queue);
     }
 
     public BrokerDatabase(Store store) {
@@ -169,6 +187,16 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         }
     }
 
+    /**
+     * A blocking operation that lists all queues of a given type:
+     * 
+     * @param type
+     *            The queue type
+     * @return A list of queues.
+     * 
+     * @throws Exception
+     *             If there was an error listing the queues.
+     */
     public Iterator<QueueQueryResult> listQueues(final short type) throws Exception {
         return store.execute(new Callback<Iterator<QueueQueryResult>, Exception>() {
 
@@ -177,6 +205,42 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
             }
 
         }, null);
+    }
+
+    /**
+     * A blocking operation that lists all entries in the specified map
+     * 
+     * @param map
+     *            The map to list
+     * @return A list of map entries
+     * 
+     * @throws Exception
+     *             If there was an error listing the queues.
+     */
+    public Map<AsciiBuffer, Buffer> listMapEntries(final AsciiBuffer map) throws Exception {
+        return store.execute(new Callback<Map<AsciiBuffer, Buffer>, Exception>() {
+
+            public Map<AsciiBuffer, Buffer> execute(Session session) throws Exception {
+                HashMap<AsciiBuffer, Buffer> ret = new HashMap<AsciiBuffer, Buffer>();
+                Iterator<AsciiBuffer> keys = session.mapEntryListKeys(map, null, -1);
+                while (keys.hasNext()) {
+                    AsciiBuffer key = keys.next();
+                    ret.put(key, session.mapEntryGet(map, key));
+                }
+
+                return ret;
+            }
+
+        }, null);
+    }
+
+    /**
+     * @param map The name of the map to update.
+     * @param key The key in the map to update.
+     * @param value The value to insert.
+     */
+    public OperationContext updateMapEntry(AsciiBuffer map, AsciiBuffer key, Buffer value) {
+        return add(new MapUpdateOperation(map, key, value), null, false) ;
     }
 
     /**
@@ -481,20 +545,20 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      * @return The {@link OperationContext} associated with the operation
      */
     public OperationContext saveMessage(SaveableQueueElement<MessageDelivery> queueElement, ISourceController<?> source, boolean delayable) {
-        return add(new AddMessageOperation(queueElement), source, delayable);
+        return add(new AddMessageOperation(queueElement), source, !delayable);
     }
 
     /**
      * Deletes the given message from the store for the given queue.
      * 
-     * @param delivery
-     *            The delivery.
+     * @param storeTracking
+     *            The tracking number of the element being deleted
      * @param queue
      *            The queue.
      * @return The {@link OperationContext} associated with the operation
      */
-    public OperationContext deleteMessage(MessageDelivery delivery, QueueDescriptor queue) {
-        return add(new DeleteMessageOperation(delivery.getStoreTracking(), queue), null, false);
+    public OperationContext deleteQueueElement(long storeTracking, QueueDescriptor queue) {
+        return add(new DeleteOperation(storeTracking, queue), null, false);
     }
 
     /**
@@ -519,8 +583,9 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      *            The listener to which messags should be passed.
      * @return The {@link OperationContext} associated with the operation
      */
-    public OperationContext restoreMessages(QueueDescriptor queue, boolean recordsOnly, long first, long maxSequence, int maxCount, RestoreListener<MessageDelivery> listener) {
-        return add(new RestoreMessageOperation(queue, recordsOnly, first, maxCount, maxSequence, listener), null, true);
+    public <T> OperationContext restoreQueueElements(QueueDescriptor queue, boolean recordsOnly, long first, long maxSequence, int maxCount, RestoreListener<T> listener,
+            MessageRecordMarshaller<T> marshaller) {
+        return add(new RestoreElementsOperation<T>(queue, recordsOnly, first, maxCount, maxSequence, listener, marshaller), null, true);
     }
 
     private void onDatabaseException(IOException ioe) {
@@ -783,18 +848,17 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         }
     }
 
-    private class DeleteMessageOperation extends OperationBase {
+    private class DeleteOperation extends OperationBase {
         private final long storeTracking;
         private QueueDescriptor queue;
 
-        public DeleteMessageOperation(long tracking, QueueDescriptor queue) {
+        public DeleteOperation(long tracking, QueueDescriptor queue) {
             this.storeTracking = tracking;
             this.queue = queue;
         }
 
         @Override
         public int getLimiterSize() {
-            // Might consider bumping this up to avoid too much accumulation?
             return BASE_MEM_SIZE + 8;
         }
 
@@ -821,22 +885,24 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         }
     }
 
-    private class RestoreMessageOperation extends OperationBase {
+    private class RestoreElementsOperation<V> extends OperationBase {
         private QueueDescriptor queue;
         private long firstKey;
         private int maxRecords;
         private long maxSequence;
         private boolean recordsOnly;
-        private RestoreListener<MessageDelivery> listener;
-        private Collection<RestoredElement<MessageDelivery>> msgs = null;
+        private RestoreListener<V> listener;
+        private Collection<RestoredElement<V>> msgs = null;
+        private MessageRecordMarshaller<V> marshaller;
 
-        RestoreMessageOperation(QueueDescriptor queue, boolean recordsOnly, long firstKey, int maxRecords, long maxSequence, RestoreListener<MessageDelivery> listener) {
+        RestoreElementsOperation(QueueDescriptor queue, boolean recordsOnly, long firstKey, int maxRecords, long maxSequence, RestoreListener<V> listener, MessageRecordMarshaller<V> marshaller) {
             this.queue = queue;
             this.recordsOnly = recordsOnly;
             this.firstKey = firstKey;
             this.maxRecords = maxRecords;
             this.maxSequence = maxSequence;
             this.listener = listener;
+            this.marshaller = marshaller;
         }
 
         @Override
@@ -850,9 +916,9 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
             Iterator<QueueRecord> records = null;
             try {
                 records = session.queueListMessagesQueue(queue, firstKey, maxSequence, maxRecords);
-                msgs = new LinkedList<RestoredElement<MessageDelivery>>();
+                msgs = new LinkedList<RestoredElement<V>>();
             } catch (KeyNotFoundException e) {
-                msgs = new ArrayList<RestoredElement<MessageDelivery>>(0);
+                msgs = new ArrayList<RestoredElement<V>>(0);
                 return;
             }
 
@@ -863,9 +929,10 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
             }
 
             while (qRecord != null) {
-                RestoredMessageImpl rm = new RestoredMessageImpl();
+                RestoredElementImpl<V> rm = new RestoredElementImpl<V>();
                 // TODO should update jms redelivery here.
                 rm.qRecord = qRecord;
+                rm.queue = queue;
                 count++;
 
                 // Set the next sequence number:
@@ -890,15 +957,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
                 if (!recordsOnly) {
                     try {
                         rm.mRecord = session.messageGetRecord(rm.qRecord.getMessageKey());
-                        rm.handler = protocolHandlers.get(rm.mRecord.getEncoding().toString());
-                        if (rm.handler == null) {
-                            try {
-                                rm.handler = ProtocolHandlerFactory.createProtocolHandler(rm.mRecord.getEncoding().toString());
-                                protocolHandlers.put(rm.mRecord.getEncoding().toString(), rm.handler);
-                            } catch (Throwable thrown) {
-                                throw new RuntimeException("Unknown message format" + rm.mRecord.getEncoding().toString(), thrown);
-                            }
-                        }
+                        rm.marshaller = marshaller;
                         msgs.add(rm);
                     } catch (KeyNotFoundException shouldNotHappen) {
                         shouldNotHappen.printStackTrace();
@@ -1037,20 +1096,51 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         }
     }
 
-    private class RestoredMessageImpl implements RestoredElement<MessageDelivery> {
+    private class MapUpdateOperation extends OperationBase {
+        final AsciiBuffer map;
+        final AsciiBuffer key;
+        final Buffer value;
+
+        MapUpdateOperation(AsciiBuffer mapName, AsciiBuffer key, Buffer value) {
+            this.map = mapName;
+            this.key = key;
+            this.value = value;
+        }
+
+        @Override
+        public int getLimiterSize() {
+            return BASE_MEM_SIZE + map.length + key.length + value.length;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.apollo.broker.BrokerDatabase.OperationBase#doExcecute
+         * (org.apache.activemq.broker.store.Store.Session)
+         */
+        @Override
+        protected void doExcecute(Session session) {
+            try {
+                session.mapEntryPut(map, key, value);
+            } catch (KeyNotFoundException e) {
+                throw new Store.FatalStoreException(e);
+            }
+        }
+    }
+
+    private class RestoredElementImpl<T> implements RestoredElement<T> {
         QueueRecord qRecord;
+        QueueDescriptor queue;
         MessageRecord mRecord;
-        ProtocolHandler handler;
+        MessageRecordMarshaller<T> marshaller;
         long nextSequence;
 
-        public MessageDelivery getElement() throws IOException {
+        public T getElement() throws IOException {
             if (mRecord == null) {
                 return null;
             }
-
-            BrokerMessageDelivery delivery = handler.createMessageDelivery(mRecord);
-            delivery.setFromDatabase(BrokerDatabase.this, mRecord);
-            return delivery;
+            return marshaller.unMarshall(mRecord, queue);
         }
 
         /*
@@ -1092,7 +1182,6 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
          * org.apache.activemq.queue.QueueStore.RestoredElement#getElementSize()
          */
         public int getElementSize() {
-            // TODO Auto-generated method stub
             return qRecord.getSize();
         }
 
@@ -1105,11 +1194,9 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         public long getExpiration() {
             return qRecord.getTte();
         }
-
     }
 
     public long allocateStoreTracking() {
-        // TODO Auto-generated method stub
         return store.allocateStoreTracking();
     }
 
@@ -1121,8 +1208,72 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         this.dispatcher = dispatcher;
     }
 
-	public Store getStore() {
-		return store;
-	}
+    public Store getStore() {
+        return store;
+    }
 
+    /**
+     * @param sqe
+     * @param source
+     * @param delayable
+     */
+    public <T> OperationContext saveQeueuElement(SaveableQueueElement<T> sqe, ISourceController<?> source, boolean delayable, MessageRecordMarshaller<T> marshaller) {
+        return add(new AddElementOpOperation<T>(sqe, delayable, marshaller), source, !delayable);
+    }
+
+    private class AddElementOpOperation<T> extends OperationBase {
+
+        private final SaveableQueueElement<T> op;
+        private MessageRecord record;
+        private boolean delayable;
+        private final MessageRecordMarshaller<T> marshaller;
+
+        public AddElementOpOperation(SaveableQueueElement<T> op, boolean delayable, MessageRecordMarshaller<T> marshaller) {
+            this.op = op;
+            this.delayable = delayable;
+            if (!delayable) {
+                record = marshaller.marshal(op.getElement());
+                this.marshaller = null;
+            } else {
+                this.marshaller = marshaller;
+            }
+        }
+
+        public boolean isDelayable() {
+            return delayable;
+        }
+
+        @Override
+        public int getLimiterSize() {
+            return record.getSize() + BASE_MEM_SIZE + 40;
+        }
+
+        @Override
+        protected void doExcecute(Session session) {
+
+            if (record == null) {
+                record = marshaller.marshal(op.getElement());
+            }
+
+            session.messageAdd(record);
+            try {
+                QueueRecord queueRecord = new QueueRecord();
+                queueRecord.setAttachment(null);
+                queueRecord.setMessageKey(record.getKey());
+                queueRecord.setSize(record.getSize());
+                queueRecord.setQueueKey(op.getSequenceNumber());
+                session.queueAddMessage(op.getQueueDescriptor(), queueRecord);
+            } catch (KeyNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onCommit() {
+        }
+
+        public String toString() {
+            return "AddTxOpOperation " + record.getKey() + super.toString();
+        }
+    }
 }

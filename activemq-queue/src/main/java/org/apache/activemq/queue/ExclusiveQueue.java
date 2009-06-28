@@ -21,7 +21,6 @@ import java.util.LinkedList;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowLimiter;
-import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
 
 public class ExclusiveQueue<E> extends AbstractFlowQueue<E> {

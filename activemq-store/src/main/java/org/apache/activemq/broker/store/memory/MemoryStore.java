@@ -415,12 +415,11 @@ public class MemoryStore implements Store {
         public void removeSubscription(AsciiBuffer name) {
             subscriptions.remove(name);
         }
-        
+
         /**
-         * @return A list of subscriptions 
+         * @return A list of subscriptions
          */
-        public Iterator<SubscriptionRecord> listSubscriptions()
-        {
+        public Iterator<SubscriptionRecord> listSubscriptions() {
             ArrayList<SubscriptionRecord> rc = new ArrayList<SubscriptionRecord>(subscriptions.size());
             rc.addAll(subscriptions.values());
             return rc.iterator();
@@ -543,16 +542,15 @@ public class MemoryStore implements Store {
         // Simple Key Value related methods could come in handy to store misc
         // data.
         // ///////////////////////////////////////////////////////////////////////////////
-        public boolean mapAdd(AsciiBuffer mapName) {
+        public void mapAdd(AsciiBuffer mapName) {
             if (maps.containsKey(mapName)) {
-                return false;
+                return;
             }
             maps.put(mapName, new TreeMap<AsciiBuffer, Buffer>());
-            return true;
         }
 
-        public boolean mapRemove(AsciiBuffer mapName) {
-            return maps.remove(mapName) != null;
+        public void mapRemove(AsciiBuffer mapName) {
+            maps.remove(mapName);
         }
 
         public Iterator<AsciiBuffer> mapList(AsciiBuffer first, int max) {
@@ -560,15 +558,22 @@ public class MemoryStore implements Store {
         }
 
         public Buffer mapEntryGet(AsciiBuffer mapName, AsciiBuffer key) throws KeyNotFoundException {
-            return get(maps, mapName).get(key);
+            TreeMap<AsciiBuffer, Buffer> map = get(maps, mapName);
+            return map.get(key);
         }
 
-        public Buffer mapEntryRemove(AsciiBuffer mapName, AsciiBuffer key) throws KeyNotFoundException {
-            return get(maps, mapName).remove(key);
+        public void mapEntryRemove(AsciiBuffer mapName, AsciiBuffer key) throws KeyNotFoundException {
+            TreeMap<AsciiBuffer, Buffer> map = get(maps, mapName);
+            map.remove(key);
         }
 
-        public Buffer mapEntryPut(AsciiBuffer mapName, AsciiBuffer key, Buffer value) throws KeyNotFoundException {
-            return get(maps, mapName).put(key, value);
+        public void mapEntryPut(AsciiBuffer mapName, AsciiBuffer key, Buffer value) {
+            TreeMap<AsciiBuffer, Buffer> map = maps.get(mapName);
+            if (map == null) {
+                mapAdd(mapName);
+                map = maps.get(mapName);
+            }
+            map.put(key, value);
         }
 
         public Iterator<AsciiBuffer> mapEntryListKeys(AsciiBuffer mapName, AsciiBuffer first, int max) throws KeyNotFoundException {

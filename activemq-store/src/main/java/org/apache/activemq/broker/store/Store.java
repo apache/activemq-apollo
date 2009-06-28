@@ -374,6 +374,8 @@ public interface Store extends Service {
         AsciiBuffer messageId;
         AsciiBuffer encoding;
         int size;
+        Buffer buffer;
+        Long streamKey;
 
         public int getSize() {
             return size;
@@ -382,10 +384,7 @@ public interface Store extends Service {
         public void setSize(int size) {
             this.size = size;
         }
-
-        Buffer buffer;
-        Long streamKey;
-
+        
         public Long getKey() {
             return key;
         }
@@ -683,15 +682,15 @@ public interface Store extends Service {
 
         public Iterator<AsciiBuffer> mapList(AsciiBuffer first, int max);
 
-        public boolean mapAdd(AsciiBuffer map);
+        public void mapAdd(AsciiBuffer map);
 
-        public boolean mapRemove(AsciiBuffer map);
+        public void mapRemove(AsciiBuffer map);
 
-        public Buffer mapEntryPut(AsciiBuffer map, AsciiBuffer key, Buffer value) throws KeyNotFoundException;
+        public void mapEntryPut(AsciiBuffer map, AsciiBuffer key, Buffer value) throws KeyNotFoundException;
 
         public Buffer mapEntryGet(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException;
 
-        public Buffer mapEntryRemove(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException;
+        public void mapEntryRemove(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException;
 
         public Iterator<AsciiBuffer> mapEntryListKeys(AsciiBuffer map, AsciiBuffer first, int max) throws KeyNotFoundException;
 

@@ -18,7 +18,6 @@ package org.apache.activemq.queue;
 
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
-import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.PriorityFlowController;
 import org.apache.activemq.flow.PrioritySizeLimiter;

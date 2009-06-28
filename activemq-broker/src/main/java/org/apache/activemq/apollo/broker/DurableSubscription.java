@@ -22,19 +22,19 @@ import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.queue.ExclusivePersistentQueue;
+import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.Subscription;
 
 public class DurableSubscription implements BrokerSubscription, DeliveryTarget {
 
-    private final ExclusivePersistentQueue<Long, MessageDelivery> queue;
+    private final IQueue<Long, MessageDelivery> queue;
     private final VirtualHost host;
     private final Destination destination;
     private Subscription<MessageDelivery> connectedSub;
     boolean started = false;
     BooleanExpression selector;
 
-    DurableSubscription(VirtualHost host, Destination destination, BooleanExpression selector, ExclusivePersistentQueue<Long, MessageDelivery> queue) {
+    DurableSubscription(VirtualHost host, Destination destination, BooleanExpression selector, IQueue<Long, MessageDelivery> queue) {
         this.host = host;
         this.queue = queue;
         this.destination = destination;

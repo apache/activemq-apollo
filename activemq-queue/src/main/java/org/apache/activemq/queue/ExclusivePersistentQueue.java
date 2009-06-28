@@ -26,11 +26,10 @@ import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.CursoredQueue.Cursor;
 import org.apache.activemq.queue.CursoredQueue.QueueElement;
-import org.apache.activemq.queue.QueueStore.PersistentQueue;
-import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
+import org.apache.activemq.queue.Subscription.SubscriptionDelivery;
 import org.apache.activemq.util.Mapper;
 
-public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> implements PersistentQueue<K, E> {
+public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> implements IQueue<K, E> {
     private CursoredQueue<E> queue;
     private final FlowController<E> controller;
     private final IFlowSizeLimiter<E> limiter;
@@ -285,7 +284,7 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
             QueueElement<E> qe = cursor.getNext();
             if (qe != null) {
                 // If the sub doesn't remove on dispatch set an ack listener:
-                SubscriptionDeliveryCallback callback = subscription.isRemoveOnDispatch(qe.elem) ? null : qe;
+                SubscriptionDelivery<E> callback = subscription.isRemoveOnDispatch(qe.elem) ? null : qe;
 
                 // See if the sink has room:
                 qe.setAcquired(subscription);
@@ -383,7 +382,7 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
     /**
      * @return The count of the elements in this queue or -1 if not yet known.
      */
-    public synchronized long getEnqueuedCount() {
+    public synchronized int getEnqueuedCount() {
         if (!initialized) {
             return -1;
         }

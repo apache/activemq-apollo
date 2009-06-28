@@ -1,0 +1,381 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.activemq.apollo.broker;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+
+import javax.transaction.xa.Xid;
+
+import org.apache.activemq.apollo.broker.BrokerDatabase.OperationContext;
+import org.apache.activemq.apollo.broker.Transaction.TxOp;
+import org.apache.activemq.broker.store.Store.MessageRecord;
+import org.apache.activemq.broker.store.Store.QueueQueryResult;
+import org.apache.activemq.flow.ISourceController;
+import org.apache.activemq.flow.SizeLimiter;
+import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.queue.ExclusivePersistentQueue;
+import org.apache.activemq.queue.IQueue;
+import org.apache.activemq.queue.PersistencePolicy;
+import org.apache.activemq.queue.QueueDescriptor;
+import org.apache.activemq.queue.QueueStore;
+import org.apache.activemq.queue.RestoreListener;
+import org.apache.activemq.queue.SaveableQueueElement;
+import org.apache.activemq.util.DataByteArrayInputStream;
+import org.apache.activemq.util.DataByteArrayOutputStream;
+import org.apache.activemq.util.Mapper;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+/**
+ * TransactionManager
+ * <p>
+ * Description:
+ * </p>
+ * 
+ * @version 1.0
+ */
+public class TransactionManager {
+    private static final Log LOG = LogFactory.getLog(TransactionManager.class);
+    private static final String TX_QUEUE_PREFIX = "TX-";
+    private static final AsciiBuffer TXN_MAP = new AsciiBuffer("TXMAP");
+
+    private final HashMap<Long, Transaction> transactions = new HashMap<Long, Transaction>();
+    private final HashMap<AsciiBuffer, Transaction> transactionsByQueue = new HashMap<AsciiBuffer, Transaction>();
+
+    private final VirtualHost host;
+    private final BrokerDatabase database;
+
+    private final AtomicLong tidGen = new AtomicLong(0);
+    private final TransactionStore txStore;
+
+    private static final int DEFAULT_TX_QUEUE_PAGING_THRESHOLD = 1024 * 64;
+    private static final int DEFAULT_TX_QUEUE_RESUME_THRESHOLD = 1;
+    // Be default we don't page out elements to disk.
+    //private static final int DEFAULT_DURABLE_QUEUE_SIZE = DEFAULT_DURABLE_QUEUE_PAGING_THRESHOLD;
+    private static final int DEFAULT_TX_QUEUE_SIZE = Integer.MAX_VALUE;
+
+    private static final PersistencePolicy<TxOp> DEFAULT_TX_QUEUE_PERSISTENCE_POLICY = new PersistencePolicy<TxOp>() {
+
+        private static final boolean PAGING_ENABLED = DEFAULT_TX_QUEUE_SIZE > DEFAULT_TX_QUEUE_PAGING_THRESHOLD;
+
+        public boolean isPersistent(TxOp elem) {
+            return elem.isPersistent();
+        }
+
+        public boolean isPageOutPlaceHolders() {
+            return false;
+        }
+
+        public boolean isPagingEnabled() {
+            return PAGING_ENABLED;
+        }
+
+        public int getPagingInMemorySize() {
+            return DEFAULT_TX_QUEUE_PAGING_THRESHOLD;
+        }
+
+        public boolean isThrottleSourcesToMemoryLimit() {
+            // Keep the queue in memory.
+            return true;
+        }
+
+        public int getDisconnectedThrottleRate() {
+            // By default don't throttle consumers when disconnected.
+            return 0;
+        }
+
+        public int getRecoveryBias() {
+            return 8;
+        }
+    };
+
+    private static final Mapper<Long, TxOp> EXPIRATION_MAPPER = new Mapper<Long, TxOp>() {
+        public Long map(TxOp element) {
+            return element.getExpiration();
+        }
+    };
+
+    private static final Mapper<Integer, TxOp> SIZE_MAPPER = new Mapper<Integer, TxOp>() {
+        public Integer map(TxOp element) {
+            return element.getLimiterSize();
+        }
+    };
+
+    private static final Mapper<Integer, TxOp> PRIORITY_MAPPER = new Mapper<Integer, TxOp>() {
+        public Integer map(TxOp element) {
+            return element.getPriority();
+        }
+    };
+
+    private static final Mapper<Long, TxOp> KEY_MAPPER = new Mapper<Long, TxOp>() {
+        public Long map(TxOp element) {
+            return element.getStoreTracking();
+        }
+    };
+
+    private static final Mapper<Integer, TxOp> PARTITION_MAPPER = new Mapper<Integer, TxOp>() {
+        public Integer map(TxOp element) {
+            return 1;
+        }
+    };
+
+    TransactionManager(VirtualHost host) {
+        this.host = host;
+        txStore = new TransactionStore(host.getDatabase());
+        database = host.getDatabase();
+    }
+
+    /**
+     * @return The TM's virtual host
+     */
+    public final VirtualHost getVirtualHost() {
+        return host;
+    }
+
+    /**
+     * Creates a transaction.
+     * 
+     * @param xid
+     * @return
+     */
+    public final Transaction createTransaction(Xid xid) {
+        Transaction ret;
+
+        long tid = tidGen.incrementAndGet();
+        IQueue<Long, TxOp> opQueue = createTranscationQueue(tid);
+
+        if (xid == null) {
+            ret = new LocalTransaction(this, tid, opQueue);
+        } else {
+            ret = new XATransaction(this, tid, xid, opQueue);
+        }
+
+        transactionsByQueue.put(opQueue.getDescriptor().getQueueName(), ret);
+        transactions.put(ret.getTid(), ret);
+
+        return ret;
+    }
+
+    /**
+     * 
+     * @throws Exception
+     */
+    public void loadTransactions() throws Exception {
+
+        tidGen.set(database.allocateStoreTracking());
+
+        Map<AsciiBuffer, Buffer> txns = database.listMapEntries(TXN_MAP);
+
+        // Load shared queues
+        Iterator<QueueQueryResult> results = database.listQueues(BrokerQueueStore.TRANSACTION_QUEUE_TYPE);
+        while (results.hasNext()) {
+            QueueQueryResult loaded = results.next();
+
+            Buffer b = txns.remove(loaded.getDescriptor().getQueueName());
+            if (b == null) {
+                LOG.warn("Recovered orphaned transaction queue: " + loaded.getDescriptor() + " elements: " + loaded.getCount());
+                database.deleteQueue(loaded.getDescriptor());
+            }
+
+            IQueue<Long, TxOp> queue = createRestoredTxQueue(loaded);
+            Transaction tx = loadTransaction(b, queue);
+            
+            //TODO if we recover a tx that isn't committed then, we should discard it.
+            if (tx.getState() < Transaction.FINISHED_STATE) {
+                LOG.warn("Recovered unfinished transaction: " + tx);
+            }
+            transactions.put(tx.getTid(), tx);
+
+            LOG.info("Loaded Queue " + queue.getResourceName() + " Messages: " + queue.getEnqueuedCount() + " Size: " + queue.getEnqueuedSize());
+        }
+
+        if (txns.isEmpty()) {
+            //TODO Based on transaction state this is generally ok, anyway the orphaned entries should be 
+            //deleted:
+            LOG.warn("Recovered transactions without backing queues: " + txns.keySet());
+
+        }
+    }
+
+    private Transaction loadTransaction(Buffer b, IQueue<Long, TxOp> queue) throws IOException
+    {
+        //TODO move the serialization into the transaction itself:
+        DataByteArrayInputStream bais = new DataByteArrayInputStream(b.getData());
+        byte type = bais.readByte();
+        byte state = bais.readByte();
+        long tid = bais.readLong();
+
+        Transaction tx = null;
+        switch (type) {
+        case Transaction.TYPE_LOCAL:
+            tx = new LocalTransaction(this, tid, queue);
+            break;
+        case Transaction.TYPE_XA:
+            XidImpl xid = new XidImpl();
+            xid.readbody(bais);
+            tx = new XATransaction(this, tid, xid, queue);
+            break;
+        default:
+            throw new IOException("Invalid transaction type: " + type);
+
+        }
+        tx.setState(state);
+        return tx;
+
+    }
+    
+    public OperationContext persistTransaction(Transaction tx) throws IOException {
+        
+        //TODO move the serialization into the transaction itself:
+        DataByteArrayOutputStream baos = new DataByteArrayOutputStream();
+        baos.writeByte(tx.getType());
+        baos.writeByte(tx.getState());
+        baos.writeLong(tx.getTid());
+        if(tx.getType() == Transaction.TYPE_XA)
+        {
+            ((XATransaction)tx).getXid().writebody(baos);
+        }
+        
+        return database.updateMapEntry(TXN_MAP, tx.getBackingQueueName(), new Buffer(baos.getData(), 0, baos.size()));
+    }
+
+    private IQueue<Long, TxOp> createRestoredTxQueue(QueueQueryResult loaded) throws IOException {
+
+        IQueue<Long, TxOp> queue = createTxQueueInternal(loaded.getDescriptor().getQueueName().toString(), loaded.getDescriptor().getQueueType());
+        queue.initialize(loaded.getFirstSequence(), loaded.getLastSequence(), loaded.getCount(), loaded.getSize());
+        return queue;
+    }
+
+    private final IQueue<Long, TxOp> createTranscationQueue(long tid) {
+        return createTxQueueInternal(TX_QUEUE_PREFIX + tid, BrokerQueueStore.TRANSACTION_QUEUE_TYPE);
+    }
+
+    private IQueue<Long, TxOp> createTxQueueInternal(final String name, short type) {
+        ExclusivePersistentQueue<Long, TxOp> queue;
+
+        SizeLimiter<TxOp> limiter = new SizeLimiter<TxOp>(DEFAULT_TX_QUEUE_SIZE, DEFAULT_TX_QUEUE_RESUME_THRESHOLD) {
+            @Override
+            public int getElementSize(TxOp elem) {
+                return elem.getLimiterSize();
+            }
+        };
+        queue = new ExclusivePersistentQueue<Long, TxOp>(name, limiter);
+        queue.setDispatcher(host.getBroker().getDispatcher());
+        queue.setStore(txStore);
+        queue.setPersistencePolicy(DEFAULT_TX_QUEUE_PERSISTENCE_POLICY);
+        queue.setExpirationMapper(EXPIRATION_MAPPER);
+        queue.getDescriptor().setApplicationType(type);
+        return queue;
+    }
+
+    final QueueStore<Long, Transaction.TxOp> getTxnStore() {
+        return txStore;
+    }
+
+    private class TransactionStore implements QueueStore<Long, Transaction.TxOp> {
+        private final BrokerDatabase database;
+
+        private final BrokerDatabase.MessageRecordMarshaller<TxOp> TX_OP_MARSHALLER = new BrokerDatabase.MessageRecordMarshaller<TxOp>() {
+            public MessageRecord marshal(TxOp element) {
+                return element.createMessageRecord();
+            }
+
+            public TxOp unMarshall(MessageRecord record, QueueDescriptor queue) {
+                Transaction t = transactionsByQueue.get(queue.getQueueName());
+                return Transaction.createTxOp(record, t);
+            }
+        };
+
+        TransactionStore(BrokerDatabase database) {
+            this.database = database;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.queue.QueueStore#addQueue(org.apache.activemq
+         * .queue.QueueDescriptor)
+         */
+        public void addQueue(QueueDescriptor queue) {
+            database.addQueue(queue);
+
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.queue.QueueStore#deleteQueue(org.apache.activemq
+         * .queue.QueueDescriptor)
+         */
+        public void deleteQueue(QueueDescriptor queue) {
+            database.deleteQueue(queue);
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.queue.QueueStore#deleteQueueElement(org.apache
+         * .activemq.queue.QueueDescriptor, java.lang.Object)
+         */
+        public void deleteQueueElement(QueueDescriptor queue, TxOp element) {
+            database.deleteQueueElement(element.getStoreTracking(), queue);
+
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.queue.QueueStore#isFromStore(java.lang.Object)
+         */
+        public boolean isFromStore(TxOp elem) {
+            return elem.isFromStore();
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.queue.QueueStore#persistQueueElement(org.apache
+         * .activemq.queue.SaveableQueueElement,
+         * org.apache.activemq.flow.ISourceController, boolean)
+         */
+        public void persistQueueElement(SaveableQueueElement<TxOp> sqe, ISourceController<?> source, boolean delayable) {
+            database.saveQeueuElement(sqe, source, delayable, TX_OP_MARSHALLER);
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see
+         * org.apache.activemq.queue.QueueStore#restoreQueueElements(org.apache
+         * .activemq.queue.QueueDescriptor, boolean, long, long, int,
+         * org.apache.activemq.queue.RestoreListener)
+         */
+        public void restoreQueueElements(QueueDescriptor queue, boolean recordOnly, long firstSequence, long maxSequence, int maxCount, RestoreListener<TxOp> listener) {
+            database.restoreQueueElements(queue, recordOnly, firstSequence, maxSequence, maxCount, listener, TX_OP_MARSHALLER);
+        }
+    }
+}

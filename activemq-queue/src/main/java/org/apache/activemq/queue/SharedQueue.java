@@ -30,7 +30,7 @@ import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.CursoredQueue.Cursor;
 import org.apache.activemq.queue.CursoredQueue.CursorReadyListener;
 import org.apache.activemq.queue.CursoredQueue.QueueElement;
-import org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback;
+import org.apache.activemq.queue.Subscription.SubscriptionDelivery;
 import org.apache.activemq.util.Mapper;
 import org.apache.kahadb.util.LinkedNode;
 import org.apache.kahadb.util.LinkedNodeList;
@@ -698,7 +698,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
             }
 
             // If the sub doesn't remove on dispatch pass it the callback
-            SubscriptionDeliveryCallback callback = sub.isRemoveOnDispatch(qe.elem) ? null : qe;
+            SubscriptionDelivery<V> callback = sub.isRemoveOnDispatch(qe.elem) ? null : qe;
             // If the sub is a browser don't pass it a callback since it does not need to 
             // delete messages
             if( sub.isBrowser() ) { 

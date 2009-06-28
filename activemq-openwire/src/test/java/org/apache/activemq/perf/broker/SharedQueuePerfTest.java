@@ -58,6 +58,7 @@ import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.QueueDispatchTarget;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.queue.Subscription;
+import org.apache.activemq.queue.Subscription.SubscriptionDelivery;
 
 import junit.framework.TestCase;
 
@@ -456,7 +457,7 @@ public class SharedQueuePerfTest extends TestCase {
          * org.apache.activemq.flow.ISourceController,
          * org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback)
          */
-        public void add(MessageDelivery element, ISourceController<?> source, SubscriptionDeliveryCallback callback) {
+        public void add(MessageDelivery element, ISourceController<?> source, SubscriptionDelivery<MessageDelivery> callback) {
             controller.add(element, source);
             addInternal(element, source, callback);
         }
@@ -468,7 +469,7 @@ public class SharedQueuePerfTest extends TestCase {
          * org.apache.activemq.flow.ISourceController,
          * org.apache.activemq.queue.Subscription.SubscriptionDeliveryCallback)
          */
-        public boolean offer(MessageDelivery element, ISourceController<?> source, SubscriptionDeliveryCallback callback) {
+        public boolean offer(MessageDelivery element, ISourceController<?> source, SubscriptionDelivery<MessageDelivery> callback) {
             if (controller.offer(element, source)) {
                 addInternal(element, source, callback);
                 return true;
@@ -481,7 +482,7 @@ public class SharedQueuePerfTest extends TestCase {
          * @param source
          * @param callback
          */
-        private void addInternal(MessageDelivery element, ISourceController<?> source, SubscriptionDeliveryCallback callback) {
+        private void addInternal(MessageDelivery element, ISourceController<?> source, SubscriptionDelivery<MessageDelivery> callback) {
             rate.increment();
             synchronized (this) {
                 controller.elementDispatched(element);

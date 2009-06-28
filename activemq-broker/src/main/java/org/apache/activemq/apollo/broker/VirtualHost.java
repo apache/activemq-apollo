@@ -28,8 +28,6 @@ import org.apache.activemq.apollo.broker.path.PathFilter;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.queue.AbstractFlowQueue;
-import org.apache.activemq.queue.ExclusivePersistentQueue;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.util.IOHelper;
 
@@ -143,7 +141,7 @@ public class VirtualHost implements Service {
             queue.shutdown(true);
         }
 
-        for (AbstractFlowQueue<MessageDelivery> queue : queueStore.getDurableQueues()) {
+        for (IQueue<Long, MessageDelivery> queue : queueStore.getDurableQueues()) {
             queue.shutdown(true);
         }
         
@@ -202,7 +200,7 @@ public class VirtualHost implements Service {
             if (consumer.isDurable()) {
                 DurableSubscription dsub = durableSubs.get(consumer.getSubscriptionName());
                 if (dsub == null) {
-                    ExclusivePersistentQueue<Long, MessageDelivery> queue = queueStore.createDurableQueue(consumer.getSubscriptionName());
+                    IQueue<Long, MessageDelivery> queue = queueStore.createDurableQueue(consumer.getSubscriptionName());
                     queue.start();
                     dsub = new DurableSubscription(this, destination, consumer.getSelectorExpression(), queue);
                     durableSubs.put(consumer.getSubscriptionName(), dsub);

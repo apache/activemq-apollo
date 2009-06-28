@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.queue;
 
-
-
 public interface SaveableQueueElement<V> {
 
     /**
@@ -48,5 +46,4 @@ public interface SaveableQueueElement<V> {
      * Called when the element has been saved.
      */
     public void notifySave();
-
 }

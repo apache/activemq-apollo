@@ -167,6 +167,9 @@ public class BTreeIndexTest extends IndexTestSupport {
             }
             public void visit(List<String> keys, List<Long> values) {
             }
+            public boolean isSatiated() {
+                return false;
+            }
         });
         
 

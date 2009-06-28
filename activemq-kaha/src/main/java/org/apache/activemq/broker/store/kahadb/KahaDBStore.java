@@ -31,7 +31,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.Store.DuplicateKeyException;
+import org.apache.activemq.broker.store.Store.KeyNotFoundException;
 import org.apache.activemq.broker.store.Store.SubscriptionRecord;
+import org.apache.activemq.broker.store.kahadb.Data.MapAdd;
+import org.apache.activemq.broker.store.kahadb.Data.MapEntryPut;
+import org.apache.activemq.broker.store.kahadb.Data.MapEntryRemove;
+import org.apache.activemq.broker.store.kahadb.Data.MapRemove;
 import org.apache.activemq.broker.store.kahadb.Data.MessageAdd;
 import org.apache.activemq.broker.store.kahadb.Data.QueueAdd;
 import org.apache.activemq.broker.store.kahadb.Data.QueueAddMessage;
@@ -41,6 +46,10 @@ import org.apache.activemq.broker.store.kahadb.Data.SubscriptionAdd;
 import org.apache.activemq.broker.store.kahadb.Data.SubscriptionRemove;
 import org.apache.activemq.broker.store.kahadb.Data.Trace;
 import org.apache.activemq.broker.store.kahadb.Data.Type;
+import org.apache.activemq.broker.store.kahadb.Data.MapAdd.MapAddBean;
+import org.apache.activemq.broker.store.kahadb.Data.MapEntryPut.MapEntryPutBean;
+import org.apache.activemq.broker.store.kahadb.Data.MapEntryRemove.MapEntryRemoveBean;
+import org.apache.activemq.broker.store.kahadb.Data.MapRemove.MapRemoveBean;
 import org.apache.activemq.broker.store.kahadb.Data.MessageAdd.MessageAddBean;
 import org.apache.activemq.broker.store.kahadb.Data.QueueAdd.QueueAddBean;
 import org.apache.activemq.broker.store.kahadb.Data.QueueAddMessage.QueueAddMessageBean;
@@ -649,9 +658,25 @@ public class KahaDBStore implements Store {
         case TRANSACTION_COMMIT:
         case TRANSACTION_ROLLBACK:
         case MAP_ADD:
+            rootEntity.mapAdd(((MapAdd) command).getMapName(), tx);
+            break;
         case MAP_REMOVE:
-        case MAP_ENTRY_PUT:
-        case MAP_ENTRY_REMOVE:
+            rootEntity.mapRemove(((MapRemove) command).getMapName(), tx);
+            break;
+        case MAP_ENTRY_PUT: {
+            MapEntryPut p = (MapEntryPut) command;
+            rootEntity.mapAddEntry(p.getMapName(), p.getKey(), p.getValue(), tx);
+            break;
+        }
+        case MAP_ENTRY_REMOVE: {
+            MapEntryRemove p = (MapEntryRemove) command;
+            try {
+                rootEntity.mapRemoveEntry(p.getMapName(), p.getKey(), tx);
+            } catch (KeyNotFoundException e) {
+                //yay, removed.
+            }
+            break;
+        }
         case STREAM_OPEN:
         case STREAM_WRITE:
         case STREAM_CLOSE:
@@ -982,7 +1007,7 @@ public class KahaDBStore implements Store {
             update.setName(record.getName());
             update.setDestination(record.getDestination());
             update.setDurable(record.getIsDurable());
-            
+
             if (record.getAttachment() != null) {
                 update.setAttachment(record.getAttachment());
             }
@@ -1019,32 +1044,54 @@ public class KahaDBStore implements Store {
         // /////////////////////////////////////////////////////////////
         // Map related methods.
         // /////////////////////////////////////////////////////////////
-        public boolean mapAdd(AsciiBuffer map) {
-            return false;
+        public void mapAdd(AsciiBuffer map) {
+            MapAddBean update = new MapAddBean();
+            update.setMapName(map);
+            addUpdate(update);
         }
 
-        public boolean mapRemove(AsciiBuffer map) {
-            return false;
+        public void mapRemove(AsciiBuffer map) {
+            MapRemoveBean update = new MapRemoveBean();
+            update.setMapName(map);
+            addUpdate(update);
         }
 
         public Iterator<AsciiBuffer> mapList(AsciiBuffer first, int max) {
-            return null;
+            storeAtomic();
+            return rootEntity.mapList(first, max, tx);
         }
 
-        public Buffer mapEntryPut(AsciiBuffer map, AsciiBuffer key, Buffer value) throws KeyNotFoundException {
-            return null;
+        public void mapEntryPut(AsciiBuffer map, AsciiBuffer key, Buffer value) {
+            MapEntryPutBean update = new MapEntryPutBean();
+            update.setMapName(map);
+            update.setKey(key);
+            update.setValue(value);
+            addUpdate(update);
         }
 
         public Buffer mapEntryGet(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException {
-            return null;
+            storeAtomic();
+            try {
+                return rootEntity.mapGetEntry(map, key, tx);
+            } catch (IOException e) {
+                throw new FatalStoreException(e);
+            }
         }
 
-        public Buffer mapEntryRemove(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException {
-            return null;
+        public void mapEntryRemove(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException {
+            MapEntryRemoveBean update = new MapEntryRemoveBean();
+            update.setMapName(map);
+            update.setKey(key);
+            addUpdate(update);
         }
 
         public Iterator<AsciiBuffer> mapEntryListKeys(AsciiBuffer map, AsciiBuffer first, int max) throws KeyNotFoundException {
-            return null;
+            storeAtomic();
+            try {
+                return rootEntity.mapListKeys(map, first, max, tx);
+            } catch (IOException e) {
+                throw new FatalStoreException(e);
+            }
         }
 
         // /////////////////////////////////////////////////////////////

@@ -71,7 +71,7 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
         }
         return priority;
     }
-    
+
     /*
      * (non-Javadoc)
      * 
@@ -88,7 +88,6 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
         }
         return tte;
     }
-    
 
     public AsciiBuffer getMsgId() {
         if (msgId == null) {
@@ -162,5 +161,4 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
         return new StompMessageEvaluationContext();
     }
 
-    
 }

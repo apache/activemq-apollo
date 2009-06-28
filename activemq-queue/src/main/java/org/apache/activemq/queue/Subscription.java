@@ -21,12 +21,20 @@ import org.apache.activemq.flow.ISourceController;
 
 public interface Subscription<E> {
 
-    public interface SubscriptionDeliveryCallback {
-
+    public interface SubscriptionDelivery<E> {
+        
         /**
-         * If {@link Subscription#isBrowser()} returns false this method
-         * indicates that the Subscription is finished with the element and that
-         * it can be removed from the queue.
+         * @return The descriptor of the queue from which this element came.
+         */
+        public QueueDescriptor getQueueDescriptor();
+        
+        /**
+         * @return a key that can be used to remove the message from the queue. 
+         */
+        public long getSourceQueueRemovalKey();
+        
+        /**
+         * Acknowledges the delivery.
          */
         public void acknowledge();
 
@@ -101,7 +109,7 @@ public interface Subscription<E> {
      *            The queue's controller, which must be used if the offered
      *            element exceeds the subscription's buffer limits.
      * @param callback
-     *            The {@link SubscriptionDeliveryCallback} associated with the
+     *            The {@link SubscriptionDelivery<E>} associated with the
      *            element
      * 
      * @return true if the element was accepted false otherwise, if false is
@@ -109,7 +117,7 @@ public interface Subscription<E> {
      *         {@link ISourceController#onFlowBlock(ISinkController)} prior to
      *         returning false.
      */
-    public boolean offer(E element, ISourceController<?> controller, SubscriptionDeliveryCallback callback);
+    public boolean offer(E element, ISourceController<?> controller, SubscriptionDelivery<E> callback);
 
     /**
      * Pushes an item to the subscription. If the subscription is not remove on
@@ -122,14 +130,14 @@ public interface Subscription<E> {
      *            The queue's controller, which must be used if the added
      *            element exceeds the subscription's buffer limits.
      * @param callback
-     *            The {@link SubscriptionDeliveryCallback} associated with the
+     *            The {@link SubscriptionDelivery<E>} associated with the
      *            element
      * @return true if the element was accepted false otherwise, if false is
      *         returned the caller must have called
      *         {@link ISourceController#onFlowBlock(ISinkController)} prior to
      *         returning false.
      */
-    public void add(E element, ISourceController<?> controller, SubscriptionDeliveryCallback callback);
+    public void add(E element, ISourceController<?> controller, SubscriptionDelivery<E> callback);
 
     @Deprecated
     public IFlowSink<E> getSink();

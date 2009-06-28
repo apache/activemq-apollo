@@ -18,6 +18,8 @@ package org.apache.activemq.queue;
 
 
 import org.apache.activemq.flow.ISourceController;
+import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.protobuf.Buffer;
 
 public interface QueueStore<K, V> {
 
@@ -65,7 +67,7 @@ public interface QueueStore<K, V> {
         public QueueDescriptor getDescriptor();
 
     }
-
+    
     /**
      * Loads a series of elements for the specified queue. The loaded messages
      * are given to the provided {@link MessageRestoreListener}.

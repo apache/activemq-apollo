@@ -17,7 +17,6 @@
 package org.apache.activemq.queue;
 
 import org.apache.activemq.dispatch.IDispatcher;
-import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.queue.QueueStore.PersistentQueue;
 import org.apache.activemq.util.Mapper;
 
@@ -61,7 +60,13 @@ public interface IQueue<K, V> extends IFlowQueue<V>, PersistentQueue<K, V> {
      *            The base priority for the queue
      */
     public void setDispatchPriority(int priority);
-
+    
+    /**
+     * Removes the element specified by the given key from the queue:
+     * @param key The key.
+    public void acknowledge(K key);
+    */
+    
     /**
      * Starts the queue.
      */

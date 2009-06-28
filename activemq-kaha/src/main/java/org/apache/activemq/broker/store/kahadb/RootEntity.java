@@ -49,7 +49,6 @@ import org.apache.kahadb.util.LongMarshaller;
 import org.apache.kahadb.util.Marshaller;
 import org.apache.kahadb.util.VariableMarshaller;
 
-
 public class RootEntity {
 
     //TODO remove this one performance testing is complete. 
@@ -69,6 +68,7 @@ public class RootEntity {
             rc.destinationIndex = new BTreeIndex<AsciiBuffer, DestinationEntity>(is.readLong());
             rc.messageRefsIndex = new BTreeIndex<Long, Long>(is.readLong());
             rc.subscriptionIndex = new BTreeIndex<AsciiBuffer, Buffer>(is.readLong());
+            rc.mapIndex = new BTreeIndex<AsciiBuffer, Long>(is.readLong());
             if (is.readBoolean()) {
                 rc.lastUpdate = Marshallers.LOCATION_MARSHALLER.readPayload(is);
             } else {
@@ -87,6 +87,7 @@ public class RootEntity {
             os.writeLong(object.destinationIndex.getPageId());
             os.writeLong(object.messageRefsIndex.getPageId());
             os.writeLong(object.subscriptionIndex.getPageId());
+            os.writeLong(object.mapIndex.getPageId());
             if (object.lastUpdate != null) {
                 os.writeBoolean(true);
                 Marshallers.LOCATION_MARSHALLER.writePayload(object.lastUpdate, os);
@@ -119,6 +120,10 @@ public class RootEntity {
     // Subscriptions
     private BTreeIndex<AsciiBuffer, Buffer> subscriptionIndex;
 
+    // Maps:
+    private BTreeIndex<AsciiBuffer, Long> mapIndex;
+    private TreeMap<AsciiBuffer, BTreeIndex<AsciiBuffer, Buffer>> mapCache;
+
     // /////////////////////////////////////////////////////////////////
     // Lifecycle Methods.
     // /////////////////////////////////////////////////////////////////
@@ -137,6 +142,8 @@ public class RootEntity {
         destinationIndex = new BTreeIndex<AsciiBuffer, DestinationEntity>(tx.getPageFile(), tx.allocate().getPageId());
         messageRefsIndex = new BTreeIndex<Long, Long>(tx.getPageFile(), tx.allocate().getPageId());
         subscriptionIndex = new BTreeIndex<AsciiBuffer, Buffer>(tx.getPageFile(), tx.allocate().getPageId());
+        mapIndex = new BTreeIndex<AsciiBuffer, Long>(tx.getPageFile(), tx.allocate().getPageId());
+
         page.set(this);
         tx.store(page, MARSHALLER, true);
     }
@@ -196,6 +203,23 @@ public class RootEntity {
             ioe.initCause(e);
             throw ioe;
         }
+
+        //Load Maps:
+        mapIndex.setPageFile(tx.getPageFile());
+        mapIndex.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
+        mapIndex.setValueMarshaller(LongMarshaller.INSTANCE);
+        mapIndex.load(tx);
+
+        //Load all of the maps and cache them:
+        for (Iterator<Entry<AsciiBuffer, Long>> iterator = mapIndex.iterator(tx); iterator.hasNext();) {
+            Entry<AsciiBuffer, Long> entry = iterator.next();
+            BTreeIndex<AsciiBuffer, Buffer> map = new BTreeIndex<AsciiBuffer, Buffer>(tx.getPageFile(), entry.getValue());
+            map.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
+            map.setValueMarshaller(Marshallers.BUFFER_MARSHALLER);
+            map.load(tx);
+            mapCache.put(entry.getKey(), map);
+        }
+
     }
 
     /**
@@ -349,15 +373,17 @@ public class RootEntity {
     // /////////////////////////////////////////////////////////////////
 
     /**
-     * Returns a list of all of the stored subscriptions. 
-     * @param tx The transaction under which this is to be executed.
-     * @return a list of all of the stored subscriptions. 
-     * @throws IOException 
+     * Returns a list of all of the stored subscriptions.
+     * 
+     * @param tx
+     *            The transaction under which this is to be executed.
+     * @return a list of all of the stored subscriptions.
+     * @throws IOException
      */
     public Iterator<SubscriptionRecord> listSubsriptions(Transaction tx) throws IOException {
-        
+
         final LinkedList<SubscriptionRecord> rc = new LinkedList<SubscriptionRecord>();
-        
+
         subscriptionIndex.visit(tx, new BTreeVisitor<AsciiBuffer, Buffer>() {
             public boolean isInterestedInKeysBetween(AsciiBuffer first, AsciiBuffer second) {
                 return true;
@@ -372,8 +398,12 @@ public class RootEntity {
                     }
                 }
             }
+
+            public boolean isSatiated() {
+                return false;
+            }
         });
-        
+
         return rc.iterator();
     }
 
@@ -406,7 +436,9 @@ public class RootEntity {
 
     /**
      * Converts a Subscription buffer to a SubscriptionRecord.
-     * @param b The buffer
+     * 
+     * @param b
+     *            The buffer
      * @return The record.
      * @throws InvalidProtocolBufferException
      */
@@ -414,7 +446,7 @@ public class RootEntity {
         if (b == null) {
             return null;
         }
-        
+
         SubscriptionRecord rc = null;
         if (b != null) {
             SubscriptionAddBuffer sab = SubscriptionAddBuffer.parseFramed(b);
@@ -507,6 +539,101 @@ public class RootEntity {
 
         return result;
     }
+
+    // /////////////////////////////////////////////////////////////////
+    // Map Methods.
+    // /////////////////////////////////////////////////////////////////
+    public final void mapAdd(AsciiBuffer key, Transaction tx) throws IOException {
+        BTreeIndex<AsciiBuffer, Buffer> map = mapCache.get(key);
+
+        if (map == null) {
+            long pageId = tx.allocate().getPageId();
+            map = new BTreeIndex<AsciiBuffer, Buffer>(tx.getPageFile(), pageId);
+            map.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
+            map.setValueMarshaller(Marshallers.BUFFER_MARSHALLER);
+            map.load(tx);
+            mapIndex.put(tx, key, pageId);
+            mapCache.put(key, map);
+        }
+    }
+
+    public final void mapRemove(AsciiBuffer key, Transaction tx) throws IOException {
+        BTreeIndex<AsciiBuffer, Buffer> map = mapCache.remove(key);
+        if (map != null) {
+            map.clear(tx);
+            map.unload(tx);
+            mapIndex.remove(tx, key);
+        }
+    }
+
+    public final void mapAddEntry(AsciiBuffer name, AsciiBuffer key, Buffer value, Transaction tx) throws IOException {
+        BTreeIndex<AsciiBuffer, Buffer> map = mapCache.get(name);
+        if (map == null) {
+            mapAdd(name, tx);
+            map = mapCache.get(name);
+        }
+
+        map.put(tx, key, value);
+
+    }
+
+    public final void mapRemoveEntry(AsciiBuffer name, AsciiBuffer key, Transaction tx) throws IOException, KeyNotFoundException {
+        BTreeIndex<AsciiBuffer, Buffer> map = mapCache.get(name);
+        if (map == null) {
+            throw new KeyNotFoundException(name.toString());
+        }
+        map.remove(tx, key);
+    }
+
+    public final Buffer mapGetEntry(AsciiBuffer name, AsciiBuffer key, Transaction tx) throws IOException, KeyNotFoundException {
+        BTreeIndex<AsciiBuffer, Buffer> map = mapCache.get(name);
+        if (map == null) {
+            throw new KeyNotFoundException(name.toString());
+        }
+        return map.get(tx, key);
+    }
+
+    public final Iterator<AsciiBuffer> mapList(AsciiBuffer first, int count, Transaction tx) {
+        LinkedList<AsciiBuffer> results = new LinkedList<AsciiBuffer>();
+
+        Collection<AsciiBuffer> values = (first == null ? mapCache.keySet() : mapCache.tailMap(first).keySet());
+        for (AsciiBuffer key : values) {
+            results.add(key);
+        }
+
+        return results.iterator();
+    }
+
+    public final Iterator<AsciiBuffer> mapListKeys(AsciiBuffer name, AsciiBuffer first, int count, Transaction tx) throws IOException, KeyNotFoundException {
+        BTreeIndex<AsciiBuffer, Buffer> map = mapCache.get(name);
+        if (map == null) {
+            throw new KeyNotFoundException(name.toString());
+        }
+
+        final LinkedList<AsciiBuffer> results = new LinkedList<AsciiBuffer>();
+
+        if (first != null && count > 0) {
+            map.visit(tx, new BTreeVisitor.GTEVisitor<AsciiBuffer, Buffer>(first, count) {
+
+                @Override
+                protected void matched(AsciiBuffer key, Buffer value) {
+                    results.add(key);
+                }
+            });
+        } else {
+            Iterator<Entry<AsciiBuffer, Buffer>> iterator = map.iterator(tx);
+            while (iterator.hasNext()) {
+                Entry<AsciiBuffer, Buffer> e = iterator.next();
+                results.add(e.getKey());
+            }
+        }
+
+        return results.iterator();
+    }
+
+    // /////////////////////////////////////////////////////////////////
+    // Map Methods.
+    // /////////////////////////////////////////////////////////////////
 
     public long getPageId() {
         return pageId;
@@ -704,6 +831,10 @@ public class RootEntity {
                         last = fileId;
                     }
                 }
+            }
+
+            public boolean isSatiated() {
+                return !gcCandidateSet.isEmpty();
             }
         });
 

@@ -522,7 +522,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         private final FlowController<MessageDelivery> controller;
         private final WindowLimiter<MessageDelivery> limiter;
 
-        private HashMap<MessageId, SubscriptionDeliveryCallback> pendingMessages = new HashMap<MessageId, SubscriptionDeliveryCallback>();
+        private HashMap<MessageId, SubscriptionDelivery<MessageDelivery>> pendingMessages = new HashMap<MessageId, SubscriptionDelivery<MessageDelivery>>();
         private LinkedList<MessageId> pendingMessageIds = new LinkedList<MessageId>();
         private BrokerSubscription brokerSubscription;
         private int borrowedLimterCredits;
@@ -557,7 +557,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             brokerSubscription.connect(this);
         }
 
-        public boolean offer(final MessageDelivery message, ISourceController<?> source, SubscriptionDeliveryCallback callback) {
+        public boolean offer(final MessageDelivery message, ISourceController<?> source, SubscriptionDelivery<MessageDelivery> callback) {
             if (!controller.offer(message, source)) {
                 return false;
             } else {
@@ -566,12 +566,12 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             }
         }
 
-        public void add(final MessageDelivery message, ISourceController<?> source, SubscriptionDeliveryCallback callback) {
+        public void add(final MessageDelivery message, ISourceController<?> source, SubscriptionDelivery<MessageDelivery> callback) {
             controller.add(message, source);
             sendInternal(message, controller, callback);
         }
 
-        private void sendInternal(final MessageDelivery message, ISourceController<?> controller, SubscriptionDeliveryCallback callback) {
+        private void sendInternal(final MessageDelivery message, ISourceController<?> controller, SubscriptionDelivery<MessageDelivery> callback) {
             Message msg = message.asType(Message.class);
             MessageDispatch md = new MessageDispatch();
             md.setConsumerId(info.getConsumerId());
@@ -606,13 +606,13 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 borrowedLimterCredits += flowCredit;
                 limiter.onProtocolCredit(flowCredit);
             } else if(info.isStandardAck()) {
-                LinkedList<SubscriptionDeliveryCallback> acked = new LinkedList<SubscriptionDeliveryCallback>();
+                LinkedList<SubscriptionDelivery<MessageDelivery>> acked = new LinkedList<SubscriptionDelivery<MessageDelivery>>();
                 synchronized (this) {
                     MessageId id = info.getLastMessageId();
                     if (isDurable() || isQueueReceiver()) {
                         while (!pendingMessageIds.isEmpty()) {
                             MessageId pendingId = pendingMessageIds.getFirst();
-                            SubscriptionDeliveryCallback callback = pendingMessages.remove(pendingId);
+                            SubscriptionDelivery<MessageDelivery> callback = pendingMessages.remove(pendingId);
                             acked.add(callback);
                             pendingMessageIds.removeFirst();
                             if (pendingId.equals(id)) {
@@ -639,7 +639,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
                 // Delete outside of synchronization on queue to avoid contention
                 // with enqueueing threads.
-                for (SubscriptionDeliveryCallback callback : acked) {
+                for (SubscriptionDelivery<MessageDelivery> callback : acked) {
                     callback.acknowledge();
                 }
             }
@@ -818,14 +818,14 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             brokerSubscription.disconnect(this);
 
             if (isDurable() || isQueueReceiver()) {
-                LinkedList<SubscriptionDeliveryCallback> unacquired = null;
+                LinkedList<SubscriptionDelivery<MessageDelivery>> unacquired = null;
 
                 synchronized (this) {
 
-                    unacquired = new LinkedList<SubscriptionDeliveryCallback>();
+                    unacquired = new LinkedList<SubscriptionDelivery<MessageDelivery>>();
                     while (!pendingMessageIds.isEmpty()) {
                         MessageId pendingId = pendingMessageIds.getLast();
-                        SubscriptionDeliveryCallback callback = pendingMessages.remove(pendingId);
+                        SubscriptionDelivery<MessageDelivery> callback = pendingMessages.remove(pendingId);
                         unacquired.add(callback);
                         pendingMessageIds.removeLast();
                     }
@@ -835,7 +835,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 if (unacquired != null) {
                     // Delete outside of synchronization on queue to avoid contention
                     // with enqueueing threads.
-                    for (SubscriptionDeliveryCallback callback : unacquired) {
+                    for (SubscriptionDelivery<MessageDelivery> callback : unacquired) {
                         callback.unacquire(controller);
                     }
                 }

@@ -26,7 +26,7 @@ import org.apache.activemq.queue.SaveableQueueElement;
 
 /**
  * @author cmacnaug
- *
+ * 
  */
 public class MessageDeliveryWrapper implements MessageDelivery {
 
@@ -151,9 +151,10 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     public boolean isPersistent() {
         return delegate.isPersistent();
     }
-    
-    
-    /** (non-Javadoc)
+
+    /**
+     * (non-Javadoc)
+     * 
      * @see org.apache.activemq.apollo.broker.MessageDelivery#getExpiration()
      */
     public long getExpiration() {
@@ -203,5 +204,4 @@ public class MessageDeliveryWrapper implements MessageDelivery {
     MessageDeliveryWrapper(MessageDelivery delivery) {
         delegate = delivery;
     }
-
 }

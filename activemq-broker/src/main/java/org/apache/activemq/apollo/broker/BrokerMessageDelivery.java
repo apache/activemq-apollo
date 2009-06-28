@@ -127,7 +127,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
         }
 
         if (!deleted) {
-            store.deleteMessage(this, queue);
+            store.deleteQueueElement(getStoreTracking(), queue);
         }
 
         if (firePersistListener) {
