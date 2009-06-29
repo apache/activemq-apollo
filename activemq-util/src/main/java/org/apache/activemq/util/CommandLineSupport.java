@@ -19,8 +19,6 @@ package org.apache.activemq.util;
 
 import java.util.ArrayList;
 
-import org.apache.kahadb.util.IntrospectionSupport;
-
 /**
  * Support utility that can be used to set the properties on any object
  * using command line arguments.

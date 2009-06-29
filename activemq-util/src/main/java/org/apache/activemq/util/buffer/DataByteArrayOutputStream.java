@@ -25,12 +25,12 @@ import java.io.UTFDataFormatException;
 /**
  * Optimized ByteArrayOutputStream
  * 
- * @version $Revision: 1.1.1.1 $
+ * @version $Revision$
  */
-public final class DataByteArrayOutputStream extends OutputStream implements DataOutput {
+public class DataByteArrayOutputStream extends OutputStream implements DataOutput {
     private static final int DEFAULT_SIZE = 2048;
-    private byte buf[];
-    private int pos;
+    protected byte buf[];
+    protected int pos;
 
     /**
      * Creates a new byte array output stream, with a buffer capacity of the
@@ -83,12 +83,14 @@ public final class DataByteArrayOutputStream extends OutputStream implements Dat
      * Writes the specified byte to this byte array output stream.
      * 
      * @param b the byte to be written.
+     * @throws IOException 
      */
-    public void write(int b) {
+    public void write(int b) throws IOException {
         int newcount = pos + 1;
         ensureEnoughBuffer(newcount);
         buf[pos] = (byte)b;
         pos = newcount;
+        onWrite();
     }
 
     /**
@@ -98,8 +100,9 @@ public final class DataByteArrayOutputStream extends OutputStream implements Dat
      * @param b the data.
      * @param off the start offset in the data.
      * @param len the number of bytes to write.
+     * @throws IOException 
      */
-    public void write(byte b[], int off, int len) {
+    public void write(byte b[], int off, int len) throws IOException {
         if (len == 0) {
             return;
         }
@@ -107,6 +110,7 @@ public final class DataByteArrayOutputStream extends OutputStream implements Dat
         ensureEnoughBuffer(newcount);
         System.arraycopy(b, off, buf, pos, len);
         pos = newcount;
+        onWrite();
     }
 
     /**
@@ -127,47 +131,54 @@ public final class DataByteArrayOutputStream extends OutputStream implements Dat
      * Set the current position for writing
      * 
      * @param offset
+     * @throws IOException 
      */
-    public void position(int offset) {
+    public void position(int offset) throws IOException {
         ensureEnoughBuffer(offset);
         pos = offset;
+        onWrite();
     }
 
     public int size() {
         return pos;
     }
 
-    public void writeBoolean(boolean v) {
+    public void writeBoolean(boolean v) throws IOException {
         ensureEnoughBuffer(pos + 1);
         buf[pos++] = (byte)(v ? 1 : 0);
+        onWrite();
     }
 
-    public void writeByte(int v) {
+    public void writeByte(int v) throws IOException {
         ensureEnoughBuffer(pos + 1);
         buf[pos++] = (byte)(v >>> 0);
+        onWrite();
     }
 
-    public void writeShort(int v) {
+    public void writeShort(int v) throws IOException {
         ensureEnoughBuffer(pos + 2);
         buf[pos++] = (byte)(v >>> 8);
         buf[pos++] = (byte)(v >>> 0);
+        onWrite();
     }
 
-    public void writeChar(int v) {
+    public void writeChar(int v) throws IOException {
         ensureEnoughBuffer(pos + 2);
         buf[pos++] = (byte)(v >>> 8);
         buf[pos++] = (byte)(v >>> 0);
+        onWrite();
     }
 
-    public void writeInt(int v) {
+    public void writeInt(int v) throws IOException {
         ensureEnoughBuffer(pos + 4);
         buf[pos++] = (byte)(v >>> 24);
         buf[pos++] = (byte)(v >>> 16);
         buf[pos++] = (byte)(v >>> 8);
         buf[pos++] = (byte)(v >>> 0);
+        onWrite();
     }
 
-    public void writeLong(long v) {
+    public void writeLong(long v) throws IOException {
         ensureEnoughBuffer(pos + 8);
         buf[pos++] = (byte)(v >>> 56);
         buf[pos++] = (byte)(v >>> 48);
@@ -177,6 +188,7 @@ public final class DataByteArrayOutputStream extends OutputStream implements Dat
         buf[pos++] = (byte)(v >>> 16);
         buf[pos++] = (byte)(v >>> 8);
         buf[pos++] = (byte)(v >>> 0);
+        onWrite();
     }
 
     public void writeFloat(float v) throws IOException {
@@ -187,14 +199,14 @@ public final class DataByteArrayOutputStream extends OutputStream implements Dat
         writeLong(Double.doubleToLongBits(v));
     }
 
-    public void writeBytes(String s) {
+    public void writeBytes(String s) throws IOException {
         int length = s.length();
         for (int i = 0; i < length; i++) {
             write((byte)s.charAt(i));
         }
     }
 
-    public void writeChars(String s) {
+    public void writeChars(String s) throws IOException {
         int length = s.length();
         for (int i = 0; i < length; i++) {
             int c = s.charAt(i);
@@ -243,6 +255,7 @@ public final class DataByteArrayOutputStream extends OutputStream implements Dat
                 buf[pos++] = (byte)(0x80 | ((c >> 0) & 0x3F));
             }
         }
+        onWrite();
     }
 
     private void ensureEnoughBuffer(int newcount) {
@@ -251,5 +264,22 @@ public final class DataByteArrayOutputStream extends OutputStream implements Dat
             System.arraycopy(buf, 0, newbuf, 0, pos);
             buf = newbuf;
         }
+    }
+    
+    /**
+     * This method is called after each write to the buffer.  This should allow subclasses 
+     * to take some action based on the writes, for example flushing data to an external system based on size. 
+     */
+    protected void onWrite() throws IOException {
+    }
+
+    public void skip(int size) throws IOException {
+        ensureEnoughBuffer(pos + size);
+        pos+=size;
+        onWrite();
+    }
+
+    public Buffer getByteSequence() {
+        return new Buffer(buf, 0, pos);
     }
 }

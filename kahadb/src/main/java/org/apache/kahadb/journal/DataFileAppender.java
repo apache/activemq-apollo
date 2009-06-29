@@ -26,9 +26,9 @@ import java.util.zip.Checksum;
 
 import org.apache.activemq.util.IOHelper;
 import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 import org.apache.activemq.util.list.LinkedNode;
 import org.apache.activemq.util.list.LinkedNodeList;
-import org.apache.kahadb.util.DataByteArrayOutputStream;
 
 /**
  * An optimized writer to do batch appends to a data file. This object is thread

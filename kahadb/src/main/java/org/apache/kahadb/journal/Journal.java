@@ -37,12 +37,12 @@ import java.util.zip.Checksum;
 
 import org.apache.activemq.util.Scheduler;
 import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.DataByteArrayInputStream;
 import org.apache.activemq.util.list.LinkedNodeList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.kahadb.journal.DataFileAppender.WriteCommand;
 import org.apache.kahadb.journal.DataFileAppender.WriteKey;
-import org.apache.kahadb.util.DataByteArrayInputStream;
 
 /**
  * Manages DataFiles

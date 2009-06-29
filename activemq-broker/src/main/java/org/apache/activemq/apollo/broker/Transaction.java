@@ -346,9 +346,13 @@ public abstract class Transaction {
         private final Buffer toBytes() {
             AsciiBuffer queueName = queue.getDescriptor().getQueueName();
             DataByteArrayOutputStream baos = new DataByteArrayOutputStream(2 + queueName.length + 8);
-            baos.writeShort(queueName.length);
-            baos.write(queueName.data, queueName.offset, queueName.length);
-            baos.writeLong(queueSequence);
+            try {
+				baos.writeShort(queueName.length);
+				baos.write(queueName.data, queueName.offset, queueName.length);
+				baos.writeLong(queueSequence);
+			} catch (IOException shouldNotHappen) {
+				throw new RuntimeException(shouldNotHappen);
+			}
             return baos.toByteSequence();
         }
 

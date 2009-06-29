@@ -42,13 +42,13 @@ import java.util.zip.Adler32;
 import java.util.zip.Checksum;
 
 import org.apache.activemq.util.IOHelper;
+import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.LRUCache;
+import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 import org.apache.activemq.util.list.Sequence;
 import org.apache.activemq.util.list.SequenceSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.kahadb.util.DataByteArrayOutputStream;
-import org.apache.kahadb.util.IntrospectionSupport;
 
 /**
  * A PageFile provides you random access to fixed sized disk pages. This object is not thread safe and therefore access to it should 

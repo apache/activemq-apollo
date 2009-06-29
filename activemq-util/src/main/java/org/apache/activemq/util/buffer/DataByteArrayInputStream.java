@@ -25,12 +25,13 @@ import java.io.UTFDataFormatException;
 /**
  * Optimized ByteArrayInputStream that can be used more than once
  * 
- * @version $Revision: 1.1.1.1 $
+ * @version $Revision$
  */
 public final class DataByteArrayInputStream extends InputStream implements DataInput {
     private byte[] buf;
     private int pos;
     private int offset;
+    private int length;
 
     /**
      * Creates a <code>StoreByteArrayInputStream</code>.
@@ -41,6 +42,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
         this.buf = buf;
         this.pos = 0;
         this.offset = 0;
+        this.length = buf.length;
     }
 
     /**
@@ -52,6 +54,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
         this.buf = sequence.getData();
         this.offset = sequence.getOffset();
         this.pos =  this.offset;
+        this.length = sequence.length;
     }
 
     /**
@@ -85,6 +88,12 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
     public void restart(byte[] newBuff) {
         buf = newBuff;
         pos = 0;
+        length = newBuff.length;
+    }
+
+    public void restart() {
+        pos = 0;
+        length = buf.length;
     }
 
     /**
@@ -96,6 +105,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
     public void restart(Buffer sequence) {
         this.buf = sequence.getData();
         this.pos = sequence.getOffset();
+        this.length = sequence.getLength();
     }
 
     /**
@@ -108,6 +118,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
             buf = new byte[size];
         }
         restart(buf);
+        this.length = size;
     }
 
     /**
@@ -122,7 +133,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
      *         stream has been reached.
      */
     public int read() {
-        return (pos < buf.length) ? (buf[pos++] & 0xff) : -1;
+        return (pos < length) ? (buf[pos++] & 0xff) : -1;
     }
 
     /**
@@ -140,11 +151,11 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
         if (b == null) {
             throw new NullPointerException();
         }
-        if (pos >= buf.length) {
+        if (pos >= length) {
             return -1;
         }
-        if (pos + len > buf.length) {
-            len = buf.length - pos;
+        if (pos + len > length) {
+            len = length - pos;
         }
         if (len <= 0) {
             return 0;
@@ -159,7 +170,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
      *         without blocking.
      */
     public int available() {
-        return buf.length - pos;
+        return length - pos;
     }
 
     public void readFully(byte[] b) {
@@ -171,8 +182,8 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
     }
 
     public int skipBytes(int n) {
-        if (pos + n > buf.length) {
-            n = buf.length - pos;
+        if (pos + n > length) {
+            n = length - pos;
         }
         if (n < 0) {
             return 0;
@@ -234,7 +245,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
 
     public String readLine() {
         int start = pos;
-        while (pos < buf.length) {
+        while (pos < length) {
             int c = read();
             if (c == '\n') {
                 break;
@@ -283,7 +294,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
             case 12:
             case 13:
                 pos += 2;
-                if (pos > total) {
+                if (pos > length) {
                     throw new UTFDataFormatException("bad string");
                 }
                 c2 = (int)buf[pos - 1];
@@ -294,7 +305,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
                 break;
             case 14:
                 pos += 3;
-                if (pos > total) {
+                if (pos > length) {
                     throw new UTFDataFormatException("bad string");
                 }
                 c2 = (int)buf[pos - 2];
@@ -309,5 +320,21 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
             }
         }
         return new String(characters, 0, count);
+    }
+
+    public int getPos() {
+        return pos;
+    }
+
+    public void setPos(int pos) {
+        this.pos = pos;
+    }
+
+    public int getLength() {
+        return length;
+    }
+
+    public void setLength(int length) {
+        this.length = length;
     }
 }

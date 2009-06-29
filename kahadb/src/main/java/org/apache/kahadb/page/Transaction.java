@@ -26,12 +26,12 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.DataByteArrayInputStream;
+import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 import org.apache.activemq.util.list.Sequence;
 import org.apache.activemq.util.list.SequenceSet;
 import org.apache.activemq.util.marshaller.Marshaller;
 import org.apache.kahadb.page.PageFile.PageWrite;
-import org.apache.kahadb.util.DataByteArrayInputStream;
-import org.apache.kahadb.util.DataByteArrayOutputStream;
 
 /**
  * The class used to read/update a PageFile object.  Using a transaction allows you to
