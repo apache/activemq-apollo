@@ -228,7 +228,7 @@ public class TransactionManager {
             tx = new LocalTransaction(this, tid, queue);
             break;
         case Transaction.TYPE_XA:
-        	int length = bais.readByte();
+        	int length = bais.readByte() & 0xFF;
         	Buffer xid = new Buffer(new byte[length]);
         	bais.readFully(xid.data);
             tx = new XATransaction(this, tid, xid, queue);
@@ -252,8 +252,8 @@ public class TransactionManager {
         if(tx.getType() == Transaction.TYPE_XA)
         {
         	Buffer xid = ((XATransaction)tx).getXid();
-        	// An XID max size is around 140 bytes
-        	baos.writeByte( xid.length );
+        	// An XID max size is around 140 bytes, byte SHOULD be big enough to frame it.
+        	baos.writeByte( xid.length & 0xFF );
         	baos.write(xid.data, xid.offset, xid.length);
         }
         
