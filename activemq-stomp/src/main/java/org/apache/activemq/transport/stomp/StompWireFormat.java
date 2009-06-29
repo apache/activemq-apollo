@@ -55,7 +55,7 @@ public class StompWireFormat implements WireFormat {
         DataOutputStream dos = new DataOutputStream(baos);
         marshal(command, dos);
         dos.close();
-        return baos.toByteSequence();
+        return baos.toBuffer();
     }
 
     public Object unmarshal(Buffer packet) throws IOException {
@@ -194,7 +194,7 @@ public class StompWireFormat implements WireFormat {
             baos.write(b);
         }
         baos.close();
-        Buffer sequence = baos.toByteSequence();
+        Buffer sequence = baos.toBuffer();
         return new String(sequence.getData(), sequence.getOffset(), sequence.getLength(), "UTF-8");
     }
 

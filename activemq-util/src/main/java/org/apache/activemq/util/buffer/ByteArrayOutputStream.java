@@ -22,7 +22,7 @@ import java.io.OutputStream;
 
 /**
  * Very similar to the java.io.ByteArrayOutputStream but this version 
- * is not thread safe and the resulting data is returned in a ByteSequence
+ * is not thread safe and the resulting data is returned in a Buffer
  * to avoid an extra byte[] allocation.
  */
 public class ByteArrayOutputStream extends OutputStream {
@@ -67,14 +67,12 @@ public class ByteArrayOutputStream extends OutputStream {
         size = 0;
     }
 
-    public Buffer toByteSequence() {
+    public Buffer toBuffer() {
         return new Buffer(buffer, 0, size);
     }
     
     public byte[] toByteArray() {
-        byte rc[] = new byte[size];
-        System.arraycopy(buffer, 0, rc, 0, size);
-        return rc;
+        return toBuffer().toByteArray();
     }
     
     public int size() {

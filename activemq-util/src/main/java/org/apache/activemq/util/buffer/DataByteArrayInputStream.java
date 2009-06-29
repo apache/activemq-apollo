@@ -98,7 +98,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
 
     /**
      * reset the <code>StoreByteArrayInputStream</code> to use an new
-     * ByteSequence
+     * Buffer
      * 
      * @param sequence
      */

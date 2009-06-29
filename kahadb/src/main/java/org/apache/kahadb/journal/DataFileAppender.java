@@ -355,7 +355,7 @@ class DataFileAppender {
                     write = write.getNext();
                 }
 
-                Buffer sequence = buff.toByteSequence();
+                Buffer sequence = buff.toBuffer();
                 
                 // Now we can fill in the batch control record properly. 
                 buff.reset();

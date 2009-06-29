@@ -59,7 +59,7 @@ public abstract class MessageTestSupport extends BaseCommandTestSupport {
             DataOutputStream dataOut = new DataOutputStream(baos);
             MarshallingSupport.writeUTF8(dataOut, "Content:11");
             dataOut.close();
-            info.setContent(baos.toByteSequence());
+            info.setContent(baos.toBuffer());
         }
         {
         	Map map = new HashMap();
@@ -68,7 +68,7 @@ public abstract class MessageTestSupport extends BaseCommandTestSupport {
             DataOutputStream os = new DataOutputStream(baos);
             MarshallingSupport.marshalPrimitiveMap(map, os);
             os.close();
-            info.setMarshalledProperties(baos.toByteSequence());
+            info.setMarshalledProperties(baos.toBuffer());
         }
         info.setDataStructure(createDataStructure("DataStructure:13"));
         info.setTargetConsumerId(createConsumerId("TargetConsumerId:14"));

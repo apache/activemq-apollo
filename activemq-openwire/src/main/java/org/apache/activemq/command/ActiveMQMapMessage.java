@@ -131,7 +131,7 @@ public class ActiveMQMapMessage extends ActiveMQMessage implements MapMessage {
                 DataOutputStream dataOut = new DataOutputStream(os);
                 MarshallingSupport.marshalPrimitiveMap(map, dataOut);
                 dataOut.close();
-                setContent(bytesOut.toByteSequence());
+                setContent(bytesOut.toBuffer());
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

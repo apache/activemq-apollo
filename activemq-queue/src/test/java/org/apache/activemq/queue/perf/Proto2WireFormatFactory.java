@@ -268,7 +268,7 @@ public class Proto2WireFormatFactory implements WireFormatFactory {
         public Buffer marshal(Object value) throws IOException {
             DataByteArrayOutputStream os = new DataByteArrayOutputStream();
             marshal(value, os);
-            return os.toByteSequence();
+            return os.toBuffer();
         }
         
         public Object unmarshal(Buffer data) throws IOException {
@@ -289,23 +289,14 @@ public class Proto2WireFormatFactory implements WireFormatFactory {
 		return new TestWireFormat();
 	}
 
-    /* (non-Javadoc)
-     * @see org.apache.activemq.wireformat.WireFormatFactory#isDiscriminatable()
-     */
     public boolean isDiscriminatable() {
         return false;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.activemq.wireformat.WireFormatFactory#matchesWireformatHeader(org.apache.activemq.util.ByteSequence)
-     */
     public boolean matchesWireformatHeader(Buffer byteSequence) {
         throw new UnsupportedOperationException();
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.activemq.wireformat.WireFormatFactory#maxWireformatHeaderLength()
-     */
     public int maxWireformatHeaderLength() {
         throw new UnsupportedOperationException();
     }

@@ -162,7 +162,7 @@ public final class OpenWireFormat implements WireFormat {
                     bytesOut.writeByte(type);
                     bs.marshal(bytesOut);
                     dsm.tightMarshal2(this, c, bytesOut, bs);
-                    sequence = bytesOut.toByteSequence();
+                    sequence = bytesOut.toBuffer();
 
                 } else {
                     bytesOut.restart();
@@ -173,7 +173,7 @@ public final class OpenWireFormat implements WireFormat {
                     }
                     bytesOut.writeByte(type);
                     dsm.looseMarshal(this, c, bytesOut);
-                    sequence = bytesOut.toByteSequence();
+                    sequence = bytesOut.toBuffer();
 
                     if (!sizePrefixDisabled) {
                         size = sequence.getLength() - 4;
@@ -187,7 +187,7 @@ public final class OpenWireFormat implements WireFormat {
                 bytesOut.restart(5);
                 bytesOut.writeInt(size);
                 bytesOut.writeByte(NULL_TYPE);
-                sequence = bytesOut.toByteSequence();
+                sequence = bytesOut.toBuffer();
             }
 
             // if( ma!=null ) {
@@ -257,7 +257,7 @@ public final class OpenWireFormat implements WireFormat {
                 dsm.looseMarshal(this, c, looseOut);
 
                 if (!sizePrefixDisabled) {
-                    Buffer sequence = bytesOut.toByteSequence();
+                    Buffer sequence = bytesOut.toBuffer();
                     dataOut.writeInt(sequence.getLength());
                     dataOut.write(sequence.getData(), sequence.getOffset(), sequence.getLength());
                 }
@@ -410,14 +410,8 @@ public final class OpenWireFormat implements WireFormat {
         ds.writeByte(type);
 
         if (o.isMarshallAware() && bs.readBoolean()) {
-
             // We should not be doing any caching
             throw new IOException("Corrupted stream");
-            // MarshallAware ma = (MarshallAware) o;
-            // ByteSequence sequence=ma.getCachedMarshalledForm(this);
-            // ds.write(sequence.getData(), sequence.getOffset(),
-            // sequence.getLength());
-
         } else {
 
             DataStreamMarshaller dsm = (DataStreamMarshaller) dataMarshallers[type & 0xFF];

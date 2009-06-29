@@ -42,10 +42,10 @@ public interface WireFormatFactory {
     /**
      * Called to test if this wireformat matches the provided header.
      * 
-     * @param byteSequence The byte sequence representing the herader data read so far.
-     * @return True if the ByteSequence matches the wire format header.
+     * @param buffer The byte buffer representing the header data read so far.
+     * @return true if the Buffer matches the wire format header.
      */
-    boolean matchesWireformatHeader(Buffer byteSequence);
+    boolean matchesWireformatHeader(Buffer buffer);
 
     
 }

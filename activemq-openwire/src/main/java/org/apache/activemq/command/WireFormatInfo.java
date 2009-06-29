@@ -176,7 +176,7 @@ public class WireFormatInfo implements Command, MarshallAware {
             DataOutputStream os = new DataOutputStream(baos);
             MarshallingSupport.marshalPrimitiveMap(properties, os);
             os.close();
-            marshalledProperties = baos.toByteSequence();
+            marshalledProperties = baos.toBuffer();
         }
     }
 

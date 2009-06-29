@@ -353,7 +353,7 @@ public abstract class Transaction {
 			} catch (IOException shouldNotHappen) {
 				throw new RuntimeException(shouldNotHappen);
 			}
-            return baos.toByteSequence();
+            return baos.toBuffer();
         }
 
         private final void fromBytes(byte[] bytes) {

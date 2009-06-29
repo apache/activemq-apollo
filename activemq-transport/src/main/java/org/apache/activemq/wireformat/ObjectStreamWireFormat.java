@@ -45,7 +45,7 @@ public class ObjectStreamWireFormat implements WireFormat {
         DataOutputStream ds = new DataOutputStream(baos);
         marshal(command, ds);
         ds.close();
-        return baos.toByteSequence();
+        return baos.toBuffer();
     }
 
     public Object unmarshal(Buffer packet) throws IOException {

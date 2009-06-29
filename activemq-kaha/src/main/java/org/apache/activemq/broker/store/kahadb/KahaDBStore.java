@@ -564,7 +564,7 @@ public class KahaDBStore implements Store {
             long start = System.currentTimeMillis();
             final Location location;
             synchronized (journal) {
-                location = journal.write(os.toByteSequence(), onFlush);
+                location = journal.write(os.toBuffer(), onFlush);
             }
             long start2 = System.currentTimeMillis();
 

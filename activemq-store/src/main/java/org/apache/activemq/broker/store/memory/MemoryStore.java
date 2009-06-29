@@ -75,7 +75,7 @@ public class MemoryStore implements Store {
             if (baos == null) {
                 throw new IllegalStateException("Stream closed.");
             }
-            data = baos.toByteSequence();
+            data = baos.toBuffer();
             baos = null;
         }
 

@@ -99,7 +99,7 @@ public class ActiveMQObjectMessage extends ActiveMQMessage implements ObjectMess
                 objOut.flush();
                 objOut.reset();
                 objOut.close();
-                setContent(bytesOut.toByteSequence());
+                setContent(bytesOut.toBuffer());
             } catch (IOException ioe) {
                 throw new RuntimeException(ioe.getMessage(), ioe);
             }

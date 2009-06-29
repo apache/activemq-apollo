@@ -19,7 +19,7 @@ package org.apache.activemq.util.buffer;
 import java.io.IOException;
 
 /**
- * Used to write and read primitives to and from a ByteSequence.
+ * Used to write and read primitives to and from a Buffer.
  */
 public final class BufferEditor {
 

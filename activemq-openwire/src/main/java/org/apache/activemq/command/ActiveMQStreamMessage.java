@@ -141,7 +141,7 @@ public class ActiveMQStreamMessage extends ActiveMQMessage implements StreamMess
         if (dataOut != null) {
             try {
                 dataOut.close();
-                setContent(bytesOut.toByteSequence());
+                setContent(bytesOut.toBuffer());
                 bytesOut = null;
                 dataOut = null;
             } catch (IOException ioe) {

@@ -78,7 +78,7 @@ public class MultiWireFormatFactory implements WireFormatFactory {
 
                 // Try to discriminate what we have read so far.
                 for (WireFormatFactory wff : wireFormatFactories) {
-                    if (wff.matchesWireformatHeader(baos.toByteSequence())) {
+                    if (wff.matchesWireformatHeader(baos.toBuffer())) {
                         wireFormat = wff.createWireFormat();
                         break;
                     }
@@ -185,33 +185,14 @@ public class MultiWireFormatFactory implements WireFormatFactory {
         this.wireFormats = formats;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.activemq.wireformat.WireFormatFactory#isDiscriminatable()
-     */
     public boolean isDiscriminatable() {
         return false;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.apache.activemq.wireformat.WireFormatFactory#matchesWireformatHeader
-     * (org.apache.activemq.util.ByteSequence)
-     */
     public boolean matchesWireformatHeader(Buffer byteSequence) {
         throw new UnsupportedOperationException();
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.apache.activemq.wireformat.WireFormatFactory#maxWireformatHeaderLength
-     * ()
-     */
     public int maxWireformatHeaderLength() {
         throw new UnsupportedOperationException();
     }

@@ -71,11 +71,11 @@ public class DataByteArrayOutputStream extends OutputStream implements DataOutpu
     }
 
     /**
-     * Get a ByteSequence from the stream
+     * Get a Buffer from the stream
      * 
      * @return the byte sequence
      */
-    public Buffer toByteSequence() {
+    public Buffer toBuffer() {
         return new Buffer(buf, 0, pos);
     }
 
@@ -279,7 +279,4 @@ public class DataByteArrayOutputStream extends OutputStream implements DataOutpu
         onWrite();
     }
 
-    public Buffer getByteSequence() {
-        return new Buffer(buf, 0, pos);
-    }
 }

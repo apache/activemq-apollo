@@ -196,7 +196,7 @@ public abstract class Message extends BaseCommand implements MarshallAware, Mess
             DataOutputStream os = new DataOutputStream(baos);
             MarshallingSupport.marshalPrimitiveMap(properties, os);
             os.close();
-            marshalledProperties = baos.toByteSequence();
+            marshalledProperties = baos.toBuffer();
         }
     }
 

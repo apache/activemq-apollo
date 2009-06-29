@@ -49,7 +49,7 @@ import com.google.protobuf.test.UnittestImport.ImportMessage;
 class TestUtil {
   private TestUtil() {}
 
-  /** Helper to convert a String to ByteSequence. */
+  /** Helper to convert a String to Buffer. */
   private static Buffer toBytes(String str) {
     try {
       return new Buffer(str.getBytes("UTF-8"));

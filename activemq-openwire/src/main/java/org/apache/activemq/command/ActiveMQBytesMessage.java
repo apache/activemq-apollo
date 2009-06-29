@@ -122,7 +122,7 @@ public class ActiveMQBytesMessage extends ActiveMQMessage implements BytesMessag
         try {
             if (dataOut != null) {
                 dataOut.close();
-                Buffer bs = bytesOut.toByteSequence();
+                Buffer bs = bytesOut.toBuffer();
                 if (compressed) {
                     int pos = bs.offset;
                     BufferEditor.writeIntBig(bs, length);
