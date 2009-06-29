@@ -30,10 +30,10 @@ import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.IFlowSizeLimiter;
 import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.util.Mapper;
-import org.apache.kahadb.util.LinkedNode;
-import org.apache.kahadb.util.LinkedNodeList;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.list.LinkedNode;
+import org.apache.activemq.util.list.LinkedNodeList;
 
 /**
  * IQueue which does direct dispatch whenever it can.

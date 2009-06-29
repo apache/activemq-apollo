@@ -22,13 +22,12 @@ import javax.transaction.xa.XAException;
 
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.Subscription.SubscriptionDelivery;
-import org.apache.activemq.util.ByteSequence;
-import org.apache.activemq.util.DataByteArrayInputStream;
-import org.apache.activemq.util.DataByteArrayOutputStream;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.DataByteArrayInputStream;
+import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 
 /**
  * Keeps track of all the actions the need to be done when a transaction does a
@@ -344,7 +343,7 @@ public abstract class Transaction {
             return null;
         }
 
-        private final ByteSequence toBytes() {
+        private final Buffer toBytes() {
             AsciiBuffer queueName = queue.getDescriptor().getQueueName();
             DataByteArrayOutputStream baos = new DataByteArrayOutputStream(2 + queueName.length + 8);
             baos.writeShort(queueName.length);

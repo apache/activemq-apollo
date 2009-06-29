@@ -22,8 +22,8 @@ import java.util.HashSet;
 
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.util.Mapper;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implements IPartitionedQueue<K, V> {
 

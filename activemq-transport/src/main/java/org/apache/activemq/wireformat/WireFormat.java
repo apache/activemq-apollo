@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.activemq.transport.Transport;
-import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.buffer.Buffer;
 
 
 /**
@@ -36,12 +36,12 @@ public interface WireFormat {
     /**
      * Packet based marshaling 
      */
-    ByteSequence marshal(Object command) throws IOException;
+    Buffer marshal(Object command) throws IOException;
     
     /**
      * Packet based un-marshaling 
      */
-    Object unmarshal(ByteSequence packet) throws IOException;
+    Object unmarshal(Buffer packet) throws IOException;
 
     /**
      * Stream based marshaling 

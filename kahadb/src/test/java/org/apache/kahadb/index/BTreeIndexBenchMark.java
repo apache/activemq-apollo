@@ -19,9 +19,9 @@ package org.apache.kahadb.index;
 import java.io.IOException;
 import java.text.NumberFormat;
 
+import org.apache.activemq.util.marshaller.LongMarshaller;
+import org.apache.activemq.util.marshaller.StringMarshaller;
 import org.apache.kahadb.page.Transaction;
-import org.apache.kahadb.util.LongMarshaller;
-import org.apache.kahadb.util.StringMarshaller;
 
 public class BTreeIndexBenchMark extends IndexBenchmark {
 

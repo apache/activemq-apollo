@@ -31,9 +31,9 @@ import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.queue.Subscription.SubscriptionDelivery;
 import org.apache.activemq.util.Comparators;
 import org.apache.activemq.util.Mapper;
-import org.apache.activemq.util.SortedLinkedList;
-import org.apache.activemq.util.SortedLinkedListNode;
 import org.apache.activemq.util.TreeMap;
+import org.apache.activemq.util.list.SortedLinkedList;
+import org.apache.activemq.util.list.SortedLinkedListNode;
 
 /**
  * @author cmacnaug

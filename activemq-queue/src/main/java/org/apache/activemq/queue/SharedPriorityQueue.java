@@ -18,7 +18,7 @@ package org.apache.activemq.queue;
 
 import java.util.ArrayList;
 import org.apache.activemq.flow.PrioritySizeLimiter;
-import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 public class SharedPriorityQueue<K, V> extends PartitionedQueue<K, V> {
 

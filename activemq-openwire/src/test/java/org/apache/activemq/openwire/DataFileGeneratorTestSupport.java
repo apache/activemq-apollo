@@ -57,7 +57,7 @@ import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.openwire.v1.ActiveMQTextMessageTest;
 import org.apache.activemq.openwire.v1.BrokerInfoTest;
 import org.apache.activemq.openwire.v1.MessageAckTest;
-import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.buffer.Buffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -148,8 +148,8 @@ public abstract class DataFileGeneratorTestSupport extends TestCase {
         } else {
             if (expectedValue instanceof Exception) {
                 assertExceptionsEqual(message, (Exception)expectedValue, actualValue);
-            } else if (expectedValue instanceof ByteSequence) {
-                assertByteSequencesEqual(message, (ByteSequence)expectedValue, actualValue);
+            } else if (expectedValue instanceof Buffer) {
+                assertByteSequencesEqual(message, (Buffer)expectedValue, actualValue);
             } else if (expectedValue instanceof DataStructure) {
                 assertBeansEqual(message + name, comparedObjects, expectedValue, actualValue);
             } else if (expectedValue instanceof Enumeration) {
@@ -185,9 +185,9 @@ public abstract class DataFileGeneratorTestSupport extends TestCase {
         }
     }
 
-    protected void assertByteSequencesEqual(String message, ByteSequence expected, Object actualValue) {
-        assertTrue(message + ". Actual value should be a ByteSequence but was: " + actualValue, actualValue instanceof ByteSequence);
-        ByteSequence actual = (ByteSequence)actualValue;
+    protected void assertByteSequencesEqual(String message, Buffer expected, Object actualValue) {
+        assertTrue(message + ". Actual value should be a ByteSequence but was: " + actualValue, actualValue instanceof Buffer);
+        Buffer actual = (Buffer)actualValue;
         int length = expected.getLength();
         assertEquals(message + ". Length", length, actual.getLength());
         int offset = expected.getOffset();

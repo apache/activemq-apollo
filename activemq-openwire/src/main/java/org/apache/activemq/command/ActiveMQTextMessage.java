@@ -30,11 +30,11 @@ import javax.jms.MessageNotWriteableException;
 import javax.jms.TextMessage;
 
 import org.apache.activemq.IConnection;
-import org.apache.activemq.util.ByteArrayInputStream;
-import org.apache.activemq.util.ByteArrayOutputStream;
-import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.JMSExceptionSupport;
 import org.apache.activemq.util.MarshallingSupport;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.ByteArrayInputStream;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
 
 /**
@@ -76,7 +76,7 @@ public class ActiveMQTextMessage extends ActiveMQMessage implements TextMessage 
         if (text == null && getContent() != null) {
             InputStream is = null;
             try {
-                ByteSequence bodyAsBytes = getContent();
+                Buffer bodyAsBytes = getContent();
                 if (bodyAsBytes != null) {
                     is = new ByteArrayInputStream(bodyAsBytes);
                     if (isCompressed()) {
@@ -105,7 +105,7 @@ public class ActiveMQTextMessage extends ActiveMQMessage implements TextMessage 
     public void beforeMarshall(WireFormat wireFormat) throws IOException {
         super.beforeMarshall(wireFormat);
 
-        ByteSequence content = getContent();
+        Buffer content = getContent();
         if (content == null && text != null) {
             ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
             OutputStream os = bytesOut;

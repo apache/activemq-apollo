@@ -25,8 +25,8 @@ import org.apache.activemq.dispatch.PriorityDispatcher;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Destination.DestinationBean;
 import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.util.Mapper;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 public class MockBrokerTest extends TestCase {
 

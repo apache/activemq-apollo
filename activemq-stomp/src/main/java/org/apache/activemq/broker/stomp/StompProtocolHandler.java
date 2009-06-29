@@ -47,15 +47,15 @@ import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.QueueDispatchTarget;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.selector.SelectorParser;
 import org.apache.activemq.transport.stomp.Stomp;
 import org.apache.activemq.transport.stomp.StompFrame;
 import org.apache.activemq.transport.stomp.StompSubscription;
-import org.apache.activemq.util.ByteArrayOutputStream;
 import org.apache.activemq.util.FactoryFinder;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
 
 public class StompProtocolHandler implements ProtocolHandler, StompMessageDelivery.PersistListener {

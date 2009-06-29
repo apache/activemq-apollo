@@ -20,7 +20,7 @@ import java.io.UnsupportedEncodingException;
 
 import org.apache.activemq.transport.stomp.Stomp;
 import org.apache.activemq.transport.stomp.StompWireFormatFactory;
-import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.buffer.Buffer;
 
 public class DiscriminatableStompWireFormatFactory extends StompWireFormatFactory {
 
@@ -38,7 +38,7 @@ public class DiscriminatableStompWireFormatFactory extends StompWireFormatFactor
         }
     }
     
-    public boolean matchesWireformatHeader(ByteSequence byteSequence) {
+    public boolean matchesWireformatHeader(Buffer byteSequence) {
         byte[] data = byteSequence.data;
         if( byteSequence.length >= MAGIC.length) {
             int offset = byteSequence.length - MAGIC.length;

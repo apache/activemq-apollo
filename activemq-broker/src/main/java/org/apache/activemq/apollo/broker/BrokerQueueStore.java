@@ -28,7 +28,6 @@ import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.PrioritySizeLimiter;
 import org.apache.activemq.flow.SizeLimiter;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.ExclusivePersistentQueue;
 import org.apache.activemq.queue.IPartitionedQueue;
 import org.apache.activemq.queue.IQueue;
@@ -42,6 +41,7 @@ import org.apache.activemq.queue.SharedPriorityQueue;
 import org.apache.activemq.queue.SharedQueue;
 import org.apache.activemq.queue.SharedQueueOld;
 import org.apache.activemq.util.Mapper;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

@@ -23,7 +23,7 @@ import javax.jms.Queue;
 
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.Router;
-import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 /**
  * 

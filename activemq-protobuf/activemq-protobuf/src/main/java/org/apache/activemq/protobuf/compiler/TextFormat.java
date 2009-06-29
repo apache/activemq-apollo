@@ -22,8 +22,8 @@ import java.nio.CharBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.activemq.protobuf.Buffer;
-import org.apache.activemq.protobuf.UTF8Buffer;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.UTF8Buffer;
 
 /** 
  * Provide ascii text parsing and formatting support for proto2 instances.

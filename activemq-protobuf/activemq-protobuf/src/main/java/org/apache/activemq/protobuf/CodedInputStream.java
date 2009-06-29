@@ -21,6 +21,9 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.BufferInputStream;
+
 
 /**
  * Reads and decodes protocol message fields.

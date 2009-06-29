@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UTFDataFormatException;
 
+import org.apache.activemq.util.buffer.Buffer;
+
 /**
  * Optimized ByteArrayOutputStream
  * 
@@ -74,8 +76,8 @@ public class DataByteArrayOutputStream extends OutputStream implements DataOutpu
      * 
      * @return the byte sequence
      */
-    public ByteSequence toByteSequence() {
-        return new ByteSequence(buf, 0, pos);
+    public Buffer toByteSequence() {
+        return new Buffer(buf, 0, pos);
     }
 
     /**
@@ -278,7 +280,7 @@ public class DataByteArrayOutputStream extends OutputStream implements DataOutpu
         onWrite();
     }
 
-    public ByteSequence getByteSequence() {
-        return new ByteSequence(buf, 0, pos);
+    public Buffer getByteSequence() {
+        return new Buffer(buf, 0, pos);
     }
 }

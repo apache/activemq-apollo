@@ -30,9 +30,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.Store.DuplicateKeyException;
-import org.apache.activemq.broker.store.Store.KeyNotFoundException;
-import org.apache.activemq.broker.store.Store.SubscriptionRecord;
 import org.apache.activemq.broker.store.kahadb.Data.MapAdd;
 import org.apache.activemq.broker.store.kahadb.Data.MapEntryPut;
 import org.apache.activemq.broker.store.kahadb.Data.MapEntryRemove;
@@ -58,12 +55,13 @@ import org.apache.activemq.broker.store.kahadb.Data.QueueRemoveMessage.QueueRemo
 import org.apache.activemq.broker.store.kahadb.Data.SubscriptionAdd.SubscriptionAddBean;
 import org.apache.activemq.broker.store.kahadb.Data.SubscriptionRemove.SubscriptionRemoveBean;
 import org.apache.activemq.broker.store.kahadb.Data.Type.TypeCreatable;
-import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.protobuf.InvalidProtocolBufferException;
 import org.apache.activemq.protobuf.MessageBuffer;
 import org.apache.activemq.protobuf.PBMessage;
 import org.apache.activemq.queue.QueueDescriptor;
+import org.apache.activemq.util.LockFile;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.buffer.Buffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.kahadb.journal.Journal;
@@ -71,10 +69,8 @@ import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.page.Page;
 import org.apache.kahadb.page.PageFile;
 import org.apache.kahadb.page.Transaction;
-import org.apache.kahadb.util.ByteSequence;
 import org.apache.kahadb.util.DataByteArrayInputStream;
 import org.apache.kahadb.util.DataByteArrayOutputStream;
-import org.apache.kahadb.util.LockFile;
 
 public class KahaDBStore implements Store {
 
@@ -86,10 +82,10 @@ public class KahaDBStore implements Store {
     private static final Log LOG = LogFactory.getLog(KahaDBStore.class);
     private static final int DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
 
-    private static final ByteSequence BEGIN_UNIT_OF_WORK_DATA = new ByteSequence(new byte[] { BEGIN_UNIT_OF_WORK });
-    private static final ByteSequence END_UNIT_OF_WORK_DATA = new ByteSequence(new byte[] { END_UNIT_OF_WORK });
-    private static final ByteSequence CANCEL_UNIT_OF_WORK_DATA = new ByteSequence(new byte[] { CANCEL_UNIT_OF_WORK });
-    private static final ByteSequence FLUSH_DATA = new ByteSequence(new byte[] { FLUSH });
+    private static final Buffer BEGIN_UNIT_OF_WORK_DATA = new Buffer(new byte[] { BEGIN_UNIT_OF_WORK });
+    private static final Buffer END_UNIT_OF_WORK_DATA = new Buffer(new byte[] { END_UNIT_OF_WORK });
+    private static final Buffer CANCEL_UNIT_OF_WORK_DATA = new Buffer(new byte[] { CANCEL_UNIT_OF_WORK });
+    private static final Buffer FLUSH_DATA = new Buffer(new byte[] { FLUSH });
 
     public static final int CLOSED_STATE = 1;
     public static final int OPEN_STATE = 2;
@@ -124,7 +120,7 @@ public class KahaDBStore implements Store {
     private static class UoWOperation {
         public TypeCreatable bean;
         public Location location;
-        public ByteSequence data;
+        public Buffer data;
     }
 
     // /////////////////////////////////////////////////////////////////
@@ -333,7 +329,7 @@ public class KahaDBStore implements Store {
                 int redoCounter = 0;
                 while (recoveryPosition != null) {
 
-                    ByteSequence data = journal.read(recoveryPosition);
+                    Buffer data = journal.read(recoveryPosition);
                     if (data.length == 1 && data.data[0] == BEGIN_UNIT_OF_WORK) {
                         uow = new ArrayList<UoWOperation>();
                     } else if (data.length == 1 && data.data[0] == END_UNIT_OF_WORK) {
@@ -611,11 +607,11 @@ public class KahaDBStore implements Store {
      * @throws IOException
      */
     private TypeCreatable load(Location location) throws IOException {
-        ByteSequence data = journal.read(location);
+        Buffer data = journal.read(location);
         return load(location, data);
     }
 
-    private TypeCreatable load(Location location, ByteSequence data) throws IOException, InvalidProtocolBufferException {
+    private TypeCreatable load(Location location, Buffer data) throws IOException, InvalidProtocolBufferException {
         DataByteArrayInputStream is = new DataByteArrayInputStream(data);
         byte readByte = is.readByte();
         Type type = Type.valueOf(readByte);

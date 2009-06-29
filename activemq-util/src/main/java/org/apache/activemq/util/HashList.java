@@ -18,8 +18,8 @@
 import java.util.HashMap;
 import java.util.Iterator;
 
-import org.apache.kahadb.util.LinkedNodeList;
-import org.apache.kahadb.util.LinkedNode;
+import org.apache.activemq.util.list.LinkedNode;
+import org.apache.activemq.util.list.LinkedNodeList;
 
 public class HashList<E> {
     private HashMap<E, HashListNode> m_index = null;

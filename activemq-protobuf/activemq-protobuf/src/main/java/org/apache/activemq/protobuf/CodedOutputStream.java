@@ -19,6 +19,9 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.BufferOutputStream;
+
 
 /**
  * Encodes and writes protocol message fields.

@@ -28,7 +28,7 @@ import java.io.RandomAccessFile;
 
 import junit.framework.Assert;
 
-import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.util.buffer.Buffer;
 
 import protobuf_unittest.UnittestProto.ForeignEnum;
 import protobuf_unittest.UnittestProto.ForeignMessage;

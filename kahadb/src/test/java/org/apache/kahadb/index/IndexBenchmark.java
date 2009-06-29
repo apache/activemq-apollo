@@ -24,9 +24,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import junit.framework.TestCase;
+
+import org.apache.activemq.util.IOHelper;
 import org.apache.kahadb.page.PageFile;
 import org.apache.kahadb.page.Transaction;
-import org.apache.kahadb.util.IOHelper;
 
 /**
  * @author chirino

@@ -27,10 +27,10 @@ import java.io.OutputStream;
 import java.util.Map;
 
 import org.apache.activemq.transport.Transport;
-import org.apache.activemq.util.ByteArrayInputStream;
-import org.apache.activemq.util.ByteArrayOutputStream;
-import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.ClassLoadingAwareObjectInputStream;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.ByteArrayInputStream;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 
 /**
  * A simple implementation which uses Object Stream serialization.
@@ -40,7 +40,7 @@ import org.apache.activemq.util.ClassLoadingAwareObjectInputStream;
 public class ObjectStreamWireFormat implements WireFormat {
 
     public static final String WIREFORMAT_NAME = "object";
-    public ByteSequence marshal(Object command) throws IOException {
+    public Buffer marshal(Object command) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream ds = new DataOutputStream(baos);
         marshal(command, ds);
@@ -48,7 +48,7 @@ public class ObjectStreamWireFormat implements WireFormat {
         return baos.toByteSequence();
     }
 
-    public Object unmarshal(ByteSequence packet) throws IOException {
+    public Object unmarshal(Buffer packet) throws IOException {
         return unmarshal(new DataInputStream(new ByteArrayInputStream(packet)));
     }
 

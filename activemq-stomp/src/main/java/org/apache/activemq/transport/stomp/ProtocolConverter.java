@@ -52,12 +52,12 @@ import org.apache.activemq.command.SessionInfo;
 import org.apache.activemq.command.ShutdownInfo;
 import org.apache.activemq.command.TransactionId;
 import org.apache.activemq.command.TransactionInfo;
-import org.apache.activemq.util.ByteArrayOutputStream;
 import org.apache.activemq.util.FactoryFinder;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.util.IdGenerator;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.LongSequenceGenerator;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 

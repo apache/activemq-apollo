@@ -17,7 +17,7 @@
 package org.apache.activemq.wireformat;
 
 import org.apache.activemq.openwire.OpenWireFormatFactory;
-import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.buffer.Buffer;
 
 public class DiscriminatableOpenWireFormatFactory extends OpenWireFormatFactory {
 
@@ -27,7 +27,7 @@ public class DiscriminatableOpenWireFormatFactory extends OpenWireFormatFactory 
         return true;
     }
 
-    public boolean matchesWireformatHeader(ByteSequence byteSequence) {
+    public boolean matchesWireformatHeader(Buffer byteSequence) {
         if (byteSequence.length == 4 + MAGIC.length) {
             for (int i = 0; i < MAGIC.length; i++) {
                 if (byteSequence.data[i + 4] != MAGIC[i]) {

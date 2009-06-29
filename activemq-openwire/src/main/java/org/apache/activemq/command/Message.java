@@ -29,10 +29,10 @@ import org.apache.activemq.advisory.AdvisorySupport;
 import org.apache.activemq.broker.region.Destination;
 import org.apache.activemq.broker.region.MessageReference;
 import org.apache.activemq.legacy.usage.MemoryUsage;
-import org.apache.activemq.util.ByteArrayInputStream;
-import org.apache.activemq.util.ByteArrayOutputStream;
-import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.MarshallingSupport;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.ByteArrayInputStream;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
 
 /**
@@ -72,8 +72,8 @@ public abstract class Message extends BaseCommand implements MarshallAware, Mess
     protected boolean compressed;
     protected String userID;
 
-    protected ByteSequence content;
-    protected ByteSequence marshalledProperties;
+    protected Buffer content;
+    protected Buffer marshalledProperties;
     protected DataStructure dataStructure;
     protected int redeliveryCounter;
 
@@ -185,7 +185,7 @@ public abstract class Message extends BaseCommand implements MarshallAware, Mess
         }
     }
 
-    private Map<String, Object> unmarsallProperties(ByteSequence marshalledProperties) throws IOException {
+    private Map<String, Object> unmarsallProperties(Buffer marshalledProperties) throws IOException {
         return MarshallingSupport.unmarshalPrimitiveMap(new DataInputStream(new ByteArrayInputStream(marshalledProperties)));
     }
 
@@ -387,22 +387,22 @@ public abstract class Message extends BaseCommand implements MarshallAware, Mess
     /**
      * @openwire:property version=1
      */
-    public ByteSequence getContent() {
+    public Buffer getContent() {
         return content;
     }
 
-    public void setContent(ByteSequence content) {
+    public void setContent(Buffer content) {
         this.content = content;
     }
 
     /**
      * @openwire:property version=1
      */
-    public ByteSequence getMarshalledProperties() {
+    public Buffer getMarshalledProperties() {
         return marshalledProperties;
     }
 
-    public void setMarshalledProperties(ByteSequence marshalledProperties) {
+    public void setMarshalledProperties(Buffer marshalledProperties) {
         this.marshalledProperties = marshalledProperties;
     }
 

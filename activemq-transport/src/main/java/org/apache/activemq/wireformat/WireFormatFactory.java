@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.wireformat;
 
-import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.buffer.Buffer;
 
 public interface WireFormatFactory {
     
@@ -45,7 +45,7 @@ public interface WireFormatFactory {
      * @param byteSequence The byte sequence representing the herader data read so far.
      * @return True if the ByteSequence matches the wire format header.
      */
-    boolean matchesWireformatHeader(ByteSequence byteSequence);
+    boolean matchesWireformatHeader(Buffer byteSequence);
 
     
 }

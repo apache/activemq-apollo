@@ -24,9 +24,8 @@ import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.command.Message;
 import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.openwire.OpenWireFormat;
-import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.protobuf.Buffer;
-import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.buffer.Buffer;
 
 public class OpenWireMessageDelivery extends BrokerMessageDelivery {
 
@@ -108,7 +107,7 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
         MessageRecord record = new MessageRecord();
         record.setEncoding(ENCODING);
 
-        ByteSequence bytes;
+        Buffer bytes;
         try {
             bytes = storeWireFormat.marshal(message);
         } catch (IOException e) {

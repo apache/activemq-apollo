@@ -37,8 +37,8 @@ import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.PriorityDispatcher;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.transport.TransportFactory;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 public abstract class BrokerTestBase extends TestCase {
 

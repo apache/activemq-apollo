@@ -20,10 +20,10 @@ import org.apache.activemq.apollo.broker.BrokerMessageDelivery;
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.filter.MessageEvaluationContext;
-import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.transport.stomp.Stomp;
 import org.apache.activemq.transport.stomp.StompFrame;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.buffer.Buffer;
 
 public class StompMessageDelivery extends BrokerMessageDelivery {
 

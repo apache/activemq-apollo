@@ -26,10 +26,10 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Map.Entry;
 
+import org.apache.activemq.util.marshaller.VariableMarshaller;
 import org.apache.kahadb.index.BTreeIndex.Prefixer;
 import org.apache.kahadb.page.Page;
 import org.apache.kahadb.page.Transaction;
-import org.apache.kahadb.util.VariableMarshaller;
 
 /**
  * The BTreeNode class represents a node in the BTree object graph. It is stored

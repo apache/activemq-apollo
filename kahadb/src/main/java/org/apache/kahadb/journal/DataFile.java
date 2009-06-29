@@ -20,8 +20,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-import org.apache.kahadb.util.IOHelper;
-import org.apache.kahadb.util.LinkedNode;
+import org.apache.activemq.util.IOHelper;
+import org.apache.activemq.util.list.LinkedNode;
 
 /**
  * DataFile

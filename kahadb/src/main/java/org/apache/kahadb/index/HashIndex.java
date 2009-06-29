@@ -24,13 +24,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.activemq.util.marshaller.Marshaller;
+import org.apache.activemq.util.marshaller.VariableMarshaller;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.kahadb.page.Page;
 import org.apache.kahadb.page.PageFile;
 import org.apache.kahadb.page.Transaction;
-import org.apache.kahadb.util.Marshaller;
-import org.apache.kahadb.util.VariableMarshaller;
 
 /**
  * BTree implementation

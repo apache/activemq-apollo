@@ -30,8 +30,8 @@ import org.apache.activemq.dispatch.PooledDispatcher.PooledDispatchContext;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.PriorityLinkedList;
 import org.apache.activemq.util.TimerHeap;
-import org.apache.kahadb.util.LinkedNode;
-import org.apache.kahadb.util.LinkedNodeList;
+import org.apache.activemq.util.list.LinkedNode;
+import org.apache.activemq.util.list.LinkedNodeList;
 
 public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runnable, IDispatcher {
 

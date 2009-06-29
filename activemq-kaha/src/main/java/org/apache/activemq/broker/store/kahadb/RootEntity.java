@@ -35,19 +35,19 @@ import org.apache.activemq.broker.store.Store.SubscriptionRecord;
 import org.apache.activemq.broker.store.kahadb.Data.MessageAdd;
 import org.apache.activemq.broker.store.kahadb.Data.SubscriptionAdd;
 import org.apache.activemq.broker.store.kahadb.Data.SubscriptionAdd.SubscriptionAddBuffer;
-import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.protobuf.InvalidProtocolBufferException;
 import org.apache.activemq.queue.QueueDescriptor;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.marshaller.IntegerMarshaller;
+import org.apache.activemq.util.marshaller.LongMarshaller;
+import org.apache.activemq.util.marshaller.Marshaller;
+import org.apache.activemq.util.marshaller.VariableMarshaller;
 import org.apache.kahadb.index.BTreeIndex;
 import org.apache.kahadb.index.BTreeVisitor;
 import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.page.Page;
 import org.apache.kahadb.page.Transaction;
-import org.apache.kahadb.util.IntegerMarshaller;
-import org.apache.kahadb.util.LongMarshaller;
-import org.apache.kahadb.util.Marshaller;
-import org.apache.kahadb.util.VariableMarshaller;
 
 public class RootEntity {
 

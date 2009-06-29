@@ -28,7 +28,7 @@ import javax.xml.bind.annotation.adapters.XmlAdapter;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 import org.apache.activemq.apollo.broker.VirtualHost;
-import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 @XmlRootElement(name = "virtual-host")
 @XmlAccessorType(XmlAccessType.FIELD)

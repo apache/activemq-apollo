@@ -16,10 +16,10 @@
  */
 package org.apache.kahadb.journal;
 
-import org.apache.kahadb.util.ByteSequence;
+import org.apache.activemq.util.buffer.Buffer;
 
 public interface ReplicationTarget {
 
-	void replicate(Location location, ByteSequence sequence, boolean sync);
+	void replicate(Location location, Buffer sequence, boolean sync);
 
 }

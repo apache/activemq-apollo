@@ -21,8 +21,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import junit.framework.TestCase;
-import org.apache.kahadb.journal.Journal;
-import org.apache.kahadb.util.ByteSequence;
+
+import org.apache.activemq.util.buffer.Buffer;
 
 public class JournalTest extends TestCase {
     protected static final int DEFAULT_MAX_BATCH_SIZE = 1024 * 1024 * 4;
@@ -64,7 +64,7 @@ public class JournalTest extends TestCase {
     public void testBatchWriteCallbackCompleteAfterTimeout() throws Exception {
         final int iterations = 10;
         final CountDownLatch latch = new CountDownLatch(iterations);
-        ByteSequence data = new ByteSequence("DATA".getBytes());
+        Buffer data = new Buffer("DATA".getBytes());
         for (int i=0; i < iterations; i++) {
             dataManager.write(data, new Runnable() {
                 public void run() {
@@ -80,7 +80,7 @@ public class JournalTest extends TestCase {
     public void testBatchWriteCallbackCompleteAfterClose() throws Exception {
         final int iterations = 10;
         final CountDownLatch latch = new CountDownLatch(iterations);
-        ByteSequence data = new ByteSequence("DATA".getBytes());
+        Buffer data = new Buffer("DATA".getBytes());
         for (int i=0; i<iterations; i++) {
             dataManager.write(data, new Runnable() {
                 public void run() {
@@ -94,7 +94,7 @@ public class JournalTest extends TestCase {
     }
     
     public void testBatchWriteCompleteAfterClose() throws Exception {
-        ByteSequence data = new ByteSequence("DATA".getBytes());
+        Buffer data = new Buffer("DATA".getBytes());
         final int iterations = 10;
         for (int i=0; i<iterations; i++) {
             dataManager.write(data, false);
@@ -113,7 +113,7 @@ public class JournalTest extends TestCase {
         };
         int messageSize = DEFAULT_MAX_BATCH_SIZE / iterations;
         byte[] message = new byte[messageSize];
-        ByteSequence data = new ByteSequence(message);
+        Buffer data = new Buffer(message);
         
         for (int i=0; i< iterations; i++) {
             dataManager.write(data, done);
@@ -124,7 +124,7 @@ public class JournalTest extends TestCase {
     }
     
     public void testNoBatchWriteWithSync() throws Exception {
-        ByteSequence data = new ByteSequence("DATA".getBytes());
+        Buffer data = new Buffer("DATA".getBytes());
         final int iterations = 10;
         for (int i=0; i<iterations; i++) {
             dataManager.write(data, true);

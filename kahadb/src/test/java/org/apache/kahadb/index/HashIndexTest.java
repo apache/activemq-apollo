@@ -16,10 +16,10 @@
  */
 package org.apache.kahadb.index;
 
+import org.apache.activemq.util.marshaller.LongMarshaller;
+import org.apache.activemq.util.marshaller.StringMarshaller;
 import org.apache.kahadb.index.HashIndex;
 import org.apache.kahadb.index.Index;
-import org.apache.kahadb.util.LongMarshaller;
-import org.apache.kahadb.util.StringMarshaller;
 
 public class HashIndexTest extends IndexTestSupport {
 

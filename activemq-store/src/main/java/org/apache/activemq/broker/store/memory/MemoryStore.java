@@ -31,12 +31,11 @@ import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.Store.DuplicateKeyException;
 import org.apache.activemq.broker.store.Store.Session;
 import org.apache.activemq.broker.store.Store.SubscriptionRecord;
-import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.QueueDescriptor;
-import org.apache.activemq.util.ByteArrayOutputStream;
-import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.Comparators;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 
 /**
  * An in memory implementation of the {@link Store} interface. It does not
@@ -63,7 +62,7 @@ public class MemoryStore implements Store {
     static private class Stream {
 
         private ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        private ByteSequence data;
+        private Buffer data;
 
         public void write(Buffer buffer) {
             if (baos == null) {

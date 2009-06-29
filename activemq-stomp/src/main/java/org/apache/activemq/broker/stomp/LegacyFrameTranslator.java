@@ -30,10 +30,10 @@ import org.apache.activemq.command.ActiveMQBytesMessage;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.activemq.command.ActiveMQTextMessage;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.transport.stomp.ProtocolException;
 import org.apache.activemq.transport.stomp.Stomp;
 import org.apache.activemq.transport.stomp.StompFrame;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 /**
  * Implements ActiveMQ 4.0 translations

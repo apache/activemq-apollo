@@ -22,10 +22,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.activemq.util.marshaller.LongMarshaller;
+import org.apache.activemq.util.marshaller.StringMarshaller;
 import org.apache.kahadb.index.BTreeIndex;
 import org.apache.kahadb.index.Index;
-import org.apache.kahadb.util.LongMarshaller;
-import org.apache.kahadb.util.StringMarshaller;
 
 public class BTreeIndexTest extends IndexTestSupport {
 

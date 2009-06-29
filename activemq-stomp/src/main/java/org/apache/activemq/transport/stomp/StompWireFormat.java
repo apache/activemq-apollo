@@ -27,9 +27,9 @@ import java.util.Map;
 
 import org.apache.activemq.transport.InactivityMonitor;
 import org.apache.activemq.transport.Transport;
-import org.apache.activemq.util.ByteArrayInputStream;
-import org.apache.activemq.util.ByteArrayOutputStream;
-import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.ByteArrayInputStream;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 
@@ -50,7 +50,7 @@ public class StompWireFormat implements WireFormat {
     private int version = 1;
     public static final String WIREFORMAT_NAME = "stomp";
 
-    public ByteSequence marshal(Object command) throws IOException {
+    public Buffer marshal(Object command) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
         marshal(command, dos);
@@ -58,7 +58,7 @@ public class StompWireFormat implements WireFormat {
         return baos.toByteSequence();
     }
 
-    public Object unmarshal(ByteSequence packet) throws IOException {
+    public Object unmarshal(Buffer packet) throws IOException {
         ByteArrayInputStream stream = new ByteArrayInputStream(packet);
         DataInputStream dis = new DataInputStream(stream);
         return unmarshal(dis);
@@ -194,7 +194,7 @@ public class StompWireFormat implements WireFormat {
             baos.write(b);
         }
         baos.close();
-        ByteSequence sequence = baos.toByteSequence();
+        Buffer sequence = baos.toByteSequence();
         return new String(sequence.getData(), sequence.getOffset(), sequence.getLength(), "UTF-8");
     }
 

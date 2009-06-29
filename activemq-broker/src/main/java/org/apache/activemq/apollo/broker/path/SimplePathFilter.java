@@ -17,7 +17,7 @@
 
 package org.apache.activemq.apollo.broker.path;
 
-import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 /**
  * Matches messages sent to an exact path

@@ -35,14 +35,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
 
+import org.apache.activemq.util.Scheduler;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.list.LinkedNodeList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.kahadb.journal.DataFileAppender.WriteCommand;
 import org.apache.kahadb.journal.DataFileAppender.WriteKey;
-import org.apache.kahadb.util.ByteSequence;
 import org.apache.kahadb.util.DataByteArrayInputStream;
-import org.apache.kahadb.util.LinkedNodeList;
-import org.apache.kahadb.util.Scheduler;
 
 /**
  * Manages DataFiles
@@ -504,10 +504,10 @@ public class Journal {
         }
     }
 
-    public synchronized ByteSequence read(Location location) throws IOException, IllegalStateException {
+    public synchronized Buffer read(Location location) throws IOException, IllegalStateException {
         DataFile dataFile = getDataFile(location);
         DataFileAccessor reader = accessorPool.openDataFileAccessor(dataFile);
-        ByteSequence rc = null;
+        Buffer rc = null;
         try {
             rc = reader.readRecord(location);
         } finally {
@@ -516,17 +516,17 @@ public class Journal {
         return rc;
     }
 
-    public synchronized Location write(ByteSequence data, boolean sync) throws IOException, IllegalStateException {
+    public synchronized Location write(Buffer data, boolean sync) throws IOException, IllegalStateException {
         Location loc = appender.storeItem(data, Location.USER_TYPE, sync);
         return loc;
     }
 
-    public synchronized Location write(ByteSequence data, Runnable onComplete) throws IOException, IllegalStateException {
+    public synchronized Location write(Buffer data, Runnable onComplete) throws IOException, IllegalStateException {
         Location loc = appender.storeItem(data, Location.USER_TYPE, onComplete);
         return loc;
     }
 
-    public void update(Location location, ByteSequence data, boolean sync) throws IOException {
+    public void update(Location location, Buffer data, boolean sync) throws IOException {
         DataFile dataFile = getDataFile(location);
         DataFileAccessor updater = accessorPool.openDataFileAccessor(dataFile);
         try {

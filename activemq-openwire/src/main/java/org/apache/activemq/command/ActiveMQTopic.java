@@ -20,7 +20,7 @@ import javax.jms.JMSException;
 import javax.jms.Topic;
 
 import org.apache.activemq.apollo.broker.Router;
-import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 /**
  * @org.apache.xbean.XBean element="topic" description="An ActiveMQ Topic

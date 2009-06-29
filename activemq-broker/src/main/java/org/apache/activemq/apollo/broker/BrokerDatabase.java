@@ -46,14 +46,14 @@ import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
-import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.activemq.queue.RestoreListener;
 import org.apache.activemq.queue.RestoredElement;
 import org.apache.activemq.queue.SaveableQueueElement;
-import org.apache.kahadb.util.LinkedNode;
-import org.apache.kahadb.util.LinkedNodeList;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.list.LinkedNode;
+import org.apache.activemq.util.list.LinkedNodeList;
 
 public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.OperationBase> implements Service, DispatcherAware {
 

@@ -28,11 +28,11 @@ import org.apache.activemq.apollo.Connection;
 import org.apache.activemq.dispatch.DispatcherAware;
 import org.apache.activemq.dispatch.IDispatcher;
 import org.apache.activemq.dispatch.PriorityDispatcher;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportServer;
 import org.apache.activemq.util.IOHelper;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

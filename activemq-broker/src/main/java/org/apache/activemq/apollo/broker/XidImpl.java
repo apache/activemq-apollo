@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import javax.transaction.xa.Xid;
 
-import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.util.buffer.Buffer;
 
 /**
  * An implementation of JTA transaction identifier (javax.transaction.xa.Xid).

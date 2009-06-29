@@ -34,9 +34,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
 
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.protobuf.compiler.parser.ParseException;
 import org.apache.activemq.protobuf.compiler.parser.ProtoParser;
+import org.apache.activemq.util.buffer.Buffer;
 
 public class JavaGenerator {
 
@@ -441,7 +441,7 @@ public class JavaGenerator {
         p("}");
         p();
 
-        p("public static "+className+" parseUnframed(org.apache.activemq.protobuf.Buffer data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
+        p("public static "+className+" parseUnframed(org.apache.activemq.util.buffer.Buffer data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
         indent();
         p("return new "+className+"().mergeUnframed(data)"+postMergeProcessing+";");
         unindent();
@@ -469,7 +469,7 @@ public class JavaGenerator {
         p("}");
         p();
         
-        p("public static "+className+" parseFramed(org.apache.activemq.protobuf.Buffer data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
+        p("public static "+className+" parseFramed(org.apache.activemq.util.buffer.Buffer data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
         indent();
         p("return new "+className+"().mergeFramed(data)"+postMergeProcessing+";");
         unindent();
@@ -686,7 +686,7 @@ public class JavaGenerator {
             p("org.apache.activemq.protobuf.CodedOutputStream original=null;");
             p("if( encodedForm == null ) {");
             indent();
-            p("encodedForm = new org.apache.activemq.protobuf.Buffer(new byte[size]);");
+            p("encodedForm = new org.apache.activemq.util.buffer.Buffer(new byte[size]);");
             p("original = output;");
             p("output = new org.apache.activemq.protobuf.CodedOutputStream(encodedForm);");
             unindent();
@@ -1343,7 +1343,7 @@ public class JavaGenerator {
             if( field.isStringType() ) {
                 return asJavaString(defaultOption.getValue());
             } else if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
-                return "new org.apache.activemq.protobuf.Buffer("+asJavaString(defaultOption.getValue())+")";
+                return "new org.apache.activemq.util.buffer.Buffer("+asJavaString(defaultOption.getValue())+")";
             } else if( field.isInteger32Type() ) {
                 int v;
                 if( field.getType() == FieldDescriptor.UINT32_TYPE ) {
@@ -1523,7 +1523,7 @@ public class JavaGenerator {
             return "java.lang.String";
         }
         if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
-            return "org.apache.activemq.protobuf.Buffer";
+            return "org.apache.activemq.util.buffer.Buffer";
         }
         if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
             return "java.lang.Boolean";
@@ -1550,7 +1550,7 @@ public class JavaGenerator {
             return "java.lang.String";
         }
         if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
-            return "org.apache.activemq.protobuf.Buffer";
+            return "org.apache.activemq.util.buffer.Buffer";
         }
         if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
             return "boolean";

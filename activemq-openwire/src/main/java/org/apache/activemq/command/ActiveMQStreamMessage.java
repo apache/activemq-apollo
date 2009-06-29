@@ -35,11 +35,11 @@ import javax.jms.MessageNotWriteableException;
 import javax.jms.StreamMessage;
 
 import org.apache.activemq.IConnection;
-import org.apache.activemq.util.ByteArrayInputStream;
-import org.apache.activemq.util.ByteArrayOutputStream;
-import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.JMSExceptionSupport;
 import org.apache.activemq.util.MarshallingSupport;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.ByteArrayInputStream;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 
 /**
  * A <CODE>StreamMessage</CODE> object is used to send a stream of primitive
@@ -1133,9 +1133,9 @@ public class ActiveMQStreamMessage extends ActiveMQMessage implements StreamMess
     private void initializeReading() throws MessageNotReadableException {
         checkWriteOnlyBody();
         if (this.dataIn == null) {
-            ByteSequence data = getContent();
+            Buffer data = getContent();
             if (data == null) {
-                data = new ByteSequence(new byte[] {}, 0, 0);
+                data = new Buffer(new byte[] {}, 0, 0);
             }
             InputStream is = new ByteArrayInputStream(data);
             if (isCompressed()) {

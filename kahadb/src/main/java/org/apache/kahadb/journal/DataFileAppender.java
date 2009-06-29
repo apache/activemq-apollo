@@ -24,10 +24,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
 
-import org.apache.kahadb.util.ByteSequence;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.list.LinkedNode;
+import org.apache.activemq.util.list.LinkedNodeList;
 import org.apache.kahadb.util.DataByteArrayOutputStream;
-import org.apache.kahadb.util.LinkedNode;
-import org.apache.kahadb.util.LinkedNodeList;
 
 /**
  * An optimized writer to do batch appends to a data file. This object is thread
@@ -118,18 +118,18 @@ class DataFileAppender {
 
     public static class WriteCommand extends LinkedNode<WriteCommand> {
         public final Location location;
-        public final ByteSequence data;
+        public final Buffer data;
         final boolean sync;
         public final Runnable onComplete;
 
-        public WriteCommand(Location location, ByteSequence data, boolean sync) {
+        public WriteCommand(Location location, Buffer data, boolean sync) {
             this.location = location;
             this.data = data;
             this.sync = sync;
             this.onComplete = null;
         }
 
-        public WriteCommand(Location location, ByteSequence data, Runnable onComplete) {
+        public WriteCommand(Location location, Buffer data, Runnable onComplete) {
             this.location = location;
             this.data = data;
             this.onComplete = onComplete;
@@ -158,7 +158,7 @@ class DataFileAppender {
      * @throws
      * @throws
      */
-    public Location storeItem(ByteSequence data, byte type, boolean sync) throws IOException {
+    public Location storeItem(Buffer data, byte type, boolean sync) throws IOException {
 
         // Write the packet our internal buffer.
         int size = data.getLength() + Journal.RECORD_HEAD_SPACE;
@@ -190,7 +190,7 @@ class DataFileAppender {
         return location;
     }
 
-    public Location storeItem(ByteSequence data, byte type, Runnable onComplete) throws IOException {
+    public Location storeItem(Buffer data, byte type, Runnable onComplete) throws IOException {
         // Write the packet our internal buffer.
         int size = data.getLength() + Journal.RECORD_HEAD_SPACE;
 
@@ -354,7 +354,7 @@ class DataFileAppender {
                     write = write.getNext();
                 }
 
-                ByteSequence sequence = buff.toByteSequence();
+                Buffer sequence = buff.toByteSequence();
                 
                 // Now we can fill in the batch control record properly. 
                 buff.reset();

@@ -25,7 +25,7 @@ import org.apache.activemq.command.DataStructure;
 import org.apache.activemq.openwire.BooleanStream;
 import org.apache.activemq.openwire.DataStreamMarshaller;
 import org.apache.activemq.openwire.OpenWireFormat;
-import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.buffer.Buffer;
 
 public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
 
@@ -416,7 +416,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         return rc;
     }
 
-    protected int tightMarshalByteSequence1(ByteSequence data, BooleanStream bs) throws IOException {
+    protected int tightMarshalByteSequence1(Buffer data, BooleanStream bs) throws IOException {
         bs.writeBoolean(data != null);
         if (data != null) {
             return data.getLength() + 4;
@@ -425,7 +425,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected void tightMarshalByteSequence2(ByteSequence data, DataOutput dataOut, BooleanStream bs)
+    protected void tightMarshalByteSequence2(Buffer data, DataOutput dataOut, BooleanStream bs)
         throws IOException {
         if (bs.readBoolean()) {
             dataOut.writeInt(data.getLength());
@@ -433,13 +433,13 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected ByteSequence tightUnmarshalByteSequence(DataInput dataIn, BooleanStream bs) throws IOException {
-        ByteSequence rc = null;
+    protected Buffer tightUnmarshalByteSequence(DataInput dataIn, BooleanStream bs) throws IOException {
+        Buffer rc = null;
         if (bs.readBoolean()) {
             int size = dataIn.readInt();
             byte[] t = new byte[size];
             dataIn.readFully(t);
-            return new ByteSequence(t, 0, size);
+            return new Buffer(t, 0, size);
         }
         return rc;
     }
@@ -623,7 +623,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         return rc;
     }
 
-    protected void looseMarshalByteSequence(OpenWireFormat wireFormat, ByteSequence data, DataOutput dataOut)
+    protected void looseMarshalByteSequence(OpenWireFormat wireFormat, Buffer data, DataOutput dataOut)
         throws IOException {
         dataOut.writeBoolean(data != null);
         if (data != null) {
@@ -632,13 +632,13 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected ByteSequence looseUnmarshalByteSequence(DataInput dataIn) throws IOException {
-        ByteSequence rc = null;
+    protected Buffer looseUnmarshalByteSequence(DataInput dataIn) throws IOException {
+        Buffer rc = null;
         if (dataIn.readBoolean()) {
             int size = dataIn.readInt();
             byte[] t = new byte[size];
             dataIn.readFully(t);
-            rc = new ByteSequence(t, 0, size);
+            rc = new Buffer(t, 0, size);
         }
         return rc;
     }

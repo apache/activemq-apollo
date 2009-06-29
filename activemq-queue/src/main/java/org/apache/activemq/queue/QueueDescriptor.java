@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.queue;
 
-import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 public class QueueDescriptor {
 

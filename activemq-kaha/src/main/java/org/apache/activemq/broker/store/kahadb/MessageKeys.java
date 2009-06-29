@@ -20,10 +20,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.marshaller.Marshaller;
+import org.apache.activemq.util.marshaller.VariableMarshaller;
 import org.apache.kahadb.journal.Location;
-import org.apache.kahadb.util.Marshaller;
-import org.apache.kahadb.util.VariableMarshaller;
 
 public class MessageKeys {
 

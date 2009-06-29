@@ -34,11 +34,11 @@ import javax.jms.MessageFormatException;
 import javax.jms.MessageNotWriteableException;
 
 import org.apache.activemq.IConnection;
-import org.apache.activemq.util.ByteArrayInputStream;
-import org.apache.activemq.util.ByteArrayOutputStream;
-import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.JMSExceptionSupport;
 import org.apache.activemq.util.MarshallingSupport;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.ByteArrayInputStream;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
 
 /**
@@ -147,7 +147,7 @@ public class ActiveMQMapMessage extends ActiveMQMessage implements MapMessage {
     private void loadContent() throws JMSException {
         try {
             if (getContent() != null && map.isEmpty()) {
-                ByteSequence content = getContent();
+                Buffer content = getContent();
                 InputStream is = new ByteArrayInputStream(content);
                 if (isCompressed()) {
                     is = new InflaterInputStream(is);

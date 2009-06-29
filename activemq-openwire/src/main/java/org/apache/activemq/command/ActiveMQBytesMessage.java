@@ -33,11 +33,11 @@ import javax.jms.MessageFormatException;
 import javax.jms.MessageNotReadableException;
 
 import org.apache.activemq.IConnection;
-import org.apache.activemq.util.ByteArrayInputStream;
-import org.apache.activemq.util.ByteArrayOutputStream;
-import org.apache.activemq.util.ByteSequence;
-import org.apache.activemq.util.ByteSequenceData;
 import org.apache.activemq.util.JMSExceptionSupport;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.BufferEditor;
+import org.apache.activemq.util.buffer.ByteArrayInputStream;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 
 /**
  * A <CODE>BytesMessage</CODE> object is used to send a message containing a
@@ -122,10 +122,10 @@ public class ActiveMQBytesMessage extends ActiveMQMessage implements BytesMessag
         try {
             if (dataOut != null) {
                 dataOut.close();
-                ByteSequence bs = bytesOut.toByteSequence();
+                Buffer bs = bytesOut.toByteSequence();
                 if (compressed) {
                     int pos = bs.offset;
-                    ByteSequenceData.writeIntBig(bs, length);
+                    BufferEditor.writeIntBig(bs, length);
                     bs.offset = pos;
                 }
                 setContent(bs);
@@ -816,9 +816,9 @@ public class ActiveMQBytesMessage extends ActiveMQMessage implements BytesMessag
     private void initializeReading() throws JMSException {
         checkWriteOnlyBody();
         if (dataIn == null) {
-            ByteSequence data = getContent();
+            Buffer data = getContent();
             if (data == null) {
-                data = new ByteSequence(new byte[] {}, 0, 0);
+                data = new Buffer(new byte[] {}, 0, 0);
             }
             InputStream is = new ByteArrayInputStream(data);
             if (isCompressed()) {

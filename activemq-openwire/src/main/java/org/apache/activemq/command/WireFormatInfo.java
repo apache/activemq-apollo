@@ -25,10 +25,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.activemq.state.CommandVisitor;
-import org.apache.activemq.util.ByteArrayInputStream;
-import org.apache.activemq.util.ByteArrayOutputStream;
-import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.MarshallingSupport;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.ByteArrayInputStream;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
 
 /**
@@ -43,7 +43,7 @@ public class WireFormatInfo implements Command, MarshallAware {
 
     protected byte magic[] = MAGIC;
     protected int version;
-    protected ByteSequence marshalledProperties;
+    protected Buffer marshalledProperties;
 
     protected transient Map<String, Object> properties;
     private transient Endpoint from;
@@ -86,11 +86,11 @@ public class WireFormatInfo implements Command, MarshallAware {
     /**
      * @openwire:property version=1
      */
-    public ByteSequence getMarshalledProperties() {
+    public Buffer getMarshalledProperties() {
         return marshalledProperties;
     }
 
-    public void setMarshalledProperties(ByteSequence marshalledProperties) {
+    public void setMarshalledProperties(Buffer marshalledProperties) {
         this.marshalledProperties = marshalledProperties;
     }
 
@@ -165,7 +165,7 @@ public class WireFormatInfo implements Command, MarshallAware {
         }
     }
 
-    private Map<String, Object> unmarsallProperties(ByteSequence marshalledProperties) throws IOException {
+    private Map<String, Object> unmarsallProperties(Buffer marshalledProperties) throws IOException {
         return MarshallingSupport.unmarshalPrimitiveMap(new DataInputStream(new ByteArrayInputStream(marshalledProperties)), MAX_PROPERTY_SIZE);
     }
 
@@ -357,10 +357,10 @@ public class WireFormatInfo implements Command, MarshallAware {
         return false;
     }
 
-    public void setCachedMarshalledForm(WireFormat wireFormat, ByteSequence data) {
+    public void setCachedMarshalledForm(WireFormat wireFormat, Buffer data) {
     }
 
-    public ByteSequence getCachedMarshalledForm(WireFormat wireFormat) {
+    public Buffer getCachedMarshalledForm(WireFormat wireFormat) {
         return null;
     }
 

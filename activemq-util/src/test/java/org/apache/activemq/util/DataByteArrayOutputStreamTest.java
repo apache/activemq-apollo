@@ -18,6 +18,8 @@ package org.apache.activemq.util;
 
 import java.io.IOException;
 
+import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
+
 import junit.framework.TestCase;
 
 public class DataByteArrayOutputStreamTest extends TestCase {

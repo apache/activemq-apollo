@@ -25,13 +25,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.list.Sequence;
+import org.apache.activemq.util.list.SequenceSet;
+import org.apache.activemq.util.marshaller.Marshaller;
 import org.apache.kahadb.page.PageFile.PageWrite;
-import org.apache.kahadb.util.ByteSequence;
 import org.apache.kahadb.util.DataByteArrayInputStream;
 import org.apache.kahadb.util.DataByteArrayOutputStream;
-import org.apache.kahadb.util.Marshaller;
-import org.apache.kahadb.util.Sequence;
-import org.apache.kahadb.util.SequenceSet;
 
 /**
  * The class used to read/update a PageFile object.  Using a transaction allows you to
@@ -421,33 +421,33 @@ public class Transaction implements Iterable<Page> {
 
     /**
      * @see org.apache.kahadb.page.Transaction#load(org.apache.kahadb.page.Page,
-     *      org.apache.kahadb.util.Marshaller)
+     *      org.apache.activemq.util.marshaller.Marshaller)
      */
     public InputStream openInputStream(final Page p) throws IOException {
 
         return new InputStream() {
 
-            private ByteSequence chunk = new ByteSequence(new byte[pageFile.getPageSize()]);
+            private Buffer chunk = new Buffer(new byte[pageFile.getPageSize()]);
             private Page page = readPage(p);
             private int pageCount = 1;
 
             private Page markPage;
-            private ByteSequence markChunk;
+            private Buffer markChunk;
 
             private Page readPage(Page page) throws IOException {
                 // Read the page data
                 
                 pageFile.readPage(page.getPageId(), chunk.getData());
                 
-                chunk.setOffset(0);
-                chunk.setLength(pageFile.getPageSize());
+                chunk.offset=0;
+                chunk.length = pageFile.getPageSize();
 
                 DataByteArrayInputStream in = new DataByteArrayInputStream(chunk);
                 page.read(in);
 
-                chunk.setOffset(Page.PAGE_HEADER_SIZE);
+                chunk.offset = Page.PAGE_HEADER_SIZE;
                 if (page.getType() == Page.PAGE_END_TYPE) {
-                    chunk.setLength((int)(page.getNext()));
+                    chunk.length = (int)(page.getNext());
                 }
 
                 if (page.getType() == Page.PAGE_FREE_TYPE) {
@@ -530,7 +530,7 @@ public class Transaction implements Iterable<Page> {
                 markPage = page;
                 byte data[] = new byte[pageFile.getPageSize()];
                 System.arraycopy(chunk.getData(), 0, data, 0, pageFile.getPageSize());
-                markChunk = new ByteSequence(data, chunk.getOffset(), chunk.getLength());
+                markChunk = new Buffer(data, chunk.getOffset(), chunk.getLength());
             }
 
             public void reset() {

@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.activemq.transport.Transport;
-import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 
@@ -32,7 +32,7 @@ public class MockWireFormatFactory implements WireFormatFactory {
 		public void setVersion(int version) {
 		}
 
-		public ByteSequence marshal(Object command) throws IOException {
+		public Buffer marshal(Object command) throws IOException {
 	        throw new UnsupportedOperationException();
 		}
 
@@ -40,7 +40,7 @@ public class MockWireFormatFactory implements WireFormatFactory {
 	        throw new UnsupportedOperationException();
 		}
 
-		public Object unmarshal(ByteSequence packet) throws IOException {
+		public Object unmarshal(Buffer packet) throws IOException {
 	        throw new UnsupportedOperationException();
 		}
 
@@ -61,7 +61,7 @@ public class MockWireFormatFactory implements WireFormatFactory {
         return false;
     }
 
-    public boolean matchesWireformatHeader(ByteSequence byteSequence) {
+    public boolean matchesWireformatHeader(Buffer byteSequence) {
         throw new UnsupportedOperationException();
     }
 

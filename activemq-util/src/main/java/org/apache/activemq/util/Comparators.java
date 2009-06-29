@@ -24,9 +24,12 @@ import java.util.Comparator;
  */
 public class Comparators {
 
+	/**
+	 * Compares Long objects for order.
+	 */
     public static final Comparator<Long> LONG_COMPARATOR = new Comparator<Long>() {
         /*
-         * (non-Javadoc)
+         * Compares its two arguments for order.
          * 
          * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
          */

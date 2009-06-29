@@ -24,7 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashSet;
 
-import org.apache.kahadb.util.StringMarshaller;
+import org.apache.activemq.util.marshaller.StringMarshaller;
 
 import junit.framework.TestCase;
 

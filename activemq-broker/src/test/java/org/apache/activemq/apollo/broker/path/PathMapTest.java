@@ -26,7 +26,7 @@ import java.util.Set;
 import junit.framework.TestCase;
 
 import org.apache.activemq.apollo.broker.path.PathMap;
-import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 public class PathMapTest extends TestCase {
     protected PathMap<String> map = new PathMap<String>();

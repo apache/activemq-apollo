@@ -25,10 +25,10 @@ import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.transport.TransportServer;
 import org.apache.activemq.transport.pipe.Pipe.ReadReadyListener;
-import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.URISupport;
+import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 
@@ -120,7 +120,7 @@ public class PipeTransportFactory extends TransportFactory {
                     		throw new EOFException();
                     	}                    	
                         if (wireFormat != null && marshal) {
-                            listener.onCommand(wireFormat.unmarshal((ByteSequence) o));
+                            listener.onCommand(wireFormat.unmarshal((Buffer) o));
                         } else {
                             listener.onCommand(o);
                         }
@@ -142,7 +142,7 @@ public class PipeTransportFactory extends TransportFactory {
                     		throw new EOFException();
                     	} else {
                             if (wireFormat != null && marshal) {
-                                listener.onCommand(wireFormat.unmarshal((ByteSequence)value));
+                                listener.onCommand(wireFormat.unmarshal((Buffer)value));
                             } else {
                                 listener.onCommand(value);
                             }

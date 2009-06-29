@@ -13,10 +13,10 @@ import org.apache.activemq.flow.Commands.FlowControl.FlowControlBean;
 import org.apache.activemq.flow.Commands.FlowControl.FlowControlBuffer;
 import org.apache.activemq.flow.Commands.Message.MessageBean;
 import org.apache.activemq.transport.Transport;
-import org.apache.activemq.util.ByteSequence;
-import org.apache.activemq.util.DataByteArrayInputStream;
-import org.apache.activemq.util.DataByteArrayOutputStream;
 import org.apache.activemq.util.IOExceptionSupport;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.DataByteArrayInputStream;
+import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 import org.apache.activemq.wireformat.StatefulWireFormat;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
@@ -265,13 +265,13 @@ public class Proto2WireFormatFactory implements WireFormatFactory {
             return false;
         }
 
-        public ByteSequence marshal(Object value) throws IOException {
+        public Buffer marshal(Object value) throws IOException {
             DataByteArrayOutputStream os = new DataByteArrayOutputStream();
             marshal(value, os);
             return os.toByteSequence();
         }
         
-        public Object unmarshal(ByteSequence data) throws IOException {
+        public Object unmarshal(Buffer data) throws IOException {
             DataByteArrayInputStream is = new DataByteArrayInputStream(data);
             return unmarshal(is);
         }
@@ -299,7 +299,7 @@ public class Proto2WireFormatFactory implements WireFormatFactory {
     /* (non-Javadoc)
      * @see org.apache.activemq.wireformat.WireFormatFactory#matchesWireformatHeader(org.apache.activemq.util.ByteSequence)
      */
-    public boolean matchesWireformatHeader(ByteSequence byteSequence) {
+    public boolean matchesWireformatHeader(Buffer byteSequence) {
         throw new UnsupportedOperationException();
     }
 

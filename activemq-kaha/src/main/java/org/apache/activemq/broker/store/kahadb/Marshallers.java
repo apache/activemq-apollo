@@ -21,12 +21,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.activemq.broker.store.Store.QueueRecord;
-import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.QueueDescriptor;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.marshaller.Marshaller;
+import org.apache.activemq.util.marshaller.VariableMarshaller;
 import org.apache.kahadb.journal.Location;
-import org.apache.kahadb.util.Marshaller;
-import org.apache.kahadb.util.VariableMarshaller;
 
 public class Marshallers {
 

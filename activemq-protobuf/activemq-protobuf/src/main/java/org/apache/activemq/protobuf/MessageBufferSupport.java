@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.BufferOutputStream;
+
 
 
 final public class MessageBufferSupport {

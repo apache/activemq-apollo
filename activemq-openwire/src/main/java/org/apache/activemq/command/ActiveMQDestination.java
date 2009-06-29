@@ -37,9 +37,9 @@ import javax.jms.TemporaryTopic;
 import javax.jms.Topic;
 
 import org.apache.activemq.jndi.JNDIBaseStorable;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.URISupport;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 /**
  * @openwire:marshaller

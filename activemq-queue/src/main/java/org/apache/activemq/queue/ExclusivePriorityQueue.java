@@ -22,7 +22,7 @@ import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.PriorityFlowController;
 import org.apache.activemq.flow.PrioritySizeLimiter;
 import org.apache.activemq.util.PriorityLinkedList;
-import org.apache.kahadb.util.LinkedNode;
+import org.apache.activemq.util.list.LinkedNode;
 
 /**
  */

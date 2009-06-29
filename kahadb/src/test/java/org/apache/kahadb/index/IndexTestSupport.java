@@ -20,9 +20,10 @@ import java.io.File;
 import java.io.IOException;
 
 import junit.framework.TestCase;
+
+import org.apache.activemq.util.IOHelper;
 import org.apache.kahadb.page.PageFile;
 import org.apache.kahadb.page.Transaction;
-import org.apache.kahadb.util.IOHelper;
 
 /**
  * Test a HashIndex

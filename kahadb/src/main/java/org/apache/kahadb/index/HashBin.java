@@ -22,9 +22,9 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.activemq.util.marshaller.VariableMarshaller;
 import org.apache.kahadb.page.Page;
 import org.apache.kahadb.page.Transaction;
-import org.apache.kahadb.util.VariableMarshaller;
 
 /**
  * Bin in a HashIndex

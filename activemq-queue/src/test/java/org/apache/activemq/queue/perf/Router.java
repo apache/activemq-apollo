@@ -9,8 +9,8 @@ import java.util.HashMap;
 
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.Commands.Destination;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.perf.MockBroker.DeliveryTarget;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 public class Router {
     final HashMap<AsciiBuffer, Collection<DeliveryTarget>> lookupTable = new HashMap<AsciiBuffer, Collection<DeliveryTarget>>();

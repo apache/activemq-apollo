@@ -27,10 +27,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.activemq.transport.Transport;
-import org.apache.activemq.util.ByteArrayInputStream;
-import org.apache.activemq.util.ByteArrayOutputStream;
-import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.FactoryFinder;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.ByteArrayInputStream;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -107,11 +107,11 @@ public class MultiWireFormatFactory implements WireFormatFactory {
             wireFormat.marshal(command, out);
         }
 
-        public ByteSequence marshal(Object command) throws IOException {
+        public Buffer marshal(Object command) throws IOException {
             throw new UnsupportedOperationException();
         }
 
-        public Object unmarshal(ByteSequence packet) throws IOException {
+        public Object unmarshal(Buffer packet) throws IOException {
             throw new UnsupportedOperationException();
         }
 
@@ -201,7 +201,7 @@ public class MultiWireFormatFactory implements WireFormatFactory {
      * org.apache.activemq.wireformat.WireFormatFactory#matchesWireformatHeader
      * (org.apache.activemq.util.ByteSequence)
      */
-    public boolean matchesWireformatHeader(ByteSequence byteSequence) {
+    public boolean matchesWireformatHeader(Buffer byteSequence) {
         throw new UnsupportedOperationException();
     }
 

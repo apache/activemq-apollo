@@ -26,8 +26,8 @@ import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
-import org.apache.kahadb.util.LinkedNode;
-import org.apache.kahadb.util.LinkedNodeList;
+import org.apache.activemq.util.list.LinkedNode;
+import org.apache.activemq.util.list.LinkedNodeList;
 
 public class MultiFlowQueue<E> extends AbstractFlowQueue<E> {
     private final HashMap<Flow, SingleFlowQueue> flowQueues = new HashMap<Flow, SingleFlowQueue>();

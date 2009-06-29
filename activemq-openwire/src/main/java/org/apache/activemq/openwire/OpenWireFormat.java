@@ -31,10 +31,10 @@ import org.apache.activemq.transport.InactivityMonitor;
 import org.apache.activemq.transport.ResponseCorrelator;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.WireFormatNegotiator;
-import org.apache.activemq.util.ByteSequence;
-import org.apache.activemq.util.ByteSequenceData;
-import org.apache.activemq.util.DataByteArrayInputStream;
-import org.apache.activemq.util.DataByteArrayOutputStream;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.BufferEditor;
+import org.apache.activemq.util.buffer.DataByteArrayInputStream;
+import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 
@@ -120,7 +120,7 @@ public final class OpenWireFormat implements WireFormat {
         return WIREFORMAT_NAME;
     }
 
-    public synchronized ByteSequence marshal(Object command) throws IOException {
+    public synchronized Buffer marshal(Object command) throws IOException {
 
         if (cacheEnabled) {
             runMarshallCacheEvictionSweep();
@@ -133,7 +133,7 @@ public final class OpenWireFormat implements WireFormat {
         //            ma = (MarshallAware)command;
         //        }
 
-        ByteSequence sequence = null;
+        Buffer sequence = null;
         // if( ma!=null ) {
         // sequence = ma.getCachedMarshalledForm(this);
         // }
@@ -178,7 +178,7 @@ public final class OpenWireFormat implements WireFormat {
                     if (!sizePrefixDisabled) {
                         size = sequence.getLength() - 4;
                         int pos = sequence.offset;
-                        ByteSequenceData.writeIntBig(sequence, size);
+                        BufferEditor.writeIntBig(sequence, size);
                         sequence.offset = pos;
                     }
                 }
@@ -197,7 +197,7 @@ public final class OpenWireFormat implements WireFormat {
         return sequence;
     }
 
-    public synchronized Object unmarshal(ByteSequence sequence) throws IOException {
+    public synchronized Object unmarshal(Buffer sequence) throws IOException {
         bytesIn.restart(sequence);
         // DataInputStream dis = new DataInputStream(new
         // ByteArrayInputStream(sequence));
@@ -257,7 +257,7 @@ public final class OpenWireFormat implements WireFormat {
                 dsm.looseMarshal(this, c, looseOut);
 
                 if (!sizePrefixDisabled) {
-                    ByteSequence sequence = bytesOut.toByteSequence();
+                    Buffer sequence = bytesOut.toByteSequence();
                     dataOut.writeInt(sequence.getLength());
                     dataOut.write(sequence.getData(), sequence.getOffset(), sequence.getLength());
                 }
@@ -385,7 +385,7 @@ public final class OpenWireFormat implements WireFormat {
 
         if (o.isMarshallAware()) {
             // MarshallAware ma = (MarshallAware)o;
-            ByteSequence sequence = null;
+            Buffer sequence = null;
             // sequence=ma.getCachedMarshalledForm(this);
             bs.writeBoolean(sequence != null);
             if (sequence != null) {

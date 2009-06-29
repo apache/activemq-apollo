@@ -22,8 +22,8 @@ import java.util.Map;
 
 import org.apache.activemq.command.BrokerId;
 import org.apache.activemq.command.Message;
-import org.apache.activemq.util.ByteArrayOutputStream;
 import org.apache.activemq.util.MarshallingSupport;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 
 /**
  * Test case for the OpenWire marshalling for Message NOTE!: This file is auto

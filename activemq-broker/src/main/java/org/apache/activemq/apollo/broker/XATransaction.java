@@ -20,8 +20,8 @@ import java.io.IOException;
 
 import javax.transaction.xa.XAException;
 
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.IQueue;
+import org.apache.activemq.util.buffer.Buffer;
 
 /**
  * XATransaction

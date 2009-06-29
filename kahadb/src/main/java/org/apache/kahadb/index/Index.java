@@ -20,8 +20,8 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.apache.activemq.util.marshaller.Marshaller;
 import org.apache.kahadb.page.Transaction;
-import org.apache.kahadb.util.Marshaller;
 
 /**
  * Simpler than a Map

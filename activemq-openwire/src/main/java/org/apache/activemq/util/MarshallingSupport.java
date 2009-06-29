@@ -29,6 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.activemq.util.buffer.DataByteArrayInputStream;
+import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
+
 /**
  * The fixed version of the UTF8 encoding function. Some older JVM's UTF8
  * encoding function breaks when handling large strings.

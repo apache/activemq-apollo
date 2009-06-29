@@ -31,11 +31,11 @@ import javax.jms.JMSException;
 import javax.jms.ObjectMessage;
 
 import org.apache.activemq.IConnection;
-import org.apache.activemq.util.ByteArrayInputStream;
-import org.apache.activemq.util.ByteArrayOutputStream;
-import org.apache.activemq.util.ByteSequence;
 import org.apache.activemq.util.ClassLoadingAwareObjectInputStream;
 import org.apache.activemq.util.JMSExceptionSupport;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.ByteArrayInputStream;
+import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 
 /**
  * An <CODE>ObjectMessage</CODE> object is used to send a message that
@@ -83,7 +83,7 @@ public class ActiveMQObjectMessage extends ActiveMQMessage implements ObjectMess
     }
 
     public void storeContent() {
-        ByteSequence bodyAsBytes = getContent();
+        Buffer bodyAsBytes = getContent();
         if (bodyAsBytes == null && object != null) {
             try {
                 ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
@@ -166,7 +166,7 @@ public class ActiveMQObjectMessage extends ActiveMQMessage implements ObjectMess
     public Serializable getObject() throws JMSException {
         if (object == null && getContent() != null) {
             try {
-                ByteSequence content = getContent();
+                Buffer content = getContent();
                 InputStream is = new ByteArrayInputStream(content);
                 if (isCompressed()) {
                     is = new InflaterInputStream(is);

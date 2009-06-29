@@ -18,8 +18,8 @@ package org.apache.activemq.util;
 
 import java.util.ArrayList;
 
-import org.apache.kahadb.util.LinkedNode;
-import org.apache.kahadb.util.LinkedNodeList;
+import org.apache.activemq.util.list.LinkedNode;
+import org.apache.activemq.util.list.LinkedNodeList;
 
 public class PriorityLinkedList<E extends LinkedNode<E>> {
 

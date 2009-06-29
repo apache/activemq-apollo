@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UTFDataFormatException;
 
+import org.apache.activemq.util.buffer.Buffer;
+
 /**
  * Optimized ByteArrayInputStream that can be used more than once
  * 
@@ -49,7 +51,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
      * 
      * @param sequence the input buffer.
      */
-    public DataByteArrayInputStream(ByteSequence sequence) {
+    public DataByteArrayInputStream(Buffer sequence) {
         this.buf = sequence.getData();
         this.offset = sequence.getOffset();
         this.pos =  this.offset;
@@ -101,7 +103,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
      * 
      * @param sequence
      */
-    public void restart(ByteSequence sequence) {
+    public void restart(Buffer sequence) {
         this.buf = sequence.getData();
         this.pos = sequence.getOffset();
         this.length = sequence.getLength();

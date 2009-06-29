@@ -28,6 +28,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.BufferOutputStream;
+
 
 abstract public class BaseMessage<T> implements Message<T> {
 

@@ -364,11 +364,11 @@ public class AltJavaGenerator {
         indent();
         
         p("private "+beanClassName+" bean;");
-        p("private org.apache.activemq.protobuf.Buffer buffer;");
+        p("private org.apache.activemq.util.buffer.Buffer buffer;");
         p("private int size=-1;");
         p("private int hashCode;");
         p();
-        p("private "+bufferClassName+"(org.apache.activemq.protobuf.Buffer buffer) {");
+        p("private "+bufferClassName+"(org.apache.activemq.util.buffer.Buffer buffer) {");
         indent();
         p("this.buffer = buffer;");
         unindent();
@@ -653,7 +653,7 @@ public class AltJavaGenerator {
         unindent();
         p("}");
         p();
-        p("public static "+bufferClassName+" parseUnframed(org.apache.activemq.protobuf.Buffer data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
+        p("public static "+bufferClassName+" parseUnframed(org.apache.activemq.util.buffer.Buffer data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
         indent();
         p("return new "+bufferClassName+"(data);");
         unindent();
@@ -661,7 +661,7 @@ public class AltJavaGenerator {
         p();
         p("public static "+bufferClassName+" parseUnframed(byte[] data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
         indent();
-        p("return parseUnframed(new org.apache.activemq.protobuf.Buffer(data));");
+        p("return parseUnframed(new org.apache.activemq.util.buffer.Buffer(data));");
         unindent();
         p("}");
         p();
@@ -675,7 +675,7 @@ public class AltJavaGenerator {
         unindent();
         p("}");
         p();
-        p("public static "+bufferClassName+" parseFramed(org.apache.activemq.protobuf.Buffer data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
+        p("public static "+bufferClassName+" parseFramed(org.apache.activemq.util.buffer.Buffer data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
         indent();
         p("try {");
         indent();
@@ -698,7 +698,7 @@ public class AltJavaGenerator {
         p();
         p("public static "+bufferClassName+" parseFramed(byte[] data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
         indent();
-        p("return parseFramed(new org.apache.activemq.protobuf.Buffer(data));");
+        p("return parseFramed(new org.apache.activemq.util.buffer.Buffer(data));");
         unindent();
         p("}");
         p();
@@ -929,7 +929,7 @@ public class AltJavaGenerator {
      */
     private void generateMethodWrite(MessageDescriptor m) {
         
-        p("public org.apache.activemq.protobuf.Buffer toUnframedBuffer() {");
+        p("public org.apache.activemq.util.buffer.Buffer toUnframedBuffer() {");
         indent();
         p("if( buffer !=null ) {");
         indent();
@@ -940,7 +940,7 @@ public class AltJavaGenerator {
         unindent();
         p("}");
         p();
-        p("public org.apache.activemq.protobuf.Buffer toFramedBuffer() {");
+        p("public org.apache.activemq.util.buffer.Buffer toFramedBuffer() {");
         indent();
         p("return org.apache.activemq.protobuf.MessageBufferSupport.toFramedBuffer(this);");
         unindent();
@@ -993,7 +993,7 @@ public class AltJavaGenerator {
         p("org.apache.activemq.protobuf.CodedOutputStream original=null;");
         p("if( buffer == null ) {");
         indent();
-        p("buffer = new org.apache.activemq.protobuf.Buffer(new byte[size]);");
+        p("buffer = new org.apache.activemq.util.buffer.Buffer(new byte[size]);");
         p("original = output;");
         p("output = new org.apache.activemq.protobuf.CodedOutputStream(buffer);");
         unindent();
@@ -1133,9 +1133,9 @@ public class AltJavaGenerator {
 						indent();
 			            String override = getOption(field.getOptions(), "java_override_type", null);
 			            if( "AsciiBuffer".equals(override) ) {
-                            p(setter + "(new org.apache.activemq.protobuf.AsciiBuffer(input.readBytes()));");
+                            p(setter + "(new org.apache.activemq.util.buffer.AsciiBuffer(input.readBytes()));");
 			            } else if( "UTF8Buffer".equals(override) ) {
-                            p(setter + "(new org.apache.activemq.protobuf.UTF8Buffer(input.readBytes()));");
+                            p(setter + "(new org.apache.activemq.util.buffer.UTF8Buffer(input.readBytes()));");
 			            } else {
 	                        p(setter + "(input.readBytes());");
 			            }						
@@ -2117,8 +2117,8 @@ public class AltJavaGenerator {
             p("}");
             p();
             
-            generateParseDelegate(ed, "parseUnframed", "org.apache.activemq.protobuf.Buffer", "org.apache.activemq.protobuf.InvalidProtocolBufferException");
-            generateParseDelegate(ed, "parseFramed", "org.apache.activemq.protobuf.Buffer", "org.apache.activemq.protobuf.InvalidProtocolBufferException");
+            generateParseDelegate(ed, "parseUnframed", "org.apache.activemq.util.buffer.Buffer", "org.apache.activemq.protobuf.InvalidProtocolBufferException");
+            generateParseDelegate(ed, "parseFramed", "org.apache.activemq.util.buffer.Buffer", "org.apache.activemq.protobuf.InvalidProtocolBufferException");
             generateParseDelegate(ed, "parseUnframed", "byte[]", "org.apache.activemq.protobuf.InvalidProtocolBufferException");
             generateParseDelegate(ed, "parseFramed", "byte[]", "org.apache.activemq.protobuf.InvalidProtocolBufferException");
             generateParseDelegate(ed, "parseFramed", "org.apache.activemq.protobuf.CodedInputStream", "org.apache.activemq.protobuf.InvalidProtocolBufferException, java.io.IOException");
@@ -2168,11 +2168,11 @@ public class AltJavaGenerator {
             // TODO: support handling string fields as buffers.
 //            String override = getOption(field.getOptions(), "java_override_type", null);
 //            if( "AsciiBuffer".equals(override) ) {
-//                return "org.apache.activemq.protobuf.AsciiBuffer";
+//                return "org.apache.activemq.util.buffer.AsciiBuffer";
 //            } else if( "UTF8Buffer".equals(override) ) {
-//                return "org.apache.activemq.protobuf.UTF8Buffer";
+//                return "org.apache.activemq.util.buffer.UTF8Buffer";
 //            } else if( "Buffer".equals(override) ) {
-//                return "org.apache.activemq.protobuf.Buffer";
+//                return "org.apache.activemq.util.buffer.Buffer";
 //            } else {
                 return "java.lang.String";
 //            }
@@ -2180,11 +2180,11 @@ public class AltJavaGenerator {
         if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
             String override = getOption(field.getOptions(), "java_override_type", null);
             if( "AsciiBuffer".equals(override) ) {
-                return "org.apache.activemq.protobuf.AsciiBuffer";
+                return "org.apache.activemq.util.buffer.AsciiBuffer";
             } else if( "UTF8Buffer".equals(override) ) {
-                return "org.apache.activemq.protobuf.UTF8Buffer";
+                return "org.apache.activemq.util.buffer.UTF8Buffer";
             } else {
-                return "org.apache.activemq.protobuf.Buffer";
+                return "org.apache.activemq.util.buffer.Buffer";
             }
         }
         if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
@@ -2212,11 +2212,11 @@ public class AltJavaGenerator {
             // TODO: support handling string fields as buffers.
 //            String override = getOption(field.getOptions(), "java_override_type", null);
 //            if( "AsciiBuffer".equals(override) ) {
-//                return "org.apache.activemq.protobuf.AsciiBuffer";
+//                return "org.apache.activemq.util.buffer.AsciiBuffer";
 //            } else if( "UTF8Buffer".equals(override) ) {
-//                return "org.apache.activemq.protobuf.UTF8Buffer";
+//                return "org.apache.activemq.util.buffer.UTF8Buffer";
 //            } else if( "Buffer".equals(override) ) {
-//                return "org.apache.activemq.protobuf.Buffer";
+//                return "org.apache.activemq.util.buffer.Buffer";
 //            } else {
                 return "java.lang.String";
 //            }
@@ -2224,11 +2224,11 @@ public class AltJavaGenerator {
         if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
             String override = getOption(field.getOptions(), "java_override_type", null);
             if( "AsciiBuffer".equals(override) ) {
-                return "org.apache.activemq.protobuf.AsciiBuffer";
+                return "org.apache.activemq.util.buffer.AsciiBuffer";
             } else if( "UTF8Buffer".equals(override) ) {
-                return "org.apache.activemq.protobuf.UTF8Buffer";
+                return "org.apache.activemq.util.buffer.UTF8Buffer";
             } else {
-                return "org.apache.activemq.protobuf.Buffer";
+                return "org.apache.activemq.util.buffer.Buffer";
             }
         }
         if( field.getType() == FieldDescriptor.BOOL_TYPE ) {

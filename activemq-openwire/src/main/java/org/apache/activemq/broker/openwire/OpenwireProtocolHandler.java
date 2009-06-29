@@ -80,11 +80,10 @@ import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.openwire.OpenWireFormat;
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.selector.SelectorParser;
 import org.apache.activemq.state.CommandVisitor;
 import org.apache.activemq.transport.WireFormatNegotiator;
-import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
 
 public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener {
@@ -893,7 +892,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
     public BrokerMessageDelivery createMessageDelivery(MessageRecord record) throws IOException {
         Buffer buf = record.getBuffer();
-        Message message = (Message) storeWireFormat.unmarshal(new ByteSequence(buf.data, buf.offset, buf.length));
+        Message message = (Message) storeWireFormat.unmarshal(new Buffer(buf.data, buf.offset, buf.length));
         OpenWireMessageDelivery delivery = new OpenWireMessageDelivery(message);
         delivery.setStoreWireFormat(storeWireFormat);
         return delivery;

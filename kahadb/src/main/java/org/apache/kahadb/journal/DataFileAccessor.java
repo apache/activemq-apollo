@@ -20,9 +20,9 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Map;
 
+import org.apache.activemq.util.buffer.Buffer;
 import org.apache.kahadb.journal.DataFileAppender.WriteCommand;
 import org.apache.kahadb.journal.DataFileAppender.WriteKey;
-import org.apache.kahadb.util.ByteSequence;
 
 /**
  * Optimized Store reader and updater. Single threaded and synchronous. Use in
@@ -65,7 +65,7 @@ final class DataFileAccessor {
         }
     }
 
-    public ByteSequence readRecord(Location location) throws IOException {
+    public Buffer readRecord(Location location) throws IOException {
 
         if (!location.isValid()) {
             throw new IOException("Invalid location: " + location);
@@ -88,7 +88,7 @@ final class DataFileAccessor {
 
             byte[] data = new byte[location.getSize() - Journal.RECORD_HEAD_SPACE];
             file.readFully(data);
-            return new ByteSequence(data, 0, data.length);
+            return new Buffer(data, 0, data.length);
 
         } catch (RuntimeException e) {
             throw new IOException("Invalid location: " + location + ", : " + e);
@@ -145,7 +145,7 @@ final class DataFileAccessor {
 //        return true;
 //    }
 
-    public void updateRecord(Location location, ByteSequence data, boolean sync) throws IOException {
+    public void updateRecord(Location location, Buffer data, boolean sync) throws IOException {
 
         file.seek(location.getOffset() + Journal.RECORD_HEAD_SPACE);
         int size = Math.min(data.getLength(), location.getSize());

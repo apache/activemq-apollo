@@ -21,9 +21,9 @@ import java.util.Collection;
 import java.util.Iterator;
 
 import org.apache.activemq.Service;
-import org.apache.activemq.protobuf.AsciiBuffer;
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.QueueDescriptor;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.buffer.Buffer;
 
 /**
  * Interface to persistently store and access data needed by the messaging

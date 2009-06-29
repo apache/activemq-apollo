@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.broker;
 import java.util.Collection;
 import java.util.HashSet;
 
-import org.apache.activemq.protobuf.AsciiBuffer;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 public interface Destination {
 

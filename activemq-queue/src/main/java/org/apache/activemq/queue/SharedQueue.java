@@ -26,14 +26,14 @@ import org.apache.activemq.flow.IFlowSizeLimiter;
 import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.CursoredQueue.Cursor;
 import org.apache.activemq.queue.CursoredQueue.CursorReadyListener;
 import org.apache.activemq.queue.CursoredQueue.QueueElement;
 import org.apache.activemq.queue.Subscription.SubscriptionDelivery;
 import org.apache.activemq.util.Mapper;
-import org.apache.kahadb.util.LinkedNode;
-import org.apache.kahadb.util.LinkedNodeList;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.list.LinkedNode;
+import org.apache.activemq.util.list.LinkedNodeList;
 
 /**
  * A SharedMessageQueue.

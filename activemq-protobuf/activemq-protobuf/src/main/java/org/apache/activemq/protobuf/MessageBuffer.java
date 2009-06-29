@@ -3,6 +3,8 @@ package org.apache.activemq.protobuf;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.activemq.util.buffer.Buffer;
+
 
 public interface MessageBuffer<B, MB extends MessageBuffer> extends PBMessage<B, MB> {
    

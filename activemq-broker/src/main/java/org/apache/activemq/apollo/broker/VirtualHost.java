@@ -27,9 +27,9 @@ import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
 import org.apache.activemq.apollo.broker.path.PathFilter;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
-import org.apache.activemq.protobuf.AsciiBuffer;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.util.IOHelper;
+import org.apache.activemq.util.buffer.AsciiBuffer;
 
 /**
  * @author chirino

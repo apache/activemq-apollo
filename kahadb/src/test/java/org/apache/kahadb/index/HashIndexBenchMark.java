@@ -16,9 +16,9 @@
  */
 package org.apache.kahadb.index;
 
+import org.apache.activemq.util.marshaller.LongMarshaller;
+import org.apache.activemq.util.marshaller.StringMarshaller;
 import org.apache.kahadb.page.Transaction;
-import org.apache.kahadb.util.LongMarshaller;
-import org.apache.kahadb.util.StringMarshaller;
 
 public class HashIndexBenchMark extends IndexBenchmark {
 

@@ -16,6 +16,9 @@
  */
 package org.apache.activemq.util;
 
+import org.apache.activemq.util.buffer.DataByteArrayInputStream;
+import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
+
 import junit.framework.TestCase;
 
 public class DataByteArrayInputStreamTest extends TestCase {
