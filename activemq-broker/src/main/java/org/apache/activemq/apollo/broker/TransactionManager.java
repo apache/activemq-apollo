@@ -22,8 +22,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.transaction.xa.Xid;
-
 import org.apache.activemq.apollo.broker.BrokerDatabase.OperationContext;
 import org.apache.activemq.apollo.broker.Transaction.TxOp;
 import org.apache.activemq.broker.store.Store.MessageRecord;
@@ -157,7 +155,7 @@ public class TransactionManager {
      * @param xid
      * @return
      */
-    public final Transaction createTransaction(Xid xid) {
+    public final Transaction createTransaction(Buffer xid) {
         Transaction ret;
 
         long tid = tidGen.incrementAndGet();
@@ -230,8 +228,9 @@ public class TransactionManager {
             tx = new LocalTransaction(this, tid, queue);
             break;
         case Transaction.TYPE_XA:
-            XidImpl xid = new XidImpl();
-            xid.readbody(bais);
+        	int length = bais.readByte();
+        	Buffer xid = new Buffer(new byte[length]);
+        	bais.readFully(xid.data);
             tx = new XATransaction(this, tid, xid, queue);
             break;
         default:
@@ -252,7 +251,10 @@ public class TransactionManager {
         baos.writeLong(tx.getTid());
         if(tx.getType() == Transaction.TYPE_XA)
         {
-            ((XATransaction)tx).getXid().writebody(baos);
+        	Buffer xid = ((XATransaction)tx).getXid();
+        	// An XID max size is around 140 bytes
+        	baos.writeByte( xid.length );
+        	baos.write(xid.data, xid.offset, xid.length);
         }
         
         return database.updateMapEntry(TXN_MAP, tx.getBackingQueueName(), new Buffer(baos.getData(), 0, baos.size()));

@@ -22,26 +22,20 @@ import java.io.IOException;
 
 import javax.transaction.xa.Xid;
 
+import org.apache.activemq.protobuf.Buffer;
+
 /**
- * An implementation of JTA transaction idenifier (javax.transaction.xa.Xid).
- * This is SonicMQ internal Xid. Any external Xid object will be converted to
- * this class.
+ * An implementation of JTA transaction identifier (javax.transaction.xa.Xid).
  */
 public class XidImpl implements Xid, Cloneable, java.io.Serializable {
 
-    //fix bug #8334
-    static final long serialVersionUID = -5363901495878210611L;
+    private static final long serialVersionUID = -5363901495878210611L;
+    private static final Buffer EMPTY_BUFFER = new Buffer(new byte[]{});
 
     // The format identifier for the XID. A value of -1 indicates the NULLXID
-    private int m_formatID = -1; // default format
-
-    private byte m_gtrid[];
-    // The number of bytes in the global transaction identfier
-    private int m_gtridLength; // Value from 1 through MAXGTRIDSIZE
-
-    private byte m_bqual[];
-    // The number of bytes in the branch qualifier
-    private int m_bqualLength; // Value from 1 through MAXBQUALSIZE
+    private int formatId = -1; // default format
+    Buffer globalTransactionId = EMPTY_BUFFER;
+    Buffer branchQualifier = EMPTY_BUFFER;
 
     /////////////////////////////// Constructors /////////////////////////////
     /**
@@ -50,13 +44,18 @@ public class XidImpl implements Xid, Cloneable, java.io.Serializable {
      * After construction the data within the XID should be initialized.
      */
     public XidImpl() {
-        this(-1, null, null);
     }
 
     public XidImpl(int formatID, byte[] globalTxnID, byte[] branchID) {
-        m_formatID = formatID;
+        this.formatId = formatID;
         setGlobalTransactionId(globalTxnID);
         setBranchQualifier(branchID);
+    }
+
+    public XidImpl(int formatID, Buffer globalTransactionId,  Buffer branchQualifier) {
+        this.formatId = formatID;
+        this.globalTransactionId = globalTransactionId;
+        this.branchQualifier=branchQualifier;
     }
 
     /**
@@ -66,13 +65,12 @@ public class XidImpl implements Xid, Cloneable, java.io.Serializable {
      *            the XID to initialize this XID from
      */
     public XidImpl(Xid from) {
-
         if ((from == null) || (from.getFormatId() == -1)) {
-            m_formatID = -1;
+            formatId = -1;
             setGlobalTransactionId(null);
             setBranchQualifier(null);
         } else {
-            m_formatID = from.getFormatId();
+            formatId = from.getFormatId();
             setGlobalTransactionId(from.getGlobalTransactionId());
             setBranchQualifier(from.getBranchQualifier());
         }
@@ -81,9 +79,7 @@ public class XidImpl implements Xid, Cloneable, java.io.Serializable {
 
     // used for test purpose
     public XidImpl(String globalTxnId, String branchId) {
-
         this(99, globalTxnId.getBytes(), branchId.getBytes());
-
     }
 
     //////////// Public Methods //////////////
@@ -98,22 +94,16 @@ public class XidImpl implements Xid, Cloneable, java.io.Serializable {
      *         transaction as this, otherwise returns false.
      */
     public boolean equals(Object o) {
-        Xid other;
-
-        if (!(o instanceof Xid))
+        if (o.getClass() != XidImpl.class)
             return false;
 
-        other = (Xid) o;
-
-        if (m_formatID == -1 && other.getFormatId() == -1)
+        XidImpl other = (XidImpl) o;
+        if (formatId == -1 && other.formatId == -1)
             return true;
 
-        if (m_formatID != other.getFormatId() || m_gtridLength != other.getGlobalTransactionId().length || m_bqualLength != other.getBranchQualifier().length) {
-            return false;
-        }
-
-        return isEqualGtrid(other) && isEqualBranchQualifier(other.getBranchQualifier());
-
+        return formatId == other.formatId 
+        		&& globalTransactionId.equals(other.globalTransactionId)
+        		&& branchQualifier.equals(other.branchQualifier);
     }
 
     /**
@@ -121,14 +111,10 @@ public class XidImpl implements Xid, Cloneable, java.io.Serializable {
      * 
      * @return the computed hashcode
      */
-
     public int hashCode() {
-
-        if (m_formatID == -1)
+        if (formatId == -1)
             return (-1);
-
-        return m_formatID + m_gtridLength - m_bqualLength;
-
+        return formatId ^ globalTransactionId.hashCode() ^ branchQualifier.hashCode();
     }
 
     /**
@@ -142,7 +128,7 @@ public class XidImpl implements Xid, Cloneable, java.io.Serializable {
     public String toString() {
         String gtString = new String(getGlobalTransactionId());
         String brString = new String(getBranchQualifier());
-        return new String("{Xid: " + "formatID=" + m_formatID + ", " + "gtrid[" + m_gtridLength + "]=" + gtString + ", " + "brid[" + m_bqualLength + "]=" + brString + "}");
+        return new String("{Xid: " + "formatID=" + formatId + ", " + "gtrid[" + globalTransactionId.length + "]=" + gtString + ", " + "brid[" + branchQualifier.length + "]=" + brString + "}");
 
     }
 
@@ -152,7 +138,7 @@ public class XidImpl implements Xid, Cloneable, java.io.Serializable {
      * @return Format identifier. -1 indicates a null XID
      */
     public int getFormatId() {
-        return m_formatID;
+        return formatId;
     }
 
     /**
@@ -161,7 +147,8 @@ public class XidImpl implements Xid, Cloneable, java.io.Serializable {
      * @return the global transaction identifier
      */
     public byte[] getGlobalTransactionId() {
-        return m_gtrid;
+    	// TODO.. may want to compact() first and keep cache that..
+        return globalTransactionId.toByteArray();
     }
 
     /**
@@ -170,7 +157,8 @@ public class XidImpl implements Xid, Cloneable, java.io.Serializable {
      * @return the branch qualifier
      */
     public byte[] getBranchQualifier() {
-        return m_bqual;
+    	// TODO.. may want to compact() first and keep cache that..
+        return branchQualifier.toByteArray();
     }
 
     ///////////////////////// private methods ////////////////////////////////
@@ -186,76 +174,32 @@ public class XidImpl implements Xid, Cloneable, java.io.Serializable {
      */
     private void setBranchQualifier(byte[] branchID) {
         if (branchID == null) {
-            m_bqualLength = 0;
-            m_bqual = new byte[m_bqualLength];
+            branchQualifier = EMPTY_BUFFER;
         } else {
-            m_bqualLength = branchID.length > MAXBQUALSIZE ? MAXBQUALSIZE : branchID.length;
-            m_bqual = new byte[m_bqualLength];
-            System.arraycopy(branchID, 0, m_bqual, 0, m_bqualLength);
+            int length = branchID.length > MAXBQUALSIZE ? MAXBQUALSIZE : branchID.length;
+            // TODO: Do we really need to copy the bytes??
+            branchQualifier = new Buffer(new byte[length]);
+            System.arraycopy(branchID, 0, branchQualifier.data, 0, length);
         }
     }
 
     private void setGlobalTransactionId(byte[] globalTxnID) {
         if (globalTxnID == null) {
-            m_gtridLength = 0;
-            m_gtrid = new byte[m_gtridLength];
+            globalTransactionId = EMPTY_BUFFER;
         } else {
-            m_gtridLength = globalTxnID.length > MAXGTRIDSIZE ? MAXGTRIDSIZE : globalTxnID.length;
-            m_gtrid = new byte[m_gtridLength];
-            System.arraycopy(globalTxnID, 0, m_gtrid, 0, m_gtridLength);
+        	int length = globalTxnID.length > MAXGTRIDSIZE ? MAXGTRIDSIZE : globalTxnID.length;
+            // TODO: Do we really need to copy the bytes??
+            globalTransactionId = new Buffer(new byte[length]);
+            System.arraycopy(globalTxnID, 0, globalTransactionId.data, 0, length);
         }
-    }
-
-    /**
-     * Return whether the Gtrid of this is equal to the Gtrid of xid
-     */
-    private boolean isEqualGtrid(Xid xid) {
-        byte[] xidGtrid = xid.getGlobalTransactionId();
-
-        if (getGlobalTransactionId() == null && xidGtrid == null)
-            return true;
-        if (getGlobalTransactionId() == null)
-            return false;
-        if (xidGtrid == null)
-            return false;
-
-        if (m_gtridLength != xidGtrid.length) {
-            return false;
-        }
-
-        for (int i = 0; i < m_gtridLength; i++) {
-            if (m_gtrid[i] != xidGtrid[i])
-                return false;
-        }
-        return true;
-    }
-
-    /**
-     * Determine if an array of bytes equals the branch qualifier
-     * 
-     * @return true if equal
-     */
-    private boolean isEqualBranchQualifier(byte[] data) {
-
-        int L = data.length > MAXBQUALSIZE ? MAXBQUALSIZE : data.length;
-
-        if (L != m_bqualLength)
-            return false;
-
-        for (int i = 0; i < m_bqualLength; i++) {
-            if (data[i] != m_bqual[i])
-                return false;
-        }
-
-        return true;
     }
 
     public int getMemorySize() {
         return 4 // formatId
                 + 4 // length of globalTxnId
-                + m_gtridLength // globalTxnId
+                + globalTransactionId.length // globalTxnId
                 + 4 // length of branchId
-                + m_bqualLength; // branchId
+                + branchQualifier.length; // branchId
     }
 
     /**
@@ -272,12 +216,12 @@ public class XidImpl implements Xid, Cloneable, java.io.Serializable {
      *                written.
      */
     public void writebody(DataOutput out) throws IOException {
-        out.writeInt(m_formatID); // format ID
+        out.writeInt(formatId); // format ID
 
-        out.writeInt(m_gtridLength); // length of global Txn ID
-        out.write(getGlobalTransactionId(), 0, m_gtridLength); // global transaction ID
-        out.writeInt(m_bqualLength); // length of branch ID
-        out.write(getBranchQualifier(), 0, m_bqualLength); // branch ID
+        out.writeInt(globalTransactionId.length); // length of global Txn ID
+        out.write(globalTransactionId.data, globalTransactionId.offset, globalTransactionId.length); // global transaction ID
+        out.writeInt(branchQualifier.length); // length of branch ID
+        out.write(branchQualifier.data, branchQualifier.offset, branchQualifier.length); // branch ID
     }
 
     /**
@@ -288,16 +232,16 @@ public class XidImpl implements Xid, Cloneable, java.io.Serializable {
      * @throws IOException
      */
     public void readbody(DataInput in) throws IOException {
-        m_formatID = in.readInt();
-        int gtidLen = in.readInt();
-        byte[] globalTxnId = new byte[gtidLen];
-        in.readFully(globalTxnId, 0, gtidLen);
+        formatId = in.readInt();
 
-        int brlen = in.readInt();
-        byte[] branchId = new byte[brlen];
-        in.readFully(branchId, 0, brlen);
+        int length = in.readInt();
+        byte[] data = new byte[length];
+        in.readFully(data);
+        setGlobalTransactionId(data);
 
-        setGlobalTransactionId(globalTxnId);
-        setBranchQualifier(branchId);
+        length = in.readInt();
+        data = new byte[length];
+        in.readFully(data);
+        setBranchQualifier(data);
     }
 } // class XidImpl

@@ -19,10 +19,9 @@ package org.apache.activemq.apollo.broker;
 import java.io.IOException;
 
 import javax.transaction.xa.XAException;
-import javax.transaction.xa.Xid;
 
+import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.queue.IQueue;
-import org.apache.activemq.util.DataByteArrayInputStream;
 
 /**
  * XATransaction
@@ -35,18 +34,14 @@ import org.apache.activemq.util.DataByteArrayInputStream;
  */
 public class XATransaction extends Transaction {
 
-    private final XidImpl xid;
+    private final Buffer xid;
 
-    XATransaction(TransactionManager manager, long tid, Xid xid, IQueue<Long, TxOp> opQueue) {
+    XATransaction(TransactionManager manager, long tid, Buffer xid, IQueue<Long, TxOp> opQueue) {
         super(manager, tid, opQueue);
-        if (xid instanceof XidImpl) {
-            this.xid = XidImpl.class.cast(xid);
-        } else {
-            this.xid = new XidImpl(xid);
-        }
+        this.xid = xid;
     }
 
-    public XidImpl getXid() {
+    public Buffer getXid() {
         return xid;
     }
 
