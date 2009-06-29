@@ -24,11 +24,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.jms.JMSException;
 
+import junit.framework.TestCase;
+
+import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerDatabase;
 import org.apache.activemq.apollo.broker.BrokerQueueStore;
-import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.broker.openwire.OpenWireMessageDelivery;
+import org.apache.activemq.broker.openwire.OpenWireMessageDelivery.PersistListener;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.command.ActiveMQDestination;
@@ -58,20 +61,19 @@ import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.QueueDispatchTarget;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.queue.Subscription;
-import org.apache.activemq.queue.Subscription.SubscriptionDelivery;
-
-import junit.framework.TestCase;
 
 public class SharedQueuePerfTest extends TestCase {
 
-    private static int PERFORMANCE_SAMPLES = 5;
+    private static int PERFORMANCE_SAMPLES = 500000;
 
     IDispatcher dispatcher;
     BrokerDatabase database;
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
-    private static final boolean PERSISTENT = false;
+    private static final boolean PERSISTENT = true;
     private static final boolean PURGE_STORE = true;
+    // Producers send sync and operations are never canceled. 
+    private static final boolean TEST_MAX_STORE_LATENCY = true;
     private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors();
 
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
@@ -96,6 +98,10 @@ public class SharedQueuePerfTest extends TestCase {
         dispatcher.start();
         database = new BrokerDatabase(createStore());
         database.setDispatcher(dispatcher);
+        if( TEST_MAX_STORE_LATENCY ) {
+        	database.setFlushDelay(0);
+        	database.setStoreBypass(false);
+        }
         database.start();
         queueStore = new BrokerQueueStore();
         queueStore.setDatabase(database);
@@ -286,7 +292,8 @@ public class SharedQueuePerfTest extends TestCase {
     class Producer implements Dispatchable, FlowUnblockListener<OpenWireMessageDelivery> {
         private AtomicBoolean stopped = new AtomicBoolean(false);
         private String name;
-        protected final MetricCounter rate = new MetricCounter();
+        protected final MetricCounter sendRate = new MetricCounter();
+		AtomicBoolean waitingForAck = new AtomicBoolean();
         private final DispatchContext dispatchContext;
 
         protected IFlowController<OpenWireMessageDelivery> outboundController;
@@ -303,8 +310,8 @@ public class SharedQueuePerfTest extends TestCase {
 
         public Producer(String name, IQueue<Long, MessageDelivery> targetQueue) {
             this.name = name;
-            rate.name("Producer " + name + " Rate");
-            totalProducerRate.add(rate);
+            sendRate.name("Producer " + name + " Rate");
+            totalProducerRate.add(sendRate);
             dispatchContext = dispatcher.register(this, name);
             // create a 1024 byte payload (2 bytes per char):
             payload = new String(new byte[512]);
@@ -356,16 +363,6 @@ public class SharedQueuePerfTest extends TestCase {
         }
 
         public boolean dispatch() {
-            if (next == null) {
-                try {
-                    createNextMessage();
-                } catch (JMSException e) {
-                    e.printStackTrace();
-                    stopped.set(true);
-                    return true;
-                }
-            }
-
             // If flow controlled stop until flow control is lifted.
             if (outboundController.isSinkBlocked()) {
                 if (outboundController.addUnblockListener(this)) {
@@ -373,13 +370,39 @@ public class SharedQueuePerfTest extends TestCase {
                 }
             }
 
+            if( TEST_MAX_STORE_LATENCY ) {
+            	// We can't send again until we get persist ack.
+            	if( waitingForAck.get() ) {
+                    return true;
+            	}
+            }
+            
+            if (next == null) {
+                try {
+                	next = createNextMessage();
+					if (TEST_MAX_STORE_LATENCY) {
+						waitingForAck.set(true);
+						next.setPersistListener(new PersistListener() {
+							public void onMessagePersisted(OpenWireMessageDelivery delivery) {
+								waitingForAck.set(false);
+								dispatchContext.requestDispatch();
+							}
+						});
+					}
+                } catch (JMSException e) {
+                    e.printStackTrace();
+                    stopped.set(true);
+                    return true;
+                }
+            }
+
+            sendRate.increment();
             outboundQueue.add(next, null);
-            rate.increment();
             next = null;
             return stopped.get();
         }
 
-        private void createNextMessage() throws JMSException {
+        private OpenWireMessageDelivery createNextMessage() throws JMSException {
             ActiveMQTextMessage message = new ActiveMQTextMessage();
             message.setJMSPriority(priority);
             message.setProducerId(producerId);
@@ -389,7 +412,7 @@ public class SharedQueuePerfTest extends TestCase {
             if (payload != null) {
                 message.setText(payload);
             }
-            next = new OpenWireMessageDelivery(message);
+            return new OpenWireMessageDelivery(message);
         }
 
         public void onFlowUnblocked(ISinkController<OpenWireMessageDelivery> controller) {

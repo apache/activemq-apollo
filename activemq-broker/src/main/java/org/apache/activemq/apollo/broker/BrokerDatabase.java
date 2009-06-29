@@ -58,6 +58,7 @@ import org.apache.kahadb.util.LinkedNodeList;
 public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.OperationBase> implements Service, DispatcherAware {
 
     private static final boolean DEBUG = false;
+    
     private final Store store;
     private final Flow databaseFlow = new Flow("database", false);
 
@@ -80,8 +81,10 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     // num scheduled for delay
     private long delayedFlushPointer = 0; // The last delayable sequence num
     // requested.
-    private final long FLUSH_DELAY_MS = 10;
-    private final Runnable flushDelayCallback;
+    private long flushDelay = 10;
+
+	private final Runnable flushDelayCallback;
+    private boolean storeBypass = true;
 
     public interface DatabaseListener {
         /**
@@ -283,7 +286,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
             op.opSequenceNumber = opSequenceNumber++;
             opQueue.addLast(op);
             if (op.flushRequested || storeLimiter.getThrottled()) {
-                if (op.isDelayable() && FLUSH_DELAY_MS > 0) {
+                if (op.isDelayable() && flushDelay > 0) {
                     scheduleDelayedFlush(op.opSequenceNumber);
                 } else {
                     updateFlushPointer(op.opSequenceNumber);
@@ -313,7 +316,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
         if (requestedDelayedFlushPointer == -1) {
             requestedDelayedFlushPointer = delayedFlushPointer;
-            dispatcher.schedule(flushDelayCallback, FLUSH_DELAY_MS, TimeUnit.MILLISECONDS);
+            dispatcher.schedule(flushDelayCallback, flushDelay, TimeUnit.MILLISECONDS);
         }
 
     }
@@ -705,15 +708,17 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         public static final int BASE_MEM_SIZE = 20;
 
         public boolean cancel() {
-            if (executePending.compareAndSet(true, false)) {
-                cancelled.set(true);
-                // System.out.println("Cancelled: " + this);
-                synchronized (opQueue) {
-                    unlink();
-                    storeController.elementDispatched(this);
-                }
-                return true;
-            }
+        	if( storeBypass ) {
+	            if (executePending.compareAndSet(true, false)) {
+	                cancelled.set(true);
+	                // System.out.println("Cancelled: " + this);
+	                synchronized (opQueue) {
+	                    unlink();
+	                    storeController.elementDispatched(this);
+	                }
+	                return true;
+	            }
+        	}
             return cancelled.get();
         }
 
@@ -1276,4 +1281,35 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
             return "AddTxOpOperation " + record.getKey() + super.toString();
         }
     }
+    
+    public long getFlushDelay() {
+		return flushDelay;
+	}
+
+	public void setFlushDelay(long flushDelay) {
+		this.flushDelay = flushDelay;
+	}
+
+	/**
+	 * @return true if operations are allowed to bypass the store.
+	 */
+	public boolean isStoreBypass() {
+		return storeBypass;
+	}
+
+	/**
+	 * Sets if persistent operations should be allowed to bypass the store.
+	 * Defaults to true, as this will give you the best performance.  In some  
+	 * cases, you want to disable this as the store being used will double
+	 * as an audit log and you do not want any persistent operations
+	 * to bypass the store.
+	 * 
+	 * When store bypass is disabled, all {@link Operation#cancel()} requests
+	 * will return false.
+	 * 
+	 * @param enable if true will enable store bypass
+	 */
+	public void setStoreBypass(boolean enable) {
+		this.storeBypass = enable;
+	}
 }
