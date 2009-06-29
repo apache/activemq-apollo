@@ -159,7 +159,7 @@ public class TransactionManager {
         Transaction ret;
 
         long tid = tidGen.incrementAndGet();
-        IQueue<Long, TxOp> opQueue = createTranscationQueue(tid);
+        IQueue<Long, TxOp> opQueue = createTransactionQueue(tid);
 
         if (xid == null) {
             ret = new LocalTransaction(this, tid, opQueue);
@@ -267,7 +267,7 @@ public class TransactionManager {
         return queue;
     }
 
-    private final IQueue<Long, TxOp> createTranscationQueue(long tid) {
+    private final IQueue<Long, TxOp> createTransactionQueue(long tid) {
         return createTxQueueInternal(TX_QUEUE_PREFIX + tid, BrokerQueueStore.TRANSACTION_QUEUE_TYPE);
     }
 
