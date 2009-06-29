@@ -24,6 +24,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
 
+import org.apache.activemq.util.IOHelper;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.util.list.LinkedNode;
 import org.apache.activemq.util.list.LinkedNodeList;
@@ -376,7 +377,7 @@ class DataFileAppender {
                 }
                 
                 if (forceToDisk) {
-                    file.getFD().sync();
+                    IOHelper.sync(file.getFD());
                 }
 
                 WriteCommand lastWrite = wb.writes.getTail();

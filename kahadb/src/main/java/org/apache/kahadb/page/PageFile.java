@@ -547,10 +547,10 @@ public class PageFile {
         // So we don't loose it.. write it 2 times...
         writeFile.seek(0);
         writeFile.write(d);
-        writeFile.getFD().sync();
+        IOHelper.sync(writeFile.getFD());
         writeFile.seek(PAGE_FILE_HEADER_SIZE/2);
         writeFile.write(d);
-        writeFile.getFD().sync();
+        IOHelper.sync(writeFile.getFD());
     }
 
     private void storeFreeList() throws IOException {
@@ -988,7 +988,7 @@ public class PageFile {
             
             if (enableDiskSyncs) {
                 // Sync to make sure recovery buffer writes land on disk..
-                recoveryFile.getFD().sync();
+                IOHelper.sync(recoveryFile.getFD());
             }
             
             recoveryPageCount = batch.size();
@@ -1002,7 +1002,7 @@ public class PageFile {
         
         // Sync again
         if( enableDiskSyncs ) {
-            writeFile.getFD().sync();
+            IOHelper.sync(writeFile.getFD());
         }
         
         synchronized( writes ) {
@@ -1094,7 +1094,7 @@ public class PageFile {
         }
         
         // And sync it to disk
-        writeFile.getFD().sync();
+        IOHelper.sync(writeFile.getFD());
         return nextTxId;
     }
 

@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Map;
 
+import org.apache.activemq.util.IOHelper;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.kahadb.journal.DataFileAppender.WriteCommand;
 import org.apache.kahadb.journal.DataFileAppender.WriteKey;
@@ -151,7 +152,7 @@ final class DataFileAccessor {
         int size = Math.min(data.getLength(), location.getSize());
         file.write(data.getData(), data.getOffset(), size);
         if (sync) {
-            file.getFD().sync();
+            IOHelper.sync(file.getFD());
         }
 
     }

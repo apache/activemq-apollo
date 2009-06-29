@@ -235,9 +235,9 @@ public class DiskBenchmark {
             }
             // Sync to disk so that the we actually write the data to disk.. otherwise 
             // OS buffering might not really do the write.
-            raf.getFD().sync();
+            IOHelper.sync(raf.getFD());
         }
-        raf.getFD().sync();
+        IOHelper.sync(raf.getFD());
         raf.close();
         now = System.currentTimeMillis();
         
@@ -256,7 +256,7 @@ public class DiskBenchmark {
             for( long i=0; i+data.length < size; i+=data.length) {
                 raf.seek(i);
                 raf.write(data);
-                raf.getFD().sync();
+                IOHelper.sync(raf.getFD());
                 ioCount++;
                 now = System.currentTimeMillis();
                 if( (now-start)>sampleInterval ) {

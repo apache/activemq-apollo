@@ -17,12 +17,15 @@
 package org.apache.activemq.util;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
+
+import org.apache.activemq.util.os.CLibrary;
 
 /**
  * @version $Revision: 661435 $
@@ -184,4 +187,63 @@ public final class IOHelper {
             }
         }
     }
+    
+	public interface IOStrategy {
+		void sync(FileDescriptor fdo) throws IOException;
+	}	
+	
+	static final IOStrategy IO_STRATEGY = createIOStrategy();
+	
+	private static IOStrategy createIOStrategy() {
+		
+		// On OS X, the fsync system call does not fully flush the hardware buffers.. 
+		// to do that you have to do an fcntl call, and the only way to do that is to
+		// do some JNI.  
+		String os = System.getProperty("os.name");
+		if( "Mac OS X".equals(os) ) {
+
+			// We will gracefully fall back to default JDK file sync behavior
+			// if the JNA library is not in the path, and we can't set the 
+			// FileDescriptor.fd field accessible.
+			try {
+				final Field field = FileDescriptor.class.getDeclaredField("fd");
+				field.setAccessible(true);
+				// Try to dynamically load the JNA impl of the CLibrary interface..
+				final CLibrary lib = getCLibrary();
+				return new IOStrategy() {
+					static final int F_FULLFSYNC = 51;	
+					public void sync(FileDescriptor fd) throws IOException {
+						try {
+							int id = field.getInt(fd);
+							lib.fcntl(id, F_FULLFSYNC);
+						} catch (Exception e) {
+							throw IOExceptionSupport.create(e);
+						}
+					}
+				};
+			} catch (Exception ignore) {
+				ignore.printStackTrace();
+				// Perhaps we should issue a warning here so folks know that 
+				// the disk syncs are not going to be of very good quality.
+			}
+		}
+		
+		return new IOStrategy() {
+			public void sync(FileDescriptor fd) throws IOException {
+				fd.sync();
+			}
+		};
+	}
+
+	@SuppressWarnings("unchecked")
+	public static CLibrary getCLibrary() throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException {
+		Class clazz = IOHelper.class.getClassLoader().loadClass("org.apache.activemq.util.os.JnaCLibrary");
+		final CLibrary lib = (CLibrary) clazz.getField("INSTANCE").get(null);
+		return lib;
+	}
+	
+	static public void sync(FileDescriptor fd) throws IOException {
+		IO_STRATEGY.sync(fd);
+	}
+
 }
