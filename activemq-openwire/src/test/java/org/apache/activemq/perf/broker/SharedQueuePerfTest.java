@@ -64,16 +64,16 @@ import org.apache.activemq.queue.Subscription;
 
 public class SharedQueuePerfTest extends TestCase {
 
-    private static int PERFORMANCE_SAMPLES = 500000;
+    private static int PERFORMANCE_SAMPLES = 5;
 
     IDispatcher dispatcher;
     BrokerDatabase database;
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
-    private static final boolean PERSISTENT = true;
+    private static final boolean PERSISTENT = false;
     private static final boolean PURGE_STORE = true;
     // Producers send sync and operations are never canceled. 
-    private static final boolean TEST_MAX_STORE_LATENCY = true;
+    private static final boolean TEST_MAX_STORE_LATENCY = false;
     private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors();
 
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
