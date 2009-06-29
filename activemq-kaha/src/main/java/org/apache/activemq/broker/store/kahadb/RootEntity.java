@@ -122,7 +122,7 @@ public class RootEntity {
 
     // Maps:
     private BTreeIndex<AsciiBuffer, Long> mapIndex;
-    private TreeMap<AsciiBuffer, BTreeIndex<AsciiBuffer, Buffer>> mapCache;
+    private TreeMap<AsciiBuffer, BTreeIndex<AsciiBuffer, Buffer>> mapCache = new TreeMap<AsciiBuffer, BTreeIndex<AsciiBuffer,Buffer>>();
 
     // /////////////////////////////////////////////////////////////////
     // Lifecycle Methods.

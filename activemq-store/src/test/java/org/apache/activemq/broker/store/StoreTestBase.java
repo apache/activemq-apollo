@@ -17,8 +17,10 @@
 package org.apache.activemq.broker.store;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.TreeMap;
 
 import junit.framework.TestCase;
 
@@ -199,6 +201,132 @@ public abstract class StoreTestBase extends TestCase {
             //Test that the queue was persisted
             checkSubscriptions(expected);
         }
+    }
+    
+    
+    public void testMap() throws Exception {
+        final TreeMap<AsciiBuffer, Buffer> expected = new TreeMap<AsciiBuffer, Buffer>();
+        final AsciiBuffer map = new AsciiBuffer("testMap");
+        
+        for(int i=0; i < 100000; i++)
+        {
+            expected.put(new AsciiBuffer("Key" + i), new AsciiBuffer("Value" + i));
+        }
+        
+        //Test no values present:
+        store.execute(new VoidCallback<Exception>() {
+            @Override
+            public void run(Session session) throws Exception {
+                Iterator<AsciiBuffer> r = session.mapList(null, 10);
+                assertEquals("Not expecting any maps", false, r.hasNext());
+            }
+        }, null);
+        
+        //Test auto add:
+        store.execute(new VoidCallback<Exception>() {
+            @Override
+            public void run(Session session) throws Exception {
+                session.mapEntryPut(new AsciiBuffer("testMap"), expected.firstKey(), expected.get(expected.firstKey()));
+                assertEquals("Value should be in map", session.mapEntryGet(map, expected.firstKey()), expected.get(expected.firstKey()));
+            }
+        }, null);
+        
+        //Test re-add non empty map
+        store.execute(new VoidCallback<Exception>() {
+            @Override
+            public void run(Session session) throws Exception {
+                session.mapAdd(map);
+                assertEquals("Value should be in map", session.mapEntryGet(map, expected.firstKey()), expected.get(expected.firstKey()));
+            }
+        }, null);
+        
+        //Test overwrite
+        store.execute(new VoidCallback<Exception>() {
+            @Override
+            public void run(Session session) throws Exception {
+                AsciiBuffer overwrite = new AsciiBuffer("overwrite");
+                session.mapEntryPut(map, expected.firstKey(), overwrite);
+                assertEquals("Value should be in map", session.mapEntryGet(map, expected.firstKey()), overwrite);
+            }
+        }, null);
+
+        store.execute(new VoidCallback<Exception>() {
+            @Override
+            public void run(Session session) throws Exception {
+                assertEquals("Value should be in map", session.mapEntryGet(map, expected.firstKey()), new AsciiBuffer("overwrite"));
+            }
+        }, null);
+        
+        //Test map remove:
+        store.execute(new VoidCallback<Exception>() {
+            @Override
+            public void run(Session session) throws Exception {
+                AsciiBuffer overwrite = new AsciiBuffer("overwrite");
+                session.mapRemove(map);
+                Iterator<AsciiBuffer> r = session.mapList(null, 10);
+                assertEquals("Not expecting any maps", false, r.hasNext());
+            }
+        }, null);
+        
+        store.execute(new VoidCallback<Exception>() {
+            @Override
+            public void run(Session session) throws Exception {
+                Iterator<AsciiBuffer> r = session.mapList(null, 10);
+                assertEquals("Not expecting any maps", false, r.hasNext());
+            }
+        }, null);
+        
+        
+        //Test multiple adds:
+        System.out.println(new Date() + " Adding entries");
+        
+        store.execute(new VoidCallback<Exception>() {
+            @Override
+            public void run(Session session) throws Exception {
+                for(AsciiBuffer k : expected.keySet())
+                {
+                    session.mapEntryPut(map, k, expected.get(k));
+                }
+            }
+        }, null);
+        
+        System.out.println(new Date() + " Checking entries");
+        
+        checkMap(map, expected);
+        
+        //Restart the store and make sure the entries are still there
+        if (isStorePersistent()) {
+            store.stop();
+
+            System.out.println(new Date() + " Restarting store");
+            store = createStore(false);
+            store.start();
+            System.out.println(new Date() + " Started store");
+            
+
+            //Test that the queue was persisted
+            checkMap(map, expected);
+        }
+    }
+    
+    private void checkMap(final AsciiBuffer mapName, final TreeMap<AsciiBuffer, Buffer> expected) throws Exception
+    {
+        store.execute(new VoidCallback<Exception>() {
+            @Override
+            public void run(Session session) throws Exception {
+                Iterator<AsciiBuffer> r = session.mapEntryListKeys(mapName, expected.firstKey(), expected.size());
+                TreeMap<AsciiBuffer, Buffer> comp = new TreeMap<AsciiBuffer, Buffer>();
+                while(r.hasNext())
+                {
+                    AsciiBuffer key = r.next();
+                    Buffer value = session.mapEntryGet(mapName, key);
+                    comp.put(key, new AsciiBuffer(value.data));
+                }
+                
+                assertEquals("Map in store doesn't match", expected, comp);
+                
+            }
+        }, null);
     }
     
     @SuppressWarnings("unchecked")

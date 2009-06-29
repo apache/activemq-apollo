@@ -138,6 +138,7 @@ public class KahaDBStore implements Store {
 
     public void stop() throws Exception {
         if (started.compareAndSet(true, false)) {
+            flush();
             unload();
         }
     }
@@ -323,41 +324,32 @@ public class KahaDBStore implements Store {
         try {
             long start = System.currentTimeMillis();
             recovering = true;
-            ArrayList<UoWOperation> uow = null;
             Location recoveryPosition = getRecoveryPosition();
             if (recoveryPosition != null) {
                 int redoCounter = 0;
+                Transaction uow = null;
+                int uowCounter = 0;
                 while (recoveryPosition != null) {
 
                     Buffer data = journal.read(recoveryPosition);
                     if (data.length == 1 && data.data[0] == BEGIN_UNIT_OF_WORK) {
-                        uow = new ArrayList<UoWOperation>();
+                        uow = pageFile.tx();
                     } else if (data.length == 1 && data.data[0] == END_UNIT_OF_WORK) {
-                        if (uow != null) {
-                            final ArrayList<UoWOperation> list = uow;
-                            pageFile.tx().execute(new Transaction.Closure<IOException>() {
-                                public void execute(Transaction tx) throws IOException {
-                                    for (UoWOperation op : list) {
-                                        updateIndex(tx, op.bean.toType(), (MessageBuffer) op.bean, op.location);
-                                        rootEntity.setLastUpdate(op.location);
-                                    }
-                                }
-                            });
-                            redoCounter += uow.size();
-                            uow = null;
-                        }
+                        rootEntity.setLastUpdate(recoveryPosition);
+                        uow.commit();
+                        redoCounter += uowCounter;
+                        uowCounter = 0;
+                        uow = null;
                     } else if (data.length == 1 && data.data[0] == CANCEL_UNIT_OF_WORK) {
+                        uow.rollback();
                         uow = null;
                     } else if (data.length == 1 && data.data[0] == FLUSH) {
                     } else {
                         final TypeCreatable message = load(recoveryPosition);
                         final Location location = recoveryPosition;
                         if (uow != null) {
-                            UoWOperation op = new UoWOperation();
-                            op.bean = message;
-                            op.data = data;
-                            op.location = recoveryPosition;
-                            uow.add(op);
+                            updateIndex(uow, message.toType(), (MessageBuffer) message, location);
+                            uowCounter++;
                         } else {
                             pageFile.tx().execute(new Transaction.Closure<IOException>() {
                                 public void execute(Transaction tx) throws IOException {
