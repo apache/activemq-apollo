@@ -20,64 +20,76 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 
-import junit.framework.TestCase;
 import org.apache.activemq.util.URISupport.CompositeData;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
 /**
  *
  * @version $Revision: 1.1 $
  */
-public class URISupportTest extends TestCase {
+public class URISupportTest {
     
-    public void testEmptyCompositePath() throws Exception {
+    @Test()
+	public void testEmptyCompositePath() throws Exception {
         CompositeData data = URISupport.parseComposite(new URI("broker:()/localhost?persistent=false"));
-        assertEquals(0, data.getComponents().length);        
+        Assert.assertEquals(data.getComponents().length, 0);        
     }
             
-    public void testCompositePath() throws Exception {
+    @Test()
+	public void testCompositePath() throws Exception {
         CompositeData data = URISupport.parseComposite(new URI("test:(path)/path"));
-        assertEquals("path", data.getPath());        
+        Assert.assertEquals(data.getPath(), "path");        
         data = URISupport.parseComposite(new URI("test:path"));
         assertNull(data.getPath());
     }
 
-    public void testSimpleComposite() throws Exception {
+    private void assertNull(Object path) {
+    	Assert.assertNull(path);
+	}
+
+	@Test()
+	public void testSimpleComposite() throws Exception {
         CompositeData data = URISupport.parseComposite(new URI("test:part1"));
-        assertEquals(1, data.getComponents().length);
+        Assert.assertEquals(data.getComponents().length, 1);
     }
 
-    public void testComposite() throws Exception {
+    @Test()
+	public void testComposite() throws Exception {
         CompositeData data = URISupport.parseComposite(new URI("test:(part1://host,part2://(sub1://part,sube2:part))"));
-        assertEquals(2, data.getComponents().length);
+        Assert.assertEquals(data.getComponents().length, 2);
     }
 
-    public void testParsingURI() throws Exception {
+    @Test()
+	public void testParsingURI() throws Exception {
         URI source = new URI("tcp://localhost:61626/foo/bar?cheese=Edam&x=123");
         
         Map map = URISupport.parseParamters(source);
     
-        assertEquals("Size: " + map, 2, map.size());
+        Assert.assertEquals(map.size(), 2, ("Size: " + map));
         assertMapKey(map, "cheese", "Edam");
         assertMapKey(map, "x", "123");
         
         URI result = URISupport.removeQuery(source);
         
-        assertEquals("result", new URI("tcp://localhost:61626/foo/bar"), result);
+        Assert.assertEquals(result, new URI("tcp://localhost:61626/foo/bar"), "result");
     }
     
     protected void assertMapKey(Map map, String key, Object expected) {
-        assertEquals("Map key: " + key, map.get(key), expected);
+        Assert.assertEquals(expected, map.get(key), ("Map key: " + key));
     }
     
-    public void testParsingCompositeURI() throws URISyntaxException {
+    @Test()
+	public void testParsingCompositeURI() throws URISyntaxException {
         URISupport.parseComposite(new URI("broker://(tcp://localhost:61616)?name=foo"));
     }
     
-    public void testCheckParenthesis() throws Exception {
+    @Test()
+	public void testCheckParenthesis() throws Exception {
         String str = "fred:(((ddd))";
-        assertFalse(URISupport.checkParenthesis(str));
+        Assert.assertFalse(URISupport.checkParenthesis(str));
         str += ")";
-        assertTrue(URISupport.checkParenthesis(str));
+        Assert.assertTrue(URISupport.checkParenthesis(str));
     }
     
 }

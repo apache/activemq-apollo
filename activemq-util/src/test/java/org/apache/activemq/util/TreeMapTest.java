@@ -19,15 +19,17 @@ package org.apache.activemq.util;
 import java.util.Comparator;
 import java.util.Iterator;
 
-import junit.framework.TestCase;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
 /**
  * @author cmacnaug
  * 
  */
-public class TreeMapTest extends TestCase {
+public class TreeMapTest {
 
-    public void testOrdering() {
+    @Test()
+	public void testOrdering() {
         Integer[] keys = new Integer[101];
         TreeMap<Integer, Integer> testMap = new TreeMap<Integer, Integer>(new Comparator<Integer>() {
 
@@ -49,66 +51,66 @@ public class TreeMapTest extends TestCase {
             refMap.put(keys[i], keys[i]);
         }
         
-        assertEquals(testMap.get(4), refMap.get(4));
-        assertEquals(testMap.get(3), refMap.get(3));
-        assertEquals(testMap.size(), refMap.size());
+        Assert.assertEquals(refMap.get(4), testMap.get(4));
+        Assert.assertEquals(refMap.get(3), testMap.get(3));
+        Assert.assertEquals(refMap.size(), testMap.size());
         
         //Test lookup:
-        assertEquals(null, testMap.lowerEntry(-2));
-        assertEquals(null, testMap.lowerEntry(-1));
-        assertEquals(null, testMap.lowerEntry(0));
-        assertEquals(new Integer(0), testMap.lowerEntry(1).getValue());
-        assertEquals(new Integer(0), testMap.lowerEntry(2).getValue());
-        assertEquals(new Integer(48), testMap.floorEntry(49).getValue());
-        assertEquals(new Integer(50), testMap.floorEntry(50).getValue());
-        assertEquals(new Integer(50), testMap.floorEntry(51).getValue());
-        assertEquals(new Integer(196), testMap.lowerEntry(198).getValue());
-        assertEquals(new Integer(198), testMap.lowerEntry(199).getValue());
-        assertEquals(new Integer(198), testMap.lowerEntry(200).getValue());
-        assertEquals(new Integer(200), testMap.lowerEntry(201).getValue());
-        assertEquals(new Integer(200), testMap.lowerEntry(202).getValue());
+        Assert.assertEquals(testMap.lowerEntry(-2), null);
+        Assert.assertEquals(testMap.lowerEntry(-1), null);
+        Assert.assertEquals(testMap.lowerEntry(0), null);
+        Assert.assertEquals(testMap.lowerEntry(1).getValue(), new Integer(0));
+        Assert.assertEquals(testMap.lowerEntry(2).getValue(), new Integer(0));
+        Assert.assertEquals(testMap.floorEntry(49).getValue(), new Integer(48));
+        Assert.assertEquals(testMap.floorEntry(50).getValue(), new Integer(50));
+        Assert.assertEquals(testMap.floorEntry(51).getValue(), new Integer(50));
+        Assert.assertEquals(testMap.lowerEntry(198).getValue(), new Integer(196));
+        Assert.assertEquals(testMap.lowerEntry(199).getValue(), new Integer(198));
+        Assert.assertEquals(testMap.lowerEntry(200).getValue(), new Integer(198));
+        Assert.assertEquals(testMap.lowerEntry(201).getValue(), new Integer(200));
+        Assert.assertEquals(testMap.lowerEntry(202).getValue(), new Integer(200));
         
-        assertEquals(null, testMap.floorEntry(-2));
-        assertEquals(null, testMap.floorEntry(-1));
-        assertEquals(new Integer(0), testMap.floorEntry(0).getValue());
-        assertEquals(new Integer(0), testMap.floorEntry(1).getValue());
-        assertEquals(new Integer(2), testMap.floorEntry(2).getValue());
-        assertEquals(new Integer(48), testMap.floorEntry(49).getValue());
-        assertEquals(new Integer(50), testMap.floorEntry(50).getValue());
-        assertEquals(new Integer(50), testMap.floorEntry(51).getValue());
-        assertEquals(new Integer(198), testMap.floorEntry(198).getValue());
-        assertEquals(new Integer(198), testMap.floorEntry(199).getValue());
-        assertEquals(new Integer(200), testMap.floorEntry(200).getValue());
-        assertEquals(new Integer(200), testMap.floorEntry(201).getValue());
-        assertEquals(new Integer(200), testMap.floorEntry(202).getValue());
+        Assert.assertEquals(testMap.floorEntry(-2), null);
+        Assert.assertEquals(testMap.floorEntry(-1), null);
+        Assert.assertEquals(testMap.floorEntry(0).getValue(), new Integer(0));
+        Assert.assertEquals(testMap.floorEntry(1).getValue(), new Integer(0));
+        Assert.assertEquals(testMap.floorEntry(2).getValue(), new Integer(2));
+        Assert.assertEquals(testMap.floorEntry(49).getValue(), new Integer(48));
+        Assert.assertEquals(testMap.floorEntry(50).getValue(), new Integer(50));
+        Assert.assertEquals(testMap.floorEntry(51).getValue(), new Integer(50));
+        Assert.assertEquals(testMap.floorEntry(198).getValue(), new Integer(198));
+        Assert.assertEquals(testMap.floorEntry(199).getValue(), new Integer(198));
+        Assert.assertEquals(testMap.floorEntry(200).getValue(), new Integer(200));
+        Assert.assertEquals(testMap.floorEntry(201).getValue(), new Integer(200));
+        Assert.assertEquals(testMap.floorEntry(202).getValue(), new Integer(200));
         
-        assertEquals(new Integer(0), testMap.upperEntry(-2).getValue());
-        assertEquals(new Integer(0), testMap.upperEntry(-1).getValue());
-        assertEquals(new Integer(2), testMap.upperEntry(0).getValue());
-        assertEquals(new Integer(2), testMap.upperEntry(1).getValue());
-        assertEquals(new Integer(4), testMap.upperEntry(2).getValue());
-        assertEquals(new Integer(50), testMap.upperEntry(49).getValue());
-        assertEquals(new Integer(52), testMap.upperEntry(50).getValue());
-        assertEquals(new Integer(52), testMap.upperEntry(51).getValue());
-        assertEquals(new Integer(200), testMap.upperEntry(198).getValue());
-        assertEquals(new Integer(200), testMap.upperEntry(199).getValue());
-        assertEquals(null, testMap.upperEntry(200));
-        assertEquals(null, testMap.upperEntry(201));
-        assertEquals(null, testMap.upperEntry(202));
+        Assert.assertEquals(testMap.upperEntry(-2).getValue(), new Integer(0));
+        Assert.assertEquals(testMap.upperEntry(-1).getValue(), new Integer(0));
+        Assert.assertEquals(testMap.upperEntry(0).getValue(), new Integer(2));
+        Assert.assertEquals(testMap.upperEntry(1).getValue(), new Integer(2));
+        Assert.assertEquals(testMap.upperEntry(2).getValue(), new Integer(4));
+        Assert.assertEquals(testMap.upperEntry(49).getValue(), new Integer(50));
+        Assert.assertEquals(testMap.upperEntry(50).getValue(), new Integer(52));
+        Assert.assertEquals(testMap.upperEntry(51).getValue(), new Integer(52));
+        Assert.assertEquals(testMap.upperEntry(198).getValue(), new Integer(200));
+        Assert.assertEquals(testMap.upperEntry(199).getValue(), new Integer(200));
+        Assert.assertEquals(testMap.upperEntry(200), null);
+        Assert.assertEquals(testMap.upperEntry(201), null);
+        Assert.assertEquals(testMap.upperEntry(202), null);
         
-        assertEquals(new Integer(0), testMap.ceilingEntry(-2).getValue());
-        assertEquals(new Integer(0), testMap.ceilingEntry(-1).getValue());
-        assertEquals(new Integer(0), testMap.ceilingEntry(0).getValue());
-        assertEquals(new Integer(2), testMap.ceilingEntry(1).getValue());
-        assertEquals(new Integer(2), testMap.ceilingEntry(2).getValue());
-        assertEquals(new Integer(50), testMap.ceilingEntry(49).getValue());
-        assertEquals(new Integer(50), testMap.ceilingEntry(50).getValue());
-        assertEquals(new Integer(52), testMap.ceilingEntry(51).getValue());
-        assertEquals(new Integer(198), testMap.ceilingEntry(198).getValue());
-        assertEquals(new Integer(200), testMap.ceilingEntry(199).getValue());
-        assertEquals(new Integer(200), testMap.ceilingEntry(200).getValue());
-        assertEquals(null, testMap.ceilingEntry(201));
-        assertEquals(null, testMap.ceilingEntry(202));
+        Assert.assertEquals(testMap.ceilingEntry(-2).getValue(), new Integer(0));
+        Assert.assertEquals(testMap.ceilingEntry(-1).getValue(), new Integer(0));
+        Assert.assertEquals(testMap.ceilingEntry(0).getValue(), new Integer(0));
+        Assert.assertEquals(testMap.ceilingEntry(1).getValue(), new Integer(2));
+        Assert.assertEquals(testMap.ceilingEntry(2).getValue(), new Integer(2));
+        Assert.assertEquals(testMap.ceilingEntry(49).getValue(), new Integer(50));
+        Assert.assertEquals(testMap.ceilingEntry(50).getValue(), new Integer(50));
+        Assert.assertEquals(testMap.ceilingEntry(51).getValue(), new Integer(52));
+        Assert.assertEquals(testMap.ceilingEntry(198).getValue(), new Integer(198));
+        Assert.assertEquals(testMap.ceilingEntry(199).getValue(), new Integer(200));
+        Assert.assertEquals(testMap.ceilingEntry(200).getValue(), new Integer(200));
+        Assert.assertEquals(testMap.ceilingEntry(201), null);
+        Assert.assertEquals(testMap.ceilingEntry(202), null);
         
         //Test iterators:
         assertEquals(refMap.keySet().iterator(), testMap.keySet().iterator());
@@ -116,7 +118,7 @@ public class TreeMapTest extends TestCase {
         assertEquals(refMap.entrySet().iterator(), testMap.entrySet().iterator());
         
         //Test removal:
-        assertEquals(refMap.remove(refMap.firstKey()), testMap.remove(testMap.firstKey()));
+        Assert.assertEquals(testMap.remove(testMap.firstKey()), refMap.remove(refMap.firstKey()));
         Iterator<Integer> refIt = refMap.values().iterator();
         Iterator<Integer> testIt = testMap.values().iterator();
         refIt.next();
@@ -128,10 +130,10 @@ public class TreeMapTest extends TestCase {
     
     private static <T> void assertEquals(Iterator<T> i1, Iterator<T> i2)
     {
-        assertEquals(i1.hasNext(), i2.hasNext());
+        Assert.assertEquals(i2.hasNext(), i1.hasNext());
         if(i1.hasNext())
         {
-            assertEquals(i1.next(), i2.next());
+            Assert.assertEquals(i2.next(), i1.next());
         }
     }
 }

@@ -18,15 +18,16 @@ package org.apache.activemq.util;
 
 import org.apache.activemq.util.buffer.DataByteArrayInputStream;
 import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
-import junit.framework.TestCase;
-
-public class DataByteArrayInputStreamTest extends TestCase {
+public class DataByteArrayInputStreamTest {
 
     /**
      * https://issues.apache.org/activemq/browse/AMQ-1911
      */
-    public void testNonAscii() throws Exception {
+    @Test()
+	public void testNonAscii() throws Exception {
         doMarshallUnMarshallValidation("meißen");
         
         int test = 0; // int to get Supplementary chars
@@ -48,6 +49,6 @@ public class DataByteArrayInputStreamTest extends TestCase {
         DataByteArrayInputStream in = new DataByteArrayInputStream(out.getData());
         in.readBoolean();
         String readBack = in.readUTF();
-        assertEquals(value, readBack);
+        Assert.assertEquals(readBack, value);
     }
 }
