@@ -23,13 +23,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import junit.framework.TestCase;
-
-import org.apache.activemq.apollo.broker.path.PathMap;
 import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
-public class PathMapTest extends TestCase {
-    protected PathMap<String> map = new PathMap<String>();
+public class PathMapTest {
 
     protected AsciiBuffer d1 = createDestination("TEST.D1");
     protected AsciiBuffer d2 = createDestination("TEST.BAR.D2");
@@ -42,326 +40,317 @@ public class PathMapTest extends TestCase {
     protected String v5 = "value5";
     protected String v6 = "value6";
 
-    public void testCompositePaths() throws Exception {
+    @Test()
+	public void testCompositePaths() throws Exception {
         AsciiBuffer d1 = createDestination("TEST.BAR.D2");
         AsciiBuffer d2 = createDestination("TEST.BAR.D3");
+        PathMap<String> map = new PathMap<String>();
         map.put(d1, v1);
         map.put(d2, v2);
         map.get(createDestination("TEST.BAR.D2,TEST.BAR.D3"));
-
     }
 
-    public void testSimplePaths() throws Exception {
+    @Test()
+	public void testSimplePaths() throws Exception {
+        PathMap<String> map = new PathMap<String>();
         map.put(d1, v1);
         map.put(d2, v2);
         map.put(d3, v3);
 
-        assertMapValue(d1, v1);
-        assertMapValue(d2, v2);
-        assertMapValue(d3, v3);
+        assertMapValue(map, d1, v1);
+        assertMapValue(map, d2, v2);
+        assertMapValue(map, d3, v3);
     }
 
-    public void testSimpleDestinationsWithMultipleValues() throws Exception {
+    @Test()
+	public void testSimpleDestinationsWithMultipleValues() throws Exception {
+        PathMap<String> map = new PathMap<String>();
         map.put(d1, v1);
         map.put(d2, v2);
         map.put(d2, v3);
 
-        assertMapValue(d1, v1);
-        assertMapValue("TEST.BAR.D2", v2, v3);
-        assertMapValue(d3, null);
+        assertMapValue(map, d1, v1);
+        assertMapValue(map, "TEST.BAR.D2", v2, v3);
+        assertMapValue(map, d3);
     }
 
 
-    public void testLookupOneStepWildcardPaths() throws Exception {
+    @Test()
+	public void testLookupOneStepWildcardPaths() throws Exception {
+        PathMap<String> map = new PathMap<String>();
         map.put(d1, v1);
         map.put(d2, v2);
         map.put(d3, v3);
 
-        assertMapValue("TEST.D1", v1);
-        assertMapValue("TEST.*", v1);
-        assertMapValue("*.D1", v1);
-        assertMapValue("*.*", v1);
+        assertMapValue(map, "TEST.D1", v1);
+        assertMapValue(map, "TEST.*", v1);
+        assertMapValue(map, "*.D1", v1);
+        assertMapValue(map, "*.*", v1);
 
-        assertMapValue("TEST.BAR.D2", v2);
-        assertMapValue("TEST.*.D2", v2);
-        assertMapValue("*.BAR.D2", v2);
-        assertMapValue("*.*.D2", v2);
+        assertMapValue(map, "TEST.BAR.D2", v2);
+        assertMapValue(map, "TEST.*.D2", v2);
+        assertMapValue(map, "*.BAR.D2", v2);
+        assertMapValue(map, "*.*.D2", v2);
 
-        assertMapValue("TEST.BAR.D3", v3);
-        assertMapValue("TEST.*.D3", v3);
-        assertMapValue("*.BAR.D3", v3);
-        assertMapValue("*.*.D3", v3);
+        assertMapValue(map, "TEST.BAR.D3", v3);
+        assertMapValue(map, "TEST.*.D3", v3);
+        assertMapValue(map, "*.BAR.D3", v3);
+        assertMapValue(map, "*.*.D3", v3);
 
-        assertMapValue("TEST.BAR.D4", null);
+        assertMapValue(map, "TEST.BAR.D4");
 
-        assertMapValue("TEST.BAR.*", v2, v3);
+        assertMapValue(map, "TEST.BAR.*", v2, v3);
     }
 
-    public void testLookupMultiStepWildcardPaths() throws Exception {
+    @Test()
+	public void testLookupMultiStepWildcardPaths() throws Exception {
+        PathMap<String> map = new PathMap<String>();
         map.put(d1, v1);
         map.put(d2, v2);
         map.put(d3, v3);
 
-        List<String> allValues = Arrays.asList(new String[] {v1, v2, v3});
+        assertMapValue(map, ">", v1, v2, v3);
+        assertMapValue(map, "TEST.>", v1, v2, v3);
+        assertMapValue(map, "*.>", v1, v2, v3);
 
-        assertMapValue(">", allValues);
-        assertMapValue("TEST.>", allValues);
-        assertMapValue("*.>", allValues);
-
-        assertMapValue("FOO.>", null);
+        assertMapValue(map, "FOO.>");
     }
 
-    public void testStoreWildcardWithOneStepPath() throws Exception {
-        put("TEST.*", v1);
-        put("TEST.D1", v2);
-        put("TEST.BAR.*", v2);
-        put("TEST.BAR.D3", v3);
+    @Test()
+	public void testStoreWildcardWithOneStepPath() throws Exception {
+        PathMap<String> map = new PathMap<String>();
+        put(map, "TEST.*", v1);
+        put(map, "TEST.D1", v2);
+        put(map, "TEST.BAR.*", v2);
+        put(map, "TEST.BAR.D3", v3);
 
-        assertMapValue("FOO", null);
-        assertMapValue("TEST.FOO", v1);
-        assertMapValue("TEST.D1", v1, v2);
+        assertMapValue(map, "FOO");
+        assertMapValue(map, "TEST.FOO", v1);
+        assertMapValue(map, "TEST.D1", v1, v2);
 
-        assertMapValue("TEST.FOO.FOO", null);
-        assertMapValue("TEST.BAR.FOO", v2);
-        assertMapValue("TEST.BAR.D3", v2, v3);
+        assertMapValue(map, "TEST.FOO.FOO");
+        assertMapValue(map, "TEST.BAR.FOO", v2);
+        assertMapValue(map, "TEST.BAR.D3", v2, v3);
 
-        assertMapValue("TEST.*", v1, v2);
-        assertMapValue("*.D1", v1, v2);
-        assertMapValue("*.*", v1, v2);
-        assertMapValue("TEST.*.*", v2, v3);
-        assertMapValue("TEST.BAR.*", v2, v3);
-        assertMapValue("*.*.*", v2, v3);
-        assertMapValue("*.BAR.*", v2, v3);
-        assertMapValue("*.BAR.D3", v2, v3);
-        assertMapValue("*.*.D3", v2, v3);
+        assertMapValue(map, "TEST.*", v1, v2);
+        assertMapValue(map, "*.D1", v1, v2);
+        assertMapValue(map, "*.*", v1, v2);
+        assertMapValue(map, "TEST.*.*", v2, v3);
+        assertMapValue(map, "TEST.BAR.*", v2, v3);
+        assertMapValue(map, "*.*.*", v2, v3);
+        assertMapValue(map, "*.BAR.*", v2, v3);
+        assertMapValue(map, "*.BAR.D3", v2, v3);
+        assertMapValue(map, "*.*.D3", v2, v3);
     }
 
-    public void testStoreWildcardInMiddleOfPath() throws Exception {
-        put("TEST.*", v1);
-        put("TEST.D1", v2);
-        put("TEST.BAR.*", v2);
-        put("TEST.XYZ.D3", v3);
-        put("TEST.XYZ.D4", v4);
-        put("TEST.BAR.D3", v5);
-        put("TEST.*.D2", v6);
+    @Test()
+	public void testStoreWildcardInMiddleOfPath() throws Exception {
+        PathMap<String> map = new PathMap<String>();
+        put(map, "TEST.*", v1);
+        put(map, "TEST.D1", v2);
+        put(map, "TEST.BAR.*", v2);
+        put(map, "TEST.XYZ.D3", v3);
+        put(map, "TEST.XYZ.D4", v4);
+        put(map, "TEST.BAR.D3", v5);
+        put(map, "TEST.*.D2", v6);
 
-        assertMapValue("TEST.*.D3", v2, v3, v5);
-        assertMapValue("TEST.*.D4", v2, v4);
+        assertMapValue(map, "TEST.*.D3", v2, v3, v5);
+        assertMapValue(map, "TEST.*.D4", v2, v4);
 
-        assertMapValue("TEST.*", v1, v2);
-        assertMapValue("TEST.*.*", v2, v3, v4, v5, v6);
-        assertMapValue("TEST.*.>", v1, v2, v3, v4, v5, v6);
-        assertMapValue("TEST.>", v1, v2, v3, v4, v5, v6);
-        assertMapValue("TEST.>.>", v1, v2, v3, v4, v5, v6);
-        assertMapValue("*.*.D3", v2, v3, v5);
-        assertMapValue("TEST.BAR.*", v2, v5, v6);
+        assertMapValue(map, "TEST.*", v1, v2);
+        assertMapValue(map, "TEST.*.*", v2, v3, v4, v5, v6);
+        assertMapValue(map, "TEST.*.>", v1, v2, v3, v4, v5, v6);
+        assertMapValue(map, "TEST.>", v1, v2, v3, v4, v5, v6);
+        assertMapValue(map, "TEST.>.>", v1, v2, v3, v4, v5, v6);
+        assertMapValue(map, "*.*.D3", v2, v3, v5);
+        assertMapValue(map, "TEST.BAR.*", v2, v5, v6);
 
-        assertMapValue("TEST.BAR.D2", v2, v6);
-        assertMapValue("TEST.*.D2", v2, v6);
-        assertMapValue("TEST.BAR.*", v2, v5, v6);
+        assertMapValue(map, "TEST.BAR.D2", v2, v6);
+        assertMapValue(map, "TEST.*.D2", v2, v6);
+        assertMapValue(map, "TEST.BAR.*", v2, v5, v6);
     }
 
-    public void testDoubleWildcardDoesNotMatchLongerPattern() throws Exception {
-        put("TEST.*", v1);
-        put("TEST.BAR.D3", v2);
+    @Test()
+	public void testDoubleWildcardDoesNotMatchLongerPattern() throws Exception {
+        PathMap<String> map = new PathMap<String>();
+        put(map, "TEST.*", v1);
+        put(map, "TEST.BAR.D3", v2);
 
-        assertMapValue("*.*.D3", v2);
+        assertMapValue(map, "*.*.D3", v2);
     }
 
-    public void testWildcardAtEndOfPathAndAtBeginningOfSearch() throws Exception {
-        put("TEST.*", v1);
+    @Test()
+	public void testWildcardAtEndOfPathAndAtBeginningOfSearch() throws Exception {
+        PathMap<String> map = new PathMap<String>();
+        put(map, "TEST.*", v1);
 
-        assertMapValue("*.D1", v1);
+        assertMapValue(map, "*.D1", v1);
     }
 
-    public void testAnyPathWildcardInMap() throws Exception {
-        put("TEST.FOO.>", v1);
+    @Test()
+	public void testAnyPathWildcardInMap() throws Exception {
+        PathMap<String> map = new PathMap<String>();
+        put(map, "TEST.FOO.>", v1);
 
-        assertMapValue("TEST.FOO.BAR.WHANOT.A.B.C", v1);
-        assertMapValue("TEST.FOO.BAR.WHANOT", v1);
-        assertMapValue("TEST.FOO.BAR", v1);
+        assertMapValue(map, "TEST.FOO.BAR.WHANOT.A.B.C", v1);
+        assertMapValue(map, "TEST.FOO.BAR.WHANOT", v1);
+        assertMapValue(map, "TEST.FOO.BAR", v1);
 
-        assertMapValue("TEST.*.*", v1);
-        assertMapValue("TEST.BAR", null);
+        assertMapValue(map, "TEST.*.*", v1);
+        assertMapValue(map, "TEST.BAR", new Object[]{});
 
-        assertMapValue("TEST.FOO", v1);
+        assertMapValue(map, "TEST.FOO", v1);
     }
 
-    public void testSimpleAddRemove() throws Exception {
-        put("TEST.D1", v2);
+    @Test()
+	public void testSimpleAddRemove() throws Exception {
+        PathMap<String> map = new PathMap<String>();
+        put(map, "TEST.D1", v2);
 
-        assertEquals("Root child count", 1, map.getRootNode().getChildCount());
+        Assert.assertEquals(map.getRootNode().getChildCount(), 1, "Root child count");
 
-        assertMapValue("TEST.D1", v2);
+        assertMapValue(map, "TEST.D1", v2);
 
-        remove("TEST.D1", v2);
+        remove(map, "TEST.D1", v2);
 
-        assertEquals("Root child count", 0, map.getRootNode().getChildCount());
-        assertMapValue("TEST.D1", null);
+        Assert.assertEquals(map.getRootNode().getChildCount(), 0, "Root child count");
+        assertMapValue(map, "TEST.D1");
     }
 
-    public void testStoreAndLookupAllWildcards() throws Exception {
-        loadSample2();
+    @Test()
+	public void testStoreAndLookupAllWildcards() throws Exception {
+        PathMap<String> map = new PathMap<String>();
+        loadSample2(map);
 
-        assertSample2();
+        assertSample2(map);
 
         // lets remove everything and add it back
-        remove("TEST.FOO", v1);
+        remove(map, "TEST.FOO", v1);
 
-        assertMapValue("TEST.FOO", v2, v3, v4);
-        assertMapValue("TEST.*", v2, v3, v4, v6);
-        assertMapValue("*.*", v2, v3, v4, v6);
+        assertMapValue(map, "TEST.FOO", v2, v3, v4);
+        assertMapValue(map, "TEST.*", v2, v3, v4, v6);
+        assertMapValue(map, "*.*", v2, v3, v4, v6);
 
-        remove("TEST.XYZ", v6);
+        remove(map, "TEST.XYZ", v6);
 
-        assertMapValue("TEST.*", v2, v3, v4);
-        assertMapValue("*.*", v2, v3, v4);
+        assertMapValue(map, "TEST.*", v2, v3, v4);
+        assertMapValue(map, "*.*", v2, v3, v4);
 
-        remove("TEST.*", v2);
+        remove(map, "TEST.*", v2);
 
-        assertMapValue("TEST.*", v3, v4);
-        assertMapValue("*.*", v3, v4);
+        assertMapValue(map, "TEST.*", v3, v4);
+        assertMapValue(map, "*.*", v3, v4);
 
-        remove(">", v4);
+        remove(map, ">", v4);
 
-        assertMapValue("TEST.*", v3);
-        assertMapValue("*.*", v3);
+        assertMapValue(map, "TEST.*", v3);
+        assertMapValue(map, "*.*", v3);
 
-        remove("TEST.>", v3);
-        remove("TEST.FOO.BAR", v5);
+        remove(map, "TEST.>", v3);
+        remove(map, "TEST.FOO.BAR", v5);
 
-        assertMapValue("FOO", null);
-        assertMapValue("TEST.FOO", null);
-        assertMapValue("TEST.D1", null);
+        assertMapValue(map, "FOO");
+        assertMapValue(map, "TEST.FOO");
+        assertMapValue(map, "TEST.D1");
 
-        assertMapValue("TEST.FOO.FOO", null);
-        assertMapValue("TEST.BAR.FOO", null);
-        assertMapValue("TEST.FOO.BAR", null);
-        assertMapValue("TEST.BAR.D3", null);
+        assertMapValue(map, "TEST.FOO.FOO");
+        assertMapValue(map, "TEST.BAR.FOO");
+        assertMapValue(map, "TEST.FOO.BAR");
+        assertMapValue(map, "TEST.BAR.D3");
 
-        assertMapValue("TEST.*", null);
-        assertMapValue("*.*", null);
-        assertMapValue("*.D1", null);
-        assertMapValue("TEST.*.*", null);
-        assertMapValue("TEST.BAR.*", null);
+        assertMapValue(map, "TEST.*");
+        assertMapValue(map, "*.*");
+        assertMapValue(map, "*.D1");
+        assertMapValue(map, "TEST.*.*");
+        assertMapValue(map, "TEST.BAR.*");
 
-        loadSample2();
+        loadSample2(map);
 
-        assertSample2();
+        assertSample2(map);
 
-        remove(">", v4);
-        remove("TEST.*", v2);
+        remove(map, ">", v4);
+        remove(map, "TEST.*", v2);
 
-        assertMapValue("FOO", null);
-        assertMapValue("TEST.FOO", v1, v3);
-        assertMapValue("TEST.D1", v3);
+        assertMapValue(map, "FOO");
+        assertMapValue(map, "TEST.FOO", v1, v3);
+        assertMapValue(map, "TEST.D1", v3);
 
-        assertMapValue("TEST.FOO.FOO", v3);
-        assertMapValue("TEST.BAR.FOO", v3);
-        assertMapValue("TEST.FOO.BAR", v3, v5);
-        assertMapValue("TEST.BAR.D3", v3);
+        assertMapValue(map, "TEST.FOO.FOO", v3);
+        assertMapValue(map, "TEST.BAR.FOO", v3);
+        assertMapValue(map, "TEST.FOO.BAR", v3, v5);
+        assertMapValue(map, "TEST.BAR.D3", v3);
 
-        assertMapValue("TEST.*", v1, v3, v6);
-        assertMapValue("*.*", v1, v3, v6);
-        assertMapValue("*.D1", v3);
-        assertMapValue("TEST.*.*", v3, v5);
-        assertMapValue("TEST.BAR.*", v3);
+        assertMapValue(map, "TEST.*", v1, v3, v6);
+        assertMapValue(map, "*.*", v1, v3, v6);
+        assertMapValue(map, "*.D1", v3);
+        assertMapValue(map, "TEST.*.*", v3, v5);
+        assertMapValue(map, "TEST.BAR.*", v3);
     }
 
-    public void testAddAndRemove() throws Exception {
+    @Test()
+	public void testAddAndRemove() throws Exception {
+        PathMap<String> map = new PathMap<String>();
 
-        put("FOO.A", v1);
-        assertMapValue("FOO.>", v1);
+        put(map, "FOO.A", v1);
+        assertMapValue(map, "FOO.>", v1);
 
-        put("FOO.B", v2);
-        assertMapValue("FOO.>", v1, v2);
+        put(map, "FOO.B", v2);
+        assertMapValue(map, "FOO.>", v1, v2);
 
         map.removeAll(createDestination("FOO.A"));
 
-        assertMapValue("FOO.>", v2);
+        assertMapValue(map, "FOO.>", v2);
 
     }
 
-    protected void loadSample2() {
-        put("TEST.FOO", v1);
-        put("TEST.*", v2);
-        put("TEST.>", v3);
-        put(">", v4);
-        put("TEST.FOO.BAR", v5);
-        put("TEST.XYZ", v6);
+    protected void loadSample2(PathMap<String> map) {
+        put(map, "TEST.FOO", v1);
+        put(map, "TEST.*", v2);
+        put(map, "TEST.>", v3);
+        put(map, ">", v4);
+        put(map, "TEST.FOO.BAR", v5);
+        put(map, "TEST.XYZ", v6);
     }
 
-    protected void assertSample2() {
-        assertMapValue("FOO", v4);
-        assertMapValue("TEST.FOO", v1, v2, v3, v4);
-        assertMapValue("TEST.D1", v2, v3, v4);
+    protected void assertSample2(PathMap<String> map) {
+        assertMapValue(map, "FOO", v4);
+        assertMapValue(map, "TEST.FOO", v1, v2, v3, v4);
+        assertMapValue(map, "TEST.D1", v2, v3, v4);
 
-        assertMapValue("TEST.FOO.FOO", v3, v4);
-        assertMapValue("TEST.BAR.FOO", v3, v4);
-        assertMapValue("TEST.FOO.BAR", v3, v4, v5);
-        assertMapValue("TEST.BAR.D3", v3, v4);
+        assertMapValue(map, "TEST.FOO.FOO", v3, v4);
+        assertMapValue(map, "TEST.BAR.FOO", v3, v4);
+        assertMapValue(map, "TEST.FOO.BAR", v3, v4, v5);
+        assertMapValue(map, "TEST.BAR.D3", v3, v4);
 
-        assertMapValue("TEST.*", v1, v2, v3, v4, v6);
-        assertMapValue("*.*", v1, v2, v3, v4, v6);
-        assertMapValue("*.D1", v2, v3, v4);
-        assertMapValue("TEST.*.*", v3, v4, v5);
-        assertMapValue("TEST.BAR.*", v3, v4);
+        assertMapValue(map, "TEST.*", v1, v2, v3, v4, v6);
+        assertMapValue(map, "*.*", v1, v2, v3, v4, v6);
+        assertMapValue(map, "*.D1", v2, v3, v4);
+        assertMapValue(map, "TEST.*.*", v3, v4, v5);
+        assertMapValue(map, "TEST.BAR.*", v3, v4);
     }
 
-    protected void put(String name, String value) {
+    protected void put(PathMap<String> map, String name, String value) {
         map.put(createDestination(name), value);
     }
 
-    protected void remove(String name, String value) {
+    protected void remove(PathMap<String> map, String name, String value) {
         AsciiBuffer destination = createDestination(name);
         map.remove(destination, value);
     }
 
-    protected void assertMapValue(String destinationName, Object expected) {
+    protected void assertMapValue(PathMap<String> map, String destinationName, Object... expected) {
         AsciiBuffer destination = createDestination(destinationName);
-        assertMapValue(destination, expected);
-    }
-
-    protected void assertMapValue(String destinationName, Object expected1, Object expected2) {
-        assertMapValue(destinationName, Arrays.asList(new Object[] {expected1, expected2}));
-    }
-
-    protected void assertMapValue(String destinationName, Object expected1, Object expected2, Object expected3) {
-        assertMapValue(destinationName, Arrays.asList(new Object[] {expected1, expected2, expected3}));
-    }
-    
-    protected void assertMapValue(AsciiBuffer destination, Object expected1, Object expected2, Object expected3) {
-        assertMapValue(destination, Arrays.asList(new Object[] {expected1, expected2, expected3}));
-    }
-
-    protected void assertMapValue(String destinationName, Object expected1, Object expected2, Object expected3, Object expected4) {
-        assertMapValue(destinationName, Arrays.asList(new Object[] {expected1, expected2, expected3, expected4}));
-    }
-
-    protected void assertMapValue(String destinationName, Object expected1, Object expected2, Object expected3, Object expected4, Object expected5) {
-        assertMapValue(destinationName, Arrays.asList(new Object[] {expected1, expected2, expected3, expected4, expected5}));
-    }
-
-    protected void assertMapValue(String destinationName, Object expected1, Object expected2, Object expected3, Object expected4, Object expected5, Object expected6) {
-        assertMapValue(destinationName, Arrays.asList(new Object[] {expected1, expected2, expected3, expected4, expected5, expected6}));
+        assertMapValue(map, destination, expected);
     }
 
     @SuppressWarnings("unchecked")
-    protected void assertMapValue(AsciiBuffer destination, Object expected) {
-        List expectedList = null;
-        if (expected == null) {
-            expectedList = Collections.EMPTY_LIST;
-        } else if (expected instanceof List) {
-            expectedList = (List)expected;
-        } else {
-            expectedList = new ArrayList();
-            expectedList.add(expected);
-        }
+    protected void assertMapValue(PathMap<String> map, AsciiBuffer destination, Object... expected) {
+        List expectedList = Arrays.asList(expected);
         Collections.sort(expectedList);
         Set actualSet = map.get(destination);
         List actual = new ArrayList(actualSet);
         Collections.sort(actual);
-        assertEquals("map value for destinationName:  " + destination, expectedList, actual);
+        Assert.assertEquals(actual, expectedList, ("map value for destinationName:  " + destination));
     }
 
     protected AsciiBuffer createDestination(String name) {

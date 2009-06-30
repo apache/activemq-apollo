@@ -19,42 +19,37 @@ package org.apache.activemq.apollo.transport.vm;
 import java.io.IOException;
 import java.net.URI;
 
-import junit.framework.TestCase;
-
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
 /**
  * 
  * @author chirino
  */
-public class VMTransportTest extends TestCase {
+public class VMTransportTest {
 
 	static {
 		System.setProperty("org.apache.activemq.default.directory.prefix", "target/test-data/");
 	}
 	
-	public void testAutoCreateBroker() throws Exception {
-		Transport connect = TransportFactory.compositeConnect(new URI("vm://test?wireFormat=mock"));
+	@Test()
+	public void autoCreateBroker() throws Exception {
+		Transport connect = TransportFactory.compositeConnect(new URI("vm://test1?wireFormat=mock"));
 		connect.start();
-		assertNotNull(connect);
+		Assert.assertNotNull(connect);
 		connect.stop();
 	}
 	
-	public void testNoAutoCreateBroker() throws Exception {
-		try {
-			TransportFactory.compositeConnect(new URI("vm://test?create=false&wireFormat=mock"));
-			fail("Expected a IOException");
-		} catch (IOException e) {
-		}
+	@Test(expectedExceptions={IOException.class})
+	public void noAutoCreateBroker() throws Exception {
+		TransportFactory.compositeConnect(new URI("vm://test2?create=false&wireFormat=mock"));
 	}
 	
-	public void testBadOptions() throws Exception {
-		try {
-			TransportFactory.compositeConnect(new URI("vm://test?crazy-option=false&wireFormat=mock"));
-			fail("Expected a IllegalArgumentException");
-		} catch (IllegalArgumentException e) {
-		}
+	@Test(expectedExceptions={IllegalArgumentException.class})
+	public void badOptions() throws Exception {
+		TransportFactory.compositeConnect(new URI("vm://test3?crazy-option=false&wireFormat=mock"));
 	}
 	
 }

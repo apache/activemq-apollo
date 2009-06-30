@@ -18,20 +18,21 @@ package org.apache.activemq.apollo.broker.path;
 
 import java.util.Set;
 
-import junit.framework.TestCase;
-
-import org.apache.activemq.apollo.broker.path.PathMap;
 import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
-public class PathMapMemoryTest extends TestCase {
+public class PathMapMemoryTest {
 
-    public void testLongPath() throws Exception {
+    @Test()
+	public void testLongPath() throws Exception {
     	AsciiBuffer d1 = new AsciiBuffer("1.2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17.18");
         PathMap<String> map = new PathMap<String>();
         map.put(d1, "test");
     }
 
-    public void testVeryLongPaths() throws Exception {
+    @Test()
+	public void testVeryLongPaths() throws Exception {
 
         for (int i = 1; i < 100; i++) {
             String name = "1";
@@ -44,12 +45,13 @@ public class PathMapMemoryTest extends TestCase {
                 PathMap<String> map = new PathMap<String>();
                 map.put(d1, "test");
             } catch (Throwable e) {
-                fail("Destination name too long: " + name + " : " + e);
+                Assert.fail("Destination name too long: " + name + " : " + e);
             }
         }
     }
     
-    public void testLotsOfPaths() throws Exception {
+    @Test()
+	public void testLotsOfPaths() throws Exception {
         PathMap<Object> map = new PathMap<Object>();
         Object value = new Object();
         int count = 1000;
@@ -61,7 +63,7 @@ public class PathMapMemoryTest extends TestCase {
             AsciiBuffer queue = new AsciiBuffer("connection:"+i);
             map.remove(queue, value);
             Set<Object> set = map.get(queue);
-            assertTrue(set.isEmpty());
+            Assert.assertTrue(set.isEmpty());
         }
     }    
 
