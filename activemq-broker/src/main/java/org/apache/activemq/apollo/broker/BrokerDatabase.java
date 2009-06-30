@@ -58,7 +58,7 @@ import org.apache.activemq.util.list.LinkedNodeList;
 public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.OperationBase> implements Service, DispatcherAware {
 
     private static final boolean DEBUG = false;
-    
+
     private final Store store;
     private final Flow databaseFlow = new Flow("database", false);
 
@@ -83,7 +83,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     // requested.
     private long flushDelay = 10;
 
-	private final Runnable flushDelayCallback;
+    private final Runnable flushDelayCallback;
     private boolean storeBypass = true;
 
     public interface DatabaseListener {
@@ -225,12 +225,16 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
             public Map<AsciiBuffer, Buffer> execute(Session session) throws Exception {
                 HashMap<AsciiBuffer, Buffer> ret = new HashMap<AsciiBuffer, Buffer>();
-                Iterator<AsciiBuffer> keys = session.mapEntryListKeys(map, null, -1);
-                while (keys.hasNext()) {
-                    AsciiBuffer key = keys.next();
-                    ret.put(key, session.mapEntryGet(map, key));
+                try {
+                    Iterator<AsciiBuffer> keys = session.mapEntryListKeys(map, null, -1);
+                    while (keys.hasNext()) {
+                        AsciiBuffer key = keys.next();
+                        ret.put(key, session.mapEntryGet(map, key));
+                    }
+                } catch (Store.KeyNotFoundException knfe) {
+                    //No keys then:
                 }
-
+                
                 return ret;
             }
 
@@ -238,12 +242,15 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     }
 
     /**
-     * @param map The name of the map to update.
-     * @param key The key in the map to update.
-     * @param value The value to insert.
+     * @param map
+     *            The name of the map to update.
+     * @param key
+     *            The key in the map to update.
+     * @param value
+     *            The value to insert.
      */
     public OperationContext updateMapEntry(AsciiBuffer map, AsciiBuffer key, Buffer value) {
-        return add(new MapUpdateOperation(map, key, value), null, false) ;
+        return add(new MapUpdateOperation(map, key, value), null, false);
     }
 
     /**
@@ -708,17 +715,17 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         public static final int BASE_MEM_SIZE = 20;
 
         public boolean cancel() {
-        	if( storeBypass ) {
-	            if (executePending.compareAndSet(true, false)) {
-	                cancelled.set(true);
-	                // System.out.println("Cancelled: " + this);
-	                synchronized (opQueue) {
-	                    unlink();
-	                    storeController.elementDispatched(this);
-	                }
-	                return true;
-	            }
-        	}
+            if (storeBypass) {
+                if (executePending.compareAndSet(true, false)) {
+                    cancelled.set(true);
+                    // System.out.println("Cancelled: " + this);
+                    synchronized (opQueue) {
+                        unlink();
+                        storeController.elementDispatched(this);
+                    }
+                    return true;
+                }
+            }
             return cancelled.get();
         }
 
@@ -1281,35 +1288,36 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
             return "AddTxOpOperation " + record.getKey() + super.toString();
         }
     }
-    
+
     public long getFlushDelay() {
-		return flushDelay;
-	}
+        return flushDelay;
+    }
 
-	public void setFlushDelay(long flushDelay) {
-		this.flushDelay = flushDelay;
-	}
+    public void setFlushDelay(long flushDelay) {
+        this.flushDelay = flushDelay;
+    }
 
-	/**
-	 * @return true if operations are allowed to bypass the store.
-	 */
-	public boolean isStoreBypass() {
-		return storeBypass;
-	}
+    /**
+     * @return true if operations are allowed to bypass the store.
+     */
+    public boolean isStoreBypass() {
+        return storeBypass;
+    }
 
-	/**
-	 * Sets if persistent operations should be allowed to bypass the store.
-	 * Defaults to true, as this will give you the best performance.  In some  
-	 * cases, you want to disable this as the store being used will double
-	 * as an audit log and you do not want any persistent operations
-	 * to bypass the store.
-	 * 
-	 * When store bypass is disabled, all {@link Operation#cancel()} requests
-	 * will return false.
-	 * 
-	 * @param enable if true will enable store bypass
-	 */
-	public void setStoreBypass(boolean enable) {
-		this.storeBypass = enable;
-	}
+    /**
+     * Sets if persistent operations should be allowed to bypass the store.
+     * Defaults to true, as this will give you the best performance. In some
+     * cases, you want to disable this as the store being used will double as an
+     * audit log and you do not want any persistent operations to bypass the
+     * store.
+     * 
+     * When store bypass is disabled, all {@link Operation#cancel()} requests
+     * will return false.
+     * 
+     * @param enable
+     *            if true will enable store bypass
+     */
+    public void setStoreBypass(boolean enable) {
+        this.storeBypass = enable;
+    }
 }
