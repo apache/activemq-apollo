@@ -324,7 +324,7 @@ public abstract class StorePerformanceBase extends TestCase {
                             for (Iterator<QueueRecord> iterator = queueRecords; iterator.hasNext();) {
                                 QueueRecord r = iterator.next();
                                 records.add(session.messageGetRecord(r.getMessageKey()));
-                                session.queueRemoveMessage(queueId, r.messageKey);
+                                session.queueRemoveMessage(queueId, r.queueKey);
                             }
                         }
                     };

@@ -106,7 +106,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         public Integer map(MessageDelivery element) {
             return element.getFlowLimiterSize();
         }
-    };    
+    };
 
     public static final Mapper<Integer, MessageDelivery> PRIORITY_MAPPER = new Mapper<Integer, MessageDelivery>() {
         public Integer map(MessageDelivery element) {
@@ -127,7 +127,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
             return (int) (element.getProducerId().hashCode() % 10);
         }
     };
-    
+
     public static final short SUBPARTITION_TYPE = 0;
     public static final short SHARED_QUEUE_TYPE = 1;
     public static final short DURABLE_QUEUE_TYPE = 2;
@@ -251,7 +251,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
 
         }
     }
-    
+
     private IQueue<Long, MessageDelivery> createRestoredQueue(IPartitionedQueue<Long, MessageDelivery> parent, QueueQueryResult loaded) throws IOException {
 
         IQueue<Long, MessageDelivery> queue;
@@ -452,8 +452,16 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         return ret;
     }
 
-    public final void deleteQueueElement(QueueDescriptor descriptor, MessageDelivery elem) {
-        elem.acknowledge(descriptor);
+    public final void deleteQueueElement(SaveableQueueElement<MessageDelivery> sqe) {
+        MessageDelivery md = sqe.getElement();
+        //If the message delivery isn't null, funnel through it 
+        //since the message may not yet be in the store:
+        if (md != null) {
+            md.acknowledge(sqe);
+        } else {
+            database.deleteQueueElement(sqe);
+        }
+
     }
 
     public final boolean isFromStore(MessageDelivery elem) {
@@ -464,8 +472,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         elem.getElement().persist(elem, controller, delayable);
     }
 
-    public final void restoreQueueElements(QueueDescriptor queue, boolean recordsOnly, long firstSequence, long maxSequence, int maxCount,
-            RestoreListener<MessageDelivery> listener) {
+    public final void restoreQueueElements(QueueDescriptor queue, boolean recordsOnly, long firstSequence, long maxSequence, int maxCount, RestoreListener<MessageDelivery> listener) {
         database.restoreQueueElements(queue, recordsOnly, firstSequence, maxSequence, maxCount, listener, MESSAGE_MARSHALLER);
     }
 

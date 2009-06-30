@@ -124,6 +124,22 @@ public abstract class CursoredQueue<V> {
         expirator.elementAdded(qe);
     }
 
+    public void remove(long sequence) {
+        QueueElement<V> qe = queue.lower(sequence, true);
+        if (qe == null) {
+            return;
+        } else if (qe.getSequence() == sequence) {
+            qe.acknowledge();
+        }
+        //Otherwise if the element is paged out, create a new
+        //holder and mark it for deletion
+        else if (persistencePolicy.isPageOutPlaceHolders()) {
+            //FIXME, need to track this delete otherwise an in flight message restore
+            //might load this element back in.
+            getQueueStore().deleteQueueElement(new QueueElement<V>(null, sequence, this));
+        }
+    }
+
     /**
      * @return True if the queue needs dispatching.
      */
@@ -865,9 +881,11 @@ public abstract class CursoredQueue<V> {
                 }
 
                 if (saved) {
-                    queue.getQueueStore().deleteQueueElement(queue.getDescriptor(), elem);
+                    queue.getQueueStore().deleteQueueElement(this);
                 }
 
+                //FIXME need to track deletions when paging is enabled
+                //otherwise an in process restore might reload the element
                 elem = null;
                 unload(null);
 
@@ -1157,8 +1175,11 @@ public abstract class CursoredQueue<V> {
             return "QueueElement " + sequence + " loaded: " + loaded + " elem loaded: " + !isPagedOut() + " owner: " + owner;
         }
 
-        /* (non-Javadoc)
-         * @see org.apache.activemq.queue.Subscription.SubscriptionDelivery#getSourceQueueRemovalKey()
+        /*
+         * (non-Javadoc)
+         * 
+         * @seeorg.apache.activemq.queue.Subscription.SubscriptionDelivery#
+         * getSourceQueueRemovalKey()
          */
         public long getSourceQueueRemovalKey() {
             return sequence;

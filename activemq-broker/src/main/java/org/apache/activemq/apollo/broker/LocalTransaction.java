@@ -43,7 +43,7 @@ public class LocalTransaction extends Transaction {
      * @see org.apache.activemq.apollo.broker.Transaction#commit(boolean)
      */
     @Override
-    public void commit(boolean onePhase) throws XAException, IOException {
+    public void commit(boolean onePhase, TransactionListener listener) throws XAException, IOException {
         // TODO Auto-generated method stub
 
     }
@@ -54,7 +54,7 @@ public class LocalTransaction extends Transaction {
      * @see org.apache.activemq.apollo.broker.Transaction#prepare()
      */
     @Override
-    public int prepare() throws XAException, IOException {
+    public int prepare(TransactionListener listener) throws XAException, IOException {
         // TODO Auto-generated method stub
         return 0;
     }
@@ -65,7 +65,7 @@ public class LocalTransaction extends Transaction {
      * @see org.apache.activemq.apollo.broker.Transaction#rollback()
      */
     @Override
-    public void rollback() throws XAException, IOException {
+    public void rollback(TransactionListener listener) throws XAException, IOException {
         // TODO Auto-generated method stub
 
     }

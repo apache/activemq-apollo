@@ -335,11 +335,13 @@ public class KahaDBStore implements Store {
                     if (data.length == 1 && data.data[0] == BEGIN_UNIT_OF_WORK) {
                         uow = pageFile.tx();
                     } else if (data.length == 1 && data.data[0] == END_UNIT_OF_WORK) {
-                        rootEntity.setLastUpdate(recoveryPosition);
-                        uow.commit();
-                        redoCounter += uowCounter;
-                        uowCounter = 0;
-                        uow = null;
+                        if (uow != null) {
+                            rootEntity.setLastUpdate(recoveryPosition);
+                            uow.commit();
+                            redoCounter += uowCounter;
+                            uowCounter = 0;
+                            uow = null;
+                        }
                     } else if (data.length == 1 && data.data[0] == CANCEL_UNIT_OF_WORK) {
                         uow.rollback();
                         uow = null;
@@ -718,8 +720,9 @@ public class KahaDBStore implements Store {
         qd.setQueueName(command.getQueueName());
         DestinationEntity destination = rootEntity.getDestination(qd);
         if (destination != null) {
-            if (destination.remove(tx, command.getMessageKey())) {
-                rootEntity.removeMessageRef(tx, command.getQueueName(), command.getMessageKey());
+            long messageKey = destination.remove(tx, command.getQueueKey());
+            if (messageKey >= 0) {
+                rootEntity.removeMessageRef(tx, command.getQueueName(), command.getQueueKey());
             }
         }
     }
@@ -940,9 +943,9 @@ public class KahaDBStore implements Store {
             addUpdate(bean);
         }
 
-        public void queueRemoveMessage(QueueDescriptor queue, Long messageKey) throws KeyNotFoundException {
+        public void queueRemoveMessage(QueueDescriptor queue, Long queueKey) throws KeyNotFoundException {
             QueueRemoveMessageBean bean = new QueueRemoveMessageBean();
-            bean.setMessageKey(messageKey);
+            bean.setQueueKey(queueKey);
             bean.setQueueName(queue.getQueueName());
             addUpdate(bean);
         }

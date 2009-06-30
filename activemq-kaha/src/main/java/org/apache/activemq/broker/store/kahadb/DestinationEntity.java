@@ -229,15 +229,23 @@ public class DestinationEntity {
         }
     }
 
-    public boolean remove(Transaction tx, long msgKey) throws IOException {
-        Long queueKey = trackingIndex.remove(tx, msgKey);
-        if (queueKey != null) {
-            QueueRecord qr = queueIndex.remove(tx, queueKey);
+    /**
+     * Removes a queue record returning the corresponding element tracking number.
+     * @param tx The transaction under which to do the removal
+     * @param queueKey The queue key
+     * @return The store tracking. 
+     * @throws IOException
+     */
+    public long remove(Transaction tx, long queueKey) throws IOException {
+        QueueRecord qr = queueIndex.remove(tx, queueKey);
+        if(qr != null)
+        {
+            trackingIndex.remove(tx, qr.getMessageKey());
             getMetaData(tx).update(-1, -qr.getSize());
             tx.store(metaData, META_DATA_MARSHALLER, true);
-            return true;
+            return qr.getMessageKey();
         }
-        return false;
+        return -1;
     }
 
     public Iterator<QueueRecord> listMessages(Transaction tx, Long firstQueueKey, Long maxQueueKey, final int max) throws IOException {

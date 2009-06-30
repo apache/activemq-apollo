@@ -95,12 +95,10 @@ public interface QueueStore<K, V> {
     /**
      * Asynchronously deletes an element from the store.
      * 
-     * @param descriptor
-     *            The queue descriptor
      * @param element
      *            The element to delete.
      */
-    public void deleteQueueElement(QueueDescriptor descriptor, V element);
+    public void deleteQueueElement(SaveableQueueElement<V> elem);
 
     /**
      * Asynchronously saves the given element to the store

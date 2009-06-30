@@ -22,7 +22,6 @@ import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.activemq.queue.SaveableQueueElement;
 import org.apache.activemq.util.buffer.AsciiBuffer;
-import org.apache.activemq.util.buffer.Buffer;
 
 /**
  * @author cmacnaug
@@ -32,14 +31,9 @@ public class MessageDeliveryWrapper implements MessageDelivery {
 
     private final MessageDelivery delegate;
 
-    /**
-     * (non-Javadoc)
-     * 
-     * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
-     *      org.apache.activemq.flow.ISourceController, boolean)
-     */
-    public void acknowledge(QueueDescriptor queue) {
-        delegate.acknowledge(queue);
+   
+    public void acknowledge(SaveableQueueElement<MessageDelivery> sqe) {
+        delegate.acknowledge(sqe);
     }
 
     /**
@@ -128,7 +122,7 @@ public class MessageDeliveryWrapper implements MessageDelivery {
      * @see org.apache.activemq.apollo.broker.MessageDelivery#persist(org.apache.activemq.apollo.queue.QueueStore.SaveableQueueElement,
      *      org.apache.activemq.flow.ISourceController, boolean)
      */
-    public Buffer getTransactionId() {
+    public long getTransactionId() {
         return delegate.getTransactionId();
     }
 

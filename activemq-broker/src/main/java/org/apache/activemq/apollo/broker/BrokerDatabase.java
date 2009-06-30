@@ -560,8 +560,8 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      *            The queue.
      * @return The {@link OperationContext} associated with the operation
      */
-    public OperationContext deleteQueueElement(long storeTracking, QueueDescriptor queue) {
-        return add(new DeleteOperation(storeTracking, queue), null, false);
+    public OperationContext deleteQueueElement(SaveableQueueElement<?> queueElement) {
+        return add(new DeleteOperation(queueElement.getSequenceNumber(), queueElement.getQueueDescriptor()), null, false);
     }
 
     /**
@@ -854,11 +854,11 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     }
 
     private class DeleteOperation extends OperationBase {
-        private final long storeTracking;
+        private final long queueKey;
         private QueueDescriptor queue;
 
-        public DeleteOperation(long tracking, QueueDescriptor queue) {
-            this.storeTracking = tracking;
+        public DeleteOperation(long queueKey, QueueDescriptor queue) {
+            this.queueKey = queueKey;
             this.queue = queue;
         }
 
@@ -870,7 +870,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         @Override
         protected void doExcecute(Session session) {
             try {
-                session.queueRemoveMessage(queue, storeTracking);
+                session.queueRemoveMessage(queue, queueKey);
             } catch (KeyNotFoundException e) {
                 // TODO Probably doesn't always mean an error, it is possible
                 // that
@@ -886,7 +886,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         }
 
         public String toString() {
-            return "MessageDelete: " + queue.getQueueName().toString() + " tracking: " + storeTracking + " " + super.toString();
+            return "MessageDelete: " + queue.getQueueName().toString() + " tracking: " + queueKey + " " + super.toString();
         }
     }
 
@@ -1223,17 +1223,17 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      * @param delayable
      */
     public <T> OperationContext saveQeueuElement(SaveableQueueElement<T> sqe, ISourceController<?> source, boolean delayable, MessageRecordMarshaller<T> marshaller) {
-        return add(new AddElementOpOperation<T>(sqe, delayable, marshaller), source, !delayable);
+        return add(new AddElementOperation<T>(sqe, delayable, marshaller), source, !delayable);
     }
 
-    private class AddElementOpOperation<T> extends OperationBase {
+    private class AddElementOperation<T> extends OperationBase {
 
         private final SaveableQueueElement<T> op;
         private MessageRecord record;
         private boolean delayable;
         private final MessageRecordMarshaller<T> marshaller;
 
-        public AddElementOpOperation(SaveableQueueElement<T> op, boolean delayable, MessageRecordMarshaller<T> marshaller) {
+        public AddElementOperation(SaveableQueueElement<T> op, boolean delayable, MessageRecordMarshaller<T> marshaller) {
             this.op = op;
             this.delayable = delayable;
             if (!delayable) {

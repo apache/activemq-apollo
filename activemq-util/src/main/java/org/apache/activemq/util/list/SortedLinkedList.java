@@ -57,6 +57,13 @@ public class SortedLinkedList<T extends SortedLinkedListNode<T>> {
             prev.linkAfter(node);
         }
     }
+    
+    /**
+     * @param sequence The sequence number of the element to get.
+     */
+    public T get(long sequence) {
+        return index.get(sequence);
+    }
 
     public T lower(long sequence, boolean inclusive) {
         Entry<Long, T> lower = index.floorEntry(sequence);
@@ -154,4 +161,6 @@ public class SortedLinkedList<T extends SortedLinkedListNode<T>> {
         }
         return rc;
     }
+
+    
 }

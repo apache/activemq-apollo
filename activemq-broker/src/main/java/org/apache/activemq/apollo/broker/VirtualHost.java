@@ -40,24 +40,25 @@ public class VirtualHost implements Service {
     final private HashMap<AsciiBuffer, Queue> queues = new HashMap<AsciiBuffer, Queue>();
     final private HashMap<String, DurableSubscription> durableSubs = new HashMap<String, DurableSubscription>();
     final private Router router = new Router();
-    
+
     private ArrayList<AsciiBuffer> hostNames = new ArrayList<AsciiBuffer>();
     private Broker broker;
     private boolean started;
     private BrokerDatabase database;
+    private TransactionManager txnManager;
 
     public VirtualHost() {
         this.router.setVirtualHost(this);
     }
 
     public VirtualHost(String name) {
-    	this();
-    	addHostName(new AsciiBuffer(name));
-	}
+        this();
+        addHostName(new AsciiBuffer(name));
+    }
 
-	public AsciiBuffer getHostName() {
+    public AsciiBuffer getHostName() {
         if (hostNames.size() > 0) {
-        	return hostNames.get(0);
+            return hostNames.get(0);
         }
         return null;
     }
@@ -65,12 +66,15 @@ public class VirtualHost implements Service {
     public List<AsciiBuffer> getHostNames() {
         return hostNames;
     }
+
     public void setHostNames(List<AsciiBuffer> hostNames) {
         this.hostNames = new ArrayList<AsciiBuffer>(hostNames);
     }
+
     public void addHostName(AsciiBuffer hostName) {
         this.hostNames.add(hostName);
     }
+
     public void removeHostName(AsciiBuffer hostName) {
         this.hostNames.remove(hostName);
     }
@@ -78,13 +82,15 @@ public class VirtualHost implements Service {
     public Router getRouter() {
         return router;
     }
-    
+
     public BrokerDatabase getDatabase() {
         return database;
     }
+
     public void setDatabase(BrokerDatabase database) {
         this.database = database;
     }
+
     public void setStore(Store store) {
         database = new BrokerDatabase(store);
     }
@@ -95,18 +101,21 @@ public class VirtualHost implements Service {
             return;
         }
 
-		if ( database == null ) {
-			Store store = createDefaultStore();
-			database = new BrokerDatabase(store);
-		}
-		
-	    database.setDispatcher(broker.getDispatcher());
-	    database.start();
+        if (database == null) {
+            Store store = createDefaultStore();
+            database = new BrokerDatabase(store);
+        }
+
+        database.setDispatcher(broker.getDispatcher());
+        database.start();
 
         router.setDatabase(database);
+
+        //Recover queues:
         queueStore.setDatabase(database);
         queueStore.setDispatcher(broker.getDispatcher());
         queueStore.loadQueues();
+
         // Create Queue instances
         for (IQueue<Long, MessageDelivery> iQueue : queueStore.getSharedQueues()) {
             Queue queue = new Queue(iQueue);
@@ -119,19 +128,24 @@ public class VirtualHost implements Service {
         for (Queue queue : queues.values()) {
             queue.start();
         }
+
+        //Recover transactions:
+        txnManager = new TransactionManager(this);
+        txnManager.loadTransactions();
+
         started = true;
     }
 
-	public Store createDefaultStore() throws Exception {
-		Store store = StoreFactory.createStore("kaha-db");
-		if( store.getStoreDirectory() == null ) {
-			File baseDir = broker.getDataDirectory();
-			String hostName = getHostName().toString();
-			String subDir = IOHelper.toFileSystemDirectorySafeName(hostName);
-			store.setStoreDirectory( new File(baseDir, subDir ) );
-		}
-		return store;
-	}
+    public Store createDefaultStore() throws Exception {
+        Store store = StoreFactory.createStore("kaha-db");
+        if (store.getStoreDirectory() == null) {
+            File baseDir = broker.getDataDirectory();
+            String hostName = getHostName().toString();
+            String subDir = IOHelper.toFileSystemDirectorySafeName(hostName);
+            store.setStoreDirectory(new File(baseDir, subDir));
+        }
+        return store;
+    }
 
     public synchronized void stop() throws Exception {
         if (!started) {
@@ -144,7 +158,7 @@ public class VirtualHost implements Service {
         for (IQueue<Long, MessageDelivery> queue : queueStore.getDurableQueues()) {
             queue.shutdown(true);
         }
-        
+
         database.stop();
         started = false;
     }
@@ -164,13 +178,17 @@ public class VirtualHost implements Service {
             Domain domain = router.getDomain(dest.getDomain());
             domain.bind(dest.getName(), queue);
             queues.put(dest.getName(), queue);
-            
+
             for (QueueLifecyleListener l : queueLifecyleListeners) {
                 l.onCreate(queue);
             }
         }
         queue.start();
         return queue;
+    }
+
+    public TransactionManager getTransactionManager() {
+        return txnManager;
     }
 
     public BrokerQueueStore getQueueStore() {
@@ -182,20 +200,20 @@ public class VirtualHost implements Service {
     }
 
     public BrokerSubscription createSubscription(ConsumerContext consumer, Destination destination) throws Exception {
-        
+
         // First handle composite destinations..  
         Collection<Destination> destinations = destination.getDestinations();
-        if(destinations != null) {
+        if (destinations != null) {
             ArrayList<BrokerSubscription> subs = new ArrayList<BrokerSubscription>(destinations.size());
             for (Destination childDest : destinations) {
                 subs.add(createSubscription(consumer, childDest));
             }
             return new CompositeSubscription(destination, subs);
         }
-                
+
         // If it's a Topic...
-        if (destination.getDomain().equals(Router.TOPIC_DOMAIN) || destination.getDomain().equals(Router.TEMP_TOPIC_DOMAIN) ) {
-            
+        if (destination.getDomain().equals(Router.TOPIC_DOMAIN) || destination.getDomain().equals(Router.TEMP_TOPIC_DOMAIN)) {
+
             // It might be a durable subscription on the topic
             if (consumer.isDurable()) {
                 DurableSubscription dsub = durableSubs.get(consumer.getSubscriptionName());
@@ -211,51 +229,53 @@ public class VirtualHost implements Service {
             // return a standard subscription
             return new TopicSubscription(this, destination, consumer.getSelectorExpression());
         }
-        
+
         // It looks like a wild card subscription on a queue.. 
-        if( PathFilter.containsWildCards(destination.getName()) ){
+        if (PathFilter.containsWildCards(destination.getName())) {
             return new WildcardQueueSubscription(this, destination, consumer);
         }
 
         // It has to be a Queue subscription then..
         Queue queue = queues.get(destination.getName());
-        if( queue == null ) {
-            if( consumer.autoCreateDestination() ) {
+        if (queue == null) {
+            if (consumer.autoCreateDestination()) {
                 queue = createQueue(destination);
             } else {
-                throw new IllegalStateException("The queue does not exist: "+destination.getName());
+                throw new IllegalStateException("The queue does not exist: " + destination.getName());
             }
         }
         return new Queue.QueueSubscription(queue);
     }
 
-	public Broker getBroker() {
-		return broker;
-	}
+    public Broker getBroker() {
+        return broker;
+    }
 
-	public void setBroker(Broker broker) {
-		this.broker = broker;
-	}
-	
-	interface QueueLifecyleListener {
-	    
-	    /**
-	     * A destination has bean created
-	     * @param destination
-	     */
-        public void onCreate(Queue queue);
-        
+    public void setBroker(Broker broker) {
+        this.broker = broker;
+    }
+
+    interface QueueLifecyleListener {
+
         /**
-         * A destination has bean destroyed 
+         * A destination has bean created
+         * 
+         * @param destination
+         */
+        public void onCreate(Queue queue);
+
+        /**
+         * A destination has bean destroyed
+         * 
          * @param destination
          */
         public void onDestroy(Queue queue);
-                
-	}
-	
-	ArrayList<QueueLifecyleListener> queueLifecyleListeners = new ArrayList<QueueLifecyleListener>();
 
-	synchronized public void addDestinationLifecyleListener(QueueLifecyleListener listener) {
+    }
+
+    ArrayList<QueueLifecyleListener> queueLifecyleListeners = new ArrayList<QueueLifecyleListener>();
+
+    synchronized public void addDestinationLifecyleListener(QueueLifecyleListener listener) {
         queueLifecyleListeners.add(listener);
     }
 

@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.broker;
 
 import java.io.IOException;
+import java.util.HashSet;
 
 import javax.transaction.xa.XAException;
 
@@ -32,8 +33,6 @@ import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 /**
  * Keeps track of all the actions the need to be done when a transaction does a
  * commit or rollback.
- * 
- * @version $Revision: 1.5 $
  */
 public abstract class Transaction {
 
@@ -49,6 +48,7 @@ public abstract class Transaction {
     private final TransactionManager manager;
     private final long tid;
     private final IQueue<Long, TxOp> opQueue;
+    private HashSet<TransactionListener> listeners;
 
     Transaction(TransactionManager manager, long tid, IQueue<Long, TxOp> opQueue) {
         this.manager = manager;
@@ -134,22 +134,26 @@ public abstract class Transaction {
 
     protected void fireAfterCommit() throws Exception {
 
-        //TODO
+        synchronized (this) {
+
+        }
     }
 
     public void fireAfterRollback() throws Exception {
-        //TODO
+        synchronized (this) {
+
+        }
     }
 
     public String toString() {
         return super.toString() + "[queue=" + opQueue + "]";
     }
 
-    public abstract void commit(boolean onePhase) throws XAException, IOException;
+    public abstract void commit(boolean onePhase, TransactionListener listener) throws XAException, IOException;
 
-    public abstract void rollback() throws XAException, IOException;
+    public abstract void rollback(TransactionListener listener) throws XAException, IOException;
 
-    public abstract int prepare() throws XAException, IOException;
+    public abstract int prepare(TransactionListener listener) throws XAException, IOException;
 
     public boolean isPrepared() {
         return getState() == PREPARED_STATE;
@@ -157,6 +161,20 @@ public abstract class Transaction {
 
     public long size() {
         return opQueue.getEnqueuedCount();
+    }
+
+    public static abstract class TransactionListener {
+        public void onRollback(Transaction t) {
+
+        }
+
+        public void onCommit(Transaction t) {
+
+        }
+
+        public void onPrepared(Transaction t) {
+
+        }
     }
 
     interface TxOp {
@@ -266,9 +284,9 @@ public abstract class Transaction {
         private boolean fromStore;
         private static final int MEM_SIZE = 8 + 8 + 8 + 8 + 1;
 
-        TxAck(IQueue<Long, ?> queue, long storeTracking, Transaction tx) {
+        TxAck(IQueue<Long, ?> queue, long removalKey, Transaction tx) {
             this.queue = queue;
-            this.storeTracking = storeTracking;
+            this.queueSequence = removalKey;
             this.tx = tx;
         }
 
@@ -290,7 +308,7 @@ public abstract class Transaction {
          * @see org.apache.activemq.apollo.broker.Transaction.TxOp#onCommit()
          */
         public final void onCommit() {
-            //TODO
+            queue.remove(queueSequence);
 
         }
 
@@ -347,12 +365,12 @@ public abstract class Transaction {
             AsciiBuffer queueName = queue.getDescriptor().getQueueName();
             DataByteArrayOutputStream baos = new DataByteArrayOutputStream(2 + queueName.length + 8);
             try {
-				baos.writeShort(queueName.length);
-				baos.write(queueName.data, queueName.offset, queueName.length);
-				baos.writeLong(queueSequence);
-			} catch (IOException shouldNotHappen) {
-				throw new RuntimeException(shouldNotHappen);
-			}
+                baos.writeShort(queueName.length);
+                baos.write(queueName.data, queueName.offset, queueName.length);
+                baos.writeLong(queueSequence);
+            } catch (IOException shouldNotHappen) {
+                throw new RuntimeException(shouldNotHappen);
+            }
             return baos.toBuffer();
         }
 

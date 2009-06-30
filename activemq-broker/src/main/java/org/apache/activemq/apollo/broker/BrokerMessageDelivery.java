@@ -73,7 +73,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
         return fromStore;
     }
 
-    public final void persist(SaveableQueueElement<MessageDelivery> elem, ISourceController<?> controller, boolean delayable) {
+    public final void persist(SaveableQueueElement<MessageDelivery> sqe, ISourceController<?> controller, boolean delayable) {
         synchronized (this) {
             // Can flush of this message to the store be delayed?
             if (enableFlushDelay && !delayable) {
@@ -83,13 +83,13 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
             // list of queues for which to save the message when dispatch is
             // finished:
             if (dispatching) {
-                addPersistentTarget(elem);
+                addPersistentTarget(sqe);
                 return;
             }
             // Otherwise, if it is still in the saver queue, we can add this
             // queue to the queue list:
             else if (pendingSave != null) {
-                addPersistentTarget(elem);
+                addPersistentTarget(sqe);
                 if (!delayable) {
                     pendingSave.requestFlush();
                 }
@@ -97,10 +97,10 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
             }
         }
 
-        store.saveMessage(elem, controller, delayable);
+        store.saveMessage(sqe, controller, delayable);
     }
 
-    public final void acknowledge(QueueDescriptor queue) {
+    public final void acknowledge(SaveableQueueElement<MessageDelivery> sqe) {
         boolean firePersistListener = false;
         boolean deleted = false;
         synchronized (this) {
@@ -110,7 +110,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
 
                 deleted = true;
 
-                removePersistentTarget(queue);
+                removePersistentTarget(sqe.getQueueDescriptor());
                 // We get a save context when we place the message in the
                 // database queue. If it has been added to the queue,
                 // and we've removed the last queue, see if we can cancel
@@ -127,7 +127,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
         }
 
         if (!deleted) {
-            store.deleteQueueElement(getStoreTracking(), queue);
+            store.deleteQueueElement(sqe);
         }
 
         if (firePersistListener) {

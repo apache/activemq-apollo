@@ -20,6 +20,7 @@ import java.io.IOException;
 
 import javax.transaction.xa.XAException;
 
+import org.apache.activemq.apollo.broker.Transaction.TransactionListener;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.util.buffer.Buffer;
 
@@ -51,7 +52,7 @@ public class XATransaction extends Transaction {
      * @see org.apache.activemq.apollo.broker.Transaction#commit(boolean)
      */
     @Override
-    public void commit(boolean onePhase) throws XAException, IOException {
+    public void commit(boolean onePhase, TransactionListener listener) throws XAException, IOException {
         // TODO Auto-generated method stub
 
     }
@@ -62,7 +63,7 @@ public class XATransaction extends Transaction {
      * @see org.apache.activemq.apollo.broker.Transaction#prepare()
      */
     @Override
-    public int prepare() throws XAException, IOException {
+    public int prepare(TransactionListener listener) throws XAException, IOException {
         // TODO Auto-generated method stub
         return 0;
     }
@@ -73,7 +74,7 @@ public class XATransaction extends Transaction {
      * @see org.apache.activemq.apollo.broker.Transaction#rollback()
      */
     @Override
-    public void rollback() throws XAException, IOException {
+    public void rollback(TransactionListener listener) throws XAException, IOException {
         // TODO Auto-generated method stub
 
     }

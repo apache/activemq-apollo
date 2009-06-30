@@ -208,7 +208,7 @@ class MockQueue implements MockBroker.DeliveryTarget {
 
         }
 
-        public final void deleteQueueElement(QueueDescriptor descriptor, Message elem) {
+        public final void deleteQueueElement(SaveableQueueElement<Message> elem) {
 
         }
 

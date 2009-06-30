@@ -93,5 +93,11 @@ public interface IQueue<K, V> extends IFlowQueue<V>, PersistentQueue<K, V> {
      *            queue shutdown will proceed asynchronously.
      */
     public void shutdown(boolean sync);
+    
+    /**
+     * Removes the element with the given sequence from this queue
+     * @param key The sequence key. 
+     */
+    public void remove(long sequence);
 
 }

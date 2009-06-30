@@ -172,6 +172,11 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
         return sinkController.offer(elem, source);
     }
     
+
+    public void remove(long key) {
+        throw new UnsupportedOperationException();
+    }
+    
     /**
      * Called when the controller accepts a message for this queue.
      */

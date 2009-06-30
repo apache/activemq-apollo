@@ -71,10 +71,9 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
 
         return rc;
     }
-    
-    
+
     abstract public IQueue<K, V> createPartition(int partitionKey);
-    
+
     /*
      * (non-Javadoc)
      * 
@@ -92,7 +91,7 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
             }
         }
     }
-    
+
     public int getEnqueuedCount() {
         checkShutdown();
         synchronized (this) {
@@ -117,7 +116,6 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
             return size;
         }
     }
-
 
     public void setStore(QueueStore<K, V> store) {
         this.store = store;
@@ -149,7 +147,6 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
             persistencePolicy = new PersistencePolicy.NON_PERSISTENT_POLICY<V>();
         }
     }
-    
 
     public synchronized void start() {
         if (!started) {
@@ -172,9 +169,8 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
         }
     }
 
-
     public void shutdown(boolean sync) {
-        Collection <IQueue<K, V>> partitions = null;
+        Collection<IQueue<K, V>> partitions = null;
         synchronized (this) {
             if (!shutdown) {
                 shutdown = true;
@@ -225,7 +221,6 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
         return partitionMapper;
     }
 
-    
     public void add(V value, ISourceController<?> source) {
         int partitionKey = partitionMapper.map(value);
         getPartition(partitionKey).add(value, source);
@@ -235,7 +230,7 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
         int partitionKey = partitionMapper.map(value);
         return getPartition(partitionKey).offer(value, source);
     }
-    
+
     public void setKeyMapper(Mapper<K, V> keyMapper) {
         this.keyMapper = keyMapper;
     }
@@ -254,9 +249,8 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
             }
         }
     }
-    
-    protected Collection<IQueue<K, V>> getPartitions()
-    {
+
+    protected Collection<IQueue<K, V>> getPartitions() {
         return partitions.values();
     }
 
@@ -265,8 +259,10 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
             throw new IllegalStateException(this + " is shutdown");
         }
     }
-    
-    /* (non-Javadoc)
+
+    /*
+     * (non-Javadoc)
+     * 
      * @see org.apache.activemq.queue.IPollableFlowSource#isDispatchReady()
      */
     public boolean isDispatchReady() {
@@ -274,7 +270,9 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
         throw new UnsupportedOperationException();
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see org.apache.activemq.queue.IPollableFlowSource#poll()
      */
     public V poll() {
@@ -282,7 +280,9 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
         throw new UnsupportedOperationException();
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see org.apache.activemq.queue.IPollableFlowSource#pollingDispatch()
      */
     public boolean pollingDispatch() {
@@ -290,12 +290,19 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
         throw new UnsupportedOperationException();
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.activemq.flow.ISinkController.FlowControllable#flowElemAccepted(org.apache.activemq.flow.ISourceController, java.lang.Object)
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * org.apache.activemq.flow.ISinkController.FlowControllable#flowElemAccepted
+     * (org.apache.activemq.flow.ISourceController, java.lang.Object)
      */
     public void flowElemAccepted(ISourceController<V> source, V elem) {
         // TODO Remove
         throw new UnsupportedOperationException();
-        
+    }
+
+    public void remove(long key) {
+        throw new UnsupportedOperationException();
     }
 }

@@ -96,6 +96,10 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
         };
     }
 
+    public synchronized void remove(long key) {
+        queue.remove(key);
+    }
+
     /*
      * (non-Javadoc)
      * 

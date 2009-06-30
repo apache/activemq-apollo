@@ -351,6 +351,12 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         }
     }
 
+    public void remove(long key) {
+        synchronized (mutex) {
+            queue.remove(key);
+        }
+    }
+
     public boolean offer(V elem, ISourceController<?> source) {
         synchronized (mutex) {
 
@@ -542,10 +548,9 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                 } else {
                     cursor.reset(queue.getFirstSequence());
                 }
-                
+
                 if (DEBUG)
                     System.out.println("Starting " + this + " at " + cursor);
-
 
                 updateDispatchList();
             }
@@ -701,17 +706,16 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
             SubscriptionDelivery<V> callback = sub.isRemoveOnDispatch(qe.elem) ? null : qe;
             // If the sub is a browser don't pass it a callback since it does not need to 
             // delete messages
-            if( sub.isBrowser() ) { 
+            if (sub.isBrowser()) {
                 callback = null;
             }
-            
+
             // See if the sink has room:
             qe.setAcquired(sub);
             if (sub.offer(qe.elem, this, callback)) {
                 if (DEBUG)
                     System.out.println("Dispatched " + qe.getElement() + " to " + this);
 
-                
                 if (!sub.isBrowser()) {
 
                     // If remove on dispatch acknowledge now:

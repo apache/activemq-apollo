@@ -37,6 +37,8 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
     private PersistListener persistListener = null;
     private final int size;
 
+    private long tid = -1;
+
     public interface PersistListener {
         public void onMessagePersisted(OpenWireMessageDelivery delivery);
     }
@@ -120,9 +122,15 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
         return record;
     }
 
-    public Buffer getTransactionId() {
-        // TODO Auto-generated method stub
-        return null;
+    public long getTransactionId() {
+        return tid;
+    }
+    
+    /**
+     * @param tid
+     */
+    public void setTransactionId(long tid) {
+        this.tid  = tid;
     }
 
     public void setStoreWireFormat(OpenWireFormat wireFormat) {
@@ -145,4 +153,6 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
     public String toString() {
         return message.getMessageId().toString();
     }
+
+    
 }

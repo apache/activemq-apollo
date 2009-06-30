@@ -20,6 +20,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.concurrent.ConcurrentHashMap;
+
+import javax.jms.JMSException;
+import javax.transaction.xa.XAException;
+import javax.transaction.xa.Xid;
 
 import org.apache.activemq.apollo.WindowLimiter;
 import org.apache.activemq.apollo.broker.Broker;
@@ -30,7 +35,9 @@ import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.apollo.broker.ProtocolHandler;
 import org.apache.activemq.apollo.broker.Router;
+import org.apache.activemq.apollo.broker.Transaction;
 import org.apache.activemq.apollo.broker.VirtualHost;
+import org.apache.activemq.apollo.broker.XidImpl;
 import org.apache.activemq.broker.openwire.OpenWireMessageDelivery.PersistListener;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.command.ActiveMQDestination;
@@ -64,6 +71,7 @@ import org.apache.activemq.command.Response;
 import org.apache.activemq.command.SessionId;
 import org.apache.activemq.command.SessionInfo;
 import org.apache.activemq.command.ShutdownInfo;
+import org.apache.activemq.command.TransactionId;
 import org.apache.activemq.command.TransactionInfo;
 import org.apache.activemq.command.WireFormatInfo;
 import org.apache.activemq.filter.BooleanExpression;
@@ -92,6 +100,8 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
     protected final HashMap<SessionId, ClientContext> sessions = new HashMap<SessionId, ClientContext>();
     protected final HashMap<ProducerId, ProducerContext> producers = new HashMap<ProducerId, ProducerContext>();
     protected final HashMap<ConsumerId, ConsumerContext> consumers = new HashMap<ConsumerId, ConsumerContext>();
+
+    protected final ConcurrentHashMap<TransactionId, Transaction> transactions = new ConcurrentHashMap<TransactionId, Transaction>();
 
     protected BrokerConnection connection;
     private OpenWireFormat wireFormat;
@@ -122,7 +132,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                         }
                     };
                     connections.put(info.getConnectionId(), connection);
-                    
+
                     // Connections have an implicitly created "default" session identified by session id = -1
                     SessionId sessionId = new SessionId(info.getConnectionId(), -1);
                     addSession(sessionId, connection);
@@ -228,7 +238,13 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
                 OpenWireMessageDelivery md = new OpenWireMessageDelivery(info);
                 md.setStoreWireFormat(storeWireFormat);
-                md.setPersistListener(OpenwireProtocolHandler.this);
+                TransactionId tid = info.getTransactionId();
+                if (tid != null) {
+                    Transaction t = locateTransaction(tid);
+                    md.setTransactionId(t.getTid());
+                } else {
+                    md.setPersistListener(OpenwireProtocolHandler.this);
+                }
 
                 // Only producers that are not using a window will block,
                 // and if it blocks.
@@ -242,7 +258,12 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 while (!producerContext.controller.offer(md, null)) {
                     producerContext.controller.waitForFlowUnblock();
                 }
-                return null;
+
+                if (tid != null) {
+                    return ack(info);
+                } else {
+                    return null;
+                }
             }
 
             public Response processMessageAck(MessageAck info) throws Exception {
@@ -298,6 +319,11 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             }
 
             public Response processConnectionControl(ConnectionControl info) throws Exception {
+                if (info != null) {
+                    if (info.isFaultTolerant()) {
+                        throw new UnsupportedOperationException("Fault Tolerance");
+                    }
+                }
                 return ack(info);
             }
 
@@ -339,34 +365,71 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             // Methods for transaction management
             // /////////////////////////////////////////////////////////////////
             public Response processBeginTransaction(TransactionInfo info) throws Exception {
-                throw new UnsupportedOperationException();
+                TransactionId tid = info.getTransactionId();
+
+                Transaction t = locateTransaction(tid);
+                if (t == null) {
+
+                    Buffer xid = null;
+                    if (tid.isXATransaction()) {
+                        xid = XidImpl.toBuffer((Xid) tid);
+                    }
+                    t = host.getTransactionManager().createTransaction(xid);
+                    transactions.put(tid, t);
+                }
+
+                return ack(info);
             }
 
-            public Response processCommitTransactionOnePhase(TransactionInfo info) throws Exception {
+            public Response processCommitTransactionOnePhase(final TransactionInfo info) throws Exception {
+                TransactionId tid = info.getTransactionId();
+                Transaction t = locateTransaction(tid);
+                t.commit(true, new Transaction.TransactionListener()
+                {
+                    
+                });
+                transactions.remove(tid);
                 throw new UnsupportedOperationException();
             }
 
             public Response processCommitTransactionTwoPhase(TransactionInfo info) throws Exception {
+                TransactionId tid = info.getTransactionId();
+                Transaction t = locateTransaction(tid);
+                t.commit(false, null);
+                transactions.remove(tid);
                 throw new UnsupportedOperationException();
             }
 
             public Response processEndTransaction(TransactionInfo info) throws Exception {
+                //Shouldn't actually do anything, send by client to ensure that it is
+                //in sync with broker transaction state. 
+                //TODO need to investigate whether this should wait for prior transaction
+                //state to flush out?
                 throw new UnsupportedOperationException();
             }
 
             public Response processForgetTransaction(TransactionInfo info) throws Exception {
-                throw new UnsupportedOperationException();
+                return processRollbackTransaction(info);
             }
 
             public Response processPrepareTransaction(TransactionInfo info) throws Exception {
+                TransactionId tid = info.getTransactionId();
+                Transaction t = locateTransaction(tid);
+                t.prepare(null);
                 throw new UnsupportedOperationException();
             }
 
             public Response processRecoverTransactions(TransactionInfo info) throws Exception {
+                //TODO
                 throw new UnsupportedOperationException();
             }
 
             public Response processRollbackTransaction(TransactionInfo info) throws Exception {
+                TransactionId tid = info.getTransactionId();
+                Transaction t = locateTransaction(tid);
+                t.rollback(null);
+                transactions.remove(tid);
+                //TODO need to respond to this when the rollback completes
                 throw new UnsupportedOperationException();
             }
 
@@ -391,6 +454,27 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 return ack(info);
             }
         };
+    }
+
+    private Transaction locateTransaction(TransactionId tid) throws XAException, JMSException {
+        Transaction t;
+
+        if (tid.isLocalTransaction()) {
+            t = transactions.get(tid);
+        } else {
+            t = host.getTransactionManager().getXATransaction(XidImpl.toBuffer((Xid) tid));
+        }
+
+        if (t == null) {
+            if (tid.isXATransaction()) {
+                XAException e = new XAException("Transaction '" + tid + "' has not been started.");
+                e.errorCode = XAException.XAER_NOTA;
+                throw e;
+            } else {
+                throw new JMSException("Transaction '" + tid + "' has not been started.");
+            }
+        }
+        return t;
     }
 
     public void start() throws Exception {
@@ -594,17 +678,23 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             }
         }
 
-        public void ack(MessageAck info) {
+        public void ack(MessageAck info) throws XAException, JMSException {
             // TODO: The pending message queue could probably be optimized to
             // avoid having to create a new list here.
             int flowCredit = info.getMessageCount();
-            if( info.isDeliveredAck() ) {
+            if (info.isDeliveredAck()) {
                 // This ack is just trying to expand the flow control window size without actually 
                 // acking the message.  Keep track of how many limiter credits we borrow since they need
                 // to get paid back with real acks later.
                 borrowedLimterCredits += flowCredit;
                 limiter.onProtocolCredit(flowCredit);
-            } else if(info.isStandardAck()) {
+            } else if (info.isStandardAck()) {
+                TransactionId tid = info.getTransactionId();
+                Transaction transaction = null;
+                if (tid != null) {
+                    transaction = locateTransaction(tid);
+                }
+
                 LinkedList<SubscriptionDelivery<MessageDelivery>> acked = new LinkedList<SubscriptionDelivery<MessageDelivery>>();
                 synchronized (this) {
                     MessageId id = info.getLastMessageId();
@@ -619,27 +709,35 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                             }
                         }
                     }
-                    
+
                     // Did we have DeliveredAcks previously sent?  Then the 
                     // the flow window has already been credited.  We need to 
                     // pay back the borrowed limiter credits before giving 
                     // credits directly to the limiter.
-                    if(borrowedLimterCredits>0) {
-                        if( flowCredit > borrowedLimterCredits ) {
+                    if (borrowedLimterCredits > 0) {
+                        if (flowCredit > borrowedLimterCredits) {
                             flowCredit -= borrowedLimterCredits;
-                            borrowedLimterCredits=0;
+                            borrowedLimterCredits = 0;
                         } else {
                             borrowedLimterCredits -= flowCredit;
-                            flowCredit=0;
+                            flowCredit = 0;
                         }
                     }
                     limiter.onProtocolCredit(flowCredit);
                 }
 
-                // Delete outside of synchronization on queue to avoid contention
-                // with enqueueing threads.
-                for (SubscriptionDelivery<MessageDelivery> callback : acked) {
-                    callback.acknowledge();
+                if (transaction == null) {
+                    // Delete outside of synchronization on queue to avoid contention
+                    // with enqueueing threads.
+                    for (SubscriptionDelivery<MessageDelivery> callback : acked) {
+                        callback.acknowledge();
+                    }
+                } else {
+                    // Delete outside of synchronization on queue to avoid contention
+                    // with enqueueing threads.
+                    for (SubscriptionDelivery<MessageDelivery> callback : acked) {
+                        transaction.addAck(callback);
+                    }
                 }
             }
         }

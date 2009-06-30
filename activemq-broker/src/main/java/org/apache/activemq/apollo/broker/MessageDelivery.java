@@ -22,7 +22,6 @@ import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.activemq.queue.SaveableQueueElement;
 import org.apache.activemq.util.buffer.AsciiBuffer;
-import org.apache.activemq.util.buffer.Buffer;
 
 public interface MessageDelivery {
 
@@ -76,9 +75,11 @@ public interface MessageDelivery {
 
     /**
      * @return if the message is part of a transaction this returns the
-     *         transaction id.
+     *         transaction id returned by {@link Transaction#getTid()} otherwise
+     *         a value of -1 indicates that this delivery is not part of a
+     *         transaction
      */
-    public Buffer getTransactionId();
+    public long getTransactionId();
 
     /**
      * Called by a queue to request that the element be persisted. The save is
@@ -92,7 +93,7 @@ public interface MessageDelivery {
      * {@link SaveableQueueElement#requestSaveNotify()} method before attempting
      * to acces the store directly.
      * 
-     * @param elem
+     * @param sqe
      *            The element to save
      * @param controller
      *            A flow controller to use in the event that there isn't room in
@@ -100,16 +101,16 @@ public interface MessageDelivery {
      * @param delayable
      *            Whether or not the save operation can be delayed.
      */
-    public void persist(SaveableQueueElement<MessageDelivery> elem, ISourceController<?> controller, boolean delayable);
+    public void persist(SaveableQueueElement<MessageDelivery> sqe, ISourceController<?> controller, boolean delayable);
 
     /**
      * Acknowledges the message for a particular queue. This will cause it to be
      * deleted from the message store.
      * 
-     * @param queue
-     *            The queue for which to acknowledge the message.
+     * @param sqe
+     *            The queue element to delete
      */
-    public void acknowledge(QueueDescriptor queue);
+    public void acknowledge(SaveableQueueElement<MessageDelivery> sqe);
 
     /**
      * Gets the tracking number used to identify this message in the message
@@ -118,9 +119,10 @@ public interface MessageDelivery {
      * @return The store tracking or -1 if not set.
      */
     public long getStoreTracking();
-    
+
     /**
      * Used to apply selectors against the message.
+     * 
      * @return
      */
     public MessageEvaluationContext createMessageEvaluationContext();

@@ -23,7 +23,6 @@ import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.transport.stomp.Stomp;
 import org.apache.activemq.transport.stomp.StompFrame;
 import org.apache.activemq.util.buffer.AsciiBuffer;
-import org.apache.activemq.util.buffer.Buffer;
 
 public class StompMessageDelivery extends BrokerMessageDelivery {
 
@@ -37,6 +36,8 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
     private AsciiBuffer msgId;
     private PersistListener persistListener = null;
     private long tte = Long.MIN_VALUE;
+
+    private long tid = -1;
 
     public interface PersistListener {
         public void onMessagePersisted(StompMessageDelivery delivery);
@@ -152,9 +153,12 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
         return record;
     }
 
-    public Buffer getTransactionId() {
-        // TODO Auto-generated method stub
-        return null;
+    public long getTransactionId() {
+        return tid;
+    }
+
+    public void setTransactionId(long tid) {
+        this.tid = tid;
     }
 
     public MessageEvaluationContext createMessageEvaluationContext() {

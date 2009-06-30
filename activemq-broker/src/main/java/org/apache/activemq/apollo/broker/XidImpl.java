@@ -23,6 +23,7 @@ import java.io.IOException;
 import javax.transaction.xa.Xid;
 
 import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 
 /**
  * An implementation of JTA transaction identifier (javax.transaction.xa.Xid).
@@ -243,5 +244,22 @@ public class XidImpl implements Xid, Cloneable, java.io.Serializable {
         data = new byte[length];
         in.readFully(data);
         setBranchQualifier(data);
+    }
+
+    /**
+     * @param tid
+     * @return
+     */
+    public static Buffer toBuffer(Xid xid) {
+        XidImpl x = new XidImpl(xid);
+        DataByteArrayOutputStream baos = new DataByteArrayOutputStream(x.getMemorySize());
+        try {
+            x.writebody(baos);
+        } catch (IOException e) {
+            //Shouldn't happen:
+            throw new RuntimeException(e);
+        }
+        return baos.toBuffer();
+        
     }
 } // class XidImpl

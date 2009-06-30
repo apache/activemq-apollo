@@ -639,7 +639,13 @@ public interface Store extends Service {
          */
         public void queueAddMessage(QueueDescriptor queue, QueueRecord record) throws KeyNotFoundException;
 
-        public void queueRemoveMessage(QueueDescriptor queue, Long messageKey) throws KeyNotFoundException;
+        /**
+         * Deletes an element from a queue.
+         * @param queue The queue
+         * @param queueKey The element's queue key as given by {@link QueueRecord#setQueueKey(Long)}
+         * @throws KeyNotFoundException
+         */
+        public void queueRemoveMessage(QueueDescriptor queue, Long queueKey) throws KeyNotFoundException;
 
         public Iterator<QueueRecord> queueListMessagesQueue(QueueDescriptor queue, Long firstQueueKey, Long maxSequence, int max) throws KeyNotFoundException;
 

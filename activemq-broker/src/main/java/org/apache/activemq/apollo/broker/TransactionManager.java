@@ -58,9 +58,10 @@ public class TransactionManager {
 
     private final HashMap<Long, Transaction> transactions = new HashMap<Long, Transaction>();
     private final HashMap<AsciiBuffer, Transaction> transactionsByQueue = new HashMap<AsciiBuffer, Transaction>();
+    private final HashMap<Buffer, XATransaction> xaTransactions = new HashMap<Buffer, XATransaction>();
 
     private final VirtualHost host;
-    private final BrokerDatabase database;
+    private BrokerDatabase database;
 
     private final AtomicLong tidGen = new AtomicLong(0);
     private final TransactionStore txStore;
@@ -155,7 +156,7 @@ public class TransactionManager {
      * @param xid
      * @return
      */
-    public final Transaction createTransaction(Buffer xid) {
+    public synchronized final Transaction createTransaction(Buffer xid) {
         Transaction ret;
 
         long tid = tidGen.incrementAndGet();
@@ -164,7 +165,9 @@ public class TransactionManager {
         if (xid == null) {
             ret = new LocalTransaction(this, tid, opQueue);
         } else {
-            ret = new XATransaction(this, tid, xid, opQueue);
+            XATransaction xat = new XATransaction(this, tid, xid, opQueue);
+            ret = xat;
+            xaTransactions.put(xid, xat);
         }
 
         transactionsByQueue.put(opQueue.getDescriptor().getQueueName(), ret);
@@ -174,10 +177,18 @@ public class TransactionManager {
     }
 
     /**
+     * @param buffer
+     * @return
+     */
+    public synchronized Transaction getXATransaction(Buffer buffer) {
+        return xaTransactions.get(buffer);
+    }
+
+    /**
      * 
      * @throws Exception
      */
-    public void loadTransactions() throws Exception {
+    public synchronized void loadTransactions() throws Exception {
 
         tidGen.set(database.allocateStoreTracking());
 
@@ -196,26 +207,28 @@ public class TransactionManager {
 
             IQueue<Long, TxOp> queue = createRestoredTxQueue(loaded);
             Transaction tx = loadTransaction(b, queue);
-            
+
             //TODO if we recover a tx that isn't committed then, we should discard it.
             if (tx.getState() < Transaction.FINISHED_STATE) {
                 LOG.warn("Recovered unfinished transaction: " + tx);
             }
             transactions.put(tx.getTid(), tx);
+            if (tx instanceof XATransaction) {
+                XATransaction xat = XATransaction.class.cast(tx);
+                xaTransactions.put(xat.getXid(), xat);
+            }
 
             LOG.info("Loaded Queue " + queue.getResourceName() + " Messages: " + queue.getEnqueuedCount() + " Size: " + queue.getEnqueuedSize());
         }
 
-        if (txns.isEmpty()) {
+        if (!txns.isEmpty()) {
             //TODO Based on transaction state this is generally ok, anyway the orphaned entries should be 
             //deleted:
             LOG.warn("Recovered transactions without backing queues: " + txns.keySet());
-
         }
     }
 
-    private Transaction loadTransaction(Buffer b, IQueue<Long, TxOp> queue) throws IOException
-    {
+    private Transaction loadTransaction(Buffer b, IQueue<Long, TxOp> queue) throws IOException {
         //TODO move the serialization into the transaction itself:
         DataByteArrayInputStream bais = new DataByteArrayInputStream(b.getData());
         byte type = bais.readByte();
@@ -228,9 +241,9 @@ public class TransactionManager {
             tx = new LocalTransaction(this, tid, queue);
             break;
         case Transaction.TYPE_XA:
-        	int length = bais.readByte() & 0xFF;
-        	Buffer xid = new Buffer(new byte[length]);
-        	bais.readFully(xid.data);
+            int length = bais.readByte() & 0xFF;
+            Buffer xid = new Buffer(new byte[length]);
+            bais.readFully(xid.data);
             tx = new XATransaction(this, tid, xid, queue);
             break;
         default:
@@ -241,22 +254,21 @@ public class TransactionManager {
         return tx;
 
     }
-    
+
     public OperationContext persistTransaction(Transaction tx) throws IOException {
-        
+
         //TODO move the serialization into the transaction itself:
         DataByteArrayOutputStream baos = new DataByteArrayOutputStream();
         baos.writeByte(tx.getType());
         baos.writeByte(tx.getState());
         baos.writeLong(tx.getTid());
-        if(tx.getType() == Transaction.TYPE_XA)
-        {
-        	Buffer xid = ((XATransaction)tx).getXid();
-        	// An XID max size is around 140 bytes, byte SHOULD be big enough to frame it.
-        	baos.writeByte( xid.length & 0xFF );
-        	baos.write(xid.data, xid.offset, xid.length);
+        if (tx.getType() == Transaction.TYPE_XA) {
+            Buffer xid = ((XATransaction) tx).getXid();
+            // An XID max size is around 140 bytes, byte SHOULD be big enough to frame it.
+            baos.writeByte(xid.length & 0xFF);
+            baos.write(xid.data, xid.offset, xid.length);
         }
-        
+
         return database.updateMapEntry(TXN_MAP, tx.getBackingQueueName(), new Buffer(baos.getData(), 0, baos.size()));
     }
 
@@ -320,7 +332,6 @@ public class TransactionManager {
          */
         public void addQueue(QueueDescriptor queue) {
             database.addQueue(queue);
-
         }
 
         /*
@@ -341,9 +352,8 @@ public class TransactionManager {
          * org.apache.activemq.queue.QueueStore#deleteQueueElement(org.apache
          * .activemq.queue.QueueDescriptor, java.lang.Object)
          */
-        public void deleteQueueElement(QueueDescriptor queue, TxOp element) {
-            database.deleteQueueElement(element.getStoreTracking(), queue);
-
+        public void deleteQueueElement(SaveableQueueElement<TxOp> sqe) {
+            database.deleteQueueElement(sqe);
         }
 
         /*

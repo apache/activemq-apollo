@@ -98,8 +98,6 @@ public class MemoryStore implements Store {
         QueueDescriptor descriptor;
 
         TreeMap<Long, QueueRecord> records = new TreeMap<Long, QueueRecord>(Comparators.LONG_COMPARATOR);
-        // Maps tracking to sequence number:
-        HashMap<Long, Long> trackingMap = new HashMap<Long, Long>();
         int count = 0;
         long size = 0;
         HashMap<QueueDescriptor, StoredQueue> partitions;
@@ -111,20 +109,18 @@ public class MemoryStore implements Store {
 
         public void add(QueueRecord record) {
             records.put(record.getQueueKey(), record);
-            trackingMap.put(record.getMessageKey(), record.getQueueKey());
             count++;
             size += record.getSize();
         }
 
-        public boolean remove(Long msgKey) {
-            Long sequenceKey = trackingMap.remove(msgKey);
-            if (sequenceKey != null) {
-                QueueRecord record = records.remove(sequenceKey);
+        public long remove(Long queueKey) {
+            QueueRecord record = records.remove(queueKey);
+            if (record != null) {
                 count--;
                 size -= record.getSize();
-                return true;
+                return record.getMessageKey();
             }
-            return false;
+            return -1;
         }
 
         public Iterator<QueueRecord> list(Long firstQueueKey, long maxSequence, int max) {
@@ -230,11 +226,11 @@ public class MemoryStore implements Store {
 
     static private class RemoveOp {
         QueueDescriptor queue;
-        Long messageKey;
+        Long queueKey;
 
-        public RemoveOp(QueueDescriptor queue, Long messageKey) {
+        public RemoveOp(QueueDescriptor queue, Long queueKey) {
             this.queue = queue;
-            this.messageKey = messageKey;
+            this.queueKey = queueKey;
         }
     }
 
@@ -244,7 +240,7 @@ public class MemoryStore implements Store {
 
         public void commit(MemorySession session) throws KeyNotFoundException {
             for (RemoveOp op : removes) {
-                session.queueRemoveMessage(op.queue, op.messageKey);
+                session.queueRemoveMessage(op.queue, op.queueKey);
             }
         }
 
@@ -258,8 +254,8 @@ public class MemoryStore implements Store {
             adds.add(messageKey);
         }
 
-        public void removeMessage(QueueDescriptor queue, Long messageKey) {
-            removes.add(new RemoveOp(queue, messageKey));
+        public void removeMessage(QueueDescriptor queue, Long queueKey) {
+            removes.add(new RemoveOp(queue, queueKey));
         }
     }
 
@@ -517,8 +513,10 @@ public class MemoryStore implements Store {
             }
         }
 
-        public void queueRemoveMessage(QueueDescriptor queue, Long msgKey) throws KeyNotFoundException {
-            if (get(queues, queue.getQueueName()).remove(msgKey)) {
+        public void queueRemoveMessage(QueueDescriptor queue, Long queueKey) throws KeyNotFoundException {
+            long msgKey = get(queues, queue.getQueueName()).remove(queueKey);
+            if(msgKey >= 0)
+            {   
                 deleteMessageReference(msgKey);
             }
         }
