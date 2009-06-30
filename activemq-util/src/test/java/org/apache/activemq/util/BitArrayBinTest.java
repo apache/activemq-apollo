@@ -1,10 +1,12 @@
 package org.apache.activemq.util;
 
-import junit.framework.TestCase;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
-public class BitArrayBinTest extends TestCase {
+public class BitArrayBinTest {
         
-    public void testSetAroundWindow() throws Exception {
+    @Test()
+	public void testSetAroundWindow() throws Exception {
         doTestSetAroundWindow(500, 2000);
         doTestSetAroundWindow(512, 2000);
         doTestSetAroundWindow(128, 512);
@@ -15,25 +17,26 @@ public class BitArrayBinTest extends TestCase {
         BitArrayBin toTest = new BitArrayBin(window);
         
         for (int i=0; i <= dataSize; i++) {
-            assertTrue("not already set", !toTest.setBit(i, Boolean.TRUE));
+            Assert.assertTrue((!toTest.setBit(i, Boolean.TRUE)), "not already set");
         }
 
         int windowOfValidData = roundWindow(dataSize, window);
         int i=dataSize;
         for (; i >= dataSize -windowOfValidData; i--) {
-            assertTrue("was already set, id=" + i, toTest.setBit(i, Boolean.TRUE));
+            Assert.assertTrue(toTest.setBit(i, Boolean.TRUE), ("was already set, id=" + i));
         }
         
         for (; i >= 0; i--) {
-            assertTrue("was not already set, id=" + i, !toTest.setBit(i, Boolean.TRUE));
+            Assert.assertTrue((!toTest.setBit(i, Boolean.TRUE)), ("was not already set, id=" + i));
         }
         
         for (int j= dataSize +1; j<(2*dataSize); j++) {
-            assertTrue("not already set: id=" + j, !toTest.setBit(j, Boolean.TRUE));
+            Assert.assertTrue((!toTest.setBit(j, Boolean.TRUE)), ("not already set: id=" + j));
         }
     }
     
-    public void testSetUnsetAroundWindow() throws Exception {
+    @Test()
+	public void testSetUnsetAroundWindow() throws Exception {
         doTestSetUnSetAroundWindow(500, 2000);
         doTestSetUnSetAroundWindow(512, 2000);
         doTestSetUnSetAroundWindow(128, 512);
@@ -44,24 +47,25 @@ public class BitArrayBinTest extends TestCase {
         BitArrayBin toTest = new BitArrayBin(window);
         
         for (int i=0; i <=dataSize; i++) {
-            assertTrue("not already set", !toTest.setBit(i, Boolean.TRUE));
+            Assert.assertTrue((!toTest.setBit(i, Boolean.TRUE)), "not already set");
         }
                 
         int windowOfValidData = roundWindow(dataSize, window);
         for (int i=dataSize; i >= 0 && i >=dataSize -windowOfValidData; i--) {
-            assertTrue("was already set, id=" + i, toTest.setBit(i, Boolean.FALSE));
+            Assert.assertTrue(toTest.setBit(i, Boolean.FALSE), ("was already set, id=" + i));
         }
 
         for (int i=0; i <=dataSize; i++) {
-            assertTrue("not already set, id:" + i, !toTest.setBit(i, Boolean.TRUE));
+            Assert.assertTrue((!toTest.setBit(i, Boolean.TRUE)), ("not already set, id:" + i));
         }
 
         for (int j= 2*dataSize; j< 4*dataSize; j++) {
-            assertTrue("not already set: id=" + j, !toTest.setBit(j, Boolean.TRUE));
+            Assert.assertTrue((!toTest.setBit(j, Boolean.TRUE)), ("not already set: id=" + j));
         }
     }
     
-    public void testSetAroundLongSizeMultiplier() throws Exception {
+    @Test()
+	public void testSetAroundLongSizeMultiplier() throws Exception {
         int window = 512;
         int dataSize = 1000;
         for (int muliplier=1; muliplier <8; muliplier++) {
@@ -69,13 +73,14 @@ public class BitArrayBinTest extends TestCase {
                 BitArrayBin toTest = new BitArrayBin(window);
                 
                 int instance = value +muliplier*BitArray.LONG_SIZE;
-                assertTrue("not already set: id=" + instance, !toTest.setBit(instance, Boolean.TRUE));
-                assertTrue("not already set: id=" + value, !toTest.setBit(value, Boolean.TRUE));
+                Assert.assertTrue((!toTest.setBit(instance, Boolean.TRUE)), ("not already set: id=" + instance));
+                Assert.assertTrue((!toTest.setBit(value, Boolean.TRUE)), ("not already set: id=" + value));
             }
         }
     }
     
-    public void testLargeGapInData(int window) throws Exception {
+    @Test()
+	public void testLargeGapInData() throws Exception {
         doTestLargeGapInData(128);
         doTestLargeGapInData(500);
     }
@@ -84,13 +89,13 @@ public class BitArrayBinTest extends TestCase {
         BitArrayBin toTest = new BitArrayBin(window);
         
         int instance = BitArray.LONG_SIZE;
-        assertTrue("not already set: id=" + instance,  !toTest.setBit(instance, Boolean.TRUE));
+        Assert.assertTrue((!toTest.setBit(instance, Boolean.TRUE)), ("not already set: id=" + instance));
         
         instance = 12 *BitArray.LONG_SIZE;
-        assertTrue("not already set: id=" + instance,  !toTest.setBit(instance, Boolean.TRUE));
+        Assert.assertTrue((!toTest.setBit(instance, Boolean.TRUE)), ("not already set: id=" + instance));
         
         instance = 9 *BitArray.LONG_SIZE;
-        assertTrue("not already set: id=" + instance,  !toTest.setBit(instance, Boolean.TRUE));
+        Assert.assertTrue((!toTest.setBit(instance, Boolean.TRUE)), ("not already set: id=" + instance));
     }
     
     // window moves in increments of BitArray.LONG_SIZE.

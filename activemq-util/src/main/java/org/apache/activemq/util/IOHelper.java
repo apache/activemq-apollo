@@ -221,8 +221,7 @@ public final class IOHelper {
 						}
 					}
 				};
-			} catch (Exception ignore) {
-				ignore.printStackTrace();
+			} catch (Throwable ignore) {
 				// Perhaps we should issue a warning here so folks know that 
 				// the disk syncs are not going to be of very good quality.
 			}

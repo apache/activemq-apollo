@@ -257,7 +257,7 @@ public class DataByteArrayOutputStream extends OutputStream implements DataOutpu
         }
         onWrite();
     }
-
+    
     private void ensureEnoughBuffer(int newcount) {
         if (newcount > buf.length) {
             byte newbuf[] = new byte[Math.max(buf.length << 1, newcount)];
