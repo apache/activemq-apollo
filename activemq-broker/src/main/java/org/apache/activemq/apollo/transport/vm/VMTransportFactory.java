@@ -145,7 +145,7 @@ public class VMTransportFactory extends PipeTransportFactory {
 				}
 				
 				// We want to use a vm transport server impl.
-				VmTransportServer vmTransportServer = (VmTransportServer) TransportFactory.bind(new URI("vm://" + name+"?wireFormat=mock"));
+				VmTransportServer vmTransportServer = (VmTransportServer) TransportFactory.bind(new URI("vm://" + name+"?wireFormat=null"));
 				vmTransportServer.setBroker(broker);
 				vmTransportServer.setWireFormatFactory(wf.getWireFormatFactory());
 				broker.addTransportServer(vmTransportServer);

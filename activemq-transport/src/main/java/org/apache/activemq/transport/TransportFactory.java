@@ -211,6 +211,9 @@ public abstract class TransportFactory {
 
     protected WireFormat createWireFormat(Map<String, String> options) throws IOException {
         WireFormatFactory factory = createWireFormatFactory(options);
+        if( factory == null ) {
+            return null;
+        }
         WireFormat format = factory.createWireFormat();
         return format;
     }
@@ -219,6 +222,9 @@ public abstract class TransportFactory {
         String wireFormat = (String)options.remove("wireFormat");
         if (wireFormat == null) {
             wireFormat = getDefaultWireFormatType();
+        }
+        if( "null".equals(wireFormat) ) {
+            return null;
         }
 
         try {
