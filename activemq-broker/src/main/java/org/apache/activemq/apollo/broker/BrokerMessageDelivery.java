@@ -48,8 +48,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
     boolean fromStore = false;
     boolean enableFlushDelay = true;
     private int limiterSize = -1;
-
-    private long tid;
+    private long tid=-1;
 
     public void setFromDatabase(BrokerDatabase database, MessageRecord mRecord) {
         fromStore = true;
