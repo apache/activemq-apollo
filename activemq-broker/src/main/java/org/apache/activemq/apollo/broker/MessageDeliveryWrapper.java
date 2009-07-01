@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.broker;
 
+import java.io.IOException;
+
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.flow.ISourceController;
@@ -31,7 +33,6 @@ public class MessageDeliveryWrapper implements MessageDelivery {
 
     private final MessageDelivery delegate;
 
-   
     public void acknowledge(SaveableQueueElement<MessageDelivery> sqe) {
         delegate.acknowledge(sqe);
     }
@@ -197,5 +198,44 @@ public class MessageDeliveryWrapper implements MessageDelivery {
      */
     MessageDeliveryWrapper(MessageDelivery delivery) {
         delegate = delivery;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * org.apache.activemq.apollo.broker.MessageDelivery#beginDispatch(org.apache
+     * .activemq.apollo.broker.BrokerDatabase)
+     */
+    public void beginDispatch(BrokerDatabase database) {
+        delegate.beginDispatch(database);
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * org.apache.activemq.apollo.broker.MessageDelivery#finishDispatch(org.
+     * apache.activemq.flow.ISourceController)
+     */
+    public void finishDispatch(ISourceController<?> controller) throws IOException {
+        delegate.finishDispatch(controller);
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * org.apache.activemq.apollo.broker.MessageDelivery#setStoreTracking(long)
+     */
+    public void setStoreTracking(long tracking) {
+        delegate.setStoreTracking(tracking);
+    }
+
+    /* (non-Javadoc)
+     * @see org.apache.activemq.apollo.broker.MessageDelivery#clearTransactionId()
+     */
+    public void clearTransactionId() {
+        delegate.clearTransactionId();
     }
 }

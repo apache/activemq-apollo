@@ -41,6 +41,11 @@ public interface SaveableQueueElement<V> {
      *         called when this element is persisted
      */
     public boolean requestSaveNotify();
+    
+    /**
+     * @return The size of the element in memory
+     */
+    public int getLimiterSize();
 
     /**
      * Called when the element has been saved.

@@ -88,10 +88,6 @@ public class DurableSubscription implements BrokerSubscription, DeliveryTarget {
         }
     }
 
-    public IFlowSink<MessageDelivery> getSink() {
-        return queue;
-    }
-
     public boolean hasSelector() {
         return selector != null;
     }

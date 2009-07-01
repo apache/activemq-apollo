@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowResource;
-import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.IFlowSizeLimiter;
 import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
@@ -49,7 +48,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
     private final LinkedNodeList<SubscriptionNode> readyPollingSubs = new LinkedNodeList<SubscriptionNode>();
 
     private final HashMap<Subscription<V>, SubscriptionNode> subscriptions = new HashMap<Subscription<V>, SubscriptionNode>();
-    private final HashMap<IFlowResource, SubscriptionNode> sinks = new HashMap<IFlowResource, SubscriptionNode>();
+    //private final HashMap<IFlowResource, SubscriptionNode> sinks = new HashMap<IFlowResource, SubscriptionNode>();
 
     private final FlowController<V> sinkController;
     private final IFlowSizeLimiter<V> limiter;
@@ -57,54 +56,6 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
 
     protected Mapper<K, V> keyMapper;
     private long directs;
-
-    private final ISourceController<V> sourceControler = new ISourceController<V>() {
-
-        public Flow getFlow() {
-            return sinkController.getFlow();
-        }
-
-        public void elementDispatched(V elem) {
-        }
-
-        public void onFlowBlock(ISinkController<?> sink) {
-        }
-
-        public void onFlowResume(ISinkController<?> sinkController) {
-            IFlowResource sink = sinkController.getFlowResource();
-            synchronized (mutex) {
-                SubscriptionNode node = sinks.get(sink);
-                if (node != null) {
-                    node.unlink();
-                    boolean notify = false;
-                    if (node.cursor == null) {
-                        readyDirectSubs.addLast(node);
-                        // System.out.println("Subscription state change: un-ready direct -> ready direct: "+node);
-                    } else {
-                        if (readyPollingSubs.isEmpty()) {
-                            notify = !store.isEmpty();
-                        }
-                        readyPollingSubs.addLast(node);
-                        // System.out.println("Subscription state change: un-ready polling -> ready polling: "+node);
-                    }
-
-                    if (notify) {
-                        notifyReady();
-                    }
-                }
-            }
-        }
-
-        @Override
-        public String toString() {
-            return getResourceName();
-        }
-
-        public IFlowResource getFlowResource() {
-            return SharedQueueOld.this;
-        }
-
-    };
 
     private QueueDescriptor queueDescriptor;
 
@@ -257,7 +208,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
         while (node != null) {
             next = node.getNext();
             if (node.subscription.matches(elem)) {
-                accepted = node.subscription.getSink().offer(elem, sourceControler);
+                accepted = node.subscription.offer(elem, node, null);
                 if (accepted) {
                     if (autoRelease) {
                         sinkController.elementDispatched(elem);
@@ -325,8 +276,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
             }
 
             // The subscription's sink may be full..
-            IFlowSink<V> sink = subNode.subscription.getSink();
-            boolean accepted = sink.offer(storeNode.getValue(), sourceControler);
+            boolean accepted = subNode.subscription.offer(storeNode.getValue(), subNode, null);
 
             synchronized (mutex) {
                 if (accepted) {
@@ -358,7 +308,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
             if (node == null) {
                 node = new SubscriptionNode(subscription);
                 subscriptions.put(subscription, node);
-                sinks.put(subscription.getSink(), node);
+                //sinks.put(subscription.getSink(), node);
                 if (!store.isEmpty()) {
                     readyPollingSubs.addLast(node);
                     notifyReady();
@@ -373,7 +323,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
         synchronized (mutex) {
             SubscriptionNode node = subscriptions.remove(subscription);
             if (node != null) {
-                sinks.remove(subscription.getSink());
+                //sinks.remove(subscription.getSink());
                 node.unlink();
                 return true;
             }
@@ -381,7 +331,7 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
         }
     }
 
-    private class SubscriptionNode extends LinkedNode<SubscriptionNode> {
+    private class SubscriptionNode extends LinkedNode<SubscriptionNode> implements ISourceController<V> {
         public final Subscription<V> subscription;
         public StoreCursor<K, V> cursor;
 
@@ -433,6 +383,59 @@ public class SharedQueueOld<K, V> extends AbstractFlowQueue<V> implements IQueue
         @Override
         public String toString() {
             return "subscription from " + getResourceName() + " to " + subscription;
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.flow.ISourceController#elementDispatched(java.lang.Object)
+         */
+        public void elementDispatched(V elem) {
+            
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.flow.ISourceController#getFlow()
+         */
+        public Flow getFlow() {
+            return sinkController.getFlow();
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.flow.ISourceController#getFlowResource()
+         */
+        public IFlowResource getFlowResource() {
+            return SharedQueueOld.this;
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.flow.ISourceController#onFlowBlock(org.apache.activemq.flow.ISinkController)
+         */
+        public void onFlowBlock(ISinkController<?> sinkController) {
+            
+            
+        }
+
+        /* (non-Javadoc)
+         * @see org.apache.activemq.flow.ISourceController#onFlowResume(org.apache.activemq.flow.ISinkController)
+         */
+        public void onFlowResume(ISinkController<?> sinkController) {
+            synchronized (mutex) {
+                    unlink();
+                boolean notify = false;
+                if (cursor == null) {
+                    readyDirectSubs.addLast(this);
+                    // System.out.println("Subscription state change: un-ready direct -> ready direct: "+node);
+                } else {
+                    if (readyPollingSubs.isEmpty()) {
+                        notify = !store.isEmpty();
+                    }
+                    readyPollingSubs.addLast(this);
+                    // System.out.println("Subscription state change: un-ready polling -> ready polling: "+node);
+                }
+
+                if (notify) {
+                    notifyReady();
+                }
+            }
         }
     }
 

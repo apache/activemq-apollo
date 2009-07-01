@@ -38,6 +38,7 @@ import org.apache.activemq.apollo.broker.Router;
 import org.apache.activemq.apollo.broker.Transaction;
 import org.apache.activemq.apollo.broker.VirtualHost;
 import org.apache.activemq.apollo.broker.XidImpl;
+import org.apache.activemq.apollo.broker.Transaction.TransactionListener;
 import org.apache.activemq.broker.openwire.OpenWireMessageDelivery.PersistListener;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.command.ActiveMQDestination;
@@ -240,7 +241,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 md.setStoreWireFormat(storeWireFormat);
                 TransactionId tid = info.getTransactionId();
                 if (tid != null) {
-                    Transaction t = locateTransaction(tid);
+                    Transaction t = locateTransaction(tid, true);
                     md.setTransactionId(t.getTid());
                 } else {
                     md.setPersistListener(OpenwireProtocolHandler.this);
@@ -367,7 +368,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             public Response processBeginTransaction(TransactionInfo info) throws Exception {
                 TransactionId tid = info.getTransactionId();
 
-                Transaction t = locateTransaction(tid);
+                Transaction t = locateTransaction(tid, false);
                 if (t == null) {
 
                     Buffer xid = null;
@@ -382,22 +383,62 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             }
 
             public Response processCommitTransactionOnePhase(final TransactionInfo info) throws Exception {
-                TransactionId tid = info.getTransactionId();
-                Transaction t = locateTransaction(tid);
-                t.commit(true, new Transaction.TransactionListener()
-                {
-                    
-                });
+                final TransactionId tid = info.getTransactionId();
+                Transaction t = locateTransaction(tid, true);
+                
+                TransactionListener listener = null;
+                if (info.isResponseRequired()) {
+                    listener = new TransactionListener() {
+
+                        @Override
+                        public void onCommit(Transaction t) {
+                            transactions.remove(tid);
+                            ack(info);
+                        }
+
+                        @Override
+                        public void onRollback(Transaction t) {
+                            transactions.remove(tid);
+                            ExceptionResponse r = new ExceptionResponse(new XAException("RolledBack"));
+                            r.setCorrelationId(info.getCommandId());
+                            connection.write(r);
+                        }
+
+                    };
+                }
+                
+                t.commit(true, listener);
                 transactions.remove(tid);
-                throw new UnsupportedOperationException();
+                return null;
             }
 
-            public Response processCommitTransactionTwoPhase(TransactionInfo info) throws Exception {
-                TransactionId tid = info.getTransactionId();
-                Transaction t = locateTransaction(tid);
-                t.commit(false, null);
-                transactions.remove(tid);
-                throw new UnsupportedOperationException();
+            public Response processCommitTransactionTwoPhase(final TransactionInfo info) throws Exception {
+                final TransactionId tid = info.getTransactionId();
+                Transaction t = locateTransaction(tid, true);
+
+                TransactionListener listener = null;
+                if (info.isResponseRequired()) {
+                    listener = new TransactionListener() {
+
+                        @Override
+                        public void onCommit(Transaction t) {
+                            transactions.remove(tid);
+                            ack(info);
+                        }
+
+                        @Override
+                        public void onRollback(Transaction t) {
+                            transactions.remove(tid);
+                            ExceptionResponse r = new ExceptionResponse(new XAException("RolledBack"));
+                            r.setCorrelationId(info.getCommandId());
+                            connection.write(r);
+                        }
+
+                    };
+                }
+
+                t.commit(false, listener);
+                return null;
             }
 
             public Response processEndTransaction(TransactionInfo info) throws Exception {
@@ -405,18 +446,30 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 //in sync with broker transaction state. 
                 //TODO need to investigate whether this should wait for prior transaction
                 //state to flush out?
-                throw new UnsupportedOperationException();
+                new UnsupportedOperationException().printStackTrace();
+                return ack(info);
             }
 
             public Response processForgetTransaction(TransactionInfo info) throws Exception {
                 return processRollbackTransaction(info);
             }
 
-            public Response processPrepareTransaction(TransactionInfo info) throws Exception {
-                TransactionId tid = info.getTransactionId();
-                Transaction t = locateTransaction(tid);
-                t.prepare(null);
-                throw new UnsupportedOperationException();
+            public Response processPrepareTransaction(final TransactionInfo info) throws Exception {
+                final TransactionId tid = info.getTransactionId();
+                Transaction t = locateTransaction(tid, true);
+
+                TransactionListener listener = null;
+                if (info.isResponseRequired()) {
+                    listener = new TransactionListener() {
+
+                        @Override
+                        public void onPrepared(Transaction t) {
+                            ack(info);
+                        }
+                    };
+                }
+                t.prepare(listener);
+                return null;
             }
 
             public Response processRecoverTransactions(TransactionInfo info) throws Exception {
@@ -424,13 +477,23 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 throw new UnsupportedOperationException();
             }
 
-            public Response processRollbackTransaction(TransactionInfo info) throws Exception {
-                TransactionId tid = info.getTransactionId();
-                Transaction t = locateTransaction(tid);
-                t.rollback(null);
+            public Response processRollbackTransaction(final TransactionInfo info) throws Exception {
+                final TransactionId tid = info.getTransactionId();
+                Transaction t = locateTransaction(tid, true);
+
+                TransactionListener listener = null;
+                if (info.isResponseRequired()) {
+                    listener = new TransactionListener() {
+
+                        @Override
+                        public void onRollback(Transaction t) {
+                            ack(info);
+                        }
+                    };
+                }
+                t.rollback(listener);
                 transactions.remove(tid);
-                //TODO need to respond to this when the rollback completes
-                throw new UnsupportedOperationException();
+                return null;
             }
 
             // /////////////////////////////////////////////////////////////////
@@ -456,7 +519,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
         };
     }
 
-    private Transaction locateTransaction(TransactionId tid) throws XAException, JMSException {
+    private Transaction locateTransaction(TransactionId tid, boolean expected) throws XAException, JMSException {
         Transaction t;
 
         if (tid.isLocalTransaction()) {
@@ -465,7 +528,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             t = host.getTransactionManager().getXATransaction(XidImpl.toBuffer((Xid) tid));
         }
 
-        if (t == null) {
+        if (t == null && expected) {
             if (tid.isXATransaction()) {
                 XAException e = new XAException("Transaction '" + tid + "' has not been started.");
                 e.errorCode = XAException.XAER_NOTA;
@@ -692,7 +755,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 TransactionId tid = info.getTransactionId();
                 Transaction transaction = null;
                 if (tid != null) {
-                    transaction = locateTransaction(tid);
+                    transaction = locateTransaction(tid, true);
                 }
 
                 LinkedList<SubscriptionDelivery<MessageDelivery>> acked = new LinkedList<SubscriptionDelivery<MessageDelivery>>();
@@ -872,15 +935,6 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
          */
         public String getConsumerId() {
             return name;
-        }
-
-        /*
-         * (non-Javadoc)
-         * 
-         * @see org.apache.activemq.queue.Subscription#getSink()
-         */
-        public IFlowSink<MessageDelivery> getSink() {
-            return this;
         }
 
         /*

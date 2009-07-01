@@ -26,6 +26,8 @@ import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.activemq.queue.SaveableQueueElement;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.buffer.Buffer;
 
 public abstract class BrokerMessageDelivery implements MessageDelivery {
 
@@ -47,6 +49,8 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
     boolean enableFlushDelay = true;
     private int limiterSize = -1;
 
+    private long tid;
+
     public void setFromDatabase(BrokerDatabase database, MessageRecord mRecord) {
         fromStore = true;
         store = database;
@@ -59,6 +63,28 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
             limiterSize = getMemorySize();
         }
         return limiterSize;
+    }
+
+    /**
+     * When an application wishes to include a message in a broker transaction
+     * it must set this the tid returned by {@link Transaction#getTid()}
+     * 
+     * @param tid
+     *            Sets the tid used to identify the transaction at the broker.
+     */
+    public void setTransactionId(long tid) {
+        this.tid = tid;
+    }
+
+    /**
+     * @return The tid used to identify the transaction at the broker.
+     */
+    public final long getTransactionId() {
+        return tid;
+    }
+
+    public final void clearTransactionId() {
+        tid = -1;
     }
 
     /**
@@ -136,12 +162,16 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
 
     }
 
-    public void beginDispatch(BrokerDatabase database) {
+    public final void setStoreTracking(long tracking) {
+        if (storeTracking == -1) {
+            storeTracking = tracking;
+        }
+    }
+
+    public final void beginDispatch(BrokerDatabase database) {
         this.store = database;
         dispatching = true;
-        if (storeTracking == -1) {
-            storeTracking = database.allocateStoreTracking();
-        }
+        setStoreTracking(database.allocateStoreTracking());
     }
 
     public long getStoreTracking() {
@@ -199,7 +229,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
         }
     }
 
-    public void finishDispatch(ISourceController<?> controller) throws IOException {
+    public final void finishDispatch(ISourceController<?> controller) throws IOException {
         boolean firePersistListener = false;
         synchronized (this) {
             // If any of the targets requested save then save the message
@@ -222,6 +252,28 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
             onMessagePersisted();
         }
     }
+
+    public final MessageRecord createMessageRecord() {
+
+        MessageRecord record = new MessageRecord();
+        record.setEncoding(getStoreEncoding());
+        record.setBuffer(getStoreEncoded());
+        record.setStreamKey((long) 0);
+        record.setMessageId(getMsgId());
+        record.setSize(getFlowLimiterSize());
+        record.setKey(getStoreTracking());
+        return record;
+    }
+
+    /**
+     * @return A buffer representation of the message to be stored in the store.
+     */
+    protected abstract Buffer getStoreEncoded();
+
+    /**
+     * @return The encoding scheme used to store the message.
+     */
+    protected abstract AsciiBuffer getStoreEncoding();
 
     public boolean isFlushDelayable() {
         // TODO Auto-generated method stub

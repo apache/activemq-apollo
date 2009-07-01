@@ -138,8 +138,4 @@ public interface Subscription<E> {
      *         returning false.
      */
     public void add(E element, ISourceController<?> controller, SubscriptionDelivery<E> callback);
-
-    @Deprecated
-    public IFlowSink<E> getSink();
-
 }

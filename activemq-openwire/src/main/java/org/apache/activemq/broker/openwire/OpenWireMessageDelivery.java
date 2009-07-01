@@ -37,8 +37,6 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
     private PersistListener persistListener = null;
     private final int size;
 
-    private long tid = -1;
-
     public interface PersistListener {
         public void onMessagePersisted(OpenWireMessageDelivery delivery);
     }
@@ -105,38 +103,6 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
         return message.isResponseRequired();
     }
 
-    public MessageRecord createMessageRecord() {
-        MessageRecord record = new MessageRecord();
-        record.setEncoding(ENCODING);
-
-        Buffer bytes;
-        try {
-            bytes = storeWireFormat.marshal(message);
-        } catch (IOException e) {
-            return null;
-        }
-        record.setBuffer(new Buffer(bytes.getData(), bytes.getOffset(), bytes.getLength()));
-        record.setStreamKey((long) 0);
-        record.setMessageId(getMsgId());
-        record.setSize(getFlowLimiterSize());
-        return record;
-    }
-
-    public long getTransactionId() {
-        return tid;
-    }
-    
-    /**
-     * @param tid
-     */
-    public void setTransactionId(long tid) {
-        this.tid  = tid;
-    }
-
-    public void setStoreWireFormat(OpenWireFormat wireFormat) {
-        this.storeWireFormat = wireFormat;
-    }
-
     /*
      * (non-Javadoc)
      * 
@@ -154,5 +120,23 @@ public class OpenWireMessageDelivery extends BrokerMessageDelivery {
         return message.getMessageId().toString();
     }
 
+    public AsciiBuffer getStoreEncoding() {
+        return ENCODING;
+    }
+    
+    public Buffer getStoreEncoded() {
+        Buffer bytes;
+        try {
+            bytes = storeWireFormat.marshal(message);
+        } catch (IOException e) {
+            return null;
+        }
+        return bytes;
+    }
+    
+
+    public void setStoreWireFormat(OpenWireFormat wireFormat) {
+        this.storeWireFormat = wireFormat;
+    }
     
 }

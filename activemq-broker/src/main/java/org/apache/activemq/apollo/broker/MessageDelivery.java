@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.broker;
 
+import java.io.IOException;
+
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.flow.ISourceController;
@@ -80,7 +82,23 @@ public interface MessageDelivery {
      *         transaction
      */
     public long getTransactionId();
+    
+    /**
+     * Clears the transaction id. Called by the broker when a transacted message
+     * is commited. 
+     */
+    public void clearTransactionId();
 
+    public void beginDispatch(BrokerDatabase database); 
+    
+    public void finishDispatch(ISourceController<?> controller) throws IOException;
+    
+    /**
+     * Sets the unique id used to identify this message in the store.
+     * @param tracking The tracking to use.
+     */
+    public void setStoreTracking(long tracking);
+    
     /**
      * Called by a queue to request that the element be persisted. The save is
      * done asynchronously, and depending on the state of the message delivery

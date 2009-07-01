@@ -516,15 +516,6 @@ public class SharedQueuePerfTest extends TestCase {
         /*
          * (non-Javadoc)
          * 
-         * @see org.apache.activemq.queue.Subscription#getSink()
-         */
-        public IFlowSink<MessageDelivery> getSink() {
-            return this;
-        }
-
-        /*
-         * (non-Javadoc)
-         * 
          * @see org.apache.activemq.queue.Subscription#hasSelector()
          */
         public boolean hasSelector() {

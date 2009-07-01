@@ -35,6 +35,7 @@ import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.RestoreListener;
 import org.apache.activemq.queue.SaveableQueueElement;
+import org.apache.activemq.util.ListenableFuture;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.activemq.util.buffer.Buffer;
@@ -69,8 +70,8 @@ public class TransactionManager {
     private static final int DEFAULT_TX_QUEUE_PAGING_THRESHOLD = 1024 * 64;
     private static final int DEFAULT_TX_QUEUE_RESUME_THRESHOLD = 1;
     // Be default we don't page out elements to disk.
-    //private static final int DEFAULT_DURABLE_QUEUE_SIZE = DEFAULT_DURABLE_QUEUE_PAGING_THRESHOLD;
-    private static final int DEFAULT_TX_QUEUE_SIZE = Integer.MAX_VALUE;
+    private static final int DEFAULT_TX_QUEUE_SIZE = DEFAULT_TX_QUEUE_PAGING_THRESHOLD;
+    //private static final int DEFAULT_TX_QUEUE_SIZE = Integer.MAX_VALUE;
 
     private static final PersistencePolicy<TxOp> DEFAULT_TX_QUEUE_PERSISTENCE_POLICY = new PersistencePolicy<TxOp>() {
 
@@ -151,6 +152,17 @@ public class TransactionManager {
     }
 
     /**
+     * @param msg
+     * @param controller
+     */
+    public void newMessage(MessageDelivery msg, ISourceController<?> controller) {
+        if (msg.getStoreTracking() == -1) {
+            msg.setStoreTracking(host.getDatabase().allocateStoreTracking());
+        }
+        transactions.get(msg.getTransactionId()).addMessage(msg, controller);
+    }
+
+    /**
      * Creates a transaction.
      * 
      * @param xid
@@ -209,7 +221,7 @@ public class TransactionManager {
             Transaction tx = loadTransaction(b, queue);
 
             //TODO if we recover a tx that isn't committed then, we should discard it.
-            if (tx.getState() < Transaction.FINISHED_STATE) {
+            if (tx.getState() < Transaction.COMMITED_STATE) {
                 LOG.warn("Recovered unfinished transaction: " + tx);
             }
             transactions.put(tx.getTid(), tx);
@@ -250,26 +262,32 @@ public class TransactionManager {
             throw new IOException("Invalid transaction type: " + type);
 
         }
-        tx.setState(state);
+        tx.setState(state, null);
         return tx;
 
     }
 
-    public OperationContext persistTransaction(Transaction tx) throws IOException {
+    public ListenableFuture<?> persistTransaction(Transaction tx) {
 
         //TODO move the serialization into the transaction itself:
         DataByteArrayOutputStream baos = new DataByteArrayOutputStream();
-        baos.writeByte(tx.getType());
-        baos.writeByte(tx.getState());
-        baos.writeLong(tx.getTid());
-        if (tx.getType() == Transaction.TYPE_XA) {
-            Buffer xid = ((XATransaction) tx).getXid();
-            // An XID max size is around 140 bytes, byte SHOULD be big enough to frame it.
-            baos.writeByte(xid.length & 0xFF);
-            baos.write(xid.data, xid.offset, xid.length);
+        try {
+            baos.writeByte(tx.getType());
+            baos.writeByte(tx.getState());
+            baos.writeLong(tx.getTid());
+            if (tx.getType() == Transaction.TYPE_XA) {
+                Buffer xid = ((XATransaction) tx).getXid();
+                // An XID max size is around 140 bytes, byte SHOULD be big enough to frame it.
+                baos.writeByte(xid.length & 0xFF);
+                baos.write(xid.data, xid.offset, xid.length);
+            }
+            OperationContext<?> ctx = database.updateMapEntry(TXN_MAP, tx.getBackingQueueName(), new Buffer(baos.getData(), 0, baos.size()));
+            ctx.requestFlush();
+            return ctx;
+        } catch (IOException ioe) {
+            //Shouldn't happen
+            throw new RuntimeException(ioe);
         }
-
-        return database.updateMapEntry(TXN_MAP, tx.getBackingQueueName(), new Buffer(baos.getData(), 0, baos.size()));
     }
 
     private IQueue<Long, TxOp> createRestoredTxQueue(QueueQueryResult loaded) throws IOException {
@@ -280,7 +298,10 @@ public class TransactionManager {
     }
 
     private final IQueue<Long, TxOp> createTransactionQueue(long tid) {
-        return createTxQueueInternal(TX_QUEUE_PREFIX + tid, BrokerQueueStore.TRANSACTION_QUEUE_TYPE);
+        IQueue<Long, TxOp> queue = createTxQueueInternal(TX_QUEUE_PREFIX + tid, BrokerQueueStore.TRANSACTION_QUEUE_TYPE);
+        queue.initialize(0, 0, 0, 0);
+        txStore.addQueue(queue.getDescriptor());
+        return queue;
     }
 
     private IQueue<Long, TxOp> createTxQueueInternal(final String name, short type) {
@@ -375,7 +396,7 @@ public class TransactionManager {
          * org.apache.activemq.flow.ISourceController, boolean)
          */
         public void persistQueueElement(SaveableQueueElement<TxOp> sqe, ISourceController<?> source, boolean delayable) {
-            database.saveQeueuElement(sqe, source, delayable, TX_OP_MARSHALLER);
+            database.saveQeueuElement(sqe, source, false, TX_OP_MARSHALLER);
         }
 
         /*
@@ -390,4 +411,5 @@ public class TransactionManager {
             database.restoreQueueElements(queue, recordOnly, firstSequence, maxSequence, maxCount, listener, TX_OP_MARSHALLER);
         }
     }
+
 }

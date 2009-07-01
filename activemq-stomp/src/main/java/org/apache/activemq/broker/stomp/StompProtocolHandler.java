@@ -349,10 +349,6 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
 
         }
 
-        public IFlowSink<MessageDelivery> getSink() {
-            return queue;
-        }
-
         public boolean hasSelector() {
             return false;
         }

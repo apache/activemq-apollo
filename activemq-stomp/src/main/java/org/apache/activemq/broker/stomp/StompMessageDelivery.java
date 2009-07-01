@@ -18,11 +18,11 @@ package org.apache.activemq.broker.stomp;
 
 import org.apache.activemq.apollo.broker.BrokerMessageDelivery;
 import org.apache.activemq.apollo.broker.Destination;
-import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.filter.MessageEvaluationContext;
 import org.apache.activemq.transport.stomp.Stomp;
 import org.apache.activemq.transport.stomp.StompFrame;
 import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.buffer.Buffer;
 
 public class StompMessageDelivery extends BrokerMessageDelivery {
 
@@ -36,8 +36,6 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
     private AsciiBuffer msgId;
     private PersistListener persistListener = null;
     private long tte = Long.MIN_VALUE;
-
-    private long tid = -1;
 
     public interface PersistListener {
         public void onMessagePersisted(StompMessageDelivery delivery);
@@ -143,23 +141,17 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
         }
     }
 
-    public MessageRecord createMessageRecord() {
-        MessageRecord record = new MessageRecord();
-        record.setEncoding(ENCODING);
-        // TODO: Serialize it..
-        // record.setBuffer()
-        // record.setStreamKey(stream);
-        record.setMessageId(getMsgId());
-        return record;
+    public AsciiBuffer getStoreEncoding() {
+        return ENCODING;
     }
-
-    public long getTransactionId() {
-        return tid;
+    
+    public Buffer getStoreEncoded() {
+        Buffer bytes;
+        //TODO encode it:
+        //return bytes;
+        throw new UnsupportedOperationException();
     }
-
-    public void setTransactionId(long tid) {
-        this.tid = tid;
-    }
+    
 
     public MessageEvaluationContext createMessageEvaluationContext() {
         return new StompMessageEvaluationContext();

@@ -28,18 +28,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 final public class Router {
-	static final private Log LOG = LogFactory.getLog(Router.class); 
-	
+    static final private Log LOG = LogFactory.getLog(Router.class);
+
     public static final AsciiBuffer TOPIC_DOMAIN = new AsciiBuffer("topic");
     public static final AsciiBuffer QUEUE_DOMAIN = new AsciiBuffer("queue");
     public static final AsciiBuffer TEMP_TOPIC_DOMAIN = new AsciiBuffer("temp-topic");
     public static final AsciiBuffer TEMP_QUEUE_DOMAIN = new AsciiBuffer("temp-queue");
 
     private final HashMap<AsciiBuffer, Domain> domains = new HashMap<AsciiBuffer, Domain>();
-    
+
     private VirtualHost virtualHost;
     private BrokerDatabase database;
-    
 
     public Router() {
         domains.put(QUEUE_DOMAIN, new Domain());
@@ -67,7 +66,7 @@ final public class Router {
     public synchronized void bind(Destination destination, DeliveryTarget target) {
         Collection<Destination> destinationList = destination.getDestinations();
         if (destinationList == null) {
-        	Domain domain = getDomain(destination);
+            Domain domain = getDomain(destination);
             domain.bind(destination.getName(), target);
         } else {
             for (Destination d : destinationList) {
@@ -79,7 +78,7 @@ final public class Router {
     public synchronized void unbind(Destination destination, DeliveryTarget target) {
         Collection<Destination> destinationList = destination.getDestinations();
         if (destinationList == null) {
-        	Domain domain = getDomain(destination);
+            Domain domain = getDomain(destination);
             domain.unbind(destination.getName(), target);
         } else {
             for (Destination d : destinationList) {
@@ -88,10 +87,17 @@ final public class Router {
         }
     }
 
-    public void route(final BrokerMessageDelivery msg, ISourceController<?> controller, boolean autoCreate) {
+    public void route(final MessageDelivery msg, ISourceController<?> controller, boolean autoCreate) {
 
+        //If the message is part of transaction send it to the transaction manager
+        if(msg.getTransactionId() >= 0)
+        {
+            virtualHost.getTransactionManager().newMessage(msg, controller);
+            return;
+        }
+        
         Collection<DeliveryTarget> targets = route(msg.getDestination(), msg, autoCreate);
-
+        
         //Set up the delivery for persistence:
         msg.beginDispatch(database);
 
@@ -124,20 +130,20 @@ final public class Router {
         // Handles routing to composite/multi destinations.
         Collection<Destination> destinationList = destination.getDestinations();
         if (destinationList == null) {
-        	Domain domain = getDomain(destination);
+            Domain domain = getDomain(destination);
             Collection<DeliveryTarget> rc = domain.route(destination.getName(), msg);
             // We can auto create queues in the queue domain..
-            if(rc.isEmpty() && autoCreate && destination.getDomain().equals(Router.QUEUE_DOMAIN) ) {
-            	try {
-					Queue queue = virtualHost.createQueue(destination);
-					rc = new ArrayList<DeliveryTarget>(1);
-					rc.add(queue);
-				} catch (Exception e) {
-					LOG.error("Failed to auto create queue: "+destination.getName()+": "+e);
-					LOG.debug("Failed to auto create queue: "+destination.getName(),e);
-				}
+            if (rc.isEmpty() && autoCreate && destination.getDomain().equals(Router.QUEUE_DOMAIN)) {
+                try {
+                    Queue queue = virtualHost.createQueue(destination);
+                    rc = new ArrayList<DeliveryTarget>(1);
+                    rc.add(queue);
+                } catch (Exception e) {
+                    LOG.error("Failed to auto create queue: " + destination.getName() + ": " + e);
+                    LOG.debug("Failed to auto create queue: " + destination.getName(), e);
+                }
             }
-			return rc;
+            return rc;
         } else {
             HashSet<DeliveryTarget> rc = new HashSet<DeliveryTarget>();
             for (Destination d : destinationList) {
