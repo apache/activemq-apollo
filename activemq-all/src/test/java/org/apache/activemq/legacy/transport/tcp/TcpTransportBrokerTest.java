@@ -16,27 +16,22 @@
  */
 package org.apache.activemq.legacy.transport.tcp;
 
-import junit.framework.Test;
-
 import org.apache.activemq.legacy.transport.TransportBrokerTestSupport;
+import org.apache.activemq.openwire.BrokerTestScenario;
+import org.testng.annotations.Test;
 
+@Test
 public class TcpTransportBrokerTest extends TransportBrokerTestSupport {
 
     protected String getBindLocation() {
         return "tcp://localhost:0";
     }
 
-    protected void setUp() throws Exception {
-        maxWait = 2000;
-        super.setUp();
-    }
-
-    public static Test suite() {
-        return suite(TcpTransportBrokerTest.class);
-    }
-
-    public static void main(String[] args) {
-        junit.textui.TestRunner.run(suite());
+    @Override
+    public Object createBean() throws Exception {
+    	BrokerTestScenario scenario = (BrokerTestScenario) super.createBean();
+    	scenario.maxWait = 2000;
+		return scenario;
     }
 
 }

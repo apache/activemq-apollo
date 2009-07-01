@@ -16,11 +16,12 @@
  */
 package org.apache.activemq.legacy.transport.tcp;
 
-import junit.framework.Test;
-import junit.textui.TestRunner;
-
 import org.apache.activemq.legacy.transport.TransportBrokerTestSupport;
+import org.apache.activemq.openwire.BrokerTestScenario;
+import org.testng.annotations.BeforeTest;
+import org.testng.annotations.Test;
 
+@Test
 public class SslTransportBrokerTest extends TransportBrokerTestSupport {
 
     public static final String KEYSTORE_TYPE = "jks";
@@ -32,6 +33,7 @@ public class SslTransportBrokerTest extends TransportBrokerTestSupport {
         return "ssl://localhost:0";
     }
 
+    @BeforeTest
     protected void setUp() throws Exception {
         System.setProperty("javax.net.ssl.trustStore", TRUST_KEYSTORE);
         System.setProperty("javax.net.ssl.trustStorePassword", PASSWORD);
@@ -40,17 +42,13 @@ public class SslTransportBrokerTest extends TransportBrokerTestSupport {
         System.setProperty("javax.net.ssl.keyStorePassword", PASSWORD);
         System.setProperty("javax.net.ssl.keyStoreType", KEYSTORE_TYPE);        
         //System.setProperty("javax.net.debug", "ssl,handshake,data,trustmanager");        
-
-        maxWait = 10000;
-        super.setUp();
     }
 
-    public static Test suite() {
-        return suite(SslTransportBrokerTest.class);
-    }
-
-    public static void main(String[] args) {
-        TestRunner.run(suite());
+    @Override
+    public Object createBean() throws Exception {
+    	BrokerTestScenario scenario = (BrokerTestScenario) super.createBean();
+    	scenario.maxWait = 10000;
+		return scenario;
     }
 
 }

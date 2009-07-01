@@ -23,7 +23,13 @@ public class Combinator {
 
 	private LinkedHashMap<String, ComboOption> comboOptions = new LinkedHashMap<String, ComboOption>();
 	private int annonymousAttributeCounter;
+	
 
+	// For folks who like to use static imports to achieve a more fluent usage API.
+	public static Combinator combinator() {
+		return new Combinator();
+	}
+		
 	static class ComboOption {
 		final String attribute;
 		final LinkedHashSet<Object> values = new LinkedHashSet<Object>();
@@ -34,17 +40,19 @@ public class Combinator {
 		}
 	}
 
-	public void put(String attribute, Object... options) {
+	public Combinator put(String attribute, Object... options) {
 		ComboOption co = this.comboOptions.get(attribute);
 		if (co == null) {
 			this.comboOptions.put(attribute, new ComboOption(attribute, Arrays.asList(options)));
 		} else {
 			co.values.addAll(Arrays.asList(options));
 		}
+		return this;
 	}
 	
-	public void add(Object... options) {
+	public Combinator add(Object... options) {
 		put(""+(annonymousAttributeCounter++), options);
+		return this;
 	}
 	
 //	@SuppressWarnings("unchecked")
@@ -125,7 +133,9 @@ public class Combinator {
 					declaredField.set(instance, value);
 				}
 			}
-			
+			if( instance instanceof CombinationAware) {
+				((CombinationAware)instance).setCombination(combination);
+			}
 			rc.add(instance);
 		}
 		Object[] t = new Object[rc.size()];
@@ -133,6 +143,90 @@ public class Combinator {
 		return t;
 	}
 
+	public <T> Object[][] combinationsAsParameterArgBeans(Class<T> clazz) throws Exception {
+		Object[] x = combinationsAsBeans(clazz);
+		Object[][]rc = new Object[x.length][];
+		for (int i = 0; i < rc.length; i++) {
+			rc[i] = new Object[] {x[i]};
+		}
+		return rc;
+	}
+	
+	public interface BeanFactory {
+		Object createBean() throws Exception;
+	}
+	
+	public interface CombinationAware {
+
+		void setCombination(Map<String, Object> combination);
+	}
+
+	
+	/**
+	 * Creates a bean for each combination of the type specified by clazz argument and uses setter/field 
+	 * injection to initialize the Bean with the combination values.
+	 * 
+	 * @param clazz
+	 * @return
+	 * @throws InstantiationException
+	 * @throws IllegalAccessException
+	 */
+	public Object[] combinationsAsBeans(BeanFactory factory) throws Exception {
+		List<Map<String, Object>> combinations = combinations();
+		List<Object> rc = new ArrayList<Object>(combinations.size());
+		
+		Class<? extends Object> clazz=null;
+		for (Map<String, Object> combination : combinations) {
+			Object instance = factory.createBean();
+			if( clazz == null ) {
+				clazz = instance.getClass();
+			}
+			for (Entry<String, Object> entry : combination.entrySet()) {
+				String key = entry.getKey();
+				Object value = entry.getValue();
+				try {
+					// Try setter injection..
+					Method method = clazz.getMethod("set"+ucfc(key), value.getClass());
+					method.invoke(instance, new Object[]{value});
+				} catch (Exception ignore) {
+					// Try property injection..
+					setField(clazz, instance, key, value);
+				}
+			}
+			
+			if( instance instanceof CombinationAware) {
+				((CombinationAware)instance).setCombination(combination);
+			}
+			rc.add(instance);
+		}
+		Object[] t = new Object[rc.size()];
+		rc.toArray(t);
+		return t;
+	}
+
+	private void setField(Class<? extends Object> clazz, Object instance, String key, Object value) throws NoSuchFieldException, IllegalAccessException {
+		while( clazz!= null ) {
+			try {
+				Field declaredField = clazz.getDeclaredField(key);
+				declaredField.setAccessible(true);
+				declaredField.set(instance, value);
+				return;
+			} catch (NoSuchFieldException e) {
+				// Field declaration may be in a parent class... keep looking.
+				clazz = clazz.getSuperclass();
+			}
+		}
+	}
+
+	public <T> Object[][] combinationsAsParameterArgBeans(BeanFactory factory) throws Exception {
+		Object[] x = combinationsAsBeans(factory);
+		Object[][]rc = new Object[x.length][];
+		for (int i = 0; i < rc.length; i++) {
+			rc[i] = new Object[] {x[i]};
+		}
+		return rc;
+	}	
+	
 	/**
 	 * Upper case the first character.
 	 * @param key
@@ -156,5 +250,6 @@ public class Combinator {
 		}
 		return rc;
 	}
+
 
 }

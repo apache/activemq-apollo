@@ -16,37 +16,44 @@
  */
 package org.apache.activemq.legacy.transport;
 
-import java.net.URI;
+import java.io.IOException;
 import java.net.URISyntaxException;
 
-import org.apache.activemq.apollo.broker.Broker;
-import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.openwire.BrokerTest;
-import org.apache.activemq.transport.Transport;
-import org.apache.activemq.transport.TransportFactory;
+import org.apache.activemq.openwire.BrokerTestScenario;
+import org.apache.activemq.transport.TransportServer;
 
 public abstract class TransportBrokerTestSupport extends BrokerTest {
 
-    protected Broker createBroker() throws Exception {
-    	Broker broker = BrokerFactory.createBroker(new URI("jaxb:classpath:non-persistent-activemq.xml"));
-    	broker.addTransportServer(TransportFactory.bind(new URI(getBindLocation())));
-        return broker;
-    }
-    
     protected abstract String getBindLocation();
-    protected String getConnectLocation() {
-    	return null;
-    }
 
+    /**
+     * Need to enhance the BrokerTestScenario a bit to inject the wire format
+     */
     @Override
-    protected Transport createTransport() throws URISyntaxException, Exception {
-        String connectLocation = getConnectLocation();
-        if( connectLocation==null ) {
-        	connectLocation = getBindLocation();
-        }
-        URI connectURI = new URI(connectLocation);
-        
-        return TransportFactory.connect(connectURI);    
+    public Object createBean() throws Exception {
+		BrokerTestScenario brokerTestScenario = new BrokerTestScenario() {
+			
+		    private TransportServer transnportServer;
+
+			@Override
+		    public TransportServer createTransnportServer() throws IOException, URISyntaxException {
+		    	transnportServer = super.createTransnportServer();
+				return transnportServer;
+		    }
+		    
+			@Override
+		    public String getConnectURI() {
+		    	return transnportServer.getConnectURI().toString();
+		    }
+
+			@Override
+			public String getBindURI() {
+				return getBindLocation();
+			}
+		    
+		};
+		return brokerTestScenario;
     }
 
 }

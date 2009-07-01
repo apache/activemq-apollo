@@ -42,82 +42,82 @@ public class SslBrokerServiceTest extends TransportBrokerTestSupport {
         return "ssl://localhost:0";
     }
     
-    @Override
-    protected Broker createBroker() throws Exception {
-    	Broker broker = BrokerFactory.createBroker(new URI("jaxb:classpath:non-persistent-activemq.xml"));
-    	broker.addTransportServer(TransportFactory.bind(new URI(getBindLocation())));
-        
-// TODO:    	
-//        KeyManager[] km = getKeyManager();
-//        TrustManager[] tm = getTrustManager();
-//        connector = service.addSslConnector(getBindLocation(), km, tm, null);
+//    @Override
+//    protected Broker createBroker() throws Exception {
+//    	Broker broker = BrokerFactory.createBroker(new URI("jaxb:classpath:non-persistent-activemq.xml"));
+//    	broker.addTransportServer(TransportFactory.bind(new URI(getBindLocation())));
 //        
-//        // for client side
-//        SslTransportFactory sslFactory = new SslTransportFactory();
-//        sslFactory.setKeyAndTrustManagers(km, tm, null);
-//        TransportFactory.registerTransportFactory("ssl", sslFactory);
-        
-        return broker;
-    }
-    
-
-    private TrustManager[] getTrustManager() throws Exception {
-        TrustManager[] trustStoreManagers = null;
-        KeyStore trustedCertStore = KeyStore.getInstance(SslTransportBrokerTest.KEYSTORE_TYPE);
-        
-        trustedCertStore.load(new FileInputStream(SslTransportBrokerTest.TRUST_KEYSTORE), null);
-        TrustManagerFactory tmf  = 
-            TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-  
-        tmf.init(trustedCertStore);
-        trustStoreManagers = tmf.getTrustManagers();
-        return trustStoreManagers; 
-    }
-
-    private KeyManager[] getKeyManager() throws Exception {
-        KeyManagerFactory kmf = 
-            KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());  
-        KeyStore ks = KeyStore.getInstance(SslTransportBrokerTest.KEYSTORE_TYPE);
-        KeyManager[] keystoreManagers = null;
-        
-        byte[] sslCert = loadClientCredential(SslTransportBrokerTest.SERVER_KEYSTORE);
-        
-       
-        if (sslCert != null && sslCert.length > 0) {
-            ByteArrayInputStream bin = new ByteArrayInputStream(sslCert);
-            ks.load(bin, SslTransportBrokerTest.PASSWORD.toCharArray());
-            kmf.init(ks, SslTransportBrokerTest.PASSWORD.toCharArray());
-            keystoreManagers = kmf.getKeyManagers();
-        }
-        return keystoreManagers;          
-    }
-
-    private static byte[] loadClientCredential(String fileName) throws IOException {
-        if (fileName == null) {
-            return null;
-        }
-        FileInputStream in = new FileInputStream(fileName);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        byte[] buf = new byte[512];
-        int i = in.read(buf);
-        while (i  > 0) {
-            out.write(buf, 0, i);
-            i = in.read(buf);
-        }
-        in.close();
-        return out.toByteArray();
-    }
-
-    protected void setUp() throws Exception {
-        maxWait = 10000;
-        super.setUp();
-    }
-
-    public static Test suite() {
-        return suite(SslBrokerServiceTest.class);
-    }
-
-    public static void main(String[] args) {
-        TestRunner.run(suite());
-    }
+//// TODO:    	
+////        KeyManager[] km = getKeyManager();
+////        TrustManager[] tm = getTrustManager();
+////        connector = service.addSslConnector(getBindLocation(), km, tm, null);
+////        
+////        // for client side
+////        SslTransportFactory sslFactory = new SslTransportFactory();
+////        sslFactory.setKeyAndTrustManagers(km, tm, null);
+////        TransportFactory.registerTransportFactory("ssl", sslFactory);
+//        
+//        return broker;
+//    }
+//    
+//
+//    private TrustManager[] getTrustManager() throws Exception {
+//        TrustManager[] trustStoreManagers = null;
+//        KeyStore trustedCertStore = KeyStore.getInstance(SslTransportBrokerTest.KEYSTORE_TYPE);
+//        
+//        trustedCertStore.load(new FileInputStream(SslTransportBrokerTest.TRUST_KEYSTORE), null);
+//        TrustManagerFactory tmf  = 
+//            TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+//  
+//        tmf.init(trustedCertStore);
+//        trustStoreManagers = tmf.getTrustManagers();
+//        return trustStoreManagers; 
+//    }
+//
+//    private KeyManager[] getKeyManager() throws Exception {
+//        KeyManagerFactory kmf = 
+//            KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());  
+//        KeyStore ks = KeyStore.getInstance(SslTransportBrokerTest.KEYSTORE_TYPE);
+//        KeyManager[] keystoreManagers = null;
+//        
+//        byte[] sslCert = loadClientCredential(SslTransportBrokerTest.SERVER_KEYSTORE);
+//        
+//       
+//        if (sslCert != null && sslCert.length > 0) {
+//            ByteArrayInputStream bin = new ByteArrayInputStream(sslCert);
+//            ks.load(bin, SslTransportBrokerTest.PASSWORD.toCharArray());
+//            kmf.init(ks, SslTransportBrokerTest.PASSWORD.toCharArray());
+//            keystoreManagers = kmf.getKeyManagers();
+//        }
+//        return keystoreManagers;          
+//    }
+//
+//    private static byte[] loadClientCredential(String fileName) throws IOException {
+//        if (fileName == null) {
+//            return null;
+//        }
+//        FileInputStream in = new FileInputStream(fileName);
+//        ByteArrayOutputStream out = new ByteArrayOutputStream();
+//        byte[] buf = new byte[512];
+//        int i = in.read(buf);
+//        while (i  > 0) {
+//            out.write(buf, 0, i);
+//            i = in.read(buf);
+//        }
+//        in.close();
+//        return out.toByteArray();
+//    }
+//
+//    protected void setUp() throws Exception {
+//        maxWait = 10000;
+//        super.setUp();
+//    }
+//
+//    public static Test suite() {
+//        return suite(SslBrokerServiceTest.class);
+//    }
+//
+//    public static void main(String[] args) {
+//        TestRunner.run(suite());
+//    }
 }

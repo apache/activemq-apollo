@@ -21,6 +21,7 @@ import java.net.URISyntaxException;
 
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.broker.store.Store;
+import org.apache.activemq.openwire.BrokerTestSupport;
 
 public class BrokerRestartTestSupport extends BrokerTestSupport {
 

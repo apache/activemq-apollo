@@ -67,10 +67,20 @@ public class VirtualHost implements Service {
         return hostNames;
     }
 
+    public void setHostNames(String... hostNames) {
+        this.hostNames.clear();
+        for (String name : hostNames) {
+			addHostName(name);
+		}
+    }
+
     public void setHostNames(List<AsciiBuffer> hostNames) {
         this.hostNames = new ArrayList<AsciiBuffer>(hostNames);
     }
 
+    public void addHostName(String hostName) {
+        this.hostNames.add(new AsciiBuffer(hostName));
+    }
     public void addHostName(AsciiBuffer hostName) {
         this.hostNames.add(hostName);
     }

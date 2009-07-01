@@ -27,6 +27,7 @@ import org.apache.activemq.command.Message;
 import org.apache.activemq.command.ProducerInfo;
 import org.apache.activemq.command.RemoveInfo;
 import org.apache.activemq.command.SessionInfo;
+import org.apache.activemq.openwire.BrokerTestSupport;
 
 public class AdvisoryBrokerTest extends BrokerTestSupport {
      

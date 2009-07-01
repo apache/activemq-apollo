@@ -23,6 +23,7 @@ import org.apache.activemq.command.ConnectionInfo;
 import org.apache.activemq.command.ConsumerId;
 import org.apache.activemq.command.ConsumerInfo;
 import org.apache.activemq.command.SessionId;
+import org.apache.activemq.openwire.BrokerTestSupport;
 
 public class ConcurrentConnectSimulationTest extends BrokerTestSupport {
 

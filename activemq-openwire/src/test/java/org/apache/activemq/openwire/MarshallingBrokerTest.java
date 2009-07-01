@@ -16,46 +16,50 @@
  */
 package org.apache.activemq.openwire;
 
-import java.net.URI;
-
-import junit.framework.Test;
-
-import org.apache.activemq.legacy.openwireprotocol.StubConnection;
-import org.apache.activemq.openwire.OpenWireFormat;
-import org.apache.activemq.transport.TransportFactory;
-import org.apache.activemq.wireformat.WireFormat;
+import org.apache.activemq.apollo.Combinator;
+import org.testng.annotations.Test;
 
 /**
  * Runs against the broker but marshals all request and response commands.
  * 
  * @version $Revision$
  */
+@Test(enabled=false)
 public class MarshallingBrokerTest extends BrokerTest {
 
-    public WireFormat wireFormat = new OpenWireFormat();
 
-    public void initCombos() {
-
-        OpenWireFormat wf1 = new OpenWireFormat();
-        wf1.setCacheEnabled(false);
-        OpenWireFormat wf2 = new OpenWireFormat();
-        wf2.setCacheEnabled(true);
-
-        addCombinationValues("wireFormat", new Object[] {wf1, wf2});
-    }
-
-    
+    /**
+     * Makes all the tests run with the OpenWireFormat in both cached and non-cached mode. 
+     */
     @Override
-    protected String getBindURI() {
-        return PIPE_URI+"?marshal=true";
-    }
+    public Combinator combinator() {
+    	Combinator combinator = super.combinator();
 
-    public static Test suite() {
-        return suite(MarshallingBrokerTest.class);
+        OpenWireFormatFactory wf1 = new OpenWireFormatFactory();
+        wf1.setCacheEnabled(false);
+        OpenWireFormatFactory wf2 = new OpenWireFormatFactory();
+        wf2.setCacheEnabled(true);
+        combinator.put("wireFormat", wf1, wf2);
+        
+		return combinator;
     }
-
-    public static void main(String[] args) {
-        junit.textui.TestRunner.run(suite());
+    
+    /**
+     * Need to enhance the BrokerTestScenario a bit to inject the wire format
+     */
+    @Override
+    public Object createBean() throws Exception {
+		return new BrokerTestScenario() {
+			
+			// TODO: need to figure out a way to inject this guy into 
+			// the transport and transport server...
+		    public OpenWireFormatFactory wireFormat = new OpenWireFormatFactory();
+		    
+		    @Override
+		    public String getBindURI() {
+		        return PIPE_URI+"?marshal=true";
+		    }
+		};
     }
 
 }

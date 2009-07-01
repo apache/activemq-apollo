@@ -16,23 +16,14 @@
  */
 package org.apache.activemq.legacy.transport.nio;
 
-import junit.framework.Test;
-import junit.textui.TestRunner;
-
 import org.apache.activemq.legacy.transport.TransportBrokerTestSupport;
+import org.testng.annotations.Test;
 
+@Test
 public class NIOTransportBrokerTest extends TransportBrokerTestSupport {
 
     protected String getBindLocation() {
-        return "nio://localhost:61616";
-    }
-
-    public static Test suite() {
-        return suite(NIOTransportBrokerTest.class);
-    }
-
-    public static void main(String[] args) {
-        TestRunner.run(suite());
+        return "nio://localhost:0";
     }
 
 }
