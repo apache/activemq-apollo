@@ -228,7 +228,19 @@
               </exclusion>
             </exclusions>
           </dependency>
+          <!--
+          Specifying the dependency on tools.jar appears to be required for non OS-X. 
+          Should remove if future versions of mvn fix this
+          -->
+          <dependency>
+			  <groupId>com.sun</groupId>
+			  <artifactId>tools</artifactId>
+			  <version>1.5.0</version>
+			  <scope>system</scope>
+			  <systemPath>${java.home}/../lib/tools.jar</systemPath>
+		  </dependency>
         </dependencies>
+        
       </plugin>
 
     </plugins>
