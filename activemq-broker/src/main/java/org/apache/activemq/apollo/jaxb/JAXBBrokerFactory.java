@@ -23,6 +23,8 @@ import java.net.URL;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.UnmarshalException;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamReader;
 
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
@@ -47,8 +49,11 @@ public class JAXBBrokerFactory implements BrokerFactory.Handler {
 		if (configURL == null) {
 			throw new IOException("Cannot create broker from non-existent URI: " + brokerURI);
 		}
+		XMLInputFactory factory = XMLInputFactory.newInstance();
+		XMLStreamReader reader = factory.createXMLStreamReader(configURL.openStream());
+		XMLStreamReader properties = new PropertiesReader(reader);
 		try {
-			BrokerXml xml = (BrokerXml) unmarshaller.unmarshal(configURL);
+			BrokerXml xml = (BrokerXml) unmarshaller.unmarshal(properties);
 			return xml.createMessageBroker();
 		} catch (UnmarshalException e) {
 			throw new IOException("Cannot create broker from URI: " + brokerURI + ", reason: " + e.getCause());

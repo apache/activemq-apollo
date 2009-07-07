@@ -109,6 +109,11 @@
       <scope>test</scope>
     </dependency>
 
+   <dependency>
+    <groupId>org.codehaus.woodstox</groupId>
+    <artifactId>wstx-asl</artifactId>
+    <version>4.0.0</version>
+   </dependency>
   </dependencies>
 
   <build>
@@ -263,7 +268,7 @@
         </dependency>
       </dependencies>
     </profile>
-    <profile>
+   <profile>
       <id>default-tools.jar</id>
       <activation>
         <jdk>1.5</jdk>

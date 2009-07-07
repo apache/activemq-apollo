@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 
+import junit.framework.TestCase;
+
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.broker.store.memory.MemoryStore;
@@ -30,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-public class JAXBConfigTest {
+public class JAXBConfigTest extends TestCase {
 
     private static final Log LOG = LogFactory.getLog(JAXBConfigTest.class);
 	

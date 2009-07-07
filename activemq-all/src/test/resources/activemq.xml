@@ -25,7 +25,7 @@
     <host-name>localhost</host-name>
     <host-name>test.localhost</host-name>
     
-    <kahadb-store/>
+    <kahadb-store directory="${user.dir}/target/${user.name}/${x}/activemq-data"/>
   </virtual-host>
 
 </broker>

@@ -50,6 +50,7 @@ public class JAXBComplexConfigTest extends TestCase {
 		assertNotNull(broker);
 		assertEquals("tcp://localhost:61616?wireFormat=openwire", broker.getTransportServers().get(0).getConnectURI().toString());
 		KahaDBStore store = (KahaDBStore)broker.getDefaultVirtualHost().getDatabase().getStore();
+		assertEquals(System.getProperty("user.dir") + "/target/" + System.getProperty("user.name") + "/${x}/activemq-data", store.getDirectory().getPath());
 	}
 
     protected Broker createBroker() throws Exception {
