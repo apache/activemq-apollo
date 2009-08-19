@@ -210,6 +210,7 @@
             </goals>
           </execution>
         </executions>
+        
         <dependencies>
           <dependency>
             <groupId>com.sun.xml.bind</groupId>
@@ -233,19 +234,7 @@
               </exclusion>
             </exclusions>
           </dependency>
-          <!--
-          Specifying the dependency on tools.jar appears to be required for non OS-X. 
-          Should remove if future versions of mvn fix this
-          -->
-          <dependency>
-			  <groupId>com.sun</groupId>
-			  <artifactId>tools</artifactId>
-			  <version>1.5.0</version>
-			  <scope>system</scope>
-			  <systemPath>${java.home}/../lib/tools.jar</systemPath>
-		  </dependency>
         </dependencies>
-        
       </plugin>
 
     </plugins>
@@ -268,24 +257,35 @@
         </dependency>
       </dependencies>
     </profile>
+    
    <profile>
-      <id>default-tools.jar</id>
+      <id>ibmjdk</id>
       <activation>
-        <jdk>1.5</jdk>
-        <property>
-          <name>java.vendor</name>
-          <value>Sun Microsystems Inc.</value>
-        </property>
+        <file>
+          <exists>${java.home}/../lib/tools.jar</exists>
+        </file>
       </activation>
-      <dependencies>
-        <dependency>
-          <groupId>com.sun</groupId>
-          <artifactId>tools</artifactId>
-          <version>1.5.0</version>
-          <scope>system</scope>
-          <systemPath>${java.home}/../lib/tools.jar</systemPath>
-        </dependency>
-      </dependencies>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-antrun-plugin</artifactId>
+              <dependencies>
+                <dependency>
+                  <groupId>com.sun</groupId>
+                  <artifactId>tools</artifactId>
+                  <!--the real JDK version could be 1.5 or 1.6-->
+                  <version>1.5.0</version>
+                  <scope>system</scope>
+                  <optional>true</optional>
+                  <systemPath>${java.home}/../lib/tools.jar</systemPath>
+                </dependency>
+              </dependencies>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
     </profile>
   </profiles>
 
