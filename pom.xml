@@ -118,6 +118,7 @@
   <modules>
     <module>activemq-bio</module>
     <module>activemq-broker</module>
+    <module>activemq-jaxb</module>
     <module>activemq-dispatcher</module>
     <module>activemq-flow</module>
     <module>activemq-kaha</module>
@@ -183,6 +184,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-jaxb</artifactId>
+        <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-network</artifactId>
         <version>${activemq-version}</version>
       </dependency>
@@ -240,6 +246,13 @@
         <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-transport</artifactId>
         <version>${activemq-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-transport</artifactId>
+        <version>${activemq-version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.activemq</groupId>

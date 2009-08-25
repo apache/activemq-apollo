@@ -25,11 +25,11 @@
   </parent>
 
   <groupId>org.apache.activemq</groupId>
-  <artifactId>activemq-broker</artifactId>
+  <artifactId>activemq-jaxb</artifactId>
   <packaging>jar</packaging>
   <version>6.0-SNAPSHOT</version>
 
-  <name>ActiveMQ :: Broker</name>
+  <name>ActiveMQ :: JAXB</name>
   
   <repositories>
     <repository>
@@ -60,35 +60,20 @@
   
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-transport</artifactId>
+      <artifactId>activemq-broker</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-store</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-selector</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-kaha</artifactId>
-    </dependency>
-    
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-context</artifactId>
       <optional>true</optional>
     </dependency>
-    
+    <dependency>
+      <groupId>org.codehaus.woodstox</groupId>
+      <artifactId>wstx-asl</artifactId>
+      <version>4.0.0</version>
+    </dependency>
 
     <!-- Testing Dependencies -->    
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-transport</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -106,11 +91,6 @@
       <scope>test</scope>
     </dependency>
 
-   <dependency>
-    <groupId>org.codehaus.woodstox</groupId>
-    <artifactId>wstx-asl</artifactId>
-    <version>4.0.0</version>
-   </dependency>
   </dependencies>
 
   <build>
@@ -132,18 +112,6 @@
     </resources>
       
     <plugins>
-
-      <!-- Generate a test jar for the test cases in this package -->
-      <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>test-jar</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
 
 <!--
 
@@ -179,8 +147,6 @@
         </executions>
       </plugin>  
 -->
-      
-      
        <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>

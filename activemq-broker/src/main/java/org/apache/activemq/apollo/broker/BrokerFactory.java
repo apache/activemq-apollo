@@ -58,7 +58,7 @@ public final class BrokerFactory {
      * 
      * @param brokerURI the URI scheme to configure the broker
      * @param startBroker whether or not the broker should have its
-     *                {@link BrokerService#start()} method called after
+     *                {@link Broker#start()} method called after
      *                construction
      * @throws Exception
      */
@@ -89,7 +89,7 @@ public final class BrokerFactory {
      * 
      * @param brokerURI the URI scheme to configure the broker
      * @param startBroker whether or not the broker should have its
-     *                {@link BrokerService#start()} method called after
+     *                {@link Broker#start()} method called after
      *                construction
      * @throws Exception
      */
