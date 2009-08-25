@@ -35,7 +35,7 @@ import org.apache.activemq.wireformat.WireFormatFactory;
 
 /**
  * Implements marshalling and unmarsalling the <a
- * href="http://stomp.codehaus.org/">Stomp</a> protocol.
+ * href="http://activemq.apache.org/stomp/">Stomp</a> protocol.
  */
 public class StompWireFormat implements WireFormat {
 

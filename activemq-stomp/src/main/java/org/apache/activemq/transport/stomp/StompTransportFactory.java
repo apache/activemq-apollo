@@ -18,30 +18,28 @@ package org.apache.activemq.transport.stomp;
 
 import java.util.Map;
 
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.activemq.legacy.broker.BrokerServiceAware;
-import org.apache.activemq.legacy.xbean.XBeanBrokerService;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.tcp.TcpTransportFactory;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.wireformat.WireFormat;
-import org.springframework.context.ApplicationContext;
+import org.apache.activemq.apollo.broker.BrokerAware;
+import org.apache.activemq.apollo.broker.Broker;
 
 /**
- * A <a href="http://stomp.codehaus.org/">STOMP</a> transport factory
+ * A <a href="http://activemq.apache.org/stomp/">STOMP</a> transport factory
  * 
  * @version $Revision: 1.1.1.1 $
  */
-public class StompTransportFactory extends TcpTransportFactory implements BrokerServiceAware {
+public class StompTransportFactory extends TcpTransportFactory implements BrokerAware {
 
-	private ApplicationContext applicationContext = null;
-	
+    private Broker broker;
+
     protected String getDefaultWireFormatType() {
         return "stomp";
     }
 
     public Transport compositeConfigure(Transport transport, WireFormat format, Map options) {
-        transport = new StompTransportFilter(transport, new LegacyFrameTranslator(), applicationContext);
+        transport = new StompTransportFilter(transport, new LegacyFrameTranslator(), broker);
         IntrospectionSupport.setProperties(transport, options);
         return super.compositeConfigure(transport, format, options);
     }
@@ -52,9 +50,7 @@ public class StompTransportFactory extends TcpTransportFactory implements Broker
         return false;
     }
 
-	public void setBrokerService(BrokerService brokerService) {
-		if (brokerService instanceof XBeanBrokerService) {
-			this.applicationContext = ((XBeanBrokerService)brokerService).getApplicationContext();
-		}
-	}
+    public void setBroker(Broker broker) {
+        this.broker = broker;
+    }
 }

@@ -214,6 +214,13 @@
       </dependency>
       <dependency>
         <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-broker</artifactId>
+        <version>${activemq-version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
         <artifactId>activemq-dispatcher</artifactId>
         <version>${activemq-version}</version>
       </dependency>

@@ -21,7 +21,7 @@ import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 
 /**
- * Creates WireFormat objects that marshalls the <a href="http://stomp.codehaus.org/">Stomp</a> protocol.
+ * Creates WireFormat objects that marshalls the <a href="http://activemq.apache.org/stomp/">Stomp</a> protocol.
  */
 public class StompWireFormatFactory implements WireFormatFactory {
     public WireFormat createWireFormat() {

@@ -58,8 +58,8 @@ import org.apache.activemq.util.IdGenerator;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.LongSequenceGenerator;
 import org.apache.activemq.util.buffer.ByteArrayOutputStream;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.broker.BrokerAware;
 
 /**
  * @author <a href="http://hiramchirino.com">chirino</a>
@@ -89,12 +89,12 @@ public class ProtocolConverter {
     private final AtomicBoolean connected = new AtomicBoolean(false);
     private final FrameTranslator frameTranslator;
     private final FactoryFinder FRAME_TRANSLATOR_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/transport/frametranslator/");
-    private final ApplicationContext applicationContext;
+    private final Broker broker;
 
-    public ProtocolConverter(StompTransportFilter stompTransportFilter, FrameTranslator translator, ApplicationContext applicationContext) {
+    public ProtocolConverter(StompTransportFilter stompTransportFilter, FrameTranslator translator, Broker broker) {
         this.transportFilter = stompTransportFilter;
         this.frameTranslator = translator;
-        this.applicationContext = applicationContext;
+        this.broker = broker;
     }
 
     protected int generateCommandId() {
@@ -145,8 +145,8 @@ public class ProtocolConverter {
 			if (header != null) {
 				translator = (FrameTranslator) FRAME_TRANSLATOR_FINDER
 						.newInstance(header);
-				if (translator instanceof ApplicationContextAware) {
-					((ApplicationContextAware)translator).setApplicationContext(applicationContext);
+				if (translator instanceof BrokerAware) {
+					((BrokerAware)translator).setBroker(broker);
 				}
 			}
 		} catch (Exception ignore) {

@@ -14,20 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.legacy.xbean;
-
-import org.apache.activemq.legacy.broker.BrokerService;
-import org.springframework.context.ApplicationContext;
+package org.apache.activemq.apollo.broker;
 
 /**
- * @deprecated The entire 'org.apache.activemq.legacy' package will hopefully go away soon.
+ * Marker interface for objects which would like to get injected with the
+ * broker instance.
  */
-@Deprecated
-public class XBeanBrokerService extends BrokerService {
+public interface BrokerAware {
 
-    public ApplicationContext getApplicationContext() {
-        // TODO Auto-generated method stub
-        return null;
-    }
+    /**
+     *
+     * @param broker the broker that the object is being associated with.
+     */
+    public void setBroker(Broker broker);
 
 }

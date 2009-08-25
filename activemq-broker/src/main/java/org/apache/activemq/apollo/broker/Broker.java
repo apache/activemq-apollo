@@ -53,7 +53,7 @@ public class Broker implements Service {
     private VirtualHost defaultVirtualHost;
     private IDispatcher dispatcher;
     private File dataDirectory;
-    
+
     private final class BrokerAcceptListener implements TransportAcceptListener {
 		public void onAccept(final Transport transport) {
 		    BrokerConnection connection = new BrokerConnection();
@@ -333,7 +333,46 @@ public class Broker implements Service {
             return new ArrayList<VirtualHost>(virtualHosts.values());
         }
     }
-    
+
+    // /////////////////////////////////////////////////////////////////
+    // Bean registry related methods to support more easily configuring
+    // broker extensions.
+    // /////////////////////////////////////////////////////////////////
+
+
+    /**
+     * Puts a bean into the registry.
+     *
+     * @param  name the name of the bean
+     * @param  value the bean value
+     * @return the previous bean registered with the name or null
+     *         if none was previously registered
+     */
+    public Object putBean(String name, Object value) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Gets a listing of all the registered bean names which
+     * implement the specified class.
+     *
+     * @param clazz
+     * @return
+     */
+    public String[] getBeanNamesForType(Class<?> clazz) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Gets a bean instance that has been registered.
+     * @param name
+     * @param <T>
+     * @return
+     */
+    public <T> T getBean(String name) {
+        throw new UnsupportedOperationException();
+    }
+
     // /////////////////////////////////////////////////////////////////
     // Property Accessors
     // /////////////////////////////////////////////////////////////////
@@ -409,5 +448,7 @@ public class Broker implements Service {
 			Thread.sleep(500);
 		}
 	}
-   
+
+
+
 }

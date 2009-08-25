@@ -17,7 +17,6 @@
 
 package org.apache.activemq.legacy.bugs.amq1095;
 
-import java.io.File;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.LinkedList;

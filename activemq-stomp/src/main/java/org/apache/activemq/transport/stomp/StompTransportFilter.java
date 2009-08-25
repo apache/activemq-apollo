@@ -25,9 +25,9 @@ import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFilter;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.util.IOExceptionSupport;
+import org.apache.activemq.apollo.broker.Broker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.springframework.context.ApplicationContext;
 
 /**
  * The StompTransportFilter normally sits on top of a TcpTransport that has been
@@ -44,10 +44,10 @@ public class StompTransportFilter extends TransportFilter {
 
     private boolean trace;
 
-    public StompTransportFilter(Transport next, FrameTranslator translator, ApplicationContext applicationContext) {
+    public StompTransportFilter(Transport next, FrameTranslator translator, Broker broker) {
         super(next);
         this.frameTranslator = translator;
-        this.protocolConverter = new ProtocolConverter(this, translator, applicationContext);
+        this.protocolConverter = new ProtocolConverter(this, translator, broker);
     }
 
     public void oneway(Object o) throws IOException {

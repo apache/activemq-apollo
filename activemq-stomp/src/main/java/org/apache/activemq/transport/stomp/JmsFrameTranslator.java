@@ -28,9 +28,8 @@ import javax.jms.JMSException;
 import org.apache.activemq.command.ActiveMQMapMessage;
 import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.activemq.command.ActiveMQObjectMessage;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
+import org.apache.activemq.apollo.broker.BrokerAware;
+import org.apache.activemq.apollo.broker.Broker;
 
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.HierarchicalStreamReader;
@@ -46,12 +45,12 @@ import com.thoughtworks.xstream.io.xml.XppReader;
  * @author <a href="mailto:dejan@nighttale.net">Dejan Bosanac</a>
  */
 public class JmsFrameTranslator extends LegacyFrameTranslator implements
-		ApplicationContextAware {
+        BrokerAware {
 
 	XStream xStream = null;
-	ApplicationContext applicationContext;
+	Broker broker;
 
-	public ActiveMQMessage convertFrame(ProtocolConverter converter,
+    public ActiveMQMessage convertFrame(ProtocolConverter converter,
 			StompFrame command) throws JMSException, ProtocolException {
 		Map headers = command.getHeaders();
 		ActiveMQMessage msg;
@@ -177,12 +176,11 @@ public class JmsFrameTranslator extends LegacyFrameTranslator implements
 	// -------------------------------------------------------------------------
 	protected XStream createXStream() {
 		XStream xstream = null;
-		if (applicationContext != null) {
-			String[] names = applicationContext
-					.getBeanNamesForType(XStream.class);
+		if (broker != null) {
+			String[] names = broker.getBeanNamesForType(XStream.class);
 			for (int i = 0; i < names.length; i++) {
 				String name = names[i];
-				xstream = (XStream) applicationContext.getBean(name);
+				xstream = (XStream) broker.getBean(name);
 				if (xstream != null) {
 					break;
 				}
@@ -196,9 +194,7 @@ public class JmsFrameTranslator extends LegacyFrameTranslator implements
 
 	}
 
-	public void setApplicationContext(ApplicationContext applicationContext)
-			throws BeansException {
-		this.applicationContext = applicationContext;
-	}
-
+    public void setBroker(Broker broker) {
+        this.broker = broker;
+    }
 }
