@@ -17,6 +17,8 @@
 
 package org.apache.activemq.util.buffer;
 
+import com.sun.org.apache.bcel.internal.util.ByteSequence;
+
 import java.util.List;
 
 
@@ -154,6 +156,25 @@ public class Buffer implements Comparable<Buffer> {
             }
         }
         return -1;
+    }
+
+    public int indexOf(Buffer needle, int pos) {
+        int max = length - needle.length;
+        for (int i = pos; i < max; i++) {
+            if (matches(needle, i)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private boolean matches(Buffer needle, int pos) {
+        for (int i = 0; i < needle.length; i++) {
+            if( data[offset + pos+ i] != needle.data[needle.offset + i] ) {
+                return false;
+            }
+        }
+        return true;
     }
 
     final public static Buffer join(List<Buffer> items, Buffer seperator) {

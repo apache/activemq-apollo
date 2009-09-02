@@ -50,22 +50,30 @@ public class LockFile {
             return;
         }
 
-        lockCounter++;
-        if( lockCounter!=1 ) {
+        if( lockCounter>0 ) {
             return;
         }
         
         IOHelper.mkdirs(file.getParentFile());
-        readFile = new RandomAccessFile(file, "rw");        
         if (lock == null) {
+            readFile = new RandomAccessFile(file, "rw");
+            IOException reason = null;
             try {
                 lock = readFile.getChannel().tryLock();
             } catch (OverlappingFileLockException e) {
-                throw IOExceptionSupport.create("File '" + file + "' could not be locked.",e);
+                reason = IOExceptionSupport.create("File '" + file + "' could not be locked.",e);
             }
-            if (lock == null) {
+            if (lock != null) {
+                lockCounter++;
+            } else {
+                // new read file for next attempt
+                closeReadFile();
+                if (reason != null) {
+                    throw reason;
+                }
                 throw new IOException("File '" + file + "' could not be locked.");
             }
+              
         }
     }
 
@@ -89,6 +97,14 @@ public class LockFile {
             }
             lock = null;
         }
+        closeReadFile();
+        
+        if( deleteOnUnlock ) {
+            file.delete();
+        }
+    }
+
+    private void closeReadFile() {
         // close the file.
         if (readFile != null) {
             try {
@@ -98,9 +114,6 @@ public class LockFile {
             readFile = null;
         }
         
-        if( deleteOnUnlock ) {
-            file.delete();
-        }
     }
 
 }
