@@ -17,7 +17,6 @@
 package org.apache.activemq.transaction;
 
 /**
- * @version $Revision$
  */
 public class Synchronization {
 

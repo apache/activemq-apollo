@@ -21,7 +21,6 @@ import org.apache.activemq.state.CommandVisitor;
 /**
  * 
  * @openwire:marshaller code="16"
- * @version $Revision$
  */
 public class ConnectionError extends BaseCommand {
 

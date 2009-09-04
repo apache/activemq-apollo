@@ -35,7 +35,6 @@ import org.apache.activemq.util.list.LinkedNodeList;
  * safe and gains throughput as you increase the number of concurrent writes it
  * does.
  * 
- * @version $Revision$
  */
 class DataFileAppender {
 

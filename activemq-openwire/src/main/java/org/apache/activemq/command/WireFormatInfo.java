@@ -33,7 +33,6 @@ import org.apache.activemq.wireformat.WireFormat;
 
 /**
  * @openwire:marshaller code="1"
- * @version $Revision$
  */
 public class WireFormatInfo implements Command, MarshallAware {
 

@@ -22,7 +22,6 @@ import org.apache.activemq.command.ConsumerInfo;
 /**
  * An event when a new consumer has started.
  * 
- * @version $Revision: 564271 $
  */
 public class ConsumerStartedEvent extends ConsumerEvent {
 

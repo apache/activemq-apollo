@@ -26,7 +26,6 @@ import javax.jms.Session;
  * A plugin strategy for transforming a message before it is sent by the JMS client or before it is
  * dispatched to the JMS consumer
  *
- * @version $Revision: 564271 $
  */
 public interface MessageTransformer {
 

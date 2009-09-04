@@ -23,7 +23,6 @@ import java.io.IOException;
 /**
  * A Page within a file.
  * 
- * @version $Revision$
  */
 public class Page<T> {
 

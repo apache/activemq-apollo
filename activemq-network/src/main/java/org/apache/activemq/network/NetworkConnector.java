@@ -43,7 +43,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * @version $Revision$
  */
 public abstract class NetworkConnector extends NetworkBridgeConfiguration implements Service {
 

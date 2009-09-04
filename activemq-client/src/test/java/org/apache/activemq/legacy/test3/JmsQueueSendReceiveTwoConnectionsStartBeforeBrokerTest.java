@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * @version $Revision$
  */
 public class JmsQueueSendReceiveTwoConnectionsStartBeforeBrokerTest extends JmsQueueSendReceiveTwoConnectionsTest {
     private static final Log LOG = LogFactory.getLog(JmsQueueSendReceiveTwoConnectionsStartBeforeBrokerTest.class);

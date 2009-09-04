@@ -26,7 +26,6 @@ import org.apache.commons.logging.LogFactory;
 
 /**
  * 
- * @version $Revision$
  */
 public class ReconnectWithSameClientIDTest extends EmbeddedBrokerTestSupport {
     private static final Log LOG = LogFactory.getLog(ReconnectWithSameClientIDTest.class);

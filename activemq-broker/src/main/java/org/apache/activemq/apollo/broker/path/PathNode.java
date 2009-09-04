@@ -25,7 +25,6 @@ import org.apache.activemq.util.buffer.AsciiBuffer;
 /**
  * Represents a node in the {@link PathMap} tree
  *
- * @version $Revision: 563921 $
  */
 public interface PathNode<Value> {
     void appendMatchingValues(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex);

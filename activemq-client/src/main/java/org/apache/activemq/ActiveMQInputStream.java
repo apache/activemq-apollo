@@ -41,7 +41,6 @@ import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.JMSExceptionSupport;
 
 /**
- * @version $Revision$
  */
 public class ActiveMQInputStream extends InputStream implements ActiveMQDispatcher {
 

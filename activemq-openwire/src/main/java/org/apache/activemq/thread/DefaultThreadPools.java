@@ -22,7 +22,6 @@ import java.util.concurrent.ThreadFactory;
 
 /**
  * 
- * @version $Revision$
  */
 public final class DefaultThreadPools {
 

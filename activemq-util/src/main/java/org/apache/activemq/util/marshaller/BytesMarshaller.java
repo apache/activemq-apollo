@@ -23,7 +23,6 @@ import java.io.IOException;
 /**
  * Implementation of a Marshaller for byte arrays
  * 
- * @version $Revision$
  */
 public class BytesMarshaller implements Marshaller<byte[]> {
 

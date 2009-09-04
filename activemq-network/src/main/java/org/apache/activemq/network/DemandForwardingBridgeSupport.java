@@ -83,7 +83,6 @@ import org.apache.commons.logging.LogFactory;
 /**
  * A useful base class for implementing demand forwarding bridges.
  * 
- * @version $Revision: 777821 $
  */
 public abstract class DemandForwardingBridgeSupport implements NetworkBridge, BrokerServiceAware {
     

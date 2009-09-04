@@ -19,7 +19,6 @@ package org.apache.activemq.advisory;
 /**
  * Listen to the changes in destinations being created or destroyed
  *
- * @version $Revision: 634277 $
  */
 public interface DestinationListener {
     void onDestinationEvent(DestinationEvent event);

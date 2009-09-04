@@ -25,7 +25,6 @@ import org.apache.activemq.Service;
  * 
  * We typically use a discovery agent to auto-discover JMS clients and JMS brokers on a network
  *
- * @version $Revision$
  */
 public interface DiscoveryAgent extends Service {
 

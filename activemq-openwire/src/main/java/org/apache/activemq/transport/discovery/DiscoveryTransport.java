@@ -30,7 +30,6 @@ import org.apache.commons.logging.LogFactory;
  * A {@link ReliableTransportChannel} which uses a {@link DiscoveryAgent} to
  * discover remote broker instances and dynamically connect to them.
  * 
- * @version $Revision$
  */
 public class DiscoveryTransport extends TransportFilter implements DiscoveryListener {
 

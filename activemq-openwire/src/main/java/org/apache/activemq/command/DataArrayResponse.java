@@ -18,7 +18,6 @@ package org.apache.activemq.command;
 
 /**
  * @openwire:marshaller code="33"
- * @version $Revision$
  */
 public class DataArrayResponse extends Response {
 

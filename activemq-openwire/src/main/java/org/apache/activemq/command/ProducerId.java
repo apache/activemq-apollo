@@ -18,7 +18,6 @@ package org.apache.activemq.command;
 
 /**
  * @openwire:marshaller code="123"
- * @version $Revision$
  */
 public class ProducerId implements DataStructure {
 

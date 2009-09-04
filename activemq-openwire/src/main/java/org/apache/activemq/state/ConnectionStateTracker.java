@@ -46,7 +46,6 @@ import org.apache.commons.logging.LogFactory;
  * Tracks the state of a connection so a newly established transport can be
  * re-initialized to the state that was tracked.
  * 
- * @version $Revision$
  */
 public class ConnectionStateTracker extends CommandVisitorAdapter {
     private static final Log LOG = LogFactory.getLog(ConnectionStateTracker.class);

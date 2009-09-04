@@ -23,7 +23,6 @@ import javax.management.remote.JMXPrincipal;
 import javax.net.ssl.SSLSocket;
 
 /**
- * @version $Revision$
  */
 public final class SslSocketHelper {
 

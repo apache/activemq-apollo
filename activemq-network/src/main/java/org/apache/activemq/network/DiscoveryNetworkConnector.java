@@ -39,7 +39,6 @@ import org.apache.commons.logging.LogFactory;
  * available and setup a connection to each available remote broker
  * 
  * @org.apache.xbean.XBean element="networkConnector"
- * @version $Revision: 725323 $
  */
 public class DiscoveryNetworkConnector extends NetworkConnector implements DiscoveryListener {
     private static final Log LOG = LogFactory.getLog(DiscoveryNetworkConnector.class);

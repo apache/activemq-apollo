@@ -17,7 +17,6 @@
 package org.apache.activemq.legacy.transport;
 
 /**
- * @version $Revision$
  */
 public class QueueClusterTest extends TopicClusterTest {
 

@@ -29,7 +29,6 @@ import org.apache.kahadb.page.Transaction;
 /**
  * Bin in a HashIndex
  * 
- * @version $Revision$
  */
 class HashBin<Key, Value> {
     

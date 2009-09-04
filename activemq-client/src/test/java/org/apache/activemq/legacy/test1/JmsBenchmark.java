@@ -54,7 +54,6 @@ import org.apache.commons.logging.LogFactory;
  * difference). The tests simulate storing 1000 1k jms messages to see the rate
  * of processing msg/sec.
  * 
- * @version $Revision$
  */
 public class JmsBenchmark extends JmsTestSupport {
     private static final transient Log LOG = LogFactory.getLog(JmsBenchmark.class);

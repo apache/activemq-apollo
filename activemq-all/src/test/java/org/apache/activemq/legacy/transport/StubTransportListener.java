@@ -24,7 +24,6 @@ import org.apache.activemq.transport.TransportListener;
 
 /**
  * 
- * @version $Revision$
  */
 public class StubTransportListener implements TransportListener {
 

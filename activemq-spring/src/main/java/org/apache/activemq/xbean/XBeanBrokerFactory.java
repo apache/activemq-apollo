@@ -37,7 +37,6 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.util.ResourceUtils;
 
 /**
- * @version $Revision$
  */
 public class XBeanBrokerFactory implements BrokerFactoryHandler {
     private static final transient Log LOG = LogFactory.getLog(XBeanBrokerFactory.class);

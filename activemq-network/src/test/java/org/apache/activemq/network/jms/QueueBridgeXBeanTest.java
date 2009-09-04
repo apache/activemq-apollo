@@ -22,7 +22,6 @@ import org.springframework.context.support.AbstractApplicationContext;
 
 /**
  *
- * @version $Revision: 564057 $
  */
 public class QueueBridgeXBeanTest extends QueueBridgeTest {
 

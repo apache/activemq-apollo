@@ -17,7 +17,6 @@
 package org.apache.activemq.transport;
 
 /**
- * @version $Revision$
  */
 public interface ResponseCallback<T> {
     void onCompletion(FutureResponse<T> resp);

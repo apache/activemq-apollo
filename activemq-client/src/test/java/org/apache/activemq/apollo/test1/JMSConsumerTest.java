@@ -50,7 +50,6 @@ import org.apache.commons.logging.LogFactory;
 /**
  * Test cases used to test the JMS message consumer.
  * 
- * @version $Revision$
  */
 public class JMSConsumerTest extends JmsTestSupport {
 

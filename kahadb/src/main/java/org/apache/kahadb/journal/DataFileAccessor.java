@@ -29,7 +29,6 @@ import org.apache.kahadb.journal.DataFileAppender.WriteKey;
  * Optimized Store reader and updater. Single threaded and synchronous. Use in
  * conjunction with the DataFileAccessorPool of concurrent use.
  * 
- * @version $Revision$
  */
 final class DataFileAccessor {
 

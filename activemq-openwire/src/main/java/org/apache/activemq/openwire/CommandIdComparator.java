@@ -23,7 +23,6 @@ import org.apache.activemq.command.Command;
 /**
  * A @{link Comparator} of commands using their {@link Command#getCommandId()}
  * 
- * @version $Revision: 564814 $
  */
 public class CommandIdComparator implements Comparator<Command> {
 

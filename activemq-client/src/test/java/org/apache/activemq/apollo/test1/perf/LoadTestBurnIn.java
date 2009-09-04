@@ -49,7 +49,6 @@ import org.apache.commons.logging.LogFactory;
  * to checking to make sure that the broker does not lock up after a while of
  * sustained messaging.
  * 
- * @version $Revision$
  */
 public class LoadTestBurnIn extends JmsTestSupport {
     private static final transient Log LOG = LogFactory.getLog(LoadTestBurnIn.class);

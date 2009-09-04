@@ -41,7 +41,6 @@ import org.apache.kahadb.journal.DataFileAppender.WriteKey;
 /**
  * Manages DataFiles
  * 
- * @version $Revision$
  */
 public class Journal {
 

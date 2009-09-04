@@ -27,7 +27,6 @@ import org.apache.activemq.util.list.SequenceSet;
 /**
  * DataFile
  * 
- * @version $Revision$
  */
 public class DataFile extends LinkedNode<DataFile> implements Comparable<DataFile> {
 

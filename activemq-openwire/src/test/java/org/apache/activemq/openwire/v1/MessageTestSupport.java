@@ -32,7 +32,6 @@ import org.apache.activemq.util.buffer.ByteArrayOutputStream;
  * modify the groovy scripts in the under src/gram/script and then use maven
  * openwire:generate to regenerate this file.
  * 
- * @version $Revision: 705547 $
  */
 public abstract class MessageTestSupport extends BaseCommandTestSupport {
 

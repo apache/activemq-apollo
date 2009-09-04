@@ -42,7 +42,6 @@ import org.apache.commons.logging.LogFactory;
  * A helper class which keeps track of the Destinations available in a broker and allows you to listen to them
  * being created or deleted.
  *
- * @version $Revision: 681153 $
  */
 public class DestinationSource implements MessageListener {
     private static final Log LOG = LogFactory.getLog(ConsumerEventSource.class);

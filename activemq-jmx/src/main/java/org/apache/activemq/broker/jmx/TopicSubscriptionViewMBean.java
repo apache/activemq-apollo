@@ -18,7 +18,6 @@ package org.apache.activemq.broker.jmx;
 
 /**
  *
- * @version $Revision: 564271 $
  */
 public interface TopicSubscriptionViewMBean extends SubscriptionViewMBean {
 

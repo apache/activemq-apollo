@@ -21,7 +21,6 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.blob.BlobTransferPolicy;
 
 /**
- * @version $Revision$
  */
 public class BlobTransferPolicyUriTest extends TestCase {
     public void testBlobTransferPolicyIsConfiguredViaUri() throws Exception {

@@ -21,7 +21,6 @@ import org.apache.activemq.apollo.test2.JmsTopicSendReceiveWithTwoConnectionsTes
 
 /**
  * 
- * @version $Revision$
  */
 public class JmsTopicSendReceiveWithTwoConnectionsWithJMXTest extends
     JmsTopicSendReceiveWithTwoConnectionsTest {

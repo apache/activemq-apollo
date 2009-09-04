@@ -22,7 +22,6 @@ import org.testng.annotations.Test;
 /**
  * Runs against the broker but marshals all request and response commands.
  * 
- * @version $Revision$
  */
 @Test(enabled=false)
 public class MarshallingBrokerTest extends BrokerTest {

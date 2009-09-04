@@ -19,7 +19,6 @@ package org.apache.activemq.command;
 /**
  * 
  * @openwire:marshaller code="121"
- * @version $Revision$
  */
 public class SessionId implements DataStructure {
 

@@ -25,7 +25,6 @@ import javax.management.j2ee.statistics.CountStatistic;
 /**
  * A count statistic implementation
  * 
- * @version $Revision$
  */
 public class PollCountStatisticImpl extends StatisticImpl implements CountStatistic {
 

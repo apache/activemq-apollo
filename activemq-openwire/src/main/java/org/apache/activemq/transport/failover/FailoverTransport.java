@@ -56,7 +56,6 @@ import org.apache.commons.logging.LogFactory;
  * A Transport that is made reliable by being able to fail over to another
  * transport when a transport failure is detected.
  * 
- * @version $Revision$
  */
 public class FailoverTransport implements CompositeTransport {
 

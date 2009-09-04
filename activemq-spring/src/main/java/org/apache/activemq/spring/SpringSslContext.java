@@ -38,7 +38,6 @@ import org.springframework.core.io.Resource;
  * 
  * @org.apache.xbean.XBean element="sslContext"
  * 
- * @version $Revision: 656319 $
  */
 public class SpringSslContext extends SslContext implements InitializingBean {    
     

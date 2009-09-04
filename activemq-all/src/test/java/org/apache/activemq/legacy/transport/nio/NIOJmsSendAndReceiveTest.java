@@ -21,7 +21,6 @@ import org.apache.activemq.apollo.test3.JmsTopicSendReceiveWithTwoConnectionsTes
 import org.apache.activemq.legacy.broker.BrokerService;
 
 /**
- * @version $Revision$
  */
 public class NIOJmsSendAndReceiveTest extends JmsTopicSendReceiveWithTwoConnectionsTest {
     protected BrokerService broker;

@@ -55,7 +55,6 @@ import org.apache.kahadb.page.Transaction;
  * implementation, and so it is entirely possible for a leaf page to be
  * completely empty after all of its keys have been removed.
  *
- * @version $Revision$, $Date$
  */
 public class BTreeIndex<Key,Value> implements Index<Key,Value> {
 
@@ -64,7 +63,6 @@ public class BTreeIndex<Key,Value> implements Index<Key,Value> {
     /**
      * Interface used to determine the simple prefix of two keys.
      *
-     * @version $Revision$, $Date$
      */
     static public interface Prefixer<Key> {
         

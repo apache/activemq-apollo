@@ -35,7 +35,6 @@ import org.apache.kahadb.page.Transaction;
 /**
  * BTree implementation
  * 
- * @version $Revision$
  */
 public class HashIndex<Key,Value> implements Index<Key,Value> {
 

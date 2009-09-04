@@ -20,7 +20,6 @@ package org.apache.activemq.transport.discovery;
 /**
  * A listener of services being added or removed from a network
  * 
- * @version $Revision$
  */
 public interface DiscoveryListener {
 

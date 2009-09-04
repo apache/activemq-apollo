@@ -32,7 +32,6 @@ import org.apache.activemq.util.ServiceStopper;
  * 
  * @org.apache.xbean.XBean
  * 
- * @version $Revision: 725323 $
  */
 public class MulticastNetworkConnector extends NetworkConnector {
 

@@ -25,7 +25,6 @@ import org.apache.activemq.command.ConsumerId;
 /**
  * An event when the number of consumers on a given destination changes.
  * 
- * @version $Revision: 564057 $
  */
 public abstract class ConsumerEvent extends EventObject {
     private static final long serialVersionUID = 2442156576867593780L;

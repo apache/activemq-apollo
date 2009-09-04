@@ -48,7 +48,6 @@ import org.apache.activemq.transport.TransportFactory;
 /**
  * Test cases used to test the JMS message consumer.
  * 
- * @version $Revision$
  */
 public class JMSMessageTest extends JmsTestSupport {
 

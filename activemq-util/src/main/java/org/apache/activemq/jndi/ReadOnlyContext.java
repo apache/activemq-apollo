@@ -57,7 +57,6 @@ import javax.naming.spi.NamingManager;
  * String envEntry2 = (String) componentContext.lookup("env/myEntry2");
  * </code>
  * 
- * @version $Revision: 1.2 $ $Date: 2005/08/27 03:52:39 $
  */
 @SuppressWarnings("unchecked")
 public class ReadOnlyContext implements Context, Serializable {

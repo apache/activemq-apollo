@@ -36,7 +36,6 @@ import org.apache.activemq.openwire.OpenWireFormat;
  *        under src/gram/script and then use maven openwire:generate to regenerate 
  *        this file.
  *
- * @version $Revision$
  */
 public abstract class BaseCommandMarshaller extends BaseDataStreamMarshaller {
 

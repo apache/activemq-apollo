@@ -19,7 +19,6 @@ package org.apache.activemq.transport;
 import java.io.IOException;
 
 /**
- * @version $Revision$
  */
 public class MutexTransport extends TransportFilter {
 

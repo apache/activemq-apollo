@@ -21,7 +21,6 @@ import java.io.IOException;
 /**
  * This is exception is thrown when the transport is disposed
  * 
- * @version $Revision: 563982 $
  */
 public class TransportDisposedIOException extends IOException {
 

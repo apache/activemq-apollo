@@ -35,7 +35,6 @@ import org.apache.commons.logging.LogFactory;
  * Used to make sure that commands are arriving periodically from the peer of
  * the transport.
  * 
- * @version $Revision$
  */
 public class InactivityMonitor extends TransportFilter {
 

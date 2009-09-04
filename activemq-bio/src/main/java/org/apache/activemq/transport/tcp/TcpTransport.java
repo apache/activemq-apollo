@@ -53,7 +53,6 @@ import java.util.concurrent.LinkedBlockingQueue;
  * 
  * @author David Martin Clavo david(dot)martin(dot)clavo(at)gmail.com (logging
  *         improvement modifications)
- * @version $Revision$
  */
 public class TcpTransport extends TransportThreadSupport implements Transport, Service, Runnable {
     private static final Log LOG = LogFactory.getLog(TcpTransport.class);

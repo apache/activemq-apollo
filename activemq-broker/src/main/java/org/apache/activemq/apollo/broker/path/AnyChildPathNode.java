@@ -26,7 +26,6 @@ import org.apache.activemq.util.buffer.AsciiBuffer;
  * An implementation of {@link PathNode} which navigates all the children of the given node
  * ignoring the name of the current path (so for navigating using * in a wildcard).
  *
- * @version $Revision: 563921 $
  */
 public class AnyChildPathNode<Value> implements PathNode<Value> {
     private PathNode<Value> node;

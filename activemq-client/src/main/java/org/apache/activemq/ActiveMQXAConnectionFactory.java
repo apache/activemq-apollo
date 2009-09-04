@@ -32,7 +32,6 @@ import org.apache.activemq.transport.Transport;
 /**
  * A factory of {@link XAConnection} instances
  * 
- * @version $Revision: 564057 $
  */
 public class ActiveMQXAConnectionFactory extends ActiveMQConnectionFactory implements XAConnectionFactory, XAQueueConnectionFactory, XATopicConnectionFactory {
 

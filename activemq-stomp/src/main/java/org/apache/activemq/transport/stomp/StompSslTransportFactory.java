@@ -28,7 +28,6 @@ import org.apache.activemq.apollo.broker.Broker;
 /**
  * A <a href="http://activemq.apache.org/stomp/">STOMP</a> over SSL transport factory
  * 
- * @version $Revision: 645574 $
  */
 public class StompSslTransportFactory extends SslTransportFactory implements BrokerAware {
     private Broker broker;

@@ -42,7 +42,6 @@ import org.apache.commons.logging.LogFactory;
  * An object which can be used to listen to the number of active consumers
  * available on a given destination.
  * 
- * @version $Revision: 669263 $
  */
 public class ConsumerEventSource implements Service, MessageListener {
     private static final Log LOG = LogFactory.getLog(ConsumerEventSource.class);

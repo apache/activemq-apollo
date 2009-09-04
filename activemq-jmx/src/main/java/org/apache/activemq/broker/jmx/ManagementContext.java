@@ -42,7 +42,6 @@ import org.apache.commons.logging.LogFactory;
  * A Flow provides different dispatch policies within the NMR
  * 
  * @org.apache.xbean.XBean
- * @version $Revision$
  */
 public class ManagementContext implements Service {
     /**

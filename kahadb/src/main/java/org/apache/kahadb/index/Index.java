@@ -26,7 +26,6 @@ import org.apache.kahadb.page.Transaction;
 /**
  * Simpler than a Map
  * 
- * @version $Revision$
  */
 public interface Index<Key,Value> {
     

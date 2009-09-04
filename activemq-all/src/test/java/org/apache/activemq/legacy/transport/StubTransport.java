@@ -26,7 +26,6 @@ import org.apache.activemq.wireformat.WireFormat;
 
 /**
  * 
- * @version $Revision$
  */
 public class StubTransport extends TransportSupport {
 

@@ -35,7 +35,6 @@ import org.apache.commons.logging.LogFactory;
  * 
  * @org.apache.xbean.XBean
  * 
- * @version $Revision: 564271 $
  */
 public class CompositeDemandForwardingBridge extends DemandForwardingBridgeSupport {
     private static final Log LOG = LogFactory.getLog(CompositeDemandForwardingBridge.class);

@@ -25,7 +25,6 @@ import org.apache.activemq.openwire.DataFileGeneratorTestSupport;
  * modify the groovy scripts in the under src/gram/script and then use maven
  * openwire:generate to regenerate this file.
  * 
- * @version $Revision: 564271 $
  */
 public class WireFormatInfoTest extends DataFileGeneratorTestSupport {
 

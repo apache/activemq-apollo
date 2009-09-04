@@ -22,7 +22,6 @@ import java.util.TimerTask;
 
 /**
  * Singelton, references maintained by users
- * @version $Revision$
  */
 public final class Scheduler { 
 

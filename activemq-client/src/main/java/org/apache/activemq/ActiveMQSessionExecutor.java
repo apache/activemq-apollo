@@ -33,7 +33,6 @@ import org.apache.commons.logging.LogFactory;
  * A utility class used by the Session for dispatching messages asynchronously
  * to consumers
  * 
- * @version $Revision$
  * @see javax.jms.Session
  */
 public class ActiveMQSessionExecutor implements Task {

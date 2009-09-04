@@ -18,7 +18,6 @@ package org.apache.activemq.command;
 
 /**
  * @openwire:marshaller code="124"
- * @version $Revision$
  */
 public class BrokerId implements DataStructure {
 

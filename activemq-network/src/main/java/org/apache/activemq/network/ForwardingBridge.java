@@ -51,7 +51,6 @@ import org.apache.commons.logging.LogFactory;
  * 
  * @org.apache.xbean.XBean
  * 
- * @version $Revision$
  */
 public class ForwardingBridge implements Service {
 

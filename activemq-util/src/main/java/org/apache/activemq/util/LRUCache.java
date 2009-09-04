@@ -22,7 +22,6 @@ import java.util.Map;
 /**
  * A Simple LRU Cache
  * 
- * @version $Revision$
  * @param <K>
  * @param <V>
  */
