@@ -17,8 +17,6 @@
 
 package org.apache.activemq.util.buffer;
 
-import com.sun.org.apache.bcel.internal.util.ByteSequence;
-
 import java.util.List;
 
 /**
@@ -34,6 +32,10 @@ public class Buffer implements Comparable<Buffer> {
         this(other.data, other.offset, other.length);
     }
 
+    public Buffer(int size) {
+        this(new byte[size]);
+    }
+    
     public Buffer(byte data[]) {
         this(data, 0, data.length);
     }

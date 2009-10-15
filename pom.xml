@@ -127,6 +127,7 @@
     <module>activemq-store</module>
     <module>activemq-transport</module>
     <module>activemq-util</module>
+    <module>hawtdb</module>
     <module>kahadb</module>
     <module>activemq-protobuf</module>
     <module>activemq-client</module>
@@ -843,6 +844,7 @@
   <build>
     <pluginManagement>
       <plugins>
+      <!-- 
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-eclipse-plugin</artifactId>
@@ -853,6 +855,7 @@
             <outputDirectory>${basedir}/eclipse-classes</outputDirectory>
           </configuration>
         </plugin>
+       -->
         <plugin>
           <groupId>com.sun.tools.jxc.maven2</groupId>
           <artifactId>maven-jaxb-schemagen-plugin</artifactId>
