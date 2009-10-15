@@ -21,7 +21,7 @@ import java.util.ArrayList;
 /**
  * Provides a list of LinkedNode objects. 
  * 
- * @author chirino
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class LinkedNodeList<T extends LinkedNode<T>> {
 
@@ -150,5 +150,21 @@ public class LinkedNodeList<T extends LinkedNode<T>> {
     		cur = cur.getNext();
     	}
     	return rc;
+    }
+
+    /**
+     * Copies the nodes of the LinkedNodeList to an ArrayList in reverse order.
+     * @return
+     */
+    public ArrayList<T> toArrayListReversed() {
+        ArrayList<T> rc = new ArrayList<T>(size);
+        if( head != null ) {
+            T cur = getTail();;
+            while( cur!=null ) {
+                rc.add(cur);
+                cur = cur.getPrevious();
+            }
+        }
+        return rc;
     }
 }

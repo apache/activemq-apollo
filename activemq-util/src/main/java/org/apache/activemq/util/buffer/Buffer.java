@@ -21,8 +21,9 @@ import com.sun.org.apache.bcel.internal.util.ByteSequence;
 
 import java.util.List;
 
-
-
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class Buffer implements Comparable<Buffer> {
 
     public byte[] data;
@@ -79,6 +80,12 @@ public class Buffer implements Comparable<Buffer> {
 
     public final int getOffset() {
         return offset;
+    }
+    
+    public Buffer deepCopy() {
+        byte t[] = new byte[length];
+        System.arraycopy(data, offset, t, 0, length);
+        return new Buffer(t);
     }
 
     public Buffer compact() {

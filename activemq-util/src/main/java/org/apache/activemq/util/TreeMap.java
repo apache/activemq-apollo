@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.util;
 
+import java.io.Serializable;
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
 import java.util.Collection;
@@ -28,13 +29,18 @@ import java.util.Map.Entry;
 /**
  * A TreeMap that is lighter weight than the Sun implementation with
  * implementations for upper/lower/floor/ceiling accessors.
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class TreeMap<K, V> {
+public class TreeMap<K, V> implements Serializable {
+
+    private static final long serialVersionUID = 6107175734705142096L;
+    
     private static final boolean RED = false;
     private static final boolean BLACK = true;
 
     private int count;
-    private TreeMapNode<K, V> root;
+    private TreeEntry<K, V> root;
     private final Comparator<? super K> comparator;
 
     public TreeMap() {
@@ -63,46 +69,22 @@ public class TreeMap<K, V> {
      * @return The first key in the map.
      */
     public K firstKey() {
-        TreeMapNode<K, V> first = firstNode();
+        TreeEntry<K, V> first = firstEntry();
         if (first != null) {
             return first.key;
         }
         return null;
     }
 
-    private TreeMapNode<K, V> firstNode() {
-        if (root == null) {
-            return null;
-        }
-        TreeMapNode<K, V> leftMost = root;
-        while (leftMost.left != null) {
-            leftMost = leftMost.left;
-        }
-
-        return leftMost;
-    }
-
     /**
      * @return The last key in the map.
      */
     public K lastKey() {
-        TreeMapNode<K, V> last = lastNode();
+        TreeEntry<K, V> last = lastEntry();
         if (last != null) {
             return last.key;
         }
         return null;
-    }
-
-    private TreeMapNode<K, V> lastNode() {
-        if (root == null) {
-            return null;
-        }
-        TreeMapNode<K, V> rightMost = root;
-        while (rightMost.right != null) {
-            rightMost = rightMost.left;
-        }
-
-        return rightMost;
     }
 
     /**
@@ -122,7 +104,7 @@ public class TreeMap<K, V> {
      * @see java.util.Map#containsKey(java.lang.Object)
      */
     public boolean containsKey(K key) {
-        return findInternal(key, root) != null;
+        return getEntry(key, root) != null;
     }
 
     /*
@@ -159,9 +141,9 @@ public class TreeMap<K, V> {
             public boolean contains(Object o) {
                 try {
                     Map.Entry<K, V> entry = (Map.Entry<K, V>) o;
-                    TreeMapNode<K, V> ours = findInternal(entry.getKey(), root);
+                    TreeEntry<K, V> ours = getEntry(entry.getKey(), root);
                     if (ours != null) {
-                        return ours.val == null ? entry.getValue() == null : ours.val.equals(entry.getValue());
+                        return ours.value == null ? entry.getValue() == null : ours.value.equals(entry.getValue());
                     } else {
                         return false;
                     }
@@ -173,7 +155,7 @@ public class TreeMap<K, V> {
             @SuppressWarnings("unchecked")
             @Override
             public boolean remove(Object o) {
-                return TreeMap.this.removeNode((TreeMapNode<K, V>) o) != null;
+                return TreeMap.this.removeEntry((TreeEntry<K, V>) o) != null;
             }
 
             @Override
@@ -194,14 +176,18 @@ public class TreeMap<K, V> {
      * @see java.util.Map#get(java.lang.Object)
      */
     public V get(K key) {
-        TreeMapNode<K, V> node = findInternal(key, root);
+        TreeEntry<K, V> node = getEntry(key, root);
         if (node != null) {
-            return node.val;
+            return node.value;
         }
         return null;
     }
 
-    private final TreeMapNode<K, V> findInternal(K key, TreeMapNode<K, V> r) {
+    public final TreeEntry<K, V> getEntry(K key) {
+        return getEntry(key, root);
+    }
+    
+    private final TreeEntry<K, V> getEntry(K key, TreeEntry<K, V> r) {
         while (r != null) {
             int c = compare(key, r.key);
             if (c == 0) {
@@ -221,8 +207,8 @@ public class TreeMap<K, V> {
      * 
      * @return The lowest key in the map
      */
-    public Entry<K, V> firstEntry() {
-        TreeMapNode<K, V> r = root;
+    public TreeEntry<K, V> firstEntry() {
+        TreeEntry<K, V> r = root;
         while (r != null) {
             if (r.left == null) {
                 break;
@@ -239,8 +225,8 @@ public class TreeMap<K, V> {
      * 
      * @return The entry associated with the greates key in the map.
      */
-    public Entry<K, V> lastEntry() {
-        TreeMapNode<K, V> r = root;
+    public TreeEntry<K, V> lastEntry() {
+        TreeEntry<K, V> r = root;
         while (r != null) {
             if (r.right == null) {
                 break;
@@ -259,9 +245,9 @@ public class TreeMap<K, V> {
      *            the key.
      * @return
      */
-    public Entry<K, V> lowerEntry(K key) {
-        TreeMapNode<K, V> n = root;
-        TreeMapNode<K, V> l = null;
+    public TreeEntry<K, V> lowerEntry(K key) {
+        TreeEntry<K, V> n = root;
+        TreeEntry<K, V> l = null;
         while (n != null) {
             int c = compare(key, n.key);
             if (c <= 0) {
@@ -291,9 +277,9 @@ public class TreeMap<K, V> {
      * @return a key-value mapping associated with the greatest key less than or
      *         equal to the given key, or null if there is no such key.
      */
-    public Entry<K, V> floorEntry(K key) {
-        TreeMapNode<K, V> n = root;
-        TreeMapNode<K, V> l = null;
+    public TreeEntry<K, V> floorEntry(K key) {
+        TreeEntry<K, V> n = root;
+        TreeEntry<K, V> l = null;
         while (n != null) {
             int c = compare(key, n.key);
             if (c == 0) {
@@ -327,9 +313,9 @@ public class TreeMap<K, V> {
      * @return a key-value mapping associated with the lowest key strictly
      *         greater than the given key
      */
-    public Entry<K, V> upperEntry(K key) {
-        TreeMapNode<K, V> n = root;
-        TreeMapNode<K, V> h = null;
+    public TreeEntry<K, V> upperEntry(K key) {
+        TreeEntry<K, V> n = root;
+        TreeEntry<K, V> h = null;
         while (n != null) {
             int c = compare(key, n.key);
             if (c >= 0) {
@@ -357,9 +343,9 @@ public class TreeMap<K, V> {
      * @param key
      * @return
      */
-    public Entry<K, V> ceilingEntry(K key) {
-        TreeMapNode<K, V> n = root;
-        TreeMapNode<K, V> h = null;
+    public TreeEntry<K, V> ceilingEntry(K key) {
+        TreeEntry<K, V> n = root;
+        TreeEntry<K, V> h = null;
         while (n != null) {
             int c = compare(key, n.key);
             if (c == 0) {
@@ -384,19 +370,39 @@ public class TreeMap<K, V> {
         return h;
     }
 
-    protected final TreeMapNode<K, V> findNext(TreeMapNode<K, V> n) {
+    static private final <K,V> TreeEntry<K, V> next(TreeEntry<K, V> n) {
         if (n == null)
             return null;
         else if (n.right != null) {
-            TreeMapNode<K, V> p = n.right;
+            TreeEntry<K, V> p = n.right;
             while (p.left != null) {
                 p = p.left;
             }
             return p;
         } else {
-            TreeMapNode<K, V> p = n.parent;
-            TreeMapNode<K, V> ch = n;
+            TreeEntry<K, V> p = n.parent;
+            TreeEntry<K, V> ch = n;
             while (p != null && ch == p.right) {
+                ch = p;
+                p = p.parent;
+            }
+            return p;
+        }
+    }
+    
+    static private final <K,V> TreeEntry<K, V> previous(TreeEntry<K, V> n) {
+        if (n == null)
+            return null;
+        else if (n.left != null) {
+            TreeEntry<K, V> p = n.left;
+            while (p.right != null) {
+                p = p.right;
+            }
+            return p;
+        } else {
+            TreeEntry<K, V> p = n.parent;
+            TreeEntry<K, V> ch = n;
+            while (p != null && ch == p.left) {
                 ch = p;
                 p = p.parent;
             }
@@ -462,7 +468,7 @@ public class TreeMap<K, V> {
      * @see java.util.Map#remove(java.lang.Object)
      */
     public V remove(K key) {
-        return removeNode(findInternal(key, root));
+        return removeEntry(getEntry(key, root));
     }
 
     /*
@@ -474,25 +480,25 @@ public class TreeMap<K, V> {
 
         if (root == null) {
             // map is empty
-            root = new TreeMapNode<K, V>(key, value, null, this);
+            root = new TreeEntry<K, V>(key, value, null, this);
             count++;
             return null;
         }
-        TreeMapNode<K, V> n = root;
+        TreeEntry<K, V> n = root;
 
         // add new mapping
         while (true) {
             int c = compare(key, n.key);
 
             if (c == 0) {
-                V old = n.val;
-                n.val = value;
+                V old = n.value;
+                n.value = value;
                 return old;
             } else if (c < 0) {
                 if (n.left != null) {
                     n = n.left;
                 } else {
-                    n.left = new TreeMapNode<K, V>(key, value, n, this);
+                    n.left = new TreeEntry<K, V>(key, value, n, this);
                     count++;
                     doRedBlackInsert(n.left);
                     return null;
@@ -501,7 +507,7 @@ public class TreeMap<K, V> {
                 if (n.right != null) {
                     n = n.right;
                 } else {
-                    n.right = new TreeMapNode<K, V>(key, value, n, this);
+                    n.right = new TreeEntry<K, V>(key, value, n, this);
                     count++;
                     doRedBlackInsert(n.right);
                     return null;
@@ -517,13 +523,13 @@ public class TreeMap<K, V> {
      * @param n
      *            the newly inserted node
      */
-    private void doRedBlackInsert(final TreeMapNode<K, V> n) {
-        TreeMapNode<K, V> currentNode = n;
+    private void doRedBlackInsert(final TreeEntry<K, V> n) {
+        TreeEntry<K, V> currentNode = n;
         color(currentNode, RED);
 
         while (currentNode != null && currentNode != root && isRed(currentNode.parent)) {
             if (isLeftChild(parent(currentNode))) {
-                TreeMapNode<K, V> y = getRight(getGrandParent(currentNode));
+                TreeEntry<K, V> y = getRight(getGrandParent(currentNode));
 
                 if (isRed(y)) {
                     color(parent(currentNode), BLACK);
@@ -548,7 +554,7 @@ public class TreeMap<K, V> {
             } else {
 
                 // just like clause above, except swap left for right
-                TreeMapNode<K, V> y = getLeft(getGrandParent(currentNode));
+                TreeEntry<K, V> y = getLeft(getGrandParent(currentNode));
 
                 if (isRed(y)) {
                     color(parent(currentNode), BLACK);
@@ -577,8 +583,8 @@ public class TreeMap<K, V> {
     }
 
     //Based on Apache common's TreeBidiMap
-    private void rotateLeft(TreeMapNode<K, V> n) {
-        TreeMapNode<K, V> r = n.right;
+    private void rotateLeft(TreeEntry<K, V> n) {
+        TreeEntry<K, V> r = n.right;
         n.right = r.left;
         if (r.left != null) {
             r.left.parent = n;
@@ -597,8 +603,8 @@ public class TreeMap<K, V> {
     }
 
     //Based on Apache common's TreeBidiMap    
-    private void rotateRight(TreeMapNode<K, V> n) {
-        TreeMapNode<K, V> l = n.left;
+    private void rotateRight(TreeEntry<K, V> n) {
+        TreeEntry<K, V> l = n.left;
         n.left = l.right;
         if (l.right != null) {
             l.right.parent = n;
@@ -621,7 +627,7 @@ public class TreeMap<K, V> {
      * @param n
      *            the node to be deleted
      */
-    private final V removeNode(TreeMapNode<K, V> n) {
+    public final V removeEntry(TreeEntry<K, V> n) {
         if (n == null) {
             return null;
         }
@@ -630,20 +636,20 @@ public class TreeMap<K, V> {
             throw new IllegalStateException("Node not in list");
         }
 
-        V old = n.val;
+        V old = n.value;
 
         count--;
 
         //if deleted node has both left and children, swap with
         // the next greater node
         if (n.left != null && n.right != null) {
-            TreeMapNode<K, V> next = findNext(n);
+            TreeEntry<K, V> next = next(n);
             n.key = next.key;
-            n.val = next.val;
+            n.value = next.value;
             n = next;
         }
 
-        TreeMapNode<K, V> replacement = n.left != null ? n.left : n.right;
+        TreeEntry<K, V> replacement = n.left != null ? n.left : n.right;
 
         if (replacement != null) {
             replacement.parent = n.parent;
@@ -696,12 +702,12 @@ public class TreeMap<K, V> {
      * @param replacementNode
      *            the node being replaced
      */
-    private void doRedBlackDeleteFixup(final TreeMapNode<K, V> replacementNode) {
-        TreeMapNode<K, V> currentNode = replacementNode;
+    private void doRedBlackDeleteFixup(final TreeEntry<K, V> replacementNode) {
+        TreeEntry<K, V> currentNode = replacementNode;
 
         while (currentNode != root && isBlack(currentNode)) {
             if (isLeftChild(currentNode)) {
-                TreeMapNode<K, V> siblingNode = getRight(parent(currentNode));
+                TreeEntry<K, V> siblingNode = getRight(parent(currentNode));
 
                 if (isRed(siblingNode)) {
                     color(siblingNode, BLACK);
@@ -732,7 +738,7 @@ public class TreeMap<K, V> {
                     currentNode = root;
                 }
             } else {
-                TreeMapNode<K, V> siblingNode = getLeft(parent(currentNode));
+                TreeEntry<K, V> siblingNode = getLeft(parent(currentNode));
 
                 if (isRed(siblingNode)) {
                     color(siblingNode, BLACK);
@@ -798,16 +804,16 @@ public class TreeMap<K, V> {
         };
     }
 
-    private static <K, V> TreeMapNode<K, V> parent(TreeMapNode<K, V> n) {
+    private static <K, V> TreeEntry<K, V> parent(TreeEntry<K, V> n) {
         return (n == null ? null : n.parent);
     }
 
-    private static <K, V> void color(TreeMapNode<K, V> n, boolean c) {
+    private static <K, V> void color(TreeEntry<K, V> n, boolean c) {
         if (n != null)
             n.color = c;
     }
 
-    private static <K, V> boolean getColor(TreeMapNode<K, V> n) {
+    private static <K, V> boolean getColor(TreeEntry<K, V> n) {
         return (n == null ? BLACK : n.color);
     }
 
@@ -817,7 +823,7 @@ public class TreeMap<K, V> {
      * @param node
      *            the node (may be null) in question
      */
-    private static <K, V> TreeMapNode<K, V> getLeft(TreeMapNode<K, V> n) {
+    private static <K, V> TreeEntry<K, V> getLeft(TreeEntry<K, V> n) {
         return (n == null) ? null : n.left;
     }
 
@@ -827,7 +833,7 @@ public class TreeMap<K, V> {
      * @param node
      *            the node (may be null) in question
      */
-    private static <K, V> TreeMapNode<K, V> getRight(TreeMapNode<K, V> n) {
+    private static <K, V> TreeEntry<K, V> getRight(TreeEntry<K, V> n) {
         return (n == null) ? null : n.right;
     }
 
@@ -838,7 +844,7 @@ public class TreeMap<K, V> {
      * @param node
      *            the node (may be null) in question
      */
-    private static <K, V> boolean isRed(TreeMapNode<K, V> n) {
+    private static <K, V> boolean isRed(TreeEntry<K, V> n) {
         return n == null ? false : n.color == RED;
     }
 
@@ -849,7 +855,7 @@ public class TreeMap<K, V> {
      * @param node
      *            the node (may be null) in question
      */
-    private static <K, V> boolean isBlack(final TreeMapNode<K, V> n) {
+    private static <K, V> boolean isBlack(final TreeEntry<K, V> n) {
         return n == null ? true : n.color == BLACK;
     }
 
@@ -863,7 +869,7 @@ public class TreeMap<K, V> {
      * @param node
      *            the node (may be null) in question
      */
-    private static <K, V> boolean isLeftChild(final TreeMapNode<K, V> node) {
+    private static <K, V> boolean isLeftChild(final TreeEntry<K, V> node) {
 
         return node == null ? true : (node.parent == null ? false : (node == node.parent.left));
     }
@@ -880,7 +886,7 @@ public class TreeMap<K, V> {
      * @param index
      *            the KEY or VALUE int
      */
-    private static <K, V> boolean isRightChild(final TreeMapNode<K, V> node) {
+    private static <K, V> boolean isRightChild(final TreeEntry<K, V> node) {
         return node == null ? true : (node.parent == null ? false : (node == node.parent.right));
 
     }
@@ -892,24 +898,27 @@ public class TreeMap<K, V> {
      * @param node
      *            the node (may be null) in question
      */
-    private static <K, V> TreeMapNode<K, V> getGrandParent(final TreeMapNode<K, V> node) {
+    private static <K, V> TreeEntry<K, V> getGrandParent(final TreeEntry<K, V> node) {
         return parent(parent(node));
     }
 
-    public static class TreeMapNode<K, V> implements Map.Entry<K, V> {
+    public static class TreeEntry<K, V> implements Map.Entry<K, V>, Serializable {
+
+        private static final long serialVersionUID = 8490652911043012737L;
+        
         TreeMap<K, V> map;
-        V val;
+        V value;
         K key;
         boolean color = BLACK;
 
-        TreeMapNode<K, V> parent;
-        TreeMapNode<K, V> left;
-        TreeMapNode<K, V> right;
+        TreeEntry<K, V> parent;
+        TreeEntry<K, V> left;
+        TreeEntry<K, V> right;
 
-        TreeMapNode(K key, V val, TreeMapNode<K, V> parent, TreeMap<K, V> map) {
+        TreeEntry(K key, V val, TreeEntry<K, V> parent, TreeMap<K, V> map) {
             this.key = key;
             this.parent = parent;
-            this.val = val;
+            this.value = val;
             this.map = map;
         }
 
@@ -928,7 +937,7 @@ public class TreeMap<K, V> {
          * @see java.util.Map.Entry#getValue()
          */
         public V getValue() {
-            return val;
+            return value;
         }
 
         /*
@@ -937,8 +946,8 @@ public class TreeMap<K, V> {
          * @see java.util.Map.Entry#setValue(java.lang.Object)
          */
         public V setValue(V val) {
-            V old = this.val;
-            this.val = val;
+            V old = this.value;
+            this.value = val;
             return old;
         }
 
@@ -948,13 +957,26 @@ public class TreeMap<K, V> {
                 return false;
             Map.Entry e = (Map.Entry) o;
 
-            return (key == null ? e.getKey() == null : key.equals(e.getKey())) && (val == null ? e.getValue() == null : val.equals(e.getValue()));
+            return (key == null ? e.getKey() == null : key.equals(e.getKey())) && (value == null ? e.getValue() == null : value.equals(e.getValue()));
         }
 
         public int hashCode() {
             int keyHash = (key == null ? 0 : key.hashCode());
-            int valueHash = (val == null ? 0 : val.hashCode());
+            int valueHash = (value == null ? 0 : value.hashCode());
             return keyHash ^ valueHash;
+        }
+        
+        public TreeEntry<K, V> next() {
+            return TreeMap.next(this);
+        }
+        
+        public TreeEntry<K, V> previous() {
+            return TreeMap.previous(this);
+        }
+        
+        @Override
+        public String toString() {
+            return "{ key: " +key+", value: "+value+" }";
         }
     }
 
@@ -970,7 +992,7 @@ public class TreeMap<K, V> {
             if (last == null) {
                 return null;
             } else {
-                return last.val;
+                return last.value;
             }
         }
     }
@@ -1011,8 +1033,8 @@ public class TreeMap<K, V> {
 
     private abstract class AbstractEntryIterator<T> implements Iterator<T> {
 
-        TreeMapNode<K, V> last = null;
-        TreeMapNode<K, V> next = firstNode();
+        TreeEntry<K, V> last = null;
+        TreeEntry<K, V> next = firstEntry();
 
         /*
          * (non-Javadoc)
@@ -1028,9 +1050,9 @@ public class TreeMap<K, V> {
          * 
          * @see java.util.Iterator#next()
          */
-        protected TreeMapNode<K, V> getNext() {
+        protected TreeEntry<K, V> getNext() {
             last = next;
-            next = findNext(next);
+            next = TreeMap.next(next);
             return last;
         }
 
@@ -1040,7 +1062,7 @@ public class TreeMap<K, V> {
          * @see java.util.Iterator#remove()
          */
         public void remove() {
-            TreeMap.this.removeNode(last);
+            TreeMap.this.removeEntry(last);
             last = null;
         }
 
