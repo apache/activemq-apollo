@@ -17,13 +17,14 @@
 package org.apache.activemq.util.list;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
 /**
  * Provides a list of LinkedNode objects. 
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class LinkedNodeList<T extends LinkedNode<T>> {
+public class LinkedNodeList<T extends LinkedNode<T>> implements Iterable<T> {
 
     T head;
     int size;
@@ -48,6 +49,9 @@ public class LinkedNodeList<T extends LinkedNode<T>> {
     }
 
     public T getTail() {
+        if( head==null ) {
+            return null;
+        }
         return head.prev;
     }
     
@@ -166,5 +170,30 @@ public class LinkedNodeList<T extends LinkedNode<T>> {
             }
         }
         return rc;
+    }
+
+    public Iterator<T> iterator() {
+        return new Iterator<T>() {
+            T next = getHead();
+            private T last;
+            
+            public boolean hasNext() {
+                return next!=null;
+            }
+
+            public T next() {
+                last = next;
+                next = last.getNext();
+                return last;
+            }
+
+            public void remove() {
+                if( last==null ) {
+                    throw new IllegalStateException();
+                }
+                last.unlink();
+                last=null;
+            }
+        };
     }
 }

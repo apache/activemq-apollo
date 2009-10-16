@@ -59,7 +59,7 @@ public class ConcurrentPageFileFactory extends PageFileFactory {
         if (concurrentPageFile != null) {
             concurrentPageFile.suspend(true, false, drainOnClose);
             concurrentPageFile.flush();
-            concurrentPageFile.applyRedos();
+            concurrentPageFile.performRedos();
             concurrentPageFile=null;
         }
         super.close();

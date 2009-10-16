@@ -62,7 +62,7 @@ public class TransactionBenchmark {
 //    }
 
     @Test
-    public void update() throws Exception {
+    public void aupdate() throws Exception {
         final int INITIAL_PAGE_COUNT = 1024 * 100;
         preallocate(INITIAL_PAGE_COUNT);
         benchmark.benchmark(1, new BenchmarkAction<RandomTxActor>("update") {

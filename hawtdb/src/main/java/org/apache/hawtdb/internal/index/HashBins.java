@@ -166,7 +166,13 @@ class HashBins {
     }
 
     <Key,Value> int index(Key x) {
-        return Math.abs(x.hashCode()%capacity);
+        try {
+            return Math.abs(x.hashCode()%capacity);
+        } catch (ArithmeticException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            throw e;
+        }
     }
     
     @Override

@@ -59,6 +59,8 @@ public class BTreeIndex<Key, Value> implements Index<Key, Value> {
 
         private Marshaller<Key> keyMarshaller;
         private Marshaller<Value> valueMarshaller;
+        private boolean deferredEncoding;
+        private Prefixer<Key> prefixer;
 
         public BTreeIndex<Key, Value> create(Paged paged, int page) {
             BTreeIndex<Key, Value> index = createInstance(paged, page);
@@ -79,7 +81,7 @@ public class BTreeIndex<Key, Value> implements Index<Key, Value> {
             if (valueMarshaller == null) {
                 throw new IllegalArgumentException("The key marshaller must be set before calling open");
             }
-            return new BTreeIndex<Key, Value>(paged, page, keyMarshaller, valueMarshaller, null);
+            return new BTreeIndex<Key, Value>(paged, page, this);
         }
 
         public Marshaller<Key> getKeyMarshaller() {
@@ -97,6 +99,23 @@ public class BTreeIndex<Key, Value> implements Index<Key, Value> {
         public void setValueMarshaller(Marshaller<Value> valueMarshaller) {
             this.valueMarshaller = valueMarshaller;
         }
+
+        public boolean isDeferredEncoding() {
+            return deferredEncoding;
+        }
+
+        public void setDeferredEncoding(boolean deferredEncoding) {
+            this.deferredEncoding = deferredEncoding;
+        }
+
+        public Prefixer<Key> getPrefixer() {
+            return prefixer;
+        }
+
+        public void setPrefixer(Prefixer<Key> prefixer) {
+            this.prefixer = prefixer;
+        }
+        
     }
 
     private final BTreeNode.BTreeNodeEncoderDecoder<Key, Value> PAGE_ENCODER_DECODER = new BTreeNode.BTreeNodeEncoderDecoder<Key, Value>(this);
@@ -106,13 +125,15 @@ public class BTreeIndex<Key, Value> implements Index<Key, Value> {
     private final Marshaller<Key> keyMarshaller;
     private final Marshaller<Value> valueMarshaller;
     private final Prefixer<Key> prefixer;
+    private final boolean deferredEncoding;
     
-    private BTreeIndex(Paged paged, int page, Marshaller<Key> keyMarshaller, Marshaller<Value> valueMarshaller, Prefixer<Key> prefixer) {
+    public BTreeIndex(Paged paged, int page, Factory<Key, Value> factory) {
         this.paged = paged;
         this.page = page;
-        this.keyMarshaller = keyMarshaller;
-        this.valueMarshaller = valueMarshaller;
-        this.prefixer = prefixer;
+        this.keyMarshaller = factory.getKeyMarshaller();
+        this.valueMarshaller = factory.getValueMarshaller();
+        this.deferredEncoding = factory.isDeferredEncoding();
+        this.prefixer = factory.getPrefixer();
     }
 
     public boolean containsKey(Key key) {
@@ -192,17 +213,30 @@ public class BTreeIndex<Key, Value> implements Index<Key, Value> {
     }
     
     void storeNode(BTreeNode<Key, Value> node) {
-        paged.put(PAGE_ENCODER_DECODER, node.getPage(), node);
+        if( deferredEncoding ) {
+            paged.put(PAGE_ENCODER_DECODER, node.getPage(), node);
+        } else {
+            PAGE_ENCODER_DECODER.store(paged, node.getPage(), node);
+        }
     }
     
     BTreeNode<Key, Value> loadNode(int page) {
-        BTreeNode<Key, Value> node = paged.get(PAGE_ENCODER_DECODER, page);
+        BTreeNode<Key, Value> node;
+        if( deferredEncoding ) {
+            node = paged.get(PAGE_ENCODER_DECODER, page);
+        } else {
+            node = PAGE_ENCODER_DECODER.load(paged, page);
+        }
         node.setPage(page);
         return node;
     }
     
     void free( int page ) {
-        paged.remove(PAGE_ENCODER_DECODER, page);
+        if( deferredEncoding ) {
+            paged.remove(PAGE_ENCODER_DECODER, page);
+        } else {
+            PAGE_ENCODER_DECODER.remove(paged, page);
+        }
         paged.allocator().free(page, 1);
     }
 

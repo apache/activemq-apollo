@@ -215,7 +215,7 @@ public class ConcurrentPageFileTest {
 
         // Apply the updates.
         pf.flush();
-        pf.applyRedos();
+        pf.performRedos();
 
         // Should still be there..
         assertEquals("Hello", load(pff.getPageFile(), 0));
@@ -238,7 +238,7 @@ public class ConcurrentPageFileTest {
 
         // Apply them
         pf.flush();
-        pf.applyRedos();
+        pf.performRedos();
 
         // We should see them now.
         assertEquals("Good", load(pff.getPageFile(), 0));
@@ -361,39 +361,19 @@ public class ConcurrentPageFileTest {
     @Test
     public void testAddRollback() throws IOException, ClassNotFoundException {
 
-        HashSet<String> expected = new HashSet<String>();
-
         // Insert some data into the page file.
         Transaction tx = pf.tx();
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 10; i++) {
             String t = "page:" + i;
-            int pageId = store(tx, t);
+            int page1 = store(tx, t);
+            tx.rollback();
+            int page2 = store(tx, t);
+            tx.rollback();
 
-            // Rollback every other insert.
-            if (i % 2 == 0) {
-                // Rolled back back tx's should have their allocated pages
-                // released..
-                assertEquals(pageId, i / 2);
-                expected.add(t);
-                tx.commit();
-            } else {
-                tx.rollback();
-            }
-
+            // page allocation should get rollback so we should 
+            // continually get the same page.
+            assertEquals(page1, page2);
         }
 
-        // Reload it...
-        reload();
-        tx = pf.tx();
-
-        // Iterate it to make sure they are still there..
-        HashSet<String> actual = new HashSet<String>();
-        for (int i = 0; i < 100; i++) {
-            if (i % 2 == 0) {
-                String t = load(tx, i / 2);
-                actual.add(t);
-            }
-        }
-        assertEquals(expected, actual);
     }
 }

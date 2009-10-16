@@ -50,7 +50,7 @@ public abstract class IndexTestSupport {
     }
     
     @After
-    protected void tearDown() throws Exception {
+    public void tearDown() throws Exception {
         if( pf!=null ) {
             pff.close();
             pff = null;
@@ -93,16 +93,13 @@ public abstract class IndexTestSupport {
         reloadIndex();
         doInsert(COUNT);
         reloadIndex();
-        tx.commit();
         checkRetrieve(COUNT);
         doRemove(COUNT);
         reloadIndex();
-        tx.commit();
         doInsert(COUNT);
         doRemoveHalf(COUNT);
         doInsertHalf(COUNT);
         reloadIndex();
-        tx.commit();
         checkRetrieve(COUNT);
     }
 
