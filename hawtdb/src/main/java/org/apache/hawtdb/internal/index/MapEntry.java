@@ -16,34 +16,37 @@
  */
 package org.apache.hawtdb.internal.index;
 
+import java.util.Map;
+
 /**
- * StringPrefixer is a {@link Prefixer} implementation that works on strings.
+ * A basic implementation of {@link Map.Entry}.
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class StringPrefixer implements Prefixer<String> {
+final class MapEntry<Key, Value> implements Map.Entry<Key, Value> {
+    
+    private final Key key;
+    private final Value value;
 
-    /**
-     * Example: If value1 is "Hello World" and value 2 is "Help Me" then the
-     * result will be: "Help"
-     * 
-     * @see Prefixer#getSimplePrefix
-     */
-    public String getSimplePrefix(String value1, String value2) {
-        char[] c1 = value1.toCharArray();
-        char[] c2 = value2.toCharArray();
-        int n = Math.min(c1.length, c2.length);
-        int i = 0;
-        while (i < n) {
-            if (c1[i] != c2[i]) {
-                return value2.substring(0, i + 1);
-            }
-            i++;
-        }
+    public MapEntry(Key key, Value value) {
+        this.key = key;
+        this.value = value;
+    }
 
-        if (n == c2.length) {
-            return value2;
-        }
-        return value2.substring(0, n);
+    public Key getKey() {
+        return key;
+    }
+
+    public Value getValue() {
+        return value;
+    }
+
+    public Value setValue(Value value) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String toString() {
+        return "{ key: "+key+", value: "+value+" }";
     }
 }

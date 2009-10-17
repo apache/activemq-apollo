@@ -53,7 +53,7 @@ final class BTreeIterator<Key, Value> implements Iterator<Map.Entry<Key, Value>>
                     break;
                 }
             } else {
-                nextEntry = new KeyValueEntry<Key, Value>(current.data.keys[nextIndex], current.data.values[nextIndex]);
+                nextEntry = new MapEntry<Key, Value>(current.data.keys[nextIndex], current.data.values[nextIndex]);
                 nextIndex++;
                 break;
             }

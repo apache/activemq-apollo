@@ -14,29 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hawtdb.internal.index;
+package org.apache.hawtdb.api;
+
 
 /**
- * Interface used to determine the simple prefix of two keys.
+ * StringPrefixer is a {@link Prefixer} implementation that works on strings.
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public interface Prefixer<Key> {
+public class StringPrefixer implements Prefixer<String> {
 
     /**
-     * This methods should return shortest prefix of value2 where the
-     * following still holds:<br/>
-     * value1 <= prefix <= value2.<br/>
-     * <br/>
+     * Example: If value1 is "Hello World" and value 2 is "Help Me" then the
+     * result will be: "Help"
      * 
-     * When this method is called, the following is guaranteed:<br/>
-     * value1 < value2<br/>
-     * <br/>
-     * 
-     * 
-     * @param value1
-     * @param value2
-     * @return
+     * @see Prefixer#getSimplePrefix
      */
-    public Key getSimplePrefix(Key value1, Key value2);
+    public String getSimplePrefix(String value1, String value2) {
+        char[] c1 = value1.toCharArray();
+        char[] c2 = value2.toCharArray();
+        int n = Math.min(c1.length, c2.length);
+        int i = 0;
+        while (i < n) {
+            if (c1[i] != c2[i]) {
+                return value2.substring(0, i + 1);
+            }
+            i++;
+        }
+
+        if (n == c2.length) {
+            return value2;
+        }
+        return value2.substring(0, n);
+    }
 }

@@ -14,27 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hawtdb.internal.index;
-
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.marshaller.FixedBufferMarshaller;
-import org.apache.activemq.util.marshaller.LongMarshaller;
-import org.apache.hawtdb.api.HashIndexFactory;
-import org.apache.hawtdb.api.Index;
-import org.apache.hawtdb.api.Transaction;
-
+package org.apache.hawtdb.api;
 
 /**
+ * Interface used to determine the simple prefix of two keys.
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class HashIndexBenchmark extends IndexBenchmark {
+public interface Prefixer<Key> {
 
-    protected Index<Long, Buffer> createIndex(Transaction tx) {
-        HashIndexFactory<Long, Buffer> factory = new HashIndexFactory<Long, Buffer>();
-        factory.setKeyMarshaller(LongMarshaller.INSTANCE);
-        factory.setValueMarshaller(new FixedBufferMarshaller(DATA.length));
-        return factory.open(tx, tx.allocator().alloc(1));
-    }
-    
+    /**
+     * This methods should return shortest prefix of value2 where the
+     * following still holds:<br/>
+     * value1 <= prefix <= value2.<br/>
+     * <br/>
+     * 
+     * When this method is called, the following is guaranteed:<br/>
+     * value1 < value2<br/>
+     * <br/>
+     * 
+     * 
+     * @param value1
+     * @param value2
+     * @return
+     */
+    public Key getSimplePrefix(Key value1, Key value2);
 }

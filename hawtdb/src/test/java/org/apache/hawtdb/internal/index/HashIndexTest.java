@@ -18,8 +18,8 @@ package org.apache.hawtdb.internal.index;
 
 import org.apache.activemq.util.marshaller.LongMarshaller;
 import org.apache.activemq.util.marshaller.StringMarshaller;
+import org.apache.hawtdb.api.HashIndexFactory;
 import org.apache.hawtdb.api.Index;
-import org.apache.hawtdb.internal.index.HashIndex.Factory;
 
 
 /**
@@ -30,7 +30,7 @@ public class HashIndexTest extends IndexTestSupport {
 
     @Override
     protected Index<String, Long> createIndex(int page) {
-        Factory<String,Long> factory = new Factory<String,Long>();
+        HashIndexFactory<String,Long> factory = new HashIndexFactory<String,Long>();
         factory.setKeyMarshaller(StringMarshaller.INSTANCE);
         factory.setValueMarshaller(LongMarshaller.INSTANCE);
         if( page==-1 ) {

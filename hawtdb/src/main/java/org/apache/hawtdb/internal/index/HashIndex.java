@@ -16,176 +16,239 @@
  */
 package org.apache.hawtdb.internal.index;
 
+import java.nio.ByteBuffer;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.activemq.util.marshaller.Marshaller;
+import javolution.io.Struct;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hawtdb.api.BTreeIndexFactory;
+import org.apache.hawtdb.api.HashIndexFactory;
 import org.apache.hawtdb.api.Index;
 import org.apache.hawtdb.api.Paged;
+import org.apache.hawtdb.api.Paged.SliceType;
 
 
 /**
- * Hash Index implementation.  The hash buckets use a BTree.
+ * Hash Index implementation.  The hash buckets store entries in a b+tree.
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class HashIndex<Key,Value> implements Index<Key,Value> {
     
     private static final Log LOG = LogFactory.getLog(HashIndex.class);
+
+    static private class Header extends Struct {
+        public final UTF8String magic = new UTF8String(4);
+        public final Signed32 page = new Signed32();
+        public final Signed32 capacity = new Signed32();
+        public final Signed32 size = new Signed32();
+        public final Signed32 active = new Signed32();
         
-    public static final String PROPERTY_PREFIX = HashIndex.class.getName()+".";
-    public static final int DEFAULT_BIN_CAPACITY = Integer.parseInt(System.getProperty(PROPERTY_PREFIX+"DEFAULT_BIN_CAPACITY", "1024"));
-    public static final int DEFAULT_MAXIMUM_BIN_CAPACITY = Integer.parseInt(System.getProperty(PROPERTY_PREFIX+"DEFAULT_MAXIMUM_BIN_CAPACITY", "16384"));
-    public static final int DEFAULT_MINIMUM_BIN_CAPACITY = Integer.parseInt(System.getProperty(PROPERTY_PREFIX+"DEFAULT_MINIMUM_BIN_CAPACITY", "16"));
-    public static final int DEFAULT_LOAD_FACTOR = Integer.parseInt(System.getProperty(PROPERTY_PREFIX+"DEFAULT_LOAD_FACTOR", "75"));
+        static Header create(ByteBuffer buffer) {
+            Header header = new Header();
+            header.setByteBuffer(buffer, buffer.position());
+            return header;
+        }
+    }
 
-    static class Factory<Key, Value> {
-        private Marshaller<Key> keyMarshaller;
-        private Marshaller<Value> valueMarshaller;
-        private int maximumBinCapacity = DEFAULT_MAXIMUM_BIN_CAPACITY;
-        private int minimumBinCapacity = DEFAULT_MINIMUM_BIN_CAPACITY;
-        private int loadFactor = DEFAULT_LOAD_FACTOR;
+    /** 
+     * This is the data stored in the index header.  It knows where
+     * the hash buckets are stored at an keeps usage statistics about
+     * those buckets. 
+     */
+    private class Buckets {
+        
+        int bucketsPage=-1;
+        int active;
+        int capacity;
+        int size;
+        
+        int increaseThreshold;
+        int decreaseThreshold;
 
-        public HashIndex<Key, Value> open(Paged paged, int page) {
-            return docreate(paged, page).open();
+        private void calcThresholds() {
+            increaseThreshold = (capacity * loadFactor)/100;
+            decreaseThreshold = (capacity * loadFactor * loadFactor ) / 20000;
         }
 
-        public HashIndex<Key, Value> create(Paged paged, int page) {
-            return docreate(paged, page).create();
-        }
-
-        private HashIndex<Key, Value> docreate(Paged paged, int page) {
-            assertFieldsSet();
-            return new HashIndex<Key, Value>(paged, page, keyMarshaller, valueMarshaller, maximumBinCapacity, minimumBinCapacity, loadFactor);
-        }
-
-        private void assertFieldsSet() {
-            if (keyMarshaller == null) {
-                throw new IllegalArgumentException("The key marshaller must be set before calling open");
+        void create(int capacity) {
+            this.size = 0;
+            this.active = 0;
+            this.capacity = capacity;
+            this.bucketsPage = paged.allocator().alloc(capacity);
+            for (int i = 0; i < capacity; i++) {
+                BIN_FACTORY.create(paged, (bucketsPage + i));
             }
-            if (valueMarshaller == null) {
-                throw new IllegalArgumentException("The key marshaller must be set before calling open");
-            }
-        }
-
-        public Marshaller<Key> getKeyMarshaller() {
-            return keyMarshaller;
-        }
-
-        public void setKeyMarshaller(Marshaller<Key> keyMarshaller) {
-            this.keyMarshaller = keyMarshaller;
-        }
-
-        public Marshaller<Value> getValueMarshaller() {
-            return valueMarshaller;
-        }
-
-        public void setValueMarshaller(Marshaller<Value> valueMarshaller) {
-            this.valueMarshaller = valueMarshaller;
-        }
-
-        public int getMaximumBinCapacity() {
-            return maximumBinCapacity;
-        }
-
-        public void setMaximumBinCapacity(int maximumBinCapacity) {
-            this.maximumBinCapacity = maximumBinCapacity;
-        }
-
-        public int getMinimumBinCapacity() {
-            return minimumBinCapacity;
-        }
-
-        public void setMinimumBinCapacity(int minimumBinCapacity) {
-            this.minimumBinCapacity = minimumBinCapacity;
-        }
-
-        public int getLoadFactor() {
-            return loadFactor;
-        }
-
-        public void setLoadFactor(int loadFactor) {
-            this.loadFactor = loadFactor;
+            calcThresholds();
+            store();
         }
         
+        public void destroy() {
+            clear();
+            paged.allocator().free(bucketsPage, capacity);
+        }
+        
+        public void clear() {
+            for (int i = 0; i < buckets.capacity; i++) {
+                buckets.bucket(i).clear();
+            }
+            buckets.size = 0;
+            buckets.active = 0;
+            buckets.calcThresholds();
+        }
+
+        void store() {
+            ByteBuffer slice = paged.slice(SliceType.WRITE, page, 1);
+            try {
+                Header header = Header.create(slice);
+                header.magic.set("HASH");
+                header.page.set(this.bucketsPage);
+                header.capacity.set(this.capacity);
+                header.size.set(this.size);
+                header.active.set(this.active);
+            } finally {
+                paged.unslice(slice);
+            }
+        }
+        
+        void load() {
+            ByteBuffer slice = paged.slice(SliceType.READ, page, 1);
+            try {
+                Header header = Header.create(slice);
+                this.bucketsPage = header.page.get();
+                this.capacity = header.capacity.get();
+                this.size = header.size.get();
+                this.active = header.active.get();
+                calcThresholds();
+            } finally {
+                paged.unslice(slice);
+            }
+        }
+        
+        Index<Key,Value> bucket(int index) {
+            return BIN_FACTORY.open(paged, bucketsPage+index);
+        }
+
+        Index<Key,Value> bucket(Key key) {
+            int i = index(key);
+            return BIN_FACTORY.open(paged, bucketsPage+i);
+        }
+
+        int index(Key x) {
+            try {
+                return Math.abs(x.hashCode()%capacity);
+            } catch (ArithmeticException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                throw e;
+            }
+        }
+        
+        @Override
+        public String toString() {
+            return "{ page:"+bucketsPage+", size: "+size+", capacity: "+capacity+", active: "+active+", increase threshold: "+increaseThreshold+", decrease threshold: "+decreaseThreshold+" }";
+        }
+
     }
     
-    final BTreeIndex.Factory<Key, Value> BIN_FACTORY = new BTreeIndex.Factory<Key, Value>();
-
-    final Paged paged;
-    final int page;
-    final int maximumBinCapacity;
-    final int minimumBinCapacity;
+    private final BTreeIndexFactory<Key, Value> BIN_FACTORY = new BTreeIndexFactory<Key, Value>();
+    
+    private final Paged paged;
+    private final int page;
+    private final int maximumBucketCapacity;
+    private final int minimumBucketCapacity;
     private final int loadFactor;
+    private final int initialBucketCapacity;
 
-    private HashBins bins;
-    int increaseThreshold;
-    int decreaseThreshold;
+    private Buckets buckets;
 
-    public HashIndex(Paged paged, int page, Marshaller<Key> keyMarshaller, Marshaller<Value> valueMarshaller, int maximumBinCapacity, int minimumBinCapacity, int loadFactor) {
+    public HashIndex(Paged paged, int page, HashIndexFactory<Key,Value> factory) {
         this.paged = paged;
         this.page = page;
-        this.maximumBinCapacity = maximumBinCapacity;
-        this.minimumBinCapacity = minimumBinCapacity;
-        this.loadFactor = loadFactor;
-        this.BIN_FACTORY.setKeyMarshaller(keyMarshaller);
-        this.BIN_FACTORY.setValueMarshaller(valueMarshaller);
+        this.maximumBucketCapacity = factory.getMaximumBucketCapacity();
+        this.minimumBucketCapacity = factory.getMinimumBucketCapacity();
+        this.loadFactor = factory.getLoadFactor();
+        this.initialBucketCapacity = factory.getBucketCapacity();
+        this.BIN_FACTORY.setKeyMarshaller(factory.getKeyMarshaller());
+        this.BIN_FACTORY.setValueMarshaller(factory.getValueMarshaller());
     }
 
     public HashIndex<Key, Value> create() {
-        this.bins = new HashBins();
-        this.bins.create(this, DEFAULT_BIN_CAPACITY);
-        paged.put(HashBins.ENCODER_DECODER, page, bins);
-        calcThresholds();
+        buckets = new Buckets();
+        buckets.create(initialBucketCapacity);
         return this;
     }
 
     public HashIndex<Key, Value> open() {
-        this.bins = paged.get(HashBins.ENCODER_DECODER, page);
-        calcThresholds();
+        buckets = new Buckets();
+        buckets.load();
         return this;
     }
 
     public Value get(Key key) {
-        return bins.bin(this, key).get(key);
+        return buckets.bucket(key).get(key);
     }
     
     public boolean containsKey(Key key) {
-        return bins.bin(this, key).containsKey(key);
+        return buckets.bucket(key).containsKey(key);
     }
-
+    
     public Value put(Key key, Value value) {
-        Value put = bins.put(this, key, value);
-        if (bins.active >= this.increaseThreshold) {
-            int newSize = Math.min(this.maximumBinCapacity, bins.capacity*2);
-            if(bins.capacity!=newSize) {
-                this.resize(newSize);
+        Index<Key, Value> bucket = buckets.bucket(key);
+
+        int originalSize = bucket.size();
+        Value put = bucket.put(key,value);
+        int newSize = bucket.size();
+
+        if (newSize != originalSize) {
+            buckets.size++;
+            if (newSize == 1) {
+                buckets.active++;
+            }
+            buckets.store();
+        }
+        
+        if (buckets.active >= buckets.increaseThreshold) {
+            newSize = Math.min(this.maximumBucketCapacity, buckets.capacity*4);
+            if(buckets.capacity!=newSize) {
+                this.changeCapacity(newSize);
             }
         }
         return put;
     }
     
     public Value remove(Key key) {
-        Value rc = bins.remove(this, key);
-        if (bins.active <= this.decreaseThreshold) {
-            int newSize = Math.max(minimumBinCapacity, bins.capacity/2);
-            if(bins.capacity!=newSize) {
-                resize(newSize);
+        Index<Key, Value> bucket = buckets.bucket(key);
+        int originalSize = bucket.size();
+        Value rc = bucket.remove(key);
+        int newSize = bucket.size();
+        
+        if (newSize != originalSize) {
+            buckets.size--;
+            if (newSize == 0) {
+                buckets.active--;
+            }
+            buckets.store();
+        }
+
+        if (buckets.active <= buckets.decreaseThreshold) {
+            newSize = Math.max(minimumBucketCapacity, buckets.capacity/2);
+            if(buckets.capacity!=newSize) {
+                changeCapacity(newSize);
             }
         }
         return rc;
     }
 
     public void clear() {
-        bins.clear(this);
-        if (bins.active <= this.decreaseThreshold) {
-            int newSize = Math.max(minimumBinCapacity, bins.capacity/2);
-            if(bins.capacity!=newSize) {
-                resize(newSize);
-            }
+        buckets.clear();
+        if (buckets.capacity!=initialBucketCapacity) {
+            changeCapacity(initialBucketCapacity);
         }
     }
     
@@ -194,47 +257,48 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
     }
     
     public int size() {
-        return bins.size;
+        return buckets.size;
     }
     
     public void destroy() {
-        bins.destroy(this);
-        bins = null;
+        buckets.destroy();
+        buckets = null;
+    }
+    public int getPage() {
+        return page;
+    }
+
+    // /////////////////////////////////////////////////////////////////
+    // Helper methods Methods
+    // /////////////////////////////////////////////////////////////////
+    private void changeCapacity(final int capacity) {
+        LOG.debug("Resizing to: "+capacity);
+        
+        Buckets next = new Buckets();
+        next.create(capacity);
+
+        // Copy the data from the old buckets to the new buckets.
+        for (int i = 0; i < buckets.capacity; i++) {
+            Index<Key, Value> bin = buckets.bucket(i);
+            HashSet<Integer> activeBuckets = new HashSet<Integer>();
+            for (Map.Entry<Key, Value> entry : bin) {
+                Key key = entry.getKey();
+                Value value = entry.getValue();
+                Index<Key, Value> bucket = next.bucket(key);
+                bucket.put(key, value);
+                if( activeBuckets.add(bucket.getPage()) ) {
+                    next.active++;
+                }
+            }
+        }
+        next.size = buckets.size;
+        
+        buckets.destroy();
+        buckets = next;
+        LOG.debug("Resizing done.  New bins start at: "+buckets.bucketsPage);        
     }
 
     public String toString() {
-        return "{ page: "+page+", bins: "+bins+" }";
-    }
-
-    // /////////////////////////////////////////////////////////////////
-    // Implementation Methods
-    // /////////////////////////////////////////////////////////////////
-    void resize(final int capacity) {
-        LOG.debug("Resizing to: "+capacity);
-        
-        HashBins newBins = new HashBins();
-        newBins.create(this, capacity);
-
-        // Copy the data from the old bins to the new bins.
-        for (int i = 0; i < bins.capacity; i++) {
-            Index<Key, Value> bin = bins.bin(this, i);
-            for (Map.Entry<Key, Value> entry : bin) {
-                newBins.put(this, entry.getKey(), entry.getValue());
-            }
-        }
-        
-        bins.destroy(this);
-        bins = newBins;
-        calcThresholds();
-        LOG.debug("Resizing done.  New bins start at: "+bins.page);        
-    }
-
-    private void calcThresholds() {
-        increaseThreshold = (bins.capacity * loadFactor)/100;
-        decreaseThreshold = (bins.capacity * loadFactor * loadFactor ) / 20000;
-    }
-
-    public int getPage() {
-        return page;
+        return "{ page: "+page+", buckets: "+buckets+" }";
     }
 }

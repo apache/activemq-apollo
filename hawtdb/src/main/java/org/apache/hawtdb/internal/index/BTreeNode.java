@@ -30,6 +30,7 @@ import org.apache.hawtdb.api.IndexVisitor;
 import org.apache.hawtdb.api.EncoderDecoder;
 import org.apache.hawtdb.api.IndexException;
 import org.apache.hawtdb.api.Paged;
+import org.apache.hawtdb.api.Prefixer;
 import org.apache.hawtdb.internal.page.Extent;
 import org.apache.hawtdb.internal.page.ExtentInputStream;
 import org.apache.hawtdb.internal.page.ExtentOutputStream;
@@ -599,7 +600,7 @@ public final class BTreeNode<Key, Value> {
             node = node.getChild(index, 0);
         }
         if (node.data.values.length > 0) {
-            return new KeyValueEntry<Key, Value>(node.data.keys[0], node.data.values[0]);
+            return new MapEntry<Key, Value>(node.data.keys[0], node.data.values[0]);
         } else {
             return null;
         }
@@ -612,7 +613,7 @@ public final class BTreeNode<Key, Value> {
         }
         if (node.data.values.length > 0) {
             int idx = node.data.values.length - 1;
-            return new KeyValueEntry<Key, Value>(node.data.keys[idx], node.data.values[idx]);
+            return new MapEntry<Key, Value>(node.data.keys[idx], node.data.values[idx]);
         } else {
             return null;
         }

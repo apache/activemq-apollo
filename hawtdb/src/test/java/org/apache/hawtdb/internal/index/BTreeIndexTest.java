@@ -26,10 +26,10 @@ import java.util.Map;
 
 import org.apache.activemq.util.marshaller.LongMarshaller;
 import org.apache.activemq.util.marshaller.StringMarshaller;
+import org.apache.hawtdb.api.BTreeIndexFactory;
 import org.apache.hawtdb.api.IndexVisitor;
 import org.apache.hawtdb.api.Index;
 import org.apache.hawtdb.internal.index.BTreeIndex;
-import org.apache.hawtdb.internal.index.BTreeIndex.Factory;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -51,7 +51,7 @@ public class BTreeIndexTest extends IndexTestSupport {
     
     @Override
     protected Index<String, Long> createIndex(int page) {
-        Factory<String,Long> factory = new Factory<String,Long>();
+        BTreeIndexFactory<String,Long> factory = new BTreeIndexFactory<String,Long>();
         factory.setKeyMarshaller(StringMarshaller.INSTANCE);
         factory.setValueMarshaller(LongMarshaller.INSTANCE);
         factory.setDeferredEncoding(deferredEncoding);

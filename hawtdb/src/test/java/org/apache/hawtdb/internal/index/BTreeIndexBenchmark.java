@@ -19,10 +19,9 @@ package org.apache.hawtdb.internal.index;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.util.marshaller.FixedBufferMarshaller;
 import org.apache.activemq.util.marshaller.LongMarshaller;
+import org.apache.hawtdb.api.BTreeIndexFactory;
 import org.apache.hawtdb.api.Index;
 import org.apache.hawtdb.api.Transaction;
-import org.apache.hawtdb.internal.index.BTreeIndex;
-import org.apache.hawtdb.internal.index.BTreeIndex.Factory;
 
 /**
  * 
@@ -31,7 +30,7 @@ import org.apache.hawtdb.internal.index.BTreeIndex.Factory;
 public class BTreeIndexBenchmark extends IndexBenchmark {
 
     protected Index<Long, Buffer> createIndex(Transaction tx) {
-        Factory<Long, Buffer> factory = new BTreeIndex.Factory<Long, Buffer>();
+        BTreeIndexFactory<Long, Buffer> factory = new BTreeIndexFactory<Long, Buffer>();
         factory.setKeyMarshaller(LongMarshaller.INSTANCE);
         factory.setValueMarshaller(new FixedBufferMarshaller(DATA.length));
         return factory.open(tx, tx.allocator().alloc(1));

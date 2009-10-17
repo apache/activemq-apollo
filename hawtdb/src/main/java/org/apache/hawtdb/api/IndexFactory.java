@@ -14,33 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hawtdb.internal.index;
-
-import java.util.Map;
+package org.apache.hawtdb.api;
 
 /**
+ * The common interface to {@link Index} factories.  An index factory
+ * allows you to create or open an index in a {@link Paged} object.
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-final class KeyValueEntry<Key, Value> implements Map.Entry<Key, Value> {
-    private final Key key;
-    private final Value value;
-
-    public KeyValueEntry(Key key, Value value) {
-        this.key = key;
-        this.value = value;
-    }
-
-    public Key getKey() {
-        return key;
-    }
-
-    public Value getValue() {
-        return value;
-    }
-
-    public Value setValue(Value value) {
-        throw new UnsupportedOperationException();
-    }
-
+public interface IndexFactory<Key, Value> {
+    
+    /**
+     * 
+     * @param paged
+     * @param page
+     * @return
+     */
+    public Index<Key, Value> create(Paged paged, int page);
+    
+    /**
+     * 
+     * @param paged
+     * @param page
+     * @return
+     */
+    public Index<Key, Value> open(Paged paged, int page);
+    
 }
