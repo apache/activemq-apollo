@@ -16,21 +16,23 @@
  */
 package org.apache.hawtdb.internal.index;
 
-import java.nio.ByteBuffer;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javolution.io.Struct;
-
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.DataByteArrayInputStream;
+import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hawtdb.api.BTreeIndexFactory;
 import org.apache.hawtdb.api.HashIndexFactory;
+import org.apache.hawtdb.api.IOPagingException;
 import org.apache.hawtdb.api.Index;
+import org.apache.hawtdb.api.IndexException;
 import org.apache.hawtdb.api.Paged;
-import org.apache.hawtdb.api.Paged.SliceType;
 
 
 /**
@@ -42,27 +44,32 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
     
     private static final Log LOG = LogFactory.getLog(HashIndex.class);
 
-    static private class Header extends Struct {
-        public final UTF8String magic = new UTF8String(4);
-        public final Signed32 page = new Signed32();
-        public final Signed32 capacity = new Signed32();
-        public final Signed32 size = new Signed32();
-        public final Signed32 active = new Signed32();
-        
-        static Header create(ByteBuffer buffer) {
-            Header header = new Header();
-            header.setByteBuffer(buffer, buffer.position());
-            return header;
-        }
-    }
+//    static private class Header extends Struct {
+//        public final UTF8String magic = new UTF8String(4);
+//        public final Signed32 page = new Signed32();
+//        public final Signed32 capacity = new Signed32();
+//        public final Signed32 size = new Signed32();
+//        public final Signed32 active = new Signed32();
+//        
+//        static Header create(ByteBuffer buffer) {
+//            Header header = new Header();
+//            header.setByteBuffer(buffer, buffer.position());
+//            return header;
+//        }
+//    }
+    
 
     /** 
      * This is the data stored in the index header.  It knows where
      * the hash buckets are stored at an keeps usage statistics about
      * those buckets. 
      */
-    private class Buckets {
+    static private class Buckets<Key,Value> {
         
+        public static final int HEADER_SIZE = headerSize();
+        public static final Buffer MAGIC = new Buffer(new byte[] {'h', 'a', 's', 'h'});
+
+        final HashIndex<Key,Value> index;
         int bucketsPage=-1;
         int active;
         int capacity;
@@ -71,18 +78,22 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
         int increaseThreshold;
         int decreaseThreshold;
 
+        public Buckets(HashIndex<Key, Value> index) {
+            this.index = index;
+        }
+
         private void calcThresholds() {
-            increaseThreshold = (capacity * loadFactor)/100;
-            decreaseThreshold = (capacity * loadFactor * loadFactor ) / 20000;
+            increaseThreshold = (capacity * index.loadFactor)/100;
+            decreaseThreshold = (capacity * index.loadFactor * index.loadFactor ) / 20000;
         }
 
         void create(int capacity) {
             this.size = 0;
             this.active = 0;
             this.capacity = capacity;
-            this.bucketsPage = paged.allocator().alloc(capacity);
+            this.bucketsPage = index.paged.allocator().alloc(capacity);
             for (int i = 0; i < capacity; i++) {
-                BIN_FACTORY.create(paged, (bucketsPage + i));
+                index.BIN_FACTORY.create(index.paged, (bucketsPage + i));
             }
             calcThresholds();
             store();
@@ -90,53 +101,70 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
         
         public void destroy() {
             clear();
-            paged.allocator().free(bucketsPage, capacity);
+            index.paged.allocator().free(bucketsPage, capacity);
         }
         
         public void clear() {
-            for (int i = 0; i < buckets.capacity; i++) {
-                buckets.bucket(i).clear();
+            for (int i = 0; i < index.buckets.capacity; i++) {
+                index.buckets.bucket(i).clear();
             }
-            buckets.size = 0;
-            buckets.active = 0;
-            buckets.calcThresholds();
+            index.buckets.size = 0;
+            index.buckets.active = 0;
+            index.buckets.calcThresholds();
+        }
+        
+        private static int headerSize() {
+            DataByteArrayOutputStream os = new DataByteArrayOutputStream();
+            new Buckets<Object, Object>(null).writeExternal(os);
+            return os.toBuffer().getLength();
         }
 
         void store() {
-            ByteBuffer slice = paged.slice(SliceType.WRITE, page, 1);
-            try {
-                Header header = Header.create(slice);
-                header.magic.set("HASH");
-                header.page.set(this.bucketsPage);
-                header.capacity.set(this.capacity);
-                header.size.set(this.size);
-                header.active.set(this.active);
-            } finally {
-                paged.unslice(slice);
-            }
+            DataByteArrayOutputStream os = new DataByteArrayOutputStream(HEADER_SIZE);
+            writeExternal(os);
+            Buffer buffer = os.toBuffer();
+            index.paged.write(index.page, buffer);
         }
-        
+
         void load() {
-            ByteBuffer slice = paged.slice(SliceType.READ, page, 1);
+            Buffer buffer = new Buffer(HEADER_SIZE);
+            index.paged.read(index.page, buffer);
+            DataByteArrayInputStream is = new DataByteArrayInputStream(buffer);
+            readExternal(is);
+        }
+        
+        private void writeExternal(DataByteArrayOutputStream os) {
             try {
-                Header header = Header.create(slice);
-                this.bucketsPage = header.page.get();
-                this.capacity = header.capacity.get();
-                this.size = header.size.get();
-                this.active = header.active.get();
-                calcThresholds();
-            } finally {
-                paged.unslice(slice);
+                os.write(MAGIC.data, MAGIC.offset, MAGIC.length);
+                os.writeInt(this.bucketsPage);
+                os.writeInt(this.capacity);
+                os.writeInt(this.size);
+                os.writeInt(this.active);
+            } catch (IOException e) {
+                throw new IOPagingException(e);
             }
         }
         
-        Index<Key,Value> bucket(int index) {
-            return BIN_FACTORY.open(paged, bucketsPage+index);
+        private void readExternal(DataByteArrayInputStream is) {
+            Buffer magic = new Buffer(MAGIC.length);
+            is.readFully(magic.data, magic.offset, magic.length);
+            if (!magic.equals(MAGIC)) {
+                throw new IndexException("Not a hash page");
+            }
+            this.bucketsPage = is.readInt();
+            this.capacity = is.readInt();
+            this.size = is.readInt();
+            this.active = is.readInt();
+        }        
+
+        
+        Index<Key,Value> bucket(int bucket) {
+            return index.BIN_FACTORY.open(index.paged, bucketsPage+bucket);
         }
 
         Index<Key,Value> bucket(Key key) {
             int i = index(key);
-            return BIN_FACTORY.open(paged, bucketsPage+i);
+            return index.BIN_FACTORY.open(index.paged, bucketsPage+i);
         }
 
         int index(Key x) {
@@ -165,7 +193,7 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
     private final int loadFactor;
     private final int initialBucketCapacity;
 
-    private Buckets buckets;
+    private Buckets<Key,Value> buckets;
 
     public HashIndex(Paged paged, int page, HashIndexFactory<Key,Value> factory) {
         this.paged = paged;
@@ -179,13 +207,13 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
     }
 
     public HashIndex<Key, Value> create() {
-        buckets = new Buckets();
+        buckets = new Buckets<Key, Value>(this);
         buckets.create(initialBucketCapacity);
         return this;
     }
 
     public HashIndex<Key, Value> open() {
-        buckets = new Buckets();
+        buckets = new Buckets<Key, Value>(this);
         buckets.load();
         return this;
     }
@@ -274,7 +302,7 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
     private void changeCapacity(final int capacity) {
         LOG.debug("Resizing to: "+capacity);
         
-        Buckets next = new Buckets();
+        Buckets<Key, Value> next = new Buckets<Key, Value>(this);
         next.create(capacity);
 
         // Copy the data from the old buckets to the new buckets.

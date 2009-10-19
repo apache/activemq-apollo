@@ -23,8 +23,8 @@ import org.apache.activemq.metric.MetricCounter;
 import org.apache.hawtdb.internal.Action;
 import org.apache.hawtdb.internal.Benchmarker;
 import org.apache.hawtdb.internal.Benchmarker.BenchmarkAction;
-import org.apache.hawtdb.internal.page.ConcurrentPageFile;
-import org.apache.hawtdb.internal.page.ConcurrentPageFileFactory;
+import org.apache.hawtdb.internal.page.HawtPageFile;
+import org.apache.hawtdb.internal.page.HawtPageFileFactory;
 
 /**
  * 
@@ -33,14 +33,14 @@ import org.apache.hawtdb.internal.page.ConcurrentPageFileFactory;
 public class TransactionBenchmarker<A extends TransactionActor<A>> {
     
     public interface Callback {
-        public void run(ConcurrentPageFileFactory pff) throws Exception;
+        public void run(HawtPageFileFactory pff) throws Exception;
     }
     
     private Callback setup;
     private Callback tearDown;
     
     public void benchmark(int actorCount, BenchmarkAction<A> action) throws Exception {
-        ConcurrentPageFileFactory pff = new ConcurrentPageFileFactory();
+        HawtPageFileFactory pff = new HawtPageFileFactory();
         pff.setFile(new File("target/test-data/" + getClass().getName() + ".db"));
         pff.getFile().delete();
         pff.open();
@@ -48,7 +48,7 @@ public class TransactionBenchmarker<A extends TransactionActor<A>> {
             if( setup!=null ) {
                 setup.run(pff);
             }
-            ConcurrentPageFile pf = pff.getConcurrentPageFile();
+            HawtPageFile pf = pff.getConcurrentPageFile();
             Benchmarker benchmark = new Benchmarker();
             benchmark.setName(action.getName());
             ArrayList<A> actors = createActors(pf, actorCount, action);
@@ -71,7 +71,7 @@ public class TransactionBenchmarker<A extends TransactionActor<A>> {
         return metrics;
     }
 
-    protected ArrayList<A> createActors(ConcurrentPageFile pageFile, int count, Action<A> action) {
+    protected ArrayList<A> createActors(HawtPageFile pageFile, int count, Action<A> action) {
         ArrayList<A> actors = new ArrayList<A>();
         for (int i = 0; i < count; i++) {
             A actor = createActor(pageFile, action, i);
@@ -84,7 +84,7 @@ public class TransactionBenchmarker<A extends TransactionActor<A>> {
     }
 
     @SuppressWarnings("unchecked")
-    protected A createActor(ConcurrentPageFile pageFile, Action<A> action, int i) {
+    protected A createActor(HawtPageFile pageFile, Action<A> action, int i) {
         return (A) new TransactionActor();
     }
 

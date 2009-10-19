@@ -20,18 +20,18 @@ package org.apache.hawtdb.internal.page;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class ConcurrentPageFileFactory extends PageFileFactory {
+public class HawtPageFileFactory extends PageFileFactory {
 
-    private ConcurrentPageFile concurrentPageFile;
+    private HawtPageFile concurrentPageFile;
     
     protected boolean drainOnClose;
 
-    public ConcurrentPageFile getConcurrentPageFile() {
+    public HawtPageFile getConcurrentPageFile() {
         return concurrentPageFile;
     }
     
-    public ConcurrentPageFileFactory() {
-        super.setHeaderSize(ConcurrentPageFile.HEADER_SIZE);
+    public HawtPageFileFactory() {
+        super.setHeaderSize(HawtPageFile.HEADER_SIZE);
     }
     
     @Override
@@ -46,7 +46,7 @@ public class ConcurrentPageFileFactory extends PageFileFactory {
         boolean existed = file.isFile();
         super.open();
         if (concurrentPageFile == null) {
-            concurrentPageFile = new ConcurrentPageFile(getPageFile());
+            concurrentPageFile = new HawtPageFile(getPageFile());
             if( existed ) {
                 concurrentPageFile.recover();
             } else {

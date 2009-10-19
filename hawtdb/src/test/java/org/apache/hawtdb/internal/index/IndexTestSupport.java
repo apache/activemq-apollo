@@ -24,8 +24,8 @@ import java.io.IOException;
 
 import org.apache.hawtdb.api.Index;
 import org.apache.hawtdb.api.Transaction;
-import org.apache.hawtdb.internal.page.ConcurrentPageFile;
-import org.apache.hawtdb.internal.page.ConcurrentPageFileFactory;
+import org.apache.hawtdb.internal.page.HawtPageFile;
+import org.apache.hawtdb.internal.page.HawtPageFileFactory;
 import org.junit.After;
 import org.junit.Test;
 
@@ -37,14 +37,14 @@ import org.junit.Test;
  */
 public abstract class IndexTestSupport {
     
-    private ConcurrentPageFileFactory pff;
-    private ConcurrentPageFile pf;
+    private HawtPageFileFactory pff;
+    private HawtPageFile pf;
     protected Index<String,Long> index;
     protected Transaction tx;
 
     
-    protected ConcurrentPageFileFactory createConcurrentPageFileFactory() {
-        ConcurrentPageFileFactory rc = new ConcurrentPageFileFactory();
+    protected HawtPageFileFactory createConcurrentPageFileFactory() {
+        HawtPageFileFactory rc = new HawtPageFileFactory();
         rc.setFile(new File("target/test-data/" + getClass().getName() + ".db"));
         return rc;
     }

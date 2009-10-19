@@ -19,7 +19,7 @@ package org.apache.hawtdb.api;
 import java.nio.ByteBuffer;
 
 import org.apache.activemq.util.buffer.Buffer;
-import org.apache.hawtdb.internal.page.ConcurrentPageFile;
+import org.apache.hawtdb.internal.page.HawtPageFile;
 
 /**
  * Gets a named cache.
@@ -29,7 +29,7 @@ import org.apache.hawtdb.internal.page.ConcurrentPageFile;
  * 
  * Pages that are being read/updated via the cache should not be accessed
  * directly via the Paged interface. The Cache will delay encoding objects until
- * a {@link ConcurrentPageFile#flush()} occurs. During that time, page data
+ * a {@link HawtPageFile#flush()} occurs. During that time, page data
  * returned from the {@link Paged} interface will be inconsistent with what was
  * stored in the Cache.
  * 

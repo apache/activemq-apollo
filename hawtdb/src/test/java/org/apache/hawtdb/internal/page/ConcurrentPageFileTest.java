@@ -36,8 +36,8 @@ import org.apache.hawtdb.api.IOPagingException;
 import org.apache.hawtdb.api.OptimisticUpdateException;
 import org.apache.hawtdb.api.Paged;
 import org.apache.hawtdb.api.Transaction;
-import org.apache.hawtdb.internal.page.ConcurrentPageFile;
-import org.apache.hawtdb.internal.page.ConcurrentPageFileFactory;
+import org.apache.hawtdb.internal.page.HawtPageFile;
+import org.apache.hawtdb.internal.page.HawtPageFileFactory;
 import org.apache.hawtdb.internal.page.ExtentInputStream;
 import org.apache.hawtdb.internal.page.ExtentOutputStream;
 import org.junit.After;
@@ -50,12 +50,12 @@ import org.junit.Test;
  */
 public class ConcurrentPageFileTest {
 
-    private ConcurrentPageFileFactory pff;
+    private HawtPageFileFactory pff;
 
-    private ConcurrentPageFile pf;
+    private HawtPageFile pf;
 
-    protected ConcurrentPageFileFactory createConcurrentPageFileFactory() {
-        ConcurrentPageFileFactory rc = new ConcurrentPageFileFactory();
+    protected HawtPageFileFactory createConcurrentPageFileFactory() {
+        HawtPageFileFactory rc = new HawtPageFileFactory();
         rc.setFile(new File("target/test-data/" + getClass().getName() + ".db"));
         return rc;
     }

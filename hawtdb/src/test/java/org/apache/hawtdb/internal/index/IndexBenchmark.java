@@ -23,7 +23,7 @@ import org.apache.hawtdb.api.Index;
 import org.apache.hawtdb.api.Transaction;
 import org.apache.hawtdb.internal.Action;
 import org.apache.hawtdb.internal.Benchmarker.BenchmarkAction;
-import org.apache.hawtdb.internal.page.ConcurrentPageFile;
+import org.apache.hawtdb.internal.page.HawtPageFile;
 import org.apache.hawtdb.internal.page.TransactionActor;
 import org.apache.hawtdb.internal.page.TransactionBenchmarker;
 import org.junit.Test;
@@ -53,7 +53,7 @@ public abstract class IndexBenchmark {
     }
     
     TransactionBenchmarker<IndexActor> benchmark = new TransactionBenchmarker<IndexActor>() {
-        protected IndexActor createActor(ConcurrentPageFile pageFile, Action<IndexActor> action, int i) {
+        protected IndexActor createActor(HawtPageFile pageFile, Action<IndexActor> action, int i) {
             return new IndexActor();
         };
     };

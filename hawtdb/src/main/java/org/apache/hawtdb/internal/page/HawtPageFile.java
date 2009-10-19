@@ -67,7 +67,7 @@ import org.apache.hawtdb.internal.util.Ranges;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public final class ConcurrentPageFile {
+public final class HawtPageFile {
 
     private static final String MAGIC = "HawtDB:1.0\n";
     private static final int FILE_HEADER_SIZE = 1024 * 4;
@@ -546,7 +546,7 @@ public final class ConcurrentPageFile {
      */
     private Ranges baseRevisionFreePages = new Ranges();
     
-    public ConcurrentPageFile(PageFile pageFile) {
+    public HawtPageFile(PageFile pageFile) {
         this.pageFile = pageFile;
         this.file = pageFile.getFile();
         this.allocator = pageFile.allocator();
@@ -555,7 +555,7 @@ public final class ConcurrentPageFile {
     }
 
     public Transaction tx() {
-        return new ConcurrentTransaction(this);
+        return new HawtTransaction(this);
     }
 
     /**

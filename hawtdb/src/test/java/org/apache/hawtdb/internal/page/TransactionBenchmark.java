@@ -22,8 +22,8 @@ import org.apache.activemq.util.buffer.Buffer;
 import org.apache.hawtdb.api.Transaction;
 import org.apache.hawtdb.internal.Action;
 import org.apache.hawtdb.internal.Benchmarker.BenchmarkAction;
-import org.apache.hawtdb.internal.page.ConcurrentPageFile;
-import org.apache.hawtdb.internal.page.ConcurrentPageFileFactory;
+import org.apache.hawtdb.internal.page.HawtPageFile;
+import org.apache.hawtdb.internal.page.HawtPageFileFactory;
 import org.apache.hawtdb.internal.page.TransactionBenchmarker.Callback;
 import org.junit.Test;
 
@@ -44,7 +44,7 @@ public class TransactionBenchmark {
     }
     
     TransactionBenchmarker<RandomTxActor> benchmark = new TransactionBenchmarker<RandomTxActor>() {
-        protected RandomTxActor createActor(ConcurrentPageFile pageFile, Action<RandomTxActor> action, int i) {
+        protected RandomTxActor createActor(HawtPageFile pageFile, Action<RandomTxActor> action, int i) {
             return new RandomTxActor();
         };
     };
@@ -93,7 +93,7 @@ public class TransactionBenchmark {
     
     private void preallocate(final int INITIAL_PAGE_COUNT) {
         benchmark.setSetup(new Callback(){
-            public void run(ConcurrentPageFileFactory pff) throws Exception {
+            public void run(HawtPageFileFactory pff) throws Exception {
                 Transaction tx = pff.getConcurrentPageFile().tx();
                 for (int i = 0; i < INITIAL_PAGE_COUNT; i++) {
                     int page = tx.allocator().alloc(1);

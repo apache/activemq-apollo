@@ -27,8 +27,8 @@ import org.apache.hawtdb.api.IOPagingException;
 import org.apache.hawtdb.api.OutOfSpaceException;
 import org.apache.hawtdb.api.PagingException;
 import org.apache.hawtdb.api.Transaction;
-import org.apache.hawtdb.internal.page.ConcurrentPageFile.DeferredUpdate;
-import org.apache.hawtdb.internal.page.ConcurrentPageFile.Snapshot;
+import org.apache.hawtdb.internal.page.HawtPageFile.DeferredUpdate;
+import org.apache.hawtdb.internal.page.HawtPageFile.Snapshot;
 
 /**
  * Transaction objects are NOT thread safe. Users of this object should
@@ -36,16 +36,16 @@ import org.apache.hawtdb.internal.page.ConcurrentPageFile.Snapshot;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-final class ConcurrentTransaction implements Transaction {
+final class HawtTransaction implements Transaction {
     /**
      * 
      */
-    private final ConcurrentPageFile parent;
+    private final HawtPageFile parent;
 
     /**
      * @param concurrentPageFile
      */
-    ConcurrentTransaction(ConcurrentPageFile concurrentPageFile) {
+    HawtTransaction(HawtPageFile concurrentPageFile) {
         parent = concurrentPageFile;
     }
 
@@ -59,24 +59,24 @@ final class ConcurrentTransaction implements Transaction {
             // TODO: this is not a very efficient way to handle allocation ranges.
             int end = pageId+count;
             for (int key = pageId; key < end; key++) {
-                Integer previous = getUpdates().put(key, ConcurrentPageFile.PAGE_FREED);
+                Integer previous = getUpdates().put(key, HawtPageFile.PAGE_FREED);
                 
                 // If it was an allocation that was done in this
                 // tx, then we can directly release it.
                 assert previous!=null;
-                if( previous == ConcurrentPageFile.PAGE_ALLOCATED) {
+                if( previous == HawtPageFile.PAGE_ALLOCATED) {
                     getUpdates().remove(key);
-                    ConcurrentTransaction.this.parent.allocator.free(key, 1);
+                    HawtTransaction.this.parent.allocator.free(key, 1);
                 }
             }
         }
         
         public int alloc(int count) throws OutOfSpaceException {
-            int pageId = ConcurrentTransaction.this.parent.allocator.alloc(count);
+            int pageId = HawtTransaction.this.parent.allocator.alloc(count);
             // TODO: this is not a very efficient way to handle allocation ranges.
             int end = pageId+count;
             for (int key = pageId; key < end; key++) {
-                getUpdates().put(key, ConcurrentPageFile.PAGE_ALLOCATED);
+                getUpdates().put(key, HawtPageFile.PAGE_ALLOCATED);
             }
             return pageId;
         }
@@ -90,11 +90,11 @@ final class ConcurrentTransaction implements Transaction {
         }
 
         public int getLimit() {
-            return ConcurrentTransaction.this.parent.allocator.getLimit();
+            return HawtTransaction.this.parent.allocator.getLimit();
         }
 
         public boolean isAllocated(int page) {
-            return ConcurrentTransaction.this.parent.allocator.isAllocated(page);
+            return HawtTransaction.this.parent.allocator.isAllocated(page);
         }
 
     };
@@ -117,14 +117,14 @@ final class ConcurrentTransaction implements Transaction {
             snapshot();
             update = parent.allocator.alloc(1);
             getUpdates().put(page, update);
-            getCacheUpdates().put(page, new ConcurrentPageFile.DeferredUpdate(update, value, marshaller));
+            getCacheUpdates().put(page, new HawtPageFile.DeferredUpdate(update, value, marshaller));
         } else {
             // We have updated it before...
             switch (update) {
-            case ConcurrentPageFile.PAGE_FREED:
+            case HawtPageFile.PAGE_FREED:
                 throw new PagingException("You should never try to write a page that has been freed.");
-            case ConcurrentPageFile.PAGE_ALLOCATED:
-                getCacheUpdates().put(page, new ConcurrentPageFile.DeferredUpdate(page, value, marshaller));
+            case HawtPageFile.PAGE_ALLOCATED:
+                getCacheUpdates().put(page, new HawtPageFile.DeferredUpdate(page, value, marshaller));
                 break;
             default:
                 DeferredUpdate cu = getCacheUpdates().get(page);
@@ -149,8 +149,8 @@ final class ConcurrentTransaction implements Transaction {
         Integer updatedPageId = updates == null ? null : updates.get(pageId);
         if (updatedPageId != null) {
             switch (updatedPageId) {
-            case ConcurrentPageFile.PAGE_ALLOCATED:
-            case ConcurrentPageFile.PAGE_FREED:
+            case HawtPageFile.PAGE_ALLOCATED:
+            case HawtPageFile.PAGE_FREED:
                 // TODO: Perhaps use a RuntimeException subclass.
                 throw new PagingException("You should never try to read a page that has been allocated or freed.");
             default:
@@ -169,9 +169,9 @@ final class ConcurrentTransaction implements Transaction {
             Integer udpate = updates == null ? null : updates.get(page);
             if (udpate != null) {
                 switch (udpate) {
-                case ConcurrentPageFile.PAGE_FREED:
+                case HawtPageFile.PAGE_FREED:
                     throw new PagingException("You should never try to read a page that has been allocated or freed.");
-                case ConcurrentPageFile.PAGE_ALLOCATED:
+                case HawtPageFile.PAGE_ALLOCATED:
                     break;
                 default:
                     page = udpate;
@@ -198,16 +198,16 @@ final class ConcurrentTransaction implements Transaction {
                 
                 int end = page+count;
                 for (int i = page; i < end; i++) {
-                    getUpdates().put(i, ConcurrentPageFile.PAGE_ALLOCATED);
+                    getUpdates().put(i, HawtPageFile.PAGE_ALLOCATED);
                 }
                 getUpdates().put(page, update);
                 
                 return parent.pageFile.slice(type, update, count);
             } else {
                 switch (update) {
-                case ConcurrentPageFile.PAGE_FREED:
+                case HawtPageFile.PAGE_FREED:
                     throw new PagingException("You should never try to write a page that has been freed.");
-                case ConcurrentPageFile.PAGE_ALLOCATED:
+                case HawtPageFile.PAGE_ALLOCATED:
                     break;
                 default:
                     page = update;
@@ -233,9 +233,9 @@ final class ConcurrentTransaction implements Transaction {
             page = update;
         } else {
             switch (update) {
-            case ConcurrentPageFile.PAGE_FREED:
+            case HawtPageFile.PAGE_FREED:
                 throw new PagingException("You should never try to write a page that has been freed.");
-            case ConcurrentPageFile.PAGE_ALLOCATED:
+            case HawtPageFile.PAGE_ALLOCATED:
                 break;
             default:
                 page = update;
@@ -280,10 +280,10 @@ final class ConcurrentTransaction implements Transaction {
     private void freeAllocatedPages() {
         for (Entry<Integer, Integer> entry : updates.entrySet()) {
             switch (entry.getValue()) {
-            case ConcurrentPageFile.PAGE_FREED:
+            case HawtPageFile.PAGE_FREED:
                 // Don't need to do anything..
                 break;
-            case ConcurrentPageFile.PAGE_ALLOCATED:
+            case HawtPageFile.PAGE_ALLOCATED:
             default:
                 // We need to free the page that was allocated for the
                 // update..

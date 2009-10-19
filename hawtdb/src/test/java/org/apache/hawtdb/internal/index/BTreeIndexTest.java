@@ -93,7 +93,7 @@ public class BTreeIndexTest extends IndexTestSupport {
         tx.commit();
     }
     
-//    @Test
+    @Test
     public void testPruning() throws Exception {
         deferredEncoding=false;
         createPageFileAndIndex((short)100);
