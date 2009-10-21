@@ -32,12 +32,15 @@ import org.apache.hawtdb.internal.page.HawtPageFileFactory;
  */
 public class TransactionBenchmarker<A extends TransactionActor<A>> {
     
+    
     public interface Callback {
         public void run(HawtPageFileFactory pff) throws Exception;
     }
     
     private Callback setup;
     private Callback tearDown;
+    private int samples = 3;
+    private int period = 1000*5;
     
     public void benchmark(int actorCount, BenchmarkAction<A> action) throws Exception {
         HawtPageFileFactory pff = new HawtPageFileFactory();
@@ -50,6 +53,8 @@ public class TransactionBenchmarker<A extends TransactionActor<A>> {
             }
             HawtPageFile pf = pff.getConcurrentPageFile();
             Benchmarker benchmark = new Benchmarker();
+            benchmark.setSamples(samples);
+            benchmark.setPeriod(period);
             benchmark.setName(action.getName());
             ArrayList<A> actors = createActors(pf, actorCount, action);
             benchmark.benchmark(actors, createMetrics(action));
@@ -102,6 +107,22 @@ public class TransactionBenchmarker<A extends TransactionActor<A>> {
 
     public void setTearDown(Callback tearDown) {
         this.tearDown = tearDown;
+    }
+
+    public int getSamples() {
+        return samples;
+    }
+
+    public void setSamples(int samples) {
+        this.samples = samples;
+    }
+
+    public int getPeriod() {
+        return period;
+    }
+
+    public void setPeriod(int period) {
+        this.period = period;
     }
     
     

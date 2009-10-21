@@ -107,6 +107,10 @@ public class HashIndexFactory<Key, Value> implements IndexFactory<Key, Value> {
     public void setBucketCapacity(int binCapacity) {
         this.initialBucketCapacity = binCapacity;
     }
+
+    public void setFixedCapacity(int value) {
+        this.minimumBucketCapacity = this.maximumBucketCapacity = this.initialBucketCapacity = value;
+    }
     
     
 }

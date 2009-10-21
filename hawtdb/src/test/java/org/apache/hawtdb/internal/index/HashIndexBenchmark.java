@@ -30,11 +30,16 @@ import org.apache.hawtdb.api.Transaction;
  */
 public class HashIndexBenchmark extends IndexBenchmark {
 
+    public HashIndexBenchmark() {
+        this.benchmark.setSamples(3);
+    }
+    
     protected Index<Long, Buffer> createIndex(Transaction tx) {
         HashIndexFactory<Long, Buffer> factory = new HashIndexFactory<Long, Buffer>();
         factory.setKeyMarshaller(LongMarshaller.INSTANCE);
         factory.setValueMarshaller(new FixedBufferMarshaller(DATA.length));
-        return factory.open(tx, tx.allocator().alloc(1));
+        factory.setFixedCapacity(1024*100);
+        return factory.create(tx, tx.allocator().alloc(1));
     }
     
 }

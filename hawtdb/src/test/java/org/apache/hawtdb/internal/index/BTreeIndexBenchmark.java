@@ -33,7 +33,7 @@ public class BTreeIndexBenchmark extends IndexBenchmark {
         BTreeIndexFactory<Long, Buffer> factory = new BTreeIndexFactory<Long, Buffer>();
         factory.setKeyMarshaller(LongMarshaller.INSTANCE);
         factory.setValueMarshaller(new FixedBufferMarshaller(DATA.length));
-        return factory.open(tx, tx.allocator().alloc(1));
+        return factory.create(tx, tx.allocator().alloc(1));
     }
 
 }
