@@ -16,18 +16,24 @@
  */
 package org.apache.hawtdb.internal.index;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.DataByteArrayInputStream;
+import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 import org.apache.activemq.util.marshaller.Marshaller;
 import org.apache.hawtdb.api.BTreeIndexFactory;
-import org.apache.hawtdb.api.IndexVisitor;
 import org.apache.hawtdb.api.Index;
+import org.apache.hawtdb.api.IndexException;
+import org.apache.hawtdb.api.IndexVisitor;
 import org.apache.hawtdb.api.Paged;
 import org.apache.hawtdb.api.Prefixer;
 import org.apache.hawtdb.internal.index.BTreeNode.Data;
+import org.apache.hawtdb.internal.page.Extent;
 
 
 /**
@@ -138,12 +144,48 @@ public class BTreeIndex<Key, Value> implements Index<Key, Value> {
         return new BTreeNode<Key, Value>(paged.allocator().alloc(1), data);
     }
     
-    void storeNode(BTreeNode<Key, Value> node) {
-        if( deferredEncoding ) {
+    BTreeNode<Key, Value> createNode() {
+        return new BTreeNode<Key, Value>(paged.allocator().alloc(1));
+    }
+    
+    @SuppressWarnings("serial")
+    static class PageOverflowIOException extends IndexException {
+    }
+    
+    /**
+     * 
+     * @param node
+     * @return false if page overflow occurred
+     */
+    boolean storeNode(BTreeNode<Key, Value> node) {
+        // Leaf nodes are the only one they might need to be stored in an
+        // extent.
+        if (deferredEncoding) {
             paged.put(PAGE_ENCODER_DECODER, node.getPage(), node);
         } else {
-            PAGE_ENCODER_DECODER.store(paged, node.getPage(), node);
+            if (node.isLeaf()) {
+                PAGE_ENCODER_DECODER.store(paged, node.getPage(), node);
+                if( !node.allowPageOverflow() && node.pageCount>1 ) {
+                    PAGE_ENCODER_DECODER.remove(paged, node.getPage());
+                    return false;
+                }
+            } else {
+                DataByteArrayOutputStream os = new DataByteArrayOutputStream(paged.getPageSize()) {
+                    protected void resize(int newcount) {
+                        throw new PageOverflowIOException();
+                    };
+                };
+                try {
+                    node.writeExternal(os, this);
+                    paged.write(node.getPage(), os.toBuffer());
+                } catch (IOException e) {
+                    throw new IndexException("Could not write btree node");
+                } catch (PageOverflowIOException e) {
+                    return false;
+                }
+            }
         }
+        return true;
     }
     
     BTreeNode<Key, Value> loadNode(int page) {
@@ -151,7 +193,21 @@ public class BTreeIndex<Key, Value> implements Index<Key, Value> {
         if( deferredEncoding ) {
             node = paged.get(PAGE_ENCODER_DECODER, page);
         } else {
-            node = PAGE_ENCODER_DECODER.load(paged, page);
+            Buffer buffer = new Buffer(paged.getPageSize());
+            paged.read(page, buffer);
+            if ( buffer.startsWith(Extent.DEFAULT_MAGIC) ) {
+                // Page data was stored in an extent..
+                node = PAGE_ENCODER_DECODER.load(paged, page);
+            } else {
+                // It was just in a plain page..
+                DataByteArrayInputStream is = new DataByteArrayInputStream(buffer);
+                node = new BTreeNode<Key, Value>();
+                try {
+                    node.readExternal(is, this);
+                } catch (IOException e) {
+                    throw new IndexException("Could not read btree node");
+                }
+            }
         }
         node.setPage(page);
         return node;
@@ -161,7 +217,11 @@ public class BTreeIndex<Key, Value> implements Index<Key, Value> {
         if( deferredEncoding ) {
             paged.remove(PAGE_ENCODER_DECODER, page);
         } else {
-            PAGE_ENCODER_DECODER.remove(paged, page);
+            Buffer buffer = new Buffer(paged.getPageSize());
+            paged.read(page, buffer);
+            if ( buffer.startsWith(Extent.DEFAULT_MAGIC) ) {
+                PAGE_ENCODER_DECODER.remove(paged, page);
+            }
         }
         paged.allocator().free(page, 1);
     }

@@ -167,6 +167,10 @@ public class Buffer implements Comparable<Buffer> {
         return -1;
     }
 
+    public boolean startsWith(Buffer other) {
+        return indexOf(other, 0)==0;
+    }
+    
     public int indexOf(Buffer needle, int pos) {
         int max = length - needle.length;
         for (int i = pos; i < max; i++) {
@@ -210,6 +214,11 @@ public class Buffer implements Comparable<Buffer> {
         return new Buffer(data, 0, size);
     }
 
+    @Override
+    public String toString() {
+        return "{ offset: "+offset+", length: "+length+" }";
+    }
+    
     @Deprecated
     public String toStringUtf8() {
         return UTF8Buffer.decode(this);

@@ -116,7 +116,7 @@ final public class MemoryMappedFile {
                 throw new IOPagingException(e);
             }
         }
-        return (ByteBuffer) buffer.limit(buffer.position()+length);
+        return ((ByteBuffer) buffer.limit(buffer.position()+length)).slice();
     }
     
     public void unslice(ByteBuffer buffer) {

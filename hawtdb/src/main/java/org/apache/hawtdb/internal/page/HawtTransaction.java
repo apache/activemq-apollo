@@ -60,11 +60,7 @@ final class HawtTransaction implements Transaction {
             int end = pageId+count;
             for (int key = pageId; key < end; key++) {
                 Integer previous = getUpdates().put(key, HawtPageFile.PAGE_FREED);
-                
-                // If it was an allocation that was done in this
-                // tx, then we can directly release it.
-                assert previous!=null;
-                if( previous == HawtPageFile.PAGE_ALLOCATED) {
+                if( previous!=null && previous==HawtPageFile.PAGE_ALLOCATED) {
                     getUpdates().remove(key);
                     HawtTransaction.this.parent.allocator.free(key, 1);
                 }
@@ -149,10 +145,11 @@ final class HawtTransaction implements Transaction {
         Integer updatedPageId = updates == null ? null : updates.get(pageId);
         if (updatedPageId != null) {
             switch (updatedPageId) {
-            case HawtPageFile.PAGE_ALLOCATED:
             case HawtPageFile.PAGE_FREED:
-                // TODO: Perhaps use a RuntimeException subclass.
-                throw new PagingException("You should never try to read a page that has been allocated or freed.");
+                throw new PagingException("You should never try to read a page that has been freed.");
+            case HawtPageFile.PAGE_ALLOCATED:
+                parent.pageFile.read(pageId, buffer);
+                break;
             default:
                 // read back in the updated we had done.
                 parent.pageFile.read(updatedPageId, buffer);

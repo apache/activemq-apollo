@@ -259,10 +259,14 @@ public class DataByteArrayOutputStream extends OutputStream implements DataOutpu
     
     private void ensureEnoughBuffer(int newcount) {
         if (newcount > buf.length) {
-            byte newbuf[] = new byte[Math.max(buf.length << 1, newcount)];
-            System.arraycopy(buf, 0, newbuf, 0, pos);
-            buf = newbuf;
+            resize(newcount);
         }
+    }
+
+    protected void resize(int newcount) {
+        byte newbuf[] = new byte[Math.max(buf.length << 1, newcount)];
+        System.arraycopy(buf, 0, newbuf, 0, pos);
+        buf = newbuf;
     }
     
     /**

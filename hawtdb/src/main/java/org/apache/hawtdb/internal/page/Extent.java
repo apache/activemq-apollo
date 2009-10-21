@@ -17,8 +17,7 @@
 package org.apache.hawtdb.internal.page;
 
 import java.nio.ByteBuffer;
-
-import javolution.io.Struct;
+import java.nio.IntBuffer;
 
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.hawtdb.api.IOPagingException;
@@ -41,91 +40,85 @@ import org.apache.hawtdb.api.Paged.SliceType;
  */
 public class Extent {
     
-    public final static byte MAGIC_VALUE = 'x'; 
-    
-    static private class Header extends Struct {
-        /**
-         * A constant prefix that can be used to identify the page type.
-         */
-        public final Signed8 magic = new Signed8();
-        /** 
-         * The number of bytes in the extent, including the header.
-         */
-        public final Signed32 length = new Signed32();
-        /**
-         * The page of the next extent or -1.
-         */
-        public final Signed32 next = new Signed32();
-    }
-
-    private final Extent.Header header = new Header();
+    public final static Buffer DEFAULT_MAGIC = new Buffer(new byte[]{'x'}); 
 
     private final Paged paged;
     private final int page;
+    private final Buffer magic;
+
     private ByteBuffer buffer;
-
-    private int bufferStartPosition;
-
+    
+    private int length;
+    private int next;
+    
     public Extent(Paged paged, int page) {
+        this(paged, page, DEFAULT_MAGIC);
+    }
+    
+    public Extent(Paged paged, int page, Buffer magic) {
         this.paged = paged;
         this.page = page;
+        this.magic = magic;
     }
     
     @Override
     public String toString() {
-        int position = 0;
-        int limit=0;
+        Integer position = null;
+        Integer limit = null;
         if( buffer!=null ) {
-            position = buffer.position()-bufferStartPosition;
-            limit = buffer.limit()-bufferStartPosition;
+            position = buffer.position();
+            limit = buffer.limit();
         }
         return "{ page: "+page+", position: "+position+", limit: "+limit+" }";
     }
     
-    public void readOpen() {
+    
+    public void readHeader() {
         buffer = paged.slice(SliceType.READ, page, 1);
-        header.setByteBuffer(buffer, buffer.position());
-        if( header.magic.get() != MAGIC_VALUE ) {
+        
+        Buffer m = new Buffer(magic.length);
+        buffer.get(m.data);
+        
+        if( !magic.equals(m) ) {
             throw new IOPagingException("Invalid extent read request.  The requested page was not an extent: "+page);
         }
         
-        int length = header.length.get();
+        IntBuffer ib = buffer.asIntBuffer();
+        length = ib.get();
+        next = ib.get();
+    }
+    
+    public void readOpen() {
+        readHeader();
         int pages = paged.pages(length);
         if( pages > 1 ) {
             paged.unslice(buffer);
             buffer = paged.slice(SliceType.READ, page, pages);
-            header.setByteBuffer(buffer, buffer.position());
         }
-        
-        bufferStartPosition = buffer.position();
-        buffer.position(bufferStartPosition+header.size());
-        buffer.limit(bufferStartPosition+length);
+        buffer.position(magic.length+8);
+        buffer.limit(length);
     }
 
     public void writeOpen(short size) {
         buffer = paged.slice(SliceType.WRITE, page, size);
-        header.setByteBuffer(buffer, buffer.position());
-        bufferStartPosition = buffer.position();
-        buffer.position(bufferStartPosition+header.size());
+        buffer.position(magic.length+8);
     }
 
-    public void writeCloseLinked(int next) {
-        int length = buffer.position()-bufferStartPosition;
-        header.magic.set(MAGIC_VALUE);
-        header.next.set(next);
-        header.length.set(length);
+    public int writeCloseLinked(int next) {
+        this.next = next;
+        length = buffer.position();
+        buffer.position(0);
+        buffer.put(magic.data, magic.offset, magic.length);
+        IntBuffer ib = buffer.asIntBuffer();
+        ib.put(length);
+        ib.put(next);
         paged.unslice(buffer);
+        return length;
     }
 
     public void writeCloseEOF() {
-        
-        int length = buffer.position()-bufferStartPosition;
-        header.magic.set(MAGIC_VALUE);
-        header.next.set(-1);
-        header.length.set(length);
-        paged.unslice(buffer);
-
-        int originalPages = paged.pages(buffer.limit()-bufferStartPosition);
+        int length = writeCloseLinked(-1);
+        int originalPages = paged.pages(buffer.limit());
         int usedPages = paged.pages(length);
         int remainingPages = originalPages-usedPages;
         
@@ -182,9 +175,8 @@ public class Extent {
     }
 
     public int getNext() {
-        return header.next.get();
+        return next;
     }
-
     
     /**
      * Frees the linked extents at the provided page id.
@@ -193,15 +185,14 @@ public class Extent {
      * @param page
      */
     public static void freeLinked(Paged paged, int page) {
-        ByteBuffer buffer = paged.slice(SliceType.READ, page, 1);
-        Header header = new Header();
-        header.setByteBuffer(buffer, buffer.position());
-        if( header.magic.get() != MAGIC_VALUE ) {
-            throw new IOPagingException("Invalid extent read request.  The requested page was not an extent: "+page);
-        }
-        int next = header.next.get();
-        free(paged, next);
+        freeLinked(paged, page, DEFAULT_MAGIC);
     }
+    
+    public static void freeLinked(Paged paged, int page, Buffer magic) {
+        Extent extent = new Extent(paged, page, magic);
+        extent.readHeader();
+        free(paged, extent.getNext());
+    }    
     
     /**
      * Frees the extent at the provided page id.
@@ -210,20 +201,17 @@ public class Extent {
      * @param page
      */
     public static void free(Paged paged, int page) {
+        free(paged, page, DEFAULT_MAGIC);
+    }    
+    public static void free(Paged paged, int page, Buffer magic) {
         while( page>=0 ) {
-            ByteBuffer buffer = paged.slice(SliceType.READ, page, 1);
+            Extent extent = new Extent(paged, page, magic);
+            extent.readHeader();
             try {
-                Header header = new Header();
-                header.setByteBuffer(buffer, buffer.position());
-                if( header.magic.get() != MAGIC_VALUE ) {
-                    throw new IOPagingException("Invalid extent read request.  The requested page was not an extent: "+page);
-                }
-
-                int next = header.next.get();
-                paged.allocator().free(page, paged.pages(header.length.get()));
-                page=next;
+                paged.allocator().free(page, paged.pages(extent.getLength()));
+                page=extent.getNext();
             } finally {
-                paged.unslice(buffer);
+                extent.readClose();
             }
         }
     }
@@ -236,20 +224,17 @@ public class Extent {
      * @param page
      */
     public static void unfree(Paged paged, int page) {
+        unfree(paged, page, DEFAULT_MAGIC);
+    }
+    public static void unfree(Paged paged, int page, Buffer magic) {
         while( page>=0 ) {
-            ByteBuffer buffer = paged.slice(SliceType.READ, page, 1);
+            Extent extent = new Extent(paged, page, magic);
+            extent.readHeader();
             try {
-                Header header = new Header();
-                header.setByteBuffer(buffer, buffer.position());
-                if( header.magic.get() != MAGIC_VALUE ) {
-                    throw new IOPagingException("Invalid extent read request.  The requested page was not an extent: "+page);
-                }
-                
-                int next = header.next.get();
-                paged.allocator().unfree(page, paged.pages(header.length.get()));
-                page=next;
+                paged.allocator().unfree(page, paged.pages(extent.length));
+                page=extent.next;
             } finally {
-                paged.unslice(buffer);
+                extent.readClose();
             }
         }
     }
@@ -259,6 +244,6 @@ public class Extent {
     }
     
     public int getLength() {
-        return header.length.get();
+        return length;
     }
 }

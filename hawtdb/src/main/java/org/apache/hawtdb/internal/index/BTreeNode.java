@@ -16,7 +16,9 @@
  */
 package org.apache.hawtdb.internal.index;
 
+import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -26,9 +28,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hawtdb.api.IndexVisitor;
+import org.apache.activemq.util.buffer.Buffer;
 import org.apache.hawtdb.api.EncoderDecoder;
 import org.apache.hawtdb.api.IndexException;
+import org.apache.hawtdb.api.IndexVisitor;
 import org.apache.hawtdb.api.Paged;
 import org.apache.hawtdb.api.Prefixer;
 import org.apache.hawtdb.internal.page.Extent;
@@ -47,17 +50,30 @@ public final class BTreeNode<Key, Value> {
 
     private static final Object [] EMPTY_ARRAY = new Object[]{};
     
-    // The page associated with this node
-    transient private int page;
-
-    // The number of pages that this node takes on disk if known. -1 if it is
-    // not yet known.
-    transient int pageCount = -1;
-
-    Data<Key, Value> data;
-
+    @SuppressWarnings("unchecked")
+    private static final Data EMPTY_DATA = new Data();
+    
+    public static final Buffer BRANCH_MAGIC = new Buffer(new byte[]{ 'b', 'b'});
+    public static final Buffer LEAF_MAGIC = new Buffer(new byte[]{ 'b', 'l'});
+    
     static class Data<Key, Value> {
 
+        // The parent node or -1 if this is the root node of the BTree
+        final int parent;
+
+        // Order list of keys in the node
+        final Key[] keys;
+
+        // Values associated with the Keys. Null if this is a branch node.
+        final Value[] values;
+
+        // nodeId pointers to children BTreeNodes. Null if this is a leaf node.
+        final int[] children;
+
+        // The next leaf node after this one. Used for fast iteration of the
+        // entries. -1 if this is the last node.
+        final int next;
+        
         @SuppressWarnings("unchecked")
         public Data() {
             this(-1, (Key[])EMPTY_ARRAY, null, (Value[])EMPTY_ARRAY, -1);
@@ -69,23 +85,16 @@ public final class BTreeNode<Key, Value> {
             this.values = values;
             this.children = children;
             this.next = next;
+        }        
+        
+        @Override
+        public String toString() {
+            return "{ parent: "+parent+", next: "+next+", type: "+(isBranch()?"branch":"leaf")+", keys: "+Arrays.toString(keys)+" }";
         }
-
-        // The parent node or -1 if this is the root node of the BTree
-        int parent;
-
-        // Order list of keys in the node
-        Key[] keys;
-
-        // Values associated with the Keys. Null if this is a branch node.
-        Value[] values;
-
-        // nodeId pointers to children BTreeNodes. Null if this is a leaf node.
-        int[] children;
-
-        // The next leaf node after this one. Used for fast iteration of the
-        // entries. -1 if this is the last node.
-        int next;
+        
+        private boolean isBranch() {
+            return children != null;
+        }
 
         public Data<Key, Value> values(Value[] values) {
             return new Data<Key, Value>(parent, keys, children, values, next);
@@ -127,6 +136,10 @@ public final class BTreeNode<Key, Value> {
             return new Data<Key, Value>(parent, keys, null, values, next);
         }
 
+        public Data<Key, Value> parent(int parent) {
+            return new Data<Key, Value>(parent, keys, children, values, next);
+        }
+
     }
 
     static public class BTreeNodeEncoderDecoder<Key, Value> implements EncoderDecoder<BTreeNode<Key, Value>> {
@@ -138,7 +151,6 @@ public final class BTreeNode<Key, Value> {
         }
 
         public List<Integer> store(Paged paged, int page, BTreeNode<Key, Value> node) {
-
             short count = (short) node.data.keys.length; // cast may truncate
                                                          // value...
             if (count != node.data.keys.length) {
@@ -152,29 +164,8 @@ public final class BTreeNode<Key, Value> {
             ExtentOutputStream eos = new ExtentOutputStream(paged, page, (short) 1, (short) 128);
             DataOutputStream os = new DataOutputStream(eos);
             try {
-                os.writeInt(node.data.parent);
-                os.writeShort(count);
-                for (int i = 0; i < node.data.keys.length; i++) {
-                    index.getKeyMarshaller().writePayload(node.data.keys[i], os);
-                }
-
-                if (node.isBranch()) {
-                    // If this is a branch...
-                    os.writeBoolean(true);
-                    for (int i = 0; i < count + 1; i++) {
-                        os.writeInt(node.data.children[i]);
-                    }
-
-                } else {
-                    // If this is a leaf
-                    os.writeBoolean(false);
-                    for (int i = 0; i < count; i++) {
-                        index.getValueMarshaller().writePayload(node.data.values[i], os);
-                    }
-                    os.writeInt(node.data.next);
-                }
+                node.writeExternal(os, index);
                 os.close();
-
             } catch (IOException e) {
                 throw new IndexException(e);
             }
@@ -191,41 +182,15 @@ public final class BTreeNode<Key, Value> {
             return rc;
         }
 
-        @SuppressWarnings("unchecked")
         public BTreeNode<Key, Value> load(Paged paged, int page) {
             ExtentInputStream eis = new ExtentInputStream(paged, page);
             DataInputStream is = new DataInputStream(eis);
-
             try {
-                int parent = is.readInt();
-                int count = is.readShort();
-                Key[] keys = (Key[]) new Object[count];
-                int[] children = null;
-                Value[] values = null;
-                int next = -1;
-
-                for (int i = 0; i < count; i++) {
-                    keys[i] = index.getKeyMarshaller().readPayload(is);
-                }
-
-                if (is.readBoolean()) {
-                    children = new int[count + 1];
-                    for (int i = 0; i < count + 1; i++) {
-                        children[i] = is.readInt();
-                    }
-                } else {
-                    values = (Value[]) new Object[count];
-                    for (int i = 0; i < count; i++) {
-                        values[i] = index.getValueMarshaller().readPayload(is);
-                    }
-                    next = is.readInt();
-                }
+                BTreeNode<Key, Value> node = new BTreeNode<Key, Value>();
+                node.readExternal(is, index);
                 is.close();
-
-                BTreeNode<Key, Value> node = new BTreeNode<Key, Value>(new Data<Key, Value>(parent, keys, children, values, next));
                 node.pageCount = eis.getPages().size();
                 return node;
-
             } catch (IOException e) {
                 throw new IndexException(e);
             }
@@ -238,8 +203,19 @@ public final class BTreeNode<Key, Value> {
 
     }
 
+    // The persistent data of the node.
+    Data<Key, Value> data;
+    // The page associated with this node
+    private int page;
+    // The number of pages that this node takes on disk if known. -1 if it is not yet known.
+    int pageCount = -1;
+    
+    public BTreeNode() {
+    }
+    
+    @SuppressWarnings("unchecked")
     public BTreeNode(int page) {
-        this(page, new Data<Key, Value>());
+        this(page, EMPTY_DATA);
     }
 
     public BTreeNode(Data<Key, Value> data) {
@@ -250,8 +226,72 @@ public final class BTreeNode<Key, Value> {
         this.page = page;
         this.data = data;
     }
+    
+    
+    void writeExternal(DataOutput os, BTreeIndex<Key, Value> index) throws IOException {
+        int count = data.keys.length;
+        if( data.isBranch() ) {
+            os.write(BRANCH_MAGIC.data, BRANCH_MAGIC.offset, BRANCH_MAGIC.length);
+        } else {
+            os.write(LEAF_MAGIC.data, LEAF_MAGIC.offset, LEAF_MAGIC.length);
+        }
+        
+        os.writeInt(data.parent);
+        os.writeShort(count);
+        for (int i = 0; i < data.keys.length; i++) {
+            index.getKeyMarshaller().writePayload(data.keys[i], os);
+        }
 
+        if (data.isBranch()) {
+            for (int i = 0; i < count + 1; i++) {
+                os.writeInt(data.children[i]);
+            }
+        } else {
+            for (int i = 0; i < count; i++) {
+                index.getValueMarshaller().writePayload(data.values[i], os);
+            }
+            os.writeInt(data.next);
+        }
+    }
+    
+    @SuppressWarnings("unchecked") void readExternal(DataInput is, BTreeIndex<Key, Value> index) throws IOException {
+        Buffer magic = new Buffer(BRANCH_MAGIC.length);
+        is.readFully(magic.data, magic.offset, magic.length);
+        boolean branch;
+        if( magic.equals(BRANCH_MAGIC)) {
+            branch = true;
+        } else if( magic.equals(LEAF_MAGIC)) {
+            branch = false;
+        } else {
+            throw new IndexException("Page did not contain the expected btree headers");
+        }
+        
+        int parent = is.readInt();
+        int count = is.readShort();
+        Key[] keys = (Key[]) new Object[count];
+        int[] children = null;
+        Value[] values = null;
+        int next = -1;
 
+        for (int i = 0; i < count; i++) {
+            keys[i] = index.getKeyMarshaller().readPayload(is);
+        }
+
+        if (branch) {
+            children = new int[count + 1];
+            for (int i = 0; i < count + 1; i++) {
+                children[i] = is.readInt();
+            }
+        } else {
+            values = (Value[]) new Object[count];
+            for (int i = 0; i < count; i++) {
+                values[i] = index.getValueMarshaller().readPayload(is);
+            }
+            next = is.readInt();
+        }
+        this.data = new Data<Key, Value>(parent, keys, children, values, next);
+    }    
+    
     /**
      * Internal (to the BTreeNode) method. Because this method is called only by
      * BTreeNode itself, no synchronization done inside of this method.
@@ -259,7 +299,7 @@ public final class BTreeNode<Key, Value> {
      * @throws IOException
      */
     private BTreeNode<Key, Value> getChild(BTreeIndex<Key, Value> index, int idx) {
-        if (isBranch() && idx >= 0 && idx < data.children.length) {
+        if (data.isBranch() && idx >= 0 && idx < data.children.length) {
             BTreeNode<Key, Value> result = index.loadNode(data.children[idx]);
             return result;
         } else {
@@ -269,7 +309,7 @@ public final class BTreeNode<Key, Value> {
 
     public Value remove(BTreeIndex<Key, Value> index, Key key) {
 
-        if (isBranch()) {
+        if (data.isBranch()) {
             int idx = Arrays.binarySearch(data.keys, key);
             idx = idx < 0 ? -(idx + 1) : idx + 1;
             BTreeNode<Key, Value> child = getChild(index, idx);
@@ -282,11 +322,11 @@ public final class BTreeNode<Key, Value> {
             if (child.data.keys.length == 0) {
 
                 // If the child node is a branch, promote
-                if (child.isBranch()) {
+                if (child.data.isBranch()) {
                     // This is cause branches are never really empty.. they just
                     // go down to 1 child..
-                    data = data.children(arrayUpdate(data.children, idx,child.data.children[0]));
-                    
+                    data = data.children(arrayUpdate(data.children, idx, child.data.children[0]));
+                    linkChild(index, child.data.children[0]);
                 } else {
 
                     // The child was a leaf. Then we need to actually remove it
@@ -351,7 +391,7 @@ public final class BTreeNode<Key, Value> {
             throw new IllegalArgumentException("Key cannot be null");
         }
 
-        if (isBranch()) {
+        if (data.isBranch()) {
             return getLeafNode(index, this, key).put(index, key, value);
         } else {
             int idx = Arrays.binarySearch(data.keys, key);
@@ -367,11 +407,13 @@ public final class BTreeNode<Key, Value> {
                 data = data.leaf(arrayInsert(data.keys, key, idx), arrayInsert(data.values, value, idx));
             }
 
-            if (splitNeeded()) {
-                split(index);
-            } else {
-                index.storeNode(this);
-            }
+//            if (splitNeeded()) {
+//                split(index);
+//            } else {
+                if( !index.storeNode(this) ) {
+                    split(index);
+                }
+//            }
 
             return oldValue;
         }
@@ -383,11 +425,14 @@ public final class BTreeNode<Key, Value> {
         idx = idx < 0 ? -(idx + 1) : idx + 1;
         data = data.branch(arrayInsert(data.keys, key, idx), arrayInsert(data.children, nodeId, idx + 1));
 
-        if (splitNeeded()) {
-            split(index);
-        } else {
-            index.storeNode(this);
-        }
+//        if (splitNeeded()) {
+//            split(index);
+//        } else {
+            if ( !index.storeNode(this) ) {
+                // overflow.. 
+                split(index);
+            }
+//        }
 
     }
 
@@ -407,7 +452,7 @@ public final class BTreeNode<Key, Value> {
         int pivot = vc / 2;
 
         // Split the node into two nodes
-        if (isBranch()) {
+        if (data.isBranch()) {
 
             leftKeys = createKeyArray(pivot);
             leftChildren = new int[leftKeys.length + 1];
@@ -449,15 +494,17 @@ public final class BTreeNode<Key, Value> {
         if (data.parent == -1) {
 
             // This can only happen if this is the root
-            BTreeNode<Key, Value> rNode;
-            BTreeNode<Key, Value> lNode;
+            BTreeNode<Key, Value> lNode = index.createNode();
+            BTreeNode<Key, Value> rNode = index.createNode();
 
-            if (isBranch()) {
-                rNode = index.createNode(data.branch(page, rightKeys, rightChildren));
-                lNode = index.createNode(data.branch(page, leftKeys, leftChildren));
+            if (data.isBranch()) {
+                rNode.data = data.branch(page, rightKeys, rightChildren);
+                rNode.linkChildren(index);
+                lNode.data = data.branch(page, leftKeys, leftChildren);
+                lNode.linkChildren(index);
             } else {
-                rNode = index.createNode(data.leaf(page, rightKeys, rightValues));
-                lNode = index.createNode(data.leaf(page, leftKeys, leftValues, rNode.getPage()));
+                rNode.data = data.leaf(page, rightKeys, rightValues);
+                lNode.data = data.leaf(page, leftKeys, leftValues, rNode.getPage());
             }
 
             Key[] v = createKeyArray(1);
@@ -471,8 +518,9 @@ public final class BTreeNode<Key, Value> {
         } else {
             BTreeNode<Key, Value> rNode;
 
-            if (isBranch()) {
+            if (data.isBranch()) {
                 rNode = index.createNode(data.branch(data.parent, rightKeys, rightChildren));
+                rNode.linkChildren(index);
                 data = data.branch(leftKeys, leftChildren);
             } else {
                 rNode = index.createNode(data.leaf(data.parent, rightKeys, rightValues, data.next));
@@ -486,19 +534,34 @@ public final class BTreeNode<Key, Value> {
     }
 
 
+    private void linkChildren(BTreeIndex<Key, Value> index) {
+        if( data ==null || data.children ==null ) {
+            throw new NullPointerException();
+        }
+       for (int child : data.children) {
+           linkChild(index, child);
+       }
+    }
+
+    private void linkChild(BTreeIndex<Key, Value> index, int child) {
+        BTreeNode<Key, Value> node = index.loadNode(child);
+        node.data = node.data.parent(page);
+        index.storeNode(node);
+    }
+
     public void printStructure(BTreeIndex<Key, Value> index, PrintWriter out, String prefix) {
         if (prefix.length() > 0 && data.parent == -1) {
             throw new IllegalStateException("Cycle back to root node detected.");
         }
 
-        if (isBranch()) {
+        if (data.isBranch()) {
             for (int i = 0; i < data.children.length; i++) {
                 BTreeNode<Key, Value> child = getChild(index, i);
                 if (i == data.children.length - 1) {
-                    out.println(prefix + "\\- " + child.getPage() + (child.isBranch() ? " (" + child.data.children.length + ")" : ""));
+                    out.println(prefix + "\\- " + child.getPage() + (child.data.isBranch() ? " (" + child.data.children.length + ")" : ""));
                     child.printStructure(index, out, prefix + "   ");
                 } else {
-                    out.println(prefix + "|- " + child.getPage() + (child.isBranch() ? " (" + child.data.children.length + ")" : "") + " : " + data.keys[i]);
+                    out.println(prefix + "|- " + child.getPage() + (child.data.isBranch() ? " (" + child.data.children.length + ")" : "") + " : " + data.keys[i]);
                     child.printStructure(index, out, prefix + "   ");
                 }
             }
@@ -507,7 +570,7 @@ public final class BTreeNode<Key, Value> {
 
     public int getMinLeafDepth(BTreeIndex<Key, Value> index, int depth) {
         depth++;
-        if (isBranch()) {
+        if (data.isBranch()) {
             int min = Integer.MAX_VALUE;
             for (int i = 0; i < data.children.length; i++) {
                 min = Math.min(min, getChild(index, i).getMinLeafDepth(index, depth));
@@ -523,7 +586,7 @@ public final class BTreeNode<Key, Value> {
         int rc=0;
         
         BTreeNode<Key, Value> node = this;
-        while (node.isBranch()) {
+        while (node.data.isBranch()) {
             node = node.getChild(index, 0);
         }
         while (node!=null) {
@@ -539,7 +602,7 @@ public final class BTreeNode<Key, Value> {
 
     public int getMaxLeafDepth(BTreeIndex<Key, Value> index, int depth) {
         depth++;
-        if (isBranch()) {
+        if (data.isBranch()) {
             int v = 0;
             for (int i = 0; i < data.children.length; i++) {
                 v = Math.max(v, getChild(index, i).getMaxLeafDepth(index, depth));
@@ -553,7 +616,7 @@ public final class BTreeNode<Key, Value> {
         if (key == null) {
             throw new IllegalArgumentException("Key cannot be null");
         }
-        if (isBranch()) {
+        if (data.isBranch()) {
             return getLeafNode(index, this, key).get(index, key);
         } else {
             int idx = Arrays.binarySearch(data.keys, key);
@@ -574,7 +637,7 @@ public final class BTreeNode<Key, Value> {
             return;
         }
 
-        if (isBranch()) {
+        if (data.isBranch()) {
             for (int i = 0; i < this.data.children.length; i++) {
                 Key key1 = null;
                 if (i != 0) {
@@ -596,7 +659,7 @@ public final class BTreeNode<Key, Value> {
 
     public Map.Entry<Key, Value> getFirst(BTreeIndex<Key, Value> index) {
         BTreeNode<Key, Value> node = this;
-        while (node.isBranch()) {
+        while (node.data.isBranch()) {
             node = node.getChild(index, 0);
         }
         if (node.data.values.length > 0) {
@@ -608,7 +671,7 @@ public final class BTreeNode<Key, Value> {
 
     public Map.Entry<Key, Value> getLast(BTreeIndex<Key, Value> index) {
         BTreeNode<Key, Value> node = this;
-        while (node.isBranch()) {
+        while (node.data.isBranch()) {
             node = node.getChild(index, node.data.children.length - 1);
         }
         if (node.data.values.length > 0) {
@@ -621,7 +684,7 @@ public final class BTreeNode<Key, Value> {
 
     public BTreeNode<Key, Value> getFirstLeafNode(BTreeIndex<Key, Value> index) {
         BTreeNode<Key, Value> node = this;
-        while (node.isBranch()) {
+        while (node.data.isBranch()) {
             node = node.getChild(index, 0);
         }
         return node;
@@ -631,7 +694,7 @@ public final class BTreeNode<Key, Value> {
         if (startKey == null) {
             return iterator(index);
         }
-        if (isBranch()) {
+        if (data.isBranch()) {
             return getLeafNode(index, this, startKey).iterator(index, startKey);
         } else {
             int idx = Arrays.binarySearch(data.keys, startKey);
@@ -648,7 +711,7 @@ public final class BTreeNode<Key, Value> {
 
     @SuppressWarnings("unchecked")
     public void clear(BTreeIndex<Key, Value> index) {
-        if (isBranch()) {
+        if (data.isBranch()) {
             for (int i = 0; i < data.children.length; i++) {
                 BTreeNode<Key, Value> node = index.loadNode(data.children[i]);
                 node.clear(index);
@@ -665,7 +728,7 @@ public final class BTreeNode<Key, Value> {
     private static <Key, Value> BTreeNode<Key, Value> getLeafNode(BTreeIndex<Key, Value> index, final BTreeNode<Key, Value> node, Key key) {
         BTreeNode<Key, Value> current = node;
         while (true) {
-            if (current.isBranch()) {
+            if (current.data.isBranch()) {
                 int idx = Arrays.binarySearch(current.data.keys, key);
                 idx = idx < 0 ? -(idx + 1) : idx + 1;
                 BTreeNode<Key, Value> child = current.getChild(index, idx);
@@ -688,7 +751,7 @@ public final class BTreeNode<Key, Value> {
             throw new IllegalArgumentException("Key cannot be null");
         }
 
-        if (isBranch()) {
+        if (data.isBranch()) {
             return getLeafNode(index, this, key).contains(index, key);
         } else {
             int idx = Arrays.binarySearch(data.keys, key);
@@ -704,9 +767,13 @@ public final class BTreeNode<Key, Value> {
     // Implementation methods
     // /////////////////////////////////////////////////////////////////
 
+    boolean allowPageOverflow() {
+        return data.keys.length < 4;
+    }
+    
     private boolean splitNeeded() {
         if (pageCount > 1 && data.keys.length > 1) {
-            if (pageCount > 128 || data.keys.length > 4) {
+            if (pageCount > 128 || !allowPageOverflow() ) {
                 return true;
             }
         }
@@ -726,14 +793,14 @@ public final class BTreeNode<Key, Value> {
     @SuppressWarnings("unchecked")
     static private <T> T[] arrayUpdate(T[] vals, int idx, T value) {
         T[] newVals = (T[]) new Object[vals.length];
-        System.arraycopy(vals, 0, newVals, 0, idx);
+        System.arraycopy(vals, 0, newVals, 0, vals.length);
         newVals[idx] = value;
         return newVals;
     }
     
     static private int[] arrayUpdate(int[] vals, int idx, int value) {
         int[] newVals = new int[vals.length];
-        System.arraycopy(vals, 0, newVals, 0, idx);
+        System.arraycopy(vals, 0, newVals, 0, vals.length);
         newVals[idx] = value;
         return newVals;
     }    
@@ -787,13 +854,6 @@ public final class BTreeNode<Key, Value> {
         return newVals;
     }
 
-    // /////////////////////////////////////////////////////////////////
-    // Property Accessors
-    // /////////////////////////////////////////////////////////////////
-    private boolean isBranch() {
-        return data.children != null;
-    }
-
     public int getParent() {
         return data.parent;
     }
@@ -811,7 +871,15 @@ public final class BTreeNode<Key, Value> {
 
     @Override
     public String toString() {
-        return "[BTreeNode " + (isBranch() ? "branch" : "leaf") + ": " + Arrays.asList(data.keys) + "]";
+        return "{ page: "+page+", data: "+data.toString()+" }";
+    }
+
+    public boolean isLeaf() {
+        return !data.isBranch();
+    }
+    
+    public boolean isBranch() {
+        return data.isBranch();
     }
 
 

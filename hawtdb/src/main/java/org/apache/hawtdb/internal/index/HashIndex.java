@@ -44,21 +44,6 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
     
     private static final Log LOG = LogFactory.getLog(HashIndex.class);
 
-//    static private class Header extends Struct {
-//        public final UTF8String magic = new UTF8String(4);
-//        public final Signed32 page = new Signed32();
-//        public final Signed32 capacity = new Signed32();
-//        public final Signed32 size = new Signed32();
-//        public final Signed32 active = new Signed32();
-//        
-//        static Header create(ByteBuffer buffer) {
-//            Header header = new Header();
-//            header.setByteBuffer(buffer, buffer.position());
-//            return header;
-//        }
-//    }
-    
-
     /** 
      * This is the data stored in the index header.  It knows where
      * the hash buckets are stored at an keeps usage statistics about
@@ -66,7 +51,7 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
      */
     static private class Buckets<Key,Value> {
         
-        public static final int HEADER_SIZE = headerSize();
+        public static final int HEADER_SIZE = 16;
         public static final Buffer MAGIC = new Buffer(new byte[] {'h', 'a', 's', 'h'});
 
         final HashIndex<Key,Value> index;
@@ -112,12 +97,6 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
             index.buckets.active = 0;
             index.buckets.calcThresholds();
         }
-        
-        private static int headerSize() {
-            DataByteArrayOutputStream os = new DataByteArrayOutputStream();
-            new Buckets<Object, Object>(null).writeExternal(os);
-            return os.toBuffer().getLength();
-        }
 
         void store() {
             DataByteArrayOutputStream os = new DataByteArrayOutputStream(HEADER_SIZE);
@@ -135,7 +114,8 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
         
         private void writeExternal(DataByteArrayOutputStream os) {
             try {
-                os.write(MAGIC.data, MAGIC.offset, MAGIC.length);
+                Buffer magic2 = MAGIC;
+                os.write(magic2.data, MAGIC.offset, MAGIC.length);
                 os.writeInt(this.bucketsPage);
                 os.writeInt(this.capacity);
                 os.writeInt(this.size);

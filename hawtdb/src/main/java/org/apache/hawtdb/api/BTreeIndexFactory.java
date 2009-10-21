@@ -48,7 +48,7 @@ public class BTreeIndexFactory<Key, Value> implements IndexFactory<Key, Value> {
 
     private Marshaller<Key> keyMarshaller;
     private Marshaller<Value> valueMarshaller;
-    private boolean deferredEncoding;
+    private boolean deferredEncoding=true;
     private Prefixer<Key> prefixer;
 
     public Index<Key, Value> create(Paged paged, int page) {
