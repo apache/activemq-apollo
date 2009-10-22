@@ -22,6 +22,7 @@ import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,6 +40,7 @@ import org.apache.activemq.util.LRUCache;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.util.list.LinkedNode;
 import org.apache.activemq.util.list.LinkedNodeList;
+import org.apache.hawtdb.api.Allocator;
 import org.apache.hawtdb.api.EncoderDecoder;
 import org.apache.hawtdb.api.IOPagingException;
 import org.apache.hawtdb.api.OptimisticUpdateException;
@@ -73,8 +75,6 @@ public final class HawtPageFile {
     private static final String MAGIC = "HawtDB:1.0\n";
     private static final int FILE_HEADER_SIZE = 1024 * 4;
 
-    public static final int PAGE_ALLOCATED = -1;
-    public static final int PAGE_FREED = -2;
     public static final int HEADER_SIZE = 1024*4;
 
     /**
@@ -131,14 +131,14 @@ public final class HawtPageFile {
      * 
      * @author chirino
      */
-    static class Commit extends RedoEntry implements Externalizable {
+    final static class Commit extends RedoEntry implements Externalizable {
 
         /** oldest revision in the commit range. */
         private long base; 
         /** newest revision in the commit range, will match base if this only tracks one commit */ 
         private long head;
         /** all the page updates that are part of the redo */
-        private ConcurrentHashMap<Integer, Integer> updates;
+        private ConcurrentHashMap<Integer, Update> updates;
         /** the deferred updates that need to be done in this redo */
         private ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates;
 
@@ -146,7 +146,7 @@ public final class HawtPageFile {
         public Commit() {
         }
         
-        public Commit(long version, ConcurrentHashMap<Integer, Integer> updates, ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates) {
+        public Commit(long version, ConcurrentHashMap<Integer, Update> updates, ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates) {
             this.head = this.base = version;
             this.updates = updates;
             this.deferredUpdates = deferredUpdates;
@@ -165,7 +165,7 @@ public final class HawtPageFile {
             return "{ base: "+this.base+", head: "+this.head+", updates: "+updateSize+", cache: "+cacheSize+" }";
         }
 
-        public long commitCheck(Map<Integer, Integer> newUpdate) {
+        public long commitCheck(Map<Integer, Update> newUpdate) {
             for (Integer page : newUpdate.keySet()) {
                 if( updates.containsKey( page ) ) {
                     throw new OptimisticUpdateException();
@@ -174,7 +174,7 @@ public final class HawtPageFile {
             return head;
         }
 
-        public void merge(Paged paged, long rev, ConcurrentHashMap<Integer, Integer> updates, ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates) {
+        public void merge(Allocator allocator, long rev, ConcurrentHashMap<Integer, Update> updates, ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates) {
             assert head+1 == rev;
             head=rev;
             if (deferredUpdates != null) {
@@ -191,9 +191,9 @@ public final class HawtPageFile {
                             // TODO: There was a previous deferred update in the redo...  we can just use it's 
                             // redo allocation and release the new allocation.
                             if (previous != null) {
-                                Integer allocated = updates.remove(page);
-                                assert allocated == du.page; // these should match...
-                                paged.allocator().free(du.page, 1);
+                                Update allocated = updates.remove(page);
+                                assert allocated.update_location == du.page; // these should match...
+                                allocator.free(du.page, 1);
                                 // since we replaced the previous entry,  
                                 du.page = previous.page;
                             }
@@ -201,7 +201,43 @@ public final class HawtPageFile {
                     }
                 }
             }
-            this.updates.putAll(updates);
+            
+            // merge all the entries in the update..
+            for (Entry<Integer, Update> entry : updates.entrySet()) {
+                merge(allocator, entry.getKey(), entry.getValue());
+            }
+        }
+
+        /**
+         * merges one update..
+         * 
+         * @param page
+         * @param update
+         */
+        private void merge(Allocator allocator, int page, Update update) {
+            Update previous = this.updates.put(page, update);
+            if (previous != null) {
+                if( update.wasFreed() ) {
+                    // we can undo the previous update
+                    if( previous.update_location != page ) {
+                        allocator.free(previous.update_location, 1);
+                    }
+                    if( previous.wasAllocated() ) {
+                        allocator.free(page, 1);
+                    }
+                    this.updates.remove(page);
+                } else {
+                    // we are undoing the previous update /w this new update.
+                    if( previous.update_location != page ) {
+                        allocator.free(previous.update_location, 1);
+                    }
+                    // we may be updating a previously allocated page,
+                    // if so we need to mark the new page as allocated too.
+                    if( previous.wasAllocated() ) {
+                        update.flags = PAGE_ALLOCATED;
+                    }                    
+                }
+            }
         }
 
         @SuppressWarnings("unchecked")
@@ -209,7 +245,7 @@ public final class HawtPageFile {
         public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
             base = in.readLong();
             head = in.readLong();
-            updates = (ConcurrentHashMap<Integer, Integer>) in.readObject();
+            updates = (ConcurrentHashMap<Integer, Update>) in.readObject();
         }
 
         @Override
@@ -221,7 +257,7 @@ public final class HawtPageFile {
         
     }
     
-    class Snapshot {
+    final class Snapshot {
         final SnapshotHead head;
         final Redo base;
         
@@ -247,7 +283,7 @@ public final class HawtPageFile {
      *  
      * @author chirino
      */
-    class SnapshotHead extends RedoEntry {
+    final class SnapshotHead extends RedoEntry {
         final Redo parent;
         
         public SnapshotHead(Redo parent) {
@@ -314,16 +350,9 @@ public final class HawtPageFile {
                 while( curEntry!=null ) {
                     Commit commit = curEntry.isCommit();
                     if( commit !=null ) {
-                        Integer updatedPage = commit.updates.get(page);
-                        if (updatedPage != null) {
-                            switch (updatedPage) {
-                            case PAGE_FREED:
-                                throw new PagingException("You should never try to read page that has been freed.");
-                            case PAGE_ALLOCATED:
-                                return page;
-                            default:
-                                return updatedPage;
-                            }
+                        Update update = commit.updates.get(page);
+                        if( update!=null ) {
+                            return update.page();
                         }
                     }
                     curEntry = curEntry.getPrevious();
@@ -367,7 +396,7 @@ public final class HawtPageFile {
             return readCache.cacheLoad(marshaller, page);
         }
         
-        public long commitCheck(Map<Integer, Integer> pageUpdates) {
+        public long commitCheck(Map<Integer, Update> pageUpdates) {
             long rc=0;
             Redo curRedo = parent;
             RedoEntry curEntry = getNext();
@@ -517,16 +546,14 @@ public final class HawtPageFile {
                         if( cu.value == null ) {
                             List<Integer> freePages = cu.marshaller.remove(pageFile, cu.page);
                             for (Integer page : freePages) {
-                                // add any allocated pages to the update list so that the free 
-                                // list gets properly adjusted.
-                                commit.updates.put(page, PAGE_FREED);
+                                commit.merge(pageFile.allocator(), page, Update.freed(page));
                             }
                         } else {
                             List<Integer> allocatedPages = cu.store(pageFile);
                             for (Integer page : allocatedPages) {
                                 // add any allocated pages to the update list so that the free 
                                 // list gets properly adjusted.
-                                commit.updates.put(page, PAGE_ALLOCATED);
+                                commit.merge(pageFile.allocator(), page, Update.allocated(page));
                             }
                         }
                     }
@@ -536,23 +563,14 @@ public final class HawtPageFile {
 
         public void freeRedoSpace(SimpleAllocator allocator) {
             for (Commit commit : this) {
-                for (Entry<Integer, Integer> entry : commit.updates.entrySet()) {
+                for (Entry<Integer, Update> entry : commit.updates.entrySet()) {
                     int key = entry.getKey();
-                    int value = entry.getValue();
-            
-                    switch( value ) {
-                    case PAGE_ALLOCATED:
-                        // It was a new page that was written.. we don't need to 
-                        // free it.
-                        break;
-                    case PAGE_FREED:
-                        // update freed a previous page.. now is when we actually free it.
+                    Update value = entry.getValue();
+                    if( value.wasFreed() ) {
                         allocator.free(key, 1);
-                        break;
-                    default:
-                        // This updated the 'key' page, now we can release the 'value' page
-                        // since it has been copied over the 'key' page and is no longer needed.
-                        allocator.free(value, 1);
+                    } else if( key != value.update_location ) {
+                        // need to free the udpate page..
+                        allocator.free(value.update_location, 1);
                     }
                 }
             }
@@ -629,7 +647,7 @@ public final class HawtPageFile {
      * @param pageUpdates
      * @param deferredUpdates
      */
-    void commit(Snapshot snapshot, ConcurrentHashMap<Integer, Integer> pageUpdates, ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates) {
+    void commit(Snapshot snapshot, ConcurrentHashMap<Integer, Update> pageUpdates, ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates) {
         
         boolean fullRedo=false;
         synchronized (TRANSACTION_MUTEX) {
@@ -664,7 +682,7 @@ public final class HawtPageFile {
             
             if( commit!=null ) {
                 // TODO: figure out how to do the merge outside the TRANSACTION_MUTEX
-                commit.merge(pageFile, rev, pageUpdates, deferredUpdates);
+                commit.merge(pageFile.allocator(), rev, pageUpdates, deferredUpdates);
             } else {
                 buildingRedo.entries.addLast(new Commit(rev, pageUpdates, deferredUpdates) );
             }
@@ -923,41 +941,42 @@ public final class HawtPageFile {
             
             // Performing the redo actually applies the updates to the original page locations.
             for (Commit commit : syncedRedos) {
-                for (Entry<Integer, Integer> entry : commit.updates.entrySet()) {
-                    int key = entry.getKey();
-                    int value = entry.getValue();
-                    switch( value ) {
-                    case PAGE_ALLOCATED:
+                for (Entry<Integer, Update> entry : commit.updates.entrySet()) {
+                    int page = entry.getKey();
+                    Update update = entry.getValue();
+                    
+                    if( page != update.update_location ) {
+                        
                         if( syncedRedos.recovered ) {
                             // If we are recovering, the allocator MIGHT not have this 
                             // page as being allocated.  This makes sure it's allocated so that
                             // new transaction to get this page and overwrite it in error.
-                            allocator.unfree(key, 1);
-                        }
-                        // Update the persistent free list.  This gets stored on the next sync.
-                        baseRevisionFreePages.remove(key, 1);
-                        break;
-                    case PAGE_FREED:
-                        // The actual free gets done on the next file sync.
-                        // Update the persistent free list.  This gets stored on the next sync.
-                        baseRevisionFreePages.add(key, 1);
-                        break;
-                    default:
-                        if( syncedRedos.recovered ) {
-                            // If we are recovering, the allocator MIGHT not have this 
-                            // page as being allocated.  This makes sure it's allocated so that
-                            // new transaction to get this page and overwrite it in error.
-                            allocator.unfree(key, 1);
+                            allocator.unfree(page, 1);
                         }
                         
-                        // Perform the update by copying the updated 'redo page' to the original
+                        // Perform the update by copying the updated page the original
                         // page location.
-                        ByteBuffer slice = pageFile.slice(SliceType.READ, value, 1);
+                        ByteBuffer slice = pageFile.slice(SliceType.READ, update.update_location, 1);
                         try {
-                            pageFile.write(key, slice);
+                            pageFile.write(page, slice);
                         } finally { 
                             pageFile.unslice(slice);
                         }
+                        
+                    }
+                    if( update.wasAllocated() ) {
+                        
+                        if( syncedRedos.recovered ) {
+                            // If we are recovering, the allocator MIGHT not have this 
+                            // page as being allocated.  This makes sure it's allocated so that
+                            // new transaction to get this page and overwrite it in error.
+                            allocator.unfree(page, 1);
+                        }
+                        // Update the persistent free list.  This gets stored on the next sync.
+                        baseRevisionFreePages.remove(page, 1);
+                        
+                    } else if( update.wasFreed() ) {
+                        baseRevisionFreePages.add(page, 1);
                     }
                 }
             }
@@ -1082,7 +1101,7 @@ public final class HawtPageFile {
     // Simple Helper Classes
     // /////////////////////////////////////////////////////////////////
 
-    class ReadCache {
+    final class ReadCache {
         private final Map<Integer, Object> map = Collections.synchronizedMap(new LRUCache<Integer, Object>(1024));
 
         @SuppressWarnings("unchecked")
@@ -1100,7 +1119,7 @@ public final class HawtPageFile {
         }        
     }
     
-    static class DeferredUpdate {
+    final static class DeferredUpdate {
         int page;
         Object value;
         EncoderDecoder<?> marshaller;
@@ -1130,4 +1149,55 @@ public final class HawtPageFile {
         public List<Integer> store(Paged paged) {
             return ((EncoderDecoder)marshaller).store(paged, page, value);
         }
-    }}
+    }
+    
+    public static final byte PAGE_ALLOCATED = 1;
+    public static final byte PAGE_FREED = 2;
+    
+    final static class Update implements Serializable {
+
+        private static final long serialVersionUID = -1128410792448869134L;
+        
+        byte flags;
+        final int update_location;
+       
+        public Update(int updateLocation, byte flags) {
+            this.update_location = updateLocation;
+            this.flags = flags;
+        }
+
+        public static Update updated(int page) {
+            return new Update(page, (byte) 0);
+        }
+
+        public static Update allocated(int page) {
+            return new Update(page, PAGE_ALLOCATED);
+        }
+
+        public static Update freed(int page) {
+            return new Update(page, PAGE_FREED);
+        }
+
+        public boolean wasFreed() {
+            return flags == PAGE_FREED;
+        }
+        
+        public boolean wasAllocated() {
+            return flags == PAGE_ALLOCATED;
+        }
+        
+        public int page() {
+            if( wasFreed() ) {
+                throw new PagingException("You should never try to read or write page that has been freed.");
+            }
+            return update_location;
+        }
+
+        @Override
+        public String toString() {
+            return "{ page: "+update_location+", flags: "+flags+" }";
+        }
+
+    }
+    
+}

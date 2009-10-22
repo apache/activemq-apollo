@@ -17,7 +17,6 @@
 package org.apache.hawtdb.internal.page;
 
 import java.nio.ByteBuffer;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.activemq.util.buffer.Buffer;
@@ -29,6 +28,7 @@ import org.apache.hawtdb.api.PagingException;
 import org.apache.hawtdb.api.Transaction;
 import org.apache.hawtdb.internal.page.HawtPageFile.DeferredUpdate;
 import org.apache.hawtdb.internal.page.HawtPageFile.Snapshot;
+import org.apache.hawtdb.internal.page.HawtPageFile.Update;
 
 /**
  * Transaction objects are NOT thread safe. Users of this object should
@@ -50,7 +50,7 @@ final class HawtTransaction implements Transaction {
     }
 
     private ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates;
-    private ConcurrentHashMap<Integer, Integer> updates;
+    private ConcurrentHashMap<Integer, Update> updates;
     private Snapshot snapshot;
     
     private final Allocator txallocator = new Allocator() {
@@ -59,8 +59,8 @@ final class HawtTransaction implements Transaction {
             // TODO: this is not a very efficient way to handle allocation ranges.
             int end = pageId+count;
             for (int key = pageId; key < end; key++) {
-                Integer previous = getUpdates().put(key, HawtPageFile.PAGE_FREED);
-                if( previous!=null && previous==HawtPageFile.PAGE_ALLOCATED) {
+                Update previous = getUpdates().put(key, Update.freed(key));
+                if( previous!=null && previous.wasAllocated() ) {
                     getUpdates().remove(key);
                     HawtTransaction.this.parent.allocator.free(key, 1);
                 }
@@ -72,7 +72,7 @@ final class HawtTransaction implements Transaction {
             // TODO: this is not a very efficient way to handle allocation ranges.
             int end = pageId+count;
             for (int key = pageId; key < end; key++) {
-                getUpdates().put(key, HawtPageFile.PAGE_ALLOCATED);
+                getUpdates().put(key, Update.allocated(key));
             }
             return pageId;
         }
@@ -107,22 +107,21 @@ final class HawtTransaction implements Transaction {
     }
 
     public <T> void put(EncoderDecoder<T> marshaller, int page, T value) {
-        Integer update = getUpdates().get(page);
+        Update update = getUpdates().get(page);
         if (update == null) {
             // This is the first time this transaction updates the page...
             snapshot();
-            update = parent.allocator.alloc(1);
+            update = Update.allocated(parent.allocator.alloc(1));
             getUpdates().put(page, update);
-            getCacheUpdates().put(page, new HawtPageFile.DeferredUpdate(update, value, marshaller));
+            getCacheUpdates().put(page, new HawtPageFile.DeferredUpdate(update.update_location, value, marshaller));
         } else {
             // We have updated it before...
-            switch (update) {
-            case HawtPageFile.PAGE_FREED:
+            if( update.wasFreed() ) {
                 throw new PagingException("You should never try to write a page that has been freed.");
-            case HawtPageFile.PAGE_ALLOCATED:
+            }
+            if( update.wasAllocated() ) {
                 getCacheUpdates().put(page, new HawtPageFile.DeferredUpdate(page, value, marshaller));
-                break;
-            default:
+            } else {
                 DeferredUpdate cu = getCacheUpdates().get(page);
                 if( cu == null ) {
                     throw new PagingException("You should never try to store mix using the cached objects with normal page updates.");
@@ -151,19 +150,9 @@ final class HawtTransaction implements Transaction {
     }
 
     public void read(int pageId, Buffer buffer) throws IOPagingException {
-       
-        Integer updatedPageId = updates == null ? null : updates.get(pageId);
-        if (updatedPageId != null) {
-            switch (updatedPageId) {
-            case HawtPageFile.PAGE_FREED:
-                throw new PagingException("You should never try to read a page that has been freed.");
-            case HawtPageFile.PAGE_ALLOCATED:
-                parent.pageFile.read(pageId, buffer);
-                break;
-            default:
-                // read back in the updated we had done.
-                parent.pageFile.read(updatedPageId, buffer);
-            }
+        Update update = updates == null ? null : updates.get(pageId);
+        if (update != null) {
+            parent.pageFile.read(update.page(), buffer);
         } else {
             // Get the data from the snapshot.
             snapshot().head.read(pageId, buffer);
@@ -173,31 +162,22 @@ final class HawtTransaction implements Transaction {
     public ByteBuffer slice(SliceType type, int page, int count) throws IOPagingException {
         //TODO: need to improve the design of ranged ops..
         if( type==SliceType.READ ) {
-            Integer udpate = updates == null ? null : updates.get(page);
+            Update udpate = updates == null ? null : updates.get(page);
             if (udpate != null) {
-                switch (udpate) {
-                case HawtPageFile.PAGE_FREED:
-                    throw new PagingException("You should never try to read a page that has been allocated or freed.");
-                case HawtPageFile.PAGE_ALLOCATED:
-                    break;
-                default:
-                    page = udpate;
-                }
-                return parent.pageFile.slice(type, page, count);
+                return parent.pageFile.slice(type, udpate.page(), count);
             } else {
                 // Get the data from the snapshot.
                 return snapshot().head.slice(page, count);
             }
             
         } else {
-            Integer update = getUpdates().get(page);
+            Update update = getUpdates().get(page);
             if (update == null) {
-                update = parent.allocator.alloc(count);
-                
+                update = Update.allocated(parent.allocator.alloc(count));
                 if (type==SliceType.READ_WRITE) {
                     ByteBuffer slice = snapshot().head.slice(page, count);
                     try {
-                        parent.pageFile.write(update, slice);
+                        parent.pageFile.write(update.update_location, slice);
                     } finally { 
                         parent.pageFile.unslice(slice);
                     }
@@ -205,23 +185,13 @@ final class HawtTransaction implements Transaction {
                 
                 int end = page+count;
                 for (int i = page; i < end; i++) {
-                    getUpdates().put(i, HawtPageFile.PAGE_ALLOCATED);
+                    getUpdates().put(i, Update.allocated(i));
                 }
                 getUpdates().put(page, update);
                 
-                return parent.pageFile.slice(type, update, count);
-            } else {
-                switch (update) {
-                case HawtPageFile.PAGE_FREED:
-                    throw new PagingException("You should never try to write a page that has been freed.");
-                case HawtPageFile.PAGE_ALLOCATED:
-                    break;
-                default:
-                    page = update;
-                }
+                return parent.pageFile.slice(type, update.update_location, count);
             }
-            return parent.pageFile.slice(type, page, count);
-            
+            return parent.pageFile.slice(type, update.page(), count);
         }
         
     }
@@ -231,24 +201,14 @@ final class HawtTransaction implements Transaction {
     }
 
     public void write(int page, Buffer buffer) throws IOPagingException {
-        Integer update = getUpdates().get(page);
+        Update update = getUpdates().get(page);
         if (update == null) {
             // We are updating an existing page in the snapshot...
             snapshot();
-            update = parent.allocator.alloc(1);
+            update = Update.allocated(parent.allocator.alloc(1));
             getUpdates().put(page, update);
-            page = update;
-        } else {
-            switch (update) {
-            case HawtPageFile.PAGE_FREED:
-                throw new PagingException("You should never try to write a page that has been freed.");
-            case HawtPageFile.PAGE_ALLOCATED:
-                break;
-            default:
-                page = update;
-            }
         }
-        parent.pageFile.write(page, buffer);
+        parent.pageFile.write(update.page(), buffer);
     }
 
 
@@ -275,16 +235,9 @@ final class HawtTransaction implements Transaction {
     public void rollback() throws IOPagingException {
         try {
             if (updates!=null) {
-                for (Entry<Integer, Integer> entry : updates.entrySet()) {
-                    switch (entry.getValue()) {
-                    case HawtPageFile.PAGE_FREED:
-                        // Don't need to do anything..
-                        break;
-                    case HawtPageFile.PAGE_ALLOCATED:
-                    default:
-                        // We need to free the page that was allocated for the
-                        // update..
-                        parent.allocator.free(entry.getKey(), 1);
+                for (Update update : updates.values()) {
+                    if( !update.wasFreed() ) {
+                        parent.allocator.free(update.update_location, 1);
                     }
                 }
             }
@@ -316,9 +269,9 @@ final class HawtTransaction implements Transaction {
         return deferredUpdates;
     }
 
-    private ConcurrentHashMap<Integer, Integer> getUpdates() {
+    private ConcurrentHashMap<Integer, Update> getUpdates() {
         if (updates == null) {
-            updates = new ConcurrentHashMap<Integer, Integer>();
+            updates = new ConcurrentHashMap<Integer, Update>();
         }
         return updates;
     }

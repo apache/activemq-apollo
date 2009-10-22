@@ -63,6 +63,11 @@ public class BTreeIndex<Key, Value> implements Index<Key, Value> {
         this.prefixer = factory.getPrefixer();
     }
     
+    @Override
+    public String toString() {
+        return "{ page: "+page+", deferredEncoding: "+deferredEncoding+" }";
+    }
+    
     public void create() {
         // Store the root page..
         BTreeNode<Key, Value> root = new BTreeNode<Key, Value>(null, page);
