@@ -25,6 +25,7 @@ public class HawtPageFileFactory extends PageFileFactory {
     private HawtPageFile concurrentPageFile;
     
     protected boolean drainOnClose;
+    protected boolean sync = true;
 
     public HawtPageFile getConcurrentPageFile() {
         return concurrentPageFile;
@@ -46,7 +47,7 @@ public class HawtPageFileFactory extends PageFileFactory {
         boolean existed = file.isFile();
         super.open();
         if (concurrentPageFile == null) {
-            concurrentPageFile = new HawtPageFile(getPageFile());
+            concurrentPageFile = new HawtPageFile(this);
             if( existed ) {
                 concurrentPageFile.recover();
             } else {
@@ -63,6 +64,16 @@ public class HawtPageFileFactory extends PageFileFactory {
             concurrentPageFile=null;
         }
         super.close();
-    }    
+    }
+
+    public boolean isSync() {
+        return sync;
+    }
+
+    public void setSync(boolean sync) {
+        this.sync = sync;
+    }
+    
+    
     
 }

@@ -31,7 +31,7 @@ import org.apache.hawtdb.api.Transaction;
 public class HashIndexBenchmark extends IndexBenchmark {
 
     public HashIndexBenchmark() {
-        this.benchmark.setSamples(3);
+        this.benchmark.setSamples(5);
     }
     
     protected Index<Long, Buffer> createIndex(Transaction tx) {

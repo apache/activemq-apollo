@@ -67,5 +67,5 @@ public interface EncoderDecoder<T> {
      * @param paged
      * @param page
      */
-    void remove(Paged paged, int page);
+    List<Integer> remove(Paged paged, int page);
 }

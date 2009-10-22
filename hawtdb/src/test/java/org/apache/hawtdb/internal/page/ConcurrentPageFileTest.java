@@ -117,7 +117,8 @@ public class ConcurrentPageFileTest {
             ConcurrentPageFileTest.this.store(paged, page, value);
             return Collections.emptyList();
         }
-        public void remove(Paged paged, int page) {
+        public List<Integer> remove(Paged paged, int page) {
+            return Collections.emptyList();
         }
     }
 

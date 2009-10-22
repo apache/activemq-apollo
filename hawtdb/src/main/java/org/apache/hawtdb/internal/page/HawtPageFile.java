@@ -259,7 +259,13 @@ public final class HawtPageFile {
                 this.updates.putAll(updates);
             }
             if( deferredUpdates!=null ) {
-                this.deferredUpdates.putAll(deferredUpdates);
+                for (Entry<Integer, DeferredUpdate> entry : deferredUpdates.entrySet()) {
+                    if( entry.getValue().value == null ) {
+                        this.deferredUpdates.remove(entry.getKey(), entry.getValue());
+                    } else {
+                        this.deferredUpdates.put(entry.getKey(), entry.getValue());
+                    }
+                }
             }
         }
 
@@ -502,6 +508,7 @@ public final class HawtPageFile {
     final SimpleAllocator allocator;
     final PageFile pageFile;
     private static final int updateBatchSize = 1024;
+    private final boolean synch;
 
 
     /** The header structure of the file */
@@ -546,8 +553,9 @@ public final class HawtPageFile {
      */
     private Ranges baseRevisionFreePages = new Ranges();
     
-    public HawtPageFile(PageFile pageFile) {
-        this.pageFile = pageFile;
+    public HawtPageFile(HawtPageFileFactory factory) {
+        this.pageFile = factory.getPageFile();
+        this.synch = factory.isSync();
         this.file = pageFile.getFile();
         this.allocator = pageFile.allocator();
         ByteBuffer slice = file.slice(false, 0, FILE_HEADER_SIZE);
@@ -756,11 +764,20 @@ public final class HawtPageFile {
         if( redo.deferredUpdates != null ) {
             for (Entry<Integer, DeferredUpdate> entry : redo.deferredUpdates.entrySet()) {
                 DeferredUpdate cu = entry.getValue();
-                List<Integer> allocatedPages = cu.store(pageFile);
-                for (Integer page : allocatedPages) {
-                    // add any allocated pages to the update list so that the free 
-                    // list gets properly adjusted.
-                    redo.updates.put(page, PAGE_ALLOCATED);
+                if( cu.value == null ) {
+                    List<Integer> freePages = cu.marshaller.remove(pageFile, cu.page);
+                    for (Integer page : freePages) {
+                        // add any allocated pages to the update list so that the free 
+                        // list gets properly adjusted.
+                        redo.updates.put(page, PAGE_FREED);
+                    }
+                } else {
+                    List<Integer> allocatedPages = cu.store(pageFile);
+                    for (Integer page : allocatedPages) {
+                        // add any allocated pages to the update list so that the free 
+                        // list gets properly adjusted.
+                        redo.updates.put(page, PAGE_ALLOCATED);
+                    }
                 }
             }
         }
@@ -788,7 +805,9 @@ public final class HawtPageFile {
     private void syncRedos() {
 
         // This is a slow operation..
-        file.sync();
+        if( synch ) {
+            file.sync();
+        }
         Header h = header();
 
         // Update the base_revision with the last performed revision.
@@ -1089,9 +1108,9 @@ public final class HawtPageFile {
     }
     
     static class DeferredUpdate {
-        private final int page;
-        private Object value;
-        private EncoderDecoder<?> marshaller;
+        final int page;
+        Object value;
+        EncoderDecoder<?> marshaller;
 
         public DeferredUpdate(int page, Object value, EncoderDecoder<?> marshaller) {
             this.page = page;

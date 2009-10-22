@@ -133,7 +133,17 @@ final class HawtTransaction implements Transaction {
     }
 
     public <T> void remove(EncoderDecoder<T> marshaller, int page) {
-        marshaller.remove(this, page);
+        DeferredUpdate deferredUpdate = getCacheUpdates().remove(page);
+        if( deferredUpdate==null ) {
+            // add a deferred update to remove the value.
+            getCacheUpdates().put(page, new DeferredUpdate(page, null, marshaller));
+        } else {
+            if( deferredUpdate.value == null ) {
+                // undo.. user error.
+                getCacheUpdates().put(deferredUpdate.page, deferredUpdate);
+                throw new PagingException("You should never try to remove a page that has been removed.");
+            }
+        }
     }
     
     public Allocator allocator() {

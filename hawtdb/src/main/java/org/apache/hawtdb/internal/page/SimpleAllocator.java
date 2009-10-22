@@ -34,9 +34,9 @@ public class SimpleAllocator implements Allocator {
     private final Ranges freeRanges = new Ranges();
     private int limit;
 
-    public SimpleAllocator(int max) {
-        this.limit = max;
-        freeRanges.add(0, max);
+    public SimpleAllocator(int limit) {
+        this.limit = limit;
+        freeRanges.add(0, limit);
     }
 
     /**

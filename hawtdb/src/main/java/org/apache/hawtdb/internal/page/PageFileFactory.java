@@ -88,5 +88,8 @@ public class PageFileFactory extends MemoryMappedFileFactory {
     public void setMaxPages(int maxPages) {
         this.maxPages = maxPages;
     }
+    public void setMaxFileSize(long size) {
+        setMaxPages( (int)((size-getHeaderSize())/getPageSize()) );
+    }
     
 }

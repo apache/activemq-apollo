@@ -214,7 +214,10 @@ final public class MemoryMappedFile {
 		MappedByteBuffer buffer = buffers.get(index);
 		if (buffer == null) {
 			try {
-                buffer = channel.map(MapMode.READ_WRITE, index*bufferSize, bufferSize);
+                long position = ((long)index)*bufferSize;
+                buffer = channel.map(MapMode.READ_WRITE, position, bufferSize);
+            } catch (IllegalArgumentException e) {
+                throw new IOPagingException(e);
             } catch (IOException e) {
                 throw new IOPagingException(e);
             }

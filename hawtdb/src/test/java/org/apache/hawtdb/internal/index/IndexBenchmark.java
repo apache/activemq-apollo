@@ -16,14 +16,17 @@
  */
 package org.apache.hawtdb.internal.index;
 
+import java.io.File;
 import java.util.Random;
 
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.hawtdb.api.Index;
+import org.apache.hawtdb.api.OutOfSpaceException;
 import org.apache.hawtdb.api.Transaction;
 import org.apache.hawtdb.internal.Action;
 import org.apache.hawtdb.internal.Benchmarker.BenchmarkAction;
 import org.apache.hawtdb.internal.page.HawtPageFile;
+import org.apache.hawtdb.internal.page.HawtPageFileFactory;
 import org.apache.hawtdb.internal.page.TransactionActor;
 import org.apache.hawtdb.internal.page.TransactionBenchmarker;
 import org.junit.Test;
@@ -34,11 +37,15 @@ import org.junit.Test;
  */
 public abstract class IndexBenchmark {
     
-    static final public byte[] DATA = new byte[8];
+    private static final int KEY_SPACE = 10000;
+    private static final int VALUE_SIZE = 8;
+    
+    static final public byte[] DATA = new byte[VALUE_SIZE];
 
     class IndexActor extends TransactionActor<IndexActor> {
         public Random random;
         public Index<Long, Buffer> index;
+        long counter=0;
         
         public void setName(String name) {
             super.setName(name);
@@ -50,6 +57,30 @@ public abstract class IndexBenchmark {
             super.setTx(tx);
             index = createIndex(tx);
         }
+        
+        public void benchmarkIndex() throws InterruptedException {
+            // Transaction retry loop.
+            while( true ) {
+                try {
+                    
+                    index.put(counter++, new Buffer(DATA));
+                    if( (counter%KEY_SPACE)==0 ) {
+                        counter=0;
+                    }
+                    
+                    // Transaction succeeded.. break out of retry loop. 
+                    break;
+                    
+                } catch (OutOfSpaceException e) {
+                    counter--;
+                    tx().rollback();
+                    System.out.println("OutOfSpaceException occurred.. waiting for space to free up..");
+                    Thread.sleep(500);
+                } finally {
+                    tx().commit();
+                }
+            }
+        }
     }
     
     TransactionBenchmarker<IndexActor> benchmark = new TransactionBenchmarker<IndexActor>() {
@@ -58,16 +89,20 @@ public abstract class IndexBenchmark {
         };
     };
 
+    public IndexBenchmark() {
+        HawtPageFileFactory hawtPageFileFactory = new HawtPageFileFactory();
+        hawtPageFileFactory.setFile(new File("target/test-data/" + getClass().getName() + ".db"));
+        hawtPageFileFactory.setSync(false);
+         // Limit file growth to 1 Gig.
+        hawtPageFileFactory.setMaxFileSize(1024*1024*1024); 
+        benchmark.setHawtPageFileFactory(hawtPageFileFactory);
+    }
     
     @Test
     public void insert() throws Exception {
-        Thread.sleep(3000);
         benchmark.benchmark(1, new BenchmarkAction<IndexActor>("insert") {
-            long counter=0;
-            @Override
-            protected void execute(IndexActor actor) {
-                actor.index.put(counter++, new Buffer(DATA));
-                actor.tx().commit();
+            protected void execute(IndexActor actor) throws InterruptedException {
+                actor.benchmarkIndex();
             }
         });
     }

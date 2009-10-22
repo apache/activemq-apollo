@@ -277,8 +277,8 @@ public final class BTreeNode<Key, Value> {
 
         }
 
-        public void remove(Paged paged, int page) {
-            Extent.freeLinked(paged, page);
+        public List<Integer> remove(Paged paged, int page) {
+            return Extent.freeLinked(paged, page);
         }
 
     }

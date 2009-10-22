@@ -184,6 +184,7 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
         this.initialBucketCapacity = factory.getBucketCapacity();
         this.BIN_FACTORY.setKeyMarshaller(factory.getKeyMarshaller());
         this.BIN_FACTORY.setValueMarshaller(factory.getValueMarshaller());
+        this.BIN_FACTORY.setDeferredEncoding(false);
     }
 
     public HashIndex<Key, Value> create() {

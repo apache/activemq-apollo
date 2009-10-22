@@ -18,6 +18,8 @@ package org.apache.hawtdb.internal.page;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.hawtdb.api.IOPagingException;
@@ -184,14 +186,14 @@ public class Extent {
      * @param paged
      * @param page
      */
-    public static void freeLinked(Paged paged, int page) {
-        freeLinked(paged, page, DEFAULT_MAGIC);
+    public static List<Integer> freeLinked(Paged paged, int page) {
+        return freeLinked(paged, page, DEFAULT_MAGIC);
     }
     
-    public static void freeLinked(Paged paged, int page, Buffer magic) {
+    public static List<Integer> freeLinked(Paged paged, int page, Buffer magic) {
         Extent extent = new Extent(paged, page, magic);
         extent.readHeader();
-        free(paged, extent.getNext());
+        return free(paged, extent.getNext());
     }    
     
     /**
@@ -200,21 +202,26 @@ public class Extent {
      * @param paged
      * @param page
      */
-    public static void free(Paged paged, int page) {
-        free(paged, page, DEFAULT_MAGIC);
+    public static List<Integer> free(Paged paged, int page) {
+        return free(paged, page, DEFAULT_MAGIC);
     }    
-    public static void free(Paged paged, int page, Buffer magic) {
+    public static List<Integer> free(Paged paged, int page, Buffer magic) {
+        ArrayList<Integer> rc = new ArrayList<Integer>();
         while( page>=0 ) {
             Extent extent = new Extent(paged, page, magic);
             extent.readHeader();
             try {
                 int pagesInExtent = paged.pages(extent.getLength());
                 paged.allocator().free(page, pagesInExtent);
+                for( int i=0; i < pagesInExtent; i++) {
+                    rc.add(page+i);
+                }
                 page=extent.getNext();
             } finally {
                 extent.readClose();
             }
         }
+        return rc;
     }
 
     /**

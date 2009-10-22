@@ -41,10 +41,10 @@ public class TransactionBenchmarker<A extends TransactionActor<A>> {
     private Callback tearDown;
     private int samples = 3;
     private int period = 1000*5;
+    private HawtPageFileFactory hawtPageFileFactory;
     
     public void benchmark(int actorCount, BenchmarkAction<A> action) throws Exception {
-        HawtPageFileFactory pff = new HawtPageFileFactory();
-        pff.setFile(new File("target/test-data/" + getClass().getName() + ".db"));
+        HawtPageFileFactory pff = getHawtPageFileFactory();
         pff.getFile().delete();
         pff.open();
         try {
@@ -124,6 +124,16 @@ public class TransactionBenchmarker<A extends TransactionActor<A>> {
     public void setPeriod(int period) {
         this.period = period;
     }
-    
+
+    public void setHawtPageFileFactory(HawtPageFileFactory hawtPageFileFactory) {
+        this.hawtPageFileFactory = hawtPageFileFactory;
+    }
+    public HawtPageFileFactory getHawtPageFileFactory() {
+        if( hawtPageFileFactory==null ) {
+            hawtPageFileFactory = new HawtPageFileFactory();
+            hawtPageFileFactory.setFile(new File("target/test-data/" + getClass().getName() + ".db"));
+        }
+        return hawtPageFileFactory;
+    }    
     
 }
