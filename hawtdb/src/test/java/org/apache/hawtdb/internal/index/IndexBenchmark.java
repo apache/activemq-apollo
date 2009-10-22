@@ -37,7 +37,7 @@ import org.junit.Test;
  */
 public abstract class IndexBenchmark {
     
-    private static final int KEY_SPACE = 10000;
+    private static final int KEY_SPACE = 5000000;
     private static final int VALUE_SIZE = 8;
     
     static final public byte[] DATA = new byte[VALUE_SIZE];

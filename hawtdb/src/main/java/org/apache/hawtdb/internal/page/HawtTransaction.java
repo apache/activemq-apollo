@@ -17,8 +17,8 @@
 package org.apache.hawtdb.internal.page;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.hawtdb.api.Allocator;
@@ -49,8 +49,8 @@ final class HawtTransaction implements Transaction {
         parent = concurrentPageFile;
     }
 
-    private HashMap<Integer, DeferredUpdate> deferredUpdates;
-    private HashMap<Integer, Integer> updates;
+    private ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates;
+    private ConcurrentHashMap<Integer, Integer> updates;
     private Snapshot snapshot;
     
     private final Allocator txallocator = new Allocator() {
@@ -103,7 +103,7 @@ final class HawtTransaction implements Transaction {
         }
         
         // No?  Then ask the snapshot to load the object.
-        return snapshot().cacheLoad(marshaller, page);
+        return snapshot().head.cacheLoad(marshaller, page);
     }
 
     public <T> void put(EncoderDecoder<T> marshaller, int page, T value) {
@@ -166,7 +166,7 @@ final class HawtTransaction implements Transaction {
             }
         } else {
             // Get the data from the snapshot.
-            snapshot().read(pageId, buffer);
+            snapshot().head.read(pageId, buffer);
         }
     }
 
@@ -186,7 +186,7 @@ final class HawtTransaction implements Transaction {
                 return parent.pageFile.slice(type, page, count);
             } else {
                 // Get the data from the snapshot.
-                return snapshot().slice(page, count);
+                return snapshot().head.slice(page, count);
             }
             
         } else {
@@ -195,7 +195,7 @@ final class HawtTransaction implements Transaction {
                 update = parent.allocator.alloc(count);
                 
                 if (type==SliceType.READ_WRITE) {
-                    ByteBuffer slice = snapshot().slice(page, count);
+                    ByteBuffer slice = snapshot().head.slice(page, count);
                     try {
                         parent.pageFile.write(update, slice);
                     } finally { 
@@ -289,10 +289,12 @@ final class HawtTransaction implements Transaction {
                 }
             }
         } finally {
-            parent.closeSnapshot(snapshot);
+            if( snapshot!=null ) {
+                snapshot.close();
+                snapshot = null;
+            }
             updates = null;
             deferredUpdates = null;
-            snapshot = null;
         }
     }
 
@@ -307,16 +309,16 @@ final class HawtTransaction implements Transaction {
         return updates == null;
     }
 
-    public HashMap<Integer, DeferredUpdate> getCacheUpdates() {
+    public ConcurrentHashMap<Integer, DeferredUpdate> getCacheUpdates() {
         if( deferredUpdates==null ) {
-            deferredUpdates = new HashMap<Integer, DeferredUpdate>();
+            deferredUpdates = new ConcurrentHashMap<Integer, DeferredUpdate>();
         }
         return deferredUpdates;
     }
 
-    private HashMap<Integer, Integer> getUpdates() {
+    private ConcurrentHashMap<Integer, Integer> getUpdates() {
         if (updates == null) {
-            updates = new HashMap<Integer, Integer>();
+            updates = new ConcurrentHashMap<Integer, Integer>();
         }
         return updates;
     }

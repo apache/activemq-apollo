@@ -16,30 +16,28 @@
  */
 package org.apache.hawtdb.internal.index;
 
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.marshaller.FixedBufferMarshaller;
 import org.apache.activemq.util.marshaller.LongMarshaller;
-import org.apache.hawtdb.api.HashIndexFactory;
+import org.apache.activemq.util.marshaller.StringMarshaller;
+import org.apache.hawtdb.api.BTreeIndexFactory;
 import org.apache.hawtdb.api.Index;
-import org.apache.hawtdb.api.Transaction;
-
 
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class HashIndexBenchmark extends IndexBenchmark {
+public class DefferedBTreeIndexTest extends BTreeIndexTest {
 
-    public HashIndexBenchmark() {
-        this.benchmark.setSamples(5);
-    }
-    
-    protected Index<Long, Buffer> createIndex(Transaction tx) {
-        HashIndexFactory<Long, Buffer> factory = new HashIndexFactory<Long, Buffer>();
-        factory.setKeyMarshaller(LongMarshaller.INSTANCE);
-        factory.setValueMarshaller(new FixedBufferMarshaller(DATA.length));
-        factory.setFixedCapacity(1024*10);
-        return factory.create(tx, tx.allocator().alloc(1));
+    @Override
+    protected Index<String, Long> createIndex(int page) {
+        BTreeIndexFactory<String,Long> factory = new BTreeIndexFactory<String,Long>();
+        factory.setKeyMarshaller(StringMarshaller.INSTANCE);
+        factory.setValueMarshaller(LongMarshaller.INSTANCE);
+        factory.setDeferredEncoding(true);
+        if( page==-1 ) {
+            return factory.create(tx, tx.allocator().alloc(1));
+        } else {
+            return factory.open(tx, page);
+        }
     }
     
 }

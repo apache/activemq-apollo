@@ -40,7 +40,6 @@ import org.junit.Test;
 public class BTreeIndexTest extends IndexTestSupport {
 
     private NumberFormat nf;
-    private boolean deferredEncoding=true;
 
     @Before
     public void setUp() throws Exception {
@@ -54,7 +53,7 @@ public class BTreeIndexTest extends IndexTestSupport {
         BTreeIndexFactory<String,Long> factory = new BTreeIndexFactory<String,Long>();
         factory.setKeyMarshaller(StringMarshaller.INSTANCE);
         factory.setValueMarshaller(LongMarshaller.INSTANCE);
-        factory.setDeferredEncoding(deferredEncoding);
+        factory.setDeferredEncoding(false);
         if( page==-1 ) {
             return factory.create(tx, tx.allocator().alloc(1));
         } else {
