@@ -30,6 +30,16 @@ import java.io.ObjectOutputStream;
  */
 public class ObjectMarshaller extends VariableMarshaller<Object> {
 
+    private int estimatedSize;
+
+    public int getEstimatedSize() {
+        return estimatedSize;
+    }
+
+    public void setEstimatedSize(int estimatedSize) {
+        this.estimatedSize = estimatedSize;
+    }
+
     public void writePayload(Object object, DataOutput dataOut) throws IOException {
         ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
         ObjectOutputStream objectOut = new ObjectOutputStream(bytesOut);
@@ -51,6 +61,10 @@ public class ObjectMarshaller extends VariableMarshaller<Object> {
         } catch (ClassNotFoundException e) {
             throw new IOException(e.getMessage());
         }
+    }
+
+    public int estimatedSize(Object object) {
+        return estimatedSize;
     }
     
 }

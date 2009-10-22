@@ -86,6 +86,10 @@ public class SequenceSet extends LinkedNodeList<Sequence> {
         public boolean isDeepCopySupported() {
             return true;
         }
+
+        public int estimatedSize(SequenceSet object) {
+            return object.size()*16;
+        }
     }
     
     public void add(Sequence value) {

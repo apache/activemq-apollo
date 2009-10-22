@@ -114,6 +114,10 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
             public void writePayload(Metadata object, DataOutput dataOut) throws IOException {
                 object.write(dataOut);
             }
+
+            public int estimatedSize(Metadata object) {
+                throw new UnsupportedOperationException();
+            }
         }
     }
     

@@ -29,10 +29,15 @@ import org.apache.hawtdb.api.Transaction;
  */
 public class BTreeIndexBenchmark extends IndexBenchmark {
 
+    public BTreeIndexBenchmark() {
+        this.benchmark.setSamples(30);
+    }
+    
     protected Index<Long, Buffer> createIndex(Transaction tx) {
         BTreeIndexFactory<Long, Buffer> factory = new BTreeIndexFactory<Long, Buffer>();
         factory.setKeyMarshaller(LongMarshaller.INSTANCE);
         factory.setValueMarshaller(new FixedBufferMarshaller(DATA.length));
+        factory.setDeferredEncoding(false);
         return factory.create(tx, tx.allocator().alloc(1));
     }
 

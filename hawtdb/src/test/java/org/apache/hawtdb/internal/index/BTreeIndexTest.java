@@ -68,7 +68,7 @@ public class BTreeIndexTest extends IndexTestSupport {
      * 
      * @throws Exception
      */
-    public void disabled_testTreeBalancing() throws Exception {
+    public void treeBalancing() throws Exception {
         createPageFileAndIndex((short) 100);
 
         BTreeIndex<String, Long> index = ((BTreeIndex<String, Long>)this.index);
@@ -95,7 +95,6 @@ public class BTreeIndexTest extends IndexTestSupport {
     
     @Test
     public void testPruning() throws Exception {
-        deferredEncoding=false;
         createPageFileAndIndex((short)100);
 
         BTreeIndex<String,Long> index = ((BTreeIndex<String,Long>)this.index);
@@ -107,6 +106,9 @@ public class BTreeIndexTest extends IndexTestSupport {
         
         doInsert(1000);
         
+        reloadAll();
+        
+        index = ((BTreeIndex<String,Long>)this.index);
         minLeafDepth = index.getMinLeafDepth();
         maxLeafDepth = index.getMaxLeafDepth();
         assertTrue("Depth of tree grew", minLeafDepth > 1);

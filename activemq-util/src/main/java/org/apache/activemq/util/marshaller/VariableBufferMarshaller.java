@@ -48,5 +48,9 @@ public class VariableBufferMarshaller extends VariableMarshaller<Buffer> {
     public boolean isDeepCopySupported() {
         return true;
     }
+
+    public int estimatedSize(Buffer object) {
+        return object.length+4;
+    }
     
 }

@@ -57,6 +57,11 @@ public class BTreeIndexFactory<Key, Value> implements IndexFactory<Key, Value> {
         return index;
     }
     
+    @Override
+    public String toString() {
+        return "{ deferredEncoding: "+deferredEncoding+" }";
+    }
+    
     public Index<Key, Value> open(Paged paged, int page) {
         return createInstance(paged, page);
     }

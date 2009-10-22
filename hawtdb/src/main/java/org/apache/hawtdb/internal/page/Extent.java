@@ -69,7 +69,7 @@ public class Extent {
             position = buffer.position();
             limit = buffer.limit();
         }
-        return "{ page: "+page+", position: "+position+", limit: "+limit+" }";
+        return "{ page: "+page+", position: "+position+", limit: "+limit+", length: "+length+", next: "+next+" }";
     }
     
     
@@ -208,7 +208,8 @@ public class Extent {
             Extent extent = new Extent(paged, page, magic);
             extent.readHeader();
             try {
-                paged.allocator().free(page, paged.pages(extent.getLength()));
+                int pagesInExtent = paged.pages(extent.getLength());
+                paged.allocator().free(page, pagesInExtent);
                 page=extent.getNext();
             } finally {
                 extent.readClose();

@@ -47,4 +47,8 @@ public class LongMarshaller implements Marshaller<Long> {
     public boolean isDeepCopySupported() {
         return true;
     }
+
+    public int estimatedSize(Long object) {
+        return 8;
+    }
 }

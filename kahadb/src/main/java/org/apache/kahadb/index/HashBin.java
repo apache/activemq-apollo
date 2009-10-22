@@ -58,6 +58,10 @@ class HashBin<Key, Value> {
                 hashIndex.getValueMarshaller().writePayload(entry.getValue(), os);
             }
         }
+
+        public int estimatedSize(HashBin<Key, Value> object) {
+            throw new UnsupportedOperationException();
+        }
         
     }
     

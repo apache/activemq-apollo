@@ -51,4 +51,8 @@ public class BytesMarshaller implements Marshaller<byte[]> {
     public boolean isDeepCopySupported() {
         return true;
     }
+
+    public int estimatedSize(byte[] object) {
+        return object.length+4;
+    }
 }

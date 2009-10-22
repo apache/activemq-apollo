@@ -581,7 +581,7 @@ public final class HawtPageFile {
                 // Note: every deferred update has an entry in the pageUpdates, so no need to 
                 // check to see if that map also conflicts.
                 rev = updatedSnapshot.commitCheck(pageUpdates);
-                
+                updatedSnapshot.close();
             } else {
                 rev = buildingRedo.head;
             }

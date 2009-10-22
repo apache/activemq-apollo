@@ -49,6 +49,12 @@ public interface Marshaller<T> {
     int getFixedSize();
     
     /**
+     * @param object
+     * @return the estimated marshaled size of the object.
+     */
+    int estimatedSize(T object);
+    
+    /**
      * 
      * @return true if the {@link #deepCopy(Object)} operations is supported.
      */

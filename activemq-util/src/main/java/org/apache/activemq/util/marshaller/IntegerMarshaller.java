@@ -51,4 +51,8 @@ public class IntegerMarshaller implements Marshaller<Integer> {
     public boolean isDeepCopySupported() {
         return true;
     }
+
+    public int estimatedSize(Integer object) {
+        return 4;
+    }
 }

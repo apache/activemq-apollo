@@ -361,6 +361,10 @@ public interface Hasher<N, K> {
         public Object readPayload(DataInput dataInput) throws IOException {
             throw new UnsupportedOperationException();
         }
+
+        public int estimatedSize(Object object) {
+            return object.toString().length();
+        }
     }
 
     /**

@@ -56,10 +56,16 @@ public final class BTreeNode<Key, Value> {
     public static final Buffer BRANCH_MAGIC = new Buffer(new byte[]{ 'b', 'b'});
     public static final Buffer LEAF_MAGIC = new Buffer(new byte[]{ 'b', 'l'});
     
+    /**
+     * This is the persistent data of each node.  Declared immutable so that 
+     * it can behave nicely in the page cache.  
+     * 
+     * TODO: Consider refactoring into branch/leaf sub classes.
+     * 
+     * @param <Key>
+     * @param <Value>
+     */
     static class Data<Key, Value> {
-
-        // The parent node or -1 if this is the root node of the BTree
-        final int parent;
 
         // Order list of keys in the node
         final Key[] keys;
@@ -76,11 +82,10 @@ public final class BTreeNode<Key, Value> {
         
         @SuppressWarnings("unchecked")
         public Data() {
-            this(-1, (Key[])EMPTY_ARRAY, null, (Value[])EMPTY_ARRAY, -1);
+            this((Key[])EMPTY_ARRAY, null, (Value[])EMPTY_ARRAY, -1);
         }
         
-        public Data(int parent, Key[] keys, int[] children, Value[] values, int next) {
-            this.parent = parent;
+        public Data(Key[] keys, int[] children, Value[] values, int next) {
             this.keys = keys;
             this.values = values;
             this.children = children;
@@ -89,154 +94,83 @@ public final class BTreeNode<Key, Value> {
         
         @Override
         public String toString() {
-            return "{ parent: "+parent+", next: "+next+", type: "+(isBranch()?"branch":"leaf")+", keys: "+Arrays.toString(keys)+" }";
+            return "{ next: "+next+", type: "+(isBranch()?"branch":"leaf")+", keys: "+Arrays.toString(keys)+" }";
         }
         
-        private boolean isBranch() {
+        public boolean isBranch() {
             return children != null;
         }
 
         public Data<Key, Value> values(Value[] values) {
-            return new Data<Key, Value>(parent, keys, children, values, next);
+            return new Data<Key, Value>(keys, children, values, next);
         }
 
         public Data<Key, Value> children(int[] children) {
-            return new Data<Key, Value>(parent, keys, children, values, next);
+            return new Data<Key, Value>(keys, children, values, next);
         }
 
         public Data<Key, Value> next(int next) {
-            return new Data<Key, Value>(parent, keys, children, values, next);
+            return new Data<Key, Value>(keys, children, values, next);
         }
         
         public Data<Key, Value> change(Key[] keys, int[] children, Value[] values) {
-            return new Data<Key, Value>(parent, keys, children, values, next);
+            return new Data<Key, Value>(keys, children, values, next);
         }
         
         public Data<Key, Value> branch(Key[] keys, int[] children) {
-            return new Data<Key, Value>(parent, keys, children, null, next);
-        }
-
-        public Data<Key, Value> branch(int parent, Key[] keys, int[] children) {
-            return new Data<Key, Value>(parent, keys, children, null, next);
+            return new Data<Key, Value>(keys, children, null, next);
         }
         
         public Data<Key, Value> leaf(Key[] keys, Value[] values) {
-            return new Data<Key, Value>(parent, keys, null, values, next);
-        }
-
-        public Data<Key, Value> leaf(int parent, Key[] keys, Value[] values) {
-            return new Data<Key, Value>(parent, keys, null, values, next);
+            return new Data<Key, Value>(keys, null, values, next);
         }
         
         public Data<Key, Value> leaf(Key[] keys, Value[] values, int next) {
-            return new Data<Key, Value>(parent, keys, null, values, next);
+            return new Data<Key, Value>(keys, null, values, next);
         }
 
-        public Data<Key, Value> leaf(int parent, Key[] keys, Value[] values, int next) {
-            return new Data<Key, Value>(parent, keys, null, values, next);
-        }
-
-        public Data<Key, Value> parent(int parent) {
-            return new Data<Key, Value>(parent, keys, children, values, next);
-        }
-
-    }
-
-    static public class BTreeNodeEncoderDecoder<Key, Value> implements EncoderDecoder<BTreeNode<Key, Value>> {
-
-        private final BTreeIndex<Key, Value> index;
-
-        public BTreeNodeEncoderDecoder(BTreeIndex<Key, Value> index) {
-            this.index = index;
-        }
-
-        public List<Integer> store(Paged paged, int page, BTreeNode<Key, Value> node) {
-            short count = (short) node.data.keys.length; // cast may truncate
-                                                         // value...
-            if (count != node.data.keys.length) {
-                throw new IndexException("Too many keys");
-            }
-
-            // The node will be stored in an extent. This allows us to easily
-            // support huge nodes.
-            // The first extent is only 1 page long, extents linked off
-            // the first page will be up to 128 pages long.
-            ExtentOutputStream eos = new ExtentOutputStream(paged, page, (short) 1, (short) 128);
-            DataOutputStream os = new DataOutputStream(eos);
-            try {
-                node.writeExternal(os, index);
-                os.close();
-            } catch (IOException e) {
-                throw new IndexException(e);
-            }
-
-            Ranges pages = eos.getPages();
-            pages.remove(page);
-            if (pages.isEmpty()) {
-                node.pageCount = 1;
-                return Collections.emptyList();
-            }
-
-            List<Integer> rc = pages.values();
-            node.pageCount = rc.size() + 1;
-            return rc;
-        }
-
-        public BTreeNode<Key, Value> load(Paged paged, int page) {
-            ExtentInputStream eis = new ExtentInputStream(paged, page);
-            DataInputStream is = new DataInputStream(eis);
-            try {
-                BTreeNode<Key, Value> node = new BTreeNode<Key, Value>();
-                node.readExternal(is, index);
-                is.close();
-                node.pageCount = eis.getPages().size();
-                return node;
-            } catch (IOException e) {
-                throw new IndexException(e);
-            }
-
-        }
-
-        public void remove(Paged paged, int page) {
-            Extent.freeLinked(paged, page);
-        }
-
-    }
-
-    // The persistent data of the node.
-    Data<Key, Value> data;
-    // The page associated with this node
-    private int page;
-    // The number of pages that this node takes on disk if known. -1 if it is not yet known.
-    int pageCount = -1;
-    
-    public BTreeNode() {
     }
     
-    @SuppressWarnings("unchecked")
-    public BTreeNode(int page) {
-        this(page, EMPTY_DATA);
-    }
-
-    public BTreeNode(Data<Key, Value> data) {
-        this.data = data;
-    }
-
-    public BTreeNode(int page, Data<Key, Value> data) {
-        this.page = page;
-        this.data = data;
+    static <Key, Value> int estimatedSize(BTreeIndex<Key, Value> index, Data<Key, Value> data) {
+        int rc = 6; // magic + key count..
+        
+        // calculate the size of the keys.
+        int v = index.getKeyMarshaller().getFixedSize();
+        if( v >=0 ) {
+            rc += v*data.keys.length;
+        } else {
+            for (Key key : data.keys) {
+                rc += index.getKeyMarshaller().estimatedSize(key);
+            }
+        }
+        
+        if( data.isBranch() ) {
+            // calculate the size of the children.
+            rc += 4*data.children.length;
+        } else {
+            // calculate the size of the values.
+            v = index.getValueMarshaller().getFixedSize();
+            if( v >=0 ) {
+                rc += v*data.values.length;
+            } else {
+                for (Value value : data.values) {
+                    rc += index.getValueMarshaller().estimatedSize(value);
+                }
+            }
+            rc += 4; // for the next pointer.
+        }
+        
+        return rc;
     }
     
-    
-    void writeExternal(DataOutput os, BTreeIndex<Key, Value> index) throws IOException {
-        int count = data.keys.length;
+    static <Key, Value> void write(DataOutput os, BTreeIndex<Key, Value> index, Data<Key, Value> data) throws IOException {
         if( data.isBranch() ) {
             os.write(BRANCH_MAGIC.data, BRANCH_MAGIC.offset, BRANCH_MAGIC.length);
         } else {
             os.write(LEAF_MAGIC.data, LEAF_MAGIC.offset, LEAF_MAGIC.length);
         }
         
-        os.writeInt(data.parent);
+        int count = data.keys.length;
         os.writeShort(count);
         for (int i = 0; i < data.keys.length; i++) {
             index.getKeyMarshaller().writePayload(data.keys[i], os);
@@ -254,7 +188,8 @@ public final class BTreeNode<Key, Value> {
         }
     }
     
-    @SuppressWarnings("unchecked") void readExternal(DataInput is, BTreeIndex<Key, Value> index) throws IOException {
+    @SuppressWarnings("unchecked") 
+    static <Key, Value> Data<Key, Value> read(DataInput is, BTreeIndex<Key, Value> index) throws IOException {
         Buffer magic = new Buffer(BRANCH_MAGIC.length);
         is.readFully(magic.data, magic.offset, magic.length);
         boolean branch;
@@ -266,7 +201,6 @@ public final class BTreeNode<Key, Value> {
             throw new IndexException("Page did not contain the expected btree headers");
         }
         
-        int parent = is.readInt();
         int count = is.readShort();
         Key[] keys = (Key[]) new Object[count];
         int[] children = null;
@@ -289,8 +223,85 @@ public final class BTreeNode<Key, Value> {
             }
             next = is.readInt();
         }
-        this.data = new Data<Key, Value>(parent, keys, children, values, next);
-    }    
+        return new Data<Key, Value>(keys, children, values, next);
+    }
+    
+    static public class DataEncoderDecoder<Key, Value> implements EncoderDecoder<Data<Key, Value>> {
+        private final BTreeIndex<Key, Value> index;
+
+        public DataEncoderDecoder(BTreeIndex<Key, Value> index) {
+            this.index = index;
+        }
+
+        public List<Integer> store(Paged paged, int page, Data<Key, Value> data) {
+            short count = (short) data.keys.length; // cast may truncate value...
+            if (count != data.keys.length) {
+                throw new IndexException("Too many keys");
+            }
+
+            // The node will be stored in an extent. This allows us to easily
+            // support huge nodes.
+            // The first extent is only 1 page long, extents linked off
+            // the first page will be up to 128 pages long.
+            ExtentOutputStream eos = new ExtentOutputStream(paged, page, (short) 1, (short) 128);
+            DataOutputStream os = new DataOutputStream(eos);
+            try {
+                write(os, index, data);
+                os.close();
+            } catch (IOException e) {
+                throw new IndexException(e);
+            }
+
+            Ranges pages = eos.getPages();
+            pages.remove(page);
+            if (pages.isEmpty()) {
+                return Collections.emptyList();
+            }
+
+            return pages.values();
+        }
+
+        public Data<Key, Value> load(Paged paged, int page) {
+            ExtentInputStream eis = new ExtentInputStream(paged, page);
+            DataInputStream is = new DataInputStream(eis);
+            try {
+                return read(is, index);
+            } catch (IOException e) {
+                throw new IndexException(e);
+            } finally {
+                try {
+                    is.close();
+                } catch (Throwable ignore) {
+                }
+            }
+
+        }
+
+        public void remove(Paged paged, int page) {
+            Extent.freeLinked(paged, page);
+        }
+
+    }
+
+    BTreeNode<Key, Value> parent;
+    // The persistent data of the node.
+    Data<Key, Value> data;
+    // The page associated with this node
+    int page;
+    boolean storedInExtent;
+    
+    @SuppressWarnings("unchecked")
+    public BTreeNode(BTreeNode<Key, Value> parent, int page) {
+        this(parent, page, EMPTY_DATA);
+    }
+
+    public BTreeNode(BTreeNode<Key, Value> parent, int page, Data<Key, Value> data) {
+        this.parent = parent;
+        this.page = page;
+        this.data = data;
+    }
+    
+    
     
     /**
      * Internal (to the BTreeNode) method. Because this method is called only by
@@ -300,7 +311,7 @@ public final class BTreeNode<Key, Value> {
      */
     private BTreeNode<Key, Value> getChild(BTreeIndex<Key, Value> index, int idx) {
         if (data.isBranch() && idx >= 0 && idx < data.children.length) {
-            BTreeNode<Key, Value> result = index.loadNode(data.children[idx]);
+            BTreeNode<Key, Value> result = index.loadNode(this, data.children[idx]);
             return result;
         } else {
             return null;
@@ -326,7 +337,6 @@ public final class BTreeNode<Key, Value> {
                     // This is cause branches are never really empty.. they just
                     // go down to 1 child..
                     data = data.children(arrayUpdate(data.children, idx, child.data.children[0]));
-                    linkChild(index, child.data.children[0]);
                 } else {
 
                     // The child was a leaf. Then we need to actually remove it
@@ -350,11 +360,11 @@ public final class BTreeNode<Key, Value> {
 
                     // If we are the root node, and only have 1 child left. Then
                     // make the root be the leaf node.
-                    if (data.children.length == 1 && data.parent == -1) {
+                    if (data.children.length == 1 && parent == null) {
                         child = getChild(index, 0);
                         data = data.change(child.data.keys, child.data.children, child.data.values);
                         // free up the page..
-                        index.free(child.getPage());
+                        index.free(child);
                     }
 
                 }
@@ -370,8 +380,8 @@ public final class BTreeNode<Key, Value> {
                 Value oldValue = data.values[idx];
                 data = data.leaf(arrayDelete(data.keys, idx), arrayDelete(data.values, idx));
 
-                if (data.keys.length == 0 && data.parent != -1) {
-                    index.free(getPage());
+                if (data.keys.length == 0 && parent != null) {
+                    index.free(this);
                 } else {
                     index.storeNode(this);
                 }
@@ -491,20 +501,18 @@ public final class BTreeNode<Key, Value> {
         }
 
         // Promote the pivot to the parent branch
-        if (data.parent == -1) {
+        if (parent == null) {
 
             // This can only happen if this is the root
-            BTreeNode<Key, Value> lNode = index.createNode();
-            BTreeNode<Key, Value> rNode = index.createNode();
+            BTreeNode<Key, Value> lNode = index.createNode(this);
+            BTreeNode<Key, Value> rNode = index.createNode(this);
 
             if (data.isBranch()) {
-                rNode.data = data.branch(page, rightKeys, rightChildren);
-                rNode.linkChildren(index);
-                lNode.data = data.branch(page, leftKeys, leftChildren);
-                lNode.linkChildren(index);
+                rNode.data = data.branch(rightKeys, rightChildren);
+                lNode.data = data.branch(leftKeys, leftChildren);
             } else {
-                rNode.data = data.leaf(page, rightKeys, rightValues);
-                lNode.data = data.leaf(page, leftKeys, leftValues, rNode.getPage());
+                rNode.data = data.leaf(rightKeys, rightValues);
+                lNode.data = data.leaf(leftKeys, leftValues, rNode.getPage());
             }
 
             Key[] v = createKeyArray(1);
@@ -519,38 +527,21 @@ public final class BTreeNode<Key, Value> {
             BTreeNode<Key, Value> rNode;
 
             if (data.isBranch()) {
-                rNode = index.createNode(data.branch(data.parent, rightKeys, rightChildren));
-                rNode.linkChildren(index);
+                rNode = index.createNode(parent, data.branch(rightKeys, rightChildren));
                 data = data.branch(leftKeys, leftChildren);
             } else {
-                rNode = index.createNode(data.leaf(data.parent, rightKeys, rightValues, data.next));
+                rNode = index.createNode(parent, data.leaf(rightKeys, rightValues, data.next));
                 data = data.leaf(leftKeys, leftValues, rNode.getPage());
             }
 
             index.storeNode(this);
             index.storeNode(rNode);
-            index.loadNode(data.parent).promoteValue(index, separator, rNode.getPage());
+            parent.promoteValue(index, separator, rNode.getPage());
         }
-    }
-
-
-    private void linkChildren(BTreeIndex<Key, Value> index) {
-        if( data ==null || data.children ==null ) {
-            throw new NullPointerException();
-        }
-       for (int child : data.children) {
-           linkChild(index, child);
-       }
-    }
-
-    private void linkChild(BTreeIndex<Key, Value> index, int child) {
-        BTreeNode<Key, Value> node = index.loadNode(child);
-        node.data = node.data.parent(page);
-        index.storeNode(node);
     }
 
     public void printStructure(BTreeIndex<Key, Value> index, PrintWriter out, String prefix) {
-        if (prefix.length() > 0 && data.parent == -1) {
+        if (prefix.length() > 0 && parent == null) {
             throw new IllegalStateException("Cycle back to root node detected.");
         }
 
@@ -592,7 +583,7 @@ public final class BTreeNode<Key, Value> {
         while (node!=null) {
             rc += node.data.values.length;
             if( node.data.next!= -1 ) {
-                node = index.loadNode(node.data.next);
+                node = index.loadNode(null, node.data.next);
             } else {
                 node = null;
             }
@@ -713,13 +704,13 @@ public final class BTreeNode<Key, Value> {
     public void clear(BTreeIndex<Key, Value> index) {
         if (data.isBranch()) {
             for (int i = 0; i < data.children.length; i++) {
-                BTreeNode<Key, Value> node = index.loadNode(data.children[i]);
+                BTreeNode<Key, Value> node = index.loadNode(this, data.children[i]);
                 node.clear(index);
-                index.free(node.getPage());
+                index.free(node);
             }
         }
         // Reset the root node to be a leaf.
-        if (data.parent == -1) {
+        if (parent == null) {
             data = data.leaf((Key[])EMPTY_ARRAY, (Value[])EMPTY_ARRAY, -1);
             index.storeNode(this);
         }
@@ -771,14 +762,14 @@ public final class BTreeNode<Key, Value> {
         return data.keys.length < 4;
     }
     
-    private boolean splitNeeded() {
-        if (pageCount > 1 && data.keys.length > 1) {
-            if (pageCount > 128 || !allowPageOverflow() ) {
-                return true;
-            }
-        }
-        return false;
-    }
+//    private boolean splitNeeded() {
+//        if (pageCount > 1 && data.keys.length > 1) {
+//            if (pageCount > 128 || !allowPageOverflow() ) {
+//                return true;
+//            }
+//        }
+//        return false;
+//    }
 
     @SuppressWarnings("unchecked")
     private Key[] createKeyArray(int size) {
@@ -854,8 +845,8 @@ public final class BTreeNode<Key, Value> {
         return newVals;
     }
 
-    public int getParent() {
-        return data.parent;
+    public BTreeNode<Key, Value> getParent() {
+        return parent;
     }
 
     public int getPage() {

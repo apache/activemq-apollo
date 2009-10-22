@@ -33,16 +33,13 @@ public class FixedBufferMarshaller implements Marshaller<Buffer> {
 
     public FixedBufferMarshaller(int size) {
         this.size = size;
-        
     }
 
     public void writePayload(Buffer value, DataOutput dataOut) throws IOException {
-        dataOut.writeInt(value.length);
-        dataOut.write(value.data, value.offset, value.length);
+        dataOut.write(value.data, value.offset, size);
     }
 
     public Buffer readPayload(DataInput dataIn) throws IOException {
-        int size = dataIn.readInt();
         byte[] data = new byte[size];
         dataIn.readFully(data);
         return new Buffer(data);
@@ -58,6 +55,10 @@ public class FixedBufferMarshaller implements Marshaller<Buffer> {
 
     public boolean isDeepCopySupported() {
         return true;
+    }
+
+    public int estimatedSize(Buffer object) {
+        return size;
     }
     
 }

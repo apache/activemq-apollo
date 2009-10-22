@@ -246,15 +246,16 @@ final class HawtTransaction implements Transaction {
         boolean failed = true;
         try {
             if (updates!=null) {
+                // If the commit is successful it will release our snapshot..
                 parent.commit(snapshot, updates, deferredUpdates);
             }
             failed = false;
         } finally {
             // Rollback if the commit fails.
             if (failed) {
-                freeAllocatedPages();
+                // rollback will release our snapshot..
+                rollback();
             }
-            parent.closeSnapshot(snapshot);
             updates = null;
             deferredUpdates = null;
             snapshot = null;
@@ -264,28 +265,24 @@ final class HawtTransaction implements Transaction {
     public void rollback() throws IOPagingException {
         try {
             if (updates!=null) {
-                freeAllocatedPages();
+                for (Entry<Integer, Integer> entry : updates.entrySet()) {
+                    switch (entry.getValue()) {
+                    case HawtPageFile.PAGE_FREED:
+                        // Don't need to do anything..
+                        break;
+                    case HawtPageFile.PAGE_ALLOCATED:
+                    default:
+                        // We need to free the page that was allocated for the
+                        // update..
+                        parent.allocator.free(entry.getKey(), 1);
+                    }
+                }
             }
         } finally {
             parent.closeSnapshot(snapshot);
             updates = null;
             deferredUpdates = null;
             snapshot = null;
-        }
-    }
-
-    private void freeAllocatedPages() {
-        for (Entry<Integer, Integer> entry : updates.entrySet()) {
-            switch (entry.getValue()) {
-            case HawtPageFile.PAGE_FREED:
-                // Don't need to do anything..
-                break;
-            case HawtPageFile.PAGE_ALLOCATED:
-            default:
-                // We need to free the page that was allocated for the
-                // update..
-                parent.allocator.free(entry.getKey(), 1);
-            }
         }
     }
 

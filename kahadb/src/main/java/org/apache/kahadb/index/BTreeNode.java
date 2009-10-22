@@ -203,6 +203,10 @@ public final class BTreeNode<Key, Value> {
             }
             return node;
         }
+
+        public int estimatedSize(BTreeNode<Key, Value> object) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     public BTreeNode(BTreeIndex<Key, Value> index) {

@@ -62,4 +62,8 @@ public class StringMarshaller implements Marshaller<String> {
     public boolean isDeepCopySupported() {
         return true;
     }
+
+    public int estimatedSize(String object) {
+        return object.length()+2;
+    }
 }

@@ -61,11 +61,13 @@ public abstract class IndexBenchmark {
     
     @Test
     public void insert() throws Exception {
+        Thread.sleep(3000);
         benchmark.benchmark(1, new BenchmarkAction<IndexActor>("insert") {
             long counter=0;
             @Override
             protected void execute(IndexActor actor) {
                 actor.index.put(counter++, new Buffer(DATA));
+                actor.tx().commit();
             }
         });
     }

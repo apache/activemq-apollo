@@ -47,7 +47,7 @@ final class BTreeIterator<Key, Value> implements Iterator<Map.Entry<Key, Value>>
             if (nextIndex >= current.data.keys.length) {
                 // we need to roll to the next leaf..
                 if (current.data.next >= 0) {
-                    current = index.loadNode(current.data.next);
+                    current = index.loadNode(null, current.data.next);
                     nextIndex = 0;
                 } else {
                     break;
