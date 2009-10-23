@@ -16,6 +16,7 @@
  */
 package org.apache.hawtdb.api;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -36,7 +37,7 @@ public interface IndexVisitor<Key,Value> {
     boolean isInterestedInKeysBetween(Key first, Key second);
 
     /**
-     * The keys and values of a BTree leaf node.
+     * The keys and values of an index node.
      *
      * @param keys
      * @param values
@@ -48,259 +49,97 @@ public interface IndexVisitor<Key,Value> {
      */
     boolean isSatiated();
 
-    public interface Predicate<Key> {
-        boolean isInterestedInKeysBetween(Key first, Key second);
-        boolean isInterestedInKey(Key key);
-    }
-
-    abstract class PredicateVisitor<Key, Value> implements IndexVisitor<Key, Value>, Predicate<Key> {
+    /**
+     * Uses a predicates to select the keys that will be visited.
+     * 
+     * @param <Key>
+     * @param <Value>
+     */
+    class PredicateVisitor<Key, Value> implements IndexVisitor<Key, Value> {
+        
         public static final int UNLIMITED=-1;
-		private int limit;
 
-		public PredicateVisitor(int limit) {
-		    this.limit = limit;
-		}
+        private final Predicate<Key> predicate;
+        private int limit;
+        
+        public PredicateVisitor(Predicate<Key> predicate) {
+            this(predicate, UNLIMITED);
+        }
+        
+        public PredicateVisitor(Predicate<Key> predicate, int limit) {
+            this.predicate = predicate;
+            this.limit = limit;
+        }
 
-		final public void visit(List<Key> keys, List<Value> values) {
-			for( int i=0; i < keys.size() && !isSatiated(); i++) {
-				Key key = keys.get(i);
-				if( isInterestedInKey(key) ) {
-				    if(limit > 0 )
-				        limit--;
-					matched(key, values.get(i));
-				}
-			}
-		}
+        final public void visit(List<Key> keys, List<Value> values) {
+            for( int i=0; i < keys.size() && !isSatiated(); i++) {
+                Key key = keys.get(i);
+                if( predicate.isInterestedInKey(key) ) {
+                    if(limit > 0 )
+                        limit--;
+                    matched(key, values.get(i));
+                }
+            }
+        }
 
-		protected void matched(Key key, Value value) {
+        @Override
+        public boolean isInterestedInKeysBetween(Key first, Key second) {
+            return predicate.isInterestedInKeysBetween(first, second);
         }
 
         public boolean isSatiated() {
             return limit==0;
         }
-    }
-
-    class OrVisitor<Key, Value> extends PredicateVisitor<Key, Value> {
-        private final List<Predicate<Key>> conditions;
-
-        public OrVisitor(List<Predicate<Key>> conditions) {
-            this(conditions, UNLIMITED);
-        }
-
-        public OrVisitor(List<Predicate<Key>> conditions, int limit) {
-            super(limit);
-            this.conditions = conditions;
-        }
-
-		final public boolean isInterestedInKeysBetween(Key first, Key second) {
-            for (Predicate<Key> condition : conditions) {
-                if( condition.isInterestedInKeysBetween(first, second) ) {
-                    return true;
-                }
-            }
-            return false;
-		}
-
-        final public boolean isInterestedInKey(Key key) {
-            for (Predicate<Key> condition : conditions) {
-                if( condition.isInterestedInKey(key) ) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder sb = new StringBuilder();
-            boolean first=true;
-            for (Predicate<Key> condition : conditions) {
-                if( !first ) {
-                    sb.append(" OR ");
-                }
-                first=false;
-                sb.append("(");
-                sb.append(condition);
-                sb.append(")");
-            }
-            return sb.toString();
-        }
-    }
-
-    class AndVisitor<Key, Value> extends PredicateVisitor<Key, Value> {
-        private final List<Predicate<Key>> conditions;
-
-        public AndVisitor(List<Predicate<Key>> conditions) {
-            this(conditions, UNLIMITED);
-        }
-        public AndVisitor(List<Predicate<Key>> conditions, int limit) {
-            super(limit);
-            this.conditions = conditions;
-        }
-
-		final public boolean isInterestedInKeysBetween(Key first, Key second) {
-            for (Predicate<Key> condition : conditions) {
-                if( !condition.isInterestedInKeysBetween(first, second) ) {
-                    return false;
-                }
-            }
-            return true;
-		}
-
-        final public boolean isInterestedInKey(Key key) {
-            for (Predicate<Key> condition : conditions) {
-                if( !condition.isInterestedInKey(key) ) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder sb = new StringBuilder();
-            boolean first=true;
-            for (Predicate<Key> condition : conditions) {
-                if( !first ) {
-                    sb.append(" AND ");
-                }
-                first=false;
-                sb.append("(");
-                sb.append(condition);
-                sb.append(")");
-            }
-            return sb.toString();
-        }
-    }
-
-    class BetweenVisitor<Key extends Comparable<? super Key>, Value> extends PredicateVisitor<Key, Value> {
-		private final Key first;
-        private final Key last;
-
-        public BetweenVisitor(Key first, Key last) {
-            this(first, last, UNLIMITED);
-        }
-
-        public BetweenVisitor(Key first, Key last, int limit) {
-            super(limit);
-			this.first = first;
-            this.last = last;
-        }
-
-		final public boolean isInterestedInKeysBetween(Key left, Key right) {
-        	return (right==null || right.compareTo(first)>=0)
-                    && (left==null || left.compareTo(last)<0);
-		}
-
-        final public boolean isInterestedInKey(Key key) {
-            return key.compareTo(first) >=0 && key.compareTo(last) <0;
-        }
-
-        @Override
-        public String toString() {
-            return first+" <= key < "+last;
-        }
-    }
-
-    class GTVisitor<Key extends Comparable<? super Key>, Value> extends PredicateVisitor<Key, Value> {
-		final private Key value;
-
-		public GTVisitor(Key value) {
-			this(value, UNLIMITED);
-		}
-		public GTVisitor(Key value, int limit) {
-		    super(limit);
-			this.value = value;
-		}
-
-		final public boolean isInterestedInKeysBetween(Key first, Key second) {
-        	return second==null || isInterestedInKey(second);
-		}
-
-        final public boolean isInterestedInKey(Key key) {
-            return key.compareTo(value)>0;
-        }
-
-        @Override
-        public String toString() {
-            return "key > "+ value;
-        }
-    }
-
-    class GTEVisitor<Key extends Comparable<? super Key>, Value> extends PredicateVisitor<Key, Value> {
-		final private Key value;
-
-        public GTEVisitor(Key value) {
-            this(value, UNLIMITED);
-        }
-
-		public GTEVisitor(Key value, int limit) {
-            super(limit);
-			this.value = value;
-		}
-
-		final public boolean isInterestedInKeysBetween(Key first, Key second) {
-        	return second==null || isInterestedInKey(second);
-		}
-
-        final public boolean isInterestedInKey(Key key) {
-            return key.compareTo(value)>=0;
-        }
-
-        @Override
-        public String toString() {
-            return "key >= "+ value;
-        }
-    }
-
-    class LTVisitor<Key extends Comparable<? super Key>, Value> extends PredicateVisitor<Key, Value> {
-		final private Key value;
-
-        public LTVisitor(Key value) {
-            this(value, UNLIMITED);
+        
+        /**
+         * Subclasses should override.  This method will be called for each key,
+         * value pair that matches the predicate.
+         * 
+         * @param key
+         * @param value
+         */
+        protected void matched(Key key, Value value) {
         }
         
-		public LTVisitor(Key value, int limit) {
-            super(limit);
-			this.value = value;
-		}
-
-		final public boolean isInterestedInKeysBetween(Key first, Key second) {
-        	return first==null || isInterestedInKey(first);
-		}
-
-        final public boolean isInterestedInKey(Key key) {
-            return key.compareTo(value)<0;
+        // 
+        // Helper static methods to help create predicate expressions.
+        //
+        
+        public static <Key> Predicate<Key> or(Predicate<Key>... conditions) {
+            return new Predicate.OrPredicate<Key>(Arrays.asList(conditions));
         }
-
-        @Override
-        public String toString() {
-            return "key < "+ value;
+        
+        public static <Key> Predicate<Key> or(List<Predicate<Key>> conditions) {
+            return new Predicate.OrPredicate<Key>(conditions);
         }
+        
+        public static <Key> Predicate<Key> and(Predicate<Key>... conditions) {
+            return new Predicate.AndPredicate<Key>(Arrays.asList(conditions));
+        }
+        
+        public static <Key> Predicate<Key> and(List<Predicate<Key>> conditions) {
+            return new Predicate.AndPredicate<Key>(conditions);
+        }        
+
+        public static <Key extends Comparable<? super Key>> Predicate<Key> gt(Key key) {
+            return new Predicate.GTPredicate<Key>(key);
+        }        
+        public static <Key extends Comparable<? super Key>> Predicate<Key> gte(Key key) {
+            return new Predicate.GTEPredicate<Key>(key);
+        }        
+
+        public static <Key extends Comparable<? super Key>> Predicate<Key> lt(Key key) {
+            return new Predicate.LTPredicate<Key>(key);
+        }        
+        public static <Key extends Comparable<? super Key>> Predicate<Key> lte(Key key) {
+            return new Predicate.LTEPredicate<Key>(key);
+        }
+        
+        public static <Key extends Comparable<? super Key>> Predicate<Key> lte(Key first, Key last) {
+            return new Predicate.BetweenPredicate<Key>(first, last);
+        }
+        
     }
 
-    class LTEVisitor<Key extends Comparable<? super Key>, Value> extends PredicateVisitor<Key, Value> {
-		final private Key value;
 
-		public LTEVisitor(Key value) {
-            this(value, UNLIMITED);
-		}
-        public LTEVisitor(Key value, int limit) {
-            super(limit);
-            this.value = value;
-        }
-
-		final public boolean isInterestedInKeysBetween(Key first, Key second) {
-        	return first==null || isInterestedInKey(first);
-		}
-
-        final public boolean isInterestedInKey(Key key) {
-            return key.compareTo(value)<=0;
-        }
-
-        @Override
-        public String toString() {
-            return "key <= "+ value;
-        }
-    }
 }
