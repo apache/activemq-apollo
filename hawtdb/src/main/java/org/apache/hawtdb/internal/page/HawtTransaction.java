@@ -282,7 +282,7 @@ final class HawtTransaction implements Transaction {
 
     public String toString() { 
         int updatesSize = updates==null ? 0 : updates.size();
-        return "{ snapshot: "+this.snapshot+", updates: "+updatesSize+" }";
+        return "{ snapshot: "+this.snapshot+", updates: "+updatesSize+", parent: "+parent+" }";
     }
 
     public int pages(int length) {

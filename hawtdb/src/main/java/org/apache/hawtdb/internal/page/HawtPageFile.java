@@ -635,6 +635,41 @@ public final class HawtPageFile {
         ByteBuffer slice = file.slice(false, 0, FILE_HEADER_SIZE);
         this.header.setByteBuffer(slice, slice.position());
     }
+    
+    @Override
+    public String toString() {
+        return "{ allocator: "+allocator
+        +", synch: "+synch
+        +", read cache size: "+readCache.map.size()
+        +", base revision free pages: "+baseRevisionFreePages + ",\n"
+        + "  redos: {\n" 
+        + "    performed: "+toString(performedRedos, syncedRedos) + ",\n" 
+        + "    synced: "+toString(syncedRedos, storedRedos) + ",\n" 
+        + "    stored: "+toString(storedRedos, buildingRedo)+ ",\n" 
+        + "    building: "+toString(buildingRedo, null)+ ",\n"
+        + "  }"        
+        + "}";
+    }
+
+    /** 
+     * @param from
+     * @param to
+     * @return string representation of the redo items from the specified redo up to (exclusive) the specified redo.
+     */
+    private String toString(Redo from, Redo to) {
+        StringBuilder rc = new StringBuilder();
+        rc.append("[ ");
+        Redo t = from;
+        while( t!=null && t!=to ) {
+            if( t!=from ) {
+                rc.append(", ");
+            }
+            rc.append(t);
+            t = t.getNext();
+        }
+        rc.append(" ]");
+        return rc.toString();
+    }
 
     public Transaction tx() {
         return new HawtTransaction(this);
