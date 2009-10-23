@@ -589,6 +589,10 @@ public final class BTreeNode<Key, Value> {
             }
         }
         return rc;
+    }
+    
+    public boolean isEmpty(BTreeIndex<Key, Value> index) {
+        return data.keys.length==0;
     }    
 
     public int getMaxLeafDepth(BTreeIndex<Key, Value> index, int depth) {

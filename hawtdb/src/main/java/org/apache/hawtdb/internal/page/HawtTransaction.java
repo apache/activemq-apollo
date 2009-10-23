@@ -16,9 +16,13 @@
  */
 package org.apache.hawtdb.internal.page;
 
+import static org.apache.hawtdb.internal.page.HawtPageFile.DeferredUpdate.deferred;
+import static org.apache.hawtdb.internal.page.HawtPageFile.Update.update;
+
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.activemq.util.StringSupport;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.hawtdb.api.Allocator;
 import org.apache.hawtdb.api.EncoderDecoder;
@@ -29,7 +33,6 @@ import org.apache.hawtdb.api.Transaction;
 import org.apache.hawtdb.internal.page.HawtPageFile.DeferredUpdate;
 import org.apache.hawtdb.internal.page.HawtPageFile.Snapshot;
 import org.apache.hawtdb.internal.page.HawtPageFile.Update;
-
 /**
  * Transaction objects are NOT thread safe. Users of this object should
  * guard it from concurrent access.
@@ -49,7 +52,6 @@ final class HawtTransaction implements Transaction {
         parent = concurrentPageFile;
     }
 
-    private ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates;
     private ConcurrentHashMap<Integer, Update> updates;
     private Snapshot snapshot;
     
@@ -59,7 +61,7 @@ final class HawtTransaction implements Transaction {
             // TODO: this is not a very efficient way to handle allocation ranges.
             int end = pageId+count;
             for (int key = pageId; key < end; key++) {
-                Update previous = getUpdates().put(key, Update.freed(key));
+                Update previous = getUpdates().put(key, update(key).freed() );
                 if( previous!=null && previous.wasAllocated() ) {
                     getUpdates().remove(key);
                     HawtTransaction.this.parent.allocator.free(key, 1);
@@ -72,7 +74,7 @@ final class HawtTransaction implements Transaction {
             // TODO: this is not a very efficient way to handle allocation ranges.
             int end = pageId+count;
             for (int key = pageId; key < end; key++) {
-                getUpdates().put(key, Update.allocated(key));
+                getUpdates().put(key, update(key).allocated() );
             }
             return pageId;
         }
@@ -97,9 +99,14 @@ final class HawtTransaction implements Transaction {
 
     public <T> T get(EncoderDecoder<T> marshaller, int page) {
         // Perhaps the page was updated in the current transaction...
-        DeferredUpdate rc = deferredUpdates == null ? null : deferredUpdates.get(page);
-        if( rc != null ) {
-            return rc.<T>value();
+        Update update = updates == null ? null : updates.get(page);
+        if( update != null ) {
+            DeferredUpdate deferred = update.deferredUpdate();
+            if( deferred != null ) {
+                return deferred.<T>value();
+            } else {
+                throw new PagingException("That page was updated with the 'put' method.");
+            }
         }
         
         // No?  Then ask the snapshot to load the object.
@@ -107,40 +114,44 @@ final class HawtTransaction implements Transaction {
     }
 
     public <T> void put(EncoderDecoder<T> marshaller, int page, T value) {
-        Update update = getUpdates().get(page);
+        ConcurrentHashMap<Integer, Update> updates = getUpdates();
+        Update update = updates.get(page);
         if (update == null) {
             // This is the first time this transaction updates the page...
             snapshot();
-            update = Update.allocated(parent.allocator.alloc(1));
-            getUpdates().put(page, update);
-            getCacheUpdates().put(page, new HawtPageFile.DeferredUpdate(update.update_location, value, marshaller));
+            updates.put(page, deferred(parent.allocator.alloc(1)).store(value, marshaller).allocated() );
         } else {
             // We have updated it before...
             if( update.wasFreed() ) {
-                throw new PagingException("You should never try to write a page that has been freed.");
+                throw new PagingException("You should never try to update a page that has been freed.");
             }
-            if( update.wasAllocated() ) {
-                getCacheUpdates().put(page, new HawtPageFile.DeferredUpdate(page, value, marshaller));
-            } else {
-                DeferredUpdate cu = getCacheUpdates().get(page);
-                if( cu == null ) {
-                    throw new PagingException("You should never try to store mix using the cached objects with normal page updates.");
-                }
-                cu.reset(value, marshaller);
+            
+            DeferredUpdate deferred = update.deferredUpdate();
+            if( deferred==null ) {
+                deferred = deferred(update);
+                updates.put(page, deferred);
             }
+            deferred.store(value, marshaller);
         }
     }
 
-    public <T> void remove(EncoderDecoder<T> marshaller, int page) {
-        DeferredUpdate deferredUpdate = getCacheUpdates().remove(page);
-        if( deferredUpdate==null ) {
-            // add a deferred update to remove the value.
-            getCacheUpdates().put(page, new DeferredUpdate(page, null, marshaller));
+    public <T> void clear(EncoderDecoder<T> marshaller, int page) {
+        ConcurrentHashMap<Integer, Update> updates = getUpdates();
+        Update update = updates.get(page);
+        
+        if( update == null ) {
+            updates.put(page, deferred(page).clear(marshaller) );
         } else {
-            if( deferredUpdate.value == null ) {
-                // undo.. user error.
-                getCacheUpdates().put(deferredUpdate.page, deferredUpdate);
-                throw new PagingException("You should never try to remove a page that has been removed.");
+            if( update.wasDeferredStore() ) {
+                if( update.wasAllocated() ) {
+                    // this transaction created it.. so it should remove it..
+                    updates.put(page, update(update));
+                } else { 
+                    // was an update of a previous location.... 
+                    updates.put(page, deferred(page).clear(marshaller));
+                }
+            } else {
+                throw new PagingException("You should never try to clear a page that was not put.");
             }
         }
     }
@@ -173,11 +184,11 @@ final class HawtTransaction implements Transaction {
         } else {
             Update update = getUpdates().get(page);
             if (update == null) {
-                update = Update.allocated(parent.allocator.alloc(count));
+                update = update(parent.allocator.alloc(count)).allocated();
                 if (type==SliceType.READ_WRITE) {
                     ByteBuffer slice = snapshot().head.slice(page, count);
                     try {
-                        parent.pageFile.write(update.update_location, slice);
+                        parent.pageFile.write(update.page, slice);
                     } finally { 
                         parent.pageFile.unslice(slice);
                     }
@@ -185,11 +196,11 @@ final class HawtTransaction implements Transaction {
                 
                 int end = page+count;
                 for (int i = page; i < end; i++) {
-                    getUpdates().put(i, Update.allocated(i));
+                    getUpdates().put(i, update(i).allocated());
                 }
                 getUpdates().put(page, update);
                 
-                return parent.pageFile.slice(type, update.update_location, count);
+                return parent.pageFile.slice(type, update.page, count);
             }
             return parent.pageFile.slice(type, update.page(), count);
         }
@@ -205,7 +216,7 @@ final class HawtTransaction implements Transaction {
         if (update == null) {
             // We are updating an existing page in the snapshot...
             snapshot();
-            update = Update.allocated(parent.allocator.alloc(1));
+            update = update(parent.allocator.alloc(1)).allocated();
             getUpdates().put(page, update);
         }
         parent.pageFile.write(update.page(), buffer);
@@ -217,7 +228,7 @@ final class HawtTransaction implements Transaction {
         try {
             if (updates!=null) {
                 // If the commit is successful it will release our snapshot..
-                parent.commit(snapshot, updates, deferredUpdates);
+                parent.commit(snapshot, updates);
             }
             failed = false;
         } finally {
@@ -227,7 +238,6 @@ final class HawtTransaction implements Transaction {
                 rollback();
             }
             updates = null;
-            deferredUpdates = null;
             snapshot = null;
         }
     }
@@ -237,7 +247,7 @@ final class HawtTransaction implements Transaction {
             if (updates!=null) {
                 for (Update update : updates.values()) {
                     if( !update.wasFreed() ) {
-                        parent.allocator.free(update.update_location, 1);
+                        parent.allocator.free(update.page, 1);
                     }
                 }
             }
@@ -247,7 +257,6 @@ final class HawtTransaction implements Transaction {
                 snapshot = null;
             }
             updates = null;
-            deferredUpdates = null;
         }
     }
 
@@ -260,13 +269,6 @@ final class HawtTransaction implements Transaction {
 
     public boolean isReadOnly() {
         return updates == null;
-    }
-
-    public ConcurrentHashMap<Integer, DeferredUpdate> getCacheUpdates() {
-        if( deferredUpdates==null ) {
-            deferredUpdates = new ConcurrentHashMap<Integer, DeferredUpdate>();
-        }
-        return deferredUpdates;
     }
 
     private ConcurrentHashMap<Integer, Update> getUpdates() {
@@ -282,7 +284,11 @@ final class HawtTransaction implements Transaction {
 
     public String toString() { 
         int updatesSize = updates==null ? 0 : updates.size();
-        return "{ snapshot: "+this.snapshot+", updates: "+updatesSize+", parent: "+parent+" }";
+        return "{ \n" +
+        	   "  snapshot: "+this.snapshot+", \n"+
+        	   "  updates: "+updatesSize+", \n" +
+        	   "  parent: "+StringSupport.indent(parent.toString(), 2)+"\n" +
+        	   "}";
     }
 
     public int pages(int length) {

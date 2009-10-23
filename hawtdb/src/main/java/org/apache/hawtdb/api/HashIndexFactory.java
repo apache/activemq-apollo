@@ -37,6 +37,7 @@ public class HashIndexFactory<Key, Value> implements IndexFactory<Key, Value> {
     private int maximumBucketCapacity = DEFAULT_MAXIMUM_BUCKET_CAPACITY;
     private int minimumBucketCapacity = DEFAULT_MINIMUM_BUCKET_CAPACITY;
     private int loadFactor = DEFAULT_LOAD_FACTOR;
+    private boolean deferredEncoding=true;
 
     public Index<Key, Value> open(Paged paged, int page) {
         return docreate(paged, page).open();
@@ -111,6 +112,15 @@ public class HashIndexFactory<Key, Value> implements IndexFactory<Key, Value> {
     public void setFixedCapacity(int value) {
         this.minimumBucketCapacity = this.maximumBucketCapacity = this.initialBucketCapacity = value;
     }
+
+    public boolean isDeferredEncoding() {
+        return deferredEncoding;
+    }
+
+    public void setDeferredEncoding(boolean deferredEncoding) {
+        this.deferredEncoding = deferredEncoding;
+    }
+    
     
     
 }

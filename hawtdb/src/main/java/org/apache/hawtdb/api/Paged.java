@@ -124,6 +124,6 @@ public interface Paged {
      * @param page
      * @return
      */
-    <T> void remove(EncoderDecoder<T> encoderDecoder, int page);
+    <T> void clear(EncoderDecoder<T> encoderDecoder, int page);
 
 }

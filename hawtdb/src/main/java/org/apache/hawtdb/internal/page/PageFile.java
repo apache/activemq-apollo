@@ -109,7 +109,7 @@ public class PageFile implements Paged {
         encoderDecoder.store(this, page, value);
     }
 
-    public <T> void remove(EncoderDecoder<T> encoderDecoder, int page) {
+    public <T> void clear(EncoderDecoder<T> encoderDecoder, int page) {
         encoderDecoder.remove(this, page);
     }
 

@@ -22,7 +22,7 @@ import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
+import java.io.ObjectStreamException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -139,17 +139,14 @@ public final class HawtPageFile {
         private long head;
         /** all the page updates that are part of the redo */
         private ConcurrentHashMap<Integer, Update> updates;
-        /** the deferred updates that need to be done in this redo */
-        private ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates;
 
 
         public Commit() {
         }
         
-        public Commit(long version, ConcurrentHashMap<Integer, Update> updates, ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates) {
+        public Commit(long version, ConcurrentHashMap<Integer, Update> updates) {
             this.head = this.base = version;
             this.updates = updates;
-            this.deferredUpdates = deferredUpdates;
         }
         
         
@@ -161,8 +158,7 @@ public final class HawtPageFile {
         
         public String toString() { 
             int updateSize = updates==null ? 0 : updates.size();
-            int cacheSize = deferredUpdates==null ? 0 : deferredUpdates.size();
-            return "{ base: "+this.base+", head: "+this.head+", updates: "+updateSize+", cache: "+cacheSize+" }";
+            return "{ base: "+this.base+", head: "+this.head+", updates: "+updateSize+" }";
         }
 
         public long commitCheck(Map<Integer, Update> newUpdate) {
@@ -174,34 +170,9 @@ public final class HawtPageFile {
             return head;
         }
 
-        public void merge(Allocator allocator, long rev, ConcurrentHashMap<Integer, Update> updates, ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates) {
+        public void merge(Allocator allocator, long rev, ConcurrentHashMap<Integer, Update> updates) {
             assert head+1 == rev;
             head=rev;
-            if (deferredUpdates != null) {
-                if (this.deferredUpdates == null) {
-                    this.deferredUpdates = deferredUpdates;
-                } else {
-                    for (Entry<Integer, DeferredUpdate> entry : deferredUpdates.entrySet()) {
-                        Integer page = entry.getKey();
-                        DeferredUpdate du = entry.getValue();
-                        if (du.value == null) {
-                            this.deferredUpdates.remove(page);
-                        } else {
-                            DeferredUpdate previous = this.deferredUpdates.put(page, du);
-                            // TODO: There was a previous deferred update in the redo...  we can just use it's 
-                            // redo allocation and release the new allocation.
-                            if (previous != null) {
-                                Update allocated = updates.remove(page);
-                                assert allocated.update_location == du.page; // these should match...
-                                allocator.free(du.page, 1);
-                                // since we replaced the previous entry,  
-                                du.page = previous.page;
-                            }
-                        }
-                    }
-                }
-            }
-            
             // merge all the entries in the update..
             for (Entry<Integer, Update> entry : updates.entrySet()) {
                 merge(allocator, entry.getKey(), entry.getValue());
@@ -217,25 +188,30 @@ public final class HawtPageFile {
         private void merge(Allocator allocator, int page, Update update) {
             Update previous = this.updates.put(page, update);
             if (previous != null) {
+                
                 if( update.wasFreed() ) {
                     // we can undo the previous update
-                    if( previous.update_location != page ) {
-                        allocator.free(previous.update_location, 1);
+                    if( previous.page != page ) {
+                        allocator.free(previous.page, 1);
                     }
                     if( previous.wasAllocated() ) {
                         allocator.free(page, 1);
                     }
                     this.updates.remove(page);
-                } else {
-                    // we are undoing the previous update /w this new update.
-                    if( previous.update_location != page ) {
-                        allocator.free(previous.update_location, 1);
-                    }
-                    // we may be updating a previously allocated page,
-                    // if so we need to mark the new page as allocated too.
-                    if( previous.wasAllocated() ) {
-                        update.flags = PAGE_ALLOCATED;
-                    }                    
+                    
+                    // No other merging is needed now..
+                    return;
+                }
+                
+                // we are undoing the previous update /w this new update.
+                if( previous.page != page ) {
+                    allocator.free(previous.page, 1);
+                }
+                
+                // we may be updating a previously allocated page,
+                // if so we need to mark the new page as allocated too.
+                if( previous.wasAllocated() ) {
+                    update.allocated();
                 }
             }
         }
@@ -379,9 +355,12 @@ public final class HawtPageFile {
                 while( curEntry!=null ) {
                     Commit commit = curEntry.isCommit();
                     if( commit !=null ) {
-                        DeferredUpdate du  = commit.deferredUpdates.get(page);
-                        if (du!=null) {
-                            return du.<T>value();
+                        Update update = commit.updates.get(page);
+                        if( update!=null ) {
+                            DeferredUpdate du  = update.deferredUpdate();
+                            if (du!=null) {
+                                return du.<T>value();
+                            }
                         }
                     }
                     curEntry = curEntry.getPrevious();
@@ -428,17 +407,16 @@ public final class HawtPageFile {
         private static final long serialVersionUID = 1188640492489990493L;
         
         /** the pageId that this redo batch is stored at */
-        private transient int page=-1;
+        private  int page=-1;
         /** points to a previous redo batch page */
         public int previous=-1;
         /** was the redo loaded in the {@link recover} method */
-        private transient boolean recovered;
+        private boolean recovered;
         
         /** the commits and snapshots in the redo */ 
-        private transient LinkedNodeList<RedoEntry> entries = new LinkedNodeList<RedoEntry>();
+        private final LinkedNodeList<RedoEntry> entries = new LinkedNodeList<RedoEntry>();
         /** tracks how many snapshots are referencing the redo */
         private int references;
-
         /** the oldest commit in this redo */
         public long base=-1;
         /** the newest commit in this redo */
@@ -458,7 +436,7 @@ public final class HawtPageFile {
         }
 
         public String toString() { 
-            return "{ page: "+this.page+", previous: "+previous+" }";
+            return "{ page: "+this.page+", base: "+base+", head: "+head+", references: "+references+", entries: "+entries.size()+" }";
         }
         
         @Override
@@ -540,20 +518,23 @@ public final class HawtPageFile {
 
         public void performDefferedUpdates(Paged pageFile) {            
             for (Commit commit : this) {
-                if( commit.deferredUpdates != null ) {
-                    for (Entry<Integer, DeferredUpdate> entry : commit.deferredUpdates.entrySet()) {
-                        DeferredUpdate cu = entry.getValue();
-                        if( cu.value == null ) {
-                            List<Integer> freePages = cu.marshaller.remove(pageFile, cu.page);
+                if( commit.updates != null ) {
+                    for (Entry<Integer, Update> entry : commit.updates.entrySet()) {
+                        DeferredUpdate du = entry.getValue().deferredUpdate();
+                        if( du == null ) {
+                            continue;
+                        }
+                        if( du.wasDeferredClear() ) {
+                            List<Integer> freePages = du.marshaller.remove(pageFile, du.page);
                             for (Integer page : freePages) {
-                                commit.merge(pageFile.allocator(), page, Update.freed(page));
+                                commit.merge(pageFile.allocator(), page, Update.update(page).freed());
                             }
-                        } else {
-                            List<Integer> allocatedPages = cu.store(pageFile);
+                        } else if( du.wasDeferredStore() ) {
+                            List<Integer> allocatedPages = du.store(pageFile);
                             for (Integer page : allocatedPages) {
                                 // add any allocated pages to the update list so that the free 
                                 // list gets properly adjusted.
-                                commit.merge(pageFile.allocator(), page, Update.allocated(page));
+                                commit.merge(pageFile.allocator(), page, Update.update(page).allocated());
                             }
                         }
                     }
@@ -568,9 +549,9 @@ public final class HawtPageFile {
                     Update value = entry.getValue();
                     if( value.wasFreed() ) {
                         allocator.free(key, 1);
-                    } else if( key != value.update_location ) {
+                    } else if( key != value.page ) {
                         // need to free the udpate page..
-                        allocator.free(value.update_location, 1);
+                        allocator.free(value.page, 1);
                     }
                 }
             }
@@ -638,17 +619,18 @@ public final class HawtPageFile {
     
     @Override
     public String toString() {
-        return "{ allocator: "+allocator
-        +", synch: "+synch
-        +", read cache size: "+readCache.map.size()
-        +", base revision free pages: "+baseRevisionFreePages + ",\n"
-        + "  redos: {\n" 
-        + "    performed: "+toString(performedRedos, syncedRedos) + ",\n" 
-        + "    synced: "+toString(syncedRedos, storedRedos) + ",\n" 
-        + "    stored: "+toString(storedRedos, buildingRedo)+ ",\n" 
-        + "    building: "+toString(buildingRedo, null)+ ",\n"
-        + "  }"        
-        + "}";
+        return "{\n" +
+        		"  allocator: "+allocator+ ",\n"+
+        		"  synch: "+synch+ ",\n"+
+        		"  read cache size: "+readCache.map.size()+ ",\n"+
+        		"  base revision free pages: "+baseRevisionFreePages + ",\n"+
+        		"  redos: {\n"+ 
+        		"    performed: "+toString(performedRedos, syncedRedos) + ",\n"+ 
+        		"    synced: "+toString(syncedRedos, storedRedos) + ",\n"+
+        		"    stored: "+toString(storedRedos, buildingRedo)+ ",\n"+
+        		"    building: "+toString(buildingRedo, null)+ ",\n"+
+        		"  }"+ "\n"+
+        		"}";
     }
 
     /** 
@@ -682,7 +664,7 @@ public final class HawtPageFile {
      * @param pageUpdates
      * @param deferredUpdates
      */
-    void commit(Snapshot snapshot, ConcurrentHashMap<Integer, Update> pageUpdates, ConcurrentHashMap<Integer, DeferredUpdate> deferredUpdates) {
+    void commit(Snapshot snapshot, ConcurrentHashMap<Integer, Update> pageUpdates) {
         
         boolean fullRedo=false;
         synchronized (TRANSACTION_MUTEX) {
@@ -717,9 +699,9 @@ public final class HawtPageFile {
             
             if( commit!=null ) {
                 // TODO: figure out how to do the merge outside the TRANSACTION_MUTEX
-                commit.merge(pageFile.allocator(), rev, pageUpdates, deferredUpdates);
+                commit.merge(pageFile.allocator(), rev, pageUpdates);
             } else {
-                buildingRedo.entries.addLast(new Commit(rev, pageUpdates, deferredUpdates) );
+                buildingRedo.entries.addLast(new Commit(rev, pageUpdates) );
             }
             
             if( buildingRedo.pageCount() > updateBatchSize ) {
@@ -758,7 +740,7 @@ public final class HawtPageFile {
             Header h = header();
             h.setByteBufferPosition(0);
             h.magic.set(MAGIC);
-            h.base_revision.set(0);
+            h.base_revision.set(-1);
             h.free_list_page.set(-1);
             h.page_size.set(pageFile.getPageSize());
             h.reserved.set("");
@@ -797,9 +779,24 @@ public final class HawtPageFile {
                 baseRevisionFreePages.add(0, allocator.getLimit());
             }
             
-            // Load the redo batches.
+            boolean consistencyCheckNeeded=true;
+            int last_synced_redo = h.redo_page.get();
             pageId = h.unsynced_redo_page.get();
-            while( pageId >= 0 ) {
+            if( pageId<0 ) {
+                pageId = last_synced_redo;
+                consistencyCheckNeeded = false;
+            }
+            while( true ) {
+                if( pageId < 0 ) {
+                    break;
+                }
+
+                if( consistencyCheckNeeded ) {
+                    // TODO: when consistencyCheckNeeded==true, then we need to check the
+                    // Consistency of the redo, as it may have been partially written to disk.
+                }
+                
+                
                 Redo redo = loadObject(pageId); 
                 redo.page = pageId;
                 redo.recovered = true;
@@ -809,17 +806,17 @@ public final class HawtPageFile {
                     buildingRedo.head = redo.head;
                 }
     
-                pageId=-1;
                 if( baseRevision < redo.head ) {
-                    
                     // add first since we are loading redo objects oldest to youngest
                     // but want to put them in the list youngest to oldest.
                     redos.addFirst(redo);
-                    syncedRedos = redo;
-                    
-                    if( baseRevision < redo.base ) {
-                        pageId=redo.previous;
+                    performedRedos = syncedRedos = redo;
+                    pageId=redo.previous;
+                    if( pageId==last_synced_redo ) {
+                        consistencyCheckNeeded = false;
                     }
+                } else {
+                    break;
                 }
             }
             
@@ -980,7 +977,7 @@ public final class HawtPageFile {
                     int page = entry.getKey();
                     Update update = entry.getValue();
                     
-                    if( page != update.update_location ) {
+                    if( page != update.page ) {
                         
                         if( syncedRedos.recovered ) {
                             // If we are recovering, the allocator MIGHT not have this 
@@ -991,7 +988,7 @@ public final class HawtPageFile {
                         
                         // Perform the update by copying the updated page the original
                         // page location.
-                        ByteBuffer slice = pageFile.slice(SliceType.READ, update.update_location, 1);
+                        ByteBuffer slice = pageFile.slice(SliceType.READ, update.page, 1);
                         try {
                             pageFile.write(page, slice);
                         } finally { 
@@ -1154,27 +1151,129 @@ public final class HawtPageFile {
         }        
     }
     
-    final static class DeferredUpdate {
-        int page;
-        Object value;
-        EncoderDecoder<?> marshaller;
+    public static final byte PAGE_ALLOCATED   = 0x01 << 0;
+    public static final byte PAGE_FREED       = 0x01 << 1;
+    public static final byte PAGE_STORE       = 0x01 << 2;
+    public static final byte PAGE_CLEAR       = 0x01 << 3;
+    
+    static class Update implements Externalizable {
 
-        public DeferredUpdate(int page, Object value, EncoderDecoder<?> marshaller) {
+        private static final long serialVersionUID = -1128410792448869134L;
+        
+        byte flags;
+        int page;
+       
+        public Update() {
+        }
+        
+        public Update(Update udpate) {
+            this.page = udpate.page;
+            this.flags = (byte) (udpate.flags & (PAGE_ALLOCATED|PAGE_FREED));
+        }
+
+        public Update(int page) {
             this.page = page;
-            this.value = value;
-            this.marshaller = marshaller;
+        }
+
+        public static Update update(Update update) {
+            return new Update(update);
+        }
+        public static Update update(int page) {
+            return new Update(page);
+        }
+        
+        public int page() {
+            if( wasFreed() ) {
+                throw new PagingException("You should never try to read or write page that has been freed.");
+            }
+            return page;
+        }
+
+        public DeferredUpdate deferredUpdate() {
+            return null;
+        }
+        
+        public Update allocated() {
+            flags = (byte) ((flags & ~PAGE_FREED) | PAGE_ALLOCATED);
+            return this;
+        }
+        
+        public Update freed() {
+            flags = (byte) ((flags & ~PAGE_ALLOCATED) | PAGE_FREED);
+            return this;
+        }
+
+        public boolean wasFreed() {
+            return (flags & PAGE_FREED)!=0 ;
+        }
+        public boolean wasAllocated() {
+            return (flags & PAGE_ALLOCATED)!=0;
+        }
+        public boolean wasDeferredStore() {
+            return (flags & PAGE_STORE)!=0 ;
+        }
+        public boolean wasDeferredClear() {
+            return (flags & PAGE_CLEAR)!=0;
         }
         
         @Override
         public String toString() {
-            return "{ page: "+page+", removed: "+(value==null)+" }";
+            return "{ page: "+page+", flags: "+flags+" }";
         }
 
-        public void reset(Object value, EncoderDecoder<?> marshaller) {
+        @Override
+        public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+            page = in.readInt();
+            flags = in.readByte();
+        }
+
+        @Override
+        public void writeExternal(ObjectOutput out) throws IOException {
+            out.writeInt(page);
+            out.writeByte(flags);
+        }
+        
+    }
+    
+    
+    @SuppressWarnings("serial")
+    static class DeferredUpdate extends Update {
+        EncoderDecoder<?> marshaller;
+        Object value;
+
+        public DeferredUpdate(Update update) {
+            super(update);
+        }
+        public DeferredUpdate(int page) {
+            super(page);
+        }
+        
+        public static DeferredUpdate deferred(int page) {
+            return new DeferredUpdate(page);
+        }
+        
+        public static DeferredUpdate deferred(Update update) {
+            return new DeferredUpdate(update);
+        }
+
+        public DeferredUpdate deferredUpdate() {
+            return this;
+        }
+        
+        public DeferredUpdate store(Object value, EncoderDecoder<?> marshaller) {
             this.value = value;
             this.marshaller = marshaller;
+            flags = (byte) ((flags & ~PAGE_CLEAR) | PAGE_STORE);
+            return this;
         }
 
+        public DeferredUpdate clear(EncoderDecoder<?> marshaller) {
+            this.marshaller= marshaller;
+            this.value=null;
+            flags = (byte) ((flags & ~PAGE_STORE) | PAGE_CLEAR);
+            return this;
+        }
+        
         @SuppressWarnings("unchecked")
         <T> T value() {
             return (T) value;
@@ -1184,55 +1283,10 @@ public final class HawtPageFile {
         public List<Integer> store(Paged paged) {
             return ((EncoderDecoder)marshaller).store(paged, page, value);
         }
-    }
-    
-    public static final byte PAGE_ALLOCATED = 1;
-    public static final byte PAGE_FREED = 2;
-    
-    final static class Update implements Serializable {
 
-        private static final long serialVersionUID = -1128410792448869134L;
-        
-        byte flags;
-        final int update_location;
-       
-        public Update(int updateLocation, byte flags) {
-            this.update_location = updateLocation;
-            this.flags = flags;
-        }
-
-        public static Update updated(int page) {
-            return new Update(page, (byte) 0);
-        }
-
-        public static Update allocated(int page) {
-            return new Update(page, PAGE_ALLOCATED);
-        }
-
-        public static Update freed(int page) {
-            return new Update(page, PAGE_FREED);
-        }
-
-        public boolean wasFreed() {
-            return flags == PAGE_FREED;
+        public Object writeReplace() throws ObjectStreamException {
+            return new Update(this);
         }
         
-        public boolean wasAllocated() {
-            return flags == PAGE_ALLOCATED;
-        }
-        
-        public int page() {
-            if( wasFreed() ) {
-                throw new PagingException("You should never try to read or write page that has been freed.");
-            }
-            return update_location;
-        }
-
-        @Override
-        public String toString() {
-            return "{ page: "+update_location+", flags: "+flags+" }";
-        }
-
-    }
-    
+    }    
 }

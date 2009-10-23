@@ -89,9 +89,13 @@ public class BTreeIndex<Key, Value> implements Index<Key, Value> {
     public Value remove(Key key) {
         return root().remove(this, key);
     }
+    
+    public int size() {
+        return root().size(this);
+    }
 
-    public boolean isTransient() {
-        return false;
+    public boolean isEmpty() {
+        return root().isEmpty(this);
     }
 
     public void clear() {
@@ -238,7 +242,7 @@ public class BTreeIndex<Key, Value> implements Index<Key, Value> {
     
     void free( BTreeNode<Key, Value> node ) {
         if( deferredEncoding ) {
-            paged.remove(DATA_ENCODER_DECODER, node.page);
+            paged.clear(DATA_ENCODER_DECODER, node.page);
         } else {
             if ( node.storedInExtent ) {
                 DATA_ENCODER_DECODER.remove(paged, node.page);
@@ -273,10 +277,6 @@ public class BTreeIndex<Key, Value> implements Index<Key, Value> {
 
     public void destroy() {
         // TODO Auto-generated method stub
-    }
-
-    public int size() {
-        return root().size(this);
     }
 
 }

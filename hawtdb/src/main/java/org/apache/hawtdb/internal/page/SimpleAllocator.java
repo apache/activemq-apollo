@@ -56,7 +56,7 @@ public class SimpleAllocator implements Allocator {
 
     
     /**
-     * @see org.apache.hawtdb.api.hiramchirino.hawtdb.Allocator#remove(int, int)
+     * @see org.apache.hawtdb.api.hiramchirino.hawtdb.Allocator#clear(int, int)
      */
     synchronized public void free(int pageId, int count) {
         freeRanges.add(pageId, count);

@@ -74,6 +74,8 @@ public interface Index<Key,Value> extends Iterable<Map.Entry<Key, Value>> {
     
     int size();
     
+    boolean isEmpty();
+    
     /**
      * @param tx
      * @return
