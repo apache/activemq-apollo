@@ -35,6 +35,7 @@ import org.apache.hawtdb.api.HashIndexFactory;
 import org.apache.hawtdb.api.IOPagingException;
 import org.apache.hawtdb.api.Index;
 import org.apache.hawtdb.api.IndexException;
+import org.apache.hawtdb.api.IndexVisitor;
 import org.apache.hawtdb.api.Paged;
 
 
@@ -52,6 +53,7 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
     private final int page;
     private final int maximumBucketCapacity;
     private final int minimumBucketCapacity;
+    private final boolean fixedCapacity;
     private final int loadFactor;
     private final int initialBucketCapacity;
     private final boolean deferredEncoding;
@@ -69,6 +71,7 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
         this.BIN_FACTORY.setKeyMarshaller(factory.getKeyMarshaller());
         this.BIN_FACTORY.setValueMarshaller(factory.getValueMarshaller());
         this.BIN_FACTORY.setDeferredEncoding(this.deferredEncoding);
+        this.fixedCapacity = this.minimumBucketCapacity==this.maximumBucketCapacity && this.maximumBucketCapacity==this.initialBucketCapacity;
     }
 
     public HashIndex<Key, Value> create() {
@@ -93,8 +96,13 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
     }
     
     public Value put(Key key, Value value) {
+        
         Index<Key, Value> bucket = buckets.bucket(key);
-
+        
+        if( fixedCapacity ) {
+            return bucket.put(key,value);
+        }
+        
         boolean wasEmpty = bucket.isEmpty();
         Value put = bucket.put(key,value);
 
@@ -114,11 +122,16 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
     
     public Value remove(Key key) {
         Index<Key, Value> bucket = buckets.bucket(key);
-
+        
+        if( fixedCapacity ) {
+            return bucket.remove(key);
+        }
+        
+        boolean wasEmpty = bucket.isEmpty();
         Value rc = bucket.remove(key);
         boolean isEmpty = bucket.isEmpty();
         
-        if (isEmpty) {
+        if (!wasEmpty && isEmpty) {
             buckets.active--;
             storeBuckets();
         }
@@ -140,6 +153,11 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
     }
     
     public Iterator<Entry<Key, Value>> iterator() throws UnsupportedOperationException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void visit(IndexVisitor<Key, Value> visitor) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
     

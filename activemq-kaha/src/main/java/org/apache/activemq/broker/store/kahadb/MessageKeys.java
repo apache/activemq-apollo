@@ -53,5 +53,9 @@ public class MessageKeys {
             dataOut.writeShort(object.messageId.length);
             dataOut.write(object.messageId.data, object.messageId.offset, object.messageId.length);
         }
+
+        public int estimatedSize(MessageKeys object) {
+            throw new UnsupportedOperationException();
+        }
     };
 }

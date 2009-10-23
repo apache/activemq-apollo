@@ -95,6 +95,10 @@ public class RootEntity {
                 os.writeBoolean(false);
             }
         }
+
+        public int estimatedSize(RootEntity object) {
+            throw new UnsupportedOperationException();
+        }
     };
 
     // The root page the this object's state is stored on.

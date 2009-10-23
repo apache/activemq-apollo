@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.TreeSet;
 import java.util.Map.Entry;
 
 import org.apache.activemq.broker.store.Store;
@@ -37,7 +36,6 @@ import org.apache.activemq.util.marshaller.LongMarshaller;
 import org.apache.activemq.util.marshaller.Marshaller;
 import org.apache.activemq.util.marshaller.VariableMarshaller;
 import org.apache.kahadb.index.BTreeIndex;
-import org.apache.kahadb.journal.Location;
 import org.apache.kahadb.page.Page;
 import org.apache.kahadb.page.Transaction;
 
@@ -61,6 +59,10 @@ public class DestinationEntity {
             dataOut.writeLong(value.metaData.getPageId());
         }
 
+        public int estimatedSize(DestinationEntity object) {
+            throw new UnsupportedOperationException();
+        }
+
     };
 
     public final static Marshaller<DestinationMetaData> META_DATA_MARSHALLER = new VariableMarshaller<DestinationMetaData>() {
@@ -74,6 +76,10 @@ public class DestinationEntity {
         public void writePayload(DestinationMetaData value, DataOutput dataOut) throws IOException {
             dataOut.writeInt(value.count);
             dataOut.writeLong(value.size);
+        }
+
+        public int estimatedSize(DestinationMetaData object) {
+            throw new UnsupportedOperationException();
         }
     };
 

@@ -65,6 +65,10 @@ public class Marshallers {
                 dataOut.writeBoolean(false);
             }
         }
+
+        public int estimatedSize(QueueRecord object) {
+            throw new UnsupportedOperationException();
+        }
     };
 
     public final static Marshaller<Location> LOCATION_MARSHALLER = new Marshaller<Location>() {
@@ -93,6 +97,10 @@ public class Marshallers {
             return 8;
         }
 
+        public int estimatedSize(Location object) {
+            throw new UnsupportedOperationException();
+        }
+
     };
 
     public final static Marshaller<AsciiBuffer> ASCII_BUFFER_MARSHALLER = new VariableMarshaller<AsciiBuffer>() {
@@ -107,6 +115,10 @@ public class Marshallers {
             dataOut.writeShort(object.length);
             dataOut.write(object.data, object.offset, object.length);
         }
+
+        public int estimatedSize(AsciiBuffer object) {
+            throw new UnsupportedOperationException();
+        }
     };
 
     public final static Marshaller<Buffer> BUFFER_MARSHALLER = new VariableMarshaller<Buffer>() {
@@ -120,6 +132,10 @@ public class Marshallers {
         public void writePayload(Buffer object, DataOutput dataOut) throws IOException {
             dataOut.writeShort(object.length);
             dataOut.write(object.data, object.offset, object.length);
+        }
+
+        public int estimatedSize(Buffer object) {
+            throw new UnsupportedOperationException();
         }
     };
 
@@ -148,6 +164,9 @@ public class Marshallers {
             } else {
                 dataOut.writeBoolean(false);
             }
+        }
+        public int estimatedSize(QueueDescriptor object) {
+            throw new UnsupportedOperationException();
         }
     };
 }

@@ -22,16 +22,12 @@ import org.apache.activemq.util.marshaller.LongMarshaller;
 import org.apache.hawtdb.api.BTreeIndexFactory;
 import org.apache.hawtdb.api.Index;
 import org.apache.hawtdb.api.Transaction;
-import org.apache.hawtdb.internal.Benchmarker.BenchmarkAction;
-import org.junit.Test;
 
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class BTreeIndexBenchmark extends IndexBenchmark {
-
-    private boolean deferredEncoding;
 
     public BTreeIndexBenchmark() {
         this.benchmark.setSamples(5);
@@ -41,28 +37,8 @@ public class BTreeIndexBenchmark extends IndexBenchmark {
         BTreeIndexFactory<Long, Buffer> factory = new BTreeIndexFactory<Long, Buffer>();
         factory.setKeyMarshaller(LongMarshaller.INSTANCE);
         factory.setValueMarshaller(new FixedBufferMarshaller(DATA.length));
-        factory.setDeferredEncoding(deferredEncoding);
         return factory.create(tx, tx.allocator().alloc(1));
     }
 
-    @Test
-    public void insertDeffered() throws Exception {
-        deferredEncoding = true;
-        benchmark.benchmark(1, new BenchmarkAction<IndexActor>("insert with deffered encoding") {
-            protected void execute(IndexActor actor) throws InterruptedException {
-                actor.benchmarkIndex();
-            }
-        });        
-    }
-
-    @Test
-    public void insert() throws Exception {
-        deferredEncoding = false;
-        benchmark.benchmark(1, new BenchmarkAction<IndexActor>("insert without deffered encoding") {
-            protected void execute(IndexActor actor) throws InterruptedException {
-                actor.benchmarkIndex();
-            }
-        });        
-    }
-    
+   
 }

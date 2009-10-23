@@ -18,7 +18,6 @@ package org.apache.activemq.broker.store.kahadb;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;

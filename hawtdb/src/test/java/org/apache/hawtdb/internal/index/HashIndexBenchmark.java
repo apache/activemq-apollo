@@ -38,7 +38,7 @@ public class HashIndexBenchmark extends IndexBenchmark {
         HashIndexFactory<Long, Buffer> factory = new HashIndexFactory<Long, Buffer>();
         factory.setKeyMarshaller(LongMarshaller.INSTANCE);
         factory.setValueMarshaller(new FixedBufferMarshaller(DATA.length));
-        factory.setFixedCapacity(1024*10);
+        factory.setFixedCapacity(500);
         return factory.create(tx, tx.allocator().alloc(1));
     }
     

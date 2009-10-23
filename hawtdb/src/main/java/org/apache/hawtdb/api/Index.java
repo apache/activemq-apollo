@@ -80,10 +80,19 @@ public interface Index<Key,Value> extends Iterable<Map.Entry<Key, Value>> {
      * @param tx
      * @return
      * @throws IOException
-     * @trhows UnsupportedOperationException 
-     *         if the index does not support fast iteration of the elements.
+     * throws UnsupportedOperationException if the index does not support fast iteration of the elements.
      */
     Iterator<Map.Entry<Key,Value>> iterator() throws UnsupportedOperationException;
+
+
+    /**
+     * Traverses the visitor over the stored entries in this index.  The visitor can control
+     * which keys and values are visited.
+     * 
+     * @param visitor
+     * @throws UnsupportedOperationException if this is not an ordered index.
+     */
+    public void visit(IndexVisitor<Key, Value> visitor) throws UnsupportedOperationException;
 
     int getPage();
     
