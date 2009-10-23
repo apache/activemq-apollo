@@ -36,7 +36,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
 
     // A non null pending save indicates that the message is the
     // saver queue and that the message
-    OperationContext pendingSave;
+    OperationContext<?> pendingSave;
 
     // List of persistent targets for which the message should be saved
     // when dispatch is complete:

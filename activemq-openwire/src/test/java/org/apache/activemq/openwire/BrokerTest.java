@@ -35,6 +35,7 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTopic;
 import org.apache.activemq.command.ConnectionInfo;
 import org.apache.activemq.command.ConsumerInfo;
+import org.apache.activemq.command.LocalTransactionId;
 import org.apache.activemq.command.Message;
 import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.command.ProducerInfo;
@@ -1432,6 +1433,149 @@ public class BrokerTest implements BeanFactory, IHookable{
         Assert.assertNotNull(m3);
         connection.request(scenario.createAck(consumerInfo, m3, 1, MessageAck.DELIVERED_ACK_TYPE));
     }
+	
+	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+	public void testTransactedSend(BrokerTestScenario scenario) throws Exception {
 
+        // Setup a first connection
+        StubConnection connection1 = scenario.createConnection();
+        ConnectionInfo connectionInfo1 = scenario.createConnectionInfo();
+        SessionInfo sessionInfo1 = scenario.createSessionInfo(connectionInfo1);
+        ProducerInfo producerInfo1 = scenario.createProducerInfo(sessionInfo1);
+        connection1.send(connectionInfo1);
+        connection1.send(sessionInfo1);
+        connection1.send(producerInfo1);
+
+        scenario.destination = scenario.createDestinationInfo(connection1, connectionInfo1, scenario.destinationType);
+
+        ConsumerInfo consumerInfo1 = scenario.createConsumerInfo(sessionInfo1, scenario.destination);
+        consumerInfo1.setPrefetchSize(100);
+        connection1.send(consumerInfo1);
+
+        // Begin the transaction.
+        LocalTransactionId txid = scenario.createLocalTransaction(sessionInfo1);
+        connection1.send(scenario.createBeginTransaction(connectionInfo1, txid));
+
+        // Send the messages
+        for (int i = 0; i < 4; i++) {
+            Message message = scenario.createMessage(producerInfo1, scenario.destination, scenario.deliveryMode);
+            message.setTransactionId(txid);
+            connection1.request(message);
+        }
+
+        // The point of this test is that message should not be delivered until
+        // send is committed.
+        Assert.assertNull(scenario.receiveMessage(connection1,scenario.MAX_NULL_WAIT));
+
+        // Commit the transaction.
+        connection1.send(scenario.createCommitTransaction1Phase(connectionInfo1, txid));
+
+        // Now get the messages.
+        for (int i = 0; i < 4; i++) {
+            Message m1 = scenario.receiveMessage(connection1);
+            Assert.assertNotNull(m1);
+        }
+
+        scenario.assertNoMessagesLeft(connection1);
+    }
+
+	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+	public void testTransactedAckWithPrefetchOfOne(BrokerTestScenario scenario) throws Exception {
+
+        // Setup a first connection
+        StubConnection connection1 = scenario.createConnection();
+        ConnectionInfo connectionInfo1 = scenario.createConnectionInfo();
+        SessionInfo sessionInfo1 = scenario.createSessionInfo(connectionInfo1);
+        ProducerInfo producerInfo1 = scenario.createProducerInfo(sessionInfo1);
+        connection1.send(connectionInfo1);
+        connection1.send(sessionInfo1);
+        connection1.send(producerInfo1);
+
+        scenario.destination = scenario.createDestinationInfo(connection1, connectionInfo1, scenario.destinationType);
+
+        ConsumerInfo consumerInfo1 = scenario.createConsumerInfo(sessionInfo1, scenario.destination);
+        consumerInfo1.setPrefetchSize(1);
+        connection1.send(consumerInfo1);
+
+        // Send the messages
+        for (int i = 0; i < 4; i++) {
+            Message message = scenario.createMessage(producerInfo1, scenario.destination, scenario.deliveryMode);
+            connection1.send(message);
+        }
+
+       
+
+        // Now get the messages.
+        for (int i = 0; i < 4; i++) {
+            // Begin the transaction.
+            LocalTransactionId txid = scenario.createLocalTransaction(sessionInfo1);
+            connection1.send(scenario.createBeginTransaction(connectionInfo1, txid));
+            Message m1 = scenario.receiveMessage(connection1);
+            Assert.assertNotNull(m1);
+            MessageAck ack = scenario.createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE);
+            ack.setTransactionId(txid);
+            connection1.send(ack);
+         // Commit the transaction.
+            connection1.send(scenario.createCommitTransaction1Phase(connectionInfo1, txid));
+        }
+        scenario.assertNoMessagesLeft(connection1);
+    }
+	
+	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+    public void testTransactedAckRollbackWithPrefetchOfOne(BrokerTestScenario scenario) throws Exception {
+
+        // Setup a first connection
+        StubConnection connection1 = scenario.createConnection();
+        ConnectionInfo connectionInfo1 = scenario.createConnectionInfo();
+        SessionInfo sessionInfo1 = scenario.createSessionInfo(connectionInfo1);
+        ProducerInfo producerInfo1 = scenario.createProducerInfo(sessionInfo1);
+        connection1.send(connectionInfo1);
+        connection1.send(sessionInfo1);
+        connection1.send(producerInfo1);
+
+        scenario.destination = scenario.createDestinationInfo(connection1, connectionInfo1, scenario.destinationType);
+
+        ConsumerInfo consumerInfo1 = scenario.createConsumerInfo(sessionInfo1, scenario.destination);
+        consumerInfo1.setPrefetchSize(1);
+        connection1.send(consumerInfo1);
+
+        // Send the messages
+        for (int i = 0; i < 4; i++) {
+            Message message = scenario.createMessage(producerInfo1, scenario.destination, scenario.deliveryMode);
+            connection1.send(message);
+        }
+
+        // Now get the messages.
+        LocalTransactionId txid = scenario.createLocalTransaction(sessionInfo1);
+        // Begin the transaction.
+        connection1.send(scenario.createBeginTransaction(connectionInfo1, txid));
+        for (int i = 0; i < 4; i++) {
+            Message m1 = scenario.receiveMessage(connection1);
+            Assert.assertNotNull(m1);
+            MessageAck ack = scenario.createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE);
+            ack.setTransactionId(txid);
+            connection1.send(ack);
+        }
+        
+        // Rollback the transaction:
+        connection1.send(scenario.createRollbackTransaction(connectionInfo1, txid));
+        
+        for (int i = 0; i < 4; i++) {
+            // Begin the transaction.
+            txid = scenario.createLocalTransaction(sessionInfo1);
+            connection1.send(scenario.createBeginTransaction(connectionInfo1, txid));
+            Message m1 = scenario.receiveMessage(connection1);
+            Assert.assertNotNull(m1);
+            MessageAck ack = scenario.createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE);
+            ack.setTransactionId(txid);
+            connection1.send(ack);
+        }
+        // Commit the transaction.
+        connection1.send(scenario.createCommitTransaction1Phase(connectionInfo1, txid));
+        
+        
+        scenario.assertNoMessagesLeft(connection1);
+    }
+	
 
 }

@@ -270,6 +270,7 @@ public abstract class Transaction {
         }
 
         public final void onRollback(ISourceController<?> controller) {
+            //Nothing to do here, message just gets dropped:
             return;
         }
 
@@ -341,7 +342,9 @@ public abstract class Transaction {
          * @see org.apache.activemq.apollo.broker.Transaction.TxOp#onRollback()
          */
         public final void onRollback(ISourceController<?> controller) {
-            // TODO unaquire the element.
+            //No-Op for now, it is possible that we'd want to unaquire these
+            //in the queue if the client weren't to keep these
+            //around
         }
 
         /*
