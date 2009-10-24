@@ -56,7 +56,7 @@ final class Commit extends BatchEntry implements Externalizable {
     
     
     @Override
-    Commit isCommit() {
+    public Commit isCommit() {
         return this;
     }
 

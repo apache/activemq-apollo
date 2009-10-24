@@ -24,6 +24,28 @@ import java.io.ObjectOutput;
 import org.apache.hawtdb.api.PagingException;
 
 /**
+ * <p>Tracks one page update.
+ * </p><p>  
+ * To be able to provide snapshot isolation and to make 
+ * sure a set of updates can be performed atomically,  updates
+ * to existing pages are stored in a 'redo' page.  Once all the updates
+ * that are part of the transaction have been verified to be on disk,
+ * and no open snapshot would need to access the data on the original page,
+ * the contents of the 'redo' page are copied to the original page location
+ * and the 'redo' page gets freed.
+ * </p><p>
+ * A Update object is stored in the updates map in a Commit object.  That map
+ * is keyed off the original page location.  The Update page is the location
+ * of the 'redo' page.
+ * </p><p>
+ * Updates to pages which were allocated in the same transaction get done
+ * directly against the allocated page since no snapshot would have a view onto 
+ * that page.  In this case the update map key would match the update's page.
+ * </p><p>
+ * An update maintains some bit flags to know if the page was a new allocation
+ * or if the update was just freeing a previously allocated page, etc.  This data
+ * is used to properly maintain the persisted free page list.
+ * </p>
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */

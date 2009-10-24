@@ -16,13 +16,9 @@
  */
 package org.apache.hawtdb.internal.page;
 
-import java.nio.ByteBuffer;
 import java.util.Map;
 
-import org.apache.activemq.util.buffer.Buffer;
 import org.apache.hawtdb.api.EncoderDecoder;
-import org.apache.hawtdb.api.IOPagingException;
-import org.apache.hawtdb.api.Paged.SliceType;
 
 /**
  * 
@@ -37,105 +33,64 @@ import org.apache.hawtdb.api.Paged.SliceType;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 final class SnapshotHead extends BatchEntry {
-    /**
-     * 
-     */
-    private final HawtPageFile hawtPageFile;
+
     final Batch parent;
     
-    public SnapshotHead(HawtPageFile hawtPageFile, Batch parent) {
-        this.hawtPageFile = hawtPageFile;
+    public SnapshotHead(Batch parent) {
         this.parent = parent;
     }
 
     /** The number of times this snapshot has been opened. */
-    protected int references;
+    protected int snapshots;
     
     public String toString() { 
-        return "{ references: "+this.references+" }";
+        return "{ references: "+this.snapshots+" }";
     }
 
-    SnapshotHead isSnapshotHead() {
+    public SnapshotHead isSnapshotHead() {
         return this;
     }
     
-    public void read(int pageId, Buffer buffer) throws IOPagingException {
-        pageId = mapPageId(pageId);
-        this.hawtPageFile.pageFile.read(pageId, buffer);
-    }
-
-    public ByteBuffer slice(int pageId, int count) {
-        pageId = mapPageId(pageId);
-        return this.hawtPageFile.pageFile.slice(SliceType.READ, pageId, count);
-    }
-    
-    public void open(Batch base) {
-        references++;
-        while( true ) {
-            base.references++;
-            if(base == parent ) {
-                break;
-            }
-            base = base.getNext();
-        }
-    }
-    
-    public void close(Batch base) {
-        references--;
-        while( true ) {
-            base.references--;
-            if(base == parent ) {
-                break;
-            }
-            base = base.getNext();
-        }
-
-        if( references==0 ) {
-            unlink();
-            // TODO: trigger merging of adjacent commits. 
-        }
-    }
-
-    public int mapPageId(int page) {
+    public int translatePage(int page) {
         // Look for the page in the previous commits..
-        Batch curRedo = parent;
-        BatchEntry curEntry = getPrevious();
+        Batch batch = parent;
+        BatchEntry entry = getPrevious();
         while( true ) {
-            if( curRedo.isPerformed() ) {
+            if( batch.isPerformed() ) {
                 break;
             }
             
-            while( curEntry!=null ) {
-                Commit commit = curEntry.isCommit();
+            while( entry!=null ) {
+                Commit commit = entry.isCommit();
                 if( commit !=null ) {
                     Update update = commit.updates.get(page);
                     if( update!=null ) {
                         return update.page();
                     }
                 }
-                curEntry = curEntry.getPrevious();
+                entry = entry.getPrevious();
             }
             
-            curRedo = curRedo.getPrevious();
-            if( curRedo==null ) {
+            batch = batch.getPrevious();
+            if( batch==null ) {
                 break;
             }
-            curEntry = curRedo.entries.getTail();
+            entry = batch.entries.getTail();
         }
         return page;
     }
     
     
-    public <T> T cacheLoad(EncoderDecoder<T> marshaller, int page) {
-        Batch curRedo = parent;
-        BatchEntry curEntry = getPrevious();
+    public <T> T get(EncoderDecoder<T> marshaller, int page) {
+        Batch batch = parent;
+        BatchEntry entry = getPrevious();
         while( true ) {
-            if( curRedo.isPerformed() ) {
+            if( batch.isPerformed() ) {
                 break;
             }
             
-            while( curEntry!=null ) {
-                Commit commit = curEntry.isCommit();
+            while( entry!=null ) {
+                Commit commit = entry.isCommit();
                 if( commit !=null ) {
                     Update update = commit.updates.get(page);
                     if( update!=null ) {
@@ -145,36 +100,36 @@ final class SnapshotHead extends BatchEntry {
                         }
                     }
                 }
-                curEntry = curEntry.getPrevious();
+                entry = entry.getPrevious();
             }
             
-            curRedo = curRedo.getPrevious();
-            if( curRedo==null ) {
+            batch = batch.getPrevious();
+            if( batch==null ) {
                 break;
             }
-            curEntry = curRedo.entries.getTail();
+            entry = batch.entries.getTail();
         }
-        return this.hawtPageFile.readCache.cacheLoad(marshaller, page);
+        return null;
     }
     
     public long commitCheck(Map<Integer, Update> pageUpdates) {
-        long rc=0;
-        Batch curRedo = parent;
-        BatchEntry curEntry = getNext();
+        long rc=parent.head;
+        Batch batch = parent;
+        BatchEntry entry = getNext();
         while( true ) {
-            while( curEntry!=null ) {
-                Commit commit = curEntry.isCommit();
+            while( entry!=null ) {
+                Commit commit = entry.isCommit();
                 if( commit!=null ) {
                     rc = commit.commitCheck(pageUpdates);
                 }
-                curEntry = curEntry.getNext();
+                entry = entry.getNext();
             }
             
-            curRedo = curRedo.getNext();
-            if( curRedo==null ) {
+            batch = batch.getNext();
+            if( batch==null ) {
                 break;
             }
-            curEntry = curRedo.entries.getHead();
+            entry = batch.entries.getHead();
         }
         return rc;
     }

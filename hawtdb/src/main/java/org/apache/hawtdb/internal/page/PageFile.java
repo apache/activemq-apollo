@@ -25,7 +25,8 @@ import org.apache.hawtdb.internal.io.MemoryMappedFile;
 
 
 /**
- * Provides Paged access to a MemoryMappedFile.
+ * Provides a {@link Paged} interface to a {@link MemoryMappedFile}. 
+ * 
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
@@ -37,28 +38,20 @@ public class PageFile implements Paged {
     private final MemoryMappedFile file;
     
     
-    @Override
-    public String toString() {
-        return "{ header size: "+headerSize+", page size: "+pageSize+", allocator: "+allocator+" }";
-    }
-
     public PageFile(MemoryMappedFile file, short pageSize, int headerSize, int maxPages) {
         this.file = file;
         this.allocator = new SimpleAllocator(maxPages);
         this.pageSize = pageSize;
         this.headerSize = headerSize;
     }
-		
+    
+    ///////////////////////////////////////////////////////////////////
+    //
+    // Paged interface implementation.
+    //
+    ///////////////////////////////////////////////////////////////////
     public SimpleAllocator allocator() {
         return allocator;
-    }
-
-    public int getHeaderSize() {
-        return headerSize;
-    }
-
-    public MemoryMappedFile getFile() {
-        return file;
     }
 
 	public void read(int pageId, Buffer buffer) {
@@ -69,10 +62,6 @@ public class PageFile implements Paged {
 		file.write(offset(pageId), buffer);
 	}
 	
-    public void write(int pageId, ByteBuffer buffer) {
-        file.write(offset(pageId), buffer);
-    }
-
 	public ByteBuffer slice(SliceType type, int pageId, int size) {
         assert size > 0;
         return file.slice(type==SliceType.READ, offset(pageId), pageSize*size);
@@ -81,12 +70,7 @@ public class PageFile implements Paged {
     public void unslice(ByteBuffer buffer) {
         file.unslice(buffer);
     }
-    
-    
-    public long offset(long pageId) {
-        assert pageId >= 0;
-        return headerSize+(pageId*pageSize);
-    }
+
 	
     public int getPageSize() {
         return pageSize;
@@ -112,5 +96,34 @@ public class PageFile implements Paged {
     public <T> void clear(EncoderDecoder<T> encoderDecoder, int page) {
         encoderDecoder.remove(this, page);
     }
+    
+    ///////////////////////////////////////////////////////////////////
+    //
+    // PageFile public methods.
+    //
+    ///////////////////////////////////////////////////////////////////
+
+    public void write(int pageId, ByteBuffer buffer) {
+        file.write(offset(pageId), buffer);
+    }
+
+    public long offset(long pageId) {
+        assert pageId >= 0;
+        return headerSize+(pageId*pageSize);
+    }
+    
+    public int getHeaderSize() {
+        return headerSize;
+    }
+
+    public MemoryMappedFile getFile() {
+        return file;
+    }
+
+    @Override
+    public String toString() {
+        return "{ header size: "+headerSize+", page size: "+pageSize+", allocator: "+allocator+" }";
+    }
+
 
 }

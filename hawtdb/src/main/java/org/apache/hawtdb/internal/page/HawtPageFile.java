@@ -77,10 +77,10 @@ public final class HawtPageFile {
         public final Signed32 page_size = new Signed32();
         /** The page location of the free page list */
         public final Signed32 free_list_page = new Signed32();
-        /** points at the latest redo page which is guaranteed to be fully stored */
-        public final Signed32 redo_page = new Signed32();
-        /** The page location of the latest redo page. Not guaranteed to be fully stored */ 
-        public final Signed32 unsynced_redo_page = new Signed32();
+        /** points at the latest batch page which is guaranteed to be fully stored */
+        public final Signed32 stored_batch_page = new Signed32();
+        /** The page location of the latest batch page. Not guaranteed to be fully stored */ 
+        public final Signed32 storing_batch_page = new Signed32();
         
         /** The size of all the previous fields */
         private static final int USED_FIELDS_SIZE = 32 + 8 + 4 + 4 + 4 + 4;
@@ -95,58 +95,63 @@ public final class HawtPageFile {
         public String toString() { 
             return "{ base_revision: "+this.base_revision.get()+
             ", page_size: "+page_size.get()+", free_list_page: "+free_list_page.get()+
-            ", redo_page: "+unsynced_redo_page.get()+", checksum: "+checksum.get()+
+            ", storing batch: "+storing_batch_page.get()+", checksum: "+checksum.get()+
             " }";
         }
     }
+    /** The header structure of the file */
+    private final Header header = new Header();
+    private final LinkedNodeList<Batch> batches = new LinkedNodeList<Batch>();
 
     private final MemoryMappedFile file;
     final SimpleAllocator allocator;
     final PageFile pageFile;
     private static final int updateBatchSize = 1024;
     private final boolean synch;
-
-    /** The header structure of the file */
-    private final Header header = new Header();
-    
-    int lastRedoPage = -1;
-    
-    private final LinkedNodeList<Batch> redos = new LinkedNodeList<Batch>();
+    private int lastBatchPage = -1;
     
     //
-    // The following Redo objects point to linked nodes in the previous redo list.  
-    // They are used to track designate the state of the redo object.
+    // The following batch objects point to linked nodes in the previous batch list.  
+    // They are used to track/designate the state of the batch object.
     //
     
-    /** The current redo that is currently being built */
-    Batch buildingRedo;
-    /** The stored redos.  These might be be recoverable. */
-    Batch storedRedos;
-    /** The synced redos.  A file sync occurred after these redos were stored. */
-    Batch syncedRedos;
-    /** The performed redos.  Updates are actually performed to the original page file. */
-    Batch performedRedos;
+    /** The current batch that is currently being assembled. */
+    Batch openBatch;
+    /** The batches that are being stored... These might be be recoverable. */
+    Batch storingBatches;
+    /** The stored batches. */
+    Batch storedBatches;
+    /** The performed batches.  Page updates have been copied from the redo pages to the original page locations. */
+    Batch performedBatches;
     
     /** Used as read cache */
     ReadCache readCache = new ReadCache();
 
-    /** Mutex for data structures which are used during house keeping tasks like redo management. Once acquired, you can also acquire the TRANSACTION_MUTEX */
+    /** 
+     * Mutex for data structures which are used during house keeping tasks like batch
+     * management. Once acquired, you can also acquire the TRANSACTION_MUTEX 
+     */
     private final Object HOUSE_KEEPING_MUTEX = "HOUSE_KEEPING_MUTEX";
 
-    /** Mutex for data structures which transaction threads access. Never attempt to acquire the HOUSE_KEEPING_MUTEX once this mutex is acquired.  */
+    /** 
+     * Mutex for data structures which transaction threads access. Never attempt to 
+     * acquire the HOUSE_KEEPING_MUTEX once this mutex is acquired.  
+     */
     final Object TRANSACTION_MUTEX = "TRANSACTION_MUTEX";
     
-
     /**
-     * This is the free page list at the base revision.  It does not track allocations in transactions
-     * or committed updates.  Only when the updates are squashed will this list be updated.
+     * This is the free page list at the base revision.  It does not 
+     * track allocations in transactions or committed updates.  Only 
+     * when the updates are performed will this list be updated.
      * 
-     * The main purpose of this list is to initialize the free list on recovery.
+     * The main purpose of this list is to initialize the free list 
+     * on recovery.
      * 
-     * This does not track the space associated with redo batches and free lists.  On 
-     * recovery that space is discovered and tracked in the allocator.
+     * This does not track the space associated with batch lists 
+     * and free lists.  On recovery that space is discovered and 
+     * tracked in the page file allocator.
      */
-    private Ranges baseRevisionFreePages = new Ranges();
+    private Ranges storedFreeList = new Ranges();
     
     public HawtPageFile(HawtPageFileFactory factory) {
         this.pageFile = factory.getPageFile();
@@ -160,23 +165,23 @@ public final class HawtPageFile {
     @Override
     public String toString() {
         return "{\n" +
-        		"  allocator: "+allocator+ ",\n"+
-        		"  synch: "+synch+ ",\n"+
-        		"  read cache size: "+readCache.map.size()+ ",\n"+
-        		"  base revision free pages: "+baseRevisionFreePages + ",\n"+
-        		"  redos: {\n"+ 
-        		"    performed: "+toString(performedRedos, syncedRedos) + ",\n"+ 
-        		"    synced: "+toString(syncedRedos, storedRedos) + ",\n"+
-        		"    stored: "+toString(storedRedos, buildingRedo)+ ",\n"+
-        		"    building: "+toString(buildingRedo, null)+ ",\n"+
-        		"  }"+ "\n"+
-        		"}";
+    		"  allocator: "+allocator+ ",\n"+
+    		"  synch: "+synch+ ",\n"+
+    		"  read cache size: "+readCache.map.size()+ ",\n"+
+    		"  base revision free pages: "+storedFreeList + ",\n"+
+    		"  batches: {\n"+ 
+    		"    performed: "+toString(performedBatches, storedBatches) + ",\n"+ 
+    		"    stored: "+toString(storedBatches, storingBatches) + ",\n"+
+    		"    storing: "+toString(storingBatches, openBatch)+ ",\n"+
+    		"    open: "+toString(openBatch, null)+ ",\n"+
+    		"  }"+ "\n"+
+    		"}";
     }
 
     /** 
      * @param from
      * @param to
-     * @return string representation of the redo items from the specified redo up to (exclusive) the specified redo.
+     * @return string representation of the batch items from the specified batch up to (exclusive) the specified batch.
      */
     private String toString(Batch from, Batch to) {
         StringBuilder rc = new StringBuilder();
@@ -206,7 +211,7 @@ public final class HawtPageFile {
      */
     void commit(Snapshot snapshot, ConcurrentHashMap<Integer, Update> pageUpdates) {
         
-        boolean fullRedo=false;
+        boolean fullBatch=false;
         synchronized (TRANSACTION_MUTEX) {
             
             // we need to figure out the revision id of the this commit...
@@ -222,17 +227,12 @@ public final class HawtPageFile {
                 rev = snapshot.getHead().commitCheck(pageUpdates);
                 snapshot.close();
             } else {
-                rev = buildingRedo.head;
+                rev = openBatch.head;
             }
             rev++;
 
-            if( buildingRedo.base == -1 ) {
-                buildingRedo.base = rev;
-            }
-            buildingRedo.head = rev;
-            
             Commit commit=null;
-            BatchEntry last = buildingRedo.entries.getTail();
+            BatchEntry last = openBatch.entries.getTail();
             if( last!=null ) {
                 commit = last.isCommit();
             }
@@ -241,20 +241,26 @@ public final class HawtPageFile {
                 // TODO: figure out how to do the merge outside the TRANSACTION_MUTEX
                 commit.merge(pageFile.allocator(), rev, pageUpdates);
             } else {
-                buildingRedo.entries.addLast(new Commit(rev, pageUpdates) );
+                openBatch.entries.addLast(new Commit(rev, pageUpdates) );
             }
             
-            if( buildingRedo.pageCount() > updateBatchSize ) {
-                fullRedo = true;
+            if( openBatch.base == -1 ) {
+                openBatch.base = rev;
+            }
+            openBatch.head = rev;
+
+            
+            if( openBatch.pageCount() > updateBatchSize ) {
+                fullBatch = true;
             }
         }
         
-        if( fullRedo ) {
+        if( fullBatch ) {
             synchronized (HOUSE_KEEPING_MUTEX) {
-                storeRedos(false);
+                storeBatches(false);
                 // TODO: do the following actions async.
-                syncRedos();
-                performRedos();
+                syncBatches();
+                performBatches();
             }
         }
     }
@@ -265,16 +271,16 @@ public final class HawtPageFile {
      */
     public void reset() {
         synchronized (HOUSE_KEEPING_MUTEX) {
-            redos.clear();
-            performedRedos = syncedRedos = storedRedos = buildingRedo = new Batch(-1);
-            redos.addFirst(buildingRedo);
+            batches.clear();
+            performedBatches = storedBatches = storingBatches = openBatch = new Batch(-1);
+            batches.addFirst(openBatch);
             
-            lastRedoPage = -1;
+            lastBatchPage = -1;
             readCache.clear();
             
             allocator.clear(); 
-            baseRevisionFreePages.clear();
-            baseRevisionFreePages.add(0, allocator.getLimit());
+            storedFreeList.clear();
+            storedFreeList.add(0, allocator.getLimit());
     
             // Initialize the file header..
             Header h = header();
@@ -284,21 +290,21 @@ public final class HawtPageFile {
             h.free_list_page.set(-1);
             h.page_size.set(pageFile.getPageSize());
             h.reserved.set("");
-            h.unsynced_redo_page.set(-1);
+            h.storing_batch_page.set(-1);
             replicateHeader();
         }
     }    
     /**
-     * Loads an existing file and replays the redo
+     * Loads an existing file and replays the batch
      * logs to put it in a consistent state.
      */
     public void recover() {
         synchronized (HOUSE_KEEPING_MUTEX) {
 
-            redos.clear();
-            performedRedos = syncedRedos = storedRedos = buildingRedo = new Batch(-1);
-            redos.addFirst(buildingRedo);
-            lastRedoPage = -1;
+            batches.clear();
+            performedBatches = storedBatches = storingBatches = openBatch = new Batch(-1);
+            batches.addFirst(openBatch);
+            lastBatchPage = -1;
             readCache.clear();
     
             Header h = header();
@@ -311,19 +317,19 @@ public final class HawtPageFile {
             // Initialize the free page list.
             int pageId = h.free_list_page.get();
             if( pageId >= 0 ) {
-                baseRevisionFreePages = loadObject(pageId);
-                allocator.copy(baseRevisionFreePages);
+                storedFreeList = loadObject(pageId);
+                allocator.copy(storedFreeList);
                 Extent.unfree(pageFile, pageId);
             } else {
                 allocator.clear(); 
-                baseRevisionFreePages.add(0, allocator.getLimit());
+                storedFreeList.add(0, allocator.getLimit());
             }
             
             boolean consistencyCheckNeeded=true;
-            int last_synced_redo = h.redo_page.get();
-            pageId = h.unsynced_redo_page.get();
+            int last_synced_batch = h.stored_batch_page.get();
+            pageId = h.storing_batch_page.get();
             if( pageId<0 ) {
-                pageId = last_synced_redo;
+                pageId = last_synced_batch;
                 consistencyCheckNeeded = false;
             }
             while( true ) {
@@ -333,26 +339,26 @@ public final class HawtPageFile {
 
                 if( consistencyCheckNeeded ) {
                     // TODO: when consistencyCheckNeeded==true, then we need to check the
-                    // Consistency of the redo, as it may have been partially written to disk.
+                    // Consistency of the batch, as it may have been partially written to disk.
                 }
                 
                 
-                Batch redo = loadObject(pageId); 
-                redo.page = pageId;
-                redo.recovered = true;
+                Batch batch = loadObject(pageId); 
+                batch.page = pageId;
+                batch.recovered = true;
                 Extent.unfree(pageFile, pageId);
                 
-                if( buildingRedo.head == -1 ) {
-                    buildingRedo.head = redo.head;
+                if( openBatch.head == -1 ) {
+                    openBatch.head = batch.head;
                 }
     
-                if( baseRevision < redo.head ) {
-                    // add first since we are loading redo objects oldest to youngest
+                if( baseRevision < batch.head ) {
+                    // add first since we are loading batch objects oldest to youngest
                     // but want to put them in the list youngest to oldest.
-                    redos.addFirst(redo);
-                    performedRedos = syncedRedos = redo;
-                    pageId=redo.previous;
-                    if( pageId==last_synced_redo ) {
+                    batches.addFirst(batch);
+                    performedBatches = storedBatches = batch;
+                    pageId=batch.previous;
+                    if( pageId==last_synced_batch ) {
                         consistencyCheckNeeded = false;
                     }
                 } else {
@@ -360,8 +366,8 @@ public final class HawtPageFile {
                 }
             }
             
-            // Apply all the redos..
-            performRedos();
+            // Apply all the batches..
+            performBatches();
         }        
     }
 
@@ -372,63 +378,63 @@ public final class HawtPageFile {
      */
     public void flush() {
         synchronized (HOUSE_KEEPING_MUTEX) {
-            storeRedos(true);
-            syncRedos();
+            storeBatches(true);
+            syncBatches();
         }
     }   
     
     // /////////////////////////////////////////////////////////////////
     //
-    // Methods which transition redos through their life cycle states;
+    // Methods which transition bathes through their life cycle states;
     //
-    //    building -> stored -> synced -> performed -> released
+    //    open -> storing -> stored -> performed -> released
     //
     // The HOUSE_KEEPING_MUTEX must be acquired before being called. 
     //
     // /////////////////////////////////////////////////////////////////
     
     /**
-     * Attempts to perform a redo state change: building -> stored
+     * Attempts to perform a batch state change: open -> storing
      */
-    private void storeRedos(boolean force) {
-        Batch redo;
+    private void storeBatches(boolean force) {
+        Batch batch;
         
         // We synchronized /w the transactions so that they see the state change.
         synchronized (TRANSACTION_MUTEX) {
-            // Re-checking since storing the redo may not be needed.
-            if( (force && buildingRedo.base!=-1 ) || buildingRedo.pageCount() > updateBatchSize ) {
-                redo = buildingRedo;
-                buildingRedo = new Batch(redo.head);
-                redos.addLast(buildingRedo);
+            // Re-checking since storing the batch may not be needed.
+            if( (force && openBatch.base!=-1 ) || openBatch.pageCount() > updateBatchSize ) {
+                batch = openBatch;
+                openBatch = new Batch(batch.head);
+                batches.addLast(openBatch);
             } else {
                 return;
             }
         }
         
         // Write any outstanding deferred cache updates...
-        redo.performDefferedUpdates(pageFile);
+        batch.performDefferedUpdates(pageFile);
 
-        // Link it to the last redo.
-        redo.previous = lastRedoPage; 
+        // Link it to the last batch.
+        batch.previous = lastBatchPage; 
         
-        // Store the redo record.
-        lastRedoPage = redo.page = storeObject(redo);
+        // Store the batch record.
+        lastBatchPage = batch.page = storeObject(batch);
 
-        // Update the header to know about the new redo page.
-        header().unsynced_redo_page.set(redo.page);
+        // Update the header to know about the new batch page.
+        header().storing_batch_page.set(batch.page);
         replicateHeader();
     }
     
     /**
      * Performs a file sync. 
      * 
-     * This allows two types of redo state changes to occur:
+     * This allows two types of batch state changes to occur:
      * <ul>
-     * <li> stored -> synced
+     * <li> storing -> stored
      * <li> performed -> released
      * </ul>
      */
-    private void syncRedos() {
+    private void syncBatches() {
 
         // This is a slow operation..
         if( synch ) {
@@ -437,50 +443,50 @@ public final class HawtPageFile {
         Header h = header();
 
         // Update the base_revision with the last performed revision.
-        if (performedRedos!=syncedRedos) {
-            Batch lastPerformedRedo = syncedRedos.getPrevious();
-            h.base_revision.set(lastPerformedRedo.head);
+        if (performedBatches!=storedBatches) {
+            Batch lastPerformedBatch = storedBatches.getPrevious();
+            h.base_revision.set(lastPerformedBatch.head);
         }
 
-        // Were there some redos in the stored state?
-        if (storedRedos!=buildingRedo) {
+        // Were there some batches in the stored state?
+        if (storingBatches!=openBatch) {
             
             // The last stored is actually synced now..
-            Batch lastStoredRedo = buildingRedo.getPrevious();
+            Batch lastStoredBatch = openBatch.getPrevious();
             // Let the header know about it..
-            h.redo_page.set(lastStoredRedo.page);
+            h.stored_batch_page.set(lastStoredBatch.page);
             
             // We synchronized /w the transactions so that they see the state change.
             synchronized (TRANSACTION_MUTEX) {
                 // Transition stored -> synced.
-                storedRedos = buildingRedo;
+                storingBatches = openBatch;
             }
         }
         
-        // Once a redo has been performed, subsequently synced, and no longer referenced,
+        // Once a batch has been performed, subsequently synced, and no longer referenced,
         // it's allocated recovery space can be released.
-        while( performedRedos!=syncedRedos ) {
-            if( performedRedos.references!=0 ) {
+        while( performedBatches!=storedBatches ) {
+            if( performedBatches.snapshots!=0 ) {
                 break;
             }
             
-            // Free the update pages associated with the redo.
-            performedRedos.freeRedoSpace(allocator);
+            // Free the update pages associated with the batch.
+            performedBatches.release(allocator);
             
-            // Free the redo record itself.
-            Extent.free(pageFile, performedRedos.page);
+            // Free the batch record itself.
+            Extent.free(pageFile, performedBatches.page);
             
-            // don't need to sync /w transactions since they don't use the performedRedos variable.
+            // don't need to sync /w transactions since they don't use the performedBatches variable.
             // Transition performed -> released
-            performedRedos = performedRedos.getNext();
+            performedBatches = performedBatches.getNext();
             
-            // removes the released redo form the redo list.
-            performedRedos.getPrevious().unlink();
+            // removes the released batch form the batch list.
+            performedBatches.getPrevious().unlink();
         }
 
         // Store the free list..
         int previousFreeListPage = h.free_list_page.get();
-        h.free_list_page.set(storeObject(baseRevisionFreePages));
+        h.free_list_page.set(storeObject(storedFreeList));
         replicateHeader();
 
         // Release the previous free list.
@@ -490,36 +496,36 @@ public final class HawtPageFile {
     }
 
     /**
-     * Attempts to perform a redo state change: synced -> performed
+     * Attempts to perform a batch state change: stored -> performed
      * 
-     * Once a redo is performed, new snapshots will not reference 
-     * the redo anymore.
+     * Once a batch is performed, new snapshots will not reference 
+     * the batch anymore.
      */
-    public void performRedos() {
+    public void performBatches() {
 
-        if( syncedRedos==storedRedos ) {
-            // There are no redos in the synced state for use to transition.
+        if( storedBatches==storingBatches ) {
+            // There are no batches in the synced state for use to transition.
             return;
         }
               
-        // The last performed redo MIGHT still have an open snapshot.
+        // The last performed batch MIGHT still have an open snapshot.
         // we can't transition from synced, until that snapshot closes.
-        Batch lastPerformed = syncedRedos.getPrevious();
-        if( lastPerformed!=null && lastPerformed.references!=0) {
+        Batch lastPerformed = storedBatches.getPrevious();
+        if( lastPerformed!=null && lastPerformed.snapshots!=0) {
             return;
         }
         
-        while( syncedRedos!=storedRedos ) {
+        while( storedBatches!=storingBatches ) {
             
-            // Performing the redo actually applies the updates to the original page locations.
-            for (Commit commit : syncedRedos) {
+            // Performing the batch actually applies the updates to the original page locations.
+            for (Commit commit : storedBatches) {
                 for (Entry<Integer, Update> entry : commit.updates.entrySet()) {
                     int page = entry.getKey();
                     Update update = entry.getValue();
                     
                     if( page != update.page ) {
                         
-                        if( syncedRedos.recovered ) {
+                        if( storedBatches.recovered ) {
                             // If we are recovering, the allocator MIGHT not have this 
                             // page as being allocated.  This makes sure it's allocated so that
                             // new transaction to get this page and overwrite it in error.
@@ -538,32 +544,32 @@ public final class HawtPageFile {
                     }
                     if( update.wasAllocated() ) {
                         
-                        if( syncedRedos.recovered ) {
+                        if( storedBatches.recovered ) {
                             // If we are recovering, the allocator MIGHT not have this 
                             // page as being allocated.  This makes sure it's allocated so that
                             // new transaction to get this page and overwrite it in error.
                             allocator.unfree(page, 1);
                         }
                         // Update the persistent free list.  This gets stored on the next sync.
-                        baseRevisionFreePages.remove(page, 1);
+                        storedFreeList.remove(page, 1);
                         
                     } else if( update.wasFreed() ) {
-                        baseRevisionFreePages.add(page, 1);
+                        storedFreeList.add(page, 1);
                     }
                 }
             }
             
-            syncedRedos.performed = true;
+            storedBatches.performed = true;
             
             // We synchronized /w the transactions so that they see the state change.
             synchronized (TRANSACTION_MUTEX) {
                 // Transition synced -> performed
-                syncedRedos = syncedRedos.getNext();
+                storedBatches = storedBatches.getNext();
             }
             
-            lastPerformed = syncedRedos.getPrevious();
-            // We have to stop if the last redo performed has an open snapshot.
-            if( lastPerformed.references!=0 ) {
+            lastPerformed = storedBatches.getPrevious();
+            // We have to stop if the last batch performed has an open snapshot.
+            if( lastPerformed.snapshots!=0 ) {
                 break;
             }
         }
@@ -578,19 +584,19 @@ public final class HawtPageFile {
             SnapshotHead head=null;
 
             // re-use the last entry if it was a snapshot head..
-            BatchEntry entry = buildingRedo.entries.getTail();
+            BatchEntry entry = openBatch.entries.getTail();
             if( entry!=null ) {
                 head = entry.isSnapshotHead();
             }
             
             if( head == null ) {
                 // create a new snapshot head entry..
-                head = new SnapshotHead(this, buildingRedo);
-                buildingRedo.entries.addLast(head);
+                head = new SnapshotHead(openBatch);
+                openBatch.entries.addLast(head);
             }
             
             // Open the snapshot off that head position.
-            return new Snapshot(this, head, syncedRedos).open();
+            return new Snapshot(this, head, storedBatches).open();
         }
     }
     

@@ -25,11 +25,11 @@ import org.apache.activemq.util.list.LinkedNode;
  */
 abstract class BatchEntry extends LinkedNode<BatchEntry> {
     
-    Commit isCommit() {
+    public Commit isCommit() {
         return null;
     }
     
-    SnapshotHead isSnapshotHead() {
+    public SnapshotHead isSnapshotHead() {
         return null;
     }
 }

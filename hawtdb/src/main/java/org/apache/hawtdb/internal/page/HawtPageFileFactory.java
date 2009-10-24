@@ -60,7 +60,7 @@ public class HawtPageFileFactory extends PageFileFactory {
         if (concurrentPageFile != null) {
             concurrentPageFile.suspend(true, false, drainOnClose);
             concurrentPageFile.flush();
-            concurrentPageFile.performRedos();
+            concurrentPageFile.performBatches();
             concurrentPageFile=null;
         }
         super.close();

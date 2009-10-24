@@ -17,7 +17,19 @@
 package org.apache.hawtdb.internal.page;
 
 /**
- * 
+ * <p>
+ * Snapshot objects are created for transactions so that they can access
+ * a consistent point in time view of the page file.
+ * </p><p>
+ * The are two parts to a snapshot: the base and the head. The base and head
+ * track the range of updates which were not yet performed against the page file
+ * when the snapshot was opened.  This range is tracked to ensure the snapshot
+ * view remains consistent.  Direct updates to data in that range is now allowed 
+ * while the snapshot is open.
+ * </p><p>
+ * When a snapshot is opened and closed, reference counters on the all 
+ * Batch objects between the base and the head get adjusted.
+ * </p>
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 final class Snapshot {
@@ -26,24 +38,44 @@ final class Snapshot {
     private final SnapshotHead head;
     private final Batch base;
     
-    Snapshot(HawtPageFile hawtPageFile, SnapshotHead head, Batch base) {
+    public  Snapshot(HawtPageFile hawtPageFile, SnapshotHead head, Batch base) {
         parent = hawtPageFile;
         this.head = head;
         this.base = base;
     }
-
-    Snapshot open() {
-        head.open(base);
+    
+    public Snapshot open() {
+        head.snapshots++;
+        Batch cur = base;
+        while( true ) {
+            cur.snapshots++;
+            if(cur == head.parent ) {
+                break;
+            }
+            cur = cur.getNext();
+        }
         return this;
     }
     
-    void close() {
+    public void close() {
         synchronized(parent.TRANSACTION_MUTEX) {
-            head.close(base);
+            head.snapshots--;
+            Batch cur = base;
+            while( true ) {
+                cur.snapshots--;
+                if(cur == head.parent ) {
+                    break;
+                }
+                cur = cur.getNext();
+            }
+
+            if( head.snapshots==0 ) {
+                head.unlink();
+            }        
         }
     }
 
-    SnapshotHead getHead() {
+    public SnapshotHead getHead() {
         return head;
     }
 }

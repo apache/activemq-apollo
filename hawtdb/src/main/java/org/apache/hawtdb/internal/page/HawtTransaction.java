@@ -108,7 +108,11 @@ final class HawtTransaction implements Transaction {
         }
         
         // No?  Then ask the snapshot to load the object.
-        return snapshot().getHead().cacheLoad(marshaller, page);
+        T rc = snapshot().getHead().get(marshaller, page);
+        if( rc == null ) {
+            rc = parent.readCache.cacheLoad(marshaller, page);
+        }
+        return rc;
     }
 
     public <T> void put(EncoderDecoder<T> marshaller, int page, T value) {
@@ -158,33 +162,45 @@ final class HawtTransaction implements Transaction {
         return txallocator;
     }
 
-    public void read(int pageId, Buffer buffer) throws IOPagingException {
-        Update update = updates == null ? null : updates.get(pageId);
+    public void read(int page, Buffer buffer) throws IOPagingException {
+        // We may need to translate the page due to an update..
+        Update update = updates == null ? null : updates.get(page);
         if (update != null) {
-            parent.pageFile.read(update.page(), buffer);
+            // in this transaction..
+            page = update.page();
         } else {
-            // Get the data from the snapshot.
-            snapshot().getHead().read(pageId, buffer);
+            // in a committed transaction that has not yet been performed.
+            page = snapshot().getHead().translatePage(page);  
         }
+        parent.pageFile.read(page, buffer);
     }
 
     public ByteBuffer slice(SliceType type, int page, int count) throws IOPagingException {
-        //TODO: need to improve the design of ranged ops..
+        //TODO: wish we could do ranged opps more efficiently.
+        
         if( type==SliceType.READ ) {
             Update udpate = updates == null ? null : updates.get(page);
             if (udpate != null) {
-                return parent.pageFile.slice(type, udpate.page(), count);
+                page = udpate.page();
             } else {
-                // Get the data from the snapshot.
-                return snapshot().getHead().slice(page, count);
+                page = snapshot().getHead().translatePage(page);
             }
-            
         } else {
             Update update = getUpdates().get(page);
             if (update == null) {
+
+                // Allocate space of the update redo pages.
                 update = update(parent.allocator.alloc(count)).allocated();
+                int end = page+count;
+                for (int i = page; i < end; i++) {
+                    getUpdates().put(i, update(i).allocated());
+                }
+                
                 if (type==SliceType.READ_WRITE) {
-                    ByteBuffer slice = snapshot().getHead().slice(page, count);
+                    // Oh he's going to read it too?? then copy the original to the 
+                    // redo pages..
+                    int originalPage = snapshot().getHead().translatePage(page);
+                    ByteBuffer slice = parent.pageFile.slice(SliceType.READ, originalPage, count);
                     try {
                         parent.pageFile.write(update.page, slice);
                     } finally { 
@@ -192,16 +208,13 @@ final class HawtTransaction implements Transaction {
                     }
                 }
                 
-                int end = page+count;
-                for (int i = page; i < end; i++) {
-                    getUpdates().put(i, update(i).allocated());
-                }
                 getUpdates().put(page, update);
-                
-                return parent.pageFile.slice(type, update.page, count);
             }
-            return parent.pageFile.slice(type, update.page(), count);
+            
+            // translate the page..
+            page = update.page;
         }
+        return parent.pageFile.slice(type, page, count);
         
     }
     

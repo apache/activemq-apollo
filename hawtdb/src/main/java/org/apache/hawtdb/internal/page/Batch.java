@@ -36,7 +36,7 @@ import org.apache.hawtdb.api.Paged;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Batch extends LinkedNode<Batch> implements Externalizable, Iterable<Commit> {
+final class Batch extends LinkedNode<Batch> implements Externalizable, Iterable<Commit> {
     private static final long serialVersionUID = 1188640492489990493L;
     
     /** the pageId that this redo batch is stored at */
@@ -49,7 +49,7 @@ class Batch extends LinkedNode<Batch> implements Externalizable, Iterable<Commit
     /** the commits and snapshots in the redo */ 
     final LinkedNodeList<BatchEntry> entries = new LinkedNodeList<BatchEntry>();
     /** tracks how many snapshots are referencing the redo */
-    int references;
+    int snapshots;
     /** the oldest commit in this redo */
     public long base=-1;
     /** the newest commit in this redo */
@@ -69,7 +69,7 @@ class Batch extends LinkedNode<Batch> implements Externalizable, Iterable<Commit
     }
 
     public String toString() { 
-        return "{ page: "+this.page+", base: "+base+", head: "+head+", references: "+references+", entries: "+entries.size()+" }";
+        return "{ page: "+this.page+", base: "+base+", head: "+head+", references: "+snapshots+", entries: "+entries.size()+" }";
     }
     
     @Override
@@ -175,7 +175,7 @@ class Batch extends LinkedNode<Batch> implements Externalizable, Iterable<Commit
         }
     }
 
-    public void freeRedoSpace(SimpleAllocator allocator) {
+    public void release(SimpleAllocator allocator) {
         for (Commit commit : this) {
             for (Entry<Integer, Update> entry : commit.updates.entrySet()) {
                 int key = entry.getKey();

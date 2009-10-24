@@ -216,7 +216,7 @@ public class ConcurrentPageFileTest {
 
         // Apply the updates.
         pf.flush();
-        pf.performRedos();
+        pf.performBatches();
 
         // Should still be there..
         assertEquals("Hello", load(pff.getPageFile(), 0));
@@ -239,7 +239,7 @@ public class ConcurrentPageFileTest {
 
         // Apply them
         pf.flush();
-        pf.performRedos();
+        pf.performBatches();
 
         // We should see them now.
         assertEquals("Good", load(pff.getPageFile(), 0));
