@@ -32,7 +32,7 @@ public class HawtPageFileFactory extends PageFileFactory {
     }
     
     public HawtPageFileFactory() {
-        super.setHeaderSize(HawtPageFile.HEADER_SIZE);
+        super.setHeaderSize(HawtPageFile.FILE_HEADER_SIZE);
     }
     
     @Override

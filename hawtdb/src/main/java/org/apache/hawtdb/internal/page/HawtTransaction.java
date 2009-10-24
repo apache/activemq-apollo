@@ -16,9 +16,6 @@
  */
 package org.apache.hawtdb.internal.page;
 
-import static org.apache.hawtdb.internal.page.HawtPageFile.DeferredUpdate.deferred;
-import static org.apache.hawtdb.internal.page.HawtPageFile.Update.update;
-
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -30,9 +27,10 @@ import org.apache.hawtdb.api.IOPagingException;
 import org.apache.hawtdb.api.OutOfSpaceException;
 import org.apache.hawtdb.api.PagingException;
 import org.apache.hawtdb.api.Transaction;
-import org.apache.hawtdb.internal.page.HawtPageFile.DeferredUpdate;
-import org.apache.hawtdb.internal.page.HawtPageFile.Snapshot;
-import org.apache.hawtdb.internal.page.HawtPageFile.Update;
+
+import static org.apache.hawtdb.internal.page.Update.*;
+import static org.apache.hawtdb.internal.page.DeferredUpdate.*;
+
 /**
  * Transaction objects are NOT thread safe. Users of this object should
  * guard it from concurrent access.
@@ -110,7 +108,7 @@ final class HawtTransaction implements Transaction {
         }
         
         // No?  Then ask the snapshot to load the object.
-        return snapshot().head.cacheLoad(marshaller, page);
+        return snapshot().getHead().cacheLoad(marshaller, page);
     }
 
     public <T> void put(EncoderDecoder<T> marshaller, int page, T value) {
@@ -166,7 +164,7 @@ final class HawtTransaction implements Transaction {
             parent.pageFile.read(update.page(), buffer);
         } else {
             // Get the data from the snapshot.
-            snapshot().head.read(pageId, buffer);
+            snapshot().getHead().read(pageId, buffer);
         }
     }
 
@@ -178,7 +176,7 @@ final class HawtTransaction implements Transaction {
                 return parent.pageFile.slice(type, udpate.page(), count);
             } else {
                 // Get the data from the snapshot.
-                return snapshot().head.slice(page, count);
+                return snapshot().getHead().slice(page, count);
             }
             
         } else {
@@ -186,7 +184,7 @@ final class HawtTransaction implements Transaction {
             if (update == null) {
                 update = update(parent.allocator.alloc(count)).allocated();
                 if (type==SliceType.READ_WRITE) {
-                    ByteBuffer slice = snapshot().head.slice(page, count);
+                    ByteBuffer slice = snapshot().getHead().slice(page, count);
                     try {
                         parent.pageFile.write(update.page, slice);
                     } finally { 
