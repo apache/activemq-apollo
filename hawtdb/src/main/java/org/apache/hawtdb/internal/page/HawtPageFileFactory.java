@@ -26,11 +26,8 @@ public class HawtPageFileFactory extends PageFileFactory {
     
     protected boolean drainOnClose;
     protected boolean sync = true;
+    protected boolean useWorkerThread;
 
-    public HawtPageFile getConcurrentPageFile() {
-        return concurrentPageFile;
-    }
-    
     public HawtPageFileFactory() {
         super.setHeaderSize(HawtPageFile.FILE_HEADER_SIZE);
     }
@@ -74,6 +71,24 @@ public class HawtPageFileFactory extends PageFileFactory {
         this.sync = sync;
     }
     
-    
+    public HawtPageFile getConcurrentPageFile() {
+        return concurrentPageFile;
+    }
+
+    public boolean isDrainOnClose() {
+        return drainOnClose;
+    }
+
+    public void setDrainOnClose(boolean drainOnClose) {
+        this.drainOnClose = drainOnClose;
+    }
+
+    public boolean isUseWorkerThread() {
+        return useWorkerThread;
+    }
+
+    public void setUseWorkerThread(boolean useWorkerThread) {
+        this.useWorkerThread = useWorkerThread;
+    }
     
 }

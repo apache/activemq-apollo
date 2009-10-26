@@ -24,6 +24,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.zip.CRC32;
 
 import javolution.io.Struct;
@@ -159,6 +162,7 @@ public final class HawtPageFile {
      * tracked in the page file allocator.
      */
     private Ranges storedFreeList = new Ranges();
+    private final ExecutorService worker;
     
     public HawtPageFile(HawtPageFileFactory factory) {
         this.pageFile = factory.getPageFile();
@@ -167,6 +171,20 @@ public final class HawtPageFile {
         this.allocator = pageFile.allocator();
         ByteBuffer slice = file.slice(false, 0, FILE_HEADER_SIZE);
         this.header.setByteBuffer(slice, slice.position());
+        
+        if( factory.isUseWorkerThread() ) {
+            worker = Executors.newSingleThreadExecutor(new ThreadFactory() {
+                public Thread newThread(Runnable r) {
+                    Thread rc = new Thread(r);
+                    rc.setName("HawtDB Worker");
+                    rc.setDaemon(true);
+                    rc.start();
+                    return rc;
+                }
+            });
+        } else {
+            worker = null;
+        }
     }
     
     @Override
@@ -264,13 +282,23 @@ public final class HawtPageFile {
         }
         
         if( fullBatch ) {
-            flushBatch();
+            synchronized (HOUSE_KEEPING_MUTEX) {
+                storeBatches(false);
+            }
+            if( worker!=null ) {
+                worker.execute(new Runnable() {
+                    public void run() {
+                        flushBatch();
+                    }
+                });
+            } else {
+                flushBatch();
+            }
         }
     }
 
     private void flushBatch() {
         synchronized (HOUSE_KEEPING_MUTEX) {
-            storeBatches(false);
             // TODO: do the following actions async.
             syncBatches();
             performBatches();
@@ -615,7 +643,7 @@ public final class HawtPageFile {
     // /////////////////////////////////////////////////////////////////
     // TODO:
     // /////////////////////////////////////////////////////////////////
-
+    
     /**
      * The quiesce method is used to pause/stop access to the concurrent page file.
      * access can be restored using the {@link #resume()} method.    
