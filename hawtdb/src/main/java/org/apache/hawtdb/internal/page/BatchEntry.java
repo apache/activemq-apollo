@@ -32,4 +32,6 @@ abstract class BatchEntry extends LinkedNode<BatchEntry> {
     public SnapshotHead isSnapshotHead() {
         return null;
     }
+    
+    public abstract long getHeadRevision();
 }

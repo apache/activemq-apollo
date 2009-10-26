@@ -56,6 +56,11 @@ final class Commit extends BatchEntry implements Externalizable {
     
     
     @Override
+    public long getHeadRevision() {
+        return head;
+    }
+    
+    @Override
     public Commit isCommit() {
         return this;
     }
@@ -135,5 +140,5 @@ final class Commit extends BatchEntry implements Externalizable {
         out.writeLong(head);
         out.writeObject(updates);
     }
-    
+
 }

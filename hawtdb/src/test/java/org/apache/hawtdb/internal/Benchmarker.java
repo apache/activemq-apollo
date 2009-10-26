@@ -47,6 +47,7 @@ public class Benchmarker {
                 execute(actor);
                 success.increment();
             } catch (Throwable e) {
+                e.printStackTrace();
                 failed.increment();
             }
         }

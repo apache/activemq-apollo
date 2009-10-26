@@ -100,7 +100,7 @@ public abstract class IndexBenchmark {
     
     @Test
     public void insert() throws Exception {
-        benchmark.benchmark(1, new BenchmarkAction<IndexActor>("insert") {
+        benchmark.benchmark(10, new BenchmarkAction<IndexActor>("insert") {
             protected void execute(IndexActor actor) throws InterruptedException {
                 actor.benchmarkIndex();
             }

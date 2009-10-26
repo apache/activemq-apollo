@@ -35,9 +35,12 @@ import org.apache.hawtdb.api.EncoderDecoder;
 final class SnapshotHead extends BatchEntry {
 
     final Batch parent;
+    final long headRevision;
     
     public SnapshotHead(Batch parent) {
         this.parent = parent;
+        BatchEntry lastEntry = this.parent.entries.getTail();
+        this.headRevision = (lastEntry == null ? this.parent.head : lastEntry.getHeadRevision())+1;
     }
 
     /** The number of times this snapshot has been opened. */
@@ -47,6 +50,11 @@ final class SnapshotHead extends BatchEntry {
         return "{ references: "+this.snapshots+" }";
     }
 
+    @Override
+    public long getHeadRevision() {
+        return headRevision;
+    }
+
     public SnapshotHead isSnapshotHead() {
         return this;
     }
@@ -54,13 +62,20 @@ final class SnapshotHead extends BatchEntry {
     public int translatePage(int page) {
         // Look for the page in the previous commits..
         Batch batch = parent;
-        BatchEntry entry = getPrevious();
+        BatchEntry tail = null;
+        BatchEntry entry = this;
         while( true ) {
             if( batch.isPerformed() ) {
                 break;
             }
             
-            while( entry!=null ) {
+            while( true ) {
+                if( tail == null ) {
+                    tail = entry;
+                } else if( !(entry.getHeadRevision() < tail.getHeadRevision()) ) {
+                    break;
+                }
+                
                 Commit commit = entry.isCommit();
                 if( commit !=null ) {
                     Update update = commit.updates.get(page);
@@ -68,13 +83,14 @@ final class SnapshotHead extends BatchEntry {
                         return update.page();
                     }
                 }
-                entry = entry.getPrevious();
+                entry = entry.getPreviousCircular();
             }
             
             batch = batch.getPrevious();
             if( batch==null ) {
                 break;
             }
+            tail = null;
             entry = batch.entries.getTail();
         }
         return page;
@@ -83,13 +99,21 @@ final class SnapshotHead extends BatchEntry {
     
     public <T> T get(EncoderDecoder<T> marshaller, int page) {
         Batch batch = parent;
-        BatchEntry entry = getPrevious();
+        BatchEntry tail = null;
+        BatchEntry entry = this;
+        
         while( true ) {
             if( batch.isPerformed() ) {
                 break;
             }
             
-            while( entry!=null ) {
+            while( true ) {
+                if( tail == null ) {
+                    tail = entry;
+                } else if( !(entry.getHeadRevision() < tail.getHeadRevision()) ) {
+                    break;
+                }
+                
                 Commit commit = entry.isCommit();
                 if( commit !=null ) {
                     Update update = commit.updates.get(page);
@@ -100,13 +124,14 @@ final class SnapshotHead extends BatchEntry {
                         }
                     }
                 }
-                entry = entry.getPrevious();
+                entry = entry.getPreviousCircular();
             }
             
             batch = batch.getPrevious();
             if( batch==null ) {
                 break;
             }
+            tail = null;
             entry = batch.entries.getTail();
         }
         return null;

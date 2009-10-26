@@ -30,7 +30,7 @@ import org.apache.hawtdb.api.Transaction;
 public class BTreeIndexBenchmark extends IndexBenchmark {
 
     public BTreeIndexBenchmark() {
-        this.benchmark.setSamples(5);
+        this.benchmark.setSamples(500);
     }
     
     protected Index<Long, Buffer> createIndex(Transaction tx) {

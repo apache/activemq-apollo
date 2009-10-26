@@ -127,17 +127,24 @@ public final class HawtPageFile {
     /** Used as read cache */
     ReadCache readCache = new ReadCache();
 
+    //
+    // Profilers like yourkit just tell which mutex class was locked.. so create a different class for each mutex
+    // so we can more easily tell which mutex was locked.
+    //
+    private static class HOUSE_KEEPING_MUTEX { public String toString() { return "HOUSE_KEEPING_MUTEX"; }}
+    private static class TRANSACTION_MUTEX { public String toString() { return "TRANSACTION_MUTEX"; }}
+
     /** 
      * Mutex for data structures which are used during house keeping tasks like batch
      * management. Once acquired, you can also acquire the TRANSACTION_MUTEX 
      */
-    private final Object HOUSE_KEEPING_MUTEX = "HOUSE_KEEPING_MUTEX";
+    private final HOUSE_KEEPING_MUTEX HOUSE_KEEPING_MUTEX = new HOUSE_KEEPING_MUTEX();
 
     /** 
      * Mutex for data structures which transaction threads access. Never attempt to 
      * acquire the HOUSE_KEEPING_MUTEX once this mutex is acquired.  
      */
-    final Object TRANSACTION_MUTEX = "TRANSACTION_MUTEX";
+    final TRANSACTION_MUTEX TRANSACTION_MUTEX = new TRANSACTION_MUTEX();
     
     /**
      * This is the free page list at the base revision.  It does not 
@@ -212,6 +219,7 @@ public final class HawtPageFile {
     void commit(Snapshot snapshot, ConcurrentHashMap<Integer, Update> pageUpdates) {
         
         boolean fullBatch=false;
+        Commit commit=null;
         synchronized (TRANSACTION_MUTEX) {
             
             // we need to figure out the revision id of the this commit...
@@ -231,7 +239,6 @@ public final class HawtPageFile {
             }
             rev++;
 
-            Commit commit=null;
             BatchEntry last = openBatch.entries.getTail();
             if( last!=null ) {
                 commit = last.isCommit();
@@ -241,7 +248,8 @@ public final class HawtPageFile {
                 // TODO: figure out how to do the merge outside the TRANSACTION_MUTEX
                 commit.merge(pageFile.allocator(), rev, pageUpdates);
             } else {
-                openBatch.entries.addLast(new Commit(rev, pageUpdates) );
+                commit = new Commit(rev, pageUpdates);
+                openBatch.entries.addLast(commit);
             }
             
             if( openBatch.base == -1 ) {
@@ -256,12 +264,16 @@ public final class HawtPageFile {
         }
         
         if( fullBatch ) {
-            synchronized (HOUSE_KEEPING_MUTEX) {
-                storeBatches(false);
-                // TODO: do the following actions async.
-                syncBatches();
-                performBatches();
-            }
+            flushBatch();
+        }
+    }
+
+    private void flushBatch() {
+        synchronized (HOUSE_KEEPING_MUTEX) {
+            storeBatches(false);
+            // TODO: do the following actions async.
+            syncBatches();
+            performBatches();
         }
     }
     
