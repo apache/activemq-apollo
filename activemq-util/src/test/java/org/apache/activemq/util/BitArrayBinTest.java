@@ -1,8 +1,30 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.activemq.util;
 
-import org.testng.Assert;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
+import static org.junit.Assert.*;
+
+
+
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class BitArrayBinTest {
         
     @Test()
@@ -17,21 +39,21 @@ public class BitArrayBinTest {
         BitArrayBin toTest = new BitArrayBin(window);
         
         for (int i=0; i <= dataSize; i++) {
-            Assert.assertTrue((!toTest.setBit(i, Boolean.TRUE)), "not already set");
+            assertTrue("not already set", (!toTest.setBit(i, Boolean.TRUE)));
         }
 
         int windowOfValidData = roundWindow(dataSize, window);
         int i=dataSize;
         for (; i >= dataSize -windowOfValidData; i--) {
-            Assert.assertTrue(toTest.setBit(i, Boolean.TRUE), ("was already set, id=" + i));
+            assertTrue(("was already set, id=" + i), toTest.setBit(i, Boolean.TRUE));
         }
         
         for (; i >= 0; i--) {
-            Assert.assertTrue((!toTest.setBit(i, Boolean.TRUE)), ("was not already set, id=" + i));
+            assertTrue(("was not already set, id=" + i), (!toTest.setBit(i, Boolean.TRUE)));
         }
         
         for (int j= dataSize +1; j<(2*dataSize); j++) {
-            Assert.assertTrue((!toTest.setBit(j, Boolean.TRUE)), ("not already set: id=" + j));
+            assertTrue(("not already set: id=" + j), (!toTest.setBit(j, Boolean.TRUE)));
         }
     }
     
@@ -47,20 +69,20 @@ public class BitArrayBinTest {
         BitArrayBin toTest = new BitArrayBin(window);
         
         for (int i=0; i <=dataSize; i++) {
-            Assert.assertTrue((!toTest.setBit(i, Boolean.TRUE)), "not already set");
+            assertTrue("not already set", (!toTest.setBit(i, Boolean.TRUE)));
         }
                 
         int windowOfValidData = roundWindow(dataSize, window);
         for (int i=dataSize; i >= 0 && i >=dataSize -windowOfValidData; i--) {
-            Assert.assertTrue(toTest.setBit(i, Boolean.FALSE), ("was already set, id=" + i));
+            assertTrue(("was already set, id=" + i), toTest.setBit(i, Boolean.FALSE));
         }
 
         for (int i=0; i <=dataSize; i++) {
-            Assert.assertTrue((!toTest.setBit(i, Boolean.TRUE)), ("not already set, id:" + i));
+            assertTrue(("not already set, id:" + i), (!toTest.setBit(i, Boolean.TRUE)));
         }
 
         for (int j= 2*dataSize; j< 4*dataSize; j++) {
-            Assert.assertTrue((!toTest.setBit(j, Boolean.TRUE)), ("not already set: id=" + j));
+            assertTrue(("not already set: id=" + j), (!toTest.setBit(j, Boolean.TRUE)));
         }
     }
     
@@ -73,8 +95,8 @@ public class BitArrayBinTest {
                 BitArrayBin toTest = new BitArrayBin(window);
                 
                 int instance = value +muliplier*BitArray.LONG_SIZE;
-                Assert.assertTrue((!toTest.setBit(instance, Boolean.TRUE)), ("not already set: id=" + instance));
-                Assert.assertTrue((!toTest.setBit(value, Boolean.TRUE)), ("not already set: id=" + value));
+                assertTrue(("not already set: id=" + instance), (!toTest.setBit(instance, Boolean.TRUE)));
+                assertTrue(("not already set: id=" + value), (!toTest.setBit(value, Boolean.TRUE)));
             }
         }
     }
@@ -89,13 +111,13 @@ public class BitArrayBinTest {
         BitArrayBin toTest = new BitArrayBin(window);
         
         int instance = BitArray.LONG_SIZE;
-        Assert.assertTrue((!toTest.setBit(instance, Boolean.TRUE)), ("not already set: id=" + instance));
+        assertTrue(("not already set: id=" + instance), (!toTest.setBit(instance, Boolean.TRUE)));
         
         instance = 12 *BitArray.LONG_SIZE;
-        Assert.assertTrue((!toTest.setBit(instance, Boolean.TRUE)), ("not already set: id=" + instance));
+        assertTrue(("not already set: id=" + instance), (!toTest.setBit(instance, Boolean.TRUE)));
         
         instance = 9 *BitArray.LONG_SIZE;
-        Assert.assertTrue((!toTest.setBit(instance, Boolean.TRUE)), ("not already set: id=" + instance));
+        assertTrue(("not already set: id=" + instance), (!toTest.setBit(instance, Boolean.TRUE)));
     }
     
     // window moves in increments of BitArray.LONG_SIZE.

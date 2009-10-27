@@ -19,9 +19,13 @@ package org.apache.activemq.apollo.broker.path;
 import java.util.Set;
 
 import org.apache.activemq.util.buffer.AsciiBuffer;
-import org.testng.Assert;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
+import static org.junit.Assert.*;
+
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class PathMapMemoryTest {
 
     @Test()
@@ -45,7 +49,7 @@ public class PathMapMemoryTest {
                 PathMap<String> map = new PathMap<String>();
                 map.put(d1, "test");
             } catch (Throwable e) {
-                Assert.fail("Destination name too long: " + name + " : " + e);
+                fail(("Destination name too long: " + name + " : " + e));
             }
         }
     }
@@ -63,7 +67,7 @@ public class PathMapMemoryTest {
             AsciiBuffer queue = new AsciiBuffer("connection:"+i);
             map.remove(queue, value);
             Set<Object> set = map.get(queue);
-            Assert.assertTrue(set.isEmpty());
+            assertTrue(set.isEmpty());
         }
     }    
 

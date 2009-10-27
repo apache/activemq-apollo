@@ -17,48 +17,55 @@
 package org.apache.activemq.openwire;
 
 import org.apache.activemq.apollo.Combinator;
-import org.testng.annotations.Test;
+import org.apache.activemq.apollo.Combinator.BeanFactory;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.experimental.theories.Theories;
+import org.junit.runner.RunWith;
+
 
 /**
  * Runs against the broker but marshals all request and response commands.
- * 
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@Test(enabled=false)
+@Ignore
+@RunWith(Theories.class)
 public class MarshallingBrokerTest extends BrokerTest {
 
+    public static BeanFactory<BrokerTestScenario> scenarioFactory() {
+        return new BeanFactory<BrokerTestScenario>() {
+            public BrokerTestScenario createBean() throws Exception {
+                return new BrokerTestScenario() {
+                    // TODO: need to figure out a way to inject this guy into 
+                    // the transport and transport server...
+//                    public OpenWireFormatFactory wireFormat = new OpenWireFormatFactory();
+                    
+                    @Override
+                    public String getBindURI() {
+                        return PIPE_URI+"?marshal=true";
+                    }
+                };
+            }
 
-    /**
-     * Makes all the tests run with the OpenWireFormat in both cached and non-cached mode. 
-     */
-    @Override
-    public Combinator combinator() {
-    	Combinator combinator = super.combinator();
-
+            public Class<BrokerTestScenario> getBeanClass() {
+                return BrokerTestScenario.class;
+            }
+        };
+    }
+    
+    @BeforeClass
+    static public void createScenarios() throws Exception {
         OpenWireFormatFactory wf1 = new OpenWireFormatFactory();
         wf1.setCacheEnabled(false);
         OpenWireFormatFactory wf2 = new OpenWireFormatFactory();
         wf2.setCacheEnabled(true);
-        combinator.put("wireFormat", wf1, wf2);
         
-		return combinator;
-    }
-    
-    /**
-     * Need to enhance the BrokerTestScenario a bit to inject the wire format
-     */
-    @Override
-    public Object createBean() throws Exception {
-		return new BrokerTestScenario() {
-			
-			// TODO: need to figure out a way to inject this guy into 
-			// the transport and transport server...
-		    public OpenWireFormatFactory wireFormat = new OpenWireFormatFactory();
-		    
-		    @Override
-		    public String getBindURI() {
-		        return PIPE_URI+"?marshal=true";
-		    }
-		};
+        Combinator combinations = combinations();
+        for (Combinator combinator : combinations.all()) {
+            combinator.put("wireFormat", wf1, wf2);
+        }
+        SCENARIOS = combinations.asBeans(scenarioFactory());
     }
 
 }

@@ -18,9 +18,13 @@ package org.apache.activemq.util;
 
 import org.apache.activemq.util.buffer.DataByteArrayInputStream;
 import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
-import org.testng.Assert;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
+import static org.junit.Assert.*;
+
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class DataByteArrayInputStreamTest {
 
     /**
@@ -49,6 +53,6 @@ public class DataByteArrayInputStreamTest {
         DataByteArrayInputStream in = new DataByteArrayInputStream(out.getData());
         in.readBoolean();
         String readBack = in.readUTF();
-        Assert.assertEquals(readBack, value);
+        assertEquals(value, readBack);
     }
 }

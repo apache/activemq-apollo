@@ -64,16 +64,8 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.testng</groupId>
-      <artifactId>testng</artifactId>
-      <version>5.8</version>
-      <scope>test</scope>
-      <classifier>jdk15</classifier>
-    </dependency>
-        
+      <scope>provided</scope>
+    </dependency>        
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>

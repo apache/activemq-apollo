@@ -35,12 +35,22 @@ import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.legacy.transport.TransportBrokerTestSupport;
 import org.apache.activemq.transport.TransportFactory;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.experimental.theories.Theories;
+import org.junit.runner.RunWith;
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+@RunWith(Theories.class)
+@Ignore
 public class SslBrokerServiceTest extends TransportBrokerTestSupport {
 
-    protected String getBindLocation() {
-        return "ssl://localhost:0";
-    }
+    @BeforeClass
+    static public void createScenarios() throws Exception {
+        SCENARIOS = combinations().asBeans(transportScenerios("ssl://localhost:0"));
+    }    
     
 //    @Override
 //    protected Broker createBroker() throws Exception {

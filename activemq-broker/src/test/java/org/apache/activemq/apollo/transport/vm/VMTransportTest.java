@@ -21,12 +21,12 @@ import java.net.URI;
 
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
-import org.testng.Assert;
-import org.testng.annotations.Test;
+import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
- * 
- * @author chirino
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class VMTransportTest {
 
@@ -38,16 +38,16 @@ public class VMTransportTest {
 	public void autoCreateBroker() throws Exception {
 		Transport connect = TransportFactory.compositeConnect(new URI("vm://test1?wireFormat=mock"));
 		connect.start();
-		Assert.assertNotNull(connect);
+		assertNotNull(connect);
 		connect.stop();
 	}
 	
-	@Test(expectedExceptions={IOException.class})
+	@Test(expected=IOException.class)
 	public void noAutoCreateBroker() throws Exception {
 		TransportFactory.compositeConnect(new URI("vm://test2?create=false&wireFormat=mock"));
 	}
 	
-	@Test(expectedExceptions={IllegalArgumentException.class})
+	@Test(expected=IllegalArgumentException.class)
 	public void badOptions() throws Exception {
 		TransportFactory.compositeConnect(new URI("vm://test3?crazy-option=false&wireFormat=mock"));
 	}

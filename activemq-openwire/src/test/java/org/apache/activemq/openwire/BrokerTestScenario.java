@@ -35,7 +35,6 @@ import org.apache.activemq.Service;
 import org.apache.activemq.apollo.Combinator.CombinationAware;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
-import org.apache.activemq.apollo.broker.VirtualHost;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.ConnectionId;
@@ -57,9 +56,12 @@ import org.apache.activemq.legacy.openwireprotocol.StubConnection;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
-import org.apache.activemq.util.buffer.AsciiBuffer;
-import org.testng.Assert;
 
+import static org.junit.Assert.*;
+
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class BrokerTestScenario implements Service, CombinationAware {
 
     /**
@@ -83,7 +85,7 @@ public class BrokerTestScenario implements Service, CombinationAware {
     public String PIPE_URI = "pipe://"+BROKER_ID;
     
     public ActiveMQDestination destination;
-    public int deliveryMode;
+    public int deliveryMode = DeliveryMode.NON_PERSISTENT;
     public int prefetch;
     public byte destinationType;
     public boolean durableConsumer;
@@ -384,7 +386,7 @@ public class BrokerTestScenario implements Service, CombinationAware {
                 return;
             }
             if (o instanceof MessageDispatch && ((MessageDispatch)o).getMessage() != null) {
-                Assert.fail("Received a message: "+((MessageDispatch)o).getMessage().getMessageId());
+                fail(("Received a message: "+((MessageDispatch)o).getMessage().getMessageId()));
             }
         }
     }

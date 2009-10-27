@@ -24,9 +24,13 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.activemq.util.buffer.AsciiBuffer;
-import org.testng.Assert;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
+import static org.junit.Assert.*;
+
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class PathMapTest {
 
     protected AsciiBuffer d1 = createDestination("TEST.D1");
@@ -207,13 +211,13 @@ public class PathMapTest {
         PathMap<String> map = new PathMap<String>();
         put(map, "TEST.D1", v2);
 
-        Assert.assertEquals(map.getRootNode().getChildCount(), 1, "Root child count");
+        assertEquals("Root child count", 1, map.getRootNode().getChildCount());
 
         assertMapValue(map, "TEST.D1", v2);
 
         remove(map, "TEST.D1", v2);
 
-        Assert.assertEquals(map.getRootNode().getChildCount(), 0, "Root child count");
+        assertEquals("Root child count", 0, map.getRootNode().getChildCount());
         assertMapValue(map, "TEST.D1");
     }
 
@@ -350,7 +354,7 @@ public class PathMapTest {
         Set actualSet = map.get(destination);
         List actual = new ArrayList(actualSet);
         Collections.sort(actual);
-        Assert.assertEquals(actual, expectedList, ("map value for destinationName:  " + destination));
+        assertEquals(("map value for destinationName:  " + destination), expectedList, actual);
     }
 
     protected AsciiBuffer createDestination(String name) {

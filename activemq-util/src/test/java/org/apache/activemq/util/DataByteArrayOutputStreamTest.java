@@ -19,8 +19,11 @@ package org.apache.activemq.util;
 import java.io.IOException;
 
 import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class DataByteArrayOutputStreamTest {
 
     /**

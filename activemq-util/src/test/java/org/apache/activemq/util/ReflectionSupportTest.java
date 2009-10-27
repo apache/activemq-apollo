@@ -16,9 +16,13 @@
  */
 package org.apache.activemq.util;
 
-import org.junit.Assert;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
+import static org.junit.Assert.*;
+
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class ReflectionSupportTest {
 	
     String favoritesString = "[queue://test, topic://test]";
@@ -28,13 +32,13 @@ public class ReflectionSupportTest {
 	public void testSetBoolean() {
                   
         TestWitBoolean target = new TestWitBoolean();
-        Assert.assertTrue((!target.getKeepAlive()));
+        assertTrue((!target.getKeepAlive()));
 
         IntrospectionSupport.setProperty(target, "keepAlive", "TRUE");
-        Assert.assertTrue(target.getKeepAlive());
+        assertTrue(target.getKeepAlive());
         
         IntrospectionSupport.setProperty(target, "keepAlive", "false");
-        Assert.assertTrue((!target.getKeepAlive()));
+        assertTrue((!target.getKeepAlive()));
     }
 
     public static class TestWitBoolean {

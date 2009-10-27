@@ -17,21 +17,19 @@
 package org.apache.activemq.legacy.transport.tcp;
 
 import org.apache.activemq.legacy.transport.TransportBrokerTestSupport;
-import org.apache.activemq.openwire.BrokerTestScenario;
-import org.testng.annotations.Test;
+import org.junit.BeforeClass;
+import org.junit.experimental.theories.Theories;
+import org.junit.runner.RunWith;
 
-@Test
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+@RunWith(Theories.class)
 public class TcpTransportBrokerTest extends TransportBrokerTestSupport {
-
-    protected String getBindLocation() {
-        return "tcp://localhost:0";
+    
+    @BeforeClass
+    static public void createScenarios() throws Exception {
+        SCENARIOS = combinations().asBeans(transportScenerios("tcp://localhost:0", 2000));
     }
-
-    @Override
-    public Object createBean() throws Exception {
-    	BrokerTestScenario scenario = (BrokerTestScenario) super.createBean();
-    	scenario.maxWait = 2000;
-		return scenario;
-    }
-
+    
 }

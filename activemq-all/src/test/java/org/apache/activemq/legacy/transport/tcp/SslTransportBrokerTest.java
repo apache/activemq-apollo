@@ -17,11 +17,14 @@
 package org.apache.activemq.legacy.transport.tcp;
 
 import org.apache.activemq.legacy.transport.TransportBrokerTestSupport;
-import org.apache.activemq.openwire.BrokerTestScenario;
-import org.testng.annotations.BeforeTest;
-import org.testng.annotations.Test;
+import org.junit.BeforeClass;
+import org.junit.experimental.theories.Theories;
+import org.junit.runner.RunWith;
 
-@Test
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+@RunWith(Theories.class)
 public class SslTransportBrokerTest extends TransportBrokerTestSupport {
 
     public static final String KEYSTORE_TYPE = "jks";
@@ -29,12 +32,8 @@ public class SslTransportBrokerTest extends TransportBrokerTestSupport {
     public static final String SERVER_KEYSTORE = "src/test/resources/server.keystore";
     public static final String TRUST_KEYSTORE = "src/test/resources/client.keystore";
 
-    protected String getBindLocation() {
-        return "ssl://localhost:0";
-    }
-
-    @BeforeTest
-    protected void setUp() throws Exception {
+    @BeforeClass
+    static public void createScenarios() throws Exception {
         System.setProperty("javax.net.ssl.trustStore", TRUST_KEYSTORE);
         System.setProperty("javax.net.ssl.trustStorePassword", PASSWORD);
         System.setProperty("javax.net.ssl.trustStoreType", KEYSTORE_TYPE);        
@@ -42,13 +41,8 @@ public class SslTransportBrokerTest extends TransportBrokerTestSupport {
         System.setProperty("javax.net.ssl.keyStorePassword", PASSWORD);
         System.setProperty("javax.net.ssl.keyStoreType", KEYSTORE_TYPE);        
         //System.setProperty("javax.net.debug", "ssl,handshake,data,trustmanager");        
-    }
 
-    @Override
-    public Object createBean() throws Exception {
-    	BrokerTestScenario scenario = (BrokerTestScenario) super.createBean();
-    	scenario.maxWait = 10000;
-		return scenario;
+        SCENARIOS = combinations().asBeans(transportScenerios("ssl://localhost:0", 10000));
     }
 
 }

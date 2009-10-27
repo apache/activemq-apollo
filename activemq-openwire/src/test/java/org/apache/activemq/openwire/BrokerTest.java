@@ -15,19 +15,12 @@
  * limitations under the License.
  */
 package org.apache.activemq.openwire;
-
-
-import static org.testng.Assert.assertEquals;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import javax.jms.DeliveryMode;
 
-import org.apache.activemq.Service;
 import org.apache.activemq.apollo.Combinator;
 import org.apache.activemq.apollo.Combinator.BeanFactory;
 import org.apache.activemq.command.ActiveMQDestination;
@@ -41,102 +34,183 @@ import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.command.ProducerInfo;
 import org.apache.activemq.command.SessionInfo;
 import org.apache.activemq.legacy.openwireprotocol.StubConnection;
-import org.testng.Assert;
-import org.testng.IHookCallBack;
-import org.testng.IHookable;
-import org.testng.ITestResult;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.After;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.experimental.theories.DataPoints;
+import org.junit.experimental.theories.Theories;
+import org.junit.experimental.theories.Theory;
+import org.junit.runner.RunWith;
 
-public class BrokerTest implements BeanFactory, IHookable{
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 
-	public Combinator combinator() {
-		return new Combinator();
-	}
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+@RunWith(Theories.class)
+public class BrokerTest  {
 
-	public Object createBean() throws Exception {
-		return new BrokerTestScenario();
-	}
-	
-	public void run(IHookCallBack callback, ITestResult result) {
-		Object [] params = new Object[]{};
-		try {
-			Field field = callback.getClass().getDeclaredField("val$parameters");
-			field.setAccessible(true);
-			params = (Object[]) field.get(callback);
-			for (int i = 0; i < params.length; i++) {
-				if( params[i] instanceof Service) {
-					((Service)params[i]).start();
-				}
-			}
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-		try {
-			callback.runTestMethod(result);
-		} finally {
-			try {
-				for (int i = 0; i < params.length; i++) {
-				if( params[i] instanceof Service) {
-						((Service)params[i]).stop();
-					}
-				}
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}
-	}
-	
-	@DataProvider(name = "default")
-	public Object[][] createData0(Method method) throws Exception {
-		return combinator()
-			.put("deliveryMode", 0)
-			.combinationsAsParameterArgBeans(this);
-	}
+    public static @DataPoints
+    BrokerTestScenario[] SCENARIOS;
+    
+    public static final ThreadLocal<BrokerTestScenario> CURRENT_SCENERIO = new ThreadLocal<BrokerTestScenario>();
 
-	@DataProvider(name = "deliveryMode-combinations")
-	public Object[][] createData1(Method method) throws Exception {
-		return combinator()
-			.put("deliveryMode", DeliveryMode.PERSISTENT, DeliveryMode.NON_PERSISTENT)
-			.combinationsAsParameterArgBeans(this);
-	}
-	
-	@DataProvider(name = "deliveryMode-queue-combinations")
-	public Object[][] createData2(Method method) throws Exception {
-		return combinator()
-			.put("deliveryMode", DeliveryMode.PERSISTENT, DeliveryMode.NON_PERSISTENT)
-			.put("destinationType", ActiveMQDestination.QUEUE_TYPE, ActiveMQDestination.TEMP_QUEUE_TYPE)
-			.combinationsAsParameterArgBeans(this);
-	}
-	
-	@DataProvider(name = "deliveryMode-perm-destinations-combinations")
-	public Object[][] createData3(Method method) throws Exception {
-		return combinator()
-			.put("deliveryMode", DeliveryMode.PERSISTENT, DeliveryMode.NON_PERSISTENT)
-			.put("destinationType", ActiveMQDestination.QUEUE_TYPE, ActiveMQDestination.TOPIC_TYPE)
-			.combinationsAsParameterArgBeans(this);
-	}	
+    public static BeanFactory<BrokerTestScenario> scenarioFactory() {
+        return new BeanFactory<BrokerTestScenario>() {
+            public BrokerTestScenario createBean() throws Exception {
+                return new BrokerTestScenario();
+            }
 
-	@DataProvider(name = "deliveryMode-all-destinations-combinations")
-	public Object[][] createData4(Method method) throws Exception {
-		return combinator()
-			.put("deliveryMode", DeliveryMode.PERSISTENT, DeliveryMode.NON_PERSISTENT)
-			.put("destinationType", ActiveMQDestination.QUEUE_TYPE, ActiveMQDestination.TOPIC_TYPE, 
-									ActiveMQDestination.TEMP_QUEUE_TYPE, ActiveMQDestination.TEMP_TOPIC_TYPE)
-			.combinationsAsParameterArgBeans(this);
-	}
-	
-	@DataProvider(name = "deliveryMode-durableConsumer-combinations")
-	public Object[][] createData5(Method method) throws Exception {
-		return combinator()
-			.put("deliveryMode", DeliveryMode.PERSISTENT, DeliveryMode.NON_PERSISTENT)
-			.put("durableConsumer", true, false)
-			.combinationsAsParameterArgBeans(this);
-	}	
-	
+            public Class<BrokerTestScenario> getBeanClass() {
+                return BrokerTestScenario.class;
+            }
+        };
+    }
+    
+    @BeforeClass
+    static public void createScenarios() throws Exception {
+        SCENARIOS = combinations().asBeans(scenarioFactory());
+    }
 
-	@Test(dataProvider = "deliveryMode-combinations")
+    public static Combinator combinations() {
+        return new Combinator().put("deliveryMode", 
+              DeliveryMode.PERSISTENT, 
+              DeliveryMode.NON_PERSISTENT)
+        .put("destinationType", 
+              ActiveMQDestination.QUEUE_TYPE, 
+              ActiveMQDestination.TOPIC_TYPE, 
+              ActiveMQDestination.TEMP_QUEUE_TYPE, 
+              ActiveMQDestination.TEMP_TOPIC_TYPE)
+        .put("durableConsumer", false)
+        // Add in the durable consumer combinations..
+        .and()
+        .put("deliveryMode", 
+              DeliveryMode.PERSISTENT, 
+              DeliveryMode.NON_PERSISTENT)
+        .put("destinationType", 
+              ActiveMQDestination.TOPIC_TYPE)
+        .put("durableConsumer", true);
+    }
+
+    private void start(BrokerTestScenario scenario) throws Exception {
+        // Start the scenario and store it in a thread local so that it can
+        // be cleaned up automatically,
+        // in the after method.
+        CURRENT_SCENERIO.set(scenario);
+        scenario.start();
+    }
+
+    @After
+    public void after() {
+        // If the CURRENT_SCENERIO is set, then we need to clean it up.
+        BrokerTestScenario scenario = CURRENT_SCENERIO.get();
+        if (scenario != null) {
+            CURRENT_SCENERIO.set(null);
+            try {
+                scenario.stop();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+
+	
+	
+//	
+//	@DataProvider(name = "default")
+//	public Object[][] createData0(Method method) throws Exception {
+//		return combinator()
+//			.put("deliveryMode", 0)
+//			.combinationsAsBeans(factory());
+//	}
+//
+    private void assumeDefault(BrokerTestScenario scenario) {
+        assumeQueueDestination(scenario);
+        assumeThat(scenario.deliveryMode, is(DeliveryMode.NON_PERSISTENT));
+    }
+
+    //	@DataProvider(name = "deliveryMode-combinations")
+//	public Object[][] createData1(Method method) throws Exception {
+//		return combinator()
+//			.put("deliveryMode", DeliveryMode.PERSISTENT, DeliveryMode.NON_PERSISTENT)
+//			.combinationsAsBeans(factory());
+//	}
+    
+    
+    private void assumeQueueDestination(BrokerTestScenario scenario) {
+        assumeThat(scenario.destinationType, is(ActiveMQDestination.QUEUE_TYPE));
+    }
+    
+//	
+//	@DataProvider(name = "deliveryMode-queue-combinations")
+//	public Object[][] createData2(Method method) throws Exception {
+//		return combinator()
+//			.put("deliveryMode", DeliveryMode.PERSISTENT, DeliveryMode.NON_PERSISTENT)
+//			.put("destinationType", ActiveMQDestination.QUEUE_TYPE, ActiveMQDestination.TEMP_QUEUE_TYPE)
+//			.combinationsAsBeans(factory());
+//	}
+    
+    @SuppressWarnings("unchecked")
+    private void assumeDeliveryModeQueue(BrokerTestScenario scenario) {
+        assumeThat(scenario.destinationType, anyOf(
+                is(ActiveMQDestination.QUEUE_TYPE),
+                is(ActiveMQDestination.TEMP_QUEUE_TYPE)
+                ));
+    }
+    
+//	
+//	@DataProvider(name = "deliveryMode-perm-destinations-combinations")
+//	public Object[][] createData3(Method method) throws Exception {
+//		return combinator()
+//			.put("deliveryMode", DeliveryMode.PERSISTENT, DeliveryMode.NON_PERSISTENT)
+//			.put("destinationType", ActiveMQDestination.QUEUE_TYPE, ActiveMQDestination.TOPIC_TYPE)
+//			.combinationsAsBeans(factory());
+//	}	
+    
+    @SuppressWarnings("unchecked")
+    private void assumeDeliveryPermDest(BrokerTestScenario scenario) {
+        assumeThat(scenario.destinationType, anyOf(
+                is(ActiveMQDestination.QUEUE_TYPE),
+                is(ActiveMQDestination.TOPIC_TYPE)
+                ));
+        assumeThat(scenario.durableConsumer, is(false));
+    }
+    
+//
+//	@DataProvider(name = "deliveryMode-all-destinations-combinations")
+//	public Object[][] createData4(Method method) throws Exception {
+//		return combinator()
+//			.put("deliveryMode", DeliveryMode.PERSISTENT, DeliveryMode.NON_PERSISTENT)
+//			.put("destinationType", ActiveMQDestination.QUEUE_TYPE, ActiveMQDestination.TOPIC_TYPE, 
+//									ActiveMQDestination.TEMP_QUEUE_TYPE, ActiveMQDestination.TEMP_TOPIC_TYPE)
+//			.combinationsAsBeans(factory());
+//	}
+//	
+    private void assumeDeliveryAllDest(BrokerTestScenario scenario) {
+        assumeThat(scenario.durableConsumer, is(false));
+    }
+
+//	@DataProvider(name = "deliveryMode-durableConsumer-combinations")
+//	public Object[][] createData5(Method method) throws Exception {
+//		return combinator()
+//			.put("deliveryMode", DeliveryMode.PERSISTENT, DeliveryMode.NON_PERSISTENT)
+//			.put("durableConsumer", true, false)
+//			.combinationsAsBeans(factory());
+//	}	
+	
+    private void assumeDeliveryDurableConsumer(BrokerTestScenario scenario) {
+        assumeThat(scenario.destinationType, is(ActiveMQDestination.TOPIC_TYPE));
+    }
+
+//	@Test(dataProvider = "deliveryMode-combinations")
+    @Theory
     public void testTopicNoLocal(BrokerTestScenario scenario) throws Exception {
+        assumeQueueDestination(scenario);
+        start(scenario);
+        
 
         ActiveMQDestination destination = new ActiveMQTopic("TEST");
 
@@ -179,7 +253,7 @@ public class BrokerTest implements BeanFactory, IHookable{
         // The 2nd connection should get the messages.
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection2);
-            Assert.assertNotNull(m1, "Message: "+i);
+            assertNotNull(("Message: "+i), m1);
         }
 
         // Send a message with the 2nd connection
@@ -190,15 +264,18 @@ public class BrokerTest implements BeanFactory, IHookable{
         // but should
         // see the messages from connection 2.
         Message m = scenario.receiveMessage(connection1);
-        Assert.assertNotNull(m);
-        assertEquals(message.getMessageId(), m.getMessageId());
+        assertNotNull(m);
+        assertEquals(m.getMessageId(), message.getMessageId());
 
         scenario.assertNoMessagesLeft(connection1);
         scenario.assertNoMessagesLeft(connection2);
     }
 
-	@Test(dataProvider = "deliveryMode-queue-combinations")
+//	@Test(dataProvider = "deliveryMode-queue-combinations")
+    @Theory
     public void testQueueSendThenAddConsumer(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryModeQueue(scenario);
+        start(scenario);
 
         // Start a producer
         StubConnection connection = scenario.createConnection();
@@ -220,12 +297,15 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         // Make sure the message was delivered.
         Message m = scenario.receiveMessage(connection);
-        Assert.assertNotNull(m);
+        assertNotNull(m);
 
     }
 
-	@Test(dataProvider = "deliveryMode-perm-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-perm-destinations-combinations")
+    @Theory
     public void testCompositeSend(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryPermDest(scenario);
+        start(scenario);
 
         // Setup a first connection
         StubConnection connection1 = scenario.createConnection();
@@ -268,12 +348,12 @@ public class BrokerTest implements BeanFactory, IHookable{
             Message m1 = scenario.receiveMessage(connection1);
             Message m2 = scenario.receiveMessage(connection2);
 
-            Assert.assertNotNull(m1);
-            Assert.assertNotNull(m2);
+            assertNotNull(m1);
+            assertNotNull(m2);
 
-            assertEquals(m1.getMessageId(), m2.getMessageId());
-            assertEquals(compositeDestination, m1.getOriginalDestination());
-            assertEquals(compositeDestination, m2.getOriginalDestination());
+            assertEquals(m2.getMessageId(), m1.getMessageId());
+            assertEquals(m1.getOriginalDestination(), compositeDestination);
+            assertEquals(m2.getOriginalDestination(), compositeDestination);
 
             connection1.request(scenario.createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE));
             connection2.request(scenario.createAck(consumerInfo2, m2, 1, MessageAck.STANDARD_ACK_TYPE));
@@ -287,8 +367,11 @@ public class BrokerTest implements BeanFactory, IHookable{
         connection2.send(scenario.closeConnectionInfo(connectionInfo2));
     }
 
-	@Test(dataProvider = "deliveryMode-combinations")
+//	@Test(dataProvider = "deliveryMode-combinations")
+    @Theory
     public void testQueueOnlyOnceDeliveryWith2Consumers(BrokerTestScenario scenario) throws Exception {
+        assumeQueueDestination(scenario);
+        start(scenario);
 
         ActiveMQDestination destination = new ActiveMQQueue("TEST");
 
@@ -325,10 +408,10 @@ public class BrokerTest implements BeanFactory, IHookable{
             Message m1 = scenario.receiveMessage(connection1);
             Message m2 = scenario.receiveMessage(connection2);
 
-            Assert.assertNotNull(m1, ("m1 is null for index: " + i));
-            Assert.assertNotNull(m2, ("m2 is null for index: " + i));
+            assertNotNull(("m1 is null for index: " + i), m1);
+            assertNotNull(("m2 is null for index: " + i), m2);
 
-            Assert.assertNotSame(m2.getMessageId(), m1.getMessageId());
+            assertNotSame(m1.getMessageId(), m2.getMessageId());
             connection1.send(scenario.createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE));
             connection2.send(scenario.createAck(consumerInfo2, m2, 1, MessageAck.STANDARD_ACK_TYPE));
         }
@@ -337,8 +420,11 @@ public class BrokerTest implements BeanFactory, IHookable{
         scenario.assertNoMessagesLeft(connection2);
     }
 
-	@Test(dataProvider = "deliveryMode-combinations")
+//	@Test(dataProvider = "deliveryMode-combinations")
+    @Theory
     public void testQueueBrowserWith2Consumers(BrokerTestScenario scenario) throws Exception {
+        assumeQueueDestination(scenario);
+        start(scenario);
 
         ActiveMQDestination destination = new ActiveMQQueue("TEST");
 
@@ -378,15 +464,15 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1, ("m1 is null for index: " + i));
+            assertNotNull(("m1 is null for index: " + i), m1);
             messages.add(m1);
         }
 
         for (int i = 0; i < 4; i++) {
             Message m1 = messages.get(i);
             Message m2 = scenario.receiveMessage(connection2);
-            Assert.assertNotNull(m2, ("m2 is null for index: " + i));
-            assertEquals(m1.getMessageId(), m2.getMessageId());
+            assertNotNull(("m2 is null for index: " + i), m2);
+            assertEquals(m2.getMessageId(), m1.getMessageId());
             connection2.send(scenario.createAck(consumerInfo2, m2, 1, MessageAck.DELIVERED_ACK_TYPE));
         }
 
@@ -398,8 +484,11 @@ public class BrokerTest implements BeanFactory, IHookable{
     /*
      * change the order of the above test
      */
-	@Test(dataProvider = "default")
+//	@Test(dataProvider = "default")
+    @Theory
     public void testQueueBrowserWith2ConsumersBrowseFirst(BrokerTestScenario scenario) throws Exception {
+        assumeDefault(scenario);
+        start(scenario);
 
         ActiveMQDestination destination = new ActiveMQQueue("TEST");
         scenario.deliveryMode = DeliveryMode.NON_PERSISTENT;
@@ -442,7 +531,7 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1, ("m1 is null for index: " + i));
+            assertNotNull(("m1 is null for index: " + i), m1);
             messages.add(m1);
         }
 
@@ -452,8 +541,11 @@ public class BrokerTest implements BeanFactory, IHookable{
         scenario.assertNoMessagesLeft(connection2);
     }
 
-	@Test(dataProvider = "default")
+//	@Test(dataProvider = "default")
+    @Theory
     public void testQueueBrowserWith2ConsumersInterleaved(BrokerTestScenario scenario) throws Exception {
+        assumeDefault(scenario);
+        start(scenario);
 
         ActiveMQDestination destination = new ActiveMQQueue("TEST");
         scenario.deliveryMode = DeliveryMode.NON_PERSISTENT;
@@ -497,15 +589,15 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1, ("m1 is null for index: " + i));
+            assertNotNull(("m1 is null for index: " + i), m1);
             messages.add(m1);
         }
 
         for (int i = 0; i < 1; i++) {
             Message m1 = messages.get(i);
             Message m2 = scenario.receiveMessage(connection2);
-            Assert.assertNotNull(m2, ("m2 is null for index: " + i));
-            assertEquals(m1.getMessageId(), m2.getMessageId());
+            assertNotNull(("m2 is null for index: " + i), m2);
+            assertEquals(m2.getMessageId(), m1.getMessageId());
             connection2.send(scenario.createAck(consumerInfo2, m2, 1, MessageAck.DELIVERED_ACK_TYPE));
         }
 
@@ -513,8 +605,11 @@ public class BrokerTest implements BeanFactory, IHookable{
         scenario.assertNoMessagesLeft(connection2);
     }
 
-	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+    @Theory
     public void testConsumerPrefetchAndStandardAck(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryAllDest(scenario);
+        start(scenario);
 
         // Start a producer and consumer
         StubConnection connection = scenario.createConnection();
@@ -538,7 +633,7 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         // Make sure only 1 message was delivered.
         Message m1 = scenario.receiveMessage(connection);
-        Assert.assertNotNull(m1);
+        assertNotNull(m1);
         scenario.assertNoMessagesLeft(connection);
 
         // Acknowledge the first message. This should cause the next message to
@@ -546,18 +641,19 @@ public class BrokerTest implements BeanFactory, IHookable{
         connection.send(scenario.createAck(consumerInfo, m1, 1, MessageAck.STANDARD_ACK_TYPE));
 
         Message m2 = scenario.receiveMessage(connection);
-        Assert.assertNotNull(m2);
+        assertNotNull(m2);
         connection.send(scenario.createAck(consumerInfo, m2, 1, MessageAck.STANDARD_ACK_TYPE));
 
         Message m3 = scenario.receiveMessage(connection);
-        Assert.assertNotNull(m3);
+        assertNotNull(m3);
         connection.send(scenario.createAck(consumerInfo, m3, 1, MessageAck.STANDARD_ACK_TYPE));
 
         connection.send(scenario.closeConnectionInfo(connectionInfo));
     }
 
-	@Test(dataProvider = "deliveryMode-combinations")
     public void testConsumerCloseCausesRedelivery(BrokerTestScenario scenario) throws Exception {
+        assumeQueueDestination(scenario);
+        start(scenario);
 
         // Setup a first connection
         StubConnection connection1 = scenario.createConnection();
@@ -582,8 +678,8 @@ public class BrokerTest implements BeanFactory, IHookable{
         // Receive the messages.
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1, ("m1 is null for index: " + i));
-            Assert.assertFalse(m1.isRedelivered());
+            assertNotNull(("m1 is null for index: " + i), m1);
+            assertFalse(m1.isRedelivered());
         }
 
         // Close the consumer without acking.. this should cause re-delivery of
@@ -598,15 +694,18 @@ public class BrokerTest implements BeanFactory, IHookable{
         // Receive the messages.
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1, ("m1 is null for index: " + i));
-            Assert.assertTrue(m1.isRedelivered());
+            assertNotNull(("m1 is null for index: " + i), m1);
+            assertTrue(m1.isRedelivered());
         }
         scenario.assertNoMessagesLeft(connection1);
 
     }
 
-	@Test(dataProvider = "default")
+//	@Test(dataProvider = "default")
+    @Theory
     public void testTopicDurableSubscriptionCanBeRestored(BrokerTestScenario scenario) throws Exception {
+        assumeDefault(scenario);
+        start(scenario);
 
         ActiveMQDestination destination = new ActiveMQTopic("TEST");
 
@@ -635,7 +734,7 @@ public class BrokerTest implements BeanFactory, IHookable{
         Message m = null;
         for (int i = 0; i < 2; i++) {
             m = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m);
+            assertNotNull(m);
         }
         // Ack the last message.
         connection1.send(scenario.createAck(consumerInfo1, m, 2, MessageAck.STANDARD_ACK_TYPE));
@@ -659,13 +758,16 @@ public class BrokerTest implements BeanFactory, IHookable{
         // Get the rest of the messages
         for (int i = 0; i < 2; i++) {
             Message m1 = scenario.receiveMessage(connection2);
-            Assert.assertNotNull(m1, ("m1 is null for index: " + i));
+            assertNotNull(("m1 is null for index: " + i), m1);
         }
         scenario.assertNoMessagesLeft(connection2);
     }
 
-	@Test(dataProvider = "deliveryMode-durableConsumer-combinations")
+//	@Test(dataProvider = "deliveryMode-durableConsumer-combinations")
+    @Theory
     public void testTopicConsumerOnlySeeMessagesAfterCreation(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryDurableConsumer(scenario);
+        start(scenario);
 
         ActiveMQDestination destination = new ActiveMQTopic("TEST");
 
@@ -696,10 +798,10 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         // Subscription should skip over the first message
         Message m2 = scenario.receiveMessage(connection1);
-        Assert.assertNotNull(m2);
-        assertEquals(m.getMessageId(), m2.getMessageId());
+        assertNotNull(m2);
+        assertEquals(m2.getMessageId(), m.getMessageId());
         m2 = scenario.receiveMessage(connection1);
-        Assert.assertNotNull(m2);
+        assertNotNull(m2);
 
         scenario.assertNoMessagesLeft(connection1);
     }
@@ -813,8 +915,11 @@ public class BrokerTest implements BeanFactory, IHookable{
 //                                                           Integer.valueOf(DeliveryMode.PERSISTENT)});
 //    }
 
-	@Test(dataProvider = "deliveryMode-combinations")
+//	@Test(dataProvider = "deliveryMode-combinations")
+    @Theory
     public void testExclusiveQueueDeliversToOnlyOneConsumer(BrokerTestScenario scenario) throws Exception {
+        assumeQueueDestination(scenario);
+        start(scenario);
 
         ActiveMQDestination destination = new ActiveMQQueue("TEST");
 
@@ -853,7 +958,7 @@ public class BrokerTest implements BeanFactory, IHookable{
         // Acknowledge the first 2 messages
         for (int i = 0; i < 2; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1);
+            assertNotNull(m1);
             connection1.send(scenario.createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE));
         }
 
@@ -866,15 +971,18 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         for (int i = 0; i < 2; i++) {
             Message m1 = scenario.receiveMessage(connection2);
-            Assert.assertNotNull(m1);
+            assertNotNull(m1);
             connection2.send(scenario.createAck(consumerInfo2, m1, 1, MessageAck.STANDARD_ACK_TYPE));
         }
 
         scenario.assertNoMessagesLeft(connection2);
     }
 
-	@Test(dataProvider = "deliveryMode-perm-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-perm-destinations-combinations")
+    @Theory
     public void testWildcardConsume(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryPermDest(scenario);
+        start(scenario);
 
         // Setup a first connection
         StubConnection connection1 = scenario.createConnection();
@@ -905,21 +1013,24 @@ public class BrokerTest implements BeanFactory, IHookable{
         connection1.send(scenario.createMessage(producerInfo1, d1, scenario.deliveryMode));
         
         Message m = scenario.receiveMessage(connection1);
-        Assert.assertNotNull(m);
-        assertEquals(d1, m.getDestination());
+        assertNotNull(m);
+        assertEquals(m.getDestination(), d1);
 
         ActiveMQDestination d2 = ActiveMQDestination.createDestination("WILD.FOO.TEST", scenario.destinationType);
         connection1.request(scenario.createMessage(producerInfo1, d2, scenario.deliveryMode));
         m = scenario.receiveMessage(connection1);
-        Assert.assertNotNull(m);
-        assertEquals(d2, m.getDestination());
+        assertNotNull(m);
+        assertEquals(m.getDestination(), d2);
 
         scenario.assertNoMessagesLeft(connection1);
         connection1.send(scenario.closeConnectionInfo(connectionInfo1));
     }
 
-	@Test(dataProvider = "deliveryMode-perm-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-perm-destinations-combinations")
+    @Theory
     public void testCompositeConsume(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryPermDest(scenario);
+        start(scenario);
 
         // Setup a first connection
         StubConnection connection1 = scenario.createConnection();
@@ -949,15 +1060,18 @@ public class BrokerTest implements BeanFactory, IHookable{
         // The consumer should get both messages.
         for (int i = 0; i < 2; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1);
+            assertNotNull(m1);
         }
 
         scenario.assertNoMessagesLeft(connection1);
         connection1.send(scenario.closeConnectionInfo(connectionInfo1));
     }
 
-	@Test(dataProvider = "deliveryMode-perm-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-perm-destinations-combinations")
+    @Theory
     public void testConnectionCloseCascades(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryPermDest(scenario);
+        start(scenario);
 
         // Setup a first connection
         StubConnection connection1 = scenario.createConnection();
@@ -990,12 +1104,12 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1);
+            assertNotNull(m1);
             connection1.send(scenario.createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE));
         }
 
         // give the async ack a chance to perculate and validate all are currently consumed
-        Assert.assertNull(connection1.getDispatchQueue().poll(scenario.MAX_NULL_WAIT, TimeUnit.MILLISECONDS));
+        assertNull(connection1.getDispatchQueue().poll(scenario.MAX_NULL_WAIT, TimeUnit.MILLISECONDS));
 
         // Close the connection, this should in turn close the consumer.
         connection1.request(scenario.closeConnectionInfo(connectionInfo1));
@@ -1003,11 +1117,14 @@ public class BrokerTest implements BeanFactory, IHookable{
         // Send another message, connection1 should not get the message.
         connection2.request(scenario.createMessage(producerInfo2, destination, scenario.deliveryMode));
 
-        Assert.assertNull(connection1.getDispatchQueue().poll(scenario.MAX_NULL_WAIT, TimeUnit.MILLISECONDS));
+        assertNull(connection1.getDispatchQueue().poll(scenario.MAX_NULL_WAIT, TimeUnit.MILLISECONDS));
     }
 
-	@Test(dataProvider = "deliveryMode-perm-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-perm-destinations-combinations")
+    @Theory
     public void testSessionCloseCascades(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryPermDest(scenario);
+        start(scenario);
 
         // Setup a first connection
         StubConnection connection1 = scenario.createConnection();
@@ -1040,7 +1157,7 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1);
+            assertNotNull(m1);
             connection1.send(scenario.createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE));
         }
 
@@ -1050,7 +1167,7 @@ public class BrokerTest implements BeanFactory, IHookable{
         // Send another message, connection1 should not get the message.
         connection2.request(scenario.createMessage(producerInfo2, destination, scenario.deliveryMode));
 
-        Assert.assertNull(connection1.getDispatchQueue().poll(scenario.MAX_NULL_WAIT, TimeUnit.MILLISECONDS));
+        assertNull(connection1.getDispatchQueue().poll(scenario.MAX_NULL_WAIT, TimeUnit.MILLISECONDS));
     }
 
 //    public void initCombosForTestConsumerClose() {
@@ -1060,8 +1177,11 @@ public class BrokerTest implements BeanFactory, IHookable{
 //                                                          new ActiveMQQueue("TEST")});
 //    }
 
-	@Test(dataProvider = "deliveryMode-perm-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-perm-destinations-combinations")
+    @Theory
     public void testConsumerClose(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryPermDest(scenario);
+        start(scenario);
 
         // Setup a first connection
         StubConnection connection1 = scenario.createConnection();
@@ -1094,12 +1214,12 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1);
+            assertNotNull(m1);
             connection1.send(scenario.createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE));
         }
 
         // give the async ack a chance to perculate and validate all are currently consumed
-        Assert.assertNull(connection1.getDispatchQueue().poll(scenario.MAX_NULL_WAIT, TimeUnit.MILLISECONDS));
+        assertNull(connection1.getDispatchQueue().poll(scenario.MAX_NULL_WAIT, TimeUnit.MILLISECONDS));
  
         // Close the consumer.
         connection1.request(scenario.closeConsumerInfo(consumerInfo1));
@@ -1107,11 +1227,14 @@ public class BrokerTest implements BeanFactory, IHookable{
         // Send another message, connection1 should not get the message.
         connection2.request(scenario.createMessage(producerInfo2, destination, scenario.deliveryMode));
 
-        Assert.assertNull(connection1.getDispatchQueue().poll(scenario.MAX_NULL_WAIT, TimeUnit.MILLISECONDS));
+        assertNull(connection1.getDispatchQueue().poll(scenario.MAX_NULL_WAIT, TimeUnit.MILLISECONDS));
     }
 
-	@Test(dataProvider = "deliveryMode-combinations")
+//	@Test(dataProvider = "deliveryMode-combinations")
+    @Theory
     public void testTopicDispatchIsBroadcast(BrokerTestScenario scenario) throws Exception {
+        assumeQueueDestination(scenario);
+        start(scenario);
 
         ActiveMQDestination destination = new ActiveMQTopic("TEST");
 
@@ -1149,14 +1272,17 @@ public class BrokerTest implements BeanFactory, IHookable{
         // Get the messages
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1);
+            assertNotNull(m1);
             m1 = scenario.receiveMessage(connection2);
-            Assert.assertNotNull(m1);
+            assertNotNull(m1);
         }
     }
 
-	@Test(dataProvider = "deliveryMode-queue-combinations")
+//	@Test(dataProvider = "deliveryMode-queue-combinations")
+    @Theory
     public void testQueueDispatchedAreRedeliveredOnConsumerClose(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryModeQueue(scenario);
+        start(scenario);
 
         // Setup a first connection
         StubConnection connection1 = scenario.createConnection();
@@ -1182,8 +1308,8 @@ public class BrokerTest implements BeanFactory, IHookable{
         // Get the messages
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1);
-            Assert.assertFalse(m1.isRedelivered());
+            assertNotNull(m1);
+            assertFalse(m1.isRedelivered());
         }
         // Close the consumer without sending any ACKS.
         connection1.send(scenario.closeConsumerInfo(consumerInfo1));
@@ -1200,13 +1326,16 @@ public class BrokerTest implements BeanFactory, IHookable{
         // Make sure the messages were re delivered to the 2nd consumer.
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1);
-            Assert.assertTrue(m1.isRedelivered());
+            assertNotNull(m1);
+            assertTrue(m1.isRedelivered());
         }
     }
 
-	@Test(dataProvider = "deliveryMode-queue-combinations")
+//	@Test(dataProvider = "deliveryMode-queue-combinations")
+    @Theory
     public void testQueueBrowseMessages(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryModeQueue(scenario);
+        start(scenario);
 
         // Start a producer and consumer
         StubConnection connection = scenario.createConnection();
@@ -1231,15 +1360,18 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         for (int i = 0; i < 4; i++) {
             Message m = scenario.receiveMessage(connection);
-            Assert.assertNotNull(m);
+            assertNotNull(m);
             connection.send(scenario.createAck(consumerInfo, m, 1, MessageAck.DELIVERED_ACK_TYPE));
         }
 
         scenario.assertNoMessagesLeft(connection);
     }
 
-	@Test(dataProvider = "deliveryMode-queue-combinations")
+//	@Test(dataProvider = "deliveryMode-queue-combinations")
+    @Theory
     public void testQueueAckRemovesMessage(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryModeQueue(scenario);
+        start(scenario);
 
         // Start a producer and consumer
         StubConnection connection = scenario.createConnection();
@@ -1261,19 +1393,22 @@ public class BrokerTest implements BeanFactory, IHookable{
         ConsumerInfo consumerInfo = scenario.createConsumerInfo(sessionInfo, destination);
         connection.request(consumerInfo);
         Message m = scenario.receiveMessage(connection);
-        Assert.assertNotNull(m);
-        assertEquals(m.getMessageId(), message1.getMessageId());
+        assertNotNull(m);
+        assertEquals(message1.getMessageId(), m.getMessageId());
 
-        assertEquals(scenario.countMessagesInQueue(connection, connectionInfo, destination), 2);
+        assertEquals(2, scenario.countMessagesInQueue(connection, connectionInfo, destination));
         connection.send(scenario.createAck(consumerInfo, m, 1, MessageAck.DELIVERED_ACK_TYPE));
-        assertEquals(scenario.countMessagesInQueue(connection, connectionInfo, destination), 2);
+        assertEquals(2, scenario.countMessagesInQueue(connection, connectionInfo, destination));
         connection.send(scenario.createAck(consumerInfo, m, 1, MessageAck.STANDARD_ACK_TYPE));
-        assertEquals(scenario.countMessagesInQueue(connection, connectionInfo, destination), 1);
+        assertEquals(1, scenario.countMessagesInQueue(connection, connectionInfo, destination));
 
     }
 
-	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+    @Theory
     public void testSelectorSkipsMessages(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryAllDest(scenario);
+        start(scenario);
 
         // Start a producer and consumer
         StubConnection connection = scenario.createConnection();
@@ -1299,16 +1434,19 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         // Use selector to skip first message.
         Message m = scenario.receiveMessage(connection);
-        Assert.assertNotNull(m);
-        assertEquals(m.getMessageId(), message2.getMessageId());
+        assertNotNull(m);
+        assertEquals(message2.getMessageId(), m.getMessageId());
         connection.send(scenario.createAck(consumerInfo, m, 1, MessageAck.STANDARD_ACK_TYPE));
         connection.send(scenario.closeConsumerInfo(consumerInfo));
 
         scenario.assertNoMessagesLeft(connection);
     }
 
-	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+    @Theory
     public void testAddConsumerThenSend(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryAllDest(scenario);
+        start(scenario);
 
         // Start a producer and consumer
         StubConnection connection = scenario.createConnection();
@@ -1328,11 +1466,14 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         // Make sure the message was delivered.
         Message m = scenario.receiveMessage(connection);
-        Assert.assertNotNull(m);
+        assertNotNull(m);
     }
 
-	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+    @Theory
     public void testConsumerPrefetchAtOne(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryAllDest(scenario);
+        start(scenario);
 
         // Start a producer and consumer
         StubConnection connection = scenario.createConnection();
@@ -1355,13 +1496,16 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         // Make sure only 1 message was delivered.
         Message m = scenario.receiveMessage(connection);
-        Assert.assertNotNull(m);
+        assertNotNull(m);
         scenario.assertNoMessagesLeft(connection);
 
     }
 
-	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+    @Theory
     public void testConsumerPrefetchAtTwo(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryAllDest(scenario);
+        start(scenario);
 
         // Start a producer and consumer
         StubConnection connection = scenario.createConnection();
@@ -1385,15 +1529,18 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         // Make sure only 1 message was delivered.
         Message m = scenario.receiveMessage(connection);
-        Assert.assertNotNull(m);
+        assertNotNull(m);
         m = scenario.receiveMessage(connection);
-        Assert.assertNotNull(m);
+        assertNotNull(m);
         scenario.assertNoMessagesLeft(connection);
 
     }
 
-	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+    @Theory
     public void testConsumerPrefetchAndDeliveredAck(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryAllDest(scenario);
+        start(scenario);
 
         // Start a producer and consumer
         StubConnection connection = scenario.createConnection();
@@ -1417,7 +1564,7 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         // Make sure only 1 message was delivered.
         Message m1 = scenario.receiveMessage(connection);
-        Assert.assertNotNull(m1);
+        assertNotNull(m1);
 
         scenario.assertNoMessagesLeft(connection);
 
@@ -1426,16 +1573,19 @@ public class BrokerTest implements BeanFactory, IHookable{
         connection.request(scenario.createAck(consumerInfo, m1, 1, MessageAck.DELIVERED_ACK_TYPE));
 
         Message m2 = scenario.receiveMessage(connection);
-        Assert.assertNotNull(m2);
+        assertNotNull(m2);
         connection.request(scenario.createAck(consumerInfo, m2, 1, MessageAck.DELIVERED_ACK_TYPE));
 
         Message m3 = scenario.receiveMessage(connection);
-        Assert.assertNotNull(m3);
+        assertNotNull(m3);
         connection.request(scenario.createAck(consumerInfo, m3, 1, MessageAck.DELIVERED_ACK_TYPE));
     }
 	
-	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+    @Theory
 	public void testTransactedSend(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryAllDest(scenario);
+        start(scenario);
 
         // Setup a first connection
         StubConnection connection1 = scenario.createConnection();
@@ -1465,7 +1615,7 @@ public class BrokerTest implements BeanFactory, IHookable{
 
         // The point of this test is that message should not be delivered until
         // send is committed.
-        Assert.assertNull(scenario.receiveMessage(connection1,scenario.MAX_NULL_WAIT));
+        assertNull(scenario.receiveMessage(connection1,scenario.MAX_NULL_WAIT));
 
         // Commit the transaction.
         connection1.send(scenario.createCommitTransaction1Phase(connectionInfo1, txid));
@@ -1473,14 +1623,17 @@ public class BrokerTest implements BeanFactory, IHookable{
         // Now get the messages.
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1);
+            assertNotNull(m1);
         }
 
         scenario.assertNoMessagesLeft(connection1);
     }
 
-	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+//	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+    @Theory
 	public void testTransactedAckWithPrefetchOfOne(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryAllDest(scenario);
+        start(scenario);
 
         // Setup a first connection
         StubConnection connection1 = scenario.createConnection();
@@ -1511,7 +1664,7 @@ public class BrokerTest implements BeanFactory, IHookable{
             LocalTransactionId txid = scenario.createLocalTransaction(sessionInfo1);
             connection1.send(scenario.createBeginTransaction(connectionInfo1, txid));
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1);
+            assertNotNull(m1);
             MessageAck ack = scenario.createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE);
             ack.setTransactionId(txid);
             connection1.send(ack);
@@ -1521,8 +1674,11 @@ public class BrokerTest implements BeanFactory, IHookable{
         scenario.assertNoMessagesLeft(connection1);
     }
 	
-	@Test(dataProvider = "deliveryMode-all-destinations-combinations")
+    @Theory
+    @Ignore
     public void testTransactedAckRollbackWithPrefetchOfOne(BrokerTestScenario scenario) throws Exception {
+        assumeDeliveryAllDest(scenario);
+        start(scenario);
 
         // Setup a first connection
         StubConnection connection1 = scenario.createConnection();
@@ -1551,7 +1707,7 @@ public class BrokerTest implements BeanFactory, IHookable{
         connection1.send(scenario.createBeginTransaction(connectionInfo1, txid));
         for (int i = 0; i < 4; i++) {
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1);
+            assertNotNull(m1);
             MessageAck ack = scenario.createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE);
             ack.setTransactionId(txid);
             connection1.send(ack);
@@ -1565,7 +1721,7 @@ public class BrokerTest implements BeanFactory, IHookable{
             txid = scenario.createLocalTransaction(sessionInfo1);
             connection1.send(scenario.createBeginTransaction(connectionInfo1, txid));
             Message m1 = scenario.receiveMessage(connection1);
-            Assert.assertNotNull(m1);
+            assertNotNull(m1);
             MessageAck ack = scenario.createAck(consumerInfo1, m1, 1, MessageAck.STANDARD_ACK_TYPE);
             ack.setTransactionId(txid);
             connection1.send(ack);

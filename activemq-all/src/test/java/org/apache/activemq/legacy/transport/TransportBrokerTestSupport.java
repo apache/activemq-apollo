@@ -19,41 +19,50 @@ package org.apache.activemq.legacy.transport;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
+import org.apache.activemq.apollo.Combinator.BeanFactory;
 import org.apache.activemq.openwire.BrokerTest;
 import org.apache.activemq.openwire.BrokerTestScenario;
 import org.apache.activemq.transport.TransportServer;
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public abstract class TransportBrokerTestSupport extends BrokerTest {
 
-    protected abstract String getBindLocation();
-
-    /**
-     * Need to enhance the BrokerTestScenario a bit to inject the wire format
-     */
-    @Override
-    public Object createBean() throws Exception {
-		BrokerTestScenario brokerTestScenario = new BrokerTestScenario() {
-			
-		    private TransportServer transnportServer;
-
-			@Override
-		    public TransportServer createTransnportServer() throws IOException, URISyntaxException {
-		    	transnportServer = super.createTransnportServer();
-				return transnportServer;
-		    }
-		    
-			@Override
-		    public String getConnectURI() {
-		    	return transnportServer.getConnectURI().toString();
-		    }
-
-			@Override
-			public String getBindURI() {
-				return getBindLocation();
-			}
-		    
-		};
-		return brokerTestScenario;
+    public static BeanFactory<BrokerTestScenario> transportScenerios(final String bindLocation) {
+        return transportScenerios(bindLocation, 4000);
     }
+    
+    public static BeanFactory<BrokerTestScenario> transportScenerios(final String bindLocation, final int maxWait) {
+        return new BeanFactory<BrokerTestScenario>() {
+            public BrokerTestScenario createBean() throws Exception {
+                BrokerTestScenario rc = new BrokerTestScenario() {
+                    private TransportServer transnportServer;
 
+                    @Override
+                    public TransportServer createTransnportServer() throws IOException, URISyntaxException {
+                        transnportServer = super.createTransnportServer();
+                        return transnportServer;
+                    }
+                    
+                    @Override
+                    public String getConnectURI() {
+                        return transnportServer.getConnectURI().toString();
+                    }
+
+                    @Override
+                    public String getBindURI() {
+                        return bindLocation;
+                    }
+                };
+                rc.maxWait = maxWait;
+                return rc;
+            }
+
+            public Class<BrokerTestScenario> getBeanClass() {
+                return BrokerTestScenario.class;
+            }
+        };
+    }
+    
 }

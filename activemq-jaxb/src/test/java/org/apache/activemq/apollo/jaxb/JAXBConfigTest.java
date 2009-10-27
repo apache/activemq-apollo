@@ -29,9 +29,11 @@ import org.apache.activemq.broker.store.memory.MemoryStore;
 import org.apache.activemq.dispatch.AbstractPooledDispatcher;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.testng.Assert;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class JAXBConfigTest extends TestCase {
 
     private static final Log LOG = LogFactory.getLog(JAXBConfigTest.class);
@@ -43,22 +45,22 @@ public class JAXBConfigTest extends TestCase {
 		Broker broker = BrokerFactory.createBroker(uri);
 		
 		AbstractPooledDispatcher p = (AbstractPooledDispatcher)broker.getDispatcher();
-		Assert.assertEquals(p.getSize(), 4);
-		Assert.assertEquals(p.getName(), "test dispatcher");
+		assertEquals(4, p.getSize());
+		assertEquals("test dispatcher", p.getName());
 		
 		
-		Assert.assertEquals(broker.getTransportServers().size(), 1);
+		assertEquals(1, broker.getTransportServers().size());
 		
 		ArrayList<String> expected = new ArrayList<String>();
 		expected.add("pipe://test1");
 		expected.add("tcp://127.0.0.1:61616");
-		Assert.assertEquals(broker.getConnectUris(), expected);
+		assertEquals(expected, broker.getConnectUris());
 		
-		Assert.assertEquals(broker.getVirtualHosts().size(), 2);
+		assertEquals(2, broker.getVirtualHosts().size());
 		
-		Assert.assertNotNull(broker.getDefaultVirtualHost().getDatabase());
-		Assert.assertNotNull(broker.getDefaultVirtualHost().getDatabase().getStore());
-		Assert.assertTrue((broker.getDefaultVirtualHost().getDatabase().getStore() instanceof MemoryStore));
+		assertNotNull(broker.getDefaultVirtualHost().getDatabase());
+		assertNotNull(broker.getDefaultVirtualHost().getDatabase().getStore());
+		assertTrue((broker.getDefaultVirtualHost().getDatabase().getStore() instanceof MemoryStore));
 		
 	}
 	
@@ -73,7 +75,7 @@ public class JAXBConfigTest extends TestCase {
 			failed = true;
 		}
 		if (!failed) {
-			Assert.fail("Creating broker from non-existing url does not throw an exception!");
+			fail("Creating broker from non-existing url does not throw an exception!");
 		}
 		failed = false;
 		//non-existent file
@@ -84,7 +86,7 @@ public class JAXBConfigTest extends TestCase {
 			failed = true;
 		}
 		if (!failed) {
-			Assert.fail("Creating broker from non-existing url does not throw an exception!");
+			fail("Creating broker from non-existing url does not throw an exception!");
 		}
 		//non-existent url
 		try {
@@ -94,7 +96,7 @@ public class JAXBConfigTest extends TestCase {
 			failed = true;
 		}
 		if (!failed) {
-			Assert.fail("Creating broker from non-existing url does not throw an exception!");
+			fail("Creating broker from non-existing url does not throw an exception!");
 		}		
 		// regular file
 		URI uri = new URI("jaxb:" + Thread.currentThread().getContextClassLoader().getResource("org/apache/activemq/apollo/jaxb/testUris.xml"));

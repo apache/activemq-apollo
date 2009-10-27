@@ -17,13 +17,18 @@
 package org.apache.activemq.legacy.transport.nio;
 
 import org.apache.activemq.legacy.transport.TransportBrokerTestSupport;
-import org.testng.annotations.Test;
+import org.junit.BeforeClass;
+import org.junit.experimental.theories.Theories;
+import org.junit.runner.RunWith;
 
-@Test
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+@RunWith(Theories.class)
 public class NIOTransportBrokerTest extends TransportBrokerTestSupport {
 
-    protected String getBindLocation() {
-        return "nio://localhost:0";
-    }
-
+    @BeforeClass
+    static public void createScenarios() throws Exception {
+        SCENARIOS = combinations().asBeans(transportScenerios("ssl://localhost:0"));
+    }  
 }
