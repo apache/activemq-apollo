@@ -72,11 +72,6 @@
         <executions>
           <execution>
             <phase>generate-sources</phase>
-            <configuration>
-              <sourceDirectory>${basedir}/src/main/grammar</sourceDirectory>
-              <outputDirectory>${basedir}/target/generated-javacc</outputDirectory>
-              <packageName>org.apache.activemq.selector</packageName>
-            </configuration>
             <goals>
               <goal>javacc</goal>
             </goals>
