@@ -40,7 +40,7 @@ public class MultiWireFormatFactory implements WireFormatFactory {
 
     private static final FactoryFinder WIREFORMAT_FACTORY_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/wireformat/");
 
-    private String wireFormats;
+    private String wireFormats = "openwire, stomp";
     private ArrayList<WireFormatFactory> wireFormatFactories;
 
     static class MultiWireFormat implements WireFormat {
@@ -63,44 +63,48 @@ public class MultiWireFormatFactory implements WireFormatFactory {
             wireFormat.setVersion(version);
         }
 
-        private ByteArrayOutputStream baos = new ByteArrayOutputStream();
         private ByteArrayInputStream peeked;
 
         public Object unmarshal(DataInput in) throws IOException {
 
-            while (wireFormat == null) {
-
-                int readByte = ((InputStream) in).read();
-                if (readByte < 0) {
-                    throw new EOFException();
-                }
-                baos.write(readByte);
-
-                // Try to discriminate what we have read so far.
-                for (WireFormatFactory wff : wireFormatFactories) {
-                    if (wff.matchesWireformatHeader(baos.toBuffer())) {
-                        wireFormat = wff.createWireFormat();
-                        break;
+            if (wireFormat == null) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream(maxHeaderLength);
+                while (wireFormat == null) {
+    
+                    int readByte = ((InputStream) in).read();
+                    if (readByte < 0) {
+                        throw new EOFException();
+                    }
+                    baos.write(readByte);
+    
+                    // Try to discriminate what we have read so far.
+                    for (WireFormatFactory wff : wireFormatFactories) {
+                        if (wff.matchesWireformatHeader(baos.toBuffer())) {
+                            wireFormat = wff.createWireFormat();
+                            break;
+                        }
+                    }
+    
+                    if (baos.size() >= maxHeaderLength && wireFormat==null) {
+                        throw new IOException("Could not discriminate the protocol.");
                     }
                 }
-
-                if (baos.size() >= maxHeaderLength) {
-                    throw new IOException("Could not discriminate the protocol.");
-                }
+                peeked = new ByteArrayInputStream(baos.toBuffer());
+                return wireFormat;
             }
 
             // If we have some peeked data we need to feed that back..  Only happens
             // for the first few bytes of the protocol header.
             if (peeked != null) {
-                in = new DataInputStream(new ConcatInputStream(peeked, (InputStream) in));
-                Object rc = wireFormat.unmarshal(in);
                 if (peeked.available() <= 0) {
                     peeked = null;
+                } else {
+                    in = new DataInputStream(new ConcatInputStream(peeked, (InputStream) in));
                 }
-                return rc;
             }
 
-            return wireFormat.unmarshal(in);
+            Object rc = wireFormat.unmarshal(in);
+            return rc;
         }
 
         public void marshal(Object command, DataOutput out) throws IOException {
@@ -159,7 +163,7 @@ public class MultiWireFormatFactory implements WireFormatFactory {
         MultiWireFormat rc = new MultiWireFormat();
         if (wireFormatFactories == null) {
             wireFormatFactories = new ArrayList<WireFormatFactory>();
-            String[] formats = getWireFormats().split("\\,");
+            String[] formats = getWireFormats().split("\\s*\\,\\s*");
             for (int i = 0; i < formats.length; i++) {
                 try {
                     WireFormatFactory wff = (WireFormatFactory) WIREFORMAT_FACTORY_FINDER.newInstance(formats[i]);
@@ -169,7 +173,7 @@ public class MultiWireFormatFactory implements WireFormatFactory {
                         throw new Exception("Not Discriminitable");
                     }
                 } catch (Exception e) {
-                    LOG.warn("Invalid wireformat '" + formats[i] + "': " + e.getMessage());
+                    LOG.debug("Invalid wireformat '" + formats[i] + "': " + e.getMessage());
                 }
             }
         }

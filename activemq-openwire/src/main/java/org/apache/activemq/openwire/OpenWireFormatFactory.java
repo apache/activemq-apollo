@@ -25,6 +25,7 @@ import org.apache.activemq.wireformat.WireFormatFactory;
  */
 public class OpenWireFormatFactory implements WireFormatFactory {
 
+    private static final Buffer MAGIC = new Buffer(new byte[] { 1, 'A', 'c', 't', 'i', 'v', 'e', 'M', 'Q' });
     //
     // The default values here are what the wire format changes to after a
     // default negotiation.
@@ -138,14 +139,17 @@ public class OpenWireFormatFactory implements WireFormatFactory {
     }
     
     public boolean isDiscriminatable() {
+        return true;
+    }
+
+    public boolean matchesWireformatHeader(Buffer buffer) {
+        if (buffer.length == 4 + MAGIC.length) {
+            return buffer.containsAt(MAGIC, 4);
+        }
         return false;
     }
 
-    public boolean matchesWireformatHeader(Buffer byteSequence) {
-        throw new UnsupportedOperationException();
-    }
-
     public int maxWireformatHeaderLength() {
-        throw new UnsupportedOperationException();
+        return 4 + MAGIC.length;
     }
 }

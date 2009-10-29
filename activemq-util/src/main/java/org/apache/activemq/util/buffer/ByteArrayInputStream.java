@@ -35,8 +35,8 @@ public class ByteArrayInputStream extends InputStream {
         this(data, 0, data.length);
     }
 
-    public ByteArrayInputStream(Buffer sequence) {
-        this(sequence.getData(), sequence.getOffset(), sequence.getLength());
+    public ByteArrayInputStream(Buffer buffer) {
+        this(buffer.getData(), buffer.getOffset(), buffer.getLength());
     }
 
     public ByteArrayInputStream(byte data[], int offset, int size) {

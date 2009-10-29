@@ -3,6 +3,7 @@ package org.apache.activemq.util.buffer;
 
 
 
+
 final public class AsciiBuffer extends Buffer {
 
     private int hashCode;
@@ -25,6 +26,23 @@ final public class AsciiBuffer extends Buffer {
         this.value = value;
     }
 
+    public static AsciiBuffer ascii(String value) {
+        if( value==null ) {
+            return null;
+        }
+        return new AsciiBuffer(value);
+    }
+    
+    public static AsciiBuffer ascii(Buffer buffer) {
+        if( buffer==null ) {
+            return null;
+        }
+        if( buffer.getClass() == AsciiBuffer.class ) {
+            return (AsciiBuffer) buffer;
+        }
+        return new AsciiBuffer(buffer);
+    }    
+    
     public AsciiBuffer compact() {
         if (length != data.length) {
             return new AsciiBuffer(toByteArray());
@@ -82,6 +100,5 @@ final public class AsciiBuffer extends Buffer {
         }
         return new String(rc);
     }
-
     
 }

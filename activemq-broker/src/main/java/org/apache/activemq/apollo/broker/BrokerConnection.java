@@ -62,7 +62,17 @@ public class BrokerConnection extends Connection {
             protocolHandler.onCommand(command);
         } else {
             try {
-                WireFormat wireformat = transport.getWireformat();
+                
+                WireFormat wireformat;
+                if( command instanceof WireFormat ) {
+                    // First command might be from the wire format decriminator, letting
+                    // us know what the actually wireformat is.
+                    wireformat = (WireFormat) command;
+                    command = null;
+                } else {
+                    wireformat = transport.getWireformat();
+                }
+                
                 try {
                     protocolHandler = ProtocolHandlerFactory.createProtocolHandler(wireformat.getName());
                 } catch(Exception e) {
@@ -79,7 +89,9 @@ public class BrokerConnection extends Connection {
                     }
                 });
                 
-                protocolHandler.onCommand(command);
+                if( command!=null ) {
+                    protocolHandler.onCommand(command);
+                }
                 
             } catch (Exception e) {
                 onException(e);

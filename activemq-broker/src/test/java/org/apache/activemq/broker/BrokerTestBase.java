@@ -27,10 +27,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.Router;
-import org.apache.activemq.apollo.broker.VirtualHost;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.dispatch.IDispatcher;
@@ -42,7 +41,7 @@ import org.apache.activemq.util.buffer.AsciiBuffer;
 
 public abstract class BrokerTestBase extends TestCase {
 
-    protected static final int PERFORMANCE_SAMPLES = 3;
+    protected static final int PERFORMANCE_SAMPLES = 30000;
 
     protected static final int IO_WORK_AMOUNT = 0;
     protected static final int FANIN_COUNT = 10;
@@ -98,23 +97,18 @@ public abstract class BrokerTestBase extends TestCase {
         dispatcher = createDispatcher();
         dispatcher.start();
         
-        String brokerWireFormat = getRemoteWireFormat();
-        if(getSupportedWireFormats() != null)
-        {
-            brokerWireFormat= "multi&wireFormat.wireFormats=" + getSupportedWireFormats();
-        }
-        
         if (tcp) {
-            sendBrokerBindURI = "tcp://localhost:10000?wireFormat=" + brokerWireFormat;
-            receiveBrokerBindURI = "tcp://localhost:20000?wireFormat=" + brokerWireFormat;
+            sendBrokerBindURI = "tcp://localhost:10000?wireFormat=" + getBrokerWireFormat();
+            receiveBrokerBindURI = "tcp://localhost:20000?wireFormat=" + getBrokerWireFormat();
+            
             sendBrokerConnectURI = "tcp://localhost:10000?wireFormat=" + getRemoteWireFormat();
-            receiveBrokerConnectURI = "tcp://localhost:20000" + getRemoteWireFormat();
+            receiveBrokerConnectURI = "tcp://localhost:20000?wireFormat=" + getRemoteWireFormat();
         } else {
             sendBrokerConnectURI = "pipe://SendBroker";
             receiveBrokerConnectURI = "pipe://ReceiveBroker";
             if (forceMarshalling) {
-                sendBrokerBindURI = sendBrokerConnectURI + "?wireFormat=" + getRemoteWireFormat();
-                receiveBrokerBindURI = receiveBrokerConnectURI + "?wireFormat=" + getRemoteWireFormat();
+                sendBrokerBindURI = sendBrokerConnectURI + "?wireFormat=" + getBrokerWireFormat();
+                receiveBrokerBindURI = receiveBrokerConnectURI + "?wireFormat=" + getBrokerWireFormat();
             } else {
                 sendBrokerBindURI = sendBrokerConnectURI;
                 receiveBrokerBindURI = receiveBrokerConnectURI;
@@ -122,8 +116,8 @@ public abstract class BrokerTestBase extends TestCase {
         }
     }
 
-    protected String getSupportedWireFormats() {
-        return null;
+    protected String getBrokerWireFormat() {
+        return "multi";
     }
 
     protected abstract String getRemoteWireFormat();

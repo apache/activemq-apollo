@@ -20,15 +20,79 @@ import java.util.Collection;
 import java.util.HashSet;
 
 import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.apache.activemq.util.buffer.Buffer;
+
+import static org.apache.activemq.util.buffer.AsciiBuffer.*;
 
 public interface Destination {
 
     AsciiBuffer getDomain();
-
     AsciiBuffer getName();
-
     Collection<Destination> getDestinations();
+    
+    public static class ParserOptions {
+        public AsciiBuffer defaultDomain;
+        public AsciiBuffer queuePrefix;
+        public AsciiBuffer topicPrefix;
+        public AsciiBuffer tempQueuePrefix;
+        public AsciiBuffer tempTopicPrefix;
+    }
 
+    static public class Parser {
+        
+        /**
+         * Parses a simple destination.
+         * 
+         * @param value
+         * @param options
+         * @return
+         */
+        public static Destination parse(AsciiBuffer value, ParserOptions options) {
+            if (options.queuePrefix!=null && value.startsWith(options.queuePrefix)) {
+                AsciiBuffer name = value.slice(options.queuePrefix.length, value.length).ascii();
+                return new SingleDestination(Router.QUEUE_DOMAIN, name);
+            } else if (options.topicPrefix!=null && value.startsWith(options.topicPrefix)) {
+                AsciiBuffer name = value.slice(options.topicPrefix.length, value.length).ascii();
+                return new SingleDestination(Router.TOPIC_DOMAIN, name);
+            } else if (options.tempQueuePrefix!=null && value.startsWith(options.tempQueuePrefix)) {
+                AsciiBuffer name = value.slice(options.tempQueuePrefix.length, value.length).ascii();
+                return new SingleDestination(Router.TEMP_QUEUE_DOMAIN, name);
+            } else if (options.tempTopicPrefix!=null && value.startsWith(options.tempTopicPrefix)) {
+                AsciiBuffer name = value.slice(options.tempTopicPrefix.length, value.length).ascii();
+                return new SingleDestination(Router.TEMP_TOPIC_DOMAIN, name);
+            } else {
+                if( options.defaultDomain==null ) {
+                    throw new IllegalArgumentException("Destination domain not provided: "+value);
+                }
+                return new SingleDestination(options.defaultDomain, value);
+            }
+        }
+        
+        /**
+         * Parses a destination which may or may not be a composite.
+         * 
+         * @param value
+         * @param options
+         * @param compositeSeparator
+         * @return
+         */
+        public static Destination parse(AsciiBuffer value, ParserOptions options, byte compositeSeparator) {
+            if( value == null ) {
+                return null;
+            }
+
+            if( value.contains(compositeSeparator) ) {
+                Buffer[] rc = value.split(compositeSeparator);
+                MultiDestination md = new MultiDestination();
+                for (Buffer buffer : rc) {
+                    md.add(parse(ascii(buffer), options));
+                }
+                return md;
+            }
+            return parse(ascii(value), options);
+        }        
+    }
+    
     public class SingleDestination implements Destination {
 
         private AsciiBuffer domain;

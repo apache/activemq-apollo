@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.transport.stomp;
+package org.apache.activemq.apollo.stomp;
 
+import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
@@ -24,19 +25,36 @@ import org.apache.activemq.wireformat.WireFormatFactory;
  * Creates WireFormat objects that marshalls the <a href="http://activemq.apache.org/stomp/">Stomp</a> protocol.
  */
 public class StompWireFormatFactory implements WireFormatFactory {
+    AsciiBuffer MAGIC = new AsciiBuffer("CONNECT");
+    
     public WireFormat createWireFormat() {
         return new StompWireFormat();
     }
     
-    public boolean matchesWireformatHeader(Buffer byteSequence) {
-        throw new UnsupportedOperationException();
+    public boolean isDiscriminatable() {
+        return true;
     }
 
     public int maxWireformatHeaderLength() {
-        throw new UnsupportedOperationException();
+        return MAGIC.length+10;
     }
 
-    public boolean isDiscriminatable() {
-        return false;
+    public boolean matchesWireformatHeader(Buffer header) {
+        if( header.length < MAGIC.length)
+            return false;
+        
+        // the magic can be preceded with newlines..
+        int max = header.length-MAGIC.length;
+        int start=0;
+        while(start < max) {
+            if( header.get(start)!='\n' ) {
+                break;
+            }
+            start++;
+        }
+        
+        return header.containsAt(MAGIC, start);
     }
+
+
 }

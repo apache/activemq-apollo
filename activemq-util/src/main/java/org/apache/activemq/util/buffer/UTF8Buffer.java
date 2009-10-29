@@ -25,13 +25,30 @@ final public class UTF8Buffer extends Buffer {
         super(encode(input));
     }
 
+    public static UTF8Buffer utf8(String value) {
+        if( value==null ) {
+            return null;
+        }
+        return new UTF8Buffer(value);
+    }
+
+    public static UTF8Buffer utf8(Buffer buffer) {
+        if( buffer==null ) {
+            return null;
+        }
+        if( buffer.getClass() == UTF8Buffer.class ) {
+            return (UTF8Buffer) buffer;
+        }
+        return new UTF8Buffer(buffer);
+    }
+
     public UTF8Buffer compact() {
         if (length != data.length) {
             return new UTF8Buffer(toByteArray());
         }
         return this;
     }
-
+    
     @Override
     protected UTF8Buffer createBuffer(byte[] data, int offset, int length) {
 		return new UTF8Buffer(data, offset, length);

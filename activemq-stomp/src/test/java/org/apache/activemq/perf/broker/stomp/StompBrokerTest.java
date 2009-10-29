@@ -16,9 +16,6 @@ public class StompBrokerTest extends BrokerTestBase {
         return new StompRemoteConsumer();
     }
     
-    /* (non-Javadoc)
-     * @see org.apache.activemq.broker.BrokerTestBase#getRemoteWireFormat()
-     */
     @Override
     protected String getRemoteWireFormat() {
          return "stomp";

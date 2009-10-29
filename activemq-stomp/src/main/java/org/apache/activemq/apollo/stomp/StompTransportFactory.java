@@ -14,17 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.transport.stomp;
+package org.apache.activemq.apollo.stomp;
 
-import java.io.IOException;
-
-import org.apache.activemq.command.Response;
+import org.apache.activemq.transport.Transport;
+import org.apache.activemq.transport.tcp.TcpTransportFactory;
 
 /**
- * Interface used by the ProtocolConverter for callbacks.
+ * A <a href="http://activemq.apache.org/stomp/">STOMP</a> transport factory
  * 
- * @author <a href="http://hiramchirino.com">chirino</a> 
+ * @version $Revision: 1.1.1.1 $
  */
-interface ResponseHandler {
-    void onResponse(ProtocolConverter converter, Response response) throws IOException;
+public class StompTransportFactory extends TcpTransportFactory {
+
+    protected String getDefaultWireFormatType() {
+        return "stomp";
+    }
+    
+    protected boolean isUseInactivityMonitor(Transport transport) {
+        // lets disable the inactivity monitor as stomp does not use keep alive
+        // packets
+        return false;
+    }
+
 }

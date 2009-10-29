@@ -14,24 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.stomp;
+package org.apache.activemq.apollo.stomp;
 
 import org.apache.activemq.apollo.broker.BrokerMessageDelivery;
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.filter.MessageEvaluationContext;
-import org.apache.activemq.transport.stomp.Stomp;
-import org.apache.activemq.transport.stomp.StompFrame;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.activemq.util.buffer.Buffer;
 
 public class StompMessageDelivery extends BrokerMessageDelivery {
-
+    
     static final private AsciiBuffer ENCODING = new AsciiBuffer("stomp");
 
     private final StompFrame frame;
     private Destination destination;
     private Runnable completionCallback;
-    private String receiptId;
     private int priority = Integer.MIN_VALUE;
     private AsciiBuffer msgId;
     private PersistListener persistListener = null;
@@ -44,7 +41,6 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
     public StompMessageDelivery(StompFrame frame, Destination destiantion) {
         this.frame = frame;
         this.destination = destiantion;
-        this.receiptId = frame.getHeaders().remove(Stomp.Headers.RECEIPT_REQUESTED);
     }
 
     public void setPersistListener(PersistListener listener) {
@@ -61,9 +57,9 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
 
     public int getPriority() {
         if (priority == Integer.MIN_VALUE) {
-            String p = frame.getHeaders().get(Stomp.Headers.Message.PRORITY);
+            AsciiBuffer p = frame.get(Stomp.Headers.Message.PRORITY);
             try {
-                priority = (p == null) ? 4 : Integer.parseInt(p);
+                priority = (p == null) ? 4 : Integer.parseInt(p.toString());
             } catch (NumberFormatException e) {
                 priority = 4;
             }
@@ -78,9 +74,9 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
      */
     public long getExpiration() {
         if (tte == Long.MIN_VALUE) {
-            String t = frame.getHeaders().get(Stomp.Headers.Message.EXPIRATION_TIME);
+            AsciiBuffer t = frame.get(Stomp.Headers.Message.EXPIRATION_TIME);
             try {
-                tte = (t == null) ? -1 : Long.parseLong(t);
+                tte = (t == null) ? -1 : Long.parseLong(t.toString());
             } catch (NumberFormatException e) {
                 tte = 1;
             }
@@ -90,9 +86,9 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
 
     public AsciiBuffer getMsgId() {
         if (msgId == null) {
-            String p = frame.getHeaders().get(Stomp.Headers.Message.MESSAGE_ID);
+            AsciiBuffer p = frame.get(Stomp.Headers.Message.MESSAGE_ID);
             if (p != null) {
-                msgId = new AsciiBuffer(p);
+                msgId = new AsciiBuffer(p.toString());
             }
         }
         return msgId;
@@ -117,21 +113,20 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
         return null;
     }
 
-    public StompFrame getStomeFame() {
+    public StompFrame getStompFrame() {
         return frame;
     }
 
-    public String getReceiptId() {
-        return receiptId;
-    }
-
     public boolean isPersistent() {
-        String p = frame.getHeaders().get(Stomp.Headers.Send.PERSISTENT);
-        return "true".equals(p);
+        AsciiBuffer persistent = frame.get(Stomp.Headers.Send.PERSISTENT);
+        if( persistent==null ) {
+            return false;
+        }
+        return Stomp.TRUE.equals(persistent);
     }
 
     public boolean isResponseRequired() {
-        return receiptId != null;
+        return frame.getHeaders().containsKey(Stomp.Headers.RECEIPT_REQUESTED);
     }
 
     public void onMessagePersisted() {
@@ -146,9 +141,7 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
     }
     
     public Buffer getStoreEncoded() {
-        Buffer bytes;
-        //TODO encode it:
-        //return bytes;
+        // TODO:
         throw new UnsupportedOperationException();
     }
     

@@ -1,4 +1,4 @@
-package org.apache.activemq.broker.stomp;
+package org.apache.activemq.apollo.stomp;
 
 import org.apache.activemq.filter.Expression;
 import org.apache.activemq.filter.FilterException;

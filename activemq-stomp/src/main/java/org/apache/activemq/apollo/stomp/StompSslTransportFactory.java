@@ -14,35 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.transport.stomp;
+package org.apache.activemq.apollo.stomp;
 
-import java.util.Map;
-
-import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.tcp.SslTransportFactory;
-import org.apache.activemq.util.IntrospectionSupport;
-import org.apache.activemq.wireformat.WireFormat;
-import org.apache.activemq.apollo.broker.BrokerAware;
-import org.apache.activemq.apollo.broker.Broker;
 
 /**
  * A <a href="http://activemq.apache.org/stomp/">STOMP</a> over SSL transport factory
  * 
  */
-public class StompSslTransportFactory extends SslTransportFactory implements BrokerAware {
-    private Broker broker;
-
+public class StompSslTransportFactory extends SslTransportFactory {
     protected String getDefaultWireFormatType() {
         return "stomp";
-    }
-
-    public Transport compositeConfigure(Transport transport, WireFormat format, Map options) {
-        transport = new StompTransportFilter(transport, new LegacyFrameTranslator(), broker);
-        IntrospectionSupport.setProperties(transport, options);
-        return super.compositeConfigure(transport, format, options);
-    }
-
-    public void setBroker(Broker broker) {
-        this.broker = broker;
     }
 }
