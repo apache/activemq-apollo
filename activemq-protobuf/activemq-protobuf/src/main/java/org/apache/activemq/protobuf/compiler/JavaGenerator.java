@@ -16,13 +16,6 @@
  */
 package org.apache.activemq.protobuf.compiler;
 
-import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_FIXED32;
-import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_FIXED64;
-import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED;
-import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_START_GROUP;
-import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_VARINT;
-import static org.apache.activemq.protobuf.WireFormat.makeTag;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -36,7 +29,8 @@ import java.util.StringTokenizer;
 
 import org.apache.activemq.protobuf.compiler.parser.ParseException;
 import org.apache.activemq.protobuf.compiler.parser.ProtoParser;
-import org.apache.activemq.util.buffer.Buffer;
+
+import static org.apache.activemq.protobuf.WireFormat.*;
 
 public class JavaGenerator {
 
@@ -1343,7 +1337,7 @@ public class JavaGenerator {
             if( field.isStringType() ) {
                 return asJavaString(defaultOption.getValue());
             } else if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
-                return "new org.apache.activemq.util.buffer.Buffer("+asJavaString(defaultOption.getValue())+")";
+                return "new org.apache.activemq.util.buffer.Buffer(org.apache.activemq.util.buffer.UTF8Buffer.encode("+asJavaString(defaultOption.getValue())+"))";
             } else if( field.isInteger32Type() ) {
                 int v;
                 if( field.getType() == FieldDescriptor.UINT32_TYPE ) {

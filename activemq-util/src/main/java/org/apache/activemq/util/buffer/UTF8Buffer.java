@@ -1,9 +1,26 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.activemq.util.buffer;
 
 import java.io.UnsupportedEncodingException;
 
-
-
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 final public class UTF8Buffer extends Buffer {
 
     int hashCode;
@@ -25,35 +42,10 @@ final public class UTF8Buffer extends Buffer {
         super(encode(input));
     }
 
-    public static UTF8Buffer utf8(String value) {
-        if( value==null ) {
-            return null;
-        }
-        return new UTF8Buffer(value);
-    }
-
-    public static UTF8Buffer utf8(Buffer buffer) {
-        if( buffer==null ) {
-            return null;
-        }
-        if( buffer.getClass() == UTF8Buffer.class ) {
-            return (UTF8Buffer) buffer;
-        }
-        return new UTF8Buffer(buffer);
-    }
-
-    public UTF8Buffer compact() {
-        if (length != data.length) {
-            return new UTF8Buffer(toByteArray());
-        }
-        return this;
-    }
+    ///////////////////////////////////////////////////////////////////
+    // Overrides
+    ///////////////////////////////////////////////////////////////////
     
-    @Override
-    protected UTF8Buffer createBuffer(byte[] data, int offset, int length) {
-		return new UTF8Buffer(data, offset, length);
-	}
-
     public String toString()
     {
         if( value==null ) {
@@ -85,6 +77,26 @@ final public class UTF8Buffer extends Buffer {
             hashCode = super.hashCode();;
         }
         return hashCode;
+    }
+
+    ///////////////////////////////////////////////////////////////////
+    // Statics
+    ///////////////////////////////////////////////////////////////////
+    public static UTF8Buffer utf8(String value) {
+        if( value==null ) {
+            return null;
+        }
+        return new UTF8Buffer(value);
+    }
+
+    public static UTF8Buffer utf8(Buffer buffer) {
+        if( buffer==null ) {
+            return null;
+        }
+        if( buffer.getClass() == UTF8Buffer.class ) {
+            return (UTF8Buffer) buffer;
+        }
+        return new UTF8Buffer(buffer);
     }
     
     static public byte[] encode(String value)

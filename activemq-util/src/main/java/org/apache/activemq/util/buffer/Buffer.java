@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.activemq.util.buffer;
 
 import java.util.ArrayList;
@@ -33,13 +32,6 @@ public class Buffer implements Comparable<Buffer> {
         this(other.data, other.offset, other.length);
     }
 
-    public static String string(Buffer value) {
-        if( value==null ) {
-            return null;
-        }
-        return value.toString();
-    }
-
     public Buffer(int size) {
         this(new byte[size]);
     }
@@ -54,33 +46,20 @@ public class Buffer implements Comparable<Buffer> {
         this.length = length;
     }
 
-    @Deprecated
-    public Buffer(String value) {
-        this(UTF8Buffer.encode(value));
-    }
-
-    @SuppressWarnings("unchecked")
-	public final <T extends Buffer> T slice(int low, int high) {
+	public final Buffer slice(int low, int high) {
         int sz;
-
         if (high < 0) {
             sz = length + high;
         } else {
             sz = high - low;
         }
-
         if (sz < 0) {
             sz = 0;
         }
-
-        return (T) createBuffer(data, offset + low, sz);
+        return new Buffer(data, (offset + low), sz);
     }
 
-    protected Buffer createBuffer(byte[] data, int offset, int length) {
-		return new Buffer(data, offset, length);
-	}
-
-	public final byte[] getData() {
+    public final byte[] getData() {
         return data;
     }
 
@@ -96,13 +75,13 @@ public class Buffer implements Comparable<Buffer> {
         return offset;
     }
     
-    public Buffer deepCopy() {
+    final public Buffer deepCopy() {
         byte t[] = new byte[length];
         System.arraycopy(data, offset, t, 0, length);
         return new Buffer(t);
     }
 
-    public Buffer compact() {
+    final public Buffer compact() {
         if (length != data.length) {
             return new Buffer(toByteArray());
         }
@@ -119,33 +98,8 @@ public class Buffer implements Comparable<Buffer> {
         return data;
     }
 
-    public byte byteAt(int i) {
+    final public byte get(int i) {
         return data[offset + i];
-    }
-
-
-    @Override
-    public int hashCode() {
-        byte[] data = this.data;
-        int offset = this.offset;
-        int length = this.length;
-
-        byte[] target = new byte[4];
-        for (int i = 0; i < length; i++) {
-            target[i % 4] ^= data[offset + i];
-        }
-        return target[0] << 24 | target[1] << 16 | target[2] << 8 | target[3];
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this)
-            return true;
-
-        if (obj == null || obj.getClass() != Buffer.class)
-            return false;
-
-        return equals((Buffer) obj);
     }
 
     final public boolean equals(Buffer obj) {
@@ -208,6 +162,7 @@ public class Buffer implements Comparable<Buffer> {
     final public int indexOf(Buffer needle) {
         return indexOf(needle, 0);
     }
+    
     final public int indexOf(Buffer needle, int pos) {
         int max = length - needle.length;
         for (int i = pos; i < max; i++) {
@@ -240,28 +195,95 @@ public class Buffer implements Comparable<Buffer> {
         return true;
     }
 
-    final public static Buffer join(List<Buffer> items, Buffer seperator) {
-        if (items.isEmpty())
-            return new Buffer(seperator.data, 0, 0);
+    
+    final public Buffer trim() {
+        return trimFront().trimEnd();
+    }
 
-        int size = 0;
-        for (Buffer item : items) {
-            size += item.length;
+    final public Buffer trimEnd() {
+        byte data[] = this.data;
+        int offset = this.offset;
+        int length = this.length;
+        int end = offset+this.length-1;
+        int pos = end;
+        
+        while ((offset <= pos) && (data[pos] <= ' ')) {
+            pos--;
         }
-        size += seperator.length * (items.size() - 1);
+        return (pos == end) ? this : new Buffer(data, offset, (length-(end-pos))); 
+    }
 
-        int pos = 0;
-        byte data[] = new byte[size];
-        for (Buffer item : items) {
-            if (pos != 0) {
-                System.arraycopy(seperator.data, seperator.offset, data, pos, seperator.length);
-                pos += seperator.length;
+    final public Buffer trimFront() {
+        byte data[] = this.data;
+        int offset = this.offset;
+        int end = offset+this.length;
+        int pos = offset;
+        while ((pos < end) && (data[pos] <= ' ')) {
+            pos++;
+        }
+        return (pos == offset) ? this : new Buffer(data, pos, (length-(pos-offset))); 
+    }
+
+    final public Buffer buffer() {
+        return new Buffer(this);
+    }
+    final public AsciiBuffer ascii() {
+        return new AsciiBuffer(this);
+    }
+    final public  UTF8Buffer utf8() {
+        return new UTF8Buffer(this);
+    }
+    
+    final public Buffer[] split(byte separator) {
+        ArrayList<Buffer> rc = new ArrayList<Buffer>();
+        
+        byte data[] = this.data;
+        int pos = this.offset;
+        int nextStart = pos;
+        int end = pos+this.length;
+
+        while( pos < end ) {
+            if( data[pos]==separator ) {
+                if( nextStart < pos ) {
+                    rc.add(new Buffer(data, nextStart, (pos-nextStart)));
+                }
+                nextStart = pos+1;
             }
-            System.arraycopy(item.data, item.offset, data, pos, item.length);
-            pos += item.length;
+            pos++;
+        }
+        if( nextStart < pos ) {
+            rc.add(new Buffer(data, nextStart, (pos-nextStart)));
         }
 
-        return new Buffer(data, 0, size);
+        return rc.toArray(new Buffer[rc.size()]);
+    }
+    
+    ///////////////////////////////////////////////////////////////////
+    // Overrides
+    ///////////////////////////////////////////////////////////////////
+    
+    @Override
+    public int hashCode() {
+        byte[] data = this.data;
+        int offset = this.offset;
+        int length = this.length;
+
+        byte[] target = new byte[4];
+        for (int i = 0; i < length; i++) {
+            target[i % 4] ^= data[offset + i];
+        }
+        return target[0] << 24 | target[1] << 16 | target[2] << 8 | target[3];
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this)
+            return true;
+
+        if (obj == null || obj.getClass() != Buffer.class)
+            return false;
+
+        return equals((Buffer) obj);
     }
 
     @Override
@@ -272,20 +294,15 @@ public class Buffer implements Comparable<Buffer> {
         }
         return "{ offset: "+offset+", length: "+length+", data: \""+str+"\" }";
     }
-    
-    @Deprecated
-    public String toStringUtf8() {
-        return UTF8Buffer.decode(this);
-    }
 
     public int compareTo(Buffer o) {
-    	if( this == o )
-    		return 0;
-    	
+        if( this == o )
+            return 0;
+        
         byte[] data = this.data;
         int offset = this.offset;
         int length = this.length;
-    	
+        
         int oLength = o.length;
         int oOffset = o.offset;
         byte[] oData = o.data;
@@ -315,69 +332,41 @@ public class Buffer implements Comparable<Buffer> {
         }
         return length - oLength;
     }
-
-    final public byte get(int i) {
-        return data[offset+i];
-    }
     
-    final public Buffer trim() {
-        return trimFront().trimEnd();
-    }
-
-    final public Buffer trimEnd() {
-        byte data[] = this.data;
-        int offset = this.offset;
-        int length = this.length;
-        int end = offset+this.length-1;
-        int pos = end;
-        
-        while ((offset <= pos) && (data[pos] <= ' ')) {
-            pos--;
+    ///////////////////////////////////////////////////////////////////
+    // Statics
+    ///////////////////////////////////////////////////////////////////
+    
+    public static String string(Buffer value) {
+        if( value==null ) {
+            return null;
         }
-        return (pos == end) ? this : createBuffer(data, offset, length-(end-pos)); 
+        return value.toString();
     }
 
-    final public Buffer trimFront() {
-        byte data[] = this.data;
-        int offset = this.offset;
-        int end = offset+this.length;
-        int pos = offset;
-        while ((pos < end) && (data[pos] <= ' ')) {
-            pos++;
+    final public static Buffer join(List<Buffer> items, Buffer seperator) {
+        if (items.isEmpty())
+            return new Buffer(seperator.data, 0, 0);
+
+        int size = 0;
+        for (Buffer item : items) {
+            size += item.length;
         }
-        return (pos == offset) ? this : createBuffer(data, pos, length-(pos-offset)); 
-    }
+        size += seperator.length * (items.size() - 1);
 
-    
-    public AsciiBuffer ascii() {
-        return new AsciiBuffer(this);
-    }
-    public  UTF8Buffer utf8() {
-        return new UTF8Buffer(this);
-    }
-    
-    public Buffer[] split(byte separator) {
-        ArrayList<Buffer> rc = new ArrayList<Buffer>();
-        
-        byte data[] = this.data;
-        int pos = this.offset;
-        int nextStart = pos;
-        int end = pos+this.length;
-
-        while( pos < end ) {
-            if( data[pos]==separator ) {
-                if( nextStart < pos ) {
-                    rc.add(createBuffer(data, nextStart, pos-nextStart));
-                }
-                nextStart = pos+1;
+        int pos = 0;
+        byte data[] = new byte[size];
+        for (Buffer item : items) {
+            if (pos != 0) {
+                System.arraycopy(seperator.data, seperator.offset, data, pos, seperator.length);
+                pos += seperator.length;
             }
-            pos++;
-        }
-        if( nextStart < pos ) {
-            rc.add(createBuffer(data, nextStart, pos-nextStart));
+            System.arraycopy(item.data, item.offset, data, pos, item.length);
+            pos += item.length;
         }
 
-        return rc.toArray(new Buffer[rc.size()]);
+        return new Buffer(data, 0, size);
     }
+    
 
 }

@@ -39,11 +39,11 @@ public final class PathSupport {
         while (true) {
             int idx = subject.indexOf(SEPARATOR, previous);
             if (idx < 0) {
-            	AsciiBuffer buffer = subject.slice(previous, lastIndex + 1);
+            	AsciiBuffer buffer = subject.slice(previous, lastIndex + 1).ascii();
                 list.add(buffer);
                 break;
             }
-        	AsciiBuffer buffer = subject.slice(previous, idx);
+        	AsciiBuffer buffer = subject.slice(previous, idx).ascii();
             list.add(buffer);
             previous = idx + 1;
         }

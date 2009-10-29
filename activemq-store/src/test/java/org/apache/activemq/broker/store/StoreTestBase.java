@@ -60,7 +60,7 @@ public abstract class StoreTestBase extends TestCase {
 
     public void testMessageAdd() throws Exception {
         final MessageRecord expected = new MessageRecord();
-        expected.setBuffer(new Buffer("buffer"));
+        expected.setBuffer(new AsciiBuffer("buffer").buffer());
         expected.setEncoding(new AsciiBuffer("encoding"));
         expected.setMessageId(new AsciiBuffer("1000"));
         expected.setKey(store.allocateStoreTracking());
@@ -113,7 +113,7 @@ public abstract class StoreTestBase extends TestCase {
         queue.setApplicationType((short) 1);
 
         final MessageRecord message = new MessageRecord();
-        message.setBuffer(new Buffer("buffer"));
+        message.setBuffer(new AsciiBuffer("buffer").buffer());
         message.setEncoding(new AsciiBuffer("encoding"));
         message.setMessageId(new AsciiBuffer("1000"));
         message.setKey(store.allocateStoreTracking());
@@ -261,7 +261,7 @@ public abstract class StoreTestBase extends TestCase {
         store.execute(new VoidCallback<Exception>() {
             @Override
             public void run(Session session) throws Exception {
-                AsciiBuffer overwrite = new AsciiBuffer("overwrite");
+//                AsciiBuffer overwrite = new AsciiBuffer("overwrite");
                 session.mapRemove(map);
                 Iterator<AsciiBuffer> r = session.mapList(null, 10);
                 assertEquals("Not expecting any maps", false, r.hasNext());

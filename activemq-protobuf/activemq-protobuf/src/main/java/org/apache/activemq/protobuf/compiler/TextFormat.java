@@ -481,7 +481,7 @@ public final class TextFormat {
   static String escapeBytes(Buffer input) {
     StringBuilder builder = new StringBuilder(input.getLength());
     for (int i = 0; i < input.getLength(); i++) {
-      byte b = input.byteAt(i);
+      byte b = input.get(i);
       switch (b) {
         // Java does not recognize \a or \v, apparently.
         case 0x07: builder.append("\\a" ); break;

@@ -1954,7 +1954,7 @@ public class AltJavaGenerator {
             if( field.isStringType() ) {
                 return asJavaString(defaultOption.getValue());
             } else if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
-                return "new "+javaType(field)+"("+asJavaString(defaultOption.getValue())+")";
+                return "new "+javaType(field)+"(org.apache.activemq.util.buffer.UTF8Buffer.encode("+asJavaString(defaultOption.getValue())+"))";
             } else if( field.isInteger32Type() ) {
                 int v;
                 if( field.getType() == FieldDescriptor.UINT32_TYPE ) {

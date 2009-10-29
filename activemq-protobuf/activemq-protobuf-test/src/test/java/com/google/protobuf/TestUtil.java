@@ -729,7 +729,7 @@ class TestUtil {
    * {@link com.google.testing.util.TestUtil#getDefaultSrcDir}.
    */
   public static String readTextFromFile(String filePath) {
-    return readBytesFromFile(filePath).toStringUtf8();
+    return readBytesFromFile(filePath).utf8().toString();
   }
 
   private static File getTestDataDir() {
