@@ -86,7 +86,7 @@ public class LocalTransaction extends Transaction {
             {
                 public void onFutureComplete(Future<? extends Object> dbCommitResult) {
                     try {
-                        dbCommitResult.get();
+                        fireAfterCommit();
                         startTransactionProcessor();
                     } catch (InterruptedException e) {
                         //Shouldn't happen
@@ -117,7 +117,7 @@ public class LocalTransaction extends Transaction {
     @Override
     public void rollback(TransactionListener listener) throws XAException, IOException {
         // TODO Auto-generated method stub
-
+        throw new UnsupportedOperationException("Not yet implemnted");
     }
 
     /* (non-Javadoc)
