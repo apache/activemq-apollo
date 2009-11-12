@@ -31,6 +31,20 @@
   <name>ActiveMQ :: Syscall :: No Arch</name>
   <description>Architecture independent module</description>
 
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <scope>test</scope>
+    </dependency>
+        
+  </dependencies> 
+  
   <build>
     <plugins>
       <plugin>
@@ -41,8 +55,10 @@
           <execution>
             <id>generate</id>
             <goals>
-              <goal>generate</goal>
-              <goal>package</goal>
+              <goal>source-generate</goal>
+              <goal>build-generate</goal>
+              <goal>build-make</goal>
+              <goal>build-package</goal>
             </goals>
           </execution>
         </executions>        

@@ -27,7 +27,7 @@
   <groupId>org.apache.activemq</groupId>
   <artifactId>activemq-syscall-lib</artifactId>
   <version>6.0-SNAPSHOT</version>
-  <packaging>pom</packaging>
+  <packaging>jar</packaging>
   
   <name>ActiveMQ :: Syscall :: Lib</name>
   <description>JNI lib module</description>
@@ -37,10 +37,33 @@
     <jni-artifactId>activemq-syscall</jni-artifactId>
     <jni-version>${project.version}</jni-version>
     <jni-prefix>lib</jni-prefix>
-    <jni-suffix>.so</jni-suffix>  </properties>    
+    <jni-suffix>.so</jni-suffix>  
+  </properties>    
+  
+  <dependencies>
+  
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-syscall</artifactId>
+      <version>6.0-SNAPSHOT</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <scope>test</scope>
+    </dependency>
+        
+  </dependencies> 
+    
   <profiles>
     
-    <profile>
+    <!-- <profile>
       <id>windows32</id>
       <activation>
         <property>
@@ -65,7 +88,7 @@
         </property>
       </activation>      
       <properties>
-        <configure-options>--with-universal</configure-options>
+        <configure-options>-with-universal</configure-options>
         <jni-suffix>.jnilib</jni-suffix>
       </properties>
     </profile>
@@ -79,18 +102,18 @@
         </property>
       </activation>      
       <properties>
-        <configure-options>--with-universal</configure-options>
+        <configure-options>-with-universal</configure-options>
         <jni-suffix>.jnilib</jni-suffix>
       </properties>
-    </profile>
+    </profile> -->
     
     <profile>
       <id>platform-selected</id>
-      <activation>
+      <!-- <activation>
         <property>
           <name>platform</name>
         </property>
-      </activation>
+      </activation> -->
       <build>
         <plugins>
           
