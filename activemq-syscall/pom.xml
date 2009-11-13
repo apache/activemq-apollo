@@ -26,14 +26,14 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.activemq</groupId>
-  <artifactId>activemq-syscall-pom</artifactId>
+  <artifactId>activemq-syscall</artifactId>
   <version>6.0-SNAPSHOT</version>
   
-  <packaging>pom</packaging>
   <name>ActiveMQ :: Syscall</name>
   <description>ActiveMQ's interface to native system calls</description>
 
   <repositories>
+    <!-- to pickup the hawtjni dependency -->
     <repository>
       <id>mvnplugins.snapshot.m2</id>
       <name>mvnplugins snapshot repository</name>
@@ -61,10 +61,61 @@
       <artifactId>hawtjni-runtime</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
-  </dependencies>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies> 
   
-  <modules>
-    <module>activemq-syscall</module>
-  </modules>
-  
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.fusesource.hawtjni</groupId>
+        <artifactId>maven-hawtjni-plugin</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <executions>
+          <execution>
+            <id>generate</id>
+            <goals>
+              <goal>generate</goal>
+              <goal>build</goal>
+              <goal>package-jar</goal>
+              <goal>package-source</goal>
+            </goals>
+            <configuration>
+              <copyright><![CDATA[
+              ]]></copyright>
+            </configuration>
+          </execution>
+        </executions>        
+      </plugin>
+      
+      <!-- older plugin versions has trouble deleting directories with symlinks in them -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>2.3</version>
+      </plugin>
+      
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>ianal-maven-plugin</artifactId>
+        <configuration>
+          <searchPaths>
+            <searchPath>META-INF</searchPath>
+            <searchPath>${project.artifactId}-${project.version}-native-src${test}</searchPath>
+          </searchPaths>
+        </configuration>
+      </plugin>
+      
+    </plugins>
+  </build>
+
 </project>
