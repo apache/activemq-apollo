@@ -19,11 +19,9 @@ package org.apache.activemq.syscall;
 import org.fusesource.hawtjni.runtime.JniClass;
 import org.fusesource.hawtjni.runtime.JniField;
 import org.fusesource.hawtjni.runtime.JniMethod;
-import org.fusesource.hawtjni.runtime.MethodFlag;
 
 import static org.fusesource.hawtjni.runtime.MethodFlag.*;
 
-import static org.fusesource.hawtjni.runtime.FieldFlag.*;
 import static org.fusesource.hawtjni.runtime.FieldFlag.CONSTANT;
 
 /**

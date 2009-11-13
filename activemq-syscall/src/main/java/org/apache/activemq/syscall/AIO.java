@@ -17,9 +17,13 @@
 package org.apache.activemq.syscall;
 
 import org.fusesource.hawtjni.runtime.ClassFlag;
+import org.fusesource.hawtjni.runtime.FieldFlag;
 import org.fusesource.hawtjni.runtime.JniArg;
 import org.fusesource.hawtjni.runtime.JniClass;
 import org.fusesource.hawtjni.runtime.JniField;
+import org.fusesource.hawtjni.runtime.JniMethod;
+
+import static org.fusesource.hawtjni.runtime.MethodFlag.*;
 
 /**
  * The aio facility provides system calls for asynchronous I/O
@@ -31,9 +35,16 @@ public class AIO extends CLibrary {
 
     @JniClass(flags={ClassFlag.STRUCT})
     static public class aiocb {
+        static {
+            LIBRARY.load();
+            init();
+        }
         
-        public static final native int aiocb_sizeof ();
-        public static final int SIZEOF = aiocb_sizeof();
+        @JniMethod(flags={CONSTANT_INITIALIZER})
+        private static final native void init();
+        
+        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct aiocb)")
+        public static int SIZEOF;
         
         int aio_fildes;
         @JniField(cast="void *")

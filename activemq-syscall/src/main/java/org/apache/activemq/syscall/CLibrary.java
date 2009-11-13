@@ -30,9 +30,9 @@ import static org.fusesource.hawtjni.runtime.Pointer.*;
 @JniClass
 public class CLibrary {
 
-    private static Library library = new Library("activemq-syscall", CLibrary.class);
+    final public static Library LIBRARY = new Library("activemq-syscall", CLibrary.class);
     static {
-        library.load();
+        LIBRARY.load();
     }
     
     ///////////////////////////////////////////////////////////////////
