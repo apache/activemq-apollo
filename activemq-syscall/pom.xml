@@ -104,13 +104,33 @@
         <version>2.3</version>
       </plugin>
       
+      <!-- We want to package up license resources in the JARs produced -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-remote-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-license-to-native-jar</id>
+            <goals>
+              <goal>process</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/generated-sources/hawtjni/lib</outputDirectory>
+              <resourceBundles>
+                <resourceBundle>org.apache:apache-jar-resource-bundle:1.4</resourceBundle>
+              </resourceBundles>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>      
+      
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>ianal-maven-plugin</artifactId>
         <configuration>
           <searchPaths>
             <searchPath>META-INF</searchPath>
-            <searchPath>${project.artifactId}-${project.version}-native-src${test}</searchPath>
+            <searchPath>${project.artifactId}-${project.version}-native-src</searchPath>
           </searchPaths>
         </configuration>
       </plugin>
