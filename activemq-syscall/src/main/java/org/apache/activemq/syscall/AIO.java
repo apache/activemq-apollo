@@ -23,6 +23,8 @@ import org.fusesource.hawtjni.runtime.JniClass;
 import org.fusesource.hawtjni.runtime.JniField;
 import org.fusesource.hawtjni.runtime.JniMethod;
 
+import static org.fusesource.hawtjni.runtime.ArgFlag.*;
+
 import static org.fusesource.hawtjni.runtime.MethodFlag.*;
 
 /**
@@ -31,12 +33,25 @@ import static org.fusesource.hawtjni.runtime.MethodFlag.*;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @JniClass
-public class AIO extends CLibrary {
+public class AIO {
+    static {
+        CLibrary.LIBRARY.load();
+        init();
+    }
+    
+    @JniMethod(flags={CONSTANT_INITIALIZER})
+    private static final native void init();
+    
+    @JniField(flags={FieldFlag.CONSTANT})
+    public static int EINPROGRESS;
+    
+//    @JniField(flags={FieldFlag.CONSTANT})
+//    public static int ECANCELLED;
 
     @JniClass(flags={ClassFlag.STRUCT})
     static public class aiocb {
         static {
-            LIBRARY.load();
+            CLibrary.LIBRARY.load();
             init();
         }
         
@@ -46,18 +61,28 @@ public class AIO extends CLibrary {
         @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct aiocb)")
         public static int SIZEOF;
         
-        int aio_fildes;
+        public int aio_fildes;
         @JniField(cast="void *")
-        long aio_buf;
+        public long aio_buf;
         @JniField(cast="size_t")
-        long aio_nbytes;
+        public long aio_nbytes;
         @JniField(cast="off_t")
-        long aio_offset;
+        public long aio_offset;
         // Don't need to access these right now:
         // int aio_reqprio;
         // struct sigevent aio_sigevent
         // int aio_lio_opcode;
         // int aio_flags;
+        
+        public static final native void memmove (
+                @JniArg(cast="void *", flags={NO_IN, CRITICAL}) aiocb dest, 
+                @JniArg(cast="const void *") long src, 
+                @JniArg(cast="size_t") long size);
+        
+        public static final native void memmove (
+                @JniArg(cast="void *") long dest, 
+                @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) aiocb src, 
+                @JniArg(cast="size_t") long size);
     }
     
     @JniClass(flags={ClassFlag.STRUCT})
@@ -78,6 +103,14 @@ public class AIO extends CLibrary {
      * </pre></code>
      */
     public static final native int aio_read(
+            @JniArg(cast="struct aiocb *")long aiocbp);
+
+    /**
+     * <code><pre>
+     * int aio_write(struct aiocb *aiocbp);
+     * </pre></code>
+     */
+    public static final native int aio_write(
             @JniArg(cast="struct aiocb *")long aiocbp);
 
     /**

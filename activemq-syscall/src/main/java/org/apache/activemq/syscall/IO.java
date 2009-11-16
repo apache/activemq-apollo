@@ -29,11 +29,12 @@ import static org.fusesource.hawtjni.runtime.FieldFlag.CONSTANT;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @JniClass
-public class IO extends CLibrary {
+public class IO {
 
     @JniMethod(flags={CONSTANT_INITIALIZER})
     private static final native void init();
     static {
+        CLibrary.LIBRARY.load();
         init();
     }
 

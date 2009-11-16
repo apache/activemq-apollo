@@ -20,6 +20,7 @@ import org.fusesource.hawtjni.runtime.JniArg;
 import org.fusesource.hawtjni.runtime.JniClass;
 import org.fusesource.hawtjni.runtime.JniMethod;
 import org.fusesource.hawtjni.runtime.Library;
+import org.fusesource.hawtjni.runtime.MethodFlag;
 
 import static org.fusesource.hawtjni.runtime.ArgFlag.*;
 import static org.fusesource.hawtjni.runtime.Pointer.*;
@@ -34,6 +35,11 @@ public class CLibrary {
     static {
         LIBRARY.load();
     }
+    
+    final public static long NULL = 0;
+    
+    @JniMethod(flags={MethodFlag.CONSTANT})
+    public static final native int errno();
     
     ///////////////////////////////////////////////////////////////////
     //

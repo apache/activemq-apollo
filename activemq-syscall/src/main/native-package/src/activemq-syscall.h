@@ -28,6 +28,9 @@
   #include <aio.h>
 #endif
 
-#include <fcntl.h>
+#ifdef HAVE_SYS_ERRNO_H
+  #include <sys/errno.h>
+#endif
 
+#include <fcntl.h>
 #endif /* INCLUDED_ACTIVEMQ_SYSCALL_H */
