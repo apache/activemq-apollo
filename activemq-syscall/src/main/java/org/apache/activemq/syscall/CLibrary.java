@@ -40,15 +40,21 @@ public class CLibrary {
     
     @JniMethod(flags={MethodFlag.CONSTANT})
     public static final native int errno();
-    
-    ///////////////////////////////////////////////////////////////////
-    //
-    // String related methods 
-    //
-    ///////////////////////////////////////////////////////////////////
+
+    @JniMethod(cast="char *")
+    public static final native long strerror(int errnum);
     
     public static final native int strlen(
             @JniArg(cast="char *")long s);
+    
+    public static String string(long ptr) {
+        if( ptr == NULL )
+            return null;
+        int length = strlen(ptr);
+        byte[] data = new byte[length];
+        memmove(data, ptr, length);
+        return new String(data);
+    }
 
     ///////////////////////////////////////////////////////////////////
     //

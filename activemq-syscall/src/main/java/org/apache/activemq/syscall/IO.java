@@ -68,6 +68,40 @@ public class IO {
     public static int O_ASYNC;
 
     @JniField(flags={CONSTANT})
+    public static int S_IRWXU;
+    @JniField(flags={CONSTANT})
+    public static int S_IRUSR;
+    @JniField(flags={CONSTANT})
+    public static int S_IWUSR;
+    @JniField(flags={CONSTANT})
+    public static int S_IXUSR;
+            
+    @JniField(flags={CONSTANT})
+    public static int S_IRWXG;
+    @JniField(flags={CONSTANT})
+    public static int S_IRGRP;
+    @JniField(flags={CONSTANT})
+    public static int S_IWGRP;
+    @JniField(flags={CONSTANT})
+    public static int S_IXGRP;
+            
+    @JniField(flags={CONSTANT})
+    public static int S_IRWXO;
+    @JniField(flags={CONSTANT})
+    public static int S_IROTH;
+    @JniField(flags={CONSTANT})
+    public static int S_IWOTH;
+    @JniField(flags={CONSTANT})
+    public static int S_IXOTH;
+            
+    @JniField(flags={CONSTANT})
+    public static int S_ISUID;
+    @JniField(flags={CONSTANT})
+    public static int S_ISGID;
+    @JniField(flags={CONSTANT})
+    public static int S_ISVTX;
+    
+    @JniField(flags={CONSTANT})
     public static int F_DUPFD;
     @JniField(flags={CONSTANT})
     public static int F_GETFD;
@@ -113,7 +147,13 @@ public class IO {
     // IO related methods 
     //
     ///////////////////////////////////////////////////////////////////
-
+    /**
+     * <code><pre>
+     * int open(const char *path, int oflags, ...);
+     * </pre></code>
+     */
+    public static final native int open(String path, int oflags);
+    
     /**
      * <code><pre>
      * int open(const char *path, int oflags, ...);
