@@ -48,7 +48,7 @@ public class AIO {
 //    @JniField(flags={FieldFlag.CONSTANT})
 //    public static int ECANCELLED;
 
-    @JniClass(flags={ClassFlag.STRUCT})
+    @JniClass(flags={ClassFlag.STRUCT, ClassFlag.ZERO_OUT})
     static public class aiocb {
         static {
             CLibrary.LIBRARY.load();

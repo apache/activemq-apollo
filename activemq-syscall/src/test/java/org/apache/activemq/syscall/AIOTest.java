@@ -10,10 +10,9 @@ import java.io.IOException;
 import org.apache.activemq.syscall.AIO.aiocb;
 import org.junit.Test;
 
-import static org.apache.activemq.syscall.CLibrary.*;
-
 import static org.apache.activemq.syscall.AIO.*;
 import static org.apache.activemq.syscall.AIOTest.NativeBuffer.*;
+import static org.apache.activemq.syscall.CLibrary.*;
 import static org.apache.activemq.syscall.IO.*;
 import static org.junit.Assert.*;
 
@@ -61,16 +60,8 @@ public class AIOTest {
         File file = new File("target/test-data/test.data");
         file.getParentFile().mkdirs();
 
-        // Clear out the data in the file.
-        StringBuffer sb = new StringBuffer();
-        for( int i=0; i < 1024*4; i++ ) {
-            sb.append(' ');
-        }
-        storeContent(file, sb.toString());
-        
-        
         // Setup a buffer holds the data that we will be writing..
-        sb = new StringBuffer();
+        StringBuffer sb = new StringBuffer();
         for( int i=0; i < 1024*4; i++ ) {
             sb.append((char)('a'+(i%26)));
         }
@@ -79,18 +70,8 @@ public class AIOTest {
         NativeBuffer writeBuffer = nativeBuffer(expected);
 
         long aiocbp = malloc(aiocb.SIZEOF);
-        System.out.println("Allocated cb of size: "+aiocb.SIZEOF+", at "+String.format("%x", aiocbp));
-        memset(aiocbp, 0, aiocb.SIZEOF); // clear out the memory..
+        System.out.println("Allocated cb of size: "+aiocb.SIZEOF);
 
-        // Lets read it to verify it's been cleared.
-        aiocb cb = new aiocb();
-        aiocb.memmove(cb, aiocbp, aiocb.SIZEOF);
-        
-        assertEquals(0, cb.aio_buf);
-        assertEquals(0, cb.aio_fildes);
-        assertEquals(0, cb.aio_nbytes);
-        assertEquals(0, cb.aio_offset);
-        
         try {
             // open the file...
             int mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH;
@@ -99,6 +80,7 @@ public class AIOTest {
             
             // Create a control block..
             // The where:
+            aiocb cb = new aiocb();
             cb.aio_fildes = fd;
             cb.aio_offset = 0;
             // The what:
@@ -109,7 +91,6 @@ public class AIOTest {
             aiocb.memmove(aiocbp, cb, aiocb.SIZEOF);
 
             // enqueue the async write..
-            System.out.println("before write cb at "+String.format("%x", aiocbp));
             checkrc(aio_write(aiocbp));
             
             long blocks[] = new long[]{aiocbp};
