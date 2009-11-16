@@ -32,5 +32,9 @@
   #include <sys/errno.h>
 #endif
 
+#ifdef HAVE_SYS_STAT_H
+  #include <sys/stat.h>
+#endif
+
 #include <fcntl.h>
 #endif /* INCLUDED_ACTIVEMQ_SYSCALL_H */

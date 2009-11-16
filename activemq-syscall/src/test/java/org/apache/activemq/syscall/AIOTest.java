@@ -3,6 +3,8 @@ package org.apache.activemq.syscall;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 import org.apache.activemq.syscall.AIO.aiocb;
@@ -59,15 +61,36 @@ public class AIOTest {
         File file = new File("target/test-data/test.data");
         file.getParentFile().mkdirs();
 
-        // Setup a buffer holds the data that we will be writing..
+        // Clear out the data in the file.
         StringBuffer sb = new StringBuffer();
+        for( int i=0; i < 1024*4; i++ ) {
+            sb.append(' ');
+        }
+        storeContent(file, sb.toString());
+        
+        
+        // Setup a buffer holds the data that we will be writing..
+        sb = new StringBuffer();
         for( int i=0; i < 1024*4; i++ ) {
             sb.append((char)('a'+(i%26)));
         }
-        
+                
         String expected = sb.toString();
         NativeBuffer writeBuffer = nativeBuffer(expected);
-        long aiocbp = calloc(aiocb.SIZEOF, 1);
+
+        long aiocbp = malloc(aiocb.SIZEOF);
+        System.out.println("Allocated cb of size: "+aiocb.SIZEOF+", at "+String.format("%x", aiocbp));
+        memset(aiocbp, 0, aiocb.SIZEOF); // clear out the memory..
+
+        // Lets read it to verify it's been cleared.
+        aiocb cb = new aiocb();
+        aiocb.memmove(cb, aiocbp, aiocb.SIZEOF);
+        
+        assertEquals(0, cb.aio_buf);
+        assertEquals(0, cb.aio_fildes);
+        assertEquals(0, cb.aio_nbytes);
+        assertEquals(0, cb.aio_offset);
+        
         try {
             // open the file...
             int mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH;
@@ -75,7 +98,6 @@ public class AIOTest {
             checkrc(fd);
             
             // Create a control block..
-            aiocb cb = new aiocb();
             // The where:
             cb.aio_fildes = fd;
             cb.aio_offset = 0;
@@ -87,6 +109,7 @@ public class AIOTest {
             aiocb.memmove(aiocbp, cb, aiocb.SIZEOF);
 
             // enqueue the async write..
+            System.out.println("before write cb at "+String.format("%x", aiocbp));
             checkrc(aio_write(aiocbp));
             
             long blocks[] = new long[]{aiocbp};
@@ -116,6 +139,11 @@ public class AIOTest {
         }
         
         // Read the file in and verify the contents is what we expect 
+        String actual = loadContent(file);
+        assertEquals(expected, actual);
+    }
+
+    private String loadContent(File file) throws FileNotFoundException, IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         FileInputStream is = new FileInputStream(file);
         try {
@@ -127,12 +155,22 @@ public class AIOTest {
             is.close();
         }
         String actual = new String(baos.toByteArray());
-        assertEquals(expected, actual);
+        return actual;
     }
 
+    private void storeContent(File file, String content) throws FileNotFoundException, IOException {
+        FileOutputStream os = new FileOutputStream(file);
+        try {
+            os.write(content.getBytes());
+        } finally {
+            os.close();
+        }
+    }
+    
     private void checkrc(int rc) throws IOException {
-        if( rc==-1 ) 
+        if( rc==-1 ) {
             throw new IOException("IO failure: "+string(strerror(errno())));
+        }
     }
 
     @Test

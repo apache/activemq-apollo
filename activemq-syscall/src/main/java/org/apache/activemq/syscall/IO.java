@@ -55,16 +55,6 @@ public class IO {
     @JniField(flags={CONSTANT})
     public static int O_EXCL;
     @JniField(flags={CONSTANT})
-    public static int O_SHLOCK;
-    @JniField(flags={CONSTANT})
-    public static int O_EXLOCK;
-    @JniField(flags={CONSTANT})
-    public static int O_NOFOLLOW;
-    @JniField(flags={CONSTANT})
-    public static int O_SYMLINK;
-    @JniField(flags={CONSTANT})
-    public static int O_EVTONLY;
-    @JniField(flags={CONSTANT})
     public static int O_ASYNC;
 
     @JniField(flags={CONSTANT})
@@ -115,26 +105,6 @@ public class IO {
     public static int F_GETOWN;
     @JniField(flags={CONSTANT})
     public static int F_SETOWN;
-    @JniField(flags={CONSTANT})
-    public static int F_GETPATH;
-    @JniField(flags={CONSTANT})
-    public static int F_PREALLOCATE;
-    @JniField(flags={CONSTANT})
-    public static int F_SETSIZE;
-    @JniField(flags={CONSTANT})
-    public static int F_RDADVISE;
-    @JniField(flags={CONSTANT})
-    public static int F_RDAHEAD;
-    @JniField(flags={CONSTANT})
-    public static int F_READBOOTSTRAP;
-    @JniField(flags={CONSTANT})
-    public static int F_WRITEBOOTSTRAP;
-    @JniField(flags={CONSTANT})
-    public static int F_NOCACHE;
-    @JniField(flags={CONSTANT})
-    public static int F_LOG2PHYS;
-    @JniField(flags={CONSTANT})
-    public static int F_FULLFSYNC;
     @JniField(flags={CONSTANT})
     public static int F_GETLK;
     @JniField(flags={CONSTANT})
