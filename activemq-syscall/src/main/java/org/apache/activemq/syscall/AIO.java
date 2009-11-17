@@ -61,7 +61,7 @@ public class AIO {
         @JniMethod(flags={CONSTANT_INITIALIZER})
         private static final native void init();
         
-        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct aiocb)")
+        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct aiocb)", conditional="#ifdef HAVE_AIO_H")
         public static int SIZEOF;
         
         public int aio_fildes;
@@ -90,9 +90,17 @@ public class AIO {
     
     @JniClass(flags={ClassFlag.STRUCT}, conditional="#ifdef HAVE_AIO_H")
     static public class timespec {
-        
-        public static final native int timespec_sizeof ();
-        public static final int SIZEOF = timespec_sizeof();
+
+    	static {
+            CLibrary.LIBRARY.load();
+            init();
+        }
+
+        @JniMethod(flags={CONSTANT_INITIALIZER})
+        private static final native void init();
+
+        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct timespec)", conditional="#ifdef HAVE_AIO_H")
+        public static int SIZEOF;
         
         @JniField(cast="time_t")
         long tv_sec;  

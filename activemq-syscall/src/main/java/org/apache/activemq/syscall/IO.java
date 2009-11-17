@@ -45,8 +45,6 @@ public class IO {
     @JniField(flags={CONSTANT})
     public static int O_RDWR;
     @JniField(flags={CONSTANT})
-    public static int O_NONBLOCK;
-    @JniField(flags={CONSTANT})
     public static int O_APPEND;
     @JniField(flags={CONSTANT})
     public static int O_CREAT;
@@ -54,7 +52,9 @@ public class IO {
     public static int O_TRUNC;
     @JniField(flags={CONSTANT})
     public static int O_EXCL;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_NONBLOCK")
+    public static int O_NONBLOCK;
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_ASYNC")
     public static int O_ASYNC;
     
     @JniField(flags={CONSTANT}, conditional="#ifdef O_SHLOCK")
@@ -69,56 +69,56 @@ public class IO {
     public static int O_EVTONLY;
     
     // Mode Constants
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_IRWXU")
     public static int S_IRWXU;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_IRUSR")
     public static int S_IRUSR;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_IWUSR")
     public static int S_IWUSR;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_IXUSR")
     public static int S_IXUSR;            
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_IRWXG")
     public static int S_IRWXG;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_IRGRP")
     public static int S_IRGRP;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_IWGRP")
     public static int S_IWGRP;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_IXGRP")
     public static int S_IXGRP;            
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_IRWXO")
     public static int S_IRWXO;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_IROTH")
     public static int S_IROTH;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_IWOTH")
     public static int S_IWOTH;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_IXOTH")
     public static int S_IXOTH;            
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_ISUID")
     public static int S_ISUID;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_ISGID")
     public static int S_ISGID;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef S_ISVTX")
     public static int S_ISVTX;
     
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_DUPFD")
     public static int F_DUPFD;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_GETFD")
     public static int F_GETFD;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_SETFD")
     public static int F_SETFD;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_GETFL")
     public static int F_GETFL;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_SETFL")
     public static int F_SETFL;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_GETOWN")
     public static int F_GETOWN;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_SETOWN")
     public static int F_SETOWN;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_GETLK")
     public static int F_GETLK;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_SETLK")
     public static int F_SETLK;
-    @JniField(flags={CONSTANT})
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_SETLKW")
     public static int F_SETLKW;
 
     @JniField(flags={CONSTANT}, conditional="#ifdef F_GETPATH")
