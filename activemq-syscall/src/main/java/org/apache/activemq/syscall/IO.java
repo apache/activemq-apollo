@@ -56,7 +56,19 @@ public class IO {
     public static int O_EXCL;
     @JniField(flags={CONSTANT})
     public static int O_ASYNC;
-
+    
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_SHLOCK")
+    public static int O_SHLOCK;
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_EXLOCK")
+    public static int O_EXLOCK;
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_NOFOLLOW")
+    public static int O_NOFOLLOW;
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_SYMLINK")
+    public static int O_SYMLINK;
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_EVTONLY")
+    public static int O_EVTONLY;
+    
+    // Mode Constants
     @JniField(flags={CONSTANT})
     public static int S_IRWXU;
     @JniField(flags={CONSTANT})
@@ -64,8 +76,7 @@ public class IO {
     @JniField(flags={CONSTANT})
     public static int S_IWUSR;
     @JniField(flags={CONSTANT})
-    public static int S_IXUSR;
-            
+    public static int S_IXUSR;            
     @JniField(flags={CONSTANT})
     public static int S_IRWXG;
     @JniField(flags={CONSTANT})
@@ -73,8 +84,7 @@ public class IO {
     @JniField(flags={CONSTANT})
     public static int S_IWGRP;
     @JniField(flags={CONSTANT})
-    public static int S_IXGRP;
-            
+    public static int S_IXGRP;            
     @JniField(flags={CONSTANT})
     public static int S_IRWXO;
     @JniField(flags={CONSTANT})
@@ -82,8 +92,7 @@ public class IO {
     @JniField(flags={CONSTANT})
     public static int S_IWOTH;
     @JniField(flags={CONSTANT})
-    public static int S_IXOTH;
-            
+    public static int S_IXOTH;            
     @JniField(flags={CONSTANT})
     public static int S_ISUID;
     @JniField(flags={CONSTANT})
@@ -111,6 +120,27 @@ public class IO {
     public static int F_SETLK;
     @JniField(flags={CONSTANT})
     public static int F_SETLKW;
+
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_GETPATH")
+    public static int F_GETPATH;
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_PREALLOCATE")
+    public static int F_PREALLOCATE;
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_SETSIZE")
+    public static int F_SETSIZE;
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_RDADVISE")
+    public static int F_RDADVISE;
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_RDAHEAD")
+    public static int F_RDAHEAD;
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_READBOOTSTRAP")
+    public static int F_READBOOTSTRAP;
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_WRITEBOOTSTRAP")
+    public static int F_WRITEBOOTSTRAP;
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_NOCACHE")
+    public static int F_NOCACHE;
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_LOG2PHYS")
+    public static int F_LOG2PHYS;
+    @JniField(flags={CONSTANT}, conditional="#ifdef F_FULLFSYNC")
+    public static int F_FULLFSYNC;
     
     ///////////////////////////////////////////////////////////////////
     //
