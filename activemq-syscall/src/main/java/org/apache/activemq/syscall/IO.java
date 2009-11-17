@@ -173,6 +173,7 @@ public class IO {
      * int fcntl(int fd, int cmd, ...);
      * </pre></code>
      */
+    @JniMethod(conditional="#ifdef HAVE_FCNTL_FUNCTION")
     public static final native int fcntl(int fd, int cmd);
         
     

@@ -94,15 +94,6 @@ public class CLibrary {
     
     /**
      * <code><pre>
-     * void bzero(void *ptr, size_t len)
-     * </pre></code>
-     */
-    public static final native void bzero(
-            @JniArg(cast = "void *") long ptr, 
-            long len);
-    
-    /**
-     * <code><pre>
      * void free(void *ptr);
      * </pre></code>
      */
