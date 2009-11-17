@@ -45,7 +45,7 @@ public class AIO {
     @JniField(flags={FieldFlag.CONSTANT}, conditional="#ifdef HAVE_AIO_H", accessor="1")
     public static boolean SUPPORTED;
     
-    @JniField(flags={FieldFlag.CONSTANT})
+    @JniField(flags={FieldFlag.CONSTANT}, conditional="#ifdef HAVE_AIO_H")
     public static int EINPROGRESS;
     
 //    @JniField(flags={FieldFlag.CONSTANT})
@@ -77,11 +77,13 @@ public class AIO {
         // int aio_lio_opcode;
         // int aio_flags;
         
+        @JniMethod(conditional="#ifdef HAVE_AIO_H")
         public static final native void memmove (
                 @JniArg(cast="void *", flags={NO_IN, CRITICAL}) aiocb dest, 
                 @JniArg(cast="const void *") long src, 
                 @JniArg(cast="size_t") long size);
         
+        @JniMethod(conditional="#ifdef HAVE_AIO_H")
         public static final native void memmove (
                 @JniArg(cast="void *") long dest, 
                 @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) aiocb src, 
@@ -105,7 +107,20 @@ public class AIO {
         @JniField(cast="time_t")
         long tv_sec;  
         @JniField(cast="long")
-        long tv_nsec; 
+        long tv_nsec;
+        
+        @JniMethod(conditional="#ifdef HAVE_AIO_H")
+        public static final native void memmove (
+                @JniArg(cast="void *", flags={NO_IN, CRITICAL}) timespec dest, 
+                @JniArg(cast="const void *") long src, 
+                @JniArg(cast="size_t") long size);
+        
+        @JniMethod(conditional="#ifdef HAVE_AIO_H")
+        public static final native void memmove (
+                @JniArg(cast="void *") long dest, 
+                @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) timespec src, 
+                @JniArg(cast="size_t") long size);
+        
     }    
     
     /**
