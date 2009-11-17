@@ -1,5 +1,13 @@
 package org.apache.activemq.syscall;
 
+import static org.apache.activemq.syscall.AIO.*;
+import static org.apache.activemq.syscall.AIOTest.NativeBuffer.*;
+import static org.apache.activemq.syscall.CLibrary.*;
+import static org.apache.activemq.syscall.IO.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
+import static org.junit.Assume.*;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -10,16 +18,10 @@ import java.io.IOException;
 import org.apache.activemq.syscall.AIO.aiocb;
 import org.junit.Test;
 
-import static org.apache.activemq.syscall.AIO.*;
-import static org.apache.activemq.syscall.AIOTest.NativeBuffer.*;
-import static org.apache.activemq.syscall.CLibrary.*;
-import static org.apache.activemq.syscall.IO.*;
-import static org.junit.Assert.*;
-
 public class AIOTest {
     
     public static final class NativeBuffer {
-
+    	
         long pointer;
         int offset;
         long length;
@@ -57,6 +59,8 @@ public class AIOTest {
     
     @Test
     public void writeThenRead() throws IOException, InterruptedException {
+    	assumeThat(AIO.SUPPORTED, is(true));
+    	 
         File file = new File("target/test-data/test.data");
         file.getParentFile().mkdirs();
 
