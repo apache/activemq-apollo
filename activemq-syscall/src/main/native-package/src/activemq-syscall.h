@@ -1,6 +1,9 @@
 #ifndef INCLUDED_ACTIVEMQ_SYSCALL_H
 #define INCLUDED_ACTIVEMQ_SYSCALL_H
 
+/* lets make sure we get the thread safe versions of the APIs */
+#define _REENTRANT 
+
 #ifdef HAVE_CONFIG_H
   /* configure based build.. we will use what it discovered about the platform */
   #include "config.h"
