@@ -1,12 +1,4 @@
-package org.apache.activemq.syscall;
-
-import static org.apache.activemq.syscall.AIO.*;
-import static org.apache.activemq.syscall.AIOTest.NativeBuffer.*;
-import static org.apache.activemq.syscall.CLibrary.*;
-import static org.apache.activemq.syscall.IO.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
-import static org.junit.Assume.*;
+package org.apache.activemq.syscall.jni;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -15,50 +7,24 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import org.apache.activemq.syscall.AIO.aiocb;
+import org.apache.activemq.syscall.NativeAllocation;
+import org.apache.activemq.syscall.jni.AIO;
+import org.apache.activemq.syscall.jni.AIO.aiocb;
 import org.junit.Test;
+
+import static org.apache.activemq.syscall.jni.AIO.*;
+import static org.apache.activemq.syscall.jni.CLibrary.*;
+import static org.apache.activemq.syscall.jni.IO.*;
+
+import static org.apache.activemq.syscall.NativeAllocation.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 
 public class AIOTest {
     
-    public static final class NativeBuffer {
-    	
-        long pointer;
-        int offset;
-        long length;
-
-
-        public NativeBuffer(long pointer, int offset, long length) {
-            if( pointer==NULL ) {
-                throw new OutOfMemoryError("jni failed to heap allocate: "+length);
-            }
-            this.pointer = pointer;
-            this.offset = offset;
-            this.length = length;
-        }
-        
-        static public NativeBuffer nativeBuffer(String value) {
-            byte[] bytes = value.getBytes();
-            long pointer = malloc(bytes.length);
-            NativeBuffer rc = new NativeBuffer(pointer, 0, bytes.length);
-            memmove(pointer, bytes, bytes.length);
-            return rc;
-        }
-        
-        static public NativeBuffer nativeBuffer(long size) {
-            return new NativeBuffer(calloc(size,1), 0, size);
-        }        
-        
-        public void free() {
-            if( pointer!=NULL ) {
-                CLibrary.free(pointer);
-                pointer = 0;
-            }
-        }
-        
-    }
-    
     @Test
-    public void writeThenRead() throws IOException, InterruptedException {
+    public void write() throws IOException, InterruptedException {
     	assumeThat(AIO.SUPPORTED, is(true));
     	 
         File file = new File("target/test-data/test.data");
@@ -71,7 +37,7 @@ public class AIOTest {
         }
                 
         String expected = sb.toString();
-        NativeBuffer writeBuffer = nativeBuffer(expected);
+        NativeAllocation writeBuffer = allocate(expected);
 
         long aiocbp = malloc(aiocb.SIZEOF);
         System.out.println("Allocated cb of size: "+aiocb.SIZEOF);
@@ -88,8 +54,8 @@ public class AIOTest {
             cb.aio_fildes = fd;
             cb.aio_offset = 0;
             // The what:
-            cb.aio_buf = writeBuffer.pointer;        
-            cb.aio_nbytes = writeBuffer.length;
+            cb.aio_buf = writeBuffer.pointer();        
+            cb.aio_nbytes = writeBuffer.length();
             
             // Move the struct into the c heap.
             aiocb.memmove(aiocbp, cb, aiocb.SIZEOF);
@@ -111,7 +77,7 @@ public class AIOTest {
 
             // The full buffer should have been written.
             long count = aio_return(aiocbp);
-            assertEquals(count, writeBuffer.length);
+            assertEquals(count, writeBuffer.length());
             
             checkrc(close(fd));
             

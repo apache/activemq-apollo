@@ -1,9 +1,11 @@
-package org.apache.activemq.syscall;
+package org.apache.activemq.syscall.jni;
 
+import org.apache.activemq.syscall.jni.CLibrary;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.activemq.syscall.CLibrary.*;
+import static org.apache.activemq.syscall.jni.CLibrary.*;
+
 
 public class CLibraryTest {
     

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.syscall;
+package org.apache.activemq.syscall.jni;
 
 import org.fusesource.hawtjni.runtime.ClassFlag;
 import org.fusesource.hawtjni.runtime.FieldFlag;

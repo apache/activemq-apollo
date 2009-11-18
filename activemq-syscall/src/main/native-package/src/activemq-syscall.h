@@ -42,4 +42,7 @@
 #endif
 
 #include <fcntl.h>
+
+#define add(value1, value2) ((value1)+value2)
+
 #endif /* INCLUDED_ACTIVEMQ_SYSCALL_H */

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.syscall;
+package org.apache.activemq.syscall.jni;
 
 import org.fusesource.hawtjni.runtime.JniArg;
 import org.fusesource.hawtjni.runtime.JniClass;
@@ -102,19 +102,51 @@ public class CLibrary {
     
     ///////////////////////////////////////////////////////////////////
     //
-    // Type conversion related methods.
+    // Generic void * helpers..
     //
     ///////////////////////////////////////////////////////////////////
     
+    @JniMethod(cast="void *", accessor="add")
+    public static final native long void_pointer_add(
+            @JniArg(cast="void *") long ptr, 
+            long amount);
+
     public static final native void memmove (
             @JniArg(cast="void *") long dest, 
             @JniArg(cast="const void *") long src, 
             @JniArg(cast="size_t") long size);
-
+    
+    ///////////////////////////////////////////////////////////////////
+    //
+    // byte helpers / converters.
+    //
+    ///////////////////////////////////////////////////////////////////
+    
+    @JniMethod(cast="jbyte *", accessor="add")
+    public static final native long jbyte_pointer_add(
+            @JniArg(cast="jbyte *") long ptr, 
+            long amount);
+    
     public static final native void memmove (
             @JniArg(cast="void *") long dest, 
             @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) byte[] src, 
             @JniArg(cast="size_t") long size);
+    
+    public static final native void memmove (
+            @JniArg(cast="void *", flags={NO_IN, CRITICAL}) byte[] dest, 
+            @JniArg(cast="const void *") long src, 
+            @JniArg(cast="size_t") long size);
+    
+    ///////////////////////////////////////////////////////////////////
+    //
+    // char helpers / converters.
+    //
+    ///////////////////////////////////////////////////////////////////
+    
+    @JniMethod(cast="jchar *", accessor="add")
+    public static final native long jchar_pointer_add(
+            @JniArg(cast="jchar *") long ptr, 
+            long amount);
 
     public static final native void memmove (
             @JniArg(cast="void *") long dest, 
@@ -122,40 +154,24 @@ public class CLibrary {
             @JniArg(cast="size_t") long size);
 
     public static final native void memmove (
-            @JniArg(cast="void *") long dest, 
-            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL})  short[] src, 
-            @JniArg(cast="size_t") long size);
-
-    public static final native void memmove (
-            @JniArg(cast="void *") long dest, 
-            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL})  int[] src, 
-            @JniArg(cast="size_t") long size);
-
-    public static final native void memmove (
-            @JniArg(cast="void *") long dest, 
-            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}, pointer=FALSE) long[] src, 
-            @JniArg(cast="size_t") long size);
-
-    public static final native void memmove (
-            @JniArg(cast="void *") long dest, 
-            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) float[] src, 
-            @JniArg(cast="size_t") long size);
-
-    public static final native void memmove (
-            @JniArg(cast="void *") long dest, 
-            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) double[] src, 
-            @JniArg(cast="size_t") long size);
-
-    
-    
-    public static final native void memmove (
-            @JniArg(cast="void *", flags={NO_IN, CRITICAL}) byte[] dest, 
-            @JniArg(cast="const void *") long src, 
-            @JniArg(cast="size_t") long size);
-
-    public static final native void memmove (
             @JniArg(cast="void *", flags={NO_IN, CRITICAL}) char[] dest, 
             @JniArg(cast="const void *") long src, 
+            @JniArg(cast="size_t") long size);
+    
+    ///////////////////////////////////////////////////////////////////
+    //
+    // short helpers / converters.
+    //
+    ///////////////////////////////////////////////////////////////////
+    
+    @JniMethod(cast="jshort *", accessor="add")
+    public static final native long jshort_pointer_add(
+            @JniArg(cast="jshort *") long ptr, 
+            long amount);
+
+    public static final native void memmove (
+            @JniArg(cast="void *") long dest, 
+            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL})  short[] src, 
             @JniArg(cast="size_t") long size);
 
     public static final native void memmove (
@@ -163,14 +179,64 @@ public class CLibrary {
             @JniArg(cast="const void *") long src, 
             @JniArg(cast="size_t") long size);
 
+    
+    ///////////////////////////////////////////////////////////////////
+    //
+    // int helpers / converters.
+    //
+    ///////////////////////////////////////////////////////////////////
+    
+    @JniMethod(cast="jint *", accessor="add")
+    public static final native long jint_pointer_add(
+            @JniArg(cast="jint *") long ptr, 
+            long amount);
+    
+    public static final native void memmove (
+            @JniArg(cast="void *") long dest, 
+            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL})  int[] src, 
+            @JniArg(cast="size_t") long size);
+
     public static final native void memmove (
             @JniArg(cast="void *", flags={NO_IN, CRITICAL}) int[] dest, 
             @JniArg(cast="const void *") long src, 
             @JniArg(cast="size_t") long size);
 
+    
+    ///////////////////////////////////////////////////////////////////
+    //
+    // long helpers / converters.
+    //
+    ///////////////////////////////////////////////////////////////////
+
+    @JniMethod(cast="jlong *", accessor="add")
+    public static final native long jlong_pointer_add(
+            @JniArg(cast="jlong *") long ptr, 
+            long amount);
+
+    public static final native void memmove (
+            @JniArg(cast="void *") long dest, 
+            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}, pointer=FALSE) long[] src, 
+            @JniArg(cast="size_t") long size);
+    
     public static final native void memmove (
             @JniArg(cast="void *", flags={NO_IN, CRITICAL}, pointer=FALSE) long[] dest, 
             @JniArg(cast="const void *") long src, 
+            @JniArg(cast="size_t") long size);
+    
+    ///////////////////////////////////////////////////////////////////
+    //
+    // float helpers / converters.
+    //
+    ///////////////////////////////////////////////////////////////////
+    
+    @JniMethod(cast="jfloat *", accessor="add")
+    public static final native long jfloat_pointer_add(
+            @JniArg(cast="jfloat *") long ptr, 
+            long amount);
+
+    public static final native void memmove (
+            @JniArg(cast="void *") long dest, 
+            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) float[] src, 
             @JniArg(cast="size_t") long size);
     
     public static final native void memmove (
@@ -178,10 +244,33 @@ public class CLibrary {
             @JniArg(cast="const void *") long src, 
             @JniArg(cast="size_t") long size);
 
+    ///////////////////////////////////////////////////////////////////
+    //
+    // double helpers / converters.
+    //
+    ///////////////////////////////////////////////////////////////////
+    
+    @JniMethod(cast="jdouble *", accessor="add")
+    public static final native long jdouble_pointer_add(
+            @JniArg(cast="jdouble *") long ptr, 
+            long amount);
+
+    public static final native void memmove (
+            @JniArg(cast="void *") long dest, 
+            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) double[] src, 
+            @JniArg(cast="size_t") long size);
+
     public static final native void memmove (
             @JniArg(cast="void *", flags={NO_IN, CRITICAL}) double[] dest, 
             @JniArg(cast="const void *") long src, 
             @JniArg(cast="size_t") long size);
+    
+    
+    ///////////////////////////////////////////////////////////////////
+    //
+    // Common array type converters..
+    //
+    ///////////////////////////////////////////////////////////////////
 
     public static final native void memmove (
             @JniArg(cast="void *", flags={NO_IN, CRITICAL}) byte[] dest, 
@@ -189,8 +278,39 @@ public class CLibrary {
             @JniArg(cast="size_t") long size);
 
     public static final native void memmove (
+            @JniArg(cast="void *", flags={NO_IN, CRITICAL}) char[] dest, 
+            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL})  byte[] src, 
+            @JniArg(cast="size_t") long size);
+
+    
+    public static final native void memmove (
             @JniArg(cast="void *", flags={NO_IN, CRITICAL}) int[] dest, 
             @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) byte[] src, 
             @JniArg(cast="size_t") long size);
+    
+    public static final native void memmove (
+            @JniArg(cast="void *", flags={NO_IN, CRITICAL}) byte[] dest, 
+            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) int[] src, 
+            @JniArg(cast="size_t") long size);
 
+    public static final native void memmove (
+            @JniArg(cast="void *", flags={NO_IN, CRITICAL}) short[] dest, 
+            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) byte[] src, 
+            @JniArg(cast="size_t") long size);
+    
+    public static final native void memmove (
+            @JniArg(cast="void *", flags={NO_IN, CRITICAL}) byte[] dest, 
+            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) short[] src, 
+            @JniArg(cast="size_t") long size);
+
+    public static final native void memmove (
+            @JniArg(cast="void *", flags={NO_IN, CRITICAL}) long[] dest, 
+            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) byte[] src, 
+            @JniArg(cast="size_t") long size);
+    
+    public static final native void memmove (
+            @JniArg(cast="void *", flags={NO_IN, CRITICAL}) byte[] dest, 
+            @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) long[] src, 
+            @JniArg(cast="size_t") long size);
+    
 }
