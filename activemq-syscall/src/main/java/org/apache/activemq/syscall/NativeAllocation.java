@@ -29,9 +29,10 @@ import static org.apache.activemq.syscall.jni.CLibrary.*;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public final class NativeAllocation {
-	
-    private long pointer;
-    private long length;
+
+    final private long pointer;
+    final private long length;
+    boolean allocated;
 
     public NativeAllocation(long pointer, long length) {
         if( pointer==NULL ) {
@@ -53,21 +54,25 @@ public final class NativeAllocation {
     }
     
     static public NativeAllocation allocate(long size) {
-        return new NativeAllocation(calloc(size,1), size);
+        NativeAllocation rc = new NativeAllocation(calloc(size,1), size);
+        rc.allocated = true;
+        return rc;
     }        
     
-    synchronized public void free() {
-        if( pointer!=NULL ) {
+    public void free() {
+        if( freeCheck() ) {
             CLibrary.free(pointer);
-            pointer = 0;
         }
     }
     
-    @Override
-    protected void finalize() throws Throwable {
-        free();
+    private boolean freeCheck() {
+        if( allocated ) {
+            allocated=false;
+            return true;
+        }
+        return false;
     }
-
+    
     public long pointer() {
         return pointer;
     }
