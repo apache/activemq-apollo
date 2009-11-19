@@ -89,7 +89,7 @@ public final class NativeAllocation {
         assert off+len <= length;
         long ptr = pointer;
         if( off > 0 ) {
-            ptr = void_pointer_add(ptr, off);
+            ptr = byte_pointer_add(ptr, off);
         }
         return new NativeAllocation(ptr, len);
     }    
@@ -99,7 +99,7 @@ public final class NativeAllocation {
     }
     
     public long offset(long offset) {
-        return void_pointer_add(pointer, offset);
+        return byte_pointer_add(pointer, offset);
     }
 
     public long length() {

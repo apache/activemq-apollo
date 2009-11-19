@@ -210,27 +210,6 @@ public class IO {
     @JniMethod(conditional="#ifdef HAVE_FCNTL_FUNCTION")
     public static final native int fcntl(int fd, int cmd, long arg);
 
-    
-    @JniMethod(cast="size_t")
-    public static final native long write(
-            int fd, 
-            @JniArg(cast="const void *") long buffer, 
-            @JniArg(cast="size_t") long length);
-    
-    
-    @JniMethod(cast="size_t")
-    public static final native long pwrite(
-            int fd, 
-            @JniArg(cast="const void *") long buffer, 
-            @JniArg(cast="size_t") long length,
-            @JniArg(cast="size_t") long offset);
-
-    @JniMethod(cast="size_t")
-    public static final native long writev(
-            int fd, 
-            @JniArg(cast="const struct iovec *") long iov, 
-            int count);
-
     @JniMethod(cast="size_t")
     public static final native long read(
             int fd, 
@@ -238,20 +217,39 @@ public class IO {
             @JniArg(cast="size_t") long length);
 
     @JniMethod(cast="size_t")
+    public static final native long write(
+            int fd, 
+            @JniArg(cast="const void *") long buffer, 
+            @JniArg(cast="size_t") long length);
+
+    @JniMethod(cast="size_t", conditional="#ifdef HAVE_PREAD_FUNCTION")
     public static final native long pread(
             int fd, 
             @JniArg(cast="void *") long buffer, 
             @JniArg(cast="size_t") long length,
             @JniArg(cast="size_t") long offset);
 
-    @JniMethod(cast="size_t")
+    @JniMethod(cast="size_t", conditional="#ifdef HAVE_PREAD_FUNCTION")
+    public static final native long pwrite(
+            int fd, 
+            @JniArg(cast="const void *") long buffer, 
+            @JniArg(cast="size_t") long length,
+            @JniArg(cast="size_t") long offset);
+
+    @JniMethod(cast="size_t", conditional="#ifdef HAVE_READV_FUNCTION")
     public static final native long readv(
             int fd, 
             @JniArg(cast="const struct iovec *") long iov, 
             int count);
 
+    @JniMethod(cast="size_t", conditional="#ifdef HAVE_READV_FUNCTION")
+    public static final native long writev(
+            int fd, 
+            @JniArg(cast="const struct iovec *") long iov, 
+            int count);
 
-    @JniClass(flags={ClassFlag.STRUCT})
+
+    @JniClass(flags={ClassFlag.STRUCT}, conditional="#ifdef HAVE_READV_FUNCTION")
     static public class iovec {
 
         static {
@@ -262,7 +260,7 @@ public class IO {
         @JniMethod(flags={CONSTANT_INITIALIZER})
         private static final native void init();
 
-        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct iovec)")
+        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct iovec)", conditional="#ifdef HAVE_READV_FUNCTION")
         public static int SIZEOF;
         
         @JniField(cast="char *")
@@ -270,17 +268,19 @@ public class IO {
         @JniField(cast="size_t")
         public long iov_len;
         
+        @JniMethod(conditional="#ifdef HAVE_READV_FUNCTION")
         public static final native void memmove (
                 @JniArg(cast="void *", flags={NO_IN, CRITICAL}) iovec dest, 
                 @JniArg(cast="const void *") long src, 
                 @JniArg(cast="size_t") long size);
         
+        @JniMethod(conditional="#ifdef HAVE_READV_FUNCTION")
         public static final native void memmove (
                 @JniArg(cast="void *") long dest, 
                 @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) iovec src, 
                 @JniArg(cast="size_t") long size);
         
-        @JniMethod(cast="struct iovec *", accessor="add")
+        @JniMethod(cast="struct iovec *", accessor="add", conditional="#ifdef HAVE_READV_FUNCTION")
         public static final native long iovec_add(
                 @JniArg(cast="struct iovec *") long ptr, 
                 long amount);        

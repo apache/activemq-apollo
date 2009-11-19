@@ -105,12 +105,6 @@ public class CLibrary {
     // Generic void * helpers..
     //
     ///////////////////////////////////////////////////////////////////
-    
-    @JniMethod(cast="void *", accessor="add")
-    public static final native long void_pointer_add(
-            @JniArg(cast="void *") long ptr, 
-            long amount);
-
     public static final native void memmove (
             @JniArg(cast="void *") long dest, 
             @JniArg(cast="const void *") long src, 
@@ -123,7 +117,7 @@ public class CLibrary {
     ///////////////////////////////////////////////////////////////////
     
     @JniMethod(cast="jbyte *", accessor="add")
-    public static final native long jbyte_pointer_add(
+    public static final native long byte_pointer_add(
             @JniArg(cast="jbyte *") long ptr, 
             long amount);
     
@@ -144,7 +138,7 @@ public class CLibrary {
     ///////////////////////////////////////////////////////////////////
     
     @JniMethod(cast="jchar *", accessor="add")
-    public static final native long jchar_pointer_add(
+    public static final native long char_pointer_add(
             @JniArg(cast="jchar *") long ptr, 
             long amount);
 
@@ -165,7 +159,7 @@ public class CLibrary {
     ///////////////////////////////////////////////////////////////////
     
     @JniMethod(cast="jshort *", accessor="add")
-    public static final native long jshort_pointer_add(
+    public static final native long short_pointer_add(
             @JniArg(cast="jshort *") long ptr, 
             long amount);
 
@@ -187,7 +181,7 @@ public class CLibrary {
     ///////////////////////////////////////////////////////////////////
     
     @JniMethod(cast="jint *", accessor="add")
-    public static final native long jint_pointer_add(
+    public static final native long int_pointer_add(
             @JniArg(cast="jint *") long ptr, 
             long amount);
     
@@ -209,7 +203,7 @@ public class CLibrary {
     ///////////////////////////////////////////////////////////////////
 
     @JniMethod(cast="jlong *", accessor="add")
-    public static final native long jlong_pointer_add(
+    public static final native long long_pointer_add(
             @JniArg(cast="jlong *") long ptr, 
             long amount);
 
@@ -230,7 +224,7 @@ public class CLibrary {
     ///////////////////////////////////////////////////////////////////
     
     @JniMethod(cast="jfloat *", accessor="add")
-    public static final native long jfloat_pointer_add(
+    public static final native long float_pointer_add(
             @JniArg(cast="jfloat *") long ptr, 
             long amount);
 
@@ -251,7 +245,7 @@ public class CLibrary {
     ///////////////////////////////////////////////////////////////////
     
     @JniMethod(cast="jdouble *", accessor="add")
-    public static final native long jdouble_pointer_add(
+    public static final native long double_pointer_add(
             @JniArg(cast="jdouble *") long ptr, 
             long amount);
 

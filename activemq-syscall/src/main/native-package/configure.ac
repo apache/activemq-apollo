@@ -54,6 +54,8 @@ AC_CHECK_HEADER([aio.h],[
 
 AC_CHECK_LIB([c], [fcntl],[AC_DEFINE([HAVE_FCNTL_FUNCTION], [1], [Define to 1 if you have the fcntl function.])])
 AC_CHECK_LIB([c], [posix_memalign],[AC_DEFINE([HAVE_POSIX_MEMALIGN_FUNCTION], [1], [Define to 1 if you have the posix_memalign function.])])
+AC_CHECK_LIB([c], [pread],[AC_DEFINE([HAVE_PREAD_FUNCTION], [1], [Define to 1 if you have the pread function.])])
+AC_CHECK_LIB([c], [readv],[AC_DEFINE([HAVE_READV_FUNCTION], [1], [Define to 1 if you have the readv function.])])
               
 AC_CHECK_HEADER([sys/errno.h],[AC_DEFINE([HAVE_SYS_ERRNO_H], [1], [Define to 1 if you have the <sys/errno.h> header file.])])
 AC_CHECK_HEADER([sys/stat.h],[AC_DEFINE([HAVE_SYS_STAT_H], [1], [Define to 1 if you have the <sys/stat.h> header file.])])
