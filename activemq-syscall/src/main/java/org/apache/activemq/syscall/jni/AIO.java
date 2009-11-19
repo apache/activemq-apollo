@@ -105,9 +105,9 @@ public class AIO {
         public static int SIZEOF;
         
         @JniField(cast="time_t")
-        long tv_sec;  
+        public long tv_sec;  
         @JniField(cast="long")
-        long tv_nsec;
+        public long tv_nsec;
         
         @JniMethod(conditional="#ifdef HAVE_AIO_H")
         public static final native void memmove (

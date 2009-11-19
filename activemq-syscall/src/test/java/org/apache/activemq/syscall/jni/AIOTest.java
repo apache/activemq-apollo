@@ -13,25 +13,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */package org.apache.activemq.syscall.jni;
+ */
+package org.apache.activemq.syscall.jni;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 import org.apache.activemq.syscall.NativeAllocation;
-import org.apache.activemq.syscall.jni.AIO;
 import org.apache.activemq.syscall.jni.AIO.aiocb;
 import org.junit.Test;
 
+import static org.apache.activemq.syscall.NativeAllocation.*;
+import static org.apache.activemq.syscall.TestSupport.*;
 import static org.apache.activemq.syscall.jni.AIO.*;
 import static org.apache.activemq.syscall.jni.CLibrary.*;
 import static org.apache.activemq.syscall.jni.IO.*;
-
-import static org.apache.activemq.syscall.NativeAllocation.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
@@ -47,16 +43,9 @@ public class AIOTest {
     public void write() throws IOException, InterruptedException {
     	assumeThat(AIO.SUPPORTED, is(true));
     	 
-        File file = new File("target/test-data/test.data");
-        file.getParentFile().mkdirs();
+        File file = dataFile(AIOTest.class.getName()+".write.data");
 
-        // Setup a buffer holds the data that we will be writing..
-        StringBuffer sb = new StringBuffer();
-        for( int i=0; i < 1024*4; i++ ) {
-            sb.append((char)('a'+(i%26)));
-        }
-                
-        String expected = sb.toString();
+        String expected = generateString(1024*4);
         NativeAllocation writeBuffer = allocate(expected);
 
         long aiocbp = malloc(aiocb.SIZEOF);
@@ -64,8 +53,9 @@ public class AIOTest {
 
         try {
             // open the file...
+            int oflags = O_NONBLOCK | O_CREAT | O_TRUNC| O_RDWR;
             int mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH;
-            int fd = open(file.getCanonicalPath(), O_NONBLOCK | O_CREAT | O_TRUNC| O_RDWR, mode);
+            int fd = open(file.getCanonicalPath(), oflags, mode);
             checkrc(fd);
             
             // Create a control block..
@@ -109,35 +99,10 @@ public class AIOTest {
             }
         }
         
-        // Read the file in and verify the contents is what we expect 
-        String actual = loadContent(file);
-        assertEquals(expected, actual);
+        assertEquals(expected, readFile(file));
     }
 
-    private String loadContent(File file) throws FileNotFoundException, IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        FileInputStream is = new FileInputStream(file);
-        try {
-            int c=0;
-            while( (c=is.read())>=0 ) {
-                baos.write(c);
-            }
-        } finally {
-            is.close();
-        }
-        String actual = new String(baos.toByteArray());
-        return actual;
-    }
 
-    private void storeContent(File file, String content) throws FileNotFoundException, IOException {
-        FileOutputStream os = new FileOutputStream(file);
-        try {
-            os.write(content.getBytes());
-        } finally {
-            os.close();
-        }
-    }
-    
     private void checkrc(int rc) throws IOException {
         if( rc==-1 ) {
             throw new IOException("IO failure: "+string(strerror(errno())));

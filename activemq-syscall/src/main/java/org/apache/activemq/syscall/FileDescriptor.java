@@ -16,12 +16,13 @@
  */
 package org.apache.activemq.syscall;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
 
 import org.apache.activemq.syscall.jni.IO;
+import org.apache.activemq.syscall.jni.AIO.aiocb;
 
+import static org.apache.activemq.syscall.jni.AIO.*;
 import static org.apache.activemq.syscall.jni.CLibrary.*;
 
 /**
@@ -32,11 +33,16 @@ public class FileDescriptor {
 
     private final int fd;
     boolean opened;
+    private AioPollAgent aioPollAgent;
 
     public FileDescriptor(int fd) {
         this.fd = fd;
     }
 
+    public static FileDescriptor open(File file, int oflags, int mode) throws IOException {
+        return open(file.getPath(), oflags, mode); 
+    }
+    
     public static FileDescriptor open(String path, int oflags, int mode) throws IOException {
         int fd = IO.open(path, oflags, mode);
         if( fd== -1 ) {
@@ -72,8 +78,55 @@ public class FileDescriptor {
         return fd;
     }
 
-    public void write(NativeAllocation writeBuffer, Callable<Integer> callback) {
+    /**
+     * does an async write, the callback gets executed once the write completes.
+     * 
+     * @param buffer
+     * @param callback
+     */
+    public void write(long offset, NativeAllocation buffer, Callback<Long> callback) throws IOException {
+        
+        aiocb cb = new aiocb();
+        cb.aio_fildes = fd;
+        cb.aio_offset = offset;
+        cb.aio_buf = buffer.pointer();        
+        cb.aio_nbytes = buffer.length();
+
+        long aiocbp = malloc(aiocb.SIZEOF);
+        if( aiocbp==NULL ) {
+            throw new OutOfMemoryError();
+        }
+        aiocb.memmove(aiocbp, cb, aiocb.SIZEOF);
+        aio_write(aiocbp);
+
+        AioPollAgent agent = getAioPollAgent();
+        agent.watch(aiocbp, callback);
         return;
     }
+    
+    private AioPollAgent getAioPollAgent() {
+        if( aioPollAgent==null ) {
+            aioPollAgent = AioPollAgent.getMainPollAgent();
+        }
+        return aioPollAgent;
+    }
+
+    public void setAioPollAgent(AioPollAgent aioPollAgent) {
+        this.aioPollAgent = aioPollAgent;
+    }
+
+    /**
+     * does an async read, the callback gets executed once the read completes.
+     * 
+     * @param buffer
+     * @param callback
+     */
+    public void read(long offset, NativeAllocation buffer, Callback<Long> callback) throws IOException {
+        
+
+        return;
+    }
+    
+    
     
 }
