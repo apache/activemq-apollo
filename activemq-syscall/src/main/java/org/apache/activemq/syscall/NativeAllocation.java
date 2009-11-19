@@ -17,6 +17,8 @@
 
 package org.apache.activemq.syscall;
 
+import java.io.UnsupportedEncodingException;
+
 import org.apache.activemq.syscall.jni.CLibrary;
 
 import static org.apache.activemq.syscall.jni.CLibrary.*;
@@ -32,7 +34,7 @@ public final class NativeAllocation {
 
     final private long pointer;
     final private long length;
-    boolean allocated;
+    volatile byte allocated;
 
     public NativeAllocation(long pointer, long length) {
         if( pointer==NULL ) {
@@ -42,10 +44,6 @@ public final class NativeAllocation {
         this.length = length;
     }
     
-    static public NativeAllocation allocate(String value) {
-        return allocate(value.getBytes());
-    }
-
     private static NativeAllocation allocate(byte[] value) {
         int size = value.length;
         NativeAllocation rc = allocate(size);
@@ -55,24 +53,47 @@ public final class NativeAllocation {
     
     static public NativeAllocation allocate(long size) {
         NativeAllocation rc = new NativeAllocation(calloc(size,1), size);
-        rc.allocated = true;
+        rc.allocated = 1;
         return rc;
     }        
     
     public void free() {
-        if( freeCheck() ) {
+        // This should be thread safe as long as the JVM continues
+        // to do the unary decrement on a byte is atomic operation
+        if( allocated==1 && (--allocated)==0 ) {
+            CLibrary.free(pointer);
+        }
+    }
+
+    /**
+     * This finalize is here as a fail safe to fee up memory that was not freed
+     * manually. 
+     * 
+     * @see java.lang.Object#finalize()
+     */
+    protected void finalize() throws Throwable {
+        if( allocated==1 && (--allocated)==0 ) {
+            assert warnAboutALeak();
             CLibrary.free(pointer);
         }
     }
     
-    private boolean freeCheck() {
-        if( allocated ) {
-            allocated=false;
-            return true;
-        }
-        return false;
+    private boolean warnAboutALeak() {
+        System.err.println(String.format("Warnning: memory leak avoided, a NativeAllocation was not freed: %d", pointer));
+        return true;
     }
-    
+
+    public NativeAllocation view(long off, long len) {
+        assert len >=0;
+        assert off >=0;
+        assert off+len <= length;
+        long ptr = pointer;
+        if( off > 0 ) {
+            ptr = void_pointer_add(ptr, off);
+        }
+        return new NativeAllocation(ptr, len);
+    }    
+
     public long pointer() {
         return pointer;
     }
@@ -83,6 +104,31 @@ public final class NativeAllocation {
 
     public long length() {
         return length;
+    }
+
+    public byte[] bytes() {
+        if( length > Integer.MAX_VALUE ) {
+            throw new IndexOutOfBoundsException("The native allocation is to large to convert to a java byte array");
+        }
+        byte rc[] = new byte[(int) length];
+        memmove(rc, pointer, length);
+        return rc;
+    }
+    
+    static public NativeAllocation allocate(String value) {
+        return allocate(value.getBytes());
+    }
+
+    static public NativeAllocation allocate(String value, String encoding) throws UnsupportedEncodingException {
+        return allocate(value.getBytes(encoding));
+    }
+
+    public String string() {
+        return new String(bytes());
+    }
+    
+    public String string(String encoding) throws UnsupportedEncodingException {
+        return new String(bytes(), encoding);
     }
 
 }

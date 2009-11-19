@@ -24,7 +24,6 @@ import org.fusesource.hawtjni.runtime.JniField;
 import org.fusesource.hawtjni.runtime.JniMethod;
 
 import static org.fusesource.hawtjni.runtime.ArgFlag.*;
-
 import static org.fusesource.hawtjni.runtime.MethodFlag.*;
 
 /**

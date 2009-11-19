@@ -47,7 +47,7 @@ public class FileDescriptorTest {
 
         File file = dataFile(FileDescriptorTest.class.getName()+".writeWithACallback.data");
         
-        int oflags = O_NONBLOCK | O_CREAT | O_TRUNC | O_RDWR;
+        int oflags = O_NONBLOCK | O_CREAT | O_TRUNC | O_WRONLY;
         int mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH;
         FileDescriptor fd = FileDescriptor.open(file, oflags, mode);
         
@@ -60,8 +60,37 @@ public class FileDescriptorTest {
         } finally {
             fd.dispose();
         }
-
+        
         assertEquals(expected, readFile(file));
+        buffer.free();
     }
     
+    
+    
+    @Test
+    public void readWithACallback() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+        assumeThat(AIO.SUPPORTED, is(true));
+        
+        String expected = generateString(1024*4);
+        
+        File file = dataFile(FileDescriptorTest.class.getName()+".writeWithACallback.data");
+        writeFile(file, expected);
+
+        NativeAllocation buffer = allocate(expected.length());
+
+        int oflags = O_NONBLOCK | O_RDONLY;
+        FileDescriptor fd = FileDescriptor.open(file, oflags);
+        
+        try {
+            FutureCallback<Long> future = new FutureCallback<Long>();
+            fd.read(0, buffer, future);
+            long count = future.get(1, TimeUnit.SECONDS);
+            assertEquals(count, buffer.length());
+        } finally {
+            fd.dispose();
+        }
+
+        assertEquals(expected, buffer.string() );
+        buffer.free();
+    }    
 }

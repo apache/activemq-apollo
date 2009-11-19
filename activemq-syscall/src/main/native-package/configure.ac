@@ -57,6 +57,8 @@ AC_CHECK_LIB([c], [posix_memalign],[AC_DEFINE([HAVE_POSIX_MEMALIGN_FUNCTION], [1
               
 AC_CHECK_HEADER([sys/errno.h],[AC_DEFINE([HAVE_SYS_ERRNO_H], [1], [Define to 1 if you have the <sys/errno.h> header file.])])
 AC_CHECK_HEADER([sys/stat.h],[AC_DEFINE([HAVE_SYS_STAT_H], [1], [Define to 1 if you have the <sys/stat.h> header file.])])
+AC_CHECK_HEADER([sys/types.h],[AC_DEFINE([HAVE_SYS_TYPES_H], [1], [Define to 1 if you have the <sys/types.h> header file.])])
+AC_CHECK_HEADER([sys/uio.h],[AC_DEFINE([HAVE_SYS_UIO_H], [1], [Define to 1 if you have the <sys/uio.h> header file.])])
 
 CFLAGS="$CFLAGS $JNI_EXTRA_CFLAGS"
 LDFLAGS="$LDFLAGS $JNI_EXTRA_LDFLAGS -release $PACKAGE_VERSION"

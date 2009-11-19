@@ -38,7 +38,7 @@ public class CLibrary {
     
     final public static long NULL = 0;
     
-    @JniMethod(flags={MethodFlag.CONSTANT})
+    @JniMethod(flags={MethodFlag.CONSTANT_GETTER})
     public static final native int errno();
 
     @JniMethod(cast="char *")

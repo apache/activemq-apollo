@@ -46,7 +46,7 @@ public class AIOTest {
         File file = dataFile(AIOTest.class.getName()+".write.data");
 
         String expected = generateString(1024*4);
-        NativeAllocation writeBuffer = allocate(expected);
+        NativeAllocation buffer = allocate(expected);
 
         long aiocbp = malloc(aiocb.SIZEOF);
         System.out.println("Allocated cb of size: "+aiocb.SIZEOF);
@@ -64,8 +64,8 @@ public class AIOTest {
             cb.aio_fildes = fd;
             cb.aio_offset = 0;
             // The what:
-            cb.aio_buf = writeBuffer.pointer();        
-            cb.aio_nbytes = writeBuffer.length();
+            cb.aio_buf = buffer.pointer();        
+            cb.aio_nbytes = buffer.length();
             
             // Move the struct into the c heap.
             aiocb.memmove(aiocbp, cb, aiocb.SIZEOF);
@@ -87,13 +87,13 @@ public class AIOTest {
 
             // The full buffer should have been written.
             long count = aio_return(aiocbp);
-            assertEquals(count, writeBuffer.length());
+            assertEquals(count, buffer.length());
             
             checkrc(close(fd));
             
         } finally {
             // Lets free up allocated memory..
-            writeBuffer.free();
+            buffer.free();
             if( aiocbp!=NULL ) {
                 free(aiocbp);
             }
@@ -103,9 +103,9 @@ public class AIOTest {
     }
 
 
-    private void checkrc(int rc) throws IOException {
+    private void checkrc(int rc) {
         if( rc==-1 ) {
-            throw new IOException("IO failure: "+string(strerror(errno())));
+            fail("IO failure: "+string(strerror(errno())));
         }
     }
 

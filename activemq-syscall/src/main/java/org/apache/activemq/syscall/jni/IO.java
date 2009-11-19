@@ -16,13 +16,16 @@
  */
 package org.apache.activemq.syscall.jni;
 
+import org.fusesource.hawtjni.runtime.ClassFlag;
+import org.fusesource.hawtjni.runtime.FieldFlag;
+import org.fusesource.hawtjni.runtime.JniArg;
 import org.fusesource.hawtjni.runtime.JniClass;
 import org.fusesource.hawtjni.runtime.JniField;
 import org.fusesource.hawtjni.runtime.JniMethod;
 
+import static org.fusesource.hawtjni.runtime.ArgFlag.*;
+import static org.fusesource.hawtjni.runtime.FieldFlag.*;
 import static org.fusesource.hawtjni.runtime.MethodFlag.*;
-
-import static org.fusesource.hawtjni.runtime.FieldFlag.CONSTANT;
 
 /**
  * 
@@ -38,6 +41,11 @@ public class IO {
         init();
     }
 
+    //////////////////////////////////////////////////////////////////
+    //
+    // Open mode constants.
+    //
+    //////////////////////////////////////////////////////////////////
     @JniField(flags={CONSTANT})
     public static int O_RDONLY;
     @JniField(flags={CONSTANT})
@@ -67,6 +75,21 @@ public class IO {
     public static int O_SYMLINK;
     @JniField(flags={CONSTANT}, conditional="#ifdef O_EVTONLY")
     public static int O_EVTONLY;
+    
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_DIRECT")
+    public static int O_DIRECT;
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_CLOEXEC")
+    public static int O_CLOEXEC;
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_DIRECTORY")
+    public static int O_DIRECTORY;
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_LARGEFILE")
+    public static int O_LARGEFILE;
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_NOATIME")
+    public static int O_NOATIME;
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_NOCTTY")
+    public static int O_NOCTTY;
+    @JniField(flags={CONSTANT}, conditional="#ifdef O_SYNC")
+    public static int O_SYNC;
     
     // Mode Constants
     @JniField(flags={CONSTANT}, conditional="#ifdef S_IRWXU")
@@ -167,7 +190,10 @@ public class IO {
      * </pre></code>
      */
     public static final native int close(int fd);
-
+    
+    @JniField(flags={FieldFlag.CONSTANT}, conditional="#ifdef HAVE_FCNTL_FUNCTION", accessor="1")
+    public static boolean HAVE_FCNTL_FUNCTION;
+    
     /**
      * <code><pre>
      * int fcntl(int fd, int cmd, ...);
@@ -175,7 +201,89 @@ public class IO {
      */
     @JniMethod(conditional="#ifdef HAVE_FCNTL_FUNCTION")
     public static final native int fcntl(int fd, int cmd);
-        
-    
 
+    /**
+     * <code><pre>
+     * int fcntl(int fd, int cmd, ...);
+     * </pre></code>
+     */
+    @JniMethod(conditional="#ifdef HAVE_FCNTL_FUNCTION")
+    public static final native int fcntl(int fd, int cmd, long arg);
+
+    
+    @JniMethod(cast="size_t")
+    public static final native long write(
+            int fd, 
+            @JniArg(cast="const void *") long buffer, 
+            @JniArg(cast="size_t") long length);
+    
+    
+    @JniMethod(cast="size_t")
+    public static final native long pwrite(
+            int fd, 
+            @JniArg(cast="const void *") long buffer, 
+            @JniArg(cast="size_t") long length,
+            @JniArg(cast="size_t") long offset);
+
+    @JniMethod(cast="size_t")
+    public static final native long writev(
+            int fd, 
+            @JniArg(cast="const struct iovec *") long iov, 
+            int count);
+
+    @JniMethod(cast="size_t")
+    public static final native long read(
+            int fd, 
+            @JniArg(cast="void *") long buffer, 
+            @JniArg(cast="size_t") long length);
+
+    @JniMethod(cast="size_t")
+    public static final native long pread(
+            int fd, 
+            @JniArg(cast="void *") long buffer, 
+            @JniArg(cast="size_t") long length,
+            @JniArg(cast="size_t") long offset);
+
+    @JniMethod(cast="size_t")
+    public static final native long readv(
+            int fd, 
+            @JniArg(cast="const struct iovec *") long iov, 
+            int count);
+
+
+    @JniClass(flags={ClassFlag.STRUCT})
+    static public class iovec {
+
+        static {
+            CLibrary.LIBRARY.load();
+            init();
+        }
+
+        @JniMethod(flags={CONSTANT_INITIALIZER})
+        private static final native void init();
+
+        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct iovec)")
+        public static int SIZEOF;
+        
+        @JniField(cast="char *")
+        public long iov_base;  
+        @JniField(cast="size_t")
+        public long iov_len;
+        
+        public static final native void memmove (
+                @JniArg(cast="void *", flags={NO_IN, CRITICAL}) iovec dest, 
+                @JniArg(cast="const void *") long src, 
+                @JniArg(cast="size_t") long size);
+        
+        public static final native void memmove (
+                @JniArg(cast="void *") long dest, 
+                @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) iovec src, 
+                @JniArg(cast="size_t") long size);
+        
+        @JniMethod(cast="struct iovec *", accessor="add")
+        public static final native long iovec_add(
+                @JniArg(cast="struct iovec *") long ptr, 
+                long amount);        
+    }      
+    
 }
