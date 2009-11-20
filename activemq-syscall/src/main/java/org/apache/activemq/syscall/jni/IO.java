@@ -60,109 +60,109 @@ public class IO {
     public static int O_TRUNC;
     @JniField(flags={CONSTANT})
     public static int O_EXCL;
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_NONBLOCK")
+    @JniField(flags={CONSTANT}, conditional="defined(O_NONBLOCK)")
     public static int O_NONBLOCK;
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_ASYNC")
+    @JniField(flags={CONSTANT}, conditional="defined(O_ASYNC)")
     public static int O_ASYNC;
     
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_SHLOCK")
+    @JniField(flags={CONSTANT}, conditional="defined(O_SHLOCK)")
     public static int O_SHLOCK;
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_EXLOCK")
+    @JniField(flags={CONSTANT}, conditional="defined(O_EXLOCK)")
     public static int O_EXLOCK;
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_NOFOLLOW")
+    @JniField(flags={CONSTANT}, conditional="defined(O_NOFOLLOW)")
     public static int O_NOFOLLOW;
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_SYMLINK")
+    @JniField(flags={CONSTANT}, conditional="defined(O_SYMLINK)")
     public static int O_SYMLINK;
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_EVTONLY")
+    @JniField(flags={CONSTANT}, conditional="defined(O_EVTONLY)")
     public static int O_EVTONLY;
     
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_DIRECT")
+    @JniField(flags={CONSTANT}, conditional="defined(O_DIRECT)")
     public static int O_DIRECT;
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_CLOEXEC")
+    @JniField(flags={CONSTANT}, conditional="defined(O_CLOEXEC)")
     public static int O_CLOEXEC;
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_DIRECTORY")
+    @JniField(flags={CONSTANT}, conditional="defined(O_DIRECTORY)")
     public static int O_DIRECTORY;
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_LARGEFILE")
+    @JniField(flags={CONSTANT}, conditional="defined(O_LARGEFILE)")
     public static int O_LARGEFILE;
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_NOATIME")
+    @JniField(flags={CONSTANT}, conditional="defined(O_NOATIME)")
     public static int O_NOATIME;
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_NOCTTY")
+    @JniField(flags={CONSTANT}, conditional="defined(O_NOCTTY)")
     public static int O_NOCTTY;
-    @JniField(flags={CONSTANT}, conditional="#ifdef O_SYNC")
+    @JniField(flags={CONSTANT}, conditional="defined(O_SYNC)")
     public static int O_SYNC;
     
     // Mode Constants
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_IRWXU")
+    @JniField(flags={CONSTANT}, conditional="defined(S_IRWXU)")
     public static int S_IRWXU;
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_IRUSR")
+    @JniField(flags={CONSTANT}, conditional="defined(S_IRUSR)")
     public static int S_IRUSR;
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_IWUSR")
+    @JniField(flags={CONSTANT}, conditional="defined(S_IWUSR)")
     public static int S_IWUSR;
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_IXUSR")
+    @JniField(flags={CONSTANT}, conditional="defined(S_IXUSR)")
     public static int S_IXUSR;            
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_IRWXG")
+    @JniField(flags={CONSTANT}, conditional="defined(S_IRWXG)")
     public static int S_IRWXG;
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_IRGRP")
+    @JniField(flags={CONSTANT}, conditional="defined(S_IRGRP)")
     public static int S_IRGRP;
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_IWGRP")
+    @JniField(flags={CONSTANT}, conditional="defined(S_IWGRP)")
     public static int S_IWGRP;
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_IXGRP")
+    @JniField(flags={CONSTANT}, conditional="defined(S_IXGRP)")
     public static int S_IXGRP;            
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_IRWXO")
+    @JniField(flags={CONSTANT}, conditional="defined(S_IRWXO)")
     public static int S_IRWXO;
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_IROTH")
+    @JniField(flags={CONSTANT}, conditional="defined(S_IROTH)")
     public static int S_IROTH;
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_IWOTH")
+    @JniField(flags={CONSTANT}, conditional="defined(S_IWOTH)")
     public static int S_IWOTH;
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_IXOTH")
+    @JniField(flags={CONSTANT}, conditional="defined(S_IXOTH)")
     public static int S_IXOTH;            
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_ISUID")
+    @JniField(flags={CONSTANT}, conditional="defined(S_ISUID)")
     public static int S_ISUID;
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_ISGID")
+    @JniField(flags={CONSTANT}, conditional="defined(S_ISGID)")
     public static int S_ISGID;
-    @JniField(flags={CONSTANT}, conditional="#ifdef S_ISVTX")
+    @JniField(flags={CONSTANT}, conditional="defined(S_ISVTX)")
     public static int S_ISVTX;
     
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_DUPFD")
+    @JniField(flags={CONSTANT}, conditional="defined(F_DUPFD)")
     public static int F_DUPFD;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_GETFD")
+    @JniField(flags={CONSTANT}, conditional="defined(F_GETFD)")
     public static int F_GETFD;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_SETFD")
+    @JniField(flags={CONSTANT}, conditional="defined(F_SETFD)")
     public static int F_SETFD;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_GETFL")
+    @JniField(flags={CONSTANT}, conditional="defined(F_GETFL)")
     public static int F_GETFL;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_SETFL")
+    @JniField(flags={CONSTANT}, conditional="defined(F_SETFL)")
     public static int F_SETFL;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_GETOWN")
+    @JniField(flags={CONSTANT}, conditional="defined(F_GETOWN)")
     public static int F_GETOWN;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_SETOWN")
+    @JniField(flags={CONSTANT}, conditional="defined(F_SETOWN)")
     public static int F_SETOWN;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_GETLK")
+    @JniField(flags={CONSTANT}, conditional="defined(F_GETLK)")
     public static int F_GETLK;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_SETLK")
+    @JniField(flags={CONSTANT}, conditional="defined(F_SETLK)")
     public static int F_SETLK;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_SETLKW")
+    @JniField(flags={CONSTANT}, conditional="defined(F_SETLKW)")
     public static int F_SETLKW;
 
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_GETPATH")
+    @JniField(flags={CONSTANT}, conditional="defined(F_GETPATH)")
     public static int F_GETPATH;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_PREALLOCATE")
+    @JniField(flags={CONSTANT}, conditional="defined(F_PREALLOCATE)")
     public static int F_PREALLOCATE;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_SETSIZE")
+    @JniField(flags={CONSTANT}, conditional="defined(F_SETSIZE)")
     public static int F_SETSIZE;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_RDADVISE")
+    @JniField(flags={CONSTANT}, conditional="defined(F_RDADVISE)")
     public static int F_RDADVISE;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_RDAHEAD")
+    @JniField(flags={CONSTANT}, conditional="defined(F_RDAHEAD)")
     public static int F_RDAHEAD;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_READBOOTSTRAP")
+    @JniField(flags={CONSTANT}, conditional="defined(F_READBOOTSTRAP)")
     public static int F_READBOOTSTRAP;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_WRITEBOOTSTRAP")
+    @JniField(flags={CONSTANT}, conditional="defined(F_WRITEBOOTSTRAP)")
     public static int F_WRITEBOOTSTRAP;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_NOCACHE")
+    @JniField(flags={CONSTANT}, conditional="defined(F_NOCACHE)")
     public static int F_NOCACHE;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_LOG2PHYS")
+    @JniField(flags={CONSTANT}, conditional="defined(F_LOG2PHYS)")
     public static int F_LOG2PHYS;
-    @JniField(flags={CONSTANT}, conditional="#ifdef F_FULLFSYNC")
+    @JniField(flags={CONSTANT}, conditional="defined(F_FULLFSYNC)")
     public static int F_FULLFSYNC;
     
     ///////////////////////////////////////////////////////////////////
@@ -191,7 +191,7 @@ public class IO {
      */
     public static final native int close(int fd);
     
-    @JniField(flags={FieldFlag.CONSTANT}, conditional="#ifdef HAVE_FCNTL_FUNCTION", accessor="1")
+    @JniField(flags={FieldFlag.CONSTANT}, conditional="defined(HAVE_FCNTL_FUNCTION)", accessor="1")
     public static boolean HAVE_FCNTL_FUNCTION;
     
     /**
@@ -199,7 +199,7 @@ public class IO {
      * int fcntl(int fd, int cmd, ...);
      * </pre></code>
      */
-    @JniMethod(conditional="#ifdef HAVE_FCNTL_FUNCTION")
+    @JniMethod(conditional="defined(HAVE_FCNTL_FUNCTION)")
     public static final native int fcntl(int fd, int cmd);
 
     /**
@@ -207,7 +207,7 @@ public class IO {
      * int fcntl(int fd, int cmd, ...);
      * </pre></code>
      */
-    @JniMethod(conditional="#ifdef HAVE_FCNTL_FUNCTION")
+    @JniMethod(conditional="defined(HAVE_FCNTL_FUNCTION)")
     public static final native int fcntl(int fd, int cmd, long arg);
 
     @JniMethod(cast="size_t")
@@ -222,34 +222,34 @@ public class IO {
             @JniArg(cast="const void *") long buffer, 
             @JniArg(cast="size_t") long length);
 
-    @JniMethod(cast="size_t", conditional="#ifdef HAVE_PREAD_FUNCTION")
+    @JniMethod(cast="size_t", conditional="defined(HAVE_PREAD_FUNCTION)")
     public static final native long pread(
             int fd, 
             @JniArg(cast="void *") long buffer, 
             @JniArg(cast="size_t") long length,
             @JniArg(cast="size_t") long offset);
 
-    @JniMethod(cast="size_t", conditional="#ifdef HAVE_PREAD_FUNCTION")
+    @JniMethod(cast="size_t", conditional="defined(HAVE_PREAD_FUNCTION)")
     public static final native long pwrite(
             int fd, 
             @JniArg(cast="const void *") long buffer, 
             @JniArg(cast="size_t") long length,
             @JniArg(cast="size_t") long offset);
 
-    @JniMethod(cast="size_t", conditional="#ifdef HAVE_READV_FUNCTION")
+    @JniMethod(cast="size_t", conditional="defined(HAVE_READV_FUNCTION)")
     public static final native long readv(
             int fd, 
             @JniArg(cast="const struct iovec *") long iov, 
             int count);
 
-    @JniMethod(cast="size_t", conditional="#ifdef HAVE_READV_FUNCTION")
+    @JniMethod(cast="size_t", conditional="defined(HAVE_READV_FUNCTION)")
     public static final native long writev(
             int fd, 
             @JniArg(cast="const struct iovec *") long iov, 
             int count);
 
 
-    @JniClass(flags={ClassFlag.STRUCT}, conditional="#ifdef HAVE_READV_FUNCTION")
+    @JniClass(flags={ClassFlag.STRUCT}, conditional="defined(HAVE_READV_FUNCTION)")
     static public class iovec {
 
         static {
@@ -260,7 +260,7 @@ public class IO {
         @JniMethod(flags={CONSTANT_INITIALIZER})
         private static final native void init();
 
-        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct iovec)", conditional="#ifdef HAVE_READV_FUNCTION")
+        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct iovec)", conditional="defined(HAVE_READV_FUNCTION)")
         public static int SIZEOF;
         
         @JniField(cast="char *")
@@ -268,19 +268,19 @@ public class IO {
         @JniField(cast="size_t")
         public long iov_len;
         
-        @JniMethod(conditional="#ifdef HAVE_READV_FUNCTION")
+        @JniMethod(conditional="defined(HAVE_READV_FUNCTION)")
         public static final native void memmove (
                 @JniArg(cast="void *", flags={NO_IN, CRITICAL}) iovec dest, 
                 @JniArg(cast="const void *") long src, 
                 @JniArg(cast="size_t") long size);
         
-        @JniMethod(conditional="#ifdef HAVE_READV_FUNCTION")
+        @JniMethod(conditional="defined(HAVE_READV_FUNCTION)")
         public static final native void memmove (
                 @JniArg(cast="void *") long dest, 
                 @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) iovec src, 
                 @JniArg(cast="size_t") long size);
         
-        @JniMethod(cast="struct iovec *", accessor="add", conditional="#ifdef HAVE_READV_FUNCTION")
+        @JniMethod(cast="struct iovec *", accessor="add", conditional="defined(HAVE_READV_FUNCTION)")
         public static final native long iovec_add(
                 @JniArg(cast="struct iovec *") long ptr, 
                 long amount);        

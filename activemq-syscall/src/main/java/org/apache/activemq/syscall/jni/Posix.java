@@ -32,7 +32,7 @@ public class Posix extends CLibrary {
      * int posix_memalign(void **ptrRef, size_t alignment, size_t len);
      * </pre></code>
      */
-    @JniMethod(conditional="#ifdef HAVE_POSIX_MEMALIGN_FUNCTION")
+    @JniMethod(conditional="defined(HAVE_POSIX_MEMALIGN_FUNCTION)")
     public static final native int posix_memalign(
             @JniArg(cast="void **") long ptrRef[], 
             @JniArg(cast="size_t")  long alignment, 

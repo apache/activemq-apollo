@@ -31,7 +31,7 @@ import static org.fusesource.hawtjni.runtime.MethodFlag.*;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@JniClass
+@JniClass(conditional="defined(HAVE_AIO_H)")
 public class AIO {
     static {
         CLibrary.LIBRARY.load();
@@ -41,16 +41,16 @@ public class AIO {
     @JniMethod(flags={CONSTANT_INITIALIZER})
     private static final native void init();
     
-    @JniField(flags={FieldFlag.CONSTANT}, conditional="#ifdef HAVE_AIO_H", accessor="1")
+    @JniField(flags={FieldFlag.CONSTANT}, accessor="1")
     public static boolean SUPPORTED;
     
-    @JniField(flags={FieldFlag.CONSTANT}, conditional="#ifdef HAVE_AIO_H")
+    @JniField(flags={FieldFlag.CONSTANT})
     public static int EINPROGRESS;
     
 //    @JniField(flags={FieldFlag.CONSTANT})
 //    public static int ECANCELLED;
 
-    @JniClass(flags={ClassFlag.STRUCT, ClassFlag.ZERO_OUT}, conditional="#ifdef HAVE_AIO_H")
+    @JniClass(flags={ClassFlag.STRUCT, ClassFlag.ZERO_OUT}, conditional="defined(HAVE_AIO_H)")
     static public class aiocb {
         static {
             CLibrary.LIBRARY.load();
@@ -60,7 +60,7 @@ public class AIO {
         @JniMethod(flags={CONSTANT_INITIALIZER})
         private static final native void init();
         
-        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct aiocb)", conditional="#ifdef HAVE_AIO_H")
+        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct aiocb)")
         public static int SIZEOF;
         
         public int aio_fildes;
@@ -76,20 +76,18 @@ public class AIO {
         // int aio_lio_opcode;
         // int aio_flags;
         
-        @JniMethod(conditional="#ifdef HAVE_AIO_H")
         public static final native void memmove (
                 @JniArg(cast="void *", flags={NO_IN, CRITICAL}) aiocb dest, 
                 @JniArg(cast="const void *") long src, 
                 @JniArg(cast="size_t") long size);
         
-        @JniMethod(conditional="#ifdef HAVE_AIO_H")
         public static final native void memmove (
                 @JniArg(cast="void *") long dest, 
                 @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) aiocb src, 
                 @JniArg(cast="size_t") long size);
     }
     
-    @JniClass(flags={ClassFlag.STRUCT}, conditional="#ifdef HAVE_AIO_H")
+    @JniClass(flags={ClassFlag.STRUCT}, conditional="defined(HAVE_AIO_H)")
     static public class timespec {
 
     	static {
@@ -100,7 +98,7 @@ public class AIO {
         @JniMethod(flags={CONSTANT_INITIALIZER})
         private static final native void init();
 
-        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct timespec)", conditional="#ifdef HAVE_AIO_H")
+        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct timespec)")
         public static int SIZEOF;
         
         @JniField(cast="time_t")
@@ -108,18 +106,15 @@ public class AIO {
         @JniField(cast="long")
         public long tv_nsec;
         
-        @JniMethod(conditional="#ifdef HAVE_AIO_H")
         public static final native void memmove (
                 @JniArg(cast="void *", flags={NO_IN, CRITICAL}) timespec dest, 
                 @JniArg(cast="const void *") long src, 
                 @JniArg(cast="size_t") long size);
         
-        @JniMethod(conditional="#ifdef HAVE_AIO_H")
         public static final native void memmove (
                 @JniArg(cast="void *") long dest, 
                 @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) timespec src, 
                 @JniArg(cast="size_t") long size);
-        
     }    
     
     /**
@@ -127,7 +122,6 @@ public class AIO {
      * int aio_read(struct aiocb *aiocbp);
      * </pre></code>
      */
-    @JniMethod(conditional="#ifdef HAVE_AIO_H")
     public static final native int aio_read(
             @JniArg(cast="struct aiocb *")long aiocbp);
 
@@ -136,7 +130,6 @@ public class AIO {
      * int aio_write(struct aiocb *aiocbp);
      * </pre></code>
      */
-    @JniMethod(conditional="#ifdef HAVE_AIO_H")
     public static final native int aio_write(
             @JniArg(cast="struct aiocb *")long aiocbp);
 
@@ -145,7 +138,6 @@ public class AIO {
      * int aio_cancel(int fd, struct aiocb *aiocbp);
      * </pre></code>
      */
-    @JniMethod(conditional="#ifdef HAVE_AIO_H")
     public static final native int aio_cancel(
             int fd, 
             @JniArg(cast="struct aiocb *")long aiocbp);
@@ -155,7 +147,6 @@ public class AIO {
      * int aio_error(const struct aiocb *aiocbp);
      * </pre></code>
      */
-    @JniMethod(conditional="#ifdef HAVE_AIO_H")
     public static final native int aio_error(
             @JniArg(cast="const struct aiocb *")long aiocbp);
     
@@ -164,7 +155,6 @@ public class AIO {
      * ssize_t aio_return(struct aiocb *aiocbp);
      * </pre></code>
      */
-    @JniMethod(conditional="#ifdef HAVE_AIO_H")
     public static final native long aio_return(
             @JniArg(cast="struct aiocb *")long aiocbp);
 
@@ -173,7 +163,6 @@ public class AIO {
      * int aio_suspend(const struct aiocb *const list[], int nent, const struct timespec *timeout);
      * </pre></code>
      */
-    @JniMethod(conditional="#ifdef HAVE_AIO_H")
     public static final native int aio_suspend(
             @JniArg(cast="const struct aiocb *const*")long[] list,
             int nent,
