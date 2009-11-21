@@ -22,6 +22,7 @@ import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -204,6 +205,11 @@ public class DiskBenchmark {
             for (String operation : this.operation) {
                 for (boolean random : this.random) {
                     for (boolean sync : this.sync) {
+                        
+                        String title = "operation: "+operation+", random: "+random+", sync: "+sync+", memcopy: "+memcopy;
+                        System.out.println(title);
+                        System.out.println(repeat('-', title.length()));
+
                         ArrayList<Benchmark> results = new ArrayList<Benchmark>(this.api.length); 
                         for (String apiName : this.api) {
                             Benchmark benchmark = createBenchmark(apiName);
@@ -225,6 +231,13 @@ public class DiskBenchmark {
         pw.close();
 
     }
+
+    private String repeat(char val, int length) {
+        char [] rc = new char[length];
+        Arrays.fill(rc, val);
+        return new String(rc);
+    }
+
 
     private void writeReportHeader(PrintWriter pw) {
         if(pw==null) 
@@ -364,9 +377,6 @@ public class DiskBenchmark {
                 }
             } catch (InterruptedException e) {
             } finally {
-                if( verbose ) {
-                    System.out.println();
-                }
                 this.samples.set(samples);
             }
         }
@@ -396,13 +406,26 @@ public class DiskBenchmark {
                 throw new RuntimeException();
             }
             
-            System.out.print("Benchmarking: api: "+apiName+", operation: "+operation+", random: "+random+", sync: "+sync+", memcopy: "+memcopy+" ");
-
+            System.out.println("  api: "+apiName);
+            
             AtomicLong ioCount=new AtomicLong();
             RateSampler sampler = new RateSampler(ioCount, sampleCount, samplePeriod);
             sampler.verbose = verbose;
             try {
                 init(true);
+                
+                // Pre-allocate the data file before we start sampling.
+                if( verbose ) {
+                    System.out.println("    pre-allocating: ... ");
+                }
+                for( long i=0; i < blocks; i++) {
+                    write();
+                }
+                sync();
+
+                if( verbose ) {
+                    System.out.print("    sampling: ");
+                }
                 sampler.start();
                 outer: while( true ) {
                     seek(0);
@@ -422,10 +445,13 @@ public class DiskBenchmark {
                     }
                 }
             } finally {
+                if( verbose ) {
+                    System.out.println(" done");
+                }
                 dispose();
             }
             samples = sampler.getSamples();
-            System.out.println("  results: "+samples);
+            System.out.println("    results: "+samples);
             System.out.println();
 
         }
