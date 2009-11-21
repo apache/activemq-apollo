@@ -210,6 +210,21 @@ public class IO {
     @JniMethod(conditional="defined(HAVE_FCNTL_FUNCTION)")
     public static final native int fcntl(int fd, int cmd, long arg);
 
+    @JniField(flags={CONSTANT})
+    public static int SEEK_SET;
+    @JniField(flags={CONSTANT})
+    public static int SEEK_CUR;
+    @JniField(flags={CONSTANT})
+    public static int SEEK_END;
+
+    public static final native int fsync(int fd);
+
+    @JniMethod(cast="off_t")
+    public static final native long lseek(
+            int fd, 
+            @JniArg(cast="off_t") long buffer, 
+            int whence);
+    
     @JniMethod(cast="size_t")
     public static final native long read(
             int fd, 

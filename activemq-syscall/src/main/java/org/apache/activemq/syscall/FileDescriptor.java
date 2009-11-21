@@ -94,6 +94,18 @@ public class FileDescriptor {
         return fd;
     }
 
+    public long seek(long offset) throws IOException {
+        return seek(offset, SEEK_SET);
+    }
+    
+    public long seek(long offset, int whence) throws IOException {
+        long rc = IO.lseek(fd, offset, whence);
+        if (rc == -1) {
+            throw error();
+        }
+        return rc;
+    }
+
     public long write(NativeAllocation buffer) throws IOException {
         long rc = IO.write(fd, buffer.pointer(), buffer.length());
         if (rc == -1) {
@@ -217,7 +229,11 @@ public class FileDescriptor {
         agent().watch(aiocbp, callback);
     }
 
-    public void sync() {
+    public void sync() throws IOException {
+        int rc = IO.fsync(fd);
+        if( rc == -1 ) {
+            throw error();
+        }
     }
 
     public boolean isfullSyncSupported() {

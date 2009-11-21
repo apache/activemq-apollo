@@ -23,6 +23,8 @@ import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import org.apache.activemq.util.cli.CommandLineSupport;
+
 
 /**
  * This class is used to get a benchmark the raw disk performance.

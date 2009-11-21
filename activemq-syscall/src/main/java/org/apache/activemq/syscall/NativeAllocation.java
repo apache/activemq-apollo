@@ -44,7 +44,7 @@ public final class NativeAllocation {
         this.length = length;
     }
     
-    private static NativeAllocation allocate(byte[] value) {
+    public static NativeAllocation allocate(byte[] value) {
         int size = value.length;
         NativeAllocation rc = allocate(size);
         memmove(rc.pointer(), value, size);

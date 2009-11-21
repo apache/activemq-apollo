@@ -15,9 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.util;
+package org.apache.activemq.util.cli;
 
 import java.util.ArrayList;
+
+import org.apache.activemq.util.IntrospectionSupport;
 
 /**
  * Support utility that can be used to set the properties on any object
@@ -46,7 +48,7 @@ public class CommandLineSupport {
 	 * @return any arguments that are not valid options for the target
 	 */
 	static public String[] setOptions(Object target, String []args) {
-		ArrayList rc = new ArrayList();
+		ArrayList<String> rc = new ArrayList<String>();
 		
 		for (int i = 0; i < args.length; i++) {
 			if( args[i] == null )
