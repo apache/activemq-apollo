@@ -199,6 +199,7 @@ public class DiskBenchmark {
         PrintWriter pw = new PrintWriter(new FileOutputStream("report.html"));
         writeReportHeader(pw);
         int chartCounter=0;
+        
         for (boolean memcopy : this.memcopy) {
             for (String operation : this.operation) {
                 for (boolean random : this.random) {
@@ -235,8 +236,10 @@ public class DiskBenchmark {
         pw.println("      google.load('visualization', '1', {'packages':['linechart']});");
         pw.println("    </script>");
         pw.println("    <style type='text/css'>");
-        pw.println("      .chart-section {width:640px; padding-left: 30px}");
-        pw.println("      .chart-props {width:140px; padding:0; padding-top:20px; float:left;}");
+        pw.println("      body {font-family:Verdana; font-size:12px; color:#666666;}");
+        pw.println("      * {margin:0; padding:0;}");
+        pw.println("      .chart-section {width:640px; padding: 10px; margin: 0px auto; clear: both;}");
+        pw.println("      .chart-props {width:140px; padding:0; padding-top:40px; float:left; text-align:right; }");
         pw.println("      .chart-graph {width: 500px; height: 200px; float:right; }");
         pw.println("    </style>");
         pw.println("  </head>");
@@ -248,13 +251,16 @@ public class DiskBenchmark {
             return;
         Benchmark d1 = data.get(0);
         
-        String titleX = String.format("Period (%.2f seconds)", samplePeriod);
-        String titleY = "IO Operations";
+        String titleX = String.format("sample period (%.2f seconds)", samplePeriod);
+        String titleY = "operations / second";
         
         pw.println("    <div class='chart-section'>");
-        pw.println("      <ul class='chart-props'>");
-        pw.println("        <li>operation: "+d1.operation+"</li><li>sync: "+d1.sync+"</li><li>memcopy: "+d1.memcopy+"</li><li>random: "+d1.random+"</li>");
-        pw.println("      </ul>");
+        pw.println("      <div class='chart-props'>");
+        pw.println("        <div>operation: "+d1.operation+"</div>" +
+                    	   "<div>sync: "+d1.sync+"</div>" +
+            			   "<div>memcopy: "+d1.memcopy+"</div>" +
+            			   "<div>random: "+d1.random+"</div>");
+        pw.println("      </div>");
         pw.println("      <div id='chart_"+id+"' class='chart-graph '></div>");
         pw.println("    </div>");
         pw.println("    <script type='text/javascript'>");
@@ -273,11 +279,11 @@ public class DiskBenchmark {
             }
             pw.print("          ['"+i+"'");
             for (Benchmark d : data) {
-                long value = 0;
+                double value = 0;
                 if( d.samples.size() >i ) {
                     value = d.samples.get(i);
                 }
-                pw.print(", "+value);
+                pw.print(String.format(", %.2f",value));
             }
             pw.print("]");
         }
@@ -289,12 +295,6 @@ public class DiskBenchmark {
         pw.println("    </script>");
         
     }
-
-    private String title(ArrayList<Benchmark> data) {
-        Benchmark d = data.get(0);
-        return "operation: "+d.operation+", sync: "+d.sync+", memcopy: "+d.memcopy+", random: "+d.random;
-    }
-
 
     private void writeReportFooter(PrintWriter pw) {
         if(pw==null) 
@@ -311,14 +311,14 @@ public class DiskBenchmark {
         throw new RuntimeException("Unsupported API: "+api);
     }
 
-    static public class Sampler extends Thread {
-        private final AtomicReference<ArrayList<Long>> samples = new AtomicReference<ArrayList<Long>>();
+    static public class RateSampler extends Thread {
+        private final AtomicReference<ArrayList<Double>> samples = new AtomicReference<ArrayList<Double>>();
         private final AtomicLong metric;
         private final int count;
         private final long period;
         public boolean verbose;
         
-        public Sampler(AtomicLong metric, int count, double periodInSecs) {
+        public RateSampler(AtomicLong metric, int count, double periodInSecs) {
             super("Sampler");
             this.metric = metric;
             this.count = count;
@@ -327,25 +327,39 @@ public class DiskBenchmark {
             setDaemon(true);
         }
         
+        static final long NANOS_PER_SECOND = NANOSECONDS.convert(1, SECONDS);
+
         static private long ns(double v) {
-            return (long)(v*NANOSECONDS.convert(1, SECONDS));
+            return (long)(v*NANOS_PER_SECOND);
         }
 
+        
         @Override
         public void run() {
-            ArrayList<Long> samples = new ArrayList<Long>(count);
+            ArrayList<Double> samples = new ArrayList<Double>(count);
             try {
                 long sleepMS = period/1000000;
                 int sleepNS = (int) (period%1000000);
-                long currentValue;
+                long currentValue, now;
                 long lastValue = metric.get();
+                long lastTime = System.nanoTime();
+                
+
                 for (int i = 0; i < count; i++) {
                     if( verbose ) {
                         System.out.print(".");
                     }
                     Thread.sleep(sleepMS,sleepNS);
+                    
+                    now = System.nanoTime();
                     currentValue = metric.get();
-                    samples.add(currentValue-lastValue);
+                    
+                    double t = (now-lastTime);
+                    t = t/NANOS_PER_SECOND;
+                    t = t*(currentValue-lastValue);
+                    samples.add(t);
+                    
+                    lastTime=now;
                     lastValue=currentValue;
                 }
             } catch (InterruptedException e) {
@@ -357,7 +371,7 @@ public class DiskBenchmark {
             }
         }
         
-        public synchronized ArrayList<Long> getSamples() {
+        public synchronized ArrayList<Double> getSamples() {
             return samples.get();
         }
     }
@@ -369,7 +383,7 @@ public class DiskBenchmark {
         public boolean random; 
         public boolean sync;
         public boolean memcopy;
-        public ArrayList<Long> samples;
+        public ArrayList<Double> samples;
         
         final public void execute() throws IOException {
             
@@ -385,7 +399,7 @@ public class DiskBenchmark {
             System.out.print("Benchmarking: api: "+apiName+", operation: "+operation+", random: "+random+", sync: "+sync+", memcopy: "+memcopy+" ");
 
             AtomicLong ioCount=new AtomicLong();
-            Sampler sampler = new Sampler(ioCount, sampleCount, samplePeriod);
+            RateSampler sampler = new RateSampler(ioCount, sampleCount, samplePeriod);
             sampler.verbose = verbose;
             try {
                 init(true);
