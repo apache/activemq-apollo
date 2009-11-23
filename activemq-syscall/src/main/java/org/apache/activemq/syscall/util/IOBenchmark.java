@@ -49,7 +49,6 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 
 import static java.lang.String.*;
-import static org.apache.activemq.syscall.jni.CLibrary.*;
 import static org.apache.activemq.syscall.jni.IO.*;
 import static org.apache.activemq.util.cli.OptionBuilder.*;
 
@@ -605,7 +604,8 @@ public class IOBenchmark {
         @Override
         protected void init(boolean write) throws IOException {
             block = block();
-            data = NativeAllocation.allocate(block);
+            data = NativeAllocation.allocate(block.length, false, 512);
+            data.set(block);
             if( write ) {
                 int oflags =  O_CREAT | O_TRUNC | O_WRONLY;
                 int mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH;
@@ -649,7 +649,7 @@ public class IOBenchmark {
                 @Override
                 public void onSuccess(Long result) {
                     if( next != null ) {
-                        memmove(block, data.pointer(), data.length());
+                        data.get(block);
                         next.onSuccess(block);
                     }
                     super.onSuccess(result);
@@ -695,7 +695,7 @@ public class IOBenchmark {
         @Override
         protected void write(long offset, byte[] block) throws IOException {
             FutureCallback<Long> callback = nextCallback(null);
-            memmove(data.pointer(), block, data.length());
+            data.set(block);
             fd.write(offset, data, callback);
         }
 
@@ -710,7 +710,8 @@ public class IOBenchmark {
         @Override
         protected void init(boolean write) throws IOException {
             block = block();
-            data = NativeAllocation.allocate(block);
+            data = NativeAllocation.allocate(block.length, false, 512);
+            data.set(block);
             if( write ) {
                 int oflags =  O_CREAT | O_TRUNC | O_WRONLY;
                 int mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH;
@@ -755,13 +756,13 @@ public class IOBenchmark {
         @Override
         protected void read(Callback<byte[]> callback) throws IOException {
             fd.read(data);
-            memmove(block, data.pointer(), data.length());
+            data.get(block);
             callback.onSuccess(block);
         }
 
         @Override
         protected void write(byte[] block) throws IOException {
-            memmove(data.pointer(), block, data.length());
+            data.set(block);
             fd.write(data);
         }
 

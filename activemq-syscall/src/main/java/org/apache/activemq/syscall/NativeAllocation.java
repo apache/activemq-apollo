@@ -22,6 +22,7 @@ import java.io.UnsupportedEncodingException;
 import org.apache.activemq.syscall.jni.CLibrary;
 
 import static org.apache.activemq.syscall.jni.CLibrary.*;
+import static org.apache.activemq.syscall.jni.Posix.*;
 
 /**
  * Wraps up a a native memory allocation in a a Java object
@@ -46,15 +47,42 @@ public final class NativeAllocation {
     
     public static NativeAllocation allocate(byte[] value) {
         int size = value.length;
-        NativeAllocation rc = allocate(size);
+        NativeAllocation rc = allocate(size, false);
         memmove(rc.pointer(), value, size);
         return rc;
     }
     
     static public NativeAllocation allocate(long size) {
-        NativeAllocation rc = new NativeAllocation(calloc(size,1), size);
+        return allocate(size, true);
+    }
+    
+    static public NativeAllocation allocate(long size, boolean zero) {
+        long ptr;
+        if( zero ) {
+            ptr = calloc(size,1);
+        } else {
+            ptr = malloc(size);
+        }
+        NativeAllocation rc = new NativeAllocation(ptr, size);
         rc.allocated = 1;
         return rc;
+    }        
+
+    static public NativeAllocation allocate(long size, boolean zero, long alignment) {
+        long ptrp[] = new long[1];
+        int rc = posix_memalign(ptrp, alignment, size);
+        if( rc != 0 ) {
+            if( rc == EINVAL ) {
+                throw new IllegalArgumentException("The alignment parameter is not a power of 2 and at least as large as sizeof(void *)");
+            }
+            throw new OutOfMemoryError();
+        }
+        if( zero ) {
+            memset(ptrp[0], 0, size);
+        }
+        NativeAllocation na = new NativeAllocation(ptrp[0], size);
+        na.allocated = 1;
+        return na;
     }        
     
     public void free() {
@@ -129,6 +157,20 @@ public final class NativeAllocation {
     
     public String string(String encoding) throws UnsupportedEncodingException {
         return new String(bytes(), encoding);
+    }
+
+    public void set(byte[] data) {
+        if( data.length > length ) {
+            throw new IllegalArgumentException("data parameter is larger than the native allocation");
+        }
+        memmove(pointer, data, data.length);
+    }
+
+    public void get(byte[] data) {
+        if( data.length < length ) {
+            throw new IllegalArgumentException("data parameter is smaller than the native allocation");
+        }
+        memmove(data, pointer, length);
     }
 
 }

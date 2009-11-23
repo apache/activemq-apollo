@@ -1,9 +1,6 @@
 #ifndef INCLUDED_ACTIVEMQ_SYSCALL_H
 #define INCLUDED_ACTIVEMQ_SYSCALL_H
 
-/* lets make sure we get the thread safe versions of the APIs */
-#define _REENTRANT 
-
 #ifdef HAVE_CONFIG_H
   /* configure based build.. we will use what it discovered about the platform */
   #include "config.h"
@@ -11,13 +8,22 @@
   /* Windows based build */
   #define HAVE_STDLIB_H 1
   #define HAVE_STRINGS_H 1
-    
-  #include <io.h>
-  
+  #define HAVE_IO_H 1
   #define bzero(ptr, len) memset(ptr, 0, len)
   #define open _open
   #define close _close 
   #define fcntl _fcntl
+#endif
+
+/* lets make sure we get the thread safe versions of the APIs */
+#ifndef _REENTRANT
+#define _REENTRANT
+#endif
+
+/* To get the linux posix extensions, consider moving
+   this into the autoconf generation */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
 #endif
 
 #ifdef HAVE_SYS_TYPES_H
@@ -52,6 +58,9 @@
   #include <sys/stat.h>
 #endif
 
+#ifdef HAVE_IO_H
+  #include <io.h>
+#endif
 
 
 #include <fcntl.h>

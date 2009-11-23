@@ -18,9 +18,14 @@ package org.apache.activemq.syscall.jni;
 
 import org.fusesource.hawtjni.runtime.JniArg;
 import org.fusesource.hawtjni.runtime.JniClass;
+import org.fusesource.hawtjni.runtime.JniField;
 import org.fusesource.hawtjni.runtime.JniMethod;
 import org.fusesource.hawtjni.runtime.Library;
 import org.fusesource.hawtjni.runtime.MethodFlag;
+
+import static org.fusesource.hawtjni.runtime.MethodFlag.*;
+
+import static org.fusesource.hawtjni.runtime.FieldFlag.*;
 
 import static org.fusesource.hawtjni.runtime.ArgFlag.*;
 import static org.fusesource.hawtjni.runtime.Pointer.*;
@@ -34,9 +39,19 @@ public class CLibrary {
     final public static Library LIBRARY = new Library("activemq-syscall", CLibrary.class);
     static {
         LIBRARY.load();
+        init();
     }
     
+    @JniMethod(flags={CONSTANT_INITIALIZER})
+    private static final native void init();
+
     final public static long NULL = 0;
+    
+    @JniField(flags={CONSTANT}, conditional="defined(ENOMEM)")
+    public static int ENOMEM;
+
+    @JniField(flags={CONSTANT}, conditional="defined(EINVAL)")
+    public static int EINVAL;
     
     @JniMethod(flags={MethodFlag.CONSTANT_GETTER})
     public static final native int errno();
