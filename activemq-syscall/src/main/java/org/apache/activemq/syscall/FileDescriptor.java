@@ -20,12 +20,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 
-import org.apache.activemq.syscall.jni.AIO;
+import org.apache.activemq.syscall.jni.PosixAIO;
 import org.apache.activemq.syscall.jni.IO;
-import org.apache.activemq.syscall.jni.AIO.aiocb;
+import org.apache.activemq.syscall.jni.PosixAIO.aiocb;
 import org.apache.activemq.syscall.jni.IO.iovec;
 
-import static org.apache.activemq.syscall.jni.AIO.*;
+import static org.apache.activemq.syscall.jni.PosixAIO.*;
 import static org.apache.activemq.syscall.jni.CLibrary.*;
 import static org.apache.activemq.syscall.jni.IO.*;
 import static org.apache.activemq.syscall.jni.IO.iovec.*;
@@ -187,7 +187,7 @@ public class FileDescriptor {
     }
 
     public boolean isAsyncIOSupported() {
-        return AIO.SUPPORTED;
+        return PosixAIO.SUPPORTED;
     }
 
     /**

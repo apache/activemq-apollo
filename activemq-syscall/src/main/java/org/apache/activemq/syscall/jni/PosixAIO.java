@@ -27,12 +27,12 @@ import static org.fusesource.hawtjni.runtime.ArgFlag.*;
 import static org.fusesource.hawtjni.runtime.MethodFlag.*;
 
 /**
- * The aio facility provides system calls for asynchronous I/O
+ * Java binding to the Posix aio system calls.
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @JniClass(conditional="defined(HAVE_AIO_H)")
-public class AIO {
+public class PosixAIO {
     static {
         CLibrary.LIBRARY.load();
         init();
@@ -86,36 +86,6 @@ public class AIO {
                 @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) aiocb src, 
                 @JniArg(cast="size_t") long size);
     }
-    
-    @JniClass(flags={ClassFlag.STRUCT}, conditional="defined(HAVE_AIO_H)")
-    static public class timespec {
-
-    	static {
-            CLibrary.LIBRARY.load();
-            init();
-        }
-
-        @JniMethod(flags={CONSTANT_INITIALIZER})
-        private static final native void init();
-
-        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct timespec)")
-        public static int SIZEOF;
-        
-        @JniField(cast="time_t")
-        public long tv_sec;  
-        @JniField(cast="long")
-        public long tv_nsec;
-        
-        public static final native void memmove (
-                @JniArg(cast="void *", flags={NO_IN, CRITICAL}) timespec dest, 
-                @JniArg(cast="const void *") long src, 
-                @JniArg(cast="size_t") long size);
-        
-        public static final native void memmove (
-                @JniArg(cast="void *") long dest, 
-                @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) timespec src, 
-                @JniArg(cast="size_t") long size);
-    }    
     
     /**
      * <code><pre>

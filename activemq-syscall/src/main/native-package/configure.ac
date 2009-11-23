@@ -41,7 +41,7 @@ AC_PROG_LIBTOOL([disable-static])
 WITH_OSX_UNIVERSAL
 WITH_JNI_JDK
 
-# Look for the AIO api..
+# Look for the Posix AIO api..
 AC_CHECK_HEADER([aio.h],[
   for lib in [aio c rt] ; do
     AC_CHECK_LIB([$lib], [aio_read],[
@@ -50,6 +50,15 @@ AC_CHECK_HEADER([aio.h],[
       break
     ])  
   done
+])
+
+# Look for the libaio api..
+AC_CHECK_HEADER([libaio.h],[
+  AC_CHECK_LIB([libaio], [io_queue_run],[
+    LDFLAGS="$LDFLAGS -llibaio"
+    AC_DEFINE([HAVE_LIBAIO_H], [1], [Define to 1 if you have the <libaio.h> header file.])
+    break
+  ])  
 ])
 
 AC_CHECK_LIB([c], [fcntl],[AC_DEFINE([HAVE_FCNTL_FUNCTION], [1], [Define to 1 if you have the fcntl function.])])

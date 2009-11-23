@@ -5,13 +5,12 @@ import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.activemq.syscall.jni.AIO;
+import org.apache.activemq.syscall.jni.Time.timespec;
 
 import static java.util.concurrent.TimeUnit.*;
-
-import static org.apache.activemq.syscall.jni.AIO.*;
 import static org.apache.activemq.syscall.jni.CLibrary.*;
-import static org.apache.activemq.syscall.jni.AIO.timespec.*;
+import static org.apache.activemq.syscall.jni.PosixAIO.*;
+import static org.apache.activemq.syscall.jni.Time.timespec.*;
 
 public class AioPollAgent {
     
@@ -28,12 +27,12 @@ public class AioPollAgent {
     public void setTimeOut(long value, TimeUnit unit) {
         synchronized (this) {
             if( timeoutp == NULL ) {
-                timeoutp = malloc(AIO.timespec.SIZEOF);
+                timeoutp = malloc(timespec.SIZEOF);
                 if( timeoutp == NULL ) {
                     throw new OutOfMemoryError();
                 }
             }
-            memmove(timeoutp, timespec(value, unit), AIO.timespec.SIZEOF);
+            memmove(timeoutp, timespec(value, unit), timespec.SIZEOF);
         }
     }
     

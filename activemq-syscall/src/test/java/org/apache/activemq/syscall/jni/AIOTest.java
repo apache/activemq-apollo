@@ -20,12 +20,12 @@ import java.io.File;
 import java.io.IOException;
 
 import org.apache.activemq.syscall.NativeAllocation;
-import org.apache.activemq.syscall.jni.AIO.aiocb;
+import org.apache.activemq.syscall.jni.PosixAIO.aiocb;
 import org.junit.Test;
 
 import static org.apache.activemq.syscall.NativeAllocation.*;
 import static org.apache.activemq.syscall.TestSupport.*;
-import static org.apache.activemq.syscall.jni.AIO.*;
+import static org.apache.activemq.syscall.jni.PosixAIO.*;
 import static org.apache.activemq.syscall.jni.CLibrary.*;
 import static org.apache.activemq.syscall.jni.IO.*;
 import static org.hamcrest.CoreMatchers.*;
@@ -41,7 +41,7 @@ public class AIOTest {
     
     @Test
     public void write() throws IOException, InterruptedException {
-    	assumeThat(AIO.SUPPORTED, is(true));
+    	assumeThat(PosixAIO.SUPPORTED, is(true));
     	 
         File file = dataFile(AIOTest.class.getName()+".write.data");
 

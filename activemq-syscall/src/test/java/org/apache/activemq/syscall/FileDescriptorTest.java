@@ -22,11 +22,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.activemq.syscall.jni.AIO;
+import org.apache.activemq.syscall.jni.PosixAIO;
 import org.junit.Test;
 
 import static org.apache.activemq.syscall.NativeAllocation.*;
-import static org.apache.activemq.syscall.TestSupport.*;
+import static org.apache.activemq.syscall.TestSupport.*;    
 import static org.apache.activemq.syscall.jni.IO.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
@@ -40,7 +40,7 @@ public class FileDescriptorTest {
     
     @Test
     public void writeWithACallback() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-        assumeThat(AIO.SUPPORTED, is(true));
+        assumeThat(PosixAIO.SUPPORTED, is(true));
         
         String expected = generateString(1024*4);
         NativeAllocation buffer = allocate(expected);
@@ -69,7 +69,7 @@ public class FileDescriptorTest {
     
     @Test
     public void readWithACallback() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-        assumeThat(AIO.SUPPORTED, is(true));
+        assumeThat(PosixAIO.SUPPORTED, is(true));
         
         String expected = generateString(1024*4);
         
@@ -96,7 +96,7 @@ public class FileDescriptorTest {
     
     @Test
     public void read() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-        assumeThat(AIO.SUPPORTED, is(true));
+        assumeThat(PosixAIO.SUPPORTED, is(true));
         
         String expected = "Hello World";
         
