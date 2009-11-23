@@ -171,6 +171,15 @@ public final class IntrospectionSupport {
         return rc;
     }
 
+    public static Class<?> getPropertyType(Object target, String name) {
+        Class<?> clazz = target.getClass();
+        Method setter = findSetterMethod(clazz, name);
+        if (setter == null) {
+            return null;
+        }
+        return setter.getParameterTypes()[0];
+    }
+    
     public static boolean setProperty(Object target, String name, Object value) {
         try {
             Class<?> clazz = target.getClass();

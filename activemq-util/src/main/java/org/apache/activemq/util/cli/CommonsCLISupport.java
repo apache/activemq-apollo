@@ -1,5 +1,8 @@
 package org.apache.activemq.util.cli;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -20,11 +23,16 @@ public class CommonsCLISupport {
             
             String value = option.getValue();
             if( value!=null ) {
-                if( !IntrospectionSupport.setProperty(target, propName, option.getValues()) ) {
-                    if( !IntrospectionSupport.setProperty(target, propName, option.getValuesList())) {
-                        IntrospectionSupport.setProperty(target, propName, value);
-                    }
-                }                
+                Class<?> type = IntrospectionSupport.getPropertyType(target, propName);
+                if( type.isArray() ) {
+                    IntrospectionSupport.setProperty(target, propName, option.getValues());
+                } else if( type.isAssignableFrom(ArrayList.class) ) {
+                    IntrospectionSupport.setProperty(target, propName, new ArrayList(option.getValuesList()) );
+                } else if( type.isAssignableFrom(HashSet.class) ) {
+                    IntrospectionSupport.setProperty(target, propName, new HashSet(option.getValuesList()) );
+                } else {
+                    IntrospectionSupport.setProperty(target, propName, value);
+                }
             } else {
                 IntrospectionSupport.setProperty(target, propName, true);                  
             }
