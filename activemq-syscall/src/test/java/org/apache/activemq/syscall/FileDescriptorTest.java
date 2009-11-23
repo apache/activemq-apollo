@@ -78,7 +78,7 @@ public class FileDescriptorTest {
 
         NativeAllocation buffer = allocate(expected.length());
 
-        int oflags = O_NONBLOCK | O_RDONLY;
+        int oflags = O_RDONLY;
         FileDescriptor fd = FileDescriptor.open(file, oflags);
         
         try {
@@ -92,5 +92,35 @@ public class FileDescriptorTest {
 
         assertEquals(expected, buffer.string() );
         buffer.free();
+    }
+    
+    @Test
+    public void read() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+        assumeThat(AIO.SUPPORTED, is(true));
+        
+        String expected = "Hello World";
+        
+        File file = dataFile(FileDescriptorTest.class.getName()+".writeWithACallback.data");
+        writeFile(file, expected);
+
+        NativeAllocation buffer = allocate(6);
+
+        int oflags = O_RDONLY;
+        FileDescriptor fd = FileDescriptor.open(file, oflags);
+        try {
+        
+            long size = fd.read(buffer);
+            assertEquals(6, size);
+            assertEquals(expected.substring(0, 6), buffer.string());
+            
+            size = fd.read(buffer);
+            assertEquals(expected.length()-6, size);
+            assertEquals(expected.substring(6), buffer.view(0, size).string());
+        
+        } finally {
+            fd.dispose();
+        }
+        buffer.free();
     }    
+
 }

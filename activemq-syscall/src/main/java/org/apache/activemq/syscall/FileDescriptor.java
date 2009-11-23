@@ -115,7 +115,7 @@ public class FileDescriptor {
     }
 
     public long read(NativeAllocation buffer) throws IOException {
-        long rc = IO.write(fd, buffer.pointer(), buffer.length());
+        long rc = IO.read(fd, buffer.pointer(), buffer.length());
         if (rc == -1) {
             throw error();
         }
@@ -131,7 +131,7 @@ public class FileDescriptor {
     }
 
     public long read(long offset, NativeAllocation buffer) throws IOException {
-        long rc = IO.pwrite(fd, buffer.pointer(), buffer.length(), offset);
+        long rc = IO.pread(fd, buffer.pointer(), buffer.length(), offset);
         if (rc == -1) {
             throw error();
         }
