@@ -18,6 +18,8 @@ package org.apache.activemq.flow;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.activemq.util.IntrospectionSupport;
+
 /**
  */
 final public class Flow {
@@ -85,7 +87,6 @@ final public class Flow {
     }
 
     public String toString() {
-        return getFlowName();
+        return IntrospectionSupport.toString(this);
     }
-
 }

@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
 
 
@@ -263,42 +262,68 @@ public final class IntrospectionSupport {
     }
 
     public static String toString(Object target, Class<?> stopClass, Map<String, Object> overrideFields) {
-        LinkedHashMap<String, Object> map = new LinkedHashMap<String, Object>();
-        addFields(target, target.getClass(), stopClass, map);
-        if (overrideFields != null) {
-        	for(String key : overrideFields.keySet()) {
-        	    Object value = overrideFields.get(key);
-        	    map.put(key, value);
-        	}
-
-        }
-        StringBuffer buffer = new StringBuffer(simpleName(target.getClass()));
-        buffer.append(" {");
-        Set entrySet = map.entrySet();
-        boolean first = true;
-        for (Iterator iter = entrySet.iterator(); iter.hasNext();) {
-            Map.Entry entry = (Map.Entry)iter.next();
-            if (first) {
-                first = false;
-            } else {
-                buffer.append(", ");
+        try {
+            LinkedHashMap<String, Object> map = new LinkedHashMap<String, Object>();
+            addFields(target, target.getClass(), stopClass, map);
+            if (overrideFields != null) {
+            	for(String key : overrideFields.keySet()) {
+            	    Object value = overrideFields.get(key);
+            	    map.put(key, value);
+            	}
             }
-            buffer.append(entry.getKey());
-            buffer.append(" = ");
-            appendToString(buffer, entry.getValue());
+           
+            boolean useMultiLine=false;
+            LinkedHashMap<String, String> props = new LinkedHashMap<String, String>();
+            for (Entry<String, Object> entry : map.entrySet()) {
+                String key = entry.getKey();
+                String value = null;
+                if( entry.getValue() !=null ) {
+                    value = entry.getValue().toString();
+                    if( value!=null && ( value.indexOf('\n')>=0 || (key.length()+value.length())>70 ) ) {
+                        useMultiLine=true;
+                    }
+                }
+                props.put(key, value);
+            }
+            
+            StringBuffer buffer = new StringBuffer();
+            if( useMultiLine) {
+                buffer.append("{\n");
+                boolean first = true;
+                for (Entry<String, String> entry : props.entrySet()) {
+                    if (first) {
+                        first = false;
+                    } else {
+                        buffer.append(",\n");
+                    }
+                    buffer.append("  ");
+                    buffer.append(entry.getKey());
+                    buffer.append(": ");
+                    buffer.append(entry.getValue());
+                }
+                buffer.append("\n}");
+            } else {
+                buffer.append("{");
+                boolean first = true;
+                for (Entry<String, String> entry : props.entrySet()) {
+                    if (first) {
+                        first = false;
+                    } else {
+                        buffer.append(", ");
+                    }
+                    buffer.append(entry.getKey());
+                    buffer.append(": ");
+                    buffer.append(StringSupport.indent(entry.getValue(), 2));
+                }
+                buffer.append("}");
+            }
+            return buffer.toString();
+        } catch (Throwable e) {
+            e.printStackTrace();
+            return "Could not toString: "+e.toString();
         }
-        buffer.append("}");
-        return buffer.toString();
     }
 
-    protected static void appendToString(StringBuffer buffer, Object value) {
-//        if (value instanceof ActiveMQDestination) {
-//            ActiveMQDestination destination = (ActiveMQDestination)value;
-//            buffer.append(destination.getQualifiedName());
-//        } else {
-            buffer.append(value);
-//        }
-    }
 
     public static String simpleName(Class<?> clazz) {
         String name = clazz.getName();
@@ -318,8 +343,7 @@ public final class IntrospectionSupport {
         Field[] fields = startClass.getDeclaredFields();
         for (int i = 0; i < fields.length; i++) {
             Field field = fields[i];
-            if (Modifier.isStatic(field.getModifiers()) || Modifier.isTransient(field.getModifiers())
-                || Modifier.isPrivate(field.getModifiers())) {
+            if (Modifier.isStatic(field.getModifiers()) || Modifier.isTransient(field.getModifiers()) ) {
                 continue;
             }
 

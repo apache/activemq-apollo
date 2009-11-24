@@ -23,12 +23,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 import org.apache.activemq.flow.IFlowLimiter.UnThrottleListener;
+import org.apache.activemq.util.IntrospectionSupport;
 
 /**
  */
 public class FlowController<E> implements IFlowController<E> {
 
     private static final Executor DEFAULT_EXECUTOR = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+    
     // Sinks that are blocking us.
     private final HashSet<ISinkController<?>> blockingSinks = new HashSet<ISinkController<?>>();
 
@@ -85,6 +87,10 @@ public class FlowController<E> implements IFlowController<E> {
             public final void onUnthrottled() {
                 FlowController.this.onUnthrottled();
             }
+            @Override
+            public String toString() {
+                return "DEFAULT";
+            }
         };
     }
 
@@ -98,6 +104,10 @@ public class FlowController<E> implements IFlowController<E> {
         {
             this.name = controllable.toString();
         }
+    }
+
+    public String toString() {
+        return IntrospectionSupport.toString(this);
     }
 
     public final IFlowLimiter<E> getLimiter() {
@@ -410,10 +420,6 @@ public class FlowController<E> implements IFlowController<E> {
                 // true
             }
         }
-    }
-
-    public String toString() {
-        return name;
     }
 
     public void setExecutor(Executor executor) {

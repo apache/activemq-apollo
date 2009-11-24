@@ -51,6 +51,7 @@ import org.apache.activemq.flow.ISinkController.FlowControllable;
 import org.apache.activemq.queue.QueueDispatchTarget;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.util.FactoryFinder;
+import org.apache.activemq.util.IdGenerator;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.util.buffer.ByteArrayOutputStream;
@@ -84,7 +85,12 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
     private final FrameTranslator translator = new DefaultFrameTranslator();
     private final FactoryFinder FRAME_TRANSLATOR_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/broker/stomp/frametranslator/");
     private SingleFlowRelay<MessageDelivery> outboundQueue;
-
+    
+    public static final IdGenerator CLIENT_IDS = new IdGenerator();
+    
+    private final String clientId = CLIENT_IDS.generateId();
+    private long messageId;
+    
     private HashMap<AsciiBuffer, ConsumerContext> allSentMessageIds = new HashMap<AsciiBuffer, ConsumerContext>();
     private Router router;
 
@@ -112,7 +118,9 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
                 Destination destination = translator(frame).convert(dest);
 
                 frame.setAction(MESSAGE);
+                frame.getHeaders().put(Stomp.Headers.Message.MESSAGE_ID, ascii(clientId+":"+(messageId++)));
                 StompMessageDelivery md = new StompMessageDelivery(frame, destination);
+                
                 inboundContext.onReceive(md);
             }
         });
@@ -121,6 +129,7 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
                 AsciiBuffer subscriptionId = frame.get(Subscribe.ID);
                 ConsumerContext ctx = new ConsumerContext(subscriptionId.toString(), frame);
                 consumers.put(ctx.stompDestination, ctx);
+                ctx.start();
                 ack(frame);
             }
         });
@@ -325,6 +334,9 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
                 queue = outboundQueue;
             }
             
+        }
+        
+        public void start() throws Exception {
             BrokerSubscription sub = router.getVirtualHost().createSubscription(this);
             sub.connect(this);
         }
@@ -501,6 +513,10 @@ public class StompProtocolHandler implements ProtocolHandler, StompMessageDelive
          * @see org.apache.activemq.queue.Subscription#isExclusive()
          */
         public boolean isExclusive() {
+            return false;
+        }
+
+        public boolean isPersistent() {
             return false;
         }
     }

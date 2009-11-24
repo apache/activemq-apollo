@@ -27,7 +27,9 @@ import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.queue.ExclusivePersistentQueue;
 import org.apache.activemq.queue.ExclusiveQueue;
 import org.apache.activemq.queue.IFlowQueue;
+import org.apache.activemq.queue.QueueDispatchTarget;
 import org.apache.activemq.queue.Subscription;
+import org.apache.activemq.util.IntrospectionSupport;
 
 class TopicSubscription implements BrokerSubscription, DeliveryTarget {
 
@@ -47,6 +49,11 @@ class TopicSubscription implements BrokerSubscription, DeliveryTarget {
         this.destination = destination;
     }
 
+    @Override
+    public String toString() {
+        return IntrospectionSupport.toString(this);
+    }
+    
     /*
      * (non-Javadoc)
      * 
@@ -71,9 +78,7 @@ class TopicSubscription implements BrokerSubscription, DeliveryTarget {
 
     public synchronized void connect(final ConsumerContext subscription) throws UserAlreadyConnectedException {
         if (this.connectedSub == null) {
-        	
-        	// Ok this is not ideal.  Perhaps not all topic subscriptions want this level of service.
-        	if( USE_PERSISTENT_QUEUES ) {
+        	if( subscription.isPersistent() ) {
         		queue = createPersistentQueue(subscription);
         	} else {
         		queue = createNonPersistentQueue(subscription);
@@ -88,12 +93,17 @@ class TopicSubscription implements BrokerSubscription, DeliveryTarget {
         }
     }
 
-    private IFlowQueue<MessageDelivery> createNonPersistentQueue(ConsumerContext subscription) {
+    private IFlowQueue<MessageDelivery> createNonPersistentQueue(final ConsumerContext subscription) {
 		Flow flow = new Flow(subscription.getResourceName(), false);
 		String name = subscription.getResourceName();
 		IFlowLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(100, 50);
 		ExclusiveQueue<MessageDelivery> queue = new ExclusiveQueue<MessageDelivery>(flow, name, limiter);
 		queue.setDispatcher(host.getBroker().getDispatcher());
+		queue.setDrain( new QueueDispatchTarget<MessageDelivery>() {
+            public void drain(MessageDelivery elem, ISourceController<MessageDelivery> controller) {
+                subscription.add(elem, controller);
+            }
+        });
 		return queue;
 	}
 

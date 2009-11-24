@@ -266,6 +266,7 @@ public abstract class BrokerMessageDelivery implements MessageDelivery {
 
     /**
      * @return A buffer representation of the message to be stored in the store.
+     * @throws  
      */
     protected abstract Buffer getStoreEncoded();
 

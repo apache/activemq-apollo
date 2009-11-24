@@ -130,6 +130,6 @@ public class SizeLimiter<E> extends AbstractLimiter<E> implements IFlowSizeLimit
     }
 
     public String toString() {
-        return "SizeLimiter " + capacity + "/" + resumeThreshold + ", s=" + size + " res=" + reserved + ", thr= " + throttled;
+        return "{ capacity: " + capacity + ", resumeThreshold: " + resumeThreshold + ", size: " + size + ", reserved: " + reserved + ", throttled: " + throttled+" }";
     }
 }

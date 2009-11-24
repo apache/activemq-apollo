@@ -84,7 +84,6 @@ import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.IFlowLimiter;
 import org.apache.activemq.flow.IFlowResource;
-import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
@@ -994,6 +993,10 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
 
             super.close();
             consumers.remove(info.getConsumerId());
+        }
+
+        public boolean isPersistent() {
+            return true;
         }
     }
 

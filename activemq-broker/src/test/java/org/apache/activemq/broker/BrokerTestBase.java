@@ -25,8 +25,6 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import junit.framework.TestCase;
-
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.Router;
@@ -38,10 +36,14 @@ import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.junit.Before;
+import org.junit.Test;
 
-public abstract class BrokerTestBase extends TestCase {
+import static java.lang.String.*;
 
-    protected static final int PERFORMANCE_SAMPLES = 30000;
+public abstract class BrokerTestBase {
+
+    protected static final int PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "3"));
 
     protected static final int IO_WORK_AMOUNT = 0;
     protected static final int FANIN_COUNT = 10;
@@ -92,8 +94,8 @@ public abstract class BrokerTestBase extends TestCase {
     final ArrayList<RemoteProducer> producers = new ArrayList<RemoteProducer>();
     final ArrayList<RemoteConsumer> consumers = new ArrayList<RemoteConsumer>();
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         dispatcher = createDispatcher();
         dispatcher.start();
         
@@ -115,7 +117,17 @@ public abstract class BrokerTestBase extends TestCase {
             }
         }
     }
-
+    
+    String name;
+    
+    private void setName(String name) {
+        if( this.name==null ) {
+            this.name = name;
+        }
+    }
+    private String getName() {
+        return name;
+    }
     protected String getBrokerWireFormat() {
         return "multi";
     }
@@ -126,7 +138,9 @@ public abstract class BrokerTestBase extends TestCase {
         return PriorityDispatcher.createPriorityDispatchPool("BrokerDispatcher", Broker.MAX_PRIORITY, asyncThreadPoolSize);
     }
 
-    public void test_1_1_0() throws Exception {
+    @Test
+    public void benchmark_1_1_0() throws Exception {
+        setName("1 producer -> 1 destination -> 0 consumers");
         if (ptp) {
             return;
         }
@@ -144,7 +158,9 @@ public abstract class BrokerTestBase extends TestCase {
         }
     }
 
-    public void test_1_1_1() throws Exception {
+    @Test
+    public void benchmark_1_1_1() throws Exception {
+        setName("1 producer -> 1 destination -> 1 consumers");
         producerCount = 1;
         destCount = 1;
         consumerCount = 1;
@@ -160,7 +176,9 @@ public abstract class BrokerTestBase extends TestCase {
         }
     }
 
-    public void test_10_1_10() throws Exception {
+    @Test
+    public void benchmark_10_1_10() throws Exception {
+        setName(format("%d producers -> 1 destination -> %d consumers", FANIN_COUNT, FANOUT_COUNT));
         producerCount = FANIN_COUNT;
         consumerCount = FANOUT_COUNT;
         destCount = 1;
@@ -176,7 +194,9 @@ public abstract class BrokerTestBase extends TestCase {
         }
     }
 
-    public void test_10_1_1() throws Exception {
+    @Test
+    public void benchmark_10_1_1() throws Exception {
+        setName(format("%d producers -> 1 destination -> 1 consumer", FANIN_COUNT));
         producerCount = FANIN_COUNT;
         destCount = 1;
         consumerCount = 1;
@@ -192,7 +212,9 @@ public abstract class BrokerTestBase extends TestCase {
         }
     }
 
-    public void test_1_1_10() throws Exception {
+    @Test
+    public void benchmark_1_1_10() throws Exception {
+        setName(format("1 producer -> 1 destination -> %d consumers", FANOUT_COUNT));
         producerCount = 1;
         destCount = 1;
         consumerCount = FANOUT_COUNT;
@@ -208,7 +230,9 @@ public abstract class BrokerTestBase extends TestCase {
         }
     }
 
-    public void test_2_2_2() throws Exception {
+    @Test
+    public void benchmark_2_2_2() throws Exception {
+        setName(format("2 producer -> 2 destination -> 2 consumers"));
         producerCount = 2;
         destCount = 2;
         consumerCount = 2;
@@ -224,7 +248,9 @@ public abstract class BrokerTestBase extends TestCase {
         }
     }
 
-    public void test_10_10_10() throws Exception {
+    @Test
+    public void benchmark_10_10_10() throws Exception {
+        setName(format("10 producers -> 10 destinations -> 10 consumers"));
         producerCount = 10;
         destCount = 10;
         consumerCount = 10;
@@ -247,7 +273,9 @@ public abstract class BrokerTestBase extends TestCase {
      * 
      * @throws Exception
      */
-    public void test_2_2_2_SlowConsumer() throws Exception {
+    @Test
+    public void benchmark_2_2_2_SlowConsumer() throws Exception {
+        setName(format("2 producer -> 2 destination -> 2 slow consumers"));
         producerCount = 2;
         destCount = 2;
         consumerCount = 2;
@@ -264,7 +292,9 @@ public abstract class BrokerTestBase extends TestCase {
         }
     }
 
-    public void test_2_2_2_Selector() throws Exception {
+    @Test
+    public void benchmark_2_2_2_Selector() throws Exception {
+        setName(format("2 producer -> 2 destination -> 2 selector consumers"));
         producerCount = 2;
         destCount = 2;
         consumerCount = 2;
@@ -293,8 +323,10 @@ public abstract class BrokerTestBase extends TestCase {
      * 
      * @throws Exception
      */
-    public void test_2_1_1_HighPriorityProducer() throws Exception {
+    @Test
+    public void benchmark_2_1_1_HighPriorityProducer() throws Exception {
 
+        setName(format("1 high and 1 normal priority producer -> 1 destination -> 1 consumer"));
         producerCount = 2;
         destCount = 1;
         consumerCount = 1;
@@ -332,7 +364,9 @@ public abstract class BrokerTestBase extends TestCase {
      * 
      * @throws Exception
      */
-    public void test_2_1_1_MixedHighPriorityProducer() throws Exception {
+    @Test
+    public void benchmark_2_1_1_MixedHighPriorityProducer() throws Exception {
+        setName(format("1 high/mixed and 1 normal priority producer -> 1 destination -> 1 consumer"));
         producerCount = 2;
         destCount = 1;
         consumerCount = 1;
@@ -526,3 +560,4 @@ public abstract class BrokerTestBase extends TestCase {
     }
 
 }
+;

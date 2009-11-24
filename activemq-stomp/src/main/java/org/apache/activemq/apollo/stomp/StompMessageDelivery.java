@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.stomp;
 
+import java.io.IOException;
+
 import org.apache.activemq.apollo.broker.BrokerMessageDelivery;
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.filter.MessageEvaluationContext;
@@ -141,8 +143,11 @@ public class StompMessageDelivery extends BrokerMessageDelivery {
     }
     
     public Buffer getStoreEncoded() {
-        // TODO:
-        throw new UnsupportedOperationException();
+        try {
+            return StompWireFormat.INSTANCE.marshal(frame);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
     
 

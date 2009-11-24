@@ -46,6 +46,8 @@ import static org.apache.activemq.util.buffer.AsciiBuffer.*;
  */
 public class StompWireFormat implements WireFormat {
     
+    public static final StompWireFormat INSTANCE = new StompWireFormat();
+    
     private static final int MAX_COMMAND_LENGTH = 1024;
     private static final int MAX_HEADER_LENGTH = 1024 * 10;
     private static final int MAX_HEADERS = 1000;

@@ -136,6 +136,8 @@ public interface ProtocolHandler extends Service {
          */
         public boolean autoCreateDestination();
 
+        public boolean isPersistent();
+
     }
 
 }
