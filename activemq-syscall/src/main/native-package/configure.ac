@@ -54,8 +54,8 @@ AC_CHECK_HEADER([aio.h],[
 
 # Look for the libaio api..
 AC_CHECK_HEADER([libaio.h],[
-  AC_CHECK_LIB([libaio], [io_queue_run],[
-    LDFLAGS="$LDFLAGS -llibaio"
+  AC_CHECK_LIB([aio], [io_queue_run],[
+    LDFLAGS="$LDFLAGS -laio"
     AC_DEFINE([HAVE_LIBAIO_H], [1], [Define to 1 if you have the <libaio.h> header file.])
     break
   ])  
@@ -70,6 +70,7 @@ AC_CHECK_HEADER([sys/errno.h],[AC_DEFINE([HAVE_SYS_ERRNO_H], [1], [Define to 1 i
 AC_CHECK_HEADER([sys/stat.h],[AC_DEFINE([HAVE_SYS_STAT_H], [1], [Define to 1 if you have the <sys/stat.h> header file.])])
 AC_CHECK_HEADER([sys/types.h],[AC_DEFINE([HAVE_SYS_TYPES_H], [1], [Define to 1 if you have the <sys/types.h> header file.])])
 AC_CHECK_HEADER([sys/uio.h],[AC_DEFINE([HAVE_SYS_UIO_H], [1], [Define to 1 if you have the <sys/uio.h> header file.])])
+AC_CHECK_HEADER([stddef.h],[AC_DEFINE([HAVE_STDDEF_H], [1], [Define to 1 if you have the <stddef.h> header file.])])
 
 CFLAGS="$CFLAGS $JNI_EXTRA_CFLAGS"
 LDFLAGS="$LDFLAGS $JNI_EXTRA_LDFLAGS -release $PACKAGE_VERSION"

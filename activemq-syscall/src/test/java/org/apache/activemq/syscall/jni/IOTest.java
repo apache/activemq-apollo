@@ -17,7 +17,7 @@ public class IOTest {
     @Test
     public void fcntl_GETFL() throws IOException, InterruptedException {
         assumeThat(HAVE_FCNTL_FUNCTION, is(true));
-        File file = dataFile(AIOTest.class.getName() + ".direct.data");
+        File file = dataFile(IOTest.class.getName() + ".direct.data");
         int fd = 0;
         try {
             // open the file...

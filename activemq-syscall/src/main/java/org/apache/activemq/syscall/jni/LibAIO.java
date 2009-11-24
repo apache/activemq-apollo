@@ -23,6 +23,7 @@ import org.fusesource.hawtjni.runtime.JniClass;
 import org.fusesource.hawtjni.runtime.JniField;
 import org.fusesource.hawtjni.runtime.JniMethod;
 
+import static org.fusesource.hawtjni.runtime.ArgFlag.*;
 import static org.fusesource.hawtjni.runtime.MethodFlag.*;
 
 /**
@@ -45,7 +46,7 @@ final public class LibAIO {
     
     
     @JniClass(flags={ClassFlag.STRUCT}, conditional="defined(HAVE_LIBAIO_H)")
-    public static final class iocb {
+    public static class iocb {
         static {
             CLibrary.LIBRARY.load();
             init();
@@ -55,19 +56,61 @@ final public class LibAIO {
 
         @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct iocb)")
         public static int SIZEOF;
+
+        @JniField(flags={FieldFlag.CONSTANT}, accessor="offsetof(struct iocb, u)")
+        public static int OFFSETOF_u;
         
         @JniField(cast="void *")
-        long data;
+        public long data;
         @JniField(cast="unsigned")
-        int key;
+        public int key;
         @JniField(cast="short")
-        short aio_lio_opcode; 
+        public short aio_lio_opcode; 
         @JniField(cast="short")
-        short aio_reqprio;
+        public short aio_reqprio;
         @JniField(cast="int")
-        int aio_fildes;
+        public int aio_fildes;
+        
+        public static final native void memmove (
+                @JniArg(cast="void *", flags={NO_IN, CRITICAL}) iocb dest, 
+                @JniArg(cast="const void *") long src, 
+                @JniArg(cast="size_t") long size);
+        
+        public static final native void memmove (
+                @JniArg(cast="void *") long dest, 
+                @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) iocb src, 
+                @JniArg(cast="size_t") long size);        
     }
 
+    @JniClass(flags={ClassFlag.STRUCT}, conditional="defined(HAVE_LIBAIO_H)")
+    public static final class io_iocb_common {
+        
+        static {
+            CLibrary.LIBRARY.load();
+            init();
+        }
+        @JniMethod(flags={CONSTANT_INITIALIZER})
+        private static final native void init();
+
+        @JniField(flags={FieldFlag.CONSTANT}, accessor="sizeof(struct io_iocb_common)")
+        public static int SIZEOF;
+        
+        @JniField(cast="void *")
+        long buf;
+        long nbytes;
+        long offset;
+        
+        public static final native void memmove (
+                @JniArg(cast="void *", flags={NO_IN, CRITICAL}) io_iocb_common dest, 
+                @JniArg(cast="const void *") long src, 
+                @JniArg(cast="size_t") long size);
+        
+        public static final native void memmove (
+                @JniArg(cast="void *") long dest, 
+                @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) io_iocb_common src, 
+                @JniArg(cast="size_t") long size);        
+    }
+    
     @JniClass(flags={ClassFlag.STRUCT}, conditional="defined(HAVE_LIBAIO_H)")
     public static final class io_event {
         static {
@@ -81,11 +124,22 @@ final public class LibAIO {
         public static int SIZEOF;
 
         @JniField(cast="void *")
-        long data;
+        public long data;
         @JniField(cast="struct iocb *")
-        long obj;
-        long res;
-        long res2;
+        public long obj;
+        public long res;
+        public long res2;
+
+        public static final native void memmove (
+                @JniArg(cast="void *", flags={NO_IN, CRITICAL}) io_event dest, 
+                @JniArg(cast="const void *") long src, 
+                @JniArg(cast="size_t") long size);
+        
+        public static final native void memmove (
+                @JniArg(cast="void *") long dest, 
+                @JniArg(cast="const void *", flags={NO_OUT, CRITICAL}) io_event src, 
+                @JniArg(cast="size_t") long size);        
+    
     };
 
     ///////////////////////////////////////////////////////////////////
@@ -127,24 +181,24 @@ final public class LibAIO {
     public static final native int io_queue_release(
             @JniArg(cast="struct io_context *") long ctx);
     public static final native int io_queue_run(
-            @JniArg(cast="struct io_context **") long ctx);
+            @JniArg(cast="struct io_context *") long ctx);
 
     public static final native void io_set_callback(
             @JniArg(cast="struct iocb *")long iocb, 
-            @JniArg(cast="io_callback_t")long  cb);
+            @JniArg(cast="void *")long  cb);
 
     public static final native void io_prep_pread(
             @JniArg(cast="struct iocb *")long iocb, 
             int fd, 
             @JniArg(cast="void *") long buf, 
-            @JniArg(cast="site_t") long count, 
+            @JniArg(cast="size_t") long count, 
             long offset);
 
     public static final native void io_prep_pwrite(
             @JniArg(cast="struct iocb *")long iocb, 
             int fd, 
             @JniArg(cast="void *") long buf, 
-            @JniArg(cast="site_t") long count, 
+            @JniArg(cast="size_t") long count, 
             long offset);
 
     public static final native void io_prep_preadv(
@@ -164,7 +218,7 @@ final public class LibAIO {
     public static final native int io_poll(
             @JniArg(cast="struct io_context *")long ctx, 
             @JniArg(cast="struct iocb *")long iocb, 
-            @JniArg(cast="io_callback_t")long  cb, 
+            @JniArg(cast="void *")long  cb, 
             int fd, 
             int events);
 
@@ -175,7 +229,7 @@ final public class LibAIO {
     public static final native int io_fsync(
             @JniArg(cast="struct io_context *")long ctx, 
             @JniArg(cast="struct iocb *")long iocb, 
-            @JniArg(cast="io_callback_t")long  cb, 
+            @JniArg(cast="void *")long  cb, 
             int fd);
 
     public static final native void io_prep_fdsync(
@@ -185,7 +239,7 @@ final public class LibAIO {
     public static final native int io_fdsync(
             @JniArg(cast="struct io_context *")long ctx, 
             @JniArg(cast="struct iocb *")long iocb, 
-            @JniArg(cast="io_callback_t")long  cb, 
+            @JniArg(cast="void *")long  cb, 
             int fd);
 
     public static final native void io_set_eventfd(

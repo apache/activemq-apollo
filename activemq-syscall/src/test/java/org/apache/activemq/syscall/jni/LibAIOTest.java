@@ -20,14 +20,15 @@ import java.io.File;
 import java.io.IOException;
 
 import org.apache.activemq.syscall.NativeAllocation;
-import org.apache.activemq.syscall.jni.PosixAIO.aiocb;
+import org.apache.activemq.syscall.jni.LibAIO.io_event;
+import org.apache.activemq.syscall.jni.LibAIO.iocb;
 import org.junit.Test;
 
 import static org.apache.activemq.syscall.NativeAllocation.*;
 import static org.apache.activemq.syscall.TestSupport.*;
-import static org.apache.activemq.syscall.jni.PosixAIO.*;
 import static org.apache.activemq.syscall.jni.CLibrary.*;
 import static org.apache.activemq.syscall.jni.IO.*;
+import static org.apache.activemq.syscall.jni.LibAIO.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
@@ -37,19 +38,25 @@ import static org.junit.Assume.*;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  *
  */
-public class AIOTest {
+public class LibAIOTest {
     
     @Test
     public void write() throws IOException, InterruptedException {
-    	assumeThat(PosixAIO.SUPPORTED, is(true));
+    	assumeThat(LibAIO.SUPPORTED, is(true));
     	 
-        File file = dataFile(AIOTest.class.getName()+".write.data");
+        File file = dataFile(LibAIOTest.class.getName()+".write.data");
 
         String expected = generateString(1024*4);
         NativeAllocation buffer = allocate(expected);
 
-        long aiocbp = malloc(aiocb.SIZEOF);
-        System.out.println("Allocated cb of size: "+aiocb.SIZEOF);
+        long iocbp = malloc(iocb.SIZEOF);
+        long io_eventp = malloc(io_event.SIZEOF);
+
+        long ctx_ida[] = new long[1];
+        int rc = io_setup(10, ctx_ida);
+        assertEquals(0, rc);
+        
+        long ctx_id = ctx_ida[0];
 
         try {
             // open the file...
@@ -58,45 +65,37 @@ public class AIOTest {
             int fd = open(file.getCanonicalPath(), oflags, mode);
             checkrc(fd);
             
-            // Create a control block..
-            // The where:
-            aiocb cb = new aiocb();
-            cb.aio_fildes = fd;
-            cb.aio_offset = 0;
-            // The what:
-            cb.aio_buf = buffer.pointer();        
-            cb.aio_nbytes = buffer.length();
-            
-            // Move the struct into the c heap.
-            aiocb.memmove(aiocbp, cb, aiocb.SIZEOF);
-
             // enqueue the async write..
-            checkrc(aio_write(aiocbp));
-            
-            long blocks[] = new long[]{aiocbp};
-            
-            // Wait for the IO to complete.
-            long timeout = NULL; // To suspend forever.
-            checkrc(aio_suspend(blocks, blocks.length, timeout));
-            
-            // Check to see if it completed.. it should 
-            // since we previously suspended.
-            int rc = aio_error(aiocbp);
-            checkrc(rc);
-            assertEquals(0, rc);
+            io_prep_pwrite(iocbp, fd, buffer.pointer(), buffer.length(), 0);
+            rc = io_submit(ctx_id, 1, new long[]{iocbp});
+            assertEquals(1, rc);
 
+            // Wait for the IO to complete.
+            rc = io_getevents(ctx_id, 1, 1, io_eventp, NULL);
+            assertEquals(1, rc);
+            
+            // Get the event..
             // The full buffer should have been written.
-            long count = aio_return(aiocbp);
-            assertEquals(count, buffer.length());
+            io_event event = new io_event();                        
+            io_event.memmove(event, io_eventp, io_event.SIZEOF);
+            
+            assertEquals(0, event.res2);
+            assertEquals(buffer.length(), event.res);
+            assertEquals(event.obj, iocbp);
             
             checkrc(close(fd));
             
         } finally {
             // Lets free up allocated memory..
+            io_destroy(ctx_id);            
             buffer.free();
-            if( aiocbp!=NULL ) {
-                free(aiocbp);
+            if( iocbp!=NULL ) {
+                free(iocbp);
             }
+            if( io_eventp!=NULL ) { 
+                free(io_eventp);
+            }
+                
         }
         
         assertEquals(expected, readFile(file));
@@ -109,10 +108,4 @@ public class AIOTest {
         }
     }
 
-    @Test
-    public void testFree() {
-        long ptr = malloc(100);
-        free(ptr);
-    }
-    
 }

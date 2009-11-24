@@ -46,6 +46,10 @@
   #include <string.h>
 #endif
 
+#ifdef HAVE_LIBAIO_H
+  #include <libaio.h>
+#endif
+
 #ifdef HAVE_AIO_H
   #include <aio.h>
 #endif
@@ -60,6 +64,10 @@
 
 #ifdef HAVE_IO_H
   #include <io.h>
+#endif
+
+#ifdef HAVE_STDDEF_H
+  #include <stddef.h>
 #endif
 
 
