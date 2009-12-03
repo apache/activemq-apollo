@@ -2,8 +2,8 @@ package org.apache.activemq.queue.perf;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
-import org.apache.activemq.dispatch.IDispatcher.Dispatchable;
+import org.apache.activemq.dispatch.internal.advanced.IDispatcher.DispatchContext;
+import org.apache.activemq.dispatch.internal.advanced.IDispatcher.Dispatchable;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;

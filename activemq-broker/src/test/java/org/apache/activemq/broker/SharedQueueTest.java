@@ -27,8 +27,8 @@ import org.apache.activemq.apollo.broker.BrokerQueueStore;
 import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
-import org.apache.activemq.dispatch.IDispatcher;
-import org.apache.activemq.dispatch.PriorityDispatcher;
+import org.apache.activemq.dispatch.internal.advanced.IDispatcher;
+import org.apache.activemq.dispatch.internal.advanced.PriorityDispatcher;
 import org.apache.activemq.queue.IQueue;
 
 /**

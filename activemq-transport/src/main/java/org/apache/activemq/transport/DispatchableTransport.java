@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.transport;
 
-import org.apache.activemq.dispatch.DispatcherAware;
+import org.apache.activemq.dispatch.internal.advanced.DispatcherAware;
 
 public interface DispatchableTransport extends Transport, DispatcherAware {
 

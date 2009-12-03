@@ -18,6 +18,9 @@ package org.apache.activemq.dispatch;
 
 import java.util.concurrent.CountDownLatch;
 
+import org.apache.activemq.dispatch.internal.advanced.AdancedDispatchSystem;
+import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSystem;
+
 import static java.lang.String.*;
 import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.*;
 
@@ -27,9 +30,14 @@ import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.
  */
 public class DispatchSystemTest {
     
-    public static void main(String[] args) throws InterruptedException {
-        benchmark("private serial queue", DispatchSystem.createQueue("test"));
-        benchmark("global queue", DispatchSystem.getGlobalQueue(DEFAULT));
+    public static void main(String[] args) throws Exception {
+        AdancedDispatchSystem advancedSystem = new AdancedDispatchSystem(Runtime.getRuntime().availableProcessors());
+        benchmark("advanced private serial queue", advancedSystem.createQueue("test"));
+        benchmark("advanced global queue", advancedSystem.getGlobalQueue(DEFAULT));
+
+        SimpleDispatchSystem simpleSystem = new SimpleDispatchSystem(Runtime.getRuntime().availableProcessors());
+        benchmark("advanced private serial queue", simpleSystem.createQueue("test"));
+        benchmark("advancedglobal queue", simpleSystem.getGlobalQueue(DEFAULT));
     }
 
     private static void benchmark(String name, DispatchQueue queue) throws InterruptedException {

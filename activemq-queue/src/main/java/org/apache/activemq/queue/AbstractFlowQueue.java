@@ -19,9 +19,9 @@ package org.apache.activemq.queue;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.apache.activemq.dispatch.IDispatcher;
-import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
-import org.apache.activemq.dispatch.IDispatcher.Dispatchable;
+import org.apache.activemq.dispatch.internal.advanced.IDispatcher;
+import org.apache.activemq.dispatch.internal.advanced.IDispatcher.DispatchContext;
+import org.apache.activemq.dispatch.internal.advanced.IDispatcher.Dispatchable;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 
 /**

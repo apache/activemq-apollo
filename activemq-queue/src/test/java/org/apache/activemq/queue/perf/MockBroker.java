@@ -21,9 +21,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.dispatch.DispatcherAware;
-import org.apache.activemq.dispatch.IDispatcher;
-import org.apache.activemq.dispatch.PriorityDispatcher;
+import org.apache.activemq.dispatch.internal.advanced.DispatcherAware;
+import org.apache.activemq.dispatch.internal.advanced.IDispatcher;
+import org.apache.activemq.dispatch.internal.advanced.PriorityDispatcher;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.transport.Transport;

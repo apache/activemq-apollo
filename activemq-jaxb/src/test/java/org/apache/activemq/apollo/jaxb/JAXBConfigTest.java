@@ -26,7 +26,7 @@ import junit.framework.TestCase;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.broker.store.memory.MemoryStore;
-import org.apache.activemq.dispatch.AbstractPooledDispatcher;
+import org.apache.activemq.dispatch.internal.advanced.AbstractPooledDispatcher;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Test;

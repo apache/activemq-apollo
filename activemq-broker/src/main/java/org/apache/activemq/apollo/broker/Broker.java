@@ -25,9 +25,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.apollo.Connection;
-import org.apache.activemq.dispatch.DispatcherAware;
-import org.apache.activemq.dispatch.IDispatcher;
-import org.apache.activemq.dispatch.PriorityDispatcher;
+import org.apache.activemq.dispatch.internal.advanced.DispatcherAware;
+import org.apache.activemq.dispatch.internal.advanced.IDispatcher;
+import org.apache.activemq.dispatch.internal.advanced.PriorityDispatcher;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportServer;
