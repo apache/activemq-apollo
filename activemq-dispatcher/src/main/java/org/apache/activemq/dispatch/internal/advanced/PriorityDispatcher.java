@@ -349,13 +349,12 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
     }
 
     //Special dispatch method that allow high priority dispatch:
-    private final void dispatchInternal(Dispatchable dispatchable, int priority)
-    {
+    private final void dispatchInternal(Dispatchable dispatchable, int priority) {
         PriorityDispatchContext context = new PriorityDispatchContext(dispatchable, false, name);
         context.priority = priority;
         context.requestDispatch();
     }
-    
+
     /*
      * (non-Javadoc)
      * 
@@ -463,7 +462,9 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
             updateEvent = createUpdateEvent();
             updateEvent[0] = new UpdateEvent(this);
             updateEvent[1] = new UpdateEvent(this);
-            currentOwner.takeOwnership(this);
+            if (persistent) {
+                currentOwner.takeOwnership(this);
+            }
         }
 
         private final PriorityDispatcher.UpdateEvent[] createUpdateEvent() {
@@ -543,9 +544,9 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
             if (closed) {
                 return;
             }
-            
+
             priority = Math.min(priority, MAX_USER_PRIORITY);
-            
+
             if (this.priority == priority) {
                 return;
             }
@@ -617,10 +618,8 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
         /**
          * May be overriden by subclass to additional work on dispatcher switch
          * 
-         * @param oldDispatcher
-         *            The old dispatcher
-         * @param newDispatcher
-         *            The new Dispatcher
+         * @param oldDispatcher The old dispatcher
+         * @param newDispatcher The new Dispatcher
          */
         protected void switchedDispatcher(PriorityDispatcher oldDispatcher, PriorityDispatcher newDispatcher) {
 
@@ -680,7 +679,7 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
 
     }
 
-	public String getName() {
-		return name;
-	}
+    public String getName() {
+        return name;
+    }
 }
