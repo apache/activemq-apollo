@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch;
+package org.apache.activemq.dispatch.internal.advanced;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -25,15 +25,15 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.dispatch.ExecutionLoadBalancer.ExecutionTracker;
-import org.apache.activemq.dispatch.PooledDispatcher.PooledDispatchContext;
+import org.apache.activemq.dispatch.internal.advanced.ExecutionLoadBalancer.ExecutionTracker;
+import org.apache.activemq.dispatch.internal.advanced.PooledDispatcher.PooledDispatchContext;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.PriorityLinkedList;
 import org.apache.activemq.util.TimerHeap;
 import org.apache.activemq.util.list.LinkedNode;
 import org.apache.activemq.util.list.LinkedNodeList;
 
-public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runnable, IDispatcher {
+public class PriorityDispatcher implements Runnable, IDispatcher {
 
     private static final boolean DEBUG = false;
     private Thread thread;
@@ -43,7 +43,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
     protected final HashSet<PriorityDispatchContext> contexts = new HashSet<PriorityDispatchContext>();
 
     // Set if this dispatcher is part of a dispatch pool:
-    protected final PooledDispatcher<D> pooledDispatcher;
+    protected final PooledDispatcher pooledDispatcher;
 
     // The local dispatch queue:
     protected final PriorityLinkedList<PriorityDispatchContext> priorityQueue;
@@ -71,7 +71,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
         }
     };
 
-    protected PriorityDispatcher(String name, int priorities, PooledDispatcher<D> pooledDispactcher) {
+    protected PriorityDispatcher(String name, int priorities, PooledDispatcher pooledDispactcher) {
         this.name = name;
         MAX_USER_PRIORITY = priorities - 1;
         priorityQueue = new PriorityLinkedList<PriorityDispatchContext>(MAX_USER_PRIORITY + 1, PRIORITY_MAPPER);
@@ -87,31 +87,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
     }
 
     public static final IDispatcher createPriorityDispatchPool(String name, final int numPriorities, int size) {
-        return new AbstractPooledDispatcher<PriorityDispatcher>(name, size) {
-
-            @Override
-            protected final PriorityDispatcher createDispatcher(String name, AbstractPooledDispatcher<PriorityDispatcher> pool) throws Exception {
-                // TODO Auto-generated method stub
-                return new PriorityDispatcher(name, numPriorities, this);
-            }
-
-            public final Executor createPriorityExecutor(final int priority) {
-                return new Executor() {
-                    public void execute(final Runnable runnable) {
-                        chooseDispatcher().dispatch(new RunnableAdapter(runnable), priority);
-                    }
-                };
-            }
-
-            public int getDispatchPriorities() {
-                // TODO Auto-generated method stub
-                return numPriorities;
-            }
-
-            public void execute(Runnable command) {
-                chooseDispatcher().dispatch(new RunnableAdapter(command), 0);
-            }
-        };
+        return new PooledPriorityDispatcher(name, size, numPriorities);
     }
 
     @SuppressWarnings("unchecked")
@@ -217,7 +193,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
 
         if (pooledDispatcher != null) {
             // Inform the dispatcher that we have started:
-            pooledDispatcher.onDispatcherStarted((D) this);
+            pooledDispatcher.onDispatcherStarted((PriorityDispatcher) this);
         }
 
         PriorityDispatchContext pdc;
@@ -291,7 +267,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
             thrown.printStackTrace();
         } finally {
             if (pooledDispatcher != null) {
-                pooledDispatcher.onDispatcherStopped((D) this);
+                pooledDispatcher.onDispatcherStopped((PriorityDispatcher) this);
             }
             cleanup();
         }
@@ -435,25 +411,25 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
         return name;
     }
 
-    private final D getCurrentDispatcher() {
+    private final PriorityDispatcher getCurrentDispatcher() {
         if (pooledDispatcher != null) {
-            return pooledDispatcher.getCurrentDispatcher();
+            return (PriorityDispatcher) pooledDispatcher.getCurrentDispatcher();
         } else if (Thread.currentThread() == thread) {
-            return (D) this;
+            return (PriorityDispatcher) this;
         } else {
             return null;
         }
 
     }
 
-    private final PooledDispatchContext<D> getCurrentDispatchContext() {
+    private final PooledDispatchContext getCurrentDispatchContext() {
         return pooledDispatcher.getCurrentDispatchContext();
     }
 
     /**
      * 
      */
-    protected class PriorityDispatchContext extends LinkedNode<PriorityDispatchContext> implements PooledDispatchContext<D> {
+    protected class PriorityDispatchContext extends LinkedNode<PriorityDispatchContext> implements PooledDispatchContext {
         // The dispatchable target:
         private final Dispatchable dispatchable;
         // The name of this context:
@@ -466,9 +442,9 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
         // from foreign threads:
         final UpdateEvent updateEvent[];
 
-        private final ExecutionTracker<D> tracker;
-        protected D currentOwner;
-        private D updateDispatcher = null;
+        private final ExecutionTracker tracker;
+        protected PriorityDispatcher currentOwner;
+        private PriorityDispatcher updateDispatcher = null;
 
         private int priority;
         private boolean dispatchRequested = false;
@@ -478,9 +454,9 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
         protected PriorityDispatchContext(Dispatchable dispatchable, boolean persistent, String name) {
             this.dispatchable = dispatchable;
             this.name = name;
-            this.currentOwner = (D) PriorityDispatcher.this;
+            this.currentOwner = (PriorityDispatcher) PriorityDispatcher.this;
             if (persistent && pooledDispatcher != null) {
-                this.tracker = pooledDispatcher.getLoadBalancer().createExecutionTracker((PooledDispatchContext<D>) this);
+                this.tracker = pooledDispatcher.getLoadBalancer().createExecutionTracker((PooledDispatchContext) this);
             } else {
                 this.tracker = null;
             }
@@ -490,8 +466,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
             currentOwner.takeOwnership(this);
         }
 
-        @SuppressWarnings("unchecked")
-        private final PriorityDispatcher<D>.UpdateEvent[] createUpdateEvent() {
+        private final PriorityDispatcher.UpdateEvent[] createUpdateEvent() {
             return new PriorityDispatcher.UpdateEvent[2];
         }
 
@@ -500,7 +475,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
          * 
          * @return the execution tracker for the context:
          */
-        public ExecutionTracker<D> getExecutionTracker() {
+        public ExecutionTracker getExecutionTracker() {
             return tracker;
         }
 
@@ -513,7 +488,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
             return dispatchable.dispatch();
         }
 
-        public final void assignToNewDispatcher(D newDispatcher) {
+        public final void assignToNewDispatcher(IDispatcher newDispatcher) {
             synchronized (this) {
 
                 // If we're already set to this dispatcher
@@ -523,7 +498,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
                     }
                 }
 
-                updateDispatcher = newDispatcher;
+                updateDispatcher = (PriorityDispatcher) newDispatcher;
                 if (DEBUG)
                     System.out.println(getName() + " updating to " + updateDispatcher);
 
@@ -534,7 +509,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
 
         public void requestDispatch() {
 
-            D callingDispatcher = getCurrentDispatcher();
+            PriorityDispatcher callingDispatcher = getCurrentDispatcher();
             if (tracker != null)
                 tracker.onDispatchRequest(callingDispatcher, getCurrentDispatchContext());
 
@@ -574,7 +549,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
             if (this.priority == priority) {
                 return;
             }
-            D callingDispatcher = getCurrentDispatcher();
+            PriorityDispatcher callingDispatcher = getCurrentDispatcher();
 
             // Otherwise this is coming off another thread, so we need to
             // synchronize to protect against ownership changes:
@@ -647,7 +622,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
          * @param newDispatcher
          *            The new Dispatcher
          */
-        protected void switchedDispatcher(D oldDispatcher, D newDispatcher) {
+        protected void switchedDispatcher(PriorityDispatcher oldDispatcher, PriorityDispatcher newDispatcher) {
 
         }
 
@@ -656,7 +631,7 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
         }
 
         public void close(boolean sync) {
-            D callingDispatcher = getCurrentDispatcher();
+            PriorityDispatcher callingDispatcher = getCurrentDispatcher();
             // System.out.println(this + "Closing");
             synchronized (this) {
                 closed = true;
@@ -695,13 +670,14 @@ public class PriorityDispatcher<D extends PriorityDispatcher<D>> implements Runn
             return dispatchable;
         }
 
-        public D getDispatcher() {
+        public PriorityDispatcher getDispatcher() {
             return currentOwner;
         }
 
         public String getName() {
             return name;
         }
+
     }
 
 	public String getName() {

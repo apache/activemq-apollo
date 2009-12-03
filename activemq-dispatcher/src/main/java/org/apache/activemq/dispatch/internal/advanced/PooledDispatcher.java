@@ -14,23 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch;
+package org.apache.activemq.dispatch.internal.advanced;
 
-import org.apache.activemq.dispatch.ExecutionLoadBalancer.ExecutionTracker;
-import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
+import org.apache.activemq.dispatch.internal.advanced.ExecutionLoadBalancer.ExecutionTracker;
+import org.apache.activemq.dispatch.internal.advanced.IDispatcher.DispatchContext;
 
-public interface PooledDispatcher<D extends IDispatcher> {
+public interface PooledDispatcher {
 
     /**
      * A {@link PooledDispatchContext}s can be moved between different
      * dispatchers.
      */
-    public interface PooledDispatchContext<D extends IDispatcher> extends DispatchContext {
+    public interface PooledDispatchContext extends DispatchContext {
         /**
          * Called to transfer a {@link PooledDispatchContext} to a new
          * Dispatcher.
          */
-        public void assignToNewDispatcher(D newDispatcher);
+        public void assignToNewDispatcher(IDispatcher newDispatcher);
 
         /**
          * Gets the dispatcher to which this PooledDispatchContext currently
@@ -38,27 +38,27 @@ public interface PooledDispatcher<D extends IDispatcher> {
          * 
          * @return
          */
-        public D getDispatcher();
+        public IDispatcher getDispatcher();
 
         /**
          * Gets the execution tracker for the context.
          * 
          * @return the execution tracker for the context:
          */
-        public ExecutionTracker<D> getExecutionTracker();
+        public ExecutionTracker getExecutionTracker();
     }
 
     /**
      * A Dispatcher must call this from it's dispatcher thread to indicate that
      * is has started it's dispatch has started.
      */
-    public void onDispatcherStarted(D dispatcher);
+    public void onDispatcherStarted(IDispatcher dispatcher);
 
     /**
      * A Dispatcher must call this from it's dispatcher thread when exiting it's
      * dispatch loop
      */
-    public void onDispatcherStopped(D dispatcher);
+    public void onDispatcherStopped(IDispatcher dispatcher);
 
     /**
      * Returns the currently executing dispatcher, or null if the current thread
@@ -66,16 +66,16 @@ public interface PooledDispatcher<D extends IDispatcher> {
      * 
      * @return The currently executing dispatcher
      */
-    public D getCurrentDispatcher();
+    public IDispatcher getCurrentDispatcher();
 
-    public void setCurrentDispatchContext(PooledDispatchContext<D> context);
+    public void setCurrentDispatchContext(PooledDispatchContext context);
 
-    public PooledDispatchContext<D> getCurrentDispatchContext();
+    public PooledDispatchContext getCurrentDispatchContext();
 
     /**
      * Returns the load balancer for this dispatch pool.
      * 
      * @return
      */
-    public ExecutionLoadBalancer<D> getLoadBalancer();
+    public ExecutionLoadBalancer getLoadBalancer();
 }

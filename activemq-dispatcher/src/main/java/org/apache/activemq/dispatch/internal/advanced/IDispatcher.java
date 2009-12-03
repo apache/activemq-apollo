@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch;
+package org.apache.activemq.dispatch.internal.advanced;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
-public interface IDispatcher extends Executor{
+public interface IDispatcher extends Executor {
 
     /**
      * This interface is implemented by Dispatchable entities. A Dispatchable

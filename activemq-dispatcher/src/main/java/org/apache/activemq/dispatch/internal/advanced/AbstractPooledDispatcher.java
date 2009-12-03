@@ -14,20 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch;
+package org.apache.activemq.dispatch.internal.advanced;
 
 import java.util.ArrayList;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements IDispatcher, PooledDispatcher<D> {
+public abstract class AbstractPooledDispatcher implements IDispatcher, PooledDispatcher {
 
     private final String name;
 
-    private final ThreadLocal<D> dispatcher = new ThreadLocal<D>();
-    private final ThreadLocal<PooledDispatchContext<D>> dispatcherContext = new ThreadLocal<PooledDispatchContext<D>>();
-    private final ArrayList<D> dispatchers = new ArrayList<D>();
+    private final ThreadLocal<IDispatcher> dispatcher = new ThreadLocal<IDispatcher>();
+    private final ThreadLocal<PooledDispatchContext> dispatcherContext = new ThreadLocal<PooledDispatchContext>();
+    private final ArrayList<IDispatcher> dispatchers = new ArrayList<IDispatcher>();
 
     final AtomicBoolean started = new AtomicBoolean();
     final AtomicBoolean shutdown = new AtomicBoolean();
@@ -35,12 +35,12 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
     private int roundRobinCounter = 0;
     private int size;
 
-    protected ExecutionLoadBalancer<D> loadBalancer;
+    protected ExecutionLoadBalancer loadBalancer;
 
     protected AbstractPooledDispatcher(String name, int size) {
         this.name = name;
         this.size = size;
-        loadBalancer = new SimpleLoadBalancer<D>();
+        loadBalancer = new SimpleLoadBalancer();
     }
 
     /**
@@ -52,10 +52,10 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
      *            The pool.
      * @return The new dispathcer.
      */
-    protected abstract D createDispatcher(String name, AbstractPooledDispatcher<D> pool) throws Exception;
+    protected abstract IDispatcher createDispatcher(String name, AbstractPooledDispatcher pool) throws Exception;
 
     /**
-     * @see org.apache.activemq.dispatch.IDispatcher#start()
+     * @see org.apache.activemq.dispatch.internal.advanced.IDispatcher#start()
      */
     public synchronized final void start() throws Exception {
         loadBalancer.start();
@@ -63,7 +63,7 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
             // Create all the workers.
             try {
                 for (int i = 0; i < size; i++) {
-                    D dispatacher = createDispatcher(name + "-" + (i + 1), this);
+                    IDispatcher dispatacher = createDispatcher(name + "-" + (i + 1), this);
 
                     dispatchers.add(dispatacher);
                     dispatacher.start();
@@ -98,11 +98,11 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
         loadBalancer.stop();
     }
 
-    public void setCurrentDispatchContext(PooledDispatchContext<D> context) {
+    public void setCurrentDispatchContext(PooledDispatchContext context) {
         dispatcherContext.set(context);
     }
 
-    public PooledDispatchContext<D> getCurrentDispatchContext() {
+    public PooledDispatchContext getCurrentDispatchContext() {
         return dispatcherContext.get();
     }
 
@@ -112,7 +112,7 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
      * 
      * @return The currently executing dispatcher
      */
-    public D getCurrentDispatcher() {
+    public IDispatcher getCurrentDispatcher() {
         return dispatcher.get();
     }
 
@@ -120,19 +120,19 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
      * A Dispatcher must call this to indicate that is has started it's dispatch
      * loop.
      */
-    public void onDispatcherStarted(D d) {
+    public void onDispatcherStarted(IDispatcher d) {
         dispatcher.set(d);
         loadBalancer.onDispatcherStarted(d);
     }
 
-    public ExecutionLoadBalancer<D> getLoadBalancer() {
+    public ExecutionLoadBalancer getLoadBalancer() {
         return loadBalancer;
     }
 
     /**
      * A Dispatcher must call this when exiting it's dispatch loop
      */
-    public void onDispatcherStopped(D d) {
+    public void onDispatcherStopped(IDispatcher d) {
         synchronized (dispatchers) {
             if (dispatchers.remove(d)) {
                 size--;
@@ -141,8 +141,8 @@ public abstract class AbstractPooledDispatcher<D extends IDispatcher> implements
         loadBalancer.onDispatcherStopped(d);
     }
 
-    protected D chooseDispatcher() {
-        D d = dispatcher.get();
+    protected IDispatcher chooseDispatcher() {
+        IDispatcher d = dispatcher.get();
         if (d == null) {
             synchronized (dispatchers) {
                 if(dispatchers.isEmpty())

@@ -14,15 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch;
+package org.apache.activemq.dispatch.internal.advanced;
 
 
-import org.apache.activemq.dispatch.IDispatcher.DispatchContext;
-import org.apache.activemq.dispatch.PooledDispatcher.PooledDispatchContext;
+import org.apache.activemq.dispatch.internal.advanced.IDispatcher.DispatchContext;
+import org.apache.activemq.dispatch.internal.advanced.PooledDispatcher.PooledDispatchContext;
 
-public interface ExecutionLoadBalancer<D extends IDispatcher> {
+public interface ExecutionLoadBalancer {
 
-    public interface ExecutionTracker<D extends IDispatcher> {
+    public interface ExecutionTracker {
         
         /**
          * Should be called when a {@link DispatchContext#requestDispatch()} is called.
@@ -30,7 +30,7 @@ public interface ExecutionLoadBalancer<D extends IDispatcher> {
          * @param caller The calling dispatcher
          * @param context The context from which the dispatch is requested.
          */
-        public void onDispatchRequest(D caller, PooledDispatchContext<D> context);
+        public void onDispatchRequest(IDispatcher caller, PooledDispatchContext context);
 
         /**
          * Must be called by the dispatcher when a {@link DispatchContext} is closed.
@@ -42,20 +42,20 @@ public interface ExecutionLoadBalancer<D extends IDispatcher> {
      * Must be called by a dispatch thread when it starts
      * @param dispatcher The dispatcher
      */
-    public void onDispatcherStarted(D dispatcher);
+    public void onDispatcherStarted(IDispatcher dispatcher);
 
     /**
      * Must be called by a dispatch thread when it stops
      * @param dispatcher The dispatcher
      */
-    public void onDispatcherStopped(D dispatcher);
+    public void onDispatcherStopped(IDispatcher dispatcher);
 
     /**
      * Gets an {@link ExecutionTracker} for the dispatch context. 
      * @param context
      * @return
      */
-    public ExecutionTracker<D> createExecutionTracker(PooledDispatchContext<D> context);
+    public ExecutionTracker createExecutionTracker(PooledDispatchContext context);
 
     /**
      * Starts execution tracking
