@@ -7,7 +7,8 @@ import java.util.ArrayList;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Destination.DestinationBean;
@@ -43,7 +44,7 @@ public class MockClient {
     protected ArrayList<MetricCounter> additionalReportMetrics = new ArrayList<MetricCounter>();
     protected boolean includeDetailedRates = false;
 
-    protected Dispatcher dispatcher;
+    protected AdvancedDispatchSPI dispatcher;
 
     public RemoteConsumer consumer(int index) {
         return consumers.get(index);
@@ -214,7 +215,7 @@ public class MockClient {
         return testName;
     }
 
-    public void setDispatcher(Dispatcher dispatcher) {
+    public void setDispatcher(AdvancedDispatchSPI dispatcher) {
         this.dispatcher = dispatcher;
     }
 
@@ -274,13 +275,13 @@ public class MockClient {
         }
     }
 
-    public Dispatcher getDispatcher() {
+    public AdvancedDispatchSPI getDispatcher() {
         return dispatcher;
     }
 
-    protected Dispatcher createDispatcher() {
+    protected AdvancedDispatchSPI createDispatcher() {
         if (dispatcher == null) {
-            dispatcher = DispatcherThread.createPriorityDispatchPool("ClientDispatcher", numPriorities, threadsPerDispatcher);
+            dispatcher = new AdvancedDispatchSPI(threadsPerDispatcher, numPriorities);
         }
         return dispatcher;
     }

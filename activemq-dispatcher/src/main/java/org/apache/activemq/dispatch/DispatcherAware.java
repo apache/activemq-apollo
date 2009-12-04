@@ -1,4 +1,6 @@
-package org.apache.activemq.dispatch.internal.advanced;
+package org.apache.activemq.dispatch;
+
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 
 /**
  * Handy interface to signal classes which would like an IDispatcher instance
@@ -8,6 +10,6 @@ package org.apache.activemq.dispatch.internal.advanced;
  */
 public interface DispatcherAware {
 
-	public void setDispatcher(Dispatcher dispatcher);
+	public void setDispatcher(AdvancedDispatchSPI dispatcher);
 	
 }

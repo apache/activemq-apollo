@@ -18,8 +18,7 @@ package org.apache.activemq.dispatch;
 
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.activemq.dispatch.DispatchSystem.DispatchSPI;
-import org.apache.activemq.dispatch.internal.advanced.AdancedDispatchSPI;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSPI;
 
 import static java.lang.String.*;
@@ -30,15 +29,35 @@ import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class DispatchSystemTest {
+
+    public static class RunnableCountDownLatch extends CountDownLatch implements Runnable {
+        public RunnableCountDownLatch(int count) {
+            super(count);
+        }
+        public void run() {
+            countDown();
+        }
+    }
     
     public static void main(String[] args) throws Exception {
-        DispatchSPI advancedSystem = new AdancedDispatchSPI(Runtime.getRuntime().availableProcessors());
+        DispatchSPI advancedSystem = new AdvancedDispatchSPI(Runtime.getRuntime().availableProcessors(), 3);
+        advancedSystem.start();
         benchmark("advanced global queue", advancedSystem, advancedSystem.getGlobalQueue(DEFAULT));
         benchmark("advanced private serial queue", advancedSystem, advancedSystem.createQueue("test"));
 
+        RunnableCountDownLatch latch = new RunnableCountDownLatch(1);
+        advancedSystem.shutdown(latch);
+        latch.await();
+
         DispatchSPI simpleSystem = new SimpleDispatchSPI(Runtime.getRuntime().availableProcessors());
+        simpleSystem.start();
+        
         benchmark("simple global queue", simpleSystem, simpleSystem.getGlobalQueue(DEFAULT));
         benchmark("simple private serial queue", simpleSystem, simpleSystem.createQueue("test"));
+
+        latch = new RunnableCountDownLatch(1);
+        simpleSystem.shutdown(latch);
+        latch.await();
     }
 
     private static void benchmark(String name, DispatchSPI spi, DispatchQueue queue) throws InterruptedException {

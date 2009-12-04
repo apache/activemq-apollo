@@ -30,7 +30,8 @@ import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.Router;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
-import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
@@ -87,7 +88,7 @@ public abstract class BrokerTestBase {
     protected Broker sendBroker;
     protected Broker rcvBroker;
     protected ArrayList<Broker> brokers = new ArrayList<Broker>();
-    protected Dispatcher dispatcher;
+    protected AdvancedDispatchSPI dispatcher;
     protected final AtomicLong msgIdGenerator = new AtomicLong();
     protected final AtomicBoolean stopping = new AtomicBoolean();
 
@@ -134,8 +135,8 @@ public abstract class BrokerTestBase {
 
     protected abstract String getRemoteWireFormat();
 
-    protected Dispatcher createDispatcher() {
-        return DispatcherThread.createPriorityDispatchPool("BrokerDispatcher", Broker.MAX_PRIORITY, asyncThreadPoolSize);
+    protected AdvancedDispatchSPI createDispatcher() {
+        return new AdvancedDispatchSPI(asyncThreadPoolSize, Broker.MAX_PRIORITY);
     }
 
     @Test

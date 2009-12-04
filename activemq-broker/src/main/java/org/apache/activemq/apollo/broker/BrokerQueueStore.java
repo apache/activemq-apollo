@@ -24,7 +24,7 @@ import java.util.Iterator;
 
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
-import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.PrioritySizeLimiter;
 import org.apache.activemq.flow.SizeLimiter;
@@ -52,7 +52,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
     private static final boolean USE_PRIORITY_QUEUES = true;
 
     private BrokerDatabase database;
-    private Dispatcher dispatcher;
+    private AdvancedDispatchSPI dispatcher;
 
     private static HashMap<String, ProtocolHandler> protocolHandlers = new HashMap<String, ProtocolHandler>();
     private static final BrokerDatabase.MessageRecordMarshaller<MessageDelivery> MESSAGE_MARSHALLER = new BrokerDatabase.MessageRecordMarshaller<MessageDelivery>() {
@@ -226,7 +226,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         this.database = database;
     }
 
-    public void setDispatcher(Dispatcher dispatcher) {
+    public void setDispatcher(AdvancedDispatchSPI dispatcher) {
         this.dispatcher = dispatcher;
     }
 

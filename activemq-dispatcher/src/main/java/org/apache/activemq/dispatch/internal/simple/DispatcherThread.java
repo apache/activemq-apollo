@@ -29,9 +29,9 @@ import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
 final public class DispatcherThread extends Thread {
     private static final int MAX_DISPATCH_BEFORE_CHECKING_FOR_HIGHER_PRIO = 10000;
     private final SimpleDispatchSPI spi;
-    private final ThreadDispatchQueue[] threadQueues;
+    final ThreadDispatchQueue[] threadQueues;
     final AtomicLong threadQueuedRunnables = new AtomicLong();
-    
+        
     public DispatcherThread(SimpleDispatchSPI spi, int ordinal) {
         this.spi = spi;
         this.threadQueues = new ThreadDispatchQueue[3];
@@ -44,42 +44,43 @@ final public class DispatcherThread extends Thread {
     
     @Override
     public void run() {
-        outer: while( true ) {
-            int counter=0;
-            for (SimpleQueue queue : threadQueues) {
-                DispatchSystem.CURRENT_QUEUE.set(queue);
-                Runnable runnable;
-                while( (runnable = queue.poll())!=null ) {
-                    dispatch(runnable);
-                    counter++;
-                }
-            }
-            if( counter!=0 ) {
-                // don't service the global queues until the thread queues are 
-                // drained.
-                continue;
-            }
-            
-            for (SimpleQueue queue : spi.globalQueues) {
-                DispatchSystem.CURRENT_QUEUE.set(threadQueues[queue.getPriority().ordinal()]);
-                
-                Runnable runnable;
-                while( (runnable = queue.poll())!=null ) {
-                    dispatch(runnable);
-                    counter++;
-                    
-                    // Thread queues have the priority.
-                    if( threadQueuedRunnables.get()!=0 ) {
-                        continue outer;
+        try {
+            outer: while( true ) {
+                int counter=0;
+                for (SimpleQueue queue : threadQueues) {
+                    DispatchSystem.CURRENT_QUEUE.set(queue);
+                    Runnable runnable;
+                    while( (runnable = queue.poll())!=null ) {
+                        dispatch(runnable);
+                        counter++;
                     }
                 }
-            }
-            if( counter!=0 ) {
-                // don't wait for wake up until we could find 
-                // no runnables to dispatch.
-                continue;
-            }
-        
+                if( counter!=0 ) {
+                    // don't service the global queues until the thread queues are 
+                    // drained.
+                    continue;
+                }
+                
+                for (SimpleQueue queue : spi.globalQueues) {
+                    DispatchSystem.CURRENT_QUEUE.set(threadQueues[queue.getPriority().ordinal()]);
+                    
+                    Runnable runnable;
+                    while( (runnable = queue.poll())!=null ) {
+                        dispatch(runnable);
+                        counter++;
+                        
+                        // Thread queues have the priority.
+                        if( threadQueuedRunnables.get()!=0 ) {
+                            continue outer;
+                        }
+                    }
+                }
+                if( counter!=0 ) {
+                    // don't wait for wake up until we could find 
+                    // no runnables to dispatch.
+                    continue;
+                }
+            
 //        GlobalDispatchQueue[] globalQueues = spi.globalQueues;
 //        while( true ) {
 //
@@ -93,13 +94,19 @@ final public class DispatcherThread extends Thread {
 //                continue;
 //            }
 //        
-            try {
-                waitForWakeup();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                return;
+                try {
+                    waitForWakeup();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    return;
+                }
             }
+        } catch (Shutdown e) {
         }
+    }
+    
+    @SuppressWarnings("serial")
+    static class Shutdown extends RuntimeException {
     }
 
     private boolean dispatch(SimpleQueue queue) {
@@ -122,6 +129,8 @@ final public class DispatcherThread extends Thread {
     private void dispatch(Runnable runnable) {
         try {
             runnable.run();
+        } catch (Shutdown e) {
+            throw e;
         } catch (Throwable e) {
             e.printStackTrace();
         }

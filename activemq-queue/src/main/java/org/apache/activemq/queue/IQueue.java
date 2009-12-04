@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.queue;
 
-import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.queue.QueueStore.PersistentQueue;
 import org.apache.activemq.util.Mapper;
 
@@ -47,7 +47,7 @@ public interface IQueue<K, V> extends IFlowQueue<V>, PersistentQueue<K, V> {
      * @param dispatcher
      *            The dispatcher to be used by the queue.
      */
-    public void setDispatcher(Dispatcher dispatcher);
+    public void setDispatcher(AdvancedDispatchSPI dispatcher);
 
     /**
      * Sets the base dispatch priority for the queue. Setting to higher value

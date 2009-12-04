@@ -21,8 +21,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.dispatch.internal.advanced.DispatcherAware;
-import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.DispatcherAware;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.Commands.Destination;
@@ -53,7 +54,7 @@ public class MockBroker implements TransportAcceptListener {
     private TransportServer transportServer;
     private String uri;
     private String name;
-    protected Dispatcher dispatcher;
+    protected AdvancedDispatchSPI dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean();
     private boolean useInputQueues = false;
 
@@ -159,7 +160,7 @@ public class MockBroker implements TransportAcceptListener {
         error.printStackTrace();
     }
 
-    public Dispatcher getDispatcher() {
+    public AdvancedDispatchSPI getDispatcher() {
         return dispatcher;
     }
 
@@ -167,7 +168,7 @@ public class MockBroker implements TransportAcceptListener {
         this.name = name;
     }
 
-    public void setDispatcher(Dispatcher dispatcher) {
+    public void setDispatcher(AdvancedDispatchSPI dispatcher) {
         this.dispatcher = dispatcher;
     }
 
@@ -189,7 +190,7 @@ public class MockBroker implements TransportAcceptListener {
 
     protected void createDispatcher() {
         if (dispatcher == null) {
-            dispatcher = DispatcherThread.createPriorityDispatchPool("BrokerDispatcher", Message.MAX_PRIORITY, Runtime.getRuntime().availableProcessors());
+            dispatcher = new AdvancedDispatchSPI(Runtime.getRuntime().availableProcessors(), Message.MAX_PRIORITY);
         }
     }
 

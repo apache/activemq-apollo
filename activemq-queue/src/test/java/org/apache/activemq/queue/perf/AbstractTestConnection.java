@@ -10,7 +10,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.flow.AbstractLimiter;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.IFlowLimiter;
@@ -65,12 +65,12 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
     private final int inputWindowSize = 1000;
     private final int inputResumeThreshold = 500;
 
-    private Dispatcher dispatcher;
+    private AdvancedDispatchSPI dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean(false);
     protected boolean blockingTransport = false;
     ExecutorService blockingWriter;
 
-    public static void setInShutdown(boolean val, Dispatcher dispatcher) {
+    public static void setInShutdown(boolean val, AdvancedDispatchSPI dispatcher) {
         if (val != inShutdown.getAndSet(val)) {
             if (val) {
                 if (USE_RATE_BASED_LIMITER) {
@@ -274,11 +274,11 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
         this.priorityLevels = priorityLevels;
     }
 
-    public Dispatcher getDispatcher() {
+    public AdvancedDispatchSPI getDispatcher() {
         return dispatcher;
     }
 
-    public void setDispatcher(Dispatcher dispatcher) {
+    public void setDispatcher(AdvancedDispatchSPI dispatcher) {
         this.dispatcher = dispatcher;
     }
 
@@ -455,12 +455,12 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
 
     protected static class RateBasedLimiterCollector implements Runnable {
 
-        private Dispatcher dispatcher;
+        private AdvancedDispatchSPI dispatcher;
         private int samplingPeriod = 50;
         private boolean scheduled = false;
         private HashSet<RateBasedLimiter> limiters = new HashSet<RateBasedLimiter>();
 
-        public synchronized void setDispatcher(Dispatcher d) {
+        public synchronized void setDispatcher(AdvancedDispatchSPI d) {
             if (d != dispatcher) {
                 scheduled = false;
                 dispatcher = d;

@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
-import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.FutureResponse;
 import org.apache.activemq.transport.ResponseCallback;
@@ -75,7 +75,7 @@ public class PipeTransportFactory extends TransportFactory {
             }
         }
 
-        public void setDispatcher(Dispatcher dispatcher) {
+        public void setDispatcher(AdvancedDispatchSPI dispatcher) {
             readContext = dispatcher.register(new Runnable() {
                 public void run() {
                     dispatch();

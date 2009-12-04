@@ -20,7 +20,8 @@ import java.util.ArrayList;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Destination.DestinationBean;
@@ -63,7 +64,7 @@ public class MockBrokerTest extends TestCase {
     protected MockBroker rcvBroker;
     protected MockClient client;
 
-    protected Dispatcher dispatcher;
+    protected AdvancedDispatchSPI dispatcher;
 
     static public final Mapper<Long, Message> KEY_MAPPER = new Mapper<Long, Message>() {
         public Long map(Message element) {
@@ -94,8 +95,8 @@ public class MockBrokerTest extends TestCase {
         }
     }
 
-    protected Dispatcher createDispatcher(String name) {
-        return DispatcherThread.createPriorityDispatchPool(name, Message.MAX_PRIORITY, threadsPerDispatcher);
+    protected AdvancedDispatchSPI createDispatcher(String name) {
+        return new AdvancedDispatchSPI(threadsPerDispatcher, Message.MAX_PRIORITY);
     }
 
     public void test_1_1_0() throws Exception {
@@ -284,7 +285,7 @@ public class MockBrokerTest extends TestCase {
             }
         }
 
-        Dispatcher clientDispatcher = null;
+        AdvancedDispatchSPI clientDispatcher = null;
         if (SEPARATE_CLIENT_DISPATCHER) {
             clientDispatcher = createDispatcher("ClientDispatcher");
             clientDispatcher.start();

@@ -16,22 +16,35 @@
  */
 package org.apache.activemq.dispatch.internal.advanced;
 
+import java.nio.channels.SelectableChannel;
 import java.util.ArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
-public class DispatcherPool implements Dispatcher {
+import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.DispatchSPI;
+import org.apache.activemq.dispatch.DispatchSource;
+import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
+import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
 
-    private final String name;
+import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.*;
+
+public class AdvancedDispatchSPI implements DispatchSPI {
+
+    final SerialDispatchQueue mainQueue = new SerialDispatchQueue("main");
+    final GlobalDispatchQueue globalQueues[];
+    final AtomicLong globalQueuedRunnables = new AtomicLong();
 
     private final ThreadLocal<DispatcherThread> dispatcher = new ThreadLocal<DispatcherThread>();
     private final ThreadLocal<PooledDispatchContext> dispatcherContext = new ThreadLocal<PooledDispatchContext>();
     private final ArrayList<DispatcherThread> dispatchers = new ArrayList<DispatcherThread>();
 
-    final AtomicBoolean started = new AtomicBoolean();
-    final AtomicBoolean shutdown = new AtomicBoolean();
+    final AtomicInteger startCounter = new AtomicInteger();
+//    final AtomicBoolean started = new AtomicBoolean();
+//    final AtomicBoolean shutdown = new AtomicBoolean();
 
     private int roundRobinCounter = 0;
     private int size;
@@ -39,10 +52,15 @@ public class DispatcherPool implements Dispatcher {
 
     protected LoadBalancer loadBalancer;
 
-    protected DispatcherPool(String name, int size, int numPriorities) {
-        this.name = name;
+    public AdvancedDispatchSPI(int size, int numPriorities) {
         this.size = size;
         this.numPriorities = numPriorities;
+        
+        globalQueues = new GlobalDispatchQueue[3];
+        for (int i = 0; i < 3; i++) {
+            globalQueues[i] = new GlobalDispatchQueue(this, DispatchQueuePriority.values()[i]);
+        }
+        
         loadBalancer = new SimpleLoadBalancer();
     }
 
@@ -55,20 +73,20 @@ public class DispatcherPool implements Dispatcher {
      *            The pool.
      * @return The new dispathcer.
      */
-    protected DispatcherThread createDispatcher(String name, DispatcherPool pool) throws Exception {
-        return new DispatcherThread(name, numPriorities, this);
+    protected DispatcherThread createDispatcher(String name) throws Exception {
+        return new DispatcherThread(this, name, numPriorities);
     }
 
     /**
      * @see org.apache.activemq.dispatch.internal.advanced.Dispatcher#start()
      */
-    public synchronized final void start() throws Exception {
-        loadBalancer.start();
-        if (started.compareAndSet(false, true)) {
+    public synchronized final void start()  {
+        if( startCounter.getAndIncrement()==0 ) {
             // Create all the workers.
             try {
+                loadBalancer.start();
                 for (int i = 0; i < size; i++) {
-                    DispatcherThread dispatacher = createDispatcher(name + "-" + (i + 1), this);
+                    DispatcherThread dispatacher = createDispatcher("dispatcher -" + (i + 1));
                     dispatchers.add(dispatacher);
                     dispatacher.start();
                 }
@@ -78,28 +96,23 @@ public class DispatcherPool implements Dispatcher {
         }
     }
 
+    public final void shutdown() {
+        shutdown(null);
+    }
+    
     /*
      * (non-Javadoc)
      * 
      * @see org.apache.activemq.dispatch.IDispatcher#shutdown()
      */
-    public synchronized final void shutdown() throws InterruptedException {
-        shutdown.set(true);
-        boolean interrupted = false;
-        while (!dispatchers.isEmpty()) {
-            try {
-                dispatchers.get(dispatchers.size() - 1).shutdown();
-            } catch (InterruptedException ie) {
-                interrupted = true;
-                continue;
+    public final void shutdown(Runnable onShutdown) {
+        if( startCounter.decrementAndGet()==0 ) {
+            final AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.size());
+            for (DispatcherThread d : new ArrayList<DispatcherThread>(dispatchers)) {
+                d.shutdown(shutdownCountDown, onShutdown);
             }
+            loadBalancer.stop();
         }
-        // Re-interrupt:
-        if (interrupted) {
-            Thread.currentThread().interrupt();
-        }
-
-        loadBalancer.stop();
     }
 
     public void setCurrentDispatchContext(PooledDispatchContext context) {
@@ -167,14 +180,6 @@ public class DispatcherPool implements Dispatcher {
         return chooseDispatcher().register(runnable, name);
     }
 
-    public String toString() {
-        return name;
-    }
-
-	public String getName() {
-		return name;
-	}
-
 	public int getSize() {
 		return size;
 	}
@@ -208,4 +213,27 @@ public class DispatcherPool implements Dispatcher {
     public void schedule(final Runnable runnable, int priority, long delay, TimeUnit timeUnit) {
         chooseDispatcher().schedule(runnable, priority, delay, timeUnit);
     }
+    
+    public DispatchQueue getMainQueue() {
+        return mainQueue;
+    }
+    
+    public DispatchQueue getGlobalQueue(DispatchQueuePriority priority) {
+        return globalQueues[priority.ordinal()];
+    }
+    
+    public DispatchQueue createQueue(String label) {
+        SerialDispatchQueue rc = new SerialDispatchQueue(label);
+        rc.setTargetQueue(getGlobalQueue(DEFAULT));
+        return rc;
+    }
+    
+    public void dispatchMain() {
+        mainQueue.run();
+    }
+
+    public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue) {
+        return null;
+    }    
+
 }

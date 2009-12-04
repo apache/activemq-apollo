@@ -14,13 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.transport;
 
-import org.apache.activemq.dispatch.DispatcherAware;
+package org.apache.activemq.dispatch;
 
-public interface DispatchableTransport extends Transport, DispatcherAware {
+import java.nio.channels.SelectableChannel;
 
-    public void setDispatchPriority(int priority);
+import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
 
-    public void setName(String name);
+public interface DispatchSPI {
+    public void start();
+    public void shutdown(Runnable onShutdown);
+    
+    public DispatchQueue getMainQueue();
+    public DispatchQueue getGlobalQueue(DispatchQueuePriority priority);
+    public DispatchQueue createQueue(String label);
+    public void dispatchMain();
+    public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue);
 }

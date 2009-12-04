@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.queue;
 
-import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.flow.IFlowRelay;
 
 public interface IFlowQueue<E> extends IBlockingFlowSource<E>, IPollableFlowSource<E>, IFlowRelay<E> {
@@ -57,7 +57,7 @@ public interface IFlowQueue<E> extends IBlockingFlowSource<E>, IPollableFlowSour
      * @param dispatcher
      *            The dispatcher to be used by the queue.
      */
-    public void setDispatcher(Dispatcher dispatcher);
+    public void setDispatcher(AdvancedDispatchSPI dispatcher);
 
     /**
      * Sets the base dispatch priority for the queue. Setting to higher value

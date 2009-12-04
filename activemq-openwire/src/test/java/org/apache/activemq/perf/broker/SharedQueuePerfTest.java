@@ -39,9 +39,8 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.MessageId;
 import org.apache.activemq.command.ProducerId;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
-import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
-import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
@@ -65,7 +64,7 @@ public class SharedQueuePerfTest extends TestCase {
 
     private static int PERFORMANCE_SAMPLES = 5;
 
-    Dispatcher dispatcher;
+    AdvancedDispatchSPI dispatcher;
     BrokerDatabase database;
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
@@ -82,12 +81,8 @@ public class SharedQueuePerfTest extends TestCase {
     protected ArrayList<Producer> producers = new ArrayList<Producer>();
     protected ArrayList<IQueue<Long, MessageDelivery>> queues = new ArrayList<IQueue<Long, MessageDelivery>>();
 
-    protected Dispatcher createDispatcher() {
-        if (THREAD_POOL_SIZE > 1) {
-            return DispatcherThread.createPriorityDispatchPool("TestDispatcher", Broker.MAX_PRIORITY, THREAD_POOL_SIZE);
-        } else {
-            return DispatcherThread.createPriorityDispatcher("TestDispatcher", Broker.MAX_PRIORITY);
-        }
+    protected AdvancedDispatchSPI createDispatcher() {
+        return new AdvancedDispatchSPI(THREAD_POOL_SIZE, Broker.MAX_PRIORITY);
     }
 
     protected int consumerStartDelay = 0;

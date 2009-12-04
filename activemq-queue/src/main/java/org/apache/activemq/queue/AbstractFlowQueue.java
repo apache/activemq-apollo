@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
-import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 
 /**
@@ -31,7 +31,7 @@ import org.apache.activemq.flow.ISinkController.FlowControllable;
  */
 public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implements FlowControllable<E>, IFlowQueue<E> {
 
-    protected Dispatcher dispatcher;
+    protected AdvancedDispatchSPI dispatcher;
     protected DispatchContext dispatchContext;
     protected Collection<IPollableFlowSource.FlowReadyListener<E>> readyListeners;
     private boolean notifyReady = false;
@@ -132,7 +132,7 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
      * @param dispatcher
      *            The dispatcher to handle messages.
      */
-    public synchronized void setDispatcher(Dispatcher dispatcher) {
+    public synchronized void setDispatcher(AdvancedDispatchSPI dispatcher) {
         this.dispatcher = dispatcher;
         dispatchContext = dispatcher.register(new Runnable(){
             public void run() {

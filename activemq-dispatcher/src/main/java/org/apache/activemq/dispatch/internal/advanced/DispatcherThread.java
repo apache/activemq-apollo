@@ -24,6 +24,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.dispatch.DispatchObserver;
 import org.apache.activemq.dispatch.DispatchSystem;
@@ -46,7 +47,7 @@ public class DispatcherThread implements Runnable, Dispatcher {
     protected final HashSet<PriorityDispatchContext> contexts = new HashSet<PriorityDispatchContext>();
 
     // Set if this dispatcher is part of a dispatch pool:
-    protected final DispatcherPool dispatcherPool;
+    protected final AdvancedDispatchSPI spi;
 
     // The local dispatch queue:
     protected final PriorityLinkedList<PriorityDispatchContext> priorityQueue;
@@ -74,7 +75,7 @@ public class DispatcherThread implements Runnable, Dispatcher {
         }
     };
 
-    protected DispatcherThread(String name, int priorities, DispatcherPool pooledDispactcher) {
+    protected DispatcherThread(AdvancedDispatchSPI spi, String name, int priorities) {
         this.name = name;
         
         this.dispatchQueues = new ThreadDispatchQueue[3];
@@ -88,15 +89,7 @@ public class DispatcherThread implements Runnable, Dispatcher {
         for (int i = 0; i < 2; i++) {
             foreignQueue[i] = new LinkedNodeList<ForeignEvent>();
         }
-        this.dispatcherPool = pooledDispactcher;
-    }
-
-    public static final Dispatcher createPriorityDispatcher(String name, int numPriorities) {
-        return new DispatcherThread(name, numPriorities, null);
-    }
-
-    public static final Dispatcher createPriorityDispatchPool(String name, final int numPriorities, int size) {
-        return new DispatcherPool(name, size, numPriorities);
+        this.spi = spi;
     }
 
     @SuppressWarnings("unchecked")
@@ -167,21 +160,33 @@ public class DispatcherThread implements Runnable, Dispatcher {
      * @see org.apache.activemq.dispatch.IDispatcher#shutdown()
      */
     public void shutdown() throws InterruptedException {
-        Thread joinThread = null;
+        Thread joinThread = shutdown(new AtomicInteger(1), null);
+        if (joinThread != null) {
+            // thread.interrupt();
+            joinThread.join();
+        }
+    }
+    
+    public Thread shutdown(final AtomicInteger shutdownCountDown, final Runnable onShutdown) {
         synchronized (this) {
             if (thread != null) {
                 dispatchInternal(new Runnable() {
                     public void run() {
                         running = false;
+                        if( shutdownCountDown.decrementAndGet()==0 && onShutdown!=null) {
+                            onShutdown.run();
+                        }
                     }
                 }, MAX_USER_PRIORITY + 1);
-                joinThread = thread;
+                Thread rc = thread;
                 thread = null;
+                return rc;
+            } else {
+                if( shutdownCountDown.decrementAndGet()==0 && onShutdown!=null) {
+                    onShutdown.run();
+                }
             }
-        }
-        if (joinThread != null) {
-            // thread.interrupt();
-            joinThread.join();
+            return null;
         }
     }
 
@@ -200,9 +205,9 @@ public class DispatcherThread implements Runnable, Dispatcher {
 
     public void run() {
 
-        if (dispatcherPool != null) {
+        if (spi != null) {
             // Inform the dispatcher that we have started:
-            dispatcherPool.onDispatcherStarted((DispatcherThread) this);
+            spi.onDispatcherStarted((DispatcherThread) this);
         }
 
         PriorityDispatchContext pdc;
@@ -216,14 +221,14 @@ public class DispatcherThread implements Runnable, Dispatcher {
                     }
                     
                     if (pdc.tracker != null) {
-                        dispatcherPool.setCurrentDispatchContext(pdc);
+                        spi.setCurrentDispatchContext(pdc);
                     }
 
                     counter++;
                     pdc.run();
 
                     if (pdc.tracker != null) {
-                        dispatcherPool.setCurrentDispatchContext(null);
+                        spi.setCurrentDispatchContext(null);
                     }
                 }
 
@@ -263,8 +268,8 @@ public class DispatcherThread implements Runnable, Dispatcher {
         } catch (Throwable thrown) {
             thrown.printStackTrace();
         } finally {
-            if (dispatcherPool != null) {
-                dispatcherPool.onDispatcherStopped((DispatcherThread) this);
+            if (spi != null) {
+                spi.onDispatcherStopped((DispatcherThread) this);
             }
             cleanup();
         }
@@ -421,8 +426,8 @@ public class DispatcherThread implements Runnable, Dispatcher {
     }
 
     private final DispatcherThread getCurrentDispatcher() {
-        if (dispatcherPool != null) {
-            return (DispatcherThread) dispatcherPool.getCurrentDispatcher();
+        if (spi != null) {
+            return (DispatcherThread) spi.getCurrentDispatcher();
         } else if (Thread.currentThread() == thread) {
             return (DispatcherThread) this;
         } else {
@@ -432,7 +437,7 @@ public class DispatcherThread implements Runnable, Dispatcher {
     }
 
     private final PooledDispatchContext getCurrentDispatchContext() {
-        return dispatcherPool.getCurrentDispatchContext();
+        return spi.getCurrentDispatchContext();
     }
 
     /**
@@ -464,8 +469,8 @@ public class DispatcherThread implements Runnable, Dispatcher {
             this.runnable = runnable;
             this.name = name;
             this.currentOwner = (DispatcherThread) DispatcherThread.this;
-            if (persistent && dispatcherPool != null) {
-                this.tracker = dispatcherPool.getLoadBalancer().createExecutionTracker((PooledDispatchContext) this);
+            if (persistent && spi != null) {
+                this.tracker = spi.getLoadBalancer().createExecutionTracker((PooledDispatchContext) this);
             } else {
                 this.tracker = null;
             }
@@ -688,4 +693,5 @@ public class DispatcherThread implements Runnable, Dispatcher {
     public String getName() {
         return name;
     }
+
 }

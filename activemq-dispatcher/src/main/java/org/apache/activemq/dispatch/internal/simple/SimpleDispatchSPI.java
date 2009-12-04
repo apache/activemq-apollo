@@ -22,9 +22,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.DispatchSPI;
 import org.apache.activemq.dispatch.DispatchSource;
 import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
-import org.apache.activemq.dispatch.DispatchSystem.DispatchSPI;
 import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
 
 import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.*;
@@ -35,7 +35,7 @@ import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class SimpleDispatchSPI extends DispatchSPI {
+public class SimpleDispatchSPI implements DispatchSPI {
         
     final SerialDispatchQueue mainQueue = new SerialDispatchQueue("main");
     final GlobalDispatchQueue globalQueues[]; 
@@ -44,20 +44,14 @@ public class SimpleDispatchSPI extends DispatchSPI {
     
     final ConcurrentLinkedQueue<DispatcherThread> waitingDispatchers = new ConcurrentLinkedQueue<DispatcherThread>();
     final AtomicInteger waitingDispatcherCount = new AtomicInteger();
-
+    final AtomicInteger startCounter = new AtomicInteger();
     
     public SimpleDispatchSPI(int size) {
         globalQueues = new GlobalDispatchQueue[3];
         for (int i = 0; i < 3; i++) {
             globalQueues[i] = new GlobalDispatchQueue(this, DispatchQueuePriority.values()[i] );
         }
-                                  
         dispatchers = new DispatcherThread[size];
-        for (int i = 0; i < size; i++) {
-            dispatchers[i] = new DispatcherThread(this, i);
-            dispatchers[i].start();
-            
-        }
     }
     
     public DispatchQueue getMainQueue() {
@@ -94,6 +88,33 @@ public class SimpleDispatchSPI extends DispatchSPI {
             if( dispatcher!=null ) {
                 waitingDispatcherCount.decrementAndGet();
                 dispatcher.globalWakeup();
+            }
+        }
+    }
+
+    public void start() {
+        if( startCounter.getAndIncrement()==0 ) {
+            for (int i = 0; i < dispatchers.length; i++) {
+                dispatchers[i] = new DispatcherThread(this, i);
+                dispatchers[i].start();
+            }
+        }
+    }
+
+    public void shutdown(final Runnable onShutdown) {
+        if( startCounter.decrementAndGet()==0 ) {
+            
+            final AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.length);
+            for (int i = 0; i < dispatchers.length; i++) {
+                ThreadDispatchQueue queue = dispatchers[i].threadQueues[LOW.ordinal()];
+                queue.runnables.add(new Runnable() {
+                    public void run() {
+                        if( shutdownCountDown.decrementAndGet()==0 && onShutdown!=null) {
+                            onShutdown.run();
+                        }
+                        throw new DispatcherThread.Shutdown();
+                    }
+                });
             }
         }
     }

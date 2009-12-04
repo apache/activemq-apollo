@@ -29,15 +29,13 @@ import org.apache.activemq.dispatch.internal.QueueSupport;
 public class GlobalDispatchQueue implements DispatchQueue {
 
     private final String label;
-    private final AdancedDispatchSPI system;
-    private final DispatcherPool dispatcher;
+    private final AdvancedDispatchSPI spi;
     private final DispatchQueuePriority priority;
     
-    public GlobalDispatchQueue(AdancedDispatchSPI system, DispatchQueuePriority priority) {
-        this.system = system;
+    public GlobalDispatchQueue(AdvancedDispatchSPI spi, DispatchQueuePriority priority) {
+        this.spi = spi;
         this.priority = priority;
         this.label=priority.toString();
-        this.dispatcher = this.system.pooledDispatcher;
     }
 
     public String getLabel() {
@@ -45,11 +43,11 @@ public class GlobalDispatchQueue implements DispatchQueue {
     }
 
     public void dispatchAsync(Runnable runnable) {
-        dispatcher.execute(runnable, priority.ordinal());
+        spi.execute(runnable, priority.ordinal());
     }
 
     public void dispatchAfter(long delayMS, Runnable runnable) {
-        dispatcher.schedule(runnable, priority.ordinal(), delayMS, TimeUnit.MILLISECONDS);
+        spi.schedule(runnable, priority.ordinal(), delayMS, TimeUnit.MILLISECONDS);
     }
 
     public void dispatchSync(final Runnable runnable) throws InterruptedException {

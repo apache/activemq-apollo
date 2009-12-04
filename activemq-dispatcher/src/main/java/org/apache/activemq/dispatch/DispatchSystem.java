@@ -32,14 +32,6 @@ public class DispatchSystem {
         LOW;
     }
 
-    static abstract public class DispatchSPI {
-        abstract public DispatchQueue getMainQueue();
-        abstract public DispatchQueue getGlobalQueue(DispatchQueuePriority priority);
-        abstract public DispatchQueue createQueue(String label);
-        abstract public void dispatchMain();
-        abstract public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue);
-    }
-
     public final static ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
     static public DispatchQueue getCurrentQueue() {
         return CURRENT_QUEUE.get();
