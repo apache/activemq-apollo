@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.dispatch.internal.simple;
 
+import java.util.LinkedList;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -30,6 +31,7 @@ import org.apache.activemq.dispatch.internal.QueueSupport;
 public class ThreadDispatchQueue implements SimpleQueue {
 
     final String label;
+    final LinkedList<Runnable> localRunnables = new LinkedList<Runnable>();
     final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
     private DispatcherThread dispatcher;
     final AtomicLong counter;
@@ -47,13 +49,30 @@ public class ThreadDispatchQueue implements SimpleQueue {
     }
 
     public void dispatchAsync(Runnable runnable) {
-        counter.incrementAndGet();
-        runnables.add(runnable);
-        dispatcher.wakeup();
+        // We don't have to take the synchronization hit 
+        // if the current thread is the dispatcher since we know it's not
+        // waiting.
+        if( Thread.currentThread()!=dispatcher ) {
+            counter.incrementAndGet();
+            runnables.add(runnable);
+            dispatcher.wakeup();
+        } else {
+            localRunnables.add(runnable);
+        }
     }
 
     public Runnable poll() {
-        Runnable rc = runnables.poll();
+        
+        // This method should only be called by our dispatcher 
+        // thread.
+        assert Thread.currentThread()==dispatcher;
+        
+        Runnable rc = localRunnables.poll();
+        if( rc !=null ) {
+            return rc;
+        }
+        
+        rc = runnables.poll();
         if( rc !=null ) {
             counter.decrementAndGet();
         }

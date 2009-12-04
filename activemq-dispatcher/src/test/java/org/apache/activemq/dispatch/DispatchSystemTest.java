@@ -32,9 +32,9 @@ import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.
 public class DispatchSystemTest {
     
     public static void main(String[] args) throws Exception {
-        DispatchSPI advancedSystem = new AdancedDispatchSPI(Runtime.getRuntime().availableProcessors());
-        benchmark("advanced global queue", advancedSystem, advancedSystem.getGlobalQueue(DEFAULT));
-        benchmark("advanced private serial queue", advancedSystem, advancedSystem.createQueue("test"));
+//        DispatchSPI advancedSystem = new AdancedDispatchSPI(Runtime.getRuntime().availableProcessors());
+//        benchmark("advanced global queue", advancedSystem, advancedSystem.getGlobalQueue(DEFAULT));
+//        benchmark("advanced private serial queue", advancedSystem, advancedSystem.createQueue("test"));
 
         DispatchSPI simpleSystem = new SimpleDispatchSPI(Runtime.getRuntime().availableProcessors());
         benchmark("simple global queue", simpleSystem, simpleSystem.getGlobalQueue(DEFAULT));
