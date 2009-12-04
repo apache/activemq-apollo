@@ -144,10 +144,6 @@ public class DispatcherThread implements Runnable, Dispatcher {
         }
     }
 
-    public DispatchContext register(Dispatchable dispatchable, String name) {
-        return register(new DispachableAdapter(dispatcherPool, dispatchable), name);
-    }
-    
     public DispatchContext register(Runnable runnable, String name) {
         return new PriorityDispatchContext(runnable, true, name);
     }

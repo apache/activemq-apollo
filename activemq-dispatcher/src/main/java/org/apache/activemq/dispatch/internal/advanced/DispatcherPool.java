@@ -163,10 +163,6 @@ public class DispatcherPool implements Dispatcher {
         }
     }
 
-    public DispatchContext register(Dispatchable dispatchable, String name) {
-        return chooseDispatcher().register(dispatchable, name);
-    }
-
     public DispatchContext register(Runnable runnable, String name) {
         return chooseDispatcher().register(runnable, name);
     }

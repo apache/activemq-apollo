@@ -14,7 +14,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
-import org.apache.activemq.dispatch.internal.advanced.Dispatchable;
 import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
 import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.FutureResponse;
@@ -37,7 +36,7 @@ public class PipeTransportFactory extends TransportFactory {
 
     static protected final HashMap<String, PipeTransportServer> servers = new HashMap<String, PipeTransportServer>();
 
-    protected static class PipeTransport implements DispatchableTransport, Dispatchable, Runnable, ReadReadyListener<Object> {
+    protected static class PipeTransport implements DispatchableTransport, Runnable, ReadReadyListener<Object> {
 
         private final Pipe<Object> pipe;
         private TransportListener listener;
@@ -77,7 +76,11 @@ public class PipeTransportFactory extends TransportFactory {
         }
 
         public void setDispatcher(Dispatcher dispatcher) {
-            readContext = dispatcher.register((Dispatchable)this, name);
+            readContext = dispatcher.register(new Runnable() {
+                public void run() {
+                    dispatch();
+                }
+            }, name);
         }
 
         public void onReadReady(Pipe<Object> pipe) {
@@ -108,13 +111,13 @@ public class PipeTransportFactory extends TransportFactory {
              */
         }
 
-        public boolean dispatch() {
+        public void dispatch() {
             while (true) {
                 try {
                     Object o = pipe.poll();
                     if (o == null) {
                         pipe.setReadReadyListener(this);
-                        return true;
+                        return;
                     } else {
                     	if(o == EOF_TOKEN) {
                     		throw new EOFException();
@@ -124,7 +127,8 @@ public class PipeTransportFactory extends TransportFactory {
                         } else {
                             listener.onCommand(o);
                         }
-                        return false;
+                        readContext.requestDispatch();
+                        return;
                     }
                 } catch (IOException e) {
                     listener.onException(e);

@@ -22,17 +22,15 @@ import java.util.concurrent.TimeUnit;
 public interface Dispatcher extends Executor {
 
     /**
-     * Registers a {@link Dispatchable} with this dispatcher, and returns a
+     * Registers a {@link Runnable} with this dispatcher, and returns a
      * {@link DispatchContext} that the caller can use to request dispatch.
      * 
-     * @param dispatchable
-     *            The {@link Dispatchable}
+     * @param runnable
+     *            The {@link Runnable}
      * @param name
      *            An identifier for the dispatcher.
      * @return A {@link DispatchContext} that can be used to request dispatch
      */
-    public DispatchContext register(Dispatchable dispatchable, String name);
-    
     public DispatchContext register(Runnable runnable, String name);
 
     /**

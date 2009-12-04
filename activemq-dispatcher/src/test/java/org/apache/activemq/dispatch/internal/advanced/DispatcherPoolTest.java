@@ -55,7 +55,7 @@ public class DispatcherPoolTest {
         counter.await();
     }
     
-    private static final class Work implements Dispatchable {
+    private static final class Work implements Runnable {
         private final CountDownLatch counter;
         private final DispatchContext context;
 
@@ -64,12 +64,11 @@ public class DispatcherPoolTest {
             this.context = pooledDispatcher.register(this , "test");
         }
 
-        public boolean dispatch() {
+        public void run() {
             counter.countDown();
             if( counter.getCount()>0 ) {
                 context.requestDispatch();
             }
-            return true;
         }
     }
 

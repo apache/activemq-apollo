@@ -3,7 +3,6 @@ package org.apache.activemq.queue.perf;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
-import org.apache.activemq.dispatch.internal.advanced.Dispatchable;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
@@ -12,7 +11,7 @@ import org.apache.activemq.flow.ISinkController.FlowUnblockListener;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
 
-public class RemoteProducer extends ClientConnection implements Dispatchable, FlowUnblockListener<Message> {
+public class RemoteProducer extends ClientConnection implements FlowUnblockListener<Message> {
 
     private final MetricCounter rate = new MetricCounter();
 
@@ -46,7 +45,11 @@ public class RemoteProducer extends ClientConnection implements Dispatchable, Fl
 
         super.start();
         outboundController = outputQueue.getFlowController(outboundFlow);
-        dispatchContext = getDispatcher().register(this, name + "-client");
+        dispatchContext = getDispatcher().register(new Runnable() {
+            public void run() {
+                dispatch();
+            }
+        }, name + "-client");
         dispatchContext.requestDispatch();
     }
 
@@ -59,7 +62,7 @@ public class RemoteProducer extends ClientConnection implements Dispatchable, Fl
         dispatchContext.requestDispatch();
     }
 
-    public boolean dispatch() {
+    public void dispatch() {
         while (true) {
 
             if (next == null) {
@@ -77,14 +80,14 @@ public class RemoteProducer extends ClientConnection implements Dispatchable, Fl
             // If flow controlled stop until flow control is lifted.
             if (outboundController.isSinkBlocked()) {
                 if (outboundController.addUnblockListener(this)) {
-                    return true;
+                    return;
                 }
             }
 
             getSink().add(next, null);
             rate.increment();
             next = null;
-            return false;
+            dispatchContext.requestDispatch();
         }
     }
 

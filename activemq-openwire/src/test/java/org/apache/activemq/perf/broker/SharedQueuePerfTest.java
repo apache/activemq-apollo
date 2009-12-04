@@ -289,7 +289,7 @@ public class SharedQueuePerfTest extends TestCase {
         }
     }
 
-    class Producer implements Dispatchable, FlowUnblockListener<OpenWireMessageDelivery> {
+    class Producer implements FlowUnblockListener<OpenWireMessageDelivery> {
         private AtomicBoolean stopped = new AtomicBoolean(false);
         private String name;
         protected final MetricCounter sendRate = new MetricCounter();
@@ -312,7 +312,11 @@ public class SharedQueuePerfTest extends TestCase {
             this.name = name;
             sendRate.name("Producer " + name + " Rate");
             totalProducerRate.add(sendRate);
-            dispatchContext = dispatcher.register(this, name);
+            dispatchContext = dispatcher.register(new Runnable(){
+                public void run() {
+                    dispatch();
+                }
+            }, name);
             // create a 1024 byte payload (2 bytes per char):
             payload = new String(new byte[512]);
             producerId = new ProducerId(name);
@@ -362,18 +366,18 @@ public class SharedQueuePerfTest extends TestCase {
             stopped.set(true);
         }
 
-        public boolean dispatch() {
+        public void dispatch() {
             // If flow controlled stop until flow control is lifted.
             if (outboundController.isSinkBlocked()) {
                 if (outboundController.addUnblockListener(this)) {
-                    return true;
+                    return;
                 }
             }
 
             if( TEST_MAX_STORE_LATENCY ) {
             	// We can't send again until we get persist ack.
             	if( waitingForAck.get() ) {
-                    return true;
+                    return;
             	}
             }
             
@@ -392,14 +396,16 @@ public class SharedQueuePerfTest extends TestCase {
                 } catch (JMSException e) {
                     e.printStackTrace();
                     stopped.set(true);
-                    return true;
+                    return;
                 }
             }
 
             sendRate.increment();
             outboundQueue.add(next, null);
             next = null;
-            return stopped.get();
+            if ( !stopped.get() ) {
+                dispatchContext.requestDispatch();
+            }
         }
 
         private OpenWireMessageDelivery createNextMessage() throws JMSException {

@@ -7,7 +7,6 @@ import org.apache.activemq.apollo.Connection;
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
-import org.apache.activemq.dispatch.internal.advanced.Dispatchable;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.ISinkController;
@@ -16,7 +15,7 @@ import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
 import org.apache.activemq.transport.TransportFactory;
 
-abstract public class RemoteProducer extends Connection implements Dispatchable, FlowUnblockListener<MessageDelivery> {
+abstract public class RemoteProducer extends Connection implements FlowUnblockListener<MessageDelivery> {
 
     protected final MetricCounter rate = new MetricCounter();
 
@@ -58,9 +57,37 @@ abstract public class RemoteProducer extends Connection implements Dispatchable,
         
         setupProducer();
         
-        dispatchContext = getDispatcher().register(this, name + "-client");
+        dispatchContext = getDispatcher().register(new Runnable(){
+            public void run() {
+                dispatch();
+            }
+        }, name + "-client");
         dispatchContext.requestDispatch();
 
+    }
+    
+    public void dispatch() {
+        while(true)
+        {
+            
+            if(next == null)
+            {
+                createNextMessage();
+            }
+            
+            //If flow controlled stop until flow control is lifted.
+            if(outboundController.isSinkBlocked())
+            {
+                if(outboundController.addUnblockListener(this))
+                {
+                    return;
+                }
+            }
+            
+            outboundQueue.add(next, null);
+            rate.increment();
+            next = null;
+        }
     }
 
     abstract protected void setupProducer() throws Exception;
@@ -75,30 +102,6 @@ abstract public class RemoteProducer extends Connection implements Dispatchable,
     
 	public void onFlowUnblocked(ISinkController<MessageDelivery> controller) {
 		dispatchContext.requestDispatch();
-	}
-
-	public boolean dispatch() {
-		while(true)
-		{
-			
-			if(next == null)
-			{
-	            createNextMessage();
-			}
-	        
-			//If flow controlled stop until flow control is lifted.
-			if(outboundController.isSinkBlocked())
-			{
-				if(outboundController.addUnblockListener(this))
-				{
-					return true;
-				}
-			}
-			
-			outboundQueue.add(next, null);
-	        rate.increment();
-	        next = null;
-		}
 	}
 
     protected String createPayload() {

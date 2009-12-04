@@ -20,17 +20,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
-import org.apache.activemq.dispatch.internal.advanced.Dispatchable;
 import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 
 /**
- * Base class for a {@link Dispatchable} {@link FlowControllable}
+ * Base class for a {@link FlowControllable}
  * {@link IFlowQueue}.
  * 
  * @param <E>
  */
-public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implements FlowControllable<E>, IFlowQueue<E>, Dispatchable {
+public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implements FlowControllable<E>, IFlowQueue<E> {
 
     protected Dispatcher dispatcher;
     protected DispatchContext dispatchContext;
@@ -56,14 +55,6 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
 
     public void setFlowQueueListener(FlowQueueListener listener) {
         this.listener = listener;
-    }
-
-    public final boolean dispatch() {
-
-        // while (pollingDispatch());
-        // return true;
-
-        return !pollingDispatch();
     }
 
     protected final FlowControllable<E> getFlowControllableHook() {
@@ -143,7 +134,12 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
      */
     public synchronized void setDispatcher(Dispatcher dispatcher) {
         this.dispatcher = dispatcher;
-        dispatchContext = dispatcher.register(this, getResourceName());
+        dispatchContext = dispatcher.register(new Runnable(){
+            public void run() {
+                if( pollingDispatch() ) {
+                    dispatchContext.requestDispatch();
+                }
+            }}, getResourceName());
         dispatchContext.updatePriority(dispatchPriority);
         super.setFlowExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
     }
