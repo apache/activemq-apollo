@@ -82,4 +82,8 @@ public class ThreadDispatchQueue implements DispatchQueue {
         throw new UnsupportedOperationException();
     }
 
+    public DispatchQueue getTargetQueue() {
+        throw new UnsupportedOperationException();
+    }
+
 }

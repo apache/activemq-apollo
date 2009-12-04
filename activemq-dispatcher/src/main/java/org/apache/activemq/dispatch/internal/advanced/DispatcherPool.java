@@ -167,6 +167,10 @@ public class DispatcherPool implements Dispatcher {
         return chooseDispatcher().register(dispatchable, name);
     }
 
+    public DispatchContext register(Runnable runnable, String name) {
+        return chooseDispatcher().register(runnable, name);
+    }
+
     public String toString() {
         return name;
     }
@@ -182,7 +186,7 @@ public class DispatcherPool implements Dispatcher {
     public final Executor createPriorityExecutor(final int priority) {
         return new Executor() {
             public void execute(final Runnable runnable) {
-                chooseDispatcher().dispatch(new RunnableAdapter(runnable), priority);
+                chooseDispatcher().dispatch(runnable, priority);
             }
 
         };
@@ -194,11 +198,11 @@ public class DispatcherPool implements Dispatcher {
     }
 
     public void execute(Runnable command) {
-        chooseDispatcher().dispatch(new RunnableAdapter(command), 0);
+        chooseDispatcher().dispatch(command, 0);
     }
     
     public void execute(Runnable command, int priority) {
-        chooseDispatcher().dispatch(new RunnableAdapter(command), priority);
+        chooseDispatcher().dispatch(command, priority);
     }
 
     public void schedule(final Runnable runnable, long delay, TimeUnit timeUnit) {

@@ -114,6 +114,10 @@ public class ThreadDispatchQueue implements SimpleQueue {
     public void setTargetQueue(DispatchQueue queue) {
         throw new UnsupportedOperationException();
     }
+    public DispatchQueue getTargetQueue() {
+        throw new UnsupportedOperationException();
+    }
+    
     
     public DispatchQueuePriority getPriority() {
         return priority;

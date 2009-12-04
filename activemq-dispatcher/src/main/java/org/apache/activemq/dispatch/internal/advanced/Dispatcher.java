@@ -17,90 +17,9 @@
 package org.apache.activemq.dispatch.internal.advanced;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public interface Dispatcher extends Executor {
-
-    /**
-     * This interface is implemented by Dispatchable entities. A Dispatchable
-     * entity registers with an {@link Dispatcher} and is returned a
-     * {@link DispatchContext} which it can use to request the
-     * {@link Dispatcher} to invoke {@link Dispatchable#dispatch()}
-     * 
-     * {@link Dispatcher} guarantees that {@link #dispatch()} will never invoke
-     * dispatch concurrently unless the {@link Dispatchable} is registered with
-     * more than one {@link Dispatcher};
-     */
-    public interface Dispatchable {
-        public boolean dispatch();
-    }
-
-    /**
-     * Returned to callers registered with this dispathcer. Used by the caller
-     * to inform the dispatcher that it is ready for dispatch.
-     * 
-     * Note that DispatchContext is not safe for concurrent access by multiple
-     * threads.
-     */
-    public interface DispatchContext {
-        /**
-         * Once registered with a dispatcher, this can be called to request
-         * dispatch. The {@link Dispatchable} will remain in the dispatch queue
-         * until a subsequent call to {@link Dispatchable#dispatch()} returns
-         * false;
-         * 
-         * @throws RejectedExecutionException If the dispatcher has been shutdown.
-         */
-        public void requestDispatch() throws RejectedExecutionException;
-
-        /**
-         * This can be called to update the dispatch priority.
-         * 
-         * @param priority
-         */
-        public void updatePriority(int priority);
-
-        /**
-         * Gets the Dispatchable that this context represents.
-         * 
-         * @return The dispatchable
-         */
-        public Dispatchable getDispatchable();
-
-        /**
-         * Gets the name of the dispatch context
-         * 
-         * @return The dispatchable
-         */
-        public String getName();
-
-        /**
-         * This must be called to release any resource the dispatcher is holding
-         * on behalf of this context. Once called this {@link DispatchContext} should
-         * no longer be used. 
-         */
-        public void close(boolean sync);
-    }
-
-    public class RunnableAdapter implements Dispatchable, Runnable {
-        private Runnable runnable;
-
-        public RunnableAdapter() {
-            runnable = this;
-        }
-        public RunnableAdapter(Runnable runnable) {
-            this.runnable = runnable;
-        }
-
-        public boolean dispatch() {
-            runnable.run();
-            return true;
-        }
-
-        public void run() {
-        }
-    }
 
     /**
      * Registers a {@link Dispatchable} with this dispatcher, and returns a
@@ -113,6 +32,8 @@ public interface Dispatcher extends Executor {
      * @return A {@link DispatchContext} that can be used to request dispatch
      */
     public DispatchContext register(Dispatchable dispatchable, String name);
+    
+    public DispatchContext register(Runnable runnable, String name);
 
     /**
      * Gets the number of dispatch priorities. Dispatch priorities are 0 based, 

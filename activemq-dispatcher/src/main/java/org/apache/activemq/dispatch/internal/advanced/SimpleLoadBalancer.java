@@ -22,6 +22,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.activemq.dispatch.DispatchObserver;
+
 
 public class SimpleLoadBalancer implements LoadBalancer {
 
@@ -97,7 +99,7 @@ public class SimpleLoadBalancer implements LoadBalancer {
         dispatchers.remove(dispatcher);
     }
 
-    public ExecutionTracker createExecutionTracker(PooledDispatchContext context) {
+    public DispatchObserver createExecutionTracker(PooledDispatchContext context) {
         return new SimpleExecutionTracker(context);
     }
 
@@ -116,7 +118,7 @@ public class SimpleLoadBalancer implements LoadBalancer {
         }
     }
 
-    private class SimpleExecutionTracker implements ExecutionTracker {
+    private class SimpleExecutionTracker implements DispatchObserver {
         private final HashMap<PooledDispatchContext, ExecutionStats> sources = new HashMap<PooledDispatchContext, ExecutionStats>();
         private final PooledDispatchContext context;
         private final AtomicInteger work = new AtomicInteger(0);
@@ -126,7 +128,7 @@ public class SimpleLoadBalancer implements LoadBalancer {
 
         SimpleExecutionTracker(PooledDispatchContext context) {
             this.context = context;
-            currentOwner = context.getDispatcher();
+            currentOwner = context.getTargetQueue();
         }
 
         /**
@@ -143,7 +145,7 @@ public class SimpleLoadBalancer implements LoadBalancer {
          * @return True if this method resulted in the dispatch request being
          *         assigned to another dispatcher.
          */
-        public void onDispatchRequest(Dispatcher callingDispatcher, PooledDispatchContext callingContext) {
+        public void onDispatch(Dispatcher callingDispatcher, PooledDispatchContext callingContext) {
 
             if (callingContext != null) {
                 // Make sure we are being called by another node:
@@ -166,7 +168,7 @@ public class SimpleLoadBalancer implements LoadBalancer {
                                 System.out.println("Assigning: " + context + " to " + callingContext + "'s  dispatcher: " + callingDispatcher + " From: " + currentOwner);
 
                             currentOwner = callingDispatcher;
-                            context.assignToNewDispatcher(callingDispatcher);
+                            context.setTargetQueue(callingDispatcher);
                         }
 
                     } else {

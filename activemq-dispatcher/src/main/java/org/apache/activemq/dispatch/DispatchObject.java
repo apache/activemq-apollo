@@ -29,4 +29,5 @@ public interface DispatchObject {
 
     public void setFinalizer(Runnable finalizer);
     public void setTargetQueue(DispatchQueue queue);
+    public DispatchQueue getTargetQueue();
 }

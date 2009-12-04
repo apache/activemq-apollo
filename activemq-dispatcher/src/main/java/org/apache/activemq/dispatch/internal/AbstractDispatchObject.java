@@ -46,5 +46,7 @@ abstract public class AbstractDispatchObject implements DispatchObject {
         this.targetQueue = targetQueue;
     }
 
-
+    public DispatchQueue getTargetQueue() {
+        return this.targetQueue;
+    }
 }

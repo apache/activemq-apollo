@@ -87,6 +87,10 @@ public class GlobalDispatchQueue implements SimpleQueue {
     public void setTargetQueue(DispatchQueue queue) {
         throw new UnsupportedOperationException();
     }
+
+    public DispatchQueue getTargetQueue() {
+        throw new UnsupportedOperationException();
+    }
     
     public Runnable poll() {
         Runnable rc = runnables.poll();

@@ -45,29 +45,38 @@ public class DispatchSystem {
         return CURRENT_QUEUE.get();
     }
 
-    private final static DispatchSPI spi = cretateDispatchSystemSPI();
+    private static DispatchSPI spi;
+    
     private static DispatchSPI cretateDispatchSystemSPI() {
         return new SimpleDispatchSPI(Runtime.getRuntime().availableProcessors());
     }
     
+    synchronized private static DispatchSPI spi() {
+        if(spi==null) {
+            spi = cretateDispatchSystemSPI();
+        }
+        return spi;
+    }
+    
     static DispatchQueue getMainQueue() {
-        return spi.getMainQueue();
+        return spi().getMainQueue();
     }
     
     static public DispatchQueue getGlobalQueue(DispatchQueuePriority priority) {
-        return spi.getGlobalQueue(priority);
+        return spi().getGlobalQueue(priority);
     }
     
     static DispatchQueue createQueue(String label) {
-        return spi.createQueue(label);
+        return spi().createQueue(label);
     }
     
     static void dispatchMain() {
-        spi.dispatchMain();
+        spi().dispatchMain();
     }
 
     static DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue) {
-        return spi.createSource(channel, interestOps, queue);
+        return spi().createSource(channel, interestOps, queue);
     }
+
 
 }

@@ -27,6 +27,7 @@ import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 final public class DispatcherThread extends Thread {
+    private static final int MAX_DISPATCH_BEFORE_CHECKING_FOR_HIGHER_PRIO = 10000;
     private final SimpleDispatchSPI spi;
     private final ThreadDispatchQueue[] threadQueues;
     final AtomicLong threadQueuedRunnables = new AtomicLong();
@@ -78,6 +79,20 @@ final public class DispatcherThread extends Thread {
                 // no runnables to dispatch.
                 continue;
             }
+        
+//        GlobalDispatchQueue[] globalQueues = spi.globalQueues;
+//        while( true ) {
+//
+//            if( dispatch(threadQueues[0]) 
+//                || dispatch(globalQueues[0]) 
+//                || dispatch(threadQueues[1]) 
+//                || dispatch(globalQueues[1]) 
+//                || dispatch(threadQueues[2]) 
+//                || dispatch(globalQueues[2]) 
+//                ) {
+//                continue;
+//            }
+//        
             try {
                 waitForWakeup();
             } catch (InterruptedException e) {
@@ -85,6 +100,23 @@ final public class DispatcherThread extends Thread {
                 return;
             }
         }
+    }
+
+    private boolean dispatch(SimpleQueue queue) {
+        int counter=0;
+        Runnable runnable;
+        while( counter < MAX_DISPATCH_BEFORE_CHECKING_FOR_HIGHER_PRIO ) {
+            runnable = queue.poll();
+            if( runnable == null ) {
+                break;
+            }        
+            if( counter==0 ) {
+                DispatchSystem.CURRENT_QUEUE.set(queue);
+            }
+            dispatch(runnable);
+            counter++;
+        }
+        return counter!=0;
     }
 
     private void dispatch(Runnable runnable) {

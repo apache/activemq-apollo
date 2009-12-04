@@ -14,40 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch.internal.advanced;
 
-import org.apache.activemq.dispatch.DispatchObserver;
+package org.apache.activemq.dispatch;
 
+import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
+import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.PooledDispatchContext;
 
-
-public interface LoadBalancer {
+public interface DispatchObserver {
+    
+    /**
+     * Should be called when a {@link DispatchContext#requestDispatch()} is called.
+     * This assists the load balancer in determining relationships between {@link DispatchContext}s
+     * @param caller The calling dispatcher
+     * @param context The context from which the dispatch is requested.
+     */
+    public void onDispatch(Dispatcher caller, PooledDispatchContext context);
 
     /**
-     * Must be called by a dispatch thread when it starts
-     * @param dispatcher The dispatcher
+     * Must be called by the dispatcher when a {@link DispatchContext} is closed.
      */
-    public void onDispatcherStarted(Dispatcher dispatcher);
-
-    /**
-     * Must be called by a dispatch thread when it stops
-     * @param dispatcher The dispatcher
-     */
-    public void onDispatcherStopped(Dispatcher dispatcher);
-
-    /**
-     * Gets an {@link DispatchObserver} for the dispatch context. 
-     * @param context
-     * @return
-     */
-    public DispatchObserver createExecutionTracker(PooledDispatchContext context);
-
-    /**
-     * Starts execution tracking
-     */
-    public void start();
-
-    /**
-     * Stops execution tracking
-     */
-    public void stop();
+    public void close();
 }

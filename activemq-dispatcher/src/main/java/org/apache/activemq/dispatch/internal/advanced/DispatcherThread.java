@@ -25,9 +25,9 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.activemq.dispatch.DispatchObserver;
 import org.apache.activemq.dispatch.DispatchSystem;
 import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
-import org.apache.activemq.dispatch.internal.advanced.LoadBalancer.ExecutionTracker;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.PriorityLinkedList;
 import org.apache.activemq.util.TimerHeap;
@@ -46,7 +46,7 @@ public class DispatcherThread implements Runnable, Dispatcher {
     protected final HashSet<PriorityDispatchContext> contexts = new HashSet<PriorityDispatchContext>();
 
     // Set if this dispatcher is part of a dispatch pool:
-    protected final DispatcherPool pooledDispatcher;
+    protected final DispatcherPool dispatcherPool;
 
     // The local dispatch queue:
     protected final PriorityLinkedList<PriorityDispatchContext> priorityQueue;
@@ -88,7 +88,7 @@ public class DispatcherThread implements Runnable, Dispatcher {
         for (int i = 0; i < 2; i++) {
             foreignQueue[i] = new LinkedNodeList<ForeignEvent>();
         }
-        this.pooledDispatcher = pooledDispactcher;
+        this.dispatcherPool = pooledDispactcher;
     }
 
     public static final Dispatcher createPriorityDispatcher(String name, int numPriorities) {
@@ -145,7 +145,11 @@ public class DispatcherThread implements Runnable, Dispatcher {
     }
 
     public DispatchContext register(Dispatchable dispatchable, String name) {
-        return new PriorityDispatchContext(dispatchable, true, name);
+        return register(new DispachableAdapter(dispatcherPool, dispatchable), name);
+    }
+    
+    public DispatchContext register(Runnable runnable, String name) {
+        return new PriorityDispatchContext(runnable, true, name);
     }
 
     /*
@@ -170,7 +174,7 @@ public class DispatcherThread implements Runnable, Dispatcher {
         Thread joinThread = null;
         synchronized (this) {
             if (thread != null) {
-                dispatchInternal(new RunnableAdapter() {
+                dispatchInternal(new Runnable() {
                     public void run() {
                         running = false;
                     }
@@ -200,52 +204,37 @@ public class DispatcherThread implements Runnable, Dispatcher {
 
     public void run() {
 
-        if (pooledDispatcher != null) {
+        if (dispatcherPool != null) {
             // Inform the dispatcher that we have started:
-            pooledDispatcher.onDispatcherStarted((DispatcherThread) this);
+            dispatcherPool.onDispatcherStarted((DispatcherThread) this);
         }
 
         PriorityDispatchContext pdc;
         try {
-            final int MAX_DISPATCH_PER_LOOP = 20;
-            int processed = 0;
-
             while (running) {
-                pdc = priorityQueue.poll();
+                int counter = 0;
                 // If no local work available wait for foreign work:
-                if (pdc == null) {
-                    waitForEvents();
-                } else {
+                while((pdc = priorityQueue.poll())!=null){
                     if( pdc.priority < dispatchQueues.length ) {
                         DispatchSystem.CURRENT_QUEUE.set(dispatchQueues[pdc.priority]);
                     }
                     
                     if (pdc.tracker != null) {
-                        pooledDispatcher.setCurrentDispatchContext(pdc);
+                        dispatcherPool.setCurrentDispatchContext(pdc);
                     }
 
-                    while (!pdc.dispatch()) {
-                        processed++;
-                        if (processed > MAX_DISPATCH_PER_LOOP || pdc.listPrio < priorityQueue.getHighestPriority()) {
-                            // Give other dispatchables a shot:
-                            // May have gotten relinked by the caller:
-                            if (!pdc.isLinked()) {
-                                priorityQueue.add(pdc, pdc.listPrio);
-                            }
-                            break;
-                        }
-                    }
+                    counter++;
+                    pdc.run();
 
                     if (pdc.tracker != null) {
-                        pooledDispatcher.setCurrentDispatchContext(null);
-                    }
-
-                    if (processed < MAX_DISPATCH_PER_LOOP) {
-                        continue;
+                        dispatcherPool.setCurrentDispatchContext(null);
                     }
                 }
 
-                processed = 0;
+                if( counter==0 ) {
+                    waitForEvents();
+                }
+
                 // Execute delayed events:
                 timerHeap.executeReadyTimers();
 
@@ -271,7 +260,6 @@ public class DispatcherThread implements Runnable, Dispatcher {
                         fe.unlink();
                         fe.execute();
                     }
-
                 }
             }
         } catch (InterruptedException e) {
@@ -279,8 +267,8 @@ public class DispatcherThread implements Runnable, Dispatcher {
         } catch (Throwable thrown) {
             thrown.printStackTrace();
         } finally {
-            if (pooledDispatcher != null) {
-                pooledDispatcher.onDispatcherStopped((DispatcherThread) this);
+            if (dispatcherPool != null) {
+                dispatcherPool.onDispatcherStopped((DispatcherThread) this);
             }
             cleanup();
         }
@@ -362,8 +350,8 @@ public class DispatcherThread implements Runnable, Dispatcher {
     }
 
     //Special dispatch method that allow high priority dispatch:
-    private final void dispatchInternal(Dispatchable dispatchable, int priority) {
-        PriorityDispatchContext context = new PriorityDispatchContext(dispatchable, false, name);
+    private final void dispatchInternal(Runnable runnable, int priority) {
+        PriorityDispatchContext context = new PriorityDispatchContext(runnable, false, name);
         context.priority = priority;
         context.requestDispatch();
     }
@@ -375,8 +363,8 @@ public class DispatcherThread implements Runnable, Dispatcher {
      * org.apache.activemq.dispatch.IDispatcher#dispatch(org.apache.activemq
      * .dispatch.Dispatcher.Dispatchable)
      */
-    public final void dispatch(Dispatchable dispatchable, int priority) {
-        PriorityDispatchContext context = new PriorityDispatchContext(dispatchable, false, name);
+    public final void dispatch(Runnable runnable, int priority) {
+        PriorityDispatchContext context = new PriorityDispatchContext(runnable, false, name);
         context.updatePriority(priority);
         context.requestDispatch();
     }
@@ -391,17 +379,17 @@ public class DispatcherThread implements Runnable, Dispatcher {
         return new Executor() {
 
             public void execute(final Runnable runnable) {
-                dispatch(new RunnableAdapter(runnable), priority);
+                dispatch(runnable, priority);
             }
         };
     }
 
     public void execute(final Runnable runnable) {
-        dispatch(new RunnableAdapter(runnable), 0);
+        dispatch(runnable, 0);
     }
     
     public void execute(final Runnable runnable, int prio) {
-        dispatch(new RunnableAdapter(runnable), prio);
+        dispatch(runnable, prio);
     }
 
     /*
@@ -437,8 +425,8 @@ public class DispatcherThread implements Runnable, Dispatcher {
     }
 
     private final DispatcherThread getCurrentDispatcher() {
-        if (pooledDispatcher != null) {
-            return (DispatcherThread) pooledDispatcher.getCurrentDispatcher();
+        if (dispatcherPool != null) {
+            return (DispatcherThread) dispatcherPool.getCurrentDispatcher();
         } else if (Thread.currentThread() == thread) {
             return (DispatcherThread) this;
         } else {
@@ -448,15 +436,15 @@ public class DispatcherThread implements Runnable, Dispatcher {
     }
 
     private final PooledDispatchContext getCurrentDispatchContext() {
-        return pooledDispatcher.getCurrentDispatchContext();
+        return dispatcherPool.getCurrentDispatchContext();
     }
 
     /**
      * 
      */
     protected class PriorityDispatchContext extends LinkedNode<PriorityDispatchContext> implements PooledDispatchContext {
-        // The dispatchable target:
-        private final Dispatchable dispatchable;
+        // The target:
+        private final Runnable runnable;
         // The name of this context:
         final String name;
         // list prio can only be updated in the thread of of the owning
@@ -467,7 +455,7 @@ public class DispatcherThread implements Runnable, Dispatcher {
         // from foreign threads:
         final UpdateEvent updateEvent[];
 
-        private final ExecutionTracker tracker;
+        private final DispatchObserver tracker;
         protected DispatcherThread currentOwner;
         private DispatcherThread updateDispatcher = null;
 
@@ -476,12 +464,12 @@ public class DispatcherThread implements Runnable, Dispatcher {
         private boolean closed = false;
         final CountDownLatch closeLatch = new CountDownLatch(1);
 
-        protected PriorityDispatchContext(Dispatchable dispatchable, boolean persistent, String name) {
-            this.dispatchable = dispatchable;
+        protected PriorityDispatchContext(Runnable runnable, boolean persistent, String name) {
+            this.runnable = runnable;
             this.name = name;
             this.currentOwner = (DispatcherThread) DispatcherThread.this;
-            if (persistent && pooledDispatcher != null) {
-                this.tracker = pooledDispatcher.getLoadBalancer().createExecutionTracker((PooledDispatchContext) this);
+            if (persistent && dispatcherPool != null) {
+                this.tracker = dispatcherPool.getLoadBalancer().createExecutionTracker((PooledDispatchContext) this);
             } else {
                 this.tracker = null;
             }
@@ -502,7 +490,7 @@ public class DispatcherThread implements Runnable, Dispatcher {
          * 
          * @return the execution tracker for the context:
          */
-        public ExecutionTracker getExecutionTracker() {
+        public DispatchObserver getExecutionTracker() {
             return tracker;
         }
 
@@ -511,11 +499,11 @@ public class DispatcherThread implements Runnable, Dispatcher {
          * 
          * @return False if the dispatchable has more work to do.
          */
-        public final boolean dispatch() {
-            return dispatchable.dispatch();
+        public final void run() {
+            runnable.run();
         }
 
-        public final void assignToNewDispatcher(Dispatcher newDispatcher) {
+        public final void setTargetQueue(Dispatcher newDispatcher) {
             synchronized (this) {
 
                 // If we're already set to this dispatcher
@@ -538,7 +526,7 @@ public class DispatcherThread implements Runnable, Dispatcher {
 
             DispatcherThread callingDispatcher = getCurrentDispatcher();
             if (tracker != null)
-                tracker.onDispatchRequest(callingDispatcher, getCurrentDispatchContext());
+                tracker.onDispatch(callingDispatcher, getCurrentDispatchContext());
 
             // Otherwise this is coming off another thread, so we need to
             // synchronize
@@ -691,11 +679,7 @@ public class DispatcherThread implements Runnable, Dispatcher {
             return getName();
         }
 
-        public Dispatchable getDispatchable() {
-            return dispatchable;
-        }
-
-        public DispatcherThread getDispatcher() {
+        public DispatcherThread getTargetQueue() {
             return currentOwner;
         }
 

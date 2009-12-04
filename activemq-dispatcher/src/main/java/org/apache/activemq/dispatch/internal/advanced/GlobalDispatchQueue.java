@@ -84,4 +84,7 @@ public class GlobalDispatchQueue implements DispatchQueue {
         throw new UnsupportedOperationException();
     }
 
+    public DispatchQueue getTargetQueue() {
+        throw new UnsupportedOperationException();
+    }
 }

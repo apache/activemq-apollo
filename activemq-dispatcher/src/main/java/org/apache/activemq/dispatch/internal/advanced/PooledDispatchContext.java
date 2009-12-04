@@ -1,7 +1,6 @@
 package org.apache.activemq.dispatch.internal.advanced;
 
-import org.apache.activemq.dispatch.internal.advanced.LoadBalancer.ExecutionTracker;
-import org.apache.activemq.dispatch.internal.advanced.Dispatcher.DispatchContext;
+import org.apache.activemq.dispatch.DispatchObserver;
 
 /**
  * A {@link PooledDispatchContext}s can be moved between different
@@ -12,7 +11,7 @@ public interface PooledDispatchContext extends DispatchContext {
      * Called to transfer a {@link PooledDispatchContext} to a new
      * Dispatcher.
      */
-    public void assignToNewDispatcher(Dispatcher newDispatcher);
+    public void setTargetQueue(Dispatcher newDispatcher);
 
     /**
      * Gets the dispatcher to which this PooledDispatchContext currently
@@ -20,12 +19,12 @@ public interface PooledDispatchContext extends DispatchContext {
      * 
      * @return
      */
-    public Dispatcher getDispatcher();
+    public Dispatcher getTargetQueue();
 
     /**
      * Gets the execution tracker for the context.
      * 
      * @return the execution tracker for the context:
      */
-    public ExecutionTracker getExecutionTracker();
+    public DispatchObserver getExecutionTracker();
 }
