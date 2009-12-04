@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchSPI;
 import org.apache.activemq.dispatch.DispatchSource;
+import org.apache.activemq.dispatch.LoadBalancer;
 import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
 import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
 
@@ -78,7 +79,7 @@ public class AdvancedDispatchSPI implements DispatchSPI {
     }
 
     /**
-     * @see org.apache.activemq.dispatch.internal.advanced.Dispatcher#start()
+     * @see org.apache.activemq.dispatch.internal.advanced.DispatcherThread#start()
      */
     public synchronized final void start()  {
         if( startCounter.getAndIncrement()==0 ) {
@@ -129,7 +130,7 @@ public class AdvancedDispatchSPI implements DispatchSPI {
      * 
      * @return The currently executing dispatcher
      */
-    public Dispatcher getCurrentDispatcher() {
+    public DispatcherThread getCurrentDispatcher() {
         return dispatcher.get();
     }
 
@@ -149,7 +150,7 @@ public class AdvancedDispatchSPI implements DispatchSPI {
     /**
      * A Dispatcher must call this when exiting it's dispatch loop
      */
-    public void onDispatcherStopped(Dispatcher d) {
+    public void onDispatcherStopped(DispatcherThread d) {
         synchronized (dispatchers) {
             if (dispatchers.remove(d)) {
                 size--;

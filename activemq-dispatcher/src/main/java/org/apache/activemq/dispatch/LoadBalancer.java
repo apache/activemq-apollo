@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch.internal.advanced;
+package org.apache.activemq.dispatch;
 
-import org.apache.activemq.dispatch.DispatchObserver;
+import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
+import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
 
 
 
@@ -26,13 +27,13 @@ public interface LoadBalancer {
      * Must be called by a dispatch thread when it starts
      * @param dispatcher The dispatcher
      */
-    public void onDispatcherStarted(Dispatcher dispatcher);
+    public void onDispatcherStarted(DispatcherThread dispatcher);
 
     /**
      * Must be called by a dispatch thread when it stops
      * @param dispatcher The dispatcher
      */
-    public void onDispatcherStopped(Dispatcher dispatcher);
+    public void onDispatcherStopped(DispatcherThread dispatcher);
 
     /**
      * Gets an {@link DispatchObserver} for the dispatch context. 

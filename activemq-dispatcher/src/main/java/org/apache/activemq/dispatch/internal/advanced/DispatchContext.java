@@ -49,7 +49,7 @@ public interface DispatchContext {
      * Called to transfer a {@link PooledDispatchContext} to a new
      * Dispatcher.
      */
-    public void setTargetQueue(Dispatcher newDispatcher);
+    public void setTargetQueue(DispatcherThread newDispatcher);
 
     /**
      * Gets the dispatcher to which this PooledDispatchContext currently
@@ -57,7 +57,7 @@ public interface DispatchContext {
      * 
      * @return
      */
-    public Dispatcher getTargetQueue();
+    public DispatcherThread getTargetQueue();
 
     /**
      * Gets the execution tracker for the context.

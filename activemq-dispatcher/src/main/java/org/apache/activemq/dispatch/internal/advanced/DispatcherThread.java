@@ -35,7 +35,7 @@ import org.apache.activemq.util.TimerHeap;
 import org.apache.activemq.util.list.LinkedNode;
 import org.apache.activemq.util.list.LinkedNodeList;
 
-public class DispatcherThread implements Runnable, Dispatcher {
+public class DispatcherThread implements Runnable {
 
     private final ThreadDispatchQueue dispatchQueues[];
     
@@ -504,7 +504,7 @@ public class DispatcherThread implements Runnable, Dispatcher {
             runnable.run();
         }
 
-        public final void setTargetQueue(Dispatcher newDispatcher) {
+        public final void setTargetQueue(DispatcherThread newDispatcher) {
             synchronized (this) {
 
                 // If we're already set to this dispatcher

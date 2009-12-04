@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.dispatch.DispatchObserver;
+import org.apache.activemq.dispatch.LoadBalancer;
 
 
 public class SimpleLoadBalancer implements LoadBalancer {
@@ -32,7 +33,7 @@ public class SimpleLoadBalancer implements LoadBalancer {
     //TODO: Added plumbing for periodic rebalancing which we should
     //consider implementing
     private static final boolean ENABLE_UPDATES = false;
-    private final ArrayList<Dispatcher> dispatchers = new ArrayList<Dispatcher>();
+    private final ArrayList<DispatcherThread> dispatchers = new ArrayList<DispatcherThread>();
 
     private AtomicBoolean running = new AtomicBoolean(false);
     private boolean needsUpdate = false;
@@ -87,7 +88,7 @@ public class SimpleLoadBalancer implements LoadBalancer {
         running.compareAndSet(true, false);
     }
 
-    public synchronized final void onDispatcherStarted(Dispatcher dispatcher) {
+    public synchronized final void onDispatcherStarted(DispatcherThread dispatcher) {
         dispatchers.add(dispatcher);
         scheduleNext();
     }
@@ -95,7 +96,7 @@ public class SimpleLoadBalancer implements LoadBalancer {
     /**
      * A Dispatcher must call this when exiting it's dispatch loop
      */
-    public void onDispatcherStopped(Dispatcher dispatcher) {
+    public void onDispatcherStopped(DispatcherThread dispatcher) {
         dispatchers.remove(dispatcher);
     }
 
@@ -124,7 +125,7 @@ public class SimpleLoadBalancer implements LoadBalancer {
         private final AtomicInteger work = new AtomicInteger(0);
 
         private DispatchContext singleSource;
-        private Dispatcher currentOwner;
+        private DispatcherThread currentOwner;
 
         SimpleExecutionTracker(DispatchContext context) {
             this.context = context;
@@ -145,7 +146,7 @@ public class SimpleLoadBalancer implements LoadBalancer {
          * @return True if this method resulted in the dispatch request being
          *         assigned to another dispatcher.
          */
-        public void onDispatch(Dispatcher callingDispatcher, DispatchContext callingContext) {
+        public void onDispatch(DispatcherThread callingDispatcher, DispatchContext callingContext) {
 
             if (callingContext != null) {
                 // Make sure we are being called by another node:
