@@ -18,6 +18,7 @@ package org.apache.activemq.dispatch;
 
 import java.util.concurrent.CountDownLatch;
 
+import org.apache.activemq.dispatch.internal.RunnableCountDownLatch;
 import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSPI;
 
@@ -30,15 +31,6 @@ import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.
  */
 public class DispatchSystemTest {
 
-    public static class RunnableCountDownLatch extends CountDownLatch implements Runnable {
-        public RunnableCountDownLatch(int count) {
-            super(count);
-        }
-        public void run() {
-            countDown();
-        }
-    }
-    
     public static void main(String[] args) throws Exception {
         DispatchSPI advancedSystem = new AdvancedDispatchSPI(Runtime.getRuntime().availableProcessors(), 3);
         advancedSystem.start();

@@ -27,6 +27,7 @@ import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
 import org.apache.activemq.apollo.broker.path.PathFilter;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
+import org.apache.activemq.dispatch.internal.RunnableCountDownLatch;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.util.IOHelper;
 import org.apache.activemq.util.buffer.AsciiBuffer;
@@ -161,14 +162,20 @@ public class VirtualHost implements Service {
         if (!started) {
             return;
         }
-        for (Queue queue : queues.values()) {
-            queue.shutdown(true);
+        ArrayList<Queue> q = new ArrayList<Queue>(queues.values());
+        RunnableCountDownLatch done = new RunnableCountDownLatch(q.size());
+        for (Queue queue : q) {
+            queue.shutdown(done);
         }
+        done.await();
 
-        for (IQueue<Long, MessageDelivery> queue : queueStore.getDurableQueues()) {
-            queue.shutdown(true);
+        ArrayList<IQueue<Long, MessageDelivery>> durableQueues = new ArrayList<IQueue<Long,MessageDelivery>>(queueStore.getDurableQueues());
+        done = new RunnableCountDownLatch(durableQueues.size());
+        for (IQueue<Long, MessageDelivery> queue : durableQueues) {
+            queue.shutdown(done);
         }
-
+        done.await();
+        
         database.stop();
         started = false;
     }

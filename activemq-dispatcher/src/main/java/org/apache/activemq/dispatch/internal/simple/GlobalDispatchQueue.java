@@ -103,4 +103,10 @@ public class GlobalDispatchQueue implements SimpleQueue {
     public DispatchQueuePriority getPriority() {
         return priority;
     }
+
+    public void release() {
+    }
+
+    public void retain() {
+    }
 }

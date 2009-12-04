@@ -499,7 +499,7 @@ public abstract class Transaction {
 
             //If we've reached the end of the op queue
             if (opQueue.getEnqueuedCount() == 0) {
-                opQueue.shutdown(false);
+                opQueue.shutdown(null);
             }
         }
 

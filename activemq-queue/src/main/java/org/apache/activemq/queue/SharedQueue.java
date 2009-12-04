@@ -337,11 +337,17 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
         }
     }
 
-    public void shutdown(boolean sync) {
-        super.shutdown(sync);
-        synchronized (mutex) {
-            queue.shutdown(sync);
-        }
+    public void shutdown(final Runnable onShutdown) {
+        super.shutdown(new Runnable() {
+            public void run() {
+                synchronized (mutex) {
+                    queue.shutdown();
+                }
+                if( onShutdown!=null ) {
+                    onShutdown.run();
+                }
+            }
+        });
     }
 
     public void add(V elem, ISourceController<?> source) {

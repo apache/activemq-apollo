@@ -2,7 +2,7 @@ package org.apache.activemq.queue.perf;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
+import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.ISinkController;
 import org.apache.activemq.flow.ISourceController;
@@ -24,11 +24,13 @@ public class RemoteProducer extends ClientConnection implements FlowUnblockListe
     private String property;
     private MetricAggregator totalProducerRate;
     Message next;
-    private DispatchContext dispatchContext;
 
     private String filler;
     private int payloadSize = 0;
     IFlowController<Message> outboundController;
+
+    private DispatchQueue dispatchQueue;
+    private Runnable dispatchTask;
 
     public void start() throws Exception {
 
@@ -45,21 +47,24 @@ public class RemoteProducer extends ClientConnection implements FlowUnblockListe
 
         super.start();
         outboundController = outputQueue.getFlowController(outboundFlow);
-        dispatchContext = getDispatcher().register(new Runnable() {
+        
+        dispatchQueue = getDispatcher().createQueue(name + "-client");
+        dispatchTask = new Runnable(){
             public void run() {
                 dispatch();
             }
-        }, name + "-client");
-        dispatchContext.requestDispatch();
+        };
+        dispatchQueue.dispatchAsync(dispatchTask);
+        
     }
 
     public void stop() throws Exception {
-        dispatchContext.close(false);
+        dispatchQueue.release();
         super.stop();
     }
 
     public void onFlowUnblocked(ISinkController<Message> controller) {
-        dispatchContext.requestDispatch();
+        dispatchQueue.dispatchAsync(dispatchTask);
     }
 
     public void dispatch() {
@@ -87,7 +92,7 @@ public class RemoteProducer extends ClientConnection implements FlowUnblockListe
             getSink().add(next, null);
             rate.increment();
             next = null;
-            dispatchContext.requestDispatch();
+            dispatchQueue.dispatchAsync(dispatchTask);
         }
     }
 

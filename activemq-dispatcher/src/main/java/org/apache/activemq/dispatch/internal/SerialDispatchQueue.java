@@ -31,6 +31,7 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
 
     private final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
     final private String label;
+    final private AtomicInteger reatinCounter = new AtomicInteger(1);
     final private AtomicInteger suspendCounter = new AtomicInteger();
     final private AtomicLong size = new AtomicLong();
     
@@ -60,9 +61,12 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
         if( runnable == null ) {
             throw new IllegalArgumentException();
         }
-        long lastSize = size.incrementAndGet();
+        long lastSize = size.getAndIncrement();
+        if( lastSize==0 ) {
+            retain();
+        }
         runnables.add(runnable);
-        if( targetQueue!=null && lastSize == 1 && suspendCounter.get()<=0 ) {
+        if( targetQueue!=null && lastSize == 0 && suspendCounter.get()<=0 ) {
             targetQueue.dispatchAsync(this);
         }
     }
@@ -79,6 +83,9 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
                     if( runnable!=null ) {
                         runnable.run();
                         lsize = size.decrementAndGet();
+                        if( lsize==0 ) {
+                            release();
+                        }
                     }
                 } catch (Throwable e) {
                     e.printStackTrace();
@@ -96,4 +103,19 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
     public void dispatchApply(int iterations, Runnable runnable) throws InterruptedException {
         QueueSupport.dispatchApply(this, iterations, runnable);
     }
+
+    public void retain() {
+        int prev = reatinCounter.getAndIncrement();
+        assert prev!=0;
+    }
+
+    public void release() {
+        if( reatinCounter.decrementAndGet()==0 ) {
+            Runnable value = finalizer.getAndSet(null);
+            if( value!=null ) {
+                value.run();
+            }
+        }
+    }
+
 }

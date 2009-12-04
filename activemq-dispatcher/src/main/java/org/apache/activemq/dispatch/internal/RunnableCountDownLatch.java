@@ -14,24 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch;
 
-/**
- * 
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-public interface DispatchObject {
-    
-    public void retain();
-    public void release();
+package org.apache.activemq.dispatch.internal;
 
-    public <Context> Context getContext();
-    public <Context> void setContext(Context context);
+import java.util.concurrent.CountDownLatch;
 
-    public void suspend();
-    public void resume();
-
-    public void setFinalizer(Runnable finalizer);
-    public void setTargetQueue(DispatchQueue queue);
-    public DispatchQueue getTargetQueue();
+public class RunnableCountDownLatch extends CountDownLatch implements Runnable {
+    public RunnableCountDownLatch(int count) {
+        super(count);
+    }
+    public void run() {
+        countDown();
+    }
 }

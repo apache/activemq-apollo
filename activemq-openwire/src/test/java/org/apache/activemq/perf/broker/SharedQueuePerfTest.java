@@ -39,8 +39,8 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.MessageId;
 import org.apache.activemq.command.ProducerId;
+import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
-import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
@@ -288,7 +288,8 @@ public class SharedQueuePerfTest extends TestCase {
         private String name;
         protected final MetricCounter sendRate = new MetricCounter();
 		AtomicBoolean waitingForAck = new AtomicBoolean();
-        private final DispatchContext dispatchContext;
+        private final DispatchQueue dispatchQueue;
+        private final Runnable dispatchTask;
 
         protected IFlowController<OpenWireMessageDelivery> outboundController;
         protected final AbstractFlowRelay<OpenWireMessageDelivery> outboundQueue;
@@ -306,11 +307,14 @@ public class SharedQueuePerfTest extends TestCase {
             this.name = name;
             sendRate.name("Producer " + name + " Rate");
             totalProducerRate.add(sendRate);
-            dispatchContext = dispatcher.register(new Runnable(){
+            
+            dispatchQueue = dispatcher.createQueue(name);
+            dispatchTask = new Runnable(){
                 public void run() {
                     dispatch();
                 }
-            }, name);
+            };
+ 
             // create a 1024 byte payload (2 bytes per char):
             payload = new String(new byte[512]);
             producerId = new ProducerId(name);
@@ -353,7 +357,7 @@ public class SharedQueuePerfTest extends TestCase {
         }
 
         public void start() {
-            dispatchContext.requestDispatch();
+            dispatchQueue.dispatchAsync(dispatchTask);
         }
 
         public void stop() {
@@ -383,7 +387,7 @@ public class SharedQueuePerfTest extends TestCase {
 						next.setPersistListener(new PersistListener() {
 							public void onMessagePersisted(OpenWireMessageDelivery delivery) {
 								waitingForAck.set(false);
-								dispatchContext.requestDispatch();
+					            dispatchQueue.dispatchAsync(dispatchTask);
 							}
 						});
 					}
@@ -398,7 +402,7 @@ public class SharedQueuePerfTest extends TestCase {
             outboundQueue.add(next, null);
             next = null;
             if ( !stopped.get() ) {
-                dispatchContext.requestDispatch();
+                dispatchQueue.dispatchAsync(dispatchTask);
             }
         }
 
@@ -416,7 +420,7 @@ public class SharedQueuePerfTest extends TestCase {
         }
 
         public void onFlowUnblocked(ISinkController<OpenWireMessageDelivery> controller) {
-            dispatchContext.requestDispatch();
+            dispatchQueue.dispatchAsync(dispatchTask);
         }
 
         public String toString() {

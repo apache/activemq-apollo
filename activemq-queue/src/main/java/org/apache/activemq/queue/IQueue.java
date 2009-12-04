@@ -87,12 +87,8 @@ public interface IQueue<K, V> extends IFlowQueue<V>, PersistentQueue<K, V> {
      * the queue is shutdown will thrown an {@link IllegalStateException} unless
      * otherwise documented.
      * 
-     * @param sync
-     *            If true will cause the calling thread to block until all
-     *            resources held by the queue are cleaned up. Otherwise, the
-     *            queue shutdown will proceed asynchronously.
      */
-    public void shutdown(boolean sync);
+    public void shutdown(Runnable onShutdown);
     
     /**
      * Removes the element with the given sequence from this queue

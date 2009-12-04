@@ -1651,9 +1651,8 @@ public abstract class CursoredQueue<V> {
     }
 
     /**
-     * @param sync
      */
-    public void shutdown(boolean sync) {
+    public void shutdown() {
         stop();
         if (!openCursors.isEmpty()) {
             ArrayList<Cursor<V>> cursors = new ArrayList<Cursor<V>>(openCursors.size());

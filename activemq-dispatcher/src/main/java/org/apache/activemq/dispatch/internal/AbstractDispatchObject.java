@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.dispatch.internal;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.activemq.dispatch.DispatchObject;
 import org.apache.activemq.dispatch.DispatchQueue;
 
@@ -25,9 +27,9 @@ import org.apache.activemq.dispatch.DispatchQueue;
  */
 abstract public class AbstractDispatchObject implements DispatchObject {
 
-    protected Object context;
-    protected Runnable finalizer;
-    protected DispatchQueue targetQueue;
+    protected volatile Object context;
+    protected volatile DispatchQueue targetQueue;
+    protected AtomicReference<Runnable> finalizer = new AtomicReference<Runnable>();
 
     @SuppressWarnings("unchecked")
     public <Context> Context getContext() {
@@ -39,7 +41,7 @@ abstract public class AbstractDispatchObject implements DispatchObject {
     }
 
     public void setFinalizer(Runnable finalizer) {
-        this.finalizer = finalizer;
+        this.finalizer.set(finalizer);
     }
 
     public void setTargetQueue(DispatchQueue targetQueue) {

@@ -86,4 +86,10 @@ public class ThreadDispatchQueue implements DispatchQueue {
         throw new UnsupportedOperationException();
     }
 
+    public void release() {
+    }
+
+    public void retain() {
+    }
+
 }

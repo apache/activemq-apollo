@@ -22,8 +22,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.activemq.dispatch.DispatchObserver;
-import org.apache.activemq.dispatch.LoadBalancer;
 
 
 public class SimpleLoadBalancer implements LoadBalancer {

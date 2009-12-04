@@ -13,7 +13,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
+import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.internal.RunnableCountDownLatch;
 import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.FutureResponse;
@@ -43,20 +44,21 @@ public class PipeTransportFactory extends TransportFactory {
         private String remoteAddress;
         private AtomicBoolean stopping = new AtomicBoolean();
         private Thread thread;
-        private DispatchContext readContext;
         private String name;
         private WireFormat wireFormat;
         private boolean marshal;
         private boolean trace;
+        private DispatchQueue dispatchQueue;
+        private Runnable dispatchTask;
 
         public PipeTransport(Pipe<Object> pipe) {
             this.pipe = pipe;
         }
 
         public void start() throws Exception {
-            if (readContext != null) {
+            if (dispatchQueue != null) {
                 pipe.setMode(Pipe.ASYNC);
-                readContext.requestDispatch();
+                dispatchQueue.dispatchAsync(dispatchTask);
             } else {
                 thread = new Thread(this, getRemoteAddress());
                 thread.start();
@@ -65,8 +67,11 @@ public class PipeTransportFactory extends TransportFactory {
 
         public void stop() throws Exception {
         	pipe.write(EOF_TOKEN);
-            if (readContext != null) {
-                readContext.close(true);
+            if (dispatchQueue != null) {
+                RunnableCountDownLatch done = new RunnableCountDownLatch(1);
+                dispatchQueue.setFinalizer(done);
+                dispatchQueue.release();
+                done.await();
             } else {
                 stopping.set(true);
                 if( thread!=null ) {
@@ -76,16 +81,17 @@ public class PipeTransportFactory extends TransportFactory {
         }
 
         public void setDispatcher(AdvancedDispatchSPI dispatcher) {
-            readContext = dispatcher.register(new Runnable() {
+            dispatchQueue = dispatcher.createQueue(name);
+            dispatchTask = new Runnable(){
                 public void run() {
                     dispatch();
                 }
-            }, name);
+            };
         }
 
         public void onReadReady(Pipe<Object> pipe) {
-            if (readContext != null) {
-                readContext.requestDispatch();
+            if (dispatchQueue != null) {
+                dispatchQueue.dispatchAsync(dispatchTask);
             }
         }
 
@@ -127,7 +133,7 @@ public class PipeTransportFactory extends TransportFactory {
                         } else {
                             listener.onCommand(o);
                         }
-                        readContext.requestDispatch();
+                        dispatchQueue.dispatchAsync(dispatchTask);
                         return;
                     }
                 } catch (IOException e) {
@@ -222,7 +228,8 @@ public class PipeTransportFactory extends TransportFactory {
         }
 
         public void setDispatchPriority(int priority) {
-            readContext.updatePriority(priority);
+//            TODO:
+//            readContext.updatePriority(priority);
         }
 
         public WireFormat getWireformat() {

@@ -38,9 +38,9 @@ public class SharedPriorityQueue<K, V> extends PartitionedQueue<K, V> {
     }
 
     @Override
-    public void shutdown(boolean sync) {
+    public void shutdown(Runnable onShutdown) {
         try {
-            super.shutdown(sync);
+            super.shutdown(onShutdown);
         } finally {
             partitions.clear();
         }

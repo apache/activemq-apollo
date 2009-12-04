@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.activemq.apollo.Connection;
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.MessageDelivery;
-import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
+import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.flow.IFlowController;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.ISinkController;
@@ -29,13 +29,15 @@ abstract public class RemoteProducer extends Connection implements FlowUnblockLi
     protected String property;
     protected MetricAggregator totalProducerRate;
     protected MessageDelivery next;
-    protected DispatchContext dispatchContext;
+    protected DispatchQueue dispatchQueue;
+    protected Runnable dispatchTask;
     protected String filler;
     protected int payloadSize = 20;
     protected URI uri;
 
     protected IFlowController<MessageDelivery> outboundController;
     protected IFlowSink<MessageDelivery> outboundQueue;
+
     
     public void start() throws Exception {
         
@@ -57,12 +59,13 @@ abstract public class RemoteProducer extends Connection implements FlowUnblockLi
         
         setupProducer();
         
-        dispatchContext = getDispatcher().register(new Runnable(){
+        dispatchQueue = getDispatcher().createQueue(name + "-client");
+        dispatchTask = new Runnable(){
             public void run() {
                 dispatch();
             }
-        }, name + "-client");
-        dispatchContext.requestDispatch();
+        };
+        dispatchQueue.dispatchAsync(dispatchTask);
 
     }
     
@@ -96,12 +99,12 @@ abstract public class RemoteProducer extends Connection implements FlowUnblockLi
 
     public void stop() throws Exception
     {
-    	dispatchContext.close(false);
+    	dispatchQueue.release();
     	super.stop();
     }
     
 	public void onFlowUnblocked(ISinkController<MessageDelivery> controller) {
-		dispatchContext.requestDispatch();
+        dispatchQueue.dispatchAsync(dispatchTask);
 	}
 
     protected String createPayload() {

@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchSPI;
 import org.apache.activemq.dispatch.DispatchSource;
-import org.apache.activemq.dispatch.LoadBalancer;
 import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
 import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
 
@@ -177,9 +176,9 @@ public class AdvancedDispatchSPI implements DispatchSPI {
         }
     }
 
-    public DispatchContext register(Runnable runnable, String name) {
-        return chooseDispatcher().register(runnable, name);
-    }
+//    public DispatchContext register(Runnable runnable, String name) {
+//        return chooseDispatcher().register(runnable, name);
+//    }
 
 	public int getSize() {
 		return size;

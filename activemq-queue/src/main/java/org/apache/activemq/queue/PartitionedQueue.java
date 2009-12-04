@@ -19,6 +19,7 @@ package org.apache.activemq.queue;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.flow.ISourceController;
@@ -169,7 +170,7 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
         }
     }
 
-    public void shutdown(boolean sync) {
+    public void shutdown(final Runnable onShutdown) {
         Collection<IQueue<K, V>> partitions = null;
         synchronized (this) {
             if (!shutdown) {
@@ -181,9 +182,22 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
         }
 
         if (partitions != null) {
+
+            Runnable wrapper=null;
+            if( onShutdown!=null ) {
+                final AtomicInteger  countDown = new AtomicInteger(partitions.size());
+                wrapper = new Runnable() {
+                    public void run() {
+                        if( countDown.decrementAndGet()==0 ) {
+                            onShutdown.run();
+                        }
+                    }
+                };
+            }
+            
             for (IQueue<K, V> partition : partitions) {
                 if (partition != null)
-                    partition.shutdown(sync);
+                    partition.shutdown(wrapper);
             }
         }
     }

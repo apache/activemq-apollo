@@ -259,11 +259,17 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
         }
     }
 
-    public void shutdown(boolean sync) {
-        super.shutdown(sync);
-        synchronized (this) {
-            queue.shutdown(sync);
-        }
+    public void shutdown(final Runnable onShutdown) {
+        super.shutdown(new Runnable() {
+            public void run() {
+                synchronized (ExclusivePersistentQueue.this) {
+                    queue.shutdown();
+                }
+                if( onShutdown!=null ) {
+                    onShutdown.run();
+                }
+            }
+        });
     }
 
     public FlowController<E> getFlowController(Flow flow) {

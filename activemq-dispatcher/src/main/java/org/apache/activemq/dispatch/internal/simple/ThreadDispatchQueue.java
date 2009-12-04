@@ -123,4 +123,10 @@ public class ThreadDispatchQueue implements SimpleQueue {
         return priority;
     }
 
+    public void release() {
+    }
+
+    public void retain() {
+    }
+
 }

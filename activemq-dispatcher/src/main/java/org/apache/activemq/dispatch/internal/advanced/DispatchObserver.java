@@ -15,10 +15,9 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.dispatch;
+package org.apache.activemq.dispatch.internal.advanced;
 
 import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
-import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
 
 public interface DispatchObserver {
     

@@ -19,7 +19,7 @@ package org.apache.activemq.queue;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
+import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 
@@ -32,7 +32,6 @@ import org.apache.activemq.flow.ISinkController.FlowControllable;
 public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implements FlowControllable<E>, IFlowQueue<E> {
 
     protected AdvancedDispatchSPI dispatcher;
-    protected DispatchContext dispatchContext;
     protected Collection<IPollableFlowSource.FlowReadyListener<E>> readyListeners;
     private boolean notifyReady = false;
     protected int dispatchPriority = 0;
@@ -44,6 +43,8 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
     };
     protected boolean started;
     protected Subscription<E> sub;
+    protected DispatchQueue dispatchQueue;
+    protected Runnable dispatchTask;
 
     AbstractFlowQueue() {
         super();
@@ -78,19 +79,17 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
      * Calls stop and cleans up resources associated with the queue.
      * 
      * @param sync
+     * @throws InterruptedException 
      */
-    public void shutdown(boolean sync) {
+    public void shutdown(Runnable onShutdown)  {
+        if( dispatchQueue == null ) {
+            throw new IllegalStateException();
+        }
+        
         stop();
-        DispatchContext dc = null;
-        synchronized (this) {
-            dc = dispatchContext;
-            dispatchContext = null;
-
-        }
-
-        if (dc != null) {
-            dc.close(sync);
-        }
+        dispatchQueue.setFinalizer(onShutdown);
+        dispatchQueue.release();
+        dispatchQueue = null;
     }
 
     /**
@@ -134,21 +133,28 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
      */
     public synchronized void setDispatcher(AdvancedDispatchSPI dispatcher) {
         this.dispatcher = dispatcher;
-        dispatchContext = dispatcher.register(new Runnable(){
+        
+        dispatchQueue = dispatcher.createQueue(getResourceName());
+        dispatchTask = new Runnable(){
             public void run() {
                 if( pollingDispatch() ) {
-                    dispatchContext.requestDispatch();
+                    dispatchQueue.dispatchAsync(dispatchTask);
                 }
-            }}, getResourceName());
-        dispatchContext.updatePriority(dispatchPriority);
+            }
+        };
+        
+//        TODO:
+//        dispatchContext.updatePriority(dispatchPriority);
+        
         super.setFlowExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
     }
 
     public synchronized void setDispatchPriority(int priority) {
         dispatchPriority = priority;
-        if (dispatchContext != null) {
-            dispatchContext.updatePriority(priority);
-        }
+//        TODO:
+//        if (dispatchContext != null) {
+//            dispatchContext.updatePriority(priority);
+//        }
     }
 
     public synchronized void addFlowReadyListener(IPollableFlowSource.FlowReadyListener<E> watcher) {
@@ -177,8 +183,8 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
      * Indicates that there are elements ready for dispatch.
      */
     protected void notifyReady() {
-        if (dispatchContext != null) {
-            dispatchContext.requestDispatch();
+        if (dispatchQueue != null) {
+            dispatchQueue.dispatchAsync(dispatchTask);
             return;
         }
 

@@ -60,9 +60,9 @@ public class Queue implements DeliveryTarget {
         }
     }
 
-    public void shutdown(boolean sync) throws Exception {
+    public void shutdown(Runnable onShutdown) throws Exception {
         if (queue != null) {
-            queue.shutdown(sync);
+            queue.shutdown(onShutdown);
         }
     }
 
