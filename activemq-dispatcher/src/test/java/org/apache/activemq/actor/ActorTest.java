@@ -7,8 +7,6 @@
  **************************************************************************************/
 package org.apache.activemq.actor;
 
-import static java.lang.String.format;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -16,7 +14,6 @@ import junit.framework.TestCase;
 
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchSPI;
-import org.apache.activemq.dispatch.DispatchSystem;
 import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 
 
