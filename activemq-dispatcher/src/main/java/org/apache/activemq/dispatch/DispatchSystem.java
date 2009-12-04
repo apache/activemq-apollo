@@ -18,7 +18,7 @@ package org.apache.activemq.dispatch;
 
 import java.nio.channels.SelectableChannel;
 
-import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSystem;
+import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSPI;
 
 /**
  * 
@@ -26,38 +26,48 @@ import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSystem;
  */
 public class DispatchSystem {
 
-    private static final SimpleDispatchSystem system = new SimpleDispatchSystem(Runtime.getRuntime().availableProcessors());
-    
-    static DispatchQueue getMainQueue() {
-        return system.getMainQueue();
-    }
-    
     public static enum DispatchQueuePriority {
         HIGH,
         DEFAULT,
         LOW;
     }
 
+    static abstract public class DispatchSPI {
+        abstract public DispatchQueue getMainQueue();
+        abstract public DispatchQueue getGlobalQueue(DispatchQueuePriority priority);
+        abstract public DispatchQueue createQueue(String label);
+        abstract public void dispatchMain();
+        abstract public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue);
+    }
+
+    public final static ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
+    static public DispatchQueue getCurrentQueue() {
+        return CURRENT_QUEUE.get();
+    }
+
+    private final static DispatchSPI spi = cretateDispatchSystemSPI();
+    private static DispatchSPI cretateDispatchSystemSPI() {
+        return new SimpleDispatchSPI(Runtime.getRuntime().availableProcessors());
+    }
+    
+    static DispatchQueue getMainQueue() {
+        return spi.getMainQueue();
+    }
+    
     static public DispatchQueue getGlobalQueue(DispatchQueuePriority priority) {
-        return system.getGlobalQueue(priority);
+        return spi.getGlobalQueue(priority);
     }
     
     static DispatchQueue createQueue(String label) {
-        return system.createQueue(label);
-    }
-    
-    static DispatchQueue getCurrentQueue() {
-        return system.getCurrentQueue();
+        return spi.createQueue(label);
     }
     
     static void dispatchMain() {
-        system.dispatchMain();
+        spi.dispatchMain();
     }
 
     static DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue) {
-        return system.createSource(channel, interestOps, queue);
+        return spi.createSource(channel, interestOps, queue);
     }
-    
-    
 
 }

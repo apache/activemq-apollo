@@ -14,13 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch.internal.simple;
+package org.apache.activemq.dispatch.internal;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.DispatchSystem;
 
 /**
  * 
@@ -32,6 +33,8 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
     final private String label;
     final private AtomicInteger suspendCounter = new AtomicInteger();
     final private AtomicLong size = new AtomicLong();
+    
+    static final ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
 
     public SerialDispatchQueue(String label) {
         this.label = label;
@@ -65,8 +68,8 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
     }
 
     public void run() {
-        DispatchQueue original = SimpleDispatchSystem.CURRENT_QUEUE.get();
-        SimpleDispatchSystem.CURRENT_QUEUE.set(this);
+        DispatchQueue original = DispatchSystem.CURRENT_QUEUE.get();
+        DispatchSystem.CURRENT_QUEUE.set(this);
         try {
             Runnable runnable;
             long lsize = size.get();
@@ -82,7 +85,7 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
                 }
             }
         } finally {
-            SimpleDispatchSystem.CURRENT_QUEUE.set(original);
+            DispatchSystem.CURRENT_QUEUE.set(original);
         }
     }
 

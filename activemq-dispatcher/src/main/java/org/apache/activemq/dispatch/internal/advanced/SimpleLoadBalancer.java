@@ -22,16 +22,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.activemq.dispatch.internal.advanced.PooledDispatcher.PooledDispatchContext;
 
-public class SimpleLoadBalancer implements ExecutionLoadBalancer {
+public class SimpleLoadBalancer implements LoadBalancer {
 
     private final boolean DEBUG = false;
 
     //TODO: Added plumbing for periodic rebalancing which we should
     //consider implementing
     private static final boolean ENABLE_UPDATES = false;
-    private final ArrayList<IDispatcher> dispatchers = new ArrayList<IDispatcher>();
+    private final ArrayList<Dispatcher> dispatchers = new ArrayList<Dispatcher>();
 
     private AtomicBoolean running = new AtomicBoolean(false);
     private boolean needsUpdate = false;
@@ -86,7 +85,7 @@ public class SimpleLoadBalancer implements ExecutionLoadBalancer {
         running.compareAndSet(true, false);
     }
 
-    public synchronized final void onDispatcherStarted(IDispatcher dispatcher) {
+    public synchronized final void onDispatcherStarted(Dispatcher dispatcher) {
         dispatchers.add(dispatcher);
         scheduleNext();
     }
@@ -94,7 +93,7 @@ public class SimpleLoadBalancer implements ExecutionLoadBalancer {
     /**
      * A Dispatcher must call this when exiting it's dispatch loop
      */
-    public void onDispatcherStopped(IDispatcher dispatcher) {
+    public void onDispatcherStopped(Dispatcher dispatcher) {
         dispatchers.remove(dispatcher);
     }
 
@@ -123,7 +122,7 @@ public class SimpleLoadBalancer implements ExecutionLoadBalancer {
         private final AtomicInteger work = new AtomicInteger(0);
 
         private PooledDispatchContext singleSource;
-        private IDispatcher currentOwner;
+        private Dispatcher currentOwner;
 
         SimpleExecutionTracker(PooledDispatchContext context) {
             this.context = context;
@@ -144,7 +143,7 @@ public class SimpleLoadBalancer implements ExecutionLoadBalancer {
          * @return True if this method resulted in the dispatch request being
          *         assigned to another dispatcher.
          */
-        public void onDispatchRequest(IDispatcher callingDispatcher, PooledDispatchContext callingContext) {
+        public void onDispatchRequest(Dispatcher callingDispatcher, PooledDispatchContext callingContext) {
 
             if (callingContext != null) {
                 // Make sure we are being called by another node:

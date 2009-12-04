@@ -26,8 +26,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.activemq.Service;
 import org.apache.activemq.apollo.Connection;
 import org.apache.activemq.dispatch.internal.advanced.DispatcherAware;
-import org.apache.activemq.dispatch.internal.advanced.IDispatcher;
-import org.apache.activemq.dispatch.internal.advanced.PriorityDispatcher;
+import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportServer;
@@ -51,7 +51,7 @@ public class Broker implements Service {
 
     private final LinkedHashMap<AsciiBuffer, VirtualHost> virtualHosts = new LinkedHashMap<AsciiBuffer, VirtualHost>();
     private VirtualHost defaultVirtualHost;
-    private IDispatcher dispatcher;
+    private Dispatcher dispatcher;
     private File dataDirectory;
 
     private final class BrokerAcceptListener implements TransportAcceptListener {
@@ -129,7 +129,7 @@ public class Broker implements Service {
 		// apply some default configuration to this broker instance before it's started.
 		if( dispatcher == null ) {
 			int threads = Runtime.getRuntime().availableProcessors();
-			dispatcher = PriorityDispatcher.createPriorityDispatchPool("Broker: "+getDefaultVirtualHost().getHostName(), Broker.MAX_PRIORITY, threads);
+			dispatcher = DispatcherThread.createPriorityDispatchPool("Broker: "+getDefaultVirtualHost().getHostName(), Broker.MAX_PRIORITY, threads);
 		}
 		
 
@@ -376,10 +376,10 @@ public class Broker implements Service {
     // /////////////////////////////////////////////////////////////////
     // Property Accessors
     // /////////////////////////////////////////////////////////////////
-    public IDispatcher getDispatcher() {
+    public Dispatcher getDispatcher() {
         return dispatcher;
     }
-    public void setDispatcher(IDispatcher dispatcher) {
+    public void setDispatcher(Dispatcher dispatcher) {
     	assertInConfigurationState();
         this.dispatcher = dispatcher;
     }

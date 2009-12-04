@@ -13,9 +13,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.activemq.dispatch.internal.advanced.IDispatcher;
-import org.apache.activemq.dispatch.internal.advanced.IDispatcher.DispatchContext;
-import org.apache.activemq.dispatch.internal.advanced.IDispatcher.Dispatchable;
+import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.Dispatcher.DispatchContext;
+import org.apache.activemq.dispatch.internal.advanced.Dispatcher.Dispatchable;
 import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.FutureResponse;
 import org.apache.activemq.transport.ResponseCallback;
@@ -76,7 +76,7 @@ public class PipeTransportFactory extends TransportFactory {
             }
         }
 
-        public void setDispatcher(IDispatcher dispatcher) {
+        public void setDispatcher(Dispatcher dispatcher) {
             readContext = dispatcher.register(this, name);
         }
 

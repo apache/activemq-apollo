@@ -22,8 +22,8 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.activemq.apollo.broker.Broker;
-import org.apache.activemq.dispatch.internal.advanced.IDispatcher;
-import org.apache.activemq.dispatch.internal.advanced.PriorityDispatcher;
+import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
 
 @XmlRootElement(name="dispatcher")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -36,12 +36,12 @@ public class DispatcherXml {
 	@XmlAttribute(required=false)
 	int threads = Runtime.getRuntime().availableProcessors();
 	
-	public IDispatcher createDispatcher(BrokerXml brokerXml) {
+	public Dispatcher createDispatcher(BrokerXml brokerXml) {
 		if( name == null ) {
 //			VirtualHostXml vh = brokerXml.getDefaultVirtualHost();
 			name = "Broker: ";
 		}
-		return PriorityDispatcher.createPriorityDispatchPool(name, maxPriority, threads);
+		return DispatcherThread.createPriorityDispatchPool(name, maxPriority, threads);
 	}
 
 }

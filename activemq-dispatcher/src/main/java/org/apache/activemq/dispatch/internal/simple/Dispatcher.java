@@ -19,14 +19,16 @@ package org.apache.activemq.dispatch.internal.simple;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import org.apache.activemq.dispatch.DispatchSystem;
+
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 final public class Dispatcher extends Thread {
-    private final SimpleDispatchSystem system;
+    private final SimpleDispatchSPI system;
     
-    public Dispatcher(SimpleDispatchSystem javaDispatchSystem, int ordinal) {
+    public Dispatcher(SimpleDispatchSPI javaDispatchSystem, int ordinal) {
         system = javaDispatchSystem;
         setName("dispatcher:"+(ordinal+1));
         setDaemon(true);
@@ -38,7 +40,7 @@ final public class Dispatcher extends Thread {
         GlobalDispatchQueue[] dispatchQueues = system.globalQueues;
         while( true ) {
             for (GlobalDispatchQueue queue : dispatchQueues) {
-                SimpleDispatchSystem.CURRENT_QUEUE.set(queue);
+                DispatchSystem.CURRENT_QUEUE.set(queue);
                 ConcurrentLinkedQueue<Runnable> runnables = queue.runnables;
                 Runnable runnable;
                 while( (runnable = runnables.poll())!=null ) {

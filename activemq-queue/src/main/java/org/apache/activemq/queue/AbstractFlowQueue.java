@@ -19,9 +19,9 @@ package org.apache.activemq.queue;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.apache.activemq.dispatch.internal.advanced.IDispatcher;
-import org.apache.activemq.dispatch.internal.advanced.IDispatcher.DispatchContext;
-import org.apache.activemq.dispatch.internal.advanced.IDispatcher.Dispatchable;
+import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.Dispatcher.DispatchContext;
+import org.apache.activemq.dispatch.internal.advanced.Dispatcher.Dispatchable;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 
 /**
@@ -32,7 +32,7 @@ import org.apache.activemq.flow.ISinkController.FlowControllable;
  */
 public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implements FlowControllable<E>, IFlowQueue<E>, Dispatchable {
 
-    protected IDispatcher dispatcher;
+    protected Dispatcher dispatcher;
     protected DispatchContext dispatchContext;
     protected Collection<IPollableFlowSource.FlowReadyListener<E>> readyListeners;
     private boolean notifyReady = false;
@@ -141,7 +141,7 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
      * @param dispatcher
      *            The dispatcher to handle messages.
      */
-    public synchronized void setDispatcher(IDispatcher dispatcher) {
+    public synchronized void setDispatcher(Dispatcher dispatcher) {
         this.dispatcher = dispatcher;
         dispatchContext = dispatcher.register(this, getResourceName());
         dispatchContext.updatePriority(dispatchPriority);

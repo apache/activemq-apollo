@@ -20,17 +20,17 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
-public interface IDispatcher extends Executor {
+public interface Dispatcher extends Executor {
 
     /**
      * This interface is implemented by Dispatchable entities. A Dispatchable
-     * entity registers with an {@link IDispatcher} and is returned a
+     * entity registers with an {@link Dispatcher} and is returned a
      * {@link DispatchContext} which it can use to request the
-     * {@link IDispatcher} to invoke {@link Dispatchable#dispatch()}
+     * {@link Dispatcher} to invoke {@link Dispatchable#dispatch()}
      * 
-     * {@link IDispatcher} guarantees that {@link #dispatch()} will never invoke
+     * {@link Dispatcher} guarantees that {@link #dispatch()} will never invoke
      * dispatch concurrently unless the {@link Dispatchable} is registered with
-     * more than one {@link IDispatcher};
+     * more than one {@link Dispatcher};
      */
     public interface Dispatchable {
         public boolean dispatch();
@@ -144,7 +144,7 @@ public interface IDispatcher extends Executor {
 
     /**
      * Schedules the given {@link Runnable} to be run at the specified time in
-     * the future on this {@link IDispatcher}.
+     * the future on this {@link Dispatcher}.
      * 
      * @param runnable
      *            The Runnable to execute

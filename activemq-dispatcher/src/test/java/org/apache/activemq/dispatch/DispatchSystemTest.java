@@ -18,8 +18,9 @@ package org.apache.activemq.dispatch;
 
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.activemq.dispatch.internal.advanced.AdancedDispatchSystem;
-import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSystem;
+import org.apache.activemq.dispatch.DispatchSystem.DispatchSPI;
+import org.apache.activemq.dispatch.internal.advanced.AdancedDispatchSPI;
+import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSPI;
 
 import static java.lang.String.*;
 import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.*;
@@ -31,22 +32,22 @@ import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.
 public class DispatchSystemTest {
     
     public static void main(String[] args) throws Exception {
-        AdancedDispatchSystem advancedSystem = new AdancedDispatchSystem(Runtime.getRuntime().availableProcessors());
-        benchmark("advanced private serial queue", advancedSystem.createQueue("test"));
-        benchmark("advanced global queue", advancedSystem.getGlobalQueue(DEFAULT));
+        DispatchSPI advancedSystem = new AdancedDispatchSPI(Runtime.getRuntime().availableProcessors());
+        benchmark("advanced private serial queue", advancedSystem, advancedSystem.createQueue("test"));
+        benchmark("advanced global queue", advancedSystem, advancedSystem.getGlobalQueue(DEFAULT));
 
-        SimpleDispatchSystem simpleSystem = new SimpleDispatchSystem(Runtime.getRuntime().availableProcessors());
-        benchmark("advanced private serial queue", simpleSystem.createQueue("test"));
-        benchmark("advancedglobal queue", simpleSystem.getGlobalQueue(DEFAULT));
+        DispatchSPI simpleSystem = new SimpleDispatchSPI(Runtime.getRuntime().availableProcessors());
+        benchmark("simple private serial queue", simpleSystem, simpleSystem.createQueue("test"));
+        benchmark("simple global queue", simpleSystem, simpleSystem.getGlobalQueue(DEFAULT));
     }
 
-    private static void benchmark(String name, DispatchQueue queue) throws InterruptedException {
+    private static void benchmark(String name, DispatchSPI spi, DispatchQueue queue) throws InterruptedException {
         // warm the JIT up..
-        benchmarkWork(queue, 100000);
+        benchmarkWork(spi, queue, 100000);
         
         int iterations = 1000*1000*20;
         long start = System.nanoTime();
-        benchmarkWork(queue, iterations);
+        benchmarkWork(spi, queue, iterations);
         long end = System.nanoTime();
         
         double durationMS = 1.0d*(end-start)/1000000d;
@@ -55,13 +56,13 @@ public class DispatchSystemTest {
         System.out.println(format("name: %s, duration: %,.3f ms, rate: %,.2f executions/sec", name, durationMS, rate));
     }
 
-    private static void benchmarkWork(final DispatchQueue queue, int iterations) throws InterruptedException {
+    private static void benchmarkWork(final DispatchSPI spi, final DispatchQueue queue, int iterations) throws InterruptedException {
         final CountDownLatch counter = new CountDownLatch(iterations);
         Runnable task = new Runnable(){
             public void run() {
                 counter.countDown();
                 if( counter.getCount()>0 ) {
-                    queue.dispatchAsync(this);
+                    DispatchSystem.getCurrentQueue().dispatchAsync(this);
                 }
             }
         };

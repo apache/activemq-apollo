@@ -8,6 +8,6 @@ package org.apache.activemq.dispatch.internal.advanced;
  */
 public interface DispatcherAware {
 
-	public void setDispatcher(IDispatcher dispatcher);
+	public void setDispatcher(Dispatcher dispatcher);
 	
 }

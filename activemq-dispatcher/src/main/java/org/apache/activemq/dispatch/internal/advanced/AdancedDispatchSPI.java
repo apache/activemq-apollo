@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch.internal.simple;
+package org.apache.activemq.dispatch.internal.advanced;
 
 import java.nio.channels.SelectableChannel;
 import java.util.concurrent.atomic.AtomicLong;
@@ -22,6 +22,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchSource;
 import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
+import org.apache.activemq.dispatch.DispatchSystem.DispatchSPI;
+import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
 
 import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.*;
 
@@ -31,28 +33,21 @@ import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class SimpleDispatchSystem {
-    
-    static final ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
-    
+public class AdancedDispatchSPI extends DispatchSPI {
+        
     final SerialDispatchQueue mainQueue = new SerialDispatchQueue("main");
-    final GlobalDispatchQueue globalQueues[]; 
-    final Dispatcher dispatchers[];
+    final GlobalDispatchQueue globalQueues[];
+    DispatcherPool pooledDispatcher;
 
-    private final Object wakeupMutex = new Object();
     final AtomicLong globalQueuedRunnables = new AtomicLong();
     
-    public SimpleDispatchSystem(int size) {
+    public AdancedDispatchSPI(int size) throws Exception {
+        pooledDispatcher = new DispatcherPool("default", size, 3);
+        pooledDispatcher.start();
+
         globalQueues = new GlobalDispatchQueue[3];
         for (int i = 0; i < 3; i++) {
-            globalQueues[i] = new GlobalDispatchQueue(this, DispatchQueuePriority.values()[i] );
-        }
-                                  
-        dispatchers = new Dispatcher[size];
-        for (int i = 0; i < size; i++) {
-            dispatchers[i] = new Dispatcher(this, i);
-            dispatchers[i].start();
-            
+            globalQueues[i] = new GlobalDispatchQueue(this, DispatchQueuePriority.values()[i]);
         }
     }
     
@@ -70,31 +65,11 @@ public class SimpleDispatchSystem {
         return rc;
     }
     
-    public DispatchQueue getCurrentQueue() {
-        return CURRENT_QUEUE.get();
-    }
-    
     public void dispatchMain() {
         mainQueue.run();
     }
 
     public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue) {
         return null;
-    }
-
-    public void waitForWakeup() throws InterruptedException {
-        while( globalQueuedRunnables.get()==0 ) {
-            synchronized(wakeupMutex) {
-                wakeupMutex.wait();
-            }
-        }
-    }
-    
-    void wakeup() {
-        if( globalQueuedRunnables.incrementAndGet() < dispatchers.length ) {
-            synchronized(wakeupMutex) {
-                wakeupMutex.notify();
-            }
-        }
-    }
+    }    
 }

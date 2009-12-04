@@ -39,10 +39,10 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.MessageId;
 import org.apache.activemq.command.ProducerId;
-import org.apache.activemq.dispatch.internal.advanced.IDispatcher;
-import org.apache.activemq.dispatch.internal.advanced.PriorityDispatcher;
-import org.apache.activemq.dispatch.internal.advanced.IDispatcher.DispatchContext;
-import org.apache.activemq.dispatch.internal.advanced.IDispatcher.Dispatchable;
+import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
+import org.apache.activemq.dispatch.internal.advanced.Dispatcher.DispatchContext;
+import org.apache.activemq.dispatch.internal.advanced.Dispatcher.Dispatchable;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
@@ -66,7 +66,7 @@ public class SharedQueuePerfTest extends TestCase {
 
     private static int PERFORMANCE_SAMPLES = 5;
 
-    IDispatcher dispatcher;
+    Dispatcher dispatcher;
     BrokerDatabase database;
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
@@ -83,11 +83,11 @@ public class SharedQueuePerfTest extends TestCase {
     protected ArrayList<Producer> producers = new ArrayList<Producer>();
     protected ArrayList<IQueue<Long, MessageDelivery>> queues = new ArrayList<IQueue<Long, MessageDelivery>>();
 
-    protected IDispatcher createDispatcher() {
+    protected Dispatcher createDispatcher() {
         if (THREAD_POOL_SIZE > 1) {
-            return PriorityDispatcher.createPriorityDispatchPool("TestDispatcher", Broker.MAX_PRIORITY, THREAD_POOL_SIZE);
+            return DispatcherThread.createPriorityDispatchPool("TestDispatcher", Broker.MAX_PRIORITY, THREAD_POOL_SIZE);
         } else {
-            return PriorityDispatcher.createPriorityDispatcher("TestDispatcher", Broker.MAX_PRIORITY);
+            return DispatcherThread.createPriorityDispatcher("TestDispatcher", Broker.MAX_PRIORITY);
         }
     }
 

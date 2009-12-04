@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch.internal.simple;
+package org.apache.activemq.dispatch.internal.advanced;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
@@ -26,15 +26,16 @@ import org.apache.activemq.dispatch.internal.QueueSupport;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class GlobalDispatchQueue implements DispatchQueue {
+public class ThreadDispatchQueue implements DispatchQueue {
 
-    private final SimpleDispatchSPI system;
-    final String label;
-    final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
+    private final String label;
+    private final DispatcherThread dispatcher;
+    private final DispatchQueuePriority priority;
     
-    public GlobalDispatchQueue(SimpleDispatchSPI system, DispatchQueuePriority priority) {
-        this.system = system;
-        this.label=priority.toString();
+    public ThreadDispatchQueue(DispatcherThread dispatcher, DispatchQueuePriority priority) {
+        this.priority = priority;
+        this.label=priority.toString()+" "+dispatcher.getName();
+        this.dispatcher = dispatcher;
     }
 
     public String getLabel() {
@@ -42,12 +43,11 @@ public class GlobalDispatchQueue implements DispatchQueue {
     }
 
     public void dispatchAsync(Runnable runnable) {
-        runnables.add(runnable);
-        system.wakeup();
+        dispatcher.execute(runnable, priority.ordinal());
     }
 
     public void dispatchAfter(long delayMS, Runnable runnable) {
-        throw new RuntimeException("TODO: implement me.");
+        dispatcher.schedule(runnable, priority.ordinal(), delayMS, TimeUnit.MILLISECONDS);
     }
 
     public void dispatchSync(final Runnable runnable) throws InterruptedException {

@@ -20,7 +20,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import org.apache.activemq.dispatch.internal.advanced.IDispatcher;
+import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.buffer.AsciiBuffer;
@@ -30,7 +30,7 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
     protected HashSet<Subscription<V>> subscriptions = new HashSet<Subscription<V>>();
     private HashMap<Integer, IQueue<K, V>> partitions = new HashMap<Integer, IQueue<K, V>>();
     protected QueueStore<K, V> store;
-    protected IDispatcher dispatcher;
+    protected Dispatcher dispatcher;
     protected boolean started;
     protected boolean shutdown = false;
     protected QueueDescriptor queueDescriptor;
@@ -239,7 +239,7 @@ abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implem
         this.autoRelease = autoRelease;
     }
 
-    public void setDispatcher(IDispatcher dispatcher) {
+    public void setDispatcher(Dispatcher dispatcher) {
         checkShutdown();
         this.dispatcher = dispatcher;
         synchronized (this) {

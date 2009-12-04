@@ -25,16 +25,19 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.dispatch.internal.advanced.ExecutionLoadBalancer.ExecutionTracker;
-import org.apache.activemq.dispatch.internal.advanced.PooledDispatcher.PooledDispatchContext;
+import org.apache.activemq.dispatch.DispatchSystem;
+import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
+import org.apache.activemq.dispatch.internal.advanced.LoadBalancer.ExecutionTracker;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.PriorityLinkedList;
 import org.apache.activemq.util.TimerHeap;
 import org.apache.activemq.util.list.LinkedNode;
 import org.apache.activemq.util.list.LinkedNodeList;
 
-public class PriorityDispatcher implements Runnable, IDispatcher {
+public class DispatcherThread implements Runnable, Dispatcher {
 
+    private final ThreadDispatchQueue dispatchQueues[];
+    
     private static final boolean DEBUG = false;
     private Thread thread;
     protected boolean running = false;
@@ -43,7 +46,7 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
     protected final HashSet<PriorityDispatchContext> contexts = new HashSet<PriorityDispatchContext>();
 
     // Set if this dispatcher is part of a dispatch pool:
-    protected final PooledDispatcher pooledDispatcher;
+    protected final DispatcherPool pooledDispatcher;
 
     // The local dispatch queue:
     protected final PriorityLinkedList<PriorityDispatchContext> priorityQueue;
@@ -71,8 +74,14 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
         }
     };
 
-    protected PriorityDispatcher(String name, int priorities, PooledDispatcher pooledDispactcher) {
+    protected DispatcherThread(String name, int priorities, DispatcherPool pooledDispactcher) {
         this.name = name;
+        
+        this.dispatchQueues = new ThreadDispatchQueue[3];
+        for (int i = 0; i < 3; i++) {
+            dispatchQueues[i] = new ThreadDispatchQueue(this, DispatchQueuePriority.values()[i]);
+        }
+
         MAX_USER_PRIORITY = priorities - 1;
         priorityQueue = new PriorityLinkedList<PriorityDispatchContext>(MAX_USER_PRIORITY + 1, PRIORITY_MAPPER);
         foreignQueue = createForeignEventQueue();
@@ -82,12 +91,12 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
         this.pooledDispatcher = pooledDispactcher;
     }
 
-    public static final IDispatcher createPriorityDispatcher(String name, int numPriorities) {
-        return new PriorityDispatcher(name, numPriorities, null);
+    public static final Dispatcher createPriorityDispatcher(String name, int numPriorities) {
+        return new DispatcherThread(name, numPriorities, null);
     }
 
-    public static final IDispatcher createPriorityDispatchPool(String name, final int numPriorities, int size) {
-        return new PooledPriorityDispatcher(name, size, numPriorities);
+    public static final Dispatcher createPriorityDispatchPool(String name, final int numPriorities, int size) {
+        return new DispatcherPool(name, size, numPriorities);
     }
 
     @SuppressWarnings("unchecked")
@@ -193,7 +202,7 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
 
         if (pooledDispatcher != null) {
             // Inform the dispatcher that we have started:
-            pooledDispatcher.onDispatcherStarted((PriorityDispatcher) this);
+            pooledDispatcher.onDispatcherStarted((DispatcherThread) this);
         }
 
         PriorityDispatchContext pdc;
@@ -207,6 +216,10 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
                 if (pdc == null) {
                     waitForEvents();
                 } else {
+                    if( pdc.priority < dispatchQueues.length ) {
+                        DispatchSystem.CURRENT_QUEUE.set(dispatchQueues[pdc.priority]);
+                    }
+                    
                     if (pdc.tracker != null) {
                         pooledDispatcher.setCurrentDispatchContext(pdc);
                     }
@@ -267,7 +280,7 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
             thrown.printStackTrace();
         } finally {
             if (pooledDispatcher != null) {
-                pooledDispatcher.onDispatcherStopped((PriorityDispatcher) this);
+                pooledDispatcher.onDispatcherStopped((DispatcherThread) this);
             }
             cleanup();
         }
@@ -386,6 +399,10 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
     public void execute(final Runnable runnable) {
         dispatch(new RunnableAdapter(runnable), 0);
     }
+    
+    public void execute(final Runnable runnable, int prio) {
+        dispatch(new RunnableAdapter(runnable), prio);
+    }
 
     /*
      * (non-Javadoc)
@@ -395,12 +412,21 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
      * long, java.util.concurrent.TimeUnit)
      */
     public void schedule(final Runnable runnable, final long delay, final TimeUnit timeUnit) {
+        schedule(runnable, 0, delay, timeUnit);
+    }
+    
+    public void schedule(final Runnable runnable, final int prio, final long delay, final TimeUnit timeUnit) {
+        final Runnable wrapper = new Runnable() {
+            public void run() {
+                execute(runnable, prio);
+            }
+        };
         if (getCurrentDispatcher() == this) {
-            timerHeap.addRelative(runnable, delay, timeUnit);
+            timerHeap.addRelative(wrapper, delay, timeUnit);
         } else {
             new ForeignEvent() {
                 public void execute() {
-                    timerHeap.addRelative(runnable, delay, timeUnit);
+                    timerHeap.addRelative(wrapper, delay, timeUnit);
                 }
             }.addToList();
         }
@@ -410,11 +436,11 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
         return name;
     }
 
-    private final PriorityDispatcher getCurrentDispatcher() {
+    private final DispatcherThread getCurrentDispatcher() {
         if (pooledDispatcher != null) {
-            return (PriorityDispatcher) pooledDispatcher.getCurrentDispatcher();
+            return (DispatcherThread) pooledDispatcher.getCurrentDispatcher();
         } else if (Thread.currentThread() == thread) {
-            return (PriorityDispatcher) this;
+            return (DispatcherThread) this;
         } else {
             return null;
         }
@@ -442,8 +468,8 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
         final UpdateEvent updateEvent[];
 
         private final ExecutionTracker tracker;
-        protected PriorityDispatcher currentOwner;
-        private PriorityDispatcher updateDispatcher = null;
+        protected DispatcherThread currentOwner;
+        private DispatcherThread updateDispatcher = null;
 
         private int priority;
         private boolean dispatchRequested = false;
@@ -453,7 +479,7 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
         protected PriorityDispatchContext(Dispatchable dispatchable, boolean persistent, String name) {
             this.dispatchable = dispatchable;
             this.name = name;
-            this.currentOwner = (PriorityDispatcher) PriorityDispatcher.this;
+            this.currentOwner = (DispatcherThread) DispatcherThread.this;
             if (persistent && pooledDispatcher != null) {
                 this.tracker = pooledDispatcher.getLoadBalancer().createExecutionTracker((PooledDispatchContext) this);
             } else {
@@ -467,8 +493,8 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
             }
         }
 
-        private final PriorityDispatcher.UpdateEvent[] createUpdateEvent() {
-            return new PriorityDispatcher.UpdateEvent[2];
+        private final DispatcherThread.UpdateEvent[] createUpdateEvent() {
+            return new DispatcherThread.UpdateEvent[2];
         }
 
         /**
@@ -489,7 +515,7 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
             return dispatchable.dispatch();
         }
 
-        public final void assignToNewDispatcher(IDispatcher newDispatcher) {
+        public final void assignToNewDispatcher(Dispatcher newDispatcher) {
             synchronized (this) {
 
                 // If we're already set to this dispatcher
@@ -499,7 +525,7 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
                     }
                 }
 
-                updateDispatcher = (PriorityDispatcher) newDispatcher;
+                updateDispatcher = (DispatcherThread) newDispatcher;
                 if (DEBUG)
                     System.out.println(getName() + " updating to " + updateDispatcher);
 
@@ -510,7 +536,7 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
 
         public void requestDispatch() {
 
-            PriorityDispatcher callingDispatcher = getCurrentDispatcher();
+            DispatcherThread callingDispatcher = getCurrentDispatcher();
             if (tracker != null)
                 tracker.onDispatchRequest(callingDispatcher, getCurrentDispatchContext());
 
@@ -550,7 +576,7 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
             if (this.priority == priority) {
                 return;
             }
-            PriorityDispatcher callingDispatcher = getCurrentDispatcher();
+            DispatcherThread callingDispatcher = getCurrentDispatcher();
 
             // Otherwise this is coming off another thread, so we need to
             // synchronize to protect against ownership changes:
@@ -621,7 +647,7 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
          * @param oldDispatcher The old dispatcher
          * @param newDispatcher The new Dispatcher
          */
-        protected void switchedDispatcher(PriorityDispatcher oldDispatcher, PriorityDispatcher newDispatcher) {
+        protected void switchedDispatcher(DispatcherThread oldDispatcher, DispatcherThread newDispatcher) {
 
         }
 
@@ -630,7 +656,7 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
         }
 
         public void close(boolean sync) {
-            PriorityDispatcher callingDispatcher = getCurrentDispatcher();
+            DispatcherThread callingDispatcher = getCurrentDispatcher();
             // System.out.println(this + "Closing");
             synchronized (this) {
                 closed = true;
@@ -669,7 +695,7 @@ public class PriorityDispatcher implements Runnable, IDispatcher {
             return dispatchable;
         }
 
-        public PriorityDispatcher getDispatcher() {
+        public DispatcherThread getDispatcher() {
             return currentOwner;
         }
 

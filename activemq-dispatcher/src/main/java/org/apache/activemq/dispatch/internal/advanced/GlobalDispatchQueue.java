@@ -16,11 +16,11 @@
  */
 package org.apache.activemq.dispatch.internal.advanced;
 
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
+import org.apache.activemq.dispatch.internal.QueueSupport;
 
 /**
  * 
@@ -28,14 +28,16 @@ import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
  */
 public class GlobalDispatchQueue implements DispatchQueue {
 
-    private final AdancedDispatchSystem system;
-    private Executor executor;
-    final String label;
+    private final String label;
+    private final AdancedDispatchSPI system;
+    private final DispatcherPool dispatcher;
+    private final DispatchQueuePriority priority;
     
-    public GlobalDispatchQueue(AdancedDispatchSystem system, DispatchQueuePriority priority) {
+    public GlobalDispatchQueue(AdancedDispatchSPI system, DispatchQueuePriority priority) {
         this.system = system;
+        this.priority = priority;
         this.label=priority.toString();
-        executor = this.system.pooledDispatcher.createPriorityExecutor(priority.ordinal());
+        this.dispatcher = this.system.pooledDispatcher;
     }
 
     public String getLabel() {
@@ -43,11 +45,11 @@ public class GlobalDispatchQueue implements DispatchQueue {
     }
 
     public void dispatchAsync(Runnable runnable) {
-        executor.execute(runnable);
+        dispatcher.execute(runnable, priority.ordinal());
     }
 
     public void dispatchAfter(long delayMS, Runnable runnable) {
-        this.system.pooledDispatcher.schedule(runnable, delayMS, TimeUnit.MILLISECONDS);
+        dispatcher.schedule(runnable, priority.ordinal(), delayMS, TimeUnit.MILLISECONDS);
     }
 
     public void dispatchSync(final Runnable runnable) throws InterruptedException {

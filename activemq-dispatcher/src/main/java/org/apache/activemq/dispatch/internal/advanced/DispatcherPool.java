@@ -17,29 +17,32 @@
 package org.apache.activemq.dispatch.internal.advanced;
 
 import java.util.ArrayList;
+import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public abstract class AbstractPooledDispatcher implements IDispatcher, PooledDispatcher {
+public class DispatcherPool implements Dispatcher {
 
     private final String name;
 
-    private final ThreadLocal<IDispatcher> dispatcher = new ThreadLocal<IDispatcher>();
+    private final ThreadLocal<DispatcherThread> dispatcher = new ThreadLocal<DispatcherThread>();
     private final ThreadLocal<PooledDispatchContext> dispatcherContext = new ThreadLocal<PooledDispatchContext>();
-    private final ArrayList<IDispatcher> dispatchers = new ArrayList<IDispatcher>();
+    private final ArrayList<DispatcherThread> dispatchers = new ArrayList<DispatcherThread>();
 
     final AtomicBoolean started = new AtomicBoolean();
     final AtomicBoolean shutdown = new AtomicBoolean();
 
     private int roundRobinCounter = 0;
     private int size;
+    private final int numPriorities;
 
-    protected ExecutionLoadBalancer loadBalancer;
+    protected LoadBalancer loadBalancer;
 
-    protected AbstractPooledDispatcher(String name, int size) {
+    protected DispatcherPool(String name, int size, int numPriorities) {
         this.name = name;
         this.size = size;
+        this.numPriorities = numPriorities;
         loadBalancer = new SimpleLoadBalancer();
     }
 
@@ -52,10 +55,12 @@ public abstract class AbstractPooledDispatcher implements IDispatcher, PooledDis
      *            The pool.
      * @return The new dispathcer.
      */
-    protected abstract IDispatcher createDispatcher(String name, AbstractPooledDispatcher pool) throws Exception;
+    protected DispatcherThread createDispatcher(String name, DispatcherPool pool) throws Exception {
+        return new DispatcherThread(name, numPriorities, this);
+    }
 
     /**
-     * @see org.apache.activemq.dispatch.internal.advanced.IDispatcher#start()
+     * @see org.apache.activemq.dispatch.internal.advanced.Dispatcher#start()
      */
     public synchronized final void start() throws Exception {
         loadBalancer.start();
@@ -63,8 +68,7 @@ public abstract class AbstractPooledDispatcher implements IDispatcher, PooledDis
             // Create all the workers.
             try {
                 for (int i = 0; i < size; i++) {
-                    IDispatcher dispatacher = createDispatcher(name + "-" + (i + 1), this);
-
+                    DispatcherThread dispatacher = createDispatcher(name + "-" + (i + 1), this);
                     dispatchers.add(dispatacher);
                     dispatacher.start();
                 }
@@ -112,7 +116,7 @@ public abstract class AbstractPooledDispatcher implements IDispatcher, PooledDis
      * 
      * @return The currently executing dispatcher
      */
-    public IDispatcher getCurrentDispatcher() {
+    public Dispatcher getCurrentDispatcher() {
         return dispatcher.get();
     }
 
@@ -120,19 +124,19 @@ public abstract class AbstractPooledDispatcher implements IDispatcher, PooledDis
      * A Dispatcher must call this to indicate that is has started it's dispatch
      * loop.
      */
-    public void onDispatcherStarted(IDispatcher d) {
+    public void onDispatcherStarted(DispatcherThread d) {
         dispatcher.set(d);
         loadBalancer.onDispatcherStarted(d);
     }
 
-    public ExecutionLoadBalancer getLoadBalancer() {
+    public LoadBalancer getLoadBalancer() {
         return loadBalancer;
     }
 
     /**
      * A Dispatcher must call this when exiting it's dispatch loop
      */
-    public void onDispatcherStopped(IDispatcher d) {
+    public void onDispatcherStopped(Dispatcher d) {
         synchronized (dispatchers) {
             if (dispatchers.remove(d)) {
                 size--;
@@ -141,8 +145,8 @@ public abstract class AbstractPooledDispatcher implements IDispatcher, PooledDis
         loadBalancer.onDispatcherStopped(d);
     }
 
-    protected IDispatcher chooseDispatcher() {
-        IDispatcher d = dispatcher.get();
+    protected DispatcherThread chooseDispatcher() {
+        DispatcherThread d = dispatcher.get();
         if (d == null) {
             synchronized (dispatchers) {
                 if(dispatchers.isEmpty())
@@ -157,17 +161,6 @@ public abstract class AbstractPooledDispatcher implements IDispatcher, PooledDis
         } else {
             return d;
         }
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.apache.activemq.dispatch.IDispatcher#schedule(java.lang.Runnable,
-     * long, java.util.concurrent.TimeUnit)
-     */
-    public void schedule(final Runnable runnable, long delay, TimeUnit timeUnit) {
-        chooseDispatcher().schedule(runnable, delay, timeUnit);
     }
 
     public DispatchContext register(Dispatchable dispatchable, String name) {
@@ -185,5 +178,34 @@ public abstract class AbstractPooledDispatcher implements IDispatcher, PooledDis
 	public int getSize() {
 		return size;
 	}
+	
+    public final Executor createPriorityExecutor(final int priority) {
+        return new Executor() {
+            public void execute(final Runnable runnable) {
+                chooseDispatcher().dispatch(new RunnableAdapter(runnable), priority);
+            }
 
+        };
+    }
+
+    public int getDispatchPriorities() {
+        // TODO Auto-generated method stub
+        return numPriorities;
+    }
+
+    public void execute(Runnable command) {
+        chooseDispatcher().dispatch(new RunnableAdapter(command), 0);
+    }
+    
+    public void execute(Runnable command, int priority) {
+        chooseDispatcher().dispatch(new RunnableAdapter(command), priority);
+    }
+
+    public void schedule(final Runnable runnable, long delay, TimeUnit timeUnit) {
+        chooseDispatcher().schedule(runnable, delay, timeUnit);
+    }
+
+    public void schedule(final Runnable runnable, int priority, long delay, TimeUnit timeUnit) {
+        chooseDispatcher().schedule(runnable, priority, delay, timeUnit);
+    }
 }

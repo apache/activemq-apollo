@@ -14,33 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch.internal.simple;
+package org.apache.activemq.dispatch.internal;
 
-import java.util.concurrent.CountDownLatch;
-
+import org.apache.activemq.dispatch.DispatchObject;
 import org.apache.activemq.dispatch.DispatchQueue;
 
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class QueueSupport {
+abstract public class AbstractDispatchObject implements DispatchObject {
 
-    static public void dispatchApply(DispatchQueue queue, int itterations, final Runnable runnable) throws InterruptedException {
-        final CountDownLatch done = new CountDownLatch(itterations);
-        Runnable wrapper = new Runnable() {
-            public void run() {
-                try {
-                    runnable.run();
-                } finally {
-                    done.countDown();
-                }
-            }
-        };
-        for( int i=0; i < itterations; i++ ) { 
-            queue.dispatchAsync(wrapper);
-        }
-        done.await();
+    protected Object context;
+    protected Runnable finalizer;
+    protected DispatchQueue targetQueue;
+
+    @SuppressWarnings("unchecked")
+    public <Context> Context getContext() {
+        return (Context) context;
     }
     
+    public <Context> void setContext(Context context) {
+        this.context = context;
+    }
+
+    public void setFinalizer(Runnable finalizer) {
+        this.finalizer = finalizer;
+    }
+
+    public void setTargetQueue(DispatchQueue targetQueue) {
+        this.targetQueue = targetQueue;
+    }
+
+
 }
