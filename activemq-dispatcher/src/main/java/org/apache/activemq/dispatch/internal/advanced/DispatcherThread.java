@@ -436,14 +436,14 @@ public class DispatcherThread implements Runnable, Dispatcher {
 
     }
 
-    private final PooledDispatchContext getCurrentDispatchContext() {
+    private final DispatchContext getCurrentDispatchContext() {
         return spi.getCurrentDispatchContext();
     }
 
     /**
      * 
      */
-    protected class PriorityDispatchContext extends LinkedNode<PriorityDispatchContext> implements PooledDispatchContext {
+    protected class PriorityDispatchContext extends LinkedNode<PriorityDispatchContext> implements DispatchContext {
         // The target:
         private final Runnable runnable;
         // The name of this context:
@@ -470,7 +470,7 @@ public class DispatcherThread implements Runnable, Dispatcher {
             this.name = name;
             this.currentOwner = (DispatcherThread) DispatcherThread.this;
             if (persistent && spi != null) {
-                this.tracker = spi.getLoadBalancer().createExecutionTracker((PooledDispatchContext) this);
+                this.tracker = spi.getLoadBalancer().createExecutionTracker((DispatchContext) this);
             } else {
                 this.tracker = null;
             }

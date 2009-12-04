@@ -19,7 +19,6 @@ package org.apache.activemq.dispatch;
 
 import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
 import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
-import org.apache.activemq.dispatch.internal.advanced.PooledDispatchContext;
 
 public interface DispatchObserver {
     
@@ -29,7 +28,7 @@ public interface DispatchObserver {
      * @param caller The calling dispatcher
      * @param context The context from which the dispatch is requested.
      */
-    public void onDispatch(Dispatcher caller, PooledDispatchContext context);
+    public void onDispatch(Dispatcher caller, DispatchContext context);
 
     /**
      * Must be called by the dispatcher when a {@link DispatchContext} is closed.

@@ -39,7 +39,7 @@ public interface LoadBalancer {
      * @param context
      * @return
      */
-    public DispatchObserver createExecutionTracker(PooledDispatchContext context);
+    public DispatchObserver createExecutionTracker(DispatchContext context);
 
     /**
      * Starts execution tracking

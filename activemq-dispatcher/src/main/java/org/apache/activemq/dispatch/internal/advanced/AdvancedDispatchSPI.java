@@ -39,7 +39,7 @@ public class AdvancedDispatchSPI implements DispatchSPI {
     final AtomicLong globalQueuedRunnables = new AtomicLong();
 
     private final ThreadLocal<DispatcherThread> dispatcher = new ThreadLocal<DispatcherThread>();
-    private final ThreadLocal<PooledDispatchContext> dispatcherContext = new ThreadLocal<PooledDispatchContext>();
+    private final ThreadLocal<DispatchContext> dispatcherContext = new ThreadLocal<DispatchContext>();
     private final ArrayList<DispatcherThread> dispatchers = new ArrayList<DispatcherThread>();
 
     final AtomicInteger startCounter = new AtomicInteger();
@@ -115,11 +115,11 @@ public class AdvancedDispatchSPI implements DispatchSPI {
         }
     }
 
-    public void setCurrentDispatchContext(PooledDispatchContext context) {
+    public void setCurrentDispatchContext(DispatchContext context) {
         dispatcherContext.set(context);
     }
 
-    public PooledDispatchContext getCurrentDispatchContext() {
+    public DispatchContext getCurrentDispatchContext() {
         return dispatcherContext.get();
     }
 

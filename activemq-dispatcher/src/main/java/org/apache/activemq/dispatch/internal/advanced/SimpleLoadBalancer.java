@@ -99,16 +99,16 @@ public class SimpleLoadBalancer implements LoadBalancer {
         dispatchers.remove(dispatcher);
     }
 
-    public DispatchObserver createExecutionTracker(PooledDispatchContext context) {
+    public DispatchObserver createExecutionTracker(DispatchContext context) {
         return new SimpleExecutionTracker(context);
     }
 
     private static class ExecutionStats {
-        final PooledDispatchContext target;
-        final PooledDispatchContext source;
+        final DispatchContext target;
+        final DispatchContext source;
         int count;
 
-        ExecutionStats(PooledDispatchContext source, PooledDispatchContext target) {
+        ExecutionStats(DispatchContext source, DispatchContext target) {
             this.target = target;
             this.source = source;
         }
@@ -119,14 +119,14 @@ public class SimpleLoadBalancer implements LoadBalancer {
     }
 
     private class SimpleExecutionTracker implements DispatchObserver {
-        private final HashMap<PooledDispatchContext, ExecutionStats> sources = new HashMap<PooledDispatchContext, ExecutionStats>();
-        private final PooledDispatchContext context;
+        private final HashMap<DispatchContext, ExecutionStats> sources = new HashMap<DispatchContext, ExecutionStats>();
+        private final DispatchContext context;
         private final AtomicInteger work = new AtomicInteger(0);
 
-        private PooledDispatchContext singleSource;
+        private DispatchContext singleSource;
         private Dispatcher currentOwner;
 
-        SimpleExecutionTracker(PooledDispatchContext context) {
+        SimpleExecutionTracker(DispatchContext context) {
             this.context = context;
             currentOwner = context.getTargetQueue();
         }
@@ -145,7 +145,7 @@ public class SimpleLoadBalancer implements LoadBalancer {
          * @return True if this method resulted in the dispatch request being
          *         assigned to another dispatcher.
          */
-        public void onDispatch(Dispatcher callingDispatcher, PooledDispatchContext callingContext) {
+        public void onDispatch(Dispatcher callingDispatcher, DispatchContext callingContext) {
 
             if (callingContext != null) {
                 // Make sure we are being called by another node:

@@ -2,6 +2,8 @@ package org.apache.activemq.dispatch.internal.advanced;
 
 import java.util.concurrent.RejectedExecutionException;
 
+import org.apache.activemq.dispatch.DispatchObserver;
+
 
 /**
  * Returned to callers registered with this dispathcer. Used by the caller
@@ -11,6 +13,7 @@ import java.util.concurrent.RejectedExecutionException;
  * threads.
  */
 public interface DispatchContext {
+    
     /**
      * Once registered with a dispatcher, this can be called to request
      * dispatch. The {@link Dispatchable} will remain in the dispatch queue
@@ -41,4 +44,25 @@ public interface DispatchContext {
      * no longer be used. 
      */
     public void close(boolean sync);
+    
+    /**
+     * Called to transfer a {@link PooledDispatchContext} to a new
+     * Dispatcher.
+     */
+    public void setTargetQueue(Dispatcher newDispatcher);
+
+    /**
+     * Gets the dispatcher to which this PooledDispatchContext currently
+     * belongs
+     * 
+     * @return
+     */
+    public Dispatcher getTargetQueue();
+
+    /**
+     * Gets the execution tracker for the context.
+     * 
+     * @return the execution tracker for the context:
+     */
+    public DispatchObserver getExecutionTracker();    
 }
