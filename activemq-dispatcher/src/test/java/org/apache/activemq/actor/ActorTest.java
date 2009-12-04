@@ -7,6 +7,8 @@
  **************************************************************************************/
 package org.apache.activemq.actor;
 
+import static java.lang.String.format;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -14,6 +16,7 @@ import junit.framework.TestCase;
 
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchSPI;
+import org.apache.activemq.dispatch.DispatchSystem;
 import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 
 
@@ -54,14 +57,13 @@ public class ActorTest extends TestCase {
         CountDownLatch latch = new CountDownLatch(1);
         testObject.actorInvocation(latch);
         assertTrue(latch.await(1, TimeUnit.SECONDS));
-        
-        latch = new CountDownLatch(1);
+         
         queue.suspend();
-        assertFalse(latch.await(2, TimeUnit.SECONDS));
+        latch = new CountDownLatch(1);
+        testObject.actorInvocation(latch);
+        assertFalse("Suspended Queue shouldn't invoked method", latch.await(2, TimeUnit.SECONDS));
         
         queue.resume();
-        assertTrue(latch.await(2, TimeUnit.SECONDS));
-        
+        assertTrue("Resumed Queue should invoke method", latch.await(2, TimeUnit.SECONDS));
     }
-    
 }
