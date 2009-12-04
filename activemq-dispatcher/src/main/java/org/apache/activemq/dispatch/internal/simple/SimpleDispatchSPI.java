@@ -17,6 +17,8 @@
 package org.apache.activemq.dispatch.internal.simple;
 
 import java.nio.channels.SelectableChannel;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchQueue;
@@ -37,10 +39,12 @@ public class SimpleDispatchSPI extends DispatchSPI {
         
     final SerialDispatchQueue mainQueue = new SerialDispatchQueue("main");
     final GlobalDispatchQueue globalQueues[]; 
-    final Dispatcher dispatchers[];
-
-    private final Object wakeupMutex = new Object();
+    final DispatcherThread dispatchers[];
     final AtomicLong globalQueuedRunnables = new AtomicLong();
+    
+    final ConcurrentLinkedQueue<DispatcherThread> waitingDispatchers = new ConcurrentLinkedQueue<DispatcherThread>();
+    final AtomicInteger waitingDispatcherCount = new AtomicInteger();
+
     
     public SimpleDispatchSPI(int size) {
         globalQueues = new GlobalDispatchQueue[3];
@@ -48,9 +52,9 @@ public class SimpleDispatchSPI extends DispatchSPI {
             globalQueues[i] = new GlobalDispatchQueue(this, DispatchQueuePriority.values()[i] );
         }
                                   
-        dispatchers = new Dispatcher[size];
+        dispatchers = new DispatcherThread[size];
         for (int i = 0; i < size; i++) {
-            dispatchers[i] = new Dispatcher(this, i);
+            dispatchers[i] = new DispatcherThread(this, i);
             dispatchers[i].start();
             
         }
@@ -77,20 +81,22 @@ public class SimpleDispatchSPI extends DispatchSPI {
     public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue) {
         return null;
     }
+
+    public void addWaitingDispatcher(DispatcherThread dispatcher) {
+        waitingDispatcherCount.incrementAndGet();
+        waitingDispatchers.add(dispatcher);
+    }
     
-    public void waitForWakeup() throws InterruptedException {
-        while( globalQueuedRunnables.get()==0 ) {
-            synchronized(wakeupMutex) {
-                wakeupMutex.wait();
+    public void wakeup() {
+        int value = waitingDispatcherCount.get();
+        if( value!=0 ) {
+            DispatcherThread dispatcher = waitingDispatchers.poll();
+            if( dispatcher!=null ) {
+                waitingDispatcherCount.decrementAndGet();
+                dispatcher.globalWakeup();
             }
         }
     }
+
     
-    void wakeup() {
-        if( globalQueuedRunnables.incrementAndGet() < dispatchers.length ) {
-            synchronized(wakeupMutex) {
-                wakeupMutex.notify();
-            }
-        }
-    }
 }

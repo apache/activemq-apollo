@@ -27,19 +27,19 @@ import org.apache.activemq.dispatch.internal.QueueSupport;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class GlobalDispatchQueue implements SimpleQueue {
+public class ThreadDispatchQueue implements SimpleQueue {
 
-    private final SimpleDispatchSPI system;
     final String label;
     final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
+    private DispatcherThread dispatcher;
     final AtomicLong counter;
     private final DispatchQueuePriority priority;
-
-    public GlobalDispatchQueue(SimpleDispatchSPI system, DispatchQueuePriority priority) {
-        this.system = system;
+    
+    public ThreadDispatchQueue(DispatcherThread dispatcher, DispatchQueuePriority priority) {
+        this.dispatcher = dispatcher;
         this.priority = priority;
         this.label=priority.toString();
-        this.counter = system.globalQueuedRunnables;
+        this.counter = dispatcher.threadQueuedRunnables;
     }
 
     public String getLabel() {
@@ -47,9 +47,17 @@ public class GlobalDispatchQueue implements SimpleQueue {
     }
 
     public void dispatchAsync(Runnable runnable) {
-        this.counter.incrementAndGet();
+        counter.incrementAndGet();
         runnables.add(runnable);
-        system.wakeup();
+        dispatcher.wakeup();
+    }
+
+    public Runnable poll() {
+        Runnable rc = runnables.poll();
+        if( rc !=null ) {
+            counter.decrementAndGet();
+        }
+        return rc;
     }
 
     public void dispatchAfter(long delayMS, Runnable runnable) {
@@ -88,15 +96,8 @@ public class GlobalDispatchQueue implements SimpleQueue {
         throw new UnsupportedOperationException();
     }
     
-    public Runnable poll() {
-        Runnable rc = runnables.poll();
-        if( rc !=null ) {
-            counter.decrementAndGet();
-        }
-        return rc;
-    }
-
     public DispatchQueuePriority getPriority() {
         return priority;
     }
+
 }

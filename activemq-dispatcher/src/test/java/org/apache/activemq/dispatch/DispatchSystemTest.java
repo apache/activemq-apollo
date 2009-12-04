@@ -33,12 +33,12 @@ public class DispatchSystemTest {
     
     public static void main(String[] args) throws Exception {
         DispatchSPI advancedSystem = new AdancedDispatchSPI(Runtime.getRuntime().availableProcessors());
-        benchmark("advanced private serial queue", advancedSystem, advancedSystem.createQueue("test"));
         benchmark("advanced global queue", advancedSystem, advancedSystem.getGlobalQueue(DEFAULT));
+        benchmark("advanced private serial queue", advancedSystem, advancedSystem.createQueue("test"));
 
         DispatchSPI simpleSystem = new SimpleDispatchSPI(Runtime.getRuntime().availableProcessors());
-        benchmark("simple private serial queue", simpleSystem, simpleSystem.createQueue("test"));
         benchmark("simple global queue", simpleSystem, simpleSystem.getGlobalQueue(DEFAULT));
+        benchmark("simple private serial queue", simpleSystem, simpleSystem.createQueue("test"));
     }
 
     private static void benchmark(String name, DispatchSPI spi, DispatchQueue queue) throws InterruptedException {
