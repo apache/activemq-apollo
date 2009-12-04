@@ -40,7 +40,6 @@ import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.MessageId;
 import org.apache.activemq.command.ProducerId;
 import org.apache.activemq.dispatch.internal.advanced.DispatchContext;
-import org.apache.activemq.dispatch.internal.advanced.Dispatchable;
 import org.apache.activemq.dispatch.internal.advanced.Dispatcher;
 import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
