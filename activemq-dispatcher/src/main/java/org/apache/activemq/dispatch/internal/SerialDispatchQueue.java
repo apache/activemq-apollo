@@ -48,7 +48,7 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
     public void resume() {
         if( suspendCounter.decrementAndGet() == 0 ) {
             if( size.get() != 0 ) {
-                targetQueue.dispatchAsync(this);
+                dispatchSelfAsync();
             }
         }
     }
@@ -71,8 +71,12 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
         }
         runnables.add(runnable);
         if( lastSize == 0 && suspendCounter.get()<=0 ) {
-            targetQueue.dispatchAsync(this);
+            dispatchSelfAsync();
         }
+    }
+
+    protected void dispatchSelfAsync() {
+        targetQueue.dispatchAsync(this);
     }
 
     public void run() {

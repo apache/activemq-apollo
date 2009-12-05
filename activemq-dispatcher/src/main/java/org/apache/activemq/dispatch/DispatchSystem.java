@@ -43,7 +43,7 @@ public class DispatchSystem {
         return new SimpleDispatchSPI(Runtime.getRuntime().availableProcessors());
     }
     
-    synchronized private static DispatchSPI spi() {
+    synchronized public static DispatchSPI spi() {
         if(spi==null) {
             spi = cretateDispatchSystemSPI();
         }

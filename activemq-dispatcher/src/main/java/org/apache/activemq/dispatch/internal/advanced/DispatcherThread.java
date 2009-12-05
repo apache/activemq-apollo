@@ -29,10 +29,11 @@ import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.PriorityLinkedList;
 import org.apache.activemq.util.TimerHeap;
-import org.apache.activemq.util.list.LinkedNode;
 import org.apache.activemq.util.list.LinkedNodeList;
 
 public class DispatcherThread implements Runnable {
+
+    static public final ThreadLocal<DispatcherThread> CURRENT = new ThreadLocal<DispatcherThread>();
 
     private final ThreadDispatchQueue dispatchQueues[];
     
@@ -50,9 +51,10 @@ public class DispatcherThread implements Runnable {
     protected final PriorityLinkedList<DispatchContext> priorityQueue;
 
     // Dispatch queue for requests from other threads:
-    private final LinkedNodeList<ForeignEvent>[] foreignQueue;
+    final LinkedNodeList<ForeignEvent>[] foreignQueue = createForeignQueue();
+
     private static final int[] TOGGLE = new int[] { 1, 0 };
-    private int foreignToggle = 0;
+    int foreignToggle = 0;
 
     // Timed Execution List
     protected final TimerHeap<Runnable> timerHeap = new TimerHeap<Runnable>() {
@@ -63,7 +65,7 @@ public class DispatcherThread implements Runnable {
     };
 
     protected final String name;
-    private final AtomicBoolean foreignAvailable = new AtomicBoolean(false);
+    final AtomicBoolean foreignAvailable = new AtomicBoolean(false);
     private final Semaphore foreignPermits = new Semaphore(0);
 
     private final Mapper<Integer, DispatchContext> PRIORITY_MAPPER = new Mapper<Integer, DispatchContext>() {
@@ -82,31 +84,15 @@ public class DispatcherThread implements Runnable {
 
         MAX_USER_PRIORITY = priorities - 1;
         priorityQueue = new PriorityLinkedList<DispatchContext>(MAX_USER_PRIORITY + 1, PRIORITY_MAPPER);
-        foreignQueue = createForeignEventQueue();
         for (int i = 0; i < 2; i++) {
             foreignQueue[i] = new LinkedNodeList<ForeignEvent>();
         }
         this.spi = spi;
     }
-
+    
     @SuppressWarnings("unchecked")
-    private LinkedNodeList<ForeignEvent>[] createForeignEventQueue() {
+    private LinkedNodeList<ForeignEvent>[] createForeignQueue() {
         return new LinkedNodeList[2];
-    }
-
-    protected abstract class ForeignEvent extends LinkedNode<ForeignEvent> {
-        public abstract void execute();
-
-        final void addToList() {
-            synchronized (foreignQueue) {
-                if (!this.isLinked()) {
-                    foreignQueue[foreignToggle].addLast(this);
-                    if (!foreignAvailable.getAndSet(true)) {
-                        wakeup();
-                    }
-                }
-            }
-        }
     }
 
     public boolean isThreaded() {
@@ -119,19 +105,6 @@ public class DispatcherThread implements Runnable {
 
     public int getDispatchPriorities() {
         return MAX_USER_PRIORITY;
-    }
-
-    class UpdateEvent extends ForeignEvent {
-        private final DispatchContext pdc;
-
-        UpdateEvent(DispatchContext pdc) {
-            this.pdc = pdc;
-        }
-
-        // Can only be called by the owner of this dispatch context:
-        public void execute() {
-            pdc.processForeignUpdates();
-        }
     }
 
     public DispatchContext register(Runnable runnable, String name) {
@@ -202,11 +175,7 @@ public class DispatcherThread implements Runnable {
 
     public void run() {
 
-        if (spi != null) {
-            // Inform the dispatcher that we have started:
-            spi.onDispatcherStarted((DispatcherThread) this);
-        }
-
+        spi.onDispatcherStarted((DispatcherThread) this);
         DispatchContext pdc;
         try {
             while (running) {
@@ -218,14 +187,14 @@ public class DispatcherThread implements Runnable {
                     }
                     
                     if (pdc.tracker != null) {
-                        spi.setCurrentDispatchContext(pdc);
+                        DispatchContext.CURRENT.set(pdc);
                     }
 
                     counter++;
                     pdc.run();
 
                     if (pdc.tracker != null) {
-                        spi.setCurrentDispatchContext(null);
+                        DispatchContext.CURRENT.set(null);
                     }
                 }
 
@@ -256,7 +225,7 @@ public class DispatcherThread implements Runnable {
                         }
 
                         fe.unlink();
-                        fe.execute();
+                        fe.run();
                     }
                 }
             }
@@ -265,9 +234,7 @@ public class DispatcherThread implements Runnable {
         } catch (Throwable thrown) {
             thrown.printStackTrace();
         } finally {
-            if (spi != null) {
-                spi.onDispatcherStopped((DispatcherThread) this);
-            }
+            spi.onDispatcherStopped((DispatcherThread) this);
             cleanup();
         }
     }
@@ -354,13 +321,6 @@ public class DispatcherThread implements Runnable {
         context.requestDispatch();
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.apache.activemq.dispatch.IDispatcher#dispatch(org.apache.activemq
-     * .dispatch.Dispatcher.Dispatchable)
-     */
     public final void dispatch(Runnable runnable, int priority) {
         DispatchContext context = new DispatchContext(this, runnable, false, name);
         context.updatePriority(priority);
@@ -390,13 +350,6 @@ public class DispatcherThread implements Runnable {
         dispatch(runnable, prio);
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.apache.activemq.dispatch.IDispatcher#schedule(java.lang.Runnable,
-     * long, java.util.concurrent.TimeUnit)
-     */
     public void schedule(final Runnable runnable, final long delay, final TimeUnit timeUnit) {
         schedule(runnable, 0, delay, timeUnit);
     }
@@ -407,34 +360,27 @@ public class DispatcherThread implements Runnable {
                 execute(runnable, prio);
             }
         };
-        if (getCurrentDispatcher() == this) {
+        if (DispatcherThread.CURRENT.get() == this) {
             timerHeap.addRelative(wrapper, delay, timeUnit);
         } else {
-            new ForeignEvent() {
-                public void execute() {
-                    timerHeap.addRelative(wrapper, delay, timeUnit);
-                }
-            }.addToList();
+            add(new TimerEvent(this, wrapper, delay, timeUnit));
         }
     }
+    
+    final void add(ForeignEvent event) {
+        synchronized (foreignQueue) {
+            if (!event.isLinked()) {
+                foreignQueue[foreignToggle].addLast(event);
+                if (!foreignAvailable.getAndSet(true)) {
+                    wakeup();
+                }
+            }
+        }
+    }
+
 
     public String toString() {
         return name;
-    }
-
-    final DispatcherThread getCurrentDispatcher() {
-        if (spi != null) {
-            return (DispatcherThread) spi.getCurrentDispatcher();
-        } else if (Thread.currentThread() == thread) {
-            return (DispatcherThread) this;
-        } else {
-            return null;
-        }
-
-    }
-
-    final DispatchContext getCurrentDispatchContext() {
-        return spi.getCurrentDispatchContext();
     }
 
     public String getName() {

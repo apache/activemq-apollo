@@ -3,29 +3,30 @@ package org.apache.activemq.dispatch.internal.advanced;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 
-import org.apache.activemq.dispatch.internal.advanced.DispatcherThread.UpdateEvent;
 import org.apache.activemq.util.list.LinkedNode;
 
 /**
  * 
  */
-class DispatchContext extends LinkedNode<DispatchContext> {
+class DispatchContext extends LinkedNode<DispatchContext> implements Runnable {
+    
+    public static final ThreadLocal<DispatchContext> CURRENT = new ThreadLocal<DispatchContext>();
 
-    private final DispatcherThread dispacher;
     // The target:
     private final Runnable runnable;
     // The name of this context:
-    final String name;
+    final String label;
+
     // list prio can only be updated in the thread of of the owning
     // dispatcher
     protected int listPrio;
 
     // The update events are used to update fields in the dispatch context
     // from foreign threads:
-    final UpdateEvent updateEvent[];
+    final UpdateEvent updateEvent[] = new UpdateEvent[2];
 
     final DispatchObserver tracker;
-    protected DispatcherThread currentOwner;
+    protected DispatcherThread target;
     private DispatcherThread updateDispatcher = null;
 
     int priority;
@@ -33,36 +34,22 @@ class DispatchContext extends LinkedNode<DispatchContext> {
     private boolean closed = false;
     final CountDownLatch closeLatch = new CountDownLatch(1);
 
-    protected DispatchContext(DispatcherThread dispatcherThread, Runnable runnable, boolean persistent, String name) {
-        dispacher = dispatcherThread;
+    protected DispatchContext(DispatcherThread thread, Runnable runnable, boolean persistent, String label) {
         this.runnable = runnable;
-        this.name = name;
-        this.currentOwner = (DispatcherThread) dispacher;
-        if (persistent && dispacher.spi != null) {
-            this.tracker = dispacher.spi.getLoadBalancer().createExecutionTracker((DispatchContext) this);
+        this.label = label;
+        this.target = thread;
+        if (persistent && target.spi != null) {
+            this.tracker = target.spi.getLoadBalancer().createExecutionTracker((DispatchContext) this);
         } else {
             this.tracker = null;
         }
-        updateEvent = createUpdateEvent();
-        updateEvent[0] = dispacher.new UpdateEvent(this);
-        updateEvent[1] = dispacher.new UpdateEvent(this);
+        updateEvent[0] = new UpdateEvent(this);
+        updateEvent[1] = new UpdateEvent(this);
         if (persistent) {
-            currentOwner.takeOwnership(this);
+            target.takeOwnership(this);
         }
     }
 
-    private final DispatcherThread.UpdateEvent[] createUpdateEvent() {
-        return new DispatcherThread.UpdateEvent[2];
-    }
-
-    /**
-     * Gets the execution tracker for the context.
-     * 
-     * @return the execution tracker for the context:
-     */
-    public DispatchObserver getExecutionTracker() {
-        return tracker;
-    }
 
     /**
      * This can only be called by the owning dispatch thread:
@@ -77,7 +64,7 @@ class DispatchContext extends LinkedNode<DispatchContext> {
         synchronized (this) {
 
             // If we're already set to this dispatcher
-            if (newDispatcher == currentOwner) {
+            if (newDispatcher == target) {
                 if (updateDispatcher == null || updateDispatcher == newDispatcher) {
                     return;
                 }
@@ -85,18 +72,18 @@ class DispatchContext extends LinkedNode<DispatchContext> {
 
             updateDispatcher = (DispatcherThread) newDispatcher;
             if (DispatcherThread.DEBUG)
-                System.out.println(getName() + " updating to " + updateDispatcher);
+                System.out.println(getLabel() + " updating to " + updateDispatcher);
 
-            currentOwner.onForeignUpdate(this);
+            target.onForeignUpdate(this);
         }
 
     }
 
     public void requestDispatch() {
 
-        DispatcherThread callingDispatcher = dispacher.getCurrentDispatcher();
+        DispatcherThread callingDispatcher = DispatcherThread.CURRENT.get();
         if (tracker != null)
-            tracker.onDispatch(callingDispatcher, dispacher.getCurrentDispatchContext());
+            tracker.onDispatch(callingDispatcher, DispatchContext.CURRENT.get());
 
         // Otherwise this is coming off another thread, so we need to
         // synchronize
@@ -104,22 +91,22 @@ class DispatchContext extends LinkedNode<DispatchContext> {
         synchronized (this) {
             // If the owner of this context is the calling thread, then
             // delegate to the dispatcher.
-            if (currentOwner == callingDispatcher) {
+            if (target == callingDispatcher) {
 
-                if (!currentOwner.running) {
+                if (!target.running) {
                     // TODO In the event that the current dispatcher
                     // failed due to a runtime exception, we could
                     // try to switch to a new dispatcher.
                     throw new RejectedExecutionException();
                 }
                 if (!isLinked()) {
-                    currentOwner.priorityQueue.add(this, listPrio);
+                    target.priorityQueue.add(this, listPrio);
                 }
                 return;
             }
 
             dispatchRequested = true;
-            currentOwner.onForeignUpdate(this);
+            target.onForeignUpdate(this);
         }
     }
 
@@ -129,12 +116,12 @@ class DispatchContext extends LinkedNode<DispatchContext> {
             return;
         }
 
-        priority = Math.min(priority, dispacher.MAX_USER_PRIORITY);
+        priority = Math.min(priority, target.MAX_USER_PRIORITY);
 
         if (this.priority == priority) {
             return;
         }
-        DispatcherThread callingDispatcher = dispacher.getCurrentDispatcher();
+        DispatcherThread callingDispatcher = DispatcherThread.CURRENT.get();
 
         // Otherwise this is coming off another thread, so we need to
         // synchronize to protect against ownership changes:
@@ -146,7 +133,7 @@ class DispatchContext extends LinkedNode<DispatchContext> {
 
             // If this is called by the owning dispatcher, then we go ahead
             // and update:
-            if (currentOwner == callingDispatcher) {
+            if (target == callingDispatcher) {
 
                 if (priority != listPrio) {
 
@@ -155,13 +142,13 @@ class DispatchContext extends LinkedNode<DispatchContext> {
                     // at the new priority:
                     if (isLinked()) {
                         unlink();
-                        currentOwner.priorityQueue.add(this, listPrio);
+                        target.priorityQueue.add(this, listPrio);
                     }
                 }
                 return;
             }
 
-            currentOwner.onForeignUpdate(this);
+            target.onForeignUpdate(this);
         }
 
     }
@@ -176,16 +163,16 @@ class DispatchContext extends LinkedNode<DispatchContext> {
 
             if (updateDispatcher != null && updateDispatcher.takeOwnership(this)) {
                 if (DispatcherThread.DEBUG) {
-                    System.out.println("Assigning " + getName() + " to " + updateDispatcher);
+                    System.out.println("Assigning " + getLabel() + " to " + updateDispatcher);
                 }
 
-                if (currentOwner.removeDispatchContext(this)) {
+                if (target.removeDispatchContext(this)) {
                     dispatchRequested = true;
                 }
 
                 updateDispatcher.onForeignUpdate(this);
-                switchedDispatcher(currentOwner, updateDispatcher);
-                currentOwner = updateDispatcher;
+                switchedDispatcher(target, updateDispatcher);
+                target = updateDispatcher;
                 updateDispatcher = null;
 
             } else {
@@ -199,14 +186,7 @@ class DispatchContext extends LinkedNode<DispatchContext> {
         }
     }
 
-    /**
-     * May be overriden by subclass to additional work on dispatcher switch
-     * 
-     * @param oldDispatcher The old dispatcher
-     * @param newDispatcher The new Dispatcher
-     */
     protected void switchedDispatcher(DispatcherThread oldDispatcher, DispatcherThread newDispatcher) {
-
     }
 
     public boolean isClosed() {
@@ -214,20 +194,20 @@ class DispatchContext extends LinkedNode<DispatchContext> {
     }
 
     public void close(boolean sync) {
-        DispatcherThread callingDispatcher = dispacher.getCurrentDispatcher();
+        DispatcherThread callingDispatcher = DispatcherThread.CURRENT.get();
         // System.out.println(this + "Closing");
         synchronized (this) {
             closed = true;
             // If the owner of this context is the calling thread, then
             // delegate to the dispatcher.
-            if (currentOwner == callingDispatcher) {
-                dispacher.removeDispatchContext(this);
+            if (target == callingDispatcher) {
+                target.removeDispatchContext(this);
                 closeLatch.countDown();
                 return;
             }
         }
 
-        currentOwner.onForeignUpdate(this);
+        target.onForeignUpdate(this);
         if (sync) {
             boolean interrupted = false;
             while (true) {
@@ -245,16 +225,12 @@ class DispatchContext extends LinkedNode<DispatchContext> {
         }
     }
 
-    public final String toString() {
-        return getName();
-    }
-
     public DispatcherThread getTargetQueue() {
-        return currentOwner;
+        return target;
     }
 
-    public String getName() {
-        return name;
+    public String getLabel() {
+        return label;
     }
 
 }

@@ -38,8 +38,6 @@ public class AdvancedDispatchSPI implements DispatchSPI {
     final GlobalDispatchQueue globalQueues[];
     final AtomicLong globalQueuedRunnables = new AtomicLong();
 
-    private final ThreadLocal<DispatcherThread> dispatcher = new ThreadLocal<DispatcherThread>();
-    private final ThreadLocal<DispatchContext> dispatcherContext = new ThreadLocal<DispatchContext>();
     private final ArrayList<DispatcherThread> dispatchers = new ArrayList<DispatcherThread>();
 
     final AtomicInteger startCounter = new AtomicInteger();
@@ -115,30 +113,12 @@ public class AdvancedDispatchSPI implements DispatchSPI {
         }
     }
 
-    public void setCurrentDispatchContext(DispatchContext context) {
-        dispatcherContext.set(context);
-    }
-
-    public DispatchContext getCurrentDispatchContext() {
-        return dispatcherContext.get();
-    }
-
-    /**
-     * Returns the currently executing dispatcher, or null if the current thread
-     * is not a dispatcher:
-     * 
-     * @return The currently executing dispatcher
-     */
-    public DispatcherThread getCurrentDispatcher() {
-        return dispatcher.get();
-    }
-
     /**
      * A Dispatcher must call this to indicate that is has started it's dispatch
      * loop.
      */
     public void onDispatcherStarted(DispatcherThread d) {
-        dispatcher.set(d);
+        DispatcherThread.CURRENT.set(d);
         loadBalancer.onDispatcherStarted(d);
     }
 
@@ -159,7 +139,7 @@ public class AdvancedDispatchSPI implements DispatchSPI {
     }
 
     protected DispatcherThread chooseDispatcher() {
-        DispatcherThread d = dispatcher.get();
+        DispatcherThread d = DispatcherThread.CURRENT.get();
         if (d == null) {
             synchronized (dispatchers) {
                 if(dispatchers.isEmpty())
@@ -223,7 +203,7 @@ public class AdvancedDispatchSPI implements DispatchSPI {
     }
     
     public DispatchQueue createQueue(String label) {
-        SerialDispatchQueue rc = new SerialDispatchQueue(label);
+        AdvancedSerialDispatchQueue rc = new AdvancedSerialDispatchQueue(label);
         rc.setTargetQueue(getGlobalQueue(DEFAULT));
         return rc;
     }

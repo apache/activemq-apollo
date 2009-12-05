@@ -28,7 +28,7 @@ public class SimpleLoadBalancer implements LoadBalancer {
 
     private final boolean DEBUG = false;
 
-    //TODO: Added plumbing for periodic rebalancing which we should
+    //TODO: Added plumbing for periodic re-balancing which we should
     //consider implementing
     private static final boolean ENABLE_UPDATES = false;
     private final ArrayList<DispatcherThread> dispatchers = new ArrayList<DispatcherThread>();
