@@ -7,8 +7,10 @@
  **************************************************************************************/
 package org.apache.activemq.actor;
 
+import java.io.FileOutputStream;
 import java.lang.reflect.Method;
 
+import net.sf.cglib.core.DefaultGeneratorStrategy;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
 import net.sf.cglib.proxy.MethodProxy;
@@ -31,6 +33,20 @@ public class Actor {
         e.setSuperclass(target.getClass());
         e.setInterfaces(interfaces);
         e.setCallback(new ActorMethodInterceptor(queue));
+//      Un-comment the following if you want store the generated class file:
+//        e.setStrategy(new DefaultGeneratorStrategy() {
+//            protected byte[] transform(byte[] b) {
+//                try {
+//                    FileOutputStream os = new FileOutputStream("test.class");
+//                    os.write(b);
+//                    os.close();
+//                } catch (Throwable e) {
+//                    e.printStackTrace();
+//                }
+//                return b;
+//            }
+//        });
+
         return (T) e.create();
     }
 
@@ -50,7 +66,8 @@ public class Actor {
     /**
      * Tests if a given method has a Message annotation
      * 
-     * @param method The mehod.
+     * @param method
+     *            The mehod.
      */
     private static boolean isMessage(Method method) {
         if (method.isAnnotationPresent(Message.class)) {
