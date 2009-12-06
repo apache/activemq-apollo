@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.dispatch.internal;
 
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.activemq.dispatch.DispatchObject;
 import org.apache.activemq.dispatch.DispatchQueue;
 
@@ -25,11 +23,10 @@ import org.apache.activemq.dispatch.DispatchQueue;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract public class AbstractDispatchObject implements DispatchObject {
+abstract public class AbstractDispatchObject extends BaseRetained implements DispatchObject {
 
     protected volatile Object context;
     protected volatile DispatchQueue targetQueue;
-    protected AtomicReference<Runnable> finalizer = new AtomicReference<Runnable>();
 
     @SuppressWarnings("unchecked")
     public <Context> Context getContext() {
@@ -40,10 +37,6 @@ abstract public class AbstractDispatchObject implements DispatchObject {
         this.context = context;
     }
 
-    public void setFinalizer(Runnable finalizer) {
-        this.finalizer.set(finalizer);
-    }
-
     public void setTargetQueue(DispatchQueue targetQueue) {
         this.targetQueue = targetQueue;
     }
@@ -51,4 +44,6 @@ abstract public class AbstractDispatchObject implements DispatchObject {
     public DispatchQueue getTargetQueue() {
         return this.targetQueue;
     }
+    
+
 }

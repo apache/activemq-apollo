@@ -18,10 +18,11 @@ package org.apache.activemq.dispatch.internal.simple;
 
 import java.util.LinkedList;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
+import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.internal.QueueSupport;
 
 /**
@@ -35,9 +36,9 @@ public class ThreadDispatchQueue implements SimpleQueue {
     final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
     private DispatcherThread dispatcher;
     final AtomicLong counter;
-    private final DispatchQueuePriority priority;
+    private final DispatchPriority priority;
     
-    public ThreadDispatchQueue(DispatcherThread dispatcher, DispatchQueuePriority priority) {
+    public ThreadDispatchQueue(DispatcherThread dispatcher, DispatchPriority priority) {
         this.dispatcher = dispatcher;
         this.priority = priority;
         this.label=priority.toString();
@@ -48,6 +49,10 @@ public class ThreadDispatchQueue implements SimpleQueue {
         return label;
     }
 
+    public void execute(Runnable runnable) {
+        dispatchAsync(runnable);
+    }
+    
     public void dispatchAsync(Runnable runnable) {
         // We don't have to take the synchronization hit 
         // if the current thread is the dispatcher since we know it's not
@@ -79,7 +84,7 @@ public class ThreadDispatchQueue implements SimpleQueue {
         return rc;
     }
 
-    public void dispatchAfter(long delayMS, Runnable runnable) {
+    public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
         throw new RuntimeException("TODO: implement me.");
     }
 
@@ -107,7 +112,7 @@ public class ThreadDispatchQueue implements SimpleQueue {
         throw new UnsupportedOperationException();
     }
 
-    public void setFinalizer(Runnable finalizer) {
+    public void setShutdownHandler(Runnable finalizer) {
         throw new UnsupportedOperationException();
     }
 
@@ -118,8 +123,7 @@ public class ThreadDispatchQueue implements SimpleQueue {
         throw new UnsupportedOperationException();
     }
     
-    
-    public DispatchQueuePriority getPriority() {
+    public DispatchPriority getPriority() {
         return priority;
     }
 

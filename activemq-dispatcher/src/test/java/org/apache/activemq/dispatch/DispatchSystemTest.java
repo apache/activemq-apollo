@@ -22,8 +22,9 @@ import org.apache.activemq.dispatch.internal.RunnableCountDownLatch;
 import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSPI;
 
+import static org.apache.activemq.dispatch.DispatchPriority.*;
+
 import static java.lang.String.*;
-import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.*;
 
 /**
  * 
@@ -41,7 +42,7 @@ public class DispatchSystemTest {
         advancedSystem.shutdown(latch);
         latch.await();
 
-        DispatchSPI simpleSystem = new SimpleDispatchSPI(Runtime.getRuntime().availableProcessors());
+        DispatchSPI simpleSystem = new SimpleDispatchSPI("test", Runtime.getRuntime().availableProcessors());
         simpleSystem.start();
         
         benchmark("simple global queue", simpleSystem, simpleSystem.getGlobalQueue(DEFAULT));

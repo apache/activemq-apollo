@@ -26,26 +26,24 @@ import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSPI;
  */
 public class DispatchSystem {
 
-    public static enum DispatchQueuePriority {
-        HIGH,
-        DEFAULT,
-        LOW;
-    }
-
     public final static ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
     static public DispatchQueue getCurrentQueue() {
         return CURRENT_QUEUE.get();
     }
 
     private static DispatchSPI spi;
-    
-    private static DispatchSPI cretateDispatchSystemSPI() {
-        return new SimpleDispatchSPI(Runtime.getRuntime().availableProcessors());
+
+    public static DispatchSPI create() {
+        return create("system", Runtime.getRuntime().availableProcessors());
+    }
+
+    public static SimpleDispatchSPI create(String name, int threads) {
+        return new SimpleDispatchSPI(name, threads);
     }
     
     synchronized public static DispatchSPI spi() {
         if(spi==null) {
-            spi = cretateDispatchSystemSPI();
+            spi = create();
         }
         return spi;
     }
@@ -54,7 +52,11 @@ public class DispatchSystem {
         return spi().getMainQueue();
     }
     
-    static public DispatchQueue getGlobalQueue(DispatchQueuePriority priority) {
+    static public DispatchQueue getGlobalQueue() {
+        return spi().getGlobalQueue();
+    }
+    
+    static public DispatchQueue getGlobalQueue(DispatchPriority priority) {
         return spi().getGlobalQueue(priority);
     }
     

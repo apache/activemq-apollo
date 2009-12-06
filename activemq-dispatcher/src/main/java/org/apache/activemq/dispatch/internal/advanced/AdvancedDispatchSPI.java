@@ -25,14 +25,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchSPI;
 import org.apache.activemq.dispatch.DispatchSource;
-import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
+import org.apache.activemq.dispatch.internal.BaseRetained;
 import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
 
-import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.*;
+import static org.apache.activemq.dispatch.DispatchPriority.*;
 
-public class AdvancedDispatchSPI implements DispatchSPI {
+import static org.apache.activemq.dispatch.DispatchPriority.*;
+
+
+public class AdvancedDispatchSPI extends BaseRetained implements DispatchSPI {
 
     final SerialDispatchQueue mainQueue = new SerialDispatchQueue("main");
     final GlobalDispatchQueue globalQueues[];
@@ -56,7 +60,7 @@ public class AdvancedDispatchSPI implements DispatchSPI {
         
         globalQueues = new GlobalDispatchQueue[3];
         for (int i = 0; i < 3; i++) {
-            globalQueues[i] = new GlobalDispatchQueue(this, DispatchQueuePriority.values()[i]);
+            globalQueues[i] = new GlobalDispatchQueue(this, DispatchPriority.values()[i]);
         }
         
         loadBalancer = new SimpleLoadBalancer();
@@ -198,13 +202,17 @@ public class AdvancedDispatchSPI implements DispatchSPI {
         return mainQueue;
     }
     
-    public DispatchQueue getGlobalQueue(DispatchQueuePriority priority) {
+    public DispatchQueue getGlobalQueue() {
+        return getGlobalQueue(DEFAULT);
+    }
+
+    public DispatchQueue getGlobalQueue(DispatchPriority priority) {
         return globalQueues[priority.ordinal()];
     }
     
     public DispatchQueue createQueue(String label) {
         AdvancedSerialDispatchQueue rc = new AdvancedSerialDispatchQueue(label);
-        rc.setTargetQueue(getGlobalQueue(DEFAULT));
+        rc.setTargetQueue(getGlobalQueue());
         return rc;
     }
     

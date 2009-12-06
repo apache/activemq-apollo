@@ -19,8 +19,8 @@ package org.apache.activemq.dispatch.internal.simple;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchSystem;
-import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
 
 /**
  * 
@@ -36,9 +36,9 @@ final public class DispatcherThread extends Thread {
         this.spi = spi;
         this.threadQueues = new ThreadDispatchQueue[3];
         for (int i = 0; i < 3; i++) {
-            threadQueues[i] = new ThreadDispatchQueue(this, DispatchQueuePriority.values()[i] );
+            threadQueues[i] = new ThreadDispatchQueue(this, DispatchPriority.values()[i] );
         }
-        setName("dispatcher:"+(ordinal+1));
+        setName(spi.getLabel()+" dispatcher: "+(ordinal+1));
         setDaemon(true);
     }
     

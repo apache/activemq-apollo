@@ -19,7 +19,7 @@ package org.apache.activemq.dispatch.internal.advanced;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
+import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.internal.QueueSupport;
 
 /**
@@ -30,9 +30,9 @@ public class ThreadDispatchQueue implements DispatchQueue {
 
     private final String label;
     private final DispatcherThread dispatcher;
-    private final DispatchQueuePriority priority;
+    private final DispatchPriority priority;
     
-    public ThreadDispatchQueue(DispatcherThread dispatcher, DispatchQueuePriority priority) {
+    public ThreadDispatchQueue(DispatcherThread dispatcher, DispatchPriority priority) {
         this.priority = priority;
         this.label=priority.toString()+" "+dispatcher.getName();
         this.dispatcher = dispatcher;
@@ -42,12 +42,16 @@ public class ThreadDispatchQueue implements DispatchQueue {
         return label;
     }
 
+    public void execute(Runnable runnable) {
+        dispatchAsync(runnable);
+    }
+
     public void dispatchAsync(Runnable runnable) {
         dispatcher.execute(runnable, priority.ordinal());
     }
 
-    public void dispatchAfter(long delayMS, Runnable runnable) {
-        dispatcher.schedule(runnable, priority.ordinal(), delayMS, TimeUnit.MILLISECONDS);
+    public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
+        dispatcher.schedule(runnable, priority.ordinal(), delay, TimeUnit.MILLISECONDS);
     }
 
     public void dispatchSync(final Runnable runnable) throws InterruptedException {
@@ -74,7 +78,7 @@ public class ThreadDispatchQueue implements DispatchQueue {
         throw new UnsupportedOperationException();
     }
 
-    public void setFinalizer(Runnable finalizer) {
+    public void setShutdownHandler(Runnable finalizer) {
         throw new UnsupportedOperationException();
     }
 

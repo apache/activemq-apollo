@@ -18,16 +18,19 @@ package org.apache.activemq.dispatch.internal.simple;
 
 import java.nio.channels.SelectableChannel;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchSPI;
 import org.apache.activemq.dispatch.DispatchSource;
-import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
+import org.apache.activemq.dispatch.internal.BaseRetained;
 import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
 
-import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.*;
+import static org.apache.activemq.dispatch.DispatchPriority.*;
+
 
 
 /**
@@ -35,7 +38,7 @@ import static org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority.
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class SimpleDispatchSPI implements DispatchSPI {
+public class SimpleDispatchSPI extends BaseRetained implements DispatchSPI {
         
     final SerialDispatchQueue mainQueue = new SerialDispatchQueue("main");
     final GlobalDispatchQueue globalQueues[]; 
@@ -45,26 +48,38 @@ public class SimpleDispatchSPI implements DispatchSPI {
     final ConcurrentLinkedQueue<DispatcherThread> waitingDispatchers = new ConcurrentLinkedQueue<DispatcherThread>();
     final AtomicInteger waitingDispatcherCount = new AtomicInteger();
     final AtomicInteger startCounter = new AtomicInteger();
+    private final String label;
+    TimerThread timerThread;
     
-    public SimpleDispatchSPI(int size) {
+    public SimpleDispatchSPI(String label, int size) {
+        this.label = label;
         globalQueues = new GlobalDispatchQueue[3];
         for (int i = 0; i < 3; i++) {
-            globalQueues[i] = new GlobalDispatchQueue(this, DispatchQueuePriority.values()[i] );
+            globalQueues[i] = new GlobalDispatchQueue(this, DispatchPriority.values()[i] );
         }
         dispatchers = new DispatcherThread[size];
     }
-    
+
     public DispatchQueue getMainQueue() {
         return mainQueue;
     }
     
-    public DispatchQueue getGlobalQueue(DispatchQueuePriority priority) {
+    public DispatchQueue getGlobalQueue() {
+        return getGlobalQueue(DEFAULT);
+    }
+
+    public DispatchQueue getGlobalQueue(DispatchPriority priority) {
         return globalQueues[priority.ordinal()];
     }
     
     public DispatchQueue createQueue(String label) {
-        SerialDispatchQueue rc = new SerialDispatchQueue(label);
-        rc.setTargetQueue(getGlobalQueue(DEFAULT));
+        SerialDispatchQueue rc = new SerialDispatchQueue(label) {
+            @Override
+            public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
+                timerThread.addRelative(runnable, this, delay, unit);
+            }
+        };
+        rc.setTargetQueue(getGlobalQueue());
         return rc;
     }
     
@@ -98,26 +113,34 @@ public class SimpleDispatchSPI implements DispatchSPI {
                 dispatchers[i] = new DispatcherThread(this, i);
                 dispatchers[i].start();
             }
+            timerThread = new TimerThread(this);
+            timerThread.start();
         }
     }
 
     public void shutdown(final Runnable onShutdown) {
         if( startCounter.decrementAndGet()==0 ) {
             
-            final AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.length);
+            final AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.length+1);
+            Runnable wrapper = new Runnable() {
+                public void run() {
+                    if( shutdownCountDown.decrementAndGet()==0 && onShutdown!=null) {
+                        onShutdown.run();
+                    }
+                    throw new DispatcherThread.Shutdown();
+                }
+            };
+
+            timerThread.shutdown(wrapper);
             for (int i = 0; i < dispatchers.length; i++) {
                 ThreadDispatchQueue queue = dispatchers[i].threadQueues[LOW.ordinal()];
-                queue.runnables.add(new Runnable() {
-                    public void run() {
-                        if( shutdownCountDown.decrementAndGet()==0 && onShutdown!=null) {
-                            onShutdown.run();
-                        }
-                        throw new DispatcherThread.Shutdown();
-                    }
-                });
+                queue.runnables.add(wrapper);
             }
         }
     }
 
+    public String getLabel() {
+        return label;
+    }
     
 }

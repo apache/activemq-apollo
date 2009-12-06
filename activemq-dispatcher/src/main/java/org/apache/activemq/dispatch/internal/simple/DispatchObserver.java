@@ -14,20 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch;
 
-/**
- * 
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-public interface DispatchObject extends Retained {
+package org.apache.activemq.dispatch.internal.simple;
+
+import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.DispatchSource;
+
+public interface DispatchObserver {
     
-    public <Context> Context getContext();
-    public <Context> void setContext(Context context);
+    public void onThreadCreate(DispatcherThread thread);
+    public void onThreadDestroy(DispatcherThread thread);
 
-    public void suspend();
-    public void resume();
+    public void onQueueCreate(DispatchQueue queue);
+    public void onQueueDestroy(DispatchQueue queue);
+    
+    public void onSourceCreate(DispatchSource source);
+    public void onSourceDestroy(DispatchSource source);
+    
+    public void onDispatchRequest(DispatchQueue target, Runnable request);
 
-    public void setTargetQueue(DispatchQueue queue);
-    public DispatchQueue getTargetQueue();
 }

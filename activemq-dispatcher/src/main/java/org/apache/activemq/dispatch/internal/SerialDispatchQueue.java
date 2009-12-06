@@ -17,6 +17,7 @@
 package org.apache.activemq.dispatch.internal;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -31,7 +32,6 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
 
     private final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
     final private String label;
-    final private AtomicInteger reatinCounter = new AtomicInteger(1);
     final private AtomicInteger suspendCounter = new AtomicInteger();
     final private AtomicLong size = new AtomicLong();
     
@@ -57,8 +57,12 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
         suspendCounter.incrementAndGet();
     }
 
-    public void dispatchAfter(long delayMS, Runnable runnable) {
+    public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
         throw new RuntimeException("TODO: implement me.");
+    }
+
+    public void execute(Runnable command) {
+        dispatchAsync(command);
     }
 
     public void dispatchAsync(Runnable runnable) {
@@ -110,20 +114,6 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
     
     public void dispatchApply(int iterations, Runnable runnable) throws InterruptedException {
         QueueSupport.dispatchApply(this, iterations, runnable);
-    }
-
-    public void retain() {
-        int prev = reatinCounter.getAndIncrement();
-        assert prev!=0;
-    }
-
-    public void release() {
-        if( reatinCounter.decrementAndGet()==0 ) {
-            Runnable value = finalizer.getAndSet(null);
-            if( value!=null ) {
-                value.run();
-            }
-        }
     }
 
 }

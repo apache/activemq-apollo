@@ -19,15 +19,16 @@ package org.apache.activemq.dispatch;
 
 import java.nio.channels.SelectableChannel;
 
-import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
 
-public interface DispatchSPI {
+public interface DispatchSPI extends Retained {
     public void start();
     public void shutdown(Runnable onShutdown);
     
     public DispatchQueue getMainQueue();
-    public DispatchQueue getGlobalQueue(DispatchQueuePriority priority);
+    public DispatchQueue getGlobalQueue();
+    public DispatchQueue getGlobalQueue(DispatchPriority priority);
     public DispatchQueue createQueue(String label);
     public void dispatchMain();
     public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue);
+    
 }

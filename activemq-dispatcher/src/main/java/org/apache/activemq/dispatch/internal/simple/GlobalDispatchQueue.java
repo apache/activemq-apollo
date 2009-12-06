@@ -17,10 +17,11 @@
 package org.apache.activemq.dispatch.internal.simple;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
+import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.internal.QueueSupport;
 
 /**
@@ -29,31 +30,35 @@ import org.apache.activemq.dispatch.internal.QueueSupport;
  */
 public class GlobalDispatchQueue implements SimpleQueue {
 
-    private final SimpleDispatchSPI system;
+    private final SimpleDispatchSPI spi;
     final String label;
     final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
     final AtomicLong counter;
-    private final DispatchQueuePriority priority;
+    private final DispatchPriority priority;
 
-    public GlobalDispatchQueue(SimpleDispatchSPI system, DispatchQueuePriority priority) {
-        this.system = system;
+    public GlobalDispatchQueue(SimpleDispatchSPI spi, DispatchPriority priority) {
+        this.spi = spi;
         this.priority = priority;
         this.label=priority.toString();
-        this.counter = system.globalQueuedRunnables;
+        this.counter = spi.globalQueuedRunnables;
     }
 
     public String getLabel() {
         return label;
     }
 
+    public void execute(Runnable runnable) {
+        dispatchAsync(runnable);
+    }
+
     public void dispatchAsync(Runnable runnable) {
         this.counter.incrementAndGet();
         runnables.add(runnable);
-        system.wakeup();
+        spi.wakeup();
     }
 
-    public void dispatchAfter(long delayMS, Runnable runnable) {
-        throw new RuntimeException("TODO: implement me.");
+    public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
+        spi.timerThread.addRelative(runnable, this, delay, unit);
     }
 
     public void dispatchSync(final Runnable runnable) throws InterruptedException {
@@ -80,7 +85,7 @@ public class GlobalDispatchQueue implements SimpleQueue {
         throw new UnsupportedOperationException();
     }
 
-    public void setFinalizer(Runnable finalizer) {
+    public void setShutdownHandler(Runnable finalizer) {
         throw new UnsupportedOperationException();
     }
 
@@ -100,7 +105,7 @@ public class GlobalDispatchQueue implements SimpleQueue {
         return rc;
     }
 
-    public DispatchQueuePriority getPriority() {
+    public DispatchPriority getPriority() {
         return priority;
     }
 

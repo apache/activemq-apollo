@@ -24,8 +24,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchSystem;
-import org.apache.activemq.dispatch.DispatchSystem.DispatchQueuePriority;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.PriorityLinkedList;
 import org.apache.activemq.util.TimerHeap;
@@ -79,7 +79,7 @@ public class DispatcherThread implements Runnable {
         
         this.dispatchQueues = new ThreadDispatchQueue[3];
         for (int i = 0; i < 3; i++) {
-            dispatchQueues[i] = new ThreadDispatchQueue(this, DispatchQueuePriority.values()[i]);
+            dispatchQueues[i] = new ThreadDispatchQueue(this, DispatchPriority.values()[i]);
         }
 
         MAX_USER_PRIORITY = priorities - 1;

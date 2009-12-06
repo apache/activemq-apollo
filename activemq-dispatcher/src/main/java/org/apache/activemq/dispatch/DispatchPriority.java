@@ -14,20 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.activemq.dispatch;
 
-/**
- * 
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-public interface DispatchObject extends Retained {
-    
-    public <Context> Context getContext();
-    public <Context> void setContext(Context context);
-
-    public void suspend();
-    public void resume();
-
-    public void setTargetQueue(DispatchQueue queue);
-    public DispatchQueue getTargetQueue();
+public enum DispatchPriority {
+    HIGH,
+    DEFAULT,
+    LOW;
 }

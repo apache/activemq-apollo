@@ -16,16 +16,19 @@
  */
 package org.apache.activemq.dispatch;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public interface DispatchQueue extends DispatchObject {
+public interface DispatchQueue extends DispatchObject, Executor {
 
     public void dispatchAsync(Runnable runnable);
     public void dispatchSync(Runnable runnable) throws InterruptedException;
     
-    public void dispatchAfter(long delayMS, Runnable runnable);
+    public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit);
     public void dispatchApply(int iterations, Runnable runnable) throws InterruptedException;
     
     String getLabel();
