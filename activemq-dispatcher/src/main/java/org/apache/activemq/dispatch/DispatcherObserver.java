@@ -24,7 +24,7 @@ public interface DispatcherObserver {
     public void onThreadCreate(DispatcherThread thread);
     public void onThreadDestroy(DispatcherThread thread);
 
-    public void onQueueCreate(DispatchQueue queue);
+    public void onQueueCreate(DispatchQueue queue, DispatchOption...options);
     public void onQueueDestroy(DispatchQueue queue);
     
     public void onSourceCreate(DispatchSource source);

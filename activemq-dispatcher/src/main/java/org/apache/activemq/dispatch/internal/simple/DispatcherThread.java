@@ -19,8 +19,6 @@ package org.apache.activemq.dispatch.internal.simple;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.activemq.dispatch.DispatchPriority;
-
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -33,9 +31,9 @@ final public class DispatcherThread extends Thread {
         
     public DispatcherThread(SimpleDispatcher dispatcher, int ordinal) {
         this.dispatcher = dispatcher;
-        this.threadQueues = new ThreadDispatchQueue[3];
-        for (int i = 0; i < 3; i++) {
-            threadQueues[i] = new ThreadDispatchQueue(this, DispatchPriority.values()[i] );
+        this.threadQueues = new ThreadDispatchQueue[dispatcher.globalQueues.length];
+        for (int i = 0; i < threadQueues.length; i++) {
+            threadQueues[i] = new ThreadDispatchQueue(this, dispatcher.globalQueues[i]);
         }
         setName(dispatcher.getLabel()+" dispatcher: "+(ordinal+1));
         setDaemon(true);
@@ -43,11 +41,12 @@ final public class DispatcherThread extends Thread {
     
     @Override
     public void run() {
+        GlobalDispatchQueue[] globalQueues = dispatcher.globalQueues;
         try {
             outer: while( true ) {
                 int counter=0;
-                for (SimpleQueue queue : threadQueues) {
-                    SimpleDispatcher.CURRENT_QUEUE.set(queue);
+                for (ThreadDispatchQueue queue : threadQueues) {
+                    SimpleDispatcher.CURRENT_QUEUE.set(queue.globalQueue);
                     Runnable runnable;
                     while( (runnable = queue.poll())!=null ) {
                         dispatch(runnable);
@@ -60,8 +59,8 @@ final public class DispatcherThread extends Thread {
                     continue;
                 }
                 
-                for (SimpleQueue queue : dispatcher.globalQueues) {
-                    SimpleDispatcher.CURRENT_QUEUE.set(threadQueues[queue.getPriority().ordinal()]);
+                for (SimpleQueue queue : globalQueues) {
+                    SimpleDispatcher.CURRENT_QUEUE.set(queue);
                     
                     Runnable runnable;
                     while( (runnable = queue.poll())!=null ) {
@@ -133,6 +132,14 @@ final public class DispatcherThread extends Thread {
         } catch (Throwable e) {
             e.printStackTrace();
         }
+    }
+    
+    public static DispatcherThread currentDispatcherThread() {
+        Thread currentThread = Thread.currentThread();
+        if( currentThread.getClass() == DispatcherThread.class ) {
+            return (DispatcherThread) currentThread;
+        }
+        return null;
     }
 
     private final Object wakeupMutex = new Object();

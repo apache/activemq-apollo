@@ -19,10 +19,12 @@ package org.apache.activemq.queue;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchPriority;
+import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
+
+import static org.apache.activemq.dispatch.DispatchOption.*;
 
 /**
  * Base class for a {@link FlowControllable}
@@ -135,7 +137,7 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
     public synchronized void setDispatcher(Dispatcher dispatcher) {
         this.dispatcher = dispatcher;
         
-        dispatchQueue = dispatcher.createSerialQueue(getResourceName());
+        dispatchQueue = dispatcher.createSerialQueue(getResourceName(), STICK_TO_CALLER_THREAD);
         dispatchTask = new Runnable(){
             public void run() {
                 if( pollingDispatch() ) {

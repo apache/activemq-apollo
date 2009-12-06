@@ -24,13 +24,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.activemq.dispatch.Dispatcher;
+import org.apache.activemq.dispatch.DispatchOption;
 import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchSource;
+import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.dispatch.internal.BaseRetained;
-import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
 
 import static org.apache.activemq.dispatch.DispatchPriority.*;
 
@@ -183,8 +183,8 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
         return globalQueues[priority.ordinal()];
     }
     
-    public DispatchQueue createSerialQueue(String label) {
-        AdvancedSerialDispatchQueue rc = new AdvancedSerialDispatchQueue(label);
+    public DispatchQueue createSerialQueue(String label, DispatchOption... options) {
+        SerialDispatchQueue rc = new SerialDispatchQueue(label, options);
         rc.setTargetQueue(getGlobalQueue());
         return rc;
     }

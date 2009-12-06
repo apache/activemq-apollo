@@ -16,32 +16,35 @@
  */
 package org.apache.activemq.dispatch.internal.simple;
 
+import java.util.Collections;
 import java.util.LinkedList;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.DispatchOption;
 import org.apache.activemq.dispatch.DispatchPriority;
+import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.internal.QueueSupport;
 
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class ThreadDispatchQueue implements SimpleQueue {
+final public class ThreadDispatchQueue implements SimpleQueue {
 
     final String label;
     final LinkedList<Runnable> localRunnables = new LinkedList<Runnable>();
     final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
-    private DispatcherThread dispatcher;
+    final DispatcherThread dispatcher;
     final AtomicLong counter;
-    private final DispatchPriority priority;
+    final GlobalDispatchQueue globalQueue;
     
-    public ThreadDispatchQueue(DispatcherThread dispatcher, DispatchPriority priority) {
+    public ThreadDispatchQueue(DispatcherThread dispatcher, GlobalDispatchQueue globalQueue) {
         this.dispatcher = dispatcher;
-        this.priority = priority;
-        this.label=priority.toString();
+        this.globalQueue = globalQueue;
+        this.label="thread local "+globalQueue.getLabel();
         this.counter = dispatcher.threadQueuedRunnables;
     }
 
@@ -119,18 +122,35 @@ public class ThreadDispatchQueue implements SimpleQueue {
     public void setTargetQueue(DispatchQueue queue) {
         throw new UnsupportedOperationException();
     }
-    public DispatchQueue getTargetQueue() {
-        throw new UnsupportedOperationException();
+    
+    public SimpleQueue getTargetQueue() {
+        return null;
     }
     
     public DispatchPriority getPriority() {
-        return priority;
+        return globalQueue.getPriority();
     }
 
     public void release() {
     }
 
     public void retain() {
+    }
+
+    public Set<DispatchOption> getOptions() {
+        return Collections.emptySet();
+    }
+
+    public GlobalDispatchQueue isGlobalDispatchQueue() {
+        return null;
+    }
+
+    public SerialDispatchQueue isSerialDispatchQueue() {
+        return null;
+    }
+
+    public ThreadDispatchQueue isThreadDispatchQueue() {
+        return this;
     }
 
 }

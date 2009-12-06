@@ -36,7 +36,7 @@ public class DispatchSystemTest {
         Dispatcher advancedSystem = new AdvancedDispatcher(new DispatcherConfig());
         advancedSystem.retain();
         benchmark("advanced global queue", advancedSystem, advancedSystem.getGlobalQueue(DEFAULT));
-        benchmark("advanced private serial queue", advancedSystem, advancedSystem.createSerialQueue("test"));
+        benchmark("advanced private serial queue", advancedSystem, advancedSystem.createSerialQueue("test", DispatchOption.STICK_TO_CALLER_THREAD));
 
         RunnableCountDownLatch latch = new RunnableCountDownLatch(1);
         advancedSystem.addShutdownWatcher(latch);
@@ -47,7 +47,7 @@ public class DispatchSystemTest {
         simpleSystem.retain();
         
         benchmark("simple global queue", simpleSystem, simpleSystem.getGlobalQueue(DEFAULT));
-        benchmark("simple private serial queue", simpleSystem, simpleSystem.createSerialQueue("test"));
+        benchmark("simple private serial queue", simpleSystem, simpleSystem.createSerialQueue("test", DispatchOption.STICK_TO_CALLER_THREAD));
 
         latch = new RunnableCountDownLatch(1);
         advancedSystem.addShutdownWatcher(latch);

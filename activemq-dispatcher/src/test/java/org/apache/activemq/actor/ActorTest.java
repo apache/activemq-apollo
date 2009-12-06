@@ -17,6 +17,8 @@ import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatcher;
 
+import static org.apache.activemq.dispatch.DispatchOption.*;
+
 
 /** 
  * ActorTest
@@ -49,7 +51,7 @@ public class ActorTest extends TestCase {
         Dispatcher advancedSystem = new AdvancedDispatcher(new DispatcherConfig());
         advancedSystem.retain();
         
-        DispatchQueue queue = advancedSystem.createSerialQueue("test");
+        DispatchQueue queue = advancedSystem.createSerialQueue("test", STICK_TO_CALLER_THREAD);
         ActorTestObject testObject = Actor.create(new ActorTestObject(), queue);
         
         CountDownLatch latch = new CountDownLatch(1);

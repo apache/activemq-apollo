@@ -18,7 +18,9 @@ package org.apache.activemq.dispatch;
 
 import java.nio.channels.SelectableChannel;
 
+
 /**
+ * Provides easy access to a system wide Dispatcher.
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
@@ -27,9 +29,11 @@ public class DispatchSystem {
     final private static Dispatcher dispatcher = create();
 
     private static Dispatcher create() {
-        return new DispatcherConfig().createDispatcher();
+        Dispatcher rc = new DispatcherConfig().createDispatcher();
+        rc.retain();
+        return rc;
     }
-
+    
     static DispatchQueue getMainQueue() {
         return dispatcher.getMainQueue();
     }
@@ -42,8 +46,8 @@ public class DispatchSystem {
         return dispatcher.getGlobalQueue(priority);
     }
     
-    static DispatchQueue getSerialQueue(String label) {
-        return dispatcher.createSerialQueue(label);
+    static DispatchQueue getSerialQueue(String label, DispatchOption...options) {
+        return dispatcher.createSerialQueue(label, options);
     }
     
     static void dispatchMain() {

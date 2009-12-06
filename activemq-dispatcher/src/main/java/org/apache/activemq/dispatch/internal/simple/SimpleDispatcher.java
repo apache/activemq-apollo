@@ -18,7 +18,6 @@ package org.apache.activemq.dispatch.internal.simple;
 
 import java.nio.channels.SelectableChannel;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -27,8 +26,9 @@ import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatchSource;
 import org.apache.activemq.dispatch.DispatcherConfig;
+import org.apache.activemq.dispatch.DispatchOption;
 import org.apache.activemq.dispatch.internal.BaseRetained;
-import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
+import org.apache.activemq.dispatch.internal.AbstractSerialDispatchQueue;
 
 import static org.apache.activemq.dispatch.DispatchPriority.*;
 
@@ -41,9 +41,9 @@ import static org.apache.activemq.dispatch.DispatchPriority.*;
  */
 final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
         
-    public final static ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
+    public final static ThreadLocal<SimpleQueue> CURRENT_QUEUE = new ThreadLocal<SimpleQueue>();
 
-    final SerialDispatchQueue mainQueue = new SerialDispatchQueue("main");
+    final SerialDispatchQueue mainQueue = new SerialDispatchQueue(this, "main");
     final GlobalDispatchQueue globalQueues[]; 
     final DispatcherThread dispatchers[];
     final AtomicLong globalQueuedRunnables = new AtomicLong();
@@ -74,13 +74,8 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
         return globalQueues[priority.ordinal()];
     }
     
-    public DispatchQueue createSerialQueue(String label) {
-        SerialDispatchQueue rc = new SerialDispatchQueue(label) {
-            @Override
-            public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
-                timerThread.addRelative(runnable, this, delay, unit);
-            }
-        };
+    public DispatchQueue createSerialQueue(String label, DispatchOption... options) {
+        AbstractSerialDispatchQueue rc = new SerialDispatchQueue(this, label, options);
         rc.setTargetQueue(getGlobalQueue());
         return rc;
     }

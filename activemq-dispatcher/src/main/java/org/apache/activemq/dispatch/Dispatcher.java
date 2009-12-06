@@ -21,11 +21,11 @@ import java.nio.channels.SelectableChannel;
 
 
 public interface Dispatcher extends Retained {
-        
+
     public DispatchQueue getGlobalQueue();
     public DispatchQueue getGlobalQueue(DispatchPriority priority);
     
-    public DispatchQueue createSerialQueue(String label);
+    public DispatchQueue createSerialQueue(String label, DispatchOption... options);
     
     public DispatchQueue getMainQueue();
     public void dispatchMain();

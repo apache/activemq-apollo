@@ -38,9 +38,9 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.MessageId;
 import org.apache.activemq.command.ProducerId;
-import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
@@ -60,6 +60,8 @@ import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.QueueDispatchTarget;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.queue.Subscription;
+
+import static org.apache.activemq.dispatch.DispatchOption.*;
 
 public class SharedQueuePerfTest extends TestCase {
 
@@ -308,7 +310,7 @@ public class SharedQueuePerfTest extends TestCase {
             sendRate.name("Producer " + name + " Rate");
             totalProducerRate.add(sendRate);
             
-            dispatchQueue = dispatcher.createSerialQueue(name);
+            dispatchQueue = dispatcher.createSerialQueue(name, STICK_TO_CALLER_THREAD);
             dispatchTask = new Runnable(){
                 public void run() {
                     dispatch();

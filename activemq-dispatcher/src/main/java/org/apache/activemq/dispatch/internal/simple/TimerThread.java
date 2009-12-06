@@ -8,7 +8,7 @@ import org.apache.activemq.util.TimerHeap;
 
 import static org.apache.activemq.dispatch.internal.simple.TimerThread.Type.*;
 
-public class TimerThread extends Thread {
+final public class TimerThread extends Thread {
     enum Type {
         RELATIVE,
         ABSOLUTE,

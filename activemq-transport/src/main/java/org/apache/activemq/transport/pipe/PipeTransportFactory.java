@@ -14,7 +14,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.dispatch.DispatchPriority;
-import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.internal.RunnableCountDownLatch;
@@ -33,6 +32,8 @@ import org.apache.activemq.util.URISupport;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
+
+import static org.apache.activemq.dispatch.DispatchOption.*;
 
 public class PipeTransportFactory extends TransportFactory {
     static private final Object EOF_TOKEN = new Object();
@@ -83,7 +84,7 @@ public class PipeTransportFactory extends TransportFactory {
         }
 
         public void setDispatcher(Dispatcher dispatcher) {
-            dispatchQueue = dispatcher.createSerialQueue(name);
+            dispatchQueue = dispatcher.createSerialQueue(name, STICK_TO_CALLER_THREAD);
             dispatchTask = new Runnable(){
                 public void run() {
                     dispatch();

@@ -21,8 +21,8 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatcherConfig;
 
-
 import static java.lang.String.*;
+import static org.apache.activemq.dispatch.DispatchOption.*;
 
 /**
  * 
@@ -64,7 +64,7 @@ public class DispatcherPoolTest {
 
         private Work(CountDownLatch counter, AdvancedDispatcher dispatcher) {
             this.counter = counter;
-            dispatchQueue = dispatcher.createSerialQueue("test");
+            dispatchQueue = dispatcher.createSerialQueue("test", STICK_TO_CALLER_THREAD);
         }
 
         public void run() {

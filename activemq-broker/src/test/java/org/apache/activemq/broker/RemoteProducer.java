@@ -15,6 +15,8 @@ import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
 import org.apache.activemq.transport.TransportFactory;
 
+import static org.apache.activemq.dispatch.DispatchOption.*;
+
 abstract public class RemoteProducer extends Connection implements FlowUnblockListener<MessageDelivery> {
 
     protected final MetricCounter rate = new MetricCounter();
@@ -59,7 +61,7 @@ abstract public class RemoteProducer extends Connection implements FlowUnblockLi
         
         setupProducer();
         
-        dispatchQueue = getDispatcher().createSerialQueue(name + "-client");
+        dispatchQueue = getDispatcher().createSerialQueue(name + "-client", STICK_TO_CALLER_THREAD);
         dispatchTask = new Runnable(){
             public void run() {
                 dispatch();

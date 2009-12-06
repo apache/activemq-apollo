@@ -16,8 +16,12 @@
  */
 package org.apache.activemq.dispatch.internal.advanced;
 
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.activemq.dispatch.DispatchOption;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.internal.QueueSupport;
@@ -95,4 +99,9 @@ public class GlobalDispatchQueue implements DispatchQueue {
 
     public void retain() {
     }
+    
+    public Set<DispatchOption> getOptions() {
+        return Collections.emptySet();
+    }
+
 }

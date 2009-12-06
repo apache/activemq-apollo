@@ -16,29 +16,40 @@
  */
 package org.apache.activemq.dispatch.internal;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.DispatchOption;
 
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class SerialDispatchQueue extends AbstractDispatchObject implements DispatchQueue, Runnable {
+abstract public class AbstractSerialDispatchQueue extends AbstractDispatchObject implements DispatchQueue, Runnable {
 
+    private final String label;
+    private final AtomicInteger suspendCounter = new AtomicInteger();
     private final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
-    final private String label;
-    final private AtomicInteger suspendCounter = new AtomicInteger();
-    final private AtomicLong size = new AtomicLong();
-    
-    static final ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
+    private final AtomicLong size = new AtomicLong();
+    private final Set<DispatchOption> options;
 
-    public SerialDispatchQueue(String label) {
+    public AbstractSerialDispatchQueue(String label, DispatchOption...options) {
         this.label = label;
+        this.options = set(options);
         retain();
+    }
+
+    static private Set<DispatchOption> set(DispatchOption[] options) {
+        if( options==null || options.length==0 )
+            return Collections.emptySet() ;
+        return Collections.unmodifiableSet(EnumSet.copyOf(Arrays.asList(options)));
     }
 
     public String getLabel() {
@@ -84,27 +95,21 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
     }
 
     public void run() {
-        DispatchQueue original = CURRENT_QUEUE.get();
-        CURRENT_QUEUE.set(this);
-        try {
-            Runnable runnable;
-            long lsize = size.get();
-            while( suspendCounter.get() <= 0 && lsize > 0 ) {
-                try {
-                    runnable = runnables.poll();
-                    if( runnable!=null ) {
-                        runnable.run();
-                        lsize = size.decrementAndGet();
-                        if( lsize==0 ) {
-                            release();
-                        }
+        Runnable runnable;
+        long lsize = size.get();
+        while( suspendCounter.get() <= 0 && lsize > 0 ) {
+            try {
+                runnable = runnables.poll();
+                if( runnable!=null ) {
+                    runnable.run();
+                    lsize = size.decrementAndGet();
+                    if( lsize==0 ) {
+                        release();
                     }
-                } catch (Throwable e) {
-                    e.printStackTrace();
                 }
+            } catch (Throwable e) {
+                e.printStackTrace();
             }
-        } finally {
-            CURRENT_QUEUE.set(original);
         }
     }
 
@@ -116,4 +121,9 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
         QueueSupport.dispatchApply(this, iterations, runnable);
     }
 
+    public Set<DispatchOption> getOptions() {
+        return options;
+    }
+
+    
 }

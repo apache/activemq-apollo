@@ -16,10 +16,14 @@
  */
 package org.apache.activemq.dispatch.internal.simple;
 
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.activemq.dispatch.DispatchOption;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.internal.QueueSupport;
@@ -28,7 +32,7 @@ import org.apache.activemq.dispatch.internal.QueueSupport;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class GlobalDispatchQueue implements SimpleQueue {
+final public class GlobalDispatchQueue implements SimpleQueue {
 
     private final SimpleDispatcher dispatcher;
     final String label;
@@ -69,6 +73,32 @@ public class GlobalDispatchQueue implements SimpleQueue {
         QueueSupport.dispatchApply(this, iterations, runnable);
     }
 
+    public ThreadDispatchQueue getTargetQueue() {
+        DispatcherThread thread = DispatcherThread.currentDispatcherThread();
+        if( thread == null ) {
+            return null;
+        }
+        return thread.threadQueues[priority.ordinal()];
+    }
+    
+    public Runnable poll() {
+        Runnable rc = runnables.poll();
+        if( rc !=null ) {
+            counter.decrementAndGet();
+        }
+        return rc;
+    }
+
+    public DispatchPriority getPriority() {
+        return priority;
+    }
+
+    public void release() {
+    }
+
+    public void retain() {
+    }
+
     public void resume() {
         throw new UnsupportedOperationException();
     }
@@ -93,25 +123,20 @@ public class GlobalDispatchQueue implements SimpleQueue {
         throw new UnsupportedOperationException();
     }
 
-    public DispatchQueue getTargetQueue() {
-        throw new UnsupportedOperationException();
-    }
-    
-    public Runnable poll() {
-        Runnable rc = runnables.poll();
-        if( rc !=null ) {
-            counter.decrementAndGet();
-        }
-        return rc;
+    public Set<DispatchOption> getOptions() {
+        return Collections.emptySet();
     }
 
-    public DispatchPriority getPriority() {
-        return priority;
+    public GlobalDispatchQueue isGlobalDispatchQueue() {
+        return this;
     }
 
-    public void release() {
+    public SerialDispatchQueue isSerialDispatchQueue() {
+        return null;
     }
 
-    public void retain() {
+    public ThreadDispatchQueue isThreadDispatchQueue() {
+        return null;
     }
+
 }

@@ -11,6 +11,8 @@ import org.apache.activemq.flow.ISinkController.FlowUnblockListener;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
 
+import static org.apache.activemq.dispatch.DispatchOption.*;
+
 public class RemoteProducer extends ClientConnection implements FlowUnblockListener<Message> {
 
     private final MetricCounter rate = new MetricCounter();
@@ -48,7 +50,7 @@ public class RemoteProducer extends ClientConnection implements FlowUnblockListe
         super.start();
         outboundController = outputQueue.getFlowController(outboundFlow);
         
-        dispatchQueue = getDispatcher().createSerialQueue(name + "-client");
+        dispatchQueue = getDispatcher().createSerialQueue(name + "-client", STICK_TO_CALLER_THREAD);
         dispatchTask = new Runnable(){
             public void run() {
                 dispatch();

@@ -14,26 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.activemq.dispatch;
 
-import java.util.EnumSet;
-import java.util.Set;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
-
-/**
- * 
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-public interface DispatchQueue extends DispatchObject, Executor {
-
-    public void dispatchAsync(Runnable runnable);
-    public void dispatchSync(Runnable runnable) throws InterruptedException;
+public enum DispatchOption {
+    /**
+     * Updates the target queue to be the
+     * thread queue so that execution 'sticks' to caller's 
+     * thread queue.
+     */
+    STICK_TO_CALLER_THREAD,
     
-    public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit);
-    public void dispatchApply(int iterations, Runnable runnable) throws InterruptedException;
-    
-    public String getLabel();
-    public Set<DispatchOption> getOptions();
-                      
+    /**
+     * Used to update the target queue to be the first
+     * random thread queue that dispatches this queue.
+     */
+    STICK_TO_DISPATCH_THREAD, 
 }

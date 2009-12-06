@@ -7,4 +7,11 @@ public interface SimpleQueue extends DispatchQueue {
 
     Runnable poll();
     DispatchPriority getPriority();
+    
+    SerialDispatchQueue isSerialDispatchQueue();
+    ThreadDispatchQueue isThreadDispatchQueue();
+    GlobalDispatchQueue isGlobalDispatchQueue();
+    
+    SimpleQueue getTargetQueue();
+
 }
