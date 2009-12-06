@@ -48,7 +48,7 @@ public class RemoteProducer extends ClientConnection implements FlowUnblockListe
         super.start();
         outboundController = outputQueue.getFlowController(outboundFlow);
         
-        dispatchQueue = getDispatcher().createQueue(name + "-client");
+        dispatchQueue = getDispatcher().createSerialQueue(name + "-client");
         dispatchTask = new Runnable(){
             public void run() {
                 dispatch();

@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 import junit.framework.TestCase;
 
 import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.DispatchSPI;
+import org.apache.activemq.dispatch.Dispatch;
 import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 
 
@@ -45,10 +45,10 @@ public class ActorTest extends TestCase {
     
     public void testActorInvocation() throws Exception
     {
-        DispatchSPI advancedSystem = new AdvancedDispatchSPI(Runtime.getRuntime().availableProcessors(), 3);
+        Dispatch advancedSystem = new AdvancedDispatchSPI(Runtime.getRuntime().availableProcessors(), 3);
         advancedSystem.start();
         
-        DispatchQueue queue = advancedSystem.createQueue("test");
+        DispatchQueue queue = advancedSystem.createSerialQueue("test");
         ActorTestObject testObject = Actor.create(new ActorTestObject(), queue);
         
         CountDownLatch latch = new CountDownLatch(1);

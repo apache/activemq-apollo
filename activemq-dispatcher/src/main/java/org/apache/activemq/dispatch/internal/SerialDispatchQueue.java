@@ -22,7 +22,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.DispatchSystem;
+import org.apache.activemq.dispatch.Dispatch;
+import org.apache.activemq.dispatch.DispatchFactory;
+
+import static org.apache.activemq.dispatch.DispatchFactory.*;
+
+import static org.apache.activemq.dispatch.DispatchFactory.*;
 
 /**
  * 
@@ -84,8 +89,8 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
     }
 
     public void run() {
-        DispatchQueue original = DispatchSystem.CURRENT_QUEUE.get();
-        DispatchSystem.CURRENT_QUEUE.set(this);
+        DispatchQueue original = CURRENT_QUEUE.get();
+        CURRENT_QUEUE.set(this);
         try {
             Runnable runnable;
             long lsize = size.get();
@@ -104,7 +109,7 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
                 }
             }
         } finally {
-            DispatchSystem.CURRENT_QUEUE.set(original);
+            CURRENT_QUEUE.set(original);
         }
     }
 

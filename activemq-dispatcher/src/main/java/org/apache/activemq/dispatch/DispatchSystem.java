@@ -26,50 +26,34 @@ import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSPI;
  */
 public class DispatchSystem {
 
-    public final static ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
-    static public DispatchQueue getCurrentQueue() {
-        return CURRENT_QUEUE.get();
+    final private static Dispatch spi = create();
+
+    private static Dispatch create() {
+        return new SimpleDispatchSPI("system", Runtime.getRuntime().availableProcessors());
     }
 
-    private static DispatchSPI spi;
-
-    public static DispatchSPI create() {
-        return create("system", Runtime.getRuntime().availableProcessors());
-    }
-
-    public static SimpleDispatchSPI create(String name, int threads) {
-        return new SimpleDispatchSPI(name, threads);
-    }
-    
-    synchronized public static DispatchSPI spi() {
-        if(spi==null) {
-            spi = create();
-        }
-        return spi;
-    }
-    
     static DispatchQueue getMainQueue() {
-        return spi().getMainQueue();
+        return spi.getMainQueue();
     }
     
     static public DispatchQueue getGlobalQueue() {
-        return spi().getGlobalQueue();
+        return spi.getGlobalQueue();
     }
     
     static public DispatchQueue getGlobalQueue(DispatchPriority priority) {
-        return spi().getGlobalQueue(priority);
+        return spi.getGlobalQueue(priority);
     }
     
-    static DispatchQueue createQueue(String label) {
-        return spi().createQueue(label);
+    static DispatchQueue getSerialQueue(String label) {
+        return spi.createSerialQueue(label);
     }
     
     static void dispatchMain() {
-        spi().dispatchMain();
+        spi.dispatchMain();
     }
 
     static DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue) {
-        return spi().createSource(channel, interestOps, queue);
+        return spi.createSource(channel, interestOps, queue);
     }
 
 

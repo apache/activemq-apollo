@@ -26,7 +26,6 @@ import javax.jms.JMSException;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerDatabase;
 import org.apache.activemq.apollo.broker.BrokerQueueStore;
 import org.apache.activemq.apollo.broker.MessageDelivery;
@@ -39,8 +38,10 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.MessageId;
 import org.apache.activemq.command.ProducerId;
+import org.apache.activemq.dispatch.Dispatch;
+import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
+import org.apache.activemq.dispatch.DispatchFactory;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
@@ -64,7 +65,7 @@ public class SharedQueuePerfTest extends TestCase {
 
     private static int PERFORMANCE_SAMPLES = 5;
 
-    AdvancedDispatchSPI dispatcher;
+    Dispatch dispatcher;
     BrokerDatabase database;
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
@@ -81,8 +82,8 @@ public class SharedQueuePerfTest extends TestCase {
     protected ArrayList<Producer> producers = new ArrayList<Producer>();
     protected ArrayList<IQueue<Long, MessageDelivery>> queues = new ArrayList<IQueue<Long, MessageDelivery>>();
 
-    protected AdvancedDispatchSPI createDispatcher() {
-        return new AdvancedDispatchSPI(THREAD_POOL_SIZE, Broker.MAX_PRIORITY);
+    protected Dispatch createDispatcher() {
+        return DispatchFactory.create("pref-test", THREAD_POOL_SIZE);
     }
 
     protected int consumerStartDelay = 0;
@@ -104,9 +105,8 @@ public class SharedQueuePerfTest extends TestCase {
     }
 
     protected void stopServices() throws Exception {
-        dispatcher.shutdown();
         database.stop();
-        dispatcher.shutdown();
+        dispatcher.release();
         consumers.clear();
         producers.clear();
         queues.clear();
@@ -216,7 +216,7 @@ public class SharedQueuePerfTest extends TestCase {
             };
 
             if (consumerStartDelay > 0) {
-                dispatcher.schedule(startConsumers, consumerStartDelay, TimeUnit.SECONDS);
+                dispatcher.getGlobalQueue().dispatchAfter(startConsumers, consumerStartDelay, TimeUnit.SECONDS);
             } else {
                 startConsumers.run();
             }
@@ -308,7 +308,7 @@ public class SharedQueuePerfTest extends TestCase {
             sendRate.name("Producer " + name + " Rate");
             totalProducerRate.add(sendRate);
             
-            dispatchQueue = dispatcher.createQueue(name);
+            dispatchQueue = dispatcher.createSerialQueue(name);
             dispatchTask = new Runnable(){
                 public void run() {
                     dispatch();
@@ -332,7 +332,7 @@ public class SharedQueuePerfTest extends TestCase {
 
             Flow flow = new Flow(name, true);
             outboundQueue = new SingleFlowRelay<OpenWireMessageDelivery>(flow, name, limiter);
-            outboundQueue.setFlowExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
+            outboundQueue.setFlowExecutor(dispatcher.getGlobalQueue(DispatchPriority.HIGH));
             outboundQueue.setDrain(new QueueDispatchTarget<OpenWireMessageDelivery>() {
 
                 public void drain(OpenWireMessageDelivery elem, ISourceController<OpenWireMessageDelivery> controller) {
@@ -449,7 +449,7 @@ public class SharedQueuePerfTest extends TestCase {
 
             controller = new FlowController<MessageDelivery>(null, flow, limiter, this);
             controller.useOverFlowQueue(false);
-            controller.setExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
+            controller.setExecutor(dispatcher.getGlobalQueue(DispatchPriority.HIGH));
 
             rate.name("Consumer " + name + " Rate");
             totalConsumerRate.add(rate);

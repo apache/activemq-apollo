@@ -20,7 +20,6 @@ package org.apache.activemq.dispatch.internal.simple;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchPriority;
-import org.apache.activemq.dispatch.DispatchSystem;
 
 /**
  * 
@@ -48,7 +47,7 @@ final public class DispatcherThread extends Thread {
             outer: while( true ) {
                 int counter=0;
                 for (SimpleQueue queue : threadQueues) {
-                    DispatchSystem.CURRENT_QUEUE.set(queue);
+                    SimpleDispatchSPI.CURRENT_QUEUE.set(queue);
                     Runnable runnable;
                     while( (runnable = queue.poll())!=null ) {
                         dispatch(runnable);
@@ -62,7 +61,7 @@ final public class DispatcherThread extends Thread {
                 }
                 
                 for (SimpleQueue queue : spi.globalQueues) {
-                    DispatchSystem.CURRENT_QUEUE.set(threadQueues[queue.getPriority().ordinal()]);
+                    SimpleDispatchSPI.CURRENT_QUEUE.set(threadQueues[queue.getPriority().ordinal()]);
                     
                     Runnable runnable;
                     while( (runnable = queue.poll())!=null ) {
@@ -118,7 +117,7 @@ final public class DispatcherThread extends Thread {
                 break;
             }        
             if( counter==0 ) {
-                DispatchSystem.CURRENT_QUEUE.set(queue);
+                SimpleDispatchSPI.CURRENT_QUEUE.set(queue);
             }
             dispatch(runnable);
             counter++;

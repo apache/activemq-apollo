@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.queue;
 
+import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowResource;
@@ -170,7 +171,7 @@ public class ExclusivePersistentQueue<K, E> extends AbstractFlowQueue<E> impleme
                 }
             };
             controller.useOverFlowQueue(false);
-            controller.setExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
+            controller.setExecutor(dispatcher.getGlobalQueue(DispatchPriority.HIGH));
         }
 
         cursor = queue.openCursor(getResourceName(), memoryController, true, true);

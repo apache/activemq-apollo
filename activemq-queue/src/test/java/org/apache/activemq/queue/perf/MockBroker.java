@@ -21,10 +21,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.dispatch.DispatcherAware;
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
-import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
+import org.apache.activemq.dispatch.Dispatch;
+import org.apache.activemq.dispatch.DispatchFactory;
+import org.apache.activemq.dispatch.DispatchAware;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.transport.Transport;
@@ -54,7 +53,7 @@ public class MockBroker implements TransportAcceptListener {
     private TransportServer transportServer;
     private String uri;
     private String name;
-    protected AdvancedDispatchSPI dispatcher;
+    protected Dispatch dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean();
     private boolean useInputQueues = false;
 
@@ -126,8 +125,8 @@ public class MockBroker implements TransportAcceptListener {
 
         transportServer = TransportFactory.bind(new URI(uri));
         transportServer.setAcceptListener(this);
-        if (transportServer instanceof DispatcherAware) {
-            ((DispatcherAware) transportServer).setDispatcher(dispatcher);
+        if (transportServer instanceof DispatchAware) {
+            ((DispatchAware) transportServer).setDispatcher(dispatcher);
         }
         transportServer.start();
 
@@ -160,7 +159,7 @@ public class MockBroker implements TransportAcceptListener {
         error.printStackTrace();
     }
 
-    public AdvancedDispatchSPI getDispatcher() {
+    public Dispatch getDispatcher() {
         return dispatcher;
     }
 
@@ -168,7 +167,7 @@ public class MockBroker implements TransportAcceptListener {
         this.name = name;
     }
 
-    public void setDispatcher(AdvancedDispatchSPI dispatcher) {
+    public void setDispatcher(Dispatch dispatcher) {
         this.dispatcher = dispatcher;
     }
 
@@ -190,7 +189,7 @@ public class MockBroker implements TransportAcceptListener {
 
     protected void createDispatcher() {
         if (dispatcher == null) {
-            dispatcher = new AdvancedDispatchSPI(Runtime.getRuntime().availableProcessors(), Message.MAX_PRIORITY);
+            dispatcher = DispatchFactory.create("mock-broker", Runtime.getRuntime().availableProcessors());
         }
     }
 

@@ -40,8 +40,8 @@ import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
 import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.broker.store.Store.Session;
-import org.apache.activemq.dispatch.DispatcherAware;
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
+import org.apache.activemq.dispatch.Dispatch;
+import org.apache.activemq.dispatch.DispatchAware;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
@@ -60,7 +60,7 @@ import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.util.list.LinkedNode;
 import org.apache.activemq.util.list.LinkedNodeList;
 
-public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.OperationBase<?>> implements Service, DispatcherAware {
+public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.OperationBase<?>> implements Service, DispatchAware {
 
     private static final boolean DEBUG = false;
 
@@ -71,7 +71,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     private final FlowController<OperationBase<?>> storeController;
     private final int FLUSH_QUEUE_SIZE = 10000 * 1024;
 
-    private AdvancedDispatchSPI dispatcher;
+    private Dispatch dispatcher;
     private Thread flushThread;
     private AtomicBoolean running = new AtomicBoolean(false);
     private DatabaseListener listener;
@@ -328,7 +328,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
         if (requestedDelayedFlushPointer == -1) {
             requestedDelayedFlushPointer = delayedFlushPointer;
-            dispatcher.schedule(flushDelayCallback, flushDelay, TimeUnit.MILLISECONDS);
+            dispatcher.getGlobalQueue().dispatchAfter(flushDelayCallback, flushDelay, TimeUnit.MILLISECONDS);
         }
 
     }
@@ -1288,11 +1288,11 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         return store.allocateStoreTracking();
     }
 
-    public AdvancedDispatchSPI getDispatcher() {
+    public Dispatch getDispatcher() {
         return dispatcher;
     }
 
-    public void setDispatcher(AdvancedDispatchSPI dispatcher) {
+    public void setDispatcher(Dispatch dispatcher) {
         this.dispatcher = dispatcher;
     }
 

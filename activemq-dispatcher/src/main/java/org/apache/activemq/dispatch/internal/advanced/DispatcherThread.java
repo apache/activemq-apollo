@@ -25,11 +25,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.dispatch.DispatchPriority;
-import org.apache.activemq.dispatch.DispatchSystem;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.PriorityLinkedList;
 import org.apache.activemq.util.TimerHeap;
 import org.apache.activemq.util.list.LinkedNodeList;
+
+import static org.apache.activemq.dispatch.DispatchFactory.*;
 
 public class DispatcherThread implements Runnable {
 
@@ -183,7 +184,7 @@ public class DispatcherThread implements Runnable {
                 // If no local work available wait for foreign work:
                 while((pdc = priorityQueue.poll())!=null){
                     if( pdc.priority < dispatchQueues.length ) {
-                        DispatchSystem.CURRENT_QUEUE.set(dispatchQueues[pdc.priority]);
+                        AdvancedDispatchSPI.CURRENT_QUEUE.set(dispatchQueues[pdc.priority]);
                     }
                     
                     if (pdc.tracker != null) {

@@ -33,27 +33,27 @@ import static java.lang.String.*;
 public class DispatchSystemTest {
 
     public static void main(String[] args) throws Exception {
-        DispatchSPI advancedSystem = new AdvancedDispatchSPI(Runtime.getRuntime().availableProcessors(), 3);
+        Dispatch advancedSystem = new AdvancedDispatchSPI(Runtime.getRuntime().availableProcessors(), 3);
         advancedSystem.start();
         benchmark("advanced global queue", advancedSystem, advancedSystem.getGlobalQueue(DEFAULT));
-        benchmark("advanced private serial queue", advancedSystem, advancedSystem.createQueue("test"));
+        benchmark("advanced private serial queue", advancedSystem, advancedSystem.createSerialQueue("test"));
 
         RunnableCountDownLatch latch = new RunnableCountDownLatch(1);
         advancedSystem.shutdown(latch);
         latch.await();
 
-        DispatchSPI simpleSystem = new SimpleDispatchSPI("test", Runtime.getRuntime().availableProcessors());
+        Dispatch simpleSystem = new SimpleDispatchSPI("test", Runtime.getRuntime().availableProcessors());
         simpleSystem.start();
         
         benchmark("simple global queue", simpleSystem, simpleSystem.getGlobalQueue(DEFAULT));
-        benchmark("simple private serial queue", simpleSystem, simpleSystem.createQueue("test"));
+        benchmark("simple private serial queue", simpleSystem, simpleSystem.createSerialQueue("test"));
 
         latch = new RunnableCountDownLatch(1);
         simpleSystem.shutdown(latch);
         latch.await();
     }
 
-    private static void benchmark(String name, DispatchSPI spi, DispatchQueue queue) throws InterruptedException {
+    private static void benchmark(String name, Dispatch spi, DispatchQueue queue) throws InterruptedException {
         // warm the JIT up..
         benchmarkWork(spi, queue, 100000);
         
@@ -68,13 +68,13 @@ public class DispatchSystemTest {
         System.out.println(format("name: %s, duration: %,.3f ms, rate: %,.2f executions/sec", name, durationMS, rate));
     }
 
-    private static void benchmarkWork(final DispatchSPI spi, final DispatchQueue queue, int iterations) throws InterruptedException {
+    private static void benchmarkWork(final Dispatch spi, final DispatchQueue queue, int iterations) throws InterruptedException {
         final CountDownLatch counter = new CountDownLatch(iterations);
         Runnable task = new Runnable(){
             public void run() {
                 counter.countDown();
                 if( counter.getCount()>0 ) {
-                    DispatchSystem.getCurrentQueue().dispatchAsync(this);
+                    spi.getCurrentQueue().dispatchAsync(this);
                 }
             }
         };

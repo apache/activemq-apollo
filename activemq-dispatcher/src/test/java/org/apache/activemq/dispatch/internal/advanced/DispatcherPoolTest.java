@@ -63,7 +63,7 @@ public class DispatcherPoolTest {
 
         private Work(CountDownLatch counter, AdvancedDispatchSPI spi) {
             this.counter = counter;
-            dispatchQueue = spi.createQueue("test");
+            dispatchQueue = spi.createSerialQueue("test");
         }
 
         public void run() {

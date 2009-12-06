@@ -9,6 +9,7 @@ import org.apache.activemq.apollo.stomp.Stomp;
 import org.apache.activemq.apollo.stomp.StompFrame;
 import org.apache.activemq.apollo.stomp.StompMessageDelivery;
 import org.apache.activemq.broker.RemoteConsumer;
+import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowResource;
@@ -64,7 +65,7 @@ public class StompRemoteConsumer extends RemoteConsumer {
                 return null;
             }
         }, flow, limiter, inboundMutex);
-        inboundController.setExecutor(getDispatcher().createPriorityExecutor(getDispatcher().getDispatchPriorities() - 1));
+        inboundController.setExecutor(getDispatcher().getGlobalQueue(DispatchPriority.HIGH));
     }
     
     public void onCommand(Object command) {

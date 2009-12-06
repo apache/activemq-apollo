@@ -20,7 +20,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
+import org.apache.activemq.dispatch.DispatchPriority;
+import org.apache.activemq.dispatch.Dispatch;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
 
 /**
@@ -31,7 +32,7 @@ import org.apache.activemq.flow.ISinkController.FlowControllable;
  */
 public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implements FlowControllable<E>, IFlowQueue<E> {
 
-    protected AdvancedDispatchSPI dispatcher;
+    protected Dispatch dispatcher;
     protected Collection<IPollableFlowSource.FlowReadyListener<E>> readyListeners;
     private boolean notifyReady = false;
     protected int dispatchPriority = 0;
@@ -87,7 +88,7 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
         }
         
         stop();
-        dispatchQueue.setFinalizer(onShutdown);
+        dispatchQueue.setShutdownHandler(onShutdown);
         dispatchQueue.release();
         dispatchQueue = null;
     }
@@ -131,10 +132,10 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
      * @param dispatcher
      *            The dispatcher to handle messages.
      */
-    public synchronized void setDispatcher(AdvancedDispatchSPI dispatcher) {
+    public synchronized void setDispatcher(Dispatch dispatcher) {
         this.dispatcher = dispatcher;
         
-        dispatchQueue = dispatcher.createQueue(getResourceName());
+        dispatchQueue = dispatcher.createSerialQueue(getResourceName());
         dispatchTask = new Runnable(){
             public void run() {
                 if( pollingDispatch() ) {
@@ -146,7 +147,7 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
 //        TODO:
 //        dispatchContext.updatePriority(dispatchPriority);
         
-        super.setFlowExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
+        super.setFlowExecutor(dispatcher.getGlobalQueue(DispatchPriority.HIGH));
     }
 
     public synchronized void setDispatchPriority(int priority) {

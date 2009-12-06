@@ -18,6 +18,7 @@ package org.apache.activemq.queue;
 
 import java.util.HashMap;
 
+import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowController;
@@ -273,7 +274,7 @@ public class SharedQueue<K, V> extends AbstractFlowQueue<V> implements IQueue<K,
                 }
             };
             controller.useOverFlowQueue(false);
-            controller.setExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
+            controller.setExecutor(dispatcher.getGlobalQueue(DispatchPriority.HIGH));
         }
 
         return queue.openCursor(name, controller, pageInElements, skipAcquired);

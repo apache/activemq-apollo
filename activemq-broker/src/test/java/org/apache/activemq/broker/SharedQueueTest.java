@@ -21,15 +21,13 @@ import java.util.ArrayList;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerDatabase;
 import org.apache.activemq.apollo.broker.BrokerQueueStore;
 import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
-import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
+import org.apache.activemq.dispatch.Dispatch;
+import org.apache.activemq.dispatch.DispatchFactory;
 import org.apache.activemq.queue.IQueue;
 
 /**
@@ -39,7 +37,7 @@ import org.apache.activemq.queue.IQueue;
 public class SharedQueueTest extends TestCase {
 
 
-    AdvancedDispatchSPI dispatcher;
+    Dispatch dispatcher;
     BrokerDatabase database;
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
@@ -48,8 +46,8 @@ public class SharedQueueTest extends TestCase {
 
     protected ArrayList<IQueue<Long, MessageDelivery>> queues = new ArrayList<IQueue<Long, MessageDelivery>>();
 
-    protected AdvancedDispatchSPI createDispatcher() {
-        return new AdvancedDispatchSPI(Runtime.getRuntime().availableProcessors(), Broker.MAX_PRIORITY);
+    protected Dispatch createDispatcher() {
+        return DispatchFactory.create("test", Runtime.getRuntime().availableProcessors());
     }
 
     protected int consumerStartDelay = 0;
@@ -77,9 +75,8 @@ public class SharedQueueTest extends TestCase {
     }
 
     protected void stopServices() throws Exception {
-        dispatcher.shutdown();
         database.stop();
-        dispatcher.shutdown();
+        dispatcher.release();
         queues.clear();
     }
 

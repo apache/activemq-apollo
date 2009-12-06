@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchPriority;
-import org.apache.activemq.dispatch.DispatchSPI;
+import org.apache.activemq.dispatch.Dispatch;
 import org.apache.activemq.dispatch.DispatchSource;
 import org.apache.activemq.dispatch.internal.BaseRetained;
 import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
@@ -38,8 +38,10 @@ import static org.apache.activemq.dispatch.DispatchPriority.*;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class SimpleDispatchSPI extends BaseRetained implements DispatchSPI {
+public class SimpleDispatchSPI extends BaseRetained implements Dispatch {
         
+    public final static ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
+
     final SerialDispatchQueue mainQueue = new SerialDispatchQueue("main");
     final GlobalDispatchQueue globalQueues[]; 
     final DispatcherThread dispatchers[];
@@ -72,7 +74,7 @@ public class SimpleDispatchSPI extends BaseRetained implements DispatchSPI {
         return globalQueues[priority.ordinal()];
     }
     
-    public DispatchQueue createQueue(String label) {
+    public DispatchQueue createSerialQueue(String label) {
         SerialDispatchQueue rc = new SerialDispatchQueue(label) {
             @Override
             public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
@@ -141,6 +143,10 @@ public class SimpleDispatchSPI extends BaseRetained implements DispatchSPI {
 
     public String getLabel() {
         return label;
+    }
+
+    public DispatchQueue getCurrentQueue() {
+        return CURRENT_QUEUE.get();
     }
     
 }

@@ -1,14 +1,11 @@
 package org.apache.activemq.queue.perf;
 
-import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
-import org.apache.activemq.transport.DispatchableTransport;
-import org.apache.activemq.transport.TransportFactory;
 
 public class RemoteConsumer extends ClientConnection {
 
@@ -32,7 +29,7 @@ public class RemoteConsumer extends ClientConnection {
     protected void messageReceived(final ISourceController<Message> controller, final Message elem) {
         if (schedualWait) {
             if (thinkTime > 0) {
-                getDispatcher().schedule(new Runnable() {
+                getDispatcher().getGlobalQueue().dispatchAfter(new Runnable() {
 
                     public void run() {
                         consumerRate.increment();

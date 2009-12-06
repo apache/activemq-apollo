@@ -24,19 +24,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.Dispatch;
 import org.apache.activemq.dispatch.DispatchPriority;
-import org.apache.activemq.dispatch.DispatchSPI;
+import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchSource;
 import org.apache.activemq.dispatch.internal.BaseRetained;
 import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
 
 import static org.apache.activemq.dispatch.DispatchPriority.*;
 
-import static org.apache.activemq.dispatch.DispatchPriority.*;
 
+public class AdvancedDispatchSPI extends BaseRetained implements Dispatch {
 
-public class AdvancedDispatchSPI extends BaseRetained implements DispatchSPI {
+    public final static ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
 
     final SerialDispatchQueue mainQueue = new SerialDispatchQueue("main");
     final GlobalDispatchQueue globalQueues[];
@@ -210,7 +210,7 @@ public class AdvancedDispatchSPI extends BaseRetained implements DispatchSPI {
         return globalQueues[priority.ordinal()];
     }
     
-    public DispatchQueue createQueue(String label) {
+    public DispatchQueue createSerialQueue(String label) {
         AdvancedSerialDispatchQueue rc = new AdvancedSerialDispatchQueue(label);
         rc.setTargetQueue(getGlobalQueue());
         return rc;
@@ -222,6 +222,10 @@ public class AdvancedDispatchSPI extends BaseRetained implements DispatchSPI {
 
     public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue) {
         return null;
+    }
+
+    public DispatchQueue getCurrentQueue() {
+        return CURRENT_QUEUE.get();
     }    
 
 }

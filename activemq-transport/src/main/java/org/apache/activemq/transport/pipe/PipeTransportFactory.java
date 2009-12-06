@@ -13,9 +13,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.activemq.dispatch.DispatchPriority;
+import org.apache.activemq.dispatch.Dispatch;
 import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.Dispatch;
 import org.apache.activemq.dispatch.internal.RunnableCountDownLatch;
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
 import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.FutureResponse;
 import org.apache.activemq.transport.ResponseCallback;
@@ -69,7 +71,7 @@ public class PipeTransportFactory extends TransportFactory {
         	pipe.write(EOF_TOKEN);
             if (dispatchQueue != null) {
                 RunnableCountDownLatch done = new RunnableCountDownLatch(1);
-                dispatchQueue.setFinalizer(done);
+                dispatchQueue.setShutdownHandler(done);
                 dispatchQueue.release();
                 done.await();
             } else {
@@ -80,8 +82,8 @@ public class PipeTransportFactory extends TransportFactory {
             }
         }
 
-        public void setDispatcher(AdvancedDispatchSPI dispatcher) {
-            dispatchQueue = dispatcher.createQueue(name);
+        public void setDispatcher(Dispatch dispatcher) {
+            dispatchQueue = dispatcher.createSerialQueue(name);
             dispatchTask = new Runnable(){
                 public void run() {
                     dispatch();
@@ -227,7 +229,7 @@ public class PipeTransportFactory extends TransportFactory {
             this.wireFormat = wireFormat;
         }
 
-        public void setDispatchPriority(int priority) {
+        public void setDispatchPriority(DispatchPriority priority) {
 //            TODO:
 //            readContext.updatePriority(priority);
         }

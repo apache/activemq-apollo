@@ -7,8 +7,8 @@ package org.apache.activemq.dispatch;
  *  
  * @author chirino
  */
-public interface DispatcherAware {
+public interface DispatchAware {
 
-	public void setDispatcher(DispatchSPI dispatcher);
+	public void setDispatcher(Dispatch dispatcher);
 	
 }

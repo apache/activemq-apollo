@@ -46,7 +46,7 @@ abstract public class RemoteConsumer extends Connection {
     protected void messageReceived(final ISourceController<MessageDelivery> controller, final MessageDelivery elem) {
         if( schedualWait ) {
             if (thinkTime > 0) {
-                getDispatcher().schedule(new Runnable(){
+                getDispatcher().getGlobalQueue().dispatchAfter(new Runnable(){
                     public void run() {
                         consumerRate.increment();
                         controller.elementDispatched(elem);

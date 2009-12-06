@@ -22,6 +22,7 @@ import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.command.MessageDispatch;
 import org.apache.activemq.command.SessionInfo;
 import org.apache.activemq.command.WireFormatInfo;
+import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowResource;
@@ -70,7 +71,7 @@ public class OpenwireRemoteConsumer extends RemoteConsumer {
                 return null;
             }
         }, flow, limiter, inboundMutex);
-        inboundController.setExecutor(getDispatcher().createPriorityExecutor(getDispatcher().getDispatchPriorities() - 1));
+        inboundController.setExecutor(getDispatcher().getGlobalQueue(DispatchPriority.HIGH));
 
     }
 

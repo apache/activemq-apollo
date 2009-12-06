@@ -75,6 +75,7 @@ import org.apache.activemq.command.ShutdownInfo;
 import org.apache.activemq.command.TransactionId;
 import org.apache.activemq.command.TransactionInfo;
 import org.apache.activemq.command.WireFormatInfo;
+import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.filter.LogicExpression;
@@ -693,7 +694,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             }
             controller = new FlowController<MessageDelivery>(null, flow, limiter, this);
             controller.useOverFlowQueue(false);
-            controller.setExecutor(connection.getDispatcher().createPriorityExecutor(connection.getDispatcher().getDispatchPriorities() - 1));
+            controller.setExecutor(connection.getDispatcher().getGlobalQueue(DispatchPriority.HIGH));
             super.onFlowOpened(controller);
         }
 

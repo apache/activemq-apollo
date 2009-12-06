@@ -59,7 +59,7 @@ abstract public class RemoteProducer extends Connection implements FlowUnblockLi
         
         setupProducer();
         
-        dispatchQueue = getDispatcher().createQueue(name + "-client");
+        dispatchQueue = getDispatcher().createSerialQueue(name + "-client");
         dispatchTask = new Runnable(){
             public void run() {
                 dispatch();

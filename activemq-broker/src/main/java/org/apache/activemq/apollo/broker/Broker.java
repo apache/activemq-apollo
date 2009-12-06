@@ -25,11 +25,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.apollo.Connection;
-import org.apache.activemq.dispatch.DispatcherAware;
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
-import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
+import org.apache.activemq.dispatch.Dispatch;
+import org.apache.activemq.dispatch.DispatchFactory;
+import org.apache.activemq.dispatch.DispatchAware;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportServer;
@@ -53,7 +51,7 @@ public class Broker implements Service {
 
     private final LinkedHashMap<AsciiBuffer, VirtualHost> virtualHosts = new LinkedHashMap<AsciiBuffer, VirtualHost>();
     private VirtualHost defaultVirtualHost;
-    private AdvancedDispatchSPI dispatcher;
+    private Dispatch dispatcher;
     private File dataDirectory;
 
     private final class BrokerAcceptListener implements TransportAcceptListener {
@@ -131,7 +129,7 @@ public class Broker implements Service {
 		// apply some default configuration to this broker instance before it's started.
 		if( dispatcher == null ) {
 			int threads = Runtime.getRuntime().availableProcessors();
-			dispatcher = new AdvancedDispatchSPI(threads, Broker.MAX_PRIORITY);
+			dispatcher = DispatchFactory.create(getName(), threads);
 		}
 		
 
@@ -186,9 +184,9 @@ public class Broker implements Service {
         for (VirtualHost virtualHost : virtualHosts.values()) {
         	stop(virtualHost);
         }
-        dispatcher.shutdown();
+        
+        dispatcher.release();
     	state.set(State.STOPPED);
-
     }
         
     // /////////////////////////////////////////////////////////////////
@@ -378,10 +376,10 @@ public class Broker implements Service {
     // /////////////////////////////////////////////////////////////////
     // Property Accessors
     // /////////////////////////////////////////////////////////////////
-    public AdvancedDispatchSPI getDispatcher() {
+    public Dispatch getDispatcher() {
         return dispatcher;
     }
-    public void setDispatcher(AdvancedDispatchSPI dispatcher) {
+    public void setDispatcher(Dispatch dispatcher) {
     	assertInConfigurationState();
         this.dispatcher = dispatcher;
     }
@@ -419,8 +417,8 @@ public class Broker implements Service {
     
 	private void startTransportServer(TransportServer server) throws Exception {
 		server.setAcceptListener(new BrokerAcceptListener());
-		if (server instanceof DispatcherAware ) {
-			((DispatcherAware) server).setDispatcher(dispatcher);
+		if (server instanceof DispatchAware ) {
+			((DispatchAware) server).setDispatcher(dispatcher);
 		}
 		server.start();
 	}

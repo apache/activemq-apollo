@@ -10,7 +10,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
+import org.apache.activemq.dispatch.DispatchPriority;
+import org.apache.activemq.dispatch.Dispatch;
 import org.apache.activemq.flow.AbstractLimiter;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.IFlowLimiter;
@@ -65,12 +66,12 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
     private final int inputWindowSize = 1000;
     private final int inputResumeThreshold = 500;
 
-    private AdvancedDispatchSPI dispatcher;
+    private Dispatch dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean(false);
     protected boolean blockingTransport = false;
     ExecutorService blockingWriter;
 
-    public static void setInShutdown(boolean val, AdvancedDispatchSPI dispatcher) {
+    public static void setInShutdown(boolean val, Dispatch dispatcher) {
         if (val != inShutdown.getAndSet(val)) {
             if (val) {
                 if (USE_RATE_BASED_LIMITER) {
@@ -104,7 +105,7 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
                 dt.setName(name + "-transport");
             }
             dt.setDispatcher(getDispatcher());
-            dt.setDispatchPriority(dispatcher.getDispatchPriorities() - 1);
+            dt.setDispatchPriority(DispatchPriority.HIGH);
         }
         transport.start();
     }
@@ -153,7 +154,7 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
             queue.getFlowController(flow).useOverFlowQueue(false);
             inputQueue = queue;
         }
-        inputQueue.setFlowExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
+        inputQueue.setFlowExecutor(dispatcher.getGlobalQueue(DispatchPriority.HIGH));
         inputQueue.setDrain(new QueueDispatchTarget<Message>() {
 
             public void drain(Message message, ISourceController<Message> controller) {
@@ -191,7 +192,7 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
             queue.addFlowReadyListener(asyncCommandQueue);
         }
         // Set the executor to be used by the queue's flow controllers:
-        outputQueue.setFlowExecutor(dispatcher.createPriorityExecutor(dispatcher.getDispatchPriorities() - 1));
+        outputQueue.setFlowExecutor(dispatcher.getGlobalQueue(DispatchPriority.HIGH));
 
         limiter.start();
         outboundLimiter.start();
@@ -274,11 +275,11 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
         this.priorityLevels = priorityLevels;
     }
 
-    public AdvancedDispatchSPI getDispatcher() {
+    public Dispatch getDispatcher() {
         return dispatcher;
     }
 
-    public void setDispatcher(AdvancedDispatchSPI dispatcher) {
+    public void setDispatcher(Dispatch dispatcher) {
         this.dispatcher = dispatcher;
     }
 
@@ -455,12 +456,12 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
 
     protected static class RateBasedLimiterCollector implements Runnable {
 
-        private AdvancedDispatchSPI dispatcher;
+        private Dispatch dispatcher;
         private int samplingPeriod = 50;
         private boolean scheduled = false;
         private HashSet<RateBasedLimiter> limiters = new HashSet<RateBasedLimiter>();
 
-        public synchronized void setDispatcher(AdvancedDispatchSPI d) {
+        public synchronized void setDispatcher(Dispatch d) {
             if (d != dispatcher) {
                 scheduled = false;
                 dispatcher = d;
@@ -517,7 +518,7 @@ public abstract class AbstractTestConnection implements TransportListener, Deliv
                 }
                 if (!scheduled && !limiters.isEmpty()) {
                     scheduled = true;
-                    dispatcher.schedule(this, samplingPeriod, TimeUnit.MILLISECONDS);
+                    dispatcher.getGlobalQueue().dispatchAfter(this, samplingPeriod, TimeUnit.MILLISECONDS);
                 }
             }
         }
