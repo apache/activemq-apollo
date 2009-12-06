@@ -78,7 +78,7 @@ public class GlobalDispatchQueue implements DispatchQueue {
         throw new UnsupportedOperationException();
     }
 
-    public void setShutdownHandler(Runnable finalizer) {
+    public void addShutdownWatcher(Runnable finalizer) {
         throw new UnsupportedOperationException();
     }
 

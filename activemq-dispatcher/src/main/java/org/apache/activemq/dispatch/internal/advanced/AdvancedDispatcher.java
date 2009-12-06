@@ -34,7 +34,7 @@ import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
 import static org.apache.activemq.dispatch.DispatchPriority.*;
 
 
-public class AdvancedDispatcher extends BaseRetained implements Dispatcher {
+final public class AdvancedDispatcher extends BaseRetained implements Dispatcher {
 
     public final static ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
 
@@ -43,10 +43,6 @@ public class AdvancedDispatcher extends BaseRetained implements Dispatcher {
     final AtomicLong globalQueuedRunnables = new AtomicLong();
 
     private final ArrayList<DispatcherThread> dispatchers = new ArrayList<DispatcherThread>();
-
-    final AtomicInteger startCounter = new AtomicInteger();
-//    final AtomicBoolean started = new AtomicBoolean();
-//    final AtomicBoolean shutdown = new AtomicBoolean();
 
     private int roundRobinCounter = 0;
     private int size;
@@ -67,54 +63,32 @@ public class AdvancedDispatcher extends BaseRetained implements Dispatcher {
     }
 
     /**
-     * Subclasses should implement this to return a new dispatcher.
-     * 
-     * @param name
-     *            The name to assign the dispatcher.
-     * @param pool
-     *            The pool.
-     * @return The new dispathcer.
-     */
-    protected DispatcherThread createDispatcher(String name) throws Exception {
-        return new DispatcherThread(this, name, numPriorities);
-    }
-
-    /**
      * @see org.apache.activemq.dispatch.internal.advanced.DispatcherThread#start()
      */
-    public synchronized final void start()  {
-        if( startCounter.getAndIncrement()==0 ) {
-            // Create all the workers.
-            try {
-                loadBalancer.start();
-                for (int i = 0; i < size; i++) {
-                    DispatcherThread dispatacher = createDispatcher("dispatcher -" + (i + 1));
-                    dispatchers.add(dispatacher);
-                    dispatacher.start();
-                }
-            } catch (Exception e) {
-                shutdown();
-            }
+    protected void startup()  {
+        loadBalancer.start();
+        for (int i = 0; i < size; i++) {
+            DispatcherThread dispatacher = new DispatcherThread(this, ("dispatcher -" + (i + 1)), numPriorities);
+            dispatchers.add(dispatacher);
+            dispatacher.start();
         }
-    }
-
-    public final void shutdown() {
-        shutdown(null);
     }
     
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.activemq.dispatch.IDispatcher#shutdown()
-     */
-    public final void shutdown(Runnable onShutdown) {
-        if( startCounter.decrementAndGet()==0 ) {
-            final AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.size());
-            for (DispatcherThread d : new ArrayList<DispatcherThread>(dispatchers)) {
-                d.shutdown(shutdownCountDown, onShutdown);
+    protected void shutdown() {
+        Runnable countDown = new Runnable() {
+            AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.size());
+            public void run() {
+                if( shutdownCountDown.decrementAndGet()==0 ) {
+                    // Notify any registered shutdown watchers.
+                    AdvancedDispatcher.super.shutdown();
+                }
             }
-            loadBalancer.stop();
+        };
+
+        for (DispatcherThread d : new ArrayList<DispatcherThread>(dispatchers)) {
+            d.shutdown(countDown);
         }
+        loadBalancer.stop();
     }
 
     /**

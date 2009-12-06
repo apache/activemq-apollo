@@ -22,15 +22,12 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.PriorityLinkedList;
 import org.apache.activemq.util.TimerHeap;
 import org.apache.activemq.util.list.LinkedNodeList;
-
-import static org.apache.activemq.dispatch.DispatcherFactory.*;
 
 public class DispatcherThread implements Runnable {
 
@@ -124,27 +121,14 @@ public class DispatcherThread implements Runnable {
             thread.start();
         }
     }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.activemq.dispatch.IDispatcher#shutdown()
-     */
-    public void shutdown() throws InterruptedException {
-        Thread joinThread = shutdown(new AtomicInteger(1), null);
-        if (joinThread != null) {
-            // thread.interrupt();
-            joinThread.join();
-        }
-    }
     
-    public Thread shutdown(final AtomicInteger shutdownCountDown, final Runnable onShutdown) {
+    public Thread shutdown(final Runnable onShutdown) {
         synchronized (this) {
             if (thread != null) {
                 dispatchInternal(new Runnable() {
                     public void run() {
                         running = false;
-                        if( shutdownCountDown.decrementAndGet()==0 && onShutdown!=null) {
+                        if( onShutdown!=null ) {
                             onShutdown.run();
                         }
                     }
@@ -153,7 +137,7 @@ public class DispatcherThread implements Runnable {
                 thread = null;
                 return rc;
             } else {
-                if( shutdownCountDown.decrementAndGet()==0 && onShutdown!=null) {
+                if( onShutdown!=null) {
                     onShutdown.run();
                 }
             }
@@ -268,7 +252,7 @@ public class DispatcherThread implements Runnable {
         foreignPermits.release();
     }
 
-    protected final void onForeignUpdate(DispatchContext context) {
+    protected void onForeignUpdate(DispatchContext context) {
         synchronized (foreignQueue) {
 
             ForeignEvent fe = context.updateEvent[foreignToggle];
@@ -281,7 +265,7 @@ public class DispatcherThread implements Runnable {
         }
     }
 
-    protected final boolean removeDispatchContext(DispatchContext context) {
+    protected boolean removeDispatchContext(DispatchContext context) {
         synchronized (foreignQueue) {
 
             if (context.updateEvent[0].isLinked()) {
@@ -304,7 +288,7 @@ public class DispatcherThread implements Runnable {
         return false;
     }
 
-    protected final boolean takeOwnership(DispatchContext context) {
+    protected boolean takeOwnership(DispatchContext context) {
         synchronized (this) {
             if (running) {
                 contexts.add(context);
@@ -316,13 +300,13 @@ public class DispatcherThread implements Runnable {
     }
 
     //Special dispatch method that allow high priority dispatch:
-    private final void dispatchInternal(Runnable runnable, int priority) {
+    private void dispatchInternal(Runnable runnable, int priority) {
         DispatchContext context = new DispatchContext(this, runnable, false, name);
         context.priority = priority;
         context.requestDispatch();
     }
 
-    public final void dispatch(Runnable runnable, int priority) {
+    public void dispatch(Runnable runnable, int priority) {
         DispatchContext context = new DispatchContext(this, runnable, false, name);
         context.updatePriority(priority);
         context.requestDispatch();
@@ -343,11 +327,11 @@ public class DispatcherThread implements Runnable {
         };
     }
 
-    public void execute(final Runnable runnable) {
+    public void execute(Runnable runnable) {
         dispatch(runnable, 0);
     }
     
-    public void execute(final Runnable runnable, int prio) {
+    public void execute(Runnable runnable, int prio) {
         dispatch(runnable, prio);
     }
 
@@ -368,7 +352,7 @@ public class DispatcherThread implements Runnable {
         }
     }
     
-    final void add(ForeignEvent event) {
+    void add(ForeignEvent event) {
         synchronized (foreignQueue) {
             if (!event.isLinked()) {
                 foreignQueue[foreignToggle].addLast(event);

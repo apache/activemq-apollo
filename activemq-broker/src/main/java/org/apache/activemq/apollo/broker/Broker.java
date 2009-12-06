@@ -138,7 +138,7 @@ public class Broker implements Service {
     		throw new IllegalStateException("Can only start a broker that is in the "+State.CONFIGURATION +" state.  Broker was "+state.get());
     	}
     	try {
-		    dispatcher.start();
+		    dispatcher.retain();
 
 	    	synchronized(virtualHosts) {
 			    for (VirtualHost virtualHost : virtualHosts.values()) {

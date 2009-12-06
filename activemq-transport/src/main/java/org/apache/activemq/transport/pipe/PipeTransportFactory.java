@@ -71,7 +71,7 @@ public class PipeTransportFactory extends TransportFactory {
         	pipe.write(EOF_TOKEN);
             if (dispatchQueue != null) {
                 RunnableCountDownLatch done = new RunnableCountDownLatch(1);
-                dispatchQueue.setShutdownHandler(done);
+                dispatchQueue.addShutdownWatcher(done);
                 dispatchQueue.release();
                 done.await();
             } else {

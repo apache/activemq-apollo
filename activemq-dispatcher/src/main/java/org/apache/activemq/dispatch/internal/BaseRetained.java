@@ -1,28 +1,49 @@
 package org.apache.activemq.dispatch.internal;
 
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class BaseRetained {
     
-    final protected AtomicInteger reatinCounter = new AtomicInteger(1);
-    final protected AtomicReference<Runnable> shutdownHandler = new AtomicReference<Runnable>();
+    final protected AtomicInteger reatinCounter = new AtomicInteger(0);
+    final protected ArrayList<Runnable> shutdownHandlers = new ArrayList<Runnable>();
 
-    public void setShutdownHandler(Runnable finalizer) {
-        this.shutdownHandler.set(finalizer);
+    public void addShutdownWatcher(Runnable shutdownHandler) {
+        synchronized(shutdownHandlers) {
+            shutdownHandlers.add(shutdownHandler);
+        }
     }
     
     public void retain() {
-        int prev = reatinCounter.getAndIncrement();
-        assert prev!=0;
+        if( reatinCounter.getAndIncrement() == 0 ) {
+            startup();
+        }
     }
 
     public void release() {
         if( reatinCounter.decrementAndGet()==0 ) {
-            Runnable value = shutdownHandler.getAndSet(null);
-            if( value!=null ) {
-                value.run();
-            }
+            shutdown();
+        }
+    }
+
+    /**
+     * Subclasses should override if they want to do some startup processing. 
+     */
+    protected void startup() {
+    }
+
+
+    /**
+     * Subclasses should override if they want to do clean up. 
+     */
+    protected void shutdown() {
+        ArrayList<Runnable> copy;
+        synchronized(shutdownHandlers) {
+            copy = new ArrayList<Runnable>(shutdownHandlers);
+            shutdownHandlers.clear();
+        }
+        for (Runnable runnable : copy) {
+            runnable.run();
         }
     }
 

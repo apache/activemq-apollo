@@ -22,12 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatcherFactory;
-
-import static org.apache.activemq.dispatch.DispatcherFactory.*;
-
-import static org.apache.activemq.dispatch.DispatcherFactory.*;
 
 /**
  * 
@@ -44,6 +38,7 @@ public class SerialDispatchQueue extends AbstractDispatchObject implements Dispa
 
     public SerialDispatchQueue(String label) {
         this.label = label;
+        retain();
     }
 
     public String getLabel() {

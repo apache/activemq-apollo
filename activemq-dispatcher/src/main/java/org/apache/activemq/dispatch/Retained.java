@@ -24,6 +24,6 @@ public interface Retained {
     
     public void retain();
     public void release();
-    public void setShutdownHandler(Runnable shutdownHandler);
+    public void addShutdownWatcher(Runnable shutdownWatcher);
 
 }

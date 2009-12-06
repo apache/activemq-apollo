@@ -38,7 +38,7 @@ import static org.apache.activemq.dispatch.DispatchPriority.*;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class SimpleDispatcher extends BaseRetained implements Dispatcher {
+final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
         
     public final static ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
 
@@ -49,7 +49,6 @@ public class SimpleDispatcher extends BaseRetained implements Dispatcher {
     
     final ConcurrentLinkedQueue<DispatcherThread> waitingDispatchers = new ConcurrentLinkedQueue<DispatcherThread>();
     final AtomicInteger waitingDispatcherCount = new AtomicInteger();
-    final AtomicInteger startCounter = new AtomicInteger();
     private final String label;
     TimerThread timerThread;
     
@@ -109,35 +108,32 @@ public class SimpleDispatcher extends BaseRetained implements Dispatcher {
         }
     }
 
-    public void start() {
-        if( startCounter.getAndIncrement()==0 ) {
-            for (int i = 0; i < dispatchers.length; i++) {
-                dispatchers[i] = new DispatcherThread(this, i);
-                dispatchers[i].start();
-            }
-            timerThread = new TimerThread(this);
-            timerThread.start();
+    protected void startup() {
+        for (int i = 0; i < dispatchers.length; i++) {
+            dispatchers[i] = new DispatcherThread(this, i);
+            dispatchers[i].start();
         }
+        timerThread = new TimerThread(this);
+        timerThread.start();
     }
 
-    public void shutdown(final Runnable onShutdown) {
-        if( startCounter.decrementAndGet()==0 ) {
-            
-            final AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.length+1);
-            Runnable wrapper = new Runnable() {
-                public void run() {
-                    if( shutdownCountDown.decrementAndGet()==0 && onShutdown!=null) {
-                        onShutdown.run();
-                    }
-                    throw new DispatcherThread.Shutdown();
+    public void shutdown() {
+        
+        Runnable countDown = new Runnable() {
+            AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.length+1);
+            public void run() {
+                if( shutdownCountDown.decrementAndGet()==0 ) {
+                    // Notify any registered shutdown watchers.
+                    SimpleDispatcher.super.shutdown();
                 }
-            };
-
-            timerThread.shutdown(wrapper);
-            for (int i = 0; i < dispatchers.length; i++) {
-                ThreadDispatchQueue queue = dispatchers[i].threadQueues[LOW.ordinal()];
-                queue.runnables.add(wrapper);
+                throw new DispatcherThread.Shutdown();
             }
+        };
+
+        timerThread.shutdown(countDown);
+        for (int i = 0; i < dispatchers.length; i++) {
+            ThreadDispatchQueue queue = dispatchers[i].threadQueues[LOW.ordinal()];
+            queue.runnables.add(countDown);
         }
     }
 

@@ -34,22 +34,24 @@ public class DispatchSystemTest {
 
     public static void main(String[] args) throws Exception {
         Dispatcher advancedSystem = new AdvancedDispatcher(Runtime.getRuntime().availableProcessors(), 3);
-        advancedSystem.start();
+        advancedSystem.retain();
         benchmark("advanced global queue", advancedSystem, advancedSystem.getGlobalQueue(DEFAULT));
         benchmark("advanced private serial queue", advancedSystem, advancedSystem.createSerialQueue("test"));
 
         RunnableCountDownLatch latch = new RunnableCountDownLatch(1);
-        advancedSystem.shutdown(latch);
+        advancedSystem.addShutdownWatcher(latch);
+        advancedSystem.release();
         latch.await();
 
         Dispatcher simpleSystem = new SimpleDispatcher("test", Runtime.getRuntime().availableProcessors());
-        simpleSystem.start();
+        simpleSystem.retain();
         
         benchmark("simple global queue", simpleSystem, simpleSystem.getGlobalQueue(DEFAULT));
         benchmark("simple private serial queue", simpleSystem, simpleSystem.createSerialQueue("test"));
 
         latch = new RunnableCountDownLatch(1);
-        simpleSystem.shutdown(latch);
+        advancedSystem.addShutdownWatcher(latch);
+        advancedSystem.release();
         latch.await();
     }
 

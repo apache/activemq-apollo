@@ -210,7 +210,7 @@ public class MockBroker implements TransportAcceptListener {
         broker.setName("Broker");
         broker.createDispatcher();
         try {
-            broker.getDispatcher().start();
+            broker.getDispatcher().retain();
             broker.startServices();
         } catch (Exception e) {
             // TODO Auto-generated catch block

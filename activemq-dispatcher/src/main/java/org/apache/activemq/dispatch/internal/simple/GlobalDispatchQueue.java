@@ -85,7 +85,7 @@ public class GlobalDispatchQueue implements SimpleQueue {
         throw new UnsupportedOperationException();
     }
 
-    public void setShutdownHandler(Runnable finalizer) {
+    public void addShutdownWatcher(Runnable finalizer) {
         throw new UnsupportedOperationException();
     }
 

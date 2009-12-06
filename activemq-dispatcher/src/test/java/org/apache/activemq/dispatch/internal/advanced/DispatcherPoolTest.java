@@ -30,21 +30,21 @@ import static java.lang.String.*;
 public class DispatcherPoolTest {
     
     public static void main(String[] args) throws Exception {
-        AdvancedDispatcher pooledDispatcher = new AdvancedDispatcher(Runtime.getRuntime().availableProcessors(), 3);
-        pooledDispatcher.start();
+        AdvancedDispatcher dispatcher = new AdvancedDispatcher(Runtime.getRuntime().availableProcessors(), 3);
+        dispatcher.retain();
         
         // warm the JIT up..
-        benchmarkWork(pooledDispatcher, 100000);
+        benchmarkWork(dispatcher, 100000);
         
         int iterations = 1000*1000*20;
         long start = System.nanoTime();
-        benchmarkWork(pooledDispatcher, iterations);
+        benchmarkWork(dispatcher, iterations);
         long end = System.nanoTime();
         
         double durationMS = 1.0d*(end-start)/1000000d;
         double rate = 1000d * iterations / durationMS;
         
-        pooledDispatcher.shutdown();
+        dispatcher.release();
         System.out.println(format("duration: %,.3f ms, rate: %,.2f executions/sec", durationMS, rate));
     }
 

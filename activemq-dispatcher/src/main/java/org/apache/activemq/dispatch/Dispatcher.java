@@ -22,9 +22,6 @@ import java.nio.channels.SelectableChannel;
 
 public interface Dispatcher extends Retained {
     
-    public void start();
-    public void shutdown(Runnable onShutdown);
-    
     public DispatchQueue getGlobalQueue();
     public DispatchQueue getGlobalQueue(DispatchPriority priority);
     

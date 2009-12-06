@@ -88,7 +88,7 @@ public abstract class AbstractFlowQueue<E> extends AbstractFlowRelay<E> implemen
         }
         
         stop();
-        dispatchQueue.setShutdownHandler(onShutdown);
+        dispatchQueue.addShutdownWatcher(onShutdown);
         dispatchQueue.release();
         dispatchQueue = null;
     }
