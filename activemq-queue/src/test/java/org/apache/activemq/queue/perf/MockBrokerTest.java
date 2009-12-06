@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import junit.framework.TestCase;
 
 import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatcherFactory;
+import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Destination.DestinationBean;
 import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
@@ -95,7 +95,7 @@ public class MockBrokerTest extends TestCase {
     }
 
     protected Dispatcher createDispatcher(String name) {
-        return DispatcherFactory.create("test", threadsPerDispatcher);
+        return DispatcherConfig.create("test", threadsPerDispatcher);
     }
 
     public void test_1_1_0() throws Exception {

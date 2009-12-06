@@ -23,7 +23,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatcherFactory;
+import org.apache.activemq.dispatch.DispatcherConfig;
 
 @XmlRootElement(name="dispatcher")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -40,7 +40,7 @@ public class DispatcherXml {
 		if( name == null ) {
 			name = "broker";
 		}
-		return DispatcherFactory.create(name, threads);
+		return DispatcherConfig.create(name, threads);
 	}
 
 }

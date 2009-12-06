@@ -41,7 +41,7 @@ import org.apache.activemq.command.ProducerId;
 import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.DispatcherFactory;
+import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
@@ -83,7 +83,7 @@ public class SharedQueuePerfTest extends TestCase {
     protected ArrayList<IQueue<Long, MessageDelivery>> queues = new ArrayList<IQueue<Long, MessageDelivery>>();
 
     protected Dispatcher createDispatcher() {
-        return DispatcherFactory.create("pref-test", THREAD_POOL_SIZE);
+        return DispatcherConfig.create("pref-test", THREAD_POOL_SIZE);
     }
 
     protected int consumerStartDelay = 0;

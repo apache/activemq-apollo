@@ -31,7 +31,7 @@ import org.apache.activemq.apollo.broker.Router;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatcherFactory;
+import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.transport.TransportFactory;
@@ -135,7 +135,7 @@ public abstract class BrokerTestBase {
     protected abstract String getRemoteWireFormat();
 
     protected Dispatcher createDispatcher() {
-        return DispatcherFactory.create("test", asyncThreadPoolSize);
+        return DispatcherConfig.create("test", asyncThreadPoolSize);
     }
 
     @Test

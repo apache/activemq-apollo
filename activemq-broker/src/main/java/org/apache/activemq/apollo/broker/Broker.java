@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.activemq.Service;
 import org.apache.activemq.apollo.Connection;
 import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatcherFactory;
+import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.dispatch.DispatcherAware;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportAcceptListener;
@@ -129,7 +129,7 @@ public class Broker implements Service {
 		// apply some default configuration to this broker instance before it's started.
 		if( dispatcher == null ) {
 			int threads = Runtime.getRuntime().availableProcessors();
-			dispatcher = DispatcherFactory.create(getName(), threads);
+			dispatcher = DispatcherConfig.create(getName(), threads);
 		}
 		
 

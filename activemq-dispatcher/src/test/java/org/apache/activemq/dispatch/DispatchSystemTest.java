@@ -33,7 +33,7 @@ import static java.lang.String.*;
 public class DispatchSystemTest {
 
     public static void main(String[] args) throws Exception {
-        Dispatcher advancedSystem = new AdvancedDispatcher(Runtime.getRuntime().availableProcessors(), 3);
+        Dispatcher advancedSystem = new AdvancedDispatcher(new DispatcherConfig());
         advancedSystem.retain();
         benchmark("advanced global queue", advancedSystem, advancedSystem.getGlobalQueue(DEFAULT));
         benchmark("advanced private serial queue", advancedSystem, advancedSystem.createSerialQueue("test"));
@@ -43,7 +43,7 @@ public class DispatchSystemTest {
         advancedSystem.release();
         latch.await();
 
-        Dispatcher simpleSystem = new SimpleDispatcher("test", Runtime.getRuntime().availableProcessors());
+        Dispatcher simpleSystem = new SimpleDispatcher(new DispatcherConfig());
         simpleSystem.retain();
         
         benchmark("simple global queue", simpleSystem, simpleSystem.getGlobalQueue(DEFAULT));

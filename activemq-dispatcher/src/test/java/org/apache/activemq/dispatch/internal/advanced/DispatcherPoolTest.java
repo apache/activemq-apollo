@@ -19,6 +19,7 @@ package org.apache.activemq.dispatch.internal.advanced;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.DispatcherConfig;
 
 
 import static java.lang.String.*;
@@ -30,7 +31,7 @@ import static java.lang.String.*;
 public class DispatcherPoolTest {
     
     public static void main(String[] args) throws Exception {
-        AdvancedDispatcher dispatcher = new AdvancedDispatcher(Runtime.getRuntime().availableProcessors(), 3);
+        AdvancedDispatcher dispatcher = new AdvancedDispatcher(new DispatcherConfig());
         dispatcher.retain();
         
         // warm the JIT up..

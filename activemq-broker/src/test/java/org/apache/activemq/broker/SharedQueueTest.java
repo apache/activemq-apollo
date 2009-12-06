@@ -27,7 +27,7 @@ import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
 import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatcherFactory;
+import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.queue.IQueue;
 
 /**
@@ -47,7 +47,7 @@ public class SharedQueueTest extends TestCase {
     protected ArrayList<IQueue<Long, MessageDelivery>> queues = new ArrayList<IQueue<Long, MessageDelivery>>();
 
     protected Dispatcher createDispatcher() {
-        return DispatcherFactory.create("test", Runtime.getRuntime().availableProcessors());
+        return DispatcherConfig.create("test", Runtime.getRuntime().availableProcessors());
     }
 
     protected int consumerStartDelay = 0;

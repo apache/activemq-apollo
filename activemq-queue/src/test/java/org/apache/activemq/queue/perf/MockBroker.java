@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatcherFactory;
+import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.dispatch.DispatcherAware;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.Commands.Destination;
@@ -189,7 +189,7 @@ public class MockBroker implements TransportAcceptListener {
 
     protected void createDispatcher() {
         if (dispatcher == null) {
-            dispatcher = DispatcherFactory.create("mock-broker", Runtime.getRuntime().availableProcessors());
+            dispatcher = DispatcherConfig.create("mock-broker", Runtime.getRuntime().availableProcessors());
         }
     }
 

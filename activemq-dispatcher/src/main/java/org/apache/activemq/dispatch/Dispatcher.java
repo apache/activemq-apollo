@@ -21,7 +21,7 @@ import java.nio.channels.SelectableChannel;
 
 
 public interface Dispatcher extends Retained {
-    
+        
     public DispatchQueue getGlobalQueue();
     public DispatchQueue getGlobalQueue(DispatchPriority priority);
     
@@ -33,5 +33,6 @@ public interface Dispatcher extends Retained {
     public DispatchQueue getCurrentQueue();
 
     public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue);
+
     
 }

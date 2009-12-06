@@ -26,6 +26,7 @@ import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatchSource;
+import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.dispatch.internal.BaseRetained;
 import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
 
@@ -52,13 +53,13 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
     private final String label;
     TimerThread timerThread;
     
-    public SimpleDispatcher(String label, int size) {
-        this.label = label;
+    public SimpleDispatcher(DispatcherConfig config) {
+        this.label = config.getLabel();
         globalQueues = new GlobalDispatchQueue[3];
         for (int i = 0; i < 3; i++) {
             globalQueues[i] = new GlobalDispatchQueue(this, DispatchPriority.values()[i] );
         }
-        dispatchers = new DispatcherThread[size];
+        dispatchers = new DispatcherThread[config.getThreads()];
     }
 
     public DispatchQueue getMainQueue() {

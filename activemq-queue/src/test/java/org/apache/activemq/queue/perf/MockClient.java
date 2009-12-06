@@ -8,7 +8,7 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatcherFactory;
+import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Destination.DestinationBean;
 import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
@@ -280,7 +280,7 @@ public class MockClient {
 
     protected Dispatcher createDispatcher() {
         if (dispatcher == null) {
-            dispatcher = DispatcherFactory.create("client", threadsPerDispatcher);
+            dispatcher = DispatcherConfig.create("client", threadsPerDispatcher);
         }
         return dispatcher;
     }

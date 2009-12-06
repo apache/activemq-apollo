@@ -28,6 +28,7 @@ import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchSource;
+import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.dispatch.internal.BaseRetained;
 import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
 
@@ -50,15 +51,13 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
 
     protected LoadBalancer loadBalancer;
 
-    public AdvancedDispatcher(int size, int numPriorities) {
-        this.size = size;
-        this.numPriorities = numPriorities;
-        
+    public AdvancedDispatcher(DispatcherConfig config) {
+        this.size = config.getThreads();
+        this.numPriorities = 3;
         globalQueues = new GlobalDispatchQueue[3];
         for (int i = 0; i < 3; i++) {
             globalQueues[i] = new GlobalDispatchQueue(this, DispatchPriority.values()[i]);
         }
-        
         loadBalancer = new SimpleLoadBalancer();
     }
 

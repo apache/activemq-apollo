@@ -18,8 +18,6 @@ package org.apache.activemq.dispatch;
 
 import java.nio.channels.SelectableChannel;
 
-import org.apache.activemq.dispatch.internal.simple.SimpleDispatcher;
-
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -29,7 +27,7 @@ public class DispatchSystem {
     final private static Dispatcher dispatcher = create();
 
     private static Dispatcher create() {
-        return new SimpleDispatcher("system", Runtime.getRuntime().availableProcessors());
+        return new DispatcherConfig().createDispatcher();
     }
 
     static DispatchQueue getMainQueue() {

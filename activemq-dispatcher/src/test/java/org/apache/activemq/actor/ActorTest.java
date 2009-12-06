@@ -14,6 +14,7 @@ import junit.framework.TestCase;
 
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.Dispatcher;
+import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatcher;
 
 
@@ -45,7 +46,7 @@ public class ActorTest extends TestCase {
     
     public void testActorInvocation() throws Exception
     {
-        Dispatcher advancedSystem = new AdvancedDispatcher(Runtime.getRuntime().availableProcessors(), 3);
+        Dispatcher advancedSystem = new AdvancedDispatcher(new DispatcherConfig());
         advancedSystem.retain();
         
         DispatchQueue queue = advancedSystem.createSerialQueue("test");
