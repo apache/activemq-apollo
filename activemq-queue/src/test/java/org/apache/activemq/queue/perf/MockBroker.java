@@ -21,9 +21,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.dispatch.Dispatch;
-import org.apache.activemq.dispatch.DispatchFactory;
-import org.apache.activemq.dispatch.DispatchAware;
+import org.apache.activemq.dispatch.Dispatcher;
+import org.apache.activemq.dispatch.DispatcherFactory;
+import org.apache.activemq.dispatch.DispatcherAware;
 import org.apache.activemq.flow.IFlowSink;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.transport.Transport;
@@ -53,7 +53,7 @@ public class MockBroker implements TransportAcceptListener {
     private TransportServer transportServer;
     private String uri;
     private String name;
-    protected Dispatch dispatcher;
+    protected Dispatcher dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean();
     private boolean useInputQueues = false;
 
@@ -125,8 +125,8 @@ public class MockBroker implements TransportAcceptListener {
 
         transportServer = TransportFactory.bind(new URI(uri));
         transportServer.setAcceptListener(this);
-        if (transportServer instanceof DispatchAware) {
-            ((DispatchAware) transportServer).setDispatcher(dispatcher);
+        if (transportServer instanceof DispatcherAware) {
+            ((DispatcherAware) transportServer).setDispatcher(dispatcher);
         }
         transportServer.start();
 
@@ -159,7 +159,7 @@ public class MockBroker implements TransportAcceptListener {
         error.printStackTrace();
     }
 
-    public Dispatch getDispatcher() {
+    public Dispatcher getDispatcher() {
         return dispatcher;
     }
 
@@ -167,7 +167,7 @@ public class MockBroker implements TransportAcceptListener {
         this.name = name;
     }
 
-    public void setDispatcher(Dispatch dispatcher) {
+    public void setDispatcher(Dispatcher dispatcher) {
         this.dispatcher = dispatcher;
     }
 
@@ -189,7 +189,7 @@ public class MockBroker implements TransportAcceptListener {
 
     protected void createDispatcher() {
         if (dispatcher == null) {
-            dispatcher = DispatchFactory.create("mock-broker", Runtime.getRuntime().availableProcessors());
+            dispatcher = DispatcherFactory.create("mock-broker", Runtime.getRuntime().availableProcessors());
         }
     }
 

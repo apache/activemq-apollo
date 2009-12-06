@@ -17,24 +17,19 @@
 
 package org.apache.activemq.dispatch;
 
-import java.nio.channels.SelectableChannel;
+import org.apache.activemq.dispatch.internal.simple.DispatcherThread;
 
+public interface DispatcherObserver {
+    
+    public void onThreadCreate(DispatcherThread thread);
+    public void onThreadDestroy(DispatcherThread thread);
 
-public interface Dispatch extends Retained {
+    public void onQueueCreate(DispatchQueue queue);
+    public void onQueueDestroy(DispatchQueue queue);
     
-    public void start();
-    public void shutdown(Runnable onShutdown);
+    public void onSourceCreate(DispatchSource source);
+    public void onSourceDestroy(DispatchSource source);
     
-    public DispatchQueue getGlobalQueue();
-    public DispatchQueue getGlobalQueue(DispatchPriority priority);
-    
-    public DispatchQueue createSerialQueue(String label);
-    
-    public DispatchQueue getMainQueue();
-    public void dispatchMain();
-    
-    public DispatchQueue getCurrentQueue();
+    public void onDispatchRequest(DispatchQueue target, Runnable request);
 
-    public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue);
-    
 }

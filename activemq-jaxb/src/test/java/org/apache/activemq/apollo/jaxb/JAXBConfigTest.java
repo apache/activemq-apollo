@@ -26,7 +26,7 @@ import junit.framework.TestCase;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.broker.store.memory.MemoryStore;
-import org.apache.activemq.dispatch.Dispatch;
+import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Test;
@@ -44,7 +44,7 @@ public class JAXBConfigTest extends TestCase {
 		LOG.info("Loading broker configuration from the classpath with URI: " + uri);
 		Broker broker = BrokerFactory.createBroker(uri);
 		
-		Dispatch p = (Dispatch)broker.getDispatcher();
+		Dispatcher p = (Dispatcher)broker.getDispatcher();
 //		assertEquals(4, p.getSize());
 //		assertEquals("test dispatcher", p.getName());
 		

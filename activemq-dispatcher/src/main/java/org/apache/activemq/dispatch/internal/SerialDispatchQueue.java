@@ -22,12 +22,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.Dispatch;
-import org.apache.activemq.dispatch.DispatchFactory;
+import org.apache.activemq.dispatch.Dispatcher;
+import org.apache.activemq.dispatch.DispatcherFactory;
 
-import static org.apache.activemq.dispatch.DispatchFactory.*;
+import static org.apache.activemq.dispatch.DispatcherFactory.*;
 
-import static org.apache.activemq.dispatch.DispatchFactory.*;
+import static org.apache.activemq.dispatch.DispatcherFactory.*;
 
 /**
  * 

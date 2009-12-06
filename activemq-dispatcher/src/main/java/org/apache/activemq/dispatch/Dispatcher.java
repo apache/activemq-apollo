@@ -14,22 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.activemq.dispatch;
 
-import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSPI;
+import java.nio.channels.SelectableChannel;
 
-/**
- * 
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-public class DispatchFactory {
 
-    public static Dispatch create() {
-        return create("system", Runtime.getRuntime().availableProcessors());
-    }
+public interface Dispatcher extends Retained {
+    
+    public void start();
+    public void shutdown(Runnable onShutdown);
+    
+    public DispatchQueue getGlobalQueue();
+    public DispatchQueue getGlobalQueue(DispatchPriority priority);
+    
+    public DispatchQueue createSerialQueue(String label);
+    
+    public DispatchQueue getMainQueue();
+    public void dispatchMain();
+    
+    public DispatchQueue getCurrentQueue();
 
-    public static Dispatch create(String name, int threads) {
-        return new SimpleDispatchSPI(name, threads);
-    }
+    public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue);
     
 }

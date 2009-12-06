@@ -30,8 +30,8 @@ import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.Router;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
-import org.apache.activemq.dispatch.Dispatch;
-import org.apache.activemq.dispatch.DispatchFactory;
+import org.apache.activemq.dispatch.Dispatcher;
+import org.apache.activemq.dispatch.DispatcherFactory;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.transport.TransportFactory;
@@ -87,7 +87,7 @@ public abstract class BrokerTestBase {
     protected Broker sendBroker;
     protected Broker rcvBroker;
     protected ArrayList<Broker> brokers = new ArrayList<Broker>();
-    protected Dispatch dispatcher;
+    protected Dispatcher dispatcher;
     protected final AtomicLong msgIdGenerator = new AtomicLong();
     protected final AtomicBoolean stopping = new AtomicBoolean();
 
@@ -134,8 +134,8 @@ public abstract class BrokerTestBase {
 
     protected abstract String getRemoteWireFormat();
 
-    protected Dispatch createDispatcher() {
-        return DispatchFactory.create("test", asyncThreadPoolSize);
+    protected Dispatcher createDispatcher() {
+        return DispatcherFactory.create("test", asyncThreadPoolSize);
     }
 
     @Test

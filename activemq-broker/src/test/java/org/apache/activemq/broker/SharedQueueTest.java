@@ -26,8 +26,8 @@ import org.apache.activemq.apollo.broker.BrokerQueueStore;
 import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
-import org.apache.activemq.dispatch.Dispatch;
-import org.apache.activemq.dispatch.DispatchFactory;
+import org.apache.activemq.dispatch.Dispatcher;
+import org.apache.activemq.dispatch.DispatcherFactory;
 import org.apache.activemq.queue.IQueue;
 
 /**
@@ -37,7 +37,7 @@ import org.apache.activemq.queue.IQueue;
 public class SharedQueueTest extends TestCase {
 
 
-    Dispatch dispatcher;
+    Dispatcher dispatcher;
     BrokerDatabase database;
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
@@ -46,8 +46,8 @@ public class SharedQueueTest extends TestCase {
 
     protected ArrayList<IQueue<Long, MessageDelivery>> queues = new ArrayList<IQueue<Long, MessageDelivery>>();
 
-    protected Dispatch createDispatcher() {
-        return DispatchFactory.create("test", Runtime.getRuntime().availableProcessors());
+    protected Dispatcher createDispatcher() {
+        return DispatcherFactory.create("test", Runtime.getRuntime().availableProcessors());
     }
 
     protected int consumerStartDelay = 0;

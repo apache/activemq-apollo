@@ -25,8 +25,8 @@ public class TimerThread extends Thread {
     private final Object mutex = new Object();
     private ArrayList<TimerRequest> requests = new ArrayList<TimerRequest>();
     
-    public TimerThread(SimpleDispatchSPI spi) {
-        setName(spi.getLabel()+" timer");
+    public TimerThread(SimpleDispatcher dispatcher) {
+        setName(dispatcher.getLabel()+" timer");
         setDaemon(true);
     }
 

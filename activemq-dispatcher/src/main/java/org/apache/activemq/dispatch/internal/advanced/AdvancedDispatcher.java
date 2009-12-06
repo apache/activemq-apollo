@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.activemq.dispatch.Dispatch;
+import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchSource;
@@ -34,7 +34,7 @@ import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
 import static org.apache.activemq.dispatch.DispatchPriority.*;
 
 
-public class AdvancedDispatchSPI extends BaseRetained implements Dispatch {
+public class AdvancedDispatcher extends BaseRetained implements Dispatcher {
 
     public final static ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
 
@@ -54,7 +54,7 @@ public class AdvancedDispatchSPI extends BaseRetained implements Dispatch {
 
     protected LoadBalancer loadBalancer;
 
-    public AdvancedDispatchSPI(int size, int numPriorities) {
+    public AdvancedDispatcher(int size, int numPriorities) {
         this.size = size;
         this.numPriorities = numPriorities;
         

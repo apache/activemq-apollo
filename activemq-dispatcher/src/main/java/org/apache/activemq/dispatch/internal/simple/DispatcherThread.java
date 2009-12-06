@@ -27,17 +27,17 @@ import org.apache.activemq.dispatch.DispatchPriority;
  */
 final public class DispatcherThread extends Thread {
     private static final int MAX_DISPATCH_BEFORE_CHECKING_FOR_HIGHER_PRIO = 10000;
-    private final SimpleDispatchSPI spi;
+    private final SimpleDispatcher dispatcher;
     final ThreadDispatchQueue[] threadQueues;
     final AtomicLong threadQueuedRunnables = new AtomicLong();
         
-    public DispatcherThread(SimpleDispatchSPI spi, int ordinal) {
-        this.spi = spi;
+    public DispatcherThread(SimpleDispatcher dispatcher, int ordinal) {
+        this.dispatcher = dispatcher;
         this.threadQueues = new ThreadDispatchQueue[3];
         for (int i = 0; i < 3; i++) {
             threadQueues[i] = new ThreadDispatchQueue(this, DispatchPriority.values()[i] );
         }
-        setName(spi.getLabel()+" dispatcher: "+(ordinal+1));
+        setName(dispatcher.getLabel()+" dispatcher: "+(ordinal+1));
         setDaemon(true);
     }
     
@@ -47,7 +47,7 @@ final public class DispatcherThread extends Thread {
             outer: while( true ) {
                 int counter=0;
                 for (SimpleQueue queue : threadQueues) {
-                    SimpleDispatchSPI.CURRENT_QUEUE.set(queue);
+                    SimpleDispatcher.CURRENT_QUEUE.set(queue);
                     Runnable runnable;
                     while( (runnable = queue.poll())!=null ) {
                         dispatch(runnable);
@@ -60,8 +60,8 @@ final public class DispatcherThread extends Thread {
                     continue;
                 }
                 
-                for (SimpleQueue queue : spi.globalQueues) {
-                    SimpleDispatchSPI.CURRENT_QUEUE.set(threadQueues[queue.getPriority().ordinal()]);
+                for (SimpleQueue queue : dispatcher.globalQueues) {
+                    SimpleDispatcher.CURRENT_QUEUE.set(threadQueues[queue.getPriority().ordinal()]);
                     
                     Runnable runnable;
                     while( (runnable = queue.poll())!=null ) {
@@ -80,7 +80,7 @@ final public class DispatcherThread extends Thread {
                     continue;
                 }
             
-//        GlobalDispatchQueue[] globalQueues = spi.globalQueues;
+//        GlobalDispatchQueue[] globalQueues = dispatcher.globalQueues;
 //        while( true ) {
 //
 //            if( dispatch(threadQueues[0]) 
@@ -117,7 +117,7 @@ final public class DispatcherThread extends Thread {
                 break;
             }        
             if( counter==0 ) {
-                SimpleDispatchSPI.CURRENT_QUEUE.set(queue);
+                SimpleDispatcher.CURRENT_QUEUE.set(queue);
             }
             dispatch(runnable);
             counter++;
@@ -139,10 +139,10 @@ final public class DispatcherThread extends Thread {
     private boolean inWaitingList;
     
     private void waitForWakeup() throws InterruptedException {
-        while( threadQueuedRunnables.get()==0 && spi.globalQueuedRunnables.get()==0 ) {
+        while( threadQueuedRunnables.get()==0 && dispatcher.globalQueuedRunnables.get()==0 ) {
             synchronized(wakeupMutex) {
                 if( !inWaitingList ) {
-                    spi.addWaitingDispatcher(this);
+                    dispatcher.addWaitingDispatcher(this);
                     inWaitingList=true;
                 }
                 wakeupMutex.wait();

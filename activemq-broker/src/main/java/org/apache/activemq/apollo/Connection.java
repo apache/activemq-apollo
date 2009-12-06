@@ -25,7 +25,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.Service;
-import org.apache.activemq.dispatch.Dispatch;
+import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
@@ -42,7 +42,7 @@ abstract public class Connection implements TransportListener, Service {
     protected int inputResumeThreshold = 512 * 1024;
     protected boolean useAsyncWriteThread = true;
 
-    private Dispatch dispatcher;
+    private Dispatcher dispatcher;
     private final AtomicBoolean stopping = new AtomicBoolean();
     private ExecutorService blockingWriter;
     private ExceptionListener exceptionListener;
@@ -170,11 +170,11 @@ abstract public class Connection implements TransportListener, Service {
         this.priorityLevels = priorityLevels;
     }
 
-    public Dispatch getDispatcher() {
+    public Dispatcher getDispatcher() {
         return dispatcher;
     }
 
-    public void setDispatcher(Dispatch dispatcher) {
+    public void setDispatcher(Dispatcher dispatcher) {
         this.dispatcher = dispatcher;
     }
 

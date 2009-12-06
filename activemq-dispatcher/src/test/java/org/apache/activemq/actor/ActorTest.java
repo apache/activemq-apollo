@@ -13,8 +13,8 @@ import java.util.concurrent.TimeUnit;
 import junit.framework.TestCase;
 
 import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.Dispatch;
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatchSPI;
+import org.apache.activemq.dispatch.Dispatcher;
+import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatcher;
 
 
 /** 
@@ -45,7 +45,7 @@ public class ActorTest extends TestCase {
     
     public void testActorInvocation() throws Exception
     {
-        Dispatch advancedSystem = new AdvancedDispatchSPI(Runtime.getRuntime().availableProcessors(), 3);
+        Dispatcher advancedSystem = new AdvancedDispatcher(Runtime.getRuntime().availableProcessors(), 3);
         advancedSystem.start();
         
         DispatchQueue queue = advancedSystem.createSerialQueue("test");

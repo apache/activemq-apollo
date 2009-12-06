@@ -30,7 +30,7 @@ import org.apache.activemq.util.PriorityLinkedList;
 import org.apache.activemq.util.TimerHeap;
 import org.apache.activemq.util.list.LinkedNodeList;
 
-import static org.apache.activemq.dispatch.DispatchFactory.*;
+import static org.apache.activemq.dispatch.DispatcherFactory.*;
 
 public class DispatcherThread implements Runnable {
 
@@ -46,7 +46,7 @@ public class DispatcherThread implements Runnable {
     protected final HashSet<DispatchContext> contexts = new HashSet<DispatchContext>();
 
     // Set if this dispatcher is part of a dispatch pool:
-    protected final AdvancedDispatchSPI spi;
+    protected final AdvancedDispatcher dispatcher;
 
     // The local dispatch queue:
     protected final PriorityLinkedList<DispatchContext> priorityQueue;
@@ -75,7 +75,7 @@ public class DispatcherThread implements Runnable {
         }
     };
 
-    protected DispatcherThread(AdvancedDispatchSPI spi, String name, int priorities) {
+    protected DispatcherThread(AdvancedDispatcher dispatcher, String name, int priorities) {
         this.name = name;
         
         this.dispatchQueues = new ThreadDispatchQueue[3];
@@ -88,7 +88,7 @@ public class DispatcherThread implements Runnable {
         for (int i = 0; i < 2; i++) {
             foreignQueue[i] = new LinkedNodeList<ForeignEvent>();
         }
-        this.spi = spi;
+        this.dispatcher = dispatcher;
     }
     
     @SuppressWarnings("unchecked")
@@ -176,7 +176,7 @@ public class DispatcherThread implements Runnable {
 
     public void run() {
 
-        spi.onDispatcherStarted((DispatcherThread) this);
+        dispatcher.onDispatcherStarted((DispatcherThread) this);
         DispatchContext pdc;
         try {
             while (running) {
@@ -184,7 +184,7 @@ public class DispatcherThread implements Runnable {
                 // If no local work available wait for foreign work:
                 while((pdc = priorityQueue.poll())!=null){
                     if( pdc.priority < dispatchQueues.length ) {
-                        AdvancedDispatchSPI.CURRENT_QUEUE.set(dispatchQueues[pdc.priority]);
+                        AdvancedDispatcher.CURRENT_QUEUE.set(dispatchQueues[pdc.priority]);
                     }
                     
                     if (pdc.tracker != null) {
@@ -235,7 +235,7 @@ public class DispatcherThread implements Runnable {
         } catch (Throwable thrown) {
             thrown.printStackTrace();
         } finally {
-            spi.onDispatcherStopped((DispatcherThread) this);
+            dispatcher.onDispatcherStopped((DispatcherThread) this);
             cleanup();
         }
     }

@@ -7,8 +7,8 @@ import java.util.ArrayList;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.activemq.dispatch.Dispatch;
-import org.apache.activemq.dispatch.DispatchFactory;
+import org.apache.activemq.dispatch.Dispatcher;
+import org.apache.activemq.dispatch.DispatcherFactory;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Destination.DestinationBean;
 import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
@@ -43,7 +43,7 @@ public class MockClient {
     protected ArrayList<MetricCounter> additionalReportMetrics = new ArrayList<MetricCounter>();
     protected boolean includeDetailedRates = false;
 
-    protected Dispatch dispatcher;
+    protected Dispatcher dispatcher;
 
     public RemoteConsumer consumer(int index) {
         return consumers.get(index);
@@ -214,7 +214,7 @@ public class MockClient {
         return testName;
     }
 
-    public void setDispatcher(Dispatch dispatcher) {
+    public void setDispatcher(Dispatcher dispatcher) {
         this.dispatcher = dispatcher;
     }
 
@@ -274,13 +274,13 @@ public class MockClient {
         }
     }
 
-    public Dispatch getDispatcher() {
+    public Dispatcher getDispatcher() {
         return dispatcher;
     }
 
-    protected Dispatch createDispatcher() {
+    protected Dispatcher createDispatcher() {
         if (dispatcher == null) {
-            dispatcher = DispatchFactory.create("client", threadsPerDispatcher);
+            dispatcher = DispatcherFactory.create("client", threadsPerDispatcher);
         }
         return dispatcher;
     }

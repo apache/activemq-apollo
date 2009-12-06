@@ -14,9 +14,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.activemq.dispatch.DispatchPriority;
-import org.apache.activemq.dispatch.Dispatch;
+import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.Dispatch;
+import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.internal.RunnableCountDownLatch;
 import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.FutureResponse;
@@ -82,7 +82,7 @@ public class PipeTransportFactory extends TransportFactory {
             }
         }
 
-        public void setDispatcher(Dispatch dispatcher) {
+        public void setDispatcher(Dispatcher dispatcher) {
             dispatchQueue = dispatcher.createSerialQueue(name);
             dispatchTask = new Runnable(){
                 public void run() {

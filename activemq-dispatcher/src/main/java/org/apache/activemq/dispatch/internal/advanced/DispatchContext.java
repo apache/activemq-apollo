@@ -38,8 +38,8 @@ class DispatchContext extends LinkedNode<DispatchContext> implements Runnable {
         this.runnable = runnable;
         this.label = label;
         this.target = thread;
-        if (persistent && target.spi != null) {
-            this.tracker = target.spi.getLoadBalancer().createExecutionTracker((DispatchContext) this);
+        if (persistent && target.dispatcher != null) {
+            this.tracker = target.dispatcher.getLoadBalancer().createExecutionTracker((DispatchContext) this);
         } else {
             this.tracker = null;
         }

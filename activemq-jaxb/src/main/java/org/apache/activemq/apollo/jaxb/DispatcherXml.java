@@ -22,8 +22,8 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.activemq.apollo.broker.Broker;
-import org.apache.activemq.dispatch.Dispatch;
-import org.apache.activemq.dispatch.DispatchFactory;
+import org.apache.activemq.dispatch.Dispatcher;
+import org.apache.activemq.dispatch.DispatcherFactory;
 
 @XmlRootElement(name="dispatcher")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -36,11 +36,11 @@ public class DispatcherXml {
 	@XmlAttribute(required=false)
 	int threads = Runtime.getRuntime().availableProcessors();
 	
-	public Dispatch createDispatcher(BrokerXml brokerXml) {
+	public Dispatcher createDispatcher(BrokerXml brokerXml) {
 		if( name == null ) {
 			name = "broker";
 		}
-		return DispatchFactory.create(name, threads);
+		return DispatcherFactory.create(name, threads);
 	}
 
 }

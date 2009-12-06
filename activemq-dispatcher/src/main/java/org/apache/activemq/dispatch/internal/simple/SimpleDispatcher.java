@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchPriority;
-import org.apache.activemq.dispatch.Dispatch;
+import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatchSource;
 import org.apache.activemq.dispatch.internal.BaseRetained;
 import org.apache.activemq.dispatch.internal.SerialDispatchQueue;
@@ -38,7 +38,7 @@ import static org.apache.activemq.dispatch.DispatchPriority.*;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class SimpleDispatchSPI extends BaseRetained implements Dispatch {
+public class SimpleDispatcher extends BaseRetained implements Dispatcher {
         
     public final static ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
 
@@ -53,7 +53,7 @@ public class SimpleDispatchSPI extends BaseRetained implements Dispatch {
     private final String label;
     TimerThread timerThread;
     
-    public SimpleDispatchSPI(String label, int size) {
+    public SimpleDispatcher(String label, int size) {
         this.label = label;
         globalQueues = new GlobalDispatchQueue[3];
         for (int i = 0; i < 3; i++) {

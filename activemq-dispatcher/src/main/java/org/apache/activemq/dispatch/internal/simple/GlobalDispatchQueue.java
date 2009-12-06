@@ -30,17 +30,17 @@ import org.apache.activemq.dispatch.internal.QueueSupport;
  */
 public class GlobalDispatchQueue implements SimpleQueue {
 
-    private final SimpleDispatchSPI spi;
+    private final SimpleDispatcher dispatcher;
     final String label;
     final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
     final AtomicLong counter;
     private final DispatchPriority priority;
 
-    public GlobalDispatchQueue(SimpleDispatchSPI spi, DispatchPriority priority) {
-        this.spi = spi;
+    public GlobalDispatchQueue(SimpleDispatcher dispatcher, DispatchPriority priority) {
+        this.dispatcher = dispatcher;
         this.priority = priority;
         this.label=priority.toString();
-        this.counter = spi.globalQueuedRunnables;
+        this.counter = dispatcher.globalQueuedRunnables;
     }
 
     public String getLabel() {
@@ -54,11 +54,11 @@ public class GlobalDispatchQueue implements SimpleQueue {
     public void dispatchAsync(Runnable runnable) {
         this.counter.incrementAndGet();
         runnables.add(runnable);
-        spi.wakeup();
+        dispatcher.wakeup();
     }
 
     public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
-        spi.timerThread.addRelative(runnable, this, delay, unit);
+        dispatcher.timerThread.addRelative(runnable, this, delay, unit);
     }
 
     public void dispatchSync(final Runnable runnable) throws InterruptedException {

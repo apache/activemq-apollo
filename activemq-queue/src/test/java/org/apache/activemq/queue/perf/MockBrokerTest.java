@@ -20,8 +20,8 @@ import java.util.ArrayList;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.dispatch.Dispatch;
-import org.apache.activemq.dispatch.DispatchFactory;
+import org.apache.activemq.dispatch.Dispatcher;
+import org.apache.activemq.dispatch.DispatcherFactory;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Destination.DestinationBean;
 import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
@@ -63,7 +63,7 @@ public class MockBrokerTest extends TestCase {
     protected MockBroker rcvBroker;
     protected MockClient client;
 
-    protected Dispatch dispatcher;
+    protected Dispatcher dispatcher;
 
     static public final Mapper<Long, Message> KEY_MAPPER = new Mapper<Long, Message>() {
         public Long map(Message element) {
@@ -94,8 +94,8 @@ public class MockBrokerTest extends TestCase {
         }
     }
 
-    protected Dispatch createDispatcher(String name) {
-        return DispatchFactory.create("test", threadsPerDispatcher);
+    protected Dispatcher createDispatcher(String name) {
+        return DispatcherFactory.create("test", threadsPerDispatcher);
     }
 
     public void test_1_1_0() throws Exception {
@@ -284,7 +284,7 @@ public class MockBrokerTest extends TestCase {
             }
         }
 
-        Dispatch clientDispatcher = null;
+        Dispatcher clientDispatcher = null;
         if (SEPARATE_CLIENT_DISPATCHER) {
             clientDispatcher = createDispatcher("ClientDispatcher");
             clientDispatcher.start();

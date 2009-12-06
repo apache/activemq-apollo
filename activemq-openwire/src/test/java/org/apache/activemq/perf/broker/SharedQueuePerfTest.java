@@ -38,10 +38,10 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.MessageId;
 import org.apache.activemq.command.ProducerId;
-import org.apache.activemq.dispatch.Dispatch;
+import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.DispatchFactory;
+import org.apache.activemq.dispatch.DispatcherFactory;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
@@ -65,7 +65,7 @@ public class SharedQueuePerfTest extends TestCase {
 
     private static int PERFORMANCE_SAMPLES = 5;
 
-    Dispatch dispatcher;
+    Dispatcher dispatcher;
     BrokerDatabase database;
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
@@ -82,8 +82,8 @@ public class SharedQueuePerfTest extends TestCase {
     protected ArrayList<Producer> producers = new ArrayList<Producer>();
     protected ArrayList<IQueue<Long, MessageDelivery>> queues = new ArrayList<IQueue<Long, MessageDelivery>>();
 
-    protected Dispatch createDispatcher() {
-        return DispatchFactory.create("pref-test", THREAD_POOL_SIZE);
+    protected Dispatcher createDispatcher() {
+        return DispatcherFactory.create("pref-test", THREAD_POOL_SIZE);
     }
 
     protected int consumerStartDelay = 0;

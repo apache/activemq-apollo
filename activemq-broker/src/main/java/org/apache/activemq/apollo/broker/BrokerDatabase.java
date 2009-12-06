@@ -40,8 +40,8 @@ import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
 import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.broker.store.Store.Session;
-import org.apache.activemq.dispatch.Dispatch;
-import org.apache.activemq.dispatch.DispatchAware;
+import org.apache.activemq.dispatch.Dispatcher;
+import org.apache.activemq.dispatch.DispatcherAware;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
@@ -60,7 +60,7 @@ import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.util.list.LinkedNode;
 import org.apache.activemq.util.list.LinkedNodeList;
 
-public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.OperationBase<?>> implements Service, DispatchAware {
+public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.OperationBase<?>> implements Service, DispatcherAware {
 
     private static final boolean DEBUG = false;
 
@@ -71,7 +71,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     private final FlowController<OperationBase<?>> storeController;
     private final int FLUSH_QUEUE_SIZE = 10000 * 1024;
 
-    private Dispatch dispatcher;
+    private Dispatcher dispatcher;
     private Thread flushThread;
     private AtomicBoolean running = new AtomicBoolean(false);
     private DatabaseListener listener;
@@ -1288,11 +1288,11 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         return store.allocateStoreTracking();
     }
 
-    public Dispatch getDispatcher() {
+    public Dispatcher getDispatcher() {
         return dispatcher;
     }
 
-    public void setDispatcher(Dispatch dispatcher) {
+    public void setDispatcher(Dispatcher dispatcher) {
         this.dispatcher = dispatcher;
     }
 

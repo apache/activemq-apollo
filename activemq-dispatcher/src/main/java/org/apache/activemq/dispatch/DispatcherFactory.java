@@ -14,22 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.activemq.dispatch;
 
-import org.apache.activemq.dispatch.internal.simple.DispatcherThread;
+import org.apache.activemq.dispatch.internal.simple.SimpleDispatcher;
 
-public interface DispatchObserver {
-    
-    public void onThreadCreate(DispatcherThread thread);
-    public void onThreadDestroy(DispatcherThread thread);
+/**
+ * 
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+public class DispatcherFactory {
 
-    public void onQueueCreate(DispatchQueue queue);
-    public void onQueueDestroy(DispatchQueue queue);
-    
-    public void onSourceCreate(DispatchSource source);
-    public void onSourceDestroy(DispatchSource source);
-    
-    public void onDispatchRequest(DispatchQueue target, Runnable request);
+    public static Dispatcher create() {
+        return create("system", Runtime.getRuntime().availableProcessors());
+    }
 
+    public static Dispatcher create(String name, int threads) {
+        return new SimpleDispatcher(name, threads);
+    }
+    
 }

@@ -18,7 +18,7 @@ package org.apache.activemq.dispatch;
 
 import java.nio.channels.SelectableChannel;
 
-import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSPI;
+import org.apache.activemq.dispatch.internal.simple.SimpleDispatcher;
 
 /**
  * 
@@ -26,34 +26,34 @@ import org.apache.activemq.dispatch.internal.simple.SimpleDispatchSPI;
  */
 public class DispatchSystem {
 
-    final private static Dispatch spi = create();
+    final private static Dispatcher dispatcher = create();
 
-    private static Dispatch create() {
-        return new SimpleDispatchSPI("system", Runtime.getRuntime().availableProcessors());
+    private static Dispatcher create() {
+        return new SimpleDispatcher("system", Runtime.getRuntime().availableProcessors());
     }
 
     static DispatchQueue getMainQueue() {
-        return spi.getMainQueue();
+        return dispatcher.getMainQueue();
     }
     
     static public DispatchQueue getGlobalQueue() {
-        return spi.getGlobalQueue();
+        return dispatcher.getGlobalQueue();
     }
     
     static public DispatchQueue getGlobalQueue(DispatchPriority priority) {
-        return spi.getGlobalQueue(priority);
+        return dispatcher.getGlobalQueue(priority);
     }
     
     static DispatchQueue getSerialQueue(String label) {
-        return spi.createSerialQueue(label);
+        return dispatcher.createSerialQueue(label);
     }
     
     static void dispatchMain() {
-        spi.dispatchMain();
+        dispatcher.dispatchMain();
     }
 
     static DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue) {
-        return spi.createSource(channel, interestOps, queue);
+        return dispatcher.createSource(channel, interestOps, queue);
     }
 
 

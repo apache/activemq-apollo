@@ -30,7 +30,7 @@ import static java.lang.String.*;
 public class DispatcherPoolTest {
     
     public static void main(String[] args) throws Exception {
-        AdvancedDispatchSPI pooledDispatcher = new AdvancedDispatchSPI(Runtime.getRuntime().availableProcessors(), 3);
+        AdvancedDispatcher pooledDispatcher = new AdvancedDispatcher(Runtime.getRuntime().availableProcessors(), 3);
         pooledDispatcher.start();
         
         // warm the JIT up..
@@ -48,7 +48,7 @@ public class DispatcherPoolTest {
         System.out.println(format("duration: %,.3f ms, rate: %,.2f executions/sec", durationMS, rate));
     }
 
-    private static void benchmarkWork(final AdvancedDispatchSPI pooledDispatcher, int iterations) throws InterruptedException {
+    private static void benchmarkWork(final AdvancedDispatcher pooledDispatcher, int iterations) throws InterruptedException {
         final CountDownLatch counter = new CountDownLatch(iterations);
         for (int i = 0; i < 1000; i++) {
             Work dispatchable = new Work(counter, pooledDispatcher);
@@ -61,9 +61,9 @@ public class DispatcherPoolTest {
         private final CountDownLatch counter;
         private final DispatchQueue dispatchQueue;
 
-        private Work(CountDownLatch counter, AdvancedDispatchSPI spi) {
+        private Work(CountDownLatch counter, AdvancedDispatcher dispatcher) {
             this.counter = counter;
-            dispatchQueue = spi.createSerialQueue("test");
+            dispatchQueue = dispatcher.createSerialQueue("test");
         }
 
         public void run() {
