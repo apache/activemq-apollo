@@ -8,12 +8,12 @@ import org.apache.activemq.util.list.LinkedNode;
 /**
  * 
  */
-class DispatchContext extends LinkedNode<DispatchContext> implements Runnable {
+public class DispatchContext extends LinkedNode<DispatchContext> implements Runnable {
     
     public static final ThreadLocal<DispatchContext> CURRENT = new ThreadLocal<DispatchContext>();
 
     // The target:
-    private final Runnable runnable;
+    protected final Runnable runnable;
     // The name of this context:
     final String label;
 
