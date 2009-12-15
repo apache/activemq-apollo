@@ -29,7 +29,11 @@ public class PizzaServiceCustomProxy implements IPizzaService {
     }
 
     public void order(final long count) {
-        queue.dispatchAsync(new OrderRunnable(target, count));
+        queue.dispatchAsync(new Runnable(){
+            public void run() {
+                target.order(count);
+            }
+        });
     }
     
 }

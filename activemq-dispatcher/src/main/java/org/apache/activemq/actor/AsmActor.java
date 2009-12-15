@@ -137,11 +137,13 @@ public class AsmActor implements Opcodes {
                 for (int index = 0; index < methods.length; index++) {
                     Method method = methods[index];
                     
-                    
                     Class<?>[] params = method.getParameterTypes();
+                    Type[] types = Type.getArgumentTypes(method);
+                    
+                    String methodSig = Type.getMethodDescriptor(method);
                     
                     // example: public void order(final long count)
-                    mv = cw.visitMethod(ACC_PUBLIC, method.getName(), "("+sig(params)+")V", null, null); 
+                    mv = cw.visitMethod(ACC_PUBLIC, method.getName(), methodSig, null, null); 
                     {
                         mv.visitCode();
                         
@@ -156,8 +158,7 @@ public class AsmActor implements Opcodes {
                         mv.visitFieldInsn(GETFIELD, proxyName, "target", sig(interfaceName));
                         
                         for (int i = 0; i < params.length; i++) {
-                            // TODO: pick the right load
-                            mv.visitVarInsn(LLOAD, 1+i);
+                            mv.visitVarInsn(types[i].getOpcode(ILOAD), 1+i);
                         }
                         
                         mv.visitMethodInsn(INVOKESPECIAL, runnable(index), "<init>", "(" + sig(interfaceName) + sig(params) +")V");
@@ -201,6 +202,8 @@ public class AsmActor implements Opcodes {
                 // example: private final long count;
                 
                 Class<?>[] params = method.getParameterTypes();
+                Type[] types = Type.getArgumentTypes(method);
+                
                 for (int i = 0; i < params.length; i++) {
                     fv = cw.visitField(ACC_PRIVATE + ACC_FINAL, "param"+i, sig(params[i]), null, null);
                     fv.visitEnd();
@@ -227,7 +230,7 @@ public class AsmActor implements Opcodes {
                         
                         // TODO: figure out how to do the right loads. it varies with the type.
                         mv.visitVarInsn(ALOAD, 0);
-                        mv.visitVarInsn(LLOAD, 2+i);
+                        mv.visitVarInsn(types[i].getOpcode(ILOAD), 2+i);
                         mv.visitFieldInsn(PUTFIELD, runnable(index), "param"+i, sig(params[i]));
                         
                     }
