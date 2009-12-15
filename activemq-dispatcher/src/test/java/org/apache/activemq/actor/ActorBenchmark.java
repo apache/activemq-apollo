@@ -1,6 +1,5 @@
 package org.apache.activemq.actor;
 
-import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.internal.AbstractSerialDispatchQueue;
 import org.junit.Test;
 
@@ -9,40 +8,57 @@ import static java.lang.String.*;
 public class ActorBenchmark {
 
     
-    public static class PizzaService
+    public static class PizzaService implements IPizzaService
     {
         long counter;
         
         @Message
-        public long order(long count)
+        public void order(long count)
         {
             counter += count;
-            return counter;
         }
     }
     
+//    @Test
+    public void benchmarkCGLibProxy() throws Exception {
+        String name = "cglib proxy";
+        PizzaService service = new PizzaService();
+        IPizzaService proxy = Actor.create(service, createQueue());
+        benchmark(name, service, proxy);
+    }
+
+    @Test
+    public void benchmarkCustomProxy() throws Exception {
+        String name = "custom proxy";
+        PizzaService service = new PizzaService();
+        IPizzaService proxy = new PizzaServiceCustomProxy(service, createQueue());
+        benchmark(name, service, proxy);
+    }
     
     @Test
-    public void benchmark() throws Exception {
-        
-        String name = "default actor";
+    public void benchmarkAsmProxy() throws Exception {
+        String name = "asm proxy";
         PizzaService service = new PizzaService();
-        
-        // Directly execute the requests...
-        DispatchQueue queue = new AbstractSerialDispatchQueue("") {
+        IPizzaService proxy = AsmActor.create(IPizzaService.class, service, createQueue());
+        benchmark(name, service, proxy);
+    }
+
+    private AbstractSerialDispatchQueue createQueue() {
+        return new AbstractSerialDispatchQueue("mock queue") {
             public void dispatchAsync(Runnable runnable) {
                 runnable.run();
             }
         };
-        
-        PizzaService proxy = Actor.create(service, queue);
+    }
 
+    private void benchmark(String name, PizzaService service, IPizzaService proxy) throws Exception {
         // warm it up..
         benchmark(proxy, 1000*1000);
         if( service.counter == 0)
             throw new Exception();
         
-        int iterations = 1000*1000*1000;
+        int iterations = 1000*1000*100;
+        
         long start = System.nanoTime();
         benchmark(proxy, iterations);
         long end = System.nanoTime();
@@ -56,7 +72,7 @@ public class ActorBenchmark {
     }
 
 
-    private void benchmark(PizzaService proxy, int iterations) {
+    private void benchmark(IPizzaService proxy, int iterations) {
         for( int i=0; i < iterations; i++ ) {
             proxy.order(1);
         }

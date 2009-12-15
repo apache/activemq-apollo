@@ -81,9 +81,10 @@ public class DispatchSystemTest {
                 }
             }
         };
-        for (int i = 0; i < 1000; i++) {
-            queue.dispatchAsync(task);
-        }
+//        for (int i = 0; i < 1000; i++) {
+//        queue.dispatchAsync(task);
+//        }
+        queue.dispatchAsync(task);
         counter.await();
     }
     
