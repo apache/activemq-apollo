@@ -116,7 +116,7 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
     public void shutdown() {
         
         Runnable countDown = new Runnable() {
-            AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.length+1);
+            AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.length);
             public void run() {
                 if( shutdownCountDown.decrementAndGet()==0 ) {
                     // Notify any registered shutdown watchers.
@@ -126,10 +126,10 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
             }
         };
 
-        timerThread.shutdown(countDown);
+        timerThread.shutdown(null);
         for (int i = 0; i < dispatchers.length; i++) {
             ThreadDispatchQueue queue = dispatchers[i].threadQueues[LOW.ordinal()];
-            queue.runnables.add(countDown);
+            queue.dispatchAsync(countDown);
         }
     }
 
@@ -141,4 +141,12 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
         return CURRENT_QUEUE.get();
     }
     
+    public DispatchQueue getCurrentThreadQueue() {
+        DispatcherThread thread = DispatcherThread.currentDispatcherThread();
+        if( thread == null ) {
+            return null;
+        }
+        return thread.currentThreadQueue;
+    }
+
 }

@@ -34,11 +34,13 @@ import org.apache.activemq.dispatch.DispatchOption;
  */
 abstract public class AbstractSerialDispatchQueue extends AbstractDispatchObject implements DispatchQueue, Runnable {
 
-    private final String label;
-    private final AtomicInteger suspendCounter = new AtomicInteger();
-    private final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
-    private final AtomicLong size = new AtomicLong();
-    private final Set<DispatchOption> options;
+    protected final String label;
+    protected final AtomicInteger suspendCounter = new AtomicInteger();
+    
+    protected final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
+    
+    protected final AtomicLong size = new AtomicLong();
+    protected final Set<DispatchOption> options;
 
     public AbstractSerialDispatchQueue(String label, DispatchOption...options) {
         this.label = label;

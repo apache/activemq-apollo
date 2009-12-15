@@ -22,8 +22,6 @@ import org.apache.activemq.dispatch.internal.RunnableCountDownLatch;
 import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatcher;
 import org.apache.activemq.dispatch.internal.simple.SimpleDispatcher;
 
-import static org.apache.activemq.dispatch.DispatchPriority.*;
-
 import static java.lang.String.*;
 
 /**
@@ -35,33 +33,35 @@ public class DispatchSystemTest {
     public static void main(String[] args) throws Exception {
         Dispatcher advancedSystem = new AdvancedDispatcher(new DispatcherConfig());
         advancedSystem.retain();
-        benchmark("advanced global queue", advancedSystem, advancedSystem.getGlobalQueue(DEFAULT));
-        benchmark("advanced private serial queue", advancedSystem, advancedSystem.createSerialQueue("test", DispatchOption.STICK_TO_CALLER_THREAD));
+        benchmarkGlobal("advanced global queue", advancedSystem);
+        benchmarkSerial("advanced private serial queue", advancedSystem);
 
         RunnableCountDownLatch latch = new RunnableCountDownLatch(1);
         advancedSystem.addShutdownWatcher(latch);
         advancedSystem.release();
         latch.await();
 
-        Dispatcher simpleSystem = new SimpleDispatcher(new DispatcherConfig());
+        DispatcherConfig config = new DispatcherConfig();
+        config.setThreads(6);
+        Dispatcher simpleSystem = new SimpleDispatcher(config);
         simpleSystem.retain();
         
-        benchmark("simple global queue", simpleSystem, simpleSystem.getGlobalQueue(DEFAULT));
-        benchmark("simple private serial queue", simpleSystem, simpleSystem.createSerialQueue("test", DispatchOption.STICK_TO_CALLER_THREAD));
+        benchmarkGlobal("simple global queue", simpleSystem);
+        benchmarkSerial("simple private serial queue", simpleSystem);
 
         latch = new RunnableCountDownLatch(1);
-        advancedSystem.addShutdownWatcher(latch);
-        advancedSystem.release();
+        simpleSystem.addShutdownWatcher(latch);
+        simpleSystem.release();
         latch.await();
     }
 
-    private static void benchmark(String name, Dispatcher dispatcher, DispatchQueue queue) throws InterruptedException {
+    private static void benchmarkSerial(String name, Dispatcher dispatcher) throws InterruptedException {
         // warm the JIT up..
-        benchmarkWork(dispatcher, queue, 100000);
+        benchmarkSerialWork(dispatcher, 100000);
         
         int iterations = 1000*1000*20;
         long start = System.nanoTime();
-        benchmarkWork(dispatcher, queue, iterations);
+        benchmarkSerialWork(dispatcher, iterations);
         long end = System.nanoTime();
         
         double durationMS = 1.0d*(end-start)/1000000d;
@@ -70,13 +70,14 @@ public class DispatchSystemTest {
         System.out.println(format("name: %s, duration: %,.3f ms, rate: %,.2f executions/sec", name, durationMS, rate));
     }
 
-    private static void benchmarkWork(final Dispatcher dispatcher, final DispatchQueue queue, int iterations) throws InterruptedException {
+    private static void benchmarkSerialWork(final Dispatcher dispatcher, int iterations) throws InterruptedException {
+        final DispatchQueue queue = dispatcher.createSerialQueue(null, DispatchOption.STICK_TO_CALLER_THREAD);
         final CountDownLatch counter = new CountDownLatch(iterations);
         Runnable task = new Runnable(){
             public void run() {
                 counter.countDown();
                 if( counter.getCount()>0 ) {
-                    dispatcher.getCurrentQueue().dispatchAsync(this);
+                    queue.dispatchAsync(this);
                 }
             }
         };
@@ -85,4 +86,51 @@ public class DispatchSystemTest {
         }
         counter.await();
     }
+    
+    private static void benchmarkGlobal(String name, Dispatcher dispatcher) throws InterruptedException {
+        // warm the JIT up..
+        benchmarkGlobalWork(dispatcher, 100000);
+        
+        int iterations = 1000*1000*20;
+        long start = System.nanoTime();
+        benchmarkGlobalWork(dispatcher, iterations);
+        long end = System.nanoTime();
+        
+        double durationMS = 1.0d*(end-start)/1000000d;
+        double rate = 1000d * iterations / durationMS;
+        
+        System.out.println(format("name: %s, duration: %,.3f ms, rate: %,.2f executions/sec", name, durationMS, rate));
+    }
+    
+    
+    private static final class TestRunnable implements Runnable {
+        private final int counter;
+        private final Runnable onDone;
+        private final DispatchQueue queue;
+
+        private TestRunnable(int counter, DispatchQueue queue, Runnable onDone) {
+            this.counter=counter;
+            this.onDone = onDone;
+            this.queue = queue;
+        }
+
+        public void run() {
+            if( counter ==0 ) {
+                onDone.run();
+            } else {
+                queue.dispatchAsync(new TestRunnable(counter-1, queue, onDone));
+            }
+        }
+    }
+    
+    private static void benchmarkGlobalWork(final Dispatcher dispatcher, int iterations) throws InterruptedException {
+        final DispatchQueue queue = dispatcher.getGlobalQueue();
+        int PARTITIONS = 1000;
+        RunnableCountDownLatch counter = new RunnableCountDownLatch(PARTITIONS);
+        for (int i = 0; i < PARTITIONS; i++) {
+            queue.dispatchAsync(new TestRunnable(iterations/PARTITIONS, queue, counter));
+        }
+        counter.await();
+    }
+
 }

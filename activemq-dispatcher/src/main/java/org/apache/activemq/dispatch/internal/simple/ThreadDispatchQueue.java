@@ -69,22 +69,16 @@ final public class ThreadDispatchQueue implements SimpleQueue {
         }
     }
 
-    public Runnable poll() {
-        
-        // This method should only be called by our dispatcher 
-        // thread.
-        assert Thread.currentThread()==dispatcher;
-        
-        Runnable rc = localRunnables.poll();
-        if( rc !=null ) {
-            return rc;
-        }
-        
-        rc = runnables.poll();
+    public Runnable pollShared() {
+        Runnable rc = runnables.poll();
         if( rc !=null ) {
             counter.decrementAndGet();
         }
         return rc;
+    }
+
+    public Runnable pollLocal() {
+        return localRunnables.poll();
     }
 
     public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {

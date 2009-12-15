@@ -31,7 +31,7 @@ public interface Dispatcher extends Retained {
     public void dispatchMain();
     
     public DispatchQueue getCurrentQueue();
-
+    
     public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue);
 
     

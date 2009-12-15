@@ -17,15 +17,14 @@
 package org.apache.activemq.dispatch.internal.simple;
 
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.dispatch.DispatchOption;
-import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchPriority;
+import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.internal.QueueSupport;
 
 /**
@@ -56,9 +55,14 @@ final public class GlobalDispatchQueue implements SimpleQueue {
     }
 
     public void dispatchAsync(Runnable runnable) {
-        this.counter.incrementAndGet();
-        runnables.add(runnable);
-        dispatcher.wakeup();
+        DispatcherThread thread = DispatcherThread.currentDispatcherThread();
+        if( thread==null ) {
+            this.counter.incrementAndGet();
+            runnables.add(runnable);
+            dispatcher.wakeup();
+        } else {
+            thread.currentThreadQueue.dispatchAsync(runnable);
+        }
     }
 
     public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {

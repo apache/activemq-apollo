@@ -91,7 +91,7 @@ public class ThreadDispatchQueue implements DispatchQueue {
     }
 
     public DispatchQueue getTargetQueue() {
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     public void release() {

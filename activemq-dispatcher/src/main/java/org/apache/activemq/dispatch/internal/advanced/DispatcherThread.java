@@ -33,7 +33,7 @@ public class DispatcherThread implements Runnable {
 
     static public final ThreadLocal<DispatcherThread> CURRENT = new ThreadLocal<DispatcherThread>();
 
-    private final ThreadDispatchQueue dispatchQueues[];
+    final ThreadDispatchQueue dispatchQueues[];
     
     static final boolean DEBUG = false;
     private Thread thread;
@@ -50,6 +50,8 @@ public class DispatcherThread implements Runnable {
 
     // Dispatch queue for requests from other threads:
     final LinkedNodeList<ForeignEvent>[] foreignQueue = createForeignQueue();
+    
+    ThreadDispatchQueue currentDispatchQueue;
 
     private static final int[] TOGGLE = new int[] { 1, 0 };
     int foreignToggle = 0;
@@ -168,7 +170,8 @@ public class DispatcherThread implements Runnable {
                 // If no local work available wait for foreign work:
                 while((pdc = priorityQueue.poll())!=null){
                     if( pdc.priority < dispatchQueues.length ) {
-                        AdvancedDispatcher.CURRENT_QUEUE.set(dispatchQueues[pdc.priority]);
+                        currentDispatchQueue = dispatchQueues[pdc.priority];
+                        AdvancedDispatcher.CURRENT_QUEUE.set(currentDispatchQueue);
                     }
                     
                     if (pdc.tracker != null) {

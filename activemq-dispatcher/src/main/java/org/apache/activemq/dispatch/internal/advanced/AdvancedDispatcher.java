@@ -199,6 +199,14 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
 
     public DispatchQueue getCurrentQueue() {
         return CURRENT_QUEUE.get();
+    }
+
+    public DispatchQueue getCurrentThreadQueue() {
+        DispatcherThread thread = DispatcherThread.CURRENT.get();
+        if( thread==null ) {
+            return null;
+        }
+        return thread.currentDispatchQueue;
     }    
 
 }
