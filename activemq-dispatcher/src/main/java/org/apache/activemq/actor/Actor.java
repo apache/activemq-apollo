@@ -32,7 +32,7 @@ public class Actor {
         Enhancer e = new Enhancer();
         e.setSuperclass(target.getClass());
         e.setInterfaces(interfaces);
-        e.setCallback(new ActorMethodInterceptor(queue));
+        e.setCallback(new ActorMethodInterceptor(target, queue));
 //      Un-comment the following if you want store the generated class file:
 //        e.setStrategy(new DefaultGeneratorStrategy() {
 //            protected byte[] transform(byte[] b) {
@@ -82,9 +82,11 @@ public class Actor {
     private static class ActorMethodInterceptor implements MethodInterceptor {
 
         private final DispatchQueue queue;
-
-        ActorMethodInterceptor(DispatchQueue queue) {
+        private final Object target;
+        
+        ActorMethodInterceptor(Object target, DispatchQueue queue) {
             this.queue = queue;
+            this.target = target;
         }
 
         /*
@@ -99,7 +101,7 @@ public class Actor {
                 queue.dispatchAsync(new Runnable() {
                     public void run() {
                         try {
-                            proxy.invokeSuper(obj, args);
+                            proxy.invoke(target, args);
                         } catch (Throwable thrown) {
                             throw new IllegalStateException(thrown);
                         }
@@ -107,7 +109,7 @@ public class Actor {
                 });
                 return null;
             } else {
-                return proxy.invokeSuper(obj, args);
+                return proxy.invoke(target, args);
             }
         }
     }
