@@ -19,7 +19,7 @@ public class ActorBenchmark {
         }
     }
     
-//    @Test
+    @Test
     public void benchmarkCGLibProxy() throws Exception {
         String name = "cglib proxy";
         PizzaService service = new PizzaService();
