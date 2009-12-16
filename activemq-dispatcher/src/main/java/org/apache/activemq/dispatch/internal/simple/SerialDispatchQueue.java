@@ -17,7 +17,6 @@
 
 package org.apache.activemq.dispatch.internal.simple;
 
-import java.util.LinkedList;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.activemq.dispatch.DispatchOption;
@@ -30,8 +29,6 @@ public final class SerialDispatchQueue extends AbstractSerialDispatchQueue imple
     private final SimpleDispatcher dispatcher;
     private volatile boolean stickToThreadOnNextDispatch; 
     private volatile boolean stickToThreadOnNextDispatchRequest; 
-    private final LinkedList<Runnable> localEnqueues = new LinkedList<Runnable>();
-    private final ThreadLocal<Boolean> executing = new ThreadLocal<Boolean>();
     
     SerialDispatchQueue(SimpleDispatcher dispatcher, String label, DispatchOption...options) {
         super(label, options);
@@ -68,72 +65,28 @@ public final class SerialDispatchQueue extends AbstractSerialDispatchQueue imple
             }
         }
 
-        // We can take a shortcut...
-        if( executing.get()!=null ) {
-            localEnqueues.add(runnable);
-        } else {
-            super.dispatchAsync(runnable);
-        }
+        super.dispatchAsync(runnable);
     }
     
     public void run() {
         SimpleQueue current = SimpleDispatcher.CURRENT_QUEUE.get();
-        if( stickToThreadOnNextDispatch ) {
-            stickToThreadOnNextDispatch=false;
-            GlobalDispatchQueue global = current.isGlobalDispatchQueue();
-            if( global!=null ) {
-                setTargetQueue(global.getTargetQueue());
-            }
-        }
-        
-        DispatcherThread thread = DispatcherThread.currentDispatcherThread();
-        
         SimpleDispatcher.CURRENT_QUEUE.set(this);
-        executing.set(true);
+        
         try {
-            
-            Runnable runnable;
-            long lsize = size.get();
-            while( suspendCounter.get() <= 0 && lsize > 0 ) {
-                
-                runnable = runnables.poll();
-                if( runnable!=null ) {
-                    runnable.run();
-                    lsize = size.decrementAndGet();
-                    if( lsize==0 ) {
-                        release();
-                    }
-                    if( thread.executionCounter.decrementAndGet() <= 0 ) {
-                        return;
-                    }
+            if( stickToThreadOnNextDispatch ) {
+                stickToThreadOnNextDispatch=false;
+                GlobalDispatchQueue global = current.isGlobalDispatchQueue();
+                if( global!=null ) {
+                    setTargetQueue(global.getTargetQueue());
                 }
             }
             
-            while( (runnable = localEnqueues.poll())!=null ) {
-                runnable.run();
-                if( thread.executionCounter.decrementAndGet() <= 0 ) {
-                    return;
-                }
-            }
-            
+            DispatcherThread thread = DispatcherThread.currentDispatcherThread();
+            dispatch(thread.executionCounter);
         } finally {
-            executing.remove();
-            
-            if( !localEnqueues.isEmpty() ) {
-                
-                long lastSize = size.getAndAdd(localEnqueues.size());
-                if( lastSize==0 ) {
-                    retain();
-                }
-                runnables.addAll(localEnqueues);
-                localEnqueues.clear();
-                
-                if( suspendCounter.get()<=0 ) {
-                    dispatchSelfAsync();
-                }
-            }
             SimpleDispatcher.CURRENT_QUEUE.set(current);
         }
+
     }
     
     public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
