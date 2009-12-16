@@ -32,32 +32,30 @@ import org.apache.activemq.dispatch.internal.AbstractSerialDispatchQueue;
 
 import static org.apache.activemq.dispatch.DispatchPriority.*;
 
-
-
 /**
  * Implements a simple dispatch system.
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
-        
+
     public final static ThreadLocal<SimpleQueue> CURRENT_QUEUE = new ThreadLocal<SimpleQueue>();
 
     final SerialDispatchQueue mainQueue = new SerialDispatchQueue(this, "main");
-    final GlobalDispatchQueue globalQueues[]; 
+    final GlobalDispatchQueue globalQueues[];
     final DispatcherThread dispatchers[];
     final AtomicLong globalQueuedRunnables = new AtomicLong();
-    
+
     final ConcurrentLinkedQueue<DispatcherThread> waitingDispatchers = new ConcurrentLinkedQueue<DispatcherThread>();
     final AtomicInteger waitingDispatcherCount = new AtomicInteger();
     private final String label;
     TimerThread timerThread;
-    
+
     public SimpleDispatcher(DispatcherConfig config) {
         this.label = config.getLabel();
         globalQueues = new GlobalDispatchQueue[3];
         for (int i = 0; i < 3; i++) {
-            globalQueues[i] = new GlobalDispatchQueue(this, DispatchPriority.values()[i] );
+            globalQueues[i] = new GlobalDispatchQueue(this, DispatchPriority.values()[i]);
         }
         dispatchers = new DispatcherThread[config.getThreads()];
     }
@@ -65,7 +63,7 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
     public DispatchQueue getMainQueue() {
         return mainQueue;
     }
-    
+
     public DispatchQueue getGlobalQueue() {
         return getGlobalQueue(DEFAULT);
     }
@@ -73,13 +71,13 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
     public DispatchQueue getGlobalQueue(DispatchPriority priority) {
         return globalQueues[priority.ordinal()];
     }
-    
+
     public DispatchQueue createSerialQueue(String label, DispatchOption... options) {
         AbstractSerialDispatchQueue rc = new SerialDispatchQueue(this, label, options);
         rc.setTargetQueue(getGlobalQueue());
         return rc;
     }
-    
+
     public void dispatchMain() {
         mainQueue.run();
     }
@@ -88,16 +86,22 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
         return null;
     }
 
-    public void addWaitingDispatcher(DispatcherThread dispatcher) {
-        waitingDispatcherCount.incrementAndGet();
-        waitingDispatchers.add(dispatcher);
+    public boolean addWaitingDispatcher(DispatcherThread dispatcher) {
+        if (globalQueuedRunnables.get() <= 0) {
+            waitingDispatcherCount.incrementAndGet();
+            waitingDispatchers.add(dispatcher);
+            return true;
+        } else {
+            dispatcher.globalWakeup();
+            return false;
+        }
     }
-    
+
     public void wakeup() {
         int value = waitingDispatcherCount.get();
-        if( value!=0 ) {
+        if (value != 0) {
             DispatcherThread dispatcher = waitingDispatchers.poll();
-            if( dispatcher!=null ) {
+            if (dispatcher != null) {
                 waitingDispatcherCount.decrementAndGet();
                 dispatcher.globalWakeup();
             }
@@ -114,11 +118,12 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
     }
 
     public void shutdown() {
-        
+
         Runnable countDown = new Runnable() {
             AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.length);
+
             public void run() {
-                if( shutdownCountDown.decrementAndGet()==0 ) {
+                if (shutdownCountDown.decrementAndGet() == 0) {
                     // Notify any registered shutdown watchers.
                     SimpleDispatcher.super.shutdown();
                 }
@@ -140,10 +145,10 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
     public DispatchQueue getCurrentQueue() {
         return CURRENT_QUEUE.get();
     }
-    
+
     public DispatchQueue getCurrentThreadQueue() {
         DispatcherThread thread = DispatcherThread.currentDispatcherThread();
-        if( thread == null ) {
+        if (thread == null) {
             return null;
         }
         return thread.currentThreadQueue;

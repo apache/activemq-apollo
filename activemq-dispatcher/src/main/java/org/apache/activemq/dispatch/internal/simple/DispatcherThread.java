@@ -17,6 +17,8 @@
 
 package org.apache.activemq.dispatch.internal.simple;
 
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -24,103 +26,103 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 final public class DispatcherThread extends Thread {
-    
+
     private static final int MAX_LOCAL_DISPATCH_BEFORE_CHECKING_GLOBAL = 1000;
     private final SimpleDispatcher dispatcher;
     final ThreadDispatchQueue[] threadQueues;
     final AtomicLong threadQueuedRunnables = new AtomicLong();
     final IntegerCounter executionCounter = new IntegerCounter();
     ThreadDispatchQueue currentThreadQueue;
-        
+
     public DispatcherThread(SimpleDispatcher dispatcher, int ordinal) {
         this.dispatcher = dispatcher;
         this.threadQueues = new ThreadDispatchQueue[dispatcher.globalQueues.length];
         for (int i = 0; i < threadQueues.length; i++) {
             threadQueues[i] = new ThreadDispatchQueue(this, dispatcher.globalQueues[i]);
         }
-        setName(dispatcher.getLabel()+" dispatcher: "+(ordinal+1));
+        setName(dispatcher.getLabel() + " dispatcher: " + (ordinal + 1));
         setDaemon(true);
     }
-    
+
     @Override
     public void run() {
         GlobalDispatchQueue[] globalQueues = dispatcher.globalQueues;
         final int PRIORITIES = threadQueues.length;
         int processGlobalQueueCount = PRIORITIES;
-        
+
         try {
-            start: for(;;) {
-                
+            start: for (;;) {
+
                 executionCounter.set(MAX_LOCAL_DISPATCH_BEFORE_CHECKING_GLOBAL);
-                
+
                 // Process the local non-synchronized queues.
                 // least contention
-                outer: while( executionCounter.get() > 0 ) {
-                    processGlobalQueueCount=PRIORITIES;
-                    for (int i=0; i < PRIORITIES; i++) {
+                outer: while (executionCounter.get() > 0) {
+                    processGlobalQueueCount = PRIORITIES;
+                    for (int i = 0; i < PRIORITIES; i++) {
                         currentThreadQueue = threadQueues[i];
                         Runnable runnable = currentThreadQueue.pollLocal();
-                        if( runnable==null ) {
+                        if (runnable == null) {
                             continue;
                         }
-                        
+
                         SimpleDispatcher.CURRENT_QUEUE.set(currentThreadQueue.globalQueue);
-                        processGlobalQueueCount=i;
-                        for(;;) {
+                        processGlobalQueueCount = i;
+                        for (;;) {
                             dispatch(runnable);
-                            if( executionCounter.decrementAndGet() <= 0 ) {
+                            if (executionCounter.decrementAndGet() <= 0) {
                                 break outer;
                             }
                             runnable = currentThreadQueue.pollLocal();
-                            if( runnable == null ) {
+                            if (runnable == null) {
                                 break;
                             }
                         }
                     }
-                    
+
                     // There was no work to do in the local queues..
-                    if( processGlobalQueueCount == PRIORITIES) {
+                    if (processGlobalQueueCount == PRIORITIES) {
                         break;
                     }
                 }
-                
-                // Process the local synchronized queues. 
+
+                // Process the local synchronized queues.
                 // medium contention
-                outer: while( executionCounter.get() > 0 ) {
-                    processGlobalQueueCount=PRIORITIES;
-                    for (int i=0; i < PRIORITIES; i++) {
+                outer: while (executionCounter.get() > 0) {
+                    processGlobalQueueCount = PRIORITIES;
+                    for (int i = 0; i < PRIORITIES; i++) {
                         currentThreadQueue = threadQueues[i];
                         Runnable runnable = currentThreadQueue.pollShared();
-                        if( runnable==null ) {
+                        if (runnable == null) {
                             continue;
                         }
                         SimpleDispatcher.CURRENT_QUEUE.set(currentThreadQueue.globalQueue);
-                        processGlobalQueueCount=i;
-                        for(;;) {
+                        processGlobalQueueCount = i;
+                        for (;;) {
                             dispatch(runnable);
-                            if( executionCounter.decrementAndGet() <= 0 ) {
+                            if (executionCounter.decrementAndGet() <= 0) {
                                 break outer;
                             }
                             runnable = currentThreadQueue.pollShared();
-                            if( runnable == null ) {
+                            if (runnable == null) {
                                 break;
                             }
                         }
                     }
-                    
+
                     // There was no work to do in the local queues..
-                    if( processGlobalQueueCount == PRIORITIES) {
+                    if (processGlobalQueueCount == PRIORITIES) {
                         break;
                     }
                 }
-                
-                // Process the global synchronized queues. 
+
+                // Process the global synchronized queues.
                 // most contention
-                for (int i=0; i < processGlobalQueueCount; i++) {
+                for (int i = 0; i < processGlobalQueueCount; i++) {
                     currentThreadQueue = threadQueues[i];
                     GlobalDispatchQueue queue = globalQueues[i];
                     Runnable runnable = queue.poll();
-                    if( runnable==null ) {
+                    if (runnable == null) {
                         continue;
                     }
                     // We only execute 1 global runnable at a time,
@@ -129,11 +131,11 @@ final public class DispatcherThread extends Thread {
                     dispatch(runnable);
                     continue start;
                 }
-                
-                if( executionCounter.get()!=MAX_LOCAL_DISPATCH_BEFORE_CHECKING_GLOBAL ) {
+
+                if (executionCounter.get() != MAX_LOCAL_DISPATCH_BEFORE_CHECKING_GLOBAL) {
                     continue start;
                 }
-                
+
                 // If we get here then there was no work in the global queues..
                 try {
                     waitForWakeup();
@@ -141,11 +143,11 @@ final public class DispatcherThread extends Thread {
                     e.printStackTrace();
                     return;
                 }
-            }            
+            }
         } catch (Shutdown e) {
         }
     }
-    
+
     @SuppressWarnings("serial")
     static class Shutdown extends RuntimeException {
     }
@@ -159,41 +161,39 @@ final public class DispatcherThread extends Thread {
             e.printStackTrace();
         }
     }
-    
+
     public static DispatcherThread currentDispatcherThread() {
         Thread currentThread = Thread.currentThread();
-        if( currentThread.getClass() == DispatcherThread.class ) {
+        if (currentThread.getClass() == DispatcherThread.class) {
             return (DispatcherThread) currentThread;
         }
         return null;
     }
 
-    private final Object wakeupMutex = new Object();
-    private boolean inWaitingList;
-    
+    private final Semaphore wakeups = new Semaphore(0);
+    private final AtomicBoolean inWaitingList = new AtomicBoolean(false);
+
     private void waitForWakeup() throws InterruptedException {
-        while( threadQueuedRunnables.get()==0 && dispatcher.globalQueuedRunnables.get()==0 ) {
-            synchronized(wakeupMutex) {
-                if( !inWaitingList ) {
-                    dispatcher.addWaitingDispatcher(this);
-                    inWaitingList=true;
+        while (threadQueuedRunnables.get() == 0 && dispatcher.globalQueuedRunnables.get() == 0) {
+            if (!wakeups.tryAcquire()) {
+                if (inWaitingList.compareAndSet(false, true)) {
+                    if (!dispatcher.addWaitingDispatcher(this)) {
+                        inWaitingList.set(false);
+                    }
                 }
-                wakeupMutex.wait();
             }
+            wakeups.acquire();
         }
+        wakeups.drainPermits();
     }
 
     public void globalWakeup() {
-        synchronized(wakeupMutex) {
-            inWaitingList=false;
-            wakeupMutex.notify();
-        }
+        wakeups.release();
+        inWaitingList.set(false);
     }
-    
+
     public void wakeup() {
-        synchronized(wakeupMutex) {
-            wakeupMutex.notify();
-        }
+        wakeups.release();
     }
-   
+
 }
