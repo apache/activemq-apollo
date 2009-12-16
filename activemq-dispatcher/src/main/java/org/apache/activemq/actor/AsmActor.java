@@ -18,18 +18,24 @@ import static org.objectweb.asm.ClassWriter.*;
 
 public class AsmActor implements Opcodes {
 
-    public static <T> T create(Class<T> interfaceClass, T target, DispatchQueue queue) throws Exception {
+    public static <T> T create(Class<T> interfaceClass, T target, DispatchQueue queue) throws IllegalArgumentException {
         return create(target.getClass().getClassLoader(), interfaceClass, target, queue);
     }
     
-    public static <T> T create(ClassLoader classLoader, Class<T> interfaceClass, T target, DispatchQueue queue) throws Exception {
+    public static <T> T create(ClassLoader classLoader, Class<T> interfaceClass, T target, DispatchQueue queue) throws IllegalArgumentException {
         Class<T> proxyClass = getProxyClass(classLoader, interfaceClass);
         Constructor<?> constructor = proxyClass.getConstructors()[0];
-        return proxyClass.cast(constructor.newInstance(new Object[]{target, queue}));
+        Object rc;
+        try {
+            rc = constructor.newInstance(new Object[]{target, queue});
+        } catch (Throwable e) {
+            throw new RuntimeException("Could not create an instance of the proxy due to: "+e.getMessage(), e);
+        }
+        return proxyClass.cast(rc);
     }
     
     @SuppressWarnings("unchecked")
-    private static <T> Class<T> getProxyClass(ClassLoader loader, Class<T> interfaceClass) throws Exception {
+    private static <T> Class<T> getProxyClass(ClassLoader loader, Class<T> interfaceClass) throws IllegalArgumentException {
         String proxyName = proxyName(interfaceClass);
         try {
             return (Class<T>) loader.loadClass(proxyName);
@@ -56,17 +62,21 @@ public class AsmActor implements Opcodes {
         private String proxyName;
         private String interfaceName;
     
-        private Generator(ClassLoader loader, Class<T> interfaceClass) throws SecurityException, NoSuchMethodException {
+        private Generator(ClassLoader loader, Class<T> interfaceClass) throws RuntimeException {
             this.loader = loader;
             this.interfaceClass = interfaceClass;
             this.proxyName = proxyName(interfaceClass).replace('.', '/');
             this.interfaceName = interfaceClass.getName().replace('.','/');
             
-            defineClassMethod = java.lang.ClassLoader.class.getDeclaredMethod("defineClass", new Class[] { String.class, byte[].class, int.class, int.class });
-            defineClassMethod.setAccessible(true);
+            try {
+                defineClassMethod = java.lang.ClassLoader.class.getDeclaredMethod("defineClass", new Class[] { String.class, byte[].class, int.class, int.class });
+                defineClassMethod.setAccessible(true);
+            } catch (Throwable e) {
+                throw new RuntimeException("Could not access the 'java.lang.ClassLoader.defineClass' method due to: "+e.getMessage(), e);
+            }
         }
     
-        private Class<T> generate() throws Exception {
+        private Class<T> generate() throws IllegalArgumentException {
             
             // Define all the runnable classes used for each method.
             Method[] methods = interfaceClass.getMethods();
@@ -82,11 +92,17 @@ public class AsmActor implements Opcodes {
         }
         
         @SuppressWarnings("unchecked")
-        private Class<T> defineClass(String name, byte[] classBytes) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
-            return (Class<T>) defineClassMethod.invoke(loader, new Object[] {name, classBytes, 0, classBytes.length});
+        private Class<T> defineClass(String name, byte[] classBytes) throws RuntimeException {
+            try {
+                return (Class<T>) defineClassMethod.invoke(loader, new Object[] {name, classBytes, 0, classBytes.length});
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException("Could not define the generated class due to: "+e.getMessage(), e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException("Could not define the generated class due to: "+e.getMessage(), e);
+            }
         }
         
-        public byte[] dumpProxy(Method[] methods) throws Exception {
+        public byte[] dumpProxy(Method[] methods) {
             ClassWriter cw = new ClassWriter(COMPUTE_FRAMES);
             FieldVisitor fv;
             MethodVisitor mv;
@@ -215,7 +231,7 @@ public class AsmActor implements Opcodes {
             return value;
         }
     
-        public byte[] dumpRunnable(int index, Method method) throws Exception {
+        public byte[] dumpRunnable(int index, Method method) {
     
             ClassWriter cw = new ClassWriter(COMPUTE_FRAMES);
             FieldVisitor fv;
