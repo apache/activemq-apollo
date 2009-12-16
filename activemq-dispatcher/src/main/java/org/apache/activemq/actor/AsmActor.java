@@ -12,6 +12,8 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
+import static org.objectweb.asm.Type.*;
+
 import static org.objectweb.asm.ClassWriter.*;
 
 public class AsmActor implements Opcodes {
@@ -44,7 +46,7 @@ public class AsmActor implements Opcodes {
     private static final class Generator<T> {
         
         private static final String RUNNABLE = "java/lang/Runnable";
-        private static final String OBJECT = "java/lang/Object";
+        private static final String OBJECT_CLASS = "java/lang/Object";
         private static final String DISPATCH_QUEUE = DispatchQueue.class.getName().replace('.','/');
 
         private final ClassLoader loader;
@@ -91,7 +93,7 @@ public class AsmActor implements Opcodes {
             Label start, end;
     
             // example: 
-            cw.visit(V1_4, ACC_PUBLIC + ACC_SUPER, proxyName, null, OBJECT, new String[] { interfaceName });
+            cw.visit(V1_4, ACC_PUBLIC + ACC_SUPER, proxyName, null, OBJECT_CLASS, new String[] { interfaceName });
             {
                 // example:
                 fv = cw.visitField(ACC_PRIVATE + ACC_FINAL, "queue", sig(DISPATCH_QUEUE), null, null);
@@ -110,7 +112,7 @@ public class AsmActor implements Opcodes {
                     start = new Label();
                     mv.visitLabel(start);
                     mv.visitVarInsn(ALOAD, 0);
-                    mv.visitMethodInsn(INVOKESPECIAL, OBJECT, "<init>", "()V");
+                    mv.visitMethodInsn(INVOKESPECIAL, OBJECT_CLASS, "<init>", "()V");
                     
                     // example: queue=queue;
                     mv.visitVarInsn(ALOAD, 0);
@@ -164,8 +166,12 @@ public class AsmActor implements Opcodes {
                         mv.visitMethodInsn(INVOKESPECIAL, runnable(index), "<init>", "(" + sig(interfaceName) + sig(params) +")V");
                         mv.visitMethodInsn(INVOKEINTERFACE, DISPATCH_QUEUE, "dispatchAsync", "(" + sig(RUNNABLE) + ")V");
                         
-                        // example: return;
-                        mv.visitInsn(RETURN);
+                        Type returnType = Type.getType(method.getReturnType());
+                        Integer returnValue = defaultConstant(returnType);
+                        if( returnValue!=null ) {
+                            mv.visitInsn(returnValue);
+                        }
+                        mv.visitInsn(returnType.getOpcode(IRETURN));
                         
                         end = new Label();
                         mv.visitLabel(end);
@@ -182,6 +188,32 @@ public class AsmActor implements Opcodes {
     
             return cw.toByteArray();
         }
+
+        private Integer defaultConstant(Type returnType) {
+            Integer value=null;
+            switch(returnType.getSort()) {
+            case BOOLEAN:
+            case CHAR:
+            case BYTE:
+            case SHORT:
+            case INT:
+                value = ICONST_0;
+                break;
+            case Type.LONG:
+                value = LCONST_0;
+                break;
+            case Type.FLOAT:
+                value = FCONST_0;
+                break;
+            case Type.DOUBLE:
+                value = DCONST_0;
+                break;
+            case ARRAY:
+            case OBJECT:
+                value = ACONST_NULL;
+            }
+            return value;
+        }
     
         public byte[] dumpRunnable(int index, Method method) throws Exception {
     
@@ -191,7 +223,7 @@ public class AsmActor implements Opcodes {
             Label start, end;
     
             // example: final class OrderRunnable implements Runnable
-            cw.visit(V1_4, ACC_FINAL + ACC_SUPER, runnable(index), null, OBJECT, new String[] { RUNNABLE });
+            cw.visit(V1_4, ACC_FINAL + ACC_SUPER, runnable(index), null, OBJECT_CLASS, new String[] { RUNNABLE });
             {
     
                 // example: private final IPizzaService target;
@@ -218,7 +250,7 @@ public class AsmActor implements Opcodes {
                     start = new Label();
                     mv.visitLabel(start);
                     mv.visitVarInsn(ALOAD, 0);
-                    mv.visitMethodInsn(INVOKESPECIAL, OBJECT, "<init>", "()V");
+                    mv.visitMethodInsn(INVOKESPECIAL, OBJECT_CLASS, "<init>", "()V");
                     
                     // example: this.target = target;
                     mv.visitVarInsn(ALOAD, 0);
@@ -266,7 +298,13 @@ public class AsmActor implements Opcodes {
                         mv.visitFieldInsn(GETFIELD, runnable(index), "param"+i, sig(params[i]));
                     }
                     
-                    mv.visitMethodInsn(INVOKEINTERFACE, interfaceName, method.getName(), "("+sig(params)+")V");
+                    String methodSig = Type.getMethodDescriptor(method);
+                    mv.visitMethodInsn(INVOKEINTERFACE, interfaceName, method.getName(), methodSig);
+                    
+                    Type returnType = Type.getType(method.getReturnType());
+                    if( returnType != VOID_TYPE ) {
+                        mv.visitInsn(POP);
+                    }
                     
                     // example: return;
                     mv.visitInsn(RETURN);

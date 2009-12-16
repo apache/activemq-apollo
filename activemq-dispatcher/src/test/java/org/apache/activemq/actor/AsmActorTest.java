@@ -7,11 +7,20 @@ import org.junit.Test;
 
 import static junit.framework.Assert.*;
 
+import static junit.framework.Assert.*;
+
+import static junit.framework.Assert.*;
+
+import static junit.framework.Assert.*;
+
+import static junit.framework.Assert.*;
+
 public class AsmActorTest {
 
     public static interface TestInterface {
         void strings(String value, String[] value2);
         void shorts(short value, short[] value2);
+        String returnString();
     }
     
     static class TestMock implements TestInterface {
@@ -20,6 +29,9 @@ public class AsmActorTest {
         }
         public void strings(String value, String[] value2) {
             fail();
+        }
+        public String returnString() {
+            return null;
         }
     }
 
@@ -42,8 +54,8 @@ public class AsmActorTest {
         
         service = new TestMock() {
             public void strings(String actual1, String[] actual2) {
-                Assert.assertEquals(expected1, actual1);
-                Assert.assertEquals(expected2, actual2);
+                assertEquals(expected1, actual1);
+                assertEquals(expected2, actual2);
             }
         };
         
@@ -60,8 +72,8 @@ public class AsmActorTest {
         
         service = new TestMock() {
             public void shorts(short actual1, short[] actual2) {
-                Assert.assertEquals(expected1, actual1);
-                Assert.assertEquals(expected2, actual2);
+                assertEquals(expected1, actual1);
+                assertEquals(expected2, actual2);
             }
         };
         
@@ -69,4 +81,18 @@ public class AsmActorTest {
         proxy.shorts(expected1, expected2);
 
     }
-}
+    
+    @Test
+    public void returnString() throws Exception {
+
+        service = new TestMock() {
+            public String returnString() {
+                return "hello";
+            }
+        };
+        
+        proxy = AsmActor.create(TestInterface.class, service, createQueue());
+        String actual = proxy.returnString();
+        assertNull(actual);
+
+    }}
