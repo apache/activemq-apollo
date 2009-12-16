@@ -21,7 +21,7 @@ package org.apache.activemq.dispatch;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public interface DispatchSource extends DispatchObject {
-
+    
     public void cancel();
     public boolean isCanceled();
     

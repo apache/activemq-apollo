@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.dispatch.internal.advanced;
 
+import java.io.IOException;
+import java.nio.channels.SelectableChannel;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.concurrent.Executor;
@@ -24,6 +26,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.dispatch.DispatchPriority;
+import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.DispatchSource;
+import org.apache.activemq.dispatch.internal.nio.NIOSourceHandler;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.PriorityLinkedList;
 import org.apache.activemq.util.TimerHeap;
@@ -73,10 +78,13 @@ public class DispatcherThread implements Runnable {
             return element.listPrio;
         }
     };
+    
 
-    protected DispatcherThread(AdvancedDispatcher dispatcher, String name, int priorities) {
+    private final NIOSourceHandler nioHandler;
+
+    protected DispatcherThread(AdvancedDispatcher dispatcher, String name, int priorities) throws IOException {
         this.name = name;
-        
+        this.nioHandler = new NIOSourceHandler(this);
         this.dispatchQueues = new ThreadDispatchQueue[3];
         for (int i = 0; i < 3; i++) {
             dispatchQueues[i] = new ThreadDispatchQueue(this, DispatchPriority.values()[i]);
@@ -132,6 +140,11 @@ public class DispatcherThread implements Runnable {
                         running = false;
                         if( onShutdown!=null ) {
                             onShutdown.run();
+                        }
+                        try {
+                            nioHandler.shutdown();
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
                     }
                 }, MAX_USER_PRIORITY + 1);
@@ -374,5 +387,4 @@ public class DispatcherThread implements Runnable {
     public String getName() {
         return name;
     }
-
 }

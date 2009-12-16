@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.dispatch.internal.advanced;
 
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.util.ArrayList;
 import java.util.concurrent.Executor;
@@ -31,15 +32,15 @@ import org.apache.activemq.dispatch.DispatchSource;
 import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.dispatch.internal.BaseRetained;
+import org.apache.activemq.dispatch.internal.nio.NIODispatchSource;
 
 import static org.apache.activemq.dispatch.DispatchPriority.*;
-
 
 final public class AdvancedDispatcher extends BaseRetained implements Dispatcher {
 
     public final static ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
 
-    final SerialDispatchQueue mainQueue = new SerialDispatchQueue("main");
+    final SerialDispatchQueue mainQueue;
     final GlobalDispatchQueue globalQueues[];
     final AtomicLong globalQueuedRunnables = new AtomicLong();
 
@@ -54,6 +55,7 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
     public AdvancedDispatcher(DispatcherConfig config) {
         this.size = config.getThreads();
         this.numPriorities = 3;
+        this.mainQueue = new SerialDispatchQueue(this, "main");
         globalQueues = new GlobalDispatchQueue[3];
         for (int i = 0; i < 3; i++) {
             globalQueues[i] = new GlobalDispatchQueue(this, DispatchPriority.values()[i]);
@@ -64,20 +66,26 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
     /**
      * @see org.apache.activemq.dispatch.internal.advanced.DispatcherThread#start()
      */
-    protected void startup()  {
+    protected void startup() {
         loadBalancer.start();
         for (int i = 0; i < size; i++) {
-            DispatcherThread dispatacher = new DispatcherThread(this, ("dispatcher -" + (i + 1)), numPriorities);
-            dispatchers.add(dispatacher);
-            dispatacher.start();
+            DispatcherThread dispatacher;
+            try {
+                dispatacher = new DispatcherThread(this, ("dispatcher -" + (i + 1)), numPriorities);
+                dispatchers.add(dispatacher);
+                dispatacher.start();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
-    
+
     protected void shutdown() {
         Runnable countDown = new Runnable() {
             AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.size());
+
             public void run() {
-                if( shutdownCountDown.decrementAndGet()==0 ) {
+                if (shutdownCountDown.decrementAndGet() == 0) {
                     // Notify any registered shutdown watchers.
                     AdvancedDispatcher.super.shutdown();
                 }
@@ -119,8 +127,7 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
         DispatcherThread d = DispatcherThread.CURRENT.get();
         if (d == null) {
             synchronized (dispatchers) {
-                if(dispatchers.isEmpty())
-                {
+                if (dispatchers.isEmpty()) {
                     throw new RejectedExecutionException();
                 }
                 if (++roundRobinCounter >= size) {
@@ -133,14 +140,14 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
         }
     }
 
-//    public DispatchContext register(Runnable runnable, String name) {
-//        return chooseDispatcher().register(runnable, name);
-//    }
+    // public DispatchContext register(Runnable runnable, String name) {
+    // return chooseDispatcher().register(runnable, name);
+    // }
 
-	public int getSize() {
-		return size;
-	}
-	
+    public int getSize() {
+        return size;
+    }
+
     public final Executor createPriorityExecutor(final int priority) {
         return new Executor() {
             public void execute(final Runnable runnable) {
@@ -158,7 +165,7 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
     public void execute(Runnable command) {
         chooseDispatcher().dispatch(command, 0);
     }
-    
+
     public void execute(Runnable command, int priority) {
         chooseDispatcher().dispatch(command, priority);
     }
@@ -170,11 +177,11 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
     public void schedule(final Runnable runnable, int priority, long delay, TimeUnit timeUnit) {
         chooseDispatcher().schedule(runnable, priority, delay, timeUnit);
     }
-    
+
     public DispatchQueue getMainQueue() {
         return mainQueue;
     }
-    
+
     public DispatchQueue getGlobalQueue() {
         return getGlobalQueue(DEFAULT);
     }
@@ -182,19 +189,31 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
     public DispatchQueue getGlobalQueue(DispatchPriority priority) {
         return globalQueues[priority.ordinal()];
     }
-    
+
     public DispatchQueue createSerialQueue(String label, DispatchOption... options) {
-        SerialDispatchQueue rc = new SerialDispatchQueue(label, options);
+        SerialDispatchQueue rc = new SerialDispatchQueue(this, label, options);
         rc.setTargetQueue(getGlobalQueue());
         return rc;
     }
-    
+
     public void dispatchMain() {
         mainQueue.run();
     }
 
     public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue) {
-        return null;
+        NIODispatchSource source = new NIODispatchSource();
+        try {
+            source.setChannel(channel);
+        } catch (ClosedChannelException e) {
+            e.printStackTrace();
+        }
+        source.setMask(interestOps);
+        //Dispatch Source must be sticky so that it sticks to it's thread's selector:
+        if (!(queue.getOptions().contains(DispatchOption.STICK_TO_CALLER_THREAD) || queue.getOptions().contains(DispatchOption.STICK_TO_CALLER_THREAD))) {
+            throw new IllegalStateException("Source dispatch queue must be sticky");
+        }
+        source.setTargetQueue(queue);
+        return source;
     }
 
     public DispatchQueue getCurrentQueue() {
@@ -203,10 +222,10 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
 
     public DispatchQueue getCurrentThreadQueue() {
         DispatcherThread thread = DispatcherThread.CURRENT.get();
-        if( thread==null ) {
+        if (thread == null) {
             return null;
         }
         return thread.currentDispatchQueue;
-    }    
+    }
 
 }

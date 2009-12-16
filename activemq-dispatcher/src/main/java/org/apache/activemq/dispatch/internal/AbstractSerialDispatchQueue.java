@@ -70,10 +70,6 @@ abstract public class AbstractSerialDispatchQueue extends AbstractDispatchObject
         suspendCounter.incrementAndGet();
     }
 
-    public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
-        throw new RuntimeException("TODO: implement me.");
-    }
-
     public void execute(Runnable command) {
         dispatchAsync(command);
     }

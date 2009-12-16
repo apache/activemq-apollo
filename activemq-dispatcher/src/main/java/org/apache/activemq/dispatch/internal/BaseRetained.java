@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class BaseRetained {
     
-    final protected AtomicInteger reatinCounter = new AtomicInteger(0);
+    final protected AtomicInteger retainCounter = new AtomicInteger(0);
     final protected ArrayList<Runnable> shutdownHandlers = new ArrayList<Runnable>();
 
     public void addShutdownWatcher(Runnable shutdownHandler) {
@@ -15,15 +15,20 @@ public class BaseRetained {
     }
     
     public void retain() {
-        if( reatinCounter.getAndIncrement() == 0 ) {
+        if( retainCounter.getAndIncrement() == 0 ) {
             startup();
         }
     }
 
     public void release() {
-        if( reatinCounter.decrementAndGet()==0 ) {
+        if( retainCounter.decrementAndGet()==0 ) {
             shutdown();
         }
+    }
+    
+    protected boolean isShutdown()
+    {
+        return retainCounter.get() <= 0;
     }
 
     /**

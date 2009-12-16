@@ -135,8 +135,7 @@ public final class SerialDispatchQueue extends AbstractSerialDispatchQueue imple
             SimpleDispatcher.CURRENT_QUEUE.set(current);
         }
     }
-
-    @Override
+    
     public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
         dispatcher.timerThread.addRelative(runnable, this, delay, unit);
     }

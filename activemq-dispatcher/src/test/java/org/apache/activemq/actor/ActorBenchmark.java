@@ -1,5 +1,7 @@
 package org.apache.activemq.actor;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.activemq.dispatch.internal.AbstractSerialDispatchQueue;
 import org.junit.Test;
 
@@ -7,18 +9,15 @@ import static java.lang.String.*;
 
 public class ActorBenchmark {
 
-    
-    public static class PizzaService implements IPizzaService
-    {
+    public static class PizzaService implements IPizzaService {
         long counter;
-        
+
         @Message
-        public void order(long count)
-        {
+        public void order(long count) {
             counter += count;
         }
     }
-    
+
     @Test
     public void benchmarkCGLibProxy() throws Exception {
         String name = "cglib proxy";
@@ -34,7 +33,7 @@ public class ActorBenchmark {
         IPizzaService proxy = new PizzaServiceCustomProxy(service, createQueue());
         benchmark(name, service, proxy);
     }
-    
+
     @Test
     public void benchmarkAsmProxy() throws Exception {
         String name = "asm proxy";
@@ -48,34 +47,39 @@ public class ActorBenchmark {
             public void dispatchAsync(Runnable runnable) {
                 runnable.run();
             }
+
+            public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
+                throw new RuntimeException("TODO: implement me.");
+                
+            }
+
         };
     }
 
     private void benchmark(String name, PizzaService service, IPizzaService proxy) throws Exception {
         // warm it up..
-        benchmark(proxy, 1000*1000);
-        if( service.counter == 0)
+        benchmark(proxy, 1000 * 1000);
+        if (service.counter == 0)
             throw new Exception();
-        
-        int iterations = 1000*1000*100;
-        
+
+        int iterations = 1000 * 1000 * 100;
+
         long start = System.nanoTime();
         benchmark(proxy, iterations);
         long end = System.nanoTime();
-        
-        if( service.counter == 0)
+
+        if (service.counter == 0)
             throw new Exception();
 
-        double durationMS = 1.0d*(end-start)/1000000d;
+        double durationMS = 1.0d * (end - start) / 1000000d;
         double rate = 1000d * iterations / durationMS;
         System.out.println(format("name: %s, duration: %,.3f ms, rate: %,.2f executions/sec", name, durationMS, rate));
     }
 
-
     private void benchmark(IPizzaService proxy, int iterations) {
-        for( int i=0; i < iterations; i++ ) {
+        for (int i = 0; i < iterations; i++) {
             proxy.order(1);
         }
     }
-    
+
 }

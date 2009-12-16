@@ -35,6 +35,7 @@ public class GlobalDispatchQueue implements DispatchQueue {
     private final String label;
     private final AdvancedDispatcher dispatcher;
     private final DispatchPriority priority;
+    private Object context;
     
     public GlobalDispatchQueue(AdvancedDispatcher dispatcher, DispatchPriority priority) {
         this.dispatcher = dispatcher;
@@ -75,11 +76,11 @@ public class GlobalDispatchQueue implements DispatchQueue {
     }
 
     public <Context> Context getContext() {
-        throw new UnsupportedOperationException();
+        return (Context) context;
     }
 
     public <Context> void setContext(Context context) {
-        throw new UnsupportedOperationException();
+        this.context = context;
     }
 
     public void addShutdownWatcher(Runnable finalizer) {

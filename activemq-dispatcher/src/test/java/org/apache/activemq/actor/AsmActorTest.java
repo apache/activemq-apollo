@@ -1,5 +1,7 @@
 package org.apache.activemq.actor;
 
+import java.util.concurrent.TimeUnit;
+
 import junit.framework.Assert;
 
 import org.apache.activemq.dispatch.internal.AbstractSerialDispatchQueue;
@@ -42,6 +44,10 @@ public class AsmActorTest {
         return new AbstractSerialDispatchQueue("mock queue") {
             public void dispatchAsync(Runnable runnable) {
                 runnable.run();
+            }
+
+            public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
+                throw new UnsupportedOperationException("Not implemented");
             }
         };
     }

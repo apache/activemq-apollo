@@ -1,13 +1,17 @@
 package org.apache.activemq.dispatch.internal.advanced;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.activemq.dispatch.DispatchOption;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.internal.AbstractSerialDispatchQueue;
 
 public class SerialDispatchQueue extends AbstractSerialDispatchQueue {
 
-    public SerialDispatchQueue(String label, DispatchOption...options) {
+    AdvancedDispatcher dispather;
+    public SerialDispatchQueue(AdvancedDispatcher dispather, String label, DispatchOption...options) {
         super(label, options);
+        this.dispather = dispather;
 //        context = new DispatchContext(this, true, label);
 }
     
@@ -28,5 +32,7 @@ public class SerialDispatchQueue extends AbstractSerialDispatchQueue {
         }
     }
     
-
+    public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
+        dispather.schedule(runnable, delay, unit);
+    }
 }

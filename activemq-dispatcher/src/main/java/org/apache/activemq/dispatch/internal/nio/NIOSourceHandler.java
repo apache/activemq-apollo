@@ -22,19 +22,22 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
-import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatcher;
 import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
 
-public class NIODispatcherThread extends DispatcherThread {
+public class NIOSourceHandler {
     private final boolean DEBUG = false;
 
     private final Selector selector;
+    private final DispatcherThread thread;
 
-    protected NIODispatcherThread(AdvancedDispatcher dispatcher, String name, int priorities) throws IOException {
-        super(dispatcher, name, priorities);
+    public NIOSourceHandler(DispatcherThread thread) throws IOException {
         this.selector = Selector.open();
+        this.thread = thread;
+    }
+
+    DispatcherThread getThread() {
+        return thread;
     }
 
     Selector getSelector() {
@@ -51,23 +54,6 @@ public class NIODispatcherThread extends DispatcherThread {
         }
     }
 
-    public SelectableDispatchContext registerSelectable(Runnable dispatchable, String name) {
-        return new SelectableDispatchContext(this, dispatchable, name);
-    }
-
-    /**
-     * Subclasses may override this to do do additional dispatch work:
-     * 
-     * @throws Exception
-     */
-    protected void dispatchHook() throws Exception {
-        doSelect(true);
-    }
-
-    protected void waitForEvents() throws Exception {
-        doSelect(false);
-    }
-
     /**
      * Subclasses may override this to provide an alternative wakeup mechanism.
      */
@@ -75,51 +61,28 @@ public class NIODispatcherThread extends DispatcherThread {
         selector.wakeup();
     }
 
-    private long lastSelect = System.nanoTime();
-    private long frequency = 50000000;
+    /**
+     * Selects ready sources, potentially blocking. If wakeup is called during
+     * select the method will return.
+     * 
+     * @param timeout
+     *            A negative value cause the select to block until a source is
+     *            ready, 0 will do a non blocking select. Otherwise the select
+     *            will block up to timeout in milliseconds waiting for a source
+     *            to become ready.
+     * @throws IOException
+     */
+    public void doSelect(long timeout) throws IOException {
 
-    private void doSelect(boolean now) throws IOException {
-
-        // Select what's ready now:
         try {
-            if (now) {
-                if (selector.keys().isEmpty()) {
-                    return;
-                }
-                // selector.selectNow();
-                // processSelected();
-
-                long time = System.nanoTime();
-                if (time - lastSelect > frequency) {
-                    selector.selectNow();
-                    lastSelect = time;
-
-                    int registered = selector.keys().size();
-                    int selected = selector.selectedKeys().size();
-                    if (selected == 0) {
-                        frequency += 1000000;
-                        if (DEBUG)
-                            debug(this + "Increased select frequency to " + frequency);
-                    } else if (selected > registered / 4) {
-                        frequency -= 1000000;
-                        if (DEBUG)
-                            debug(this + "Decreased select frequency to " + frequency);
-                    }
-                    processSelected();
-
-                }
+            if (timeout == -1) {
+                selector.select();
+            } else if (timeout > 0) {
+                selector.select(timeout);
             } else {
-                long next = timerHeap.timeToNext(TimeUnit.MILLISECONDS);
-                if (next == -1) {
-                    selector.select();
-                } else if (next > 0) {
-                    selector.select(next);
-                } else {
-                    selector.selectNow();
-                }
-                lastSelect = System.nanoTime();
-                processSelected();
+                selector.selectNow();
             }
+            processSelected();
 
         } catch (CancelledKeyException ignore) {
             // A key may have been canceled.
@@ -136,17 +99,17 @@ public class NIODispatcherThread extends DispatcherThread {
                 boolean done = false;
                 SelectionKey key = i.next();
                 if (key.isValid()) {
-                    SelectableDispatchContext context = (SelectableDispatchContext) key.attachment();
+                    NIODispatchSource source = (NIODispatchSource) key.attachment();
 
                     done = true;
                     try {
-                        done = context.onSelect();
+                        done = source.onSelect();
                     } catch (RuntimeException re) {
                         if (DEBUG)
-                            debug("Exception in " + context + " closing");
+                            debug("Exception in " + source + " canceling");
                         // If there is a Runtime error close the context:
                         // TODO better error handling here:
-                        context.close(false);
+                        source.cancel();
                     }
                 } else {
                     done = true;
@@ -158,6 +121,14 @@ public class NIODispatcherThread extends DispatcherThread {
                 }
             }
         }
+    }
+
+    public void shutdown() throws IOException {
+        for (SelectionKey key : selector.keys()) {
+            NIODispatchSource source = (NIODispatchSource) key.attachment();
+            source.cancel();
+        }
+        selector.close();
     }
 
     private final void debug(String str) {
