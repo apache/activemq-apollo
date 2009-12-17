@@ -96,17 +96,16 @@ public class MockBroker implements TransportServerHandler {
         transportServer.setTargetQueue(brokerDispatchQueue);
         transportServer.setHandler(this);
         transportServer.resume();
-
+        
         for (MockQueue queue : queues.values()) {
             queue.start();
-        }
-
-        for (BrokerConnection connection : brokerConnections) {
-            connection.retain();
         }
     }
 
     public void onBind() {
+        for (BrokerConnection connection : brokerConnections) {
+            connection.retain();
+        }
     }
     
     public void onUnbind() {
