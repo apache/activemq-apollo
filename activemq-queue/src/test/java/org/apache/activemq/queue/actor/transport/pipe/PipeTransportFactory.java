@@ -186,6 +186,11 @@ public class PipeTransportFactory implements TransportFactory {
             this.dispatcher = dispatcher;
             dispatchQueue = (DispatchQueue) next;
             dispatchQueue.suspend();
+            dispatchQueue.addShutdownWatcher(new Runnable() {
+                public void run() {
+                    perform_unbind(PipeTransportServer.this);
+                }
+            });
             this.actor = ActorProxy.create(PipeTransportServerActor.class, this, dispatchQueue);
             this.actor.onBind();
         }
@@ -267,6 +272,15 @@ public class PipeTransportFactory implements TransportFactory {
             super( dispatcher.createSerialQueue(null) );
             this.dispatchQueue = (DispatchQueue) next;
             this.dispatchQueue.suspend();
+            this.dispatchQueue.addShutdownWatcher(new Runnable() {
+                public void run() {
+                    PipeTransportActor peer = PipeTransport.this.peer;
+                    if( peer!=null ) {
+                        peer.onDisconnect();
+                        peer = null;
+                    }
+                }
+            });
             
             // Queue up the connect event so it's the first thing that gets executed when
             // this object gets resumed..
