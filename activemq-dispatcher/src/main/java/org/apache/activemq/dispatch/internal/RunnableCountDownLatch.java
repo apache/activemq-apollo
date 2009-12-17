@@ -19,6 +19,10 @@ package org.apache.activemq.dispatch.internal;
 
 import java.util.concurrent.CountDownLatch;
 
+/**
+ * 
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class RunnableCountDownLatch extends CountDownLatch implements Runnable {
     public RunnableCountDownLatch(int count) {
         super(count);

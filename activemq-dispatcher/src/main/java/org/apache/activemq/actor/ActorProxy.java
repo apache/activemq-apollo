@@ -16,7 +16,7 @@ import static org.objectweb.asm.Type.*;
 
 import static org.objectweb.asm.ClassWriter.*;
 
-public class AsmActor implements Opcodes {
+public class ActorProxy {
 
     public static <T> T create(Class<T> interfaceClass, T target, DispatchQueue queue) throws IllegalArgumentException {
         return create(target.getClass().getClassLoader(), interfaceClass, target, queue);
@@ -46,10 +46,10 @@ public class AsmActor implements Opcodes {
     }
 
     static private String proxyName(Class<?> clazz) {
-        return "org.apache.activemq.actor.generated."+clazz.getName();
+        return clazz.getName()+"$__ACTOR_PROXY__";
     }
     
-    private static final class Generator<T> {
+    private static final class Generator<T> implements Opcodes {
         
         private static final String RUNNABLE = "java/lang/Runnable";
         private static final String OBJECT_CLASS = "java/lang/Object";

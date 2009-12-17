@@ -17,7 +17,9 @@
 
 package org.apache.activemq.actor;
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public interface IPizzaService {
-    @Message
     public void order(long count);
 }

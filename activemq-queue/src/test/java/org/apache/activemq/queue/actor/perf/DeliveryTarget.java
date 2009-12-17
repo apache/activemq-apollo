@@ -15,23 +15,20 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.dispatch;
+package org.apache.activemq.queue.actor.perf;
 
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public enum DispatchOption {
+public interface DeliveryTarget {
+
     /**
-     * Updates the target queue to be the
-     * thread queue so that execution 'sticks' to caller's 
-     * thread queue.
+     * @return true if this sub has a selector
      */
-    STICK_TO_CALLER_THREAD,
+    public boolean hasSelector();
     
-    /**
-     * Used to update the target queue to be the first
-     * random thread queue that dispatches this queue.
-     */
-    STICK_TO_DISPATCH_THREAD, 
+    public boolean match(Message message);
+
+    public void add(Message msg, Runnable r);
 }

@@ -1,23 +1,33 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.activemq.actor;
 
 import java.util.concurrent.TimeUnit;
-
-import junit.framework.Assert;
 
 import org.apache.activemq.dispatch.internal.AbstractSerialDispatchQueue;
 import org.junit.Test;
 
 import static junit.framework.Assert.*;
 
-import static junit.framework.Assert.*;
-
-import static junit.framework.Assert.*;
-
-import static junit.framework.Assert.*;
-
-import static junit.framework.Assert.*;
-
-public class AsmActorTest {
+/**
+ * 
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+public class ActorProxyTest {
 
     public static interface TestInterface {
         void strings(String value, String[] value2);
@@ -65,7 +75,7 @@ public class AsmActorTest {
             }
         };
         
-        proxy = AsmActor.create(TestInterface.class, service, createQueue());
+        proxy = ActorProxy.create(TestInterface.class, service, createQueue());
         proxy.strings(expected1, expected2);
 
     }
@@ -83,7 +93,7 @@ public class AsmActorTest {
             }
         };
         
-        proxy = AsmActor.create(TestInterface.class, service, createQueue());
+        proxy = ActorProxy.create(TestInterface.class, service, createQueue());
         proxy.shorts(expected1, expected2);
 
     }
@@ -97,7 +107,7 @@ public class AsmActorTest {
             }
         };
         
-        proxy = AsmActor.create(TestInterface.class, service, createQueue());
+        proxy = ActorProxy.create(TestInterface.class, service, createQueue());
         String actual = proxy.returnString();
         assertNull(actual);
 

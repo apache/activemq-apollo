@@ -36,7 +36,6 @@ import org.apache.activemq.dispatch.internal.simple.IntegerCounter;
 abstract public class AbstractSerialDispatchQueue extends AbstractDispatchObject implements DispatchQueue, Runnable {
 
     protected final String label;
-    protected final AtomicInteger suspendCounter = new AtomicInteger();
     protected final AtomicInteger executeCounter = new AtomicInteger();
     
     protected final AtomicLong externalQueueSize = new AtomicLong();
@@ -64,14 +63,9 @@ abstract public class AbstractSerialDispatchQueue extends AbstractDispatchObject
         return label;
     }
 
-    public void resume() {
-        if( suspendCounter.decrementAndGet() == 0 ) {
-            dispatchSelfAsync();
-        }
-    }
-
-    public void suspend() {
-        suspendCounter.incrementAndGet();
+    @Override
+    protected void onResume() {
+        dispatchSelfAsync();
     }
 
     public void execute(Runnable command) {

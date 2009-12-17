@@ -19,6 +19,10 @@ package org.apache.activemq.dispatch;
 
 import org.apache.activemq.dispatch.internal.simple.DispatcherThread;
 
+/**
+ * 
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public interface DispatcherObserver {
     
     public void onThreadCreate(DispatcherThread thread);

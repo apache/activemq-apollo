@@ -19,6 +19,9 @@ package org.apache.activemq.actor;
 
 import org.apache.activemq.dispatch.DispatchQueue;
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class PizzaServiceCustomProxy implements IPizzaService {
     private final DispatchQueue queue;
     private final IPizzaService target;

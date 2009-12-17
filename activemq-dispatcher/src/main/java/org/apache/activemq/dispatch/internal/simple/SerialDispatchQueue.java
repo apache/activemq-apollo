@@ -24,6 +24,10 @@ import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.internal.AbstractSerialDispatchQueue;
 
+/**
+ * 
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public final class SerialDispatchQueue extends AbstractSerialDispatchQueue implements SimpleQueue {
 
     private final SimpleDispatcher dispatcher;

@@ -14,24 +14,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.activemq.queue.actor.perf;
 
-package org.apache.activemq.dispatch;
+import org.apache.activemq.actor.ActorProxy;
+import org.apache.activemq.queue.actor.transport.TransportFactorySystem;
 
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public enum DispatchOption {
-    /**
-     * Updates the target queue to be the
-     * thread queue so that execution 'sticks' to caller's 
-     * thread queue.
-     */
-    STICK_TO_CALLER_THREAD,
+public class ClientConnection extends BaseConnection {
     
-    /**
-     * Used to update the target queue to be the first
-     * random thread queue that dispatches this queue.
-     */
-    STICK_TO_DISPATCH_THREAD, 
+    protected String connectUri;
+    
+    public void setConnectUri(String uri) {
+        this.connectUri = uri;
+    }
+
+    protected void createActor() {
+        actor = ActorProxy.create(Protocol.class, new ClientProtocolImpl(), dispatchQueue);
+    }
+
+    protected class ClientProtocolImpl extends ProtocolImpl  {
+        
+        @Override
+        public void start()  {
+            transport = TransportFactorySystem.connect(dispatcher, connectUri);
+            super.start();
+        }
+
+        public void onConnect() {
+            super.onConnect();
+            super.transportSend(name);
+        }
+        
+    }
+    
+
+
 }

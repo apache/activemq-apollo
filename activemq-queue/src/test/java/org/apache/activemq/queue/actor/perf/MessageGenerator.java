@@ -14,24 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.activemq.dispatch;
+package org.apache.activemq.queue.actor.perf;
 
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public enum DispatchOption {
-    /**
-     * Updates the target queue to be the
-     * thread queue so that execution 'sticks' to caller's 
-     * thread queue.
-     */
-    STICK_TO_CALLER_THREAD,
-    
-    /**
-     * Used to update the target queue to be the first
-     * random thread queue that dispatches this queue.
-     */
-    STICK_TO_DISPATCH_THREAD, 
+public interface MessageGenerator {
+    interface MessageReadyListener {
+        public void onMessageReady(Message m);
+    }
+
+    public void addMessageReadyListener(MessageReadyListener listener);
+
+    public Message pollMessage();
+
 }

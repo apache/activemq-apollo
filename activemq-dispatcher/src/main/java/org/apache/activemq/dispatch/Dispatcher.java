@@ -19,7 +19,10 @@ package org.apache.activemq.dispatch;
 
 import java.nio.channels.SelectableChannel;
 
-
+/**
+ * 
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public interface Dispatcher extends Retained {
 
     public DispatchQueue getGlobalQueue();

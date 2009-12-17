@@ -17,52 +17,44 @@ import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.dispatch.internal.advanced.AdvancedDispatcher;
 
-import static org.apache.activemq.dispatch.DispatchOption.*;
-
-
-/** 
+/**
  * ActorTest
  * <p>
  * Description:
  * </p>
+ * 
  * @author cmacnaug
  * @version 1.0
  */
 public class ActorTest extends TestCase {
 
     
-    public static class ActorTestObject
-    {
-        @Message
-        public void actorInvocation(CountDownLatch latch)
-        {
-            latch.countDown();
-        }
-        
-        public void straightThrough(CountDownLatch latch)
-        {
-            latch.countDown();
-        }
-        
+    interface TestObjectActor {
+        public void actorInvocation(CountDownLatch latch);
     }
     
-    public void testActorInvocation() throws Exception
-    {
+    public static class TestObject implements TestObjectActor {
+        public void actorInvocation(CountDownLatch latch) {
+            latch.countDown();
+        }
+    }
+
+    public void testActorInvocation() throws Exception {
         Dispatcher advancedSystem = new AdvancedDispatcher(new DispatcherConfig());
         advancedSystem.retain();
-        
-        DispatchQueue queue = advancedSystem.createSerialQueue("test", STICK_TO_CALLER_THREAD);
-        ActorTestObject testObject = Actor.create(new ActorTestObject(), queue);
-        
+
+        DispatchQueue queue = advancedSystem.createSerialQueue("test");
+        TestObjectActor actor = ActorProxy.create(TestObjectActor.class, new TestObject(), queue);
+
         CountDownLatch latch = new CountDownLatch(1);
-        testObject.actorInvocation(latch);
+        actor.actorInvocation(latch);
         assertTrue(latch.await(1, TimeUnit.SECONDS));
-         
+
         queue.suspend();
         latch = new CountDownLatch(1);
-        testObject.actorInvocation(latch);
+        actor.actorInvocation(latch);
         assertFalse("Suspended Queue shouldn't invoked method", latch.await(2, TimeUnit.SECONDS));
-        
+
         queue.resume();
         assertTrue("Resumed Queue should invoke method", latch.await(2, TimeUnit.SECONDS));
     }

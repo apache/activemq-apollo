@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.dispatch.internal;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.activemq.dispatch.DispatchObject;
 import org.apache.activemq.dispatch.DispatchQueue;
 
@@ -27,6 +29,7 @@ abstract public class AbstractDispatchObject extends BaseRetained implements Dis
 
     protected volatile Object context;
     protected volatile DispatchQueue targetQueue;
+    protected final AtomicInteger suspendCounter = new AtomicInteger();
 
     @SuppressWarnings("unchecked")
     public <Context> Context getContext() {
@@ -45,5 +48,17 @@ abstract public class AbstractDispatchObject extends BaseRetained implements Dis
         return this.targetQueue;
     }
     
+    public void resume() {
+        if( suspendCounter.decrementAndGet() == 0 ) {
+            onResume();
+        }
+    }
+
+    public void suspend() {
+        suspendCounter.incrementAndGet();
+    }
+    
+    protected void onResume() {
+    }
 
 }

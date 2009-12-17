@@ -17,6 +17,10 @@
 
 package org.apache.activemq.dispatch;
 
+/**
+ * 
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public enum DispatchPriority {
     HIGH,
     DEFAULT,
