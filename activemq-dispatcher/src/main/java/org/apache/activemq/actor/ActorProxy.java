@@ -22,7 +22,7 @@ public class ActorProxy {
         return create(target.getClass().getClassLoader(), interfaceClass, target, queue);
     }
     
-    public static <T> T create(ClassLoader classLoader, Class<T> interfaceClass, T target, DispatchQueue queue) throws IllegalArgumentException {
+    synchronized public static <T> T create(ClassLoader classLoader, Class<T> interfaceClass, T target, DispatchQueue queue) throws IllegalArgumentException {
         Class<T> proxyClass = getProxyClass(classLoader, interfaceClass);
         Constructor<?> constructor = proxyClass.getConstructors()[0];
         Object rc;

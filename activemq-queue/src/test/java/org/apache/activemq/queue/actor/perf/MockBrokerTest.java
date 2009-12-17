@@ -34,7 +34,7 @@ import org.apache.activemq.util.buffer.AsciiBuffer;
  */
 public class MockBrokerTest extends TestCase {
 
-    protected static final int PERFORMANCE_SAMPLES = 30000000;
+    protected static final int PERFORMANCE_SAMPLES = 3;
     protected static final int SAMPLING_FREQUENCY = 5;
 
     protected static final int FANIN_COUNT = 10;
