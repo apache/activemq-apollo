@@ -219,7 +219,7 @@ public class MockClient {
     }
 
     public void runTest() throws Exception {
-        getDispatcher().retain();
+        getDispatcher().resume();
 
         // Start 'em up.
         startServices();
@@ -304,7 +304,7 @@ public class MockClient {
         System.out.println(IntrospectionSupport.toString(test));
         try
         {
-            test.getDispatcher().retain();
+            test.getDispatcher().resume();
             test.createConnections();
             test.runTest();
         }

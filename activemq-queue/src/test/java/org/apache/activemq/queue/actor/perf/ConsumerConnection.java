@@ -37,16 +37,16 @@ public class ConsumerConnection extends ClientConnection {
     private final MetricCounter rate = new MetricCounter();
 
     protected void createActor() {
-        actor = ActorProxy.create(Protocol.class, new ProducerProtocolImpl(), dispatchQueue);
+        actor = ActorProxy.create(ConnectionStateActor.class, new ConsumerConnectionState(), dispatchQueue);
     }
 
-    class ProducerProtocolImpl extends ClientProtocolImpl {
+    class ConsumerConnectionState extends ClientConnectionState {
 
         @Override
-        public void start() {
+        public void onStart() {
             rate.name("Consumer " + name + " Rate");
             totalConsumerRate.add(rate);
-            super.start();
+            super.onStart();
         }
         
         @Override
@@ -61,7 +61,7 @@ public class ConsumerConnection extends ClientConnection {
                 dispatchQueue.dispatchAfter(new Runnable() {
                     public void run() {
                         rate.increment();
-                        ProducerProtocolImpl.super.onReceiveMessage(msg);
+                        ConsumerConnectionState.super.onReceiveMessage(msg);
                     }
                 }, thinkTime, TimeUnit.MILLISECONDS);
 

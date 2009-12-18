@@ -14,16 +14,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch;
+
+package org.apache.activemq.queue.actor.perf;
 
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public interface Retained {
+public class WindowController extends WindowLimiter {
+
+    private int maxSize;
+    private int processed;
+    private int creditsAt;
     
-    public void retain();
-    public void release();
-    public void addShutdownWatcher(Runnable shutdownWatcher);
+    public int processed(int count) {
+        int rc = 0;
+        processed += count;
+        if( processed >= creditsAt ) {
+            change(processed);
+            rc = processed;
+            processed = 0;
+        }
+        return rc;
+    }
+    
+    int maxSize(int newMaxSize) {
+        int change = newMaxSize-maxSize;
+        this.maxSize=newMaxSize;
+        this.creditsAt = maxSize/2;
+        change(change);
+        return change;
+    }
+    
+    int maxSize() {
+        return maxSize;
+    }
 
 }

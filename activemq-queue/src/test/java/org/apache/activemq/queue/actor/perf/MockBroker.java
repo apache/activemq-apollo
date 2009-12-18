@@ -18,6 +18,8 @@ package org.apache.activemq.queue.actor.perf;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.dispatch.DispatchQueue;
@@ -28,6 +30,8 @@ import org.apache.activemq.queue.actor.transport.Transport;
 import org.apache.activemq.queue.actor.transport.TransportFactorySystem;
 import org.apache.activemq.queue.actor.transport.TransportServer;
 import org.apache.activemq.queue.actor.transport.TransportServerHandler;
+
+import static java.util.concurrent.TimeUnit.*;
 
 /**
  * 
@@ -80,16 +84,18 @@ public class MockBroker implements TransportServerHandler {
         transportServer.release();
 
         for (BrokerConnection connection : connections) {
-            connection.release();
+            connection.stop();
         }
         for (BrokerConnection connection : brokerConnections) {
-            connection.release();
+            connection.stop();
         }
         for (MockQueue queue : queues.values()) {
             queue.stop();
         }
     }
 
+    CountDownLatch bindLatch = new CountDownLatch(1);
+    
     public final void startServices() throws Exception {
         brokerDispatchQueue = dispatcher.createSerialQueue("broker");
         transportServer = TransportFactorySystem.bind(dispatcher, uri);
@@ -100,12 +106,24 @@ public class MockBroker implements TransportServerHandler {
         for (MockQueue queue : queues.values()) {
             queue.start();
         }
+        
+        for (BrokerConnection connection : brokerConnections) {
+            connection.start();
+        }
+        
+        if( !bindLatch.await(5, SECONDS) ) {
+            throw new Exception("bind timeout");
+        }
+    }
+
+    public void onFailure(Exception error) {
+        bindLatch.countDown();
+        System.out.println("Accept error: " + error);
+        error.printStackTrace();
     }
 
     public void onBind() {
-        for (BrokerConnection connection : brokerConnections) {
-            connection.retain();
-        }
+        bindLatch.countDown();
     }
     
     public void onUnbind() {
@@ -117,18 +135,15 @@ public class MockBroker implements TransportServerHandler {
         connection.setTransport(transport);
         connection.setPriorityLevels(MockBrokerTest.PRIORITY_LEVELS);
         connection.setDispatcher(dispatcher);
+        connection.setName("handler: "+transport.getRemoteAddress());
         connections.add(connection);
         try {
-            connection.retain();
+            connection.start();
         } catch (Exception e1) {
             onFailure(e1);
         }
     }
 
-    public void onFailure(Exception error) {
-        System.out.println("Accept error: " + error);
-        error.printStackTrace();
-    }
 
     public Dispatcher getDispatcher() {
         return dispatcher;
@@ -181,7 +196,7 @@ public class MockBroker implements TransportServerHandler {
         broker.setName("Broker");
         broker.createDispatcher();
         try {
-            broker.getDispatcher().retain();
+            broker.getDispatcher().resume();
             broker.startServices();
         } catch (Exception e) {
             // TODO Auto-generated catch block

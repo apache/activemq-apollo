@@ -18,7 +18,7 @@ package org.apache.activemq.queue.actor.perf;
 
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.internal.BaseRetained;
+import org.apache.activemq.dispatch.internal.RunnableCountDownLatch;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.FlowControl;
 import org.apache.activemq.flow.Commands.Destination.DestinationBean;
@@ -32,105 +32,31 @@ import org.apache.activemq.queue.actor.transport.TransportHandler;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract public class BaseConnection extends BaseRetained {
+abstract public class BaseConnection {
 
-    protected interface Protocol extends TransportHandler {
-        void start();
-        void shutdown(Runnable onShutdown);
+    protected interface ConnectionStateActor extends TransportHandler {
+        void onStart();
+        void onStop();
     }
     
     protected String name;
     protected Dispatcher dispatcher;
 
     protected DispatchQueue dispatchQueue;
-    protected Protocol actor;
+    protected ConnectionStateActor actor;
 
-    
-    @Override
-    protected void startup() {
-        super.startup();
+    public void start() {
         dispatchQueue = dispatcher.createSerialQueue(name);
         createActor();
-        actor.start();
+        actor.onStart();
     }
 
-    @Override
-    protected void shutdown() {
-        actor.shutdown(new Runnable() {
-            public void run() {
-                // notifies registered shutdown handlers 
-                BaseConnection.super.shutdown();
-            }
-        });
-    }
-    
-    public static class WindowController extends WindowLimiter {
-
-        private int maxSize;
-        private int processed;
-        private int creditsAt;
-        
-        public int processed(int count) {
-            int rc = 0;
-            processed += count;
-            if( processed >= creditsAt ) {
-                change(processed);
-                rc = processed;
-                processed = 0;
-            }
-            return rc;
-        }
-        
-        int maxSize(int newMaxSize) {
-            int change = newMaxSize-maxSize;
-            this.maxSize=newMaxSize;
-            this.creditsAt = maxSize/2;
-            change(change);
-            return change;
-        }
-        
-        int maxSize() {
-            return maxSize;
-        }
-
-    }
-    
-    public static class WindowLimiter {
-
-        private int opensAt = 1;
-        private int size;
-        private boolean closed;
-        
-        public WindowLimiter() {
-            this.closed = true;
-        }
-
-        int size() {
-            return size;
-        }
-        
-        WindowLimiter size(int size) {
-            this.size = size;
-            return this;
-        }
-        
-        public boolean isOpen() {
-            return !closed;
-        }
-        
-        public boolean isClosed() {
-            return closed;
-        }
-        
-        public void change(int change) {
-            size += change;
-            if( change > 0 && closed && size >= opensAt) {
-                closed = false;
-            } else if( change < 0 && !closed && size <= 0) {
-                closed = true;
-            }
-        }
-
+    public void stop() throws InterruptedException {
+        actor.onStop();
+        RunnableCountDownLatch done = new RunnableCountDownLatch(1);
+        dispatchQueue.addShutdownWatcher(done);
+        dispatchQueue.release();
+        done.await();
     }
     
     abstract protected void createActor();
@@ -139,35 +65,33 @@ abstract public class BaseConnection extends BaseRetained {
     // serial execution context.  So synchronization is required.
     // It also places a restriction that all operations should 
     // avoid mutex contention and avoid blocking IO calls.
-    protected class ProtocolImpl implements Protocol {
+    protected class ConnectionState implements ConnectionStateActor {
         
         final protected WindowController inboundSessionWindow = new WindowController();
         final protected WindowLimiter outboundSessionWindow = new WindowLimiter();
         final protected WindowLimiter outboundTransportWindow = new WindowLimiter();
 
         protected Transport transport;
-        protected Runnable onShutdown;
         protected boolean disconnected;
         protected Exception failure;
 
-        ProtocolImpl() {
+        ConnectionState() {
             outboundTransportWindow.size(100);
         }
         
-        public void start() {
-            
+        public void onStart() {
+            dispatchQueue.addShutdownWatcher(new Runnable() {
+                public void run() {
+                    transport.setTargetQueue(dispatcher.getGlobalQueue());
+                    transport.release();
+                }
+            });
             transport.setTargetQueue(dispatchQueue);
             transport.setHandler(this);
             transport.resume();
         }
         
-        public void shutdown(Runnable onShutdown) {
-            if( disconnected ) {
-                onShutdown.run();
-            } else {
-                this.onShutdown = onShutdown;
-                transport.release();
-            }
+        public void onStop() {
         }
 
         public void onConnect() {
@@ -176,10 +100,6 @@ abstract public class BaseConnection extends BaseRetained {
         
         public void onDisconnect() {
             disconnected = true;
-            if( onShutdown!=null ) {
-                shutdown(onShutdown);
-                onShutdown=null;
-            }
         }
 
         public void onFailure(Exception failure) {

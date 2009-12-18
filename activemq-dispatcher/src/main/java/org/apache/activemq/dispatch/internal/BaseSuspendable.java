@@ -14,42 +14,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.queue.actor.perf;
+package org.apache.activemq.dispatch.internal;
 
-import org.apache.activemq.actor.ActorProxy;
-import org.apache.activemq.queue.actor.transport.TransportFactorySystem;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.activemq.dispatch.Suspendable;
 
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class ClientConnection extends BaseConnection {
+public class BaseSuspendable extends BaseRetainable implements Suspendable {
     
-    protected String connectUri;
-    
-    public void setConnectUri(String uri) {
-        this.connectUri = uri;
-    }
+    protected final AtomicBoolean startup = new AtomicBoolean(true);
+    protected final AtomicInteger suspended = new AtomicInteger();
 
-    protected void createActor() {
-        actor = ActorProxy.create(ConnectionStateActor.class, new ClientConnectionState(), dispatchQueue);
-    }
-
-    protected class ClientConnectionState extends ConnectionState  {
-        
-        @Override
-        public void onStart()  {
-            transport = TransportFactorySystem.connect(dispatcher, connectUri);
-            super.onStart();
+    public void resume() {
+       assertRetained();
+        if( suspended.decrementAndGet() == 0 ) {
+            if( startup.compareAndSet(true, false) ) {
+                onStartup();
+            } else {
+                onResume();
+            }
         }
-
-        public void onConnect() {
-            super.onConnect();
-            super.transportSend(name);
-        }
-        
     }
-    
 
+    public void suspend() {
+       assertRetained();
+        if( suspended.getAndIncrement()==0 ) {
+            onSuspend();
+        }
+    }
+
+    protected void onStartup() {
+    }
+
+    protected void onSuspend() {
+    }
+
+    protected void onResume() {
+    }
 
 }

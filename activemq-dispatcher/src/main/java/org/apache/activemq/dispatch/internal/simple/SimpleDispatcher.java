@@ -21,14 +21,14 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.DispatchPriority;
-import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatchSource;
-import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.dispatch.DispatchOption;
-import org.apache.activemq.dispatch.internal.BaseRetained;
+import org.apache.activemq.dispatch.DispatchPriority;
+import org.apache.activemq.dispatch.DispatchQueue;
+import org.apache.activemq.dispatch.DispatchSource;
+import org.apache.activemq.dispatch.Dispatcher;
+import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.dispatch.internal.AbstractSerialDispatchQueue;
+import org.apache.activemq.dispatch.internal.BaseSuspendable;
 
 import static org.apache.activemq.dispatch.DispatchPriority.*;
 
@@ -37,7 +37,7 @@ import static org.apache.activemq.dispatch.DispatchPriority.*;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
+final public class SimpleDispatcher extends BaseSuspendable implements Dispatcher {
 
     public final static ThreadLocal<SimpleQueue> CURRENT_QUEUE = new ThreadLocal<SimpleQueue>();
 
@@ -58,6 +58,7 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
             globalQueues[i] = new GlobalDispatchQueue(this, DispatchPriority.values()[i]);
         }
         dispatchers = new DispatcherThread[config.getThreads()];
+        super.suspend();
     }
 
     public DispatchQueue getMainQueue() {
@@ -107,8 +108,14 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
             }
         }
     }
+    
+    @Override
+    public void suspend() {
+        throw new UnsupportedOperationException();
+    }
 
-    protected void startup() {
+    @Override
+    protected void onStartup() {
         for (int i = 0; i < dispatchers.length; i++) {
             dispatchers[i] = new DispatcherThread(this, i);
             dispatchers[i].start();
@@ -117,7 +124,8 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
         timerThread.start();
     }
 
-    public void shutdown() {
+    @Override
+    public void onShutdown() {
 
         Runnable countDown = new Runnable() {
             AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.length);
@@ -125,7 +133,7 @@ final public class SimpleDispatcher extends BaseRetained implements Dispatcher {
             public void run() {
                 if (shutdownCountDown.decrementAndGet() == 0) {
                     // Notify any registered shutdown watchers.
-                    SimpleDispatcher.super.shutdown();
+                    SimpleDispatcher.super.onShutdown();
                 }
                 throw new DispatcherThread.Shutdown();
             }

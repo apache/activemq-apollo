@@ -227,8 +227,6 @@ public class MockClient {
     }
 
     public void runTest() throws Exception {
-        getDispatcher().retain();
-
         // Start 'em up.
         startServices();
         try {
@@ -241,21 +239,21 @@ public class MockClient {
     private void startServices() throws Exception {
 //        BaseTestConnection.setInShutdown(false, dispatcher);
         for (ConsumerConnection connection : consumers) {
-            connection.retain();
+            connection.start();
         }
 
         for (ProducerConnection connection : producers) {
-            connection.retain();
+            connection.start();
         }
     }
 
     private void stopServices() throws Exception {
 //        BaseTestConnection.setInShutdown(true, dispatcher);
         for (ProducerConnection connection : producers) {
-            connection.release();
+            connection.stop();
         }
         for (ConsumerConnection connection : consumers) {
-            connection.release();
+            connection.stop();
         }
     }
 
@@ -311,7 +309,7 @@ public class MockClient {
         System.out.println(IntrospectionSupport.toString(test));
         try
         {
-            test.getDispatcher().retain();
+            test.getDispatcher().resume();
             test.createConnections();
             test.runTest();
         }

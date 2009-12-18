@@ -30,7 +30,7 @@ public class DispatchSystem {
 
     private static Dispatcher create() {
         Dispatcher rc = new DispatcherConfig().createDispatcher();
-        rc.retain();
+        rc.resume();
         return rc;
     }
     

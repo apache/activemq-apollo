@@ -40,16 +40,17 @@ public class ProducerConnection extends ClientConnection {
     private AtomicLong messageIdGenerator;
 
     protected void createActor() {
-        actor = ActorProxy.create(Protocol.class, new ProducerProtocolImpl(), dispatchQueue);
+        actor = ActorProxy.create(ConnectionStateActor.class, new ProducerConnectionState(), dispatchQueue);
     }
 
-    class ProducerProtocolImpl extends ClientProtocolImpl {
+    class ProducerConnectionState extends ClientConnectionState {
         
         private String filler;
         private int payloadCounter;
+        private boolean stopped;
 
         @Override
-        public void start() {
+        public void onStart() {
             rate.name("Producer " + name + " Rate");
             totalProducerRate.add(rate);
 
@@ -60,7 +61,7 @@ public class ProducerConnection extends ClientConnection {
                 }
                 filler = sb.toString();
             }
-            super.start();
+            super.onStart();
         }
         
         @Override
@@ -73,8 +74,14 @@ public class ProducerConnection extends ClientConnection {
             produceMessages();
         }
         
+        @Override
+        public void onStop() {
+            stopped = true;
+            super.onStop();
+        }
+        
         private void produceMessages() {
-            while( !isSessionSendBlocked() ) {
+            while( !isSessionSendBlocked() && !stopped ) {
                 int p = priority;
                 if (priorityMod > 0) {
                     p = payloadCounter % priorityMod == 0 ? 0 : p;

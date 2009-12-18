@@ -32,7 +32,7 @@ public class DispatchSystemTest {
 
     public static void main(String[] args) throws Exception {
         Dispatcher advancedSystem = new AdvancedDispatcher(new DispatcherConfig());
-        advancedSystem.retain();
+        advancedSystem.resume();
         benchmarkGlobal("advanced global queue", advancedSystem);
         benchmarkSerial("advanced private serial queue", advancedSystem);
 
@@ -44,7 +44,7 @@ public class DispatchSystemTest {
         DispatcherConfig config = new DispatcherConfig();
         config.setThreads(6);
         Dispatcher simpleSystem = new SimpleDispatcher(config);
-        simpleSystem.retain();
+        simpleSystem.resume();
         
         benchmarkGlobal("simple global queue", simpleSystem);
         benchmarkSerial("simple private serial queue", simpleSystem);

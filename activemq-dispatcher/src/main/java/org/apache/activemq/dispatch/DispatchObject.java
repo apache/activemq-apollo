@@ -20,13 +20,10 @@ package org.apache.activemq.dispatch;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public interface DispatchObject extends Retained {
+public interface DispatchObject extends Suspendable {
     
     public <Context> Context getContext();
     public <Context> void setContext(Context context);
-
-    public void suspend();
-    public void resume();
 
     public void setTargetQueue(DispatchQueue queue);
     public DispatchQueue getTargetQueue();

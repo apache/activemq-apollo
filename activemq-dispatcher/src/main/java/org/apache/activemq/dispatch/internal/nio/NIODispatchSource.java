@@ -38,7 +38,6 @@ public class NIODispatchSource extends AbstractDispatchObject implements Dispatc
     private Runnable cancelHandler;
 
     public NIODispatchSource() {
-        super.retain();
     }
 
     /**
@@ -172,7 +171,7 @@ public class NIODispatchSource extends AbstractDispatchObject implements Dispatc
     }
 
     @Override
-    protected void shutdown() {
+    protected void onShutdown() {
         // actual close can only happen on the owning dispatch thread:
         if (key != null && key.isValid()) {
             // This will make sure that the key is removed

@@ -18,8 +18,6 @@ package org.apache.activemq.queue.actor.perf;
 
 import java.util.ArrayList;
 
-import junit.framework.TestCase;
-
 import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.flow.Commands.Destination;
@@ -27,12 +25,16 @@ import org.apache.activemq.flow.Commands.Destination.DestinationBean;
 import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class MockBrokerTest extends TestCase {
+public class MockBrokerTest {
 
     protected static final int PERFORMANCE_SAMPLES = 3;
     protected static final int SAMPLING_FREQUENCY = 5;
@@ -58,8 +60,7 @@ public class MockBrokerTest extends TestCase {
     protected String receiveBrokerURI;
 
     // Set's the number of threads to use:
-    protected static final boolean SEPARATE_CLIENT_DISPATCHER = false;
-    protected final int threadsPerDispatcher = Runtime.getRuntime().availableProcessors();
+    static protected final int threadsPerDispatcher = Runtime.getRuntime().availableProcessors();
     protected boolean usePartitionedQueue = false;
 
     protected ArrayList<MockBroker> brokers = new ArrayList<MockBroker>();
@@ -67,7 +68,7 @@ public class MockBrokerTest extends TestCase {
     protected MockBroker rcvBroker;
     protected MockClient client;
 
-    protected Dispatcher dispatcher;
+    protected static Dispatcher dispatcher;
 
     static public final Mapper<Long, Message> KEY_MAPPER = new Mapper<Long, Message>() {
         public Long map(Message element) {
@@ -82,8 +83,22 @@ public class MockBrokerTest extends TestCase {
         }
     };
 
-    @Override
-    protected void setUp() throws Exception {
+    @BeforeClass
+    static public void setUpSuite() throws Exception {
+        dispatcher = DispatcherConfig.create("test", threadsPerDispatcher);
+        dispatcher.resume();
+    }
+    
+    @AfterClass
+    static public void tearDownSuite() throws Exception {
+        if( dispatcher!=null ) {
+            dispatcher.release();
+        }
+    }
+    
+    
+    @Before
+    public void setUp() throws Exception {
         if (tcp) {
             sendBrokerURI = "tcp://localhost:10000?wireFormat=proto";
             receiveBrokerURI = "tcp://localhost:20000?wireFormat=proto";
@@ -98,10 +113,7 @@ public class MockBrokerTest extends TestCase {
         }
     }
 
-    protected Dispatcher createDispatcher(String name) {
-        return DispatcherConfig.create("test", threadsPerDispatcher);
-    }
-
+    @Test
     public void test_1_1_0() throws Exception {
 
         client = new MockClient();
@@ -109,67 +121,73 @@ public class MockBrokerTest extends TestCase {
         client.setDestCount(1);
         client.setNumConsumers(0);
 
-        createConnections(1);
+        createConnections("test_1_1_0", 1);
         runTestCase();
     }
 
+    @Test
     public void test_1_1_1() throws Exception {
         client = new MockClient();
         client.setNumProducers(1);
         client.setDestCount(1);
         client.setNumConsumers(1);
 
-        createConnections(1);
+        createConnections("test_1_1_1", 1);
         runTestCase();
     }
 
+    @Test
     public void test_10_10_10() throws Exception {
         client = new MockClient();
         client.setNumProducers(FANIN_COUNT);
         client.setDestCount(FANIN_COUNT);
         client.setNumConsumers(FANOUT_COUNT);
 
-        createConnections(FANIN_COUNT);
+        createConnections("test_10_10_10", FANIN_COUNT);
         runTestCase();
     }
 
+    @Test
     public void test_10_1_10() throws Exception {
         client = new MockClient();
         client.setNumProducers(FANIN_COUNT);
         client.setDestCount(1);
         client.setNumConsumers(FANOUT_COUNT);
 
-        createConnections(1);
+        createConnections("test_10_1_10", 1);
         runTestCase();
     }
 
+    @Test
     public void test_10_1_1() throws Exception {
         client = new MockClient();
         client.setNumProducers(FANIN_COUNT);
         client.setDestCount(1);
         client.setNumConsumers(1);
 
-        createConnections(1);
+        createConnections("test_1_1_1", 1);
         runTestCase();
     }
 
+    @Test
     public void test_1_1_10() throws Exception {
         client = new MockClient();
         client.setNumProducers(1);
         client.setDestCount(1);
         client.setNumConsumers(FANOUT_COUNT);
 
-        createConnections(1);
+        createConnections("test_1_1_10", 1);
         runTestCase();
     }
 
+    @Test
     public void test_2_2_2() throws Exception {
         client = new MockClient();
         client.setNumProducers(2);
         client.setDestCount(2);
         client.setNumConsumers(2);
 
-        createConnections(2);
+        createConnections("test_2_2_2", 2);
         runTestCase();
     }
 
@@ -180,25 +198,27 @@ public class MockBrokerTest extends TestCase {
      * 
      * @throws Exception
      */
+    @Test
     public void test_2_2_2_SlowConsumer() throws Exception {
         client = new MockClient();
         client.setNumProducers(2);
         client.setDestCount(2);
         client.setNumConsumers(2);
 
-        createConnections(2);
+        createConnections("test_2_2_2_SlowConsumer", 2);
         client.consumer(0).setThinkTime(50);
         runTestCase();
 
     }
 
+    @Test
     public void test_2_2_2_Selector() throws Exception {
         client = new MockClient();
         client.setNumProducers(2);
         client.setDestCount(2);
         client.setNumConsumers(2);
 
-        createConnections(2);
+        createConnections("test_2_2_2_Selector", 2);
 
         // Add properties to match producers to their consumers
         for (int i = 0; i < 2; i++) {
@@ -216,6 +236,7 @@ public class MockBrokerTest extends TestCase {
      * 
      * @throws Exception
      */
+    @Test
     public void test_2_1_1_HighPriorityProducer() throws Exception {
 
         client = new MockClient();
@@ -223,7 +244,7 @@ public class MockBrokerTest extends TestCase {
         client.setNumConsumers(1);
         client.setDestCount(1);
 
-        createConnections(1);
+        createConnections("test_2_1_1_HighPriorityProducer", 1);
         ProducerConnection producer = client.producer(0);
         client.includeInRateReport(producer);
         producer.setPriority(1);
@@ -240,13 +261,14 @@ public class MockBrokerTest extends TestCase {
      * 
      * @throws Exception
      */
+    @Test
     public void test_2_1_1_MixedHighPriorityProducer() throws Exception {
         client = new MockClient();
         client.setNumProducers(2);
         client.setNumConsumers(1);
         client.setDestCount(1);
 
-        createConnections(1);
+        createConnections("test_2_1_1_MixedHighPriorityProducer", 1);
         ProducerConnection producer = client.producer(0);
         producer.setPriority(1);
         producer.setPriorityMod(3);
@@ -256,10 +278,7 @@ public class MockBrokerTest extends TestCase {
         runTestCase();
     }
 
-    private void createConnections(int destCount) throws Exception {
-
-        dispatcher = createDispatcher("BrokerDispatcher");
-        dispatcher.retain();
+    private void createConnections(String testName, int destCount) throws Exception {
 
         if (multibroker) {
             sendBroker = createBroker("SendBroker", sendBrokerURI);
@@ -288,16 +307,8 @@ public class MockBrokerTest extends TestCase {
             }
         }
 
-        Dispatcher clientDispatcher = null;
-        if (SEPARATE_CLIENT_DISPATCHER) {
-            clientDispatcher = createDispatcher("ClientDispatcher");
-            clientDispatcher.retain();
-        } else {
-            clientDispatcher = dispatcher;
-        }
-
         // Configure Client:
-        client.setDispatcher(clientDispatcher);
+        client.setDispatcher(dispatcher);
         client.setNumPriorities(PRIORITY_LEVELS);
         client.setSendBrokerURI(sendBroker.getUri());
         client.setReceiveBrokerURI(rcvBroker.getUri());
@@ -305,8 +316,7 @@ public class MockBrokerTest extends TestCase {
         client.setSamplingFrequency(1000 * SAMPLING_FREQUENCY);
         client.setThreadsPerDispatcher(threadsPerDispatcher);
         client.setPtp(ptp);
-        client.setTestName(getName());
-
+        client.setTestName(testName);
         client.createConnections();
     }
 
@@ -336,18 +346,14 @@ public class MockBrokerTest extends TestCase {
         try {
             client.runTest();
         } finally {
+            System.out.println("Shutting down..");
             stopServices();
         }
     }
 
     private void stopServices() throws Exception {
-
         for (MockBroker broker : brokers) {
             broker.stopServices();
-        }
-
-        if (dispatcher != null) {
-            dispatcher.release();
         }
     }
 

@@ -32,7 +32,7 @@ public class DispatcherPoolTest {
     
     public static void main(String[] args) throws Exception {
         AdvancedDispatcher dispatcher = new AdvancedDispatcher(new DispatcherConfig());
-        dispatcher.retain();
+        dispatcher.resume();
         
         // warm the JIT up..
         benchmarkWork(dispatcher, 100000);

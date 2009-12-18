@@ -26,6 +26,9 @@ import java.util.Arrays;
 public class StringSupport {
 
     public static String indent(String value, int spaces) {
+        if( value == null ) {
+            return null;
+        }
         String indent = fillString(spaces, ' ');
         return value.replaceAll("(\\r?\\n)", "$1"+indent);
     }

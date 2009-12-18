@@ -19,51 +19,50 @@ package org.apache.activemq.dispatch.internal;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.lang.String.*;
+
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class BaseRetained {
-    
-    final protected AtomicInteger retainCounter = new AtomicInteger(0);
+public class BaseRetainable {
+
+    final protected AtomicInteger retained = new AtomicInteger(1);
     final protected ArrayList<Runnable> shutdownHandlers = new ArrayList<Runnable>(1);
 
     public void addShutdownWatcher(Runnable shutdownHandler) {
-        synchronized(shutdownHandlers) {
+        assertRetained();
+        synchronized (shutdownHandlers) {
             shutdownHandlers.add(shutdownHandler);
         }
     }
-    
+
     public void retain() {
-        if( retainCounter.getAndIncrement() == 0 ) {
-            startup();
-        }
+        assertRetained();
+        retained.getAndIncrement();
     }
 
     public void release() {
-        if( retainCounter.decrementAndGet()==0 ) {
-            shutdown();
+        assertRetained();
+        if (retained.decrementAndGet() == 0) {
+            onShutdown();
         }
     }
-    
-    protected boolean isShutdown()
-    {
-        return retainCounter.get() <= 0;
+
+    final protected void assertRetained() {
+        assert retained.get() > 0 : format("%s: Use of object not allowed after it has been released", this.toString());
+    }
+
+    public boolean isShutdown() {
+        return retained.get() <= 0;
     }
 
     /**
-     * Subclasses should override if they want to do some startup processing. 
+     * Subclasses should override if they want to do clean up.
      */
-    protected void startup() {
-    }
-
-
-    /**
-     * Subclasses should override if they want to do clean up. 
-     */
-    protected void shutdown() {
+    protected void onShutdown() {
         ArrayList<Runnable> copy;
-        synchronized(shutdownHandlers) {
+        synchronized (shutdownHandlers) {
             copy = new ArrayList<Runnable>(shutdownHandlers);
             shutdownHandlers.clear();
         }

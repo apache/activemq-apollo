@@ -254,14 +254,22 @@ public final class IntrospectionSupport {
     }
 
     public static String toString(Object target) {
-        return toString(target, Object.class, null);
+        return toString(target, Object.class, null, null);
+    }
+    
+    public static String toString(Object target, String...fields) {
+        return toString(target, Object.class, null, fields);
     }
     
     public static String toString(Object target, Class<?> stopClass) {
-    	return toString(target, stopClass, null);
+    	return toString(target, stopClass, null, null);
     }
 
-    public static String toString(Object target, Class<?> stopClass, Map<String, Object> overrideFields) {
+    public static String toString(Object target, Map<String, Object> overrideFields, String...fields) {
+        return toString(target, Object.class, overrideFields, fields);
+    }
+
+    public static String toString(Object target, Class<?> stopClass, Map<String, Object> overrideFields, String fields[]) {
         try {
             LinkedHashMap<String, Object> map = new LinkedHashMap<String, Object>();
             addFields(target, target.getClass(), stopClass, map);
@@ -270,6 +278,10 @@ public final class IntrospectionSupport {
             	    Object value = overrideFields.get(key);
             	    map.put(key, value);
             	}
+            }
+            
+            if( fields!=null ) {
+                map.keySet().retainAll(Arrays.asList(fields));
             }
            
             boolean useMultiLine=false;
@@ -313,7 +325,8 @@ public final class IntrospectionSupport {
                     }
                     buffer.append(entry.getKey());
                     buffer.append(": ");
-                    buffer.append(StringSupport.indent(entry.getValue(), 2));
+                    String value = entry.getValue();
+                    buffer.append(StringSupport.indent(value, 2));
                 }
                 buffer.append("}");
             }

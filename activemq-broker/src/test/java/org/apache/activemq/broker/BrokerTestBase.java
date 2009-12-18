@@ -97,7 +97,7 @@ public abstract class BrokerTestBase {
     @Before
     public void setUp() throws Exception {
         dispatcher = createDispatcher();
-        dispatcher.retain();
+        dispatcher.resume();
         
         if (tcp) {
             sendBrokerBindURI = "tcp://localhost:10000?wireFormat=" + getBrokerWireFormat();

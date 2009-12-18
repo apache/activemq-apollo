@@ -28,7 +28,7 @@ import org.apache.activemq.queue.actor.transport.Transport;
  */
 public class BrokerConnection extends BaseConnection implements DeliveryTarget {
     
-    interface BrokerProtocol extends Protocol {
+    interface BrokerConnectionStateActor extends ConnectionStateActor {
         public void onBrokerDispatch(Message msg, Runnable r);
     }
     
@@ -45,22 +45,22 @@ public class BrokerConnection extends BaseConnection implements DeliveryTarget {
     }
     
     private MockBroker broker;
-    private BrokerProtocol brokerActor;
+    private BrokerConnectionStateActor brokerActor;
     private Transport transport;
     private int priorityLevels;
 
     protected void createActor() {
-        actor = brokerActor = ActorProxy.create(BrokerProtocol.class, new BrokerProtocolImpl(), dispatchQueue);
+        actor = brokerActor = ActorProxy.create(BrokerConnectionStateActor.class, new BrokerConnectionState(), dispatchQueue);
     }
 
-    protected class BrokerProtocolImpl extends ProtocolImpl implements BrokerProtocol {
+    protected class BrokerConnectionState extends ConnectionState implements BrokerConnectionStateActor {
 
         String name;
         
         @Override
-        public void start() {
+        public void onStart() {
             this.transport = BrokerConnection.this.transport;
-            super.start();
+            super.onStart();
         }
         
         // TODO: to increase fairness: we might want to have a pendingQueue per sender
@@ -81,7 +81,7 @@ public class BrokerConnection extends BaseConnection implements DeliveryTarget {
             // is configured with.
             broker.router.route(msg, dispatchQueue, new Runnable() {
                 public void run() {
-                    BrokerProtocolImpl.super.onReceiveMessage(msg);
+                    BrokerConnectionState.super.onReceiveMessage(msg);
                 }
             });
         }

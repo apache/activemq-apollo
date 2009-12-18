@@ -23,7 +23,7 @@ import java.nio.channels.SelectableChannel;
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public interface Dispatcher extends Retained {
+public interface Dispatcher extends Suspendable {
 
     public DispatchQueue getGlobalQueue();
     public DispatchQueue getGlobalQueue(DispatchPriority priority);

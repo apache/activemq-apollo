@@ -92,7 +92,7 @@ public class SharedQueuePerfTest extends TestCase {
 
     protected void startServices() throws Exception {
         dispatcher = createDispatcher();
-        dispatcher.retain();
+        dispatcher.resume();
         database = new BrokerDatabase(createStore());
         database.setDispatcher(dispatcher);
         if( TEST_MAX_STORE_LATENCY ) {

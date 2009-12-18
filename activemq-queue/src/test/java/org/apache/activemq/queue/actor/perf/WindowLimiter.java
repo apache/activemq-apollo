@@ -14,42 +14,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.activemq.queue.actor.perf;
 
-import org.apache.activemq.actor.ActorProxy;
-import org.apache.activemq.queue.actor.transport.TransportFactorySystem;
-
 /**
- * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class ClientConnection extends BaseConnection {
+public class WindowLimiter {
+
+    private int opensAt = 1;
+    private int size;
+    private boolean closed;
     
-    protected String connectUri;
-    
-    public void setConnectUri(String uri) {
-        this.connectUri = uri;
+    public WindowLimiter() {
+        this.closed = true;
     }
 
-    protected void createActor() {
-        actor = ActorProxy.create(ConnectionStateActor.class, new ClientConnectionState(), dispatchQueue);
+    int size() {
+        return size;
     }
-
-    protected class ClientConnectionState extends ConnectionState  {
-        
-        @Override
-        public void onStart()  {
-            transport = TransportFactorySystem.connect(dispatcher, connectUri);
-            super.onStart();
+    
+    WindowLimiter size(int size) {
+        this.size = size;
+        return this;
+    }
+    
+    public boolean isOpen() {
+        return !closed;
+    }
+    
+    public boolean isClosed() {
+        return closed;
+    }
+    
+    public void change(int change) {
+        size += change;
+        if( change > 0 && closed && size >= opensAt) {
+            closed = false;
+        } else if( change < 0 && !closed && size <= 0) {
+            closed = true;
         }
-
-        public void onConnect() {
-            super.onConnect();
-            super.transportSend(name);
-        }
-        
     }
-    
-
 
 }

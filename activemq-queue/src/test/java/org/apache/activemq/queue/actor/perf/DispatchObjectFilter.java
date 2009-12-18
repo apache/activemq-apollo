@@ -14,41 +14,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.dispatch.internal;
 
-import java.util.concurrent.atomic.AtomicInteger;
+package org.apache.activemq.queue.actor.perf;
 
 import org.apache.activemq.dispatch.DispatchObject;
 import org.apache.activemq.dispatch.DispatchQueue;
 
 /**
- * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract public class AbstractDispatchObject extends BaseSuspendable implements DispatchObject {
+public class DispatchObjectFilter implements DispatchObject {
+    protected DispatchObject next;
+    
+    public DispatchObjectFilter() {
+    }
 
-    protected volatile Object context;
-    protected volatile DispatchQueue targetQueue;
-
-    @SuppressWarnings("unchecked")
-    public <Context> Context getContext() {
-       assertRetained();
-        return (Context) context;
+    public DispatchObjectFilter(DispatchObject next) {
+        this.next = next;
     }
     
-    public <Context> void setContext(Context context) {
-       assertRetained();
-        this.context = context;
+    public void addShutdownWatcher(Runnable shutdownWatcher) {
+        next.addShutdownWatcher(shutdownWatcher);
     }
-
-    public void setTargetQueue(DispatchQueue targetQueue) {
-       assertRetained();
-        this.targetQueue = targetQueue;
+    public <Context> Context getContext() {
+        return next.getContext();
     }
-
     public DispatchQueue getTargetQueue() {
-       assertRetained();
-        return this.targetQueue;
+        return next.getTargetQueue();
     }
-
+    public void release() {
+        next.release();
+    }
+    public void resume() {
+        next.resume();
+    }
+    public void retain() {
+        next.retain();
+    }
+    public <Context> void setContext(Context context) {
+        next.setContext(context);
+    }
+    public void setTargetQueue(DispatchQueue queue) {
+        next.setTargetQueue(queue);
+    }
+    public void suspend() {
+        next.suspend();
+    }
 }

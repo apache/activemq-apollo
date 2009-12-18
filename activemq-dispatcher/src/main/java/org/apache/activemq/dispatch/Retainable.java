@@ -14,42 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.queue.actor.perf;
-
-import org.apache.activemq.actor.ActorProxy;
-import org.apache.activemq.queue.actor.transport.TransportFactorySystem;
+package org.apache.activemq.dispatch;
 
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class ClientConnection extends BaseConnection {
+public interface Retainable {
     
-    protected String connectUri;
-    
-    public void setConnectUri(String uri) {
-        this.connectUri = uri;
-    }
-
-    protected void createActor() {
-        actor = ActorProxy.create(ConnectionStateActor.class, new ClientConnectionState(), dispatchQueue);
-    }
-
-    protected class ClientConnectionState extends ConnectionState  {
-        
-        @Override
-        public void onStart()  {
-            transport = TransportFactorySystem.connect(dispatcher, connectUri);
-            super.onStart();
-        }
-
-        public void onConnect() {
-            super.onConnect();
-            super.transportSend(name);
-        }
-        
-    }
-    
-
+    public void retain();
+    public void release();
+    public void addShutdownWatcher(Runnable shutdownWatcher);
 
 }

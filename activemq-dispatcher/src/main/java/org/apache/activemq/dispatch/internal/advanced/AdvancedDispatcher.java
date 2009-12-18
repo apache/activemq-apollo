@@ -31,12 +31,12 @@ import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchSource;
 import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatcherConfig;
-import org.apache.activemq.dispatch.internal.BaseRetained;
+import org.apache.activemq.dispatch.internal.BaseSuspendable;
 import org.apache.activemq.dispatch.internal.nio.NIODispatchSource;
 
 import static org.apache.activemq.dispatch.DispatchPriority.*;
 
-final public class AdvancedDispatcher extends BaseRetained implements Dispatcher {
+final public class AdvancedDispatcher extends BaseSuspendable implements Dispatcher {
 
     public final static ThreadLocal<DispatchQueue> CURRENT_QUEUE = new ThreadLocal<DispatchQueue>();
 
@@ -61,13 +61,11 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
             globalQueues[i] = new GlobalDispatchQueue(this, DispatchPriority.values()[i]);
         }
         loadBalancer = new SimpleLoadBalancer();
+        super.suspend();
     }
-
-    /**
-     * @see org.apache.activemq.dispatch.internal.advanced.DispatcherThread#start()
-     */
-    protected void startup() {
-        loadBalancer.start();
+    
+    @Override
+    protected void onStartup() {
         for (int i = 0; i < size; i++) {
             DispatcherThread dispatacher;
             try {
@@ -78,16 +76,28 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
                 e.printStackTrace();
             }
         }
+
     }
 
-    protected void shutdown() {
+    @Override
+    public void retain() {
+        super.retain();
+    }
+    
+    @Override
+    public void suspend() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void onShutdown() {
         Runnable countDown = new Runnable() {
             AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.size());
 
             public void run() {
                 if (shutdownCountDown.decrementAndGet() == 0) {
                     // Notify any registered shutdown watchers.
-                    AdvancedDispatcher.super.shutdown();
+                    AdvancedDispatcher.super.onShutdown();
                 }
             }
         };
@@ -97,6 +107,7 @@ final public class AdvancedDispatcher extends BaseRetained implements Dispatcher
         }
         loadBalancer.stop();
     }
+    
 
     /**
      * A Dispatcher must call this to indicate that is has started it's dispatch

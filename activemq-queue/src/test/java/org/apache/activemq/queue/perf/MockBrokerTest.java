@@ -255,7 +255,7 @@ public class MockBrokerTest extends TestCase {
     private void createConnections(int destCount) throws Exception {
 
         dispatcher = createDispatcher("BrokerDispatcher");
-        dispatcher.retain();
+        dispatcher.resume();
 
         if (multibroker) {
             sendBroker = createBroker("SendBroker", sendBrokerURI);
@@ -287,7 +287,7 @@ public class MockBrokerTest extends TestCase {
         Dispatcher clientDispatcher = null;
         if (SEPARATE_CLIENT_DISPATCHER) {
             clientDispatcher = createDispatcher("ClientDispatcher");
-            clientDispatcher.retain();
+            clientDispatcher.resume();
         } else {
             clientDispatcher = dispatcher;
         }

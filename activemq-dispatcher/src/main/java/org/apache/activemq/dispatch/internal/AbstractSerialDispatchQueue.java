@@ -39,7 +39,7 @@ abstract public class AbstractSerialDispatchQueue extends AbstractDispatchObject
     protected final AtomicInteger executeCounter = new AtomicInteger();
     
     protected final AtomicLong externalQueueSize = new AtomicLong();
-    protected final AtomicLong queueSize = new AtomicLong();
+    protected final AtomicLong size = new AtomicLong();
     protected final ConcurrentLinkedQueue<Runnable> externalQueue = new ConcurrentLinkedQueue<Runnable>();
 
     private final LinkedList<Runnable> localQueue = new LinkedList<Runnable>();
@@ -50,7 +50,6 @@ abstract public class AbstractSerialDispatchQueue extends AbstractDispatchObject
     public AbstractSerialDispatchQueue(String label, DispatchOption...options) {
         this.label = label;
         this.options = set(options);
-        retain();
     }
 
     static private Set<DispatchOption> set(DispatchOption[] options) {
@@ -64,28 +63,37 @@ abstract public class AbstractSerialDispatchQueue extends AbstractDispatchObject
     }
 
     @Override
+    protected void onStartup() {
+        dispatchSelfAsync();
+    }
+
+    @Override
     protected void onResume() {
         dispatchSelfAsync();
     }
 
     public void execute(Runnable command) {
+       assertRetained();
         dispatchAsync(command);
     }
 
     public void dispatchAsync(Runnable runnable) {
         assert runnable != null;
+       assertRetained();
 
-        if( queueSize.getAndIncrement()==0 ) {
-            retain();
-        }
+        long sizeWas = size.getAndIncrement();
 
         // We can take a shortcut...
         if( executing.get()!=null ) {
             localQueue.add(runnable);
         } else {
+            if( sizeWas==0 ) {
+                retain();
+            }
+
             long lastSize = externalQueueSize.getAndIncrement();
             externalQueue.add(runnable);
-            if( lastSize == 0 && suspendCounter.get()<=0 ) {
+            if( lastSize == 0 && suspended.get()<=0 ) {
                 dispatchSelfAsync();
             }
         }
@@ -122,7 +130,7 @@ abstract public class AbstractSerialDispatchQueue extends AbstractDispatchObject
         try {
             
             Runnable runnable;
-            while( suspendCounter.get() <= 0 ) {
+            while( suspended.get() <= 0 ) {
                 
                 if( (runnable = localQueue.poll())!=null ) {
                     counter++;
@@ -153,24 +161,30 @@ abstract public class AbstractSerialDispatchQueue extends AbstractDispatchObject
             }
             
         } finally {
-            long size = queueSize.addAndGet(-counter);
-            if( size==0 ) { 
-                release();
-            } else {
-                dispatchSelfAsync();
+            if( counter>0 ) {
+                long lsize = size.addAndGet(-counter);
+                assert lsize >= 0;
+                if( lsize==0 ) {
+                    release();
+                } else {
+                    dispatchSelfAsync();
+                }
             }
         }
     }
 
     public void dispatchSync(Runnable runnable) throws InterruptedException {
+       assertRetained();
         dispatchApply(1, runnable);
     }
     
     public void dispatchApply(int iterations, Runnable runnable) throws InterruptedException {
+       assertRetained();
         QueueSupport.dispatchApply(this, iterations, runnable);
     }
 
     public Set<DispatchOption> getOptions() {
+       assertRetained();
         return options;
     }
 

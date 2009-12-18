@@ -26,6 +26,7 @@ import org.apache.activemq.dispatch.DispatchOption;
 import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.internal.QueueSupport;
+import org.apache.activemq.util.IntrospectionSupport;
 
 /**
  * 
@@ -141,6 +142,11 @@ final public class GlobalDispatchQueue implements SimpleQueue {
 
     public ThreadDispatchQueue isThreadDispatchQueue() {
         return null;
+    }
+
+    @Override
+    public String toString() {
+        return IntrospectionSupport.toString(this);
     }
 
 }

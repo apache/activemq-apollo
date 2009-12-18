@@ -21,12 +21,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.actor.ActorProxy;
-import org.apache.activemq.dispatch.DispatchObject;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.Dispatcher;
+import org.apache.activemq.queue.actor.perf.DispatchObjectFilter;
 import org.apache.activemq.queue.actor.transport.Transport;
 import org.apache.activemq.queue.actor.transport.TransportFactory;
 import org.apache.activemq.queue.actor.transport.TransportHandler;
@@ -45,7 +47,8 @@ import org.apache.activemq.wireformat.WireFormatFactory;
 public class PipeTransportFactory implements TransportFactory {
 
     static protected final HashMap<String, PipeTransportServer> servers = new HashMap<String, PipeTransportServer>();
-    
+    static final AtomicLong CONNECTION_IDS = new AtomicLong();
+
     static void perform_unbind(PipeTransportServer server) {
         synchronized(servers) {
             servers.remove(server.name);
@@ -69,7 +72,10 @@ public class PipeTransportFactory implements TransportFactory {
                 throw new IOException("Server not bound: " + clientTransport.name);
             }
         }
-        PipeTransport serverTransport = new PipeTransport(server.dispatcher);
+        
+        long connectionId = clientTransport.connectionId;
+        String remoteAddress = clientTransport.connnectAddress+":server:"+connectionId;
+        PipeTransport serverTransport = new PipeTransport(server.dispatcher, connectionId, remoteAddress);
         clientTransport.peer = serverTransport.actor;
         serverTransport.peer = clientTransport.actor;
         server.actor.onConnect(serverTransport);
@@ -87,13 +93,12 @@ public class PipeTransportFactory implements TransportFactory {
             throw new IllegalArgumentException("Invalid bind uri: "+e, e);
         }
 
-        PipeTransportServer rc = new PipeTransportServer(dispatcher);
+        PipeTransportServer rc = new PipeTransportServer(dispatcher, name);
         rc.connectURI = bindUri;
         IntrospectionSupport.setProperties(rc, options);
         if (!options.isEmpty()) {
             throw new IllegalArgumentException("Invalid bind uri parameters: " + options);
         }
-        rc.name = name;
         return rc;
     }
 
@@ -109,7 +114,9 @@ public class PipeTransportFactory implements TransportFactory {
             throw new IllegalArgumentException("Invalid connect uri: "+e, e);
         }
         
-        PipeTransport rc = new PipeTransport(dispatcher);
+        long connectionId = CONNECTION_IDS.incrementAndGet();
+        String remoteAddress = connectUri+":client:"+connectionId;
+        PipeTransport rc = new PipeTransport(dispatcher, connectionId, remoteAddress);
         IntrospectionSupport.setProperties(rc, options);
         if (!options.isEmpty()) {
             throw new IllegalArgumentException("Invalid connect uri parameters: " + options);
@@ -118,45 +125,6 @@ public class PipeTransportFactory implements TransportFactory {
         rc.name = name;
         return rc;
 
-    }
-    
-    public static class DispatchObjectFilter implements DispatchObject {
-        protected DispatchObject next;
-        
-        public DispatchObjectFilter() {
-        }
-
-        public DispatchObjectFilter(DispatchObject next) {
-            this.next = next;
-        }
-        
-        public void addShutdownWatcher(Runnable shutdownWatcher) {
-            next.addShutdownWatcher(shutdownWatcher);
-        }
-        public <Context> Context getContext() {
-            return next.getContext();
-        }
-        public DispatchQueue getTargetQueue() {
-            return next.getTargetQueue();
-        }
-        public void release() {
-            next.release();
-        }
-        public void resume() {
-            next.resume();
-        }
-        public void retain() {
-            next.retain();
-        }
-        public <Context> void setContext(Context context) {
-            next.setContext(context);
-        }
-        public void setTargetQueue(DispatchQueue queue) {
-            next.setTargetQueue(queue);
-        }
-        public void suspend() {
-            next.suspend();
-        }
     }
     
     interface PipeTransportServerActor {
@@ -179,11 +147,11 @@ public class PipeTransportFactory implements TransportFactory {
         protected boolean marshal;
         
         protected final AtomicInteger suspendCounter = new AtomicInteger();
-        protected long connectionCounter;
 
-        public PipeTransportServer(Dispatcher dispatcher) {
-            super( dispatcher.createSerialQueue(null) );
+        public PipeTransportServer(Dispatcher dispatcher, String name) {
+            super( dispatcher.createSerialQueue(name) );
             this.dispatcher = dispatcher;
+            this.name=name;
             dispatchQueue = (DispatchQueue) next;
             dispatchQueue.suspend();
             dispatchQueue.addShutdownWatcher(new Runnable() {
@@ -214,8 +182,6 @@ public class PipeTransportFactory implements TransportFactory {
         }
 
         public void onConnect(PipeTransport serverSide) {
-            long connectionId = connectionCounter++;
-            serverSide.remoteAddress = connectURI.toString() + "#" + connectionId;
             handler.onAccept(serverSide);
         }
 
@@ -266,26 +232,42 @@ public class PipeTransportFactory implements TransportFactory {
         private String wireFormat;
         private boolean marshal;
         
+        protected final AtomicBoolean connected = new AtomicBoolean();
         protected final AtomicInteger suspendCounter = new AtomicInteger();
-        
-        public PipeTransport(Dispatcher dispatcher) {
-            super( dispatcher.createSerialQueue(null) );
+        private final long connectionId;
+
+        final protected AtomicInteger retained = new AtomicInteger(1);
+
+        public PipeTransport(Dispatcher dispatcher, long connectionId, String remoteAddress) {
+            super( dispatcher.createSerialQueue(remoteAddress) );
+            this.connectionId = connectionId;
             this.dispatchQueue = (DispatchQueue) next;
             this.dispatchQueue.suspend();
-            this.dispatchQueue.addShutdownWatcher(new Runnable() {
-                public void run() {
-                    PipeTransportActor peer = PipeTransport.this.peer;
-                    if( peer!=null ) {
-                        peer.onDisconnect();
-                        peer = null;
-                    }
-                }
-            });
+            this.remoteAddress = remoteAddress;
             
             // Queue up the connect event so it's the first thing that gets executed when
             // this object gets resumed..
             this.actor = ActorProxy.create(PipeTransportActor.class, this, dispatchQueue);
             this.actor.onConnect();
+        }
+        
+        public void retain() {
+            retained.getAndIncrement();
+        }
+
+        public void release() {
+            if (retained.decrementAndGet() == 0) {
+                PipeTransportActor peer = PipeTransport.this.peer;
+                if( peer!=null ) {
+                    peer.onDisconnect();
+                }
+                dispatchQueue.dispatchAsync(new Runnable(){
+                    public void run() {
+                        handler = null;
+                    }
+                });
+                dispatchQueue.release();                
+            }
         }
         
         public void setHandler(TransportHandler hanlder) {
@@ -294,21 +276,39 @@ public class PipeTransportFactory implements TransportFactory {
         
         public void onConnect() {
             try {
+                if( !connected.compareAndSet(false, true) ) {
+                    throw new IOException("allready connected.");
+                }
+                
                 if (connnectAddress != null) {
                     // Client side connect case...
                     perform_connect(this);
-                    remoteAddress = connnectAddress;
-                    handler.onConnect();
+                    if( handler!=null ) {
+                        handler.onConnect();
+                    }
                 } else {
                     // Server side connect case...
-                    if( peer==null || remoteAddress==null ) {
+                    if( peer==null ) {
                         throw new IOException("Server transport not properly initialized.");
                     }
-                    handler.onConnect();
+                    if( handler!=null ) {
+                        handler.onConnect();
+                    }
                 }
+                dispatchQueue.retain();
             } catch (IOException e) {
-                handler.onFailure(e);
+                onFailure(e);
             }
+        }
+        
+        public void onDisconnect() {
+            if( !connected.compareAndSet(true, false) ) {
+                throw new AssertionError("Was not connected.");
+            }
+            if( handler!=null ) {
+                handler.onDisconnect();
+            }
+            dispatchQueue.release();
         }
 
         public void send(Object message) {
@@ -328,21 +328,26 @@ public class PipeTransportFactory implements TransportFactory {
                 complete(onCompleted, queue);
                 return;
             }
+            if( queue!=null ) {
+                queue.retain();
+            }
             peer.onDispatch(message, onCompleted, queue);
         }
 
         public void onDispatch(Object message, Runnable onCompleted, DispatchQueue queue) {
             try {
-                Object m = message;
-                if (wf != null && marshal) {
-                    try {
-                        m = wf.unmarshal((Buffer) m);
-                    } catch (IOException e) {
-                        handler.onFailure(e);
-                        return;
+                if( handler!=null ) {
+                    Object m = message;
+                    if (wf != null && marshal) {
+                        try {
+                            m = wf.unmarshal((Buffer) m);
+                        } catch (IOException e) {
+                            handler.onFailure(e);
+                            return;
+                        }
                     }
+                    handler.onRecevie(m);
                 }
-                handler.onRecevie(m);
             } finally {
                 complete(onCompleted, queue);
             }
@@ -352,17 +357,19 @@ public class PipeTransportFactory implements TransportFactory {
             if( onCompleted!=null ) {
                 if(queue!=null) {
                     queue.dispatchAsync(onCompleted);
+                    if( queue!=null ) {
+                        queue.release();
+                    }
                 } else {
                     onCompleted.run();
                 }
             }
         }
         
-        public void onDisconnect() {
-            handler.onDisconnect();
-        }
         public void onFailure(Exception e) {
-            handler.onFailure(e);
+            if( handler!=null ) {
+                handler.onFailure(e);
+            }
         }
 
         public String getRemoteAddress() {

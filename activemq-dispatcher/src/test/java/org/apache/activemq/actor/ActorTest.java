@@ -41,7 +41,7 @@ public class ActorTest extends TestCase {
 
     public void testActorInvocation() throws Exception {
         Dispatcher advancedSystem = new AdvancedDispatcher(new DispatcherConfig());
-        advancedSystem.retain();
+        advancedSystem.resume();
 
         DispatchQueue queue = advancedSystem.createSerialQueue("test");
         TestObjectActor actor = ActorProxy.create(TestObjectActor.class, new TestObject(), queue);
