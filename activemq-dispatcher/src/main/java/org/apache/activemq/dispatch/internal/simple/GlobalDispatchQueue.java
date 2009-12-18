@@ -36,7 +36,7 @@ final public class GlobalDispatchQueue implements SimpleQueue {
 
     private final SimpleDispatcher dispatcher;
     final String label;
-    final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
+    final ConcurrentLinkedQueue<Runnable> globalRunnables = new ConcurrentLinkedQueue<Runnable>();
     final AtomicLong counter;
     private final DispatchPriority priority;
 
@@ -57,13 +57,22 @@ final public class GlobalDispatchQueue implements SimpleQueue {
 
     public void dispatchAsync(Runnable runnable) {
         DispatcherThread thread = DispatcherThread.currentDispatcherThread();
-        if( thread==null ) {
-            this.counter.incrementAndGet();
-            runnables.add(runnable);
-            dispatcher.wakeup();
+        if( runnable.getClass() == SerialDispatchQueue.class ) {
+            SerialDispatchQueue queue = ((SerialDispatchQueue)runnable);
+            queue.pick(this, thread);
         } else {
-            thread.currentThreadQueue.dispatchAsync(runnable);
-        }
+            if( thread==null ) {
+                enqueueExternal(runnable);
+            } else {
+                thread.currentThreadQueue.localEnqueue(runnable);
+            }
+        }        
+    }
+
+    void enqueueExternal(Runnable runnable) {
+        this.counter.incrementAndGet();
+        globalRunnables.add(runnable);
+        dispatcher.wakeup();
     }
 
     public void dispatchAfter(Runnable runnable, long delay, TimeUnit unit) {
@@ -87,7 +96,7 @@ final public class GlobalDispatchQueue implements SimpleQueue {
     }
     
     public Runnable poll() {
-        Runnable rc = runnables.poll();
+        Runnable rc = globalRunnables.poll();
         if( rc !=null ) {
             counter.decrementAndGet();
         }

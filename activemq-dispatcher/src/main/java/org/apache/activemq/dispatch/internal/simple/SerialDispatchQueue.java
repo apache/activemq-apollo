@@ -129,4 +129,16 @@ public final class SerialDispatchQueue extends AbstractSerialDispatchQueue imple
     public String toString() {
         return IntrospectionSupport.toString(this, "label", "size", "suspended", "retained");
     }
+
+    int localEnqueueCounter;
+    
+    public void pick(GlobalDispatchQueue queue, DispatcherThread thread) {
+        if( thread==null || localEnqueueCounter > 500 ) {
+            localEnqueueCounter=0;
+            queue.enqueueExternal(this);
+        } else {
+            localEnqueueCounter++;
+            thread.currentThreadQueue.localEnqueue(this);
+        }        
+    }
 }

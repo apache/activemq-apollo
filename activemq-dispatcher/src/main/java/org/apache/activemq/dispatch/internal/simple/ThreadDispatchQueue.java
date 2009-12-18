@@ -36,7 +36,7 @@ final public class ThreadDispatchQueue implements SimpleQueue {
 
     final String label;
     final LinkedList<Runnable> localRunnables = new LinkedList<Runnable>();
-    final ConcurrentLinkedQueue<Runnable> runnables = new ConcurrentLinkedQueue<Runnable>();
+    final ConcurrentLinkedQueue<Runnable> globalRunnables = new ConcurrentLinkedQueue<Runnable>();
     final DispatcherThread dispatcher;
     final AtomicLong counter;
     final GlobalDispatchQueue globalQueue;
@@ -61,16 +61,24 @@ final public class ThreadDispatchQueue implements SimpleQueue {
         // if the current thread is the dispatcher since we know it's not
         // waiting.
         if( Thread.currentThread()!=dispatcher ) {
-            counter.incrementAndGet();
-            runnables.add(runnable);
-            dispatcher.wakeup();
+            globalEnqueue(runnable);
         } else {
-            localRunnables.add(runnable);
+            localEnqueue(runnable);
         }
     }
 
+    void localEnqueue(Runnable runnable) {
+        localRunnables.add(runnable);
+    }
+
+    void globalEnqueue(Runnable runnable) {
+        counter.incrementAndGet();
+        globalRunnables.add(runnable);
+        dispatcher.wakeup();
+    }
+
     public Runnable pollShared() {
-        Runnable rc = runnables.poll();
+        Runnable rc = globalRunnables.poll();
         if( rc !=null ) {
             counter.decrementAndGet();
         }
