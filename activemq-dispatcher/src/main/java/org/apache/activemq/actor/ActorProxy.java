@@ -81,7 +81,7 @@ public class ActorProxy {
             // Define all the runnable classes used for each method.
             Method[] methods = interfaceClass.getMethods();
             for (int index = 0; index < methods.length; index++) {
-                String name = runnable(index).replace('/', '.');
+                String name = runnable(index, methods[index]).replace('/', '.');
                 byte[] clazzBytes = dumpRunnable(index, methods[index]);
                 defineClass(name, clazzBytes);
             }
@@ -170,7 +170,7 @@ public class ActorProxy {
                         mv.visitLabel(start);
                         mv.visitVarInsn(ALOAD, 0);
                         mv.visitFieldInsn(GETFIELD, proxyName, "queue", sig(DISPATCH_QUEUE));
-                        mv.visitTypeInsn(NEW, runnable(index));
+                        mv.visitTypeInsn(NEW, runnable(index, methods[index]));
                         mv.visitInsn(DUP);
                         mv.visitVarInsn(ALOAD, 0);
                         mv.visitFieldInsn(GETFIELD, proxyName, "target", sig(interfaceName));
@@ -179,7 +179,7 @@ public class ActorProxy {
                             mv.visitVarInsn(types[i].getOpcode(ILOAD), 1+i);
                         }
                         
-                        mv.visitMethodInsn(INVOKESPECIAL, runnable(index), "<init>", "(" + sig(interfaceName) + sig(params) +")V");
+                        mv.visitMethodInsn(INVOKESPECIAL, runnable(index, methods[index]), "<init>", "(" + sig(interfaceName) + sig(params) +")V");
                         mv.visitMethodInsn(INVOKEINTERFACE, DISPATCH_QUEUE, "dispatchAsync", "(" + sig(RUNNABLE) + ")V");
                         
                         Type returnType = Type.getType(method.getReturnType());
@@ -239,7 +239,8 @@ public class ActorProxy {
             Label start, end;
     
             // example: final class OrderRunnable implements Runnable
-            cw.visit(V1_4, ACC_FINAL + ACC_SUPER, runnable(index), null, OBJECT_CLASS, new String[] { RUNNABLE });
+            String runnableClassName = runnable(index, method);
+            cw.visit(V1_4, ACC_FINAL + ACC_SUPER, runnableClassName, null, OBJECT_CLASS, new String[] { RUNNABLE });
             {
     
                 // example: private final IPizzaService target;
@@ -271,7 +272,7 @@ public class ActorProxy {
                     // example: this.target = target;
                     mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 1);
-                    mv.visitFieldInsn(PUTFIELD, runnable(index), "target", sig(interfaceName));
+                    mv.visitFieldInsn(PUTFIELD, runnableClassName, "target", sig(interfaceName));
                     
                     // example: this.count = count;
                     for (int i = 0; i < params.length; i++) {
@@ -279,7 +280,7 @@ public class ActorProxy {
                         // TODO: figure out how to do the right loads. it varies with the type.
                         mv.visitVarInsn(ALOAD, 0);
                         mv.visitVarInsn(types[i].getOpcode(ILOAD), 2+i);
-                        mv.visitFieldInsn(PUTFIELD, runnable(index), "param"+i, sig(params[i]));
+                        mv.visitFieldInsn(PUTFIELD, runnableClassName, "param"+i, sig(params[i]));
                         
                     }
                     
@@ -288,7 +289,7 @@ public class ActorProxy {
                     
                     end = new Label();
                     mv.visitLabel(end);
-                    mv.visitLocalVariable("this", sig(runnable(index)), null, start, end, 0);
+                    mv.visitLocalVariable("this", sig(runnableClassName), null, start, end, 0);
                     mv.visitLocalVariable("target", sig(interfaceName), null, start, end, 1);
                     
                     for (int i = 0; i < params.length; i++) {
@@ -307,11 +308,11 @@ public class ActorProxy {
                     start = new Label();
                     mv.visitLabel(start);
                     mv.visitVarInsn(ALOAD, 0);
-                    mv.visitFieldInsn(GETFIELD, runnable(index), "target", sig(interfaceName));
+                    mv.visitFieldInsn(GETFIELD, runnableClassName, "target", sig(interfaceName));
                     
                     for (int i = 0; i < params.length; i++) {
                         mv.visitVarInsn(ALOAD, 0);
-                        mv.visitFieldInsn(GETFIELD, runnable(index), "param"+i, sig(params[i]));
+                        mv.visitFieldInsn(GETFIELD, runnableClassName, "param"+i, sig(params[i]));
                     }
                     
                     String methodSig = Type.getMethodDescriptor(method);
@@ -327,7 +328,7 @@ public class ActorProxy {
             
                     end = new Label();
                     mv.visitLabel(end);
-                    mv.visitLocalVariable("this", sig(runnable(index)), null, start, end, 0);
+                    mv.visitLocalVariable("this", sig(runnableClassName), null, start, end, 0);
                     mv.visitMaxs(0, 0);
                 }
                 mv.visitEnd();
@@ -350,8 +351,8 @@ public class ActorProxy {
             return Type.getDescriptor(clazz);
         }
     
-        private String runnable(int index) {
-            return proxyName+"$method"+index;
+        private String runnable(int index, Method method) {
+            return proxyName+"$"+index+"$"+method.getName();
         }
     
         private String sig(String name) {

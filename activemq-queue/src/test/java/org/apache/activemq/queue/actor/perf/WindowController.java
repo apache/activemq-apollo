@@ -17,6 +17,8 @@
 
 package org.apache.activemq.queue.actor.perf;
 
+import org.apache.activemq.util.IntrospectionSupport;
+
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -48,6 +50,11 @@ public class WindowController extends WindowLimiter {
     
     int maxSize() {
         return maxSize;
+    }
+    
+    @Override
+    public String toString() {
+        return IntrospectionSupport.toString(this);
     }
 
 }

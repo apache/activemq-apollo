@@ -230,6 +230,7 @@ public class MockClient {
         // Start 'em up.
         startServices();
         try {
+//            Thread.sleep(1000*1000*1000);
             reportRates();
         } finally {
             stopServices();

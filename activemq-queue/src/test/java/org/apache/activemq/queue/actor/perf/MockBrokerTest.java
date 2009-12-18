@@ -165,8 +165,15 @@ public class MockBrokerTest {
         client.setDestCount(1);
         client.setNumConsumers(1);
 
-        createConnections("test_1_1_1", 1);
+        createConnections("test_10_1_1", 1);
+//        setProducerThinkTime(1);
         runTestCase();
+    }
+
+    private void setProducerThinkTime(int thinkTime) {
+        for( int i=0; i < client.getNumProducers(); i++ ) {
+            client.producer(i).setThinkTime(thinkTime);
+        }
     }
 
     @Test

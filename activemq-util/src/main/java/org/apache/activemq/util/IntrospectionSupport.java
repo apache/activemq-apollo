@@ -311,7 +311,7 @@ public final class IntrospectionSupport {
                     buffer.append("  ");
                     buffer.append(entry.getKey());
                     buffer.append(": ");
-                    buffer.append(entry.getValue());
+                    buffer.append(StringSupport.indent(entry.getValue(), 2));
                 }
                 buffer.append("\n}");
             } else {
@@ -326,7 +326,7 @@ public final class IntrospectionSupport {
                     buffer.append(entry.getKey());
                     buffer.append(": ");
                     String value = entry.getValue();
-                    buffer.append(StringSupport.indent(value, 2));
+                    buffer.append(value);
                 }
                 buffer.append("}");
             }
@@ -356,7 +356,7 @@ public final class IntrospectionSupport {
         Field[] fields = startClass.getDeclaredFields();
         for (int i = 0; i < fields.length; i++) {
             Field field = fields[i];
-            if (Modifier.isStatic(field.getModifiers()) || Modifier.isTransient(field.getModifiers()) ) {
+            if (Modifier.isStatic(field.getModifiers())) {
                 continue;
             }
 

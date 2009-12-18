@@ -23,6 +23,8 @@ import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
 
+import static java.util.concurrent.TimeUnit.*;
+
 /**
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -38,16 +40,20 @@ public class ProducerConnection extends ClientConnection {
     private int payloadSize = 0;
     private final MetricCounter rate = new MetricCounter();
     private AtomicLong messageIdGenerator;
+    volatile private long thinkTime;
 
     protected void createActor() {
         actor = ActorProxy.create(ConnectionStateActor.class, new ProducerConnectionState(), dispatchQueue);
     }
+    
+    private static final long MATCH_WINDOW = MILLISECONDS.toNanos(100);
 
     class ProducerConnectionState extends ClientConnectionState {
         
         private String filler;
         private int payloadCounter;
         private boolean stopped;
+        private boolean schedualed;
 
         @Override
         public void onStart() {
@@ -80,20 +86,39 @@ public class ProducerConnection extends ClientConnection {
             super.onStop();
         }
         
+        
         private void produceMessages() {
-            while( !isSessionSendBlocked() && !stopped ) {
-                int p = priority;
-                if (priorityMod > 0) {
-                    p = payloadCounter % priorityMod == 0 ? 0 : p;
+            while( !isSessionSendBlocked() && !stopped && !schedualed ) {
+                sendMessage();
+                if( thinkTime > 0 ) {
+                    schedualNextSend();
+                    return;
                 }
-
-                Message next = new Message(messageIdGenerator.incrementAndGet(), producerId, createPayload(), null, destination, p);
-                if (property != null) {
-                    next.setProperty(property);
-                }
-                sessionSend(next);
-                rate.increment();
             }
+        }
+
+        private void schedualNextSend() {
+            schedualed=true;
+            dispatchQueue.dispatchAfter(new Runnable() {
+                public void run() {
+                   schedualed = false;
+                   produceMessages(); 
+                }
+            }, thinkTime, MILLISECONDS);
+        }
+
+        private void sendMessage() {
+            int p = priority;
+            if (priorityMod > 0) {
+                p = payloadCounter % priorityMod == 0 ? 0 : p;
+            }
+
+            Message next = new Message(messageIdGenerator.incrementAndGet(), producerId, createPayload(), null, destination, p);
+            if (property != null) {
+                next.setProperty(property);
+            }
+            sessionSend(next);
+            rate.increment();
         }
         
         private String createPayload() {
@@ -183,6 +208,14 @@ public class ProducerConnection extends ClientConnection {
 
     public void setMessageIdGenerator(AtomicLong messageIdGenerator) {
         this.messageIdGenerator = messageIdGenerator;
+    }
+
+    public long getThinkTime() {
+        return thinkTime;
+    }
+
+    public void setThinkTime(long thinkTime) {
+        this.thinkTime = thinkTime;
     }
     
 

@@ -20,7 +20,9 @@ import java.util.LinkedList;
 
 import org.apache.activemq.actor.ActorProxy;
 import org.apache.activemq.flow.Commands.Destination;
+import org.apache.activemq.flow.Commands.FlowControl;
 import org.apache.activemq.queue.actor.transport.Transport;
+import org.apache.activemq.util.IntrospectionSupport;
 
 /**
  * 
@@ -42,6 +44,10 @@ public class BrokerConnection extends BaseConnection implements DeliveryTarget {
             this.onComplete = onComplete;
         }
         
+        @Override
+        public String toString() {
+            return IntrospectionSupport.toString(this);
+        }
     }
     
     private MockBroker broker;
@@ -65,6 +71,7 @@ public class BrokerConnection extends BaseConnection implements DeliveryTarget {
         
         // TODO: to increase fairness: we might want to have a pendingQueue per sender
         final LinkedList<DispatchRequest> pendingQueue = new LinkedList<DispatchRequest>(); 
+        final LinkedList<Runnable> dispatchedQueue = new LinkedList<Runnable>(); 
         
         @Override
         protected void onReceiveString(String remoteName) {
@@ -79,9 +86,15 @@ public class BrokerConnection extends BaseConnection implements DeliveryTarget {
             // to complete the routing and we don't want to have th producer
             // send us more messages than the max session protocol window
             // is configured with.
-            broker.router.route(msg, dispatchQueue, new Runnable() {
+            broker.router.route(msg, 
+                    dispatchQueue, new Runnable() {
                 public void run() {
                     BrokerConnectionState.super.onReceiveMessage(msg);
+                }
+                
+                @Override
+                public String toString() {
+                    return IntrospectionSupport.toString(BrokerConnectionState.this, "name", "inboundSessionWindow");
                 }
             });
         }
@@ -92,23 +105,35 @@ public class BrokerConnection extends BaseConnection implements DeliveryTarget {
         }
 
         public void onBrokerDispatch(Message message, Runnable onComplete) {
-            if( !isSessionSendBlocked() ) {
-                sessionSend(message);
-                onComplete.run();
-            } else {
-                pendingQueue.add(new DispatchRequest(message, onComplete));
-            }
+            pendingQueue.add(new DispatchRequest(message, onComplete));
+            dispatchPendingQueue();
         }
         
         @Override
         protected void onSessionResume() {
+            dispatchPendingQueue();
+        }
+
+        private void dispatchPendingQueue() {
             while( !isSessionSendBlocked() ) {
                 DispatchRequest request = pendingQueue.poll();
                 if( request==null ) {
                     return;
                 }
+                dispatchedQueue.add(request.onComplete);
                 sessionSend(request.message);
-                request.onComplete.run();
+            }
+        }
+     
+        @Override
+        protected void onReceiveFlowControl(FlowControl command) {
+            super.onReceiveFlowControl(command);
+            int credit = command.getCredit();
+            for( int i=0; i < credit; i++) {
+                Runnable onComplete = dispatchedQueue.poll();
+                if( onComplete!=null ) {
+                    onComplete.run();
+                }
             }
         }
         

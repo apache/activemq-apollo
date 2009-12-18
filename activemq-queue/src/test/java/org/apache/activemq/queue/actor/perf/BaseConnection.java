@@ -76,7 +76,7 @@ abstract public class BaseConnection {
         protected Exception failure;
 
         ConnectionState() {
-            outboundTransportWindow.size(100);
+            outboundTransportWindow.size(500).opensAt(499);
         }
         
         public void onStart() {
@@ -127,10 +127,6 @@ abstract public class BaseConnection {
             }
         }
 
-        public void sessionSend(Message message) {
-            transportSend(message);
-        }
-        
         protected void onReceiveDestination(Destination command) {
         }
 
@@ -149,16 +145,22 @@ abstract public class BaseConnection {
             }
         }
         
+        public void sessionSend(Message message) {
+            outboundSessionWindow.change(-1);
+            transportSend(message);
+        }
+        
         public void transportSend(Object message) {
-            outboundTransportWindow.change(-1);
-            transport.send(message, onSendCompleted, dispatchQueue);
+//            outboundTransportWindow.change(-1);
+//            transport.send(message, onSendCompleted, dispatchQueue);
+            transport.send(message);
         }
         
         private final Runnable onSendCompleted = new Runnable() {
             public void run() {
                 boolean wasClosed = outboundTransportWindow.isClosed();
                 outboundTransportWindow.change(1);
-                if( !wasClosed && !isSessionSendBlocked() ) {
+                if( wasClosed && !isSessionSendBlocked() ) {
                     onSessionResume();
                 }
             }
@@ -167,6 +169,7 @@ abstract public class BaseConnection {
         protected void onReceiveFlowControl(FlowControl command) {
             boolean wasClosed = outboundSessionWindow.isClosed();
             outboundSessionWindow.change(command.getCredit());
+            
             if( wasClosed && !isSessionSendBlocked() ) {
                 onSessionResume();
             }

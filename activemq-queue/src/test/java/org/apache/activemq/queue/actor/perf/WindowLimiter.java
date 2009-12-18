@@ -17,6 +17,8 @@
 
 package org.apache.activemq.queue.actor.perf;
 
+import org.apache.activemq.util.IntrospectionSupport;
+
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
@@ -29,6 +31,16 @@ public class WindowLimiter {
     public WindowLimiter() {
         this.closed = true;
     }
+    
+    int opensAt() {
+        return opensAt;
+    }
+    
+    WindowLimiter opensAt(int opensAt) {
+        this.opensAt = opensAt;
+        closed = size < opensAt ;
+        return this;
+    }
 
     int size() {
         return size;
@@ -36,6 +48,7 @@ public class WindowLimiter {
     
     WindowLimiter size(int size) {
         this.size = size;
+        closed = size < opensAt ;
         return this;
     }
     
@@ -54,6 +67,11 @@ public class WindowLimiter {
         } else if( change < 0 && !closed && size <= 0) {
             closed = true;
         }
+    }
+
+    @Override
+    public String toString() {
+        return IntrospectionSupport.toString(this);
     }
 
 }

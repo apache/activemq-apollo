@@ -29,6 +29,9 @@ public class RunnableSupport {
     private static Runnable NO_OP = new Runnable() {
         public void run() {
         }
+        public String toString() {
+            return "{}";
+        };
     };
     
     public static Runnable runNoop() {
@@ -49,6 +52,9 @@ public class RunnableSupport {
                     runnable.run();
                 }
             }
+            public String toString() {
+                return "{"+runnable+"}";
+            };
         };
     }
     
@@ -66,6 +72,9 @@ public class RunnableSupport {
                     runnable.run();
                 }
             }
+            public String toString() {
+                return "{"+runnable+"}";
+            };
         };
     }
     
@@ -80,6 +89,9 @@ public class RunnableSupport {
                     queue.dispatchAsync(runnable);
                 }
             }
+            public String toString() {
+                return "{"+runnable+"}";
+            };
         };
     }
     
@@ -94,6 +106,9 @@ public class RunnableSupport {
                     queue.dispatchAsync(runnable);
                 }
             }
+            public String toString() {
+                return "{"+runnable.toString()+"}";
+            };
         };
     }
 

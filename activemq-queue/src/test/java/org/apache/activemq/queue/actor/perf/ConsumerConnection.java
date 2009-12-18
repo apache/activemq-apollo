@@ -30,10 +30,9 @@ import org.apache.activemq.metric.MetricCounter;
 public class ConsumerConnection extends ClientConnection {
     
     private MetricAggregator totalConsumerRate;
-    private long thinkTime;
+    volatile private long thinkTime;
     private Destination destination;
     private String selector;
-    private boolean schedualWait = true;
     private final MetricCounter rate = new MetricCounter();
 
     protected void createActor() {
@@ -104,14 +103,6 @@ public class ConsumerConnection extends ClientConnection {
 
     public void setSelector(String selector) {
         this.selector = selector;
-    }
-
-    public boolean isSchedualWait() {
-        return schedualWait;
-    }
-
-    public void setSchedualWait(boolean schedualWait) {
-        this.schedualWait = schedualWait;
     }
 
     public MetricCounter getRate() {

@@ -33,8 +33,10 @@ public class Router {
     final void route(Message msg, DispatchQueue queue, Runnable onRouteCompleted) {
         AsciiBuffer key = msg.getDestination().getName();
         Collection<DeliveryTarget> targets = lookupTable.get(key);
-        if( targets == null ) 
+        if( targets == null )  {
+            onRouteCompleted.run();
             return;
+        }
         
         Runnable r = runOnceAfter(queue, onRouteCompleted, targets.size());
         for (DeliveryTarget dt : targets) {
