@@ -90,15 +90,9 @@ final public class SimpleDispatcher extends BaseSuspendable implements Dispatche
         return source;
     }
 
-    public boolean addWaitingDispatcher(DispatcherThread dispatcher) {
-        if (globalQueuedRunnables.get() <= 0) {
-            waitingDispatcherCount.incrementAndGet();
-            waitingDispatchers.add(dispatcher);
-            return true;
-        } else {
-            dispatcher.globalWakeup();
-            return false;
-        }
+    public void addWaitingDispatcher(DispatcherThread dispatcher) {
+        waitingDispatcherCount.incrementAndGet();
+        waitingDispatchers.add(dispatcher);
     }
 
     public void wakeup() {
@@ -107,7 +101,7 @@ final public class SimpleDispatcher extends BaseSuspendable implements Dispatche
             DispatcherThread dispatcher = waitingDispatchers.poll();
             if (dispatcher != null) {
                 waitingDispatcherCount.decrementAndGet();
-                dispatcher.globalWakeup();
+                dispatcher.wakeup();
             }
         }
     }

@@ -32,10 +32,14 @@ import org.junit.Test;
 import static java.util.concurrent.TimeUnit.*;
 import static junit.framework.Assert.*;
 
+/**
+ * 
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class NioDispatchSoruceTest {
 
     @Test
-    public void test() throws IOException, InterruptedException {
+    public void connect() throws IOException, InterruptedException {
 
         // Create the nio server socket...
         final ServerSocketChannel channel = ServerSocketChannel.open();
@@ -46,26 +50,42 @@ public class NioDispatchSoruceTest {
         // Get a dispatcher and queue..
         SimpleDispatcher dispatcher = new SimpleDispatcher(new DispatcherConfig());
         dispatcher.resume();
+        
+        Thread.sleep(1000);
         DispatchQueue accepts = dispatcher.createSerialQueue("test");
         
         // Create a source attached to the server socket to deal with new connectins..
         DispatchSource source = dispatcher.createSource(channel, SelectionKey.OP_ACCEPT, accepts);
-        // All we do is just release a countdown latch...
-        RunnableCountDownLatch accepted = new RunnableCountDownLatch(1) {
-            @Override
-            public void run() {
-                try {
-                    SocketChannel socket = channel.accept();
-                    socket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                super.run();
-            }
-        };
-        source.setEventHandler(accepted);
+        RunnableCountDownLatch accepted;
+        
 
-        // Connect to the server in a new thread.
+        // Events should not be seen until the source is resumed.
+        accepted = acceptor(channel);
+        source.setEventHandler(accepted);
+        connect(channel);
+        assertFalse(accepted.await(1, SECONDS));
+        source.resume();
+        assertTrue(accepted.await(1, SECONDS));
+
+        // Since we are resumed we should get the next connect quickly..
+        System.out.println("start....");
+        accepted = acceptor(channel);
+        source.setEventHandler(accepted);
+        connect(channel);
+        System.out.println("waiting....");
+        assertTrue(accepted.await(2, SECONDS));
+
+        // Now test that events don't get fired
+        // once the source is canceled. 
+        accepted = acceptor(channel);
+        source.setEventHandler(accepted);
+        source.cancel();
+        connect(channel);        
+        assertFalse(accepted.await(2, SECONDS));
+        
+    }
+
+    private void connect(final ServerSocketChannel channel) {
         new Thread("connect") {
             public void run() {
                 try {
@@ -77,14 +97,21 @@ public class NioDispatchSoruceTest {
                 }
             }
         }.start();
-        
-        // Events should not get delivered until the source is resumed.
-        assertFalse(accepted.await(1, SECONDS));
-        source.resume();
-        
-        // Count down latch should get released now.
-        assertTrue(accepted.await(1, SECONDS));
-        
+    }
+
+    private RunnableCountDownLatch acceptor(final ServerSocketChannel channel) {
+        return new RunnableCountDownLatch(1) {
+            @Override
+            public void run() {
+                try {
+                    SocketChannel socket = channel.accept();
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                super.run();
+            }
+        };
     }
 
     static public InetSocketAddress address(String host, int port) throws UnknownHostException {

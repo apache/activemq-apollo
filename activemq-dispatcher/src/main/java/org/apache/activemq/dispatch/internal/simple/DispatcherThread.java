@@ -18,7 +18,6 @@
 package org.apache.activemq.dispatch.internal.simple;
 
 import java.io.IOException;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -67,7 +66,7 @@ final public class DispatcherThread extends Thread {
             start: for (;;) {
 
                 try {
-                    this.selector.doSelect(0);
+                    this.selector.select(0);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -196,35 +195,31 @@ final public class DispatcherThread extends Thread {
         return null;
     }
 
-    private final Semaphore wakeups = new Semaphore(0);
     private final AtomicBoolean inWaitingList = new AtomicBoolean(false);
 
     private void waitForWakeup() throws InterruptedException {
         try {
-            this.selector.doSelect(0);
+            this.selector.select(0);
         } catch (IOException e) {
             e.printStackTrace();
         }
         while (threadQueuedRunnables.get() == 0 && dispatcher.globalQueuedRunnables.get() == 0) {
-            if (!wakeups.tryAcquire()) {
-                if (inWaitingList.compareAndSet(false, true)) {
-                    if (!dispatcher.addWaitingDispatcher(this)) {
-                        inWaitingList.set(false);
-                    }
-                }
+            if (inWaitingList.compareAndSet(false, true)) {
+                dispatcher.addWaitingDispatcher(this);
             }
-            wakeups.acquire();
+            try {
+                // If the selector found some work...
+                if( this.selector.select(100) != 0 ) {
+                    return;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-        wakeups.drainPermits();
-    }
-
-    public void globalWakeup() {
-        wakeups.release();
-        inWaitingList.set(false);
     }
 
     public void wakeup() {
-        wakeups.release();
+       this.selector.wakeup();
     }
 
 }

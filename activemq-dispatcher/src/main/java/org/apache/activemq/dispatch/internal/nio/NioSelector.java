@@ -23,6 +23,12 @@ import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.Set;
 
+import static java.lang.String.*;
+
+/**
+ * 
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class NioSelector {
     
     public final static ThreadLocal<NioSelector> CURRENT_SELECTOR = new ThreadLocal<NioSelector>();
@@ -38,20 +44,11 @@ public class NioSelector {
         return selector;
     }
 
-    protected void cleanup() {
-        try {
-            selector.close();
-        } catch (IOException e) {
-            if (DEBUG) {
-                debug("Error closing selector", e);
-            }
-        }
-    }
-
     /**
      * Subclasses may override this to provide an alternative wakeup mechanism.
      */
-    protected void wakeup() {
+    public void wakeup() {
+        debug("waking selector");
         selector.wakeup();
     }
 
@@ -66,8 +63,7 @@ public class NioSelector {
      *            to become ready.
      * @throws IOException
      */
-    public void doSelect(long timeout) throws IOException {
-
+    public int select(long timeout) throws IOException {
         try {
             if (timeout == -1) {
                 selector.select();
@@ -76,19 +72,20 @@ public class NioSelector {
             } else {
                 selector.selectNow();
             }
-            processSelected();
+            return processSelected();
 
         } catch (CancelledKeyException ignore) {
-            // A key may have been canceled.
+            return 0;
         }
-
     }
 
-    private void processSelected() {
+    private int processSelected() {
 
         // Walk the set of ready keys servicing each ready context:
         Set<SelectionKey> selectedKeys = selector.selectedKeys();
-        if (!selectedKeys.isEmpty()) {
+        int size = selectedKeys.size();
+        if (size!=0) {
+            debug("selected: %d",size);
             for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
                 SelectionKey key = i.next();
                 boolean valid = key.isValid();
@@ -99,6 +96,7 @@ public class NioSelector {
                 }
             }
         }
+        return size;
     }
 
     public void shutdown() throws IOException {
@@ -109,13 +107,21 @@ public class NioSelector {
         selector.close();
     }
 
-    private final void debug(String str) {
-        System.out.println(this + ": " + str);
+    protected void debug(String str, Object... args) {
+        if (DEBUG) {
+            System.out.println(format("[DEBUG] NioSelector %0#10x: ", System.identityHashCode(this))+format(str, args));
+        }
     }
 
-    private final void debug(String str, Throwable e) {
-        System.out.println(this + ": " + str);
-        e.printStackTrace();
+    protected void debug(Throwable thrown, String str, Object... args) {
+        if (DEBUG) {
+            if (str != null) {
+                debug(str, args);
+            }
+            if (thrown != null) {
+                thrown.printStackTrace();
+            }
+        }
     }
 
 }

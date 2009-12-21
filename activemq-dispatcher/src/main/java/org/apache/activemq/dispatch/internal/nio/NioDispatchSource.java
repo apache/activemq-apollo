@@ -33,7 +33,7 @@ import static java.lang.String.*;
  */
 final public class NioDispatchSource extends BaseSuspendable implements DispatchSource {
 
-    public static final boolean DEBUG = true;
+    public static final boolean DEBUG = false;
 
     interface KeyActor {
         public void register();
@@ -88,7 +88,7 @@ final public class NioDispatchSource extends BaseSuspendable implements Dispatch
                 key.attach(new Runnable() {
                     public void run() {
                         int ops = key.readyOps();
-                        debug("%s: selector found ready ops: %d", this, ops);
+                        debug("selector found ready ops: %d", ops);
                         readyOps |= ops;
                         resume();
                     }
@@ -102,7 +102,7 @@ final public class NioDispatchSource extends BaseSuspendable implements Dispatch
             if( readyOps!=0 && suspended.get() <= 0) {
                 final int dispatchedOps = readyOps;
                 readyOps = 0;
-                debug("%s: dispatching for ops: %d", this, dispatchedOps);
+                debug("dispatching for ops: %d", dispatchedOps);
                 targetQueue.dispatchAsync(new Runnable() {
                     public void run() {
                         eventHandler.run();
@@ -113,13 +113,13 @@ final public class NioDispatchSource extends BaseSuspendable implements Dispatch
         }
         
         public void addInterest(int ops) {
-            debug("%s: adding interest: %d", this, ops);
+            debug("adding interest: %d", ops);
             key.interestOps(key.interestOps()|ops);
         }
         
         public void cancel() {
             if (key != null && key.isValid()) {
-                debug("%s: canceling key: %s", this, key);
+                debug("canceling key.");
                 // This will make sure that the key is removed
                 // from the selector.
                 key.cancel();
@@ -186,7 +186,7 @@ final public class NioDispatchSource extends BaseSuspendable implements Dispatch
 
     protected void debug(String str, Object... args) {
         if (DEBUG) {
-            System.out.println(format(str, args));
+            System.out.println(format("[DEBUG] NioDispatchSource %0#10x: ", System.identityHashCode(this))+format(str, args));
         }
     }
 
