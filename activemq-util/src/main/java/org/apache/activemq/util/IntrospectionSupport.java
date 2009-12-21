@@ -269,7 +269,7 @@ public final class IntrospectionSupport {
         return toString(target, Object.class, overrideFields, fields);
     }
 
-    public static String toString(Object target, Class<?> stopClass, Map<String, Object> overrideFields, String fields[]) {
+    public static String toString(Object target, Class<?> stopClass, Map<String, Object> overrideFields, String ... fields) {
         try {
             LinkedHashMap<String, Object> map = new LinkedHashMap<String, Object>();
             addFields(target, target.getClass(), stopClass, map);

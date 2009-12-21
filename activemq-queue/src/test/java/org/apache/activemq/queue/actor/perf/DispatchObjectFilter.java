@@ -37,7 +37,7 @@ public class DispatchObjectFilter implements DispatchObject {
         next.addShutdownWatcher(shutdownWatcher);
     }
     public <Context> Context getContext() {
-        return next.getContext();
+        return (Context)next.getContext();
     }
     public DispatchQueue getTargetQueue() {
         return next.getTargetQueue();
