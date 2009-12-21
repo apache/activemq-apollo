@@ -17,9 +17,12 @@
 
 package org.apache.activemq.dispatch.internal.simple;
 
+import java.io.IOException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.activemq.dispatch.internal.nio.NioSelector;
 
 /**
  * 
@@ -33,6 +36,7 @@ final public class DispatcherThread extends Thread {
     final AtomicLong threadQueuedRunnables = new AtomicLong();
     final IntegerCounter executionCounter = new IntegerCounter();
     ThreadDispatchQueue currentThreadQueue;
+    private NioSelector selector;
 
     public DispatcherThread(SimpleDispatcher dispatcher, int ordinal) {
         this.dispatcher = dispatcher;
@@ -51,8 +55,23 @@ final public class DispatcherThread extends Thread {
         int processGlobalQueueCount = PRIORITIES;
 
         try {
+            this.selector = new NioSelector();
+            NioSelector.CURRENT_SELECTOR.set(selector);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;
+        }
+        
+        try {
+            
             start: for (;;) {
 
+                try {
+                    this.selector.doSelect(0);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                
                 executionCounter.set(MAX_LOCAL_DISPATCH_BEFORE_CHECKING_GLOBAL);
 
                 // Process the local non-synchronized queues.
@@ -145,6 +164,13 @@ final public class DispatcherThread extends Thread {
                 }
             }
         } catch (Shutdown e) {
+        } finally {
+            try {
+                selector.shutdown();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            NioSelector.CURRENT_SELECTOR.remove();
         }
     }
 
@@ -174,6 +200,11 @@ final public class DispatcherThread extends Thread {
     private final AtomicBoolean inWaitingList = new AtomicBoolean(false);
 
     private void waitForWakeup() throws InterruptedException {
+        try {
+            this.selector.doSelect(0);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         while (threadQueuedRunnables.get() == 0 && dispatcher.globalQueuedRunnables.get() == 0) {
             if (!wakeups.tryAcquire()) {
                 if (inWaitingList.compareAndSet(false, true)) {

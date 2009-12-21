@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.dispatch.internal;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.activemq.dispatch.DispatchObject;
 import org.apache.activemq.dispatch.DispatchQueue;
 
@@ -28,26 +26,27 @@ import org.apache.activemq.dispatch.DispatchQueue;
 abstract public class AbstractDispatchObject extends BaseSuspendable implements DispatchObject {
 
     protected volatile Object context;
+
     protected volatile DispatchQueue targetQueue;
 
     @SuppressWarnings("unchecked")
     public <Context> Context getContext() {
-       assertRetained();
+        assertRetained();
         return (Context) context;
     }
-    
+
     public <Context> void setContext(Context context) {
-       assertRetained();
+        assertRetained();
         this.context = context;
     }
 
     public void setTargetQueue(DispatchQueue targetQueue) {
-       assertRetained();
+        assertRetained();
         this.targetQueue = targetQueue;
     }
 
     public DispatchQueue getTargetQueue() {
-       assertRetained();
+        assertRetained();
         return this.targetQueue;
     }
 

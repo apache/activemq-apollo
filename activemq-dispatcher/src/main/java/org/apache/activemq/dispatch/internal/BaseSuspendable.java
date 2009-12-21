@@ -26,14 +26,14 @@ import org.apache.activemq.dispatch.Suspendable;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class BaseSuspendable extends BaseRetainable implements Suspendable {
-    
+
     protected final AtomicBoolean startup = new AtomicBoolean(true);
     protected final AtomicInteger suspended = new AtomicInteger();
 
     public void resume() {
-       assertRetained();
-        if( suspended.decrementAndGet() == 0 ) {
-            if( startup.compareAndSet(true, false) ) {
+        assertRetained();
+        if (suspended.decrementAndGet() == 0) {
+            if (startup.compareAndSet(true, false)) {
                 onStartup();
             } else {
                 onResume();
@@ -42,8 +42,8 @@ public class BaseSuspendable extends BaseRetainable implements Suspendable {
     }
 
     public void suspend() {
-       assertRetained();
-        if( suspended.getAndIncrement()==0 ) {
+        assertRetained();
+        if (suspended.getAndIncrement() == 0) {
             onSuspend();
         }
     }

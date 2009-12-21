@@ -25,13 +25,7 @@ public interface DispatchSource extends DispatchObject {
     public void cancel();
     public boolean isCanceled();
     
-    public long getData();
-    
-    public long getMask();
-    public void setMask(long mask);
-    
     public void setCancelHandler(Runnable cancelHandler);
     public void setEventHandler(Runnable eventHandler);
-    
     
 }

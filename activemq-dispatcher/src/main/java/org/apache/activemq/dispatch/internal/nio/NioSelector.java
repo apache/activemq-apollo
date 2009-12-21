@@ -23,21 +23,15 @@ import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.apache.activemq.dispatch.internal.advanced.DispatcherThread;
-
-public class NIOSourceHandler {
+public class NioSelector {
+    
+    public final static ThreadLocal<NioSelector> CURRENT_SELECTOR = new ThreadLocal<NioSelector>();
+    
     private final boolean DEBUG = false;
-
     private final Selector selector;
-    private final DispatcherThread thread;
 
-    public NIOSourceHandler(DispatcherThread thread) throws IOException {
+    public NioSelector() throws IOException {
         this.selector = Selector.open();
-        this.thread = thread;
-    }
-
-    DispatcherThread getThread() {
-        return thread;
     }
 
     Selector getSelector() {
@@ -96,28 +90,12 @@ public class NIOSourceHandler {
         Set<SelectionKey> selectedKeys = selector.selectedKeys();
         if (!selectedKeys.isEmpty()) {
             for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
-                boolean done = false;
                 SelectionKey key = i.next();
-                if (key.isValid()) {
-                    NIODispatchSource source = (NIODispatchSource) key.attachment();
-
-                    done = true;
-                    try {
-                        done = source.onSelect();
-                    } catch (RuntimeException re) {
-                        if (DEBUG)
-                            debug("Exception in " + source + " canceling");
-                        // If there is a Runtime error close the context:
-                        // TODO better error handling here:
-                        source.cancel();
-                    }
-                } else {
-                    done = true;
-                }
-
-                // If no more interests remove:
-                if (done) {
-                    i.remove();
+                boolean valid = key.isValid();
+                i.remove();
+                if (valid) {
+                    key.interestOps(key.interestOps() & ~key.readyOps());
+                    ((Runnable) key.attachment()).run();
                 }
             }
         }
@@ -125,7 +103,7 @@ public class NIOSourceHandler {
 
     public void shutdown() throws IOException {
         for (SelectionKey key : selector.keys()) {
-            NIODispatchSource source = (NIODispatchSource) key.attachment();
+            NioDispatchSource source = (NioDispatchSource) key.attachment();
             source.cancel();
         }
         selector.close();

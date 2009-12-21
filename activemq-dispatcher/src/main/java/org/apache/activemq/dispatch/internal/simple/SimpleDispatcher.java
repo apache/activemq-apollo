@@ -29,6 +29,7 @@ import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.dispatch.internal.AbstractSerialDispatchQueue;
 import org.apache.activemq.dispatch.internal.BaseSuspendable;
+import org.apache.activemq.dispatch.internal.nio.NioDispatchSource;
 
 import static org.apache.activemq.dispatch.DispatchPriority.*;
 
@@ -58,7 +59,7 @@ final public class SimpleDispatcher extends BaseSuspendable implements Dispatche
             globalQueues[i] = new GlobalDispatchQueue(this, DispatchPriority.values()[i]);
         }
         dispatchers = new DispatcherThread[config.getThreads()];
-        super.suspend();
+        this.suspended.incrementAndGet();
     }
 
     public DispatchQueue getMainQueue() {
@@ -84,7 +85,9 @@ final public class SimpleDispatcher extends BaseSuspendable implements Dispatche
     }
 
     public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue) {
-        return null;
+        NioDispatchSource source = new NioDispatchSource(this, channel, interestOps);
+        source.setTargetQueue(queue);
+        return source;
     }
 
     public boolean addWaitingDispatcher(DispatcherThread dispatcher) {
@@ -129,7 +132,6 @@ final public class SimpleDispatcher extends BaseSuspendable implements Dispatche
 
         Runnable countDown = new Runnable() {
             AtomicInteger shutdownCountDown = new AtomicInteger(dispatchers.length);
-
             public void run() {
                 if (shutdownCountDown.decrementAndGet() == 0) {
                     // Notify any registered shutdown watchers.

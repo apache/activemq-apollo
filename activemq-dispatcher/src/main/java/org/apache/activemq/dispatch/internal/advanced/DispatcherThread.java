@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.activemq.dispatch.DispatchPriority;
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.dispatch.DispatchSource;
-import org.apache.activemq.dispatch.internal.nio.NIOSourceHandler;
+import org.apache.activemq.dispatch.internal.nio.NioSelector;
 import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.PriorityLinkedList;
 import org.apache.activemq.util.TimerHeap;
@@ -80,11 +80,11 @@ public class DispatcherThread implements Runnable {
     };
     
 
-    private final NIOSourceHandler nioHandler;
+    private final NioSelector nioHandler;
 
     protected DispatcherThread(AdvancedDispatcher dispatcher, String name, int priorities) throws IOException {
         this.name = name;
-        this.nioHandler = new NIOSourceHandler(this);
+        this.nioHandler = new NioSelector();
         this.dispatchQueues = new ThreadDispatchQueue[3];
         for (int i = 0; i < 3; i++) {
             dispatchQueues[i] = new ThreadDispatchQueue(this, DispatchPriority.values()[i]);

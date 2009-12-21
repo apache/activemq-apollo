@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.dispatch.internal.advanced;
 
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.util.ArrayList;
 import java.util.concurrent.Executor;
@@ -32,7 +31,7 @@ import org.apache.activemq.dispatch.DispatchSource;
 import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.dispatch.internal.BaseSuspendable;
-import org.apache.activemq.dispatch.internal.nio.NIODispatchSource;
+import org.apache.activemq.dispatch.internal.nio.NioDispatchSource;
 
 import static org.apache.activemq.dispatch.DispatchPriority.*;
 
@@ -212,17 +211,7 @@ final public class AdvancedDispatcher extends BaseSuspendable implements Dispatc
     }
 
     public DispatchSource createSource(SelectableChannel channel, int interestOps, DispatchQueue queue) {
-        NIODispatchSource source = new NIODispatchSource();
-        try {
-            source.setChannel(channel);
-        } catch (ClosedChannelException e) {
-            e.printStackTrace();
-        }
-        source.setMask(interestOps);
-        //Dispatch Source must be sticky so that it sticks to it's thread's selector:
-        if (!(queue.getOptions().contains(DispatchOption.STICK_TO_CALLER_THREAD) || queue.getOptions().contains(DispatchOption.STICK_TO_CALLER_THREAD))) {
-            throw new IllegalStateException("Source dispatch queue must be sticky");
-        }
+        NioDispatchSource source = new NioDispatchSource(this, channel, interestOps);
         source.setTargetQueue(queue);
         return source;
     }
