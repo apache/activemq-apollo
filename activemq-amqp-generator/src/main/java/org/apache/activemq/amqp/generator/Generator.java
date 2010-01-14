@@ -1,5 +1,13 @@
 package org.apache.activemq.amqp.generator;
 
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.List;
 import javax.xml.bind.JAXBContext;
@@ -20,17 +28,17 @@ public class Generator {
 
     private Log LOG = LogFactory.getLog(Generator.class);
 
-    private String [] inputFiles;
+    private String[] inputFiles;
     private String outputDirectory;
     private String packagePrefix;
 
     private TypeRegistry typeRegistry = new TypeRegistry();
 
-    public String [] getInputFile() {
+    public String[] getInputFile() {
         return inputFiles;
     }
 
-    public void setInputFiles(String ... inputFiles) {
+    public void setInputFiles(String... inputFiles) {
         this.inputFiles = inputFiles;
     }
 
@@ -54,8 +62,7 @@ public class Generator {
         TypeRegistry.init(this);
         JAXBContext jc = JAXBContext.newInstance(Amqp.class.getPackage().getName());
 
-        for(String inputFile : inputFiles)
-        {
+        for (String inputFile : inputFiles) {
             // JAXB has some namespace handling problems:
             Unmarshaller unmarshaller = jc.createUnmarshaller();
             SAXParserFactory parserFactory;
@@ -67,7 +74,7 @@ public class Generator {
             // File(inputFile)), Amqp.class).getValue();
             Amqp amqp = (Amqp) unmarshaller.unmarshal(er);
             List<Object> list = amqp.getDocOrSection();
-    
+
             // Scan document:
             for (Object docOrSection : amqp.getDocOrSection()) {
                 if (docOrSection instanceof Section) {
@@ -80,6 +87,26 @@ public class Generator {
                     }
                 }
             }
+        }
+
+        // Copy handcoded:
+        String[] handcoded = new String[] { "AmqpMarshaller", "AmqpType"};
+        for (String javaFile : handcoded) {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(this.getClass().getClassLoader().getResourceAsStream("org/apache/activemq/amqp/generator/handcoded/" + javaFile + ".jtemp")));
+            String line = reader.readLine();
+            line = line.replace("org.apache.activemq.amqp.generator.handcoded", packagePrefix);
+
+            File out = new File(this.outputDirectory + File.separator + packagePrefix.replace(".", File.separator) + File.separator + javaFile + ".java");
+            out.getParentFile().mkdirs();
+            BufferedWriter writer = new BufferedWriter(new FileWriter(out));
+
+            while (line != null) {
+                writer.write(line);
+                writer.newLine();
+                line = reader.readLine();
+            }
+            writer.flush();
+            writer.close();
         }
 
         // Generate Types:

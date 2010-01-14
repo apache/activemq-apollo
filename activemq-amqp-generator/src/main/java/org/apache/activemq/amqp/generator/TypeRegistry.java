@@ -27,8 +27,9 @@ public class TypeRegistry {
         JAVA_TYPE_MAP.put("binary", new JavaTypeMapping("binary", "byte []", "java.lang"));
         JAVA_TYPE_MAP.put("string", new JavaTypeMapping("string", "String", "java.lang"));
         JAVA_TYPE_MAP.put("symbol", new JavaTypeMapping("symbol", "String", "java.lang"));
-        JAVA_TYPE_MAP.put("list", new JavaTypeMapping("list", "List", "java.util"));
-        JAVA_TYPE_MAP.put("map", new JavaTypeMapping("map", "HashMap", "java.util"));
+        JAVA_TYPE_MAP.put("list", new JavaTypeMapping("list", "List <AmqpType>", "java.util"));
+        JAVA_TYPE_MAP.put("map", new JavaTypeMapping("map", "HashMap <AmqpType, AmqpType>", "java.util"));
+        JAVA_TYPE_MAP.put("null", new JavaTypeMapping("null", "Object", "java.lang"));
 
     }
 
@@ -36,6 +37,8 @@ public class TypeRegistry {
         // Add in the wildcard type:
         GENERATED_TYPE_MAP.put("*", new AnyClass("*", "AmqpAny", generator.getPackagePrefix() + ".types"));
         JAVA_TYPE_MAP.put("*", new JavaTypeMapping("*", "byte []", "java.lang"));
+        
+        // Add in the compound type:
     }
 
     public static String getJavaType(AmqpField field) throws UnknownTypeException {
@@ -117,6 +120,19 @@ public class TypeRegistry {
             super.javaType = javaType;
             super.setPrimitive(true);
             super.javaPackage = javaPackage;
+            super.handcoded = true;
         }
     }
+    
+    public static class CompoundType extends AmqpClass {
+
+        CompoundType(String name, String javaType, String javaPackage) {
+            super.name = name;
+            super.javaType = javaType;
+            super.setPrimitive(true);
+            super.javaPackage = javaPackage;
+        }
+    }
+    
+    
 }
