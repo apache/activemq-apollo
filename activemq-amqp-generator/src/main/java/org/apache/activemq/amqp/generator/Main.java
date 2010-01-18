@@ -1,6 +1,5 @@
 package org.apache.activemq.amqp.generator;
 
-import javax.xml.bind.JAXBException;
 
 public class Main {
 
@@ -10,6 +9,7 @@ public class Main {
                 "C:/dev/fuse/amq6.0/activemq-amqp-generator/specification/1.0-PR2/types.xml", "C:/dev/fuse/amq6.0/activemq-amqp-generator/specification/1.0-PR2/security.xml");
         gen.setPackagePrefix("org.apache.activemq.amqp.v1pr2");
         gen.setOutputDirectory("C:/dev/fuse/amq6.0/activemq-amqp-generator/src/main/java");
+        gen.setSourceDirectory("C:/dev/fuse/amq6.0/activemq-amqp-generator/src/handcoded");
         try {
             gen.generate();
         } catch (Exception e) {

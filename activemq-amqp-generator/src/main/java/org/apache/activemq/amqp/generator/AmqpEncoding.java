@@ -74,6 +74,11 @@ public class AmqpEncoding {
         return "compound".equals(getCategory());
     }
     
+    public boolean isArray()
+    {
+        return "array".equals(getCategory());
+    }
+    
     public String toString() {
         return "{" + name + ", cat=" + category + ", code=" + code + ", width=" + width +"}";
     }

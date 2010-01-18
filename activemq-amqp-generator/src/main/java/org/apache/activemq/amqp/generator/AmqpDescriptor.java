@@ -53,6 +53,14 @@ public class AmqpDescriptor {
         this.descriptorId = descriptorId;
     }
 
+    public AmqpClass resolveDescribedType() throws UnknownTypeException {
+        return TypeRegistry.resolveAmqpClass(getDescribedType());
+    }
+
+    public String getDescribedType() {
+        return symbolicName.substring(symbolicName.lastIndexOf(":") + 1);
+    }
+
     public String toString() {
         return "{" + symbolicName + ", code=" + formatCode + "}";
     }

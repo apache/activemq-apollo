@@ -1,15 +1,11 @@
 package org.apache.activemq.amqp.generator;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.HashMap;
-import java.util.List;
+
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.parsers.SAXParserFactory;
@@ -19,20 +15,15 @@ import javax.xml.transform.sax.SAXSource;
 import org.apache.activemq.amqp.generator.jaxb.schema.Amqp;
 import org.apache.activemq.amqp.generator.jaxb.schema.Section;
 import org.apache.activemq.amqp.generator.jaxb.schema.Type;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
 public class Generator {
 
-    private Log LOG = LogFactory.getLog(Generator.class);
-
     private String[] inputFiles;
     private String outputDirectory;
+    private String sourceDirectory;
     private String packagePrefix;
-
-    private TypeRegistry typeRegistry = new TypeRegistry();
 
     public String[] getInputFile() {
         return inputFiles;
@@ -50,6 +41,10 @@ public class Generator {
         this.outputDirectory = outputDirectory;
     }
 
+    public void setSourceDirectory(String sourceDirectory) {
+        this.sourceDirectory = sourceDirectory;
+    }
+    
     public String getPackagePrefix() {
         return packagePrefix;
     }
@@ -73,8 +68,7 @@ public class Generator {
             // Amqp amqp = (Amqp) unmarshaller.unmarshal(new StreamSource(new
             // File(inputFile)), Amqp.class).getValue();
             Amqp amqp = (Amqp) unmarshaller.unmarshal(er);
-            List<Object> list = amqp.getDocOrSection();
-
+            
             // Scan document:
             for (Object docOrSection : amqp.getDocOrSection()) {
                 if (docOrSection instanceof Section) {
@@ -90,17 +84,19 @@ public class Generator {
         }
 
         // Copy handcoded:
-        String[] handcoded = new String[] { "AmqpMarshaller", "AmqpType"};
-        for (String javaFile : handcoded) {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(this.getClass().getClassLoader().getResourceAsStream("org/apache/activemq/amqp/generator/handcoded/" + javaFile + ".jtemp")));
-            String line = reader.readLine();
-            line = line.replace("org.apache.activemq.amqp.generator.handcoded", packagePrefix);
-
-            File out = new File(this.outputDirectory + File.separator + packagePrefix.replace(".", File.separator) + File.separator + javaFile + ".java");
+        String handCodedSource = "org/apache/activemq/amqp/generator/handcoded";
+        String outputPackage = packagePrefix.replace(".", File.separator);
+        File sourceDir = new File(sourceDirectory + File.separator + handCodedSource);
+        for (File javaFile : Utils.findFiles(sourceDir)) {
+            javaFile.setWritable(true);
+            BufferedReader reader = new BufferedReader(new FileReader(javaFile));
+            File out = new File(outputDirectory + File.separator + outputPackage + File.separator + javaFile.getCanonicalPath().substring((int)sourceDir.getCanonicalPath().length()));
             out.getParentFile().mkdirs();
+            String line = reader.readLine();
             BufferedWriter writer = new BufferedWriter(new FileWriter(out));
 
             while (line != null) {
+                line = line.replace("org.apache.activemq.amqp.generator.handcoded", packagePrefix);
                 writer.write(line);
                 writer.newLine();
                 line = reader.readLine();
@@ -122,4 +118,6 @@ public class Generator {
         TypeRegistry.addType(amqpClass);
         System.out.println("Found: " + amqpClass);
     }
+
+    
 }

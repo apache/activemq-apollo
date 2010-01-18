@@ -1,11 +1,13 @@
 package org.apache.activemq.amqp.generator;
 
-import org.apache.activemq.amqp.generator.jaxb.schema.*;
-import static org.apache.activemq.amqp.generator.Utils.*;
+import static org.apache.activemq.amqp.generator.Utils.toJavaName;
+
+import org.apache.activemq.amqp.generator.jaxb.schema.Doc;
+import org.apache.activemq.amqp.generator.jaxb.schema.Field;
 
 public class AmqpField {
 
-    String doc;
+    AmqpDoc doc;
     String name;
     String defaultValue;
     String label;
@@ -22,7 +24,14 @@ public class AmqpField {
         type = field.getType();
 
         for (Object object : field.getDocOrException()) {
-            // TODO;
+            if (object instanceof Doc) {
+                if (doc == null) {
+                    doc = new AmqpDoc();
+                }
+                doc.parseFromDoc((Doc) object);
+            } else {
+                // TODO handle exception:
+            }
         }
     }
 
@@ -34,11 +43,11 @@ public class AmqpField {
         this.name = name;
     }
 
-    public String getDoc() {
+    public AmqpDoc getDoc() {
         return doc;
     }
 
-    public void setDoc(String doc) {
+    public void setDoc(AmqpDoc doc) {
         this.doc = doc;
     }
 
@@ -82,14 +91,15 @@ public class AmqpField {
         this.required = required;
     }
 
-    public String getJavaType() throws UnknownTypeException {
-        return TypeRegistry.getJavaType(this);
+    public AmqpClass resolveAmqpFieldType() throws UnknownTypeException {
+        if (isMultiple()) {
+            return TypeRegistry.resolveAmqpClass("list");
+        }
+
+        AmqpClass ampqClass = TypeRegistry.resolveAmqpClass(this);
+        return ampqClass;
     }
-    
-    public String getJavaPackage() throws UnknownTypeException {
-        return TypeRegistry.getJavaPackage(this);
-    }
-    
+
     public String getJavaName() {
         return toJavaName(name);
     }
