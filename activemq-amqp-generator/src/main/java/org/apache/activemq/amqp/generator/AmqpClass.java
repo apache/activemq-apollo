@@ -8,14 +8,11 @@ import static org.apache.activemq.amqp.generator.Utils.toJavaName;
 import static org.apache.activemq.amqp.generator.Utils.writeJavaCopyWrite;
 
 import java.io.BufferedWriter;
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.TreeSet;
 
 import org.apache.activemq.amqp.generator.TypeRegistry.JavaTypeMapping;
@@ -25,10 +22,6 @@ import org.apache.activemq.amqp.generator.jaxb.schema.Doc;
 import org.apache.activemq.amqp.generator.jaxb.schema.Encoding;
 import org.apache.activemq.amqp.generator.jaxb.schema.Field;
 import org.apache.activemq.amqp.generator.jaxb.schema.Type;
-import org.apache.activemq.amqp.v1pr2.messaging.AmqpDistributionMode;
-import org.apache.activemq.amqp.v1pr2.transport.AmqpConnectionErrorCode;
-import org.apache.activemq.amqp.v1pr2.types.AmqpUint;
-import org.apache.activemq.amqp.v1pr2.types.AmqpUshort;
 
 public class AmqpClass {
 
