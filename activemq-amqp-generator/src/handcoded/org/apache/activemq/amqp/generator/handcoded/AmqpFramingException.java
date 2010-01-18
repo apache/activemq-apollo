@@ -1,4 +1,4 @@
-package org.apache.activemq.amqp.v1pr2;
+package org.apache.activemq.amqp.generator.handcoded;
 
 import java.io.IOException;
 
