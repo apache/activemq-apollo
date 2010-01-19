@@ -16,18 +16,20 @@ import java.util.LinkedList;
 import java.util.TreeSet;
 
 import org.apache.activemq.amqp.generator.TypeRegistry.JavaTypeMapping;
+import org.apache.activemq.amqp.generator.jaxb.schema.Amqp;
 import org.apache.activemq.amqp.generator.jaxb.schema.Choice;
 import org.apache.activemq.amqp.generator.jaxb.schema.Descriptor;
 import org.apache.activemq.amqp.generator.jaxb.schema.Doc;
 import org.apache.activemq.amqp.generator.jaxb.schema.Encoding;
 import org.apache.activemq.amqp.generator.jaxb.schema.Field;
+import org.apache.activemq.amqp.generator.jaxb.schema.Section;
 import org.apache.activemq.amqp.generator.jaxb.schema.Type;
 
 public class AmqpClass {
 
     protected String name;
     protected String label;
-    protected AmqpDoc doc;
+    protected AmqpDoc doc = new AmqpDoc();
     protected AmqpChoice choice;
     protected AmqpException exception;
     protected AmqpDescriptor descriptor;
@@ -36,6 +38,7 @@ public class AmqpClass {
 
     protected boolean restricted;
     protected boolean primitive;
+    protected boolean isCommand;
 
     LinkedHashMap<String, AmqpField> fields = new LinkedHashMap<String, AmqpField>();
     public boolean handcoded;
@@ -45,10 +48,11 @@ public class AmqpClass {
     // Java mapping of the value that this type holds (if any)
     public TypeRegistry.JavaTypeMapping valueMapping;
 
-    public void parseFromType(Generator generator, String source, Type type) throws UnknownTypeException {
+    public void parseFromType(Generator generator, Amqp source, Section section, Type type) throws UnknownTypeException {
         this.name = type.getName();
         this.restrictedType = type.getSource();
         this.label = type.getLabel();
+        isCommand = Generator.COMMANDS.contains(name) || Generator.CONTROLS.contains(name);
 
         for (Object typeAttribute : type.getEncodingOrDescriptorOrFieldOrChoiceOrExceptionOrDoc()) {
             if (typeAttribute instanceof Field) {
@@ -64,7 +68,6 @@ public class AmqpClass {
                 }
                 choice.parseFromChoice((Choice) typeAttribute);
             } else if (typeAttribute instanceof Doc) {
-                doc = new AmqpDoc();
                 doc.parseFromDoc((Doc) typeAttribute);
             } else if (typeAttribute instanceof Encoding) {
                 if (encodings == null) {
@@ -79,6 +82,10 @@ public class AmqpClass {
             }
         }
 
+        if (label != null) {
+            doc.setLabel("Represents a " + label);
+        }
+
         if (type.getClazz().equalsIgnoreCase("primitive")) {
             setPrimitive(true);
         }
@@ -89,7 +96,7 @@ public class AmqpClass {
             this.restricted = true;
         }
 
-        typeMapping = new JavaTypeMapping(name, generator.getPackagePrefix() + "." + source + "." + "Amqp" + capFirst(toJavaName(name)));
+        typeMapping = new JavaTypeMapping(name, generator.getPackagePrefix() + "." + source.getName() + "." + "Amqp" + capFirst(toJavaName(name)));
     }
 
     public void generate(Generator generator) throws IOException, UnknownTypeException {
@@ -127,6 +134,10 @@ public class AmqpClass {
                 writer.write(" extends AmqpType");
             } else if (isRestricted()) {
                 writer.write(" extends " + resolveRestrictedType().getTypeMapping().getShortName());
+            }
+
+            if (isCommand()) {
+                writer.write(" implements AmqpCommand");
             }
         }
 
@@ -166,17 +177,22 @@ public class AmqpClass {
             }
         }
 
+        if (isCommand()) {
+            imports.add(generator.getPackagePrefix() + ".AmqpCommandHandler");
+            imports.add(generator.getPackagePrefix() + ".AmqpCommand");
+        }
+
         if (isPrimitive() || descriptor != null) {
 
             imports.add(generator.getPackagePrefix() + ".types.AmqpType");
-            imports.add("java.io.DataOutputStream");
-            imports.add("java.io.DataInputStream");
+            imports.add("java.io.DataOutput");
+            imports.add("java.io.DataInput");
             imports.add("java.io.IOException");
         }
 
         if (isPrimitive()) {
             filterOrAddImport(imports, resolveValueMapping());
-            //Need the AmqpMarshaller to help with encodings:
+            // Need the AmqpMarshaller to help with encodings:
             if (hasNonZeroEncoding() || encodings.size() > 1) {
                 imports.add(generator.getPackagePrefix() + ".AmqpMarshaller");
             }
@@ -301,11 +317,7 @@ public class AmqpClass {
             for (Choice constant : choice.choices) {
                 i++;
                 if (constant.getDoc() != null) {
-                    AmqpDoc docs = new AmqpDoc();
-                    for (Doc doc : constant.getDoc()) {
-                        docs.parseFromDoc(doc);
-                    }
-                    docs.writeJavaDoc(writer, 1);
+                    new AmqpDoc(constant.getDoc()).writeJavaDoc(writer, 1);
                 }
 
                 writer.write(tab(1) + toJavaConstant(constant.getName()) + "((" + amqpType.resolveValueMapping().getJavaType() + ") " + constant.getValue() + ")");
@@ -391,7 +403,7 @@ public class AmqpClass {
             // writer.newLine();
             // writer.write(tab(1) + "public static final  " +
             // getTypeMapping().getJavaType() +
-            // " createFromStream(DataInputStream dis) throws IOException {");
+            // " createFromStream(DataInput dis) throws IOException {");
             // writer.newLine();
             // writer.write(tab(2) + " return get(" +
             // amqpType.getTypeMapping().getJavaType() +
@@ -587,9 +599,7 @@ public class AmqpClass {
 
             // Setter:
             writer.newLine();
-            if (field.getDoc() != null) {
-                field.getDoc().writeJavaDoc(writer, 1);
-            }
+            field.writeJavaDoc(writer, 1);
             writer.write(tab(1) + "public final void set" + capFirst(field.getJavaName()) + "(" + amqpType.resolveValueType() + " " + toJavaName(field.getName()) + ") {");
             writer.newLine();
             if (amqpType.isPrimitive() && !amqpType.getName().equals("*")) {
@@ -602,9 +612,7 @@ public class AmqpClass {
             writer.newLine();
             writer.newLine();
             // Getter:
-            if (field.getDoc() != null) {
-                field.getDoc().writeJavaDoc(writer, 1);
-            }
+            field.writeJavaDoc(writer, 1);
             writer.write(tab(1) + "public final " + amqpType.resolveValueType() + " get" + capFirst(field.getJavaName()) + "() {");
             writer.newLine();
             if (amqpType.isPrimitive() && !amqpType.getName().equals("*")) {
@@ -657,7 +665,7 @@ public class AmqpClass {
         ret = true;
 
         writer.newLine();
-        writer.write(tab(1) + "public static final " + typeMapping.javaType + " createFromStream(DataInputStream dis) throws IOException {");
+        writer.write(tab(1) + "public static final " + typeMapping.javaType + " createFromStream(DataInput dis) throws IOException {");
         writer.newLine();
         writer.write(tab(2) + typeMapping.javaType + " rc = new " + typeMapping.javaType + "();");
         writer.newLine();
@@ -669,7 +677,7 @@ public class AmqpClass {
         writer.newLine();
 
         writer.newLine();
-        writer.write(tab(1) + "public final void marshal(DataOutputStream dos) throws IOException {");
+        writer.write(tab(1) + "public final void marshal(DataOutput dos) throws IOException {");
         writer.newLine();
         writer.write(tab(2) + "marshalConstructor(dos);");
         writer.newLine();
@@ -679,7 +687,7 @@ public class AmqpClass {
         writer.newLine();
 
         writer.newLine();
-        writer.write(tab(1) + "public final void unmarshal(DataInputStream dis) throws IOException {");
+        writer.write(tab(1) + "public final void unmarshal(DataInput dis) throws IOException {");
         writer.newLine();
         writer.write(tab(2) + "unmarshalConstructor(dis);");
         writer.newLine();
@@ -712,7 +720,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public final void marshalConstructor(DataOutputStream dos) throws IOException {");
+                writer.write(tab(1) + "public final void marshalConstructor(DataOutput dos) throws IOException {");
                 writer.newLine();
                 writer.write(tab(2) + "dos.writeByte(FORMAT_CODE);");
                 writer.newLine();
@@ -720,7 +728,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public final void unmarshalConstructor(DataInputStream dis) throws IOException {");
+                writer.write(tab(1) + "public final void unmarshalConstructor(DataInput dis) throws IOException {");
                 writer.newLine();
                 writer.write(tab(2) + "byte fc = dis.readByte();");
                 writer.newLine();
@@ -734,7 +742,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public final void marshalData(DataOutputStream dos) throws IOException {");
+                writer.write(tab(1) + "public final void marshalData(DataOutput dos) throws IOException {");
                 writer.newLine();
                 if (hasNonZeroEncoding()) {
 
@@ -745,7 +753,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public final void unmarshalData(DataInputStream dis) throws IOException {");
+                writer.write(tab(1) + "public final void unmarshalData(DataInput dis) throws IOException {");
                 writer.newLine();
                 if (hasNonZeroEncoding()) {
                     writer.write(tab(2) + "value = AmqpMarshaller.read" + capFirst(toJavaName(name)) + "(dis);");
@@ -801,7 +809,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public final void marshalConstructor(DataOutputStream dos) throws IOException {");
+                writer.write(tab(1) + "public final void marshalConstructor(DataOutput dos) throws IOException {");
                 writer.newLine();
                 writer.write(tab(2) + "chooseEncoding();");
                 writer.newLine();
@@ -811,7 +819,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public final void unmarshalConstructor(DataInputStream dis) throws IOException {");
+                writer.write(tab(1) + "public final void unmarshalConstructor(DataInput dis) throws IOException {");
                 writer.newLine();
                 writer.write(tab(2) + "encoding = " + getEncodingName(false) + ".getEncoding(dis.readByte());");
                 writer.newLine();
@@ -819,7 +827,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public final void marshalData(DataOutputStream dos) throws IOException {");
+                writer.write(tab(1) + "public final void marshalData(DataOutput dos) throws IOException {");
                 if (hasNonZeroEncoding()) {
                     writer.newLine();
                     writer.write(tab(2) + "encoding.CATEGORY.marshalFormatHeader(this, dos);");
@@ -831,7 +839,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public final void unmarshalData(DataInputStream dis) throws IOException {");
+                writer.write(tab(1) + "public final void unmarshalData(DataInput dis) throws IOException {");
                 if (hasNonZeroEncoding()) {
                     writer.newLine();
                     writer.write(tab(2) + "value = AmqpMarshaller.read" + capFirst(toJavaName(name)) + "(encoding, encodedSize, encodedCount, dis);");
@@ -840,6 +848,16 @@ public class AmqpClass {
                 writer.write(tab(1) + "}");
                 writer.newLine();
             }
+        }
+
+        if (isCommand()) {
+            writer.newLine();
+            writer.write(tab(1) + "public final void handle(AmqpCommandHandler handler) throws Exception {");
+            writer.newLine();
+            writer.write(tab(2) + "handler.handle" + capFirst(toJavaName(name)) + "(this);");
+            writer.newLine();
+            writer.write(tab(1) + "}");
+            writer.newLine();
         }
 
         if (descriptor != null) {
@@ -861,7 +879,7 @@ public class AmqpClass {
             writer.newLine();
 
             writer.newLine();
-            writer.write(tab(1) + "public final void marshalConstructor(DataOutputStream dos) throws IOException {");
+            writer.write(tab(1) + "public final void marshalConstructor(DataOutput dos) throws IOException {");
             writer.newLine();
             writer.write(tab(2) + "dos.write(CONSTRUCTOR);");
             writer.newLine();
@@ -871,7 +889,7 @@ public class AmqpClass {
             writer.newLine();
 
             writer.newLine();
-            writer.write(tab(1) + "public final void marshalData(DataOutputStream dos) throws IOException {");
+            writer.write(tab(1) + "public final void marshalData(DataOutput dos) throws IOException {");
             writer.newLine();
             writer.write(tab(2) + "value.marshalData(dos);");
             writer.newLine();
@@ -879,7 +897,7 @@ public class AmqpClass {
             writer.newLine();
 
             writer.newLine();
-            writer.write(tab(1) + "public final void unmarshalConstructor(DataInputStream dos) throws IOException {");
+            writer.write(tab(1) + "public final void unmarshalConstructor(DataInput dos) throws IOException {");
             writer.newLine();
             writer.write(tab(2) + "//TODO");
             writer.newLine();
@@ -887,7 +905,7 @@ public class AmqpClass {
             writer.newLine();
 
             writer.newLine();
-            writer.write(tab(1) + "public final void unmarshalData(DataInputStream dis) throws IOException {");
+            writer.write(tab(1) + "public final void unmarshalData(DataInput dis) throws IOException {");
             writer.newLine();
             if (descriptor.getDescribedType().equals("list")) {
                 writer.write(tab(2) + "value = new " + TypeRegistry.resolveAmqpClass(descriptor.getDescribedType()).getJavaType() + "();");
@@ -979,6 +997,10 @@ public class AmqpClass {
 
     public boolean isRestricted() {
         return restricted;
+    }
+
+    public boolean isCommand() {
+        return isCommand;
     }
 
     public String getRestrictedType() {

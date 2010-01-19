@@ -123,7 +123,7 @@ public class AmqpMarshallerGen {
                 writer.newLine();
                 writeJavaComment(writer, 1, "Writes a " + javaType + " with the given encoding");
                 writer.write(tab(1) + "public static final void write" + capFirst(toJavaName(amqpClass.name)) + "(" + javaType + " val, " + amqpClass.getEncodingName(true)
-                        + " encoding, DataOutputStream dos) throws IOException {");
+                        + " encoding, DataOutput dos) throws IOException {");
                 writeUnimplementedMethodBody(writer, 1);
 
                 writer.newLine();
@@ -131,11 +131,11 @@ public class AmqpMarshallerGen {
                 if(amqpClass.hasCompoundEncoding() || amqpClass.hasArrayEncoding() ||  amqpClass.hasVariableEncoding())
                 {
                     writer.write(tab(1) + "public static final " + javaType + " read" + capFirst(toJavaName(amqpClass.name)) + "(" + amqpClass.getEncodingName(true)
-                            + " encoding, int size, int count, DataInputStream dis) throws IOException {");
+                            + " encoding, int size, int count, DataInput dis) throws IOException {");
                 }
                 else {
                     writer.write(tab(1) + "public static final " + javaType + " read" + capFirst(toJavaName(amqpClass.name)) + "(" + amqpClass.getEncodingName(true)
-                            + " encoding, DataInputStream dis) throws IOException {");
+                            + " encoding, DataInput dis) throws IOException {");
                 }
                 writeUnimplementedMethodBody(writer, 1);
             }
@@ -146,15 +146,15 @@ public class AmqpMarshallerGen {
 
                 writer.newLine();
                 writeJavaComment(writer, 1, "Writes a " + javaType + " encoded as " + encoding.getLabel());
-                writer.write(tab(1) + "public static final void write" + capFirst(toJavaName(amqpClass.name)) + "(" + javaType + " val, DataOutputStream dos) throws IOException {");
+                writer.write(tab(1) + "public static final void write" + capFirst(toJavaName(amqpClass.name)) + "(" + javaType + " val, DataOutput dos) throws IOException {");
                 writeUnimplementedMethodBody(writer, 1);
 
                 writer.newLine();
                 writeJavaComment(writer, 1, "Reads a " + javaType + " encoded as " + encoding.getLabel());
                 if (amqpClass.hasNonFixedEncoding()) {
-                    writer.write(tab(1) + "public static final " + javaType + " read" + capFirst(toJavaName(amqpClass.name)) + "(int size, int count, DataInputStream dis) throws IOException {");
+                    writer.write(tab(1) + "public static final " + javaType + " read" + capFirst(toJavaName(amqpClass.name)) + "(int size, int count, DataInput dis) throws IOException {");
                 } else {
-                    writer.write(tab(1) + "public static final " + javaType + " read" + capFirst(toJavaName(amqpClass.name)) + "(DataInputStream dis) throws IOException {");
+                    writer.write(tab(1) + "public static final " + javaType + " read" + capFirst(toJavaName(amqpClass.name)) + "(DataInput dis) throws IOException {");
                 }
                 writeUnimplementedMethodBody(writer, 1);
                 

@@ -1,5 +1,3 @@
-package org.apache.activemq.amqp.generator.handcoded.types;
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with his work
@@ -16,9 +14,10 @@ package org.apache.activemq.amqp.generator.handcoded.types;
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+package org.apache.activemq.amqp.generator.handcoded.types;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 public abstract class AmqpType {
@@ -114,7 +113,7 @@ public abstract class AmqpType {
             }
         }
 
-        public final void marshalFormatHeader(AmqpType type, DataOutputStream dos) throws IOException {
+        public final void marshalFormatHeader(AmqpType type, DataOutput dos) throws IOException {
             if (category == FormatCategory.FIXED) {
                 return;
             }
@@ -136,7 +135,7 @@ public abstract class AmqpType {
             }
         }
 
-        public final void unmarshalFormatHeader(AmqpType type, DataInputStream dis) throws IOException {
+        public final void unmarshalFormatHeader(AmqpType type, DataInput dis) throws IOException {
             if (category == FormatCategory.FIXED) {
                 return;
             }
@@ -171,11 +170,11 @@ public abstract class AmqpType {
 
     public abstract int getEncodedCount() throws IOException;
 
-    public abstract void unmarshal(DataInputStream dis) throws IOException;
+    public abstract void unmarshal(DataInput dis) throws IOException;
     
-    public abstract void marshal(DataOutputStream dos) throws IOException;
+    public abstract void marshal(DataOutput dos) throws IOException;
 
-    public abstract void marshalConstructor(DataOutputStream dos) throws IOException;
+    public abstract void marshalConstructor(DataOutput dos) throws IOException;
 
-    public abstract void marshalData(DataOutputStream dos) throws IOException;
+    public abstract void marshalData(DataOutput dos) throws IOException;
 }

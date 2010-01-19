@@ -2,12 +2,15 @@ package org.apache.activemq.amqp.generator;
 
 import static org.apache.activemq.amqp.generator.Utils.toJavaName;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+
 import org.apache.activemq.amqp.generator.jaxb.schema.Doc;
 import org.apache.activemq.amqp.generator.jaxb.schema.Field;
 
 public class AmqpField {
 
-    AmqpDoc doc;
+    AmqpDoc doc = new AmqpDoc();
     String name;
     String defaultValue;
     String label;
@@ -22,12 +25,10 @@ public class AmqpField {
         multiple = new Boolean(field.getMultiple()).booleanValue();
         required = new Boolean(field.getRequired()).booleanValue();
         type = field.getType();
-
+        doc.setLabel(label);
+        
         for (Object object : field.getDocOrException()) {
             if (object instanceof Doc) {
-                if (doc == null) {
-                    doc = new AmqpDoc();
-                }
                 doc.parseFromDoc((Doc) object);
             } else {
                 // TODO handle exception:
@@ -98,6 +99,10 @@ public class AmqpField {
 
         AmqpClass ampqClass = TypeRegistry.resolveAmqpClass(this);
         return ampqClass;
+    }
+
+    public void writeJavaDoc(BufferedWriter writer, int indent) throws IOException {
+        doc.writeJavaDoc(writer, indent);
     }
 
     public String getJavaName() {

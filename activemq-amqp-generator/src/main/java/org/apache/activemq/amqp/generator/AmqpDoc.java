@@ -10,14 +10,39 @@ import org.apache.activemq.amqp.generator.jaxb.schema.*;
 public class AmqpDoc {
 
     List<Doc> docs = new LinkedList<Doc>();
+    String label;
+
+    AmqpDoc() {
+
+    }
+
+    AmqpDoc(Doc doc) {
+        parseFromDoc(doc);
+    }
+
+    AmqpDoc(List<Doc> docs) {
+        parseFromDoc(docs);
+    }
 
     public void parseFromDoc(Doc doc) {
 
         this.docs.add(doc);
     }
 
+    public void parseFromDoc(List<Doc> docs) {
+
+        this.docs.addAll(docs);
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
+    }
+
     public void writeJavaDoc(BufferedWriter writer, int indent) throws IOException {
         String comment = "";
+        if (label != null) {
+            comment = label + "\n";
+        }
         for (Doc doc : docs) {
             for (Object docType : doc.getPOrUlOrOlOrDlOrPicture()) {
 
