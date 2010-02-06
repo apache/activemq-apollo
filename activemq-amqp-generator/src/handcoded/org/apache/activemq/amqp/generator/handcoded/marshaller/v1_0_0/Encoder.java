@@ -1,0 +1,1350 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with his work
+ * for additional information regarding copyright ownership. The ASF licenses
+ * this file to You under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ */
+package org.apache.activemq.amqp.generator.handcoded.marshaller.v1_0_0;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.activemq.amqp.generator.handcoded.marshaller.AmqpVersion;
+import org.apache.activemq.amqp.generator.handcoded.marshaller.Encoded;
+import org.apache.activemq.amqp.generator.handcoded.marshaller.AmqpEncodingError;
+import org.apache.activemq.amqp.generator.handcoded.marshaller.UnexpectedTypeException;
+import org.apache.activemq.amqp.generator.handcoded.marshaller.v1_0_0.AmqpMarshaller;
+import org.apache.activemq.amqp.generator.handcoded.marshaller.v1_0_0.AmqpListMarshaller.LIST_ENCODING;
+import org.apache.activemq.amqp.generator.handcoded.marshaller.v1_0_0.AmqpBinaryMarshaller.BINARY_ENCODING;
+import org.apache.activemq.amqp.generator.handcoded.marshaller.v1_0_0.AmqpBooleanMarshaller.BOOLEAN_ENCODING;
+import org.apache.activemq.amqp.generator.handcoded.marshaller.v1_0_0.AmqpMapMarshaller.MAP_ENCODING;
+import org.apache.activemq.amqp.generator.handcoded.marshaller.v1_0_0.AmqpStringMarshaller.STRING_ENCODING;
+import org.apache.activemq.amqp.generator.handcoded.marshaller.v1_0_0.AmqpSymbolMarshaller.SYMBOL_ENCODING;
+import org.apache.activemq.amqp.generator.handcoded.types.*;
+import org.apache.activemq.amqp.generator.handcoded.BitUtils;
+import org.apache.activemq.amqp.protocol.marshaller.v1_0_0.Encoder.ListDecoder;
+import org.apache.activemq.amqp.protocol.types.AmqpType;
+import org.apache.activemq.util.buffer.Buffer;
+
+public class Encoder extends BaseEncoder {
+
+    static final Encoder SINGLETON = new Encoder();
+    private static final AmqpMarshaller MARSHALLER = AmqpMarshaller.getMarshaller();
+
+    static final byte NULL_FORMAT_CODE = AmqpNullMarshaller.FORMAT_CODE;
+    static final byte DESCRIBED_FORMAT_CODE = (byte) 0x00;
+
+    static final ListDecoder DEFAULT_LIST_DECODER = new ListDecoder() {
+
+        public final AmqpType<?> unmarshalType(int pos, DataInput in) throws IOException, AmqpEncodingError {
+            return MARSHALLER.unmarshalType(in);
+        }
+
+        public final AmqpType<?> decodeType(int pos, EncodedBuffer buffer) throws AmqpEncodingError {
+            return MARSHALLER.decodeType(buffer);
+        }
+    };
+    
+    static final MapDecoder DEFAULT_MAP_DECODER = new MapDecoder() {
+        
+        public final void decodeToMap(EncodedBuffer key, EncodedBuffer val, Map<AmqpType<?>, AmqpType<?>> map) throws AmqpEncodingError {
+            map.put(MARSHALLER.decodeType(key), MARSHALLER.decodeType(key));
+        }
+        
+        public final void unmarshalToMap(DataInput in, Map<AmqpType<?>, AmqpType<?>> map) throws IOException, AmqpEncodingError {
+            map.put(MARSHALLER.unmarshalType(in), MARSHALLER.unmarshalType(in));
+        }
+    };
+
+    private Encoder() {
+
+    }
+
+    public static enum FormatCategory {
+        DESCRIBED(false, false), FIXED(false, false), VARIABLE(true, false), COMPOUND(true, true), ARRAY(true, true);
+
+        private final boolean encodesSize;
+        private final boolean encodesCount;
+
+        FormatCategory(boolean encodesSize, boolean encodesCount) {
+            this.encodesSize = encodesSize;
+            this.encodesCount = encodesCount;
+        }
+
+        public static FormatCategory getCategory(byte formatCode) throws IllegalArgumentException {
+            switch ((byte) (formatCode | 0xF0)) {
+            case (byte) 0x00:
+                return DESCRIBED;
+            case (byte) 0x40:
+            case (byte) 0x50:
+            case (byte) 0x60:
+            case (byte) 0x70:
+            case (byte) 0x80:
+            case (byte) 0x90:
+                return FIXED;
+            case (byte) 0xA0:
+            case (byte) 0xB0:
+                return VARIABLE;
+            case (byte) 0xC0:
+            case (byte) 0xD0:
+                return COMPOUND;
+            case (byte) 0xE0:
+            case (byte) 0xF0:
+                return ARRAY;
+            default:
+                throw new IllegalArgumentException("" + formatCode);
+            }
+        }
+
+        public final boolean encodesSize() {
+            return encodesSize;
+        }
+
+        public final boolean encodesCount() {
+            return encodesCount;
+        }
+
+        public static final EncodedBuffer createBuffer(byte formatCode, DataInput in) throws IOException, AmqpEncodingError {
+            switch ((byte) (formatCode | 0xF0)) {
+            case (byte) 0x00:
+                return new DescribedBuffer(formatCode, in);
+            case (byte) 0x40:
+            case (byte) 0x50:
+            case (byte) 0x60:
+            case (byte) 0x70:
+            case (byte) 0x80:
+            case (byte) 0x90:
+                return new FixedBuffer(formatCode, in);
+            case (byte) 0xA0:
+            case (byte) 0xB0:
+                return new VariableBuffer(formatCode, in);
+            case (byte) 0xC0:
+            case (byte) 0xD0:
+                return new CompoundBuffer(formatCode, in);
+            case (byte) 0xE0:
+            case (byte) 0xF0:
+                return new ArrayBuffer(formatCode, in);
+            default:
+                throw new AmqpEncodingError("Invalid format code: " + formatCode);
+            }
+        }
+
+        public static final EncodedBuffer createBuffer(AbstractEncoded<?> encoded) throws AmqpEncodingError {
+            switch ((byte) (encoded.getEncodingFormatCode() | 0xF0)) {
+            case (byte) 0x00:
+                return new DescribedBuffer(encoded);
+            case (byte) 0x40:
+            case (byte) 0x50:
+            case (byte) 0x60:
+            case (byte) 0x70:
+            case (byte) 0x80:
+            case (byte) 0x90:
+                return new FixedBuffer(encoded);
+            case (byte) 0xA0:
+            case (byte) 0xB0:
+                return new VariableBuffer(encoded);
+            case (byte) 0xC0:
+            case (byte) 0xD0:
+                return new CompoundBuffer(encoded);
+            case (byte) 0xE0:
+            case (byte) 0xF0:
+                return new ArrayBuffer(encoded);
+            default:
+                throw new AmqpEncodingError("Invalid format code: " + encoded.getEncodingFormatCode());
+            }
+        }
+
+        public static EncodedBuffer createBuffer(Buffer source, int offset) throws AmqpEncodingError {
+            byte formatCode = source.get(offset);
+            switch ((byte) (formatCode | 0xF0)) {
+            case (byte) 0x00:
+                return new DescribedBuffer(source, offset);
+            case (byte) 0x40:
+            case (byte) 0x50:
+            case (byte) 0x60:
+            case (byte) 0x70:
+            case (byte) 0x80:
+            case (byte) 0x90:
+                return new FixedBuffer(source, offset);
+            case (byte) 0xA0:
+            case (byte) 0xB0:
+                return new VariableBuffer(source, offset);
+            case (byte) 0xC0:
+            case (byte) 0xD0:
+                return new CompoundBuffer(source, offset);
+            case (byte) 0xE0:
+            case (byte) 0xF0:
+                return new ArrayBuffer(source, offset);
+            default:
+                throw new AmqpEncodingError("Invalid format code: " + formatCode);
+            }
+        }
+    }
+
+    public static enum FormatSubCategory {
+        FIXED_0((byte) 0x40, 0), FIXED_1((byte) 0x50, 1), FIXED_2((byte) 0x60, 2), FIXED_4((byte) 0x70, 4), FIXED_8((byte) 0x80, 8), FIXED_16((byte) 0x90, 16), VARIABLE_1((byte) 0xA0, 1), VARIABLE_4(
+                (byte) 0xB0, 4), COMPOUND_1((byte) 0xC0, 1), COMPOUND_4((byte) 0xD0, 4), ARRAY_1((byte) 0xE0, 1), ARRAY_4((byte) 0xF0, 4);
+
+        private final FormatCategory category;
+        private final byte subCategory;
+        public final int WIDTH;
+
+        FormatSubCategory(byte subCategory, int width) {
+            this.subCategory = subCategory;
+            category = FormatCategory.getCategory(this.subCategory);
+            this.WIDTH = width;
+
+        }
+
+        public static FormatSubCategory getCategory(byte formatCode) throws IllegalArgumentException {
+            switch ((byte) (formatCode | 0xF0)) {
+            case (byte) 0x40:
+                return FIXED_0;
+            case (byte) 0x50:
+                return FIXED_1;
+            case (byte) 0x60:
+                return FIXED_2;
+            case (byte) 0x70:
+                return FIXED_4;
+            case (byte) 0x80:
+                return FIXED_8;
+            case (byte) 0x90:
+                return FIXED_16;
+            case (byte) 0xA0:
+                return VARIABLE_1;
+            case (byte) 0xB0:
+                return VARIABLE_4;
+            case (byte) 0xC0:
+                return COMPOUND_1;
+            case (byte) 0xD0:
+                return COMPOUND_4;
+            case (byte) 0xE0:
+                return ARRAY_1;
+            case (byte) 0xF0:
+                return ARRAY_4;
+            default:
+                throw new IllegalArgumentException("" + formatCode);
+            }
+        }
+
+        public final boolean encodesSize() {
+            return category.encodesSize();
+        }
+
+        public final boolean encodesCount() {
+            return category.encodesCount();
+        }
+
+        public final int getEncodedSize(AbstractEncoded<?> encoded) throws AmqpEncodingError {
+            if (encoded.getValue() == null) {
+                return 1;
+            }
+            switch (category) {
+            case FIXED: {
+                return 1 + WIDTH;
+            }
+            case VARIABLE:
+            case COMPOUND: {
+                return getDataOffset() + encoded.getDataSize();
+            }
+            case ARRAY: {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+            case DESCRIBED: {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+            default: {
+                throw new IllegalArgumentException(category.name());
+            }
+            }
+        }
+
+        public final int getDataOffset() {
+            switch (category) {
+            case FIXED: {
+                return 1;
+            }
+            case VARIABLE: {
+                return 1 + WIDTH;
+            }
+            case COMPOUND: {
+                return 1 + 2 * WIDTH;
+            }
+            case ARRAY: {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+            case DESCRIBED: {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+            default: {
+                throw new IllegalArgumentException(category.name());
+            }
+            }
+        }
+
+        public final boolean isFixed() {
+            return category == FormatCategory.FIXED;
+        }
+    }
+
+    public static abstract class EncodedBuffer {
+
+        protected final byte formatCode;
+        protected final FormatSubCategory category;
+        protected Buffer encoded;
+
+        EncodedBuffer(byte formatCode, DataInput in) throws IOException {
+            this.formatCode = formatCode;
+            this.category = FormatSubCategory.getCategory(formatCode);
+            unmarshal(in);
+        }
+
+        EncodedBuffer(AbstractEncoded<?> encodedType) throws AmqpEncodingError {
+            this.formatCode = encodedType.getEncodingFormatCode();
+            this.category = FormatSubCategory.getCategory(formatCode);
+            fromEncoded(encodedType);
+        }
+
+        EncodedBuffer(Buffer source, int offset) throws AmqpEncodingError {
+            this.formatCode = source.get(offset);
+            this.category = FormatSubCategory.getCategory(formatCode);
+            fromBuffer(encoded, offset);
+        }
+
+        public final int getEncodedSize() {
+            return encoded.getLength();
+        }
+
+        public final Buffer getBuffer() {
+            return encoded;
+        }
+
+        public final void marshal(DataOutput out) throws IOException {
+            out.write(encoded.data, encoded.offset, encoded.length);
+        }
+
+        public EncodedBuffer getDescriptor() {
+            return null;
+        }
+
+        public final byte getEncodingFormatCode() {
+            return formatCode;
+        }
+
+        public final AmqpVersion getEncodingVersion() {
+            return AmqpMarshaller.VERSION;
+        }
+
+        protected abstract void fromEncoded(AbstractEncoded<?> encodedType) throws AmqpEncodingError;
+
+        protected abstract void fromBuffer(Buffer buffer, int offset) throws AmqpEncodingError;
+
+        protected abstract void unmarshal(DataInput in) throws IOException;
+
+        public abstract int getConstructorLength();
+
+        public abstract int getDataOffset();
+
+        public abstract int getDataSize() throws AmqpEncodingError;
+
+        public abstract int getDataCount() throws AmqpEncodingError;
+
+        public abstract void marshalConstructor(DataOutput out) throws IOException;
+
+        public abstract void marshalData(DataOutput out) throws IOException;
+
+        public boolean isFixed() {
+            return false;
+        }
+
+        public FixedBuffer asFixed() {
+            throw new AmqpEncodingError(FormatSubCategory.getCategory(formatCode).name());
+        }
+
+        public boolean isVariable() {
+            return false;
+        }
+
+        public VariableBuffer asVariable() {
+            throw new AmqpEncodingError(FormatSubCategory.getCategory(formatCode).name());
+        }
+
+        public boolean isArray() {
+            return false;
+        }
+
+        public ArrayBuffer asArray() {
+            throw new AmqpEncodingError(FormatSubCategory.getCategory(formatCode).name());
+        }
+
+        public boolean isCompound() {
+            return false;
+        }
+
+        public CompoundBuffer asCompound() {
+            throw new AmqpEncodingError(FormatSubCategory.getCategory(formatCode).name());
+        }
+
+        public boolean isDescribed() {
+            return false;
+        }
+
+        public DescribedBuffer asDescribed() {
+            throw new AmqpEncodingError(FormatSubCategory.getCategory(formatCode).name());
+        }
+
+    }
+
+    public static class FixedBuffer extends EncodedBuffer {
+
+        FixedBuffer(byte formatCode, DataInput in) throws IOException {
+            super(formatCode, in);
+        }
+
+        FixedBuffer(Buffer source, int offset) throws AmqpEncodingError {
+            super(source, offset);
+        }
+
+        FixedBuffer(AbstractEncoded<?> encodedType) throws AmqpEncodingError {
+            super(encodedType);
+        }
+
+        public final boolean isFixed() {
+            return true;
+        }
+
+        public final FixedBuffer asFixed() {
+            return this;
+        }
+
+        public final int getConstructorLength() {
+            return 1;
+        }
+
+        public final int getDataOffset() {
+            return 1;
+        }
+
+        public final int getDataSize() throws AmqpEncodingError {
+            return category.WIDTH;
+        }
+
+        public final int getDataCount() throws AmqpEncodingError {
+            return 1;
+        }
+
+        public final void marshalConstructor(DataOutput out) throws IOException {
+            out.writeByte(formatCode);
+        }
+
+        public final void marshalData(DataOutput out) throws IOException {
+            if (getDataSize() > 0) {
+                out.write(encoded.data, 1, category.WIDTH);
+            }
+        }
+
+        protected final void unmarshal(DataInput in) throws IOException {
+            if (getDataSize() > 0) {
+                in.readFully(encoded.data, getDataOffset(), getDataSize());
+            }
+        }
+
+        @Override
+        protected final void fromBuffer(Buffer source, int offset) {
+            encoded = new Buffer(getEncodedSize());
+            System.arraycopy(source.data, source.offset + offset, encoded.data, 0, getEncodedSize());
+        }
+
+        @Override
+        protected final void fromEncoded(AbstractEncoded<?> encodedType) throws AmqpEncodingError {
+            encoded = new Buffer(getEncodedSize());
+            encoded.data[0] = formatCode;
+            encodedType.encode(encoded, 1);
+        }
+    }
+
+    public static class VariableBuffer extends EncodedBuffer {
+
+        int dataSize;
+
+        VariableBuffer(byte formatCode, DataInput in) throws IOException {
+            super(formatCode, in);
+        }
+
+        VariableBuffer(Buffer source, int offset) throws AmqpEncodingError {
+            super(source, offset);
+        }
+
+        VariableBuffer(AbstractEncoded<?> encodedType) throws AmqpEncodingError {
+            super(encodedType);
+        }
+
+        public boolean isVariable() {
+            return true;
+        }
+
+        public VariableBuffer asVariable() {
+            return this;
+        }
+
+        public int getConstructorLength() {
+            return 1;
+        }
+
+        public int getDataOffset() {
+            return 1 + category.WIDTH;
+        }
+
+        public int getDataSize() {
+            return dataSize;
+        }
+
+        public int getDataCount() {
+            return 1;
+        }
+
+        public void marshalConstructor(DataOutput out) throws IOException {
+            out.writeByte(formatCode);
+        }
+
+        public void marshalData(DataOutput out) throws IOException {
+            out.write(encoded.data, 1 + encoded.offset, getEncodedSize() - 1);
+        }
+
+        @Override
+        public void fromEncoded(AbstractEncoded<?> encodedType) throws AmqpEncodingError {
+            dataSize = encodedType.computeDataSize();
+            encoded = new Buffer(1 + category.WIDTH + dataSize);
+            encoded.data[1] = formatCode;
+            if (category.WIDTH == 1) {
+                BitUtils.setUByte(encoded.data, 1, (short) dataSize);
+            } else {
+                BitUtils.setUInt(encoded.data, 1, dataSize);
+            }
+            encodedType.encode(encoded, getDataOffset());
+        }
+
+        @Override
+        public void fromBuffer(Buffer source, int offset) {
+            offset += source.offset;
+            if (category.WIDTH == 1) {
+                dataSize = 0xff & source.data[offset + 1];
+            } else {
+                dataSize = (int) BitUtils.getUInt(source.data, offset + 1);
+            }
+
+            encoded = new Buffer(1 + category.WIDTH + dataSize);
+            System.arraycopy(source, offset, encoded, 1, encoded.length);
+        }
+
+        public void unmarshal(DataInput in) throws IOException {
+            byte[] header = new byte[category.WIDTH];
+            in.readFully(header);
+            if (category.WIDTH == 1) {
+                dataSize = 0xff & header[0];
+            } else {
+                dataSize = (int) BitUtils.getUInt(header, 0);
+            }
+            encoded = new Buffer(1 + header.length + dataSize);
+            encoded.data[0] = formatCode;
+            System.arraycopy(header, 0, encoded, 1, header.length);
+            if (getDataSize() > 0) {
+                in.readFully(encoded.data, getDataOffset(), dataSize);
+            }
+        }
+    }
+
+    public static class CompoundBuffer extends EncodedBuffer {
+        private int dataSize;
+        private int dataCount;
+        private EncodedBuffer[] constituents;
+
+        CompoundBuffer(byte formatCode, DataInput in) throws IOException {
+            super(formatCode, in);
+        }
+
+        CompoundBuffer(Buffer source, int offset) throws AmqpEncodingError {
+            super(source, offset);
+        }
+
+        CompoundBuffer(AbstractEncoded<?> encodedType) throws AmqpEncodingError {
+            super(encodedType);
+        }
+
+        public boolean isCompound() {
+            return true;
+        }
+
+        public CompoundBuffer asCompound() {
+            return this;
+        }
+
+        public int getConstructorLength() {
+            return 1;
+        }
+
+        public int getDataOffset() {
+            return 1 + 2 * category.WIDTH;
+        }
+
+        public int getDataSize() throws AmqpEncodingError {
+            return dataSize;
+        }
+
+        public int getDataCount() throws AmqpEncodingError {
+            return dataCount;
+        }
+
+        public void marshalConstructor(DataOutput out) throws IOException {
+            out.writeByte(formatCode);
+        }
+
+        public void marshalData(DataOutput out) throws IOException {
+            out.write(encoded.data, 1 + encoded.offset, getEncodedSize() - 1);
+        }
+
+        public void unmarshal(DataInput in) throws IOException {
+            byte[] header = new byte[category.WIDTH * 2];
+            in.readFully(header);
+            if (category.WIDTH == 1) {
+                dataSize = 0xff & header[0];
+                dataCount = 0xff & header[1];
+            } else {
+                dataSize = (int) BitUtils.getUInt(header, 0);
+                dataCount = (int) BitUtils.getUInt(header, category.WIDTH);
+            }
+            encoded = new Buffer(1 + header.length + dataSize);
+            encoded.data[0] = formatCode;
+            System.arraycopy(header, 0, encoded, 1, header.length);
+            if (getDataSize() > 0) {
+                in.readFully(encoded.data, getDataOffset(), dataSize);
+            }
+        }
+
+        @Override
+        public void fromEncoded(AbstractEncoded<?> encodedType) throws AmqpEncodingError {
+            dataSize = encodedType.computeDataSize();
+            dataCount = encodedType.computeDataCount();
+
+            encoded = new Buffer(1 + category.WIDTH + dataSize);
+            encoded.data[1] = formatCode;
+            if (category.WIDTH == 1) {
+                BitUtils.setUByte(encoded.data, 1, (short) dataSize);
+                BitUtils.setUByte(encoded.data, 2, (short) dataSize);
+            } else {
+                BitUtils.setUInt(encoded.data, 1, dataSize);
+                BitUtils.setUByte(encoded.data, 1 + category.WIDTH, (short) dataSize);
+            }
+            encodedType.encode(encoded, 1);
+        }
+
+        @Override
+        public void fromBuffer(Buffer buffer, int offset) {
+            offset = offset + buffer.offset;
+            if (category.WIDTH == 1) {
+                dataSize = 0xff & buffer.data[offset + 1];
+                dataCount = 0xff & buffer.data[offset + 2];
+            } else {
+                dataSize = (int) BitUtils.getUInt(buffer.data, offset + 1);
+                dataCount = (int) BitUtils.getUInt(buffer.data, offset + 1 + category.WIDTH);
+            }
+            encoded = new Buffer(1 + category.WIDTH * 2 + dataSize);
+            System.arraycopy(buffer.data, offset, encoded.data, 0, encoded.length);
+        }
+
+        EncodedBuffer[] constituents() {
+            if (constituents == null) {
+                EncodedBuffer[] cb = new EncodedBuffer[getDataCount()];
+                Buffer b = getBuffer();
+                int offset = getDataOffset();
+                for (int i = 0; i < constituents.length; i++) {
+                    constituents[i] = FormatCategory.createBuffer(b, offset);
+                }
+                this.constituents = cb;
+            }
+            return constituents;
+        }
+    }
+
+    public static class ArrayBuffer extends EncodedBuffer {
+        int dataSize;
+        int dataCount;
+
+        ArrayBuffer(byte formatCode, DataInput in) throws IOException {
+            super(formatCode, in);
+        }
+
+        ArrayBuffer(Buffer source, int offset) throws AmqpEncodingError {
+            super(source, offset);
+        }
+
+        ArrayBuffer(AbstractEncoded<?> encodedType) throws AmqpEncodingError {
+            super(encodedType);
+        }
+
+        public final boolean isArray() {
+            return true;
+        }
+
+        public final ArrayBuffer asArray() {
+            return this;
+        }
+
+        public int getConstructorLength() {
+            return 1;
+        }
+
+        public int getDataOffset() {
+            throw new UnsupportedOperationException();
+        }
+
+        public int getDataSize() throws AmqpEncodingError {
+            return dataSize;
+        }
+
+        public int getDataCount() throws AmqpEncodingError {
+            return dataCount;
+        }
+
+        public void marshalConstructor(DataOutput out) throws IOException {
+            out.write(encoded.data, encoded.offset, getConstructorLength());
+        }
+
+        public void marshalData(DataOutput out) throws IOException {
+            if (getDataSize() > 0) {
+                out.write(encoded.data, encoded.offset + getDataOffset(), getDataSize());
+            }
+        }
+
+        protected final void unmarshal(DataInput in) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected final void fromEncoded(AbstractEncoded<?> encodedType) throws AmqpEncodingError {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected final void fromBuffer(Buffer buffer, int offset) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    public static class DescribedBuffer extends EncodedBuffer {
+
+        EncodedBuffer descriptor;
+        EncodedBuffer describedBuffer;
+
+        DescribedBuffer(byte formatCode, DataInput in) throws IOException {
+            super(formatCode, in);
+        }
+
+        DescribedBuffer(Buffer source, int offset) throws AmqpEncodingError {
+            super(source, offset);
+        }
+
+        DescribedBuffer(AbstractEncoded<?> encodedType) throws AmqpEncodingError {
+            super(encodedType);
+        }
+
+        public final boolean isDescribed() {
+            return true;
+        }
+
+        public final DescribedBuffer asDescribed() {
+            return this;
+        }
+
+        public EncodedBuffer getDescriptorBuffer() {
+            return descriptor;
+        }
+
+        public EncodedBuffer getDescribedBuffer() {
+            return describedBuffer;
+        }
+
+        public int getConstructorLength() {
+            return 1 + descriptor.getEncodedSize() + describedBuffer.getConstructorLength();
+        }
+
+        public int getDataOffset() {
+            return 1 + descriptor.getEncodedSize() + describedBuffer.getDataOffset();
+        }
+
+        public int getDataSize() throws AmqpEncodingError {
+            return describedBuffer.getDataSize();
+        }
+
+        public int getDataCount() throws AmqpEncodingError {
+            return describedBuffer.getDataCount();
+        }
+
+        public void marshalConstructor(DataOutput out) throws IOException {
+            out.write(encoded.data, 0, getConstructorLength());
+        }
+
+        public void marshalData(DataOutput out) throws IOException {
+            if (getDataSize() > 0) {
+                out.write(encoded.data, getDataOffset(), getDataSize());
+            }
+        }
+
+        protected final void unmarshal(DataInput in) throws IOException {
+            descriptor = FormatCategory.createBuffer(in.readByte(), in);
+            describedBuffer = FormatCategory.createBuffer(in.readByte(), in);
+            encoded = new Buffer(1 + descriptor.getEncodedSize() + describedBuffer.getEncodedSize());
+            // TODO we should be able to let the described type decode into our
+            // buffer
+            // which would save a potoentially large copy.
+            encoded.data[0] = formatCode;
+            System.arraycopy(descriptor.getBuffer().data, 0, encoded.data, 1, descriptor.getEncodedSize());
+            System.arraycopy(describedBuffer.getBuffer().data, 0, encoded.data, 1 + descriptor.getEncodedSize(), describedBuffer.getEncodedSize());
+            descriptor.encoded = new Buffer(encoded.data, 1, descriptor.encoded.getLength());
+            describedBuffer.encoded = new Buffer(encoded.data, 1, describedBuffer.encoded.getLength());
+        }
+
+        @Override
+        protected final void fromEncoded(AbstractEncoded<?> encodedType) throws AmqpEncodingError {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected final void fromBuffer(Buffer buffer, int offset) throws AmqpEncodingError {
+            descriptor = FormatCategory.createBuffer(buffer, offset + 1);
+            describedBuffer = FormatCategory.createBuffer(buffer, offset + 1 + descriptor.getEncodedSize());
+            encoded = new Buffer(1 + descriptor.getEncodedSize() + describedBuffer.getEncodedSize());
+            System.arraycopy(buffer, offset + buffer.offset, encoded, 0, encoded.length);
+            descriptor.encoded = new Buffer(encoded.data, 1, descriptor.encoded.getLength());
+            describedBuffer.encoded = new Buffer(encoded.data, 1, describedBuffer.encoded.getLength());
+        }
+    }
+
+    static abstract class AbstractEncoded<V> implements Encoded<V> {
+        private EncodedBuffer encoded;
+        private byte formatCode;
+        protected V value;
+
+        // TODO make configurable.
+        private boolean cacheEncoded = true;
+
+        AbstractEncoded(EncodedBuffer encoded) {
+            this.encoded = encoded;
+        }
+
+        AbstractEncoded(byte formatCode, V value) throws AmqpEncodingError {
+            this.value = value;
+        }
+
+        public final AmqpVersion getEncodingVersion() {
+            return AmqpMarshaller.VERSION;
+        }
+
+        public final byte getEncodingFormatCode() {
+            return encoded.getEncodingFormatCode();
+        }
+
+        public final Buffer getBuffer() throws AmqpEncodingError {
+            if (encoded == null) {
+                encoded = FormatCategory.createBuffer(this);
+            }
+            return encoded.getBuffer();
+        }
+
+        public final V getValue() throws AmqpEncodingError {
+            if (value != null || formatCode == AmqpNullMarshaller.FORMAT_CODE) {
+                return value;
+            }
+
+            value = decode(encoded);
+            return value;
+        }
+
+        public final int getEncodedSize() throws AmqpEncodingError {
+            if (encoded == null) {
+                return 1 + getDataSize();
+            } else {
+                return encoded.getEncodedSize();
+            }
+        }
+
+        public final int getDataSize() throws AmqpEncodingError {
+            return encoded.getDataSize();
+        }
+
+        public final int getDataCount() throws AmqpEncodingError {
+            return encoded.getDataCount();
+        }
+
+        public final void marshal(DataOutput out) throws IOException {
+            encoded.marshal(out);
+        }
+
+        public final void unmarshal(DataInput in) throws IOException {
+            // encoded.unmarshal(in);
+        }
+
+        public final void marshalConstructor(DataOutput out) throws IOException {
+            encoded.marshalConstructor(out);
+        }
+
+        /**
+         * Must be implemented by subclasses that have non fixed width encodings
+         * to determine the size of encoded data.
+         * 
+         * @return The size of the encoded data.
+         */
+        protected int computeDataSize() throws AmqpEncodingError {
+            throw new IllegalStateException("unimplmented");
+        }
+
+        /**
+         * Must be implemented by subclasses that have compound or array
+         * encoding to determine the number of elements that are to be encoded.
+         * 
+         * @return The number of encoded elements
+         */
+        protected int computeDataCount() throws AmqpEncodingError {
+            throw new IllegalStateException("unimplmented");
+        }
+
+        public final void encode(Buffer encoded, int offset) throws AmqpEncodingError {
+            encode(value, encoded, offset);
+        }
+
+        public abstract void encode(V decoded, Buffer encoded, int offset) throws AmqpEncodingError;
+
+        public abstract V decode(EncodedBuffer buffer) throws AmqpEncodingError;
+
+        abstract V unmarshalData(DataInput in) throws IOException;
+
+        public abstract void marshalData(DataOutput out) throws IOException;
+    }
+
+    public static abstract class DescribedEncoded<V> extends AbstractEncoded<V> {
+
+        DescribedEncoded(DescribedBuffer encoded) {
+            super(encoded);
+        }
+
+        DescribedEncoded(V value) {
+            super((byte) 0x00, value);
+        }
+
+        public final void encode(V decoded, Buffer encoded, int offset) throws AmqpEncodingError {
+            encodeDescriptor(encoded, offset);
+            offset += getDescriptorSize();
+            encodeDescribed(decoded, encoded, offset);
+        }
+
+        public final V decode(EncodedBuffer buffer) throws AmqpEncodingError {
+            // TODO remove cast?
+            return decodeDescribed(((DescribedBuffer) buffer).describedBuffer);
+        }
+
+        public final V unmarshalData(DataInput in) throws IOException {
+            EncodedBuffer descriptor = FormatCategory.createBuffer(in.readByte(), in);
+            return unmarshalDescribed(in);
+        }
+
+        public final void marshalData(DataOutput out) throws IOException {
+            marshalDescriptor(out);
+            marshalDescribed(out);
+        }
+
+        protected abstract void marshalDescriptor(DataOutput output) throws IOException;
+
+        protected abstract void encodeDescriptor(Buffer encoded, int offset) throws AmqpEncodingError;
+
+        protected abstract int getDescriptorSize();
+
+        protected abstract void encodeDescribed(V value, Buffer encoded, int offset) throws AmqpEncodingError;
+
+        protected abstract V decodeDescribed(EncodedBuffer buffer) throws AmqpEncodingError;
+
+        protected abstract V unmarshalDescribed(DataInput in) throws IOException;
+
+        protected abstract void marshalDescribed(DataOutput out) throws IOException;
+
+    }
+
+    public static interface ListDecoder {
+        AmqpType<?> decodeType(int pos, EncodedBuffer buffer) throws AmqpEncodingError;
+
+        AmqpType<?> unmarshalType(int pos, DataInput in) throws IOException, AmqpEncodingError;
+    }
+    
+    public static interface MapDecoder {
+        void decodeToMap(EncodedBuffer key, EncodedBuffer val, Map<AmqpType<?>, AmqpType<?>> map) throws AmqpEncodingError;
+        public void unmarshalToMap(DataInput in, Map<AmqpType<?>, AmqpType<?>> map) throws IOException, AmqpEncodingError;
+    }
+
+    // ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Encoding Helpers:
+    // ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public static final AmqpType<?> decode(Buffer source) throws AmqpEncodingError {
+        EncodedBuffer buffer = FormatCategory.createBuffer(source, 0);
+        return MARSHALLER.decodeType(buffer);
+    }
+
+    public static final AmqpType<?> unmarshalType(DataInput in) throws IOException, AmqpEncodingError {
+        EncodedBuffer buffer = FormatCategory.createBuffer(in.readByte(), in);
+        return MARSHALLER.decodeType(buffer);
+    }
+
+    public final Boolean valueOfBoolean(AmqpBooleanMarshaller.BOOLEAN_ENCODING encoding) {
+        return encoding == AmqpBooleanMarshaller.BOOLEAN_ENCODING.TRUE;
+    }
+
+    public final Boolean valueOfNull() {
+        return null;
+    }
+
+    public static final AmqpBinaryMarshaller.BINARY_ENCODING chooseBinaryEncoding(Buffer val) throws AmqpEncodingError {
+        if (val.length > 255) {
+            return AmqpBinaryMarshaller.BINARY_ENCODING.VBIN32;
+        }
+        return AmqpBinaryMarshaller.BINARY_ENCODING.VBIN8;
+    }
+
+    public static final AmqpBooleanMarshaller.BOOLEAN_ENCODING chooseBooleanEncoding(boolean val) throws AmqpEncodingError {
+        if (val) {
+            return AmqpBooleanMarshaller.BOOLEAN_ENCODING.TRUE;
+        }
+        return AmqpBooleanMarshaller.BOOLEAN_ENCODING.FALSE;
+    }
+
+    public static final AmqpStringMarshaller.STRING_ENCODING chooseStringEncoding(String val) throws AmqpEncodingError {
+        try {
+            if (val.length() > 255 || val.getBytes("utf-16").length > 255) {
+                return AmqpStringMarshaller.STRING_ENCODING.STR32_UTF16;
+            }
+        } catch (UnsupportedEncodingException uee) {
+            throw new AmqpEncodingError(uee.getMessage(), uee);
+        }
+
+        return AmqpStringMarshaller.STRING_ENCODING.STR32_UTF16;
+    }
+
+    public static final AmqpSymbolMarshaller.SYMBOL_ENCODING chooseSymbolEncoding(String val) throws AmqpEncodingError {
+        try {
+            if (val.length() > 255 || val.getBytes("ascii").length > 255) {
+                return AmqpSymbolMarshaller.SYMBOL_ENCODING.SYM32;
+            }
+        } catch (UnsupportedEncodingException uee) {
+            throw new AmqpEncodingError(uee.getMessage(), uee);
+        }
+        return AmqpSymbolMarshaller.SYMBOL_ENCODING.SYM8;
+    }
+
+    public static final int getEncodedSizeOfBinary(Buffer val, BINARY_ENCODING encoding) {
+        return val.length;
+    }
+
+    public static final int getEncodedSizeOfBoolean(boolean val, BOOLEAN_ENCODING encoding) {
+        return 0;
+    }
+
+    // ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // LIST ENCODINGS
+    // ///////////////////////////////////////////////////////////////////////////////////////////////////
+    public static final AmqpListMarshaller.LIST_ENCODING chooseListEncoding(List<AmqpType<?>> val) throws AmqpEncodingError {
+        if (val.size() > 255) {
+            return AmqpListMarshaller.LIST_ENCODING.LIST32;
+        }
+        for (AmqpType<?> le : val) {
+            int size = le.getEncoded(MARSHALLER).getEncodedSize();
+            if (size > 255) {
+                return AmqpListMarshaller.LIST_ENCODING.LIST32;
+            }
+        }
+        return AmqpListMarshaller.LIST_ENCODING.LIST8;
+    }
+
+    public static final int getEncodedSizeOfList(List<AmqpType<?>> val, LIST_ENCODING encoding) throws AmqpEncodingError {
+        int size = 0;
+        switch (encoding) {
+        // TODO for arrays we need to choose an encoding that is compatible for
+        // all
+        // values.
+        case ARRAY32: {
+            for (AmqpType<?> le : val) {
+                size += le.getEncoded(MARSHALLER).getDataSize();
+            }
+            return size;
+        }
+        case ARRAY8: {
+            for (AmqpType<?> le : val) {
+                size += le.getEncoded(MARSHALLER).getDataSize();
+            }
+            return size;
+        }
+        case LIST32: {
+            for (AmqpType<?> le : val) {
+                size += le.getEncoded(MARSHALLER).getDataSize();
+            }
+            return size;
+        }
+        case LIST8: {
+            for (AmqpType<?> le : val) {
+                size += le.getEncoded(MARSHALLER).getEncodedSize();
+            }
+            return size;
+        }
+        default: {
+            throw new IllegalArgumentException(encoding.name());
+        }
+        }
+    }
+
+    public static final int getEncodedCountOfList(List<AmqpType<?>> val, LIST_ENCODING listENCODING) throws AmqpEncodingError {
+        return val.size();
+    }
+
+    // List 8 encoding
+    public void encodeListList8(List<AmqpType<?>> value, Buffer encoded, int offset) throws AmqpEncodingError {
+        encodeList(value, encoded, offset);
+    }
+
+    public List<AmqpType<?>> decodeListList8(Buffer encoded, int offset, int count, int size, ListDecoder decoder) throws AmqpEncodingError {
+        return decodeList(encoded, offset, count, size, decoder);
+    }
+
+    public void writeListList8(List<AmqpType<?>> val, DataOutput out) throws IOException, AmqpEncodingError {
+        writeList(val, out);
+    }
+
+    public List<AmqpType<?>> readListList8(int count, int size, DataInput in, ListDecoder decoder) throws IOException, AmqpEncodingError {
+        return readList(count, size, in, decoder);
+    }
+
+    // List 32 encoding:
+    public void encodeListList32(List<AmqpType<?>> value, Buffer encoded, int offset) throws AmqpEncodingError {
+        encodeList(value, encoded, offset);
+    }
+
+    public List<AmqpType<?>> decodeListList32(Buffer encoded, int offset, int count, int size, ListDecoder decoder) throws AmqpEncodingError {
+        return decodeList(encoded, offset, count, size, decoder);
+    }
+
+    public void writeListList32(List<AmqpType<?>> val, DataOutput out) throws IOException, AmqpEncodingError {
+        writeList(val, out);
+    }
+
+    public List<AmqpType<?>> readListList32(int count, int size, DataInput in, ListDecoder decoder) throws IOException, AmqpEncodingError {
+        return readList(count, size, in, decoder);
+    }
+
+    // Array 8 encoding
+    public void encodeListArray8(List<AmqpType<?>> value, Buffer encoded, int offset) throws AmqpEncodingError {
+        encodeArray(value, encoded, offset);
+    }
+
+    public List<AmqpType<?>> decodeListArray8(Buffer encoded, int offset, int count, int size, ListDecoder decoder) throws AmqpEncodingError {
+        return decodeArray(encoded, offset, count, size, decoder);
+    }
+
+    public void writeListArray8(List<AmqpType<?>> val, DataOutput out) throws IOException, AmqpEncodingError {
+        writeArray(val, out);
+    }
+
+    public List<AmqpType<?>> readListArray8(int count, int size, DataInput in, ListDecoder decoder) throws IOException, AmqpEncodingError {
+        return readArray(count, size, in, decoder);
+    }
+
+    // List 32 encoding:
+    public void encodeListArray32(List<AmqpType<?>> value, Buffer encoded, int offset) throws AmqpEncodingError {
+        encodeArray(value, encoded, offset);
+    }
+
+    public List<AmqpType<?>> decodeListArray32(Buffer encoded, int offset, int count, int size, ListDecoder decoder) throws AmqpEncodingError {
+        return decodeArray(encoded, offset, count, size, decoder);
+    }
+
+    public void writeListArray32(List<AmqpType<?>> val, DataOutput out) throws IOException, AmqpEncodingError {
+        writeArray(val, out);
+    }
+
+    public List<AmqpType<?>> readListArray32(int count, int size, DataInput in, ListDecoder decoder) throws IOException, AmqpEncodingError {
+        return readArray(count, size, in, decoder);
+    }
+
+    // Generic versions:
+    public static final void encodeList(List<AmqpType<?>> value, Buffer target, int offset) throws AmqpEncodingError {
+        for (AmqpType<?> le : value) {
+            Encoded<?> encoded = le.getEncoded(MARSHALLER);
+            encoded.encode(target, offset);
+            offset = encoded.getDataSize();
+        }
+    }
+
+    public static final List<AmqpType<?>> decodeList(Buffer source, int offset, int count, int size, ListDecoder decoder) throws AmqpEncodingError {
+        ArrayList<AmqpType<?>> rc = new ArrayList<AmqpType<?>>(count);
+        for (int i = 0; i < count; i++) {
+            EncodedBuffer encoded = FormatCategory.createBuffer(source, offset);
+            offset += encoded.getEncodedSize();
+            decoder.decodeType(i, encoded);
+        }
+        return rc;
+    }
+
+    public static final List<AmqpType<?>> readList(int count, int size, DataInput in, ListDecoder decoder) throws IOException, AmqpEncodingError {
+        List<AmqpType<?>> rc = new ArrayList<AmqpType<?>>((int) count);
+        for (int i = 0; i < count; i++) {
+           rc.set(i, decoder.unmarshalType(i, in));
+        }
+        return rc;
+    }
+
+    public static final void writeList(List<AmqpType<?>> val, DataOutput out) throws IOException, AmqpEncodingError {
+        for (AmqpType<?> le : val) {
+            le.marshal(out, MARSHALLER);
+        }
+    }
+
+    public static final void encodeArray(List<AmqpType<?>> value, Buffer target, int offset) throws AmqpEncodingError {
+        Encoded<?> first = value.get(0).getEncoded(MARSHALLER);
+        first.encode(target, offset);
+        offset += first.getEncodedSize();
+
+        // TODO
+        throw new UnsupportedOperationException();
+
+        // for (int i = 1; i < value.size(); i++) {
+        // value.get(i).getEncoded(MARSHALLER);
+        // }
+    }
+
+    public static final List<AmqpType<?>> decodeArray(Buffer encoded, int offset, int count, int size, ListDecoder decoder) {
+        // TODO
+        throw new UnsupportedOperationException();
+    }
+
+    public static final List<AmqpType<?>> readArray(int count, int size, DataInput dis, ListDecoder decoder) throws IOException, AmqpEncodingError {
+        // TODO
+        throw new UnsupportedOperationException();
+    }
+
+    public static final void writeArray(List<AmqpType<?>> val, DataOutput out) throws IOException, AmqpEncodingError {
+        Encoded<?> first = val.get(0).getEncoded(MARSHALLER);
+        first.marshal(out);
+        for (int i = 1; i < val.size(); i++) {
+            val.get(i).getEncoded(MARSHALLER).marshalData(out);
+        }
+    }
+
+    // ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Map ENCODINGS
+    // ///////////////////////////////////////////////////////////////////////////////////////////////////
+    public static final AmqpMapMarshaller.MAP_ENCODING chooseMapEncoding(HashMap<AmqpType<?>, AmqpType<?>> val) throws AmqpEncodingError {
+        for (Map.Entry<AmqpType<?>, AmqpType<?>> me : val.entrySet()) {
+            int size = me.getKey().getEncoded(MARSHALLER).getEncodedSize() + me.getValue().getEncoded(MARSHALLER).getEncodedSize();
+            if (size > 255) {
+                return AmqpMapMarshaller.MAP_ENCODING.MAP32;
+            }
+        }
+        return AmqpMapMarshaller.MAP_ENCODING.MAP8;
+    }
+
+    public static final int getEncodedSizeOfMap(HashMap<AmqpType<?>, AmqpType<?>> val, MAP_ENCODING encoding) throws AmqpEncodingError {
+        int size = 0;
+        for (Map.Entry<AmqpType<?>, AmqpType<?>> me : val.entrySet()) {
+            size += me.getKey().getEncoded(MARSHALLER).getEncodedSize() + me.getValue().getEncoded(MARSHALLER).getEncodedSize();
+        }
+        return size;
+    }
+
+    public static final int getEncodedCountOfMap(HashMap<AmqpType<?>, AmqpType<?>> val, MAP_ENCODING mapENCODING) throws AmqpEncodingError {
+        return val.size() * 2;
+    }
+
+    public final void encodeMapMap32(HashMap<AmqpType<?>, AmqpType<?>> value, Buffer target, int offset) throws AmqpEncodingError {
+        encodeMap(value, target, offset);
+    }
+
+    public final HashMap<AmqpType<?>, AmqpType<?>> decodeMapMap32(Buffer source, int offset, int count, int size, MapDecoder decoder) throws AmqpEncodingError {
+        return decodeMap(source, offset, count, size, decoder);
+    }
+
+    public final void writeMapMap32(HashMap<AmqpType<?>, AmqpType<?>> val, DataOutput out) throws AmqpEncodingError, IOException {
+        writeMap(val, out);
+
+    }
+
+    public final HashMap<AmqpType<?>, AmqpType<?>> readMapMap32(int count, int size, DataInput in, MapDecoder decoder) throws AmqpEncodingError, IOException {
+        return readMap(count, size, in, decoder);
+    }
+
+    public final void encodeMapMap8(HashMap<AmqpType<?>, AmqpType<?>> value, Buffer target, int offset) throws AmqpEncodingError {
+        encodeMap(value, target, offset);
+    }
+
+    public final HashMap<AmqpType<?>, AmqpType<?>> decodeMapMap8(Buffer source, int offset, int count, int size, MapDecoder decoder) throws AmqpEncodingError {
+        return decodeMap(source, offset, count, size, decoder);
+    }
+
+    public final void writeMapMap8(HashMap<AmqpType<?>, AmqpType<?>> val, DataOutput out) throws AmqpEncodingError, IOException {
+        writeMap(val, out);
+
+    }
+
+    public final HashMap<AmqpType<?>, AmqpType<?>> readMapMap8(int count, int size, DataInput in, MapDecoder decoder) throws AmqpEncodingError, IOException {
+        return readMap(count, size, in, decoder);
+    }
+
+    public static final HashMap<AmqpType<?>, AmqpType<?>> decodeMap(Buffer source, int offset, int count, int size, MapDecoder decoder) throws AmqpEncodingError {
+        HashMap<AmqpType<?>, AmqpType<?>> rc = new HashMap<AmqpType<?>, AmqpType<?>>();
+        for (int i = 0; i < count; i += 2) {
+            EncodedBuffer encodedKey = FormatCategory.createBuffer(source, offset);
+            offset += encodedKey.getEncodedSize();
+            EncodedBuffer encodedVal = FormatCategory.createBuffer(source, offset);
+            offset += encodedVal.getEncodedSize();
+            decoder.decodeToMap(encodedKey, encodedVal, rc);
+        }
+        return rc;
+    }
+
+    public static final void encodeMap(HashMap<AmqpType<?>, AmqpType<?>> value, Buffer target, int offset) throws AmqpEncodingError {
+        for (Map.Entry<AmqpType<?>, AmqpType<?>> me : value.entrySet()) {
+            Encoded<?> eKey = me.getKey().getEncoded(MARSHALLER);
+            eKey.encode(target, offset);
+            offset += eKey.getEncodedSize();
+
+            Encoded<?> eVal = me.getValue().getEncoded(MARSHALLER);
+            eVal.encode(target, offset);
+            offset += eVal.getEncodedSize();
+        }
+    }
+
+    public static final void writeMap(HashMap<AmqpType<?>, AmqpType<?>> val, DataOutput out) throws IOException, AmqpEncodingError {
+        for (Map.Entry<AmqpType<?>, AmqpType<?>> me : val.entrySet()) {
+            me.getKey().marshal(out, MARSHALLER);
+            me.getValue().marshal(out, MARSHALLER);
+        }
+    }
+
+    public static final HashMap<AmqpType<?>, AmqpType<?>> readMap(int count, int size, DataInput in, MapDecoder decoder) throws IOException, AmqpEncodingError {
+        HashMap<AmqpType<?>, AmqpType<?>> rc = new HashMap<AmqpType<?>, AmqpType<?>>();
+        for (int i = 0; i < count; i += 2) {
+            decoder.unmarshalToMap(in, rc);
+        }
+        return rc;
+    }
+}

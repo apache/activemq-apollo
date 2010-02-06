@@ -7,7 +7,7 @@ public class Main {
         Generator gen = new Generator();
         gen.setInputFiles("C:/dev/fuse/amq6.0/activemq-amqp-generator/specification/1.0-PR2/transport.xml", "C:/dev/fuse/amq6.0/activemq-amqp-generator/specification/1.0-PR2/messaging.xml",
                 "C:/dev/fuse/amq6.0/activemq-amqp-generator/specification/1.0-PR2/types.xml", "C:/dev/fuse/amq6.0/activemq-amqp-generator/specification/1.0-PR2/security.xml");
-        gen.setPackagePrefix("org.apache.activemq.amqp.protocol.v1pr2");
+        
         gen.setOutputDirectory("C:/dev/fuse/amq6.0/activemq-amqp/src/main/java");
         gen.setSourceDirectory("C:/dev/fuse/amq6.0/activemq-amqp-generator/src/handcoded");
         try {

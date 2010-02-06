@@ -9,25 +9,25 @@ public class TypeRegistry {
     private static final HashMap<String, AmqpClass> GENERATED_TYPE_MAP = new HashMap<String, AmqpClass>();
 
     static {
-        JAVA_TYPE_MAP.put("boolean", new JavaTypeMapping("boolean", "java.lang.boolean"));
-        JAVA_TYPE_MAP.put("ubyte", new JavaTypeMapping("ubyte", "java.lang.short"));
-        JAVA_TYPE_MAP.put("ushort", new JavaTypeMapping("ushort", "java.lang.int"));
-        JAVA_TYPE_MAP.put("uint", new JavaTypeMapping("uint", "java.lang.long"));
+        JAVA_TYPE_MAP.put("boolean", new JavaTypeMapping("boolean", "java.lang.Boolean"));
+        JAVA_TYPE_MAP.put("ubyte", new JavaTypeMapping("ubyte", "java.lang.Short"));
+        JAVA_TYPE_MAP.put("ushort", new JavaTypeMapping("ushort", "java.lang.Integer"));
+        JAVA_TYPE_MAP.put("uint", new JavaTypeMapping("uint", "java.lang.Long"));
         JAVA_TYPE_MAP.put("ulong", new JavaTypeMapping("ulong", "java.math.BigInteger"));
-        JAVA_TYPE_MAP.put("byte", new JavaTypeMapping("byte", "java.lang.byte"));
-        JAVA_TYPE_MAP.put("short", new JavaTypeMapping("short", "java.lang.short"));
-        JAVA_TYPE_MAP.put("int", new JavaTypeMapping("int", "java.lang.int"));
-        JAVA_TYPE_MAP.put("long", new JavaTypeMapping("long", "java.lang.long"));
-        JAVA_TYPE_MAP.put("float", new JavaTypeMapping("float", "java.lang.float"));
-        JAVA_TYPE_MAP.put("double", new JavaTypeMapping("double", "java.lang.double"));
-        JAVA_TYPE_MAP.put("char", new JavaTypeMapping("char", "java.lang.int"));
+        JAVA_TYPE_MAP.put("byte", new JavaTypeMapping("byte", "java.lang.Byte"));
+        JAVA_TYPE_MAP.put("short", new JavaTypeMapping("short", "java.lang.Short"));
+        JAVA_TYPE_MAP.put("int", new JavaTypeMapping("int", "java.lang.Integer"));
+        JAVA_TYPE_MAP.put("long", new JavaTypeMapping("long", "java.lang.Long"));
+        JAVA_TYPE_MAP.put("float", new JavaTypeMapping("float", "java.lang.Float"));
+        JAVA_TYPE_MAP.put("double", new JavaTypeMapping("double", "java.lang.Double"));
+        JAVA_TYPE_MAP.put("char", new JavaTypeMapping("char", "java.lang.Integer"));
         JAVA_TYPE_MAP.put("timestamp", new JavaTypeMapping("timestamp", "java.util.Date"));
         JAVA_TYPE_MAP.put("uuid", new JavaTypeMapping("uuid", "java.util.UUID"));
-        JAVA_TYPE_MAP.put("binary", new JavaTypeMapping("binary", "java.lang.byte", true, null));
+        JAVA_TYPE_MAP.put("binary", new JavaTypeMapping("binary", "org.apache.activemq.util.buffer.Buffer"));
         JAVA_TYPE_MAP.put("string", new JavaTypeMapping("string", "java.lang.String"));
         JAVA_TYPE_MAP.put("symbol", new JavaTypeMapping("symbol", "java.lang.String"));
-        JAVA_TYPE_MAP.put("list", new JavaTypeMapping("list", "java.util.List", false, "<AmqpType>"));
-        JAVA_TYPE_MAP.put("map", new JavaTypeMapping("map", "java.util.HashMap", false, "<AmqpType, AmqpType>"));
+        JAVA_TYPE_MAP.put("list", new JavaTypeMapping("list", "java.util.List", false, "<AmqpType<?>>"));
+        JAVA_TYPE_MAP.put("map", new JavaTypeMapping("map", "java.util.HashMap", false, "<AmqpType<?>, AmqpType<?>>"));
         JAVA_TYPE_MAP.put("null", new JavaTypeMapping("null", "java.lang.Object"));
 
     }
@@ -102,13 +102,14 @@ public class TypeRegistry {
 
     public static class JavaTypeMapping {
 
-        String amqpType;
-        String shortName;
-        String packageName;
-        String fullName;
-        String javaType;
+        private String amqpType;
+        private String shortName;
+        private String packageName;
+        private String fullName;
+        private String javaType;
 
         boolean array;
+        private boolean inner;
         String generic;
 
         JavaTypeMapping(String amqpType, String fullName, boolean array, String generic) {
@@ -129,6 +130,18 @@ public class TypeRegistry {
             this.packageName = fullName.substring(0, fullName.lastIndexOf("."));
             this.shortName = fullName.substring(fullName.lastIndexOf(".") + 1);
             this.javaType = shortName;
+        }
+
+        JavaTypeMapping(String amqpType, String packageName, String className, boolean inner) {
+            this.amqpType = amqpType;
+            this.fullName = packageName + "." + className;
+            this.packageName = packageName;
+            this.inner = inner;
+            this.javaType = className;
+            if (inner) {
+                this.javaType = className;
+                this.shortName = className.substring(className.lastIndexOf(".") + 1);
+            }
         }
 
         public String getAmqpType() {
@@ -187,22 +200,31 @@ public class TypeRegistry {
             this.generic = generic;
         }
 
+        public String getFullVersionMarshallerName(Generator generator) {
+            return generator.getMarshallerPackage() + "." + shortName + "Marshaller";
+        }
+
         public String getImport() {
-            if (packageName.startsWith("java.lang")) {
-                return null;
+            if  (inner) {
+                return fullName.substring(0, fullName.lastIndexOf("."));
             } else {
                 return fullName;
             }
+        }
+
+        public String toString() {
+            return javaType;
         }
     }
 
     public static class AmqpType extends AmqpClass {
 
         AmqpType(String amqpName, String fullName) {
-            super.typeMapping = new JavaTypeMapping(amqpName, fullName);
+            super.typeMapping = new JavaTypeMapping(amqpName, fullName, false, "<?>");
             super.name = amqpName;
             super.setPrimitive(true);
             super.handcoded = true;
+            super.valueMapping = typeMapping;
         }
     }
 

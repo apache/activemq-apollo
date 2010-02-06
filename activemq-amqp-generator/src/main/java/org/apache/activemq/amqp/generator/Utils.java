@@ -129,6 +129,11 @@ public class Utils {
         return rc.toArray(new String[] {});
     }
 
+    public static final String javaPackageOf(String fullName)
+    {
+        return fullName.substring(0, fullName.lastIndexOf("."));
+    }
+    
     public static final List<File> findFiles(File dir) {
         LinkedList<File> rc = new LinkedList<File>();
         for (File file : dir.listFiles()) {
