@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?><project>
+  <parent>
+    <artifactId>activemq-parent</artifactId>
+    <groupId>org.apache.activemq</groupId>
+    <version>6.0-SNAPSHOT</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.activemq</groupId>
+  <artifactId>activemq-amqp</artifactId>
+  <name>activemq-amqp</name>
+  <version>6.0-SNAPSHOT</version>
+  <url>http://maven.apache.org</url>
+  
+  <dependencies>
+  	 <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-broker</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-transport</artifactId>
+    </dependency>
+    <dependency>
+    	<groupId>org.apache.activemq</groupId>
+    	<artifactId>activemq-bio</artifactId>
+    </dependency>
+	<dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-util</artifactId>
+      <version>6.0-SNAPSHOT</version>
+    </dependency>
+
+    <!-- Testing Dependencies -->
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-broker</artifactId>
+      <version>${activemq-version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-util</artifactId>
+      <version>${activemq-version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <scope>test</scope>
+    </dependency>
+  
+  
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>
