@@ -15,17 +15,11 @@
  * the License.
  */
 package org.apache.activemq.amqp.generator.handcoded.types;
-import java.io.DataOutput;
-import java.io.IOException;
 
-import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
-import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
+import org.apache.activemq.amqp.generator.handcoded.marshaller.Encoded;
 
-public interface AmqpType<Bean, EncodedBuffer extends AmqpBuffer<?>> {
+public interface AmqpBuffer<V> {
 
-    public EncodedBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError;
+    public Encoded<V> getEncoded();
     
-    public void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError;
-    
-    public boolean equivalent(AmqpType<?,?> t);
 }

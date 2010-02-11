@@ -16,15 +16,13 @@
  */
 package org.apache.activemq.amqp.generator.handcoded.marshaller.v1_0_0;
 
-import java.io.DataInput;
-import java.io.IOException;
 import org.apache.activemq.amqp.generator.handcoded.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.generator.handcoded.marshaller.v1_0_0.Encoder.DescribedBuffer;
 
 
 import org.apache.activemq.amqp.generator.handcoded.types.AmqpType;
 
-public interface DescribedTypeMarshaller<D extends AmqpType<?>> {
+public interface DescribedTypeMarshaller<D extends AmqpType<?, ?>> {
     
-    public D decodeDescribedType(AmqpType<?> descriptor, DescribedBuffer buffer) throws AmqpEncodingError;
+    public D decodeDescribedType(AmqpType<?, ?> descriptor, DescribedBuffer buffer) throws AmqpEncodingError;
 }

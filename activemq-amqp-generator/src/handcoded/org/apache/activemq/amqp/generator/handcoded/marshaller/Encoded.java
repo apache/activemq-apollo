@@ -17,7 +17,6 @@
 package org.apache.activemq.amqp.generator.handcoded.marshaller;
 
 import java.io.DataOutput;
-import java.io.DataInput;
 import java.io.IOException;
 
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
@@ -25,6 +24,8 @@ import org.apache.activemq.util.buffer.Buffer;
 
 public interface Encoded<E> extends Encoding {
 
+    public boolean isNull();
+    
     public int getEncodedSize() throws AmqpEncodingError;
 
     public int getDataSize() throws AmqpEncodingError;

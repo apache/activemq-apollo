@@ -26,13 +26,35 @@ public class TypeRegistry {
         JAVA_TYPE_MAP.put("binary", new JavaTypeMapping("binary", "org.apache.activemq.util.buffer.Buffer"));
         JAVA_TYPE_MAP.put("string", new JavaTypeMapping("string", "java.lang.String"));
         JAVA_TYPE_MAP.put("symbol", new JavaTypeMapping("symbol", "java.lang.String"));
-        JAVA_TYPE_MAP.put("list", new JavaTypeMapping("list", "java.util.List", false, "<AmqpType<?>>"));
-        JAVA_TYPE_MAP.put("map", new JavaTypeMapping("map", "java.util.HashMap", false, "<AmqpType<?>, AmqpType<?>>"));
+        JAVA_TYPE_MAP.put("list", new JavaTypeMapping("list", "java.util.List", false, "<AmqpType<?,?>>"));
+        JAVA_TYPE_MAP.put("map", new JavaTypeMapping("map", "java.util.HashMap", false, "<AmqpType<?,?>, AmqpType<?,?>>"));
         JAVA_TYPE_MAP.put("null", new JavaTypeMapping("null", "java.lang.Object"));
 
     }
 
     static final void init(Generator generator) {
+        
+        JAVA_TYPE_MAP.put("boolean", new JavaTypeMapping("boolean", "java.lang.Boolean"));
+        JAVA_TYPE_MAP.put("ubyte", new JavaTypeMapping("ubyte", "java.lang.Short"));
+        JAVA_TYPE_MAP.put("ushort", new JavaTypeMapping("ushort", "java.lang.Integer"));
+        JAVA_TYPE_MAP.put("uint", new JavaTypeMapping("uint", "java.lang.Long"));
+        JAVA_TYPE_MAP.put("ulong", new JavaTypeMapping("ulong", "java.math.BigInteger"));
+        JAVA_TYPE_MAP.put("byte", new JavaTypeMapping("byte", "java.lang.Byte"));
+        JAVA_TYPE_MAP.put("short", new JavaTypeMapping("short", "java.lang.Short"));
+        JAVA_TYPE_MAP.put("int", new JavaTypeMapping("int", "java.lang.Integer"));
+        JAVA_TYPE_MAP.put("long", new JavaTypeMapping("long", "java.lang.Long"));
+        JAVA_TYPE_MAP.put("float", new JavaTypeMapping("float", "java.lang.Float"));
+        JAVA_TYPE_MAP.put("double", new JavaTypeMapping("double", "java.lang.Double"));
+        JAVA_TYPE_MAP.put("char", new JavaTypeMapping("char", "java.lang.Integer"));
+        JAVA_TYPE_MAP.put("timestamp", new JavaTypeMapping("timestamp", "java.util.Date"));
+        JAVA_TYPE_MAP.put("uuid", new JavaTypeMapping("uuid", "java.util.UUID"));
+        JAVA_TYPE_MAP.put("binary", new JavaTypeMapping("binary", "org.apache.activemq.util.buffer.Buffer"));
+        JAVA_TYPE_MAP.put("string", new JavaTypeMapping("string", "java.lang.String"));
+        JAVA_TYPE_MAP.put("symbol", new JavaTypeMapping("symbol", "java.lang.String"));
+        JAVA_TYPE_MAP.put("list", new JavaTypeMapping("list", generator.getPackagePrefix() + ".types.IAmqpList"));
+        JAVA_TYPE_MAP.put("map", new JavaTypeMapping("map", "java.util.HashMap", false, "<AmqpType<?,?>, AmqpType<?,?>>"));
+        JAVA_TYPE_MAP.put("null", new JavaTypeMapping("null", "java.lang.Object"));
+        
         // Add in the wildcard type:
         AmqpClass any = new AmqpType("*", generator.getPackagePrefix() + ".types.AmqpType");
         GENERATED_TYPE_MAP.put("*", any);
@@ -54,6 +76,11 @@ public class TypeRegistry {
         return mapping;
     }
 
+    public static AmqpClass any()
+    {
+        return GENERATED_TYPE_MAP.get("*");
+    }
+    
     public static AmqpClass resolveAmqpClass(AmqpField amqpField) throws UnknownTypeException {
         return resolveAmqpClass(amqpField.getType());
     }
@@ -205,11 +232,7 @@ public class TypeRegistry {
         }
 
         public String getImport() {
-            if  (inner) {
-                return fullName.substring(0, fullName.lastIndexOf("."));
-            } else {
-                return fullName;
-            }
+            return fullName;
         }
 
         public String toString() {
@@ -220,7 +243,7 @@ public class TypeRegistry {
     public static class AmqpType extends AmqpClass {
 
         AmqpType(String amqpName, String fullName) {
-            super.typeMapping = new JavaTypeMapping(amqpName, fullName, false, "<?>");
+            super.typeMapping = new JavaTypeMapping(amqpName, fullName, false, "<?, ?>");
             super.name = amqpName;
             super.setPrimitive(true);
             super.handcoded = true;

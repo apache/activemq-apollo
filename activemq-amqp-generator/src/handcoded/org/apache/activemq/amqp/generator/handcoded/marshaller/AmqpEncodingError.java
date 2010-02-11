@@ -16,9 +16,8 @@
  */
 package org.apache.activemq.amqp.generator.handcoded.marshaller;
 
-import java.io.IOException;
-
 public class AmqpEncodingError extends Error {
+    private static final long serialVersionUID = 1L;
 
     public AmqpEncodingError(String msg) {
         super(msg);
@@ -27,5 +26,4 @@ public class AmqpEncodingError extends Error {
     public AmqpEncodingError(String msg, Throwable cause) {
         super(msg, cause);
     }
-
 }

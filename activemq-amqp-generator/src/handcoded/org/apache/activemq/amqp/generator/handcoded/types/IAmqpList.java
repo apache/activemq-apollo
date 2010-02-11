@@ -15,17 +15,35 @@
  * the License.
  */
 package org.apache.activemq.amqp.generator.handcoded.types;
-import java.io.DataOutput;
-import java.io.IOException;
 
-import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
-import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
+import java.util.Iterator;
 
-public interface AmqpType<Bean, EncodedBuffer extends AmqpBuffer<?>> {
+public interface IAmqpList extends Iterable<AmqpType<?, ?>> {
 
-    public EncodedBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError;
-    
-    public void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError;
-    
-    public boolean equivalent(AmqpType<?,?> t);
+    public AmqpType<?, ?> get(int index);
+
+    public void set(int index, AmqpType<?, ?> value);
+
+    public int getListCount();
+
+    public static class AmqpListIterator implements Iterator<AmqpType<?, ?>> {
+        int next = 0;
+        final IAmqpList list;
+
+        public AmqpListIterator(IAmqpList list) {
+            this.list = list;
+        }
+
+        public boolean hasNext() {
+            return next < list.getListCount();
+        }
+
+        public AmqpType<?, ?> next() {
+            return list.get(next++);
+        }
+
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+    }
 }

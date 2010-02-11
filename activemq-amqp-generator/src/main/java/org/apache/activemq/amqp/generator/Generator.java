@@ -236,7 +236,10 @@ public class Generator {
         writer.newLine();
         writer.newLine();
 
-        writeMarshallerImports(writer, false, outputPackage);
+        TreeSet<String> imports = new TreeSet<String>();
+        imports.add(getPackagePrefix() + ".marshaller.AmqpVersion");
+        imports.add(getPackagePrefix() + ".marshaller.Encoded");
+        writeMarshallerImports(writer, false, imports, outputPackage);
 
         writer.newLine();
         writer.write("public interface AmqpMarshaller {");
@@ -248,15 +251,11 @@ public class Generator {
         writer.newLine();
 
         writer.newLine();
-        writer.write(tab(1) + "public <T> Encoded<T> encode(AmqpType<T> data) throws AmqpEncodingError;");
-        writer.newLine();
-        
-        writer.newLine();
-        writer.write(tab(1) + "public AmqpType<?> decodeType(Buffer source) throws AmqpEncodingError;");
+        writer.write(tab(1) + "public " + TypeRegistry.any().typeMapping + " decodeType(Buffer source) throws AmqpEncodingError;");
         writer.newLine();
 
         writer.newLine();
-        writer.write(tab(1) + "public AmqpType<?> unmarshalType(DataInput in) throws IOException, AmqpEncodingError;");
+        writer.write(tab(1) + "public " + TypeRegistry.any().typeMapping + " unmarshalType(DataInput in) throws IOException, AmqpEncodingError;");
         writer.newLine();
 
         // Generate Handler methods:
@@ -272,7 +271,11 @@ public class Generator {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public " + amqpClass.getJavaType() + " unmarshal" + capFirst(amqpClass.getJavaType()) + "(DataInput in) throws IOException, AmqpEncodingError;");
+                writer.write(tab(1) + "public Encoded<" + amqpClass.getValueMapping() + "> decode" + amqpClass.getJavaType() + "(Buffer source, int offset) throws AmqpEncodingError;");
+                writer.newLine();
+
+                writer.newLine();
+                writer.write(tab(1) + "public Encoded<" + amqpClass.getValueMapping() + "> unmarshal" + amqpClass.getJavaType() + "(DataInput in) throws IOException, AmqpEncodingError;");
                 writer.newLine();
             }
         }
@@ -293,7 +296,11 @@ public class Generator {
         writer.newLine();
         writer.newLine();
 
-        writeMarshallerImports(writer, false, getMarshallerPackage());
+        TreeSet<String> imports = new TreeSet<String>();
+        imports.add(getMarshallerPackage() + ".Encoder.*");
+        imports.add(getPackagePrefix() + ".marshaller.AmqpVersion");
+        imports.add(getPackagePrefix() + ".marshaller.Encoded");
+        writeMarshallerImports(writer, false, imports, getMarshallerPackage());
 
         writer.newLine();
         writer.write("public class AmqpMarshaller implements " + getPackagePrefix() + ".marshaller.AmqpMarshaller {");
@@ -301,10 +308,6 @@ public class Generator {
 
         writer.newLine();
         writer.write(tab(1) + "static final AmqpMarshaller SINGLETON = new AmqpMarshaller();");
-        writer.newLine();
-
-        writer.newLine();
-        writer.write(tab(1) + "private static final Encoder ENCODER = Encoder.SINGLETON;");
         writer.newLine();
 
         writer.newLine();
@@ -348,33 +351,32 @@ public class Generator {
         writer.newLine();
 
         // Generate Handler methods:
-
         writer.newLine();
-        writer.write(tab(1) + "public final <T> Encoded<T> encode(AmqpType<T> data) throws AmqpEncodingError {");
+        writer.write(tab(1) + "public final " + TypeRegistry.any().typeMapping + " unmarshalType(DataInput in) throws IOException, AmqpEncodingError {");
         writer.newLine();
-        writer.write(tab(2) + "throw new UnsupportedOperationException();");
-        writer.newLine();
-        writer.write(tab(1) + "}");
-        writer.newLine();
-
-        writer.newLine();
-        writer.write(tab(1) + "public final AmqpType<?> unmarshalType(DataInput in) throws IOException, AmqpEncodingError {");
-        writer.newLine();
-        writer.write(tab(2) + "return ENCODER.unmarshalType(in);");
-        writer.newLine();
-        writer.write(tab(1) + "}");
-        writer.newLine();
-        
-        writer.newLine();
-        writer.write(tab(1) + "public final AmqpType<?> decodeType(Buffer source) throws AmqpEncodingError {");
-        writer.newLine();
-        writer.write(tab(2) + "return ENCODER.decode(source);");
+        writer.write(tab(2) + "return Encoder.unmarshalType(in);");
         writer.newLine();
         writer.write(tab(1) + "}");
         writer.newLine();
 
         writer.newLine();
-        writer.write(tab(1) + "final AmqpType<?> decodeType(EncodedBuffer encoded) throws AmqpEncodingError {");
+        writer.write(tab(1) + "public final " + TypeRegistry.any().typeMapping + " decodeType(Buffer source) throws AmqpEncodingError {");
+        writer.newLine();
+        writer.write(tab(2) + "return Encoder.decode(source);");
+        writer.newLine();
+        writer.write(tab(1) + "}");
+        writer.newLine();
+
+        writer.newLine();
+        writer.write(tab(1) + "final " + TypeRegistry.any().typeMapping + " decodeType(EncodedBuffer encoded) throws AmqpEncodingError {");
+        writer.newLine();
+        writer.write(tab(2) + "if(encoded.isDescribed()) {");
+        writer.newLine();
+        writer.write(tab(2) + "return decodeType(encoded.asDescribed());");
+        writer.newLine();
+        writer.write(tab(2) + "}");
+        writer.newLine();
+
         writer.newLine();
         writer.write(tab(2) + "switch(encoded.getEncodingFormatCode()) {");
         writer.newLine();
@@ -395,7 +397,7 @@ public class Generator {
                 }
                 writer.write(tab(2) + "{");
                 writer.newLine();
-                writer.write(tab(3) + "return " + amqpClass.getMarshaller() + ".decodeType(encoded);");
+                writer.write(tab(3) + "return " + amqpClass.bufferMapping + ".create(" + amqpClass.getMarshaller() + ".createEncoded(encoded));");
                 writer.newLine();
                 writer.write(tab(2) + "}");
                 writer.newLine();
@@ -415,9 +417,9 @@ public class Generator {
         writer.newLine();
 
         writer.newLine();
-        writer.write(tab(1) + "final AmqpType<?> decodeType(DescribedBuffer buffer) throws AmqpEncodingError {");
+        writer.write(tab(1) + "final " + TypeRegistry.any().typeMapping + " decodeType(DescribedBuffer buffer) throws AmqpEncodingError {");
         writer.newLine();
-        writer.write(tab(2) + "AmqpType<?> descriptor = decodeType(buffer.getDescriptor());");
+        writer.write(tab(2) + TypeRegistry.any().typeMapping + " descriptor = decodeType(buffer.getDescriptorBuffer());");
         writer.newLine();
         writer.write(tab(2) + "//TODO might want to revisit whether or not the cast is needed here:");
         writer.newLine();
@@ -425,7 +427,7 @@ public class Generator {
         writer.newLine();
         writer.write(tab(2) + "if(descriptor instanceof AmqpUlong) {");
         writer.newLine();
-        writer.write(tab(3) + "dtm = DESCRIBED_NUMERIC_TYPES.get(((AmqpUlong)descriptor).getValue());");
+        writer.write(tab(3) + "dtm = DESCRIBED_NUMERIC_TYPES.get(((AmqpUlong)descriptor).getValue().longValue());");
         writer.newLine();
         writer.write(tab(2) + "}");
         writer.newLine();
@@ -466,9 +468,17 @@ public class Generator {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public final " + amqpClass.getJavaType() + " unmarshal" + capFirst(amqpClass.getJavaType()) + "(DataInput in) throws IOException, AmqpEncodingError {");
+                writer.write(tab(1) + "public Encoded<" + amqpClass.getValueMapping() + "> decode" + amqpClass.getJavaType() + "(Buffer source, int offset) throws AmqpEncodingError {");
                 writer.newLine();
-                writer.write(tab(2) + "return " + amqpClass.getJavaType() + "Marshaller.unmarshalType(new " + amqpClass.getJavaType() + "(), in);");
+                writer.write(tab(2) + "return " + amqpClass.getMarshaller() + ".createEncoded(source, offset);");
+                writer.newLine();
+                writer.write(tab(1) + "}");
+                writer.newLine();
+
+                writer.newLine();
+                writer.write(tab(1) + "public Encoded<" + amqpClass.getValueMapping() + "> unmarshal" + amqpClass.getJavaType() + "(DataInput in) throws IOException, AmqpEncodingError {");
+                writer.newLine();
+                writer.write(tab(2) + "return " + amqpClass.getMarshaller() + ".createEncoded(in);");
                 writer.newLine();
                 writer.write(tab(1) + "}");
                 writer.newLine();
@@ -493,9 +503,9 @@ public class Generator {
         writer.newLine();
         writer.newLine();
 
-        writeMarshallerImports(writer, true, getMarshallerPackage(), getPackagePrefix() + ".types");
-
-        writer.write("import org.apache.activemq.util.buffer.Buffer;");
+        TreeSet<String> imports = new TreeSet<String>();
+        imports.add("java.io.DataOutput");
+        writeMarshallerImports(writer, true, imports, getMarshallerPackage(), getPackagePrefix() + ".types");
         writer.newLine();
 
         writer.newLine();
@@ -561,8 +571,7 @@ public class Generator {
         writer.close();
     }
 
-    private void writeMarshallerImports(BufferedWriter writer, boolean primitiveOnly, String... packageFilters) throws IOException, UnknownTypeException {
-        TreeSet<String> imports = new TreeSet<String>();
+    private void writeMarshallerImports(BufferedWriter writer, boolean primitiveOnly, TreeSet<String> imports, String... packageFilters) throws IOException, UnknownTypeException {
         HashSet<String> filters = new HashSet<String>();
         filters.add("java.lang");
         for (String filter : packageFilters) {
@@ -570,16 +579,11 @@ public class Generator {
         }
 
         imports.add("java.io.DataInput");
-        imports.add("java.io.DataOutput");
         imports.add("java.io.IOException");
-        imports.add(getPackagePrefix() + ".marshaller.AmqpVersion");
-        imports.add(getPackagePrefix() + ".marshaller.Encoded");
-        imports.add(getPackagePrefix() + ".marshaller.Encoding");
         imports.add(getPackagePrefix() + ".marshaller.AmqpEncodingError");
-        imports.add(getMarshallerPackage() + ".Encoder.*");
 
         for (AmqpClass amqpClass : TypeRegistry.getGeneratedTypes()) {
-            if (primitiveOnly && !amqpClass.isPrimitive()) {
+            if (primitiveOnly && (!amqpClass.isPrimitive() || amqpClass.isList() || amqpClass.isMap())) {
                 continue;
             }
             if (amqpClass.needsMarshaller()) {
