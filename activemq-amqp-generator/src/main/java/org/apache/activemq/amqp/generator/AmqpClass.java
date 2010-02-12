@@ -158,7 +158,11 @@ public class AmqpClass {
             }
 
             if (isList()) {
-                writer.write(", IAmqpList");
+                writer.write(", " + valueMapping.getJavaType());
+            }
+
+            if (isMap()) {
+                writer.write(", " + valueMapping.getJavaType());
             }
 
             if (isCommand()) {
@@ -240,8 +244,8 @@ public class AmqpClass {
                     imports.add(generator.getPackagePrefix() + ".types.AmqpType");
                 } else if (describedType.getName().equals("map")) {
                     imports.add(TypeRegistry.resolveAmqpClass("map").getValueMapping().getImport());
-                    imports.add("java.util.Map");
                     imports.add(generator.getPackagePrefix() + ".types.AmqpType");
+                    imports.add("java.util.HashMap");
                     // Import symbol which is used for the keys:
                     imports.add(TypeRegistry.resolveAmqpClass("symbol").getTypeMapping().getImport());
                 }
@@ -274,8 +278,18 @@ public class AmqpClass {
 
             imports.add(getValueMapping().getImport());
 
-            if (isList()) {
+            if (resolveBaseType().isList()) {
                 imports.add("java.util.Iterator");
+            }
+
+            if (isList()) {
+                imports.add("java.util.ArrayList");
+            }
+
+            if (resolveBaseType().isMap()) {
+                imports.add("java.util.Iterator");
+                imports.add("java.util.Map");
+                imports.add("java.util.HashMap");
             }
 
             if (descriptor != null) {
@@ -283,7 +297,6 @@ public class AmqpClass {
                 AmqpClass describedType = descriptor.resolveDescribedType();
                 if (describedType.getName().equals("list")) {
                     imports.add(TypeRegistry.resolveAmqpClass("list").getValueMapping().getImport());
-                    imports.add("java.util.Iterator");
                 } else if (describedType.getName().equals("map")) {
                     imports.add(TypeRegistry.resolveAmqpClass("map").getValueMapping().getImport());
                 }
@@ -430,10 +443,9 @@ public class AmqpClass {
     private void writeEncodings(BufferedWriter writer) throws IOException, UnknownTypeException {
         if (isDescribed()) {
 
-            AmqpClass describedClass = descriptor.resolveDescribedType();
-            JavaTypeMapping describedType = describedClass.getTypeMapping();
+            AmqpClass describedType = descriptor.resolveDescribedType();
 
-            if (descriptor.getDescribedType().equals("list")) {
+            if (describedType.isList()) {
                 writer.newLine();
                 writer.write(tab(1) + "private static final ListDecoder DECODER = new ListDecoder() {");
                 writer.newLine();
@@ -501,12 +513,24 @@ public class AmqpClass {
 
                 writer.write(tab(1) + "};");
                 writer.newLine();
-            } else if (descriptor.getDescribedType().equals("map")) {
+            } else if (describedType.isMap()) {
 
                 writer.newLine();
-                writer.write(tab(1) + "private static final MapDecoder DECODER = new MapDecoder() {");
+                writer.write(tab(1) + "private static final MapDecoder<AmqpSymbol, " + TypeRegistry.any().typeMapping + "> DECODER = new MapDecoder<AmqpSymbol, " + TypeRegistry.any().typeMapping
+                        + ">() {");
                 writer.newLine();
-                writer.write(tab(2) + "public void decodeToMap(EncodedBuffer encodedKey, EncodedBuffer encodedValue, Map<" + TypeRegistry.any().typeMapping + "," + TypeRegistry.any().typeMapping
+
+                writer.newLine();
+                writer.write(tab(2) + "public IAmqpMap<AmqpSymbol, AmqpType<?, ?>> createMap(int entryCount) {");
+                writer.newLine();
+                writer.write(tab(3) + "return new IAmqpMap.AmqpWrapperMap<AmqpSymbol, AmqpType<?,?>>(new HashMap<AmqpSymbol, AmqpType<?,?>>());");
+                writer.newLine();
+                writer.newLine();
+                writer.write(tab(2) + "}");
+                writer.newLine();
+
+                writer.newLine();
+                writer.write(tab(2) + "public void decodeToMap(EncodedBuffer encodedKey, EncodedBuffer encodedValue, IAmqpMap<AmqpSymbol," + TypeRegistry.any().typeMapping
                         + "> map) throws AmqpEncodingError {");
                 writer.newLine();
                 writer.write(tab(3) + "AmqpSymbol key = AmqpSymbol.AmqpSymbolBuffer.create(AmqpSymbolMarshaller.createEncoded(encodedKey));");
@@ -521,12 +545,12 @@ public class AmqpClass {
                 int f = 0;
                 for (AmqpField field : fields.values()) {
                     AmqpClass fieldType = field.resolveAmqpFieldType();
-                    writer.write(tab(3) + (f > 0 ? "else " : "") + "if (key.getValue().equals(" + toJavaConstant(field.getName()) + "_KEY.getValue())){");
+                    writer.write(tab(3) + (f > 0 ? "else " : "") + "if (key.equals(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY)){");
                     writer.newLine();
                     if (fieldType.isAny()) {
-                        writer.write(tab(4) + "map.put(" + toJavaConstant(field.getName()) + "_KEY, AmqpMarshaller.SINGLETON.decodeType(buffer));");
+                        writer.write(tab(4) + "map.put(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY, AmqpMarshaller.SINGLETON.decodeType(buffer));");
                     } else {
-                        writer.write(tab(4) + "map.put(" + toJavaConstant(field.getName()) + "_KEY, " + fieldType.getBufferMapping() + ".create(" + fieldType.getMarshaller()
+                        writer.write(tab(4) + "map.put(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY, " + fieldType.getBufferMapping() + ".create(" + fieldType.getMarshaller()
                                 + ".createEncoded(encodedValue)));");
                     }
                     writer.newLine();
@@ -542,8 +566,8 @@ public class AmqpClass {
                 writer.write(tab(2) + "}");
                 writer.newLine();
 
-                writer.write(tab(2) + "public void unmarshalToMap(DataInput in, Map<" + TypeRegistry.any().typeMapping + "," + TypeRegistry.any().typeMapping
-                        + "> map) throws AmqpEncodingError, IOException {");
+                writer.newLine();
+                writer.write(tab(2) + "public void unmarshalToMap(DataInput in, IAmqpMap<AmqpSymbol," + TypeRegistry.any().typeMapping + "> map) throws IOException, AmqpEncodingError {");
                 writer.newLine();
                 writer.write(tab(3) + "AmqpSymbol key = AmqpSymbol.AmqpSymbolBuffer.create(AmqpSymbolMarshaller.createEncoded(in));");
                 writer.newLine();
@@ -557,14 +581,13 @@ public class AmqpClass {
                 f = 0;
                 for (AmqpField field : fields.values()) {
                     AmqpClass fieldType = field.resolveAmqpFieldType();
-                    writer.write(tab(3) + (f > 0 ? "else " : "") + "if (key.getValue().equals(" + toJavaConstant(field.getName()) + "_KEY.getValue())){");
+                    writer.write(tab(3) + (f > 0 ? "else " : "") + "if (key.equals(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY)){");
                     writer.newLine();
                     if (fieldType.isAny()) {
-                        writer.write(tab(4) + "map.put(" + toJavaConstant(field.getName()) + "_KEY, AmqpMarshaller.SINGLETON.unmarshalType(in));");
+                        writer.write(tab(4) + "map.put(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY, AmqpMarshaller.SINGLETON.unmarshalType(in));");
                     } else {
-                        writer
-                                .write(tab(4) + "map.put(" + toJavaConstant(field.getName()) + "_KEY, " + fieldType.getBufferMapping() + ".create(" + fieldType.getMarshaller()
-                                        + ".createEncoded(in)));");
+                        writer.write(tab(4) + "map.put(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY, " + fieldType.getBufferMapping() + ".create(" + fieldType.getMarshaller()
+                                + ".createEncoded(in)));");
                     }
                     writer.newLine();
                     writer.write(tab(3) + "}");
@@ -600,7 +623,7 @@ public class AmqpClass {
             writer.newLine();
             writer.write(tab(2) + "public " + getJavaType() + "Encoded(" + typeMapping + " value) {");
             writer.newLine();
-            writer.write(tab(3) + "super(" + describedClass.getMarshaller() + ".encode(value));");
+            writer.write(tab(3) + "super(" + describedType.getMarshaller() + ".encode(value));");
             writer.newLine();
             writer.write(tab(2) + "}");
             writer.newLine();
@@ -624,7 +647,7 @@ public class AmqpClass {
             writer.newLine();
             writer.write(tab(2) + "protected final Encoded<" + getValueMapping() + "> decodeDescribed(EncodedBuffer encoded) throws AmqpEncodingError {");
             writer.newLine();
-            writer.write(tab(3) + "return " + describedClass.getMarshaller() + ".createEncoded(encoded, DECODER);");
+            writer.write(tab(3) + "return " + describedType.getMarshaller() + ".createEncoded(encoded, DECODER);");
             writer.newLine();
             writer.write(tab(2) + "}");
             writer.newLine();
@@ -632,7 +655,7 @@ public class AmqpClass {
             writer.newLine();
             writer.write(tab(2) + "protected final Encoded<" + getValueMapping() + "> unmarshalDescribed(DataInput in) throws IOException {");
             writer.newLine();
-            writer.write(tab(3) + "return " + describedClass.getMarshaller() + ".createEncoded(in, DECODER);");
+            writer.write(tab(3) + "return " + describedType.getMarshaller() + ".createEncoded(in, DECODER);");
             writer.newLine();
             writer.write(tab(2) + "}");
             writer.newLine();
@@ -1077,23 +1100,28 @@ public class AmqpClass {
         writer.write(tab(indent) + "private " + beanMapping.getShortName() + " bean = this;");
         writer.newLine();
         writeFields(writer, indent);
-        writer.newLine();
+
         // CONSTRUCTORS:
-        // Allow creation of empty described types:
-        if (baseType.isDescribed()) {
-            writer.write(tab(indent) + "public " + beanMapping.getShortName() + "() {");
-        } else {
-            writer.write(tab(indent) + "protected " + beanMapping.getShortName() + "() {");
+        // Allow creation of unitialized mutable types:
+        if (isMutable()) {
+            writer.newLine();
+            writer.write(tab(indent) + "" + beanMapping.getShortName() + "() {");
+            writer.newLine();
+            if (baseType.isMap()) {
+                writer.write(tab(indent + 1) + "this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());");
+                writer.newLine();
+            } else if (!isDescribed() && baseType.isList()) {
+                writer.write(tab(indent + 1) + "this.value = new IAmqpList.AmqpWrapperList(new ArrayList<AmqpType<?,?>>());");
+                writer.newLine();
+            }
+            writer.write(tab(indent) + "}");
+            writer.newLine();
         }
-        writer.newLine();
-        writer.write(tab(indent) + "}");
-        writer.newLine();
 
         writer.newLine();
-        writer.write(tab(indent) + "public " + beanMapping.getShortName() + "(" + baseType.getValueMapping() + " value) {");
+        writer.write(tab(indent) + beanMapping.getShortName() + "(" + baseType.getValueMapping() + " value) {");
         writer.newLine();
-        if (isDescribed() && getDescribedType().isList()) {
-            writer.write(tab(++indent) + "//TODO we should defer decoding of the described type:");
+        if (isDescribed() && baseType.isList()) {
             writer.newLine();
             writer.write(tab(indent) + "for(int i = 0; i < value.getListCount(); i++) {");
             writer.newLine();
@@ -1108,7 +1136,7 @@ public class AmqpClass {
         writer.newLine();
 
         writer.newLine();
-        writer.write(tab(indent) + "public " + beanMapping.getShortName() + "(" + beanMapping + " other) {");
+        writer.write(tab(indent) + beanMapping.getShortName() + "(" + beanMapping + " other) {");
         writer.newLine();
         writer.write(tab(indent + 1) + "this.bean = other;");
         writer.newLine();
@@ -1184,20 +1212,20 @@ public class AmqpClass {
             writer.newLine();
             writer.write(tab(--indent) + "}");
             writer.newLine();
-        
+
             writer.newLine();
             writer.write(tab(indent) + "private final void copy(" + beanMapping + " other) {");
             writer.newLine();
             indent++;
-            if (baseType.isPrimitive()) {
-                writer.write(tab(indent) + "this.value = other.value;");
-                writer.newLine();
-            }
-            if (baseType.isDescribed()) {
+
+            if (isDescribed()) {
                 for (AmqpField field : baseType.fields.values()) {
                     writer.write(tab(indent) + "this." + field.getJavaName() + "= other." + field.getJavaName() + ";");
                     writer.newLine();
                 }
+            } else {
+                writer.write(tab(indent) + "this.value = other.value;");
+                writer.newLine();
             }
             writer.write(tab(indent) + "bean = this;");
             writer.newLine();
@@ -1206,71 +1234,56 @@ public class AmqpClass {
         }
 
         // Equivalency:
-        // Only override equals for immutable types:
-        if (baseType.isPrimitive() && !(baseType.isList() || baseType.isMap())) {
-            writer.newLine();
-            writer.write(tab(indent) + "public boolean equals(Object o){");
-            writer.newLine();
-            writer.write(tab(++indent) + "if(this == o) {");
-            writer.newLine();
-            writer.write(tab(++indent) + "return true;");
-            writer.newLine();
-            writer.write(tab(--indent) + "}");
-            writer.newLine();
-            writer.newLine();
-            writer.write(tab(indent) + "if(o == null || !(o instanceof " + typeMapping + ")) {");
-            writer.newLine();
-            writer.write(tab(++indent) + "return false;");
-            writer.newLine();
-            writer.write(tab(--indent) + "}");
-            writer.newLine();
-            writer.newLine();
-            writer.write(tab(indent) + "return equivalent((" + typeMapping + ") o);");
-            writer.newLine();
-            writer.write(tab(--indent) + "}");
-            writer.newLine();
-
-            writer.newLine();
-            writer.write(tab(indent) + "public int hashCode() {");
-            writer.newLine();
-            writer.write(tab(++indent) + "if(getValue() == null) {");
-            writer.newLine();
-            writer.write(tab(++indent) + "return " + beanMapping + ".class.hashCode();");
-            writer.newLine();
-            writer.write(tab(--indent) + "}");
-            writer.newLine();
-            writer.write(tab(indent) + "return getValue().hashCode();");
-            writer.newLine();
-            writer.write(tab(--indent) + "}");
-            writer.newLine();
-        }
-
         writer.newLine();
-        writer.write(tab(indent) + "public boolean equivalent(AmqpType<?,?> t){");
+        writer.write(tab(indent) + "public boolean equals(Object o){");
         writer.newLine();
-        writer.write(tab(++indent) + "if(this == t) {");
+        writer.write(tab(++indent) + "if(this == o) {");
         writer.newLine();
         writer.write(tab(++indent) + "return true;");
         writer.newLine();
         writer.write(tab(--indent) + "}");
         writer.newLine();
         writer.newLine();
-        writer.write(tab(indent) + "if(t == null || !(t instanceof " + typeMapping + ")) {");
+        writer.write(tab(indent) + "if(o == null || !(o instanceof " + typeMapping + ")) {");
         writer.newLine();
         writer.write(tab(++indent) + "return false;");
         writer.newLine();
         writer.write(tab(--indent) + "}");
         writer.newLine();
         writer.newLine();
-        writer.write(tab(indent) + "return equivalent((" + typeMapping + ") t);");
+        writer.write(tab(indent) + "return equals((" + typeMapping + ") o);");
         writer.newLine();
         writer.write(tab(--indent) + "}");
         writer.newLine();
 
         writer.newLine();
-        writer.write(tab(indent++) + "public boolean equivalent(" + typeMapping + " b) {");
+        writer.write(tab(indent++) + "public boolean equals(" + typeMapping + " b) {");
         writer.newLine();
-        if (baseType.isPrimitive()) {
+        if (isDescribed()) {
+            for (AmqpField field : fields.values()) {
+
+                writer.newLine();
+                writer.write(tab(indent) + "if(b.get" + capFirst(field.getJavaName()) + "() == null ^ get" + capFirst(field.getJavaName()) + "() == null) {");
+                writer.newLine();
+                writer.write(tab(++indent) + "return false;");
+                writer.newLine();
+                writer.write(tab(--indent) + "}");
+                writer.newLine();
+                writer.write(tab(indent) + "if(b.get" + capFirst(field.getJavaName()) + "() != null && !b.get" + capFirst(field.getJavaName()) + "().equals(get" + capFirst(field.getJavaName())
+                        + "())){ ");
+
+                writer.newLine();
+                writer.write(tab(++indent) + "return false;");
+                writer.newLine();
+                writer.write(tab(--indent) + "}");
+                writer.newLine();
+            }
+            writer.write(tab(indent) + "return true;");
+        } else if (baseType.isMap()) {
+            writer.write(tab(indent) + "return AbstractAmqpMap.checkEqual(this, b);");
+        } else if (baseType.isList()) {
+            writer.write(tab(indent) + "return AbstractAmqpList.checkEqual(this, b);");
+        } else {
             writer.write(tab(indent) + "if(b == null) {");
             writer.newLine();
             writer.write(tab(++indent) + "return false;");
@@ -1287,37 +1300,28 @@ public class AmqpClass {
             writer.newLine();
             writer.newLine();
             writer.write(tab(indent) + "return b.getValue() == null || b.getValue().equals(getValue());");
-            writer.newLine();
-        } else if (baseType.isDescribed()) {
-            for (AmqpField field : fields.values()) {
-                AmqpClass fieldClass = field.resolveAmqpFieldType();
-
-                writer.newLine();
-                writer.write(tab(indent) + "if(b.get" + capFirst(field.getJavaName()) + "() == null ^ get" + capFirst(field.getJavaName()) + "() == null) {");
-                writer.newLine();
-                writer.write(tab(++indent) + "return false;");
-                writer.newLine();
-                writer.write(tab(--indent) + "}");
-                writer.newLine();
-
-                if (fieldClass.isDescribed()) {
-                    writer.write(tab(indent) + "if(b.get" + capFirst(field.getJavaName()) + "() != null && !b.get" + capFirst(field.getJavaName()) + "().equivalent(get"
-                            + capFirst(field.getJavaName()) + "())){ ");
-                } else {
-                    writer.write(tab(indent) + "if(b.get" + capFirst(field.getJavaName()) + "() != null && !b.get" + capFirst(field.getJavaName()) + "().equals(get" + capFirst(field.getJavaName())
-                            + "())){ ");
-                }
-
-                writer.newLine();
-                writer.write(tab(++indent) + "return false;");
-                writer.newLine();
-                writer.write(tab(--indent) + "}");
-                writer.newLine();
-            }
-            writer.write(tab(indent) + "return true;");
-            writer.newLine();
         }
+        writer.newLine();
+        writer.write(tab(--indent) + "}");
+        writer.newLine();
 
+        writer.newLine();
+        writer.write(tab(indent) + "public int hashCode() {");
+        writer.newLine();
+        if (baseType.isMap()) {
+            writer.write(tab(++indent) + "return AbstractAmqpMap.hashCodeFor(this);");
+        } else if (baseType.isList()) {
+            writer.write(tab(++indent) + "return AbstractAmqpList.hashCodeFor(this);");
+        } else {
+            writer.write(tab(++indent) + "if(getValue() == null) {");
+            writer.newLine();
+            writer.write(tab(++indent) + "return " + beanMapping + ".class.hashCode();");
+            writer.newLine();
+            writer.write(tab(--indent) + "}");
+            writer.newLine();
+            writer.write(tab(indent) + "return getValue().hashCode();");
+        }
+        writer.newLine();
         writer.write(tab(--indent) + "}");
         writer.newLine();
 
@@ -1457,28 +1461,27 @@ public class AmqpClass {
         }
 
         // Equivalency:
-        if (isPrimitive() && !(isList() || isMap())) {
-            writer.newLine();
-            writer.write(tab(indent) + "public boolean equals(Object o){");
-            writer.newLine();
-            writer.write(tab(++indent) + "return bean().equals(o);");
-            writer.newLine();
-            writer.write(tab(--indent) + "}");
-            writer.newLine();
-
-            writer.newLine();
-            writer.write(tab(indent) + "public int hashCode() {");
-            writer.newLine();
-            writer.write(tab(++indent) + "return bean().hashCode();");
-            writer.newLine();
-            writer.write(tab(--indent) + "}");
-            writer.newLine();
-        }
 
         writer.newLine();
-        writer.write(tab(indent) + "public boolean equivalent(AmqpType<?, ?> t) {");
+        writer.write(tab(indent) + "public boolean equals(Object o){");
         writer.newLine();
-        writer.write(tab(++indent) + "return bean().equivalent(t);");
+        writer.write(tab(++indent) + "return bean().equals(o);");
+        writer.newLine();
+        writer.write(tab(--indent) + "}");
+        writer.newLine();
+
+        writer.newLine();
+        writer.write(tab(indent) + "public boolean equals(" + typeMapping + " o){");
+        writer.newLine();
+        writer.write(tab(++indent) + "return bean().equals(o);");
+        writer.newLine();
+        writer.write(tab(--indent) + "}");
+        writer.newLine();
+
+        writer.newLine();
+        writer.write(tab(indent) + "public int hashCode() {");
+        writer.newLine();
+        writer.write(tab(++indent) + "return bean().hashCode();");
         writer.newLine();
         writer.write(tab(--indent) + "}");
         writer.newLine();
@@ -1526,23 +1529,33 @@ public class AmqpClass {
             ret = true;
 
             AmqpClass fieldClass = field.resolveAmqpFieldType();
-            JavaTypeMapping returnType = fieldClass.isPrimitive() ? fieldClass.getValueMapping() : fieldClass.typeMapping;
+            AmqpClass baseType = fieldClass.resolveBaseType();
 
             if (!buffer) {
 
-                if (!fieldClass.isAny() && fieldClass.isPrimitive()) {
-                    // Setter:
+                // Setters:
+                if (baseType.isPrimitive() && !baseType.isAny() && !fieldClass.isEnumType() && !baseType.isDescribed() && !baseType.isMutable()) {
                     writer.newLine();
-                    writer.write(tab(indent) + "public void set" + capFirst(field.getJavaName()) + "(" + fieldClass.valueMapping + " " + toJavaName(field.getName()) + ") {");
+                    writer.write(tab(indent) + "public void set" + capFirst(field.getJavaName()) + "(" + baseType.valueMapping + " " + toJavaName(field.getName()) + ") {");
                     writer.newLine();
-                    writer.write(tab(++indent) + "set" + capFirst(field.getJavaName()) + "(new " + fieldClass.getBeanMapping() + "(" + toJavaName(field.getName()) + "));");
+                    writer.write(tab(++indent) + "set" + capFirst(field.getJavaName()) + "(TypeFactory.create" + fieldClass.getJavaType() + "(" + toJavaName(field.getName()) + "));");
                     writer.newLine();
                     writer.write(tab(--indent) + "}");
                     writer.newLine();
                     writer.newLine();
+
+                    if (baseType.getValueMapping().hasPrimitiveType()) {
+                        writer.newLine();
+                        writer.write(tab(indent) + "public void set" + capFirst(field.getJavaName()) + "(" + baseType.getValueMapping().getPrimitiveType() + " " + toJavaName(field.getName()) + ") {");
+                        writer.newLine();
+                        writer.write(tab(++indent) + "set" + capFirst(field.getJavaName()) + "(TypeFactory.create" + fieldClass.getJavaType() + "(" + toJavaName(field.getName()) + "));");
+                        writer.newLine();
+                        writer.write(tab(--indent) + "}");
+                        writer.newLine();
+                        writer.newLine();
+                    }
                 }
 
-                // Setter:
                 writer.newLine();
                 writer.write(tab(indent) + "public final void set" + capFirst(field.getJavaName()) + "(" + fieldClass.typeMapping + " " + toJavaName(field.getName()) + ") {");
                 writer.newLine();
@@ -1553,7 +1566,9 @@ public class AmqpClass {
                 writer.write(tab(--indent) + "}");
                 writer.newLine();
                 writer.newLine();
+
                 // Getter:
+                JavaTypeMapping returnType = fieldClass.isPrimitive() ? fieldClass.getValueMapping() : fieldClass.typeMapping;
                 writer.write(tab(indent) + "public final " + returnType + " get" + capFirst(field.getJavaName()) + "() {");
                 writer.newLine();
                 if (!fieldClass.isAny() && fieldClass.isPrimitive()) {
@@ -1565,17 +1580,28 @@ public class AmqpClass {
                 writer.write(tab(--indent) + "}");
                 writer.newLine();
             } else {
-                if (!fieldClass.isAny() && fieldClass.isPrimitive()) {
-                    // Setter:
+
+                // Setters:
+                if (baseType.isPrimitive() && !baseType.isAny() && !fieldClass.isEnumType() && !baseType.isDescribed() && !baseType.isMutable()) {
                     writer.newLine();
-                    writer.write(tab(1) + "public void set" + capFirst(field.getJavaName()) + "(" + fieldClass.getValueMapping() + " " + toJavaName(field.getName()) + ") {");
+                    writer.write(tab(indent) + "public void set" + capFirst(field.getJavaName()) + "(" + baseType.getValueMapping() + " " + toJavaName(field.getName()) + ") {");
                     writer.newLine();
                     writer.write(tab(++indent) + "bean().set" + capFirst(field.getJavaName()) + "(" + toJavaName(field.getName()) + ");");
                     writer.newLine();
                     writer.write(tab(--indent) + "}");
                     writer.newLine();
+
+                    if (baseType.getValueMapping().hasPrimitiveType()) {
+                        writer.newLine();
+                        writer.write(tab(indent) + "public void set" + capFirst(field.getJavaName()) + "(" + baseType.getValueMapping().getPrimitiveType() + " " + toJavaName(field.getName()) + ") {");
+                        writer.newLine();
+                        writer.write(tab(++indent) + "bean().set" + capFirst(field.getJavaName()) + "(" + toJavaName(field.getName()) + ");");
+                        writer.newLine();
+                        writer.write(tab(--indent) + "}");
+                        writer.newLine();
+                        writer.newLine();
+                    }
                 }
-                // Setter:
                 writer.newLine();
                 writer.write(tab(indent) + "public final void set" + capFirst(field.getJavaName()) + "(" + fieldClass.getTypeMapping() + " " + toJavaName(field.getName()) + ") {");
                 writer.newLine();
@@ -1584,6 +1610,7 @@ public class AmqpClass {
                 writer.write(tab(--indent) + "}");
                 writer.newLine();
                 // Getter:
+                JavaTypeMapping returnType = fieldClass.isPrimitive() ? fieldClass.getValueMapping() : fieldClass.typeMapping;
                 writer.newLine();
                 writer.write(tab(indent) + "public final " + returnType + " get" + capFirst(field.getJavaName()) + "() {");
                 writer.newLine();
@@ -1598,18 +1625,37 @@ public class AmqpClass {
             if (!buffer) {
                 writer.write(tab(indent) + "public void put(" + TypeRegistry.any().typeMapping + " key, " + TypeRegistry.any().typeMapping + " value) {");
                 writer.newLine();
-                writer.write(tab(++indent) + "bean.value.put(key, value);");
+                writer.write(tab(++indent) + "copyCheck();");
+                writer.newLine();
+                writer.write(tab(indent) + "bean.value.put(key, value);");
                 writer.newLine();
                 writer.write(tab(--indent) + "}");
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(indent) + "public " + TypeRegistry.any().typeMapping + " get(" + TypeRegistry.any().typeMapping + " key) {");
+                writer.write(tab(indent) + "public " + TypeRegistry.any().typeMapping + " get(Object key) {");
                 writer.newLine();
                 writer.write(tab(++indent) + "return bean.value.get(key);");
                 writer.newLine();
                 writer.write(tab(--indent) + "}");
                 writer.newLine();
+
+                writer.newLine();
+                writer.write(tab(indent) + "public int getEntryCount() {");
+                writer.newLine();
+                writer.write(tab(++indent) + "return bean.value.getEntryCount();");
+                writer.newLine();
+                writer.write(tab(--indent) + "}");
+                writer.newLine();
+
+                writer.newLine();
+                writer.write(tab(indent) + "public Iterator<Map.Entry<" + TypeRegistry.any().getJavaType() + ", " + TypeRegistry.any().getJavaType() + ">> iterator() {");
+                writer.newLine();
+                writer.write(tab(++indent) + "return bean.value.iterator();");
+                writer.newLine();
+                writer.write(tab(--indent) + "}");
+                writer.newLine();
+
             } else {
                 writer.write(tab(indent) + "public void put(" + TypeRegistry.any().typeMapping + " key, " + TypeRegistry.any().typeMapping + " value) {");
                 writer.newLine();
@@ -1619,9 +1665,25 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(indent) + "public " + TypeRegistry.any().typeMapping + " get(" + TypeRegistry.any().typeMapping + " key) {");
+                writer.write(tab(indent) + "public " + TypeRegistry.any().typeMapping + " get(Object key) {");
                 writer.newLine();
                 writer.write(tab(++indent) + "return bean().get(key);");
+                writer.newLine();
+                writer.write(tab(--indent) + "}");
+                writer.newLine();
+
+                writer.newLine();
+                writer.write(tab(indent) + "public int getEntryCount() {");
+                writer.newLine();
+                writer.write(tab(++indent) + "return bean().getEntryCount();");
+                writer.newLine();
+                writer.write(tab(--indent) + "}");
+                writer.newLine();
+
+                writer.newLine();
+                writer.write(tab(indent) + "public Iterator<Map.Entry<" + TypeRegistry.any().getJavaType() + ", " + TypeRegistry.any().getJavaType() + ">> iterator() {");
+                writer.newLine();
+                writer.write(tab(++indent) + "return bean().iterator();");
                 writer.newLine();
                 writer.write(tab(--indent) + "}");
                 writer.newLine();
@@ -1632,7 +1694,9 @@ public class AmqpClass {
                 writer.newLine();
                 writer.write(tab(indent) + "public void set(int index, " + TypeRegistry.any().typeMapping + " value) {");
                 writer.newLine();
-                writer.write(tab(++indent) + "bean.value.set(index, value);");
+                writer.write(tab(++indent) + "copyCheck();");
+                writer.newLine();
+                writer.write(tab(indent) + "bean.value.set(index, value);");
                 writer.newLine();
                 writer.write(tab(--indent) + "}");
                 writer.newLine();
@@ -1654,7 +1718,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(indent) + "public Iterator<AmqpType<?, ?>> iterator() {");
+                writer.write(tab(indent) + "public Iterator<" + TypeRegistry.any().typeMapping + "> iterator() {");
                 writer.newLine();
                 writer.write(tab(++indent) + "return new AmqpListIterator(bean.value);");
                 writer.newLine();
@@ -1687,7 +1751,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(indent) + "public Iterator<AmqpType<?, ?>> iterator() {");
+                writer.write(tab(indent) + "public Iterator<" + TypeRegistry.any().typeMapping + "> iterator() {");
                 writer.newLine();
                 writer.write(tab(++indent) + "return bean().iterator();");
                 writer.newLine();
@@ -1829,27 +1893,53 @@ public class AmqpClass {
     private void writeBeanInterface(BufferedWriter writer, int indent) throws IOException, UnknownTypeException {
 
         if (isDescribed()) {
+
+            // Write out symbol constants
+            if (resolveBaseType().isMap()) {
+                writer.newLine();
+                for (AmqpField field : fields.values()) {
+
+                    AmqpClass symbolClass = TypeRegistry.resolveAmqpClass("symbol");
+                    writeJavaComment(writer, indent, "Key for: " + field.getLabel());
+                    writer.write(tab(1) + "public static final " + symbolClass.typeMapping + " " + toJavaConstant(field.getName()) + "_KEY = TypeFactory.create" + symbolClass.typeMapping + "(\""
+                            + field.getName() + "\");");
+
+                    writer.newLine();
+                }
+                writer.newLine();
+            }
+
             writer.newLine();
             for (AmqpField field : fields.values()) {
 
                 AmqpClass fieldClass = field.resolveAmqpFieldType();
-                JavaTypeMapping returnType = fieldClass.isPrimitive() ? fieldClass.getValueMapping() : fieldClass.typeMapping;
+                AmqpClass baseType = fieldClass.resolveBaseType();
 
-                if (!fieldClass.isAny() && fieldClass.isPrimitive()) {
+                if (baseType.isPrimitive() && !baseType.isAny() && !fieldClass.isEnumType() && !baseType.isDescribed() && !baseType.isMutable()) {
                     // Setter:
                     writer.newLine();
+                    field.getDoc().parseFromDoc(fieldClass.doc.docs);
                     field.writeJavaDoc(writer, indent);
-                    writer.write(tab(1) + "public void set" + capFirst(field.getJavaName()) + "(" + fieldClass.valueMapping + " " + toJavaName(field.getName()) + ");");
+                    writer.write(tab(indent) + "public void set" + capFirst(field.getJavaName()) + "(" + baseType.valueMapping + " " + toJavaName(field.getName()) + ");");
                     writer.newLine();
+
+                    if (baseType.getValueMapping().hasPrimitiveType()) {
+                        writer.newLine();
+                        field.writeJavaDoc(writer, indent);
+                        writer.write(tab(indent) + "public void set" + capFirst(field.getJavaName()) + "(" + baseType.getValueMapping().getPrimitiveType() + " " + toJavaName(field.getName()) + ");");
+                        writer.newLine();
+                    }
+
                 }
 
-                // Setter:
+                // Setters:
                 writer.newLine();
                 field.writeJavaDoc(writer, indent);
                 writer.write(tab(1) + "public void set" + capFirst(field.getJavaName()) + "(" + fieldClass.typeMapping + " " + toJavaName(field.getName()) + ");");
                 writer.newLine();
 
                 // Getter:
+                JavaTypeMapping returnType = fieldClass.isPrimitive() ? fieldClass.getValueMapping() : fieldClass.typeMapping;
                 writer.newLine();
                 field.writeJavaDoc(writer, indent);
                 writer.write(tab(indent) + "public " + returnType + " get" + capFirst(field.getJavaName()) + "();");
@@ -1858,12 +1948,14 @@ public class AmqpClass {
         }
 
         if (isMap()) {
+            doc.writeJavaDoc(writer, indent);
             writer.write(tab(indent) + "public void put(" + TypeRegistry.any().typeMapping + " key, " + TypeRegistry.any().typeMapping + " value);");
             writer.newLine();
-            writer.write(tab(indent) + "public " + TypeRegistry.any().typeMapping + " get(" + TypeRegistry.any().typeMapping + " key);");
+            writer.write(tab(indent) + "public " + TypeRegistry.any().typeMapping + " get(Object key);");
             writer.newLine();
 
         } else if (isList()) {
+            doc.writeJavaDoc(writer, indent);
             writer.write(tab(indent) + "public void set(int index, " + TypeRegistry.any().typeMapping + " value);");
             writer.newLine();
             writer.write(tab(indent) + "public " + TypeRegistry.any().typeMapping + " get(int index);");
@@ -1953,21 +2045,9 @@ public class AmqpClass {
             writer.write(tab(1) + "}), 0);");
             writer.newLine();
 
-            String describedType = descriptor.getDescribedType();
+            AmqpClass describedType = descriptor.resolveDescribedType();
 
-            if (describedType.equals("map")) {
-                writer.newLine();
-                writer.write(tab(1) + "//Accessor keys for field mapped fields:");
-                writer.newLine();
-                for (AmqpField field : fields.values()) {
-
-                    AmqpClass symbolClass = TypeRegistry.resolveAmqpClass("symbol");
-                    writer.write(tab(1) + "private static final " + symbolClass.bufferMapping + " " + toJavaConstant(field.getName()) + "_KEY = new " + symbolClass.beanMapping + "(\""
-                            + field.getName() + "\").getBuffer(AmqpMarshaller.SINGLETON);");
-                    writer.newLine();
-                }
-                writer.newLine();
-            } else if (!describedType.equals("list")) {
+            if (!(describedType.isMap() || describedType.isList())) {
                 throw new UnknownTypeException("Support for " + descriptor.getDescribedType() + " as a described type isn't yet implemented");
             }
 
@@ -2462,6 +2542,8 @@ public class AmqpClass {
     public AmqpClass resolveBaseType() throws UnknownTypeException {
         if (isRestricted()) {
             return TypeRegistry.resolveAmqpClass(restrictedType);
+        } else if (isDescribed()) {
+            return getDescribedType();
         } else {
             return this;
         }

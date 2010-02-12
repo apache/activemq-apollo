@@ -26,6 +26,4 @@ public interface AmqpType<Bean, EncodedBuffer extends AmqpBuffer<?>> {
     public EncodedBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError;
     
     public void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError;
-    
-    public boolean equivalent(AmqpType<?,?> t);
 }

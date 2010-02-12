@@ -35,6 +35,7 @@ import org.apache.activemq.amqp.generator.handcoded.marshaller.v1_0_0.AmqpMapMar
 import org.apache.activemq.amqp.generator.handcoded.BitUtils;
 import org.apache.activemq.amqp.generator.handcoded.types.AmqpType;
 import org.apache.activemq.amqp.generator.handcoded.types.IAmqpList;
+import org.apache.activemq.amqp.protocol.types.IAmqpMap;
 import org.apache.activemq.util.buffer.Buffer;
 
 public class Encoder extends BaseEncoder {
@@ -56,13 +57,18 @@ public class Encoder extends BaseEncoder {
         }
     };
 
-    static final MapDecoder DEFAULT_MAP_DECODER = new MapDecoder() {
+    static final MapDecoder<AmqpType<?,?>, AmqpType<?, ?>> DEFAULT_MAP_DECODER = new MapDecoder<AmqpType<?,?>, AmqpType<?, ?>>() {
 
-        public final void decodeToMap(EncodedBuffer key, EncodedBuffer val, Map<AmqpType<?, ?>, AmqpType<?, ?>> map) throws AmqpEncodingError {
-            map.put(MARSHALLER.decodeType(key), MARSHALLER.decodeType(key));
+        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> createMap(int entryCount) {
+            return new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());
         }
 
-        public final void unmarshalToMap(DataInput in, Map<AmqpType<?, ?>, AmqpType<?, ?>> map) throws IOException, AmqpEncodingError {
+        public void decodeToMap(EncodedBuffer key, EncodedBuffer val, IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> map) throws AmqpEncodingError {
+            map.put(MARSHALLER.decodeType(key), MARSHALLER.decodeType(key));
+            
+        }
+
+        public void unmarshalToMap(DataInput in, IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> map) throws IOException, AmqpEncodingError {
             map.put(MARSHALLER.unmarshalType(in), MARSHALLER.unmarshalType(in));
         }
     };
@@ -1104,10 +1110,12 @@ public class Encoder extends BaseEncoder {
         AmqpType<?, ?> unmarshalType(int pos, DataInput in) throws IOException, AmqpEncodingError;
     }
 
-    public static interface MapDecoder {
-        void decodeToMap(EncodedBuffer key, EncodedBuffer val, Map<AmqpType<?, ?>, AmqpType<?, ?>> map) throws AmqpEncodingError;
+    public static interface MapDecoder<K extends AmqpType<?, ?>, V extends AmqpType<?, ?>> {
+        void decodeToMap(EncodedBuffer key, EncodedBuffer val, IAmqpMap<K, V> map) throws AmqpEncodingError;
 
-        public void unmarshalToMap(DataInput in, Map<AmqpType<?, ?>, AmqpType<?, ?>> map) throws IOException, AmqpEncodingError;
+        public void unmarshalToMap(DataInput in, IAmqpMap<K, V> map) throws IOException, AmqpEncodingError;
+
+        IAmqpMap<K, V> createMap(int entryCount);
     }
 
     // ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1203,7 +1211,7 @@ public class Encoder extends BaseEncoder {
             return new AmqpListIterator(this);
         }
     }
-
+    
     public static final AmqpListMarshaller.LIST_ENCODING chooseListEncoding(IAmqpList val) throws AmqpEncodingError {
         if (val.getListCount() > 255) {
             return AmqpListMarshaller.LIST_ENCODING.LIST32;
@@ -1392,8 +1400,9 @@ public class Encoder extends BaseEncoder {
     // ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Map ENCODINGS
     // ///////////////////////////////////////////////////////////////////////////////////////////////////
-    public static final AmqpMapMarshaller.MAP_ENCODING chooseMapEncoding(HashMap<AmqpType<?, ?>, AmqpType<?, ?>> val) throws AmqpEncodingError {
-        for (Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>> me : val.entrySet()) {
+    public static final AmqpMapMarshaller.MAP_ENCODING chooseMapEncoding(IAmqpMap<?, ?> map) throws AmqpEncodingError {
+        for (Map.Entry<? extends AmqpType<?,?>, ? extends AmqpType<?,?>> me : map) {
+            
             int size = me.getKey().getBuffer(MARSHALLER).getEncoded().getEncodedSize() + me.getValue().getBuffer(MARSHALLER).getEncoded().getEncodedSize();
             if (size > 255) {
                 return AmqpMapMarshaller.MAP_ENCODING.MAP32;
@@ -1402,54 +1411,54 @@ public class Encoder extends BaseEncoder {
         return AmqpMapMarshaller.MAP_ENCODING.MAP8;
     }
 
-    public final int getEncodedSizeOfMap(HashMap<AmqpType<?, ?>, AmqpType<?, ?>> val, MAP_ENCODING encoding) throws AmqpEncodingError {
+    public final int getEncodedSizeOfMap(IAmqpMap<?, ?> map, MAP_ENCODING encoding) throws AmqpEncodingError {
         int size = 0;
-        for (Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>> me : val.entrySet()) {
+        for (Map.Entry<? extends AmqpType<?,?>, ? extends AmqpType<?,?>> me : map) {
             size += me.getKey().getBuffer(MARSHALLER).getEncoded().getEncodedSize() + me.getValue().getBuffer(MARSHALLER).getEncoded().getEncodedSize();
         }
         return size;
     }
 
-    public final int getEncodedCountOfMap(HashMap<AmqpType<?, ?>, AmqpType<?, ?>> val, MAP_ENCODING mapENCODING) throws AmqpEncodingError {
-        return val.size() * 2;
+    public final int getEncodedCountOfMap(IAmqpMap<?, ?> map, MAP_ENCODING mapENCODING) throws AmqpEncodingError {
+        return map.getEntryCount() * 2;
     }
 
-    public final void encodeMapMap32(HashMap<AmqpType<?, ?>, AmqpType<?, ?>> value, Buffer target, int offset) throws AmqpEncodingError {
+    public final void encodeMapMap32(IAmqpMap<?, ?> value, Buffer target, int offset) throws AmqpEncodingError {
         encodeMap(value, target, offset);
     }
 
-    public final HashMap<AmqpType<?, ?>, AmqpType<?, ?>> decodeMapMap32(Buffer source, int offset, int count, int size, MapDecoder decoder) throws AmqpEncodingError {
+    public final <K extends AmqpType<?,?>, V extends AmqpType<?,?>> IAmqpMap<K, V> decodeMapMap32(Buffer source, int offset, int count, int size, MapDecoder<K, V> decoder) throws AmqpEncodingError {
         return decodeMap(source, offset, count, size, decoder);
     }
 
-    public final void writeMapMap32(HashMap<AmqpType<?, ?>, AmqpType<?, ?>> val, DataOutput out) throws AmqpEncodingError, IOException {
+    public final void writeMapMap32(IAmqpMap<?, ?> val, DataOutput out) throws AmqpEncodingError, IOException {
         writeMap(val, out);
 
     }
 
-    public final HashMap<AmqpType<?, ?>, AmqpType<?, ?>> readMapMap32(int count, int size, DataInput in, MapDecoder decoder) throws AmqpEncodingError, IOException {
+    public final <K extends AmqpType<?,?>, V extends AmqpType<?,?>> IAmqpMap<K, V> readMapMap32(int count, int size, DataInput in, MapDecoder<K, V> decoder) throws AmqpEncodingError, IOException {
         return readMap(count, size, in, decoder);
     }
 
-    public final void encodeMapMap8(HashMap<AmqpType<?, ?>, AmqpType<?, ?>> value, Buffer target, int offset) throws AmqpEncodingError {
+    public final void encodeMapMap8(IAmqpMap<?, ?> value, Buffer target, int offset) throws AmqpEncodingError {
         encodeMap(value, target, offset);
     }
 
-    public final HashMap<AmqpType<?, ?>, AmqpType<?, ?>> decodeMapMap8(Buffer source, int offset, int count, int size, MapDecoder decoder) throws AmqpEncodingError {
+    public final <K extends AmqpType<?,?>, V extends AmqpType<?,?>> IAmqpMap<K, V> decodeMapMap8(Buffer source, int offset, int count, int size, MapDecoder<K, V> decoder) throws AmqpEncodingError {
         return decodeMap(source, offset, count, size, decoder);
     }
 
-    public final void writeMapMap8(HashMap<AmqpType<?, ?>, AmqpType<?, ?>> val, DataOutput out) throws AmqpEncodingError, IOException {
+    public final void writeMapMap8(IAmqpMap<?, ?> val, DataOutput out) throws AmqpEncodingError, IOException {
         writeMap(val, out);
 
     }
 
-    public final HashMap<AmqpType<?, ?>, AmqpType<?, ?>> readMapMap8(int count, int size, DataInput in, MapDecoder decoder) throws AmqpEncodingError, IOException {
+    public final <K extends AmqpType<?,?>, V extends AmqpType<?,?>> IAmqpMap<K, V> readMapMap8(int count, int size, DataInput in, MapDecoder<K, V> decoder) throws AmqpEncodingError, IOException {
         return readMap(count, size, in, decoder);
     }
 
-    public static final HashMap<AmqpType<?, ?>, AmqpType<?, ?>> decodeMap(Buffer source, int offset, int count, int size, MapDecoder decoder) throws AmqpEncodingError {
-        HashMap<AmqpType<?, ?>, AmqpType<?, ?>> rc = new HashMap<AmqpType<?, ?>, AmqpType<?, ?>>();
+    public static final <K extends AmqpType<?,?>, V extends AmqpType<?,?>> IAmqpMap<K, V> decodeMap(Buffer source, int offset, int count, int size, MapDecoder<K, V> decoder) throws AmqpEncodingError {
+        IAmqpMap<K, V> rc = decoder.createMap(count / 2);
         for (int i = 0; i < count; i += 2) {
             EncodedBuffer encodedKey = FormatCategory.createBuffer(source, offset);
             offset += encodedKey.getEncodedSize();
@@ -1459,9 +1468,18 @@ public class Encoder extends BaseEncoder {
         }
         return rc;
     }
+    
 
-    public static final void encodeMap(HashMap<AmqpType<?, ?>, AmqpType<?, ?>> value, Buffer target, int offset) throws AmqpEncodingError {
-        for (Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>> me : value.entrySet()) {
+    public static final <K extends AmqpType<?,?>, V extends AmqpType<?,?>> IAmqpMap<K, V> readMap(int count, int size, DataInput in, MapDecoder<K, V> decoder) throws IOException, AmqpEncodingError {
+        IAmqpMap<K, V> rc = decoder.createMap(count / 2);
+        for (int i = 0; i < count; i += 2) {
+            decoder.unmarshalToMap(in, rc);
+        }
+        return rc;
+    }
+
+    public static final void encodeMap(IAmqpMap<?, ?> value, Buffer target, int offset) throws AmqpEncodingError {
+        for (Map.Entry<? extends AmqpType<?,?>, ? extends AmqpType<?,?>> me : value) {
             Encoded<?> eKey = me.getKey().getBuffer(MARSHALLER).getEncoded();
             eKey.encode(target, offset);
             offset += eKey.getEncodedSize();
@@ -1472,18 +1490,10 @@ public class Encoder extends BaseEncoder {
         }
     }
 
-    public static final void writeMap(HashMap<AmqpType<?, ?>, AmqpType<?, ?>> val, DataOutput out) throws IOException, AmqpEncodingError {
-        for (Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>> me : val.entrySet()) {
+    public static final void writeMap(IAmqpMap<?, ?> val, DataOutput out) throws IOException, AmqpEncodingError {
+        for (Map.Entry<? extends AmqpType<?,?>, ? extends AmqpType<?,?>> me : val) {
             me.getKey().marshal(out, MARSHALLER);
             me.getValue().marshal(out, MARSHALLER);
         }
-    }
-
-    public static final HashMap<AmqpType<?, ?>, AmqpType<?, ?>> readMap(int count, int size, DataInput in, MapDecoder decoder) throws IOException, AmqpEncodingError {
-        HashMap<AmqpType<?, ?>, AmqpType<?, ?>> rc = new HashMap<AmqpType<?, ?>, AmqpType<?, ?>>();
-        for (int i = 0; i < count; i += 2) {
-            decoder.unmarshalToMap(in, rc);
-        }
-        return rc;
     }
 }

@@ -17,6 +17,10 @@
 package org.apache.activemq.amqp.generator.handcoded.types;
 
 import java.util.Iterator;
+import java.util.List;
+
+import org.apache.activemq.amqp.protocol.types.AmqpType;
+import org.apache.activemq.amqp.protocol.types.IAmqpList;
 
 public interface IAmqpList extends Iterable<AmqpType<?, ?>> {
 
@@ -44,6 +48,127 @@ public interface IAmqpList extends Iterable<AmqpType<?, ?>> {
 
         public void remove() {
             throw new UnsupportedOperationException();
+        }
+    }
+
+    public static abstract class AbstractAmqpList implements IAmqpList {
+        public static final int hashCodeFor(IAmqpList l) {
+            int hashCode = 1;
+            for (Object obj : l) {
+                hashCode = 31 * hashCode + (obj == null ? 0 : obj.hashCode());
+            }
+            return hashCode;
+        }
+        
+        public static final boolean checkEqual(IAmqpList l1, IAmqpList l2) {
+            if (l1 == null ^ l2 == null) {
+                return false;
+            }
+
+            if (l1 == null) {
+                return true;
+            }
+
+            if (l1.getListCount() != l2.getListCount()) {
+                return false;
+            }
+
+            Iterator<?> i1 = l1.iterator();
+            Iterator<?> i2 = l2.iterator();
+            while (i1.hasNext()) {
+                Object e1 = i1.next();
+                Object e2 = i2.next();
+                if (!(e1 == null ? e2 == null : e1.equals(e2))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    public static class AmqpWrapperList extends AbstractAmqpList {
+        private final List<AmqpType<?, ?>> list;
+
+        public AmqpWrapperList(List<AmqpType<?, ?>> list) {
+            this.list = list;
+        }
+
+        public AmqpType<?, ?> get(int index) {
+            return list.get(index);
+        }
+
+        public int getListCount() {
+            return list.size();
+        }
+
+        public void set(int index, AmqpType<?, ?> value) {
+            list.set(index, value);
+        }
+
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return list.iterator();
+        }
+
+        public boolean equals(Object o) {
+            if (o == null) {
+                return false;
+            }
+
+            if (o instanceof IAmqpList) {
+                return equals((IAmqpList) o);
+            }
+            return false;
+        }
+
+        public boolean equals(IAmqpList l) {
+            return checkEqual(this, l);
+        }
+
+        public int hashCode() {
+            return hashCodeFor(this);
+        }
+    }
+
+    public static class ArrayBackedList extends AbstractAmqpList {
+        AmqpType<?, ?>[] list;
+
+        ArrayBackedList(int size) {
+            list = new AmqpType<?, ?>[size];
+        }
+
+        public AmqpType<?, ?> get(int index) {
+            return list[index];
+        }
+
+        public int getListCount() {
+            return list.length;
+        }
+
+        public void set(int index, AmqpType<?, ?> value) {
+            list[index] = value;
+        }
+
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return new AmqpListIterator(this);
+        }
+
+        public boolean equals(Object o) {
+            if (o == null) {
+                return false;
+            }
+
+            if (o instanceof IAmqpList) {
+                return equals((IAmqpList) o);
+            }
+            return false;
+        }
+
+        public boolean equals(IAmqpList l) {
+            return checkEqual(this, l);
+        }
+
+        public int hashCode() {
+            return hashCodeFor(this);
         }
     }
 }

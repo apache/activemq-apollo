@@ -116,7 +116,6 @@ public class Generator {
                 if (docOrSection instanceof Section) {
                     Section section = (Section) docOrSection;
 
-                    System.out.println("Scanning: " + section.getName());
                     for (Object docOrDefinitionOrType : section.getDocOrDefinitionOrType()) {
                         if (docOrDefinitionOrType instanceof Type) {
                             generateClassFromType(amqp, section, (Type) docOrDefinitionOrType);
@@ -163,6 +162,7 @@ public class Generator {
         generateCommandHandler();
         generateMarshallerInterface();
         generateMarshaller();
+        generateTypeFactory();
         writeDefinitions();
     }
 
@@ -297,6 +297,7 @@ public class Generator {
         writer.newLine();
 
         TreeSet<String> imports = new TreeSet<String>();
+        imports.add("java.util.HashMap");
         imports.add(getMarshallerPackage() + ".Encoder.*");
         imports.add(getPackagePrefix() + ".marshaller.AmqpVersion");
         imports.add(getPackagePrefix() + ".marshaller.Encoded");
@@ -518,7 +519,7 @@ public class Generator {
         filters.add("map");
 
         // Write out encoding serializers:
-        classLoop: for (AmqpClass amqpClass : TypeRegistry.getGeneratedTypes()) {
+        for (AmqpClass amqpClass : TypeRegistry.getGeneratedTypes()) {
             if (!amqpClass.isPrimitive() || filters.contains(amqpClass.getName())) {
                 continue;
             }
@@ -571,17 +572,94 @@ public class Generator {
         writer.close();
     }
 
-    private void writeMarshallerImports(BufferedWriter writer, boolean primitiveOnly, TreeSet<String> imports, String... packageFilters) throws IOException, UnknownTypeException {
-        HashSet<String> filters = new HashSet<String>();
-        filters.add("java.lang");
-        for (String filter : packageFilters) {
-            filters.add(filter);
+    private void generateTypeFactory() throws IOException, UnknownTypeException {
+
+        String outputPackage = getPackagePrefix() + ".types";
+        File out = new File(outputDirectory + File.separator + outputPackage.replace(".", File.separator) + File.separator + "TypeFactory.java");
+
+        BufferedWriter writer = new BufferedWriter(new FileWriter(out));
+
+        writeJavaCopyWrite(writer);
+        writer.write("package " + outputPackage + ";");
+        writer.newLine();
+        writer.newLine();
+
+        TreeSet<String> imports = new TreeSet<String>();
+        writeTypeImports(writer, true, imports, getMarshallerPackage(), outputPackage);
+        writer.newLine();
+
+        writer.newLine();
+        writer.write("public class TypeFactory {");
+        writer.newLine();
+        
+        for (AmqpClass ac : TypeRegistry.getGeneratedTypes()) {
+            if (ac.isAny() || ac.isEnumType()) {
+                continue;
+            }
+            if (ac.isDescribed()) {
+                writer.newLine();
+                writeJavaComment(writer, 1, "Creates a " + ac.getTypeMapping());
+                writer.write(tab(1) + "public static final " + ac.getTypeMapping() + " create" + ac.getTypeMapping() + "() {");
+                writer.newLine();
+                writer.write(tab(2) + "return new " + ac.getBeanMapping() + "();");
+                writer.newLine();
+                writer.write(tab(1) + "};");
+                writer.newLine();
+            } else {
+                AmqpClass bt = ac.resolveBaseType();
+                writer.newLine();
+                writeJavaComment(writer, 1, "Creates a " + ac.getTypeMapping());
+                writer.write(tab(1) + "public static final " + ac.getTypeMapping() + " create" + ac.getTypeMapping() + "(" + bt.getValueMapping() + " val) {");
+                writer.newLine();
+                writer.write(tab(2) + "return new " + ac.getBeanMapping() + "(val);");
+                writer.newLine();
+                writer.write(tab(1) + "}");
+                writer.newLine();
+                
+                if(bt.getValueMapping().hasPrimitiveType())
+                {
+                    writeJavaComment(writer, 1, "Creates a " + ac.getTypeMapping());
+                    writer.write(tab(1) + "public static final " + ac.getTypeMapping() + " create" + ac.getTypeMapping() + "(" + bt.getValueMapping().getPrimitiveType() + " val) {");
+                    writer.newLine();
+                    writer.write(tab(2) + "return new " + ac.getBeanMapping() + "(val);");
+                    writer.newLine();
+                    writer.write(tab(1) + "}");
+                    writer.newLine();
+                }
+                
+                if(bt.isMutable())
+                {
+                    writeJavaComment(writer, 1, "Creates an empty " + ac.getTypeMapping());
+                    writer.write(tab(1) + "public static final " + ac.getTypeMapping() + " create" + ac.getTypeMapping() + "() {");
+                    writer.newLine();
+                    writer.write(tab(2) + "return new " + ac.getBeanMapping() + "();");
+                    writer.newLine();
+                    writer.write(tab(1) + "}");
+                    writer.newLine();
+                }
+            }
         }
+        writer.write("}");
+        writer.newLine();
+        writer.flush();
+        writer.close();
+    }
+
+    private void writeMarshallerImports(BufferedWriter writer, boolean primitiveOnly, TreeSet<String> imports, String... packageFilters) throws IOException, UnknownTypeException {
 
         imports.add("java.io.DataInput");
         imports.add("java.io.IOException");
         imports.add(getPackagePrefix() + ".marshaller.AmqpEncodingError");
 
+        writeTypeImports(writer, primitiveOnly, imports, packageFilters);
+    }
+
+    private void writeTypeImports(BufferedWriter writer, boolean primitiveOnly, TreeSet<String> imports, String... packageFilters) throws IOException, UnknownTypeException {
+        HashSet<String> filters = new HashSet<String>();
+        filters.add("java.lang");
+        for (String filter : packageFilters) {
+            filters.add(filter);
+        }
         for (AmqpClass amqpClass : TypeRegistry.getGeneratedTypes()) {
             if (primitiveOnly && (!amqpClass.isPrimitive() || amqpClass.isList() || amqpClass.isMap())) {
                 continue;
@@ -609,7 +687,6 @@ public class Generator {
         AmqpClass amqpClass = new AmqpClass();
         amqpClass.parseFromType(this, source, section, type);
         TypeRegistry.addType(amqpClass);
-        System.out.println("Found: " + amqpClass);
     }
 
     public String getVersionPackageName() {

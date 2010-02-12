@@ -33,32 +33,34 @@ public class TypeRegistry {
     }
 
     static final void init(Generator generator) {
-        
-        JAVA_TYPE_MAP.put("boolean", new JavaTypeMapping("boolean", "java.lang.Boolean"));
-        JAVA_TYPE_MAP.put("ubyte", new JavaTypeMapping("ubyte", "java.lang.Short"));
-        JAVA_TYPE_MAP.put("ushort", new JavaTypeMapping("ushort", "java.lang.Integer"));
-        JAVA_TYPE_MAP.put("uint", new JavaTypeMapping("uint", "java.lang.Long"));
+
+        // Add in the wildcard type:
+        AmqpClass any = new AmqpType("*", generator.getPackagePrefix() + ".types.AmqpType");
+        GENERATED_TYPE_MAP.put("*", any);
+        JAVA_TYPE_MAP.put("*", any.typeMapping);
+
+        //
+        JAVA_TYPE_MAP.put("boolean", new JavaTypeMapping("boolean", "java.lang.Boolean", "boolean"));
+        JAVA_TYPE_MAP.put("ubyte", new JavaTypeMapping("ubyte", "java.lang.Short", "short"));
+        JAVA_TYPE_MAP.put("ushort", new JavaTypeMapping("ushort", "java.lang.Integer", "int"));
+        JAVA_TYPE_MAP.put("uint", new JavaTypeMapping("uint", "java.lang.Long", "long"));
         JAVA_TYPE_MAP.put("ulong", new JavaTypeMapping("ulong", "java.math.BigInteger"));
-        JAVA_TYPE_MAP.put("byte", new JavaTypeMapping("byte", "java.lang.Byte"));
-        JAVA_TYPE_MAP.put("short", new JavaTypeMapping("short", "java.lang.Short"));
-        JAVA_TYPE_MAP.put("int", new JavaTypeMapping("int", "java.lang.Integer"));
-        JAVA_TYPE_MAP.put("long", new JavaTypeMapping("long", "java.lang.Long"));
-        JAVA_TYPE_MAP.put("float", new JavaTypeMapping("float", "java.lang.Float"));
-        JAVA_TYPE_MAP.put("double", new JavaTypeMapping("double", "java.lang.Double"));
-        JAVA_TYPE_MAP.put("char", new JavaTypeMapping("char", "java.lang.Integer"));
+        JAVA_TYPE_MAP.put("byte", new JavaTypeMapping("byte", "java.lang.Byte", "byte"));
+        JAVA_TYPE_MAP.put("short", new JavaTypeMapping("short", "java.lang.Short", "short"));
+        JAVA_TYPE_MAP.put("int", new JavaTypeMapping("int", "java.lang.Integer", "int"));
+        JAVA_TYPE_MAP.put("long", new JavaTypeMapping("long", "java.lang.Long", "long"));
+        JAVA_TYPE_MAP.put("float", new JavaTypeMapping("float", "java.lang.Float", "float"));
+        JAVA_TYPE_MAP.put("double", new JavaTypeMapping("double", "java.lang.Double", "double"));
+        JAVA_TYPE_MAP.put("char", new JavaTypeMapping("char", "java.lang.Integer", "int"));
         JAVA_TYPE_MAP.put("timestamp", new JavaTypeMapping("timestamp", "java.util.Date"));
         JAVA_TYPE_MAP.put("uuid", new JavaTypeMapping("uuid", "java.util.UUID"));
         JAVA_TYPE_MAP.put("binary", new JavaTypeMapping("binary", "org.apache.activemq.util.buffer.Buffer"));
         JAVA_TYPE_MAP.put("string", new JavaTypeMapping("string", "java.lang.String"));
         JAVA_TYPE_MAP.put("symbol", new JavaTypeMapping("symbol", "java.lang.String"));
         JAVA_TYPE_MAP.put("list", new JavaTypeMapping("list", generator.getPackagePrefix() + ".types.IAmqpList"));
-        JAVA_TYPE_MAP.put("map", new JavaTypeMapping("map", "java.util.HashMap", false, "<AmqpType<?,?>, AmqpType<?,?>>"));
+        JAVA_TYPE_MAP.put("map", new JavaTypeMapping("map", generator.getPackagePrefix() + ".types.IAmqpMap", false, "<" + any.getJavaType() + ", " + any.getJavaType() + ">"));
         JAVA_TYPE_MAP.put("null", new JavaTypeMapping("null", "java.lang.Object"));
-        
-        // Add in the wildcard type:
-        AmqpClass any = new AmqpType("*", generator.getPackagePrefix() + ".types.AmqpType");
-        GENERATED_TYPE_MAP.put("*", any);
-        JAVA_TYPE_MAP.put("*", any.typeMapping);
+
     }
 
     public static JavaTypeMapping getJavaTypeMapping(String name) throws UnknownTypeException {
@@ -76,11 +78,10 @@ public class TypeRegistry {
         return mapping;
     }
 
-    public static AmqpClass any()
-    {
+    public static AmqpClass any() {
         return GENERATED_TYPE_MAP.get("*");
     }
-    
+
     public static AmqpClass resolveAmqpClass(AmqpField amqpField) throws UnknownTypeException {
         return resolveAmqpClass(amqpField.getType());
     }
@@ -134,9 +135,9 @@ public class TypeRegistry {
         private String packageName;
         private String fullName;
         private String javaType;
+        private String primitiveType;
 
         boolean array;
-        private boolean inner;
         String generic;
 
         JavaTypeMapping(String amqpType, String fullName, boolean array, String generic) {
@@ -151,6 +152,15 @@ public class TypeRegistry {
             }
         }
 
+        JavaTypeMapping(String amqpType, String fullName, String primitiveType) {
+            this.amqpType = amqpType;
+            this.fullName = fullName;
+            this.primitiveType = primitiveType;
+            this.packageName = fullName.substring(0, fullName.lastIndexOf("."));
+            this.shortName = fullName.substring(fullName.lastIndexOf(".") + 1);
+            this.javaType = shortName;
+        }
+
         JavaTypeMapping(String amqpType, String fullName) {
             this.amqpType = amqpType;
             this.fullName = fullName;
@@ -163,12 +173,22 @@ public class TypeRegistry {
             this.amqpType = amqpType;
             this.fullName = packageName + "." + className;
             this.packageName = packageName;
-            this.inner = inner;
             this.javaType = className;
             if (inner) {
                 this.javaType = className;
                 this.shortName = className.substring(className.lastIndexOf(".") + 1);
             }
+        }
+
+        public boolean hasPrimitiveType() {
+            return primitiveType != null;
+        }
+
+        public String getPrimitiveType() {
+            if (primitiveType == null) {
+                return javaType;
+            }
+            return primitiveType;
         }
 
         public String getAmqpType() {
