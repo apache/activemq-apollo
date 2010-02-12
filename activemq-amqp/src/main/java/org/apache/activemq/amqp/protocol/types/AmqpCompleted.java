@@ -21,9 +21,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.Boolean;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
 import org.apache.activemq.amqp.protocol.marshaller.Encoded;
+import org.apache.activemq.amqp.protocol.types.IAmqpMap;
 import org.apache.activemq.util.buffer.Buffer;
 
 /**
@@ -37,6 +40,12 @@ import org.apache.activemq.util.buffer.Buffer;
 public interface AmqpCompleted extends AmqpMap {
 
 
+    /**
+     * Key for: permit truncation of the remaining transfer
+     */
+    public static final AmqpSymbol TRUNCATE_KEY = TypeFactory.createAmqpSymbol("truncate");
+
+
 
     /**
      * permit truncation of the remaining transfer
@@ -46,6 +55,15 @@ public interface AmqpCompleted extends AmqpMap {
      * </p>
      */
     public void setTruncate(Boolean truncate);
+
+    /**
+     * permit truncation of the remaining transfer
+     * <p>
+     * The truncate flag, if true, indicates that the receiver is not interested in the rest of
+     * the Message content, and the sender is free to omit it.
+     * </p>
+     */
+    public void setTruncate(boolean truncate);
 
     /**
      * permit truncation of the remaining transfer
@@ -70,16 +88,17 @@ public interface AmqpCompleted extends AmqpMap {
         private AmqpCompletedBuffer buffer;
         private AmqpCompletedBean bean = this;
         private AmqpBoolean truncate;
-        private HashMap<AmqpType<?,?>, AmqpType<?,?>> value;
+        private IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value;
 
-        public AmqpCompletedBean() {
+        AmqpCompletedBean() {
+            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());
         }
 
-        public AmqpCompletedBean(HashMap<AmqpType<?,?>, AmqpType<?,?>> value) {
+        AmqpCompletedBean(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) {
             this.value = value;
         }
 
-        public AmqpCompletedBean(AmqpCompleted.AmqpCompletedBean other) {
+        AmqpCompletedBean(AmqpCompleted.AmqpCompletedBean other) {
             this.bean = other;
         }
 
@@ -100,7 +119,12 @@ public interface AmqpCompleted extends AmqpMap {
 
 
         public void setTruncate(Boolean truncate) {
-            setTruncate(new AmqpBoolean.AmqpBooleanBean(truncate));
+            setTruncate(TypeFactory.createAmqpBoolean(truncate));
+        }
+
+
+        public void setTruncate(boolean truncate) {
+            setTruncate(TypeFactory.createAmqpBoolean(truncate));
         }
 
 
@@ -113,14 +137,23 @@ public interface AmqpCompleted extends AmqpMap {
             return bean.truncate.getValue();
         }
         public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+            copyCheck();
             bean.value.put(key, value);
         }
 
-        public AmqpType<?, ?> get(AmqpType<?, ?> key) {
+        public AmqpType<?, ?> get(Object key) {
             return bean.value.get(key);
         }
 
-        public HashMap<AmqpType<?,?>, AmqpType<?,?>> getValue() {
+        public int getEntryCount() {
+            return bean.value.getEntryCount();
+        }
+
+        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+            return bean.value.iterator();
+        }
+
+        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
             return bean.value;
         }
 
@@ -135,23 +168,22 @@ public interface AmqpCompleted extends AmqpMap {
         }
 
         private final void copy(AmqpCompleted.AmqpCompletedBean other) {
-            this.truncate= other.truncate;
             bean = this;
         }
 
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
+        public boolean equals(Object o){
+            if(this == o) {
                 return true;
             }
 
-            if(t == null || !(t instanceof AmqpCompleted)) {
+            if(o == null || !(o instanceof AmqpCompleted)) {
                 return false;
             }
 
-            return equivalent((AmqpCompleted) t);
+            return equals((AmqpCompleted) o);
         }
 
-        public boolean equivalent(AmqpCompleted b) {
+        public boolean equals(AmqpCompleted b) {
 
             if(b.getTruncate() == null ^ getTruncate() == null) {
                 return false;
@@ -161,19 +193,28 @@ public interface AmqpCompleted extends AmqpMap {
             }
             return true;
         }
+
+        public int hashCode() {
+            return AbstractAmqpMap.hashCodeFor(this);
+        }
     }
 
     public static class AmqpCompletedBuffer extends AmqpMap.AmqpMapBuffer implements AmqpCompleted{
 
         private AmqpCompletedBean bean;
 
-        protected AmqpCompletedBuffer(Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> encoded) {
+        protected AmqpCompletedBuffer(Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
-    public void setTruncate(Boolean truncate) {
+        public void setTruncate(Boolean truncate) {
             bean().setTruncate(truncate);
         }
+
+        public void setTruncate(boolean truncate) {
+            bean().setTruncate(truncate);
+        }
+
 
         public final void setTruncate(AmqpBoolean truncate) {
             bean().setTruncate(truncate);
@@ -186,11 +227,19 @@ public interface AmqpCompleted extends AmqpMap {
             bean().put(key, value);
         }
 
-        public AmqpType<?, ?> get(AmqpType<?, ?> key) {
+        public AmqpType<?, ?> get(Object key) {
             return bean().get(key);
         }
 
-        public HashMap<AmqpType<?,?>, AmqpType<?,?>> getValue() {
+        public int getEntryCount() {
+            return bean().getEntryCount();
+        }
+
+        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+            return bean().iterator();
+        }
+
+        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
             return bean().getValue();
         }
 
@@ -206,11 +255,19 @@ public interface AmqpCompleted extends AmqpMap {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
         }
 
-        public static AmqpCompleted.AmqpCompletedBuffer create(Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> encoded) {
+        public boolean equals(AmqpCompleted o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
+        }
+
+        public static AmqpCompleted.AmqpCompletedBuffer create(Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

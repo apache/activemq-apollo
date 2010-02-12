@@ -58,6 +58,15 @@ public interface AmqpHeader extends AmqpList {
      * restarted.
      * </p>
      */
+    public void setDurable(boolean durable);
+
+    /**
+     * specify durability requirements
+     * <p>
+     * Durable Messages MUST NOT be lost even if an intermediary is unexpectedly terminated and
+     * restarted.
+     * </p>
+     */
     public void setDurable(AmqpBoolean durable);
 
     /**
@@ -114,6 +123,52 @@ public interface AmqpHeader extends AmqpList {
      * </p>
      */
     public void setPriority(Short priority);
+
+    /**
+     * relative Message priority
+     * <p>
+     * This field contains the relative Message priority. Higher numbers indicate higher
+     * priority Messages. Messages with higher priorities MAY be delivered before those with
+     * lower priorities.
+     * </p>
+     * <p>
+     * An AMQP intermediary implementing distinct priority levels MUST do so in the following
+     * manner:
+     * </p>
+     * <ul>
+     * <li>
+     * <p>
+     * If n distinct priorities are implemented and n is less than 10 -- priorities 0 to
+     * (5 - ceiling(n/2)) MUST be treated equivalently and MUST be the lowest effective
+     * priority. The priorities (4 + floor(n/2)) and above MUST be treated equivalently
+     * and MUST be the highest effective priority. The priorities (5 - ceiling(n/2)) to (4
+     * + floor(n/2)) inclusive MUST be treated as distinct priorities.
+     * </p>
+     * <
+     * ></li>
+     * <li>
+     * <p>
+     * If n distinct priorities are implemented and n is 10 or greater -- priorities 0 to
+     * (n - 1) MUST be distinct, and priorities n and above MUST be equivalent to priority
+     * (n - 1).
+     * </p>
+     * <
+     * ></li>
+     * <
+     * ></ul>
+     * <p>
+     * Thus, for example, if 2 distinct priorities are implemented, then levels 0 to 4 are
+     * equivalent, and levels 5 to 9 are equivalent and levels 4 and 5 are distinct. If 3
+     * distinct priorities are implements the 0 to 3 are equivalent, 5 to 9 are equivalent and
+     * 3, 4 and 5 are distinct.
+     * </p>
+     * <p>
+     * This scheme ensures that if two priorities are distinct for a server which implements m
+     * separate priority levels they are also distinct for a server which implements n
+     * different priority levels where n > m.
+     * </p>
+     */
+    public void setPriority(short priority);
 
     /**
      * relative Message priority
@@ -286,6 +341,15 @@ public interface AmqpHeader extends AmqpList {
      * current Link has been previously attempted.
      * </p>
      */
+    public void setFormerAcquirers(long formerAcquirers);
+
+    /**
+     * <p>
+     * The number of other DESTRUCTIVE Links to which delivery of this Message was previously
+     * attempted unsuccessfully. This does not include the current Link even if delivery to the
+     * current Link has been previously attempted.
+     * </p>
+     */
     public void setFormerAcquirers(AmqpUint formerAcquirers);
 
     /**
@@ -343,6 +407,30 @@ public interface AmqpHeader extends AmqpList {
      * </li>
      * </ol>
      */
+    public void setDeliveryFailures(long deliveryFailures);
+
+    /**
+     * the number of prior unsuccessful delivery attempts
+     * <p>
+     * The number of unsuccessful previous attempts to deliver this message. If this value is
+     * non-zero it may be taken as an indication that the Message may be a duplicate. The
+     * delivery-failures value is initially set to the same value as the Message has when it
+     * arrived at the source. It is incremented When:
+     * </p>
+     * <ol>
+     * <li>
+     * <p>
+     * the Message has previously been sent from this Node using a Source with a
+     * distribution-mode of DESTRUCTIVE which closed without the Message being acknowledged
+     * </p>
+     * </li>
+     * <li>
+     * <p>
+     * and the delivery-failed field set to true.
+     * </p>
+     * </li>
+     * </ol>
+     */
     public void setDeliveryFailures(AmqpUint deliveryFailures);
 
     /**
@@ -373,6 +461,11 @@ public interface AmqpHeader extends AmqpList {
      * indicates the format of the Message
      */
     public void setFormatCode(Long formatCode);
+
+    /**
+     * indicates the format of the Message
+     */
+    public void setFormatCode(long formatCode);
 
     /**
      * indicates the format of the Message
@@ -434,345 +527,365 @@ public interface AmqpHeader extends AmqpList {
         private AmqpMessageAttributes messageAttrs;
         private AmqpMessageAttributes deliveryAttrs;
 
-        public AmqpHeaderBean() {
+        AmqpHeaderBean() {
         }
 
-        public AmqpHeaderBean(IAmqpList value) {
-            //TODO we should defer decoding of the described type:
-            for(int i = 0; i < value.getListCount(); i++) {
-                set(i, value.get(i));
-            }
-        }
+        AmqpHeaderBean(IAmqpList value) {
 
-        public AmqpHeaderBean(AmqpHeader.AmqpHeaderBean other) {
-            this.bean = other;
-        }
-
-        public final AmqpHeaderBean copy() {
-            return new AmqpHeader.AmqpHeaderBean(bean);
-        }
-
-        public final AmqpHeader.AmqpHeaderBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-            if(buffer == null) {
-                buffer = new AmqpHeaderBuffer(marshaller.encode(this));
-            }
-            return buffer;
-        }
-
-        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-            getBuffer(marshaller).marshal(out, marshaller);
-        }
-
-
-        public void setDurable(Boolean durable) {
-            setDurable(new AmqpBoolean.AmqpBooleanBean(durable));
-        }
-
-
-        public final void setDurable(AmqpBoolean durable) {
-            copyCheck();
-            bean.durable = durable;
-        }
-
-        public final Boolean getDurable() {
-            return bean.durable.getValue();
-        }
-
-        public void setPriority(Short priority) {
-            setPriority(new AmqpUbyte.AmqpUbyteBean(priority));
-        }
-
-
-        public final void setPriority(AmqpUbyte priority) {
-            copyCheck();
-            bean.priority = priority;
-        }
-
-        public final Short getPriority() {
-            return bean.priority.getValue();
-        }
-
-        public void setTransmitTime(Date transmitTime) {
-            setTransmitTime(new AmqpTimestamp.AmqpTimestampBean(transmitTime));
-        }
-
-
-        public final void setTransmitTime(AmqpTimestamp transmitTime) {
-            copyCheck();
-            bean.transmitTime = transmitTime;
-        }
-
-        public final Date getTransmitTime() {
-            return bean.transmitTime.getValue();
-        }
-
-        public void setTtl(BigInteger ttl) {
-            setTtl(new AmqpUlong.AmqpUlongBean(ttl));
-        }
-
-
-        public final void setTtl(AmqpUlong ttl) {
-            copyCheck();
-            bean.ttl = ttl;
-        }
-
-        public final BigInteger getTtl() {
-            return bean.ttl.getValue();
-        }
-
-        public void setFormerAcquirers(Long formerAcquirers) {
-            setFormerAcquirers(new AmqpUint.AmqpUintBean(formerAcquirers));
-        }
-
-
-        public final void setFormerAcquirers(AmqpUint formerAcquirers) {
-            copyCheck();
-            bean.formerAcquirers = formerAcquirers;
-        }
-
-        public final Long getFormerAcquirers() {
-            return bean.formerAcquirers.getValue();
-        }
-
-        public void setDeliveryFailures(Long deliveryFailures) {
-            setDeliveryFailures(new AmqpUint.AmqpUintBean(deliveryFailures));
-        }
-
-
-        public final void setDeliveryFailures(AmqpUint deliveryFailures) {
-            copyCheck();
-            bean.deliveryFailures = deliveryFailures;
-        }
-
-        public final Long getDeliveryFailures() {
-            return bean.deliveryFailures.getValue();
-        }
-
-        public void setFormatCode(Long formatCode) {
-            setFormatCode(new AmqpUint.AmqpUintBean(formatCode));
-        }
-
-
-        public final void setFormatCode(AmqpUint formatCode) {
-            copyCheck();
-            bean.formatCode = formatCode;
-        }
-
-        public final Long getFormatCode() {
-            return bean.formatCode.getValue();
-        }
-
-        public final void setMessageAttrs(AmqpMessageAttributes messageAttrs) {
-            copyCheck();
-            bean.messageAttrs = messageAttrs;
-        }
-
-        public final AmqpMessageAttributes getMessageAttrs() {
-            return bean.messageAttrs;
-        }
-
-        public final void setDeliveryAttrs(AmqpMessageAttributes deliveryAttrs) {
-            copyCheck();
-            bean.deliveryAttrs = deliveryAttrs;
-        }
-
-        public final AmqpMessageAttributes getDeliveryAttrs() {
-            return bean.deliveryAttrs;
-        }
-
-        public void set(int index, AmqpType<?, ?> value) {
-            switch(index) {
-            case 0: {
-                setDurable((AmqpBoolean) value);
-                break;
-            }
-            case 1: {
-                setPriority((AmqpUbyte) value);
-                break;
-            }
-            case 2: {
-                setTransmitTime((AmqpTimestamp) value);
-                break;
-            }
-            case 3: {
-                setTtl((AmqpUlong) value);
-                break;
-            }
-            case 4: {
-                setFormerAcquirers((AmqpUint) value);
-                break;
-            }
-            case 5: {
-                setDeliveryFailures((AmqpUint) value);
-                break;
-            }
-            case 6: {
-                setFormatCode((AmqpUint) value);
-                break;
-            }
-            case 7: {
-                setMessageAttrs((AmqpMessageAttributes) value);
-                break;
-            }
-            case 8: {
-                setDeliveryAttrs((AmqpMessageAttributes) value);
-                break;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public AmqpType<?, ?> get(int index) {
-            switch(index) {
-            case 0: {
-                return bean.durable;
-            }
-            case 1: {
-                return bean.priority;
-            }
-            case 2: {
-                return bean.transmitTime;
-            }
-            case 3: {
-                return bean.ttl;
-            }
-            case 4: {
-                return bean.formerAcquirers;
-            }
-            case 5: {
-                return bean.deliveryFailures;
-            }
-            case 6: {
-                return bean.formatCode;
-            }
-            case 7: {
-                return bean.messageAttrs;
-            }
-            case 8: {
-                return bean.deliveryAttrs;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public int getListCount() {
-            return 9;
-        }
-
-        public IAmqpList getValue() {
-            return bean;
-        }
-
-        public Iterator<AmqpType<?, ?>> iterator() {
-            return new AmqpListIterator(bean);
-        }
-
-
-        private final void copyCheck() {
-            if(buffer != null) {;
-                throw new IllegalStateException("unwriteable");
-            }
-            if(bean != this) {;
-                copy(bean);
-            }
-        }
-
-        private final void copy(AmqpHeader.AmqpHeaderBean other) {
-            this.durable= other.durable;
-            this.priority= other.priority;
-            this.transmitTime= other.transmitTime;
-            this.ttl= other.ttl;
-            this.formerAcquirers= other.formerAcquirers;
-            this.deliveryFailures= other.deliveryFailures;
-            this.formatCode= other.formatCode;
-            this.messageAttrs= other.messageAttrs;
-            this.deliveryAttrs= other.deliveryAttrs;
-            bean = this;
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpHeader)) {
-                return false;
-            }
-
-            return equivalent((AmqpHeader) t);
-        }
-
-        public boolean equivalent(AmqpHeader b) {
-
-            if(b.getDurable() == null ^ getDurable() == null) {
-                return false;
-            }
-            if(b.getDurable() != null && !b.getDurable().equals(getDurable())){ 
-                return false;
-            }
-
-            if(b.getPriority() == null ^ getPriority() == null) {
-                return false;
-            }
-            if(b.getPriority() != null && !b.getPriority().equals(getPriority())){ 
-                return false;
-            }
-
-            if(b.getTransmitTime() == null ^ getTransmitTime() == null) {
-                return false;
-            }
-            if(b.getTransmitTime() != null && !b.getTransmitTime().equals(getTransmitTime())){ 
-                return false;
-            }
-
-            if(b.getTtl() == null ^ getTtl() == null) {
-                return false;
-            }
-            if(b.getTtl() != null && !b.getTtl().equals(getTtl())){ 
-                return false;
-            }
-
-            if(b.getFormerAcquirers() == null ^ getFormerAcquirers() == null) {
-                return false;
-            }
-            if(b.getFormerAcquirers() != null && !b.getFormerAcquirers().equals(getFormerAcquirers())){ 
-                return false;
-            }
-
-            if(b.getDeliveryFailures() == null ^ getDeliveryFailures() == null) {
-                return false;
-            }
-            if(b.getDeliveryFailures() != null && !b.getDeliveryFailures().equals(getDeliveryFailures())){ 
-                return false;
-            }
-
-            if(b.getFormatCode() == null ^ getFormatCode() == null) {
-                return false;
-            }
-            if(b.getFormatCode() != null && !b.getFormatCode().equals(getFormatCode())){ 
-                return false;
-            }
-
-            if(b.getMessageAttrs() == null ^ getMessageAttrs() == null) {
-                return false;
-            }
-            if(b.getMessageAttrs() != null && !b.getMessageAttrs().equals(getMessageAttrs())){ 
-                return false;
-            }
-
-            if(b.getDeliveryAttrs() == null ^ getDeliveryAttrs() == null) {
-                return false;
-            }
-            if(b.getDeliveryAttrs() != null && !b.getDeliveryAttrs().equals(getDeliveryAttrs())){ 
-                return false;
-            }
-            return true;
+        for(int i = 0; i < value.getListCount(); i++) {
+            set(i, value.get(i));
         }
     }
+
+    AmqpHeaderBean(AmqpHeader.AmqpHeaderBean other) {
+        this.bean = other;
+    }
+
+    public final AmqpHeaderBean copy() {
+        return new AmqpHeader.AmqpHeaderBean(bean);
+    }
+
+    public final AmqpHeader.AmqpHeaderBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+        if(buffer == null) {
+            buffer = new AmqpHeaderBuffer(marshaller.encode(this));
+        }
+        return buffer;
+    }
+
+    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+        getBuffer(marshaller).marshal(out, marshaller);
+    }
+
+
+    public void setDurable(Boolean durable) {
+        setDurable(TypeFactory.createAmqpBoolean(durable));
+    }
+
+
+    public void setDurable(boolean durable) {
+        setDurable(TypeFactory.createAmqpBoolean(durable));
+    }
+
+
+    public final void setDurable(AmqpBoolean durable) {
+        copyCheck();
+        bean.durable = durable;
+    }
+
+    public final Boolean getDurable() {
+        return bean.durable.getValue();
+    }
+
+    public void setPriority(Short priority) {
+        setPriority(TypeFactory.createAmqpUbyte(priority));
+    }
+
+
+    public void setPriority(short priority) {
+        setPriority(TypeFactory.createAmqpUbyte(priority));
+    }
+
+
+    public final void setPriority(AmqpUbyte priority) {
+        copyCheck();
+        bean.priority = priority;
+    }
+
+    public final Short getPriority() {
+        return bean.priority.getValue();
+    }
+
+    public void setTransmitTime(Date transmitTime) {
+        setTransmitTime(TypeFactory.createAmqpTimestamp(transmitTime));
+    }
+
+
+    public final void setTransmitTime(AmqpTimestamp transmitTime) {
+        copyCheck();
+        bean.transmitTime = transmitTime;
+    }
+
+    public final Date getTransmitTime() {
+        return bean.transmitTime.getValue();
+    }
+
+    public void setTtl(BigInteger ttl) {
+        setTtl(TypeFactory.createAmqpUlong(ttl));
+    }
+
+
+    public final void setTtl(AmqpUlong ttl) {
+        copyCheck();
+        bean.ttl = ttl;
+    }
+
+    public final BigInteger getTtl() {
+        return bean.ttl.getValue();
+    }
+
+    public void setFormerAcquirers(Long formerAcquirers) {
+        setFormerAcquirers(TypeFactory.createAmqpUint(formerAcquirers));
+    }
+
+
+    public void setFormerAcquirers(long formerAcquirers) {
+        setFormerAcquirers(TypeFactory.createAmqpUint(formerAcquirers));
+    }
+
+
+    public final void setFormerAcquirers(AmqpUint formerAcquirers) {
+        copyCheck();
+        bean.formerAcquirers = formerAcquirers;
+    }
+
+    public final Long getFormerAcquirers() {
+        return bean.formerAcquirers.getValue();
+    }
+
+    public void setDeliveryFailures(Long deliveryFailures) {
+        setDeliveryFailures(TypeFactory.createAmqpUint(deliveryFailures));
+    }
+
+
+    public void setDeliveryFailures(long deliveryFailures) {
+        setDeliveryFailures(TypeFactory.createAmqpUint(deliveryFailures));
+    }
+
+
+    public final void setDeliveryFailures(AmqpUint deliveryFailures) {
+        copyCheck();
+        bean.deliveryFailures = deliveryFailures;
+    }
+
+    public final Long getDeliveryFailures() {
+        return bean.deliveryFailures.getValue();
+    }
+
+    public void setFormatCode(Long formatCode) {
+        setFormatCode(TypeFactory.createAmqpUint(formatCode));
+    }
+
+
+    public void setFormatCode(long formatCode) {
+        setFormatCode(TypeFactory.createAmqpUint(formatCode));
+    }
+
+
+    public final void setFormatCode(AmqpUint formatCode) {
+        copyCheck();
+        bean.formatCode = formatCode;
+    }
+
+    public final Long getFormatCode() {
+        return bean.formatCode.getValue();
+    }
+
+    public final void setMessageAttrs(AmqpMessageAttributes messageAttrs) {
+        copyCheck();
+        bean.messageAttrs = messageAttrs;
+    }
+
+    public final AmqpMessageAttributes getMessageAttrs() {
+        return bean.messageAttrs;
+    }
+
+    public final void setDeliveryAttrs(AmqpMessageAttributes deliveryAttrs) {
+        copyCheck();
+        bean.deliveryAttrs = deliveryAttrs;
+    }
+
+    public final AmqpMessageAttributes getDeliveryAttrs() {
+        return bean.deliveryAttrs;
+    }
+
+    public void set(int index, AmqpType<?, ?> value) {
+        switch(index) {
+        case 0: {
+            setDurable((AmqpBoolean) value);
+            break;
+        }
+        case 1: {
+            setPriority((AmqpUbyte) value);
+            break;
+        }
+        case 2: {
+            setTransmitTime((AmqpTimestamp) value);
+            break;
+        }
+        case 3: {
+            setTtl((AmqpUlong) value);
+            break;
+        }
+        case 4: {
+            setFormerAcquirers((AmqpUint) value);
+            break;
+        }
+        case 5: {
+            setDeliveryFailures((AmqpUint) value);
+            break;
+        }
+        case 6: {
+            setFormatCode((AmqpUint) value);
+            break;
+        }
+        case 7: {
+            setMessageAttrs((AmqpMessageAttributes) value);
+            break;
+        }
+        case 8: {
+            setDeliveryAttrs((AmqpMessageAttributes) value);
+            break;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public AmqpType<?, ?> get(int index) {
+        switch(index) {
+        case 0: {
+            return bean.durable;
+        }
+        case 1: {
+            return bean.priority;
+        }
+        case 2: {
+            return bean.transmitTime;
+        }
+        case 3: {
+            return bean.ttl;
+        }
+        case 4: {
+            return bean.formerAcquirers;
+        }
+        case 5: {
+            return bean.deliveryFailures;
+        }
+        case 6: {
+            return bean.formatCode;
+        }
+        case 7: {
+            return bean.messageAttrs;
+        }
+        case 8: {
+            return bean.deliveryAttrs;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public int getListCount() {
+        return 9;
+    }
+
+    public IAmqpList getValue() {
+        return bean;
+    }
+
+    public Iterator<AmqpType<?, ?>> iterator() {
+        return new AmqpListIterator(bean);
+    }
+
+
+    private final void copyCheck() {
+        if(buffer != null) {;
+            throw new IllegalStateException("unwriteable");
+        }
+        if(bean != this) {;
+            copy(bean);
+        }
+    }
+
+    private final void copy(AmqpHeader.AmqpHeaderBean other) {
+        bean = this;
+    }
+
+    public boolean equals(Object o){
+        if(this == o) {
+            return true;
+        }
+
+        if(o == null || !(o instanceof AmqpHeader)) {
+            return false;
+        }
+
+        return equals((AmqpHeader) o);
+    }
+
+    public boolean equals(AmqpHeader b) {
+
+        if(b.getDurable() == null ^ getDurable() == null) {
+            return false;
+        }
+        if(b.getDurable() != null && !b.getDurable().equals(getDurable())){ 
+            return false;
+        }
+
+        if(b.getPriority() == null ^ getPriority() == null) {
+            return false;
+        }
+        if(b.getPriority() != null && !b.getPriority().equals(getPriority())){ 
+            return false;
+        }
+
+        if(b.getTransmitTime() == null ^ getTransmitTime() == null) {
+            return false;
+        }
+        if(b.getTransmitTime() != null && !b.getTransmitTime().equals(getTransmitTime())){ 
+            return false;
+        }
+
+        if(b.getTtl() == null ^ getTtl() == null) {
+            return false;
+        }
+        if(b.getTtl() != null && !b.getTtl().equals(getTtl())){ 
+            return false;
+        }
+
+        if(b.getFormerAcquirers() == null ^ getFormerAcquirers() == null) {
+            return false;
+        }
+        if(b.getFormerAcquirers() != null && !b.getFormerAcquirers().equals(getFormerAcquirers())){ 
+            return false;
+        }
+
+        if(b.getDeliveryFailures() == null ^ getDeliveryFailures() == null) {
+            return false;
+        }
+        if(b.getDeliveryFailures() != null && !b.getDeliveryFailures().equals(getDeliveryFailures())){ 
+            return false;
+        }
+
+        if(b.getFormatCode() == null ^ getFormatCode() == null) {
+            return false;
+        }
+        if(b.getFormatCode() != null && !b.getFormatCode().equals(getFormatCode())){ 
+            return false;
+        }
+
+        if(b.getMessageAttrs() == null ^ getMessageAttrs() == null) {
+            return false;
+        }
+        if(b.getMessageAttrs() != null && !b.getMessageAttrs().equals(getMessageAttrs())){ 
+            return false;
+        }
+
+        if(b.getDeliveryAttrs() == null ^ getDeliveryAttrs() == null) {
+            return false;
+        }
+        if(b.getDeliveryAttrs() != null && !b.getDeliveryAttrs().equals(getDeliveryAttrs())){ 
+            return false;
+        }
+        return true;
+    }
+
+    public int hashCode() {
+        return AbstractAmqpList.hashCodeFor(this);
+    }
+}
 
     public static class AmqpHeaderBuffer extends AmqpList.AmqpListBuffer implements AmqpHeader{
 
@@ -782,9 +895,14 @@ public interface AmqpHeader extends AmqpList {
             super(encoded);
         }
 
-    public void setDurable(Boolean durable) {
+        public void setDurable(Boolean durable) {
             bean().setDurable(durable);
         }
+
+        public void setDurable(boolean durable) {
+            bean().setDurable(durable);
+        }
+
 
         public final void setDurable(AmqpBoolean durable) {
             bean().setDurable(durable);
@@ -794,9 +912,14 @@ public interface AmqpHeader extends AmqpList {
             return bean().getDurable();
         }
 
-    public void setPriority(Short priority) {
+        public void setPriority(Short priority) {
             bean().setPriority(priority);
         }
+
+        public void setPriority(short priority) {
+            bean().setPriority(priority);
+        }
+
 
         public final void setPriority(AmqpUbyte priority) {
             bean().setPriority(priority);
@@ -806,7 +929,7 @@ public interface AmqpHeader extends AmqpList {
             return bean().getPriority();
         }
 
-    public void setTransmitTime(Date transmitTime) {
+        public void setTransmitTime(Date transmitTime) {
             bean().setTransmitTime(transmitTime);
         }
 
@@ -818,7 +941,7 @@ public interface AmqpHeader extends AmqpList {
             return bean().getTransmitTime();
         }
 
-    public void setTtl(BigInteger ttl) {
+        public void setTtl(BigInteger ttl) {
             bean().setTtl(ttl);
         }
 
@@ -830,9 +953,14 @@ public interface AmqpHeader extends AmqpList {
             return bean().getTtl();
         }
 
-    public void setFormerAcquirers(Long formerAcquirers) {
+        public void setFormerAcquirers(Long formerAcquirers) {
             bean().setFormerAcquirers(formerAcquirers);
         }
+
+        public void setFormerAcquirers(long formerAcquirers) {
+            bean().setFormerAcquirers(formerAcquirers);
+        }
+
 
         public final void setFormerAcquirers(AmqpUint formerAcquirers) {
             bean().setFormerAcquirers(formerAcquirers);
@@ -842,9 +970,14 @@ public interface AmqpHeader extends AmqpList {
             return bean().getFormerAcquirers();
         }
 
-    public void setDeliveryFailures(Long deliveryFailures) {
+        public void setDeliveryFailures(Long deliveryFailures) {
             bean().setDeliveryFailures(deliveryFailures);
         }
+
+        public void setDeliveryFailures(long deliveryFailures) {
+            bean().setDeliveryFailures(deliveryFailures);
+        }
+
 
         public final void setDeliveryFailures(AmqpUint deliveryFailures) {
             bean().setDeliveryFailures(deliveryFailures);
@@ -854,9 +987,14 @@ public interface AmqpHeader extends AmqpList {
             return bean().getDeliveryFailures();
         }
 
-    public void setFormatCode(Long formatCode) {
+        public void setFormatCode(Long formatCode) {
             bean().setFormatCode(formatCode);
         }
+
+        public void setFormatCode(long formatCode) {
+            bean().setFormatCode(formatCode);
+        }
+
 
         public final void setFormatCode(AmqpUint formatCode) {
             bean().setFormatCode(formatCode);
@@ -914,8 +1052,16 @@ public interface AmqpHeader extends AmqpList {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpHeader o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpHeader.AmqpHeaderBuffer create(Encoded<IAmqpList> encoded) {

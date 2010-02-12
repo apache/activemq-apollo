@@ -21,9 +21,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.Boolean;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
 import org.apache.activemq.amqp.protocol.marshaller.Encoded;
+import org.apache.activemq.amqp.protocol.types.IAmqpMap;
 import org.apache.activemq.util.buffer.Buffer;
 
 /**
@@ -39,6 +42,16 @@ import org.apache.activemq.util.buffer.Buffer;
 public interface AmqpRejected extends AmqpMap {
 
 
+    /**
+     * Key for: permit truncation of the remaining transfer
+     */
+    public static final AmqpSymbol TRUNCATE_KEY = TypeFactory.createAmqpSymbol("truncate");
+    /**
+     * Key for: null
+     */
+    public static final AmqpSymbol REJECT_PROPERTIES_KEY = TypeFactory.createAmqpSymbol("reject-properties");
+
+
 
     /**
      * permit truncation of the remaining transfer
@@ -48,6 +61,15 @@ public interface AmqpRejected extends AmqpMap {
      * </p>
      */
     public void setTruncate(Boolean truncate);
+
+    /**
+     * permit truncation of the remaining transfer
+     * <p>
+     * The truncate flag, if true, indicates that the receiver is not interested in the rest of
+     * the Message content, and the sender is free to omit it.
+     * </p>
+     */
+    public void setTruncate(boolean truncate);
 
     /**
      * permit truncation of the remaining transfer
@@ -73,14 +95,6 @@ public interface AmqpRejected extends AmqpMap {
      * message-attrs map under the key "reject-properties".
      * </p>
      */
-    public void setRejectProperties(HashMap<AmqpType<?,?>, AmqpType<?,?>> rejectProperties);
-
-    /**
-     * <p>
-     * The map supplied in this field will be placed in any rejected Message headers in the
-     * message-attrs map under the key "reject-properties".
-     * </p>
-     */
     public void setRejectProperties(AmqpMap rejectProperties);
 
     /**
@@ -89,7 +103,7 @@ public interface AmqpRejected extends AmqpMap {
      * message-attrs map under the key "reject-properties".
      * </p>
      */
-    public HashMap<AmqpType<?,?>, AmqpType<?,?>> getRejectProperties();
+    public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getRejectProperties();
 
     public static class AmqpRejectedBean implements AmqpRejected{
 
@@ -97,16 +111,17 @@ public interface AmqpRejected extends AmqpMap {
         private AmqpRejectedBean bean = this;
         private AmqpBoolean truncate;
         private AmqpMap rejectProperties;
-        private HashMap<AmqpType<?,?>, AmqpType<?,?>> value;
+        private IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value;
 
-        public AmqpRejectedBean() {
+        AmqpRejectedBean() {
+            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());
         }
 
-        public AmqpRejectedBean(HashMap<AmqpType<?,?>, AmqpType<?,?>> value) {
+        AmqpRejectedBean(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) {
             this.value = value;
         }
 
-        public AmqpRejectedBean(AmqpRejected.AmqpRejectedBean other) {
+        AmqpRejectedBean(AmqpRejected.AmqpRejectedBean other) {
             this.bean = other;
         }
 
@@ -127,7 +142,12 @@ public interface AmqpRejected extends AmqpMap {
 
 
         public void setTruncate(Boolean truncate) {
-            setTruncate(new AmqpBoolean.AmqpBooleanBean(truncate));
+            setTruncate(TypeFactory.createAmqpBoolean(truncate));
+        }
+
+
+        public void setTruncate(boolean truncate) {
+            setTruncate(TypeFactory.createAmqpBoolean(truncate));
         }
 
 
@@ -140,28 +160,32 @@ public interface AmqpRejected extends AmqpMap {
             return bean.truncate.getValue();
         }
 
-        public void setRejectProperties(HashMap<AmqpType<?,?>, AmqpType<?,?>> rejectProperties) {
-            setRejectProperties(new AmqpMap.AmqpMapBean(rejectProperties));
-        }
-
-
         public final void setRejectProperties(AmqpMap rejectProperties) {
             copyCheck();
             bean.rejectProperties = rejectProperties;
         }
 
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> getRejectProperties() {
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getRejectProperties() {
             return bean.rejectProperties.getValue();
         }
         public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+            copyCheck();
             bean.value.put(key, value);
         }
 
-        public AmqpType<?, ?> get(AmqpType<?, ?> key) {
+        public AmqpType<?, ?> get(Object key) {
             return bean.value.get(key);
         }
 
-        public HashMap<AmqpType<?,?>, AmqpType<?,?>> getValue() {
+        public int getEntryCount() {
+            return bean.value.getEntryCount();
+        }
+
+        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+            return bean.value.iterator();
+        }
+
+        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
             return bean.value;
         }
 
@@ -176,24 +200,22 @@ public interface AmqpRejected extends AmqpMap {
         }
 
         private final void copy(AmqpRejected.AmqpRejectedBean other) {
-            this.truncate= other.truncate;
-            this.rejectProperties= other.rejectProperties;
             bean = this;
         }
 
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
+        public boolean equals(Object o){
+            if(this == o) {
                 return true;
             }
 
-            if(t == null || !(t instanceof AmqpRejected)) {
+            if(o == null || !(o instanceof AmqpRejected)) {
                 return false;
             }
 
-            return equivalent((AmqpRejected) t);
+            return equals((AmqpRejected) o);
         }
 
-        public boolean equivalent(AmqpRejected b) {
+        public boolean equals(AmqpRejected b) {
 
             if(b.getTruncate() == null ^ getTruncate() == null) {
                 return false;
@@ -210,19 +232,28 @@ public interface AmqpRejected extends AmqpMap {
             }
             return true;
         }
+
+        public int hashCode() {
+            return AbstractAmqpMap.hashCodeFor(this);
+        }
     }
 
     public static class AmqpRejectedBuffer extends AmqpMap.AmqpMapBuffer implements AmqpRejected{
 
         private AmqpRejectedBean bean;
 
-        protected AmqpRejectedBuffer(Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> encoded) {
+        protected AmqpRejectedBuffer(Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
-    public void setTruncate(Boolean truncate) {
+        public void setTruncate(Boolean truncate) {
             bean().setTruncate(truncate);
         }
+
+        public void setTruncate(boolean truncate) {
+            bean().setTruncate(truncate);
+        }
+
 
         public final void setTruncate(AmqpBoolean truncate) {
             bean().setTruncate(truncate);
@@ -232,26 +263,30 @@ public interface AmqpRejected extends AmqpMap {
             return bean().getTruncate();
         }
 
-    public void setRejectProperties(HashMap<AmqpType<?,?>, AmqpType<?,?>> rejectProperties) {
-            bean().setRejectProperties(rejectProperties);
-        }
-
         public final void setRejectProperties(AmqpMap rejectProperties) {
             bean().setRejectProperties(rejectProperties);
         }
 
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> getRejectProperties() {
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getRejectProperties() {
             return bean().getRejectProperties();
         }
         public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
             bean().put(key, value);
         }
 
-        public AmqpType<?, ?> get(AmqpType<?, ?> key) {
+        public AmqpType<?, ?> get(Object key) {
             return bean().get(key);
         }
 
-        public HashMap<AmqpType<?,?>, AmqpType<?,?>> getValue() {
+        public int getEntryCount() {
+            return bean().getEntryCount();
+        }
+
+        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+            return bean().iterator();
+        }
+
+        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
             return bean().getValue();
         }
 
@@ -267,11 +302,19 @@ public interface AmqpRejected extends AmqpMap {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
         }
 
-        public static AmqpRejected.AmqpRejectedBuffer create(Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> encoded) {
+        public boolean equals(AmqpRejected o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
+        }
+
+        public static AmqpRejected.AmqpRejectedBuffer create(Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

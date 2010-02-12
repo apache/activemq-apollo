@@ -42,14 +42,11 @@ public interface AmqpSessionName extends AmqpBinary {
         private AmqpSessionNameBean bean = this;
         private Buffer value;
 
-        protected AmqpSessionNameBean() {
-        }
-
-        public AmqpSessionNameBean(Buffer value) {
+        AmqpSessionNameBean(Buffer value) {
             this.value = value;
         }
 
-        public AmqpSessionNameBean(AmqpSessionName.AmqpSessionNameBean other) {
+        AmqpSessionNameBean(AmqpSessionName.AmqpSessionNameBean other) {
             this.bean = other;
         }
 
@@ -83,29 +80,10 @@ public interface AmqpSessionName extends AmqpBinary {
                 return false;
             }
 
-            return equivalent((AmqpSessionName) o);
+            return equals((AmqpSessionName) o);
         }
 
-        public int hashCode() {
-            if(getValue() == null) {
-                return AmqpSessionName.AmqpSessionNameBean.class.hashCode();
-            }
-            return getValue().hashCode();
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpSessionName)) {
-                return false;
-            }
-
-            return equivalent((AmqpSessionName) t);
-        }
-
-        public boolean equivalent(AmqpSessionName b) {
+        public boolean equals(AmqpSessionName b) {
             if(b == null) {
                 return false;
             }
@@ -115,6 +93,13 @@ public interface AmqpSessionName extends AmqpBinary {
             }
 
             return b.getValue() == null || b.getValue().equals(getValue());
+        }
+
+        public int hashCode() {
+            if(getValue() == null) {
+                return AmqpSessionName.AmqpSessionNameBean.class.hashCode();
+            }
+            return getValue().hashCode();
         }
     }
 
@@ -146,8 +131,16 @@ public interface AmqpSessionName extends AmqpBinary {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpSessionName o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpSessionName.AmqpSessionNameBuffer create(Encoded<Buffer> encoded) {

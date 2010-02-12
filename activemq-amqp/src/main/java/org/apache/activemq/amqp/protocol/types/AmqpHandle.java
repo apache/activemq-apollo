@@ -45,14 +45,11 @@ public interface AmqpHandle extends AmqpUint {
         private AmqpHandleBean bean = this;
         private Long value;
 
-        protected AmqpHandleBean() {
-        }
-
-        public AmqpHandleBean(Long value) {
+        AmqpHandleBean(Long value) {
             this.value = value;
         }
 
-        public AmqpHandleBean(AmqpHandle.AmqpHandleBean other) {
+        AmqpHandleBean(AmqpHandle.AmqpHandleBean other) {
             this.bean = other;
         }
 
@@ -86,29 +83,10 @@ public interface AmqpHandle extends AmqpUint {
                 return false;
             }
 
-            return equivalent((AmqpHandle) o);
+            return equals((AmqpHandle) o);
         }
 
-        public int hashCode() {
-            if(getValue() == null) {
-                return AmqpHandle.AmqpHandleBean.class.hashCode();
-            }
-            return getValue().hashCode();
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpHandle)) {
-                return false;
-            }
-
-            return equivalent((AmqpHandle) t);
-        }
-
-        public boolean equivalent(AmqpHandle b) {
+        public boolean equals(AmqpHandle b) {
             if(b == null) {
                 return false;
             }
@@ -118,6 +96,13 @@ public interface AmqpHandle extends AmqpUint {
             }
 
             return b.getValue() == null || b.getValue().equals(getValue());
+        }
+
+        public int hashCode() {
+            if(getValue() == null) {
+                return AmqpHandle.AmqpHandleBean.class.hashCode();
+            }
+            return getValue().hashCode();
         }
     }
 
@@ -149,8 +134,16 @@ public interface AmqpHandle extends AmqpUint {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpHandle o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpHandle.AmqpHandleBuffer create(Encoded<Long> encoded) {

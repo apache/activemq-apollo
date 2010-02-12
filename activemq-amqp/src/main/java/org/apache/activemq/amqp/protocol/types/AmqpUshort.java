@@ -39,14 +39,11 @@ public interface AmqpUshort extends AmqpType<AmqpUshort.AmqpUshortBean, AmqpUsho
         private AmqpUshortBean bean = this;
         private Integer value;
 
-        protected AmqpUshortBean() {
-        }
-
-        public AmqpUshortBean(Integer value) {
+        AmqpUshortBean(Integer value) {
             this.value = value;
         }
 
-        public AmqpUshortBean(AmqpUshort.AmqpUshortBean other) {
+        AmqpUshortBean(AmqpUshort.AmqpUshortBean other) {
             this.bean = other;
         }
 
@@ -80,29 +77,10 @@ public interface AmqpUshort extends AmqpType<AmqpUshort.AmqpUshortBean, AmqpUsho
                 return false;
             }
 
-            return equivalent((AmqpUshort) o);
+            return equals((AmqpUshort) o);
         }
 
-        public int hashCode() {
-            if(getValue() == null) {
-                return AmqpUshort.AmqpUshortBean.class.hashCode();
-            }
-            return getValue().hashCode();
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpUshort)) {
-                return false;
-            }
-
-            return equivalent((AmqpUshort) t);
-        }
-
-        public boolean equivalent(AmqpUshort b) {
+        public boolean equals(AmqpUshort b) {
             if(b == null) {
                 return false;
             }
@@ -112,6 +90,13 @@ public interface AmqpUshort extends AmqpType<AmqpUshort.AmqpUshortBean, AmqpUsho
             }
 
             return b.getValue() == null || b.getValue().equals(getValue());
+        }
+
+        public int hashCode() {
+            if(getValue() == null) {
+                return AmqpUshort.AmqpUshortBean.class.hashCode();
+            }
+            return getValue().hashCode();
         }
     }
 
@@ -155,12 +140,12 @@ public interface AmqpUshort extends AmqpType<AmqpUshort.AmqpUshortBean, AmqpUsho
             return bean().equals(o);
         }
 
-        public int hashCode() {
-            return bean().hashCode();
+        public boolean equals(AmqpUshort o){
+            return bean().equals(o);
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpUshort.AmqpUshortBuffer create(Encoded<Integer> encoded) {

@@ -20,7 +20,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.String;
-import java.util.HashMap;
 import java.util.Iterator;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
@@ -81,17 +80,12 @@ public interface AmqpConnectionError extends AmqpList {
     /**
      * map to carry additional information about the error
      */
-    public void setErrorInfo(HashMap<AmqpType<?,?>, AmqpType<?,?>> errorInfo);
-
-    /**
-     * map to carry additional information about the error
-     */
     public void setErrorInfo(AmqpMap errorInfo);
 
     /**
      * map to carry additional information about the error
      */
-    public HashMap<AmqpType<?,?>, AmqpType<?,?>> getErrorInfo();
+    public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getErrorInfo();
 
     public static class AmqpConnectionErrorBean implements AmqpConnectionError{
 
@@ -101,179 +95,175 @@ public interface AmqpConnectionError extends AmqpList {
         private AmqpString description;
         private AmqpMap errorInfo;
 
-        public AmqpConnectionErrorBean() {
+        AmqpConnectionErrorBean() {
         }
 
-        public AmqpConnectionErrorBean(IAmqpList value) {
-            //TODO we should defer decoding of the described type:
-            for(int i = 0; i < value.getListCount(); i++) {
-                set(i, value.get(i));
-            }
-        }
+        AmqpConnectionErrorBean(IAmqpList value) {
 
-        public AmqpConnectionErrorBean(AmqpConnectionError.AmqpConnectionErrorBean other) {
-            this.bean = other;
-        }
-
-        public final AmqpConnectionErrorBean copy() {
-            return new AmqpConnectionError.AmqpConnectionErrorBean(bean);
-        }
-
-        public final AmqpConnectionError.AmqpConnectionErrorBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-            if(buffer == null) {
-                buffer = new AmqpConnectionErrorBuffer(marshaller.encode(this));
-            }
-            return buffer;
-        }
-
-        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-            getBuffer(marshaller).marshal(out, marshaller);
-        }
-
-
-        public final void setErrorCode(AmqpConnectionErrorCode errorCode) {
-            copyCheck();
-            bean.errorCode = errorCode;
-        }
-
-        public final AmqpConnectionErrorCode getErrorCode() {
-            return bean.errorCode;
-        }
-
-        public void setDescription(String description) {
-            setDescription(new AmqpString.AmqpStringBean(description));
-        }
-
-
-        public final void setDescription(AmqpString description) {
-            copyCheck();
-            bean.description = description;
-        }
-
-        public final String getDescription() {
-            return bean.description.getValue();
-        }
-
-        public void setErrorInfo(HashMap<AmqpType<?,?>, AmqpType<?,?>> errorInfo) {
-            setErrorInfo(new AmqpMap.AmqpMapBean(errorInfo));
-        }
-
-
-        public final void setErrorInfo(AmqpMap errorInfo) {
-            copyCheck();
-            bean.errorInfo = errorInfo;
-        }
-
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> getErrorInfo() {
-            return bean.errorInfo.getValue();
-        }
-
-        public void set(int index, AmqpType<?, ?> value) {
-            switch(index) {
-            case 0: {
-                setErrorCode(AmqpConnectionErrorCode.get((AmqpUshort)value));
-                break;
-            }
-            case 1: {
-                setDescription((AmqpString) value);
-                break;
-            }
-            case 2: {
-                setErrorInfo((AmqpMap) value);
-                break;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public AmqpType<?, ?> get(int index) {
-            switch(index) {
-            case 0: {
-                if(errorCode == null) {
-                    return null;
-                }
-                return errorCode.getValue();
-            }
-            case 1: {
-                return bean.description;
-            }
-            case 2: {
-                return bean.errorInfo;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public int getListCount() {
-            return 3;
-        }
-
-        public IAmqpList getValue() {
-            return bean;
-        }
-
-        public Iterator<AmqpType<?, ?>> iterator() {
-            return new AmqpListIterator(bean);
-        }
-
-
-        private final void copyCheck() {
-            if(buffer != null) {;
-                throw new IllegalStateException("unwriteable");
-            }
-            if(bean != this) {;
-                copy(bean);
-            }
-        }
-
-        private final void copy(AmqpConnectionError.AmqpConnectionErrorBean other) {
-            this.errorCode= other.errorCode;
-            this.description= other.description;
-            this.errorInfo= other.errorInfo;
-            bean = this;
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpConnectionError)) {
-                return false;
-            }
-
-            return equivalent((AmqpConnectionError) t);
-        }
-
-        public boolean equivalent(AmqpConnectionError b) {
-
-            if(b.getErrorCode() == null ^ getErrorCode() == null) {
-                return false;
-            }
-            if(b.getErrorCode() != null && !b.getErrorCode().equals(getErrorCode())){ 
-                return false;
-            }
-
-            if(b.getDescription() == null ^ getDescription() == null) {
-                return false;
-            }
-            if(b.getDescription() != null && !b.getDescription().equals(getDescription())){ 
-                return false;
-            }
-
-            if(b.getErrorInfo() == null ^ getErrorInfo() == null) {
-                return false;
-            }
-            if(b.getErrorInfo() != null && !b.getErrorInfo().equals(getErrorInfo())){ 
-                return false;
-            }
-            return true;
+        for(int i = 0; i < value.getListCount(); i++) {
+            set(i, value.get(i));
         }
     }
+
+    AmqpConnectionErrorBean(AmqpConnectionError.AmqpConnectionErrorBean other) {
+        this.bean = other;
+    }
+
+    public final AmqpConnectionErrorBean copy() {
+        return new AmqpConnectionError.AmqpConnectionErrorBean(bean);
+    }
+
+    public final AmqpConnectionError.AmqpConnectionErrorBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+        if(buffer == null) {
+            buffer = new AmqpConnectionErrorBuffer(marshaller.encode(this));
+        }
+        return buffer;
+    }
+
+    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+        getBuffer(marshaller).marshal(out, marshaller);
+    }
+
+
+    public final void setErrorCode(AmqpConnectionErrorCode errorCode) {
+        copyCheck();
+        bean.errorCode = errorCode;
+    }
+
+    public final AmqpConnectionErrorCode getErrorCode() {
+        return bean.errorCode;
+    }
+
+    public void setDescription(String description) {
+        setDescription(TypeFactory.createAmqpString(description));
+    }
+
+
+    public final void setDescription(AmqpString description) {
+        copyCheck();
+        bean.description = description;
+    }
+
+    public final String getDescription() {
+        return bean.description.getValue();
+    }
+
+    public final void setErrorInfo(AmqpMap errorInfo) {
+        copyCheck();
+        bean.errorInfo = errorInfo;
+    }
+
+    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getErrorInfo() {
+        return bean.errorInfo.getValue();
+    }
+
+    public void set(int index, AmqpType<?, ?> value) {
+        switch(index) {
+        case 0: {
+            setErrorCode(AmqpConnectionErrorCode.get((AmqpUshort)value));
+            break;
+        }
+        case 1: {
+            setDescription((AmqpString) value);
+            break;
+        }
+        case 2: {
+            setErrorInfo((AmqpMap) value);
+            break;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public AmqpType<?, ?> get(int index) {
+        switch(index) {
+        case 0: {
+            if(errorCode == null) {
+                return null;
+            }
+            return errorCode.getValue();
+        }
+        case 1: {
+            return bean.description;
+        }
+        case 2: {
+            return bean.errorInfo;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public int getListCount() {
+        return 3;
+    }
+
+    public IAmqpList getValue() {
+        return bean;
+    }
+
+    public Iterator<AmqpType<?, ?>> iterator() {
+        return new AmqpListIterator(bean);
+    }
+
+
+    private final void copyCheck() {
+        if(buffer != null) {;
+            throw new IllegalStateException("unwriteable");
+        }
+        if(bean != this) {;
+            copy(bean);
+        }
+    }
+
+    private final void copy(AmqpConnectionError.AmqpConnectionErrorBean other) {
+        bean = this;
+    }
+
+    public boolean equals(Object o){
+        if(this == o) {
+            return true;
+        }
+
+        if(o == null || !(o instanceof AmqpConnectionError)) {
+            return false;
+        }
+
+        return equals((AmqpConnectionError) o);
+    }
+
+    public boolean equals(AmqpConnectionError b) {
+
+        if(b.getErrorCode() == null ^ getErrorCode() == null) {
+            return false;
+        }
+        if(b.getErrorCode() != null && !b.getErrorCode().equals(getErrorCode())){ 
+            return false;
+        }
+
+        if(b.getDescription() == null ^ getDescription() == null) {
+            return false;
+        }
+        if(b.getDescription() != null && !b.getDescription().equals(getDescription())){ 
+            return false;
+        }
+
+        if(b.getErrorInfo() == null ^ getErrorInfo() == null) {
+            return false;
+        }
+        if(b.getErrorInfo() != null && !b.getErrorInfo().equals(getErrorInfo())){ 
+            return false;
+        }
+        return true;
+    }
+
+    public int hashCode() {
+        return AbstractAmqpList.hashCodeFor(this);
+    }
+}
 
     public static class AmqpConnectionErrorBuffer extends AmqpList.AmqpListBuffer implements AmqpConnectionError{
 
@@ -291,7 +281,7 @@ public interface AmqpConnectionError extends AmqpList {
             return bean().getErrorCode();
         }
 
-    public void setDescription(String description) {
+        public void setDescription(String description) {
             bean().setDescription(description);
         }
 
@@ -303,15 +293,11 @@ public interface AmqpConnectionError extends AmqpList {
             return bean().getDescription();
         }
 
-    public void setErrorInfo(HashMap<AmqpType<?,?>, AmqpType<?,?>> errorInfo) {
-            bean().setErrorInfo(errorInfo);
-        }
-
         public final void setErrorInfo(AmqpMap errorInfo) {
             bean().setErrorInfo(errorInfo);
         }
 
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> getErrorInfo() {
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getErrorInfo() {
             return bean().getErrorInfo();
         }
 
@@ -347,8 +333,16 @@ public interface AmqpConnectionError extends AmqpList {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpConnectionError o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpConnectionError.AmqpConnectionErrorBuffer create(Encoded<IAmqpList> encoded) {

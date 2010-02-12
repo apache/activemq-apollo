@@ -57,6 +57,15 @@ public interface AmqpFragment extends AmqpList {
      * boundary within the Message.
      * </p>
      */
+    public void setFirst(boolean first);
+
+    /**
+     * indicates the fragment is the first in the Section
+     * <p>
+     * If this flag is true, then the beginning of the payload corresponds with a section
+     * boundary within the Message.
+     * </p>
+     */
     public void setFirst(AmqpBoolean first);
 
     /**
@@ -76,6 +85,15 @@ public interface AmqpFragment extends AmqpList {
      * </p>
      */
     public void setLast(Boolean last);
+
+    /**
+     * indicates the fragment is the last in the Section
+     * <p>
+     * If this flag is true, then the end of the payload corresponds with a section boundary
+     * within the Message.
+     * </p>
+     */
+    public void setLast(boolean last);
 
     /**
      * indicates the fragment is the last in the Section
@@ -104,6 +122,16 @@ public interface AmqpFragment extends AmqpList {
      * </p>
      */
     public void setFormatCode(Long formatCode);
+
+    /**
+     * indicates the format of the Message section
+     * <p>
+     * The format code indicates the format of the current section of the Message. A Message
+     * may have multiple sections, and therefore multiple format codes, however the format code
+     * is only permitted to change at section boundaries.
+     * </p>
+     */
+    public void setFormatCode(long formatCode);
 
     /**
      * indicates the format of the Message section
@@ -165,239 +193,253 @@ public interface AmqpFragment extends AmqpList {
         private AmqpUlong fragmentOffset;
         private AmqpBinary payload;
 
-        public AmqpFragmentBean() {
+        AmqpFragmentBean() {
         }
 
-        public AmqpFragmentBean(IAmqpList value) {
-            //TODO we should defer decoding of the described type:
-            for(int i = 0; i < value.getListCount(); i++) {
-                set(i, value.get(i));
-            }
-        }
+        AmqpFragmentBean(IAmqpList value) {
 
-        public AmqpFragmentBean(AmqpFragment.AmqpFragmentBean other) {
-            this.bean = other;
-        }
-
-        public final AmqpFragmentBean copy() {
-            return new AmqpFragment.AmqpFragmentBean(bean);
-        }
-
-        public final AmqpFragment.AmqpFragmentBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-            if(buffer == null) {
-                buffer = new AmqpFragmentBuffer(marshaller.encode(this));
-            }
-            return buffer;
-        }
-
-        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-            getBuffer(marshaller).marshal(out, marshaller);
-        }
-
-
-        public void setFirst(Boolean first) {
-            setFirst(new AmqpBoolean.AmqpBooleanBean(first));
-        }
-
-
-        public final void setFirst(AmqpBoolean first) {
-            copyCheck();
-            bean.first = first;
-        }
-
-        public final Boolean getFirst() {
-            return bean.first.getValue();
-        }
-
-        public void setLast(Boolean last) {
-            setLast(new AmqpBoolean.AmqpBooleanBean(last));
-        }
-
-
-        public final void setLast(AmqpBoolean last) {
-            copyCheck();
-            bean.last = last;
-        }
-
-        public final Boolean getLast() {
-            return bean.last.getValue();
-        }
-
-        public void setFormatCode(Long formatCode) {
-            setFormatCode(new AmqpUint.AmqpUintBean(formatCode));
-        }
-
-
-        public final void setFormatCode(AmqpUint formatCode) {
-            copyCheck();
-            bean.formatCode = formatCode;
-        }
-
-        public final Long getFormatCode() {
-            return bean.formatCode.getValue();
-        }
-
-        public void setFragmentOffset(BigInteger fragmentOffset) {
-            setFragmentOffset(new AmqpUlong.AmqpUlongBean(fragmentOffset));
-        }
-
-
-        public final void setFragmentOffset(AmqpUlong fragmentOffset) {
-            copyCheck();
-            bean.fragmentOffset = fragmentOffset;
-        }
-
-        public final BigInteger getFragmentOffset() {
-            return bean.fragmentOffset.getValue();
-        }
-
-        public void setPayload(Buffer payload) {
-            setPayload(new AmqpBinary.AmqpBinaryBean(payload));
-        }
-
-
-        public final void setPayload(AmqpBinary payload) {
-            copyCheck();
-            bean.payload = payload;
-        }
-
-        public final Buffer getPayload() {
-            return bean.payload.getValue();
-        }
-
-        public void set(int index, AmqpType<?, ?> value) {
-            switch(index) {
-            case 0: {
-                setFirst((AmqpBoolean) value);
-                break;
-            }
-            case 1: {
-                setLast((AmqpBoolean) value);
-                break;
-            }
-            case 2: {
-                setFormatCode((AmqpUint) value);
-                break;
-            }
-            case 3: {
-                setFragmentOffset((AmqpUlong) value);
-                break;
-            }
-            case 4: {
-                setPayload((AmqpBinary) value);
-                break;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public AmqpType<?, ?> get(int index) {
-            switch(index) {
-            case 0: {
-                return bean.first;
-            }
-            case 1: {
-                return bean.last;
-            }
-            case 2: {
-                return bean.formatCode;
-            }
-            case 3: {
-                return bean.fragmentOffset;
-            }
-            case 4: {
-                return bean.payload;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public int getListCount() {
-            return 5;
-        }
-
-        public IAmqpList getValue() {
-            return bean;
-        }
-
-        public Iterator<AmqpType<?, ?>> iterator() {
-            return new AmqpListIterator(bean);
-        }
-
-
-        private final void copyCheck() {
-            if(buffer != null) {;
-                throw new IllegalStateException("unwriteable");
-            }
-            if(bean != this) {;
-                copy(bean);
-            }
-        }
-
-        private final void copy(AmqpFragment.AmqpFragmentBean other) {
-            this.first= other.first;
-            this.last= other.last;
-            this.formatCode= other.formatCode;
-            this.fragmentOffset= other.fragmentOffset;
-            this.payload= other.payload;
-            bean = this;
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpFragment)) {
-                return false;
-            }
-
-            return equivalent((AmqpFragment) t);
-        }
-
-        public boolean equivalent(AmqpFragment b) {
-
-            if(b.getFirst() == null ^ getFirst() == null) {
-                return false;
-            }
-            if(b.getFirst() != null && !b.getFirst().equals(getFirst())){ 
-                return false;
-            }
-
-            if(b.getLast() == null ^ getLast() == null) {
-                return false;
-            }
-            if(b.getLast() != null && !b.getLast().equals(getLast())){ 
-                return false;
-            }
-
-            if(b.getFormatCode() == null ^ getFormatCode() == null) {
-                return false;
-            }
-            if(b.getFormatCode() != null && !b.getFormatCode().equals(getFormatCode())){ 
-                return false;
-            }
-
-            if(b.getFragmentOffset() == null ^ getFragmentOffset() == null) {
-                return false;
-            }
-            if(b.getFragmentOffset() != null && !b.getFragmentOffset().equals(getFragmentOffset())){ 
-                return false;
-            }
-
-            if(b.getPayload() == null ^ getPayload() == null) {
-                return false;
-            }
-            if(b.getPayload() != null && !b.getPayload().equals(getPayload())){ 
-                return false;
-            }
-            return true;
+        for(int i = 0; i < value.getListCount(); i++) {
+            set(i, value.get(i));
         }
     }
+
+    AmqpFragmentBean(AmqpFragment.AmqpFragmentBean other) {
+        this.bean = other;
+    }
+
+    public final AmqpFragmentBean copy() {
+        return new AmqpFragment.AmqpFragmentBean(bean);
+    }
+
+    public final AmqpFragment.AmqpFragmentBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+        if(buffer == null) {
+            buffer = new AmqpFragmentBuffer(marshaller.encode(this));
+        }
+        return buffer;
+    }
+
+    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+        getBuffer(marshaller).marshal(out, marshaller);
+    }
+
+
+    public void setFirst(Boolean first) {
+        setFirst(TypeFactory.createAmqpBoolean(first));
+    }
+
+
+    public void setFirst(boolean first) {
+        setFirst(TypeFactory.createAmqpBoolean(first));
+    }
+
+
+    public final void setFirst(AmqpBoolean first) {
+        copyCheck();
+        bean.first = first;
+    }
+
+    public final Boolean getFirst() {
+        return bean.first.getValue();
+    }
+
+    public void setLast(Boolean last) {
+        setLast(TypeFactory.createAmqpBoolean(last));
+    }
+
+
+    public void setLast(boolean last) {
+        setLast(TypeFactory.createAmqpBoolean(last));
+    }
+
+
+    public final void setLast(AmqpBoolean last) {
+        copyCheck();
+        bean.last = last;
+    }
+
+    public final Boolean getLast() {
+        return bean.last.getValue();
+    }
+
+    public void setFormatCode(Long formatCode) {
+        setFormatCode(TypeFactory.createAmqpUint(formatCode));
+    }
+
+
+    public void setFormatCode(long formatCode) {
+        setFormatCode(TypeFactory.createAmqpUint(formatCode));
+    }
+
+
+    public final void setFormatCode(AmqpUint formatCode) {
+        copyCheck();
+        bean.formatCode = formatCode;
+    }
+
+    public final Long getFormatCode() {
+        return bean.formatCode.getValue();
+    }
+
+    public void setFragmentOffset(BigInteger fragmentOffset) {
+        setFragmentOffset(TypeFactory.createAmqpUlong(fragmentOffset));
+    }
+
+
+    public final void setFragmentOffset(AmqpUlong fragmentOffset) {
+        copyCheck();
+        bean.fragmentOffset = fragmentOffset;
+    }
+
+    public final BigInteger getFragmentOffset() {
+        return bean.fragmentOffset.getValue();
+    }
+
+    public void setPayload(Buffer payload) {
+        setPayload(TypeFactory.createAmqpBinary(payload));
+    }
+
+
+    public final void setPayload(AmqpBinary payload) {
+        copyCheck();
+        bean.payload = payload;
+    }
+
+    public final Buffer getPayload() {
+        return bean.payload.getValue();
+    }
+
+    public void set(int index, AmqpType<?, ?> value) {
+        switch(index) {
+        case 0: {
+            setFirst((AmqpBoolean) value);
+            break;
+        }
+        case 1: {
+            setLast((AmqpBoolean) value);
+            break;
+        }
+        case 2: {
+            setFormatCode((AmqpUint) value);
+            break;
+        }
+        case 3: {
+            setFragmentOffset((AmqpUlong) value);
+            break;
+        }
+        case 4: {
+            setPayload((AmqpBinary) value);
+            break;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public AmqpType<?, ?> get(int index) {
+        switch(index) {
+        case 0: {
+            return bean.first;
+        }
+        case 1: {
+            return bean.last;
+        }
+        case 2: {
+            return bean.formatCode;
+        }
+        case 3: {
+            return bean.fragmentOffset;
+        }
+        case 4: {
+            return bean.payload;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public int getListCount() {
+        return 5;
+    }
+
+    public IAmqpList getValue() {
+        return bean;
+    }
+
+    public Iterator<AmqpType<?, ?>> iterator() {
+        return new AmqpListIterator(bean);
+    }
+
+
+    private final void copyCheck() {
+        if(buffer != null) {;
+            throw new IllegalStateException("unwriteable");
+        }
+        if(bean != this) {;
+            copy(bean);
+        }
+    }
+
+    private final void copy(AmqpFragment.AmqpFragmentBean other) {
+        bean = this;
+    }
+
+    public boolean equals(Object o){
+        if(this == o) {
+            return true;
+        }
+
+        if(o == null || !(o instanceof AmqpFragment)) {
+            return false;
+        }
+
+        return equals((AmqpFragment) o);
+    }
+
+    public boolean equals(AmqpFragment b) {
+
+        if(b.getFirst() == null ^ getFirst() == null) {
+            return false;
+        }
+        if(b.getFirst() != null && !b.getFirst().equals(getFirst())){ 
+            return false;
+        }
+
+        if(b.getLast() == null ^ getLast() == null) {
+            return false;
+        }
+        if(b.getLast() != null && !b.getLast().equals(getLast())){ 
+            return false;
+        }
+
+        if(b.getFormatCode() == null ^ getFormatCode() == null) {
+            return false;
+        }
+        if(b.getFormatCode() != null && !b.getFormatCode().equals(getFormatCode())){ 
+            return false;
+        }
+
+        if(b.getFragmentOffset() == null ^ getFragmentOffset() == null) {
+            return false;
+        }
+        if(b.getFragmentOffset() != null && !b.getFragmentOffset().equals(getFragmentOffset())){ 
+            return false;
+        }
+
+        if(b.getPayload() == null ^ getPayload() == null) {
+            return false;
+        }
+        if(b.getPayload() != null && !b.getPayload().equals(getPayload())){ 
+            return false;
+        }
+        return true;
+    }
+
+    public int hashCode() {
+        return AbstractAmqpList.hashCodeFor(this);
+    }
+}
 
     public static class AmqpFragmentBuffer extends AmqpList.AmqpListBuffer implements AmqpFragment{
 
@@ -407,9 +449,14 @@ public interface AmqpFragment extends AmqpList {
             super(encoded);
         }
 
-    public void setFirst(Boolean first) {
+        public void setFirst(Boolean first) {
             bean().setFirst(first);
         }
+
+        public void setFirst(boolean first) {
+            bean().setFirst(first);
+        }
+
 
         public final void setFirst(AmqpBoolean first) {
             bean().setFirst(first);
@@ -419,9 +466,14 @@ public interface AmqpFragment extends AmqpList {
             return bean().getFirst();
         }
 
-    public void setLast(Boolean last) {
+        public void setLast(Boolean last) {
             bean().setLast(last);
         }
+
+        public void setLast(boolean last) {
+            bean().setLast(last);
+        }
+
 
         public final void setLast(AmqpBoolean last) {
             bean().setLast(last);
@@ -431,9 +483,14 @@ public interface AmqpFragment extends AmqpList {
             return bean().getLast();
         }
 
-    public void setFormatCode(Long formatCode) {
+        public void setFormatCode(Long formatCode) {
             bean().setFormatCode(formatCode);
         }
+
+        public void setFormatCode(long formatCode) {
+            bean().setFormatCode(formatCode);
+        }
+
 
         public final void setFormatCode(AmqpUint formatCode) {
             bean().setFormatCode(formatCode);
@@ -443,7 +500,7 @@ public interface AmqpFragment extends AmqpList {
             return bean().getFormatCode();
         }
 
-    public void setFragmentOffset(BigInteger fragmentOffset) {
+        public void setFragmentOffset(BigInteger fragmentOffset) {
             bean().setFragmentOffset(fragmentOffset);
         }
 
@@ -455,7 +512,7 @@ public interface AmqpFragment extends AmqpList {
             return bean().getFragmentOffset();
         }
 
-    public void setPayload(Buffer payload) {
+        public void setPayload(Buffer payload) {
             bean().setPayload(payload);
         }
 
@@ -499,8 +556,16 @@ public interface AmqpFragment extends AmqpList {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpFragment o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpFragment.AmqpFragmentBuffer create(Encoded<IAmqpList> encoded) {

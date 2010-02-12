@@ -43,14 +43,11 @@ public interface AmqpSequenceNo extends AmqpUint {
         private AmqpSequenceNoBean bean = this;
         private Long value;
 
-        protected AmqpSequenceNoBean() {
-        }
-
-        public AmqpSequenceNoBean(Long value) {
+        AmqpSequenceNoBean(Long value) {
             this.value = value;
         }
 
-        public AmqpSequenceNoBean(AmqpSequenceNo.AmqpSequenceNoBean other) {
+        AmqpSequenceNoBean(AmqpSequenceNo.AmqpSequenceNoBean other) {
             this.bean = other;
         }
 
@@ -84,29 +81,10 @@ public interface AmqpSequenceNo extends AmqpUint {
                 return false;
             }
 
-            return equivalent((AmqpSequenceNo) o);
+            return equals((AmqpSequenceNo) o);
         }
 
-        public int hashCode() {
-            if(getValue() == null) {
-                return AmqpSequenceNo.AmqpSequenceNoBean.class.hashCode();
-            }
-            return getValue().hashCode();
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpSequenceNo)) {
-                return false;
-            }
-
-            return equivalent((AmqpSequenceNo) t);
-        }
-
-        public boolean equivalent(AmqpSequenceNo b) {
+        public boolean equals(AmqpSequenceNo b) {
             if(b == null) {
                 return false;
             }
@@ -116,6 +94,13 @@ public interface AmqpSequenceNo extends AmqpUint {
             }
 
             return b.getValue() == null || b.getValue().equals(getValue());
+        }
+
+        public int hashCode() {
+            if(getValue() == null) {
+                return AmqpSequenceNo.AmqpSequenceNoBean.class.hashCode();
+            }
+            return getValue().hashCode();
         }
     }
 
@@ -147,8 +132,16 @@ public interface AmqpSequenceNo extends AmqpUint {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpSequenceNo o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpSequenceNo.AmqpSequenceNoBuffer create(Encoded<Long> encoded) {

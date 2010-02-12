@@ -20,35 +20,42 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
 import org.apache.activemq.amqp.protocol.marshaller.Encoded;
+import org.apache.activemq.amqp.protocol.types.IAmqpMap;
 import org.apache.activemq.util.buffer.Buffer;
 
 /**
  * Represents a a polymorphic mapping from distinct keys to values
  */
-public interface AmqpMap extends AmqpType<AmqpMap.AmqpMapBean, AmqpMap.AmqpMapBuffer> {
+public interface AmqpMap extends AmqpType<AmqpMap.AmqpMapBean, AmqpMap.AmqpMapBuffer>, IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> {
 
+    /**
+     * Represents a a polymorphic mapping from distinct keys to values
+     */
     public void put(AmqpType<?, ?> key, AmqpType<?, ?> value);
-    public AmqpType<?, ?> get(AmqpType<?, ?> key);
+    public AmqpType<?, ?> get(Object key);
 
-    public HashMap<AmqpType<?,?>, AmqpType<?,?>> getValue();
+    public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue();
 
     public static class AmqpMapBean implements AmqpMap{
 
         private AmqpMapBuffer buffer;
         private AmqpMapBean bean = this;
-        private HashMap<AmqpType<?,?>, AmqpType<?,?>> value;
+        private IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value;
 
-        protected AmqpMapBean() {
+        AmqpMapBean() {
+            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());
         }
 
-        public AmqpMapBean(HashMap<AmqpType<?,?>, AmqpType<?,?>> value) {
+        AmqpMapBean(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) {
             this.value = value;
         }
 
-        public AmqpMapBean(AmqpMap.AmqpMapBean other) {
+        AmqpMapBean(AmqpMap.AmqpMapBean other) {
             this.bean = other;
         }
 
@@ -68,14 +75,23 @@ public interface AmqpMap extends AmqpType<AmqpMap.AmqpMapBean, AmqpMap.AmqpMapBu
         }
 
         public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+            copyCheck();
             bean.value.put(key, value);
         }
 
-        public AmqpType<?, ?> get(AmqpType<?, ?> key) {
+        public AmqpType<?, ?> get(Object key) {
             return bean.value.get(key);
         }
 
-        public HashMap<AmqpType<?,?>, AmqpType<?,?>> getValue() {
+        public int getEntryCount() {
+            return bean.value.getEntryCount();
+        }
+
+        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+            return bean.value.iterator();
+        }
+
+        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
             return bean.value;
         }
 
@@ -94,44 +110,40 @@ public interface AmqpMap extends AmqpType<AmqpMap.AmqpMapBean, AmqpMap.AmqpMapBu
             bean = this;
         }
 
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
+        public boolean equals(Object o){
+            if(this == o) {
                 return true;
             }
 
-            if(t == null || !(t instanceof AmqpMap)) {
+            if(o == null || !(o instanceof AmqpMap)) {
                 return false;
             }
 
-            return equivalent((AmqpMap) t);
+            return equals((AmqpMap) o);
         }
 
-        public boolean equivalent(AmqpMap b) {
-            if(b == null) {
-                return false;
-            }
+        public boolean equals(AmqpMap b) {
+            return AbstractAmqpMap.checkEqual(this, b);
+        }
 
-            if(b.getValue() == null ^ getValue() == null) {
-                return false;
-            }
-
-            return b.getValue() == null || b.getValue().equals(getValue());
+        public int hashCode() {
+            return AbstractAmqpMap.hashCodeFor(this);
         }
     }
 
-    public static class AmqpMapBuffer implements AmqpMap, AmqpBuffer< HashMap<AmqpType<?,?>, AmqpType<?,?>>> {
+    public static class AmqpMapBuffer implements AmqpMap, AmqpBuffer< IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> {
 
         private AmqpMapBean bean;
-        protected Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> encoded;
+        protected Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encoded;
 
         protected AmqpMapBuffer() {
         }
 
-        protected AmqpMapBuffer(Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> encoded) {
+        protected AmqpMapBuffer(Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encoded) {
             this.encoded = encoded;
         }
 
-        public final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> getEncoded() throws AmqpEncodingError{
+        public final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> getEncoded() throws AmqpEncodingError{
             return encoded;
         }
 
@@ -142,11 +154,19 @@ public interface AmqpMap extends AmqpType<AmqpMap.AmqpMapBean, AmqpMap.AmqpMapBu
             bean().put(key, value);
         }
 
-        public AmqpType<?, ?> get(AmqpType<?, ?> key) {
+        public AmqpType<?, ?> get(Object key) {
             return bean().get(key);
         }
 
-        public HashMap<AmqpType<?,?>, AmqpType<?,?>> getValue() {
+        public int getEntryCount() {
+            return bean().getEntryCount();
+        }
+
+        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+            return bean().iterator();
+        }
+
+        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
             return bean().getValue();
         }
 
@@ -162,11 +182,19 @@ public interface AmqpMap extends AmqpType<AmqpMap.AmqpMapBean, AmqpMap.AmqpMapBu
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
         }
 
-        public static AmqpMap.AmqpMapBuffer create(Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> encoded) {
+        public boolean equals(AmqpMap o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
+        }
+
+        public static AmqpMap.AmqpMapBuffer create(Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

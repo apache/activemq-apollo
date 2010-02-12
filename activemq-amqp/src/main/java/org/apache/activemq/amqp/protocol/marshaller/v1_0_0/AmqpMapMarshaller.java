@@ -19,7 +19,6 @@ package org.apache.activemq.amqp.protocol.marshaller.v1_0_0;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.HashMap;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpVersion;
 import org.apache.activemq.amqp.protocol.marshaller.Encoded;
@@ -29,12 +28,13 @@ import org.apache.activemq.amqp.protocol.marshaller.v1_0_0.Encoder;
 import org.apache.activemq.amqp.protocol.marshaller.v1_0_0.Encoder.*;
 import org.apache.activemq.amqp.protocol.types.AmqpMap;
 import org.apache.activemq.amqp.protocol.types.AmqpType;
+import org.apache.activemq.amqp.protocol.types.IAmqpMap;
 import org.apache.activemq.util.buffer.Buffer;
 
 public class AmqpMapMarshaller {
 
     private static final Encoder ENCODER = Encoder.SINGLETON;
-    private static final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> NULL_ENCODED = new Encoder.NullEncoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>>();
+    private static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> NULL_ENCODED = new Encoder.NullEncoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>>();
 
     public static final byte MAP8_FORMAT_CODE = (byte) 0xc1;
     public static final byte MAP32_FORMAT_CODE = (byte) 0xd1;
@@ -86,7 +86,7 @@ public class AmqpMapMarshaller {
             }
             }
         }
-        static final AmqpMapEncoded createEncoded(byte formatCode, HashMap<AmqpType<?,?>, AmqpType<?,?>> value) throws AmqpEncodingError {
+        static final AmqpMapEncoded createEncoded(byte formatCode, IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) throws AmqpEncodingError {
             switch(formatCode) {
             case MAP8_FORMAT_CODE: {
                 return new AmqpMapMap8Encoded(value);
@@ -100,14 +100,14 @@ public class AmqpMapMarshaller {
             }
         }
     }
-    public static abstract class AmqpMapEncoded extends AbstractEncoded <HashMap<AmqpType<?,?>, AmqpType<?,?>>> {
+    public static abstract class AmqpMapEncoded extends AbstractEncoded <IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> {
         MapDecoder decoder = Encoder.DEFAULT_MAP_DECODER;
 
         public AmqpMapEncoded(EncodedBuffer encoded) {
             super(encoded);
         }
 
-        public AmqpMapEncoded(byte formatCode, HashMap<AmqpType<?,?>, AmqpType<?,?>> value) throws AmqpEncodingError {
+        public AmqpMapEncoded(byte formatCode, IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) throws AmqpEncodingError {
             super(formatCode, value);
         }
 
@@ -126,7 +126,7 @@ public class AmqpMapMarshaller {
             super(encoded);
         }
 
-        public AmqpMapMap8Encoded(HashMap<AmqpType<?,?>, AmqpType<?,?>> value) throws AmqpEncodingError {
+        public AmqpMapMap8Encoded(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) throws AmqpEncodingError {
             super(MAP_ENCODING.MAP8.FORMAT_CODE, value);
         }
 
@@ -138,11 +138,11 @@ public class AmqpMapMarshaller {
             return ENCODER.getEncodedCountOfMap(value, encoding);
         }
 
-        public final void encode(HashMap<AmqpType<?,?>, AmqpType<?,?>> value, Buffer encoded, int offset) throws AmqpEncodingError {
+        public final void encode(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value, Buffer encoded, int offset) throws AmqpEncodingError {
             ENCODER.encodeMapMap8(value, encoded, offset);
         }
 
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> decode(EncodedBuffer encoded) throws AmqpEncodingError {
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> decode(EncodedBuffer encoded) throws AmqpEncodingError {
             return ENCODER.decodeMapMap8(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataCount(), encoded.getDataSize(), decoder);
         }
 
@@ -150,7 +150,7 @@ public class AmqpMapMarshaller {
             ENCODER.writeMapMap8(value, out);
         }
 
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> unmarshalData(DataInput in) throws IOException {
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> unmarshalData(DataInput in) throws IOException {
             return ENCODER.readMapMap8(getDataCount(), getDataSize(), in, decoder);
         }
     }
@@ -165,7 +165,7 @@ public class AmqpMapMarshaller {
             super(encoded);
         }
 
-        public AmqpMapMap32Encoded(HashMap<AmqpType<?,?>, AmqpType<?,?>> value) throws AmqpEncodingError {
+        public AmqpMapMap32Encoded(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) throws AmqpEncodingError {
             super(MAP_ENCODING.MAP32.FORMAT_CODE, value);
         }
 
@@ -177,11 +177,11 @@ public class AmqpMapMarshaller {
             return ENCODER.getEncodedCountOfMap(value, encoding);
         }
 
-        public final void encode(HashMap<AmqpType<?,?>, AmqpType<?,?>> value, Buffer encoded, int offset) throws AmqpEncodingError {
+        public final void encode(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value, Buffer encoded, int offset) throws AmqpEncodingError {
             ENCODER.encodeMapMap32(value, encoded, offset);
         }
 
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> decode(EncodedBuffer encoded) throws AmqpEncodingError {
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> decode(EncodedBuffer encoded) throws AmqpEncodingError {
             return ENCODER.decodeMapMap32(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataCount(), encoded.getDataSize(), decoder);
         }
 
@@ -189,7 +189,7 @@ public class AmqpMapMarshaller {
             ENCODER.writeMapMap32(value, out);
         }
 
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> unmarshalData(DataInput in) throws IOException {
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> unmarshalData(DataInput in) throws IOException {
             return ENCODER.readMapMap32(getDataCount(), getDataSize(), in, decoder);
         }
     }
@@ -199,41 +199,41 @@ public class AmqpMapMarshaller {
         return Encoder.chooseMapEncoding(val.getValue());
     }
 
-    private static final MAP_ENCODING chooseEncoding(HashMap<AmqpType<?,?>, AmqpType<?,?>> val) throws AmqpEncodingError {
+    private static final MAP_ENCODING chooseEncoding(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> val) throws AmqpEncodingError {
         return Encoder.chooseMapEncoding(val);
     }
 
-    static final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> encode(AmqpMap data) throws AmqpEncodingError {
+    static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encode(AmqpMap data) throws AmqpEncodingError {
         if(data == null) {
             return NULL_ENCODED;
         }
         return MAP_ENCODING.createEncoded(chooseEncoding(data).FORMAT_CODE, data.getValue());
     }
 
-    static final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> createEncoded(Buffer source, int offset) throws AmqpEncodingError {
+    static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> createEncoded(Buffer source, int offset) throws AmqpEncodingError {
         return createEncoded(FormatCategory.createBuffer(source, offset));
     }
 
-    static final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> createEncoded(HashMap<AmqpType<?,?>, AmqpType<?,?>> val) throws AmqpEncodingError {
+    static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> createEncoded(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> val) throws AmqpEncodingError {
         return MAP_ENCODING.createEncoded(chooseEncoding(val).FORMAT_CODE, val);
     }
 
-    static final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> createEncoded(DataInput in) throws IOException, AmqpEncodingError {
+    static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> createEncoded(DataInput in) throws IOException, AmqpEncodingError {
         return createEncoded(FormatCategory.createBuffer(in.readByte(), in));
     }
 
-    static final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> createEncoded(EncodedBuffer buffer) throws AmqpEncodingError {
+    static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> createEncoded(EncodedBuffer buffer) throws AmqpEncodingError {
         if(buffer.getEncodingFormatCode() == AmqpNullMarshaller.FORMAT_CODE) {
             return NULL_ENCODED;
         }
         return MAP_ENCODING.createEncoded(buffer);
     }
 
-    static final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> createEncoded(DataInput in, MapDecoder decoder) throws IOException, AmqpEncodingError {
+    static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> createEncoded(DataInput in, MapDecoder decoder) throws IOException, AmqpEncodingError {
         return createEncoded(FormatCategory.createBuffer(in.readByte(), in), decoder);
     }
 
-    static final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> createEncoded(EncodedBuffer buffer, MapDecoder decoder) throws AmqpEncodingError {
+    static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> createEncoded(EncodedBuffer buffer, MapDecoder decoder) throws AmqpEncodingError {
         if(buffer.getEncodingFormatCode() == AmqpNullMarshaller.FORMAT_CODE) {
             return NULL_ENCODED;
         }

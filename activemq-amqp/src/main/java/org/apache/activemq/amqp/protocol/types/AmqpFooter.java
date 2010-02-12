@@ -76,142 +76,144 @@ public interface AmqpFooter extends AmqpList {
         private AmqpMessageAttributes messageAttrs;
         private AmqpMessageAttributes deliveryAttrs;
 
-        public AmqpFooterBean() {
+        AmqpFooterBean() {
         }
 
-        public AmqpFooterBean(IAmqpList value) {
-            //TODO we should defer decoding of the described type:
-            for(int i = 0; i < value.getListCount(); i++) {
-                set(i, value.get(i));
-            }
-        }
+        AmqpFooterBean(IAmqpList value) {
 
-        public AmqpFooterBean(AmqpFooter.AmqpFooterBean other) {
-            this.bean = other;
-        }
-
-        public final AmqpFooterBean copy() {
-            return new AmqpFooter.AmqpFooterBean(bean);
-        }
-
-        public final AmqpFooter.AmqpFooterBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-            if(buffer == null) {
-                buffer = new AmqpFooterBuffer(marshaller.encode(this));
-            }
-            return buffer;
-        }
-
-        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-            getBuffer(marshaller).marshal(out, marshaller);
-        }
-
-
-        public final void setMessageAttrs(AmqpMessageAttributes messageAttrs) {
-            copyCheck();
-            bean.messageAttrs = messageAttrs;
-        }
-
-        public final AmqpMessageAttributes getMessageAttrs() {
-            return bean.messageAttrs;
-        }
-
-        public final void setDeliveryAttrs(AmqpMessageAttributes deliveryAttrs) {
-            copyCheck();
-            bean.deliveryAttrs = deliveryAttrs;
-        }
-
-        public final AmqpMessageAttributes getDeliveryAttrs() {
-            return bean.deliveryAttrs;
-        }
-
-        public void set(int index, AmqpType<?, ?> value) {
-            switch(index) {
-            case 0: {
-                setMessageAttrs((AmqpMessageAttributes) value);
-                break;
-            }
-            case 1: {
-                setDeliveryAttrs((AmqpMessageAttributes) value);
-                break;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public AmqpType<?, ?> get(int index) {
-            switch(index) {
-            case 0: {
-                return bean.messageAttrs;
-            }
-            case 1: {
-                return bean.deliveryAttrs;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public int getListCount() {
-            return 2;
-        }
-
-        public IAmqpList getValue() {
-            return bean;
-        }
-
-        public Iterator<AmqpType<?, ?>> iterator() {
-            return new AmqpListIterator(bean);
-        }
-
-
-        private final void copyCheck() {
-            if(buffer != null) {;
-                throw new IllegalStateException("unwriteable");
-            }
-            if(bean != this) {;
-                copy(bean);
-            }
-        }
-
-        private final void copy(AmqpFooter.AmqpFooterBean other) {
-            this.messageAttrs= other.messageAttrs;
-            this.deliveryAttrs= other.deliveryAttrs;
-            bean = this;
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpFooter)) {
-                return false;
-            }
-
-            return equivalent((AmqpFooter) t);
-        }
-
-        public boolean equivalent(AmqpFooter b) {
-
-            if(b.getMessageAttrs() == null ^ getMessageAttrs() == null) {
-                return false;
-            }
-            if(b.getMessageAttrs() != null && !b.getMessageAttrs().equals(getMessageAttrs())){ 
-                return false;
-            }
-
-            if(b.getDeliveryAttrs() == null ^ getDeliveryAttrs() == null) {
-                return false;
-            }
-            if(b.getDeliveryAttrs() != null && !b.getDeliveryAttrs().equals(getDeliveryAttrs())){ 
-                return false;
-            }
-            return true;
+        for(int i = 0; i < value.getListCount(); i++) {
+            set(i, value.get(i));
         }
     }
+
+    AmqpFooterBean(AmqpFooter.AmqpFooterBean other) {
+        this.bean = other;
+    }
+
+    public final AmqpFooterBean copy() {
+        return new AmqpFooter.AmqpFooterBean(bean);
+    }
+
+    public final AmqpFooter.AmqpFooterBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+        if(buffer == null) {
+            buffer = new AmqpFooterBuffer(marshaller.encode(this));
+        }
+        return buffer;
+    }
+
+    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+        getBuffer(marshaller).marshal(out, marshaller);
+    }
+
+
+    public final void setMessageAttrs(AmqpMessageAttributes messageAttrs) {
+        copyCheck();
+        bean.messageAttrs = messageAttrs;
+    }
+
+    public final AmqpMessageAttributes getMessageAttrs() {
+        return bean.messageAttrs;
+    }
+
+    public final void setDeliveryAttrs(AmqpMessageAttributes deliveryAttrs) {
+        copyCheck();
+        bean.deliveryAttrs = deliveryAttrs;
+    }
+
+    public final AmqpMessageAttributes getDeliveryAttrs() {
+        return bean.deliveryAttrs;
+    }
+
+    public void set(int index, AmqpType<?, ?> value) {
+        switch(index) {
+        case 0: {
+            setMessageAttrs((AmqpMessageAttributes) value);
+            break;
+        }
+        case 1: {
+            setDeliveryAttrs((AmqpMessageAttributes) value);
+            break;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public AmqpType<?, ?> get(int index) {
+        switch(index) {
+        case 0: {
+            return bean.messageAttrs;
+        }
+        case 1: {
+            return bean.deliveryAttrs;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public int getListCount() {
+        return 2;
+    }
+
+    public IAmqpList getValue() {
+        return bean;
+    }
+
+    public Iterator<AmqpType<?, ?>> iterator() {
+        return new AmqpListIterator(bean);
+    }
+
+
+    private final void copyCheck() {
+        if(buffer != null) {;
+            throw new IllegalStateException("unwriteable");
+        }
+        if(bean != this) {;
+            copy(bean);
+        }
+    }
+
+    private final void copy(AmqpFooter.AmqpFooterBean other) {
+        bean = this;
+    }
+
+    public boolean equals(Object o){
+        if(this == o) {
+            return true;
+        }
+
+        if(o == null || !(o instanceof AmqpFooter)) {
+            return false;
+        }
+
+        return equals((AmqpFooter) o);
+    }
+
+    public boolean equals(AmqpFooter b) {
+
+        if(b.getMessageAttrs() == null ^ getMessageAttrs() == null) {
+            return false;
+        }
+        if(b.getMessageAttrs() != null && !b.getMessageAttrs().equals(getMessageAttrs())){ 
+            return false;
+        }
+
+        if(b.getDeliveryAttrs() == null ^ getDeliveryAttrs() == null) {
+            return false;
+        }
+        if(b.getDeliveryAttrs() != null && !b.getDeliveryAttrs().equals(getDeliveryAttrs())){ 
+            return false;
+        }
+        return true;
+    }
+
+    public int hashCode() {
+        return AbstractAmqpList.hashCodeFor(this);
+    }
+}
 
     public static class AmqpFooterBuffer extends AmqpList.AmqpListBuffer implements AmqpFooter{
 
@@ -269,8 +271,16 @@ public interface AmqpFooter extends AmqpList {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpFooter o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpFooter.AmqpFooterBuffer create(Encoded<IAmqpList> encoded) {

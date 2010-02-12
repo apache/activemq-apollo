@@ -13,28 +13,27 @@ import org.apache.activemq.amqp.protocol.types.AmqpHandle;
 import org.apache.activemq.amqp.protocol.types.AmqpOptions;
 import org.apache.activemq.amqp.protocol.types.AmqpSequenceNo;
 import org.apache.activemq.amqp.protocol.types.AmqpType;
+import org.apache.activemq.amqp.protocol.types.TypeFactory;
+import static org.apache.activemq.amqp.protocol.types.TypeFactory.*;
 
 import junit.framework.TestCase;
 
 public class AmqpProtocolTest extends TestCase {
 
     public void testSequencNumber() throws Exception {
-        AmqpSequenceNo val1 = new AmqpSequenceNo.AmqpSequenceNoBean(10L);
-        AmqpSequenceNo val2 = new AmqpSequenceNo.AmqpSequenceNoBean(10L);
-        assertTrue(val1.equivalent(val2));
-        
+        AmqpSequenceNo val1 = createAmqpSequenceNo(10);
+        AmqpSequenceNo val2 = createAmqpSequenceNo(10);
+        assertTrue(val1.equals(val2));
     }
     
     public void testAmqpFlow() throws Exception {
-        AmqpFlow val = new AmqpFlow.AmqpFlowBean();
-        val.setHandle(new AmqpHandle.AmqpHandleBean(1L));
-        AmqpFlow read = marshalUnmarshal(val);
-        AmqpHandle handle = read.getHandle();
+        AmqpFlow flow = createAmqpFlow();
+        flow.setHandle(1);
+        flow.setOptions(createAmqpOptions());
         
-        AmqpSequenceNo seq = read.getLimit();
-        AmqpOptions options = read.getOptions();
-        
-        assertTrue(val.equivalent(read));
+        AmqpFlow read = marshalUnmarshal(flow);
+                
+        assertTrue(flow.equals(read));
         System.out.println("Value: " + read.getValue());
     }
 

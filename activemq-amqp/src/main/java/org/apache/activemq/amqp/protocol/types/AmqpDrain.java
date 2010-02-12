@@ -57,6 +57,40 @@ public interface AmqpDrain extends AmqpList, AmqpCommand {
      * <p>
      * Identifies the Link to be drained.
      * </p>
+     * <p>
+     * command and subsequently used
+     * by endpoints as a shorthand to refer to the Link in all outgoing commands. The two
+     * endpoints may potentially use different handles to refer to the same Link. Link handles
+     * may be reused once a Link is closed for both send and receive.
+     * </p>
+     */
+    public void setHandle(Long handle);
+
+    /**
+     * the Link handle
+     * <p>
+     * Identifies the Link to be drained.
+     * </p>
+     * <p>
+     * command and subsequently used
+     * by endpoints as a shorthand to refer to the Link in all outgoing commands. The two
+     * endpoints may potentially use different handles to refer to the same Link. Link handles
+     * may be reused once a Link is closed for both send and receive.
+     * </p>
+     */
+    public void setHandle(long handle);
+
+    /**
+     * the Link handle
+     * <p>
+     * Identifies the Link to be drained.
+     * </p>
+     * <p>
+     * command and subsequently used
+     * by endpoints as a shorthand to refer to the Link in all outgoing commands. The two
+     * endpoints may potentially use different handles to refer to the same Link. Link handles
+     * may be reused once a Link is closed for both send and receive.
+     * </p>
      */
     public void setHandle(AmqpHandle handle);
 
@@ -64,6 +98,12 @@ public interface AmqpDrain extends AmqpList, AmqpCommand {
      * the Link handle
      * <p>
      * Identifies the Link to be drained.
+     * </p>
+     * <p>
+     * command and subsequently used
+     * by endpoints as a shorthand to refer to the Link in all outgoing commands. The two
+     * endpoints may potentially use different handles to refer to the same Link. Link handles
+     * may be reused once a Link is closed for both send and receive.
      * </p>
      */
     public AmqpHandle getHandle();
@@ -75,146 +115,158 @@ public interface AmqpDrain extends AmqpList, AmqpCommand {
         private AmqpOptions options;
         private AmqpHandle handle;
 
-        public AmqpDrainBean() {
+        AmqpDrainBean() {
         }
 
-        public AmqpDrainBean(IAmqpList value) {
-            //TODO we should defer decoding of the described type:
-            for(int i = 0; i < value.getListCount(); i++) {
-                set(i, value.get(i));
-            }
-        }
+        AmqpDrainBean(IAmqpList value) {
 
-        public AmqpDrainBean(AmqpDrain.AmqpDrainBean other) {
-            this.bean = other;
-        }
-
-        public final AmqpDrainBean copy() {
-            return new AmqpDrain.AmqpDrainBean(bean);
-        }
-
-        public final void handle(AmqpCommandHandler handler) throws Exception {
-            handler.handleDrain(this);
-        }
-
-        public final AmqpDrain.AmqpDrainBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-            if(buffer == null) {
-                buffer = new AmqpDrainBuffer(marshaller.encode(this));
-            }
-            return buffer;
-        }
-
-        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-            getBuffer(marshaller).marshal(out, marshaller);
-        }
-
-
-        public final void setOptions(AmqpOptions options) {
-            copyCheck();
-            bean.options = options;
-        }
-
-        public final AmqpOptions getOptions() {
-            return bean.options;
-        }
-
-        public final void setHandle(AmqpHandle handle) {
-            copyCheck();
-            bean.handle = handle;
-        }
-
-        public final AmqpHandle getHandle() {
-            return bean.handle;
-        }
-
-        public void set(int index, AmqpType<?, ?> value) {
-            switch(index) {
-            case 0: {
-                setOptions((AmqpOptions) value);
-                break;
-            }
-            case 1: {
-                setHandle((AmqpHandle) value);
-                break;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public AmqpType<?, ?> get(int index) {
-            switch(index) {
-            case 0: {
-                return bean.options;
-            }
-            case 1: {
-                return bean.handle;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public int getListCount() {
-            return 2;
-        }
-
-        public IAmqpList getValue() {
-            return bean;
-        }
-
-        public Iterator<AmqpType<?, ?>> iterator() {
-            return new AmqpListIterator(bean);
-        }
-
-
-        private final void copyCheck() {
-            if(buffer != null) {;
-                throw new IllegalStateException("unwriteable");
-            }
-            if(bean != this) {;
-                copy(bean);
-            }
-        }
-
-        private final void copy(AmqpDrain.AmqpDrainBean other) {
-            this.options= other.options;
-            this.handle= other.handle;
-            bean = this;
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpDrain)) {
-                return false;
-            }
-
-            return equivalent((AmqpDrain) t);
-        }
-
-        public boolean equivalent(AmqpDrain b) {
-
-            if(b.getOptions() == null ^ getOptions() == null) {
-                return false;
-            }
-            if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
-                return false;
-            }
-
-            if(b.getHandle() == null ^ getHandle() == null) {
-                return false;
-            }
-            if(b.getHandle() != null && !b.getHandle().equals(getHandle())){ 
-                return false;
-            }
-            return true;
+        for(int i = 0; i < value.getListCount(); i++) {
+            set(i, value.get(i));
         }
     }
+
+    AmqpDrainBean(AmqpDrain.AmqpDrainBean other) {
+        this.bean = other;
+    }
+
+    public final AmqpDrainBean copy() {
+        return new AmqpDrain.AmqpDrainBean(bean);
+    }
+
+    public final void handle(AmqpCommandHandler handler) throws Exception {
+        handler.handleDrain(this);
+    }
+
+    public final AmqpDrain.AmqpDrainBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+        if(buffer == null) {
+            buffer = new AmqpDrainBuffer(marshaller.encode(this));
+        }
+        return buffer;
+    }
+
+    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+        getBuffer(marshaller).marshal(out, marshaller);
+    }
+
+
+    public final void setOptions(AmqpOptions options) {
+        copyCheck();
+        bean.options = options;
+    }
+
+    public final AmqpOptions getOptions() {
+        return bean.options;
+    }
+
+    public void setHandle(Long handle) {
+        setHandle(TypeFactory.createAmqpHandle(handle));
+    }
+
+
+    public void setHandle(long handle) {
+        setHandle(TypeFactory.createAmqpHandle(handle));
+    }
+
+
+    public final void setHandle(AmqpHandle handle) {
+        copyCheck();
+        bean.handle = handle;
+    }
+
+    public final AmqpHandle getHandle() {
+        return bean.handle;
+    }
+
+    public void set(int index, AmqpType<?, ?> value) {
+        switch(index) {
+        case 0: {
+            setOptions((AmqpOptions) value);
+            break;
+        }
+        case 1: {
+            setHandle((AmqpHandle) value);
+            break;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public AmqpType<?, ?> get(int index) {
+        switch(index) {
+        case 0: {
+            return bean.options;
+        }
+        case 1: {
+            return bean.handle;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public int getListCount() {
+        return 2;
+    }
+
+    public IAmqpList getValue() {
+        return bean;
+    }
+
+    public Iterator<AmqpType<?, ?>> iterator() {
+        return new AmqpListIterator(bean);
+    }
+
+
+    private final void copyCheck() {
+        if(buffer != null) {;
+            throw new IllegalStateException("unwriteable");
+        }
+        if(bean != this) {;
+            copy(bean);
+        }
+    }
+
+    private final void copy(AmqpDrain.AmqpDrainBean other) {
+        bean = this;
+    }
+
+    public boolean equals(Object o){
+        if(this == o) {
+            return true;
+        }
+
+        if(o == null || !(o instanceof AmqpDrain)) {
+            return false;
+        }
+
+        return equals((AmqpDrain) o);
+    }
+
+    public boolean equals(AmqpDrain b) {
+
+        if(b.getOptions() == null ^ getOptions() == null) {
+            return false;
+        }
+        if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
+            return false;
+        }
+
+        if(b.getHandle() == null ^ getHandle() == null) {
+            return false;
+        }
+        if(b.getHandle() != null && !b.getHandle().equals(getHandle())){ 
+            return false;
+        }
+        return true;
+    }
+
+    public int hashCode() {
+        return AbstractAmqpList.hashCodeFor(this);
+    }
+}
 
     public static class AmqpDrainBuffer extends AmqpList.AmqpListBuffer implements AmqpDrain{
 
@@ -231,6 +283,15 @@ public interface AmqpDrain extends AmqpList, AmqpCommand {
         public final AmqpOptions getOptions() {
             return bean().getOptions();
         }
+
+        public void setHandle(Long handle) {
+            bean().setHandle(handle);
+        }
+
+        public void setHandle(long handle) {
+            bean().setHandle(handle);
+        }
+
 
         public final void setHandle(AmqpHandle handle) {
             bean().setHandle(handle);
@@ -276,8 +337,16 @@ public interface AmqpDrain extends AmqpList, AmqpCommand {
             handler.handleDrain(this);
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpDrain o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpDrain.AmqpDrainBuffer create(Encoded<IAmqpList> encoded) {

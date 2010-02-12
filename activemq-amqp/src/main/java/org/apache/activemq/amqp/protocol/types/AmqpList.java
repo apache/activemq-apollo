@@ -19,6 +19,7 @@ package org.apache.activemq.amqp.protocol.types;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
@@ -31,6 +32,9 @@ import org.apache.activemq.util.buffer.Buffer;
  */
 public interface AmqpList extends AmqpType<AmqpList.AmqpListBean, AmqpList.AmqpListBuffer>, IAmqpList {
 
+    /**
+     * Represents a a sequence of polymorphic values
+     */
     public void set(int index, AmqpType<?, ?> value);
     public AmqpType<?, ?> get(int index);
     public int getListCount();
@@ -43,14 +47,15 @@ public interface AmqpList extends AmqpType<AmqpList.AmqpListBean, AmqpList.AmqpL
         private AmqpListBean bean = this;
         private IAmqpList value;
 
-        protected AmqpListBean() {
+        AmqpListBean() {
+            this.value = new IAmqpList.AmqpWrapperList(new ArrayList<AmqpType<?,?>>());
         }
 
-        public AmqpListBean(IAmqpList value) {
+        AmqpListBean(IAmqpList value) {
             this.value = value;
         }
 
-        public AmqpListBean(AmqpList.AmqpListBean other) {
+        AmqpListBean(AmqpList.AmqpListBean other) {
             this.bean = other;
         }
 
@@ -71,6 +76,7 @@ public interface AmqpList extends AmqpType<AmqpList.AmqpListBean, AmqpList.AmqpL
 
 
         public void set(int index, AmqpType<?, ?> value) {
+            copyCheck();
             bean.value.set(index, value);
         }
 
@@ -105,28 +111,24 @@ public interface AmqpList extends AmqpType<AmqpList.AmqpListBean, AmqpList.AmqpL
             bean = this;
         }
 
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
+        public boolean equals(Object o){
+            if(this == o) {
                 return true;
             }
 
-            if(t == null || !(t instanceof AmqpList)) {
+            if(o == null || !(o instanceof AmqpList)) {
                 return false;
             }
 
-            return equivalent((AmqpList) t);
+            return equals((AmqpList) o);
         }
 
-        public boolean equivalent(AmqpList b) {
-            if(b == null) {
-                return false;
-            }
+        public boolean equals(AmqpList b) {
+            return AbstractAmqpList.checkEqual(this, b);
+        }
 
-            if(b.getValue() == null ^ getValue() == null) {
-                return false;
-            }
-
-            return b.getValue() == null || b.getValue().equals(getValue());
+        public int hashCode() {
+            return AbstractAmqpList.hashCodeFor(this);
         }
     }
 
@@ -182,8 +184,16 @@ public interface AmqpList extends AmqpType<AmqpList.AmqpListBean, AmqpList.AmqpL
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpList o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpList.AmqpListBuffer create(Encoded<IAmqpList> encoded) {

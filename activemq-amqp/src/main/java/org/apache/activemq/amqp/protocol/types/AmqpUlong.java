@@ -39,14 +39,11 @@ public interface AmqpUlong extends AmqpType<AmqpUlong.AmqpUlongBean, AmqpUlong.A
         private AmqpUlongBean bean = this;
         private BigInteger value;
 
-        protected AmqpUlongBean() {
-        }
-
-        public AmqpUlongBean(BigInteger value) {
+        AmqpUlongBean(BigInteger value) {
             this.value = value;
         }
 
-        public AmqpUlongBean(AmqpUlong.AmqpUlongBean other) {
+        AmqpUlongBean(AmqpUlong.AmqpUlongBean other) {
             this.bean = other;
         }
 
@@ -80,29 +77,10 @@ public interface AmqpUlong extends AmqpType<AmqpUlong.AmqpUlongBean, AmqpUlong.A
                 return false;
             }
 
-            return equivalent((AmqpUlong) o);
+            return equals((AmqpUlong) o);
         }
 
-        public int hashCode() {
-            if(getValue() == null) {
-                return AmqpUlong.AmqpUlongBean.class.hashCode();
-            }
-            return getValue().hashCode();
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpUlong)) {
-                return false;
-            }
-
-            return equivalent((AmqpUlong) t);
-        }
-
-        public boolean equivalent(AmqpUlong b) {
+        public boolean equals(AmqpUlong b) {
             if(b == null) {
                 return false;
             }
@@ -112,6 +90,13 @@ public interface AmqpUlong extends AmqpType<AmqpUlong.AmqpUlongBean, AmqpUlong.A
             }
 
             return b.getValue() == null || b.getValue().equals(getValue());
+        }
+
+        public int hashCode() {
+            if(getValue() == null) {
+                return AmqpUlong.AmqpUlongBean.class.hashCode();
+            }
+            return getValue().hashCode();
         }
     }
 
@@ -155,12 +140,12 @@ public interface AmqpUlong extends AmqpType<AmqpUlong.AmqpUlongBean, AmqpUlong.A
             return bean().equals(o);
         }
 
-        public int hashCode() {
-            return bean().hashCode();
+        public boolean equals(AmqpUlong o){
+            return bean().equals(o);
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpUlong.AmqpUlongBuffer create(Encoded<BigInteger> encoded) {

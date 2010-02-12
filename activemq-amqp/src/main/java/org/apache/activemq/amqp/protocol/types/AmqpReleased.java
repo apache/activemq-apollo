@@ -21,9 +21,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.Boolean;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
 import org.apache.activemq.amqp.protocol.marshaller.Encoded;
+import org.apache.activemq.amqp.protocol.types.IAmqpMap;
 import org.apache.activemq.util.buffer.Buffer;
 
 /**
@@ -39,6 +42,28 @@ import org.apache.activemq.util.buffer.Buffer;
 public interface AmqpReleased extends AmqpMap {
 
 
+    /**
+     * Key for: permit truncation of the remaining transfer
+     */
+    public static final AmqpSymbol TRUNCATE_KEY = TypeFactory.createAmqpSymbol("truncate");
+    /**
+     * Key for: count the transfer as an unsuccessful delivery attempt
+     */
+    public static final AmqpSymbol DELIVERY_FAILED_KEY = TypeFactory.createAmqpSymbol("delivery-failed");
+    /**
+     * Key for: prevent redelivery
+     */
+    public static final AmqpSymbol DELIVER_ELSEWHERE_KEY = TypeFactory.createAmqpSymbol("deliver-elsewhere");
+    /**
+     * Key for: message attributes
+     */
+    public static final AmqpSymbol MESSAGE_ATTRS_KEY = TypeFactory.createAmqpSymbol("message-attrs");
+    /**
+     * Key for: delivery attributes
+     */
+    public static final AmqpSymbol DELIVERY_ATTRS_KEY = TypeFactory.createAmqpSymbol("delivery-attrs");
+
+
 
     /**
      * permit truncation of the remaining transfer
@@ -48,6 +73,15 @@ public interface AmqpReleased extends AmqpMap {
      * </p>
      */
     public void setTruncate(Boolean truncate);
+
+    /**
+     * permit truncation of the remaining transfer
+     * <p>
+     * The truncate flag, if true, indicates that the receiver is not interested in the rest of
+     * the Message content, and the sender is free to omit it.
+     * </p>
+     */
+    public void setTruncate(boolean truncate);
 
     /**
      * permit truncation of the remaining transfer
@@ -83,6 +117,15 @@ public interface AmqpReleased extends AmqpMap {
      * delivery-failures count incremented.
      * </p>
      */
+    public void setDeliveryFailed(boolean deliveryFailed);
+
+    /**
+     * count the transfer as an unsuccessful delivery attempt
+     * <p>
+     * If the delivery-failed flag is set, any Messages released MUST have their
+     * delivery-failures count incremented.
+     * </p>
+     */
     public void setDeliveryFailed(AmqpBoolean deliveryFailed);
 
     /**
@@ -102,6 +145,15 @@ public interface AmqpReleased extends AmqpMap {
      * </p>
      */
     public void setDeliverElsewhere(Boolean deliverElsewhere);
+
+    /**
+     * prevent redelivery
+     * <p>
+     * If the deliver-elsewhere is set, then any Messages released MUST NOT be redelivered to
+     * the releasing Link Endpoint.
+     * </p>
+     */
+    public void setDeliverElsewhere(boolean deliverElsewhere);
 
     /**
      * prevent redelivery
@@ -178,16 +230,17 @@ public interface AmqpReleased extends AmqpMap {
         private AmqpBoolean deliverElsewhere;
         private AmqpMessageAttributes messageAttrs;
         private AmqpMessageAttributes deliveryAttrs;
-        private HashMap<AmqpType<?,?>, AmqpType<?,?>> value;
+        private IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value;
 
-        public AmqpReleasedBean() {
+        AmqpReleasedBean() {
+            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());
         }
 
-        public AmqpReleasedBean(HashMap<AmqpType<?,?>, AmqpType<?,?>> value) {
+        AmqpReleasedBean(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) {
             this.value = value;
         }
 
-        public AmqpReleasedBean(AmqpReleased.AmqpReleasedBean other) {
+        AmqpReleasedBean(AmqpReleased.AmqpReleasedBean other) {
             this.bean = other;
         }
 
@@ -208,7 +261,12 @@ public interface AmqpReleased extends AmqpMap {
 
 
         public void setTruncate(Boolean truncate) {
-            setTruncate(new AmqpBoolean.AmqpBooleanBean(truncate));
+            setTruncate(TypeFactory.createAmqpBoolean(truncate));
+        }
+
+
+        public void setTruncate(boolean truncate) {
+            setTruncate(TypeFactory.createAmqpBoolean(truncate));
         }
 
 
@@ -222,7 +280,12 @@ public interface AmqpReleased extends AmqpMap {
         }
 
         public void setDeliveryFailed(Boolean deliveryFailed) {
-            setDeliveryFailed(new AmqpBoolean.AmqpBooleanBean(deliveryFailed));
+            setDeliveryFailed(TypeFactory.createAmqpBoolean(deliveryFailed));
+        }
+
+
+        public void setDeliveryFailed(boolean deliveryFailed) {
+            setDeliveryFailed(TypeFactory.createAmqpBoolean(deliveryFailed));
         }
 
 
@@ -236,7 +299,12 @@ public interface AmqpReleased extends AmqpMap {
         }
 
         public void setDeliverElsewhere(Boolean deliverElsewhere) {
-            setDeliverElsewhere(new AmqpBoolean.AmqpBooleanBean(deliverElsewhere));
+            setDeliverElsewhere(TypeFactory.createAmqpBoolean(deliverElsewhere));
+        }
+
+
+        public void setDeliverElsewhere(boolean deliverElsewhere) {
+            setDeliverElsewhere(TypeFactory.createAmqpBoolean(deliverElsewhere));
         }
 
 
@@ -267,14 +335,23 @@ public interface AmqpReleased extends AmqpMap {
             return bean.deliveryAttrs;
         }
         public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+            copyCheck();
             bean.value.put(key, value);
         }
 
-        public AmqpType<?, ?> get(AmqpType<?, ?> key) {
+        public AmqpType<?, ?> get(Object key) {
             return bean.value.get(key);
         }
 
-        public HashMap<AmqpType<?,?>, AmqpType<?,?>> getValue() {
+        public int getEntryCount() {
+            return bean.value.getEntryCount();
+        }
+
+        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+            return bean.value.iterator();
+        }
+
+        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
             return bean.value;
         }
 
@@ -289,27 +366,22 @@ public interface AmqpReleased extends AmqpMap {
         }
 
         private final void copy(AmqpReleased.AmqpReleasedBean other) {
-            this.truncate= other.truncate;
-            this.deliveryFailed= other.deliveryFailed;
-            this.deliverElsewhere= other.deliverElsewhere;
-            this.messageAttrs= other.messageAttrs;
-            this.deliveryAttrs= other.deliveryAttrs;
             bean = this;
         }
 
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
+        public boolean equals(Object o){
+            if(this == o) {
                 return true;
             }
 
-            if(t == null || !(t instanceof AmqpReleased)) {
+            if(o == null || !(o instanceof AmqpReleased)) {
                 return false;
             }
 
-            return equivalent((AmqpReleased) t);
+            return equals((AmqpReleased) o);
         }
 
-        public boolean equivalent(AmqpReleased b) {
+        public boolean equals(AmqpReleased b) {
 
             if(b.getTruncate() == null ^ getTruncate() == null) {
                 return false;
@@ -347,19 +419,28 @@ public interface AmqpReleased extends AmqpMap {
             }
             return true;
         }
+
+        public int hashCode() {
+            return AbstractAmqpMap.hashCodeFor(this);
+        }
     }
 
     public static class AmqpReleasedBuffer extends AmqpMap.AmqpMapBuffer implements AmqpReleased{
 
         private AmqpReleasedBean bean;
 
-        protected AmqpReleasedBuffer(Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> encoded) {
+        protected AmqpReleasedBuffer(Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
-    public void setTruncate(Boolean truncate) {
+        public void setTruncate(Boolean truncate) {
             bean().setTruncate(truncate);
         }
+
+        public void setTruncate(boolean truncate) {
+            bean().setTruncate(truncate);
+        }
+
 
         public final void setTruncate(AmqpBoolean truncate) {
             bean().setTruncate(truncate);
@@ -369,9 +450,14 @@ public interface AmqpReleased extends AmqpMap {
             return bean().getTruncate();
         }
 
-    public void setDeliveryFailed(Boolean deliveryFailed) {
+        public void setDeliveryFailed(Boolean deliveryFailed) {
             bean().setDeliveryFailed(deliveryFailed);
         }
+
+        public void setDeliveryFailed(boolean deliveryFailed) {
+            bean().setDeliveryFailed(deliveryFailed);
+        }
+
 
         public final void setDeliveryFailed(AmqpBoolean deliveryFailed) {
             bean().setDeliveryFailed(deliveryFailed);
@@ -381,9 +467,14 @@ public interface AmqpReleased extends AmqpMap {
             return bean().getDeliveryFailed();
         }
 
-    public void setDeliverElsewhere(Boolean deliverElsewhere) {
+        public void setDeliverElsewhere(Boolean deliverElsewhere) {
             bean().setDeliverElsewhere(deliverElsewhere);
         }
+
+        public void setDeliverElsewhere(boolean deliverElsewhere) {
+            bean().setDeliverElsewhere(deliverElsewhere);
+        }
+
 
         public final void setDeliverElsewhere(AmqpBoolean deliverElsewhere) {
             bean().setDeliverElsewhere(deliverElsewhere);
@@ -412,11 +503,19 @@ public interface AmqpReleased extends AmqpMap {
             bean().put(key, value);
         }
 
-        public AmqpType<?, ?> get(AmqpType<?, ?> key) {
+        public AmqpType<?, ?> get(Object key) {
             return bean().get(key);
         }
 
-        public HashMap<AmqpType<?,?>, AmqpType<?,?>> getValue() {
+        public int getEntryCount() {
+            return bean().getEntryCount();
+        }
+
+        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+            return bean().iterator();
+        }
+
+        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
             return bean().getValue();
         }
 
@@ -432,11 +531,19 @@ public interface AmqpReleased extends AmqpMap {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
         }
 
-        public static AmqpReleased.AmqpReleasedBuffer create(Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> encoded) {
+        public boolean equals(AmqpReleased o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
+        }
+
+        public static AmqpReleased.AmqpReleasedBuffer create(Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

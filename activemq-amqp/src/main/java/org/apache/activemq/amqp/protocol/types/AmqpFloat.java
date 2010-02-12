@@ -39,14 +39,11 @@ public interface AmqpFloat extends AmqpType<AmqpFloat.AmqpFloatBean, AmqpFloat.A
         private AmqpFloatBean bean = this;
         private Float value;
 
-        protected AmqpFloatBean() {
-        }
-
-        public AmqpFloatBean(Float value) {
+        AmqpFloatBean(Float value) {
             this.value = value;
         }
 
-        public AmqpFloatBean(AmqpFloat.AmqpFloatBean other) {
+        AmqpFloatBean(AmqpFloat.AmqpFloatBean other) {
             this.bean = other;
         }
 
@@ -80,29 +77,10 @@ public interface AmqpFloat extends AmqpType<AmqpFloat.AmqpFloatBean, AmqpFloat.A
                 return false;
             }
 
-            return equivalent((AmqpFloat) o);
+            return equals((AmqpFloat) o);
         }
 
-        public int hashCode() {
-            if(getValue() == null) {
-                return AmqpFloat.AmqpFloatBean.class.hashCode();
-            }
-            return getValue().hashCode();
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpFloat)) {
-                return false;
-            }
-
-            return equivalent((AmqpFloat) t);
-        }
-
-        public boolean equivalent(AmqpFloat b) {
+        public boolean equals(AmqpFloat b) {
             if(b == null) {
                 return false;
             }
@@ -112,6 +90,13 @@ public interface AmqpFloat extends AmqpType<AmqpFloat.AmqpFloatBean, AmqpFloat.A
             }
 
             return b.getValue() == null || b.getValue().equals(getValue());
+        }
+
+        public int hashCode() {
+            if(getValue() == null) {
+                return AmqpFloat.AmqpFloatBean.class.hashCode();
+            }
+            return getValue().hashCode();
         }
     }
 
@@ -155,12 +140,12 @@ public interface AmqpFloat extends AmqpType<AmqpFloat.AmqpFloatBean, AmqpFloat.A
             return bean().equals(o);
         }
 
-        public int hashCode() {
-            return bean().hashCode();
+        public boolean equals(AmqpFloat o){
+            return bean().equals(o);
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpFloat.AmqpFloatBuffer create(Encoded<Float> encoded) {

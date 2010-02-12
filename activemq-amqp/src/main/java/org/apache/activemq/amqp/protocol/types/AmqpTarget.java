@@ -22,12 +22,29 @@ import java.io.IOException;
 import java.lang.Boolean;
 import java.lang.Long;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
 import org.apache.activemq.amqp.protocol.marshaller.Encoded;
+import org.apache.activemq.amqp.protocol.types.IAmqpMap;
 import org.apache.activemq.util.buffer.Buffer;
 
 public interface AmqpTarget extends AmqpMap {
+
+
+    /**
+     * Key for: The address of the target.
+     */
+    public static final AmqpSymbol ADDRESS_KEY = TypeFactory.createAmqpSymbol("address");
+    /**
+     * Key for: request creation of a remote Node
+     */
+    public static final AmqpSymbol CREATE_KEY = TypeFactory.createAmqpSymbol("create");
+    /**
+     * Key for: the target timeout
+     */
+    public static final AmqpSymbol TIMEOUT_KEY = TypeFactory.createAmqpSymbol("timeout");
 
 
 
@@ -40,6 +57,29 @@ public interface AmqpTarget extends AmqpMap {
      * command sent by the receiving Link Endpoint. When sent by the sending Link Endpoint the
      * address MUST be set unless the create flag is set, in which case the address MUST NOT be
      * set.
+     * </p>
+     * <p>
+     * Specifies the name for a source or target to which Messages are to be transferred to or
+     * from. Addresses are expected to be human readable, but are intentionally considered
+     * opaque. The format of an address is not defined by this specification.
+     * </p>
+     */
+    public void setAddress(Buffer address);
+
+    /**
+     * The address of the target.
+     * <p>
+     * The address is resolved to a Node by the Container of the receiving Link Endpoint.
+     * </p>
+     * <p>
+     * command sent by the receiving Link Endpoint. When sent by the sending Link Endpoint the
+     * address MUST be set unless the create flag is set, in which case the address MUST NOT be
+     * set.
+     * </p>
+     * <p>
+     * Specifies the name for a source or target to which Messages are to be transferred to or
+     * from. Addresses are expected to be human readable, but are intentionally considered
+     * opaque. The format of an address is not defined by this specification.
      * </p>
      */
     public void setAddress(AmqpAddress address);
@@ -53,6 +93,11 @@ public interface AmqpTarget extends AmqpMap {
      * command sent by the receiving Link Endpoint. When sent by the sending Link Endpoint the
      * address MUST be set unless the create flag is set, in which case the address MUST NOT be
      * set.
+     * </p>
+     * <p>
+     * Specifies the name for a source or target to which Messages are to be transferred to or
+     * from. Addresses are expected to be human readable, but are intentionally considered
+     * opaque. The format of an address is not defined by this specification.
      * </p>
      */
     public AmqpAddress getAddress();
@@ -72,6 +117,22 @@ public interface AmqpTarget extends AmqpMap {
      * </p>
      */
     public void setCreate(Boolean create);
+
+    /**
+     * request creation of a remote Node
+     * <p>
+     * sent by the incoming Link Endpoint.
+     * </p>
+     * <p>
+     * The algorithm used to produce the address from the Link name, must produce repeatable
+     * results. If the Link is durable, generating an address from a given Link name within a
+     * given client-id MUST always produce the same result. If the Link is not durable,
+     * generating an address from a given Link name within a given Session MUST always produce
+     * the same result. The generated address SHOULD include the Link name and Session-name or
+     * client-id in some recognizable form for ease of traceability.
+     * </p>
+     */
+    public void setCreate(boolean create);
 
     /**
      * request creation of a remote Node
@@ -125,6 +186,17 @@ public interface AmqpTarget extends AmqpMap {
      * which will be used.
      * </p>
      */
+    public void setTimeout(long timeout);
+
+    /**
+     * the target timeout
+     * <p>
+     * The minimum length of time (in milliseconds) after the Link has been destroyed before
+     * the target is destroyed. The value set by the sending Link endpoint is indicative of
+     * the timeout it desires, the value set by the receiving Link endpoint defines the timeout
+     * which will be used.
+     * </p>
+     */
     public void setTimeout(AmqpUint timeout);
 
     /**
@@ -145,16 +217,17 @@ public interface AmqpTarget extends AmqpMap {
         private AmqpAddress address;
         private AmqpBoolean create;
         private AmqpUint timeout;
-        private HashMap<AmqpType<?,?>, AmqpType<?,?>> value;
+        private IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value;
 
-        public AmqpTargetBean() {
+        AmqpTargetBean() {
+            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());
         }
 
-        public AmqpTargetBean(HashMap<AmqpType<?,?>, AmqpType<?,?>> value) {
+        AmqpTargetBean(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) {
             this.value = value;
         }
 
-        public AmqpTargetBean(AmqpTarget.AmqpTargetBean other) {
+        AmqpTargetBean(AmqpTarget.AmqpTargetBean other) {
             this.bean = other;
         }
 
@@ -174,6 +247,11 @@ public interface AmqpTarget extends AmqpMap {
         }
 
 
+        public void setAddress(Buffer address) {
+            setAddress(TypeFactory.createAmqpAddress(address));
+        }
+
+
         public final void setAddress(AmqpAddress address) {
             copyCheck();
             bean.address = address;
@@ -184,7 +262,12 @@ public interface AmqpTarget extends AmqpMap {
         }
 
         public void setCreate(Boolean create) {
-            setCreate(new AmqpBoolean.AmqpBooleanBean(create));
+            setCreate(TypeFactory.createAmqpBoolean(create));
+        }
+
+
+        public void setCreate(boolean create) {
+            setCreate(TypeFactory.createAmqpBoolean(create));
         }
 
 
@@ -198,7 +281,12 @@ public interface AmqpTarget extends AmqpMap {
         }
 
         public void setTimeout(Long timeout) {
-            setTimeout(new AmqpUint.AmqpUintBean(timeout));
+            setTimeout(TypeFactory.createAmqpUint(timeout));
+        }
+
+
+        public void setTimeout(long timeout) {
+            setTimeout(TypeFactory.createAmqpUint(timeout));
         }
 
 
@@ -211,14 +299,23 @@ public interface AmqpTarget extends AmqpMap {
             return bean.timeout.getValue();
         }
         public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+            copyCheck();
             bean.value.put(key, value);
         }
 
-        public AmqpType<?, ?> get(AmqpType<?, ?> key) {
+        public AmqpType<?, ?> get(Object key) {
             return bean.value.get(key);
         }
 
-        public HashMap<AmqpType<?,?>, AmqpType<?,?>> getValue() {
+        public int getEntryCount() {
+            return bean.value.getEntryCount();
+        }
+
+        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+            return bean.value.iterator();
+        }
+
+        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
             return bean.value;
         }
 
@@ -233,25 +330,22 @@ public interface AmqpTarget extends AmqpMap {
         }
 
         private final void copy(AmqpTarget.AmqpTargetBean other) {
-            this.address= other.address;
-            this.create= other.create;
-            this.timeout= other.timeout;
             bean = this;
         }
 
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
+        public boolean equals(Object o){
+            if(this == o) {
                 return true;
             }
 
-            if(t == null || !(t instanceof AmqpTarget)) {
+            if(o == null || !(o instanceof AmqpTarget)) {
                 return false;
             }
 
-            return equivalent((AmqpTarget) t);
+            return equals((AmqpTarget) o);
         }
 
-        public boolean equivalent(AmqpTarget b) {
+        public boolean equals(AmqpTarget b) {
 
             if(b.getAddress() == null ^ getAddress() == null) {
                 return false;
@@ -275,14 +369,22 @@ public interface AmqpTarget extends AmqpMap {
             }
             return true;
         }
+
+        public int hashCode() {
+            return AbstractAmqpMap.hashCodeFor(this);
+        }
     }
 
     public static class AmqpTargetBuffer extends AmqpMap.AmqpMapBuffer implements AmqpTarget{
 
         private AmqpTargetBean bean;
 
-        protected AmqpTargetBuffer(Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> encoded) {
+        protected AmqpTargetBuffer(Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encoded) {
             super(encoded);
+        }
+
+        public void setAddress(Buffer address) {
+            bean().setAddress(address);
         }
 
         public final void setAddress(AmqpAddress address) {
@@ -293,9 +395,14 @@ public interface AmqpTarget extends AmqpMap {
             return bean().getAddress();
         }
 
-    public void setCreate(Boolean create) {
+        public void setCreate(Boolean create) {
             bean().setCreate(create);
         }
+
+        public void setCreate(boolean create) {
+            bean().setCreate(create);
+        }
+
 
         public final void setCreate(AmqpBoolean create) {
             bean().setCreate(create);
@@ -305,9 +412,14 @@ public interface AmqpTarget extends AmqpMap {
             return bean().getCreate();
         }
 
-    public void setTimeout(Long timeout) {
+        public void setTimeout(Long timeout) {
             bean().setTimeout(timeout);
         }
+
+        public void setTimeout(long timeout) {
+            bean().setTimeout(timeout);
+        }
+
 
         public final void setTimeout(AmqpUint timeout) {
             bean().setTimeout(timeout);
@@ -320,11 +432,19 @@ public interface AmqpTarget extends AmqpMap {
             bean().put(key, value);
         }
 
-        public AmqpType<?, ?> get(AmqpType<?, ?> key) {
+        public AmqpType<?, ?> get(Object key) {
             return bean().get(key);
         }
 
-        public HashMap<AmqpType<?,?>, AmqpType<?,?>> getValue() {
+        public int getEntryCount() {
+            return bean().getEntryCount();
+        }
+
+        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+            return bean().iterator();
+        }
+
+        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
             return bean().getValue();
         }
 
@@ -340,11 +460,19 @@ public interface AmqpTarget extends AmqpMap {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
         }
 
-        public static AmqpTarget.AmqpTargetBuffer create(Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> encoded) {
+        public boolean equals(AmqpTarget o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
+        }
+
+        public static AmqpTarget.AmqpTargetBuffer create(Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

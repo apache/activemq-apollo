@@ -19,7 +19,6 @@ package org.apache.activemq.amqp.protocol.types;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Iterator;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
@@ -40,17 +39,12 @@ public interface AmqpSaslResponse extends AmqpList {
     /**
      * options map
      */
-    public void setOptions(HashMap<AmqpType<?,?>, AmqpType<?,?>> options);
-
-    /**
-     * options map
-     */
     public void setOptions(AmqpMap options);
 
     /**
      * options map
      */
-    public HashMap<AmqpType<?,?>, AmqpType<?,?>> getOptions();
+    public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOptions();
 
     /**
      * security response data
@@ -86,152 +80,149 @@ public interface AmqpSaslResponse extends AmqpList {
         private AmqpMap options;
         private AmqpBinary response;
 
-        public AmqpSaslResponseBean() {
+        AmqpSaslResponseBean() {
         }
 
-        public AmqpSaslResponseBean(IAmqpList value) {
-            //TODO we should defer decoding of the described type:
-            for(int i = 0; i < value.getListCount(); i++) {
-                set(i, value.get(i));
-            }
-        }
+        AmqpSaslResponseBean(IAmqpList value) {
 
-        public AmqpSaslResponseBean(AmqpSaslResponse.AmqpSaslResponseBean other) {
-            this.bean = other;
-        }
-
-        public final AmqpSaslResponseBean copy() {
-            return new AmqpSaslResponse.AmqpSaslResponseBean(bean);
-        }
-
-        public final AmqpSaslResponse.AmqpSaslResponseBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-            if(buffer == null) {
-                buffer = new AmqpSaslResponseBuffer(marshaller.encode(this));
-            }
-            return buffer;
-        }
-
-        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-            getBuffer(marshaller).marshal(out, marshaller);
-        }
-
-
-        public void setOptions(HashMap<AmqpType<?,?>, AmqpType<?,?>> options) {
-            setOptions(new AmqpMap.AmqpMapBean(options));
-        }
-
-
-        public final void setOptions(AmqpMap options) {
-            copyCheck();
-            bean.options = options;
-        }
-
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> getOptions() {
-            return bean.options.getValue();
-        }
-
-        public void setResponse(Buffer response) {
-            setResponse(new AmqpBinary.AmqpBinaryBean(response));
-        }
-
-
-        public final void setResponse(AmqpBinary response) {
-            copyCheck();
-            bean.response = response;
-        }
-
-        public final Buffer getResponse() {
-            return bean.response.getValue();
-        }
-
-        public void set(int index, AmqpType<?, ?> value) {
-            switch(index) {
-            case 0: {
-                setOptions((AmqpMap) value);
-                break;
-            }
-            case 1: {
-                setResponse((AmqpBinary) value);
-                break;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public AmqpType<?, ?> get(int index) {
-            switch(index) {
-            case 0: {
-                return bean.options;
-            }
-            case 1: {
-                return bean.response;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public int getListCount() {
-            return 2;
-        }
-
-        public IAmqpList getValue() {
-            return bean;
-        }
-
-        public Iterator<AmqpType<?, ?>> iterator() {
-            return new AmqpListIterator(bean);
-        }
-
-
-        private final void copyCheck() {
-            if(buffer != null) {;
-                throw new IllegalStateException("unwriteable");
-            }
-            if(bean != this) {;
-                copy(bean);
-            }
-        }
-
-        private final void copy(AmqpSaslResponse.AmqpSaslResponseBean other) {
-            this.options= other.options;
-            this.response= other.response;
-            bean = this;
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpSaslResponse)) {
-                return false;
-            }
-
-            return equivalent((AmqpSaslResponse) t);
-        }
-
-        public boolean equivalent(AmqpSaslResponse b) {
-
-            if(b.getOptions() == null ^ getOptions() == null) {
-                return false;
-            }
-            if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
-                return false;
-            }
-
-            if(b.getResponse() == null ^ getResponse() == null) {
-                return false;
-            }
-            if(b.getResponse() != null && !b.getResponse().equals(getResponse())){ 
-                return false;
-            }
-            return true;
+        for(int i = 0; i < value.getListCount(); i++) {
+            set(i, value.get(i));
         }
     }
+
+    AmqpSaslResponseBean(AmqpSaslResponse.AmqpSaslResponseBean other) {
+        this.bean = other;
+    }
+
+    public final AmqpSaslResponseBean copy() {
+        return new AmqpSaslResponse.AmqpSaslResponseBean(bean);
+    }
+
+    public final AmqpSaslResponse.AmqpSaslResponseBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+        if(buffer == null) {
+            buffer = new AmqpSaslResponseBuffer(marshaller.encode(this));
+        }
+        return buffer;
+    }
+
+    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+        getBuffer(marshaller).marshal(out, marshaller);
+    }
+
+
+    public final void setOptions(AmqpMap options) {
+        copyCheck();
+        bean.options = options;
+    }
+
+    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOptions() {
+        return bean.options.getValue();
+    }
+
+    public void setResponse(Buffer response) {
+        setResponse(TypeFactory.createAmqpBinary(response));
+    }
+
+
+    public final void setResponse(AmqpBinary response) {
+        copyCheck();
+        bean.response = response;
+    }
+
+    public final Buffer getResponse() {
+        return bean.response.getValue();
+    }
+
+    public void set(int index, AmqpType<?, ?> value) {
+        switch(index) {
+        case 0: {
+            setOptions((AmqpMap) value);
+            break;
+        }
+        case 1: {
+            setResponse((AmqpBinary) value);
+            break;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public AmqpType<?, ?> get(int index) {
+        switch(index) {
+        case 0: {
+            return bean.options;
+        }
+        case 1: {
+            return bean.response;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public int getListCount() {
+        return 2;
+    }
+
+    public IAmqpList getValue() {
+        return bean;
+    }
+
+    public Iterator<AmqpType<?, ?>> iterator() {
+        return new AmqpListIterator(bean);
+    }
+
+
+    private final void copyCheck() {
+        if(buffer != null) {;
+            throw new IllegalStateException("unwriteable");
+        }
+        if(bean != this) {;
+            copy(bean);
+        }
+    }
+
+    private final void copy(AmqpSaslResponse.AmqpSaslResponseBean other) {
+        bean = this;
+    }
+
+    public boolean equals(Object o){
+        if(this == o) {
+            return true;
+        }
+
+        if(o == null || !(o instanceof AmqpSaslResponse)) {
+            return false;
+        }
+
+        return equals((AmqpSaslResponse) o);
+    }
+
+    public boolean equals(AmqpSaslResponse b) {
+
+        if(b.getOptions() == null ^ getOptions() == null) {
+            return false;
+        }
+        if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
+            return false;
+        }
+
+        if(b.getResponse() == null ^ getResponse() == null) {
+            return false;
+        }
+        if(b.getResponse() != null && !b.getResponse().equals(getResponse())){ 
+            return false;
+        }
+        return true;
+    }
+
+    public int hashCode() {
+        return AbstractAmqpList.hashCodeFor(this);
+    }
+}
 
     public static class AmqpSaslResponseBuffer extends AmqpList.AmqpListBuffer implements AmqpSaslResponse{
 
@@ -241,19 +232,15 @@ public interface AmqpSaslResponse extends AmqpList {
             super(encoded);
         }
 
-    public void setOptions(HashMap<AmqpType<?,?>, AmqpType<?,?>> options) {
-            bean().setOptions(options);
-        }
-
         public final void setOptions(AmqpMap options) {
             bean().setOptions(options);
         }
 
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> getOptions() {
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOptions() {
             return bean().getOptions();
         }
 
-    public void setResponse(Buffer response) {
+        public void setResponse(Buffer response) {
             bean().setResponse(response);
         }
 
@@ -297,8 +284,16 @@ public interface AmqpSaslResponse extends AmqpList {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpSaslResponse o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpSaslResponse.AmqpSaslResponseBuffer create(Encoded<IAmqpList> encoded) {

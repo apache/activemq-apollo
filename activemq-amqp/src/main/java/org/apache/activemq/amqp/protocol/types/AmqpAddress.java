@@ -43,14 +43,11 @@ public interface AmqpAddress extends AmqpBinary {
         private AmqpAddressBean bean = this;
         private Buffer value;
 
-        protected AmqpAddressBean() {
-        }
-
-        public AmqpAddressBean(Buffer value) {
+        AmqpAddressBean(Buffer value) {
             this.value = value;
         }
 
-        public AmqpAddressBean(AmqpAddress.AmqpAddressBean other) {
+        AmqpAddressBean(AmqpAddress.AmqpAddressBean other) {
             this.bean = other;
         }
 
@@ -84,29 +81,10 @@ public interface AmqpAddress extends AmqpBinary {
                 return false;
             }
 
-            return equivalent((AmqpAddress) o);
+            return equals((AmqpAddress) o);
         }
 
-        public int hashCode() {
-            if(getValue() == null) {
-                return AmqpAddress.AmqpAddressBean.class.hashCode();
-            }
-            return getValue().hashCode();
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpAddress)) {
-                return false;
-            }
-
-            return equivalent((AmqpAddress) t);
-        }
-
-        public boolean equivalent(AmqpAddress b) {
+        public boolean equals(AmqpAddress b) {
             if(b == null) {
                 return false;
             }
@@ -116,6 +94,13 @@ public interface AmqpAddress extends AmqpBinary {
             }
 
             return b.getValue() == null || b.getValue().equals(getValue());
+        }
+
+        public int hashCode() {
+            if(getValue() == null) {
+                return AmqpAddress.AmqpAddressBean.class.hashCode();
+            }
+            return getValue().hashCode();
         }
     }
 
@@ -147,8 +132,16 @@ public interface AmqpAddress extends AmqpBinary {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpAddress o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpAddress.AmqpAddressBuffer create(Encoded<Buffer> encoded) {

@@ -90,6 +90,15 @@ public interface AmqpEnlist extends AmqpList, AmqpCommand {
      * applies to joining a transaction previously seen.
      * </p>
      */
+    public void setJoin(boolean join);
+
+    /**
+     * Join with existing xid flag
+     * <p>
+     * Indicate whether this is joining an already associated xid. Indicate that the enlist
+     * applies to joining a transaction previously seen.
+     * </p>
+     */
     public void setJoin(AmqpBoolean join);
 
     /**
@@ -108,6 +117,14 @@ public interface AmqpEnlist extends AmqpList, AmqpCommand {
      * </p>
      */
     public void setResume(Boolean resume);
+
+    /**
+     * Resume flag
+     * <p>
+     * Indicate that the enlist applies to resuming a suspended transaction branch.
+     * </p>
+     */
+    public void setResume(boolean resume);
 
     /**
      * Resume flag
@@ -134,204 +151,214 @@ public interface AmqpEnlist extends AmqpList, AmqpCommand {
         private AmqpBoolean join;
         private AmqpBoolean resume;
 
-        public AmqpEnlistBean() {
+        AmqpEnlistBean() {
         }
 
-        public AmqpEnlistBean(IAmqpList value) {
-            //TODO we should defer decoding of the described type:
-            for(int i = 0; i < value.getListCount(); i++) {
-                set(i, value.get(i));
-            }
-        }
+        AmqpEnlistBean(IAmqpList value) {
 
-        public AmqpEnlistBean(AmqpEnlist.AmqpEnlistBean other) {
-            this.bean = other;
-        }
-
-        public final AmqpEnlistBean copy() {
-            return new AmqpEnlist.AmqpEnlistBean(bean);
-        }
-
-        public final void handle(AmqpCommandHandler handler) throws Exception {
-            handler.handleEnlist(this);
-        }
-
-        public final AmqpEnlist.AmqpEnlistBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-            if(buffer == null) {
-                buffer = new AmqpEnlistBuffer(marshaller.encode(this));
-            }
-            return buffer;
-        }
-
-        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-            getBuffer(marshaller).marshal(out, marshaller);
-        }
-
-
-        public final void setOptions(AmqpOptions options) {
-            copyCheck();
-            bean.options = options;
-        }
-
-        public final AmqpOptions getOptions() {
-            return bean.options;
-        }
-
-        public final void setXid(AmqpXid xid) {
-            copyCheck();
-            bean.xid = xid;
-        }
-
-        public final AmqpXid getXid() {
-            return bean.xid;
-        }
-
-        public void setJoin(Boolean join) {
-            setJoin(new AmqpBoolean.AmqpBooleanBean(join));
-        }
-
-
-        public final void setJoin(AmqpBoolean join) {
-            copyCheck();
-            bean.join = join;
-        }
-
-        public final Boolean getJoin() {
-            return bean.join.getValue();
-        }
-
-        public void setResume(Boolean resume) {
-            setResume(new AmqpBoolean.AmqpBooleanBean(resume));
-        }
-
-
-        public final void setResume(AmqpBoolean resume) {
-            copyCheck();
-            bean.resume = resume;
-        }
-
-        public final Boolean getResume() {
-            return bean.resume.getValue();
-        }
-
-        public void set(int index, AmqpType<?, ?> value) {
-            switch(index) {
-            case 0: {
-                setOptions((AmqpOptions) value);
-                break;
-            }
-            case 1: {
-                setXid((AmqpXid) value);
-                break;
-            }
-            case 2: {
-                setJoin((AmqpBoolean) value);
-                break;
-            }
-            case 3: {
-                setResume((AmqpBoolean) value);
-                break;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public AmqpType<?, ?> get(int index) {
-            switch(index) {
-            case 0: {
-                return bean.options;
-            }
-            case 1: {
-                return bean.xid;
-            }
-            case 2: {
-                return bean.join;
-            }
-            case 3: {
-                return bean.resume;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public int getListCount() {
-            return 4;
-        }
-
-        public IAmqpList getValue() {
-            return bean;
-        }
-
-        public Iterator<AmqpType<?, ?>> iterator() {
-            return new AmqpListIterator(bean);
-        }
-
-
-        private final void copyCheck() {
-            if(buffer != null) {;
-                throw new IllegalStateException("unwriteable");
-            }
-            if(bean != this) {;
-                copy(bean);
-            }
-        }
-
-        private final void copy(AmqpEnlist.AmqpEnlistBean other) {
-            this.options= other.options;
-            this.xid= other.xid;
-            this.join= other.join;
-            this.resume= other.resume;
-            bean = this;
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpEnlist)) {
-                return false;
-            }
-
-            return equivalent((AmqpEnlist) t);
-        }
-
-        public boolean equivalent(AmqpEnlist b) {
-
-            if(b.getOptions() == null ^ getOptions() == null) {
-                return false;
-            }
-            if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
-                return false;
-            }
-
-            if(b.getXid() == null ^ getXid() == null) {
-                return false;
-            }
-            if(b.getXid() != null && !b.getXid().equivalent(getXid())){ 
-                return false;
-            }
-
-            if(b.getJoin() == null ^ getJoin() == null) {
-                return false;
-            }
-            if(b.getJoin() != null && !b.getJoin().equals(getJoin())){ 
-                return false;
-            }
-
-            if(b.getResume() == null ^ getResume() == null) {
-                return false;
-            }
-            if(b.getResume() != null && !b.getResume().equals(getResume())){ 
-                return false;
-            }
-            return true;
+        for(int i = 0; i < value.getListCount(); i++) {
+            set(i, value.get(i));
         }
     }
+
+    AmqpEnlistBean(AmqpEnlist.AmqpEnlistBean other) {
+        this.bean = other;
+    }
+
+    public final AmqpEnlistBean copy() {
+        return new AmqpEnlist.AmqpEnlistBean(bean);
+    }
+
+    public final void handle(AmqpCommandHandler handler) throws Exception {
+        handler.handleEnlist(this);
+    }
+
+    public final AmqpEnlist.AmqpEnlistBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+        if(buffer == null) {
+            buffer = new AmqpEnlistBuffer(marshaller.encode(this));
+        }
+        return buffer;
+    }
+
+    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+        getBuffer(marshaller).marshal(out, marshaller);
+    }
+
+
+    public final void setOptions(AmqpOptions options) {
+        copyCheck();
+        bean.options = options;
+    }
+
+    public final AmqpOptions getOptions() {
+        return bean.options;
+    }
+
+    public final void setXid(AmqpXid xid) {
+        copyCheck();
+        bean.xid = xid;
+    }
+
+    public final AmqpXid getXid() {
+        return bean.xid;
+    }
+
+    public void setJoin(Boolean join) {
+        setJoin(TypeFactory.createAmqpBoolean(join));
+    }
+
+
+    public void setJoin(boolean join) {
+        setJoin(TypeFactory.createAmqpBoolean(join));
+    }
+
+
+    public final void setJoin(AmqpBoolean join) {
+        copyCheck();
+        bean.join = join;
+    }
+
+    public final Boolean getJoin() {
+        return bean.join.getValue();
+    }
+
+    public void setResume(Boolean resume) {
+        setResume(TypeFactory.createAmqpBoolean(resume));
+    }
+
+
+    public void setResume(boolean resume) {
+        setResume(TypeFactory.createAmqpBoolean(resume));
+    }
+
+
+    public final void setResume(AmqpBoolean resume) {
+        copyCheck();
+        bean.resume = resume;
+    }
+
+    public final Boolean getResume() {
+        return bean.resume.getValue();
+    }
+
+    public void set(int index, AmqpType<?, ?> value) {
+        switch(index) {
+        case 0: {
+            setOptions((AmqpOptions) value);
+            break;
+        }
+        case 1: {
+            setXid((AmqpXid) value);
+            break;
+        }
+        case 2: {
+            setJoin((AmqpBoolean) value);
+            break;
+        }
+        case 3: {
+            setResume((AmqpBoolean) value);
+            break;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public AmqpType<?, ?> get(int index) {
+        switch(index) {
+        case 0: {
+            return bean.options;
+        }
+        case 1: {
+            return bean.xid;
+        }
+        case 2: {
+            return bean.join;
+        }
+        case 3: {
+            return bean.resume;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public int getListCount() {
+        return 4;
+    }
+
+    public IAmqpList getValue() {
+        return bean;
+    }
+
+    public Iterator<AmqpType<?, ?>> iterator() {
+        return new AmqpListIterator(bean);
+    }
+
+
+    private final void copyCheck() {
+        if(buffer != null) {;
+            throw new IllegalStateException("unwriteable");
+        }
+        if(bean != this) {;
+            copy(bean);
+        }
+    }
+
+    private final void copy(AmqpEnlist.AmqpEnlistBean other) {
+        bean = this;
+    }
+
+    public boolean equals(Object o){
+        if(this == o) {
+            return true;
+        }
+
+        if(o == null || !(o instanceof AmqpEnlist)) {
+            return false;
+        }
+
+        return equals((AmqpEnlist) o);
+    }
+
+    public boolean equals(AmqpEnlist b) {
+
+        if(b.getOptions() == null ^ getOptions() == null) {
+            return false;
+        }
+        if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
+            return false;
+        }
+
+        if(b.getXid() == null ^ getXid() == null) {
+            return false;
+        }
+        if(b.getXid() != null && !b.getXid().equals(getXid())){ 
+            return false;
+        }
+
+        if(b.getJoin() == null ^ getJoin() == null) {
+            return false;
+        }
+        if(b.getJoin() != null && !b.getJoin().equals(getJoin())){ 
+            return false;
+        }
+
+        if(b.getResume() == null ^ getResume() == null) {
+            return false;
+        }
+        if(b.getResume() != null && !b.getResume().equals(getResume())){ 
+            return false;
+        }
+        return true;
+    }
+
+    public int hashCode() {
+        return AbstractAmqpList.hashCodeFor(this);
+    }
+}
 
     public static class AmqpEnlistBuffer extends AmqpList.AmqpListBuffer implements AmqpEnlist{
 
@@ -357,9 +384,14 @@ public interface AmqpEnlist extends AmqpList, AmqpCommand {
             return bean().getXid();
         }
 
-    public void setJoin(Boolean join) {
+        public void setJoin(Boolean join) {
             bean().setJoin(join);
         }
+
+        public void setJoin(boolean join) {
+            bean().setJoin(join);
+        }
+
 
         public final void setJoin(AmqpBoolean join) {
             bean().setJoin(join);
@@ -369,9 +401,14 @@ public interface AmqpEnlist extends AmqpList, AmqpCommand {
             return bean().getJoin();
         }
 
-    public void setResume(Boolean resume) {
+        public void setResume(Boolean resume) {
             bean().setResume(resume);
         }
+
+        public void setResume(boolean resume) {
+            bean().setResume(resume);
+        }
+
 
         public final void setResume(AmqpBoolean resume) {
             bean().setResume(resume);
@@ -417,8 +454,16 @@ public interface AmqpEnlist extends AmqpList, AmqpCommand {
             handler.handleEnlist(this);
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpEnlist o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpEnlist.AmqpEnlistBuffer create(Encoded<IAmqpList> encoded) {

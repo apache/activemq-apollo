@@ -39,14 +39,11 @@ public interface AmqpUuid extends AmqpType<AmqpUuid.AmqpUuidBean, AmqpUuid.AmqpU
         private AmqpUuidBean bean = this;
         private UUID value;
 
-        protected AmqpUuidBean() {
-        }
-
-        public AmqpUuidBean(UUID value) {
+        AmqpUuidBean(UUID value) {
             this.value = value;
         }
 
-        public AmqpUuidBean(AmqpUuid.AmqpUuidBean other) {
+        AmqpUuidBean(AmqpUuid.AmqpUuidBean other) {
             this.bean = other;
         }
 
@@ -80,29 +77,10 @@ public interface AmqpUuid extends AmqpType<AmqpUuid.AmqpUuidBean, AmqpUuid.AmqpU
                 return false;
             }
 
-            return equivalent((AmqpUuid) o);
+            return equals((AmqpUuid) o);
         }
 
-        public int hashCode() {
-            if(getValue() == null) {
-                return AmqpUuid.AmqpUuidBean.class.hashCode();
-            }
-            return getValue().hashCode();
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpUuid)) {
-                return false;
-            }
-
-            return equivalent((AmqpUuid) t);
-        }
-
-        public boolean equivalent(AmqpUuid b) {
+        public boolean equals(AmqpUuid b) {
             if(b == null) {
                 return false;
             }
@@ -112,6 +90,13 @@ public interface AmqpUuid extends AmqpType<AmqpUuid.AmqpUuidBean, AmqpUuid.AmqpU
             }
 
             return b.getValue() == null || b.getValue().equals(getValue());
+        }
+
+        public int hashCode() {
+            if(getValue() == null) {
+                return AmqpUuid.AmqpUuidBean.class.hashCode();
+            }
+            return getValue().hashCode();
         }
     }
 
@@ -155,12 +140,12 @@ public interface AmqpUuid extends AmqpType<AmqpUuid.AmqpUuidBean, AmqpUuid.AmqpU
             return bean().equals(o);
         }
 
-        public int hashCode() {
-            return bean().hashCode();
+        public boolean equals(AmqpUuid o){
+            return bean().equals(o);
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpUuid.AmqpUuidBuffer create(Encoded<UUID> encoded) {

@@ -19,7 +19,6 @@ package org.apache.activemq.amqp.protocol.marshaller.v1_0_0;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Map;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.Encoded;
 import org.apache.activemq.amqp.protocol.marshaller.UnexpectedTypeException;
@@ -31,12 +30,13 @@ import org.apache.activemq.amqp.protocol.types.AmqpRejected;
 import org.apache.activemq.amqp.protocol.types.AmqpSymbol;
 import org.apache.activemq.amqp.protocol.types.AmqpType;
 import org.apache.activemq.amqp.protocol.types.AmqpUlong;
+import org.apache.activemq.amqp.protocol.types.IAmqpMap;
 import org.apache.activemq.util.buffer.Buffer;
 
 public class AmqpRejectedMarshaller implements DescribedTypeMarshaller<AmqpRejected>{
 
     static final AmqpRejectedMarshaller SINGLETON = new AmqpRejectedMarshaller();
-    private static final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> NULL_ENCODED = new Encoder.NullEncoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>>();
+    private static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> NULL_ENCODED = new Encoder.NullEncoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>>();
 
     public static final String SYMBOLIC_ID = "amqp:rejected:map";
     //Format code: 0x00000001:0x00009805:
@@ -50,39 +50,41 @@ public class AmqpRejectedMarshaller implements DescribedTypeMarshaller<AmqpRejec
         (byte) 0x00, (byte) 0x00, (byte) 0x98, (byte) 0x05   // DESCRIPTOR ID CODE
     }), 0);
 
-    //Accessor keys for field mapped fields:
-    private static final AmqpSymbol.AmqpSymbolBuffer TRUNCATE_KEY = new AmqpSymbol.AmqpSymbolBean("truncate").getBuffer(AmqpMarshaller.SINGLETON);
-    private static final AmqpSymbol.AmqpSymbolBuffer REJECT_PROPERTIES_KEY = new AmqpSymbol.AmqpSymbolBean("reject-properties").getBuffer(AmqpMarshaller.SINGLETON);
+    private static final MapDecoder<AmqpSymbol, AmqpType<?, ?>> DECODER = new MapDecoder<AmqpSymbol, AmqpType<?, ?>>() {
 
+        public IAmqpMap<AmqpSymbol, AmqpType<?, ?>> createMap(int entryCount) {
+            return new IAmqpMap.AmqpWrapperMap<AmqpSymbol, AmqpType<?,?>>(new HashMap<AmqpSymbol, AmqpType<?,?>>());
 
-    private static final MapDecoder DECODER = new MapDecoder() {
-        public void decodeToMap(EncodedBuffer encodedKey, EncodedBuffer encodedValue, Map<AmqpType<?, ?>,AmqpType<?, ?>> map) throws AmqpEncodingError {
+        }
+
+        public void decodeToMap(EncodedBuffer encodedKey, EncodedBuffer encodedValue, IAmqpMap<AmqpSymbol,AmqpType<?, ?>> map) throws AmqpEncodingError {
             AmqpSymbol key = AmqpSymbol.AmqpSymbolBuffer.create(AmqpSymbolMarshaller.createEncoded(encodedKey));
             if (key == null) {
                 throw new AmqpEncodingError("Null Key for " + SYMBOLIC_ID);
             }
 
-            if (key.getValue().equals(TRUNCATE_KEY.getValue())){
-                map.put(TRUNCATE_KEY, AmqpBoolean.AmqpBooleanBuffer.create(AmqpBooleanMarshaller.createEncoded(encodedValue)));
+            if (key.equals(AmqpRejected.TRUNCATE_KEY)){
+                map.put(AmqpRejected.TRUNCATE_KEY, AmqpBoolean.AmqpBooleanBuffer.create(AmqpBooleanMarshaller.createEncoded(encodedValue)));
             }
-            if (key.getValue().equals(REJECT_PROPERTIES_KEY.getValue())){
-                map.put(REJECT_PROPERTIES_KEY, AmqpMap.AmqpMapBuffer.create(AmqpMapMarshaller.createEncoded(encodedValue)));
+            if (key.equals(AmqpRejected.REJECT_PROPERTIES_KEY)){
+                map.put(AmqpRejected.REJECT_PROPERTIES_KEY, AmqpMap.AmqpMapBuffer.create(AmqpMapMarshaller.createEncoded(encodedValue)));
             }
             else {
                 throw new UnexpectedTypeException("Invalid Key for " + SYMBOLIC_ID + " : " + key);
             }
         }
-        public void unmarshalToMap(DataInput in, Map<AmqpType<?, ?>,AmqpType<?, ?>> map) throws AmqpEncodingError, IOException {
+
+        public void unmarshalToMap(DataInput in, IAmqpMap<AmqpSymbol,AmqpType<?, ?>> map) throws IOException, AmqpEncodingError {
             AmqpSymbol key = AmqpSymbol.AmqpSymbolBuffer.create(AmqpSymbolMarshaller.createEncoded(in));
             if (key == null) {
                 throw new AmqpEncodingError("Null Key for " + SYMBOLIC_ID);
             }
 
-            if (key.getValue().equals(TRUNCATE_KEY.getValue())){
-                map.put(TRUNCATE_KEY, AmqpBoolean.AmqpBooleanBuffer.create(AmqpBooleanMarshaller.createEncoded(in)));
+            if (key.equals(AmqpRejected.TRUNCATE_KEY)){
+                map.put(AmqpRejected.TRUNCATE_KEY, AmqpBoolean.AmqpBooleanBuffer.create(AmqpBooleanMarshaller.createEncoded(in)));
             }
-            if (key.getValue().equals(REJECT_PROPERTIES_KEY.getValue())){
-                map.put(REJECT_PROPERTIES_KEY, AmqpMap.AmqpMapBuffer.create(AmqpMapMarshaller.createEncoded(in)));
+            if (key.equals(AmqpRejected.REJECT_PROPERTIES_KEY)){
+                map.put(AmqpRejected.REJECT_PROPERTIES_KEY, AmqpMap.AmqpMapBuffer.create(AmqpMapMarshaller.createEncoded(in)));
             }
             else {
                 throw new UnexpectedTypeException("Invalid Key for " + SYMBOLIC_ID + " : " + key);
@@ -90,7 +92,7 @@ public class AmqpRejectedMarshaller implements DescribedTypeMarshaller<AmqpRejec
         }
     };
 
-    public static class AmqpRejectedEncoded extends DescribedEncoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> {
+    public static class AmqpRejectedEncoded extends DescribedEncoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> {
 
         public AmqpRejectedEncoded(DescribedBuffer buffer) {
             super(buffer);
@@ -108,11 +110,11 @@ public class AmqpRejectedMarshaller implements DescribedTypeMarshaller<AmqpRejec
             return NUMERIC_ID;
         }
 
-        protected final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> decodeDescribed(EncodedBuffer encoded) throws AmqpEncodingError {
+        protected final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> decodeDescribed(EncodedBuffer encoded) throws AmqpEncodingError {
             return AmqpMapMarshaller.createEncoded(encoded, DECODER);
         }
 
-        protected final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> unmarshalDescribed(DataInput in) throws IOException {
+        protected final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> unmarshalDescribed(DataInput in) throws IOException {
             return AmqpMapMarshaller.createEncoded(in, DECODER);
         }
 
@@ -121,19 +123,19 @@ public class AmqpRejectedMarshaller implements DescribedTypeMarshaller<AmqpRejec
         }
     }
 
-    public static final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> encode(AmqpRejected value) throws AmqpEncodingError {
+    public static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encode(AmqpRejected value) throws AmqpEncodingError {
         return new AmqpRejectedEncoded(value);
     }
 
-    static final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> createEncoded(Buffer source, int offset) throws AmqpEncodingError {
+    static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> createEncoded(Buffer source, int offset) throws AmqpEncodingError {
         return createEncoded(FormatCategory.createBuffer(source, offset));
     }
 
-    static final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> createEncoded(DataInput in) throws IOException, AmqpEncodingError {
+    static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> createEncoded(DataInput in) throws IOException, AmqpEncodingError {
         return createEncoded(FormatCategory.createBuffer(in.readByte(), in));
     }
 
-    static final Encoded<HashMap<AmqpType<?,?>, AmqpType<?,?>>> createEncoded(EncodedBuffer buffer) throws AmqpEncodingError {
+    static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> createEncoded(EncodedBuffer buffer) throws AmqpEncodingError {
         byte fc = buffer.getEncodingFormatCode();
         if (fc == Encoder.NULL_FORMAT_CODE) {
             return NULL_ENCODED;

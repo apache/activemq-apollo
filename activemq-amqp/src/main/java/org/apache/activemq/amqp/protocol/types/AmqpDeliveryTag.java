@@ -35,14 +35,11 @@ public interface AmqpDeliveryTag extends AmqpBinary {
         private AmqpDeliveryTagBean bean = this;
         private Buffer value;
 
-        protected AmqpDeliveryTagBean() {
-        }
-
-        public AmqpDeliveryTagBean(Buffer value) {
+        AmqpDeliveryTagBean(Buffer value) {
             this.value = value;
         }
 
-        public AmqpDeliveryTagBean(AmqpDeliveryTag.AmqpDeliveryTagBean other) {
+        AmqpDeliveryTagBean(AmqpDeliveryTag.AmqpDeliveryTagBean other) {
             this.bean = other;
         }
 
@@ -76,29 +73,10 @@ public interface AmqpDeliveryTag extends AmqpBinary {
                 return false;
             }
 
-            return equivalent((AmqpDeliveryTag) o);
+            return equals((AmqpDeliveryTag) o);
         }
 
-        public int hashCode() {
-            if(getValue() == null) {
-                return AmqpDeliveryTag.AmqpDeliveryTagBean.class.hashCode();
-            }
-            return getValue().hashCode();
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpDeliveryTag)) {
-                return false;
-            }
-
-            return equivalent((AmqpDeliveryTag) t);
-        }
-
-        public boolean equivalent(AmqpDeliveryTag b) {
+        public boolean equals(AmqpDeliveryTag b) {
             if(b == null) {
                 return false;
             }
@@ -108,6 +86,13 @@ public interface AmqpDeliveryTag extends AmqpBinary {
             }
 
             return b.getValue() == null || b.getValue().equals(getValue());
+        }
+
+        public int hashCode() {
+            if(getValue() == null) {
+                return AmqpDeliveryTag.AmqpDeliveryTagBean.class.hashCode();
+            }
+            return getValue().hashCode();
         }
     }
 
@@ -139,8 +124,16 @@ public interface AmqpDeliveryTag extends AmqpBinary {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpDeliveryTag o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpDeliveryTag.AmqpDeliveryTagBuffer create(Encoded<Buffer> encoded) {

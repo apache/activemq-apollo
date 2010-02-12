@@ -39,14 +39,11 @@ public interface AmqpTimestamp extends AmqpType<AmqpTimestamp.AmqpTimestampBean,
         private AmqpTimestampBean bean = this;
         private Date value;
 
-        protected AmqpTimestampBean() {
-        }
-
-        public AmqpTimestampBean(Date value) {
+        AmqpTimestampBean(Date value) {
             this.value = value;
         }
 
-        public AmqpTimestampBean(AmqpTimestamp.AmqpTimestampBean other) {
+        AmqpTimestampBean(AmqpTimestamp.AmqpTimestampBean other) {
             this.bean = other;
         }
 
@@ -80,29 +77,10 @@ public interface AmqpTimestamp extends AmqpType<AmqpTimestamp.AmqpTimestampBean,
                 return false;
             }
 
-            return equivalent((AmqpTimestamp) o);
+            return equals((AmqpTimestamp) o);
         }
 
-        public int hashCode() {
-            if(getValue() == null) {
-                return AmqpTimestamp.AmqpTimestampBean.class.hashCode();
-            }
-            return getValue().hashCode();
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpTimestamp)) {
-                return false;
-            }
-
-            return equivalent((AmqpTimestamp) t);
-        }
-
-        public boolean equivalent(AmqpTimestamp b) {
+        public boolean equals(AmqpTimestamp b) {
             if(b == null) {
                 return false;
             }
@@ -112,6 +90,13 @@ public interface AmqpTimestamp extends AmqpType<AmqpTimestamp.AmqpTimestampBean,
             }
 
             return b.getValue() == null || b.getValue().equals(getValue());
+        }
+
+        public int hashCode() {
+            if(getValue() == null) {
+                return AmqpTimestamp.AmqpTimestampBean.class.hashCode();
+            }
+            return getValue().hashCode();
         }
     }
 
@@ -155,12 +140,12 @@ public interface AmqpTimestamp extends AmqpType<AmqpTimestamp.AmqpTimestampBean,
             return bean().equals(o);
         }
 
-        public int hashCode() {
-            return bean().hashCode();
+        public boolean equals(AmqpTimestamp o){
+            return bean().equals(o);
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpTimestamp.AmqpTimestampBuffer create(Encoded<Date> encoded) {

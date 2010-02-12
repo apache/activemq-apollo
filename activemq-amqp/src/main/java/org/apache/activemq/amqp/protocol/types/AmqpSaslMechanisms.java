@@ -19,7 +19,6 @@ package org.apache.activemq.amqp.protocol.types;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Iterator;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
@@ -40,27 +39,12 @@ public interface AmqpSaslMechanisms extends AmqpList {
     /**
      * options map
      */
-    public void setOptions(HashMap<AmqpType<?,?>, AmqpType<?,?>> options);
-
-    /**
-     * options map
-     */
     public void setOptions(AmqpMap options);
 
     /**
      * options map
      */
-    public HashMap<AmqpType<?,?>, AmqpType<?,?>> getOptions();
-
-    /**
-     * supported sasl mechanisms
-     * <p>
-     * A list of the sasl security mechanisms supported by the sending peer. If the sending
-     * peer does not require its partner to authenticate with it, this list may be empty or
-     * absent. The server mechanisms are ordered in decreasing level of preference.
-     * </p>
-     */
-    public void setSaslServerMechanisms(IAmqpList saslServerMechanisms);
+    public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOptions();
 
     /**
      * supported sasl mechanisms
@@ -89,152 +73,144 @@ public interface AmqpSaslMechanisms extends AmqpList {
         private AmqpMap options;
         private AmqpList saslServerMechanisms;
 
-        public AmqpSaslMechanismsBean() {
+        AmqpSaslMechanismsBean() {
         }
 
-        public AmqpSaslMechanismsBean(IAmqpList value) {
-            //TODO we should defer decoding of the described type:
-            for(int i = 0; i < value.getListCount(); i++) {
-                set(i, value.get(i));
-            }
-        }
+        AmqpSaslMechanismsBean(IAmqpList value) {
 
-        public AmqpSaslMechanismsBean(AmqpSaslMechanisms.AmqpSaslMechanismsBean other) {
-            this.bean = other;
-        }
-
-        public final AmqpSaslMechanismsBean copy() {
-            return new AmqpSaslMechanisms.AmqpSaslMechanismsBean(bean);
-        }
-
-        public final AmqpSaslMechanisms.AmqpSaslMechanismsBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-            if(buffer == null) {
-                buffer = new AmqpSaslMechanismsBuffer(marshaller.encode(this));
-            }
-            return buffer;
-        }
-
-        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-            getBuffer(marshaller).marshal(out, marshaller);
-        }
-
-
-        public void setOptions(HashMap<AmqpType<?,?>, AmqpType<?,?>> options) {
-            setOptions(new AmqpMap.AmqpMapBean(options));
-        }
-
-
-        public final void setOptions(AmqpMap options) {
-            copyCheck();
-            bean.options = options;
-        }
-
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> getOptions() {
-            return bean.options.getValue();
-        }
-
-        public void setSaslServerMechanisms(IAmqpList saslServerMechanisms) {
-            setSaslServerMechanisms(new AmqpList.AmqpListBean(saslServerMechanisms));
-        }
-
-
-        public final void setSaslServerMechanisms(AmqpList saslServerMechanisms) {
-            copyCheck();
-            bean.saslServerMechanisms = saslServerMechanisms;
-        }
-
-        public final IAmqpList getSaslServerMechanisms() {
-            return bean.saslServerMechanisms.getValue();
-        }
-
-        public void set(int index, AmqpType<?, ?> value) {
-            switch(index) {
-            case 0: {
-                setOptions((AmqpMap) value);
-                break;
-            }
-            case 1: {
-                setSaslServerMechanisms((AmqpList) value);
-                break;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public AmqpType<?, ?> get(int index) {
-            switch(index) {
-            case 0: {
-                return bean.options;
-            }
-            case 1: {
-                return bean.saslServerMechanisms;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public int getListCount() {
-            return 2;
-        }
-
-        public IAmqpList getValue() {
-            return bean;
-        }
-
-        public Iterator<AmqpType<?, ?>> iterator() {
-            return new AmqpListIterator(bean);
-        }
-
-
-        private final void copyCheck() {
-            if(buffer != null) {;
-                throw new IllegalStateException("unwriteable");
-            }
-            if(bean != this) {;
-                copy(bean);
-            }
-        }
-
-        private final void copy(AmqpSaslMechanisms.AmqpSaslMechanismsBean other) {
-            this.options= other.options;
-            this.saslServerMechanisms= other.saslServerMechanisms;
-            bean = this;
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpSaslMechanisms)) {
-                return false;
-            }
-
-            return equivalent((AmqpSaslMechanisms) t);
-        }
-
-        public boolean equivalent(AmqpSaslMechanisms b) {
-
-            if(b.getOptions() == null ^ getOptions() == null) {
-                return false;
-            }
-            if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
-                return false;
-            }
-
-            if(b.getSaslServerMechanisms() == null ^ getSaslServerMechanisms() == null) {
-                return false;
-            }
-            if(b.getSaslServerMechanisms() != null && !b.getSaslServerMechanisms().equals(getSaslServerMechanisms())){ 
-                return false;
-            }
-            return true;
+        for(int i = 0; i < value.getListCount(); i++) {
+            set(i, value.get(i));
         }
     }
+
+    AmqpSaslMechanismsBean(AmqpSaslMechanisms.AmqpSaslMechanismsBean other) {
+        this.bean = other;
+    }
+
+    public final AmqpSaslMechanismsBean copy() {
+        return new AmqpSaslMechanisms.AmqpSaslMechanismsBean(bean);
+    }
+
+    public final AmqpSaslMechanisms.AmqpSaslMechanismsBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+        if(buffer == null) {
+            buffer = new AmqpSaslMechanismsBuffer(marshaller.encode(this));
+        }
+        return buffer;
+    }
+
+    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+        getBuffer(marshaller).marshal(out, marshaller);
+    }
+
+
+    public final void setOptions(AmqpMap options) {
+        copyCheck();
+        bean.options = options;
+    }
+
+    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOptions() {
+        return bean.options.getValue();
+    }
+
+    public final void setSaslServerMechanisms(AmqpList saslServerMechanisms) {
+        copyCheck();
+        bean.saslServerMechanisms = saslServerMechanisms;
+    }
+
+    public final IAmqpList getSaslServerMechanisms() {
+        return bean.saslServerMechanisms.getValue();
+    }
+
+    public void set(int index, AmqpType<?, ?> value) {
+        switch(index) {
+        case 0: {
+            setOptions((AmqpMap) value);
+            break;
+        }
+        case 1: {
+            setSaslServerMechanisms((AmqpList) value);
+            break;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public AmqpType<?, ?> get(int index) {
+        switch(index) {
+        case 0: {
+            return bean.options;
+        }
+        case 1: {
+            return bean.saslServerMechanisms;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public int getListCount() {
+        return 2;
+    }
+
+    public IAmqpList getValue() {
+        return bean;
+    }
+
+    public Iterator<AmqpType<?, ?>> iterator() {
+        return new AmqpListIterator(bean);
+    }
+
+
+    private final void copyCheck() {
+        if(buffer != null) {;
+            throw new IllegalStateException("unwriteable");
+        }
+        if(bean != this) {;
+            copy(bean);
+        }
+    }
+
+    private final void copy(AmqpSaslMechanisms.AmqpSaslMechanismsBean other) {
+        bean = this;
+    }
+
+    public boolean equals(Object o){
+        if(this == o) {
+            return true;
+        }
+
+        if(o == null || !(o instanceof AmqpSaslMechanisms)) {
+            return false;
+        }
+
+        return equals((AmqpSaslMechanisms) o);
+    }
+
+    public boolean equals(AmqpSaslMechanisms b) {
+
+        if(b.getOptions() == null ^ getOptions() == null) {
+            return false;
+        }
+        if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
+            return false;
+        }
+
+        if(b.getSaslServerMechanisms() == null ^ getSaslServerMechanisms() == null) {
+            return false;
+        }
+        if(b.getSaslServerMechanisms() != null && !b.getSaslServerMechanisms().equals(getSaslServerMechanisms())){ 
+            return false;
+        }
+        return true;
+    }
+
+    public int hashCode() {
+        return AbstractAmqpList.hashCodeFor(this);
+    }
+}
 
     public static class AmqpSaslMechanismsBuffer extends AmqpList.AmqpListBuffer implements AmqpSaslMechanisms{
 
@@ -244,20 +220,12 @@ public interface AmqpSaslMechanisms extends AmqpList {
             super(encoded);
         }
 
-    public void setOptions(HashMap<AmqpType<?,?>, AmqpType<?,?>> options) {
-            bean().setOptions(options);
-        }
-
         public final void setOptions(AmqpMap options) {
             bean().setOptions(options);
         }
 
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> getOptions() {
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOptions() {
             return bean().getOptions();
-        }
-
-    public void setSaslServerMechanisms(IAmqpList saslServerMechanisms) {
-            bean().setSaslServerMechanisms(saslServerMechanisms);
         }
 
         public final void setSaslServerMechanisms(AmqpList saslServerMechanisms) {
@@ -300,8 +268,16 @@ public interface AmqpSaslMechanisms extends AmqpList {
             return bean;
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpSaslMechanisms o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpSaslMechanisms.AmqpSaslMechanismsBuffer create(Encoded<IAmqpList> encoded) {

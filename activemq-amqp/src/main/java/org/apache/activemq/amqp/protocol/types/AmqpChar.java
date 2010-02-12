@@ -39,14 +39,11 @@ public interface AmqpChar extends AmqpType<AmqpChar.AmqpCharBean, AmqpChar.AmqpC
         private AmqpCharBean bean = this;
         private Integer value;
 
-        protected AmqpCharBean() {
-        }
-
-        public AmqpCharBean(Integer value) {
+        AmqpCharBean(Integer value) {
             this.value = value;
         }
 
-        public AmqpCharBean(AmqpChar.AmqpCharBean other) {
+        AmqpCharBean(AmqpChar.AmqpCharBean other) {
             this.bean = other;
         }
 
@@ -80,29 +77,10 @@ public interface AmqpChar extends AmqpType<AmqpChar.AmqpCharBean, AmqpChar.AmqpC
                 return false;
             }
 
-            return equivalent((AmqpChar) o);
+            return equals((AmqpChar) o);
         }
 
-        public int hashCode() {
-            if(getValue() == null) {
-                return AmqpChar.AmqpCharBean.class.hashCode();
-            }
-            return getValue().hashCode();
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpChar)) {
-                return false;
-            }
-
-            return equivalent((AmqpChar) t);
-        }
-
-        public boolean equivalent(AmqpChar b) {
+        public boolean equals(AmqpChar b) {
             if(b == null) {
                 return false;
             }
@@ -112,6 +90,13 @@ public interface AmqpChar extends AmqpType<AmqpChar.AmqpCharBean, AmqpChar.AmqpC
             }
 
             return b.getValue() == null || b.getValue().equals(getValue());
+        }
+
+        public int hashCode() {
+            if(getValue() == null) {
+                return AmqpChar.AmqpCharBean.class.hashCode();
+            }
+            return getValue().hashCode();
         }
     }
 
@@ -155,12 +140,12 @@ public interface AmqpChar extends AmqpType<AmqpChar.AmqpCharBean, AmqpChar.AmqpC
             return bean().equals(o);
         }
 
-        public int hashCode() {
-            return bean().hashCode();
+        public boolean equals(AmqpChar o){
+            return bean().equals(o);
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpChar.AmqpCharBuffer create(Encoded<Integer> encoded) {

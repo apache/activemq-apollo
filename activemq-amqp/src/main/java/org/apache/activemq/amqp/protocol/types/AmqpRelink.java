@@ -19,7 +19,6 @@ package org.apache.activemq.amqp.protocol.types;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Iterator;
 import org.apache.activemq.amqp.protocol.AmqpCommand;
 import org.apache.activemq.amqp.protocol.AmqpCommandHandler;
@@ -56,18 +55,47 @@ public interface AmqpRelink extends AmqpList, AmqpCommand {
 
     /**
      * identifies the Link
+     * <p>
+     * command and subsequently used
+     * by endpoints as a shorthand to refer to the Link in all outgoing commands. The two
+     * endpoints may potentially use different handles to refer to the same Link. Link handles
+     * may be reused once a Link is closed for both send and receive.
+     * </p>
+     */
+    public void setHandle(Long handle);
+
+    /**
+     * identifies the Link
+     * <p>
+     * command and subsequently used
+     * by endpoints as a shorthand to refer to the Link in all outgoing commands. The two
+     * endpoints may potentially use different handles to refer to the same Link. Link handles
+     * may be reused once a Link is closed for both send and receive.
+     * </p>
+     */
+    public void setHandle(long handle);
+
+    /**
+     * identifies the Link
+     * <p>
+     * command and subsequently used
+     * by endpoints as a shorthand to refer to the Link in all outgoing commands. The two
+     * endpoints may potentially use different handles to refer to the same Link. Link handles
+     * may be reused once a Link is closed for both send and receive.
+     * </p>
      */
     public void setHandle(AmqpHandle handle);
 
     /**
      * identifies the Link
+     * <p>
+     * command and subsequently used
+     * by endpoints as a shorthand to refer to the Link in all outgoing commands. The two
+     * endpoints may potentially use different handles to refer to the same Link. Link handles
+     * may be reused once a Link is closed for both send and receive.
+     * </p>
      */
     public AmqpHandle getHandle();
-
-    /**
-     * the source for Messages
-     */
-    public void setSource(HashMap<AmqpType<?,?>, AmqpType<?,?>> source);
 
     /**
      * the source for Messages
@@ -77,12 +105,7 @@ public interface AmqpRelink extends AmqpList, AmqpCommand {
     /**
      * the source for Messages
      */
-    public HashMap<AmqpType<?,?>, AmqpType<?,?>> getSource();
-
-    /**
-     * the target for Messages
-     */
-    public void setTarget(HashMap<AmqpType<?,?>, AmqpType<?,?>> target);
+    public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getSource();
 
     /**
      * the target for Messages
@@ -92,7 +115,7 @@ public interface AmqpRelink extends AmqpList, AmqpCommand {
     /**
      * the target for Messages
      */
-    public HashMap<AmqpType<?,?>, AmqpType<?,?>> getTarget();
+    public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getTarget();
 
     public static class AmqpRelinkBean implements AmqpRelink{
 
@@ -103,204 +126,204 @@ public interface AmqpRelink extends AmqpList, AmqpCommand {
         private AmqpMap source;
         private AmqpMap target;
 
-        public AmqpRelinkBean() {
+        AmqpRelinkBean() {
         }
 
-        public AmqpRelinkBean(IAmqpList value) {
-            //TODO we should defer decoding of the described type:
-            for(int i = 0; i < value.getListCount(); i++) {
-                set(i, value.get(i));
-            }
-        }
+        AmqpRelinkBean(IAmqpList value) {
 
-        public AmqpRelinkBean(AmqpRelink.AmqpRelinkBean other) {
-            this.bean = other;
-        }
-
-        public final AmqpRelinkBean copy() {
-            return new AmqpRelink.AmqpRelinkBean(bean);
-        }
-
-        public final void handle(AmqpCommandHandler handler) throws Exception {
-            handler.handleRelink(this);
-        }
-
-        public final AmqpRelink.AmqpRelinkBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-            if(buffer == null) {
-                buffer = new AmqpRelinkBuffer(marshaller.encode(this));
-            }
-            return buffer;
-        }
-
-        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-            getBuffer(marshaller).marshal(out, marshaller);
-        }
-
-
-        public final void setOptions(AmqpOptions options) {
-            copyCheck();
-            bean.options = options;
-        }
-
-        public final AmqpOptions getOptions() {
-            return bean.options;
-        }
-
-        public final void setHandle(AmqpHandle handle) {
-            copyCheck();
-            bean.handle = handle;
-        }
-
-        public final AmqpHandle getHandle() {
-            return bean.handle;
-        }
-
-        public void setSource(HashMap<AmqpType<?,?>, AmqpType<?,?>> source) {
-            setSource(new AmqpMap.AmqpMapBean(source));
-        }
-
-
-        public final void setSource(AmqpMap source) {
-            copyCheck();
-            bean.source = source;
-        }
-
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> getSource() {
-            return bean.source.getValue();
-        }
-
-        public void setTarget(HashMap<AmqpType<?,?>, AmqpType<?,?>> target) {
-            setTarget(new AmqpMap.AmqpMapBean(target));
-        }
-
-
-        public final void setTarget(AmqpMap target) {
-            copyCheck();
-            bean.target = target;
-        }
-
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> getTarget() {
-            return bean.target.getValue();
-        }
-
-        public void set(int index, AmqpType<?, ?> value) {
-            switch(index) {
-            case 0: {
-                setOptions((AmqpOptions) value);
-                break;
-            }
-            case 1: {
-                setHandle((AmqpHandle) value);
-                break;
-            }
-            case 2: {
-                setSource((AmqpMap) value);
-                break;
-            }
-            case 3: {
-                setTarget((AmqpMap) value);
-                break;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public AmqpType<?, ?> get(int index) {
-            switch(index) {
-            case 0: {
-                return bean.options;
-            }
-            case 1: {
-                return bean.handle;
-            }
-            case 2: {
-                return bean.source;
-            }
-            case 3: {
-                return bean.target;
-            }
-            default : {
-                throw new IndexOutOfBoundsException(String.valueOf(index));
-            }
-            }
-        }
-
-        public int getListCount() {
-            return 4;
-        }
-
-        public IAmqpList getValue() {
-            return bean;
-        }
-
-        public Iterator<AmqpType<?, ?>> iterator() {
-            return new AmqpListIterator(bean);
-        }
-
-
-        private final void copyCheck() {
-            if(buffer != null) {;
-                throw new IllegalStateException("unwriteable");
-            }
-            if(bean != this) {;
-                copy(bean);
-            }
-        }
-
-        private final void copy(AmqpRelink.AmqpRelinkBean other) {
-            this.options= other.options;
-            this.handle= other.handle;
-            this.source= other.source;
-            this.target= other.target;
-            bean = this;
-        }
-
-        public boolean equivalent(AmqpType<?,?> t){
-            if(this == t) {
-                return true;
-            }
-
-            if(t == null || !(t instanceof AmqpRelink)) {
-                return false;
-            }
-
-            return equivalent((AmqpRelink) t);
-        }
-
-        public boolean equivalent(AmqpRelink b) {
-
-            if(b.getOptions() == null ^ getOptions() == null) {
-                return false;
-            }
-            if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
-                return false;
-            }
-
-            if(b.getHandle() == null ^ getHandle() == null) {
-                return false;
-            }
-            if(b.getHandle() != null && !b.getHandle().equals(getHandle())){ 
-                return false;
-            }
-
-            if(b.getSource() == null ^ getSource() == null) {
-                return false;
-            }
-            if(b.getSource() != null && !b.getSource().equals(getSource())){ 
-                return false;
-            }
-
-            if(b.getTarget() == null ^ getTarget() == null) {
-                return false;
-            }
-            if(b.getTarget() != null && !b.getTarget().equals(getTarget())){ 
-                return false;
-            }
-            return true;
+        for(int i = 0; i < value.getListCount(); i++) {
+            set(i, value.get(i));
         }
     }
+
+    AmqpRelinkBean(AmqpRelink.AmqpRelinkBean other) {
+        this.bean = other;
+    }
+
+    public final AmqpRelinkBean copy() {
+        return new AmqpRelink.AmqpRelinkBean(bean);
+    }
+
+    public final void handle(AmqpCommandHandler handler) throws Exception {
+        handler.handleRelink(this);
+    }
+
+    public final AmqpRelink.AmqpRelinkBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+        if(buffer == null) {
+            buffer = new AmqpRelinkBuffer(marshaller.encode(this));
+        }
+        return buffer;
+    }
+
+    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+        getBuffer(marshaller).marshal(out, marshaller);
+    }
+
+
+    public final void setOptions(AmqpOptions options) {
+        copyCheck();
+        bean.options = options;
+    }
+
+    public final AmqpOptions getOptions() {
+        return bean.options;
+    }
+
+    public void setHandle(Long handle) {
+        setHandle(TypeFactory.createAmqpHandle(handle));
+    }
+
+
+    public void setHandle(long handle) {
+        setHandle(TypeFactory.createAmqpHandle(handle));
+    }
+
+
+    public final void setHandle(AmqpHandle handle) {
+        copyCheck();
+        bean.handle = handle;
+    }
+
+    public final AmqpHandle getHandle() {
+        return bean.handle;
+    }
+
+    public final void setSource(AmqpMap source) {
+        copyCheck();
+        bean.source = source;
+    }
+
+    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getSource() {
+        return bean.source.getValue();
+    }
+
+    public final void setTarget(AmqpMap target) {
+        copyCheck();
+        bean.target = target;
+    }
+
+    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getTarget() {
+        return bean.target.getValue();
+    }
+
+    public void set(int index, AmqpType<?, ?> value) {
+        switch(index) {
+        case 0: {
+            setOptions((AmqpOptions) value);
+            break;
+        }
+        case 1: {
+            setHandle((AmqpHandle) value);
+            break;
+        }
+        case 2: {
+            setSource((AmqpMap) value);
+            break;
+        }
+        case 3: {
+            setTarget((AmqpMap) value);
+            break;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public AmqpType<?, ?> get(int index) {
+        switch(index) {
+        case 0: {
+            return bean.options;
+        }
+        case 1: {
+            return bean.handle;
+        }
+        case 2: {
+            return bean.source;
+        }
+        case 3: {
+            return bean.target;
+        }
+        default : {
+            throw new IndexOutOfBoundsException(String.valueOf(index));
+        }
+        }
+    }
+
+    public int getListCount() {
+        return 4;
+    }
+
+    public IAmqpList getValue() {
+        return bean;
+    }
+
+    public Iterator<AmqpType<?, ?>> iterator() {
+        return new AmqpListIterator(bean);
+    }
+
+
+    private final void copyCheck() {
+        if(buffer != null) {;
+            throw new IllegalStateException("unwriteable");
+        }
+        if(bean != this) {;
+            copy(bean);
+        }
+    }
+
+    private final void copy(AmqpRelink.AmqpRelinkBean other) {
+        bean = this;
+    }
+
+    public boolean equals(Object o){
+        if(this == o) {
+            return true;
+        }
+
+        if(o == null || !(o instanceof AmqpRelink)) {
+            return false;
+        }
+
+        return equals((AmqpRelink) o);
+    }
+
+    public boolean equals(AmqpRelink b) {
+
+        if(b.getOptions() == null ^ getOptions() == null) {
+            return false;
+        }
+        if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
+            return false;
+        }
+
+        if(b.getHandle() == null ^ getHandle() == null) {
+            return false;
+        }
+        if(b.getHandle() != null && !b.getHandle().equals(getHandle())){ 
+            return false;
+        }
+
+        if(b.getSource() == null ^ getSource() == null) {
+            return false;
+        }
+        if(b.getSource() != null && !b.getSource().equals(getSource())){ 
+            return false;
+        }
+
+        if(b.getTarget() == null ^ getTarget() == null) {
+            return false;
+        }
+        if(b.getTarget() != null && !b.getTarget().equals(getTarget())){ 
+            return false;
+        }
+        return true;
+    }
+
+    public int hashCode() {
+        return AbstractAmqpList.hashCodeFor(this);
+    }
+}
 
     public static class AmqpRelinkBuffer extends AmqpList.AmqpListBuffer implements AmqpRelink{
 
@@ -318,6 +341,15 @@ public interface AmqpRelink extends AmqpList, AmqpCommand {
             return bean().getOptions();
         }
 
+        public void setHandle(Long handle) {
+            bean().setHandle(handle);
+        }
+
+        public void setHandle(long handle) {
+            bean().setHandle(handle);
+        }
+
+
         public final void setHandle(AmqpHandle handle) {
             bean().setHandle(handle);
         }
@@ -326,27 +358,19 @@ public interface AmqpRelink extends AmqpList, AmqpCommand {
             return bean().getHandle();
         }
 
-    public void setSource(HashMap<AmqpType<?,?>, AmqpType<?,?>> source) {
-            bean().setSource(source);
-        }
-
         public final void setSource(AmqpMap source) {
             bean().setSource(source);
         }
 
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> getSource() {
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getSource() {
             return bean().getSource();
-        }
-
-    public void setTarget(HashMap<AmqpType<?,?>, AmqpType<?,?>> target) {
-            bean().setTarget(target);
         }
 
         public final void setTarget(AmqpMap target) {
             bean().setTarget(target);
         }
 
-        public final HashMap<AmqpType<?,?>, AmqpType<?,?>> getTarget() {
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getTarget() {
             return bean().getTarget();
         }
 
@@ -386,8 +410,16 @@ public interface AmqpRelink extends AmqpList, AmqpCommand {
             handler.handleRelink(this);
         }
 
-        public boolean equivalent(AmqpType<?, ?> t) {
-            return bean().equivalent(t);
+        public boolean equals(Object o){
+            return bean().equals(o);
+        }
+
+        public boolean equals(AmqpRelink o){
+            return bean().equals(o);
+        }
+
+        public int hashCode() {
+            return bean().hashCode();
         }
 
         public static AmqpRelink.AmqpRelinkBuffer create(Encoded<IAmqpList> encoded) {
