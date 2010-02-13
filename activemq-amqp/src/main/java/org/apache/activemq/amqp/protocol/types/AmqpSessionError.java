@@ -211,277 +211,277 @@ public interface AmqpSessionError extends AmqpList {
         AmqpSessionErrorBean() {
         }
 
-        AmqpSessionErrorBean(IAmqpList value) {
+        AmqpSessionErrorBean(IAmqpList<AmqpType<?, ?>> value) {
 
-        for(int i = 0; i < value.getListCount(); i++) {
-            set(i, value.get(i));
-        }
-    }
-
-    AmqpSessionErrorBean(AmqpSessionError.AmqpSessionErrorBean other) {
-        this.bean = other;
-    }
-
-    public final AmqpSessionErrorBean copy() {
-        return new AmqpSessionError.AmqpSessionErrorBean(bean);
-    }
-
-    public final AmqpSessionError.AmqpSessionErrorBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-        if(buffer == null) {
-            buffer = new AmqpSessionErrorBuffer(marshaller.encode(this));
-        }
-        return buffer;
-    }
-
-    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-        getBuffer(marshaller).marshal(out, marshaller);
-    }
-
-
-    public final void setErrorCode(AmqpSessionErrorCode errorCode) {
-        copyCheck();
-        bean.errorCode = errorCode;
-    }
-
-    public final AmqpSessionErrorCode getErrorCode() {
-        return bean.errorCode;
-    }
-
-    public void setCommandId(Long commandId) {
-        setCommandId(TypeFactory.createAmqpSequenceNo(commandId));
-    }
-
-
-    public void setCommandId(long commandId) {
-        setCommandId(TypeFactory.createAmqpSequenceNo(commandId));
-    }
-
-
-    public final void setCommandId(AmqpSequenceNo commandId) {
-        copyCheck();
-        bean.commandId = commandId;
-    }
-
-    public final AmqpSequenceNo getCommandId() {
-        return bean.commandId;
-    }
-
-    public void setCommandCode(Short commandCode) {
-        setCommandCode(TypeFactory.createAmqpUbyte(commandCode));
-    }
-
-
-    public void setCommandCode(short commandCode) {
-        setCommandCode(TypeFactory.createAmqpUbyte(commandCode));
-    }
-
-
-    public final void setCommandCode(AmqpUbyte commandCode) {
-        copyCheck();
-        bean.commandCode = commandCode;
-    }
-
-    public final Short getCommandCode() {
-        return bean.commandCode.getValue();
-    }
-
-    public void setFieldIndex(Short fieldIndex) {
-        setFieldIndex(TypeFactory.createAmqpUbyte(fieldIndex));
-    }
-
-
-    public void setFieldIndex(short fieldIndex) {
-        setFieldIndex(TypeFactory.createAmqpUbyte(fieldIndex));
-    }
-
-
-    public final void setFieldIndex(AmqpUbyte fieldIndex) {
-        copyCheck();
-        bean.fieldIndex = fieldIndex;
-    }
-
-    public final Short getFieldIndex() {
-        return bean.fieldIndex.getValue();
-    }
-
-    public void setDescription(String description) {
-        setDescription(TypeFactory.createAmqpString(description));
-    }
-
-
-    public final void setDescription(AmqpString description) {
-        copyCheck();
-        bean.description = description;
-    }
-
-    public final String getDescription() {
-        return bean.description.getValue();
-    }
-
-    public final void setErrorInfo(AmqpMap errorInfo) {
-        copyCheck();
-        bean.errorInfo = errorInfo;
-    }
-
-    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getErrorInfo() {
-        return bean.errorInfo.getValue();
-    }
-
-    public void set(int index, AmqpType<?, ?> value) {
-        switch(index) {
-        case 0: {
-            setErrorCode(AmqpSessionErrorCode.get((AmqpUshort)value));
-            break;
-        }
-        case 1: {
-            setCommandId((AmqpSequenceNo) value);
-            break;
-        }
-        case 2: {
-            setCommandCode((AmqpUbyte) value);
-            break;
-        }
-        case 3: {
-            setFieldIndex((AmqpUbyte) value);
-            break;
-        }
-        case 4: {
-            setDescription((AmqpString) value);
-            break;
-        }
-        case 5: {
-            setErrorInfo((AmqpMap) value);
-            break;
-        }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        }
-    }
-
-    public AmqpType<?, ?> get(int index) {
-        switch(index) {
-        case 0: {
-            if(errorCode == null) {
-                return null;
+            for(int i = 0; i < value.getListCount(); i++) {
+                set(i, value.get(i));
             }
-            return errorCode.getValue();
         }
-        case 1: {
+
+        AmqpSessionErrorBean(AmqpSessionError.AmqpSessionErrorBean other) {
+            this.bean = other;
+        }
+
+        public final AmqpSessionErrorBean copy() {
+            return new AmqpSessionError.AmqpSessionErrorBean(bean);
+        }
+
+        public final AmqpSessionError.AmqpSessionErrorBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+            if(buffer == null) {
+                buffer = new AmqpSessionErrorBuffer(marshaller.encode(this));
+            }
+            return buffer;
+        }
+
+        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+            getBuffer(marshaller).marshal(out, marshaller);
+        }
+
+
+        public final void setErrorCode(AmqpSessionErrorCode errorCode) {
+            copyCheck();
+            bean.errorCode = errorCode;
+        }
+
+        public final AmqpSessionErrorCode getErrorCode() {
+            return bean.errorCode;
+        }
+
+        public void setCommandId(Long commandId) {
+            setCommandId(TypeFactory.createAmqpSequenceNo(commandId));
+        }
+
+
+        public void setCommandId(long commandId) {
+            setCommandId(TypeFactory.createAmqpSequenceNo(commandId));
+        }
+
+
+        public final void setCommandId(AmqpSequenceNo commandId) {
+            copyCheck();
+            bean.commandId = commandId;
+        }
+
+        public final AmqpSequenceNo getCommandId() {
             return bean.commandId;
         }
-        case 2: {
-            return bean.commandCode;
+
+        public void setCommandCode(Short commandCode) {
+            setCommandCode(TypeFactory.createAmqpUbyte(commandCode));
         }
-        case 3: {
-            return bean.fieldIndex;
+
+
+        public void setCommandCode(short commandCode) {
+            setCommandCode(TypeFactory.createAmqpUbyte(commandCode));
         }
-        case 4: {
-            return bean.description;
+
+
+        public final void setCommandCode(AmqpUbyte commandCode) {
+            copyCheck();
+            bean.commandCode = commandCode;
         }
-        case 5: {
+
+        public final Short getCommandCode() {
+            return bean.commandCode.getValue();
+        }
+
+        public void setFieldIndex(Short fieldIndex) {
+            setFieldIndex(TypeFactory.createAmqpUbyte(fieldIndex));
+        }
+
+
+        public void setFieldIndex(short fieldIndex) {
+            setFieldIndex(TypeFactory.createAmqpUbyte(fieldIndex));
+        }
+
+
+        public final void setFieldIndex(AmqpUbyte fieldIndex) {
+            copyCheck();
+            bean.fieldIndex = fieldIndex;
+        }
+
+        public final Short getFieldIndex() {
+            return bean.fieldIndex.getValue();
+        }
+
+        public void setDescription(String description) {
+            setDescription(TypeFactory.createAmqpString(description));
+        }
+
+
+        public final void setDescription(AmqpString description) {
+            copyCheck();
+            bean.description = description;
+        }
+
+        public final String getDescription() {
+            return bean.description.getValue();
+        }
+
+        public final void setErrorInfo(AmqpMap errorInfo) {
+            copyCheck();
+            bean.errorInfo = errorInfo;
+        }
+
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getErrorInfo() {
             return bean.errorInfo;
         }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
+
+        public void set(int index, AmqpType<?, ?> value) {
+            switch(index) {
+            case 0: {
+                setErrorCode(AmqpSessionErrorCode.get((AmqpUshort)value));
+                break;
+            }
+            case 1: {
+                setCommandId((AmqpSequenceNo) value);
+                break;
+            }
+            case 2: {
+                setCommandCode((AmqpUbyte) value);
+                break;
+            }
+            case 3: {
+                setFieldIndex((AmqpUbyte) value);
+                break;
+            }
+            case 4: {
+                setDescription((AmqpString) value);
+                break;
+            }
+            case 5: {
+                setErrorInfo((AmqpMap) value);
+                break;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
+
+        public AmqpType<?, ?> get(int index) {
+            switch(index) {
+            case 0: {
+                if(errorCode == null) {
+                    return null;
+                }
+                return errorCode.getValue();
+            }
+            case 1: {
+                return bean.commandId;
+            }
+            case 2: {
+                return bean.commandCode;
+            }
+            case 3: {
+                return bean.fieldIndex;
+            }
+            case 4: {
+                return bean.description;
+            }
+            case 5: {
+                return bean.errorInfo;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
-    }
 
-    public int getListCount() {
-        return 6;
-    }
-
-    public IAmqpList getValue() {
-        return bean;
-    }
-
-    public Iterator<AmqpType<?, ?>> iterator() {
-        return new AmqpListIterator(bean);
-    }
-
-
-    private final void copyCheck() {
-        if(buffer != null) {;
-            throw new IllegalStateException("unwriteable");
+        public int getListCount() {
+            return 6;
         }
-        if(bean != this) {;
-            copy(bean);
+
+        public IAmqpList<AmqpType<?, ?>> getValue() {
+            return bean;
         }
-    }
 
-    private final void copy(AmqpSessionError.AmqpSessionErrorBean other) {
-        bean = this;
-    }
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return new AmqpListIterator<AmqpType<?, ?>>(bean);
+        }
 
-    public boolean equals(Object o){
-        if(this == o) {
+
+        private final void copyCheck() {
+            if(buffer != null) {;
+                throw new IllegalStateException("unwriteable");
+            }
+            if(bean != this) {;
+                copy(bean);
+            }
+        }
+
+        private final void copy(AmqpSessionError.AmqpSessionErrorBean other) {
+            bean = this;
+        }
+
+        public boolean equals(Object o){
+            if(this == o) {
+                return true;
+            }
+
+            if(o == null || !(o instanceof AmqpSessionError)) {
+                return false;
+            }
+
+            return equals((AmqpSessionError) o);
+        }
+
+        public boolean equals(AmqpSessionError b) {
+
+            if(b.getErrorCode() == null ^ getErrorCode() == null) {
+                return false;
+            }
+            if(b.getErrorCode() != null && !b.getErrorCode().equals(getErrorCode())){ 
+                return false;
+            }
+
+            if(b.getCommandId() == null ^ getCommandId() == null) {
+                return false;
+            }
+            if(b.getCommandId() != null && !b.getCommandId().equals(getCommandId())){ 
+                return false;
+            }
+
+            if(b.getCommandCode() == null ^ getCommandCode() == null) {
+                return false;
+            }
+            if(b.getCommandCode() != null && !b.getCommandCode().equals(getCommandCode())){ 
+                return false;
+            }
+
+            if(b.getFieldIndex() == null ^ getFieldIndex() == null) {
+                return false;
+            }
+            if(b.getFieldIndex() != null && !b.getFieldIndex().equals(getFieldIndex())){ 
+                return false;
+            }
+
+            if(b.getDescription() == null ^ getDescription() == null) {
+                return false;
+            }
+            if(b.getDescription() != null && !b.getDescription().equals(getDescription())){ 
+                return false;
+            }
+
+            if(b.getErrorInfo() == null ^ getErrorInfo() == null) {
+                return false;
+            }
+            if(b.getErrorInfo() != null && !b.getErrorInfo().equals(getErrorInfo())){ 
+                return false;
+            }
             return true;
         }
 
-        if(o == null || !(o instanceof AmqpSessionError)) {
-            return false;
+        public int hashCode() {
+            return AbstractAmqpList.hashCodeFor(this);
         }
-
-        return equals((AmqpSessionError) o);
     }
-
-    public boolean equals(AmqpSessionError b) {
-
-        if(b.getErrorCode() == null ^ getErrorCode() == null) {
-            return false;
-        }
-        if(b.getErrorCode() != null && !b.getErrorCode().equals(getErrorCode())){ 
-            return false;
-        }
-
-        if(b.getCommandId() == null ^ getCommandId() == null) {
-            return false;
-        }
-        if(b.getCommandId() != null && !b.getCommandId().equals(getCommandId())){ 
-            return false;
-        }
-
-        if(b.getCommandCode() == null ^ getCommandCode() == null) {
-            return false;
-        }
-        if(b.getCommandCode() != null && !b.getCommandCode().equals(getCommandCode())){ 
-            return false;
-        }
-
-        if(b.getFieldIndex() == null ^ getFieldIndex() == null) {
-            return false;
-        }
-        if(b.getFieldIndex() != null && !b.getFieldIndex().equals(getFieldIndex())){ 
-            return false;
-        }
-
-        if(b.getDescription() == null ^ getDescription() == null) {
-            return false;
-        }
-        if(b.getDescription() != null && !b.getDescription().equals(getDescription())){ 
-            return false;
-        }
-
-        if(b.getErrorInfo() == null ^ getErrorInfo() == null) {
-            return false;
-        }
-        if(b.getErrorInfo() != null && !b.getErrorInfo().equals(getErrorInfo())){ 
-            return false;
-        }
-        return true;
-    }
-
-    public int hashCode() {
-        return AbstractAmqpList.hashCodeFor(this);
-    }
-}
 
     public static class AmqpSessionErrorBuffer extends AmqpList.AmqpListBuffer implements AmqpSessionError{
 
         private AmqpSessionErrorBean bean;
 
-        protected AmqpSessionErrorBuffer(Encoded<IAmqpList> encoded) {
+        protected AmqpSessionErrorBuffer(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
@@ -580,10 +580,6 @@ public interface AmqpSessionError extends AmqpList {
             return bean().iterator();
         }
 
-        public IAmqpList getValue() {
-            return bean().getValue();
-        }
-
         public AmqpSessionError.AmqpSessionErrorBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
             return this;
         }
@@ -608,7 +604,7 @@ public interface AmqpSessionError extends AmqpList {
             return bean().hashCode();
         }
 
-        public static AmqpSessionError.AmqpSessionErrorBuffer create(Encoded<IAmqpList> encoded) {
+        public static AmqpSessionError.AmqpSessionErrorBuffer create(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

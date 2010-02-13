@@ -48,7 +48,7 @@ public interface AmqpMessageAttributes extends AmqpMap {
         private IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value;
 
         AmqpMessageAttributesBean() {
-            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());
+            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>,AmqpType<?,?>>(new HashMap<AmqpType<?,?>,AmqpType<?,?>>());
         }
 
         AmqpMessageAttributesBean(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) {
@@ -74,12 +74,12 @@ public interface AmqpMessageAttributes extends AmqpMap {
             getBuffer(marshaller).marshal(out, marshaller);
         }
 
-        public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+        public void put(AmqpType<?,?> key, AmqpType<?,?> value) {
             copyCheck();
             bean.value.put(key, value);
         }
 
-        public AmqpType<?, ?> get(Object key) {
+        public AmqpType<?,?> get(Object key) {
             return bean.value.get(key);
         }
 
@@ -87,12 +87,8 @@ public interface AmqpMessageAttributes extends AmqpMap {
             return bean.value.getEntryCount();
         }
 
-        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+        public Iterator<Map.Entry<AmqpType<?,?>, AmqpType<?,?>>> iterator() {
             return bean.value.iterator();
-        }
-
-        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
-            return bean.value;
         }
 
 
@@ -142,11 +138,11 @@ public interface AmqpMessageAttributes extends AmqpMap {
         protected AmqpMessageAttributesBuffer(Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
-        public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+        public void put(AmqpType<?,?> key, AmqpType<?,?> value) {
             bean().put(key, value);
         }
 
-        public AmqpType<?, ?> get(Object key) {
+        public AmqpType<?,?> get(Object key) {
             return bean().get(key);
         }
 
@@ -154,12 +150,8 @@ public interface AmqpMessageAttributes extends AmqpMap {
             return bean().getEntryCount();
         }
 
-        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+        public Iterator<Map.Entry<AmqpType<?,?>, AmqpType<?,?>>> iterator() {
             return bean().iterator();
-        }
-
-        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
-            return bean().getValue();
         }
 
         public AmqpMessageAttributes.AmqpMessageAttributesBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{

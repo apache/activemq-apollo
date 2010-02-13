@@ -101,178 +101,178 @@ public interface AmqpLinkError extends AmqpList {
         AmqpLinkErrorBean() {
         }
 
-        AmqpLinkErrorBean(IAmqpList value) {
+        AmqpLinkErrorBean(IAmqpList<AmqpType<?, ?>> value) {
 
-        for(int i = 0; i < value.getListCount(); i++) {
-            set(i, value.get(i));
-        }
-    }
-
-    AmqpLinkErrorBean(AmqpLinkError.AmqpLinkErrorBean other) {
-        this.bean = other;
-    }
-
-    public final AmqpLinkErrorBean copy() {
-        return new AmqpLinkError.AmqpLinkErrorBean(bean);
-    }
-
-    public final AmqpLinkError.AmqpLinkErrorBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-        if(buffer == null) {
-            buffer = new AmqpLinkErrorBuffer(marshaller.encode(this));
-        }
-        return buffer;
-    }
-
-    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-        getBuffer(marshaller).marshal(out, marshaller);
-    }
-
-
-    public final void setErrorCode(AmqpLinkErrorCode errorCode) {
-        copyCheck();
-        bean.errorCode = errorCode;
-    }
-
-    public final AmqpLinkErrorCode getErrorCode() {
-        return bean.errorCode;
-    }
-
-    public void setDescription(String description) {
-        setDescription(TypeFactory.createAmqpString(description));
-    }
-
-
-    public final void setDescription(AmqpString description) {
-        copyCheck();
-        bean.description = description;
-    }
-
-    public final String getDescription() {
-        return bean.description.getValue();
-    }
-
-    public final void setErrorInfo(AmqpMap errorInfo) {
-        copyCheck();
-        bean.errorInfo = errorInfo;
-    }
-
-    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getErrorInfo() {
-        return bean.errorInfo.getValue();
-    }
-
-    public void set(int index, AmqpType<?, ?> value) {
-        switch(index) {
-        case 0: {
-            setErrorCode(AmqpLinkErrorCode.get((AmqpUshort)value));
-            break;
-        }
-        case 1: {
-            setDescription((AmqpString) value);
-            break;
-        }
-        case 2: {
-            setErrorInfo((AmqpMap) value);
-            break;
-        }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        }
-    }
-
-    public AmqpType<?, ?> get(int index) {
-        switch(index) {
-        case 0: {
-            if(errorCode == null) {
-                return null;
+            for(int i = 0; i < value.getListCount(); i++) {
+                set(i, value.get(i));
             }
-            return errorCode.getValue();
         }
-        case 1: {
-            return bean.description;
+
+        AmqpLinkErrorBean(AmqpLinkError.AmqpLinkErrorBean other) {
+            this.bean = other;
         }
-        case 2: {
+
+        public final AmqpLinkErrorBean copy() {
+            return new AmqpLinkError.AmqpLinkErrorBean(bean);
+        }
+
+        public final AmqpLinkError.AmqpLinkErrorBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+            if(buffer == null) {
+                buffer = new AmqpLinkErrorBuffer(marshaller.encode(this));
+            }
+            return buffer;
+        }
+
+        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+            getBuffer(marshaller).marshal(out, marshaller);
+        }
+
+
+        public final void setErrorCode(AmqpLinkErrorCode errorCode) {
+            copyCheck();
+            bean.errorCode = errorCode;
+        }
+
+        public final AmqpLinkErrorCode getErrorCode() {
+            return bean.errorCode;
+        }
+
+        public void setDescription(String description) {
+            setDescription(TypeFactory.createAmqpString(description));
+        }
+
+
+        public final void setDescription(AmqpString description) {
+            copyCheck();
+            bean.description = description;
+        }
+
+        public final String getDescription() {
+            return bean.description.getValue();
+        }
+
+        public final void setErrorInfo(AmqpMap errorInfo) {
+            copyCheck();
+            bean.errorInfo = errorInfo;
+        }
+
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getErrorInfo() {
             return bean.errorInfo;
         }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
+
+        public void set(int index, AmqpType<?, ?> value) {
+            switch(index) {
+            case 0: {
+                setErrorCode(AmqpLinkErrorCode.get((AmqpUshort)value));
+                break;
+            }
+            case 1: {
+                setDescription((AmqpString) value);
+                break;
+            }
+            case 2: {
+                setErrorInfo((AmqpMap) value);
+                break;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
+
+        public AmqpType<?, ?> get(int index) {
+            switch(index) {
+            case 0: {
+                if(errorCode == null) {
+                    return null;
+                }
+                return errorCode.getValue();
+            }
+            case 1: {
+                return bean.description;
+            }
+            case 2: {
+                return bean.errorInfo;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
-    }
 
-    public int getListCount() {
-        return 3;
-    }
-
-    public IAmqpList getValue() {
-        return bean;
-    }
-
-    public Iterator<AmqpType<?, ?>> iterator() {
-        return new AmqpListIterator(bean);
-    }
-
-
-    private final void copyCheck() {
-        if(buffer != null) {;
-            throw new IllegalStateException("unwriteable");
+        public int getListCount() {
+            return 3;
         }
-        if(bean != this) {;
-            copy(bean);
+
+        public IAmqpList<AmqpType<?, ?>> getValue() {
+            return bean;
         }
-    }
 
-    private final void copy(AmqpLinkError.AmqpLinkErrorBean other) {
-        bean = this;
-    }
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return new AmqpListIterator<AmqpType<?, ?>>(bean);
+        }
 
-    public boolean equals(Object o){
-        if(this == o) {
+
+        private final void copyCheck() {
+            if(buffer != null) {;
+                throw new IllegalStateException("unwriteable");
+            }
+            if(bean != this) {;
+                copy(bean);
+            }
+        }
+
+        private final void copy(AmqpLinkError.AmqpLinkErrorBean other) {
+            bean = this;
+        }
+
+        public boolean equals(Object o){
+            if(this == o) {
+                return true;
+            }
+
+            if(o == null || !(o instanceof AmqpLinkError)) {
+                return false;
+            }
+
+            return equals((AmqpLinkError) o);
+        }
+
+        public boolean equals(AmqpLinkError b) {
+
+            if(b.getErrorCode() == null ^ getErrorCode() == null) {
+                return false;
+            }
+            if(b.getErrorCode() != null && !b.getErrorCode().equals(getErrorCode())){ 
+                return false;
+            }
+
+            if(b.getDescription() == null ^ getDescription() == null) {
+                return false;
+            }
+            if(b.getDescription() != null && !b.getDescription().equals(getDescription())){ 
+                return false;
+            }
+
+            if(b.getErrorInfo() == null ^ getErrorInfo() == null) {
+                return false;
+            }
+            if(b.getErrorInfo() != null && !b.getErrorInfo().equals(getErrorInfo())){ 
+                return false;
+            }
             return true;
         }
 
-        if(o == null || !(o instanceof AmqpLinkError)) {
-            return false;
+        public int hashCode() {
+            return AbstractAmqpList.hashCodeFor(this);
         }
-
-        return equals((AmqpLinkError) o);
     }
-
-    public boolean equals(AmqpLinkError b) {
-
-        if(b.getErrorCode() == null ^ getErrorCode() == null) {
-            return false;
-        }
-        if(b.getErrorCode() != null && !b.getErrorCode().equals(getErrorCode())){ 
-            return false;
-        }
-
-        if(b.getDescription() == null ^ getDescription() == null) {
-            return false;
-        }
-        if(b.getDescription() != null && !b.getDescription().equals(getDescription())){ 
-            return false;
-        }
-
-        if(b.getErrorInfo() == null ^ getErrorInfo() == null) {
-            return false;
-        }
-        if(b.getErrorInfo() != null && !b.getErrorInfo().equals(getErrorInfo())){ 
-            return false;
-        }
-        return true;
-    }
-
-    public int hashCode() {
-        return AbstractAmqpList.hashCodeFor(this);
-    }
-}
 
     public static class AmqpLinkErrorBuffer extends AmqpList.AmqpListBuffer implements AmqpLinkError{
 
         private AmqpLinkErrorBean bean;
 
-        protected AmqpLinkErrorBuffer(Encoded<IAmqpList> encoded) {
+        protected AmqpLinkErrorBuffer(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
@@ -320,10 +320,6 @@ public interface AmqpLinkError extends AmqpList {
             return bean().iterator();
         }
 
-        public IAmqpList getValue() {
-            return bean().getValue();
-        }
-
         public AmqpLinkError.AmqpLinkErrorBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
             return this;
         }
@@ -348,7 +344,7 @@ public interface AmqpLinkError extends AmqpList {
             return bean().hashCode();
         }
 
-        public static AmqpLinkError.AmqpLinkErrorBuffer create(Encoded<IAmqpList> encoded) {
+        public static AmqpLinkError.AmqpLinkErrorBuffer create(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

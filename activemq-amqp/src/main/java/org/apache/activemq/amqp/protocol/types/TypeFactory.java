@@ -455,7 +455,7 @@ public class TypeFactory {
     /**
      * Creates a AmqpList
      */
-    public static final AmqpList createAmqpList(IAmqpList val) {
+    public static final AmqpList createAmqpList(IAmqpList<AmqpType<?, ?>> val) {
         return new AmqpList.AmqpListBean(val);
     }
     /**

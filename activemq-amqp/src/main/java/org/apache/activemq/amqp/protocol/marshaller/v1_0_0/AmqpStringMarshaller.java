@@ -153,12 +153,12 @@ public class AmqpStringMarshaller {
             ENCODER.encodeStringStr8Utf8(value, encoded, offset);
         }
 
-        public final String decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeStringStr8Utf8(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
-        }
-
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeStringStr8Utf8(value, out);
+        }
+
+        public final String decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return ENCODER.decodeStringStr8Utf8(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
         }
 
         public final String unmarshalData(DataInput in) throws IOException {
@@ -188,12 +188,12 @@ public class AmqpStringMarshaller {
             ENCODER.encodeStringStr8Utf16(value, encoded, offset);
         }
 
-        public final String decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeStringStr8Utf16(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
-        }
-
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeStringStr8Utf16(value, out);
+        }
+
+        public final String decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return ENCODER.decodeStringStr8Utf16(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
         }
 
         public final String unmarshalData(DataInput in) throws IOException {
@@ -223,12 +223,12 @@ public class AmqpStringMarshaller {
             ENCODER.encodeStringStr32Utf8(value, encoded, offset);
         }
 
-        public final String decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeStringStr32Utf8(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
-        }
-
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeStringStr32Utf8(value, out);
+        }
+
+        public final String decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return ENCODER.decodeStringStr32Utf8(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
         }
 
         public final String unmarshalData(DataInput in) throws IOException {
@@ -258,12 +258,12 @@ public class AmqpStringMarshaller {
             ENCODER.encodeStringStr32Utf16(value, encoded, offset);
         }
 
-        public final String decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeStringStr32Utf16(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
-        }
-
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeStringStr32Utf16(value, out);
+        }
+
+        public final String decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return ENCODER.decodeStringStr32Utf16(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
         }
 
         public final String unmarshalData(DataInput in) throws IOException {

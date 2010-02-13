@@ -270,7 +270,7 @@ public interface AmqpOpen extends AmqpList, AmqpCommand {
      * need not be supplied in the outgoing-locales.
      * </p>
      */
-    public IAmqpList getOutgoingLocales();
+    public IAmqpList<AmqpType<?, ?>> getOutgoingLocales();
 
     /**
      * desired locales for incoming text in decreasing level of preference
@@ -298,7 +298,7 @@ public interface AmqpOpen extends AmqpList, AmqpCommand {
      * specified in the outgoing-locales field.
      * </p>
      */
-    public IAmqpList getIncomingLocales();
+    public IAmqpList<AmqpType<?, ?>> getIncomingLocales();
 
     /**
      * peer properties
@@ -338,7 +338,7 @@ public interface AmqpOpen extends AmqpList, AmqpCommand {
      * not present in the offered-capability list then it MUST close the connection.
      * </p>
      */
-    public IAmqpList getOfferedCapabilities();
+    public IAmqpList<AmqpType<?, ?>> getOfferedCapabilities();
 
     /**
      * the extension capabilities the sender may use if the receiver supports them
@@ -364,7 +364,7 @@ public interface AmqpOpen extends AmqpList, AmqpCommand {
      * Connection.
      * </p>
      */
-    public IAmqpList getDesiredCapabilities();
+    public IAmqpList<AmqpType<?, ?>> getDesiredCapabilities();
 
     public static class AmqpOpenBean implements AmqpOpen{
 
@@ -385,398 +385,398 @@ public interface AmqpOpen extends AmqpList, AmqpCommand {
         AmqpOpenBean() {
         }
 
-        AmqpOpenBean(IAmqpList value) {
+        AmqpOpenBean(IAmqpList<AmqpType<?, ?>> value) {
 
-        for(int i = 0; i < value.getListCount(); i++) {
-            set(i, value.get(i));
+            for(int i = 0; i < value.getListCount(); i++) {
+                set(i, value.get(i));
+            }
         }
-    }
 
-    AmqpOpenBean(AmqpOpen.AmqpOpenBean other) {
-        this.bean = other;
-    }
-
-    public final AmqpOpenBean copy() {
-        return new AmqpOpen.AmqpOpenBean(bean);
-    }
-
-    public final void handle(AmqpCommandHandler handler) throws Exception {
-        handler.handleOpen(this);
-    }
-
-    public final AmqpOpen.AmqpOpenBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-        if(buffer == null) {
-            buffer = new AmqpOpenBuffer(marshaller.encode(this));
+        AmqpOpenBean(AmqpOpen.AmqpOpenBean other) {
+            this.bean = other;
         }
-        return buffer;
-    }
 
-    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-        getBuffer(marshaller).marshal(out, marshaller);
-    }
-
-
-    public final void setOptions(AmqpOptions options) {
-        copyCheck();
-        bean.options = options;
-    }
-
-    public final AmqpOptions getOptions() {
-        return bean.options;
-    }
-
-    public void setContainerId(String containerId) {
-        setContainerId(TypeFactory.createAmqpString(containerId));
-    }
-
-
-    public final void setContainerId(AmqpString containerId) {
-        copyCheck();
-        bean.containerId = containerId;
-    }
-
-    public final String getContainerId() {
-        return bean.containerId.getValue();
-    }
-
-    public void setHostname(String hostname) {
-        setHostname(TypeFactory.createAmqpString(hostname));
-    }
-
-
-    public final void setHostname(AmqpString hostname) {
-        copyCheck();
-        bean.hostname = hostname;
-    }
-
-    public final String getHostname() {
-        return bean.hostname.getValue();
-    }
-
-    public void setMaxFrameSize(Long maxFrameSize) {
-        setMaxFrameSize(TypeFactory.createAmqpUint(maxFrameSize));
-    }
-
-
-    public void setMaxFrameSize(long maxFrameSize) {
-        setMaxFrameSize(TypeFactory.createAmqpUint(maxFrameSize));
-    }
-
-
-    public final void setMaxFrameSize(AmqpUint maxFrameSize) {
-        copyCheck();
-        bean.maxFrameSize = maxFrameSize;
-    }
-
-    public final Long getMaxFrameSize() {
-        return bean.maxFrameSize.getValue();
-    }
-
-    public void setChannelMax(Integer channelMax) {
-        setChannelMax(TypeFactory.createAmqpUshort(channelMax));
-    }
-
-
-    public void setChannelMax(int channelMax) {
-        setChannelMax(TypeFactory.createAmqpUshort(channelMax));
-    }
-
-
-    public final void setChannelMax(AmqpUshort channelMax) {
-        copyCheck();
-        bean.channelMax = channelMax;
-    }
-
-    public final Integer getChannelMax() {
-        return bean.channelMax.getValue();
-    }
-
-    public void setHeartbeatInterval(Integer heartbeatInterval) {
-        setHeartbeatInterval(TypeFactory.createAmqpUshort(heartbeatInterval));
-    }
-
-
-    public void setHeartbeatInterval(int heartbeatInterval) {
-        setHeartbeatInterval(TypeFactory.createAmqpUshort(heartbeatInterval));
-    }
-
-
-    public final void setHeartbeatInterval(AmqpUshort heartbeatInterval) {
-        copyCheck();
-        bean.heartbeatInterval = heartbeatInterval;
-    }
-
-    public final Integer getHeartbeatInterval() {
-        return bean.heartbeatInterval.getValue();
-    }
-
-    public final void setOutgoingLocales(AmqpList outgoingLocales) {
-        copyCheck();
-        bean.outgoingLocales = outgoingLocales;
-    }
-
-    public final IAmqpList getOutgoingLocales() {
-        return bean.outgoingLocales.getValue();
-    }
-
-    public final void setIncomingLocales(AmqpList incomingLocales) {
-        copyCheck();
-        bean.incomingLocales = incomingLocales;
-    }
-
-    public final IAmqpList getIncomingLocales() {
-        return bean.incomingLocales.getValue();
-    }
-
-    public final void setPeerProperties(AmqpMap peerProperties) {
-        copyCheck();
-        bean.peerProperties = peerProperties;
-    }
-
-    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getPeerProperties() {
-        return bean.peerProperties.getValue();
-    }
-
-    public final void setOfferedCapabilities(AmqpList offeredCapabilities) {
-        copyCheck();
-        bean.offeredCapabilities = offeredCapabilities;
-    }
-
-    public final IAmqpList getOfferedCapabilities() {
-        return bean.offeredCapabilities.getValue();
-    }
-
-    public final void setDesiredCapabilities(AmqpList desiredCapabilities) {
-        copyCheck();
-        bean.desiredCapabilities = desiredCapabilities;
-    }
-
-    public final IAmqpList getDesiredCapabilities() {
-        return bean.desiredCapabilities.getValue();
-    }
-
-    public void set(int index, AmqpType<?, ?> value) {
-        switch(index) {
-        case 0: {
-            setOptions((AmqpOptions) value);
-            break;
+        public final AmqpOpenBean copy() {
+            return new AmqpOpen.AmqpOpenBean(bean);
         }
-        case 1: {
-            setContainerId((AmqpString) value);
-            break;
-        }
-        case 2: {
-            setHostname((AmqpString) value);
-            break;
-        }
-        case 3: {
-            setMaxFrameSize((AmqpUint) value);
-            break;
-        }
-        case 4: {
-            setChannelMax((AmqpUshort) value);
-            break;
-        }
-        case 5: {
-            setHeartbeatInterval((AmqpUshort) value);
-            break;
-        }
-        case 6: {
-            setOutgoingLocales((AmqpList) value);
-            break;
-        }
-        case 7: {
-            setIncomingLocales((AmqpList) value);
-            break;
-        }
-        case 8: {
-            setPeerProperties((AmqpMap) value);
-            break;
-        }
-        case 9: {
-            setOfferedCapabilities((AmqpList) value);
-            break;
-        }
-        case 10: {
-            setDesiredCapabilities((AmqpList) value);
-            break;
-        }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        }
-    }
 
-    public AmqpType<?, ?> get(int index) {
-        switch(index) {
-        case 0: {
+        public final void handle(AmqpCommandHandler handler) throws Exception {
+            handler.handleOpen(this);
+        }
+
+        public final AmqpOpen.AmqpOpenBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+            if(buffer == null) {
+                buffer = new AmqpOpenBuffer(marshaller.encode(this));
+            }
+            return buffer;
+        }
+
+        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+            getBuffer(marshaller).marshal(out, marshaller);
+        }
+
+
+        public final void setOptions(AmqpOptions options) {
+            copyCheck();
+            bean.options = options;
+        }
+
+        public final AmqpOptions getOptions() {
             return bean.options;
         }
-        case 1: {
-            return bean.containerId;
+
+        public void setContainerId(String containerId) {
+            setContainerId(TypeFactory.createAmqpString(containerId));
         }
-        case 2: {
-            return bean.hostname;
+
+
+        public final void setContainerId(AmqpString containerId) {
+            copyCheck();
+            bean.containerId = containerId;
         }
-        case 3: {
-            return bean.maxFrameSize;
+
+        public final String getContainerId() {
+            return bean.containerId.getValue();
         }
-        case 4: {
-            return bean.channelMax;
+
+        public void setHostname(String hostname) {
+            setHostname(TypeFactory.createAmqpString(hostname));
         }
-        case 5: {
-            return bean.heartbeatInterval;
+
+
+        public final void setHostname(AmqpString hostname) {
+            copyCheck();
+            bean.hostname = hostname;
         }
-        case 6: {
+
+        public final String getHostname() {
+            return bean.hostname.getValue();
+        }
+
+        public void setMaxFrameSize(Long maxFrameSize) {
+            setMaxFrameSize(TypeFactory.createAmqpUint(maxFrameSize));
+        }
+
+
+        public void setMaxFrameSize(long maxFrameSize) {
+            setMaxFrameSize(TypeFactory.createAmqpUint(maxFrameSize));
+        }
+
+
+        public final void setMaxFrameSize(AmqpUint maxFrameSize) {
+            copyCheck();
+            bean.maxFrameSize = maxFrameSize;
+        }
+
+        public final Long getMaxFrameSize() {
+            return bean.maxFrameSize.getValue();
+        }
+
+        public void setChannelMax(Integer channelMax) {
+            setChannelMax(TypeFactory.createAmqpUshort(channelMax));
+        }
+
+
+        public void setChannelMax(int channelMax) {
+            setChannelMax(TypeFactory.createAmqpUshort(channelMax));
+        }
+
+
+        public final void setChannelMax(AmqpUshort channelMax) {
+            copyCheck();
+            bean.channelMax = channelMax;
+        }
+
+        public final Integer getChannelMax() {
+            return bean.channelMax.getValue();
+        }
+
+        public void setHeartbeatInterval(Integer heartbeatInterval) {
+            setHeartbeatInterval(TypeFactory.createAmqpUshort(heartbeatInterval));
+        }
+
+
+        public void setHeartbeatInterval(int heartbeatInterval) {
+            setHeartbeatInterval(TypeFactory.createAmqpUshort(heartbeatInterval));
+        }
+
+
+        public final void setHeartbeatInterval(AmqpUshort heartbeatInterval) {
+            copyCheck();
+            bean.heartbeatInterval = heartbeatInterval;
+        }
+
+        public final Integer getHeartbeatInterval() {
+            return bean.heartbeatInterval.getValue();
+        }
+
+        public final void setOutgoingLocales(AmqpList outgoingLocales) {
+            copyCheck();
+            bean.outgoingLocales = outgoingLocales;
+        }
+
+        public final IAmqpList<AmqpType<?, ?>> getOutgoingLocales() {
             return bean.outgoingLocales;
         }
-        case 7: {
+
+        public final void setIncomingLocales(AmqpList incomingLocales) {
+            copyCheck();
+            bean.incomingLocales = incomingLocales;
+        }
+
+        public final IAmqpList<AmqpType<?, ?>> getIncomingLocales() {
             return bean.incomingLocales;
         }
-        case 8: {
+
+        public final void setPeerProperties(AmqpMap peerProperties) {
+            copyCheck();
+            bean.peerProperties = peerProperties;
+        }
+
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getPeerProperties() {
             return bean.peerProperties;
         }
-        case 9: {
+
+        public final void setOfferedCapabilities(AmqpList offeredCapabilities) {
+            copyCheck();
+            bean.offeredCapabilities = offeredCapabilities;
+        }
+
+        public final IAmqpList<AmqpType<?, ?>> getOfferedCapabilities() {
             return bean.offeredCapabilities;
         }
-        case 10: {
+
+        public final void setDesiredCapabilities(AmqpList desiredCapabilities) {
+            copyCheck();
+            bean.desiredCapabilities = desiredCapabilities;
+        }
+
+        public final IAmqpList<AmqpType<?, ?>> getDesiredCapabilities() {
             return bean.desiredCapabilities;
         }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
+
+        public void set(int index, AmqpType<?, ?> value) {
+            switch(index) {
+            case 0: {
+                setOptions((AmqpOptions) value);
+                break;
+            }
+            case 1: {
+                setContainerId((AmqpString) value);
+                break;
+            }
+            case 2: {
+                setHostname((AmqpString) value);
+                break;
+            }
+            case 3: {
+                setMaxFrameSize((AmqpUint) value);
+                break;
+            }
+            case 4: {
+                setChannelMax((AmqpUshort) value);
+                break;
+            }
+            case 5: {
+                setHeartbeatInterval((AmqpUshort) value);
+                break;
+            }
+            case 6: {
+                setOutgoingLocales((AmqpList) value);
+                break;
+            }
+            case 7: {
+                setIncomingLocales((AmqpList) value);
+                break;
+            }
+            case 8: {
+                setPeerProperties((AmqpMap) value);
+                break;
+            }
+            case 9: {
+                setOfferedCapabilities((AmqpList) value);
+                break;
+            }
+            case 10: {
+                setDesiredCapabilities((AmqpList) value);
+                break;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
+
+        public AmqpType<?, ?> get(int index) {
+            switch(index) {
+            case 0: {
+                return bean.options;
+            }
+            case 1: {
+                return bean.containerId;
+            }
+            case 2: {
+                return bean.hostname;
+            }
+            case 3: {
+                return bean.maxFrameSize;
+            }
+            case 4: {
+                return bean.channelMax;
+            }
+            case 5: {
+                return bean.heartbeatInterval;
+            }
+            case 6: {
+                return bean.outgoingLocales;
+            }
+            case 7: {
+                return bean.incomingLocales;
+            }
+            case 8: {
+                return bean.peerProperties;
+            }
+            case 9: {
+                return bean.offeredCapabilities;
+            }
+            case 10: {
+                return bean.desiredCapabilities;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
-    }
 
-    public int getListCount() {
-        return 11;
-    }
-
-    public IAmqpList getValue() {
-        return bean;
-    }
-
-    public Iterator<AmqpType<?, ?>> iterator() {
-        return new AmqpListIterator(bean);
-    }
-
-
-    private final void copyCheck() {
-        if(buffer != null) {;
-            throw new IllegalStateException("unwriteable");
+        public int getListCount() {
+            return 11;
         }
-        if(bean != this) {;
-            copy(bean);
+
+        public IAmqpList<AmqpType<?, ?>> getValue() {
+            return bean;
         }
-    }
 
-    private final void copy(AmqpOpen.AmqpOpenBean other) {
-        bean = this;
-    }
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return new AmqpListIterator<AmqpType<?, ?>>(bean);
+        }
 
-    public boolean equals(Object o){
-        if(this == o) {
+
+        private final void copyCheck() {
+            if(buffer != null) {;
+                throw new IllegalStateException("unwriteable");
+            }
+            if(bean != this) {;
+                copy(bean);
+            }
+        }
+
+        private final void copy(AmqpOpen.AmqpOpenBean other) {
+            bean = this;
+        }
+
+        public boolean equals(Object o){
+            if(this == o) {
+                return true;
+            }
+
+            if(o == null || !(o instanceof AmqpOpen)) {
+                return false;
+            }
+
+            return equals((AmqpOpen) o);
+        }
+
+        public boolean equals(AmqpOpen b) {
+
+            if(b.getOptions() == null ^ getOptions() == null) {
+                return false;
+            }
+            if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
+                return false;
+            }
+
+            if(b.getContainerId() == null ^ getContainerId() == null) {
+                return false;
+            }
+            if(b.getContainerId() != null && !b.getContainerId().equals(getContainerId())){ 
+                return false;
+            }
+
+            if(b.getHostname() == null ^ getHostname() == null) {
+                return false;
+            }
+            if(b.getHostname() != null && !b.getHostname().equals(getHostname())){ 
+                return false;
+            }
+
+            if(b.getMaxFrameSize() == null ^ getMaxFrameSize() == null) {
+                return false;
+            }
+            if(b.getMaxFrameSize() != null && !b.getMaxFrameSize().equals(getMaxFrameSize())){ 
+                return false;
+            }
+
+            if(b.getChannelMax() == null ^ getChannelMax() == null) {
+                return false;
+            }
+            if(b.getChannelMax() != null && !b.getChannelMax().equals(getChannelMax())){ 
+                return false;
+            }
+
+            if(b.getHeartbeatInterval() == null ^ getHeartbeatInterval() == null) {
+                return false;
+            }
+            if(b.getHeartbeatInterval() != null && !b.getHeartbeatInterval().equals(getHeartbeatInterval())){ 
+                return false;
+            }
+
+            if(b.getOutgoingLocales() == null ^ getOutgoingLocales() == null) {
+                return false;
+            }
+            if(b.getOutgoingLocales() != null && !b.getOutgoingLocales().equals(getOutgoingLocales())){ 
+                return false;
+            }
+
+            if(b.getIncomingLocales() == null ^ getIncomingLocales() == null) {
+                return false;
+            }
+            if(b.getIncomingLocales() != null && !b.getIncomingLocales().equals(getIncomingLocales())){ 
+                return false;
+            }
+
+            if(b.getPeerProperties() == null ^ getPeerProperties() == null) {
+                return false;
+            }
+            if(b.getPeerProperties() != null && !b.getPeerProperties().equals(getPeerProperties())){ 
+                return false;
+            }
+
+            if(b.getOfferedCapabilities() == null ^ getOfferedCapabilities() == null) {
+                return false;
+            }
+            if(b.getOfferedCapabilities() != null && !b.getOfferedCapabilities().equals(getOfferedCapabilities())){ 
+                return false;
+            }
+
+            if(b.getDesiredCapabilities() == null ^ getDesiredCapabilities() == null) {
+                return false;
+            }
+            if(b.getDesiredCapabilities() != null && !b.getDesiredCapabilities().equals(getDesiredCapabilities())){ 
+                return false;
+            }
             return true;
         }
 
-        if(o == null || !(o instanceof AmqpOpen)) {
-            return false;
+        public int hashCode() {
+            return AbstractAmqpList.hashCodeFor(this);
         }
-
-        return equals((AmqpOpen) o);
     }
-
-    public boolean equals(AmqpOpen b) {
-
-        if(b.getOptions() == null ^ getOptions() == null) {
-            return false;
-        }
-        if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
-            return false;
-        }
-
-        if(b.getContainerId() == null ^ getContainerId() == null) {
-            return false;
-        }
-        if(b.getContainerId() != null && !b.getContainerId().equals(getContainerId())){ 
-            return false;
-        }
-
-        if(b.getHostname() == null ^ getHostname() == null) {
-            return false;
-        }
-        if(b.getHostname() != null && !b.getHostname().equals(getHostname())){ 
-            return false;
-        }
-
-        if(b.getMaxFrameSize() == null ^ getMaxFrameSize() == null) {
-            return false;
-        }
-        if(b.getMaxFrameSize() != null && !b.getMaxFrameSize().equals(getMaxFrameSize())){ 
-            return false;
-        }
-
-        if(b.getChannelMax() == null ^ getChannelMax() == null) {
-            return false;
-        }
-        if(b.getChannelMax() != null && !b.getChannelMax().equals(getChannelMax())){ 
-            return false;
-        }
-
-        if(b.getHeartbeatInterval() == null ^ getHeartbeatInterval() == null) {
-            return false;
-        }
-        if(b.getHeartbeatInterval() != null && !b.getHeartbeatInterval().equals(getHeartbeatInterval())){ 
-            return false;
-        }
-
-        if(b.getOutgoingLocales() == null ^ getOutgoingLocales() == null) {
-            return false;
-        }
-        if(b.getOutgoingLocales() != null && !b.getOutgoingLocales().equals(getOutgoingLocales())){ 
-            return false;
-        }
-
-        if(b.getIncomingLocales() == null ^ getIncomingLocales() == null) {
-            return false;
-        }
-        if(b.getIncomingLocales() != null && !b.getIncomingLocales().equals(getIncomingLocales())){ 
-            return false;
-        }
-
-        if(b.getPeerProperties() == null ^ getPeerProperties() == null) {
-            return false;
-        }
-        if(b.getPeerProperties() != null && !b.getPeerProperties().equals(getPeerProperties())){ 
-            return false;
-        }
-
-        if(b.getOfferedCapabilities() == null ^ getOfferedCapabilities() == null) {
-            return false;
-        }
-        if(b.getOfferedCapabilities() != null && !b.getOfferedCapabilities().equals(getOfferedCapabilities())){ 
-            return false;
-        }
-
-        if(b.getDesiredCapabilities() == null ^ getDesiredCapabilities() == null) {
-            return false;
-        }
-        if(b.getDesiredCapabilities() != null && !b.getDesiredCapabilities().equals(getDesiredCapabilities())){ 
-            return false;
-        }
-        return true;
-    }
-
-    public int hashCode() {
-        return AbstractAmqpList.hashCodeFor(this);
-    }
-}
 
     public static class AmqpOpenBuffer extends AmqpList.AmqpListBuffer implements AmqpOpen{
 
         private AmqpOpenBean bean;
 
-        protected AmqpOpenBuffer(Encoded<IAmqpList> encoded) {
+        protected AmqpOpenBuffer(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
@@ -867,7 +867,7 @@ public interface AmqpOpen extends AmqpList, AmqpCommand {
             bean().setOutgoingLocales(outgoingLocales);
         }
 
-        public final IAmqpList getOutgoingLocales() {
+        public final IAmqpList<AmqpType<?, ?>> getOutgoingLocales() {
             return bean().getOutgoingLocales();
         }
 
@@ -875,7 +875,7 @@ public interface AmqpOpen extends AmqpList, AmqpCommand {
             bean().setIncomingLocales(incomingLocales);
         }
 
-        public final IAmqpList getIncomingLocales() {
+        public final IAmqpList<AmqpType<?, ?>> getIncomingLocales() {
             return bean().getIncomingLocales();
         }
 
@@ -891,7 +891,7 @@ public interface AmqpOpen extends AmqpList, AmqpCommand {
             bean().setOfferedCapabilities(offeredCapabilities);
         }
 
-        public final IAmqpList getOfferedCapabilities() {
+        public final IAmqpList<AmqpType<?, ?>> getOfferedCapabilities() {
             return bean().getOfferedCapabilities();
         }
 
@@ -899,7 +899,7 @@ public interface AmqpOpen extends AmqpList, AmqpCommand {
             bean().setDesiredCapabilities(desiredCapabilities);
         }
 
-        public final IAmqpList getDesiredCapabilities() {
+        public final IAmqpList<AmqpType<?, ?>> getDesiredCapabilities() {
             return bean().getDesiredCapabilities();
         }
 
@@ -917,10 +917,6 @@ public interface AmqpOpen extends AmqpList, AmqpCommand {
 
         public Iterator<AmqpType<?, ?>> iterator() {
             return bean().iterator();
-        }
-
-        public IAmqpList getValue() {
-            return bean().getValue();
         }
 
         public AmqpOpen.AmqpOpenBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
@@ -951,7 +947,7 @@ public interface AmqpOpen extends AmqpList, AmqpCommand {
             return bean().hashCode();
         }
 
-        public static AmqpOpen.AmqpOpenBuffer create(Encoded<IAmqpList> encoded) {
+        public static AmqpOpen.AmqpOpenBuffer create(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

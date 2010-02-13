@@ -127,12 +127,12 @@ public class AmqpBooleanMarshaller {
 
         }
 
-        public final Boolean decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.valueOfBoolean(encoding);
-        }
-
         public final void marshalData(DataOutput out) throws IOException {
 
+        }
+
+        public final Boolean decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return ENCODER.valueOfBoolean(encoding);
         }
 
         public final Boolean unmarshalData(DataInput in) throws IOException {
@@ -158,12 +158,12 @@ public class AmqpBooleanMarshaller {
 
         }
 
-        public final Boolean decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.valueOfBoolean(encoding);
-        }
-
         public final void marshalData(DataOutput out) throws IOException {
 
+        }
+
+        public final Boolean decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return ENCODER.valueOfBoolean(encoding);
         }
 
         public final Boolean unmarshalData(DataInput in) throws IOException {

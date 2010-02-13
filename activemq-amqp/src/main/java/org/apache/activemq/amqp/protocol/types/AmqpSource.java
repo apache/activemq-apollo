@@ -266,7 +266,7 @@ public interface AmqpSource extends AmqpMap {
      * state.
      * </p>
      */
-    public IAmqpList getMessageStates();
+    public IAmqpList<AmqpType<?, ?>> getMessageStates();
 
     /**
      * disposition for unacked Messages
@@ -298,7 +298,7 @@ public interface AmqpSource extends AmqpMap {
         private IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value;
 
         AmqpSourceBean() {
-            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());
+            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>,AmqpType<?,?>>(new HashMap<AmqpType<?,?>,AmqpType<?,?>>());
         }
 
         AmqpSourceBean(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) {
@@ -400,8 +400,8 @@ public interface AmqpSource extends AmqpMap {
             bean.messageStates = messageStates;
         }
 
-        public final IAmqpList getMessageStates() {
-            return bean.messageStates.getValue();
+        public final IAmqpList<AmqpType<?, ?>> getMessageStates() {
+            return bean.messageStates;
         }
 
         public final void setOrphanDisposition(AmqpMap orphanDisposition) {
@@ -410,14 +410,14 @@ public interface AmqpSource extends AmqpMap {
         }
 
         public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOrphanDisposition() {
-            return bean.orphanDisposition.getValue();
+            return bean.orphanDisposition;
         }
-        public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+        public void put(AmqpType<?,?> key, AmqpType<?,?> value) {
             copyCheck();
             bean.value.put(key, value);
         }
 
-        public AmqpType<?, ?> get(Object key) {
+        public AmqpType<?,?> get(Object key) {
             return bean.value.get(key);
         }
 
@@ -425,12 +425,8 @@ public interface AmqpSource extends AmqpMap {
             return bean.value.getEntryCount();
         }
 
-        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+        public Iterator<Map.Entry<AmqpType<?,?>, AmqpType<?,?>>> iterator() {
             return bean.value.iterator();
-        }
-
-        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
-            return bean.value;
         }
 
 
@@ -591,7 +587,7 @@ public interface AmqpSource extends AmqpMap {
             bean().setMessageStates(messageStates);
         }
 
-        public final IAmqpList getMessageStates() {
+        public final IAmqpList<AmqpType<?, ?>> getMessageStates() {
             return bean().getMessageStates();
         }
 
@@ -602,11 +598,11 @@ public interface AmqpSource extends AmqpMap {
         public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOrphanDisposition() {
             return bean().getOrphanDisposition();
         }
-        public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+        public void put(AmqpType<?,?> key, AmqpType<?,?> value) {
             bean().put(key, value);
         }
 
-        public AmqpType<?, ?> get(Object key) {
+        public AmqpType<?,?> get(Object key) {
             return bean().get(key);
         }
 
@@ -614,12 +610,8 @@ public interface AmqpSource extends AmqpMap {
             return bean().getEntryCount();
         }
 
-        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+        public Iterator<Map.Entry<AmqpType<?,?>, AmqpType<?,?>>> iterator() {
             return bean().iterator();
-        }
-
-        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
-            return bean().getValue();
         }
 
         public AmqpSource.AmqpSourceBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{

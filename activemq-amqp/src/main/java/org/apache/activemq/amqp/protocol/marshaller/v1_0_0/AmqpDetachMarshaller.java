@@ -37,7 +37,7 @@ import org.apache.activemq.util.buffer.Buffer;
 public class AmqpDetachMarshaller implements DescribedTypeMarshaller<AmqpDetach>{
 
     static final AmqpDetachMarshaller SINGLETON = new AmqpDetachMarshaller();
-    private static final Encoded<IAmqpList> NULL_ENCODED = new Encoder.NullEncoded<IAmqpList>();
+    private static final Encoded<IAmqpList<AmqpType<?, ?>>> NULL_ENCODED = new Encoder.NullEncoded<IAmqpList<AmqpType<?, ?>>>();
 
     public static final String SYMBOLIC_ID = "amqp:detach:list";
     //Format code: 0x00000001:0x00000203:
@@ -51,49 +51,78 @@ public class AmqpDetachMarshaller implements DescribedTypeMarshaller<AmqpDetach>
         (byte) 0x00, (byte) 0x00, (byte) 0x02, (byte) 0x03   // DESCRIPTOR ID CODE
     }), 0);
 
-    private static final ListDecoder DECODER = new ListDecoder() {
-        public final AmqpType<?, ?> unmarshalType(int pos, DataInput in) throws IOException {
-            switch(pos) {
-            case 0: {
-                return AmqpOptions.AmqpOptionsBuffer.create(AmqpMapMarshaller.createEncoded(in));
+    private static final ListDecoder<AmqpType<?, ?>> DECODER = new ListDecoder<AmqpType<?, ?>>() {
+        public final IAmqpList<AmqpType<?, ?>> unmarshalType(int dataCount, int dataSize, DataInput in) throws AmqpEncodingError, IOException {
+            if (dataCount > 4) {
+                throw new AmqpEncodingError("Too many fields for " + SYMBOLIC_ID + ": " + dataCount);
             }
-            case 1: {
-                return AmqpSessionName.AmqpSessionNameBuffer.create(AmqpBinaryMarshaller.createEncoded(in));
+            IAmqpList<AmqpType<?, ?>> rc = new IAmqpList.ArrayBackedList<AmqpType<?, ?>>(new AmqpType<?, ?>[4]);
+            //options:
+            if(dataCount > 0) {
+                rc.set(0, AmqpOptions.AmqpOptionsBuffer.create(AmqpMapMarshaller.createEncoded(in)));
+                dataCount--;
             }
-            case 2: {
-                return AmqpBoolean.AmqpBooleanBuffer.create(AmqpBooleanMarshaller.createEncoded(in));
+
+            //name:
+            if(dataCount > 0) {
+                rc.set(1, AmqpSessionName.AmqpSessionNameBuffer.create(AmqpBinaryMarshaller.createEncoded(in)));
+                dataCount--;
             }
-            case 3: {
-                return AmqpSessionError.AmqpSessionErrorBuffer.create(AmqpSessionErrorMarshaller.createEncoded(in));
+            else {
+                throw new AmqpEncodingError("Missing required field for " + SYMBOLIC_ID + ": name");
             }
-            default: {
-                return AmqpMarshaller.SINGLETON.unmarshalType(in);
+
+            //closing:
+            if(dataCount > 0) {
+                rc.set(2, AmqpBoolean.AmqpBooleanBuffer.create(AmqpBooleanMarshaller.createEncoded(in)));
+                dataCount--;
             }
+
+            //exception:
+            if(dataCount > 0) {
+                rc.set(3, AmqpSessionError.AmqpSessionErrorBuffer.create(AmqpSessionErrorMarshaller.createEncoded(in)));
+                dataCount--;
             }
+            return rc;
         }
 
-        public final AmqpType<?, ?> decodeType(int pos, EncodedBuffer buffer) throws AmqpEncodingError {
-            switch(pos) {
-            case 0: {
-                return AmqpOptions.AmqpOptionsBuffer.create(AmqpMapMarshaller.createEncoded(buffer));
+        public IAmqpList<AmqpType<?, ?>> decode(EncodedBuffer[] constituents) {
+            if (constituents.length > 4) {
+                throw new AmqpEncodingError("Too many fields for " + SYMBOLIC_ID + ":" + constituents.length);
             }
-            case 1: {
-                return AmqpSessionName.AmqpSessionNameBuffer.create(AmqpBinaryMarshaller.createEncoded(buffer));
+            int dataCount = constituents.length;
+            IAmqpList<AmqpType<?, ?>> rc = new IAmqpList.ArrayBackedList<AmqpType<?, ?>>(new AmqpType<?, ?>[4]);
+            //options:
+            if(dataCount > 0) {
+                rc.set(0, AmqpOptions.AmqpOptionsBuffer.create(AmqpMapMarshaller.createEncoded(constituents[0])));
+                dataCount--;
             }
-            case 2: {
-                return AmqpBoolean.AmqpBooleanBuffer.create(AmqpBooleanMarshaller.createEncoded(buffer));
+
+            //name:
+            if(dataCount > 0) {
+                rc.set(1, AmqpSessionName.AmqpSessionNameBuffer.create(AmqpBinaryMarshaller.createEncoded(constituents[1])));
+                dataCount--;
             }
-            case 3: {
-                return AmqpSessionError.AmqpSessionErrorBuffer.create(AmqpSessionErrorMarshaller.createEncoded(buffer));
+            else {
+                throw new AmqpEncodingError("Missing required field for " + SYMBOLIC_ID + ": name");
             }
-            default: {
-                return AmqpMarshaller.SINGLETON.decodeType(buffer);
+
+            //closing:
+            if(dataCount > 0) {
+                rc.set(2, AmqpBoolean.AmqpBooleanBuffer.create(AmqpBooleanMarshaller.createEncoded(constituents[2])));
+                dataCount--;
             }
+
+            //exception:
+            if(dataCount > 0) {
+                rc.set(3, AmqpSessionError.AmqpSessionErrorBuffer.create(AmqpSessionErrorMarshaller.createEncoded(constituents[3])));
+                dataCount--;
             }
+            return rc;
         }
     };
 
-    public static class AmqpDetachEncoded extends DescribedEncoded<IAmqpList> {
+    public static class AmqpDetachEncoded extends DescribedEncoded<IAmqpList<AmqpType<?, ?>>> {
 
         public AmqpDetachEncoded(DescribedBuffer buffer) {
             super(buffer);
@@ -111,11 +140,11 @@ public class AmqpDetachMarshaller implements DescribedTypeMarshaller<AmqpDetach>
             return NUMERIC_ID;
         }
 
-        protected final Encoded<IAmqpList> decodeDescribed(EncodedBuffer encoded) throws AmqpEncodingError {
+        protected final Encoded<IAmqpList<AmqpType<?, ?>>> decodeDescribed(EncodedBuffer encoded) throws AmqpEncodingError {
             return AmqpListMarshaller.createEncoded(encoded, DECODER);
         }
 
-        protected final Encoded<IAmqpList> unmarshalDescribed(DataInput in) throws IOException {
+        protected final Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalDescribed(DataInput in) throws IOException {
             return AmqpListMarshaller.createEncoded(in, DECODER);
         }
 
@@ -124,19 +153,19 @@ public class AmqpDetachMarshaller implements DescribedTypeMarshaller<AmqpDetach>
         }
     }
 
-    public static final Encoded<IAmqpList> encode(AmqpDetach value) throws AmqpEncodingError {
+    public static final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpDetach value) throws AmqpEncodingError {
         return new AmqpDetachEncoded(value);
     }
 
-    static final Encoded<IAmqpList> createEncoded(Buffer source, int offset) throws AmqpEncodingError {
+    static final Encoded<IAmqpList<AmqpType<?, ?>>> createEncoded(Buffer source, int offset) throws AmqpEncodingError {
         return createEncoded(FormatCategory.createBuffer(source, offset));
     }
 
-    static final Encoded<IAmqpList> createEncoded(DataInput in) throws IOException, AmqpEncodingError {
+    static final Encoded<IAmqpList<AmqpType<?, ?>>> createEncoded(DataInput in) throws IOException, AmqpEncodingError {
         return createEncoded(FormatCategory.createBuffer(in.readByte(), in));
     }
 
-    static final Encoded<IAmqpList> createEncoded(EncodedBuffer buffer) throws AmqpEncodingError {
+    static final Encoded<IAmqpList<AmqpType<?, ?>>> createEncoded(EncodedBuffer buffer) throws AmqpEncodingError {
         byte fc = buffer.getEncodingFormatCode();
         if (fc == Encoder.NULL_FORMAT_CODE) {
             return NULL_ENCODED;

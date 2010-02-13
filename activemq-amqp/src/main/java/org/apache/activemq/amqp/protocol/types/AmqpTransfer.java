@@ -178,7 +178,7 @@ public interface AmqpTransfer extends AmqpList, AmqpCommand {
 
     public void setFragments(AmqpList fragments);
 
-    public IAmqpList getFragments();
+    public IAmqpList<AmqpType<?, ?>> getFragments();
 
     public static class AmqpTransferBean implements AmqpTransfer{
 
@@ -194,278 +194,278 @@ public interface AmqpTransfer extends AmqpList, AmqpCommand {
         AmqpTransferBean() {
         }
 
-        AmqpTransferBean(IAmqpList value) {
+        AmqpTransferBean(IAmqpList<AmqpType<?, ?>> value) {
 
-        for(int i = 0; i < value.getListCount(); i++) {
-            set(i, value.get(i));
+            for(int i = 0; i < value.getListCount(); i++) {
+                set(i, value.get(i));
+            }
         }
-    }
 
-    AmqpTransferBean(AmqpTransfer.AmqpTransferBean other) {
-        this.bean = other;
-    }
-
-    public final AmqpTransferBean copy() {
-        return new AmqpTransfer.AmqpTransferBean(bean);
-    }
-
-    public final void handle(AmqpCommandHandler handler) throws Exception {
-        handler.handleTransfer(this);
-    }
-
-    public final AmqpTransfer.AmqpTransferBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-        if(buffer == null) {
-            buffer = new AmqpTransferBuffer(marshaller.encode(this));
+        AmqpTransferBean(AmqpTransfer.AmqpTransferBean other) {
+            this.bean = other;
         }
-        return buffer;
-    }
 
-    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-        getBuffer(marshaller).marshal(out, marshaller);
-    }
-
-
-    public final void setOptions(AmqpOptions options) {
-        copyCheck();
-        bean.options = options;
-    }
-
-    public final AmqpOptions getOptions() {
-        return bean.options;
-    }
-
-    public void setHandle(Long handle) {
-        setHandle(TypeFactory.createAmqpHandle(handle));
-    }
-
-
-    public void setHandle(long handle) {
-        setHandle(TypeFactory.createAmqpHandle(handle));
-    }
-
-
-    public final void setHandle(AmqpHandle handle) {
-        copyCheck();
-        bean.handle = handle;
-    }
-
-    public final AmqpHandle getHandle() {
-        return bean.handle;
-    }
-
-    public void setDeliveryTag(Buffer deliveryTag) {
-        setDeliveryTag(TypeFactory.createAmqpDeliveryTag(deliveryTag));
-    }
-
-
-    public final void setDeliveryTag(AmqpDeliveryTag deliveryTag) {
-        copyCheck();
-        bean.deliveryTag = deliveryTag;
-    }
-
-    public final AmqpDeliveryTag getDeliveryTag() {
-        return bean.deliveryTag;
-    }
-
-    public void setMore(Boolean more) {
-        setMore(TypeFactory.createAmqpBoolean(more));
-    }
-
-
-    public void setMore(boolean more) {
-        setMore(TypeFactory.createAmqpBoolean(more));
-    }
-
-
-    public final void setMore(AmqpBoolean more) {
-        copyCheck();
-        bean.more = more;
-    }
-
-    public final Boolean getMore() {
-        return bean.more.getValue();
-    }
-
-    public void setAborted(Boolean aborted) {
-        setAborted(TypeFactory.createAmqpBoolean(aborted));
-    }
-
-
-    public void setAborted(boolean aborted) {
-        setAborted(TypeFactory.createAmqpBoolean(aborted));
-    }
-
-
-    public final void setAborted(AmqpBoolean aborted) {
-        copyCheck();
-        bean.aborted = aborted;
-    }
-
-    public final Boolean getAborted() {
-        return bean.aborted.getValue();
-    }
-
-    public final void setFragments(AmqpList fragments) {
-        copyCheck();
-        bean.fragments = fragments;
-    }
-
-    public final IAmqpList getFragments() {
-        return bean.fragments.getValue();
-    }
-
-    public void set(int index, AmqpType<?, ?> value) {
-        switch(index) {
-        case 0: {
-            setOptions((AmqpOptions) value);
-            break;
+        public final AmqpTransferBean copy() {
+            return new AmqpTransfer.AmqpTransferBean(bean);
         }
-        case 1: {
-            setHandle((AmqpHandle) value);
-            break;
-        }
-        case 2: {
-            setDeliveryTag((AmqpDeliveryTag) value);
-            break;
-        }
-        case 3: {
-            setMore((AmqpBoolean) value);
-            break;
-        }
-        case 4: {
-            setAborted((AmqpBoolean) value);
-            break;
-        }
-        case 5: {
-            setFragments((AmqpList) value);
-            break;
-        }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        }
-    }
 
-    public AmqpType<?, ?> get(int index) {
-        switch(index) {
-        case 0: {
+        public final void handle(AmqpCommandHandler handler) throws Exception {
+            handler.handleTransfer(this);
+        }
+
+        public final AmqpTransfer.AmqpTransferBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+            if(buffer == null) {
+                buffer = new AmqpTransferBuffer(marshaller.encode(this));
+            }
+            return buffer;
+        }
+
+        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+            getBuffer(marshaller).marshal(out, marshaller);
+        }
+
+
+        public final void setOptions(AmqpOptions options) {
+            copyCheck();
+            bean.options = options;
+        }
+
+        public final AmqpOptions getOptions() {
             return bean.options;
         }
-        case 1: {
+
+        public void setHandle(Long handle) {
+            setHandle(TypeFactory.createAmqpHandle(handle));
+        }
+
+
+        public void setHandle(long handle) {
+            setHandle(TypeFactory.createAmqpHandle(handle));
+        }
+
+
+        public final void setHandle(AmqpHandle handle) {
+            copyCheck();
+            bean.handle = handle;
+        }
+
+        public final AmqpHandle getHandle() {
             return bean.handle;
         }
-        case 2: {
+
+        public void setDeliveryTag(Buffer deliveryTag) {
+            setDeliveryTag(TypeFactory.createAmqpDeliveryTag(deliveryTag));
+        }
+
+
+        public final void setDeliveryTag(AmqpDeliveryTag deliveryTag) {
+            copyCheck();
+            bean.deliveryTag = deliveryTag;
+        }
+
+        public final AmqpDeliveryTag getDeliveryTag() {
             return bean.deliveryTag;
         }
-        case 3: {
-            return bean.more;
+
+        public void setMore(Boolean more) {
+            setMore(TypeFactory.createAmqpBoolean(more));
         }
-        case 4: {
-            return bean.aborted;
+
+
+        public void setMore(boolean more) {
+            setMore(TypeFactory.createAmqpBoolean(more));
         }
-        case 5: {
+
+
+        public final void setMore(AmqpBoolean more) {
+            copyCheck();
+            bean.more = more;
+        }
+
+        public final Boolean getMore() {
+            return bean.more.getValue();
+        }
+
+        public void setAborted(Boolean aborted) {
+            setAborted(TypeFactory.createAmqpBoolean(aborted));
+        }
+
+
+        public void setAborted(boolean aborted) {
+            setAborted(TypeFactory.createAmqpBoolean(aborted));
+        }
+
+
+        public final void setAborted(AmqpBoolean aborted) {
+            copyCheck();
+            bean.aborted = aborted;
+        }
+
+        public final Boolean getAborted() {
+            return bean.aborted.getValue();
+        }
+
+        public final void setFragments(AmqpList fragments) {
+            copyCheck();
+            bean.fragments = fragments;
+        }
+
+        public final IAmqpList<AmqpType<?, ?>> getFragments() {
             return bean.fragments;
         }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
+
+        public void set(int index, AmqpType<?, ?> value) {
+            switch(index) {
+            case 0: {
+                setOptions((AmqpOptions) value);
+                break;
+            }
+            case 1: {
+                setHandle((AmqpHandle) value);
+                break;
+            }
+            case 2: {
+                setDeliveryTag((AmqpDeliveryTag) value);
+                break;
+            }
+            case 3: {
+                setMore((AmqpBoolean) value);
+                break;
+            }
+            case 4: {
+                setAborted((AmqpBoolean) value);
+                break;
+            }
+            case 5: {
+                setFragments((AmqpList) value);
+                break;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
+
+        public AmqpType<?, ?> get(int index) {
+            switch(index) {
+            case 0: {
+                return bean.options;
+            }
+            case 1: {
+                return bean.handle;
+            }
+            case 2: {
+                return bean.deliveryTag;
+            }
+            case 3: {
+                return bean.more;
+            }
+            case 4: {
+                return bean.aborted;
+            }
+            case 5: {
+                return bean.fragments;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
-    }
 
-    public int getListCount() {
-        return 6;
-    }
-
-    public IAmqpList getValue() {
-        return bean;
-    }
-
-    public Iterator<AmqpType<?, ?>> iterator() {
-        return new AmqpListIterator(bean);
-    }
-
-
-    private final void copyCheck() {
-        if(buffer != null) {;
-            throw new IllegalStateException("unwriteable");
+        public int getListCount() {
+            return 6;
         }
-        if(bean != this) {;
-            copy(bean);
+
+        public IAmqpList<AmqpType<?, ?>> getValue() {
+            return bean;
         }
-    }
 
-    private final void copy(AmqpTransfer.AmqpTransferBean other) {
-        bean = this;
-    }
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return new AmqpListIterator<AmqpType<?, ?>>(bean);
+        }
 
-    public boolean equals(Object o){
-        if(this == o) {
+
+        private final void copyCheck() {
+            if(buffer != null) {;
+                throw new IllegalStateException("unwriteable");
+            }
+            if(bean != this) {;
+                copy(bean);
+            }
+        }
+
+        private final void copy(AmqpTransfer.AmqpTransferBean other) {
+            bean = this;
+        }
+
+        public boolean equals(Object o){
+            if(this == o) {
+                return true;
+            }
+
+            if(o == null || !(o instanceof AmqpTransfer)) {
+                return false;
+            }
+
+            return equals((AmqpTransfer) o);
+        }
+
+        public boolean equals(AmqpTransfer b) {
+
+            if(b.getOptions() == null ^ getOptions() == null) {
+                return false;
+            }
+            if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
+                return false;
+            }
+
+            if(b.getHandle() == null ^ getHandle() == null) {
+                return false;
+            }
+            if(b.getHandle() != null && !b.getHandle().equals(getHandle())){ 
+                return false;
+            }
+
+            if(b.getDeliveryTag() == null ^ getDeliveryTag() == null) {
+                return false;
+            }
+            if(b.getDeliveryTag() != null && !b.getDeliveryTag().equals(getDeliveryTag())){ 
+                return false;
+            }
+
+            if(b.getMore() == null ^ getMore() == null) {
+                return false;
+            }
+            if(b.getMore() != null && !b.getMore().equals(getMore())){ 
+                return false;
+            }
+
+            if(b.getAborted() == null ^ getAborted() == null) {
+                return false;
+            }
+            if(b.getAborted() != null && !b.getAborted().equals(getAborted())){ 
+                return false;
+            }
+
+            if(b.getFragments() == null ^ getFragments() == null) {
+                return false;
+            }
+            if(b.getFragments() != null && !b.getFragments().equals(getFragments())){ 
+                return false;
+            }
             return true;
         }
 
-        if(o == null || !(o instanceof AmqpTransfer)) {
-            return false;
+        public int hashCode() {
+            return AbstractAmqpList.hashCodeFor(this);
         }
-
-        return equals((AmqpTransfer) o);
     }
-
-    public boolean equals(AmqpTransfer b) {
-
-        if(b.getOptions() == null ^ getOptions() == null) {
-            return false;
-        }
-        if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
-            return false;
-        }
-
-        if(b.getHandle() == null ^ getHandle() == null) {
-            return false;
-        }
-        if(b.getHandle() != null && !b.getHandle().equals(getHandle())){ 
-            return false;
-        }
-
-        if(b.getDeliveryTag() == null ^ getDeliveryTag() == null) {
-            return false;
-        }
-        if(b.getDeliveryTag() != null && !b.getDeliveryTag().equals(getDeliveryTag())){ 
-            return false;
-        }
-
-        if(b.getMore() == null ^ getMore() == null) {
-            return false;
-        }
-        if(b.getMore() != null && !b.getMore().equals(getMore())){ 
-            return false;
-        }
-
-        if(b.getAborted() == null ^ getAborted() == null) {
-            return false;
-        }
-        if(b.getAborted() != null && !b.getAborted().equals(getAborted())){ 
-            return false;
-        }
-
-        if(b.getFragments() == null ^ getFragments() == null) {
-            return false;
-        }
-        if(b.getFragments() != null && !b.getFragments().equals(getFragments())){ 
-            return false;
-        }
-        return true;
-    }
-
-    public int hashCode() {
-        return AbstractAmqpList.hashCodeFor(this);
-    }
-}
 
     public static class AmqpTransferBuffer extends AmqpList.AmqpListBuffer implements AmqpTransfer{
 
         private AmqpTransferBean bean;
 
-        protected AmqpTransferBuffer(Encoded<IAmqpList> encoded) {
+        protected AmqpTransferBuffer(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
@@ -544,7 +544,7 @@ public interface AmqpTransfer extends AmqpList, AmqpCommand {
             bean().setFragments(fragments);
         }
 
-        public final IAmqpList getFragments() {
+        public final IAmqpList<AmqpType<?, ?>> getFragments() {
             return bean().getFragments();
         }
 
@@ -562,10 +562,6 @@ public interface AmqpTransfer extends AmqpList, AmqpCommand {
 
         public Iterator<AmqpType<?, ?>> iterator() {
             return bean().iterator();
-        }
-
-        public IAmqpList getValue() {
-            return bean().getValue();
         }
 
         public AmqpTransfer.AmqpTransferBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
@@ -596,7 +592,7 @@ public interface AmqpTransfer extends AmqpList, AmqpCommand {
             return bean().hashCode();
         }
 
-        public static AmqpTransfer.AmqpTransferBuffer create(Encoded<IAmqpList> encoded) {
+        public static AmqpTransfer.AmqpTransferBuffer create(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

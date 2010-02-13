@@ -91,11 +91,11 @@ public interface AmqpMarshaller {
 
     public AmqpType<?, ?> unmarshalType(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpSessionError data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpSessionError data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpSessionError(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpSessionError(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpSessionError(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpSessionError(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<Integer> encode(AmqpChar data) throws AmqpEncodingError;
 
@@ -103,17 +103,17 @@ public interface AmqpMarshaller {
 
     public Encoded<Integer> unmarshalAmqpChar(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpUnlink data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpUnlink data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpUnlink(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpUnlink(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpUnlink(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpUnlink(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpFlow data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpFlow data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpFlow(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpFlow(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpFlow(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpFlow(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<Long> encode(AmqpLong data) throws AmqpEncodingError;
 
@@ -127,23 +127,23 @@ public interface AmqpMarshaller {
 
     public Encoded<Float> unmarshalAmqpFloat(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpRelink data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpRelink data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpRelink(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpRelink(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpRelink(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpRelink(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpClose data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpClose data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpClose(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpClose(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpClose(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpClose(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpOpen data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpOpen data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpOpen(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpOpen(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpOpen(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpOpen(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<Byte> encode(AmqpByte data) throws AmqpEncodingError;
 
@@ -157,11 +157,11 @@ public interface AmqpMarshaller {
 
     public Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> unmarshalAmqpRejected(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpSaslOutcome data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpSaslOutcome data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpSaslOutcome(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpSaslOutcome(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpSaslOutcome(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpSaslOutcome(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<Boolean> encode(AmqpBoolean data) throws AmqpEncodingError;
 
@@ -175,17 +175,17 @@ public interface AmqpMarshaller {
 
     public Encoded<BigInteger> unmarshalAmqpUlong(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpTransfer data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpTransfer data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpTransfer(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpTransfer(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpTransfer(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpTransfer(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpDetach data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpDetach data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpDetach(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpDetach(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpDetach(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpDetach(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<String> encode(AmqpSymbol data) throws AmqpEncodingError;
 
@@ -193,11 +193,11 @@ public interface AmqpMarshaller {
 
     public Encoded<String> unmarshalAmqpSymbol(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpSaslInit data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpSaslInit data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpSaslInit(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpSaslInit(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpSaslInit(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpSaslInit(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<Integer> encode(AmqpInt data) throws AmqpEncodingError;
 
@@ -205,17 +205,17 @@ public interface AmqpMarshaller {
 
     public Encoded<Integer> unmarshalAmqpInt(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpEnlist data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpEnlist data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpEnlist(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpEnlist(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpEnlist(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpEnlist(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpProperties data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpProperties data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpProperties(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpProperties(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpProperties(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpProperties(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<Double> encode(AmqpDouble data) throws AmqpEncodingError;
 
@@ -223,23 +223,23 @@ public interface AmqpMarshaller {
 
     public Encoded<Double> unmarshalAmqpDouble(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpDrain data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpDrain data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpDrain(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpDrain(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpDrain(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpDrain(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpHeader data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpHeader data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpHeader(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpHeader(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpHeader(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpHeader(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpSaslMechanisms data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpSaslMechanisms data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpSaslMechanisms(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpSaslMechanisms(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpSaslMechanisms(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpSaslMechanisms(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<UUID> encode(AmqpUuid data) throws AmqpEncodingError;
 
@@ -247,17 +247,17 @@ public interface AmqpMarshaller {
 
     public Encoded<UUID> unmarshalAmqpUuid(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpBar data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpBar data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpBar(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpBar(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpBar(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpBar(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpFilter data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpFilter data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpFilter(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpFilter(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpFilter(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpFilter(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<Buffer> encode(AmqpBinary data) throws AmqpEncodingError;
 
@@ -265,17 +265,17 @@ public interface AmqpMarshaller {
 
     public Encoded<Buffer> unmarshalAmqpBinary(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpNoop data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpNoop data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpNoop(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpNoop(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpNoop(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpNoop(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpLink data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpLink data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpLink(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpLink(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpLink(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpLink(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<Date> encode(AmqpTimestamp data) throws AmqpEncodingError;
 
@@ -295,11 +295,11 @@ public interface AmqpMarshaller {
 
     public Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> unmarshalAmqpReleased(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpTxn data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpTxn data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpTxn(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpTxn(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpTxn(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpTxn(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encode(AmqpMap data) throws AmqpEncodingError;
 
@@ -307,35 +307,35 @@ public interface AmqpMarshaller {
 
     public Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> unmarshalAmqpMap(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpLinkError data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpLinkError data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpLinkError(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpLinkError(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpLinkError(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpLinkError(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpConnectionError data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpConnectionError data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpConnectionError(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpConnectionError(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpConnectionError(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpConnectionError(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpSaslResponse data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpSaslResponse data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpSaslResponse(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpSaslResponse(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpSaslResponse(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpSaslResponse(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpFragment data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpFragment data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpFragment(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpFragment(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpFragment(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpFragment(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpDisposition data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpDisposition data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpDisposition(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpDisposition(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpDisposition(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpDisposition(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<Object> encode(AmqpNull data) throws AmqpEncodingError;
 
@@ -349,17 +349,17 @@ public interface AmqpMarshaller {
 
     public Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> unmarshalAmqpCompleted(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpXid data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpXid data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpXid(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpXid(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpXid(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpXid(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpList data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpList data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpList(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpList(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpList(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpList(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<Integer> encode(AmqpUshort data) throws AmqpEncodingError;
 
@@ -367,11 +367,11 @@ public interface AmqpMarshaller {
 
     public Encoded<Integer> unmarshalAmqpUshort(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpFooter data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpFooter data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpFooter(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpFooter(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpFooter(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpFooter(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> encode(AmqpSource data) throws AmqpEncodingError;
 
@@ -379,17 +379,17 @@ public interface AmqpMarshaller {
 
     public Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> unmarshalAmqpSource(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpSaslChallenge data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpSaslChallenge data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpSaslChallenge(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpSaslChallenge(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpSaslChallenge(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpSaslChallenge(DataInput in) throws IOException, AmqpEncodingError;
 
-    public Encoded<IAmqpList> encode(AmqpAttach data) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpAttach data) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> decodeAmqpAttach(Buffer source, int offset) throws AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpAttach(Buffer source, int offset) throws AmqpEncodingError;
 
-    public Encoded<IAmqpList> unmarshalAmqpAttach(DataInput in) throws IOException, AmqpEncodingError;
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpAttach(DataInput in) throws IOException, AmqpEncodingError;
 
     public Encoded<String> encode(AmqpString data) throws AmqpEncodingError;
 

@@ -105,178 +105,178 @@ public interface AmqpSaslOutcome extends AmqpList {
         AmqpSaslOutcomeBean() {
         }
 
-        AmqpSaslOutcomeBean(IAmqpList value) {
+        AmqpSaslOutcomeBean(IAmqpList<AmqpType<?, ?>> value) {
 
-        for(int i = 0; i < value.getListCount(); i++) {
-            set(i, value.get(i));
+            for(int i = 0; i < value.getListCount(); i++) {
+                set(i, value.get(i));
+            }
         }
-    }
 
-    AmqpSaslOutcomeBean(AmqpSaslOutcome.AmqpSaslOutcomeBean other) {
-        this.bean = other;
-    }
-
-    public final AmqpSaslOutcomeBean copy() {
-        return new AmqpSaslOutcome.AmqpSaslOutcomeBean(bean);
-    }
-
-    public final AmqpSaslOutcome.AmqpSaslOutcomeBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-        if(buffer == null) {
-            buffer = new AmqpSaslOutcomeBuffer(marshaller.encode(this));
+        AmqpSaslOutcomeBean(AmqpSaslOutcome.AmqpSaslOutcomeBean other) {
+            this.bean = other;
         }
-        return buffer;
-    }
 
-    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-        getBuffer(marshaller).marshal(out, marshaller);
-    }
-
-
-    public final void setOptions(AmqpMap options) {
-        copyCheck();
-        bean.options = options;
-    }
-
-    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOptions() {
-        return bean.options.getValue();
-    }
-
-    public final void setCode(AmqpSaslCode code) {
-        copyCheck();
-        bean.code = code;
-    }
-
-    public final AmqpSaslCode getCode() {
-        return bean.code;
-    }
-
-    public void setAdditionalData(Buffer additionalData) {
-        setAdditionalData(TypeFactory.createAmqpBinary(additionalData));
-    }
-
-
-    public final void setAdditionalData(AmqpBinary additionalData) {
-        copyCheck();
-        bean.additionalData = additionalData;
-    }
-
-    public final Buffer getAdditionalData() {
-        return bean.additionalData.getValue();
-    }
-
-    public void set(int index, AmqpType<?, ?> value) {
-        switch(index) {
-        case 0: {
-            setOptions((AmqpMap) value);
-            break;
+        public final AmqpSaslOutcomeBean copy() {
+            return new AmqpSaslOutcome.AmqpSaslOutcomeBean(bean);
         }
-        case 1: {
-            setCode(AmqpSaslCode.get((AmqpUbyte)value));
-            break;
-        }
-        case 2: {
-            setAdditionalData((AmqpBinary) value);
-            break;
-        }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        }
-    }
 
-    public AmqpType<?, ?> get(int index) {
-        switch(index) {
-        case 0: {
+        public final AmqpSaslOutcome.AmqpSaslOutcomeBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+            if(buffer == null) {
+                buffer = new AmqpSaslOutcomeBuffer(marshaller.encode(this));
+            }
+            return buffer;
+        }
+
+        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+            getBuffer(marshaller).marshal(out, marshaller);
+        }
+
+
+        public final void setOptions(AmqpMap options) {
+            copyCheck();
+            bean.options = options;
+        }
+
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOptions() {
             return bean.options;
         }
-        case 1: {
-            if(code == null) {
-                return null;
+
+        public final void setCode(AmqpSaslCode code) {
+            copyCheck();
+            bean.code = code;
+        }
+
+        public final AmqpSaslCode getCode() {
+            return bean.code;
+        }
+
+        public void setAdditionalData(Buffer additionalData) {
+            setAdditionalData(TypeFactory.createAmqpBinary(additionalData));
+        }
+
+
+        public final void setAdditionalData(AmqpBinary additionalData) {
+            copyCheck();
+            bean.additionalData = additionalData;
+        }
+
+        public final Buffer getAdditionalData() {
+            return bean.additionalData.getValue();
+        }
+
+        public void set(int index, AmqpType<?, ?> value) {
+            switch(index) {
+            case 0: {
+                setOptions((AmqpMap) value);
+                break;
             }
-            return code.getValue();
+            case 1: {
+                setCode(AmqpSaslCode.get((AmqpUbyte)value));
+                break;
+            }
+            case 2: {
+                setAdditionalData((AmqpBinary) value);
+                break;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
-        case 2: {
-            return bean.additionalData;
+
+        public AmqpType<?, ?> get(int index) {
+            switch(index) {
+            case 0: {
+                return bean.options;
+            }
+            case 1: {
+                if(code == null) {
+                    return null;
+                }
+                return code.getValue();
+            }
+            case 2: {
+                return bean.additionalData;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
+
+        public int getListCount() {
+            return 3;
         }
+
+        public IAmqpList<AmqpType<?, ?>> getValue() {
+            return bean;
         }
-    }
 
-    public int getListCount() {
-        return 3;
-    }
-
-    public IAmqpList getValue() {
-        return bean;
-    }
-
-    public Iterator<AmqpType<?, ?>> iterator() {
-        return new AmqpListIterator(bean);
-    }
-
-
-    private final void copyCheck() {
-        if(buffer != null) {;
-            throw new IllegalStateException("unwriteable");
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return new AmqpListIterator<AmqpType<?, ?>>(bean);
         }
-        if(bean != this) {;
-            copy(bean);
+
+
+        private final void copyCheck() {
+            if(buffer != null) {;
+                throw new IllegalStateException("unwriteable");
+            }
+            if(bean != this) {;
+                copy(bean);
+            }
         }
-    }
 
-    private final void copy(AmqpSaslOutcome.AmqpSaslOutcomeBean other) {
-        bean = this;
-    }
+        private final void copy(AmqpSaslOutcome.AmqpSaslOutcomeBean other) {
+            bean = this;
+        }
 
-    public boolean equals(Object o){
-        if(this == o) {
+        public boolean equals(Object o){
+            if(this == o) {
+                return true;
+            }
+
+            if(o == null || !(o instanceof AmqpSaslOutcome)) {
+                return false;
+            }
+
+            return equals((AmqpSaslOutcome) o);
+        }
+
+        public boolean equals(AmqpSaslOutcome b) {
+
+            if(b.getOptions() == null ^ getOptions() == null) {
+                return false;
+            }
+            if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
+                return false;
+            }
+
+            if(b.getCode() == null ^ getCode() == null) {
+                return false;
+            }
+            if(b.getCode() != null && !b.getCode().equals(getCode())){ 
+                return false;
+            }
+
+            if(b.getAdditionalData() == null ^ getAdditionalData() == null) {
+                return false;
+            }
+            if(b.getAdditionalData() != null && !b.getAdditionalData().equals(getAdditionalData())){ 
+                return false;
+            }
             return true;
         }
 
-        if(o == null || !(o instanceof AmqpSaslOutcome)) {
-            return false;
+        public int hashCode() {
+            return AbstractAmqpList.hashCodeFor(this);
         }
-
-        return equals((AmqpSaslOutcome) o);
     }
-
-    public boolean equals(AmqpSaslOutcome b) {
-
-        if(b.getOptions() == null ^ getOptions() == null) {
-            return false;
-        }
-        if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
-            return false;
-        }
-
-        if(b.getCode() == null ^ getCode() == null) {
-            return false;
-        }
-        if(b.getCode() != null && !b.getCode().equals(getCode())){ 
-            return false;
-        }
-
-        if(b.getAdditionalData() == null ^ getAdditionalData() == null) {
-            return false;
-        }
-        if(b.getAdditionalData() != null && !b.getAdditionalData().equals(getAdditionalData())){ 
-            return false;
-        }
-        return true;
-    }
-
-    public int hashCode() {
-        return AbstractAmqpList.hashCodeFor(this);
-    }
-}
 
     public static class AmqpSaslOutcomeBuffer extends AmqpList.AmqpListBuffer implements AmqpSaslOutcome{
 
         private AmqpSaslOutcomeBean bean;
 
-        protected AmqpSaslOutcomeBuffer(Encoded<IAmqpList> encoded) {
+        protected AmqpSaslOutcomeBuffer(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
@@ -324,10 +324,6 @@ public interface AmqpSaslOutcome extends AmqpList {
             return bean().iterator();
         }
 
-        public IAmqpList getValue() {
-            return bean().getValue();
-        }
-
         public AmqpSaslOutcome.AmqpSaslOutcomeBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
             return this;
         }
@@ -352,7 +348,7 @@ public interface AmqpSaslOutcome extends AmqpList {
             return bean().hashCode();
         }
 
-        public static AmqpSaslOutcome.AmqpSaslOutcomeBuffer create(Encoded<IAmqpList> encoded) {
+        public static AmqpSaslOutcome.AmqpSaslOutcomeBuffer create(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

@@ -147,212 +147,212 @@ public interface AmqpDetach extends AmqpList, AmqpCommand {
         AmqpDetachBean() {
         }
 
-        AmqpDetachBean(IAmqpList value) {
+        AmqpDetachBean(IAmqpList<AmqpType<?, ?>> value) {
 
-        for(int i = 0; i < value.getListCount(); i++) {
-            set(i, value.get(i));
+            for(int i = 0; i < value.getListCount(); i++) {
+                set(i, value.get(i));
+            }
         }
-    }
 
-    AmqpDetachBean(AmqpDetach.AmqpDetachBean other) {
-        this.bean = other;
-    }
-
-    public final AmqpDetachBean copy() {
-        return new AmqpDetach.AmqpDetachBean(bean);
-    }
-
-    public final void handle(AmqpCommandHandler handler) throws Exception {
-        handler.handleDetach(this);
-    }
-
-    public final AmqpDetach.AmqpDetachBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-        if(buffer == null) {
-            buffer = new AmqpDetachBuffer(marshaller.encode(this));
+        AmqpDetachBean(AmqpDetach.AmqpDetachBean other) {
+            this.bean = other;
         }
-        return buffer;
-    }
 
-    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-        getBuffer(marshaller).marshal(out, marshaller);
-    }
-
-
-    public final void setOptions(AmqpOptions options) {
-        copyCheck();
-        bean.options = options;
-    }
-
-    public final AmqpOptions getOptions() {
-        return bean.options;
-    }
-
-    public void setName(Buffer name) {
-        setName(TypeFactory.createAmqpSessionName(name));
-    }
-
-
-    public final void setName(AmqpSessionName name) {
-        copyCheck();
-        bean.name = name;
-    }
-
-    public final AmqpSessionName getName() {
-        return bean.name;
-    }
-
-    public void setClosing(Boolean closing) {
-        setClosing(TypeFactory.createAmqpBoolean(closing));
-    }
-
-
-    public void setClosing(boolean closing) {
-        setClosing(TypeFactory.createAmqpBoolean(closing));
-    }
-
-
-    public final void setClosing(AmqpBoolean closing) {
-        copyCheck();
-        bean.closing = closing;
-    }
-
-    public final Boolean getClosing() {
-        return bean.closing.getValue();
-    }
-
-    public final void setException(AmqpSessionError exception) {
-        copyCheck();
-        bean.exception = exception;
-    }
-
-    public final AmqpSessionError getException() {
-        return bean.exception;
-    }
-
-    public void set(int index, AmqpType<?, ?> value) {
-        switch(index) {
-        case 0: {
-            setOptions((AmqpOptions) value);
-            break;
+        public final AmqpDetachBean copy() {
+            return new AmqpDetach.AmqpDetachBean(bean);
         }
-        case 1: {
-            setName((AmqpSessionName) value);
-            break;
-        }
-        case 2: {
-            setClosing((AmqpBoolean) value);
-            break;
-        }
-        case 3: {
-            setException((AmqpSessionError) value);
-            break;
-        }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        }
-    }
 
-    public AmqpType<?, ?> get(int index) {
-        switch(index) {
-        case 0: {
+        public final void handle(AmqpCommandHandler handler) throws Exception {
+            handler.handleDetach(this);
+        }
+
+        public final AmqpDetach.AmqpDetachBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+            if(buffer == null) {
+                buffer = new AmqpDetachBuffer(marshaller.encode(this));
+            }
+            return buffer;
+        }
+
+        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+            getBuffer(marshaller).marshal(out, marshaller);
+        }
+
+
+        public final void setOptions(AmqpOptions options) {
+            copyCheck();
+            bean.options = options;
+        }
+
+        public final AmqpOptions getOptions() {
             return bean.options;
         }
-        case 1: {
+
+        public void setName(Buffer name) {
+            setName(TypeFactory.createAmqpSessionName(name));
+        }
+
+
+        public final void setName(AmqpSessionName name) {
+            copyCheck();
+            bean.name = name;
+        }
+
+        public final AmqpSessionName getName() {
             return bean.name;
         }
-        case 2: {
-            return bean.closing;
+
+        public void setClosing(Boolean closing) {
+            setClosing(TypeFactory.createAmqpBoolean(closing));
         }
-        case 3: {
+
+
+        public void setClosing(boolean closing) {
+            setClosing(TypeFactory.createAmqpBoolean(closing));
+        }
+
+
+        public final void setClosing(AmqpBoolean closing) {
+            copyCheck();
+            bean.closing = closing;
+        }
+
+        public final Boolean getClosing() {
+            return bean.closing.getValue();
+        }
+
+        public final void setException(AmqpSessionError exception) {
+            copyCheck();
+            bean.exception = exception;
+        }
+
+        public final AmqpSessionError getException() {
             return bean.exception;
         }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
+
+        public void set(int index, AmqpType<?, ?> value) {
+            switch(index) {
+            case 0: {
+                setOptions((AmqpOptions) value);
+                break;
+            }
+            case 1: {
+                setName((AmqpSessionName) value);
+                break;
+            }
+            case 2: {
+                setClosing((AmqpBoolean) value);
+                break;
+            }
+            case 3: {
+                setException((AmqpSessionError) value);
+                break;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
+
+        public AmqpType<?, ?> get(int index) {
+            switch(index) {
+            case 0: {
+                return bean.options;
+            }
+            case 1: {
+                return bean.name;
+            }
+            case 2: {
+                return bean.closing;
+            }
+            case 3: {
+                return bean.exception;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
-    }
 
-    public int getListCount() {
-        return 4;
-    }
-
-    public IAmqpList getValue() {
-        return bean;
-    }
-
-    public Iterator<AmqpType<?, ?>> iterator() {
-        return new AmqpListIterator(bean);
-    }
-
-
-    private final void copyCheck() {
-        if(buffer != null) {;
-            throw new IllegalStateException("unwriteable");
+        public int getListCount() {
+            return 4;
         }
-        if(bean != this) {;
-            copy(bean);
+
+        public IAmqpList<AmqpType<?, ?>> getValue() {
+            return bean;
         }
-    }
 
-    private final void copy(AmqpDetach.AmqpDetachBean other) {
-        bean = this;
-    }
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return new AmqpListIterator<AmqpType<?, ?>>(bean);
+        }
 
-    public boolean equals(Object o){
-        if(this == o) {
+
+        private final void copyCheck() {
+            if(buffer != null) {;
+                throw new IllegalStateException("unwriteable");
+            }
+            if(bean != this) {;
+                copy(bean);
+            }
+        }
+
+        private final void copy(AmqpDetach.AmqpDetachBean other) {
+            bean = this;
+        }
+
+        public boolean equals(Object o){
+            if(this == o) {
+                return true;
+            }
+
+            if(o == null || !(o instanceof AmqpDetach)) {
+                return false;
+            }
+
+            return equals((AmqpDetach) o);
+        }
+
+        public boolean equals(AmqpDetach b) {
+
+            if(b.getOptions() == null ^ getOptions() == null) {
+                return false;
+            }
+            if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
+                return false;
+            }
+
+            if(b.getName() == null ^ getName() == null) {
+                return false;
+            }
+            if(b.getName() != null && !b.getName().equals(getName())){ 
+                return false;
+            }
+
+            if(b.getClosing() == null ^ getClosing() == null) {
+                return false;
+            }
+            if(b.getClosing() != null && !b.getClosing().equals(getClosing())){ 
+                return false;
+            }
+
+            if(b.getException() == null ^ getException() == null) {
+                return false;
+            }
+            if(b.getException() != null && !b.getException().equals(getException())){ 
+                return false;
+            }
             return true;
         }
 
-        if(o == null || !(o instanceof AmqpDetach)) {
-            return false;
+        public int hashCode() {
+            return AbstractAmqpList.hashCodeFor(this);
         }
-
-        return equals((AmqpDetach) o);
     }
-
-    public boolean equals(AmqpDetach b) {
-
-        if(b.getOptions() == null ^ getOptions() == null) {
-            return false;
-        }
-        if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
-            return false;
-        }
-
-        if(b.getName() == null ^ getName() == null) {
-            return false;
-        }
-        if(b.getName() != null && !b.getName().equals(getName())){ 
-            return false;
-        }
-
-        if(b.getClosing() == null ^ getClosing() == null) {
-            return false;
-        }
-        if(b.getClosing() != null && !b.getClosing().equals(getClosing())){ 
-            return false;
-        }
-
-        if(b.getException() == null ^ getException() == null) {
-            return false;
-        }
-        if(b.getException() != null && !b.getException().equals(getException())){ 
-            return false;
-        }
-        return true;
-    }
-
-    public int hashCode() {
-        return AbstractAmqpList.hashCodeFor(this);
-    }
-}
 
     public static class AmqpDetachBuffer extends AmqpList.AmqpListBuffer implements AmqpDetach{
 
         private AmqpDetachBean bean;
 
-        protected AmqpDetachBuffer(Encoded<IAmqpList> encoded) {
+        protected AmqpDetachBuffer(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
@@ -417,10 +417,6 @@ public interface AmqpDetach extends AmqpList, AmqpCommand {
             return bean().iterator();
         }
 
-        public IAmqpList getValue() {
-            return bean().getValue();
-        }
-
         public AmqpDetach.AmqpDetachBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
             return this;
         }
@@ -449,7 +445,7 @@ public interface AmqpDetach extends AmqpList, AmqpCommand {
             return bean().hashCode();
         }
 
-        public static AmqpDetach.AmqpDetachBuffer create(Encoded<IAmqpList> encoded) {
+        public static AmqpDetach.AmqpDetachBuffer create(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

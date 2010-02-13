@@ -83,152 +83,152 @@ public interface AmqpSaslChallenge extends AmqpList {
         AmqpSaslChallengeBean() {
         }
 
-        AmqpSaslChallengeBean(IAmqpList value) {
+        AmqpSaslChallengeBean(IAmqpList<AmqpType<?, ?>> value) {
 
-        for(int i = 0; i < value.getListCount(); i++) {
-            set(i, value.get(i));
+            for(int i = 0; i < value.getListCount(); i++) {
+                set(i, value.get(i));
+            }
         }
-    }
 
-    AmqpSaslChallengeBean(AmqpSaslChallenge.AmqpSaslChallengeBean other) {
-        this.bean = other;
-    }
-
-    public final AmqpSaslChallengeBean copy() {
-        return new AmqpSaslChallenge.AmqpSaslChallengeBean(bean);
-    }
-
-    public final AmqpSaslChallenge.AmqpSaslChallengeBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-        if(buffer == null) {
-            buffer = new AmqpSaslChallengeBuffer(marshaller.encode(this));
+        AmqpSaslChallengeBean(AmqpSaslChallenge.AmqpSaslChallengeBean other) {
+            this.bean = other;
         }
-        return buffer;
-    }
 
-    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-        getBuffer(marshaller).marshal(out, marshaller);
-    }
-
-
-    public final void setOptions(AmqpMap options) {
-        copyCheck();
-        bean.options = options;
-    }
-
-    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOptions() {
-        return bean.options.getValue();
-    }
-
-    public void setChallenge(Buffer challenge) {
-        setChallenge(TypeFactory.createAmqpBinary(challenge));
-    }
-
-
-    public final void setChallenge(AmqpBinary challenge) {
-        copyCheck();
-        bean.challenge = challenge;
-    }
-
-    public final Buffer getChallenge() {
-        return bean.challenge.getValue();
-    }
-
-    public void set(int index, AmqpType<?, ?> value) {
-        switch(index) {
-        case 0: {
-            setOptions((AmqpMap) value);
-            break;
+        public final AmqpSaslChallengeBean copy() {
+            return new AmqpSaslChallenge.AmqpSaslChallengeBean(bean);
         }
-        case 1: {
-            setChallenge((AmqpBinary) value);
-            break;
-        }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        }
-    }
 
-    public AmqpType<?, ?> get(int index) {
-        switch(index) {
-        case 0: {
+        public final AmqpSaslChallenge.AmqpSaslChallengeBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+            if(buffer == null) {
+                buffer = new AmqpSaslChallengeBuffer(marshaller.encode(this));
+            }
+            return buffer;
+        }
+
+        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+            getBuffer(marshaller).marshal(out, marshaller);
+        }
+
+
+        public final void setOptions(AmqpMap options) {
+            copyCheck();
+            bean.options = options;
+        }
+
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOptions() {
             return bean.options;
         }
-        case 1: {
-            return bean.challenge;
+
+        public void setChallenge(Buffer challenge) {
+            setChallenge(TypeFactory.createAmqpBinary(challenge));
         }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
+
+
+        public final void setChallenge(AmqpBinary challenge) {
+            copyCheck();
+            bean.challenge = challenge;
         }
+
+        public final Buffer getChallenge() {
+            return bean.challenge.getValue();
         }
-    }
 
-    public int getListCount() {
-        return 2;
-    }
-
-    public IAmqpList getValue() {
-        return bean;
-    }
-
-    public Iterator<AmqpType<?, ?>> iterator() {
-        return new AmqpListIterator(bean);
-    }
-
-
-    private final void copyCheck() {
-        if(buffer != null) {;
-            throw new IllegalStateException("unwriteable");
+        public void set(int index, AmqpType<?, ?> value) {
+            switch(index) {
+            case 0: {
+                setOptions((AmqpMap) value);
+                break;
+            }
+            case 1: {
+                setChallenge((AmqpBinary) value);
+                break;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
-        if(bean != this) {;
-            copy(bean);
+
+        public AmqpType<?, ?> get(int index) {
+            switch(index) {
+            case 0: {
+                return bean.options;
+            }
+            case 1: {
+                return bean.challenge;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
-    }
 
-    private final void copy(AmqpSaslChallenge.AmqpSaslChallengeBean other) {
-        bean = this;
-    }
+        public int getListCount() {
+            return 2;
+        }
 
-    public boolean equals(Object o){
-        if(this == o) {
+        public IAmqpList<AmqpType<?, ?>> getValue() {
+            return bean;
+        }
+
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return new AmqpListIterator<AmqpType<?, ?>>(bean);
+        }
+
+
+        private final void copyCheck() {
+            if(buffer != null) {;
+                throw new IllegalStateException("unwriteable");
+            }
+            if(bean != this) {;
+                copy(bean);
+            }
+        }
+
+        private final void copy(AmqpSaslChallenge.AmqpSaslChallengeBean other) {
+            bean = this;
+        }
+
+        public boolean equals(Object o){
+            if(this == o) {
+                return true;
+            }
+
+            if(o == null || !(o instanceof AmqpSaslChallenge)) {
+                return false;
+            }
+
+            return equals((AmqpSaslChallenge) o);
+        }
+
+        public boolean equals(AmqpSaslChallenge b) {
+
+            if(b.getOptions() == null ^ getOptions() == null) {
+                return false;
+            }
+            if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
+                return false;
+            }
+
+            if(b.getChallenge() == null ^ getChallenge() == null) {
+                return false;
+            }
+            if(b.getChallenge() != null && !b.getChallenge().equals(getChallenge())){ 
+                return false;
+            }
             return true;
         }
 
-        if(o == null || !(o instanceof AmqpSaslChallenge)) {
-            return false;
+        public int hashCode() {
+            return AbstractAmqpList.hashCodeFor(this);
         }
-
-        return equals((AmqpSaslChallenge) o);
     }
-
-    public boolean equals(AmqpSaslChallenge b) {
-
-        if(b.getOptions() == null ^ getOptions() == null) {
-            return false;
-        }
-        if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
-            return false;
-        }
-
-        if(b.getChallenge() == null ^ getChallenge() == null) {
-            return false;
-        }
-        if(b.getChallenge() != null && !b.getChallenge().equals(getChallenge())){ 
-            return false;
-        }
-        return true;
-    }
-
-    public int hashCode() {
-        return AbstractAmqpList.hashCodeFor(this);
-    }
-}
 
     public static class AmqpSaslChallengeBuffer extends AmqpList.AmqpListBuffer implements AmqpSaslChallenge{
 
         private AmqpSaslChallengeBean bean;
 
-        protected AmqpSaslChallengeBuffer(Encoded<IAmqpList> encoded) {
+        protected AmqpSaslChallengeBuffer(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
@@ -268,10 +268,6 @@ public interface AmqpSaslChallenge extends AmqpList {
             return bean().iterator();
         }
 
-        public IAmqpList getValue() {
-            return bean().getValue();
-        }
-
         public AmqpSaslChallenge.AmqpSaslChallengeBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
             return this;
         }
@@ -296,7 +292,7 @@ public interface AmqpSaslChallenge extends AmqpList {
             return bean().hashCode();
         }
 
-        public static AmqpSaslChallenge.AmqpSaslChallengeBuffer create(Encoded<IAmqpList> encoded) {
+        public static AmqpSaslChallenge.AmqpSaslChallengeBuffer create(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

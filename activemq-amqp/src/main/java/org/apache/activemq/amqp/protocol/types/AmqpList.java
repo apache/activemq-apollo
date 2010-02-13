@@ -30,7 +30,7 @@ import org.apache.activemq.util.buffer.Buffer;
 /**
  * Represents a a sequence of polymorphic values
  */
-public interface AmqpList extends AmqpType<AmqpList.AmqpListBean, AmqpList.AmqpListBuffer>, IAmqpList {
+public interface AmqpList extends AmqpType<AmqpList.AmqpListBean, AmqpList.AmqpListBuffer>, IAmqpList<AmqpType<?, ?>> {
 
     /**
      * Represents a a sequence of polymorphic values
@@ -39,19 +39,17 @@ public interface AmqpList extends AmqpType<AmqpList.AmqpListBean, AmqpList.AmqpL
     public AmqpType<?, ?> get(int index);
     public int getListCount();
 
-    public IAmqpList getValue();
-
     public static class AmqpListBean implements AmqpList{
 
         private AmqpListBuffer buffer;
         private AmqpListBean bean = this;
-        private IAmqpList value;
+        private IAmqpList<AmqpType<?, ?>> value;
 
         AmqpListBean() {
             this.value = new IAmqpList.AmqpWrapperList(new ArrayList<AmqpType<?,?>>());
         }
 
-        AmqpListBean(IAmqpList value) {
+        AmqpListBean(IAmqpList<AmqpType<?, ?>> value) {
             this.value = value;
         }
 
@@ -89,11 +87,7 @@ public interface AmqpList extends AmqpType<AmqpList.AmqpListBean, AmqpList.AmqpL
         }
 
         public Iterator<AmqpType<?, ?>> iterator() {
-            return new AmqpListIterator(bean.value);
-        }
-
-        public IAmqpList getValue() {
-            return bean;
+            return new AmqpListIterator<AmqpType<?, ?>>(bean.value);
         }
 
 
@@ -132,19 +126,19 @@ public interface AmqpList extends AmqpType<AmqpList.AmqpListBean, AmqpList.AmqpL
         }
     }
 
-    public static class AmqpListBuffer implements AmqpList, AmqpBuffer< IAmqpList> {
+    public static class AmqpListBuffer implements AmqpList, AmqpBuffer< IAmqpList<AmqpType<?, ?>>> {
 
         private AmqpListBean bean;
-        protected Encoded<IAmqpList> encoded;
+        protected Encoded<IAmqpList<AmqpType<?, ?>>> encoded;
 
         protected AmqpListBuffer() {
         }
 
-        protected AmqpListBuffer(Encoded<IAmqpList> encoded) {
+        protected AmqpListBuffer(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             this.encoded = encoded;
         }
 
-        public final Encoded<IAmqpList> getEncoded() throws AmqpEncodingError{
+        public final Encoded<IAmqpList<AmqpType<?, ?>>> getEncoded() throws AmqpEncodingError{
             return encoded;
         }
 
@@ -166,10 +160,6 @@ public interface AmqpList extends AmqpType<AmqpList.AmqpListBean, AmqpList.AmqpL
 
         public Iterator<AmqpType<?, ?>> iterator() {
             return bean().iterator();
-        }
-
-        public IAmqpList getValue() {
-            return bean().getValue();
         }
 
         public AmqpList.AmqpListBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
@@ -196,7 +186,7 @@ public interface AmqpList extends AmqpType<AmqpList.AmqpListBean, AmqpList.AmqpL
             return bean().hashCode();
         }
 
-        public static AmqpList.AmqpListBuffer create(Encoded<IAmqpList> encoded) {
+        public static AmqpList.AmqpListBuffer create(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

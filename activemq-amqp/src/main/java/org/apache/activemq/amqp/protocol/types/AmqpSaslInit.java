@@ -118,180 +118,180 @@ public interface AmqpSaslInit extends AmqpList {
         AmqpSaslInitBean() {
         }
 
-        AmqpSaslInitBean(IAmqpList value) {
+        AmqpSaslInitBean(IAmqpList<AmqpType<?, ?>> value) {
 
-        for(int i = 0; i < value.getListCount(); i++) {
-            set(i, value.get(i));
+            for(int i = 0; i < value.getListCount(); i++) {
+                set(i, value.get(i));
+            }
         }
-    }
 
-    AmqpSaslInitBean(AmqpSaslInit.AmqpSaslInitBean other) {
-        this.bean = other;
-    }
-
-    public final AmqpSaslInitBean copy() {
-        return new AmqpSaslInit.AmqpSaslInitBean(bean);
-    }
-
-    public final AmqpSaslInit.AmqpSaslInitBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-        if(buffer == null) {
-            buffer = new AmqpSaslInitBuffer(marshaller.encode(this));
+        AmqpSaslInitBean(AmqpSaslInit.AmqpSaslInitBean other) {
+            this.bean = other;
         }
-        return buffer;
-    }
 
-    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-        getBuffer(marshaller).marshal(out, marshaller);
-    }
-
-
-    public final void setOptions(AmqpMap options) {
-        copyCheck();
-        bean.options = options;
-    }
-
-    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOptions() {
-        return bean.options.getValue();
-    }
-
-    public void setMechanism(String mechanism) {
-        setMechanism(TypeFactory.createAmqpString(mechanism));
-    }
-
-
-    public final void setMechanism(AmqpString mechanism) {
-        copyCheck();
-        bean.mechanism = mechanism;
-    }
-
-    public final String getMechanism() {
-        return bean.mechanism.getValue();
-    }
-
-    public void setInitialResponse(Buffer initialResponse) {
-        setInitialResponse(TypeFactory.createAmqpBinary(initialResponse));
-    }
-
-
-    public final void setInitialResponse(AmqpBinary initialResponse) {
-        copyCheck();
-        bean.initialResponse = initialResponse;
-    }
-
-    public final Buffer getInitialResponse() {
-        return bean.initialResponse.getValue();
-    }
-
-    public void set(int index, AmqpType<?, ?> value) {
-        switch(index) {
-        case 0: {
-            setOptions((AmqpMap) value);
-            break;
+        public final AmqpSaslInitBean copy() {
+            return new AmqpSaslInit.AmqpSaslInitBean(bean);
         }
-        case 1: {
-            setMechanism((AmqpString) value);
-            break;
-        }
-        case 2: {
-            setInitialResponse((AmqpBinary) value);
-            break;
-        }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        }
-    }
 
-    public AmqpType<?, ?> get(int index) {
-        switch(index) {
-        case 0: {
+        public final AmqpSaslInit.AmqpSaslInitBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+            if(buffer == null) {
+                buffer = new AmqpSaslInitBuffer(marshaller.encode(this));
+            }
+            return buffer;
+        }
+
+        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+            getBuffer(marshaller).marshal(out, marshaller);
+        }
+
+
+        public final void setOptions(AmqpMap options) {
+            copyCheck();
+            bean.options = options;
+        }
+
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getOptions() {
             return bean.options;
         }
-        case 1: {
-            return bean.mechanism;
+
+        public void setMechanism(String mechanism) {
+            setMechanism(TypeFactory.createAmqpString(mechanism));
         }
-        case 2: {
-            return bean.initialResponse;
+
+
+        public final void setMechanism(AmqpString mechanism) {
+            copyCheck();
+            bean.mechanism = mechanism;
         }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
+
+        public final String getMechanism() {
+            return bean.mechanism.getValue();
         }
+
+        public void setInitialResponse(Buffer initialResponse) {
+            setInitialResponse(TypeFactory.createAmqpBinary(initialResponse));
         }
-    }
-
-    public int getListCount() {
-        return 3;
-    }
-
-    public IAmqpList getValue() {
-        return bean;
-    }
-
-    public Iterator<AmqpType<?, ?>> iterator() {
-        return new AmqpListIterator(bean);
-    }
 
 
-    private final void copyCheck() {
-        if(buffer != null) {;
-            throw new IllegalStateException("unwriteable");
+        public final void setInitialResponse(AmqpBinary initialResponse) {
+            copyCheck();
+            bean.initialResponse = initialResponse;
         }
-        if(bean != this) {;
-            copy(bean);
+
+        public final Buffer getInitialResponse() {
+            return bean.initialResponse.getValue();
         }
-    }
 
-    private final void copy(AmqpSaslInit.AmqpSaslInitBean other) {
-        bean = this;
-    }
+        public void set(int index, AmqpType<?, ?> value) {
+            switch(index) {
+            case 0: {
+                setOptions((AmqpMap) value);
+                break;
+            }
+            case 1: {
+                setMechanism((AmqpString) value);
+                break;
+            }
+            case 2: {
+                setInitialResponse((AmqpBinary) value);
+                break;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
+        }
 
-    public boolean equals(Object o){
-        if(this == o) {
+        public AmqpType<?, ?> get(int index) {
+            switch(index) {
+            case 0: {
+                return bean.options;
+            }
+            case 1: {
+                return bean.mechanism;
+            }
+            case 2: {
+                return bean.initialResponse;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
+        }
+
+        public int getListCount() {
+            return 3;
+        }
+
+        public IAmqpList<AmqpType<?, ?>> getValue() {
+            return bean;
+        }
+
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return new AmqpListIterator<AmqpType<?, ?>>(bean);
+        }
+
+
+        private final void copyCheck() {
+            if(buffer != null) {;
+                throw new IllegalStateException("unwriteable");
+            }
+            if(bean != this) {;
+                copy(bean);
+            }
+        }
+
+        private final void copy(AmqpSaslInit.AmqpSaslInitBean other) {
+            bean = this;
+        }
+
+        public boolean equals(Object o){
+            if(this == o) {
+                return true;
+            }
+
+            if(o == null || !(o instanceof AmqpSaslInit)) {
+                return false;
+            }
+
+            return equals((AmqpSaslInit) o);
+        }
+
+        public boolean equals(AmqpSaslInit b) {
+
+            if(b.getOptions() == null ^ getOptions() == null) {
+                return false;
+            }
+            if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
+                return false;
+            }
+
+            if(b.getMechanism() == null ^ getMechanism() == null) {
+                return false;
+            }
+            if(b.getMechanism() != null && !b.getMechanism().equals(getMechanism())){ 
+                return false;
+            }
+
+            if(b.getInitialResponse() == null ^ getInitialResponse() == null) {
+                return false;
+            }
+            if(b.getInitialResponse() != null && !b.getInitialResponse().equals(getInitialResponse())){ 
+                return false;
+            }
             return true;
         }
 
-        if(o == null || !(o instanceof AmqpSaslInit)) {
-            return false;
+        public int hashCode() {
+            return AbstractAmqpList.hashCodeFor(this);
         }
-
-        return equals((AmqpSaslInit) o);
     }
-
-    public boolean equals(AmqpSaslInit b) {
-
-        if(b.getOptions() == null ^ getOptions() == null) {
-            return false;
-        }
-        if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
-            return false;
-        }
-
-        if(b.getMechanism() == null ^ getMechanism() == null) {
-            return false;
-        }
-        if(b.getMechanism() != null && !b.getMechanism().equals(getMechanism())){ 
-            return false;
-        }
-
-        if(b.getInitialResponse() == null ^ getInitialResponse() == null) {
-            return false;
-        }
-        if(b.getInitialResponse() != null && !b.getInitialResponse().equals(getInitialResponse())){ 
-            return false;
-        }
-        return true;
-    }
-
-    public int hashCode() {
-        return AbstractAmqpList.hashCodeFor(this);
-    }
-}
 
     public static class AmqpSaslInitBuffer extends AmqpList.AmqpListBuffer implements AmqpSaslInit{
 
         private AmqpSaslInitBean bean;
 
-        protected AmqpSaslInitBuffer(Encoded<IAmqpList> encoded) {
+        protected AmqpSaslInitBuffer(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
@@ -343,10 +343,6 @@ public interface AmqpSaslInit extends AmqpList {
             return bean().iterator();
         }
 
-        public IAmqpList getValue() {
-            return bean().getValue();
-        }
-
         public AmqpSaslInit.AmqpSaslInitBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
             return this;
         }
@@ -371,7 +367,7 @@ public interface AmqpSaslInit extends AmqpList {
             return bean().hashCode();
         }
 
-        public static AmqpSaslInit.AmqpSaslInitBuffer create(Encoded<IAmqpList> encoded) {
+        public static AmqpSaslInit.AmqpSaslInitBuffer create(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

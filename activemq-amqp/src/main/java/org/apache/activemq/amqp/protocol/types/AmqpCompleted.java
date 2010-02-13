@@ -91,7 +91,7 @@ public interface AmqpCompleted extends AmqpMap {
         private IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value;
 
         AmqpCompletedBean() {
-            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());
+            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>,AmqpType<?,?>>(new HashMap<AmqpType<?,?>,AmqpType<?,?>>());
         }
 
         AmqpCompletedBean(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) {
@@ -136,12 +136,12 @@ public interface AmqpCompleted extends AmqpMap {
         public final Boolean getTruncate() {
             return bean.truncate.getValue();
         }
-        public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+        public void put(AmqpType<?,?> key, AmqpType<?,?> value) {
             copyCheck();
             bean.value.put(key, value);
         }
 
-        public AmqpType<?, ?> get(Object key) {
+        public AmqpType<?,?> get(Object key) {
             return bean.value.get(key);
         }
 
@@ -149,12 +149,8 @@ public interface AmqpCompleted extends AmqpMap {
             return bean.value.getEntryCount();
         }
 
-        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+        public Iterator<Map.Entry<AmqpType<?,?>, AmqpType<?,?>>> iterator() {
             return bean.value.iterator();
-        }
-
-        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
-            return bean.value;
         }
 
 
@@ -223,11 +219,11 @@ public interface AmqpCompleted extends AmqpMap {
         public final Boolean getTruncate() {
             return bean().getTruncate();
         }
-        public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+        public void put(AmqpType<?,?> key, AmqpType<?,?> value) {
             bean().put(key, value);
         }
 
-        public AmqpType<?, ?> get(Object key) {
+        public AmqpType<?,?> get(Object key) {
             return bean().get(key);
         }
 
@@ -235,12 +231,8 @@ public interface AmqpCompleted extends AmqpMap {
             return bean().getEntryCount();
         }
 
-        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+        public Iterator<Map.Entry<AmqpType<?,?>, AmqpType<?,?>>> iterator() {
             return bean().iterator();
-        }
-
-        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
-            return bean().getValue();
         }
 
         public AmqpCompleted.AmqpCompletedBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{

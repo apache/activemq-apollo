@@ -404,343 +404,343 @@ public interface AmqpLink extends AmqpList, AmqpCommand {
         AmqpLinkBean() {
         }
 
-        AmqpLinkBean(IAmqpList value) {
+        AmqpLinkBean(IAmqpList<AmqpType<?, ?>> value) {
 
-        for(int i = 0; i < value.getListCount(); i++) {
-            set(i, value.get(i));
+            for(int i = 0; i < value.getListCount(); i++) {
+                set(i, value.get(i));
+            }
         }
-    }
 
-    AmqpLinkBean(AmqpLink.AmqpLinkBean other) {
-        this.bean = other;
-    }
-
-    public final AmqpLinkBean copy() {
-        return new AmqpLink.AmqpLinkBean(bean);
-    }
-
-    public final void handle(AmqpCommandHandler handler) throws Exception {
-        handler.handleLink(this);
-    }
-
-    public final AmqpLink.AmqpLinkBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-        if(buffer == null) {
-            buffer = new AmqpLinkBuffer(marshaller.encode(this));
+        AmqpLinkBean(AmqpLink.AmqpLinkBean other) {
+            this.bean = other;
         }
-        return buffer;
-    }
 
-    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-        getBuffer(marshaller).marshal(out, marshaller);
-    }
-
-
-    public final void setOptions(AmqpOptions options) {
-        copyCheck();
-        bean.options = options;
-    }
-
-    public final AmqpOptions getOptions() {
-        return bean.options;
-    }
-
-    public void setName(String name) {
-        setName(TypeFactory.createAmqpString(name));
-    }
-
-
-    public final void setName(AmqpString name) {
-        copyCheck();
-        bean.name = name;
-    }
-
-    public final String getName() {
-        return bean.name.getValue();
-    }
-
-    public final void setScope(AmqpScope scope) {
-        copyCheck();
-        bean.scope = scope;
-    }
-
-    public final AmqpScope getScope() {
-        return bean.scope;
-    }
-
-    public void setHandle(Long handle) {
-        setHandle(TypeFactory.createAmqpHandle(handle));
-    }
-
-
-    public void setHandle(long handle) {
-        setHandle(TypeFactory.createAmqpHandle(handle));
-    }
-
-
-    public final void setHandle(AmqpHandle handle) {
-        copyCheck();
-        bean.handle = handle;
-    }
-
-    public final AmqpHandle getHandle() {
-        return bean.handle;
-    }
-
-    public final void setDirection(AmqpDirection direction) {
-        copyCheck();
-        bean.direction = direction;
-    }
-
-    public final AmqpDirection getDirection() {
-        return bean.direction;
-    }
-
-    public final void setSource(AmqpMap source) {
-        copyCheck();
-        bean.source = source;
-    }
-
-    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getSource() {
-        return bean.source.getValue();
-    }
-
-    public final void setTarget(AmqpMap target) {
-        copyCheck();
-        bean.target = target;
-    }
-
-    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getTarget() {
-        return bean.target.getValue();
-    }
-
-    public void setTransferUnit(BigInteger transferUnit) {
-        setTransferUnit(TypeFactory.createAmqpUlong(transferUnit));
-    }
-
-
-    public final void setTransferUnit(AmqpUlong transferUnit) {
-        copyCheck();
-        bean.transferUnit = transferUnit;
-    }
-
-    public final BigInteger getTransferUnit() {
-        return bean.transferUnit.getValue();
-    }
-
-    public void setResumeTag(Buffer resumeTag) {
-        setResumeTag(TypeFactory.createAmqpDeliveryTag(resumeTag));
-    }
-
-
-    public final void setResumeTag(AmqpDeliveryTag resumeTag) {
-        copyCheck();
-        bean.resumeTag = resumeTag;
-    }
-
-    public final AmqpDeliveryTag getResumeTag() {
-        return bean.resumeTag;
-    }
-
-    public void set(int index, AmqpType<?, ?> value) {
-        switch(index) {
-        case 0: {
-            setOptions((AmqpOptions) value);
-            break;
+        public final AmqpLinkBean copy() {
+            return new AmqpLink.AmqpLinkBean(bean);
         }
-        case 1: {
-            setName((AmqpString) value);
-            break;
-        }
-        case 2: {
-            setScope(AmqpScope.get((AmqpUbyte)value));
-            break;
-        }
-        case 3: {
-            setHandle((AmqpHandle) value);
-            break;
-        }
-        case 4: {
-            setDirection(AmqpDirection.get((AmqpUbyte)value));
-            break;
-        }
-        case 5: {
-            setSource((AmqpMap) value);
-            break;
-        }
-        case 6: {
-            setTarget((AmqpMap) value);
-            break;
-        }
-        case 7: {
-            setTransferUnit((AmqpUlong) value);
-            break;
-        }
-        case 8: {
-            setResumeTag((AmqpDeliveryTag) value);
-            break;
-        }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        }
-    }
 
-    public AmqpType<?, ?> get(int index) {
-        switch(index) {
-        case 0: {
+        public final void handle(AmqpCommandHandler handler) throws Exception {
+            handler.handleLink(this);
+        }
+
+        public final AmqpLink.AmqpLinkBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+            if(buffer == null) {
+                buffer = new AmqpLinkBuffer(marshaller.encode(this));
+            }
+            return buffer;
+        }
+
+        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+            getBuffer(marshaller).marshal(out, marshaller);
+        }
+
+
+        public final void setOptions(AmqpOptions options) {
+            copyCheck();
+            bean.options = options;
+        }
+
+        public final AmqpOptions getOptions() {
             return bean.options;
         }
-        case 1: {
-            return bean.name;
+
+        public void setName(String name) {
+            setName(TypeFactory.createAmqpString(name));
         }
-        case 2: {
-            if(scope == null) {
-                return null;
-            }
-            return scope.getValue();
+
+
+        public final void setName(AmqpString name) {
+            copyCheck();
+            bean.name = name;
         }
-        case 3: {
+
+        public final String getName() {
+            return bean.name.getValue();
+        }
+
+        public final void setScope(AmqpScope scope) {
+            copyCheck();
+            bean.scope = scope;
+        }
+
+        public final AmqpScope getScope() {
+            return bean.scope;
+        }
+
+        public void setHandle(Long handle) {
+            setHandle(TypeFactory.createAmqpHandle(handle));
+        }
+
+
+        public void setHandle(long handle) {
+            setHandle(TypeFactory.createAmqpHandle(handle));
+        }
+
+
+        public final void setHandle(AmqpHandle handle) {
+            copyCheck();
+            bean.handle = handle;
+        }
+
+        public final AmqpHandle getHandle() {
             return bean.handle;
         }
-        case 4: {
-            if(direction == null) {
-                return null;
-            }
-            return direction.getValue();
+
+        public final void setDirection(AmqpDirection direction) {
+            copyCheck();
+            bean.direction = direction;
         }
-        case 5: {
+
+        public final AmqpDirection getDirection() {
+            return bean.direction;
+        }
+
+        public final void setSource(AmqpMap source) {
+            copyCheck();
+            bean.source = source;
+        }
+
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getSource() {
             return bean.source;
         }
-        case 6: {
+
+        public final void setTarget(AmqpMap target) {
+            copyCheck();
+            bean.target = target;
+        }
+
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getTarget() {
             return bean.target;
         }
-        case 7: {
-            return bean.transferUnit;
+
+        public void setTransferUnit(BigInteger transferUnit) {
+            setTransferUnit(TypeFactory.createAmqpUlong(transferUnit));
         }
-        case 8: {
+
+
+        public final void setTransferUnit(AmqpUlong transferUnit) {
+            copyCheck();
+            bean.transferUnit = transferUnit;
+        }
+
+        public final BigInteger getTransferUnit() {
+            return bean.transferUnit.getValue();
+        }
+
+        public void setResumeTag(Buffer resumeTag) {
+            setResumeTag(TypeFactory.createAmqpDeliveryTag(resumeTag));
+        }
+
+
+        public final void setResumeTag(AmqpDeliveryTag resumeTag) {
+            copyCheck();
+            bean.resumeTag = resumeTag;
+        }
+
+        public final AmqpDeliveryTag getResumeTag() {
             return bean.resumeTag;
         }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
+
+        public void set(int index, AmqpType<?, ?> value) {
+            switch(index) {
+            case 0: {
+                setOptions((AmqpOptions) value);
+                break;
+            }
+            case 1: {
+                setName((AmqpString) value);
+                break;
+            }
+            case 2: {
+                setScope(AmqpScope.get((AmqpUbyte)value));
+                break;
+            }
+            case 3: {
+                setHandle((AmqpHandle) value);
+                break;
+            }
+            case 4: {
+                setDirection(AmqpDirection.get((AmqpUbyte)value));
+                break;
+            }
+            case 5: {
+                setSource((AmqpMap) value);
+                break;
+            }
+            case 6: {
+                setTarget((AmqpMap) value);
+                break;
+            }
+            case 7: {
+                setTransferUnit((AmqpUlong) value);
+                break;
+            }
+            case 8: {
+                setResumeTag((AmqpDeliveryTag) value);
+                break;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
+
+        public AmqpType<?, ?> get(int index) {
+            switch(index) {
+            case 0: {
+                return bean.options;
+            }
+            case 1: {
+                return bean.name;
+            }
+            case 2: {
+                if(scope == null) {
+                    return null;
+                }
+                return scope.getValue();
+            }
+            case 3: {
+                return bean.handle;
+            }
+            case 4: {
+                if(direction == null) {
+                    return null;
+                }
+                return direction.getValue();
+            }
+            case 5: {
+                return bean.source;
+            }
+            case 6: {
+                return bean.target;
+            }
+            case 7: {
+                return bean.transferUnit;
+            }
+            case 8: {
+                return bean.resumeTag;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
-    }
 
-    public int getListCount() {
-        return 9;
-    }
-
-    public IAmqpList getValue() {
-        return bean;
-    }
-
-    public Iterator<AmqpType<?, ?>> iterator() {
-        return new AmqpListIterator(bean);
-    }
-
-
-    private final void copyCheck() {
-        if(buffer != null) {;
-            throw new IllegalStateException("unwriteable");
+        public int getListCount() {
+            return 9;
         }
-        if(bean != this) {;
-            copy(bean);
+
+        public IAmqpList<AmqpType<?, ?>> getValue() {
+            return bean;
         }
-    }
 
-    private final void copy(AmqpLink.AmqpLinkBean other) {
-        bean = this;
-    }
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return new AmqpListIterator<AmqpType<?, ?>>(bean);
+        }
 
-    public boolean equals(Object o){
-        if(this == o) {
+
+        private final void copyCheck() {
+            if(buffer != null) {;
+                throw new IllegalStateException("unwriteable");
+            }
+            if(bean != this) {;
+                copy(bean);
+            }
+        }
+
+        private final void copy(AmqpLink.AmqpLinkBean other) {
+            bean = this;
+        }
+
+        public boolean equals(Object o){
+            if(this == o) {
+                return true;
+            }
+
+            if(o == null || !(o instanceof AmqpLink)) {
+                return false;
+            }
+
+            return equals((AmqpLink) o);
+        }
+
+        public boolean equals(AmqpLink b) {
+
+            if(b.getOptions() == null ^ getOptions() == null) {
+                return false;
+            }
+            if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
+                return false;
+            }
+
+            if(b.getName() == null ^ getName() == null) {
+                return false;
+            }
+            if(b.getName() != null && !b.getName().equals(getName())){ 
+                return false;
+            }
+
+            if(b.getScope() == null ^ getScope() == null) {
+                return false;
+            }
+            if(b.getScope() != null && !b.getScope().equals(getScope())){ 
+                return false;
+            }
+
+            if(b.getHandle() == null ^ getHandle() == null) {
+                return false;
+            }
+            if(b.getHandle() != null && !b.getHandle().equals(getHandle())){ 
+                return false;
+            }
+
+            if(b.getDirection() == null ^ getDirection() == null) {
+                return false;
+            }
+            if(b.getDirection() != null && !b.getDirection().equals(getDirection())){ 
+                return false;
+            }
+
+            if(b.getSource() == null ^ getSource() == null) {
+                return false;
+            }
+            if(b.getSource() != null && !b.getSource().equals(getSource())){ 
+                return false;
+            }
+
+            if(b.getTarget() == null ^ getTarget() == null) {
+                return false;
+            }
+            if(b.getTarget() != null && !b.getTarget().equals(getTarget())){ 
+                return false;
+            }
+
+            if(b.getTransferUnit() == null ^ getTransferUnit() == null) {
+                return false;
+            }
+            if(b.getTransferUnit() != null && !b.getTransferUnit().equals(getTransferUnit())){ 
+                return false;
+            }
+
+            if(b.getResumeTag() == null ^ getResumeTag() == null) {
+                return false;
+            }
+            if(b.getResumeTag() != null && !b.getResumeTag().equals(getResumeTag())){ 
+                return false;
+            }
             return true;
         }
 
-        if(o == null || !(o instanceof AmqpLink)) {
-            return false;
+        public int hashCode() {
+            return AbstractAmqpList.hashCodeFor(this);
         }
-
-        return equals((AmqpLink) o);
     }
-
-    public boolean equals(AmqpLink b) {
-
-        if(b.getOptions() == null ^ getOptions() == null) {
-            return false;
-        }
-        if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
-            return false;
-        }
-
-        if(b.getName() == null ^ getName() == null) {
-            return false;
-        }
-        if(b.getName() != null && !b.getName().equals(getName())){ 
-            return false;
-        }
-
-        if(b.getScope() == null ^ getScope() == null) {
-            return false;
-        }
-        if(b.getScope() != null && !b.getScope().equals(getScope())){ 
-            return false;
-        }
-
-        if(b.getHandle() == null ^ getHandle() == null) {
-            return false;
-        }
-        if(b.getHandle() != null && !b.getHandle().equals(getHandle())){ 
-            return false;
-        }
-
-        if(b.getDirection() == null ^ getDirection() == null) {
-            return false;
-        }
-        if(b.getDirection() != null && !b.getDirection().equals(getDirection())){ 
-            return false;
-        }
-
-        if(b.getSource() == null ^ getSource() == null) {
-            return false;
-        }
-        if(b.getSource() != null && !b.getSource().equals(getSource())){ 
-            return false;
-        }
-
-        if(b.getTarget() == null ^ getTarget() == null) {
-            return false;
-        }
-        if(b.getTarget() != null && !b.getTarget().equals(getTarget())){ 
-            return false;
-        }
-
-        if(b.getTransferUnit() == null ^ getTransferUnit() == null) {
-            return false;
-        }
-        if(b.getTransferUnit() != null && !b.getTransferUnit().equals(getTransferUnit())){ 
-            return false;
-        }
-
-        if(b.getResumeTag() == null ^ getResumeTag() == null) {
-            return false;
-        }
-        if(b.getResumeTag() != null && !b.getResumeTag().equals(getResumeTag())){ 
-            return false;
-        }
-        return true;
-    }
-
-    public int hashCode() {
-        return AbstractAmqpList.hashCodeFor(this);
-    }
-}
 
     public static class AmqpLinkBuffer extends AmqpList.AmqpListBuffer implements AmqpLink{
 
         private AmqpLinkBean bean;
 
-        protected AmqpLinkBuffer(Encoded<IAmqpList> encoded) {
+        protected AmqpLinkBuffer(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
@@ -853,10 +853,6 @@ public interface AmqpLink extends AmqpList, AmqpCommand {
             return bean().iterator();
         }
 
-        public IAmqpList getValue() {
-            return bean().getValue();
-        }
-
         public AmqpLink.AmqpLinkBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
             return this;
         }
@@ -885,7 +881,7 @@ public interface AmqpLink extends AmqpList, AmqpCommand {
             return bean().hashCode();
         }
 
-        public static AmqpLink.AmqpLinkBuffer create(Encoded<IAmqpList> encoded) {
+        public static AmqpLink.AmqpLinkBuffer create(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

@@ -35,7 +35,7 @@ import org.apache.activemq.util.buffer.Buffer;
 public class AmqpSaslResponseMarshaller implements DescribedTypeMarshaller<AmqpSaslResponse>{
 
     static final AmqpSaslResponseMarshaller SINGLETON = new AmqpSaslResponseMarshaller();
-    private static final Encoded<IAmqpList> NULL_ENCODED = new Encoder.NullEncoded<IAmqpList>();
+    private static final Encoded<IAmqpList<AmqpType<?, ?>>> NULL_ENCODED = new Encoder.NullEncoded<IAmqpList<AmqpType<?, ?>>>();
 
     public static final String SYMBOLIC_ID = "amqp:sasl-response:list";
     //Format code: 0x00000001:0x00000704:
@@ -49,37 +49,54 @@ public class AmqpSaslResponseMarshaller implements DescribedTypeMarshaller<AmqpS
         (byte) 0x00, (byte) 0x00, (byte) 0x07, (byte) 0x04   // DESCRIPTOR ID CODE
     }), 0);
 
-    private static final ListDecoder DECODER = new ListDecoder() {
-        public final AmqpType<?, ?> unmarshalType(int pos, DataInput in) throws IOException {
-            switch(pos) {
-            case 0: {
-                return AmqpMap.AmqpMapBuffer.create(AmqpMapMarshaller.createEncoded(in));
+    private static final ListDecoder<AmqpType<?, ?>> DECODER = new ListDecoder<AmqpType<?, ?>>() {
+        public final IAmqpList<AmqpType<?, ?>> unmarshalType(int dataCount, int dataSize, DataInput in) throws AmqpEncodingError, IOException {
+            if (dataCount > 2) {
+                throw new AmqpEncodingError("Too many fields for " + SYMBOLIC_ID + ": " + dataCount);
             }
-            case 1: {
-                return AmqpBinary.AmqpBinaryBuffer.create(AmqpBinaryMarshaller.createEncoded(in));
+            IAmqpList<AmqpType<?, ?>> rc = new IAmqpList.ArrayBackedList<AmqpType<?, ?>>(new AmqpType<?, ?>[2]);
+            //options:
+            if(dataCount > 0) {
+                rc.set(0, AmqpMap.AmqpMapBuffer.create(AmqpMapMarshaller.createEncoded(in)));
+                dataCount--;
             }
-            default: {
-                return AmqpMarshaller.SINGLETON.unmarshalType(in);
+
+            //response:
+            if(dataCount > 0) {
+                rc.set(1, AmqpBinary.AmqpBinaryBuffer.create(AmqpBinaryMarshaller.createEncoded(in)));
+                dataCount--;
             }
+            else {
+                throw new AmqpEncodingError("Missing required field for " + SYMBOLIC_ID + ": response");
             }
+            return rc;
         }
 
-        public final AmqpType<?, ?> decodeType(int pos, EncodedBuffer buffer) throws AmqpEncodingError {
-            switch(pos) {
-            case 0: {
-                return AmqpMap.AmqpMapBuffer.create(AmqpMapMarshaller.createEncoded(buffer));
+        public IAmqpList<AmqpType<?, ?>> decode(EncodedBuffer[] constituents) {
+            if (constituents.length > 2) {
+                throw new AmqpEncodingError("Too many fields for " + SYMBOLIC_ID + ":" + constituents.length);
             }
-            case 1: {
-                return AmqpBinary.AmqpBinaryBuffer.create(AmqpBinaryMarshaller.createEncoded(buffer));
+            int dataCount = constituents.length;
+            IAmqpList<AmqpType<?, ?>> rc = new IAmqpList.ArrayBackedList<AmqpType<?, ?>>(new AmqpType<?, ?>[2]);
+            //options:
+            if(dataCount > 0) {
+                rc.set(0, AmqpMap.AmqpMapBuffer.create(AmqpMapMarshaller.createEncoded(constituents[0])));
+                dataCount--;
             }
-            default: {
-                return AmqpMarshaller.SINGLETON.decodeType(buffer);
+
+            //response:
+            if(dataCount > 0) {
+                rc.set(1, AmqpBinary.AmqpBinaryBuffer.create(AmqpBinaryMarshaller.createEncoded(constituents[1])));
+                dataCount--;
             }
+            else {
+                throw new AmqpEncodingError("Missing required field for " + SYMBOLIC_ID + ": response");
             }
+            return rc;
         }
     };
 
-    public static class AmqpSaslResponseEncoded extends DescribedEncoded<IAmqpList> {
+    public static class AmqpSaslResponseEncoded extends DescribedEncoded<IAmqpList<AmqpType<?, ?>>> {
 
         public AmqpSaslResponseEncoded(DescribedBuffer buffer) {
             super(buffer);
@@ -97,11 +114,11 @@ public class AmqpSaslResponseMarshaller implements DescribedTypeMarshaller<AmqpS
             return NUMERIC_ID;
         }
 
-        protected final Encoded<IAmqpList> decodeDescribed(EncodedBuffer encoded) throws AmqpEncodingError {
+        protected final Encoded<IAmqpList<AmqpType<?, ?>>> decodeDescribed(EncodedBuffer encoded) throws AmqpEncodingError {
             return AmqpListMarshaller.createEncoded(encoded, DECODER);
         }
 
-        protected final Encoded<IAmqpList> unmarshalDescribed(DataInput in) throws IOException {
+        protected final Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalDescribed(DataInput in) throws IOException {
             return AmqpListMarshaller.createEncoded(in, DECODER);
         }
 
@@ -110,19 +127,19 @@ public class AmqpSaslResponseMarshaller implements DescribedTypeMarshaller<AmqpS
         }
     }
 
-    public static final Encoded<IAmqpList> encode(AmqpSaslResponse value) throws AmqpEncodingError {
+    public static final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpSaslResponse value) throws AmqpEncodingError {
         return new AmqpSaslResponseEncoded(value);
     }
 
-    static final Encoded<IAmqpList> createEncoded(Buffer source, int offset) throws AmqpEncodingError {
+    static final Encoded<IAmqpList<AmqpType<?, ?>>> createEncoded(Buffer source, int offset) throws AmqpEncodingError {
         return createEncoded(FormatCategory.createBuffer(source, offset));
     }
 
-    static final Encoded<IAmqpList> createEncoded(DataInput in) throws IOException, AmqpEncodingError {
+    static final Encoded<IAmqpList<AmqpType<?, ?>>> createEncoded(DataInput in) throws IOException, AmqpEncodingError {
         return createEncoded(FormatCategory.createBuffer(in.readByte(), in));
     }
 
-    static final Encoded<IAmqpList> createEncoded(EncodedBuffer buffer) throws AmqpEncodingError {
+    static final Encoded<IAmqpList<AmqpType<?, ?>>> createEncoded(EncodedBuffer buffer) throws AmqpEncodingError {
         byte fc = buffer.getEncodingFormatCode();
         if (fc == Encoder.NULL_FORMAT_CODE) {
             return NULL_ENCODED;

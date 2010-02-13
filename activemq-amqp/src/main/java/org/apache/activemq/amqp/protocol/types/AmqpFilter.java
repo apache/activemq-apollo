@@ -84,152 +84,152 @@ public interface AmqpFilter extends AmqpList {
         AmqpFilterBean() {
         }
 
-        AmqpFilterBean(IAmqpList value) {
+        AmqpFilterBean(IAmqpList<AmqpType<?, ?>> value) {
 
-        for(int i = 0; i < value.getListCount(); i++) {
-            set(i, value.get(i));
+            for(int i = 0; i < value.getListCount(); i++) {
+                set(i, value.get(i));
+            }
         }
-    }
 
-    AmqpFilterBean(AmqpFilter.AmqpFilterBean other) {
-        this.bean = other;
-    }
-
-    public final AmqpFilterBean copy() {
-        return new AmqpFilter.AmqpFilterBean(bean);
-    }
-
-    public final AmqpFilter.AmqpFilterBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-        if(buffer == null) {
-            buffer = new AmqpFilterBuffer(marshaller.encode(this));
+        AmqpFilterBean(AmqpFilter.AmqpFilterBean other) {
+            this.bean = other;
         }
-        return buffer;
-    }
 
-    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-        getBuffer(marshaller).marshal(out, marshaller);
-    }
-
-
-    public void setFilterType(String filterType) {
-        setFilterType(TypeFactory.createAmqpSymbol(filterType));
-    }
-
-
-    public final void setFilterType(AmqpSymbol filterType) {
-        copyCheck();
-        bean.filterType = filterType;
-    }
-
-    public final String getFilterType() {
-        return bean.filterType.getValue();
-    }
-
-    public final void setFilter(AmqpType<?, ?> filter) {
-        copyCheck();
-        bean.filter = filter;
-    }
-
-    public final AmqpType<?, ?> getFilter() {
-        return bean.filter;
-    }
-
-    public void set(int index, AmqpType<?, ?> value) {
-        switch(index) {
-        case 0: {
-            setFilterType((AmqpSymbol) value);
-            break;
+        public final AmqpFilterBean copy() {
+            return new AmqpFilter.AmqpFilterBean(bean);
         }
-        case 1: {
-            setFilter((AmqpType<?, ?>) value);
-            break;
-        }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        }
-    }
 
-    public AmqpType<?, ?> get(int index) {
-        switch(index) {
-        case 0: {
-            return bean.filterType;
+        public final AmqpFilter.AmqpFilterBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+            if(buffer == null) {
+                buffer = new AmqpFilterBuffer(marshaller.encode(this));
+            }
+            return buffer;
         }
-        case 1: {
+
+        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+            getBuffer(marshaller).marshal(out, marshaller);
+        }
+
+
+        public void setFilterType(String filterType) {
+            setFilterType(TypeFactory.createAmqpSymbol(filterType));
+        }
+
+
+        public final void setFilterType(AmqpSymbol filterType) {
+            copyCheck();
+            bean.filterType = filterType;
+        }
+
+        public final String getFilterType() {
+            return bean.filterType.getValue();
+        }
+
+        public final void setFilter(AmqpType<?, ?> filter) {
+            copyCheck();
+            bean.filter = filter;
+        }
+
+        public final AmqpType<?, ?> getFilter() {
             return bean.filter;
         }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
+
+        public void set(int index, AmqpType<?, ?> value) {
+            switch(index) {
+            case 0: {
+                setFilterType((AmqpSymbol) value);
+                break;
+            }
+            case 1: {
+                setFilter((AmqpType<?, ?>) value);
+                break;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
+
+        public AmqpType<?, ?> get(int index) {
+            switch(index) {
+            case 0: {
+                return bean.filterType;
+            }
+            case 1: {
+                return bean.filter;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
-    }
 
-    public int getListCount() {
-        return 2;
-    }
-
-    public IAmqpList getValue() {
-        return bean;
-    }
-
-    public Iterator<AmqpType<?, ?>> iterator() {
-        return new AmqpListIterator(bean);
-    }
-
-
-    private final void copyCheck() {
-        if(buffer != null) {;
-            throw new IllegalStateException("unwriteable");
+        public int getListCount() {
+            return 2;
         }
-        if(bean != this) {;
-            copy(bean);
+
+        public IAmqpList<AmqpType<?, ?>> getValue() {
+            return bean;
         }
-    }
 
-    private final void copy(AmqpFilter.AmqpFilterBean other) {
-        bean = this;
-    }
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return new AmqpListIterator<AmqpType<?, ?>>(bean);
+        }
 
-    public boolean equals(Object o){
-        if(this == o) {
+
+        private final void copyCheck() {
+            if(buffer != null) {;
+                throw new IllegalStateException("unwriteable");
+            }
+            if(bean != this) {;
+                copy(bean);
+            }
+        }
+
+        private final void copy(AmqpFilter.AmqpFilterBean other) {
+            bean = this;
+        }
+
+        public boolean equals(Object o){
+            if(this == o) {
+                return true;
+            }
+
+            if(o == null || !(o instanceof AmqpFilter)) {
+                return false;
+            }
+
+            return equals((AmqpFilter) o);
+        }
+
+        public boolean equals(AmqpFilter b) {
+
+            if(b.getFilterType() == null ^ getFilterType() == null) {
+                return false;
+            }
+            if(b.getFilterType() != null && !b.getFilterType().equals(getFilterType())){ 
+                return false;
+            }
+
+            if(b.getFilter() == null ^ getFilter() == null) {
+                return false;
+            }
+            if(b.getFilter() != null && !b.getFilter().equals(getFilter())){ 
+                return false;
+            }
             return true;
         }
 
-        if(o == null || !(o instanceof AmqpFilter)) {
-            return false;
+        public int hashCode() {
+            return AbstractAmqpList.hashCodeFor(this);
         }
-
-        return equals((AmqpFilter) o);
     }
-
-    public boolean equals(AmqpFilter b) {
-
-        if(b.getFilterType() == null ^ getFilterType() == null) {
-            return false;
-        }
-        if(b.getFilterType() != null && !b.getFilterType().equals(getFilterType())){ 
-            return false;
-        }
-
-        if(b.getFilter() == null ^ getFilter() == null) {
-            return false;
-        }
-        if(b.getFilter() != null && !b.getFilter().equals(getFilter())){ 
-            return false;
-        }
-        return true;
-    }
-
-    public int hashCode() {
-        return AbstractAmqpList.hashCodeFor(this);
-    }
-}
 
     public static class AmqpFilterBuffer extends AmqpList.AmqpListBuffer implements AmqpFilter{
 
         private AmqpFilterBean bean;
 
-        protected AmqpFilterBuffer(Encoded<IAmqpList> encoded) {
+        protected AmqpFilterBuffer(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
@@ -269,10 +269,6 @@ public interface AmqpFilter extends AmqpList {
             return bean().iterator();
         }
 
-        public IAmqpList getValue() {
-            return bean().getValue();
-        }
-
         public AmqpFilter.AmqpFilterBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
             return this;
         }
@@ -297,7 +293,7 @@ public interface AmqpFilter extends AmqpList {
             return bean().hashCode();
         }
 
-        public static AmqpFilter.AmqpFilterBuffer create(Encoded<IAmqpList> encoded) {
+        public static AmqpFilter.AmqpFilterBuffer create(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

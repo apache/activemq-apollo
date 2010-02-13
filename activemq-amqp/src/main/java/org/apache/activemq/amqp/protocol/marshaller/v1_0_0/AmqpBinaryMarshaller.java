@@ -130,12 +130,12 @@ public class AmqpBinaryMarshaller {
             ENCODER.encodeBinaryVbin8(value, encoded, offset);
         }
 
-        public final Buffer decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeBinaryVbin8(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
-        }
-
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeBinaryVbin8(value, out);
+        }
+
+        public final Buffer decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return ENCODER.decodeBinaryVbin8(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
         }
 
         public final Buffer unmarshalData(DataInput in) throws IOException {
@@ -165,12 +165,12 @@ public class AmqpBinaryMarshaller {
             ENCODER.encodeBinaryVbin32(value, encoded, offset);
         }
 
-        public final Buffer decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeBinaryVbin32(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
-        }
-
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeBinaryVbin32(value, out);
+        }
+
+        public final Buffer decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return ENCODER.decodeBinaryVbin32(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
         }
 
         public final Buffer unmarshalData(DataInput in) throws IOException {

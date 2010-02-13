@@ -325,15 +325,15 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         //an placeholder type
         throw new AmqpEncodingError("Unrecognized described type:" + descriptor);
     }
-    public final Encoded<IAmqpList> encode(AmqpSessionError data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpSessionError data) throws AmqpEncodingError {
         return AmqpSessionErrorMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpSessionError(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpSessionError(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpSessionErrorMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpSessionError(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpSessionError(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpSessionErrorMarshaller.createEncoded(in);
     }
 
@@ -349,27 +349,27 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpCharMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpUnlink data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpUnlink data) throws AmqpEncodingError {
         return AmqpUnlinkMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpUnlink(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpUnlink(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpUnlinkMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpUnlink(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpUnlink(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpUnlinkMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpFlow data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpFlow data) throws AmqpEncodingError {
         return AmqpFlowMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpFlow(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpFlow(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpFlowMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpFlow(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpFlow(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpFlowMarshaller.createEncoded(in);
     }
 
@@ -397,39 +397,39 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpFloatMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpRelink data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpRelink data) throws AmqpEncodingError {
         return AmqpRelinkMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpRelink(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpRelink(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpRelinkMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpRelink(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpRelink(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpRelinkMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpClose data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpClose data) throws AmqpEncodingError {
         return AmqpCloseMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpClose(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpClose(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpCloseMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpClose(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpClose(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpCloseMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpOpen data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpOpen data) throws AmqpEncodingError {
         return AmqpOpenMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpOpen(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpOpen(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpOpenMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpOpen(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpOpen(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpOpenMarshaller.createEncoded(in);
     }
 
@@ -457,15 +457,15 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpRejectedMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpSaslOutcome data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpSaslOutcome data) throws AmqpEncodingError {
         return AmqpSaslOutcomeMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpSaslOutcome(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpSaslOutcome(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpSaslOutcomeMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpSaslOutcome(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpSaslOutcome(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpSaslOutcomeMarshaller.createEncoded(in);
     }
 
@@ -493,27 +493,27 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpUlongMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpTransfer data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpTransfer data) throws AmqpEncodingError {
         return AmqpTransferMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpTransfer(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpTransfer(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpTransferMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpTransfer(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpTransfer(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpTransferMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpDetach data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpDetach data) throws AmqpEncodingError {
         return AmqpDetachMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpDetach(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpDetach(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpDetachMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpDetach(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpDetach(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpDetachMarshaller.createEncoded(in);
     }
 
@@ -529,15 +529,15 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpSymbolMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpSaslInit data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpSaslInit data) throws AmqpEncodingError {
         return AmqpSaslInitMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpSaslInit(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpSaslInit(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpSaslInitMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpSaslInit(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpSaslInit(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpSaslInitMarshaller.createEncoded(in);
     }
 
@@ -553,27 +553,27 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpIntMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpEnlist data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpEnlist data) throws AmqpEncodingError {
         return AmqpEnlistMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpEnlist(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpEnlist(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpEnlistMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpEnlist(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpEnlist(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpEnlistMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpProperties data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpProperties data) throws AmqpEncodingError {
         return AmqpPropertiesMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpProperties(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpProperties(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpPropertiesMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpProperties(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpProperties(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpPropertiesMarshaller.createEncoded(in);
     }
 
@@ -589,39 +589,39 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpDoubleMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpDrain data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpDrain data) throws AmqpEncodingError {
         return AmqpDrainMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpDrain(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpDrain(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpDrainMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpDrain(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpDrain(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpDrainMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpHeader data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpHeader data) throws AmqpEncodingError {
         return AmqpHeaderMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpHeader(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpHeader(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpHeaderMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpHeader(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpHeader(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpHeaderMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpSaslMechanisms data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpSaslMechanisms data) throws AmqpEncodingError {
         return AmqpSaslMechanismsMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpSaslMechanisms(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpSaslMechanisms(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpSaslMechanismsMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpSaslMechanisms(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpSaslMechanisms(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpSaslMechanismsMarshaller.createEncoded(in);
     }
 
@@ -637,27 +637,27 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpUuidMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpBar data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpBar data) throws AmqpEncodingError {
         return AmqpBarMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpBar(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpBar(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpBarMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpBar(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpBar(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpBarMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpFilter data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpFilter data) throws AmqpEncodingError {
         return AmqpFilterMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpFilter(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpFilter(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpFilterMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpFilter(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpFilter(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpFilterMarshaller.createEncoded(in);
     }
 
@@ -673,27 +673,27 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpBinaryMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpNoop data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpNoop data) throws AmqpEncodingError {
         return AmqpNoopMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpNoop(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpNoop(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpNoopMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpNoop(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpNoop(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpNoopMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpLink data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpLink data) throws AmqpEncodingError {
         return AmqpLinkMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpLink(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpLink(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpLinkMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpLink(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpLink(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpLinkMarshaller.createEncoded(in);
     }
 
@@ -733,15 +733,15 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpReleasedMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpTxn data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpTxn data) throws AmqpEncodingError {
         return AmqpTxnMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpTxn(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpTxn(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpTxnMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpTxn(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpTxn(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpTxnMarshaller.createEncoded(in);
     }
 
@@ -757,63 +757,63 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpMapMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpLinkError data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpLinkError data) throws AmqpEncodingError {
         return AmqpLinkErrorMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpLinkError(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpLinkError(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpLinkErrorMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpLinkError(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpLinkError(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpLinkErrorMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpConnectionError data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpConnectionError data) throws AmqpEncodingError {
         return AmqpConnectionErrorMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpConnectionError(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpConnectionError(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpConnectionErrorMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpConnectionError(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpConnectionError(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpConnectionErrorMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpSaslResponse data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpSaslResponse data) throws AmqpEncodingError {
         return AmqpSaslResponseMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpSaslResponse(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpSaslResponse(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpSaslResponseMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpSaslResponse(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpSaslResponse(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpSaslResponseMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpFragment data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpFragment data) throws AmqpEncodingError {
         return AmqpFragmentMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpFragment(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpFragment(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpFragmentMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpFragment(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpFragment(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpFragmentMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpDisposition data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpDisposition data) throws AmqpEncodingError {
         return AmqpDispositionMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpDisposition(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpDisposition(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpDispositionMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpDisposition(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpDisposition(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpDispositionMarshaller.createEncoded(in);
     }
 
@@ -841,27 +841,27 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpCompletedMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpXid data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpXid data) throws AmqpEncodingError {
         return AmqpXidMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpXid(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpXid(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpXidMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpXid(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpXid(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpXidMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpList data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpList data) throws AmqpEncodingError {
         return AmqpListMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpList(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpList(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpListMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpList(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpList(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpListMarshaller.createEncoded(in);
     }
 
@@ -877,15 +877,15 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpUshortMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpFooter data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpFooter data) throws AmqpEncodingError {
         return AmqpFooterMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpFooter(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpFooter(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpFooterMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpFooter(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpFooter(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpFooterMarshaller.createEncoded(in);
     }
 
@@ -901,27 +901,27 @@ public class AmqpMarshaller implements org.apache.activemq.amqp.protocol.marshal
         return AmqpSourceMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpSaslChallenge data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpSaslChallenge data) throws AmqpEncodingError {
         return AmqpSaslChallengeMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpSaslChallenge(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpSaslChallenge(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpSaslChallengeMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpSaslChallenge(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpSaslChallenge(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpSaslChallengeMarshaller.createEncoded(in);
     }
 
-    public final Encoded<IAmqpList> encode(AmqpAttach data) throws AmqpEncodingError {
+    public final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpAttach data) throws AmqpEncodingError {
         return AmqpAttachMarshaller.encode(data);
     }
 
-    public Encoded<IAmqpList> decodeAmqpAttach(Buffer source, int offset) throws AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> decodeAmqpAttach(Buffer source, int offset) throws AmqpEncodingError {
         return AmqpAttachMarshaller.createEncoded(source, offset);
     }
 
-    public Encoded<IAmqpList> unmarshalAmqpAttach(DataInput in) throws IOException, AmqpEncodingError {
+    public Encoded<IAmqpList<AmqpType<?, ?>>> unmarshalAmqpAttach(DataInput in) throws IOException, AmqpEncodingError {
         return AmqpAttachMarshaller.createEncoded(in);
     }
 

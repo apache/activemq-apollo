@@ -266,297 +266,297 @@ public interface AmqpProperties extends AmqpList {
         AmqpPropertiesBean() {
         }
 
-        AmqpPropertiesBean(IAmqpList value) {
+        AmqpPropertiesBean(IAmqpList<AmqpType<?, ?>> value) {
 
-        for(int i = 0; i < value.getListCount(); i++) {
-            set(i, value.get(i));
+            for(int i = 0; i < value.getListCount(); i++) {
+                set(i, value.get(i));
+            }
         }
-    }
 
-    AmqpPropertiesBean(AmqpProperties.AmqpPropertiesBean other) {
-        this.bean = other;
-    }
-
-    public final AmqpPropertiesBean copy() {
-        return new AmqpProperties.AmqpPropertiesBean(bean);
-    }
-
-    public final AmqpProperties.AmqpPropertiesBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-        if(buffer == null) {
-            buffer = new AmqpPropertiesBuffer(marshaller.encode(this));
+        AmqpPropertiesBean(AmqpProperties.AmqpPropertiesBean other) {
+            this.bean = other;
         }
-        return buffer;
-    }
 
-    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-        getBuffer(marshaller).marshal(out, marshaller);
-    }
-
-
-    public void setMessageId(Buffer messageId) {
-        setMessageId(TypeFactory.createAmqpBinary(messageId));
-    }
-
-
-    public final void setMessageId(AmqpBinary messageId) {
-        copyCheck();
-        bean.messageId = messageId;
-    }
-
-    public final Buffer getMessageId() {
-        return bean.messageId.getValue();
-    }
-
-    public void setUserId(Buffer userId) {
-        setUserId(TypeFactory.createAmqpBinary(userId));
-    }
-
-
-    public final void setUserId(AmqpBinary userId) {
-        copyCheck();
-        bean.userId = userId;
-    }
-
-    public final Buffer getUserId() {
-        return bean.userId.getValue();
-    }
-
-    public void setTo(String to) {
-        setTo(TypeFactory.createAmqpString(to));
-    }
-
-
-    public final void setTo(AmqpString to) {
-        copyCheck();
-        bean.to = to;
-    }
-
-    public final String getTo() {
-        return bean.to.getValue();
-    }
-
-    public void setReplyTo(String replyTo) {
-        setReplyTo(TypeFactory.createAmqpString(replyTo));
-    }
-
-
-    public final void setReplyTo(AmqpString replyTo) {
-        copyCheck();
-        bean.replyTo = replyTo;
-    }
-
-    public final String getReplyTo() {
-        return bean.replyTo.getValue();
-    }
-
-    public void setCorrelationId(Buffer correlationId) {
-        setCorrelationId(TypeFactory.createAmqpBinary(correlationId));
-    }
-
-
-    public final void setCorrelationId(AmqpBinary correlationId) {
-        copyCheck();
-        bean.correlationId = correlationId;
-    }
-
-    public final Buffer getCorrelationId() {
-        return bean.correlationId.getValue();
-    }
-
-    public void setContentLength(BigInteger contentLength) {
-        setContentLength(TypeFactory.createAmqpUlong(contentLength));
-    }
-
-
-    public final void setContentLength(AmqpUlong contentLength) {
-        copyCheck();
-        bean.contentLength = contentLength;
-    }
-
-    public final BigInteger getContentLength() {
-        return bean.contentLength.getValue();
-    }
-
-    public void setContentType(String contentType) {
-        setContentType(TypeFactory.createAmqpSymbol(contentType));
-    }
-
-
-    public final void setContentType(AmqpSymbol contentType) {
-        copyCheck();
-        bean.contentType = contentType;
-    }
-
-    public final String getContentType() {
-        return bean.contentType.getValue();
-    }
-
-    public void set(int index, AmqpType<?, ?> value) {
-        switch(index) {
-        case 0: {
-            setMessageId((AmqpBinary) value);
-            break;
+        public final AmqpPropertiesBean copy() {
+            return new AmqpProperties.AmqpPropertiesBean(bean);
         }
-        case 1: {
-            setUserId((AmqpBinary) value);
-            break;
-        }
-        case 2: {
-            setTo((AmqpString) value);
-            break;
-        }
-        case 3: {
-            setReplyTo((AmqpString) value);
-            break;
-        }
-        case 4: {
-            setCorrelationId((AmqpBinary) value);
-            break;
-        }
-        case 5: {
-            setContentLength((AmqpUlong) value);
-            break;
-        }
-        case 6: {
-            setContentType((AmqpSymbol) value);
-            break;
-        }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        }
-    }
 
-    public AmqpType<?, ?> get(int index) {
-        switch(index) {
-        case 0: {
-            return bean.messageId;
+        public final AmqpProperties.AmqpPropertiesBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+            if(buffer == null) {
+                buffer = new AmqpPropertiesBuffer(marshaller.encode(this));
+            }
+            return buffer;
         }
-        case 1: {
-            return bean.userId;
-        }
-        case 2: {
-            return bean.to;
-        }
-        case 3: {
-            return bean.replyTo;
-        }
-        case 4: {
-            return bean.correlationId;
-        }
-        case 5: {
-            return bean.contentLength;
-        }
-        case 6: {
-            return bean.contentType;
-        }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        }
-    }
 
-    public int getListCount() {
-        return 7;
-    }
-
-    public IAmqpList getValue() {
-        return bean;
-    }
-
-    public Iterator<AmqpType<?, ?>> iterator() {
-        return new AmqpListIterator(bean);
-    }
+        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+            getBuffer(marshaller).marshal(out, marshaller);
+        }
 
 
-    private final void copyCheck() {
-        if(buffer != null) {;
-            throw new IllegalStateException("unwriteable");
+        public void setMessageId(Buffer messageId) {
+            setMessageId(TypeFactory.createAmqpBinary(messageId));
         }
-        if(bean != this) {;
-            copy(bean);
+
+
+        public final void setMessageId(AmqpBinary messageId) {
+            copyCheck();
+            bean.messageId = messageId;
         }
-    }
 
-    private final void copy(AmqpProperties.AmqpPropertiesBean other) {
-        bean = this;
-    }
+        public final Buffer getMessageId() {
+            return bean.messageId.getValue();
+        }
 
-    public boolean equals(Object o){
-        if(this == o) {
+        public void setUserId(Buffer userId) {
+            setUserId(TypeFactory.createAmqpBinary(userId));
+        }
+
+
+        public final void setUserId(AmqpBinary userId) {
+            copyCheck();
+            bean.userId = userId;
+        }
+
+        public final Buffer getUserId() {
+            return bean.userId.getValue();
+        }
+
+        public void setTo(String to) {
+            setTo(TypeFactory.createAmqpString(to));
+        }
+
+
+        public final void setTo(AmqpString to) {
+            copyCheck();
+            bean.to = to;
+        }
+
+        public final String getTo() {
+            return bean.to.getValue();
+        }
+
+        public void setReplyTo(String replyTo) {
+            setReplyTo(TypeFactory.createAmqpString(replyTo));
+        }
+
+
+        public final void setReplyTo(AmqpString replyTo) {
+            copyCheck();
+            bean.replyTo = replyTo;
+        }
+
+        public final String getReplyTo() {
+            return bean.replyTo.getValue();
+        }
+
+        public void setCorrelationId(Buffer correlationId) {
+            setCorrelationId(TypeFactory.createAmqpBinary(correlationId));
+        }
+
+
+        public final void setCorrelationId(AmqpBinary correlationId) {
+            copyCheck();
+            bean.correlationId = correlationId;
+        }
+
+        public final Buffer getCorrelationId() {
+            return bean.correlationId.getValue();
+        }
+
+        public void setContentLength(BigInteger contentLength) {
+            setContentLength(TypeFactory.createAmqpUlong(contentLength));
+        }
+
+
+        public final void setContentLength(AmqpUlong contentLength) {
+            copyCheck();
+            bean.contentLength = contentLength;
+        }
+
+        public final BigInteger getContentLength() {
+            return bean.contentLength.getValue();
+        }
+
+        public void setContentType(String contentType) {
+            setContentType(TypeFactory.createAmqpSymbol(contentType));
+        }
+
+
+        public final void setContentType(AmqpSymbol contentType) {
+            copyCheck();
+            bean.contentType = contentType;
+        }
+
+        public final String getContentType() {
+            return bean.contentType.getValue();
+        }
+
+        public void set(int index, AmqpType<?, ?> value) {
+            switch(index) {
+            case 0: {
+                setMessageId((AmqpBinary) value);
+                break;
+            }
+            case 1: {
+                setUserId((AmqpBinary) value);
+                break;
+            }
+            case 2: {
+                setTo((AmqpString) value);
+                break;
+            }
+            case 3: {
+                setReplyTo((AmqpString) value);
+                break;
+            }
+            case 4: {
+                setCorrelationId((AmqpBinary) value);
+                break;
+            }
+            case 5: {
+                setContentLength((AmqpUlong) value);
+                break;
+            }
+            case 6: {
+                setContentType((AmqpSymbol) value);
+                break;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
+        }
+
+        public AmqpType<?, ?> get(int index) {
+            switch(index) {
+            case 0: {
+                return bean.messageId;
+            }
+            case 1: {
+                return bean.userId;
+            }
+            case 2: {
+                return bean.to;
+            }
+            case 3: {
+                return bean.replyTo;
+            }
+            case 4: {
+                return bean.correlationId;
+            }
+            case 5: {
+                return bean.contentLength;
+            }
+            case 6: {
+                return bean.contentType;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
+        }
+
+        public int getListCount() {
+            return 7;
+        }
+
+        public IAmqpList<AmqpType<?, ?>> getValue() {
+            return bean;
+        }
+
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return new AmqpListIterator<AmqpType<?, ?>>(bean);
+        }
+
+
+        private final void copyCheck() {
+            if(buffer != null) {;
+                throw new IllegalStateException("unwriteable");
+            }
+            if(bean != this) {;
+                copy(bean);
+            }
+        }
+
+        private final void copy(AmqpProperties.AmqpPropertiesBean other) {
+            bean = this;
+        }
+
+        public boolean equals(Object o){
+            if(this == o) {
+                return true;
+            }
+
+            if(o == null || !(o instanceof AmqpProperties)) {
+                return false;
+            }
+
+            return equals((AmqpProperties) o);
+        }
+
+        public boolean equals(AmqpProperties b) {
+
+            if(b.getMessageId() == null ^ getMessageId() == null) {
+                return false;
+            }
+            if(b.getMessageId() != null && !b.getMessageId().equals(getMessageId())){ 
+                return false;
+            }
+
+            if(b.getUserId() == null ^ getUserId() == null) {
+                return false;
+            }
+            if(b.getUserId() != null && !b.getUserId().equals(getUserId())){ 
+                return false;
+            }
+
+            if(b.getTo() == null ^ getTo() == null) {
+                return false;
+            }
+            if(b.getTo() != null && !b.getTo().equals(getTo())){ 
+                return false;
+            }
+
+            if(b.getReplyTo() == null ^ getReplyTo() == null) {
+                return false;
+            }
+            if(b.getReplyTo() != null && !b.getReplyTo().equals(getReplyTo())){ 
+                return false;
+            }
+
+            if(b.getCorrelationId() == null ^ getCorrelationId() == null) {
+                return false;
+            }
+            if(b.getCorrelationId() != null && !b.getCorrelationId().equals(getCorrelationId())){ 
+                return false;
+            }
+
+            if(b.getContentLength() == null ^ getContentLength() == null) {
+                return false;
+            }
+            if(b.getContentLength() != null && !b.getContentLength().equals(getContentLength())){ 
+                return false;
+            }
+
+            if(b.getContentType() == null ^ getContentType() == null) {
+                return false;
+            }
+            if(b.getContentType() != null && !b.getContentType().equals(getContentType())){ 
+                return false;
+            }
             return true;
         }
 
-        if(o == null || !(o instanceof AmqpProperties)) {
-            return false;
+        public int hashCode() {
+            return AbstractAmqpList.hashCodeFor(this);
         }
-
-        return equals((AmqpProperties) o);
     }
-
-    public boolean equals(AmqpProperties b) {
-
-        if(b.getMessageId() == null ^ getMessageId() == null) {
-            return false;
-        }
-        if(b.getMessageId() != null && !b.getMessageId().equals(getMessageId())){ 
-            return false;
-        }
-
-        if(b.getUserId() == null ^ getUserId() == null) {
-            return false;
-        }
-        if(b.getUserId() != null && !b.getUserId().equals(getUserId())){ 
-            return false;
-        }
-
-        if(b.getTo() == null ^ getTo() == null) {
-            return false;
-        }
-        if(b.getTo() != null && !b.getTo().equals(getTo())){ 
-            return false;
-        }
-
-        if(b.getReplyTo() == null ^ getReplyTo() == null) {
-            return false;
-        }
-        if(b.getReplyTo() != null && !b.getReplyTo().equals(getReplyTo())){ 
-            return false;
-        }
-
-        if(b.getCorrelationId() == null ^ getCorrelationId() == null) {
-            return false;
-        }
-        if(b.getCorrelationId() != null && !b.getCorrelationId().equals(getCorrelationId())){ 
-            return false;
-        }
-
-        if(b.getContentLength() == null ^ getContentLength() == null) {
-            return false;
-        }
-        if(b.getContentLength() != null && !b.getContentLength().equals(getContentLength())){ 
-            return false;
-        }
-
-        if(b.getContentType() == null ^ getContentType() == null) {
-            return false;
-        }
-        if(b.getContentType() != null && !b.getContentType().equals(getContentType())){ 
-            return false;
-        }
-        return true;
-    }
-
-    public int hashCode() {
-        return AbstractAmqpList.hashCodeFor(this);
-    }
-}
 
     public static class AmqpPropertiesBuffer extends AmqpList.AmqpListBuffer implements AmqpProperties{
 
         private AmqpPropertiesBean bean;
 
-        protected AmqpPropertiesBuffer(Encoded<IAmqpList> encoded) {
+        protected AmqpPropertiesBuffer(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
@@ -660,10 +660,6 @@ public interface AmqpProperties extends AmqpList {
             return bean().iterator();
         }
 
-        public IAmqpList getValue() {
-            return bean().getValue();
-        }
-
         public AmqpProperties.AmqpPropertiesBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
             return this;
         }
@@ -688,7 +684,7 @@ public interface AmqpProperties extends AmqpList {
             return bean().hashCode();
         }
 
-        public static AmqpProperties.AmqpPropertiesBuffer create(Encoded<IAmqpList> encoded) {
+        public static AmqpProperties.AmqpPropertiesBuffer create(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

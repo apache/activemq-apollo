@@ -134,240 +134,240 @@ public interface AmqpDisposition extends AmqpList, AmqpCommand {
         AmqpDispositionBean() {
         }
 
-        AmqpDispositionBean(IAmqpList value) {
+        AmqpDispositionBean(IAmqpList<AmqpType<?, ?>> value) {
 
-        for(int i = 0; i < value.getListCount(); i++) {
-            set(i, value.get(i));
+            for(int i = 0; i < value.getListCount(); i++) {
+                set(i, value.get(i));
+            }
         }
-    }
 
-    AmqpDispositionBean(AmqpDisposition.AmqpDispositionBean other) {
-        this.bean = other;
-    }
-
-    public final AmqpDispositionBean copy() {
-        return new AmqpDisposition.AmqpDispositionBean(bean);
-    }
-
-    public final void handle(AmqpCommandHandler handler) throws Exception {
-        handler.handleDisposition(this);
-    }
-
-    public final AmqpDisposition.AmqpDispositionBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
-        if(buffer == null) {
-            buffer = new AmqpDispositionBuffer(marshaller.encode(this));
+        AmqpDispositionBean(AmqpDisposition.AmqpDispositionBean other) {
+            this.bean = other;
         }
-        return buffer;
-    }
 
-    public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
-        getBuffer(marshaller).marshal(out, marshaller);
-    }
-
-
-    public final void setOptions(AmqpOptions options) {
-        copyCheck();
-        bean.options = options;
-    }
-
-    public final AmqpOptions getOptions() {
-        return bean.options;
-    }
-
-    public void setHandle(Long handle) {
-        setHandle(TypeFactory.createAmqpHandle(handle));
-    }
-
-
-    public void setHandle(long handle) {
-        setHandle(TypeFactory.createAmqpHandle(handle));
-    }
-
-
-    public final void setHandle(AmqpHandle handle) {
-        copyCheck();
-        bean.handle = handle;
-    }
-
-    public final AmqpHandle getHandle() {
-        return bean.handle;
-    }
-
-    public final void setDisposition(AmqpMap disposition) {
-        copyCheck();
-        bean.disposition = disposition;
-    }
-
-    public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getDisposition() {
-        return bean.disposition.getValue();
-    }
-
-    public void setFirst(Buffer first) {
-        setFirst(TypeFactory.createAmqpDeliveryTag(first));
-    }
-
-
-    public final void setFirst(AmqpDeliveryTag first) {
-        copyCheck();
-        bean.first = first;
-    }
-
-    public final AmqpDeliveryTag getFirst() {
-        return bean.first;
-    }
-
-    public void setLast(Buffer last) {
-        setLast(TypeFactory.createAmqpDeliveryTag(last));
-    }
-
-
-    public final void setLast(AmqpDeliveryTag last) {
-        copyCheck();
-        bean.last = last;
-    }
-
-    public final AmqpDeliveryTag getLast() {
-        return bean.last;
-    }
-
-    public void set(int index, AmqpType<?, ?> value) {
-        switch(index) {
-        case 0: {
-            setOptions((AmqpOptions) value);
-            break;
+        public final AmqpDispositionBean copy() {
+            return new AmqpDisposition.AmqpDispositionBean(bean);
         }
-        case 1: {
-            setHandle((AmqpHandle) value);
-            break;
-        }
-        case 2: {
-            setDisposition((AmqpMap) value);
-            break;
-        }
-        case 3: {
-            setFirst((AmqpDeliveryTag) value);
-            break;
-        }
-        case 4: {
-            setLast((AmqpDeliveryTag) value);
-            break;
-        }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        }
-    }
 
-    public AmqpType<?, ?> get(int index) {
-        switch(index) {
-        case 0: {
+        public final void handle(AmqpCommandHandler handler) throws Exception {
+            handler.handleDisposition(this);
+        }
+
+        public final AmqpDisposition.AmqpDispositionBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
+            if(buffer == null) {
+                buffer = new AmqpDispositionBuffer(marshaller.encode(this));
+            }
+            return buffer;
+        }
+
+        public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
+            getBuffer(marshaller).marshal(out, marshaller);
+        }
+
+
+        public final void setOptions(AmqpOptions options) {
+            copyCheck();
+            bean.options = options;
+        }
+
+        public final AmqpOptions getOptions() {
             return bean.options;
         }
-        case 1: {
+
+        public void setHandle(Long handle) {
+            setHandle(TypeFactory.createAmqpHandle(handle));
+        }
+
+
+        public void setHandle(long handle) {
+            setHandle(TypeFactory.createAmqpHandle(handle));
+        }
+
+
+        public final void setHandle(AmqpHandle handle) {
+            copyCheck();
+            bean.handle = handle;
+        }
+
+        public final AmqpHandle getHandle() {
             return bean.handle;
         }
-        case 2: {
+
+        public final void setDisposition(AmqpMap disposition) {
+            copyCheck();
+            bean.disposition = disposition;
+        }
+
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getDisposition() {
             return bean.disposition;
         }
-        case 3: {
+
+        public void setFirst(Buffer first) {
+            setFirst(TypeFactory.createAmqpDeliveryTag(first));
+        }
+
+
+        public final void setFirst(AmqpDeliveryTag first) {
+            copyCheck();
+            bean.first = first;
+        }
+
+        public final AmqpDeliveryTag getFirst() {
             return bean.first;
         }
-        case 4: {
+
+        public void setLast(Buffer last) {
+            setLast(TypeFactory.createAmqpDeliveryTag(last));
+        }
+
+
+        public final void setLast(AmqpDeliveryTag last) {
+            copyCheck();
+            bean.last = last;
+        }
+
+        public final AmqpDeliveryTag getLast() {
             return bean.last;
         }
-        default : {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
+
+        public void set(int index, AmqpType<?, ?> value) {
+            switch(index) {
+            case 0: {
+                setOptions((AmqpOptions) value);
+                break;
+            }
+            case 1: {
+                setHandle((AmqpHandle) value);
+                break;
+            }
+            case 2: {
+                setDisposition((AmqpMap) value);
+                break;
+            }
+            case 3: {
+                setFirst((AmqpDeliveryTag) value);
+                break;
+            }
+            case 4: {
+                setLast((AmqpDeliveryTag) value);
+                break;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
+
+        public AmqpType<?, ?> get(int index) {
+            switch(index) {
+            case 0: {
+                return bean.options;
+            }
+            case 1: {
+                return bean.handle;
+            }
+            case 2: {
+                return bean.disposition;
+            }
+            case 3: {
+                return bean.first;
+            }
+            case 4: {
+                return bean.last;
+            }
+            default : {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+            }
         }
-    }
 
-    public int getListCount() {
-        return 5;
-    }
-
-    public IAmqpList getValue() {
-        return bean;
-    }
-
-    public Iterator<AmqpType<?, ?>> iterator() {
-        return new AmqpListIterator(bean);
-    }
-
-
-    private final void copyCheck() {
-        if(buffer != null) {;
-            throw new IllegalStateException("unwriteable");
+        public int getListCount() {
+            return 5;
         }
-        if(bean != this) {;
-            copy(bean);
+
+        public IAmqpList<AmqpType<?, ?>> getValue() {
+            return bean;
         }
-    }
 
-    private final void copy(AmqpDisposition.AmqpDispositionBean other) {
-        bean = this;
-    }
+        public Iterator<AmqpType<?, ?>> iterator() {
+            return new AmqpListIterator<AmqpType<?, ?>>(bean);
+        }
 
-    public boolean equals(Object o){
-        if(this == o) {
+
+        private final void copyCheck() {
+            if(buffer != null) {;
+                throw new IllegalStateException("unwriteable");
+            }
+            if(bean != this) {;
+                copy(bean);
+            }
+        }
+
+        private final void copy(AmqpDisposition.AmqpDispositionBean other) {
+            bean = this;
+        }
+
+        public boolean equals(Object o){
+            if(this == o) {
+                return true;
+            }
+
+            if(o == null || !(o instanceof AmqpDisposition)) {
+                return false;
+            }
+
+            return equals((AmqpDisposition) o);
+        }
+
+        public boolean equals(AmqpDisposition b) {
+
+            if(b.getOptions() == null ^ getOptions() == null) {
+                return false;
+            }
+            if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
+                return false;
+            }
+
+            if(b.getHandle() == null ^ getHandle() == null) {
+                return false;
+            }
+            if(b.getHandle() != null && !b.getHandle().equals(getHandle())){ 
+                return false;
+            }
+
+            if(b.getDisposition() == null ^ getDisposition() == null) {
+                return false;
+            }
+            if(b.getDisposition() != null && !b.getDisposition().equals(getDisposition())){ 
+                return false;
+            }
+
+            if(b.getFirst() == null ^ getFirst() == null) {
+                return false;
+            }
+            if(b.getFirst() != null && !b.getFirst().equals(getFirst())){ 
+                return false;
+            }
+
+            if(b.getLast() == null ^ getLast() == null) {
+                return false;
+            }
+            if(b.getLast() != null && !b.getLast().equals(getLast())){ 
+                return false;
+            }
             return true;
         }
 
-        if(o == null || !(o instanceof AmqpDisposition)) {
-            return false;
+        public int hashCode() {
+            return AbstractAmqpList.hashCodeFor(this);
         }
-
-        return equals((AmqpDisposition) o);
     }
-
-    public boolean equals(AmqpDisposition b) {
-
-        if(b.getOptions() == null ^ getOptions() == null) {
-            return false;
-        }
-        if(b.getOptions() != null && !b.getOptions().equals(getOptions())){ 
-            return false;
-        }
-
-        if(b.getHandle() == null ^ getHandle() == null) {
-            return false;
-        }
-        if(b.getHandle() != null && !b.getHandle().equals(getHandle())){ 
-            return false;
-        }
-
-        if(b.getDisposition() == null ^ getDisposition() == null) {
-            return false;
-        }
-        if(b.getDisposition() != null && !b.getDisposition().equals(getDisposition())){ 
-            return false;
-        }
-
-        if(b.getFirst() == null ^ getFirst() == null) {
-            return false;
-        }
-        if(b.getFirst() != null && !b.getFirst().equals(getFirst())){ 
-            return false;
-        }
-
-        if(b.getLast() == null ^ getLast() == null) {
-            return false;
-        }
-        if(b.getLast() != null && !b.getLast().equals(getLast())){ 
-            return false;
-        }
-        return true;
-    }
-
-    public int hashCode() {
-        return AbstractAmqpList.hashCodeFor(this);
-    }
-}
 
     public static class AmqpDispositionBuffer extends AmqpList.AmqpListBuffer implements AmqpDisposition{
 
         private AmqpDispositionBean bean;
 
-        protected AmqpDispositionBuffer(Encoded<IAmqpList> encoded) {
+        protected AmqpDispositionBuffer(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             super(encoded);
         }
 
@@ -444,10 +444,6 @@ public interface AmqpDisposition extends AmqpList, AmqpCommand {
             return bean().iterator();
         }
 
-        public IAmqpList getValue() {
-            return bean().getValue();
-        }
-
         public AmqpDisposition.AmqpDispositionBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{
             return this;
         }
@@ -476,7 +472,7 @@ public interface AmqpDisposition extends AmqpList, AmqpCommand {
             return bean().hashCode();
         }
 
-        public static AmqpDisposition.AmqpDispositionBuffer create(Encoded<IAmqpList> encoded) {
+        public static AmqpDisposition.AmqpDispositionBuffer create(Encoded<IAmqpList<AmqpType<?, ?>>> encoded) {
             if(encoded.isNull()) {
                 return null;
             }

@@ -25,16 +25,18 @@ public class AmqpProtocolTest extends TestCase {
         AmqpSequenceNo val2 = createAmqpSequenceNo(10);
         assertTrue(val1.equals(val2));
     }
-    
+
     public void testAmqpFlow() throws Exception {
         AmqpFlow flow = createAmqpFlow();
         flow.setHandle(1);
         flow.setOptions(createAmqpOptions());
-        
+        flow.getOptions().put(createAmqpString("Hello"), createAmqpUint(20));
+        flow.setLimit(2);
+
         AmqpFlow read = marshalUnmarshal(flow);
-                
+
         assertTrue(flow.equals(read));
-        System.out.println("Value: " + read.getValue());
+        System.out.println("Value: " + read);
     }
 
     private <T extends AmqpType<?, ?>> T marshalUnmarshal(T type) throws IOException, AmqpEncodingError {

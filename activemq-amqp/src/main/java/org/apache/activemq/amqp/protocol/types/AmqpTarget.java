@@ -220,7 +220,7 @@ public interface AmqpTarget extends AmqpMap {
         private IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value;
 
         AmqpTargetBean() {
-            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());
+            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>,AmqpType<?,?>>(new HashMap<AmqpType<?,?>,AmqpType<?,?>>());
         }
 
         AmqpTargetBean(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) {
@@ -298,12 +298,12 @@ public interface AmqpTarget extends AmqpMap {
         public final Long getTimeout() {
             return bean.timeout.getValue();
         }
-        public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+        public void put(AmqpType<?,?> key, AmqpType<?,?> value) {
             copyCheck();
             bean.value.put(key, value);
         }
 
-        public AmqpType<?, ?> get(Object key) {
+        public AmqpType<?,?> get(Object key) {
             return bean.value.get(key);
         }
 
@@ -311,12 +311,8 @@ public interface AmqpTarget extends AmqpMap {
             return bean.value.getEntryCount();
         }
 
-        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+        public Iterator<Map.Entry<AmqpType<?,?>, AmqpType<?,?>>> iterator() {
             return bean.value.iterator();
-        }
-
-        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
-            return bean.value;
         }
 
 
@@ -428,11 +424,11 @@ public interface AmqpTarget extends AmqpMap {
         public final Long getTimeout() {
             return bean().getTimeout();
         }
-        public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+        public void put(AmqpType<?,?> key, AmqpType<?,?> value) {
             bean().put(key, value);
         }
 
-        public AmqpType<?, ?> get(Object key) {
+        public AmqpType<?,?> get(Object key) {
             return bean().get(key);
         }
 
@@ -440,12 +436,8 @@ public interface AmqpTarget extends AmqpMap {
             return bean().getEntryCount();
         }
 
-        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+        public Iterator<Map.Entry<AmqpType<?,?>, AmqpType<?,?>>> iterator() {
             return bean().iterator();
-        }
-
-        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
-            return bean().getValue();
         }
 
         public AmqpTarget.AmqpTargetBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{

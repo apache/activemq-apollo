@@ -51,37 +51,46 @@ public class AmqpCompletedMarshaller implements DescribedTypeMarshaller<AmqpComp
 
     private static final MapDecoder<AmqpSymbol, AmqpType<?, ?>> DECODER = new MapDecoder<AmqpSymbol, AmqpType<?, ?>>() {
 
-        public IAmqpMap<AmqpSymbol, AmqpType<?, ?>> createMap(int entryCount) {
-            return new IAmqpMap.AmqpWrapperMap<AmqpSymbol, AmqpType<?,?>>(new HashMap<AmqpSymbol, AmqpType<?,?>>());
+        public IAmqpMap<AmqpSymbol, AmqpType<?, ?>> decode(EncodedBuffer[] constituents) throws AmqpEncodingError {
+            IAmqpMap<AmqpSymbol, AmqpType<?, ?>> rc = new IAmqpMap.AmqpWrapperMap<AmqpSymbol, AmqpType<?,?>>(new HashMap<AmqpSymbol, AmqpType<?,?>>());
+            if (constituents.length % 2 != 0) {
+                throw new AmqpEncodingError("Invalid number of compound constituents for " + SYMBOLIC_ID + ": " + constituents.length);
+            }
+            for (int i = 0; i < constituents.length; i += 2) {
+                AmqpSymbol key = AmqpSymbol.AmqpSymbolBuffer.create(AmqpSymbolMarshaller.createEncoded(constituents[i]));
+                if (key == null) {
+                    throw new AmqpEncodingError("Null Key for " + SYMBOLIC_ID);
+                }
 
+                if (key.equals(AmqpCompleted.TRUNCATE_KEY)){
+                    rc.put(AmqpCompleted.TRUNCATE_KEY, AmqpBoolean.AmqpBooleanBuffer.create(AmqpBooleanMarshaller.createEncoded(constituents[i + 1])));
+                }
+                else {
+                    throw new UnexpectedTypeException("Invalid field key for " + SYMBOLIC_ID + " : " + key);
+                }
+            }
+            return rc;
         }
 
-        public void decodeToMap(EncodedBuffer encodedKey, EncodedBuffer encodedValue, IAmqpMap<AmqpSymbol,AmqpType<?, ?>> map) throws AmqpEncodingError {
-            AmqpSymbol key = AmqpSymbol.AmqpSymbolBuffer.create(AmqpSymbolMarshaller.createEncoded(encodedKey));
-            if (key == null) {
-                throw new AmqpEncodingError("Null Key for " + SYMBOLIC_ID);
+        public IAmqpMap<AmqpSymbol, AmqpType<?, ?>> unmarshalType(int dataCount, int dataSize, DataInput in) throws IOException, AmqpEncodingError {
+            IAmqpMap<AmqpSymbol, AmqpType<?, ?>> rc = new IAmqpMap.AmqpWrapperMap<AmqpSymbol, AmqpType<?,?>>(new HashMap<AmqpSymbol, AmqpType<?,?>>());
+            if (dataCount % 2 != 0) {
+                throw new AmqpEncodingError("Invalid number of compound constituents for " + SYMBOLIC_ID + ": " + dataCount);
             }
+            for (int i = 0; i < dataCount; i += 2) {
+                AmqpSymbol key = AmqpSymbol.AmqpSymbolBuffer.create(AmqpSymbolMarshaller.createEncoded(in));
+                if (key == null) {
+                    throw new AmqpEncodingError("Null Key for " + SYMBOLIC_ID);
+                }
 
-            if (key.equals(AmqpCompleted.TRUNCATE_KEY)){
-                map.put(AmqpCompleted.TRUNCATE_KEY, AmqpBoolean.AmqpBooleanBuffer.create(AmqpBooleanMarshaller.createEncoded(encodedValue)));
+                if (key.equals(AmqpCompleted.TRUNCATE_KEY)){
+                    rc.put(AmqpCompleted.TRUNCATE_KEY, AmqpBoolean.AmqpBooleanBuffer.create(AmqpBooleanMarshaller.createEncoded(in)));
+                }
+                else {
+                    throw new UnexpectedTypeException("Invalid field key for " + SYMBOLIC_ID + " : " + key);
+                }
             }
-            else {
-                throw new UnexpectedTypeException("Invalid Key for " + SYMBOLIC_ID + " : " + key);
-            }
-        }
-
-        public void unmarshalToMap(DataInput in, IAmqpMap<AmqpSymbol,AmqpType<?, ?>> map) throws IOException, AmqpEncodingError {
-            AmqpSymbol key = AmqpSymbol.AmqpSymbolBuffer.create(AmqpSymbolMarshaller.createEncoded(in));
-            if (key == null) {
-                throw new AmqpEncodingError("Null Key for " + SYMBOLIC_ID);
-            }
-
-            if (key.equals(AmqpCompleted.TRUNCATE_KEY)){
-                map.put(AmqpCompleted.TRUNCATE_KEY, AmqpBoolean.AmqpBooleanBuffer.create(AmqpBooleanMarshaller.createEncoded(in)));
-            }
-            else {
-                throw new UnexpectedTypeException("Invalid Key for " + SYMBOLIC_ID + " : " + key);
-            }
+            return rc;
         }
     };
 

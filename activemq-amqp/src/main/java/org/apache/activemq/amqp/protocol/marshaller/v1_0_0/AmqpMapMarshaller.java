@@ -142,16 +142,16 @@ public class AmqpMapMarshaller {
             ENCODER.encodeMapMap8(value, encoded, offset);
         }
 
-        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeMapMap8(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataCount(), encoded.getDataSize(), decoder);
-        }
-
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeMapMap8(value, out);
         }
 
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return decoder.decode(encoded.asCompound().constituents());
+        }
+
         public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> unmarshalData(DataInput in) throws IOException {
-            return ENCODER.readMapMap8(getDataCount(), getDataSize(), in, decoder);
+            return decoder.unmarshalType(getDataCount(), getDataSize(), in);
         }
     }
 
@@ -181,22 +181,22 @@ public class AmqpMapMarshaller {
             ENCODER.encodeMapMap32(value, encoded, offset);
         }
 
-        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeMapMap32(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataCount(), encoded.getDataSize(), decoder);
-        }
-
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeMapMap32(value, out);
         }
 
+        public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return decoder.decode(encoded.asCompound().constituents());
+        }
+
         public final IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> unmarshalData(DataInput in) throws IOException {
-            return ENCODER.readMapMap32(getDataCount(), getDataSize(), in, decoder);
+            return decoder.unmarshalType(getDataCount(), getDataSize(), in);
         }
     }
 
 
     private static final MAP_ENCODING chooseEncoding(AmqpMap val) throws AmqpEncodingError {
-        return Encoder.chooseMapEncoding(val.getValue());
+        return Encoder.chooseMapEncoding(val);
     }
 
     private static final MAP_ENCODING chooseEncoding(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> val) throws AmqpEncodingError {
@@ -207,7 +207,7 @@ public class AmqpMapMarshaller {
         if(data == null) {
             return NULL_ENCODED;
         }
-        return MAP_ENCODING.createEncoded(chooseEncoding(data).FORMAT_CODE, data.getValue());
+        return MAP_ENCODING.createEncoded(chooseEncoding(data).FORMAT_CODE, data);
     }
 
     static final Encoded<IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>>> createEncoded(Buffer source, int offset) throws AmqpEncodingError {

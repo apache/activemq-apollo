@@ -131,12 +131,12 @@ public class AmqpSymbolMarshaller {
             ENCODER.encodeSymbolSym8(value, encoded, offset);
         }
 
-        public final String decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeSymbolSym8(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
-        }
-
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeSymbolSym8(value, out);
+        }
+
+        public final String decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return ENCODER.decodeSymbolSym8(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
         }
 
         public final String unmarshalData(DataInput in) throws IOException {
@@ -166,12 +166,12 @@ public class AmqpSymbolMarshaller {
             ENCODER.encodeSymbolSym32(value, encoded, offset);
         }
 
-        public final String decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeSymbolSym32(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
-        }
-
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeSymbolSym32(value, out);
+        }
+
+        public final String decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return ENCODER.decodeSymbolSym32(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());
         }
 
         public final String unmarshalData(DataInput in) throws IOException {

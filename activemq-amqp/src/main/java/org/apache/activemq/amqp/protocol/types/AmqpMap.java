@@ -36,10 +36,8 @@ public interface AmqpMap extends AmqpType<AmqpMap.AmqpMapBean, AmqpMap.AmqpMapBu
     /**
      * Represents a a polymorphic mapping from distinct keys to values
      */
-    public void put(AmqpType<?, ?> key, AmqpType<?, ?> value);
-    public AmqpType<?, ?> get(Object key);
-
-    public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue();
+    public void put(AmqpType<?,?> key, AmqpType<?,?> value);
+    public AmqpType<?,?> get(Object key);
 
     public static class AmqpMapBean implements AmqpMap{
 
@@ -48,7 +46,7 @@ public interface AmqpMap extends AmqpType<AmqpMap.AmqpMapBean, AmqpMap.AmqpMapBu
         private IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value;
 
         AmqpMapBean() {
-            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());
+            this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>,AmqpType<?,?>>(new HashMap<AmqpType<?,?>,AmqpType<?,?>>());
         }
 
         AmqpMapBean(IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> value) {
@@ -74,12 +72,12 @@ public interface AmqpMap extends AmqpType<AmqpMap.AmqpMapBean, AmqpMap.AmqpMapBu
             getBuffer(marshaller).marshal(out, marshaller);
         }
 
-        public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+        public void put(AmqpType<?,?> key, AmqpType<?,?> value) {
             copyCheck();
             bean.value.put(key, value);
         }
 
-        public AmqpType<?, ?> get(Object key) {
+        public AmqpType<?,?> get(Object key) {
             return bean.value.get(key);
         }
 
@@ -87,12 +85,8 @@ public interface AmqpMap extends AmqpType<AmqpMap.AmqpMapBean, AmqpMap.AmqpMapBu
             return bean.value.getEntryCount();
         }
 
-        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+        public Iterator<Map.Entry<AmqpType<?,?>, AmqpType<?,?>>> iterator() {
             return bean.value.iterator();
-        }
-
-        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
-            return bean.value;
         }
 
 
@@ -150,11 +144,11 @@ public interface AmqpMap extends AmqpType<AmqpMap.AmqpMapBean, AmqpMap.AmqpMapBu
         public final void marshal(DataOutput out, AmqpMarshaller marshaller) throws IOException, AmqpEncodingError{
             encoded.marshal(out);
         }
-        public void put(AmqpType<?, ?> key, AmqpType<?, ?> value) {
+        public void put(AmqpType<?,?> key, AmqpType<?,?> value) {
             bean().put(key, value);
         }
 
-        public AmqpType<?, ?> get(Object key) {
+        public AmqpType<?,?> get(Object key) {
             return bean().get(key);
         }
 
@@ -162,12 +156,8 @@ public interface AmqpMap extends AmqpType<AmqpMap.AmqpMapBean, AmqpMap.AmqpMapBu
             return bean().getEntryCount();
         }
 
-        public Iterator<Map.Entry<AmqpType<?, ?>, AmqpType<?, ?>>> iterator() {
+        public Iterator<Map.Entry<AmqpType<?,?>, AmqpType<?,?>>> iterator() {
             return bean().iterator();
-        }
-
-        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> getValue() {
-            return bean().getValue();
         }
 
         public AmqpMap.AmqpMapBuffer getBuffer(AmqpMarshaller marshaller) throws AmqpEncodingError{

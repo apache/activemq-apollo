@@ -27,13 +27,14 @@ import org.apache.activemq.amqp.protocol.marshaller.UnexpectedTypeException;
 import org.apache.activemq.amqp.protocol.marshaller.v1_0_0.Encoder;
 import org.apache.activemq.amqp.protocol.marshaller.v1_0_0.Encoder.*;
 import org.apache.activemq.amqp.protocol.types.AmqpList;
+import org.apache.activemq.amqp.protocol.types.AmqpType;
 import org.apache.activemq.amqp.protocol.types.IAmqpList;
 import org.apache.activemq.util.buffer.Buffer;
 
 public class AmqpListMarshaller {
 
     private static final Encoder ENCODER = Encoder.SINGLETON;
-    private static final Encoded<IAmqpList> NULL_ENCODED = new Encoder.NullEncoded<IAmqpList>();
+    private static final Encoded<IAmqpList<AmqpType<?, ?>>> NULL_ENCODED = new Encoder.NullEncoded<IAmqpList<AmqpType<?, ?>>>();
 
     public static final byte LIST8_FORMAT_CODE = (byte) 0xc0;
     public static final byte LIST32_FORMAT_CODE = (byte) 0xd0;
@@ -101,7 +102,7 @@ public class AmqpListMarshaller {
             }
             }
         }
-        static final AmqpListEncoded createEncoded(byte formatCode, IAmqpList value) throws AmqpEncodingError {
+        static final AmqpListEncoded createEncoded(byte formatCode, IAmqpList<AmqpType<?, ?>> value) throws AmqpEncodingError {
             switch(formatCode) {
             case LIST8_FORMAT_CODE: {
                 return new AmqpListList8Encoded(value);
@@ -121,14 +122,14 @@ public class AmqpListMarshaller {
             }
         }
     }
-    public static abstract class AmqpListEncoded extends AbstractEncoded <IAmqpList> {
+    public static abstract class AmqpListEncoded extends AbstractEncoded <IAmqpList<AmqpType<?, ?>>> {
         ListDecoder decoder = Encoder.DEFAULT_LIST_DECODER;
 
         public AmqpListEncoded(EncodedBuffer encoded) {
             super(encoded);
         }
 
-        public AmqpListEncoded(byte formatCode, IAmqpList value) throws AmqpEncodingError {
+        public AmqpListEncoded(byte formatCode, IAmqpList<AmqpType<?, ?>> value) throws AmqpEncodingError {
             super(formatCode, value);
         }
 
@@ -147,7 +148,7 @@ public class AmqpListMarshaller {
             super(encoded);
         }
 
-        public AmqpListList8Encoded(IAmqpList value) throws AmqpEncodingError {
+        public AmqpListList8Encoded(IAmqpList<AmqpType<?, ?>> value) throws AmqpEncodingError {
             super(LIST_ENCODING.LIST8.FORMAT_CODE, value);
         }
 
@@ -159,20 +160,20 @@ public class AmqpListMarshaller {
             return ENCODER.getEncodedCountOfList(value, encoding);
         }
 
-        public final void encode(IAmqpList value, Buffer encoded, int offset) throws AmqpEncodingError {
+        public final void encode(IAmqpList<AmqpType<?, ?>> value, Buffer encoded, int offset) throws AmqpEncodingError {
             ENCODER.encodeListList8(value, encoded, offset);
-        }
-
-        public final IAmqpList decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeListList8(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataCount(), encoded.getDataSize(), decoder);
         }
 
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeListList8(value, out);
         }
 
-        public final IAmqpList unmarshalData(DataInput in) throws IOException {
-            return ENCODER.readListList8(getDataCount(), getDataSize(), in, decoder);
+        public final IAmqpList<AmqpType<?, ?>> decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return decoder.decode(encoded.asCompound().constituents());
+        }
+
+        public final IAmqpList<AmqpType<?, ?>> unmarshalData(DataInput in) throws IOException {
+            return decoder.unmarshalType(getDataCount(), getDataSize(), in);
         }
     }
 
@@ -186,7 +187,7 @@ public class AmqpListMarshaller {
             super(encoded);
         }
 
-        public AmqpListList32Encoded(IAmqpList value) throws AmqpEncodingError {
+        public AmqpListList32Encoded(IAmqpList<AmqpType<?, ?>> value) throws AmqpEncodingError {
             super(LIST_ENCODING.LIST32.FORMAT_CODE, value);
         }
 
@@ -198,20 +199,20 @@ public class AmqpListMarshaller {
             return ENCODER.getEncodedCountOfList(value, encoding);
         }
 
-        public final void encode(IAmqpList value, Buffer encoded, int offset) throws AmqpEncodingError {
+        public final void encode(IAmqpList<AmqpType<?, ?>> value, Buffer encoded, int offset) throws AmqpEncodingError {
             ENCODER.encodeListList32(value, encoded, offset);
-        }
-
-        public final IAmqpList decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeListList32(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataCount(), encoded.getDataSize(), decoder);
         }
 
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeListList32(value, out);
         }
 
-        public final IAmqpList unmarshalData(DataInput in) throws IOException {
-            return ENCODER.readListList32(getDataCount(), getDataSize(), in, decoder);
+        public final IAmqpList<AmqpType<?, ?>> decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return decoder.decode(encoded.asCompound().constituents());
+        }
+
+        public final IAmqpList<AmqpType<?, ?>> unmarshalData(DataInput in) throws IOException {
+            return decoder.unmarshalType(getDataCount(), getDataSize(), in);
         }
     }
 
@@ -225,7 +226,7 @@ public class AmqpListMarshaller {
             super(encoded);
         }
 
-        public AmqpListArray8Encoded(IAmqpList value) throws AmqpEncodingError {
+        public AmqpListArray8Encoded(IAmqpList<AmqpType<?, ?>> value) throws AmqpEncodingError {
             super(LIST_ENCODING.ARRAY8.FORMAT_CODE, value);
         }
 
@@ -237,20 +238,20 @@ public class AmqpListMarshaller {
             return ENCODER.getEncodedCountOfList(value, encoding);
         }
 
-        public final void encode(IAmqpList value, Buffer encoded, int offset) throws AmqpEncodingError {
+        public final void encode(IAmqpList<AmqpType<?, ?>> value, Buffer encoded, int offset) throws AmqpEncodingError {
             ENCODER.encodeListArray8(value, encoded, offset);
-        }
-
-        public final IAmqpList decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeListArray8(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataCount(), encoded.getDataSize(), decoder);
         }
 
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeListArray8(value, out);
         }
 
-        public final IAmqpList unmarshalData(DataInput in) throws IOException {
-            return ENCODER.readListArray8(getDataCount(), getDataSize(), in, decoder);
+        public final IAmqpList<AmqpType<?, ?>> decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return decoder.decode(encoded.asCompound().constituents());
+        }
+
+        public final IAmqpList<AmqpType<?, ?>> unmarshalData(DataInput in) throws IOException {
+            return decoder.unmarshalType(getDataCount(), getDataSize(), in);
         }
     }
 
@@ -264,7 +265,7 @@ public class AmqpListMarshaller {
             super(encoded);
         }
 
-        public AmqpListArray32Encoded(IAmqpList value) throws AmqpEncodingError {
+        public AmqpListArray32Encoded(IAmqpList<AmqpType<?, ?>> value) throws AmqpEncodingError {
             super(LIST_ENCODING.ARRAY32.FORMAT_CODE, value);
         }
 
@@ -276,63 +277,63 @@ public class AmqpListMarshaller {
             return ENCODER.getEncodedCountOfList(value, encoding);
         }
 
-        public final void encode(IAmqpList value, Buffer encoded, int offset) throws AmqpEncodingError {
+        public final void encode(IAmqpList<AmqpType<?, ?>> value, Buffer encoded, int offset) throws AmqpEncodingError {
             ENCODER.encodeListArray32(value, encoded, offset);
-        }
-
-        public final IAmqpList decode(EncodedBuffer encoded) throws AmqpEncodingError {
-            return ENCODER.decodeListArray32(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataCount(), encoded.getDataSize(), decoder);
         }
 
         public final void marshalData(DataOutput out) throws IOException {
             ENCODER.writeListArray32(value, out);
         }
 
-        public final IAmqpList unmarshalData(DataInput in) throws IOException {
-            return ENCODER.readListArray32(getDataCount(), getDataSize(), in, decoder);
+        public final IAmqpList<AmqpType<?, ?>> decode(EncodedBuffer encoded) throws AmqpEncodingError {
+            return decoder.decode(encoded.asCompound().constituents());
+        }
+
+        public final IAmqpList<AmqpType<?, ?>> unmarshalData(DataInput in) throws IOException {
+            return decoder.unmarshalType(getDataCount(), getDataSize(), in);
         }
     }
 
 
     private static final LIST_ENCODING chooseEncoding(AmqpList val) throws AmqpEncodingError {
-        return Encoder.chooseListEncoding(val.getValue());
-    }
-
-    private static final LIST_ENCODING chooseEncoding(IAmqpList val) throws AmqpEncodingError {
         return Encoder.chooseListEncoding(val);
     }
 
-    static final Encoded<IAmqpList> encode(AmqpList data) throws AmqpEncodingError {
+    private static final LIST_ENCODING chooseEncoding(IAmqpList<AmqpType<?, ?>> val) throws AmqpEncodingError {
+        return Encoder.chooseListEncoding(val);
+    }
+
+    static final Encoded<IAmqpList<AmqpType<?, ?>>> encode(AmqpList data) throws AmqpEncodingError {
         if(data == null) {
             return NULL_ENCODED;
         }
-        return LIST_ENCODING.createEncoded(chooseEncoding(data).FORMAT_CODE, data.getValue());
+        return LIST_ENCODING.createEncoded(chooseEncoding(data).FORMAT_CODE, data);
     }
 
-    static final Encoded<IAmqpList> createEncoded(Buffer source, int offset) throws AmqpEncodingError {
+    static final Encoded<IAmqpList<AmqpType<?, ?>>> createEncoded(Buffer source, int offset) throws AmqpEncodingError {
         return createEncoded(FormatCategory.createBuffer(source, offset));
     }
 
-    static final Encoded<IAmqpList> createEncoded(IAmqpList val) throws AmqpEncodingError {
+    static final Encoded<IAmqpList<AmqpType<?, ?>>> createEncoded(IAmqpList<AmqpType<?, ?>> val) throws AmqpEncodingError {
         return LIST_ENCODING.createEncoded(chooseEncoding(val).FORMAT_CODE, val);
     }
 
-    static final Encoded<IAmqpList> createEncoded(DataInput in) throws IOException, AmqpEncodingError {
+    static final Encoded<IAmqpList<AmqpType<?, ?>>> createEncoded(DataInput in) throws IOException, AmqpEncodingError {
         return createEncoded(FormatCategory.createBuffer(in.readByte(), in));
     }
 
-    static final Encoded<IAmqpList> createEncoded(EncodedBuffer buffer) throws AmqpEncodingError {
+    static final Encoded<IAmqpList<AmqpType<?, ?>>> createEncoded(EncodedBuffer buffer) throws AmqpEncodingError {
         if(buffer.getEncodingFormatCode() == AmqpNullMarshaller.FORMAT_CODE) {
             return NULL_ENCODED;
         }
         return LIST_ENCODING.createEncoded(buffer);
     }
 
-    static final Encoded<IAmqpList> createEncoded(DataInput in, ListDecoder decoder) throws IOException, AmqpEncodingError {
+    static final Encoded<IAmqpList<AmqpType<?, ?>>> createEncoded(DataInput in, ListDecoder decoder) throws IOException, AmqpEncodingError {
         return createEncoded(FormatCategory.createBuffer(in.readByte(), in), decoder);
     }
 
-    static final Encoded<IAmqpList> createEncoded(EncodedBuffer buffer, ListDecoder decoder) throws AmqpEncodingError {
+    static final Encoded<IAmqpList<AmqpType<?, ?>>> createEncoded(EncodedBuffer buffer, ListDecoder decoder) throws AmqpEncodingError {
         if(buffer.getEncodingFormatCode() == AmqpNullMarshaller.FORMAT_CODE) {
             return NULL_ENCODED;
         }
