@@ -21,7 +21,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.activemq.amqp.generator.handcoded.marshaller.AmqpVersion;
@@ -35,7 +34,7 @@ import org.apache.activemq.amqp.generator.handcoded.marshaller.v1_0_0.AmqpMapMar
 import org.apache.activemq.amqp.generator.handcoded.BitUtils;
 import org.apache.activemq.amqp.generator.handcoded.types.AmqpType;
 import org.apache.activemq.amqp.generator.handcoded.types.IAmqpList;
-import org.apache.activemq.amqp.protocol.types.IAmqpMap;
+import org.apache.activemq.amqp.generator.handcoded.types.IAmqpMap;
 import org.apache.activemq.util.buffer.Buffer;
 
 public class Encoder extends BaseEncoder {
@@ -46,30 +45,61 @@ public class Encoder extends BaseEncoder {
     static final byte NULL_FORMAT_CODE = AmqpNullMarshaller.FORMAT_CODE;
     static final byte DESCRIBED_FORMAT_CODE = (byte) 0x00;
 
-    static final ListDecoder DEFAULT_LIST_DECODER = new ListDecoder() {
+    public static interface ListDecoder<E extends AmqpType<?, ?>> {
+        public IAmqpList<E> decode(EncodedBuffer[] constituents) throws AmqpEncodingError;
 
-        public final AmqpType<?, ?> unmarshalType(int pos, DataInput in) throws IOException, AmqpEncodingError {
-            return MARSHALLER.unmarshalType(in);
+        public IAmqpList<E> unmarshalType(int dataCount, int dataSize, DataInput in) throws IOException, AmqpEncodingError;
+    }
+
+    public static interface MapDecoder<K extends AmqpType<?, ?>, V extends AmqpType<?, ?>> {
+        public IAmqpMap<K, V> decode(EncodedBuffer[] constituents) throws AmqpEncodingError;
+
+        public IAmqpMap<K, V> unmarshalType(int dataCount, int dataSize, DataInput in) throws IOException, AmqpEncodingError;
+    }
+
+    static final ListDecoder<AmqpType<?, ?>> DEFAULT_LIST_DECODER = new ListDecoder<AmqpType<?, ?>>() {
+
+        public IAmqpList<AmqpType<?, ?>> decode(EncodedBuffer[] constituents) {
+            IAmqpList<AmqpType<?, ?>> rc = new IAmqpList.ArrayBackedList<AmqpType<?, ?>>(new AmqpType<?, ?>[constituents.length]);
+            for (int i = 0; i < constituents.length; i++) {
+                rc.set(i, MARSHALLER.decodeType(constituents[i]));
+            }
+            return rc;
         }
 
-        public final AmqpType<?, ?> decodeType(int pos, EncodedBuffer buffer) throws AmqpEncodingError {
-            return MARSHALLER.decodeType(buffer);
+        public final IAmqpList<AmqpType<?, ?>> unmarshalType(int dataCount, int dataSize, DataInput in) throws IOException, AmqpEncodingError {
+            IAmqpList<AmqpType<?, ?>> rc = new IAmqpList.ArrayBackedList<AmqpType<?, ?>>(new AmqpType<?, ?>[dataCount]);
+            for (int i = 0; i < dataCount; i++) {
+                rc.set(i, MARSHALLER.unmarshalType(in));
+            }
+            return rc;
         }
     };
 
-    static final MapDecoder<AmqpType<?,?>, AmqpType<?, ?>> DEFAULT_MAP_DECODER = new MapDecoder<AmqpType<?,?>, AmqpType<?, ?>>() {
+    static final MapDecoder<AmqpType<?, ?>, AmqpType<?, ?>> DEFAULT_MAP_DECODER = new MapDecoder<AmqpType<?, ?>, AmqpType<?, ?>>() {
 
-        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> createMap(int entryCount) {
-            return new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());
+        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> decode(EncodedBuffer[] constituents) {
+            IAmqpMap.AmqpWrapperMap<AmqpType<?, ?>, AmqpType<?, ?>> rc = new IAmqpMap.AmqpWrapperMap<AmqpType<?, ?>, AmqpType<?, ?>>(new HashMap<AmqpType<?, ?>, AmqpType<?, ?>>());
+            if (constituents.length % 2 != 0) {
+                throw new AmqpEncodingError("Invalid number of compound constituents: " + constituents.length);
+            }
+
+            for (int i = 0; i < constituents.length; i += 2) {
+                rc.put(MARSHALLER.decodeType(constituents[i]), MARSHALLER.decodeType(constituents[i + 1]));
+            }
+            return rc;
         }
 
-        public void decodeToMap(EncodedBuffer key, EncodedBuffer val, IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> map) throws AmqpEncodingError {
-            map.put(MARSHALLER.decodeType(key), MARSHALLER.decodeType(key));
-            
-        }
+        public IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> unmarshalType(int dataCount, int dataSize, DataInput in) throws IOException, AmqpEncodingError {
+            IAmqpMap.AmqpWrapperMap<AmqpType<?, ?>, AmqpType<?, ?>> rc = new IAmqpMap.AmqpWrapperMap<AmqpType<?, ?>, AmqpType<?, ?>>(new HashMap<AmqpType<?, ?>, AmqpType<?, ?>>());
+            if (dataCount % 2 != 0) {
+                throw new AmqpEncodingError("Invalid number of compound constituents: " + dataCount);
+            }
 
-        public void unmarshalToMap(DataInput in, IAmqpMap<AmqpType<?, ?>, AmqpType<?, ?>> map) throws IOException, AmqpEncodingError {
-            map.put(MARSHALLER.unmarshalType(in), MARSHALLER.unmarshalType(in));
+            for (int i = 0; i < dataCount; i += 2) {
+                rc.put(MARSHALLER.unmarshalType(in), MARSHALLER.unmarshalType(in));
+            }
+            return rc;
         }
     };
 
@@ -578,7 +608,7 @@ public class Encoder extends BaseEncoder {
             }
 
             Buffer rc = new Buffer(1 + category.WIDTH + dataSize);
-            System.arraycopy(source, offset, rc, 0, rc.length);
+            System.arraycopy(source.data, offset, rc.data, 0, rc.length);
             return rc;
         }
 
@@ -707,8 +737,9 @@ public class Encoder extends BaseEncoder {
                 EncodedBuffer[] cb = new EncodedBuffer[getDataCount()];
                 Buffer b = getBuffer();
                 int offset = getDataOffset();
-                for (int i = 0; i < constituents.length; i++) {
-                    constituents[i] = FormatCategory.createBuffer(b, offset);
+                for (int i = 0; i < cb.length; i++) {
+                    cb[i] = FormatCategory.createBuffer(b, offset);
+                    offset += cb[i].getEncodedSize();
                 }
                 this.constituents = cb;
             }
@@ -881,7 +912,7 @@ public class Encoder extends BaseEncoder {
         protected V value;
 
         // TODO make configurable.
-        //private boolean cacheEncoded = true;
+        // private boolean cacheEncoded = true;
 
         AbstractEncoded(EncodedBuffer encoded) {
             this.encoded = encoded;
@@ -1016,7 +1047,7 @@ public class Encoder extends BaseEncoder {
 
     static class NullEncoded<V> extends AbstractEncoded<V> {
 
-        private static FixedBuffer nb = new FixedBuffer(new Buffer(new byte [] {NULL_FORMAT_CODE}), 0);
+        private static FixedBuffer nb = new FixedBuffer(new Buffer(new byte[] { NULL_FORMAT_CODE }), 0);
 
         NullEncoded() {
             super(nb);
@@ -1104,20 +1135,6 @@ public class Encoder extends BaseEncoder {
         protected abstract Encoded<V> unmarshalDescribed(DataInput in) throws IOException, AmqpEncodingError;
     }
 
-    public static interface ListDecoder {
-        AmqpType<?, ?> decodeType(int pos, EncodedBuffer buffer) throws AmqpEncodingError;
-
-        AmqpType<?, ?> unmarshalType(int pos, DataInput in) throws IOException, AmqpEncodingError;
-    }
-
-    public static interface MapDecoder<K extends AmqpType<?, ?>, V extends AmqpType<?, ?>> {
-        void decodeToMap(EncodedBuffer key, EncodedBuffer val, IAmqpMap<K, V> map) throws AmqpEncodingError;
-
-        public void unmarshalToMap(DataInput in, IAmqpMap<K, V> map) throws IOException, AmqpEncodingError;
-
-        IAmqpMap<K, V> createMap(int entryCount);
-    }
-
     // ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Encoding Helpers:
     // ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1187,37 +1204,12 @@ public class Encoder extends BaseEncoder {
     // ///////////////////////////////////////////////////////////////////////////////////////////////////
     // LIST ENCODINGS
     // ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-    private static class ArrayBackedList implements IAmqpList {
-        AmqpType<?, ?>[] list;
-
-        ArrayBackedList(int size) {
-            list = new AmqpType<?, ?>[size];
-        }
-
-        public AmqpType<?, ?> get(int index) {
-            return list[index];
-        }
-
-        public int getListCount() {
-            return list.length;
-        }
-
-        public void set(int index, AmqpType<?, ?> value) {
-            list[index] = value;
-        }
-
-        public Iterator<AmqpType<?, ?>> iterator() {
-            return new AmqpListIterator(this);
-        }
-    }
-    
-    public static final AmqpListMarshaller.LIST_ENCODING chooseListEncoding(IAmqpList val) throws AmqpEncodingError {
+    public static final <E extends AmqpType<?, ?>> AmqpListMarshaller.LIST_ENCODING chooseListEncoding(IAmqpList<E> val) throws AmqpEncodingError {
         if (val.getListCount() > 255) {
             return AmqpListMarshaller.LIST_ENCODING.LIST32;
         }
         int size = 1;
-        for (AmqpType<?, ?> le : val) {
+        for (E le : val) {
             if (le == null) {
                 size += 1;
             } else {
@@ -1230,7 +1222,7 @@ public class Encoder extends BaseEncoder {
         return AmqpListMarshaller.LIST_ENCODING.LIST8;
     }
 
-    public final int getEncodedSizeOfList(IAmqpList val, LIST_ENCODING encoding) throws AmqpEncodingError {
+    public final <E extends AmqpType<?, ?>> int getEncodedSizeOfList(IAmqpList<E> val, LIST_ENCODING encoding) throws AmqpEncodingError {
         int size = 0;
         switch (encoding) {
         // TODO for arrays we need to choose an encoding that is compatible for
@@ -1242,7 +1234,7 @@ public class Encoder extends BaseEncoder {
         }
         case LIST32:
         case LIST8: {
-            for (AmqpType<?, ?> le : val) {
+            for (E le : val) {
                 if (le == null) {
                     size += 1;
                 } else {
@@ -1257,107 +1249,57 @@ public class Encoder extends BaseEncoder {
         }
     }
 
-    public final int getEncodedCountOfList(IAmqpList val, LIST_ENCODING listENCODING) throws AmqpEncodingError {
+    public final <E extends AmqpType<?, ?>> int getEncodedCountOfList(IAmqpList<E> val, LIST_ENCODING listENCODING) throws AmqpEncodingError {
         return val.getListCount();
     }
 
     // List 8 encoding
-    public void encodeListList8(IAmqpList value, Buffer encoded, int offset) throws AmqpEncodingError {
+    public <E extends AmqpType<?, ?>> void encodeListList8(IAmqpList<E> value, Buffer encoded, int offset) throws AmqpEncodingError {
         encodeList(value, encoded, offset);
     }
 
-    public IAmqpList decodeListList8(Buffer encoded, int offset, int count, int size, ListDecoder decoder) throws AmqpEncodingError {
-        return decodeList(encoded, offset, count, size, decoder);
-    }
-
-    public void writeListList8(IAmqpList val, DataOutput out) throws IOException, AmqpEncodingError {
+    public <E extends AmqpType<?, ?>> void writeListList8(IAmqpList<E> val, DataOutput out) throws IOException, AmqpEncodingError {
         writeList(val, out);
-    }
-
-    public IAmqpList readListList8(int count, int size, DataInput in, ListDecoder decoder) throws IOException, AmqpEncodingError {
-        return readList(count, size, in, decoder);
     }
 
     // List 32 encoding:
-    public void encodeListList32(IAmqpList value, Buffer encoded, int offset) throws AmqpEncodingError {
+    public <E extends AmqpType<?, ?>> void encodeListList32(IAmqpList<E> value, Buffer encoded, int offset) throws AmqpEncodingError {
         encodeList(value, encoded, offset);
     }
 
-    public IAmqpList decodeListList32(Buffer encoded, int offset, int count, int size, ListDecoder decoder) throws AmqpEncodingError {
-        return decodeList(encoded, offset, count, size, decoder);
-    }
-
-    public void writeListList32(IAmqpList val, DataOutput out) throws IOException, AmqpEncodingError {
+    public <E extends AmqpType<?, ?>> void writeListList32(IAmqpList<E> val, DataOutput out) throws IOException, AmqpEncodingError {
         writeList(val, out);
-    }
-
-    public IAmqpList readListList32(int count, int size, DataInput in, ListDecoder decoder) throws IOException, AmqpEncodingError {
-        return readList(count, size, in, decoder);
     }
 
     // Array 8 encoding
-    public void encodeListArray8(IAmqpList value, Buffer encoded, int offset) throws AmqpEncodingError {
+    public <E extends AmqpType<?, ?>> void encodeListArray8(IAmqpList<E> value, Buffer encoded, int offset) throws AmqpEncodingError {
         encodeArray(value, encoded, offset);
     }
 
-    public IAmqpList decodeListArray8(Buffer encoded, int offset, int count, int size, ListDecoder decoder) throws AmqpEncodingError {
-        return decodeArray(encoded, offset, count, size, decoder);
-    }
-
-    public void writeListArray8(IAmqpList val, DataOutput out) throws IOException, AmqpEncodingError {
+    public <E extends AmqpType<?, ?>> void writeListArray8(IAmqpList<E> val, DataOutput out) throws IOException, AmqpEncodingError {
         writeArray(val, out);
-    }
-
-    public IAmqpList readListArray8(int count, int size, DataInput in, ListDecoder decoder) throws IOException, AmqpEncodingError {
-        return readArray(count, size, in, decoder);
     }
 
     // List 32 encoding:
-    public void encodeListArray32(IAmqpList value, Buffer encoded, int offset) throws AmqpEncodingError {
+    public <E extends AmqpType<?, ?>> void encodeListArray32(IAmqpList<E> value, Buffer encoded, int offset) throws AmqpEncodingError {
         encodeArray(value, encoded, offset);
     }
 
-    public IAmqpList decodeListArray32(Buffer encoded, int offset, int count, int size, ListDecoder decoder) throws AmqpEncodingError {
-        return decodeArray(encoded, offset, count, size, decoder);
-    }
-
-    public void writeListArray32(IAmqpList val, DataOutput out) throws IOException, AmqpEncodingError {
+    public <E extends AmqpType<?, ?>> void writeListArray32(IAmqpList<E> val, DataOutput out) throws IOException, AmqpEncodingError {
         writeArray(val, out);
     }
 
-    public IAmqpList readListArray32(int count, int size, DataInput in, ListDecoder decoder) throws IOException, AmqpEncodingError {
-        return readArray(count, size, in, decoder);
-    }
-
     // Generic versions:
-    public static final void encodeList(IAmqpList value, Buffer target, int offset) throws AmqpEncodingError {
-        for (AmqpType<?, ?> le : value) {
+    public static final <E extends AmqpType<?, ?>> void encodeList(IAmqpList<E> value, Buffer target, int offset) throws AmqpEncodingError {
+        for (E le : value) {
             Encoded<?> encoded = le.getBuffer(MARSHALLER).getEncoded();
             encoded.encode(target, offset);
             offset = encoded.getDataSize();
         }
     }
 
-    public static final IAmqpList decodeList(Buffer source, int offset, int count, int size, ListDecoder decoder) throws AmqpEncodingError {
-        IAmqpList rc = new ArrayBackedList(count);
-        for (int i = 0; i < count; i++) {
-            EncodedBuffer encoded = FormatCategory.createBuffer(source, offset);
-            offset += encoded.getEncodedSize();
-            rc.set(i, decoder.decodeType(i, encoded));
-        }
-        return rc;
-    }
-
-    public static final IAmqpList readList(int count, int size, DataInput in, ListDecoder decoder) throws IOException, AmqpEncodingError {
-        IAmqpList rc = new ArrayBackedList(count);
-        for (int i = 0; i < count; i++) {
-            rc.set(i, decoder.unmarshalType(i, in));
-        }
-        return rc;
-    }
-
-    public static final void writeList(IAmqpList val, DataOutput out) throws IOException, AmqpEncodingError {
-        for (AmqpType<?, ?> le : val) {
+    public static final <E extends AmqpType<?, ?>> void writeList(IAmqpList<E> val, DataOutput out) throws IOException, AmqpEncodingError {
+        for (E le : val) {
             if (le == null) {
                 out.writeByte(NULL_FORMAT_CODE);
             } else {
@@ -1366,7 +1308,7 @@ public class Encoder extends BaseEncoder {
         }
     }
 
-    public static final void encodeArray(IAmqpList value, Buffer target, int offset) throws AmqpEncodingError {
+    public static final <E extends AmqpType<?, ?>> void encodeArray(IAmqpList<E> value, Buffer target, int offset) throws AmqpEncodingError {
         Encoded<?> first = value.get(0).getBuffer(MARSHALLER).getEncoded();
         first.encode(target, offset);
         offset += first.getEncodedSize();
@@ -1379,17 +1321,17 @@ public class Encoder extends BaseEncoder {
         // }
     }
 
-    public static final IAmqpList decodeArray(Buffer encoded, int offset, int count, int size, ListDecoder decoder) {
+    public static final <E extends AmqpType<?, ?>> IAmqpList<E> decodeArray(Buffer encoded, int offset, int count, int size, ListDecoder<E> decoder) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static final IAmqpList readArray(int count, int size, DataInput dis, ListDecoder decoder) throws IOException, AmqpEncodingError {
+    public static final <E extends AmqpType<?, ?>> IAmqpList<E> readArray(int count, int size, DataInput dis, ListDecoder<E> decoder) throws IOException, AmqpEncodingError {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static final void writeArray(IAmqpList val, DataOutput out) throws IOException, AmqpEncodingError {
+    public static final <E extends AmqpType<?, ?>> void writeArray(IAmqpList<E> val, DataOutput out) throws IOException, AmqpEncodingError {
         Encoded<?> first = val.get(0).getBuffer(MARSHALLER).getEncoded();
         first.marshal(out);
         for (int i = 1; i < val.getListCount(); i++) {
@@ -1401,8 +1343,8 @@ public class Encoder extends BaseEncoder {
     // Map ENCODINGS
     // ///////////////////////////////////////////////////////////////////////////////////////////////////
     public static final AmqpMapMarshaller.MAP_ENCODING chooseMapEncoding(IAmqpMap<?, ?> map) throws AmqpEncodingError {
-        for (Map.Entry<? extends AmqpType<?,?>, ? extends AmqpType<?,?>> me : map) {
-            
+        for (Map.Entry<? extends AmqpType<?, ?>, ? extends AmqpType<?, ?>> me : map) {
+
             int size = me.getKey().getBuffer(MARSHALLER).getEncoded().getEncodedSize() + me.getValue().getBuffer(MARSHALLER).getEncoded().getEncodedSize();
             if (size > 255) {
                 return AmqpMapMarshaller.MAP_ENCODING.MAP32;
@@ -1413,7 +1355,7 @@ public class Encoder extends BaseEncoder {
 
     public final int getEncodedSizeOfMap(IAmqpMap<?, ?> map, MAP_ENCODING encoding) throws AmqpEncodingError {
         int size = 0;
-        for (Map.Entry<? extends AmqpType<?,?>, ? extends AmqpType<?,?>> me : map) {
+        for (Map.Entry<? extends AmqpType<?, ?>, ? extends AmqpType<?, ?>> me : map) {
             size += me.getKey().getBuffer(MARSHALLER).getEncoded().getEncodedSize() + me.getValue().getBuffer(MARSHALLER).getEncoded().getEncodedSize();
         }
         return size;
@@ -1427,25 +1369,12 @@ public class Encoder extends BaseEncoder {
         encodeMap(value, target, offset);
     }
 
-    public final <K extends AmqpType<?,?>, V extends AmqpType<?,?>> IAmqpMap<K, V> decodeMapMap32(Buffer source, int offset, int count, int size, MapDecoder<K, V> decoder) throws AmqpEncodingError {
-        return decodeMap(source, offset, count, size, decoder);
-    }
-
     public final void writeMapMap32(IAmqpMap<?, ?> val, DataOutput out) throws AmqpEncodingError, IOException {
         writeMap(val, out);
-
-    }
-
-    public final <K extends AmqpType<?,?>, V extends AmqpType<?,?>> IAmqpMap<K, V> readMapMap32(int count, int size, DataInput in, MapDecoder<K, V> decoder) throws AmqpEncodingError, IOException {
-        return readMap(count, size, in, decoder);
     }
 
     public final void encodeMapMap8(IAmqpMap<?, ?> value, Buffer target, int offset) throws AmqpEncodingError {
         encodeMap(value, target, offset);
-    }
-
-    public final <K extends AmqpType<?,?>, V extends AmqpType<?,?>> IAmqpMap<K, V> decodeMapMap8(Buffer source, int offset, int count, int size, MapDecoder<K, V> decoder) throws AmqpEncodingError {
-        return decodeMap(source, offset, count, size, decoder);
     }
 
     public final void writeMapMap8(IAmqpMap<?, ?> val, DataOutput out) throws AmqpEncodingError, IOException {
@@ -1453,33 +1382,8 @@ public class Encoder extends BaseEncoder {
 
     }
 
-    public final <K extends AmqpType<?,?>, V extends AmqpType<?,?>> IAmqpMap<K, V> readMapMap8(int count, int size, DataInput in, MapDecoder<K, V> decoder) throws AmqpEncodingError, IOException {
-        return readMap(count, size, in, decoder);
-    }
-
-    public static final <K extends AmqpType<?,?>, V extends AmqpType<?,?>> IAmqpMap<K, V> decodeMap(Buffer source, int offset, int count, int size, MapDecoder<K, V> decoder) throws AmqpEncodingError {
-        IAmqpMap<K, V> rc = decoder.createMap(count / 2);
-        for (int i = 0; i < count; i += 2) {
-            EncodedBuffer encodedKey = FormatCategory.createBuffer(source, offset);
-            offset += encodedKey.getEncodedSize();
-            EncodedBuffer encodedVal = FormatCategory.createBuffer(source, offset);
-            offset += encodedVal.getEncodedSize();
-            decoder.decodeToMap(encodedKey, encodedVal, rc);
-        }
-        return rc;
-    }
-    
-
-    public static final <K extends AmqpType<?,?>, V extends AmqpType<?,?>> IAmqpMap<K, V> readMap(int count, int size, DataInput in, MapDecoder<K, V> decoder) throws IOException, AmqpEncodingError {
-        IAmqpMap<K, V> rc = decoder.createMap(count / 2);
-        for (int i = 0; i < count; i += 2) {
-            decoder.unmarshalToMap(in, rc);
-        }
-        return rc;
-    }
-
     public static final void encodeMap(IAmqpMap<?, ?> value, Buffer target, int offset) throws AmqpEncodingError {
-        for (Map.Entry<? extends AmqpType<?,?>, ? extends AmqpType<?,?>> me : value) {
+        for (Map.Entry<? extends AmqpType<?, ?>, ? extends AmqpType<?, ?>> me : value) {
             Encoded<?> eKey = me.getKey().getBuffer(MARSHALLER).getEncoded();
             eKey.encode(target, offset);
             offset += eKey.getEncodedSize();
@@ -1491,7 +1395,7 @@ public class Encoder extends BaseEncoder {
     }
 
     public static final void writeMap(IAmqpMap<?, ?> val, DataOutput out) throws IOException, AmqpEncodingError {
-        for (Map.Entry<? extends AmqpType<?,?>, ? extends AmqpType<?,?>> me : val) {
+        for (Map.Entry<? extends AmqpType<?, ?>, ? extends AmqpType<?, ?>> me : val) {
             me.getKey().marshal(out, MARSHALLER);
             me.getValue().marshal(out, MARSHALLER);
         }

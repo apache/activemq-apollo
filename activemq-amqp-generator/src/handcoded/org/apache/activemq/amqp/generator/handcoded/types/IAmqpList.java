@@ -19,22 +19,19 @@ package org.apache.activemq.amqp.generator.handcoded.types;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.activemq.amqp.protocol.types.AmqpType;
-import org.apache.activemq.amqp.protocol.types.IAmqpList;
+public interface IAmqpList<E extends AmqpType<?, ?>> extends Iterable<E> {
 
-public interface IAmqpList extends Iterable<AmqpType<?, ?>> {
+    public E get(int index);
 
-    public AmqpType<?, ?> get(int index);
-
-    public void set(int index, AmqpType<?, ?> value);
+    public void set(int index, E value);
 
     public int getListCount();
 
-    public static class AmqpListIterator implements Iterator<AmqpType<?, ?>> {
+    public static class AmqpListIterator<E extends AmqpType<?, ?>> implements Iterator<E> {
         int next = 0;
-        final IAmqpList list;
+        final IAmqpList<E> list;
 
-        public AmqpListIterator(IAmqpList list) {
+        public AmqpListIterator(IAmqpList<E> list) {
             this.list = list;
         }
 
@@ -42,7 +39,7 @@ public interface IAmqpList extends Iterable<AmqpType<?, ?>> {
             return next < list.getListCount();
         }
 
-        public AmqpType<?, ?> next() {
+        public E next() {
             return list.get(next++);
         }
 
@@ -51,16 +48,16 @@ public interface IAmqpList extends Iterable<AmqpType<?, ?>> {
         }
     }
 
-    public static abstract class AbstractAmqpList implements IAmqpList {
-        public static final int hashCodeFor(IAmqpList l) {
+    public static abstract class AbstractAmqpList<E extends AmqpType<?, ?>> implements IAmqpList<E> {
+        public static final int hashCodeFor(IAmqpList<?> l) {
             int hashCode = 1;
             for (Object obj : l) {
                 hashCode = 31 * hashCode + (obj == null ? 0 : obj.hashCode());
             }
             return hashCode;
         }
-        
-        public static final boolean checkEqual(IAmqpList l1, IAmqpList l2) {
+
+        public static final boolean checkEqual(IAmqpList<?> l1, IAmqpList<?> l2) {
             if (l1 == null ^ l2 == null) {
                 return false;
             }
@@ -86,14 +83,14 @@ public interface IAmqpList extends Iterable<AmqpType<?, ?>> {
         }
     }
 
-    public static class AmqpWrapperList extends AbstractAmqpList {
-        private final List<AmqpType<?, ?>> list;
+    public static class AmqpWrapperList<E extends AmqpType<?, ?>> extends AbstractAmqpList<E> {
+        private final List<E> list;
 
-        public AmqpWrapperList(List<AmqpType<?, ?>> list) {
+        public AmqpWrapperList(List<E> list) {
             this.list = list;
         }
 
-        public AmqpType<?, ?> get(int index) {
+        public E get(int index) {
             return list.get(index);
         }
 
@@ -101,11 +98,11 @@ public interface IAmqpList extends Iterable<AmqpType<?, ?>> {
             return list.size();
         }
 
-        public void set(int index, AmqpType<?, ?> value) {
+        public void set(int index, E value) {
             list.set(index, value);
         }
 
-        public Iterator<AmqpType<?, ?>> iterator() {
+        public Iterator<E> iterator() {
             return list.iterator();
         }
 
@@ -114,13 +111,13 @@ public interface IAmqpList extends Iterable<AmqpType<?, ?>> {
                 return false;
             }
 
-            if (o instanceof IAmqpList) {
-                return equals((IAmqpList) o);
+            if (o instanceof IAmqpList<?>) {
+                return equals((IAmqpList<?>) o);
             }
             return false;
         }
 
-        public boolean equals(IAmqpList l) {
+        public boolean equals(IAmqpList<?> l) {
             return checkEqual(this, l);
         }
 
@@ -129,14 +126,14 @@ public interface IAmqpList extends Iterable<AmqpType<?, ?>> {
         }
     }
 
-    public static class ArrayBackedList extends AbstractAmqpList {
-        AmqpType<?, ?>[] list;
+    public static class ArrayBackedList<E extends AmqpType<?, ?>> extends AbstractAmqpList<E> {
+        E[] list;
 
-        ArrayBackedList(int size) {
-            list = new AmqpType<?, ?>[size];
+        public ArrayBackedList(E[] list) {
+            this.list = list;
         }
 
-        public AmqpType<?, ?> get(int index) {
+        public E get(int index) {
             return list[index];
         }
 
@@ -144,12 +141,12 @@ public interface IAmqpList extends Iterable<AmqpType<?, ?>> {
             return list.length;
         }
 
-        public void set(int index, AmqpType<?, ?> value) {
+        public void set(int index, E value) {
             list[index] = value;
         }
 
-        public Iterator<AmqpType<?, ?>> iterator() {
-            return new AmqpListIterator(this);
+        public Iterator<E> iterator() {
+            return new AmqpListIterator<E>(this);
         }
 
         public boolean equals(Object o) {
@@ -157,13 +154,13 @@ public interface IAmqpList extends Iterable<AmqpType<?, ?>> {
                 return false;
             }
 
-            if (o instanceof IAmqpList) {
-                return equals((IAmqpList) o);
+            if (o instanceof IAmqpList<?>) {
+                return equals((IAmqpList<?>) o);
             }
             return false;
         }
 
-        public boolean equals(IAmqpList l) {
+        public boolean equals(IAmqpList<?> l) {
             return checkEqual(this, l);
         }
 

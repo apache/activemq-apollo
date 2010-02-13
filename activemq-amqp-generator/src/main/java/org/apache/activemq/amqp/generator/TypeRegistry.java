@@ -8,30 +8,6 @@ public class TypeRegistry {
     private static final HashMap<String, JavaTypeMapping> JAVA_TYPE_MAP = new HashMap<String, JavaTypeMapping>();
     private static final HashMap<String, AmqpClass> GENERATED_TYPE_MAP = new HashMap<String, AmqpClass>();
 
-    static {
-        JAVA_TYPE_MAP.put("boolean", new JavaTypeMapping("boolean", "java.lang.Boolean"));
-        JAVA_TYPE_MAP.put("ubyte", new JavaTypeMapping("ubyte", "java.lang.Short"));
-        JAVA_TYPE_MAP.put("ushort", new JavaTypeMapping("ushort", "java.lang.Integer"));
-        JAVA_TYPE_MAP.put("uint", new JavaTypeMapping("uint", "java.lang.Long"));
-        JAVA_TYPE_MAP.put("ulong", new JavaTypeMapping("ulong", "java.math.BigInteger"));
-        JAVA_TYPE_MAP.put("byte", new JavaTypeMapping("byte", "java.lang.Byte"));
-        JAVA_TYPE_MAP.put("short", new JavaTypeMapping("short", "java.lang.Short"));
-        JAVA_TYPE_MAP.put("int", new JavaTypeMapping("int", "java.lang.Integer"));
-        JAVA_TYPE_MAP.put("long", new JavaTypeMapping("long", "java.lang.Long"));
-        JAVA_TYPE_MAP.put("float", new JavaTypeMapping("float", "java.lang.Float"));
-        JAVA_TYPE_MAP.put("double", new JavaTypeMapping("double", "java.lang.Double"));
-        JAVA_TYPE_MAP.put("char", new JavaTypeMapping("char", "java.lang.Integer"));
-        JAVA_TYPE_MAP.put("timestamp", new JavaTypeMapping("timestamp", "java.util.Date"));
-        JAVA_TYPE_MAP.put("uuid", new JavaTypeMapping("uuid", "java.util.UUID"));
-        JAVA_TYPE_MAP.put("binary", new JavaTypeMapping("binary", "org.apache.activemq.util.buffer.Buffer"));
-        JAVA_TYPE_MAP.put("string", new JavaTypeMapping("string", "java.lang.String"));
-        JAVA_TYPE_MAP.put("symbol", new JavaTypeMapping("symbol", "java.lang.String"));
-        JAVA_TYPE_MAP.put("list", new JavaTypeMapping("list", "java.util.List", false, "<AmqpType<?,?>>"));
-        JAVA_TYPE_MAP.put("map", new JavaTypeMapping("map", "java.util.HashMap", false, "<AmqpType<?,?>, AmqpType<?,?>>"));
-        JAVA_TYPE_MAP.put("null", new JavaTypeMapping("null", "java.lang.Object"));
-
-    }
-
     static final void init(Generator generator) {
 
         // Add in the wildcard type:
@@ -57,7 +33,7 @@ public class TypeRegistry {
         JAVA_TYPE_MAP.put("binary", new JavaTypeMapping("binary", "org.apache.activemq.util.buffer.Buffer"));
         JAVA_TYPE_MAP.put("string", new JavaTypeMapping("string", "java.lang.String"));
         JAVA_TYPE_MAP.put("symbol", new JavaTypeMapping("symbol", "java.lang.String"));
-        JAVA_TYPE_MAP.put("list", new JavaTypeMapping("list", generator.getPackagePrefix() + ".types.IAmqpList"));
+        JAVA_TYPE_MAP.put("list", new JavaTypeMapping("list", generator.getPackagePrefix() + ".types.IAmqpList", false, "<" + any.getJavaType() + ">"));
         JAVA_TYPE_MAP.put("map", new JavaTypeMapping("map", generator.getPackagePrefix() + ".types.IAmqpMap", false, "<" + any.getJavaType() + ", " + any.getJavaType() + ">"));
         JAVA_TYPE_MAP.put("null", new JavaTypeMapping("null", "java.lang.Object"));
 
@@ -143,10 +119,7 @@ public class TypeRegistry {
         JavaTypeMapping(String amqpType, String fullName, boolean array, String generic) {
             this(amqpType, fullName);
             this.array = array;
-            this.generic = generic;
-            if (generic != null) {
-                javaType = javaType + generic;
-            }
+            setGeneric(generic);
             if (array) {
                 javaType = javaType + " []";
             }
@@ -199,6 +172,10 @@ public class TypeRegistry {
             this.amqpType = amqpType;
         }
 
+        public String getClassName() {
+            return shortName;
+        }
+
         public String getShortName() {
             return shortName;
         }
@@ -227,6 +204,28 @@ public class TypeRegistry {
             return javaType;
         }
 
+        private String parameratize(String str, String... generics) {
+            if (generic != null) {
+                if (generics != null && generics.length > 0) {
+                    boolean first = true;
+                    for (String g : generics) {
+                        if (!first) {
+                            str += ", " + g;
+                        } else {
+                            first = false;
+                            str += "<" + g;
+                        }
+                    }
+                    return str + ">";
+
+                } else {
+                    return javaType + generic;
+                }
+
+            }
+            return str;
+        }
+
         public void setJavaType(String javaType) {
             this.javaType = javaType;
         }
@@ -245,6 +244,7 @@ public class TypeRegistry {
 
         public void setGeneric(String generic) {
             this.generic = generic;
+            javaType = shortName + generic;
         }
 
         public String getFullVersionMarshallerName(Generator generator) {
@@ -256,7 +256,7 @@ public class TypeRegistry {
         }
 
         public String toString() {
-            return javaType;
+            return getJavaType();
         }
     }
 

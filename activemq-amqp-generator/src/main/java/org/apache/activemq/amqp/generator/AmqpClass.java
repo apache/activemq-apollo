@@ -54,6 +54,10 @@ public class AmqpClass {
     // Java mapping of the buffer for this type (if any)
     protected TypeRegistry.JavaTypeMapping bufferMapping;
 
+    protected String mapKeyType = "AmqpType<?,?>";
+    protected String mapValueType = "AmqpType<?,?>";
+    protected String listElementType = "AmqpType<?,?>";
+
     public TypeRegistry.JavaTypeMapping versionMarshaller;
 
     public void parseFromType(Generator generator, Amqp source, Section section, Type type) throws UnknownTypeException {
@@ -122,7 +126,6 @@ public class AmqpClass {
         if (handcoded) {
             return;
         }
-        String className = getJavaType();
 
         File file = new File(generator.getOutputDirectory() + File.separator + new String(typeMapping.getFullName()).replace(".", File.separator) + ".java");
         file.getParentFile().mkdirs();
@@ -146,22 +149,18 @@ public class AmqpClass {
 
         // We use enums for restricted types with a choice:
         if (isEnumType()) {
-            writer.write("public enum " + className);
+            writer.write("public enum " + typeMapping);
         } else if (isMarshallable()) {
 
             if (isRestricted()) {
-                writer.write("public interface " + className + " extends " + resolveRestrictedType().getTypeMapping());
+                writer.write("public interface " + typeMapping + " extends " + resolveRestrictedType().getTypeMapping());
             } else if (isDescribed()) {
-                writer.write("public interface " + className + " extends " + descriptor.resolveDescribedType().getTypeMapping());
+                writer.write("public interface " + typeMapping + " extends " + descriptor.resolveDescribedType().getTypeMapping());
             } else {
-                writer.write("public interface " + className + " extends AmqpType<" + beanMapping + ", " + bufferMapping + ">");
+                writer.write("public interface " + typeMapping + " extends AmqpType<" + beanMapping + ", " + bufferMapping + ">");
             }
-
-            if (isList()) {
-                writer.write(", " + valueMapping.getJavaType());
-            }
-
-            if (isMap()) {
+            
+            if (isList() || isMap()) {
                 writer.write(", " + valueMapping.getJavaType());
             }
 
@@ -222,8 +221,8 @@ public class AmqpClass {
             // Add the marshalled type:
             filterOrAddImport(imports, typeMapping, marshaller);
 
-            if (isMap()) {
-                filterOrAddImport(imports, TypeRegistry.resolveAmqpClass("*").getTypeMapping(), marshaller);
+            if (isMap() || isList()) {
+                filterOrAddImport(imports, TypeRegistry.any().getTypeMapping(), marshaller);
             }
 
             imports.add("java.io.DataInput");
@@ -447,66 +446,98 @@ public class AmqpClass {
 
             if (describedType.isList()) {
                 writer.newLine();
-                writer.write(tab(1) + "private static final ListDecoder DECODER = new ListDecoder() {");
+                writer.write(tab(1) + "private static final ListDecoder<" + TypeRegistry.any().typeMapping + "> DECODER = new ListDecoder<" + TypeRegistry.any().typeMapping + ">() {");
                 writer.newLine();
-                writer.write(tab(2) + "public final " + TypeRegistry.any().typeMapping + " unmarshalType(int pos, DataInput in) throws IOException {");
+                writer
+                        .write(tab(2) + "public final IAmqpList<" + TypeRegistry.any().typeMapping
+                                + "> unmarshalType(int dataCount, int dataSize, DataInput in) throws AmqpEncodingError, IOException {");
                 writer.newLine();
-                writer.write(tab(3) + "switch(pos) {");
+                writer.write(tab(3) + "if (dataCount > " + fields.size() + ") {");
                 writer.newLine();
+                writer.write(tab(4) + "throw new AmqpEncodingError(\"Too many fields for \" + SYMBOLIC_ID + \": \" + dataCount);");
+                writer.newLine();
+                writer.write(tab(3) + "}");
+
+                writer.newLine();
+                writer.write(tab(3) + "IAmqpList<" + TypeRegistry.any().typeMapping + "> rc = new IAmqpList.ArrayBackedList<" + TypeRegistry.any().typeMapping + ">(new "
+                        + TypeRegistry.any().typeMapping + "[" + fields.size() + "]);");
                 int f = 0;
                 for (AmqpField field : fields.values()) {
                     AmqpClass fieldType = field.resolveAmqpFieldType();
-
-                    writer.write(tab(3) + "case " + f++ + ": {");
+                    writer.newLine();
+                    writer.write(tab(3) + "//" + field.getName() + ":");
+                    writer.newLine();
+                    writer.write(tab(3) + "if(dataCount > 0) {");
                     writer.newLine();
                     if (fieldType.isAny()) {
-                        writer.write(tab(4) + "return AmqpMarshaller.SINGLETON.unmarshalType(in);");
+                        writer.write(tab(4) + "rc.set(" + f + ", AmqpMarshaller.SINGLETON.unmarshalType(in));");
                     } else {
-                        writer.write(tab(4) + "return " + fieldType.getBufferMapping() + ".create(" + fieldType.getMarshaller() + ".createEncoded(in));");
+                        writer.write(tab(4) + "rc.set(" + f + ", " + fieldType.getBufferMapping() + ".create(" + fieldType.getMarshaller() + ".createEncoded(in)));");
                     }
+                    writer.newLine();
+                    writer.write(tab(4) + "dataCount--;");
                     writer.newLine();
                     writer.write(tab(3) + "}");
                     writer.newLine();
+                    if (field.isRequired()) {
+                        writer.write(tab(3) + "else {");
+                        writer.newLine();
+                        writer.write(tab(4) + "throw new AmqpEncodingError(\"Missing required field for \" + SYMBOLIC_ID + \": " + field.getName() + "\");");
+                        writer.newLine();
+                        writer.write(tab(3) + "}");
+                        writer.newLine();
+                    }
+                    f++;
                 }
-                writer.write(tab(3) + "default: {");
-                writer.newLine();
-                writer.write(tab(4) + "return AmqpMarshaller.SINGLETON.unmarshalType(in);");
-                writer.newLine();
-                writer.write(tab(3) + "}");
-                writer.newLine();
-                writer.write(tab(3) + "}");
+
+                writer.write(tab(3) + "return rc;");
                 writer.newLine();
                 writer.write(tab(2) + "}");
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(2) + "public final " + TypeRegistry.any().typeMapping + " decodeType(int pos, EncodedBuffer buffer) throws AmqpEncodingError {");
+                writer.write(tab(2) + "public IAmqpList<" + TypeRegistry.any().typeMapping + "> decode(EncodedBuffer[] constituents) {");
                 writer.newLine();
-                writer.write(tab(3) + "switch(pos) {");
+                writer.write(tab(3) + "if (constituents.length > " + fields.size() + ") {");
                 writer.newLine();
+                writer.write(tab(4) + "throw new AmqpEncodingError(\"Too many fields for \" + SYMBOLIC_ID + \":\" + constituents.length);");
+                writer.newLine();
+                writer.write(tab(3) + "}");
 
+                writer.newLine();
+                writer.write(tab(3) + "int dataCount = constituents.length;");
+                writer.newLine();
+                writer.write(tab(3) + "IAmqpList<" + TypeRegistry.any().typeMapping + "> rc = new IAmqpList.ArrayBackedList<" + TypeRegistry.any().typeMapping + ">(new "
+                        + TypeRegistry.any().typeMapping + "[" + fields.size() + "]);");
                 f = 0;
                 for (AmqpField field : fields.values()) {
                     AmqpClass fieldType = field.resolveAmqpFieldType();
-
-                    writer.write(tab(3) + "case " + f++ + ": {");
+                    writer.newLine();
+                    writer.write(tab(3) + "//" + field.getName() + ":");
+                    writer.newLine();
+                    writer.write(tab(3) + "if(dataCount > 0) {");
                     writer.newLine();
                     if (fieldType.isAny()) {
-                        writer.write(tab(4) + "return " + fieldType.getMarshaller() + ".decodeType(buffer);");
+                        writer.write(tab(4) + "rc.set(" + f + ", AmqpMarshaller.SINGLETON.decodeType(constituents[" + f + "]));");
                     } else {
-                        writer.write(tab(4) + "return " + fieldType.getBufferMapping() + ".create(" + fieldType.getMarshaller() + ".createEncoded(buffer));");
+                        writer.write(tab(4) + "rc.set(" + f + ", " + fieldType.getBufferMapping() + ".create(" + fieldType.getMarshaller() + ".createEncoded(constituents[" + f + "])));");
                     }
+                    writer.newLine();
+                    writer.write(tab(4) + "dataCount--;");
                     writer.newLine();
                     writer.write(tab(3) + "}");
                     writer.newLine();
+                    if (field.isRequired()) {
+                        writer.write(tab(3) + "else {");
+                        writer.newLine();
+                        writer.write(tab(4) + "throw new AmqpEncodingError(\"Missing required field for \" + SYMBOLIC_ID + \": " + field.getName() + "\");");
+                        writer.newLine();
+                        writer.write(tab(3) + "}");
+                        writer.newLine();
+                    }
+                    f++;
                 }
-                writer.write(tab(3) + "default: {");
-                writer.newLine();
-                writer.write(tab(4) + "return AmqpMarshaller.SINGLETON.decodeType(buffer);");
-                writer.newLine();
-                writer.write(tab(3) + "}");
-                writer.newLine();
-                writer.write(tab(3) + "}");
+                writer.write(tab(3) + "return rc;");
                 writer.newLine();
                 writer.write(tab(2) + "}");
                 writer.newLine();
@@ -521,83 +552,103 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(2) + "public IAmqpMap<AmqpSymbol, AmqpType<?, ?>> createMap(int entryCount) {");
+                writer.write(tab(2) + "public IAmqpMap<AmqpSymbol, AmqpType<?, ?>> decode(EncodedBuffer[] constituents) throws AmqpEncodingError {");
                 writer.newLine();
-                writer.write(tab(3) + "return new IAmqpMap.AmqpWrapperMap<AmqpSymbol, AmqpType<?,?>>(new HashMap<AmqpSymbol, AmqpType<?,?>>());");
+                writer.write(tab(3) + "IAmqpMap<AmqpSymbol, AmqpType<?, ?>> rc = new IAmqpMap.AmqpWrapperMap<AmqpSymbol, AmqpType<?,?>>(new HashMap<AmqpSymbol, AmqpType<?,?>>());");
                 writer.newLine();
+                writer.write(tab(3) + "if (constituents.length % 2 != 0) {");
                 writer.newLine();
-                writer.write(tab(2) + "}");
-                writer.newLine();
-
-                writer.newLine();
-                writer.write(tab(2) + "public void decodeToMap(EncodedBuffer encodedKey, EncodedBuffer encodedValue, IAmqpMap<AmqpSymbol," + TypeRegistry.any().typeMapping
-                        + "> map) throws AmqpEncodingError {");
-                writer.newLine();
-                writer.write(tab(3) + "AmqpSymbol key = AmqpSymbol.AmqpSymbolBuffer.create(AmqpSymbolMarshaller.createEncoded(encodedKey));");
-                writer.newLine();
-                writer.write(tab(3) + "if (key == null) {");
-                writer.newLine();
-                writer.write(tab(4) + "throw new AmqpEncodingError(\"Null Key for \" + SYMBOLIC_ID);");
+                writer.write(tab(4) + "throw new AmqpEncodingError(\"Invalid number of compound constituents for \" + SYMBOLIC_ID + \": \" + constituents.length);");
                 writer.newLine();
                 writer.write(tab(3) + "}");
+                writer.newLine();
+
+                writer.write(tab(3) + "for (int i = 0; i < constituents.length; i += 2) {");
+                writer.newLine();
+                writer.write(tab(4) + "AmqpSymbol key = AmqpSymbol.AmqpSymbolBuffer.create(AmqpSymbolMarshaller.createEncoded(constituents[i]));");
+                writer.newLine();
+                writer.write(tab(4) + "if (key == null) {");
+                writer.newLine();
+                writer.write(tab(5) + "throw new AmqpEncodingError(\"Null Key for \" + SYMBOLIC_ID);");
+                writer.newLine();
+                writer.write(tab(4) + "}");
                 writer.newLine();
                 writer.newLine();
                 int f = 0;
                 for (AmqpField field : fields.values()) {
                     AmqpClass fieldType = field.resolveAmqpFieldType();
-                    writer.write(tab(3) + (f > 0 ? "else " : "") + "if (key.equals(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY)){");
+                    writer.write(tab(4) + (f > 0 ? "else " : "") + "if (key.equals(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY)){");
                     writer.newLine();
                     if (fieldType.isAny()) {
-                        writer.write(tab(4) + "map.put(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY, AmqpMarshaller.SINGLETON.decodeType(buffer));");
+                        writer.write(tab(5) + "rc.put(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY, AmqpMarshaller.SINGLETON.decodeType(constituents[i + 1]));");
                     } else {
-                        writer.write(tab(4) + "map.put(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY, " + fieldType.getBufferMapping() + ".create(" + fieldType.getMarshaller()
-                                + ".createEncoded(encodedValue)));");
+                        writer.write(tab(5) + "rc.put(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY, " + fieldType.getBufferMapping() + ".create(" + fieldType.getMarshaller()
+                                + ".createEncoded(constituents[i + 1])));");
                     }
                     writer.newLine();
-                    writer.write(tab(3) + "}");
+                    writer.write(tab(4) + "}");
                     writer.newLine();
                 }
-                writer.write(tab(3) + "else {");
+                writer.write(tab(4) + "else {");
                 writer.newLine();
-                writer.write(tab(4) + "throw new UnexpectedTypeException(\"Invalid Key for \" + SYMBOLIC_ID + \" : \" + key);");
+                writer.write(tab(5) + "throw new UnexpectedTypeException(\"Invalid field key for \" + SYMBOLIC_ID + \" : \" + key);");
+                writer.newLine();
+                writer.write(tab(4) + "}");
                 writer.newLine();
                 writer.write(tab(3) + "}");
+                writer.newLine();
+                writer.write(tab(3) + "return rc;");
                 writer.newLine();
                 writer.write(tab(2) + "}");
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(2) + "public void unmarshalToMap(DataInput in, IAmqpMap<AmqpSymbol," + TypeRegistry.any().typeMapping + "> map) throws IOException, AmqpEncodingError {");
+                writer.write(tab(2) + "public IAmqpMap<AmqpSymbol, AmqpType<?, ?>> unmarshalType(int dataCount, int dataSize, DataInput in) throws IOException, AmqpEncodingError {");
                 writer.newLine();
-                writer.write(tab(3) + "AmqpSymbol key = AmqpSymbol.AmqpSymbolBuffer.create(AmqpSymbolMarshaller.createEncoded(in));");
+                writer.write(tab(3) + "IAmqpMap<AmqpSymbol, AmqpType<?, ?>> rc = new IAmqpMap.AmqpWrapperMap<AmqpSymbol, AmqpType<?,?>>(new HashMap<AmqpSymbol, AmqpType<?,?>>());");
                 writer.newLine();
-                writer.write(tab(3) + "if (key == null) {");
+                writer.write(tab(3) + "if (dataCount % 2 != 0) {");
                 writer.newLine();
-                writer.write(tab(4) + "throw new AmqpEncodingError(\"Null Key for \" + SYMBOLIC_ID);");
+                writer.write(tab(4) + "throw new AmqpEncodingError(\"Invalid number of compound constituents for \" + SYMBOLIC_ID + \": \" + dataCount);");
                 writer.newLine();
                 writer.write(tab(3) + "}");
+                writer.newLine();
+
+                writer.write(tab(3) + "for (int i = 0; i < dataCount; i += 2) {");
+                writer.newLine();
+                writer.write(tab(4) + "AmqpSymbol key = AmqpSymbol.AmqpSymbolBuffer.create(AmqpSymbolMarshaller.createEncoded(in));");
+                writer.newLine();
+                writer.write(tab(4) + "if (key == null) {");
+                writer.newLine();
+                writer.write(tab(5) + "throw new AmqpEncodingError(\"Null Key for \" + SYMBOLIC_ID);");
+                writer.newLine();
+                writer.write(tab(4) + "}");
                 writer.newLine();
                 writer.newLine();
                 f = 0;
                 for (AmqpField field : fields.values()) {
                     AmqpClass fieldType = field.resolveAmqpFieldType();
-                    writer.write(tab(3) + (f > 0 ? "else " : "") + "if (key.equals(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY)){");
+                    writer.write(tab(4) + (f > 0 ? "else " : "") + "if (key.equals(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY)){");
                     writer.newLine();
                     if (fieldType.isAny()) {
-                        writer.write(tab(4) + "map.put(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY, AmqpMarshaller.SINGLETON.unmarshalType(in));");
+                        writer.write(tab(5) + "rc.put(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY, AmqpMarshaller.SINGLETON.decodeType(in));");
                     } else {
-                        writer.write(tab(4) + "map.put(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY, " + fieldType.getBufferMapping() + ".create(" + fieldType.getMarshaller()
+                        writer.write(tab(5) + "rc.put(" + typeMapping + "." + toJavaConstant(field.getName()) + "_KEY, " + fieldType.getBufferMapping() + ".create(" + fieldType.getMarshaller()
                                 + ".createEncoded(in)));");
                     }
                     writer.newLine();
-                    writer.write(tab(3) + "}");
+                    writer.write(tab(4) + "}");
                     writer.newLine();
                 }
-                writer.write(tab(3) + "else {");
+                writer.write(tab(4) + "else {");
                 writer.newLine();
-                writer.write(tab(4) + "throw new UnexpectedTypeException(\"Invalid Key for \" + SYMBOLIC_ID + \" : \" + key);");
+                writer.write(tab(5) + "throw new UnexpectedTypeException(\"Invalid field key for \" + SYMBOLIC_ID + \" : \" + key);");
+                writer.newLine();
+                writer.write(tab(4) + "}");
                 writer.newLine();
                 writer.write(tab(3) + "}");
+                writer.newLine();
+                writer.write(tab(3) + "return rc;");
                 writer.newLine();
                 writer.write(tab(2) + "}");
                 writer.newLine();
@@ -893,20 +944,17 @@ public class AmqpClass {
             writer.write(tab(1) + "}");
             writer.newLine();
 
-            String decoderArg = "";
             writer.write(tab(1) + "public static abstract class " + getJavaType() + "Encoded extends AbstractEncoded <" + getValueMapping().getJavaType() + "> {");
             if (isList()) {
                 writer.newLine();
                 writer.write(tab(2) + "ListDecoder decoder = Encoder.DEFAULT_LIST_DECODER;");
                 writer.newLine();
-                decoderArg = ", decoder";
             }
 
             if (isMap()) {
                 writer.newLine();
                 writer.write(tab(2) + "MapDecoder decoder = Encoder.DEFAULT_MAP_DECODER;");
                 writer.newLine();
-                decoderArg = ", decoder";
             }
 
             writer.newLine();
@@ -1005,21 +1053,6 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(2) + "public final " + getValueMapping().getJavaType() + " decode(EncodedBuffer encoded) throws AmqpEncodingError {");
-                writer.newLine();
-                if (hasCompoundEncoding()) {
-                    writer.write(tab(3) + "return ENCODER.decode" + capFirst(toJavaName(name)) + eName + "(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataCount(), encoded.getDataSize()"
-                            + decoderArg + ");");
-                } else if (hasNonZeroEncoding()) {
-                    writer.write(tab(3) + "return ENCODER.decode" + capFirst(toJavaName(name)) + eName + "(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize()" + decoderArg + ");");
-                } else {
-                    writer.write(tab(3) + "return ENCODER.valueOf" + capFirst(toJavaName(name)) + "(encoding);");
-                }
-                writer.newLine();
-                writer.write(tab(2) + "}");
-                writer.newLine();
-
-                writer.newLine();
                 writer.write(tab(2) + "public final void marshalData(DataOutput out) throws IOException {");
                 writer.newLine();
                 if (hasNonZeroEncoding()) {
@@ -1030,15 +1063,34 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
+                writer.write(tab(2) + "public final " + getValueMapping().getJavaType() + " decode(EncodedBuffer encoded) throws AmqpEncodingError {");
+                writer.newLine();
+                if (isList() || isMap()) {
+                    writer.write(tab(3) + "return decoder.decode(encoded.asCompound().constituents());");
+                } else if (hasCompoundEncoding()) {
+                    writer.write(tab(3) + "return ENCODER.decode" + capFirst(toJavaName(name)) + eName
+                            + "(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataCount(), encoded.getDataSize());");
+                } else if (hasNonZeroEncoding()) {
+                    writer.write(tab(3) + "return ENCODER.decode" + capFirst(toJavaName(name)) + eName + "(encoded.getBuffer(), encoded.getDataOffset(), encoded.getDataSize());");
+                } else {
+                    writer.write(tab(3) + "return ENCODER.valueOf" + capFirst(toJavaName(name)) + "(encoding);");
+                }
+                writer.newLine();
+                writer.write(tab(2) + "}");
+                writer.newLine();
+
+                writer.newLine();
                 writer.write(tab(2) + "public final " + getValueMapping().getJavaType() + " unmarshalData(DataInput in) throws IOException {");
                 writer.newLine();
 
-                if (hasCompoundEncoding()) {
-                    writer.write(tab(3) + "return ENCODER.read" + capFirst(toJavaName(name)) + eName + "(getDataCount(), getDataSize(), in" + decoderArg + ");");
+                if (isList() || isMap()) {
+                    writer.write(tab(3) + "return decoder.unmarshalType(getDataCount(), getDataSize(), in);");
+                } else if (hasCompoundEncoding()) {
+                    writer.write(tab(3) + "return ENCODER.read" + capFirst(toJavaName(name)) + eName + "(getDataCount(), getDataSize(), in);");
                 } else if (hasNonZeroEncoding()) {
-                    writer.write(tab(3) + "return ENCODER.read" + capFirst(toJavaName(name)) + eName + "(getDataSize(), in" + decoderArg + ");");
+                    writer.write(tab(3) + "return ENCODER.read" + capFirst(toJavaName(name)) + eName + "(getDataSize(), in);");
                 } else {
-                    writer.write(tab(3) + "return ENCODER.valueOf" + capFirst(toJavaName(name)) + "(encoding" + decoderArg + ");");
+                    writer.write(tab(3) + "return ENCODER.valueOf" + capFirst(toJavaName(name)) + "(encoding);");
                 }
                 writer.newLine();
                 writer.write(tab(2) + "}");
@@ -1091,7 +1143,7 @@ public class AmqpClass {
         AmqpClass baseType = resolveBaseType();
 
         writer.newLine();
-        writer.write(tab(indent++) + "public static class " + getJavaType() + "Bean implements " + getJavaType() + "{");
+        writer.write(tab(indent++) + "public static class " + beanMapping.getShortName() + " implements " + typeMapping + "{");
         writer.newLine();
 
         writer.newLine();
@@ -1108,7 +1160,8 @@ public class AmqpClass {
             writer.write(tab(indent) + "" + beanMapping.getShortName() + "() {");
             writer.newLine();
             if (baseType.isMap()) {
-                writer.write(tab(indent + 1) + "this.value = new IAmqpMap.AmqpWrapperMap<AmqpType<?,?>, AmqpType<?,?>>(new HashMap<AmqpType<?,?>, AmqpType<?,?>>());");
+                writer.write(tab(indent + 1) + "this.value = new IAmqpMap.AmqpWrapperMap<" + getMapKeyType() + "," + getMapValueType() + ">(new HashMap<" + getMapKeyType() + "," + getMapValueType()
+                        + ">());");
                 writer.newLine();
             } else if (!isDescribed() && baseType.isList()) {
                 writer.write(tab(indent + 1) + "this.value = new IAmqpList.AmqpWrapperList(new ArrayList<AmqpType<?,?>>());");
@@ -1119,11 +1172,11 @@ public class AmqpClass {
         }
 
         writer.newLine();
-        writer.write(tab(indent) + beanMapping.getShortName() + "(" + baseType.getValueMapping() + " value) {");
+        writer.write(tab(indent) + beanMapping.getShortName() + "(" + baseType.getValueMapping().getJavaType() + " value) {");
         writer.newLine();
         if (isDescribed() && baseType.isList()) {
             writer.newLine();
-            writer.write(tab(indent) + "for(int i = 0; i < value.getListCount(); i++) {");
+            writer.write(tab(++indent) + "for(int i = 0; i < value.getListCount(); i++) {");
             writer.newLine();
             writer.write(tab(++indent) + "set(i, value.get(i));");
             writer.newLine();
@@ -1335,7 +1388,7 @@ public class AmqpClass {
             AmqpClass describedType = descriptor.resolveDescribedType();
 
             writer.newLine();
-            writer.write(tab(indent++) + "public static class " + bufferMapping.getShortName() + " extends " + describedType.bufferMapping + " implements " + typeMapping + "{");
+            writer.write(tab(indent++) + "public static class " + bufferMapping.getClassName() + " extends " + describedType.bufferMapping + " implements " + typeMapping + "{");
             writer.newLine();
 
             writer.newLine();
@@ -1571,7 +1624,7 @@ public class AmqpClass {
                 JavaTypeMapping returnType = fieldClass.isPrimitive() ? fieldClass.getValueMapping() : fieldClass.typeMapping;
                 writer.write(tab(indent) + "public final " + returnType + " get" + capFirst(field.getJavaName()) + "() {");
                 writer.newLine();
-                if (!fieldClass.isAny() && fieldClass.isPrimitive()) {
+                if (!fieldClass.isAny() && fieldClass.isPrimitive() && !fieldClass.isMutable()) {
                     writer.write(tab(++indent) + "return bean." + field.getJavaName() + ".getValue();");
                 } else {
                     writer.write(tab(++indent) + "return bean." + field.getJavaName() + ";");
@@ -1623,7 +1676,7 @@ public class AmqpClass {
 
         if (isMap()) {
             if (!buffer) {
-                writer.write(tab(indent) + "public void put(" + TypeRegistry.any().typeMapping + " key, " + TypeRegistry.any().typeMapping + " value) {");
+                writer.write(tab(indent) + "public void put(" + getMapKeyType() + " key, " + getMapValueType() + " value) {");
                 writer.newLine();
                 writer.write(tab(++indent) + "copyCheck();");
                 writer.newLine();
@@ -1633,7 +1686,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(indent) + "public " + TypeRegistry.any().typeMapping + " get(Object key) {");
+                writer.write(tab(indent) + "public " + getMapValueType() + " get(Object key) {");
                 writer.newLine();
                 writer.write(tab(++indent) + "return bean.value.get(key);");
                 writer.newLine();
@@ -1649,7 +1702,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(indent) + "public Iterator<Map.Entry<" + TypeRegistry.any().getJavaType() + ", " + TypeRegistry.any().getJavaType() + ">> iterator() {");
+                writer.write(tab(indent) + "public Iterator<Map.Entry<" + getMapKeyType() + ", " + getMapValueType() + ">> iterator() {");
                 writer.newLine();
                 writer.write(tab(++indent) + "return bean.value.iterator();");
                 writer.newLine();
@@ -1657,7 +1710,7 @@ public class AmqpClass {
                 writer.newLine();
 
             } else {
-                writer.write(tab(indent) + "public void put(" + TypeRegistry.any().typeMapping + " key, " + TypeRegistry.any().typeMapping + " value) {");
+                writer.write(tab(indent) + "public void put(" + getMapKeyType() + " key, " + getMapValueType() + " value) {");
                 writer.newLine();
                 writer.write(tab(++indent) + "bean().put(key, value);");
                 writer.newLine();
@@ -1665,7 +1718,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(indent) + "public " + TypeRegistry.any().typeMapping + " get(Object key) {");
+                writer.write(tab(indent) + "public " + getMapValueType() + " get(Object key) {");
                 writer.newLine();
                 writer.write(tab(++indent) + "return bean().get(key);");
                 writer.newLine();
@@ -1681,7 +1734,7 @@ public class AmqpClass {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(indent) + "public Iterator<Map.Entry<" + TypeRegistry.any().getJavaType() + ", " + TypeRegistry.any().getJavaType() + ">> iterator() {");
+                writer.write(tab(indent) + "public Iterator<Map.Entry<" + getMapKeyType() + ", " + getMapValueType() + ">> iterator() {");
                 writer.newLine();
                 writer.write(tab(++indent) + "return bean().iterator();");
                 writer.newLine();
@@ -1720,7 +1773,7 @@ public class AmqpClass {
                 writer.newLine();
                 writer.write(tab(indent) + "public Iterator<" + TypeRegistry.any().typeMapping + "> iterator() {");
                 writer.newLine();
-                writer.write(tab(++indent) + "return new AmqpListIterator(bean.value);");
+                writer.write(tab(++indent) + "return new AmqpListIterator<" + TypeRegistry.any().typeMapping + ">(bean.value);");
                 writer.newLine();
                 writer.write(tab(--indent) + "}");
                 writer.newLine();
@@ -1854,7 +1907,7 @@ public class AmqpClass {
                 writer.newLine();
                 writer.write(tab(indent) + "public Iterator<AmqpType<?, ?>> iterator() {");
                 writer.newLine();
-                writer.write(tab(++indent) + "return new AmqpListIterator(bean);");
+                writer.write(tab(++indent) + "return new AmqpListIterator<" + TypeRegistry.any().typeMapping + ">(bean);");
                 writer.newLine();
                 writer.write(tab(--indent) + "}");
                 writer.newLine();
@@ -1868,7 +1921,7 @@ public class AmqpClass {
             resolveRestrictedType().writeFieldAccesors(writer, indent, buffer);
         }
 
-        if (isPrimitive()) {
+        if (isPrimitive() && !isMutable()) {
 
             // Getter:
             writer.newLine();
@@ -1949,9 +2002,9 @@ public class AmqpClass {
 
         if (isMap()) {
             doc.writeJavaDoc(writer, indent);
-            writer.write(tab(indent) + "public void put(" + TypeRegistry.any().typeMapping + " key, " + TypeRegistry.any().typeMapping + " value);");
+            writer.write(tab(indent) + "public void put(" + getMapKeyType() + " key, " + getMapValueType() + " value);");
             writer.newLine();
-            writer.write(tab(indent) + "public " + TypeRegistry.any().typeMapping + " get(Object key);");
+            writer.write(tab(indent) + "public " + getMapValueType() + " get(Object key);");
             writer.newLine();
 
         } else if (isList()) {
@@ -1964,7 +2017,7 @@ public class AmqpClass {
             writer.newLine();
         }
 
-        if (isPrimitive()) {
+        if (isPrimitive() && !isMutable()) {
             // Getter:
             writer.newLine();
             writer.write(tab(1) + "public " + valueMapping + " getValue();");
@@ -1979,7 +2032,7 @@ public class AmqpClass {
 
         String packageName = generator.getMarshallerPackage();
 
-        File file = new File(generator.getOutputDirectory() + File.separator + new String(packageName).replace(".", File.separator) + File.separator + typeMapping + "Marshaller.java");
+        File file = new File(generator.getOutputDirectory() + File.separator + new String(packageName).replace(".", File.separator) + File.separator + typeMapping.getClassName() + "Marshaller.java");
         file.getParentFile().mkdirs();
         if (file.exists()) {
             file.delete();
@@ -2188,7 +2241,11 @@ public class AmqpClass {
                 writer.newLine();
                 writer.write(tab(1) + "private static final " + getEncodingName(false) + " chooseEncoding(" + getJavaType() + " val) throws AmqpEncodingError {");
                 writer.newLine();
-                writer.write(tab(2) + "return Encoder.choose" + capFirst(name) + "Encoding(val.getValue());");
+                if (isMutable()) {
+                    writer.write(tab(2) + "return Encoder.choose" + capFirst(name) + "Encoding(val);");
+                } else {
+                    writer.write(tab(2) + "return Encoder.choose" + capFirst(name) + "Encoding(val.getValue());");
+                }
                 writer.newLine();
                 writer.write(tab(1) + "}");
                 writer.newLine();
@@ -2210,7 +2267,11 @@ public class AmqpClass {
                 writer.newLine();
                 writer.write(tab(2) + "}");
                 writer.newLine();
-                writer.write(tab(2) + "return " + getEncodingName(false) + ".createEncoded(chooseEncoding(data).FORMAT_CODE, data.getValue());");
+                if (isMutable()) {
+                    writer.write(tab(2) + "return " + getEncodingName(false) + ".createEncoded(chooseEncoding(data).FORMAT_CODE, data);");
+                } else {
+                    writer.write(tab(2) + "return " + getEncodingName(false) + ".createEncoded(chooseEncoding(data).FORMAT_CODE, data.getValue());");
+                }
                 writer.newLine();
                 writer.write(tab(1) + "}");
                 writer.newLine();
@@ -2397,8 +2458,20 @@ public class AmqpClass {
         return name.equals("map");
     }
 
+    public final String getMapKeyType() {
+        return mapKeyType;
+    }
+
+    public final String getMapValueType() {
+        return mapValueType;
+    }
+
     public boolean isList() {
         return name.equals("list");
+    }
+
+    public final String getListElementType() {
+        return listElementType;
     }
 
     public boolean isMarshallable() {
