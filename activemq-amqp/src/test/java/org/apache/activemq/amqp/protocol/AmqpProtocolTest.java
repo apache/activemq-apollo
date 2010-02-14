@@ -8,11 +8,7 @@ import java.io.IOException;
 
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
-import org.apache.activemq.amqp.protocol.types.AmqpFlow;
-import org.apache.activemq.amqp.protocol.types.AmqpHandle;
-import org.apache.activemq.amqp.protocol.types.AmqpOptions;
-import org.apache.activemq.amqp.protocol.types.AmqpSequenceNo;
-import org.apache.activemq.amqp.protocol.types.AmqpType;
+import org.apache.activemq.amqp.protocol.types.*;
 import org.apache.activemq.amqp.protocol.types.TypeFactory;
 import static org.apache.activemq.amqp.protocol.types.TypeFactory.*;
 
@@ -26,6 +22,21 @@ public class AmqpProtocolTest extends TestCase {
         assertTrue(val1.equals(val2));
     }
 
+    public void testAmqpOpen() throws Exception {
+        AmqpOpen open = createAmqpOpen();
+        open.setHeartbeatInterval(60);
+        open.setChannelMax(1024);
+        open.setContainerId("TestContainer");
+        open.setHostname("localhost");
+        open.setDesiredCapabilities(createAmqpList());
+        open.setMaxFrameSize(16000);
+        
+        AmqpOpen read = marshalUnmarshal(open);
+
+        assertTrue(open.equals(read));
+        System.out.println("Value: " + read);
+    }
+    
     public void testAmqpFlow() throws Exception {
         AmqpFlow flow = createAmqpFlow();
         flow.setHandle(1);
