@@ -48,7 +48,8 @@ public class Encoder extends BaseEncoder {
 
     static final byte NULL_FORMAT_CODE = AmqpNullMarshaller.FORMAT_CODE;
     static final byte DESCRIBED_FORMAT_CODE = (byte) 0x00;
-
+    static final NullEncoded<?> NULL_ENCODED = new NullEncoded<Object>();
+    
     public static interface ListDecoder<E extends AmqpType<?, ?>> {
         public IAmqpList<E> decode(EncodedBuffer[] constituents) throws AmqpEncodingError;
 
@@ -1049,6 +1050,12 @@ public class Encoder extends BaseEncoder {
         public abstract void marshalData(DataOutput out) throws IOException;
     }
 
+    @SuppressWarnings("unchecked")
+    static final <V> Encoded<V> getNullEncoded()
+    {
+        return (Encoded<V>) NULL_ENCODED;
+    }
+    
     static class NullEncoded<V> extends AbstractEncoded<V> {
 
         private static FixedBuffer nb = new FixedBuffer(new Buffer(new byte[] { NULL_FORMAT_CODE }), 0);

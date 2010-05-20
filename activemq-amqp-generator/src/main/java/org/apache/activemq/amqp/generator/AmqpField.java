@@ -5,6 +5,7 @@ import static org.apache.activemq.amqp.generator.Utils.toJavaName;
 import java.io.BufferedWriter;
 import java.io.IOException;
 
+import org.apache.activemq.amqp.generator.TypeRegistry.JavaTypeMapping;
 import org.apache.activemq.amqp.generator.jaxb.schema.Doc;
 import org.apache.activemq.amqp.generator.jaxb.schema.Field;
 
@@ -26,7 +27,7 @@ public class AmqpField {
         required = new Boolean(field.getRequired()).booleanValue();
         type = field.getType();
         doc.setLabel(label);
-        
+
         for (Object object : field.getDocOrException()) {
             if (object instanceof Doc) {
                 doc.parseFromDoc((Doc) object);
@@ -99,6 +100,18 @@ public class AmqpField {
 
         AmqpClass ampqClass = TypeRegistry.resolveAmqpClass(this);
         return ampqClass;
+    }
+
+    public JavaTypeMapping resolveAccessorMapping() throws UnknownTypeException {
+        AmqpClass amqpClass = TypeRegistry.resolveAmqpClass(this);
+        if (isMultiple()) {
+            // Swap with the value type for enum types:
+            if (amqpClass.isEnumType()) {
+                return TypeRegistry.resolveAmqpClass("list").getTypeMapping().parameterized(amqpClass.getBaseType().getTypeMapping().toString());
+            }
+            return TypeRegistry.resolveAmqpClass("list").getTypeMapping().parameterized(amqpClass.getTypeMapping().toString());
+        }
+        return amqpClass.getTypeMapping().wildcard();
     }
 
     public void writeJavaDoc(BufferedWriter writer, int indent) throws IOException {

@@ -269,15 +269,15 @@ public class Generator {
                 }
 
                 writer.newLine();
-                writer.write(tab(1) + "public Encoded<" + amqpClass.getValueMapping() + "> encode(" + amqpClass.getJavaType() + " data) throws AmqpEncodingError;");
+                writer.write(tab(1) + "public " + amqpClass.getTypeMapping().getGeneric(" ") + "Encoded<" + amqpClass.getValueMapping().parameterized() + "> encode(" + amqpClass.typeMapping.parameterized() + " data) throws AmqpEncodingError;");
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public Encoded<" + amqpClass.getValueMapping() + "> decode" + amqpClass.getJavaType() + "(Buffer source, int offset) throws AmqpEncodingError;");
+                writer.write(tab(1) + "public " + amqpClass.getTypeMapping().getGeneric(" ") + "Encoded<" + amqpClass.getValueMapping().parameterized() + "> decode" + amqpClass.getJavaType() + "(Buffer source, int offset) throws AmqpEncodingError;");
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public Encoded<" + amqpClass.getValueMapping() + "> unmarshal" + amqpClass.getJavaType() + "(DataInput in) throws IOException, AmqpEncodingError;");
+                writer.write(tab(1) + "public " + amqpClass.getTypeMapping().getGeneric(" ") + "Encoded<" + amqpClass.getValueMapping().parameterized() + "> unmarshal" + amqpClass.getJavaType() + "(DataInput in) throws IOException, AmqpEncodingError;");
                 writer.newLine();
             }
         }
@@ -401,7 +401,7 @@ public class Generator {
                 }
                 writer.write(tab(2) + "{");
                 writer.newLine();
-                writer.write(tab(3) + "return " + amqpClass.bufferMapping + ".create(" + amqpClass.getMarshaller() + ".createEncoded(encoded));");
+                writer.write(tab(3) + "return " + amqpClass.bufferMapping.getClassName() + ".create(" + amqpClass.getMarshaller() + ".createEncoded(encoded));");
                 writer.newLine();
                 writer.write(tab(2) + "}");
                 writer.newLine();
@@ -464,7 +464,7 @@ public class Generator {
                     continue;
                 }
                 writer.newLine();
-                writer.write(tab(1) + "public final Encoded<" + amqpClass.getValueMapping() + "> encode(" + amqpClass.getJavaType() + " data) throws AmqpEncodingError {");
+                writer.write(tab(1) + "public final " + amqpClass.getTypeMapping().getGeneric(" ") + "Encoded<" + amqpClass.getValueMapping().parameterized() + "> encode(" + amqpClass.getTypeMapping().parameterized()+ " data) throws AmqpEncodingError {");
                 writer.newLine();
                 writer.write(tab(2) + "return " + amqpClass.getJavaType() + "Marshaller.encode(data);");
                 writer.newLine();
@@ -472,7 +472,7 @@ public class Generator {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public Encoded<" + amqpClass.getValueMapping() + "> decode" + amqpClass.getJavaType() + "(Buffer source, int offset) throws AmqpEncodingError {");
+                writer.write(tab(1) + "public final " + amqpClass.getTypeMapping().getGeneric(" ") + "Encoded<" + amqpClass.getValueMapping().parameterized() + "> decode" + amqpClass.getTypeMapping().shortName().nonGeneric() + "(Buffer source, int offset) throws AmqpEncodingError {");
                 writer.newLine();
                 writer.write(tab(2) + "return " + amqpClass.getMarshaller() + ".createEncoded(source, offset);");
                 writer.newLine();
@@ -480,7 +480,7 @@ public class Generator {
                 writer.newLine();
 
                 writer.newLine();
-                writer.write(tab(1) + "public Encoded<" + amqpClass.getValueMapping() + "> unmarshal" + amqpClass.getJavaType() + "(DataInput in) throws IOException, AmqpEncodingError {");
+                writer.write(tab(1) + "public final " + amqpClass.getTypeMapping().getGeneric(" ") + "Encoded<" + amqpClass.getValueMapping().parameterized() + "> unmarshal" + amqpClass.getTypeMapping().shortName().nonGeneric() + "(DataInput in) throws IOException, AmqpEncodingError {");
                 writer.newLine();
                 writer.write(tab(2) + "return " + amqpClass.getMarshaller() + ".createEncoded(in);");
                 writer.newLine();
@@ -604,19 +604,19 @@ public class Generator {
             if (ac.isDescribed()) {
                 writer.newLine();
                 writeJavaComment(writer, 1, "Creates a " + ac.getTypeMapping());
-                writer.write(tab(1) + "public static final " + ac.getTypeMapping() + " create" + ac.getTypeMapping() + "() {");
+                writer.write(tab(1) + "public static final " + ac.getTypeMapping().getGeneric(" ") + ac.getTypeMapping().parameterized() + " create" + ac.getTypeMapping().getClassName() + "() {");
                 writer.newLine();
-                writer.write(tab(2) + "return new " + ac.getBeanMapping() + "();");
+                writer.write(tab(2) + "return new " + ac.getBeanMapping().parameterized() + "();");
                 writer.newLine();
                 writer.write(tab(1) + "};");
                 writer.newLine();
             } else {
-                AmqpClass bt = ac.resolveBaseType();
+                AmqpClass bt = ac.getBaseType();
                 writer.newLine();
                 writeJavaComment(writer, 1, "Creates a " + ac.getTypeMapping());
-                writer.write(tab(1) + "public static final " + ac.getTypeMapping() + " create" + ac.getTypeMapping() + "(" + bt.getValueMapping() + " val) {");
+                writer.write(tab(1) + "public static final " + ac.getTypeMapping().getGeneric(" ") + ac.getTypeMapping().parameterized() + " create" + ac.getTypeMapping().getClassName() + "(" + ac.getValueMapping().parameterized() + " val) {");
                 writer.newLine();
-                writer.write(tab(2) + "return new " + ac.getBeanMapping() + "(val);");
+                writer.write(tab(2) + "return new " + ac.getBeanMapping().parameterized() + "(val);");
                 writer.newLine();
                 writer.write(tab(1) + "}");
                 writer.newLine();
@@ -624,9 +624,9 @@ public class Generator {
                 if(bt.getValueMapping().hasPrimitiveType())
                 {
                     writeJavaComment(writer, 1, "Creates a " + ac.getTypeMapping());
-                    writer.write(tab(1) + "public static final " + ac.getTypeMapping() + " create" + ac.getTypeMapping() + "(" + bt.getValueMapping().getPrimitiveType() + " val) {");
+                    writer.write(tab(1) + "public static final " + ac.getTypeMapping().getGeneric(" ") + ac.getTypeMapping().parameterized() + " create" + ac.getTypeMapping().getClassName() + "(" + bt.getValueMapping().getPrimitiveType() + " val) {");
                     writer.newLine();
-                    writer.write(tab(2) + "return new " + ac.getBeanMapping() + "(val);");
+                    writer.write(tab(2) + "return new " + ac.getBeanMapping().parameterized() + "(val);");
                     writer.newLine();
                     writer.write(tab(1) + "}");
                     writer.newLine();
@@ -635,9 +635,9 @@ public class Generator {
                 if(bt.isMutable())
                 {
                     writeJavaComment(writer, 1, "Creates an empty " + ac.getTypeMapping());
-                    writer.write(tab(1) + "public static final " + ac.getTypeMapping() + " create" + ac.getTypeMapping() + "() {");
+                    writer.write(tab(1) + "public static final " + ac.getTypeMapping().getGeneric(" ") + ac.getTypeMapping().parameterized() + " create" + ac.getTypeMapping().getClassName() + "() {");
                     writer.newLine();
-                    writer.write(tab(2) + "return new " + ac.getBeanMapping() + "();");
+                    writer.write(tab(2) + "return new " + ac.getBeanMapping().parameterized() + "();");
                     writer.newLine();
                     writer.write(tab(1) + "}");
                     writer.newLine();
