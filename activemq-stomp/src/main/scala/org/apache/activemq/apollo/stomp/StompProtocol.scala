@@ -111,7 +111,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   override def onTransportDisconnected() = {
     if( !closed ) {
-      info("stop")
+      info("cleaning up resources")
       closed=true;
       if( producerRoute!=null ) {
         host.router.disconnect(producerRoute)
@@ -250,17 +250,21 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   }
 
   private def die(msg:String) = {
-    info("Shutting connection down due to: "+msg)
-    connection.transport.suspendRead
-    connection.transport.oneway(StompFrame(Responses.ERROR, Nil, ascii(msg)), null)
-    ^ {
-      connection.stop()
-    } ->: queue
+    if( !connection.stopped ) {
+      info("Shutting connection down due to: "+msg)
+      connection.transport.suspendRead
+      connection.transport.oneway(StompFrame(Responses.ERROR, Nil, ascii(msg)), null)
+      ^ {
+        connection.stop()
+      } ->: queue
+    }
   }
 
   override def onTransportFailure(error: IOException) = {
-    info(error, "Shutting connection down due to: %s", error)
-    super.onTransportFailure(error);
+    if( !connection.stopped ) {
+      info(error, "Shutting connection down due to: %s", error)
+      super.onTransportFailure(error);
+    }
   }
 }
 

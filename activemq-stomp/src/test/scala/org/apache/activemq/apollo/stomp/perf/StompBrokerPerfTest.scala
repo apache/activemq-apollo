@@ -84,7 +84,7 @@ class StompRemoteConsumer extends RemoteConsumer {
       transport.suspendRead
       dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, ^ {
         consumerRate.increment();
-        if (!stopping) {
+        if (!stopped) {
           transport.resumeRead
         }
       })
@@ -116,7 +116,7 @@ class StompRemoteProducer extends RemoteProducer {
       delivery.setDisposer(^{
         rate.increment();
         val task = ^ {
-          if( !stopping ) {
+          if( !stopped ) {
             send_next
           }
         }

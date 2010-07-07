@@ -52,6 +52,9 @@ class Domain {
 
 }
 
+object Router extends Log {
+
+}
 
 /**
  * Provides a non-blocking concurrent producer to consumer
@@ -65,8 +68,11 @@ class Domain {
  * to the destination. 
  *
  */
-class Router(var queue:DispatchQueue) {
-  
+class Router(var queue:DispatchQueue) extends DispatchLogging {
+
+  override protected def log = Router
+  protected def dispatchQueue:DispatchQueue = queue
+
   trait DestinationNode {
     var targets = List[DeliveryConsumer]()
     var routes = List[DeliveryProducerRoute]()
@@ -189,8 +195,10 @@ trait Route extends Retained {
 
 }
 
-class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue, val producer:DeliveryProducer) extends BaseRetained with Route {
+class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue, val producer:DeliveryProducer) extends BaseRetained with Route with DispatchLogging {
 
+  override protected def log = Router
+  protected def dispatchQueue:DispatchQueue = queue
 
   // Retain the queue while we are retained.
   queue.retain
@@ -211,7 +219,7 @@ class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue
 
   private def internal_bind(values:List[DeliveryConsumer]) = {
     values.foreach{ x=>
-      println("producer route attaching to conusmer.")
+      debug("producer route attaching to conusmer.")
       targets = x.open_session(queue) :: targets
     }
   }
@@ -220,6 +228,7 @@ class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue
     this.targets = this.targets.filterNot { x=>
       val rc = targets.contains(x.consumer)
       if( rc ) {
+        debug("producer route detaching from conusmer.")
         x.close
       }
       rc
@@ -228,6 +237,7 @@ class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue
 
   def disconnected() = ^ {
     this.targets.foreach { x=>
+      debug("producer route detaching from conusmer.")
       x.close
       x.consumer.release
     }    

@@ -44,7 +44,7 @@ abstract class Connection() extends TransportListener with Service  with Dispatc
   dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
   
   var name = "connection"
-  var stopping = false;
+  var stopped = false;
 
   var transport:Transport = null
 
@@ -55,13 +55,13 @@ abstract class Connection() extends TransportListener with Service  with Dispatc
   }
 
   def stop() = {
-    stopping=true
+    stopped=true
     transport.stop()
     dispatchQueue.release
   }
 
   def onTransportFailure(error:IOException) = {
-    if (!stopping) {
+    if (!stopped) {
         onFailure(error);
     }
   }
