@@ -93,6 +93,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   protected def _start(onCompleted: Runnable) = {
     executor_pool = Executors.newFixedThreadPool(20)
     client.config = config
+    schedualDisplayStats
     executor_pool {
       client.start(^{
         next_msg_key.set( client.databaseRootRecord.getLastMessageKey.longValue +1 )
@@ -197,6 +198,8 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   /////////////////////////////////////////////////////////////////////
   class HawtDBBatch extends BaseRetained with StoreBatch {
 
+    var dispose_start:Long = 0
+
     class MessageAction {
 
       var msg= 0L
@@ -262,13 +265,32 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     }
 
     override def dispose = {
+      dispose_start = System.nanoTime
       transaction_source.merge(this)
     }
 
     def onPerformed() {
+      metric_commit_counter += 1
+      val t = TimeUnit.NANOSECONDS.toMillis(System.nanoTime-dispose_start)
+      if( t < 0 ) {
+        println("wtf")
+      }
+      metric_commit_latency_counter += t
       super.dispose
     }
   }
+
+  var metric_canceled_message_counter:Long = 0
+  var metric_canceled_enqueue_counter:Long = 0
+  var metric_flushed_message_counter:Long = 0
+  var metric_flushed_enqueue_counter:Long = 0
+  var metric_commit_counter:Long = 0
+  var metric_commit_latency_counter:Long = 0
+
+
+  var canceled_add_message:Long = 0
+  var canceled_enqueue:Long = 0
+
 
   def key(x:QueueEntryRecord) = (x.queueKey, x.queueSeq)
 
@@ -281,7 +303,29 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   var delayedTransactions = new HashMap[Int, HawtDBBatch]()
 
   var next_tx_id = new IntCounter
-  
+
+
+  def schedualDisplayStats:Unit = {
+    val st = System.nanoTime
+    val ss = (metric_canceled_message_counter, metric_canceled_enqueue_counter, metric_flushed_message_counter, metric_flushed_enqueue_counter, metric_commit_counter, metric_commit_latency_counter)
+    def displayStats = {
+      if( serviceState.isStarted ) {
+        val et = System.nanoTime
+        val es = (metric_canceled_message_counter, metric_canceled_enqueue_counter, metric_flushed_message_counter, metric_flushed_enqueue_counter, metric_commit_counter, metric_commit_latency_counter)
+
+        val commits = es._5-ss._5
+        var avgCommitLatency = if (commits!=0) (es._6 - ss._6).toFloat / commits else 0f
+
+        def rate(x:Long, y:Long):Float = ((y-x)*1000.0f)/TimeUnit.NANOSECONDS.toMillis(et-st)
+
+        info("metrics: cancled: { messages: %,.3f, enqeues: %,.3f }, flushed: { messages: %,.3f, enqeues: %,.3f }, commit latency: %,.3f",
+          rate(ss._1,es._1), rate(ss._2,es._2), rate(ss._3,es._3), rate(ss._4,es._4), avgCommitLatency)
+        schedualDisplayStats
+      }
+    }
+    dispatchQueue.dispatchAfter(5, TimeUnit.SECONDS, ^{ displayStats })
+  }
+
   def drain_transactions = {
     transaction_source.getData.foreach { tx =>
 
@@ -310,6 +354,8 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
           val prevAction:HawtDBBatch#MessageAction = pendingEnqueues.remove(currentKey)
           if( prevAction!=null ) {
 
+            metric_canceled_enqueue_counter += 1
+
             // yay we can cancel out a previous enqueue
             prevAction.enqueues = prevAction.enqueues.filterNot( x=> key(x) == currentKey )
 
@@ -317,6 +363,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
             if( prevAction.enqueues == Nil && prevAction.messageRecord !=null ) {
               pendingStores.remove(msg)
               prevAction.messageRecord = null
+              metric_canceled_message_counter += 1
             }
 
             // Cancel the action if it's now empty
@@ -358,9 +405,11 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
 
         tx.actions.foreach { case (msg, action) =>
           if( action.messageRecord !=null ) {
+            metric_flushed_message_counter += 1
             pendingStores.remove(msg)
           }
           action.enqueues.foreach { queueEntry=>
+            metric_flushed_enqueue_counter += 1
             val k = key(queueEntry)
             pendingEnqueues.remove(k)
           }

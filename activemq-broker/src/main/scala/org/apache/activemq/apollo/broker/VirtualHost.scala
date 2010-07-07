@@ -30,7 +30,8 @@ import ReporterLevel._
 import org.apache.activemq.broker.store.{Store}
 import org.fusesource.hawtbuf.proto.WireFormat
 import org.apache.activemq.apollo.store.{StoreFactory, QueueRecord}
-import org.apache.activemq.apollo.dto.{CassandraStoreDTO, VirtualHostDTO}
+import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, CassandraStoreDTO, VirtualHostDTO}
+import java.io.File
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -51,8 +52,8 @@ object VirtualHost extends Log {
     rc.id = "default"
     rc.enabled = true
     rc.hostNames.add("localhost")
-    val store = new CassandraStoreDTO
-    store.hosts.add("127.0.0.1:9160")
+    val store = new HawtDBStoreDTO
+    store.directory = new File("activemq-data") 
     rc.store = store
     rc
   }

@@ -382,7 +382,10 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     val buffer = baos.toBuffer()
     append(buffer) {
       location =>
-        executeStore(batch, update, onComplete, location)
+        executeStore(batch, update, null, location)
+    }
+    if(onComplete!=null) {
+      onComplete.run
     }
   }
 
@@ -533,18 +536,15 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
   private def append(data: Buffer)(cb: (Location) => Unit): Unit = {
     val start = System.currentTimeMillis()
-    try {
-      journal.write(data, new JournalCallback() {
-        def success(location: Location) = {
-          cb(location)
-        }
-      })
-    } finally {
-      val end = System.currentTimeMillis()
-      if (end - start > 1000) {
+    journal.write(data, new JournalCallback() {
+      def success(location: Location) = {
+        var end = System.currentTimeMillis()
         warn("Journal append latencey: %,.3f seconds", ((end - start) / 1000.0f))
+        cb(location)
+        var end2 = System.currentTimeMillis()
+        warn("Index latencey: %,.3f seconds", ((end2 - end) / 1000.0f))
       }
-    }
+    })
   }
 
   def read(location: Location) = journal.read(location)
