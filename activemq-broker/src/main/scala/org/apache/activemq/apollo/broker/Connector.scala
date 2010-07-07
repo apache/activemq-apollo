@@ -153,20 +153,13 @@ class Connector(val broker:Broker) extends BaseService with DispatchLogging {
 
 
   override def _stop(onCompleted:Runnable): Unit = {
-    val tracker = new LoggingTracker(toString, dispatchQueue)
-
-    // This odd usage of tracker is because we don't want
-    // to kill client connections until the server is
-    // stopped. Since the connections list could change between
-    // now and when the server actually stops.
-    val task = tracker.task(transportServer.toString)
     transportServer.stop(^{
+      val tracker = new LoggingTracker(toString, dispatchQueue)
       for (connection <- connections) {
         tracker.stop(connection)
       }
-      task.run
+      tracker.callback(onCompleted)
     })
-    tracker.callback(onCompleted)
   }
 
   /**

@@ -40,7 +40,7 @@ abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfter
 
   def testName = _testName.get
 
-  protected override def runTest(testName: String, reporter: Reporter, stopper: Stopper, configMap: Map[String, Any], tracker: Tracker) = {
+  protected override def runTest(testName: String, reporter: org.scalatest.Reporter, stopper: Stopper, configMap: Map[String, Any], tracker: Tracker) = {
     _testName.set(testName)
     try {
       super.runTest(testName, reporter, stopper, configMap, tracker)

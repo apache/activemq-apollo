@@ -83,7 +83,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
   var database:BrokerDatabase = new BrokerDatabase
   var transactionManager:TransactionManager = new TransactionManager
 
-  override def toString = "virtual-host: "+config.id
+  override def toString = if (config==null) "virtual-host" else "virtual-host: "+config.id
 
   /**
    * Validates and then applies the configuration.
