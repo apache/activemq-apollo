@@ -30,8 +30,8 @@ import BufferConversions._
 import _root_.scala.collection.JavaConversions._
 import StompFrameConstants._
 import java.io.{EOFException, DataOutput, DataInput, IOException}
-import org.apache.activemq.broker.store.DirectRecordStore
 import java.nio.channels.{SocketChannel, WritableByteChannel, ReadableByteChannel}
+import org.apache.activemq.apollo.MemoryPool
 
 /**
  * Creates WireFormat objects that marshalls the <a href="http://activemq.apache.org/stomp/">Stomp</a> protocol.
@@ -70,7 +70,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
   import StompWireFormat._
   override protected def log: Log = StompWireFormat
 
-  var direct_record_store:DirectRecordStore = null
+  var memory_pool:MemoryPool = null
 
   implicit def wrap(x: Buffer) = ByteBuffer.wrap(x.data, x.offset, x.length);
   implicit def wrap(x: Byte) = {

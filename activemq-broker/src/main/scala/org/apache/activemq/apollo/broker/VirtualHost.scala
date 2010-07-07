@@ -34,6 +34,7 @@ import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, CassandraStoreDTO, Virtua
 import java.io.File
 import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.util.LongCounter
+import org.apache.activemq.apollo.MemoryPool
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

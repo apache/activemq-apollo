@@ -31,7 +31,7 @@ import StompFrameConstants._
 import java.io.IOException
 import org.apache.activemq.selector.SelectorParser
 import org.apache.activemq.filter.{BooleanExpression, FilterException}
-import org.apache.activemq.broker.store.{DirectRecordStore, StoreUOW}
+import org.apache.activemq.broker.store.{StoreUOW}
 
 object StompConstants {
 
@@ -170,9 +170,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     connection.connector.broker.getDefaultVirtualHost(
       queue.wrap { (host)=>
         this.host=host
-        if( this.host.store!=null && this.host.store.isInstanceOf[DirectRecordStore] ) {
+        if( this.host.memory_pool!=null ) {
           val wf = connection.transport.getWireformat.asInstanceOf[StompWireFormat]
-          wf.direct_record_store = this.host.store.asInstanceOf[DirectRecordStore]
+          wf.memory_pool = this.host.memory_pool
         }
         connection.transport.resumeRead
       }

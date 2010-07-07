@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker
+package org.apache.activemq.apollo
 
 import java.nio.ByteBuffer
 
@@ -31,5 +31,5 @@ trait MemoryAllocation {
  */
 trait MemoryPool {
   def alloc(size:Int):MemoryAllocation
-  def free(MemoryAllocation)
+  def free(ma:MemoryAllocation)
 }
