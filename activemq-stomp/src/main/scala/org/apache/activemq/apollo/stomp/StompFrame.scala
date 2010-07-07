@@ -24,6 +24,7 @@ import java.lang.{String, Class}
 import java.io.DataOutput
 import org.apache.activemq.apollo.broker._
 import org.apache.activemq.apollo.MemoryAllocation
+import org.fusesource.hawtdispatch.BaseRetained
 
 /**
  *
@@ -153,12 +154,17 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
     }
   }
 
+
+  def setDisposer(disposer: Runnable) = throw new UnsupportedOperationException
+  def retained = throw new UnsupportedOperationException
+  def retain = frame.retain
+  def release = frame.release
 }
 
 
 
 object StompFrame extends Sizer[StompFrame] {
-  def size(value:StompFrame) = value.size   
+  def size(value:StompFrame) = value.size
 }
 
 trait StompContent {
@@ -170,6 +176,8 @@ trait StompContent {
 
   def utf8:UTF8Buffer
 
+  def retain = {}
+  def release = {}
 }
 
 object NilStompContent extends StompContent {
@@ -208,6 +216,9 @@ case class DirectStompContent(direct:MemoryAllocation) extends StompContent {
   def utf8:UTF8Buffer = {
     buffer.utf8
   }
+
+  override def retain = direct.retain
+  override def release = direct.release
 }
 
 /**
@@ -272,4 +283,6 @@ case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:StompCo
     ).map(_._2).getOrElse(null)
   }
 
+  def retain = content.retain
+  def release = content.release
 }

@@ -138,6 +138,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
             }
           }
           val frame = delivery.message.asInstanceOf[StompFrameMessage].frame
+          frame.retain
           val rc = session.offer(frame)
           assert(rc, "offer should be accepted since it was not full")
           true
@@ -163,7 +164,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   var pendingAcks = HashMap[AsciiBuffer, (StoreUOW)=>Unit]()
 
   override def onTransportConnected() = {
-    session_manager = new SinkMux[StompFrame]( MapSink(connection.transportSink){ x=>x }, dispatchQueue, StompFrame)
+
+    session_manager = new SinkMux[StompFrame]( MapSink(connection.transportSink){x=>x}, dispatchQueue, StompFrame)
     connection_sink = new OverflowSink(session_manager.open(dispatchQueue));
     connection_sink.refiller = ^{}
     
@@ -275,6 +277,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         }
 
       case None=>
+        frame.release
         die("destination not set.")
     }
   }
@@ -328,8 +331,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         connection_sink.offer(StompFrame(Responses.RECEIPT, List((Stomp.Headers.Response.RECEIPT_ID, receipt))))
       }
     }
-
-
+    frame.release
   }
 
   def on_stomp_subscribe(headers:HeaderMap) = {

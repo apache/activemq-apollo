@@ -302,17 +302,19 @@ class DeliveryProducerRoute(val router:Router, val destination:Destination, val 
 
       // Do we need to store the message if we have a matching consumer?
       var storeOnMatch = delivery.message.persistent && router.host.store!=null
+      delivery.message.retain
 
       targets.foreach { target=>
 
         // only delivery to matching consumers
         if( target.consumer.matches(delivery) ) {
-          
+
           if( storeOnMatch ) {
             delivery.uow = router.host.store.createStoreUOW
             delivery.storeKey = delivery.uow.store(delivery.createMessageRecord)
             storeOnMatch = false
           }
+
 
           if( !target.offer(delivery) ) {
             overflowSessions ::= target
@@ -340,6 +342,7 @@ class DeliveryProducerRoute(val router:Router, val destination:Destination, val 
     if (delivery.uow != null) {
       delivery.uow.release
     }
+    delivery.message.release
   }
 
   val drainer = ^{

@@ -493,7 +493,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val id: Long) e
       if (session.full) {
         false
       } else {
-
+        delivery.message.retain
         if( tune_persistent && delivery.uow!=null ) {
           delivery.uow.retain
         }
@@ -755,7 +755,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     def as_head:Head = null
 
     /**
-     * Gets the size of this entry in bytes.  The head and tail entries allways return 0.
+     * Gets the size of this entry in bytes.  The head and tail entries always return 0.
      */
     def size = 0
 
@@ -1000,8 +1000,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       if( flushing ) {
         queue.flushing_size-=size
         queue.capacity_used -= size
-        state = new Flushed(delivery.storeKey, size)
+        delivery.message.release
 
+        state = new Flushed(delivery.storeKey, size)
         if( can_combine_with_prev ) {
           getPrevious.as_flushed_range.combineNext
         }
@@ -1020,6 +1021,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         flushing = false
         queue.flushing_size-=size
       }
+      delivery.message.release
       queue.capacity_used -= size
       super.remove
     }
@@ -1169,7 +1171,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         delivery.size = messageRecord.size
         delivery.storeKey = messageRecord.key
 
-        queue.capacity_used += size
+        queue.capacity_used += delivery.size
         queue.flushed_items -= 1
         state = new Loaded(delivery, true)
       } else {

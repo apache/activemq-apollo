@@ -34,7 +34,7 @@ import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, CassandraStoreDTO, Virtua
 import java.io.File
 import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.util.LongCounter
-import org.apache.activemq.apollo.MemoryPool
+import org.apache.activemq.apollo.{MemoryPoolFactory, MemoryPool}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -127,6 +127,17 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
 
 
   override protected def _start(onCompleted:Runnable):Unit = {
+
+//    val memory_pool_config: String = null
+    val memory_pool_config: String = "hawtdb:activemq.tmp"
+
+    if( MemoryPoolFactory.validate(memory_pool_config) ) {
+      memory_pool = MemoryPoolFactory.create(memory_pool_config)
+      if( memory_pool!=null ) {
+        memory_pool.start
+      }
+    }
+
     val tracker = new LoggingTracker("virtual host startup", dispatchQueue)
     store = StoreFactory.create(config.store)
     if( store!=null ) {
@@ -207,6 +218,11 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
 //            queue.shutdown(done);
 //        }
 //        done.await();
+
+    if( memory_pool!=null ) {
+      memory_pool.stop
+      memory_pool = null
+    }
 
     if( store!=null ) {
       store.stop(onCompleted);

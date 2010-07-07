@@ -74,7 +74,7 @@ trait DeliverySession extends Sink[Delivery] {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait Message extends Filterable {
+trait Message extends Filterable with Retained {
 
   /**
    * the globally unique id of the message
@@ -132,7 +132,7 @@ object Delivery extends Sizer[Delivery] {
 class Delivery extends BaseRetained {
 
   /**
-   * memory size of the delivery.  Used for resource allocation tracking
+   * Total size of the delivery.  Used for resource allocation tracking
    */
   var size:Int = 0
 
