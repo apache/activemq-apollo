@@ -159,7 +159,11 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       pageFileFactory.setSync(true)
       pageFileFactory.setUseWorkerThread(true)
       pageFileFactory.setPageSize(512.toShort)
-      pageFileFactory.setCacheSize((1024*1024*20)/512); // 20 meg page cache 
+
+      // Empirically found (using profiler) that a cached BTree page retains
+      // about 4000 bytes of mem ON 64 bit platform.
+      pageFileFactory.setCacheSize((1024*1024*20)/4000 );
+
       pageFileFactory.open()
 
       val initialized = withTx { tx =>
@@ -193,7 +197,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
       // Schedual periodic jobs.. they keep executing while schedual_version remains the same.
       schedualCleanup(schedual_version.get())
-      schedualFlush(schedual_version.get())
+      // schedualFlush(schedual_version.get())
     }
   }
 
@@ -312,11 +316,37 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   val metric_load_from_index = new TimeCounter
   val metric_load_from_journal = new TimeCounter
 
+  def loadMessages(requests: ListBuffer[(Long, (Option[MessageRecord])=>Unit)]) = {
+    val locations = withTx { tx =>
+      val helper = new TxHelper(tx)
+      import JavaConversions._
+      import helper._
+      requests.flatMap { case (messageKey, callback)=>
+        val location = metric_load_from_index.time {
+          messageKeyIndex.get(messageKey)
+        }
+        if( location==null ) {
+          debug("Message not indexed.  Journal location could not be determined for message: %s", messageKey)
+          callback(None)
+          None
+        } else {
+          Some((location, callback))
+        }
+      }
+    }
+
+    locations.foreach { case (location, callback)=>
+      val addMessage = metric_load_from_journal.time {
+        load(location, classOf[AddMessage.Getter])
+      }
+      callback( addMessage.map( x => toMessageRecord(x) ) )
+    }
+
+  }
+
   def loadMessage(messageKey: Long): Option[MessageRecord] = {
     metric_load_from_index.start { end =>
       withTx { tx =>
-        val idxPage = rootBuffer.getMessageKeyIndexPage
-
         val helper = new TxHelper(tx)
         import JavaConversions._
         import helper._

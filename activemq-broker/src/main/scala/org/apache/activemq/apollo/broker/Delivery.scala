@@ -48,6 +48,7 @@ trait DeliveryProducer {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait DeliveryConsumer extends Retained {
+  def browser = false
   def dispatchQueue:DispatchQueue;
   def matches(message:Delivery):Boolean
   def connect(producer:DeliveryProducer):DeliverySession

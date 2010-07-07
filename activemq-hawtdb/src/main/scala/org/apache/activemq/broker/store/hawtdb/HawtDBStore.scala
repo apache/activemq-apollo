@@ -91,7 +91,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   }
 
   protected def _start(onCompleted: Runnable) = {
-    executor_pool = Executors.newFixedThreadPool(20, new ThreadFactory(){
+    executor_pool = Executors.newFixedThreadPool(1, new ThreadFactory(){
       def newThread(r: Runnable) = {
         val rc = new Thread(r, "hawtdb store client")
         rc.setDaemon(true)
@@ -160,10 +160,19 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     }
   }
 
+  val load_source = createSource(new ListEventAggregator[(Long, (Option[MessageRecord])=>Unit)](), dispatchQueue)
+  load_source.setEventHandler(^{drain_loads});
+  load_source.resume
+
+
   def loadMessage(id: Long)(callback: (Option[MessageRecord]) => Unit) = {
+    load_source.merge((id, callback))
+  }
+
+  def drain_loads = {
+    var data = load_source.getData
     executor_pool ^{
-      val rc = client.loadMessage(id)
-      callback( rc )
+      client.loadMessages(data)
     }
   }
 
@@ -437,28 +446,30 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
 
     if( !txs.isEmpty ) {
       storeLatency.start { end=>
-        client.store(txs, ^{
-          dispatchQueue {
+        executor_pool {
+          client.store(txs, ^{
+            dispatchQueue {
 
-            end()
-            txs.foreach { tx=>
+              end()
+              txs.foreach { tx=>
 
-              tx.actions.foreach { case (msg, action) =>
-                if( action.messageRecord !=null ) {
-                  metric_flushed_message_counter += 1
-                  pendingStores.remove(msg)
+                tx.actions.foreach { case (msg, action) =>
+                  if( action.messageRecord !=null ) {
+                    metric_flushed_message_counter += 1
+                    pendingStores.remove(msg)
+                  }
+                  action.enqueues.foreach { queueEntry=>
+                    metric_flushed_enqueue_counter += 1
+                    val k = key(queueEntry)
+                    pendingEnqueues.remove(k)
+                  }
                 }
-                action.enqueues.foreach { queueEntry=>
-                  metric_flushed_enqueue_counter += 1
-                  val k = key(queueEntry)
-                  pendingEnqueues.remove(k)
-                }
+                tx.onPerformed
+
               }
-              tx.onPerformed
-
             }
-          }
-        })
+          })
+        }
       }
     }
   }
