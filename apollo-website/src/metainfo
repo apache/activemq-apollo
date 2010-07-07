@@ -24,11 +24,14 @@
   # -------------------------------------------------------------------
   # You can easily switch the site from one look to another here:
   # -------------------------------------------------------------------
-  template: /styles/activemq/main.template
+  template: /styles/impact/main.template
   
   # -------------------------------------------------------------------
   # Define the project properties here, these can be accessed in the 
   # pages using the {var:} syntax.
   # -------------------------------------------------------------------
-  project_name: "ActiveMQ Apollo"
-  project_slogan: 'The Next Generation of Messaging Middleware'
+  project_name: "Apollo"
+  project_slogan: "The message broker focused on simplicity, stability and scalability"
+  description: "Apollo, the message broker focused on simplicity, stability and scalability"
+  keywords: "ActiveMQ Apollo message broker simplicity stability scalability"
+  project_logo: /images/project-logo.png
