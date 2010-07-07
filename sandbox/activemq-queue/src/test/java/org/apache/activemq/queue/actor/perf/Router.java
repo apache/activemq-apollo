@@ -9,7 +9,7 @@ import java.util.HashMap;
 
 import org.apache.activemq.dispatch.DispatchQueue;
 import org.apache.activemq.flow.Commands.Destination;
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
 import static org.apache.activemq.dispatch.internal.RunnableSupport.*;
 

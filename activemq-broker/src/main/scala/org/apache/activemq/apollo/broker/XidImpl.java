@@ -22,8 +22,8 @@ import java.io.IOException;
 
 import javax.transaction.xa.Xid;
 
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
+import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 
 /**
  * An implementation of JTA transaction identifier (javax.transaction.xa.Xid).

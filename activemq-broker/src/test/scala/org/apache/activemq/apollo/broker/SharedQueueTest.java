@@ -70,7 +70,7 @@ public class SharedQueueTest extends TestCase {
 //    protected Store createStore() throws Exception {
 //        Store store = null;
 //        if (USE_KAHA_DB) {
-//            store = StoreFactory.createStore("kaha-db");
+//            store = StoreFactory.createStore("hawtdb");
 //        } else {
 //            store = StoreFactory.createStore("memory");
 //        }

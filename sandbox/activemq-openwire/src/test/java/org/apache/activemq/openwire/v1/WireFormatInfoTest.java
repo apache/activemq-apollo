@@ -43,7 +43,7 @@ public class WireFormatInfoTest extends DataFileGeneratorTestSupport {
 
         {
             byte data[] = "MarshalledProperties:1".getBytes();
-            info.setMarshalledProperties(new org.apache.activemq.util.buffer.Buffer(data, 0, data.length));
+            info.setMarshalledProperties(new org.fusesource.hawtbuf.Buffer(data, 0, data.length));
         }
 
     }

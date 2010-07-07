@@ -25,7 +25,7 @@ import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
 import org.apache.activemq.amqp.protocol.marshaller.Encoded;
 import org.apache.activemq.amqp.protocol.types.AmqpSequenceNo;
 import org.apache.activemq.amqp.protocol.types.AmqpUint;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 
 /**
  * Represents a 32-bit RFC-1982 serial number

@@ -20,7 +20,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.activemq.util.StringSupport;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.hawtdb.api.Allocator;
 import org.apache.hawtdb.api.EncoderDecoder;
 import org.apache.hawtdb.api.IOPagingException;

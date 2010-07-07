@@ -23,7 +23,7 @@ import java.lang.Integer;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
 import org.apache.activemq.amqp.protocol.marshaller.Encoded;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 
 /**
  * Represents a integer in the range 0 to 2^16 - 1

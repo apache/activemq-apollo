@@ -32,7 +32,7 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.test2.TestSupport;
 import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
 
 /**

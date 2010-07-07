@@ -19,7 +19,7 @@ package org.apache.hawtdb.internal.index;
 import java.io.File;
 import java.util.Random;
 
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.hawtdb.api.Index;
 import org.apache.hawtdb.api.OutOfSpaceException;
 import org.apache.hawtdb.api.Transaction;

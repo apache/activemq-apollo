@@ -25,7 +25,7 @@ import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.util.Mapper;
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
 abstract public class PartitionedQueue<K, V> extends AbstractFlowQueue<V> implements IPartitionedQueue<K, V> {
 

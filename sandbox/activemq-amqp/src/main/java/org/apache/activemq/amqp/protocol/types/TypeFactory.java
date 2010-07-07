@@ -19,7 +19,7 @@ package org.apache.activemq.amqp.protocol.types;
 import java.math.BigInteger;
 import java.util.Date;
 import java.util.UUID;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//

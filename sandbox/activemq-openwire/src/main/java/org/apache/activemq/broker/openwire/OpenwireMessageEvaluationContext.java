@@ -15,7 +15,7 @@ import org.apache.activemq.command.TransactionId;
 import org.apache.activemq.filter.Expression;
 import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.filter.MessageEvaluationContext;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 
 public class OpenwireMessageEvaluationContext implements MessageEvaluationContext {
 

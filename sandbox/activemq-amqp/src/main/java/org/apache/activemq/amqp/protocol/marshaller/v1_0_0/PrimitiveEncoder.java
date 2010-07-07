@@ -23,7 +23,7 @@ import java.math.BigInteger;
 import java.util.Date;
 import java.util.UUID;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//

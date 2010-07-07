@@ -21,7 +21,7 @@ import _root_.org.apache.activemq.apollo.broker._
 
 import _root_.org.apache.activemq.wireformat.{WireFormatFactory, WireFormat}
 import java.nio.ByteBuffer
-import _root_.org.apache.activemq.util.buffer._
+import _root_.org.fusesource.hawtbuf._
 import collection.mutable.{ListBuffer, HashMap}
 import AsciiBuffer._
 import Stomp._

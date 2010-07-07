@@ -25,7 +25,7 @@ import org.apache.activemq.command.DataStructure;
 import org.apache.activemq.openwire.BooleanStream;
 import org.apache.activemq.openwire.DataStreamMarshaller;
 import org.apache.activemq.openwire.OpenWireFormat;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 
 public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
 

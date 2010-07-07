@@ -16,14 +16,12 @@
  */
 package org.apache.activemq.command;
 
-import java.util.Collection;
-
 import javax.jms.JMSException;
 import javax.jms.Queue;
 
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.Router;
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
 /**
  * 

@@ -50,11 +50,11 @@ public abstract class MessageTestSupport extends BaseCommandTestSupport {
         info.setType("Type:10");
         {
             byte data[] = "Content:11".getBytes();
-            info.setContent(new org.apache.activemq.util.buffer.Buffer(data, 0, data.length));
+            info.setContent(new org.fusesource.hawtbuf.Buffer(data, 0, data.length));
         }
         {
             byte data[] = "MarshalledProperties:12".getBytes();
-            info.setMarshalledProperties(new org.apache.activemq.util.buffer.Buffer(data, 0, data.length));
+            info.setMarshalledProperties(new org.fusesource.hawtbuf.Buffer(data, 0, data.length));
         }
         info.setDataStructure(createDataStructure("DataStructure:13"));
         info.setTargetConsumerId(createConsumerId("TargetConsumerId:14"));

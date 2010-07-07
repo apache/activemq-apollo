@@ -20,7 +20,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.hawtdb.api.Paged;
 import org.apache.hawtdb.internal.util.Ranges;
 

@@ -11,7 +11,7 @@ import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
 import org.apache.activemq.amqp.protocol.types.AmqpType;
 import org.apache.activemq.transport.Transport;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.buffer.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 

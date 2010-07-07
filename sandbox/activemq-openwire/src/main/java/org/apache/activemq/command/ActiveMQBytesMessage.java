@@ -34,10 +34,10 @@ import javax.jms.MessageNotReadableException;
 
 import org.apache.activemq.IConnection;
 import org.apache.activemq.util.JMSExceptionSupport;
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.buffer.BufferEditor;
-import org.apache.activemq.util.buffer.ByteArrayInputStream;
-import org.apache.activemq.util.buffer.ByteArrayOutputStream;
+import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.BufferEditor;
+import org.fusesource.hawtbuf.ByteArrayInputStream;
+import org.fusesource.hawtbuf.ByteArrayOutputStream;
 
 /**
  * A <CODE>BytesMessage</CODE> object is used to send a message containing a

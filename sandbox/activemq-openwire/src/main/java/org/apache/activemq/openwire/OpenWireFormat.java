@@ -19,10 +19,10 @@ package org.apache.activemq.openwire;
 import org.apache.activemq.command.CommandTypes;
 import org.apache.activemq.command.DataStructure;
 import org.apache.activemq.command.WireFormatInfo;
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.buffer.BufferEditor;
-import org.apache.activemq.util.buffer.DataByteArrayInputStream;
-import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
+import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.buffer.BufferEditor;
+import org.fusesource.hawtbuf.DataByteArrayInputStream;
+import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 

@@ -1,10 +1,8 @@
 package org.apache.activemq.amqp.wireformat;
 
-import java.io.*;
-
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
 import org.apache.activemq.amqp.protocol.types.*;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 

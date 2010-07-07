@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.broker;
 
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
 /**
  */

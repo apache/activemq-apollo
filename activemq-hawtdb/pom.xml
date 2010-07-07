@@ -37,23 +37,20 @@
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-store</artifactId>
       <version>6.0-SNAPSHOT</version>
-      <optional>false</optional>
     </dependency>
     
     <dependency>
       <groupId>org.fusesource.hawtdb</groupId>
       <artifactId>hawtdb</artifactId>
       <version>${hawtdb-version}</version>
-      <optional>false</optional>
     </dependency>
     
     <dependency>
-      <groupId>org.apache.activemq.protobuf</groupId>
-      <artifactId>activemq-protobuf</artifactId>
-      <version>${activemq-protobuf-version}</version>
-      <optional>false</optional>
-    </dependency>  
-  
+      <groupId>org.fusesource.hawtbuf</groupId>
+      <artifactId>hawtbuf-proto</artifactId>
+      <version>${hawtbuf-version}</version>
+    </dependency>
+
     <!-- Testing Dependencies -->    
     <dependency>
       <groupId>org.apache.activemq</groupId>
@@ -81,8 +78,9 @@
     <plugins>
 
       <plugin>
-        <groupId>org.apache.activemq.protobuf</groupId>
-        <artifactId>activemq-protobuf</artifactId>
+        <groupId>org.fusesource.hawtbuf</groupId>
+        <artifactId>hawtbuf-proto</artifactId>
+        <version>${hawtbuf-version}</version>
         <configuration>
           <type>alt</type>
         </configuration>

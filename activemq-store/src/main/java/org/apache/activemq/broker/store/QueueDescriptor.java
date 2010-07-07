@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.broker.store;
 
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
 
 public class QueueDescriptor {

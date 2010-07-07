@@ -19,10 +19,10 @@ package org.apache.activemq.apollo.broker
 import _root_.java.util.{LinkedList}
 import _root_.org.apache.activemq.filter.{MessageEvaluationContext}
 import _root_.java.lang.{String}
-import _root_.org.apache.activemq.util.buffer.{Buffer, AsciiBuffer}
 import _root_.org.fusesource.hawtdispatch._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import org.apache.activemq.transport.Transport
+import org.fusesource.hawtbuf._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

@@ -1,0 +1,166 @@
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+package org.apache.activemq.broker.store.hawtdb;
+
+option java_multiple_files = false;
+option java_outer_classname = "Data";
+
+enum Type {
+  //| option java_create_message="true";
+  MESSAGE_ADD = 0;
+  QUEUE_ADD = 10;
+  QUEUE_REMOVE = 11;
+  QUEUE_ADD_MESSAGE = 12;
+  QUEUE_REMOVE_MESSAGE = 13;
+  TRANSACTION_BEGIN = 20;
+  TRANSACTION_ADD_MESSAGE = 21;
+  TRANSACTION_REMOVE_MESSAGE = 22;
+  TRANSACTION_COMMIT = 23;
+  TRANSACTION_ROLLBACK = 24;
+  MAP_ADD = 30;
+  MAP_REMOVE = 31;
+  MAP_ENTRY_PUT = 32;
+  MAP_ENTRY_REMOVE = 33;
+  STREAM_OPEN = 40;
+  STREAM_WRITE = 41;
+  STREAM_CLOSE = 42;
+  STREAM_REMOVE = 43;
+  SUBSCRIPTION_ADD = 50;
+  SUBSCRIPTION_REMOVE = 51;
+  
+  TRACE = 100;
+}
+
+message Trace {
+  optional bytes message = 2 [java_override_type = "AsciiBuffer"];
+}  
+
+///////////////////////////////////////////////////////////////
+// Message related operations.
+///////////////////////////////////////////////////////////////
+
+message MessageAdd {
+  optional int64 messageKey=1;
+  optional bytes messageId = 2 [java_override_type = "AsciiBuffer"];
+  optional bytes encoding = 3 [java_override_type = "AsciiBuffer"];
+  optional bytes buffer = 4;
+  optional int64 streamKey=5;
+  optional int32 messageSize=6;
+}  
+
+///////////////////////////////////////////////////////////////
+// Queue related operations.
+///////////////////////////////////////////////////////////////
+
+message QueueAdd {
+  optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
+  optional int32 applicationType = 2; 
+  optional bytes parentName = 3 [java_override_type = "AsciiBuffer"];
+  optional int32 queueType = 4;
+  optional int32 partitionId = 5;
+}  
+message QueueRemove {
+  optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
+}  
+message QueueAddMessage {
+  optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
+  optional int64 queueKey=2;
+  optional int64 messageKey=3;
+  optional bytes attachment = 4;
+  optional int32 messageSize=5;
+}  
+message QueueRemoveMessage {
+  optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
+  optional int64 queueKey=2;
+}  
+
+
+///////////////////////////////////////////////////////////////
+// Client related operations.
+///////////////////////////////////////////////////////////////
+message SubscriptionAdd {
+  optional bytes name        = 1    [java_override_type = "AsciiBuffer"];
+  optional bytes selector    = 2    [java_override_type = "AsciiBuffer"];
+  optional bytes destination = 3    [java_override_type = "AsciiBuffer"];
+  optional bool  durable     = 4    [default = false];
+  optional int64 tte         = 5    [default = -1];
+  optional bytes attachment  = 6;
+  
+}
+
+message SubscriptionRemove {
+  optional bytes name = 1 [java_override_type = "AsciiBuffer"];
+}
+
+
+///////////////////////////////////////////////////////////////
+// Map related operations.
+///////////////////////////////////////////////////////////////
+message MapAdd {
+  optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
+}  
+message MapRemove {
+  optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
+}  
+message MapEntryPut {
+  optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
+  optional bytes key = 2 [java_override_type = "AsciiBuffer"];
+  optional bytes value = 3;
+} 
+message MapEntryRemove {
+  optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
+  optional bytes key = 2 [java_override_type = "AsciiBuffer"];
+}
+
+///////////////////////////////////////////////////////////////
+// Stream related operations.
+///////////////////////////////////////////////////////////////
+message StreamOpen {
+  optional int64 streamKey=1;
+}
+message StreamWrite {
+  optional int64 streamKey=1;
+  optional bytes data = 2;
+}
+message StreamClose {
+  optional int64 streamKey=1;
+}
+message StreamRemove {
+  optional int64 streamKey=1;
+}
+
+///////////////////////////////////////////////////////////////
+// Transaction related operations.
+///////////////////////////////////////////////////////////////
+message TransactionBegin {
+  optional bytes txid = 1;
+}
+message TransactionAddMessage {
+  optional bytes txid = 1;
+  optional int64 messageKey=2;
+}
+message TransactionRemoveMessage {
+  optional bytes txid = 1;
+  optional bytes queueName = 2 [java_override_type = "AsciiBuffer"];
+  optional int64 messageKey=3;
+}
+message TransactionCommit {
+  optional bytes txid = 1;
+}
+message TransactionRollback {
+  optional bytes txid = 1;
+}

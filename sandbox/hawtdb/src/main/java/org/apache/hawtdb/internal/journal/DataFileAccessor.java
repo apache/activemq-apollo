@@ -21,7 +21,7 @@ import java.io.RandomAccessFile;
 import java.util.Map;
 
 import org.apache.activemq.util.IOHelper;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.hawtdb.internal.journal.DataFileAppender.WriteCommand;
 import org.apache.hawtdb.internal.journal.DataFileAppender.WriteKey;
 

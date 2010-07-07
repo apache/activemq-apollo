@@ -31,7 +31,7 @@ import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.util.IntrospectionSupport;
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
 /**
  * 

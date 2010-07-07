@@ -22,8 +22,8 @@ import java.io.StringReader;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.buffer.BufferInputStream;
+import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.BufferInputStream;
 import org.apache.xpath.CachedXPathAPI;
 import org.apache.xpath.objects.XObject;
 import org.w3c.dom.Document;

@@ -24,9 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.buffer.DataByteArrayInputStream;
-import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
+import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.DataByteArrayInputStream;
+import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hawtdb.api.BTreeIndexFactory;

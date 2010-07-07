@@ -24,7 +24,7 @@ import org.apache.activemq.flow.Commands.Message.MessageBean;
 import org.apache.activemq.flow.Commands.Message.MessageBuffer;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.Mapper;
-import org.apache.activemq.util.buffer.UTF8Buffer;
+import org.fusesource.hawtbuf.UTF8Buffer;
 
 /**
  * 

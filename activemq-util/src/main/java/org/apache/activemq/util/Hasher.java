@@ -19,15 +19,14 @@ package org.apache.activemq.util;
 
 import org.apache.activemq.util.marshaller.Marshaller;
 import org.apache.activemq.util.marshaller.VariableMarshaller;
-import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 
 import java.io.IOException;
 import java.io.DataOutput;
 import java.io.DataInput;
 import java.util.zip.Checksum;
 import java.util.zip.CRC32;
-import java.util.zip.Adler32;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 

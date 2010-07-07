@@ -21,11 +21,11 @@ import _root_.org.apache.activemq.broker.store.memory.MemoryStore
 import _root_.org.apache.activemq.broker.store.{Store}
 import _root_.org.apache.activemq.Service
 import _root_.java.lang.{String}
-import _root_.org.apache.activemq.util.buffer.{AsciiBuffer}
 import _root_.org.fusesource.hawtdispatch.{ScalaDispatch, DispatchQueue}
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.reflect.BeanProperty
 import path.PathFilter
+import org.fusesource.hawtbuf.AsciiBuffer
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

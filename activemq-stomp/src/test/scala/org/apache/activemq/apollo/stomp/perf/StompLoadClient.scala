@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.stomp.perf
 
 import _root_.java.io._
 import _root_.java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
-import _root_.org.apache.activemq.util.buffer.AsciiBuffer
+import _root_.org.fusesource.hawtbuf.AsciiBuffer
 import java.net.{ProtocolException, InetSocketAddress, URI, Socket}
 
 import java.lang.String._

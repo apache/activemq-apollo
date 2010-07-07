@@ -16,7 +16,7 @@
  */
 package org.apache.hawtdb.internal.index;
 
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.activemq.util.marshaller.FixedBufferMarshaller;
 import org.apache.activemq.util.marshaller.LongMarshaller;
 import org.apache.hawtdb.api.BTreeIndexFactory;

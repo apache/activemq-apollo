@@ -30,9 +30,9 @@ import org.apache.activemq.broker.region.Destination;
 import org.apache.activemq.broker.region.MessageReference;
 import org.apache.activemq.legacy.usage.MemoryUsage;
 import org.apache.activemq.util.MarshallingSupport;
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.buffer.ByteArrayInputStream;
-import org.apache.activemq.util.buffer.ByteArrayOutputStream;
+import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.ByteArrayInputStream;
+import org.fusesource.hawtbuf.ByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
 
 /**

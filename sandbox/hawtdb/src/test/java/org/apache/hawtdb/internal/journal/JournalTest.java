@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.hawtdb.internal.journal.Journal;
 
 /**

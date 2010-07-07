@@ -57,7 +57,7 @@ import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.openwire.v1.ActiveMQTextMessageTest;
 import org.apache.activemq.openwire.v1.BrokerInfoTest;
 import org.apache.activemq.openwire.v1.MessageAckTest;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

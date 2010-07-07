@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.buffer.Buffer;
 
 public class JournalTest extends TestCase {
     protected static final int DEFAULT_MAX_BATCH_SIZE = 1024 * 1024 * 4;

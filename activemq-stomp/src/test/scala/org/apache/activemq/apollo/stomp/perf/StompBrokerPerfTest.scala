@@ -21,7 +21,7 @@ import _root_.org.apache.activemq.apollo.broker._
 import _root_.org.apache.activemq.apollo.broker.perf._
 import _root_.org.apache.activemq.apollo.stomp._
 
-import _root_.org.apache.activemq.util.buffer._
+import _root_.org.fusesource.hawtbuf._
 import collection.mutable.{ListBuffer, HashMap}
 
 import AsciiBuffer._

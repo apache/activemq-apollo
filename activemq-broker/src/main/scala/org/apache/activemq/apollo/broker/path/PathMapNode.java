@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
 /**
  * An implementation class used to implement {@link PathMap}

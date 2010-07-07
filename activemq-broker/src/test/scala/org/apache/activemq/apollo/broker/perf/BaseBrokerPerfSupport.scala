@@ -25,7 +25,6 @@ import org.apache.activemq.transport.TransportFactory
 
 import _root_.scala.collection.JavaConversions._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import org.apache.activemq.util.buffer.AsciiBuffer
 import org.apache.activemq.broker.store.{Store, StoreFactory}
 import java.io.{File, IOException}
 import java.util.ArrayList
@@ -33,6 +32,7 @@ import org.fusesource.hawtdispatch.BaseRetained
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import org.apache.activemq.apollo.broker._
 import org.scalatest._
+import _root_.org.fusesource.hawtbuf._
 
 object BaseBrokerPerfSupport {
   var PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "1"))
@@ -530,7 +530,7 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
 
   protected def createStore(broker: Broker): Store = {
     val store = if (USE_KAHA_DB) {
-      StoreFactory.createStore("kaha-db");
+      StoreFactory.createStore("hawtdb");
     } else {
       StoreFactory.createStore("memory");
     }

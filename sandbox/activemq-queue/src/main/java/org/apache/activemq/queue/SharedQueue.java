@@ -33,7 +33,7 @@ import org.apache.activemq.queue.CursoredQueue.CursorReadyListener;
 import org.apache.activemq.queue.CursoredQueue.QueueElement;
 import org.apache.activemq.queue.Subscription.SubscriptionDelivery;
 import org.apache.activemq.util.Mapper;
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 import org.apache.activemq.util.list.LinkedNode;
 import org.apache.activemq.util.list.LinkedNodeList;
 

@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.stomp
 
 import _root_.org.apache.activemq.wireformat.{WireFormat}
 import _root_.org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained}
-import _root_.org.apache.activemq.util.buffer._
+import _root_.org.fusesource.hawtbuf._
 import collection.mutable.{ListBuffer, HashMap}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 

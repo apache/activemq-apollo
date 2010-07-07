@@ -18,7 +18,7 @@ package org.apache.hawtdb.internal.page;
 
 import java.nio.ByteBuffer;
 
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.hawtdb.api.EncoderDecoder;
 import org.apache.hawtdb.api.Paged;
 import org.apache.hawtdb.internal.io.MemoryMappedFile;

@@ -44,6 +44,12 @@
   <dependencies>
                 
     <dependency>
+      <groupId>org.fusesource.hawtbuf</groupId>
+      <artifactId>hawtbuf-core</artifactId>
+      <version>${hawtbuf-version}</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.geronimo.specs</groupId>
       <artifactId>geronimo-jms_1.1_spec</artifactId>
       <version>1.1.1</version>

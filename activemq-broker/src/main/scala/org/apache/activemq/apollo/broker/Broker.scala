@@ -20,7 +20,6 @@ import _root_.java.io.{File}
 import _root_.org.apache.activemq.transport._
 import _root_.org.apache.activemq.Service
 import _root_.java.lang.{String}
-import _root_.org.apache.activemq.util.buffer.{Buffer, UTF8Buffer, AsciiBuffer}
 import _root_.org.apache.activemq.util.{FactoryFinder, IOHelper}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import _root_.scala.collection.JavaConversions._
@@ -28,6 +27,7 @@ import _root_.scala.reflect.BeanProperty
 import org.fusesource.hawtdispatch.{Dispatch, DispatchQueue, BaseRetained}
 import java.util.{HashSet, LinkedList, LinkedHashMap, ArrayList}
 import java.util.concurrent.{TimeUnit, CountDownLatch}
+import org.fusesource.hawtbuf._
 
 /**
  * <p>

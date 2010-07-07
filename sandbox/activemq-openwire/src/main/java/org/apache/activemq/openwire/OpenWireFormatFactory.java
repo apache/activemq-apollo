@@ -17,7 +17,7 @@
 package org.apache.activemq.openwire;
 
 import org.apache.activemq.command.WireFormatInfo;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.buffer.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 

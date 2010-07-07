@@ -20,7 +20,7 @@ import java.util.ArrayList;
 
 import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.flow.PrioritySizeLimiter;
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
 public class SharedPriorityQueue<K, V> extends PartitionedQueue<K, V> {
 

@@ -17,7 +17,7 @@
 package org.apache.activemq.apollo.broker
 
 import _root_.java.util.concurrent.atomic.AtomicLong
-import _root_.org.apache.activemq.util.buffer._
+import _root_.org.fusesource.hawtbuf._
 import _root_.org.fusesource.hawtdispatch._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 

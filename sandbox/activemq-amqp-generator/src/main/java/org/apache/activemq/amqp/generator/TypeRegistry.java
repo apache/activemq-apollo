@@ -2,7 +2,6 @@ package org.apache.activemq.amqp.generator;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.StringTokenizer;
 
 public class TypeRegistry {
 

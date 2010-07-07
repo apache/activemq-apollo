@@ -16,8 +16,8 @@
  */
 package org.apache.activemq.apollo.stomp;
 
-import org.apache.activemq.util.buffer.AsciiBuffer;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
+import org.fusesource.hawtbuf.Buffer;
 
 
 public interface Stomp {

@@ -19,7 +19,7 @@ package org.apache.hawtdb.internal.page;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.hawtdb.api.Paged;
 import org.apache.hawtdb.internal.util.Ranges;
 

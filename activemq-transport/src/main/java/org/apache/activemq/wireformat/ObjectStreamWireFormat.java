@@ -25,14 +25,11 @@ import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
-import java.util.Map;
 
-import org.apache.activemq.transport.Transport;
 import org.apache.activemq.util.ClassLoadingAwareObjectInputStream;
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.buffer.ByteArrayInputStream;
-import org.apache.activemq.util.buffer.ByteArrayOutputStream;
+import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.ByteArrayInputStream;
+import org.fusesource.hawtbuf.ByteArrayOutputStream;
 
 /**
  * A simple implementation which uses Object Stream serialization.

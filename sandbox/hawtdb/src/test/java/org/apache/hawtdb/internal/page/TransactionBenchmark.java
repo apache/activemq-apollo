@@ -18,7 +18,7 @@ package org.apache.hawtdb.internal.page;
 
 import java.util.Random;
 
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.hawtdb.api.Transaction;
 import org.apache.hawtdb.internal.Action;
 import org.apache.hawtdb.internal.Benchmarker.BenchmarkAction;

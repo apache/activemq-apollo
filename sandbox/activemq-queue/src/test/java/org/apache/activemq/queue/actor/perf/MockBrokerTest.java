@@ -24,7 +24,7 @@ import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Destination.DestinationBean;
 import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
 import org.apache.activemq.util.Mapper;
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;

@@ -232,7 +232,7 @@ public class AmqpClass {
             imports.add(generator.getPackagePrefix() + ".marshaller.Encoded");
             imports.add(generator.getMarshallerPackage() + ".Encoder");
             imports.add(generator.getMarshallerPackage() + ".Encoder.*");
-            imports.add("org.apache.activemq.util.buffer.Buffer");
+            imports.add("org.fusesource.hawtbuf.Buffer");
 
             if (isDescribed()) {
 
@@ -271,7 +271,7 @@ public class AmqpClass {
             imports.add(generator.getPackagePrefix() + ".marshaller.AmqpEncodingError");
             imports.add(generator.getPackagePrefix() + ".marshaller.AmqpMarshaller");
             imports.add(generator.getPackagePrefix() + ".marshaller.Encoded");
-            imports.add("org.apache.activemq.util.buffer.Buffer");
+            imports.add("org.fusesource.hawtbuf.Buffer");
             imports.add("java.io.IOException");
             imports.add("java.io.DataOutput");
             imports.add("java.io.DataInput");

@@ -31,9 +31,8 @@ import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.broker.store.Store.Session;
 import org.apache.activemq.broker.store.Store.SubscriptionRecord;
 import org.apache.activemq.broker.store.Store.VoidCallback;
-import org.apache.activemq.broker.store.QueueDescriptor;
-import org.apache.activemq.util.buffer.AsciiBuffer;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
+import org.fusesource.hawtbuf.Buffer;
 
 public abstract class StoreTestBase extends TestCase {
 

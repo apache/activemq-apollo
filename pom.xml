@@ -92,6 +92,7 @@
     <activemq-protobuf-version>1.1-SNAPSHOT</activemq-protobuf-version>
     <hawtdispatch-version>1.0-SNAPSHOT</hawtdispatch-version>
     <hawtdb-version>1.1-SNAPSHOT</hawtdb-version>
+    <hawtbuf-version>1.0-SNAPSHOT</hawtbuf-version>
 
     <scala-version>2.8.0.Beta1</scala-version>
     <scalatest-version>1.0.1-for-scala-2.8.0.Beta1-RC7-with-test-interfaces-0.3-SNAPSHOT</scalatest-version>
@@ -127,7 +128,6 @@
 
   <modules>
     <module>activemq-util</module>
-    <module>activemq-protobuf</module>
     <module>activemq-transport</module>
     <module>activemq-store</module>
     <module>activemq-broker</module>
@@ -160,12 +160,12 @@
    </repositories>
 
   <!-- This is only here since the activemq-protobuf plugin has not been released yet -->
-  <pluginRepositories>
-    <pluginRepository>
-      <id>apache.snapshots</id>
-      <url>https://repository.apache.org/content/repositories/snapshots/</url>
-    </pluginRepository>
-  </pluginRepositories>
+  <!--<pluginRepositories>-->
+    <!--<pluginRepository>-->
+      <!--<id>apache.snapshots</id>-->
+      <!--<url>https://repository.apache.org/content/repositories/snapshots/</url>-->
+    <!--</pluginRepository>-->
+  <!--</pluginRepositories>-->
 
   <dependencyManagement>
     <dependencies>
@@ -245,7 +245,7 @@
           <version>1.0</version>
         </plugin>
         <plugin>
-          <groupId>org.apache.activemq.protobuf</groupId>
+          <groupId>org.fusesource.hawtbuf.proto</groupId>
           <artifactId>activemq-protobuf</artifactId>
           <version>1.1-SNAPSHOT</version>
         </plugin>

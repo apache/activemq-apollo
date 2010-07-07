@@ -18,7 +18,7 @@ package org.apache.activemq.transport.pipe;
 
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
 import org.fusesource.hawtdispatch.*;
 

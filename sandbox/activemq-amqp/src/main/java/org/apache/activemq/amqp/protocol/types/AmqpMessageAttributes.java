@@ -28,7 +28,7 @@ import org.apache.activemq.amqp.protocol.marshaller.Encoded;
 import org.apache.activemq.amqp.protocol.types.AmqpMap;
 import org.apache.activemq.amqp.protocol.types.AmqpMessageAttributes;
 import org.apache.activemq.amqp.protocol.types.IAmqpMap;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 
 /**
  * <p>

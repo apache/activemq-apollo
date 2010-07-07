@@ -44,7 +44,7 @@ import java.util.zip.Checksum;
 import org.apache.activemq.util.IOHelper;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.LRUCache;
-import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
+import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.apache.activemq.util.list.Sequence;
 import org.apache.activemq.util.list.SequenceSet;
 import org.apache.commons.logging.Log;

@@ -23,7 +23,7 @@ import java.lang.Double;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
 import org.apache.activemq.amqp.protocol.marshaller.Encoded;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 
 /**
  * Represents a 64-bit floating point number (IEEE 754-2008 binary64)

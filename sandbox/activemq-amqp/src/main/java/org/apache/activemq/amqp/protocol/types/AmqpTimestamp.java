@@ -23,7 +23,7 @@ import java.util.Date;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
 import org.apache.activemq.amqp.protocol.marshaller.Encoded;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 
 /**
  * Represents a an absolute point in time

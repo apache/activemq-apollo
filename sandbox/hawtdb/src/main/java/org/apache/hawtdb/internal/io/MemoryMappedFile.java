@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 
 import org.apache.activemq.util.IOHelper;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.hawtdb.api.IOPagingException;
 
 /**

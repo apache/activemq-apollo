@@ -30,7 +30,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.hawtdb.api.EncoderDecoder;
 import org.apache.hawtdb.api.IOPagingException;
 import org.apache.hawtdb.api.OptimisticUpdateException;

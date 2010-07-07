@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.wireformat;
 
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 
 public interface WireFormatFactory {
     

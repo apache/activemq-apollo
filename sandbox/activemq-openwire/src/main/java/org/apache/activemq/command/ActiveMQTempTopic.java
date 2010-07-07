@@ -20,7 +20,7 @@ import javax.jms.JMSException;
 import javax.jms.TemporaryTopic;
 
 import org.apache.activemq.apollo.broker.Router;
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.buffer.AsciiBuffer;
 
 /**
  * @openwire:marshaller code="103"

@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.broker.path;
 
 import java.util.ArrayList;
 
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
 /**
  * Helper class for decomposing a AsciiBuffer based path into it path component parts.

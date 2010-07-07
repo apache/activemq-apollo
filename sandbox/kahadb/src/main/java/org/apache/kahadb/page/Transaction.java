@@ -25,9 +25,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.buffer.DataByteArrayInputStream;
-import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
+import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.DataByteArrayInputStream;
+import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.apache.activemq.util.list.Sequence;
 import org.apache.activemq.util.list.SequenceSet;
 import org.apache.activemq.util.marshaller.Marshaller;

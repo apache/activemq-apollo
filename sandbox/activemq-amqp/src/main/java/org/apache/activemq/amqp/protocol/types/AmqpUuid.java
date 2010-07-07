@@ -23,7 +23,7 @@ import java.util.UUID;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpEncodingError;
 import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
 import org.apache.activemq.amqp.protocol.marshaller.Encoded;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 
 /**
  * Represents a a universally unique id as defined by RFC-4122 section 4.1.2

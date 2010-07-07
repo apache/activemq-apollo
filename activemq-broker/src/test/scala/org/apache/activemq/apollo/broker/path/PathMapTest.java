@@ -23,7 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 import org.junit.Test;
 
 import static org.junit.Assert.*;

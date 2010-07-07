@@ -2,7 +2,7 @@ package org.apache.activemq.apollo.jaxb;
 
 import javax.xml.bind.annotation.adapters.XmlAdapter;
 
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
 class AsciiBufferAdapter extends XmlAdapter<String, AsciiBuffer> {
 	@Override

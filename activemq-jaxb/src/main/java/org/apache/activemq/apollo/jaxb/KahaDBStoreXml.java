@@ -24,7 +24,7 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.kahadb.KahaDBStore;
+import org.apache.activemq.broker.store.hawtdb.HawtDBStore;
 
 @XmlRootElement(name="kahadb-store")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -50,21 +50,21 @@ public class KahaDBStoreXml extends StoreXml {
 	private File directory;
 
 	public Store createStore() {
-		KahaDBStore rc = new KahaDBStore();
+		HawtDBStore rc = new HawtDBStore();
 		if( checkpointInterval!=null )
 			rc.setCheckpointInterval(checkpointInterval);
 		if( cleanupInterval!=null )
 			rc.setCleanupInterval(cleanupInterval);
 		if( purgeOnStartup!=null )
 			rc.setDeleteAllMessages(purgeOnStartup);
-		if( indexWriteAsync!=null )
-			rc.setEnableIndexWriteAsync(indexWriteAsync);
-		if( journalDiskSyncs!=null )
-			rc.setEnableJournalDiskSyncs(journalDiskSyncs);
+//		if( indexWriteAsync!=null )
+//			rc.setEnableIndexWriteAsync(indexWriteAsync);
+//		if( journalDiskSyncs!=null )
+//			rc.setEnableJournalDiskSyncs(journalDiskSyncs);
 		if( failIfDatabaseIsLocked!=null )
 			rc.setFailIfDatabaseIsLocked(failIfDatabaseIsLocked);
-		if( indexWriteBatchSize!=null )
-			rc.setIndexWriteBatchSize(indexWriteBatchSize);
+//		if( indexWriteBatchSize!=null )
+//			rc.setIndexWriteBatchSize(indexWriteBatchSize);
 		if( journalMaxFileLength!=null )
 			rc.setJournalMaxFileLength(journalMaxFileLength);
 		if( directory!=null )

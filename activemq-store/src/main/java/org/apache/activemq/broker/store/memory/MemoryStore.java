@@ -30,9 +30,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.util.Comparators;
-import org.apache.activemq.util.buffer.AsciiBuffer;
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.buffer.ByteArrayOutputStream;
+import org.fusesource.hawtbuf.AsciiBuffer;
+import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.ByteArrayOutputStream;
 
 /**
  * An in memory implementation of the {@link Store} interface. It does not

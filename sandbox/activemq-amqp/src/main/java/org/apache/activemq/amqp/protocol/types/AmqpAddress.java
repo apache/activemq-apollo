@@ -24,7 +24,7 @@ import org.apache.activemq.amqp.protocol.marshaller.AmqpMarshaller;
 import org.apache.activemq.amqp.protocol.marshaller.Encoded;
 import org.apache.activemq.amqp.protocol.types.AmqpAddress;
 import org.apache.activemq.amqp.protocol.types.AmqpBinary;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 
 /**
  * Represents a name of the source or target for a Message

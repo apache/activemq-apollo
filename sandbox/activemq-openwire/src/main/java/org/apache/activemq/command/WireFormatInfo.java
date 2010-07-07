@@ -26,9 +26,9 @@ import java.util.Map;
 
 import org.apache.activemq.state.CommandVisitor;
 import org.apache.activemq.util.MarshallingSupport;
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.buffer.ByteArrayInputStream;
-import org.apache.activemq.util.buffer.ByteArrayOutputStream;
+import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.ByteArrayInputStream;
+import org.fusesource.hawtbuf.ByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
 
 /**

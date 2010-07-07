@@ -18,10 +18,10 @@ package org.apache.activemq.transport.tcp;
 
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
-import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.DispatchSource;

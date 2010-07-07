@@ -36,7 +36,7 @@ import org.apache.activemq.queue.actor.transport.TransportServer;
 import org.apache.activemq.queue.actor.transport.TransportServerHandler;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.URISupport;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.buffer.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 

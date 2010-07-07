@@ -33,9 +33,8 @@ import org.apache.activemq.broker.store.Store.VoidCallback;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
 import org.apache.activemq.metric.Period;
-import org.apache.activemq.broker.store.QueueDescriptor;
-import org.apache.activemq.util.buffer.AsciiBuffer;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
+import org.fusesource.hawtbuf.Buffer;
 
 public abstract class StorePerformanceBase extends TestCase {
     

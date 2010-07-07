@@ -28,9 +28,9 @@ import java.util.zip.Adler32;
 import java.util.zip.Checksum;
 
 import org.apache.activemq.util.Scheduler;
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.buffer.DataByteArrayInputStream;
-import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
+import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.DataByteArrayInputStream;
+import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.apache.activemq.util.list.LinkedNodeList;
 import org.apache.activemq.util.list.Sequence;
 import org.apache.commons.logging.Log;

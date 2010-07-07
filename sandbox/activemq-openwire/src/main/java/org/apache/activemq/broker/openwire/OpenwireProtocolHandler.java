@@ -92,7 +92,7 @@ import org.apache.activemq.openwire.OpenWireFormat;
 import org.apache.activemq.selector.SelectorParser;
 import org.apache.activemq.state.CommandVisitor;
 import org.apache.activemq.transport.WireFormatNegotiator;
-import org.apache.activemq.util.buffer.Buffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
 import org.fusesource.hawtdispatch.Dispatch;
 

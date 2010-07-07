@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.broker.path;
 
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
 /**
  * A base class for entry objects used to construct a path based policy

@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
 
-import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
 /**
  * Represents a node in the {@link PathMap} tree

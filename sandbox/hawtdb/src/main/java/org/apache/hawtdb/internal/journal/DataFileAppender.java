@@ -25,8 +25,8 @@ import java.util.zip.Adler32;
 import java.util.zip.Checksum;
 
 import org.apache.activemq.util.IOHelper;
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
+import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.apache.activemq.util.list.LinkedNode;
 import org.apache.activemq.util.list.LinkedNodeList;
 
