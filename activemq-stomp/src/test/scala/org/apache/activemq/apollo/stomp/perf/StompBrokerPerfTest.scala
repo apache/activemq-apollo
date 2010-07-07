@@ -69,10 +69,10 @@ class StompRemoteConsumer extends RemoteConsumer {
     def onTransportCommand(command:Object) = {
       var frame = command.asInstanceOf[StompFrame]
       frame match {
-        case StompFrame(Responses.CONNECTED, headers, _) =>
-        case StompFrame(Responses.MESSAGE, headers, content) =>
+        case StompFrame(Responses.CONNECTED, headers, _, _) =>
+        case StompFrame(Responses.MESSAGE, headers, content, _) =>
           messageReceived();
-        case StompFrame(Responses.ERROR, headers, content) =>
+        case StompFrame(Responses.ERROR, headers, content, _) =>
           onFailure(new Exception("Server reported an error: " + frame.content));
         case _ =>
           onFailure(new Exception("Unexpected stomp command: " + frame.action));
@@ -137,14 +137,14 @@ class StompRemoteProducer extends RemoteProducer {
           stompDestination = ascii("/topic/"+destination.getName().toString());
       }
       transport.oneway(StompFrame(Stomp.Commands.CONNECT), null);
-
+      send_next
     }
 
     def onTransportCommand(command:Object) = {
       var frame = command.asInstanceOf[StompFrame]
       frame match {
-        case StompFrame(Responses.CONNECTED, headers, _) =>
-        case StompFrame(Responses.ERROR, headers, content) =>
+        case StompFrame(Responses.CONNECTED, headers, _, _) =>
+        case StompFrame(Responses.ERROR, headers, content, _) =>
           onFailure(new Exception("Server reported an error: " + frame.content.utf8));
         case _ =>
           onFailure(new Exception("Unexpected stomp command: " + frame.action));

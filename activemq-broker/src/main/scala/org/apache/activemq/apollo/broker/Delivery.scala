@@ -390,7 +390,7 @@ trait DeliverySink {
   def send(delivery:Delivery):Unit
 }
 
-class TransportDeliverySink(val transport:Transport) extends DeliverySink {
+class TransportDeliverySink(var transport:Transport) extends DeliverySink {
   def full:Boolean = transport.isFull
   def send(delivery:Delivery) = transport.oneway(delivery.message, delivery)
 }
@@ -472,7 +472,7 @@ class DeliveryOverflowBuffer(val delivery_buffer:DeliverySink) extends DeliveryS
 
 }
 
-class DeliverySessionManager(val delivery_buffer:DeliverySink, val queue:DispatchQueue) extends BaseRetained {
+class DeliverySessionManager(val sink:DeliverySink, val queue:DispatchQueue) extends BaseRetained {
 
   var sessions = List[SessionServer]()
 
@@ -494,7 +494,7 @@ class DeliverySessionManager(val delivery_buffer:DeliverySink, val queue:Dispatc
   def drain_source = {
     val deliveries = source.getData
     deliveries.foreach { delivery=>
-      delivery_buffer.send(delivery)
+      sink.send(delivery)
       delivery.release
     }
   }
@@ -514,7 +514,7 @@ class DeliverySessionManager(val delivery_buffer:DeliverySink, val queue:Dispatc
 
     val client = new SessionClient()
 
-    class SessionClient() extends DeliveryOverflowBuffer(delivery_buffer) {
+    class SessionClient() extends DeliveryOverflowBuffer(sink) {
 
       producer_queue.retain
       val credit_adder = createSource(EventAggregators.INTEGER_ADD , producer_queue)

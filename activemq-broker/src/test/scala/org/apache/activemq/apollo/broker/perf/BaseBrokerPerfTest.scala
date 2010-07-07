@@ -55,6 +55,7 @@ abstract class RemoteConsumer extends Connection {
 
   override def onTransportConnected() = {
     setupSubscription();
+    transport.resumeRead
   }
 
   override def onTransportFailure(error: IOException) = {
@@ -116,6 +117,7 @@ abstract class RemoteProducer extends Connection {
 
   override def onTransportConnected() = {
     setupProducer();
+    transport.resumeRead
   }
 
   def setupProducer()
@@ -254,7 +256,7 @@ abstract class BaseBrokerPerfTest {
     consumerCount = 1;
 
     createConnections();
-    producers.get(0).thinkTime = 500000*1000;
+//    producers.get(0).thinkTime = 500000*1000;
 
     // Start 'em up.
     startClients();

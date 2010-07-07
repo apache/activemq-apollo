@@ -35,45 +35,8 @@ object StompFrameConstants {
 import StompFrameConstants._
 import StompConstants._;
 import BufferConversions._
-  
-/**
- * Represents all the data in a STOMP frame.
- *
- * @author <a href="http://hiramchirino.com">chirino</a>
- */
-case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:Buffer=NO_DATA) extends Message {
 
-  def headerSize = {
-    if( headers.isEmpty ) {
-      0
-    } else {
-      // if all the headers were part of the same input buffer.. size can be calculated by
-      // subtracting positions in the buffer.
-      val firstBuffer = headers.head._1
-      val lastBuffer =  headers.last._2
-      if( firstBuffer.data eq lastBuffer.data ) {
-        (lastBuffer.offset-firstBuffer.offset)+lastBuffer.length+1
-      } else {
-        // gota do it the hard way
-        var rc = 0;
-        val i = headers.iterator
-        while( i.hasNext ) {
-          val (key, value) = i.next
-          rc += (key.length + value.length+2)
-        }
-        rc
-      }
-    }
-  }
-
-  def size = {
-     if( action.data eq content.data ) {
-        (content.offset-action.offset)+content.length
-     } else {
-       action.length + 1 +
-       headerSize + 1 + content.length
-     }
-  }
+case class StompFrameMessage(frame:StompFrame) extends Message {
 
   /**
    * the globally unique id of the message
@@ -133,7 +96,7 @@ case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:Buffer=
     }
   }
 
-  for( header <- headers ) {
+  for( header <- (frame.updated_headers ::: frame.headers).reverse ) {
     header match {
       case (Stomp.Headers.Message.MESSAGE_ID, value) =>
         id = value
@@ -146,4 +109,60 @@ case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:Buffer=
       case _ =>
     }
   }
+}
+
+/**
+ * Represents all the data in a STOMP frame.
+ *
+ * @author <a href="http://hiramchirino.com">chirino</a>
+ */
+case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:Buffer=NO_DATA, updated_headers:HeaderMap=Nil) {
+
+  def size_of_updated_headers = {
+    size_of(updated_headers)
+  }
+
+  def size_of_original_headers = {
+    if( headers.isEmpty ) {
+      0
+    } else {
+      // if all the headers were part of the same input buffer.. size can be calculated by
+      // subtracting positions in the buffer.
+      val firstBuffer = headers.head._1
+      val lastBuffer =  headers.last._2
+      if( firstBuffer.data eq lastBuffer.data ) {
+        (lastBuffer.offset-firstBuffer.offset)+lastBuffer.length+1
+      } else {
+        // gota do it the hard way
+        size_of(headers)
+      }
+    }
+  }
+
+  private def size_of(headers:HeaderMap): Int = {
+    var rc = 0;
+    val i = headers.iterator
+    while (i.hasNext) {
+      val (key, value) = i.next
+      rc += (key.length + value.length + 2)
+    }
+    rc
+  }
+
+  def size = {
+     if( (action.data eq content.data) && updated_headers==Nil ) {
+        (content.offset-action.offset)+content.length
+     } else {
+       action.length + 1 +
+       size_of_updated_headers +
+       size_of_original_headers + 1 + content.length
+     }
+  }
+
+  def header(name:AsciiBuffer) = {
+    updated_headers.filter( _._1 == name ).headOption.orElse(
+      headers.filter( _._1 == name ).headOption
+    ).map(_._2).getOrElse(null)
+  }
+
 }

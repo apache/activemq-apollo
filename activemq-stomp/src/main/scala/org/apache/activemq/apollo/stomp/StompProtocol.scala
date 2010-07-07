@@ -99,7 +99,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   private def queue = connection.dispatchQueue
 
   override def onTransportConnected() = {
-    outboundChannel = new TransportDeliverySink(connection.transport)
+    outboundChannel = new TransportDeliverySink(connection.transport) {
+      override def send(delivery: Delivery) = transport.oneway(delivery.message.asInstanceOf[StompFrameMessage].frame, delivery)
+    }
     connection.broker.runtime.getDefaultVirtualHost(
       queue.wrap { (host)=>
         this.host=host
@@ -128,23 +130,23 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   def onTransportCommand(command:Any) = {
     try {
       command match {
-        case StompFrame(Commands.SEND, headers, content) =>
+        case StompFrame(Commands.SEND, headers, content, _) =>
           on_stomp_send(command.asInstanceOf[StompFrame])
-        case StompFrame(Commands.ACK, headers, content) =>
+        case StompFrame(Commands.ACK, headers, content, _) =>
           // TODO:
-        case StompFrame(Commands.SUBSCRIBE, headers, content) =>
+        case StompFrame(Commands.SUBSCRIBE, headers, content, _) =>
           info("got command: %s", command)
           on_stomp_subscribe(headers)
-        case StompFrame(Commands.CONNECT, headers, _) =>
+        case StompFrame(Commands.CONNECT, headers, _, _) =>
           info("got command: %s", command)
           on_stomp_connect(headers)
-        case StompFrame(Commands.DISCONNECT, headers, content) =>
+        case StompFrame(Commands.DISCONNECT, headers, content, _t) =>
           info("got command: %s", command)
           connection.stop
         case s:StompWireFormat =>
           // this is passed on to us by the protocol discriminator
           // so we know which wire format is being used.
-        case StompFrame(unknown, _, _) =>
+        case StompFrame(unknown, _, _, _) =>
           die("Unsupported STOMP command: "+unknown);
         case _ =>
           die("Unsupported command: "+command);
@@ -214,9 +216,26 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     }
   }
 
+  var message_id_counter = 0;
+  def next_message_id = {
+    message_id_counter += 1
+    // TODO: properly generate mesage ids
+    new AsciiBuffer("msg:"+message_id_counter);
+  }
+
   def send_via_route(route:DeliveryProducerRoute, frame:StompFrame) = {
     if( !route.targets.isEmpty ) {
-      val delivery = Delivery(frame, frame.size)
+
+      // We may need to add some headers..
+      var message = if( frame.header(Stomp.Headers.Message.MESSAGE_ID)==null ) {
+        var updated_headers:HeaderMap=Nil;
+        updated_headers ::= (Stomp.Headers.Message.MESSAGE_ID, next_message_id)
+        StompFrameMessage(StompFrame(Stomp.Responses.MESSAGE, frame.headers, frame.content, updated_headers))
+      } else {
+        StompFrameMessage(StompFrame(Stomp.Responses.MESSAGE, frame.headers, frame.content))
+      }
+      
+      val delivery = Delivery(message, message.frame.size)
       connection.transport.suspendRead
       delivery.setDisposer(^{
         connection.transport.resumeRead
