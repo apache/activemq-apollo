@@ -634,6 +634,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
   def init(delivery:Delivery):QueueEntry = {
     state = new Loaded(delivery, false)
+    queue.capacity_used += size
     this
   }
 
