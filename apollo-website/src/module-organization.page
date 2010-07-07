@@ -15,67 +15,18 @@
 # limitations under the License.
 
 title: Module Organization
---- pipeline:textile
+---
 
-h2. Overview
+# Module Organization
 
-ActiveMQ 6.x Should
+<img style="width: 70%; height: auto; display: block; margin-left: auto;  margin-right: auto" 
+    src="images/module-deps-graph.png" alt="dependencies graph">
 
-* Not conflict with ActiveMQ 5.x if it's in the CLASSPATH
-* Have a module and package structure that is OSGi friendly for extending.
-* Not depend on ActiveMQ 5.x modules
+## Updating
 
-h2. Modules
+You can regenerate the above graph by running the following commands at the project root:
 
-h3. Core Modules
-
-These modules define the basic architecture and extension points of ActiveMQ 6.x.  It should be a goal to keep these as small and concise as possible.
-
-Modules:
-* activemq-util: Common interfaces and utility classes
-* activemq-flow: Flow control model interfaces and implementation
-
-h3. WireFormat/Protocol Handler implementations
-
-Modules:
-* activemq-protocol: Holds the WireFormat and Protocol Handler API interfaces
-* activemq-openwire
-* activemq-stomp
-
-h3. Transport Layer implementations
-
-Modules:
-* activemq-transport: Holds Transport API defintion and VM implementation.
-* activemq-bio: Holds the blocking IO implementations
-* activemq-nio: Holds the non-blocking IO implementations
-
-h3. Dispatcher implementations
-
-Modules:
-* activemq-dispatcher : Dispatches API and default implementation
-* activemq-dispatcher-nio : Holds an NIO aware dispatcher implementation
-
-h3. Data Store implementations
-
-Modules:
-* activemq-store: Holds the Store API Definition and a memory based impelementation
-* activemq-kaha
-
-h3. Broker Service: activemq-broker
-
-Provides:
-* The APIs and implementations for configuring and starting broker instances ( via java/xml/spring etc.)
-
-h3. Client Library: activemq-client
-
-Provides:
-
-* JMS client API implementation
-
-
-h2. Packages
-
-To avoid class conflicts, we should pick a new package base.  How does this sound: @org.apache.activemq.puma@ ?
-
+    mvn -P graph graph:reactor -Dhide-transitive=true -Dhide-external=true -Dgraph.label= -Dhide-version=true -Dhide-group-id=true -Dhide-type=true
+    cp target/reactor-graph.png apollo-website/src/images/module-deps-graph.png
 
 
