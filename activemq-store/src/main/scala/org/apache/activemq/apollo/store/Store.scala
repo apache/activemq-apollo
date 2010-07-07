@@ -16,10 +16,10 @@
  */
 package org.apache.activemq.broker.store
 
-import org.apache.activemq.Service
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.broker.Reporter
 import org.apache.activemq.apollo.dto.StoreDTO
+import org.apache.activemq.apollo.ServiceTrait
 
 /**
  * <p>
@@ -29,7 +29,7 @@ import org.apache.activemq.apollo.dto.StoreDTO
  *
  *  @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait Store extends Service {
+trait Store extends ServiceTrait {
 
   /**
    * Creates a store uow which is used to perform persistent
