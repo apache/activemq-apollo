@@ -461,7 +461,7 @@ class DeliveryOverflowBuffer(val delivery_buffer:DeliveryBuffer) {
 
 }
 
-class DeliveryCreditBufferProtocol(val delivery_buffer:DeliveryBuffer, val queue:DispatchQueue) extends BaseRetained {
+class DeliveryCreditBufferProtocol(val delivery_buffer:DeliveryBuffer, val queue:DispatchQueue) extends BaseRetained with Suspendable {
 
   var sessions = List[CreditServer]()
 
@@ -478,7 +478,10 @@ class DeliveryCreditBufferProtocol(val delivery_buffer:DeliveryBuffer, val queue
   // use a event aggregating source to coalesce multiple events from the same thread.
   val source = createSource(new ListEventAggregator[Delivery](), queue)
   source.setEventHandler(^{drain_source});
-  source.resume
+
+  def suspend() = source.suspend
+  def resume() = source.resume
+  def isSuspended() = source.isSuspended
 
   def drain_source = {
     val deliveries = source.getData
@@ -487,7 +490,6 @@ class DeliveryCreditBufferProtocol(val delivery_buffer:DeliveryBuffer, val queue
       delivery.release
     }
   }
-
 
   class CreditServer(val producer_queue:DispatchQueue) {
     private var _capacity = 0

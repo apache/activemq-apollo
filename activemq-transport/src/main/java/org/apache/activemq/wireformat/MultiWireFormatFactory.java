@@ -108,19 +108,35 @@ public class MultiWireFormatFactory implements WireFormatFactory {
                 UnmarshalSession session;
 
                 public int getStartPos() {
-                    return start;
+                    if( session!=null ) {
+                        return session.getStartPos();
+                    } else {
+                        return start;
+                    }
                 }
 
                 public void setStartPos(int pos) {
-                    start=pos;
+                    if( session!=null ) {
+                        session.setEndPos(pos);
+                    } else {
+                        start=pos;
+                    }
                 }
 
                 public int getEndPos() {
-                    return end;
+                    if( session!=null ) {
+                        return session.getEndPos();
+                    } else {
+                        return end;
+                    }
                 }
 
                 public void setEndPos(int pos) {
-                    end = pos;
+                    if( session!=null ) {
+                        session.setEndPos(pos);
+                    } else {
+                        end = pos;
+                    }
                 }
 
                 public Object unmarshal(ByteBuffer buffer) throws IOException {
