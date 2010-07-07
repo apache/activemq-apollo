@@ -48,7 +48,8 @@ abstract class Connection() extends TransportListener with BaseService  with Dis
   val dispatchQueue = createQueue(id)
   
   def stopped = serviceState match {
-    case STOPPED() | STOPPING() => true
+    case STOPPED => true
+    case x:STOPPING => true
     case _ => false
   }
 
@@ -102,11 +103,9 @@ class BrokerConnection(val broker: Broker) extends Connection {
   }
 
   override protected def _stop(onCompleted:Runnable) = {
-    if( !stopped ) {
-      broker.runtime.stopped(this)
-      broker.dispatchQueue.release
-      super._stop(onCompleted)
-    }
+    broker.runtime.stopped(this)
+    broker.dispatchQueue.release
+    super._stop(onCompleted)
   }
 
   override def onTransportConnected() = protocolHandler.onTransportConnected

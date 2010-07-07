@@ -39,18 +39,18 @@ trait BaseService extends Service {
     def done = callbacks.foreach(_.run)
   }
 
-  case class CREATED extends State
-  case class STARTING extends State with CallbackSupport
-  case class STARTED extends State
-  case class STOPPING extends State with CallbackSupport
-  case class STOPPED extends State
+  object CREATED extends State
+  class  STARTING extends State with CallbackSupport
+  object STARTED extends State
+  class  STOPPING extends State with CallbackSupport
+  object STOPPED extends State
 
   val dispatchQueue:DispatchQueue
 
   final def start() = start(null)
   final def stop() = stop(null)
 
-  protected var _serviceState:State = CREATED()
+  protected var _serviceState:State = CREATED
   protected def serviceState = _serviceState
 
   private def error(msg:String) {
@@ -64,11 +64,11 @@ trait BaseService extends Service {
 
   final def start(onCompleted:Runnable) = ^{
     def do_start = {
-      val state = STARTING()
+      val state = new STARTING()
       state << onCompleted
       _serviceState = state
       _start(^{
-        _serviceState = STARTED()
+        _serviceState = STARTED
         state.done
       })
     }
@@ -78,13 +78,13 @@ trait BaseService extends Service {
       }
     }
     _serviceState match {
-      case x:CREATED =>
+      case CREATED =>
         do_start
-      case x:STOPPED =>
+      case STOPPED =>
         do_start
       case state:STARTING =>
         state << onCompleted
-      case state:STARTED =>
+      case STARTED =>
         done
       case state =>
         done
@@ -99,17 +99,17 @@ trait BaseService extends Service {
       }
     }
     _serviceState match {
-      case x:STARTED =>
-        val state = STOPPING()
+      case STARTED =>
+        val state = new STOPPING
         state << onCompleted
         _serviceState = state
         _stop(^{
-          _serviceState = STOPPED()
+          _serviceState = STOPPED
           state.done
         })
       case state:STOPPING =>
         state << onCompleted
-      case state:STOPPED =>
+      case STOPPED =>
         done
       case state =>
         done

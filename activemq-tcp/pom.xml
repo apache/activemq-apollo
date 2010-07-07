@@ -38,7 +38,7 @@
       <artifactId>activemq-transport</artifactId>
       <version>6.0-SNAPSHOT</version>
     </dependency>
-    
+
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>

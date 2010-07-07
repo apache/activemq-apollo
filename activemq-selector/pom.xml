@@ -38,6 +38,12 @@
       <artifactId>activemq-util</artifactId>
       <version>6.0-SNAPSHOT</version>
     </dependency>
+    
+    <dependency>
+      <groupId>org.fusesource.hawtbuf</groupId>
+      <artifactId>hawtbuf-core</artifactId>
+      <version>${hawtbuf-version}</version>
+    </dependency>
 
     <!-- TODO: try to remove this dependency -->
     <dependency>

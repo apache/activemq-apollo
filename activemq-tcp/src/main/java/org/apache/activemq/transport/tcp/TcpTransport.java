@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.transport.tcp;
 
+import org.apache.activemq.apollo.BaseService;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.wireformat.WireFormat;
@@ -36,15 +37,12 @@ import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.Map;
 
-import static org.apache.activemq.transport.tcp.TcpTransport.SocketState.*;
-import static org.apache.activemq.transport.tcp.TcpTransport.TransportState.*;
-
 /**
  * An implementation of the {@link Transport} interface using raw tcp/ip
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class TcpTransport implements Transport {
+public class TcpTransport extends BaseService implements Transport {
 
     static {
         System.out.println(TcpTransport.class.getClassLoader().getResource("log4j.properties"));
@@ -53,16 +51,116 @@ public class TcpTransport implements Transport {
 
     private Map<String, Object> socketOptions;
 
-    enum SocketState {
-        CONNECTING,
-        CONNECTED,
-        DISCONNECTED
+    abstract static class SocketState {
+        void onStop(Runnable onCompleted) {
+        }
+        void onCanceled() {
+        }
+        boolean is(Class<? extends SocketState> clazz) {
+            return getClass()==clazz;
+        }
     }
 
-    enum TransportState {
-        CREATED,
-        RUNNING,
-        DISPOSED
+    static class DISCONNECTED extends SocketState{}
+
+    class CONNECTING extends SocketState{
+        void onStop(Runnable onCompleted) {
+            trace("CONNECTING.onStop");
+            CANCELING state = new CANCELING();
+            socketState = state;
+            state.onStop(onCompleted);
+        }
+        void onCanceled() {
+            trace("CONNECTING.onCanceled");
+            CANCELING state = new CANCELING();
+            socketState = state;
+            state.onCanceled();
+        }
+    }
+
+    class CONNECTED extends SocketState {
+        void onStop(Runnable onCompleted) {
+            trace("CONNECTED.onStop");
+            CANCELING state = new CANCELING();
+            socketState = state;
+            state.add(createDisconnectTask());
+            state.onStop(onCompleted);
+        }
+        void onCanceled() {
+            trace("CONNECTED.onCanceled");
+            CANCELING state = new CANCELING();
+            socketState = state;
+            state.add(createDisconnectTask());
+            state.onCanceled();
+        }
+        Runnable createDisconnectTask() {
+            return new Runnable(){
+                public void run() {
+                    listener.onTransportDisconnected();
+                }
+            };
+        }
+    }
+
+    class CANCELING extends SocketState {
+        private LinkedList<Runnable> runnables =  new LinkedList<Runnable>();
+        private int remaining;
+        private boolean dispose;
+
+        public CANCELING() {
+            if( readSource!=null ) {
+                remaining++;
+                readSource.cancel();
+            }
+            if( writeSource!=null ) {
+                remaining++;
+                writeSource.cancel();
+            }
+        }
+        void onStop(Runnable onCompleted) {
+            trace("CANCELING.onCompleted");
+            add(onCompleted);
+            dispose = true;
+        }
+        void add(Runnable onCompleted) {
+            if( onCompleted!=null ) {
+                runnables.add(onCompleted);
+            }
+        }
+        void onCanceled() {
+            trace("CANCELING.onCanceled");
+            remaining--;
+            if( remaining!=0 ) {
+                return;
+            }
+            try {
+                channel.close();
+            } catch (IOException ignore) {
+            }
+            socketState = new CANCELED(dispose);
+            for (Runnable runnable : runnables) {
+                runnable.run();
+            }
+            if (dispose) {
+                dispose();
+            }
+        }
+    }
+
+    class CANCELED extends SocketState {
+        private boolean disposed;
+
+        public CANCELED(boolean disposed) {
+            this.disposed=disposed;
+        }
+
+        void onStop(Runnable onCompleted) {
+            trace("CANCELED.onStop");
+            if( !disposed ) {
+                disposed = true;
+                dispose();
+            }
+        }
     }
 
     protected URI remoteLocation;
@@ -73,8 +171,7 @@ public class TcpTransport implements Transport {
 
     private SocketChannel channel;
 
-    private SocketState socketState = DISCONNECTED;
-    private TransportState transportState = CREATED;
+    private SocketState socketState = new DISCONNECTED();
 
     private DispatchQueue dispatchQueue;
     private DispatchSource readSource;
@@ -88,6 +185,11 @@ public class TcpTransport implements Transport {
     protected boolean useLocalHost = true;
     ByteBuffer readBuffer = ByteBuffer.allocate(bufferSize);
 
+    private final Runnable CANCEL_HANDLER = new Runnable() {
+        public void run() {
+            socketState.onCanceled();
+        }
+    };
 
     static final class OneWay {
         final Object command;
@@ -99,16 +201,28 @@ public class TcpTransport implements Transport {
         }
     }
 
-    public void connected(SocketChannel channel) {
+    public void connected(SocketChannel channel) throws IOException {
         this.channel = channel;
+        this.channel.configureBlocking(false);
         this.remoteAddress = channel.socket().getRemoteSocketAddress().toString();
-        this.socketState = CONNECTED;
+        this.socketState = new CONNECTED();
     }
 
     public void connecting(URI remoteLocation, URI localLocation) throws IOException {
+        this.channel = SocketChannel.open();
+        this.channel.configureBlocking(false);
         this.remoteLocation = remoteLocation;
         this.localLocation = localLocation;
-        this.socketState = CONNECTING;
+
+        if (localLocation != null) {
+            InetSocketAddress localAddress = new InetSocketAddress(InetAddress.getByName(localLocation.getHost()), localLocation.getPort());
+            channel.socket().bind(localAddress);
+        }
+
+        String host = resolveHostName(remoteLocation.getHost());
+        InetSocketAddress remoteAddress = new InetSocketAddress(host, remoteLocation.getPort());
+        channel.connect(remoteAddress);
+        this.socketState = new CONNECTING();
     }
 
 
@@ -126,66 +240,51 @@ public class TcpTransport implements Transport {
         }
     }
 
-    public void start() throws Exception {
-        start(null);
-    }
-    public void start(Runnable onCompleted) throws Exception {
-        if (dispatchQueue == null) {
-            throw new IllegalArgumentException("dispatchQueue is not set");
-        }
-        if (listener == null) {
-            throw new IllegalArgumentException("listener is not set");
-        }
-        if (transportState != CREATED) {
-            throw new IllegalStateException("start can only be used from the created state");
-        }
-        transportState = RUNNING;
-
-        if (socketState == CONNECTING) {
-            channel = SocketChannel.open();
-        }
-        channel.configureBlocking(false);
-        channel.socket().setSendBufferSize(bufferSize);
-        channel.socket().setReceiveBufferSize(bufferSize);
-        next_outbound_buffer = new DataByteArrayOutputStream(bufferSize);
-        outbound_buffer = ByteBuffer.allocate(0);
-
-        if (socketState == CONNECTING) {
-
-            if (localLocation != null) {
-                InetSocketAddress localAddress = new InetSocketAddress(InetAddress.getByName(localLocation.getHost()), localLocation.getPort());
-                channel.socket().bind(localAddress);
-            }
-
-            String host = resolveHostName(remoteLocation.getHost());
-            InetSocketAddress remoteAddress = new InetSocketAddress(host, remoteLocation.getPort());
-            channel.connect(remoteAddress);
-
-            final DispatchSource connectSource = Dispatch.createSource(channel, SelectionKey.OP_CONNECT, dispatchQueue);
-            connectSource.setEventHandler(new Runnable() {
-                public void run() {
-                    if (transportState == RUNNING) {
+    public void _start(Runnable onCompleted) {
+        try {
+            if (socketState.is(CONNECTING.class) ) {
+                trace("connecting...");
+                // this allows the connect to complete..
+                readSource = Dispatch.createSource(channel, SelectionKey.OP_CONNECT, dispatchQueue);
+                readSource.setEventHandler(new Runnable() {
+                    public void run() {
+                        if (getServiceState() != STARTED) {
+                            return;
+                        }
                         try {
-                            socketState = CONNECTED;
+                            trace("connected.");
                             channel.finishConnect();
-                            connectSource.release();
-                            fireConnected();
+                            readSource.setCancelHandler(null);
+                            readSource.release();
+                            readSource=null;
+                            socketState = new CONNECTED();
+                            onConnected();
                         } catch (IOException e) {
                             onTransportFailure(e);
                         }
                     }
-                }
-            });
-            connectSource.resume();
-        } else {
-            fireConnected();
+                });
+                readSource.setCancelHandler(CANCEL_HANDLER);
+                readSource.resume();
+            } else if (socketState.is(CONNECTED.class) ) {
+                trace("was connected.");
+                onConnected();
+            } else {
+                System.err.println("cannot be started.  socket state is: "+socketState); 
+            }
+        } catch (IOException e) {
+            onTransportFailure(e);
+        } finally {
+            if( onCompleted!=null ) {
+                onCompleted.run();
+            }
         }
-        if( onCompleted!=null ) {
-            dispatchQueue.execute(onCompleted);
-        }
-
     }
 
+    public void _stop(final Runnable onCompleted) {
+        trace("stopping.. at state: "+socketState);
+        socketState.onStop(onCompleted);
+    }
 
     protected String resolveHostName(String host) throws UnknownHostException {
         String localName = InetAddress.getLocalHost().getHostName();
@@ -197,15 +296,20 @@ public class TcpTransport implements Transport {
         return host;
     }
 
-    private void fireConnected() {
+    private void onConnected() throws SocketException {
 
-        try {
-            channel.socket().setSendBufferSize(bufferSize);
-            channel.socket().setReceiveBufferSize(bufferSize);
-        } catch (SocketException e) {
-        }
+        channel.socket().setSendBufferSize(bufferSize);
+        channel.socket().setReceiveBufferSize(bufferSize);
+
+        next_outbound_buffer = new DataByteArrayOutputStream(bufferSize);
+        outbound_buffer = ByteBuffer.allocate(0);
 
         readSource = Dispatch.createSource(channel, SelectionKey.OP_READ, dispatchQueue);
+        writeSource = Dispatch.createSource(channel, SelectionKey.OP_WRITE, dispatchQueue);
+
+        readSource.setCancelHandler(CANCEL_HANDLER);
+        writeSource.setCancelHandler(CANCEL_HANDLER);
+
         readSource.setEventHandler(new Runnable() {
             public void run() {
                 try {
@@ -215,18 +319,9 @@ public class TcpTransport implements Transport {
                 }
             }
         });
-        readSource.setCancelHandler(new Runnable() {
-            public void run() {
-                trace("Read canceled");
-                writeSource.cancel();
-                trace("Canceling write");
-            }
-        });
-
-        writeSource = Dispatch.createSource(channel, SelectionKey.OP_WRITE, dispatchQueue);
         writeSource.setEventHandler(new Runnable() {
             public void run() {
-                if (transportState == RUNNING) {
+                if (getServiceState() == STARTED) {
                     // once the outbound is drained.. we can suspend getting
                     // write events.
                     if (drainOutbound()) {
@@ -235,50 +330,15 @@ public class TcpTransport implements Transport {
                 }
             }
         });
-        writeSource.setCancelHandler(new Runnable() {
-            public void run() {
-                trace("Write canceled");
-                writeSource.cancel();
-                trace("Disposeing");
-                dispose();
-            }
-        });
 
         remoteAddress = channel.socket().getRemoteSocketAddress().toString();
         listener.onTransportConnected();
     }
 
 
-    public void stop() throws Exception {
-        stop(null);
-    }
-    public void stop(final Runnable onCompleted) throws Exception {
-        if (transportState != RUNNING) {
-            throw new IllegalStateException("stop can only be used from the started state but was "+transportState);
-        }
-        trace("Canceling read");
-        transportState = DISPOSED;
-        writeSource.setDisposer(new Runnable(){
-            public void run() {
-                trace("running callback: "+onCompleted);
-                if( onCompleted!=null ) {
-                    onCompleted.run();
-                }
-            }
-        });
-        readSource.cancel();
-    }
 
     private void dispose() {
 
-        assert dispatchQueue!=null;
-        assert Dispatch.getCurrentQueue() == dispatchQueue;
-
-        try {
-            channel.close();
-        } catch (IOException ignore) {
-        }
-        listener.onTransportDisconnected();
 //        OneWay oneWay = outbound.poll();
 //        while (oneWay != null) {
 //            if (oneWay.retained != null) {
@@ -295,12 +355,8 @@ public class TcpTransport implements Transport {
     }
 
     public void onTransportFailure(IOException error) {
-        if( socketState == CONNECTED ) {
-            socketState = DISCONNECTED;
-            listener.onTransportFailure(error);
-            readSource.cancel();
-            writeSource.cancel();
-        }
+        listener.onTransportFailure(error);
+        socketState.onCanceled();
     }
 
 
@@ -311,10 +367,10 @@ public class TcpTransport implements Transport {
     public void oneway(Object command, Retained retained) {
         assert Dispatch.getCurrentQueue() == dispatchQueue;
         try {
-            if (socketState != CONNECTED) {
+            if (!socketState.is(CONNECTED.class)) {
                 throw new IOException("Not connected.");
             }
-            if (transportState != RUNNING) {
+            if (getServiceState() != STARTED) {
                 throw new IOException("Not running.");
             }
         } catch (IOException e) {
@@ -348,7 +404,7 @@ public class TcpTransport implements Transport {
         assert Dispatch.getCurrentQueue() == dispatchQueue;
         try {
 
-            while (socketState == CONNECTED) {
+            while (socketState.is(CONNECTED.class) ) {
 
                 // if we have a pending write that is being sent over the socket...
                 if (outbound_buffer.remaining()!=0) {
@@ -394,7 +450,7 @@ public class TcpTransport implements Transport {
     }
 
     private void drainInbound() throws IOException {
-        if (transportState == DISPOSED || readSource.isSuspended()) {
+        if (getServiceState() == STARTED || readSource.isSuspended()) {
             return;
         }
         while (true) {
@@ -436,7 +492,7 @@ public class TcpTransport implements Transport {
                 listener.onTransportCommand(command);
 
                 // the transport may be suspended after processing a command.
-                if (transportState == DISPOSED || readSource.isSuspended()) {
+                if (getServiceState() == STOPPED || readSource.isSuspended()) {
                     return;
                 }
             }
@@ -458,7 +514,7 @@ public class TcpTransport implements Transport {
 
     private boolean assertConnected() {
         try {
-            if (socketState != CONNECTED) {
+            if ( !isConnected() ) {
                 throw new IOException("Not connected.");
             }
             return true;
@@ -502,11 +558,11 @@ public class TcpTransport implements Transport {
     }
 
     public boolean isConnected() {
-        return socketState == CONNECTED;
+        return socketState.is(CONNECTED.class);
     }
 
     public boolean isDisposed() {
-        return transportState == DISPOSED;
+        return getServiceState() == STOPPED;
     }
 
     public boolean isFaultTolerant() {

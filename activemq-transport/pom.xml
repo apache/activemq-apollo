@@ -46,6 +46,12 @@
     </dependency>
 
     <dependency>
+      <groupId>org.fusesource.hawtbuf</groupId>
+      <artifactId>hawtbuf-core</artifactId>
+      <version>${hawtbuf-version}</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.fusesource.hawtdispatch</groupId>
       <artifactId>hawtdispatch</artifactId>
       <version>${hawtdispatch-version}</version>
