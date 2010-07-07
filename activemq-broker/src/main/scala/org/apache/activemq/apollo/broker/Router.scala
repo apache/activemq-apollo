@@ -181,8 +181,8 @@ class Router(val host:VirtualHost) extends DispatchLogging {
       }
     } >>: dispatchQueue
 
-  def connect(destination:Destination, routeQueue:DispatchQueue, producer:DeliveryProducer)(completed: (DeliveryProducerRoute)=>Unit) = {
-    val route = new DeliveryProducerRoute(destination, routeQueue, producer) {
+  def connect(destination:Destination, producer:DeliveryProducer)(completed: (DeliveryProducerRoute)=>Unit) = {
+    val route = new DeliveryProducerRoute(destination, producer) {
       override def on_connected = {
         completed(this);
       }
@@ -214,8 +214,8 @@ class Router(val host:VirtualHost) extends DispatchLogging {
  */
 trait Route extends Retained {
 
-  val destination:Destination
-  val dispatchQueue:DispatchQueue
+  def destination:Destination
+  def dispatchQueue:DispatchQueue
   val metric = new AtomicLong();
 
   def connected(targets:List[DeliveryConsumer]):Unit
@@ -228,9 +228,10 @@ trait Route extends Retained {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class DeliveryProducerRoute(val destination:Destination, override val dispatchQueue:DispatchQueue, val producer:DeliveryProducer) extends BaseRetained with Route with DispatchLogging {
+class DeliveryProducerRoute(val destination:Destination, val producer:DeliveryProducer) extends BaseRetained with Route with Sink[Delivery] with DispatchLogging {
 
   override protected def log = Router
+  override def dispatchQueue = producer.dispatchQueue
 
   // Retain the queue while we are retained.
   dispatchQueue.retain
@@ -238,7 +239,7 @@ class DeliveryProducerRoute(val destination:Destination, override val dispatchQu
     dispatchQueue.release
   })
 
-  var targets = List[DeliverySession]()
+  var targets = List[Session]()
 
   def connected(targets:List[DeliveryConsumer]) = retaining(targets) {
     internal_bind(targets)
@@ -252,7 +253,9 @@ class DeliveryProducerRoute(val destination:Destination, override val dispatchQu
   private def internal_bind(values:List[DeliveryConsumer]) = {
     values.foreach{ x=>
       debug("producer route attaching to conusmer.")
-      targets = x.connect(dispatchQueue) :: targets
+      val target = x.connect(producer);
+      target.refiller = drainer
+      targets ::= target
     }
   }
 
@@ -277,5 +280,51 @@ class DeliveryProducerRoute(val destination:Destination, override val dispatchQu
 
   protected def on_connected = {}
   protected def on_disconnected = {}
+
+  //
+  // Sink trait implementation.  This Sink overflows
+  // by 1 value.  It's only full when overflowed.  It overflows
+  // when one of the down stream sinks cannot accept the offered
+  // Dispatch.
+  //
+
+  var overflow:Delivery=null
+  var overflowSessions = List[Session]()
+  var refiller:Runnable=null
+
+  def full = overflow!=null
+
+  def offer(value:Delivery) = {
+    if( full ) {
+      false
+    } else {
+      targets.foreach { target=>
+        if( !target.offer(value) ) {
+          overflowSessions ::= target
+        }
+      }
+      if( overflowSessions!=Nil ) {
+        overflow = value
+      }
+      true
+    }
+  }
+
+  val drainer = ^{
+    if( overflow!=null ) {
+      val original = overflowSessions;
+      overflowSessions = Nil
+      original.foreach { target=>
+        if( !target.offer(overflow) ) {
+          overflowSessions ::= target
+        }
+      }
+      if( overflowSessions==Nil ) {
+        overflow = null
+        refiller.run
+      }
+    }
+  }
+
 
 }

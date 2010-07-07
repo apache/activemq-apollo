@@ -32,15 +32,15 @@ import org.fusesource.hawtdispatch.Retained;
 public interface Transport extends Service {
 
 
-    boolean isFull();
+    boolean full();
 
     /**
-     * A one way asynchronous send.
+     * A one way asynchronous send of a command.  Only sent if the the transport is not full.
      * 
      * @param command
-     * @throws IOException
+     * @return true if the command was accepted.
      */
-    void oneway(Object command, Retained retained);
+    boolean offer(Object command);
 
     /**
      * Returns the current transport listener

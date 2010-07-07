@@ -60,9 +60,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   protected def dispatchQueue:DispatchQueue = connection.dispatchQueue
 
   class SimpleConsumer(val destination:Destination) extends BaseRetained with DeliveryConsumer {
-
     val dispatchQueue = StompProtocolHandler.this.dispatchQueue
-    val session_manager = new DeliverySessionManager(outboundChannel, dispatchQueue)
 
     dispatchQueue.retain
     setDisposer(^{
@@ -70,27 +68,49 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       dispatchQueue.release
     })
 
-    def matches(message:Delivery) = true
+    def matches(delivery:Delivery) = {
+      // TODO add selector support here...
+      delivery.message.isInstanceOf[StompFrameMessage]
+    }
 
-    def connect(producer_queue:DispatchQueue) = new DeliverySession {
-      val session = session_manager.open(producer_queue)
-
-      val consumer = SimpleConsumer.this
+    def connect(p:DeliveryProducer) = new Session {
       retain
 
-      def deliver(delivery:Delivery) =  {
-//        info("Delivering to consumer session")
-        session.send(delivery)
-      }
+      def producer = p
+      def consumer = SimpleConsumer.this
+
+      val session = session_manager.open(producer.dispatchQueue)
 
       def close = {
         session_manager.close(session)
         release
       }
+
+      // Delegate all the flow control stuff to the session
+      def full = session.full
+      def offer(delivery:Delivery) = {
+        if( session.full ) {
+          false
+        } else {
+          if( delivery.ack ) {
+            producer.ack(delivery)
+          }
+          val frame = delivery.message.asInstanceOf[StompFrameMessage].frame
+          val rc = session.offer(frame)
+          assert(rc, "offer should be accepted since it was not full")
+          true
+        }
+      }
+      
+      def refiller = session.refiller
+      def refiller_=(value:Runnable) = { session.refiller=value }
+
     }
   }
 
-  var outboundChannel:TransportDeliverySink = null
+  var session_manager:SinkMux[StompFrame] = null
+  var connection_sink:Sink[StompFrame] = null
+
   var closed = false
   var consumer:SimpleConsumer = null
 
@@ -100,13 +120,10 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   private def queue = connection.dispatchQueue
 
   override def onTransportConnected() = {
-    outboundChannel = new TransportDeliverySink(connection.transport) {
-      override def send(delivery: Delivery) = {
-        if( transport.isConnected ) {
-          transport.oneway(delivery.message.asInstanceOf[StompFrameMessage].frame, delivery)
-        }
-      }
-    }
+    session_manager = new SinkMux[StompFrame]( MapSink(connection.transportSink){ x=>x }, dispatchQueue, StompFrame)
+    connection_sink = new OverflowSink(session_manager.open(dispatchQueue));
+    connection_sink.refiller = ^{}
+    
     connection.connector.broker.getDefaultVirtualHost(
       queue.wrap { (host)=>
         this.host=host
@@ -114,7 +131,6 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       }
     )
   }
-
 
   override def onTransportDisconnected() = {
     if( !closed ) {
@@ -132,7 +148,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   }
 
 
-  def onTransportCommand(command:Any) = {
+  override def onTransportCommand(command:Any) = {
     try {
       command match {
         case StompFrame(Commands.SEND, headers, content, _) =>
@@ -164,7 +180,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
 
   def on_stomp_connect(headers:HeaderMap) = {
-    connection.transport.oneway(StompFrame(Responses.CONNECTED), null)
+    connection_sink.offer(StompFrame(Responses.CONNECTED))
   }
 
   def get(headers:HeaderMap, name:AsciiBuffer):Option[AsciiBuffer] = {
@@ -192,6 +208,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
           }
 
           val producer = new DeliveryProducer() {
+            override def dispatchQueue = queue
             override def collocate(value:DispatchQueue):Unit = ^{
 //              TODO:
 //              if( value.getTargetQueue ne queue.getTargetQueue ) {
@@ -206,11 +223,14 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
           // don't process frames until we are connected..
           connection.transport.suspendRead
-          host.router.connect(destiantion, queue, producer) {
+          host.router.connect(destiantion, producer) {
             (route) =>
               if( !connection.stopped ) {
                 connection.transport.resumeRead
                 producerRoute = route
+                producerRoute.refiller = ^{
+                  connection.transport.resumeRead
+                }
                 send_via_route(producerRoute, frame)
               }
           }
@@ -251,14 +271,14 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 //        delivery.ref = host.database.createMessageRecord(message.id, content, PROTOCOL)
       }
 
-      connection.transport.suspendRead
-      delivery.setDisposer(^{
-        connection.transport.resumeRead
-      })
-      route.targets.foreach(consumer=>{
-        consumer.deliver(delivery)
-      })
-      delivery.release;
+      // routes can allways accept at least 1 delivery...
+      assert( !route.full )
+      route.offer(delivery)
+      if( route.full ) {
+        // but once it gets full.. suspend, so that we get more stomp messages
+        // until it's not full anymore.
+        connection.transport.suspendRead
+      }
     } else {
       // info("Dropping message.  No consumers interested in message.")
     }
@@ -287,7 +307,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     if( !connection.stopped ) {
       info("Shutting connection down due to: "+msg)
       connection.transport.suspendRead
-      connection.transport.oneway(StompFrame(Responses.ERROR, Nil, ascii(msg)), null)
+      connection.transport.offer(StompFrame(Responses.ERROR, Nil, ascii(msg)), null)
       ^ {
         connection.stop()
       } >>: queue

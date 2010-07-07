@@ -154,39 +154,34 @@ public class PipeTransport implements Transport {
         }
     }
 
-    final LinkedList<OneWay> inbound = new LinkedList<OneWay>();
     int outbound = 0;
     int maxOutbound = 100;
 
-    public boolean isFull() {
+    public boolean full() {
         return outbound >= maxOutbound;
     }
 
-    public void oneway(Object command, Retained retained) {
+    public boolean offer(Object command) {
         if( !connected ) {
-            throw new IllegalStateException("Not connected.");
+            return false;
         }
-        if( isFull() && retained!=null) {
-            retained.retain();
-            inbound.add(new OneWay(command, retained));
+        if( full() ) {
+            return false;
         } else {
-            transmit(command, null);
+            transmit(command);
+            return true;
         }
     }
 
     private void drainInbound() {
-        while( !isFull() && !inbound.isEmpty() ) {
-            OneWay oneWay = inbound.poll();
-            transmit(oneWay.command, oneWay.retained);
+        if( !full() ) {
+            listener.onRefill();
         }
     }
 
-    private void transmit(Object command, Retained retained) {
+    private void transmit(Object command) {
         outbound++;
         peer.dispatchSource.merge(command);
-        if( retained!=null ) {
-            retained.release();
-        }
     }
 
     public String getRemoteAddress() {

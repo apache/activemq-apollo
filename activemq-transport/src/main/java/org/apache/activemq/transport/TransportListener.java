@@ -30,6 +30,12 @@ public interface TransportListener {
      * @param command
      */
     void onTransportCommand(Object command);
+
+    /**
+     * transport can now accept more commands for transmission. 
+     */
+    void onRefill();
+
     /**
      * An unrecoverable exception has occured on the transport
      * @param error

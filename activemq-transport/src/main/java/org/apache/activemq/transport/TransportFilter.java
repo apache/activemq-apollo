@@ -109,17 +109,21 @@ public class TransportFilter implements TransportListener, Transport {
         transportListener.onTransportCommand(command);
     }
 
+    public void onRefill() {
+        transportListener.onRefill();
+    }
+
 
     public String toString() {
         return next.toString();
     }
 
-    public void oneway(Object command, Retained retained) {
-        next.oneway(command, retained);
+    public boolean  offer(Object command) {
+        return next.offer(command);
     }
 
-    public boolean isFull() {
-        return next.isFull();
+    public boolean full() {
+        return next.full();
     }
 
     public void onTransportFailure(IOException error) {

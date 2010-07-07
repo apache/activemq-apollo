@@ -32,6 +32,9 @@ public class DefaultTransportListener implements TransportListener {
     public void onTransportCommand(Object command) {
     }
 
+    public void onRefill() {
+    }
+
     /**
      * An unrecoverable exception has occured on the transport
      * 

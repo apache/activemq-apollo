@@ -20,7 +20,7 @@ import _root_.java.util.LinkedList
 import _root_.org.apache.activemq.filter.{Expression, MessageEvaluationContext}
 import _root_.org.fusesource.hawtbuf._
 import collection.mutable.ListBuffer
-import org.apache.activemq.apollo.broker.{Destination, BufferConversions, Message}
+import org.apache.activemq.apollo.broker.{Sizer, Destination, BufferConversions, Message}
 
 /**
  *
@@ -111,6 +111,10 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
       case _ =>
     }
   }
+}
+
+object StompFrame extends Sizer[StompFrame] {
+  def size(value:StompFrame) = value.size   
 }
 
 /**

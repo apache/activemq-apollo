@@ -33,45 +33,51 @@ import org.fusesource.hawtdispatch.BaseRetained
 class StompBrokerPerfTest extends BaseBrokerPerfSupport {
   println(getClass.getClassLoader.getResource("log4j.properties"));
 
-    override def createProducer() =  new StompRemoteProducer()
-    override def createConsumer() = new StompRemoteConsumer()
-    override def getRemoteWireFormat() = "stomp"
+  override def createProducer() = new StompRemoteProducer()
+
+  override def createConsumer() = new StompRemoteConsumer()
+
+  override def getRemoteWireFormat() = "stomp"
 
 }
 
 class StompRemoteConsumer extends RemoteConsumer {
+  var outboundSink: OverflowSink[StompFrame] = null
 
-    def setupSubscription() = {
-        val stompDestination = if( destination.getDomain() == Domain.QUEUE_DOMAIN ) {
-            ascii("/queue/"+destination.getName().toString());
-        } else {
-            ascii("/topic/"+destination.getName().toString());
-        }
+  def setupSubscription() = {
+    outboundSink = new OverflowSink[StompFrame](MapSink(transportSink){ x=>x })
+    outboundSink.refiller = ^{}
 
-        var frame = StompFrame(Stomp.Commands.CONNECT);
-        transport.oneway(frame, null);
-
-        var headers:List[(AsciiBuffer, AsciiBuffer)] = Nil
-        headers ::= (Stomp.Headers.Subscribe.DESTINATION, stompDestination)
-        headers ::= (Stomp.Headers.Subscribe.ID, ascii("stomp-sub-"+name))
-        headers ::= (Stomp.Headers.Subscribe.ACK_MODE, Stomp.Headers.Subscribe.AckModeValues.AUTO)
-
-        frame = StompFrame(Stomp.Commands.SUBSCRIBE, headers);
-        transport.oneway(frame, null);
+    val stompDestination = if (destination.getDomain() == Domain.QUEUE_DOMAIN) {
+      ascii("/queue/" + destination.getName().toString());
+    } else {
+      ascii("/topic/" + destination.getName().toString());
     }
 
-    def onTransportCommand(command:Object) = {
-      var frame = command.asInstanceOf[StompFrame]
-      frame match {
-        case StompFrame(Responses.CONNECTED, headers, _, _) =>
-        case StompFrame(Responses.MESSAGE, headers, content, _) =>
-          messageReceived();
-        case StompFrame(Responses.ERROR, headers, content, _) =>
-          onFailure(new Exception("Server reported an error: " + frame.content));
-        case _ =>
-          onFailure(new Exception("Unexpected stomp command: " + frame.action));
-      }
+    var frame = StompFrame(Stomp.Commands.CONNECT);
+    outboundSink.offer(frame);
+
+    var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
+    headers ::= (Stomp.Headers.Subscribe.DESTINATION, stompDestination)
+    headers ::= (Stomp.Headers.Subscribe.ID, ascii("stomp-sub-" + name))
+    headers ::= (Stomp.Headers.Subscribe.ACK_MODE, Stomp.Headers.Subscribe.AckModeValues.AUTO)
+
+    frame = StompFrame(Stomp.Commands.SUBSCRIBE, headers);
+    outboundSink.offer(frame);
+  }
+
+  override def onTransportCommand(command: Object) = {
+    var frame = command.asInstanceOf[StompFrame]
+    frame match {
+      case StompFrame(Responses.CONNECTED, headers, _, _) =>
+      case StompFrame(Responses.MESSAGE, headers, content, _) =>
+        messageReceived();
+      case StompFrame(Responses.ERROR, headers, content, _) =>
+        onFailure(new Exception("Server reported an error: " + frame.content));
+      case _ =>
+        onFailure(new Exception("Unexpected stomp command: " + frame.action));
     }
+  }
 
   protected def messageReceived() {
     if (thinkTime > 0) {
@@ -90,60 +96,69 @@ class StompRemoteConsumer extends RemoteConsumer {
 }
 
 class StompRemoteProducer extends RemoteProducer {
+  var outboundSink: OverflowSink[StompFrame] = null
+  var stompDestination: AsciiBuffer = null
+  var frame:StompFrame = null
 
-    var stompDestination:AsciiBuffer = null
+  def send_next: Unit = {
+    var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
+    headers ::= (Stomp.Headers.Send.DESTINATION, stompDestination);
+    if (property != null) {
+      headers ::= (ascii(property), ascii(property));
+    }
+    //    var p = this.priority;
+    //    if (priorityMod > 0) {
+    //        p = if ((counter % priorityMod) == 0) { 0 } else { priority }
+    //    }
 
-    def send_next:Unit = {
-      var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
-      headers ::= (Stomp.Headers.Send.DESTINATION, stompDestination);
-      if (property != null) {
-          headers ::= (ascii(property), ascii(property));
-      }
-//    var p = this.priority;
-//    if (priorityMod > 0) {
-//        p = if ((counter % priorityMod) == 0) { 0 } else { priority }
-//    }
+    var content = ascii(createPayload());
+    frame = StompFrame(Stomp.Commands.SEND, headers, content)
+    drain()
+  }
 
-      var content = ascii(createPayload());
-      val frame = StompFrame(Stomp.Commands.SEND, headers, content)
-      val delivery = new BaseRetained()
-      delivery.setDisposer(^{
+  def drain() = {
+    if( frame!=null ) {
+      if( !outboundSink.full ) {
+        outboundSink.offer(frame)
+        frame = null
         rate.increment();
         val task = ^ {
-          if( !stopped ) {
+          if (!stopped) {
             send_next
           }
         }
-        if( thinkTime > 0 ) {
+        if (thinkTime > 0) {
           dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, task)
         } else {
           dispatchQueue << task
         }
-      })
-      transport.oneway(frame, delivery)
-      delivery.release
-    }
-
-    override def setupProducer() = {
-      if( destination.getDomain() == Domain.QUEUE_DOMAIN  ) {
-          stompDestination = ascii("/queue/"+destination.getName().toString());
-      } else {
-          stompDestination = ascii("/topic/"+destination.getName().toString());
-      }
-      transport.oneway(StompFrame(Stomp.Commands.CONNECT), null);
-      send_next
-    }
-
-    def onTransportCommand(command:Object) = {
-      var frame = command.asInstanceOf[StompFrame]
-      frame match {
-        case StompFrame(Responses.CONNECTED, headers, _, _) =>
-        case StompFrame(Responses.ERROR, headers, content, _) =>
-          onFailure(new Exception("Server reported an error: " + frame.content.utf8));
-        case _ =>
-          onFailure(new Exception("Unexpected stomp command: " + frame.action));
       }
     }
+  }
+
+  override def setupProducer() = {
+    outboundSink = new OverflowSink[StompFrame](MapSink(transportSink){ x=>x })
+    outboundSink.refiller = ^ { drain }
+
+    if (destination.getDomain() == Domain.QUEUE_DOMAIN) {
+      stompDestination = ascii("/queue/" + destination.getName().toString());
+    } else {
+      stompDestination = ascii("/topic/" + destination.getName().toString());
+    }
+    outboundSink.offer(StompFrame(Stomp.Commands.CONNECT));
+    send_next
+  }
+
+  override def onTransportCommand(command: Object) = {
+    var frame = command.asInstanceOf[StompFrame]
+    frame match {
+      case StompFrame(Responses.CONNECTED, headers, _, _) =>
+      case StompFrame(Responses.ERROR, headers, content, _) =>
+        onFailure(new Exception("Server reported an error: " + frame.content.utf8));
+      case _ =>
+        onFailure(new Exception("Unexpected stomp command: " + frame.action));
+    }
+  }
 
 }
 

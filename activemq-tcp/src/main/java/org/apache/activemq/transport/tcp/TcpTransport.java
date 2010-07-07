@@ -176,11 +176,11 @@ public class TcpTransport extends BaseService implements Transport {
 
     int bufferSize = 1024*64;
 
-    final LinkedList<OneWay> outbound = new LinkedList<OneWay>();
     DataByteArrayOutputStream next_outbound_buffer;
     ByteBuffer outbound_buffer;
     protected boolean useLocalHost = true;
     ByteBuffer readBuffer = ByteBuffer.allocate(bufferSize);
+    boolean full = false;
 
     private final Runnable CANCEL_HANDLER = new Runnable() {
         public void run() {
@@ -357,11 +357,11 @@ public class TcpTransport extends BaseService implements Transport {
     }
 
 
-    public boolean isFull() {
-        return next_outbound_buffer.size() >= bufferSize>>2;
+    public boolean full() {
+        return full;
     }
 
-    public void oneway(Object command, Retained retained) {
+    public boolean offer(Object command) {
         assert Dispatch.getCurrentQueue() == dispatchQueue;
         try {
             if (!socketState.is(CONNECTED.class)) {
@@ -372,30 +372,31 @@ public class TcpTransport extends BaseService implements Transport {
             }
         } catch (IOException e) {
             onTransportFailure(e);
-            return;
+            return false;
         }
 
-        boolean wasEmpty = next_outbound_buffer.size()==0;
-        if (retained!=null && isFull() ) {
-            // retaining blocks the sender it is released.
-            retained.retain();
-            outbound.add(new OneWay(command, retained));
+        if ( full ) {
+            return false;
         } else {
             try {
                 wireformat.marshal(command, next_outbound_buffer);
+                if( next_outbound_buffer.size() >= bufferSize>>2 ) {
+                    full  = true;
+                }
             } catch (IOException e) {
                 onTransportFailure(e);
-                return;
+                return false;
             }
             if ( outbound_buffer.remaining()==0 ) {
                 writeSource.resume();
             }
+            return true;
         }
 
     }
 
     /**
-     * @retruns true if the outbound has been drained of all objects and there are no in progress writes.
+     * @retruns true if there are no in progress writes.
      */
     private boolean drainOutbound() {
         assert Dispatch.getCurrentQueue() == dispatchQueue;
@@ -416,22 +417,15 @@ public class TcpTransport extends BaseService implements Transport {
                         outbound_buffer = next_outbound_buffer.toBuffer().toByteBuffer();
                         next_outbound_buffer = new DataByteArrayOutputStream(prev_size);
                     } else {
-                        // marshall all the available frames..
-                        OneWay oneWay = outbound.poll();
-                        while (oneWay != null) {
-                            wireformat.marshal(oneWay.command, next_outbound_buffer);
-                            if (oneWay.retained != null) {
-                                oneWay.retained.release();
+                        if( full ) {
+                            full = false;
+                            listener.onRefill();
+                            // If the listener did not have anything for us...
+                            if (next_outbound_buffer.size() == 0) {
+                                // the source is now drained...
+                                return true;
                             }
-                            if ( isFull() ) {
-                                oneWay = null;
-                            } else {
-                                oneWay = outbound.poll();
-                            }
-                        }
-
-                        if (next_outbound_buffer.size() == 0) {
-                            // the source is now drained...
+                        } else {
                             return true;
                         }
                     }
@@ -442,8 +436,7 @@ public class TcpTransport extends BaseService implements Transport {
             onTransportFailure(e);
             return true;
         }
-
-        return outbound.isEmpty() && outbound_buffer == null;
+        return outbound_buffer.remaining() == 0;
     }
 
     private void drainInbound() throws IOException {

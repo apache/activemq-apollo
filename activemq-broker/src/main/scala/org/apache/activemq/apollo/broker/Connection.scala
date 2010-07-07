@@ -39,7 +39,7 @@ object Connection extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract class Connection() extends TransportListener with BaseService  {
+abstract class Connection() extends DefaultTransportListener with BaseService  {
 
   override protected def log = Connection
 
@@ -47,13 +47,14 @@ abstract class Connection() extends TransportListener with BaseService  {
   val id = next_id
   val dispatchQueue = createQueue(id)
   var stopped = true
-
   var transport:Transport = null
+  var transportSink:TransportSink = null 
 
   override def toString = id
 
   override protected def _start(onCompleted:Runnable) = {
     stopped = false
+    transportSink = new TransportSink(transport)
     transport.setDispatchQueue(dispatchQueue);
     transport.setTransportListener(Connection.this);
     transport.start(onCompleted)
@@ -65,7 +66,7 @@ abstract class Connection() extends TransportListener with BaseService  {
   }
 
 
-  def onTransportFailure(error:IOException) = {
+  override def onTransportFailure(error:IOException) = {
     if (!stopped) {
         onFailure(error);
     }
@@ -76,10 +77,10 @@ abstract class Connection() extends TransportListener with BaseService  {
     transport.stop
   }
 
-  def onTransportDisconnected() = {
-  }
-
-  def onTransportConnected() = {
+  override def onRefill = {
+    if( transportSink.refiller !=null ) {
+      transportSink.refiller.run
+    }
   }
 
 }
@@ -109,7 +110,7 @@ class BrokerConnection(val connector: Connector) extends Connection {
 
   override def onTransportDisconnected() = protocolHandler.onTransportDisconnected
 
-  def onTransportCommand(command: Object) = {
+  override def onTransportCommand(command: Object) = {
     try {
       protocolHandler.onTransportCommand(command);
     } catch {
@@ -119,6 +120,11 @@ class BrokerConnection(val connector: Connector) extends Connection {
   }
 
   override def onTransportFailure(error: IOException) = protocolHandler.onTransportFailure(error)
+
+  override def onRefill = {
+    super.onRefill
+    protocolHandler.onRefill
+  }
 }
 
 /**
@@ -133,7 +139,7 @@ class MultiProtocolHandler extends ProtocolHandler {
 
   var connected = false
 
-  def onTransportCommand(command:Any) = {
+  override def onTransportCommand(command:Any) = {
 
     if (!command.isInstanceOf[WireFormat]) {
       throw new ProtocolException("First command should be a WireFormat");
@@ -177,7 +183,7 @@ object ProtocolHandlerFactory {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait ProtocolHandler extends TransportListener {
+trait ProtocolHandler extends DefaultTransportListener {
 
   var connection:BrokerConnection = null;
 
@@ -185,16 +191,8 @@ trait ProtocolHandler extends TransportListener {
     this.connection = brokerConnection
   }
 
-  def onTransportCommand(command:Any);
-
-  def onTransportFailure(error:IOException) = {
+  override def onTransportFailure(error:IOException) = {
     connection.stop()
-  }
-
-  def onTransportDisconnected() = {
-  }
-
-  def onTransportConnected() = {
   }
 
 }
