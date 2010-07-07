@@ -21,10 +21,10 @@ import _root_.org.apache.activemq.filter.{Expression, Filterable}
 import _root_.org.fusesource.hawtbuf._
 import collection.mutable.ListBuffer
 import java.lang.{String, Class}
-import java.io.DataOutput
 import org.apache.activemq.apollo.broker._
 import org.apache.activemq.apollo.DirectBuffer
 import org.fusesource.hawtdispatch.BaseRetained
+import java.io.{OutputStream, DataOutput}
 
 /**
  *
@@ -42,9 +42,12 @@ import StompConstants._;
 import BufferConversions._
 import Buffer._
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 case class StompFrameMessage(frame:StompFrame) extends Message {
   
-  def protocol = PROTOCOL
+  def protocol = StompProtocol
 
   /**
    * the globally unique id of the message
@@ -95,7 +98,7 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
 
   def getBodyAs[T](toType : Class[T]) = {
     (frame.content match {
-      case x:BufferStompContent =>
+      case x:BufferContent =>
         if( toType == classOf[String] ) {
           x.content.utf8
         } else if (toType == classOf[Buffer]) {
@@ -107,9 +110,9 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
         } else {
           null
         }
-      case x:DirectStompContent =>
+      case x:DirectContent =>
         null
-      case NilStompContent =>
+      case NilContent =>
         if( toType == classOf[String] ) {
           ""
         } else if (toType == classOf[Buffer]) {
@@ -163,16 +166,22 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
 
 
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object StompFrame extends Sizer[StompFrame] {
   def size(value:StompFrame) = value.size
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait StompContent {
   def length:Int
 
   def isEmpty = length == 0
 
-  def writeTo(os:DataOutput)
+  def writeTo(os:OutputStream)
 
   def utf8:UTF8Buffer
 
@@ -180,25 +189,34 @@ trait StompContent {
   def release = {}
 }
 
-object NilStompContent extends StompContent {
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+object NilContent extends StompContent {
   def length = 0
-  def writeTo(os:DataOutput) = {}
+  def writeTo(os:OutputStream) = {}
   val utf8 = new UTF8Buffer("")
 }
 
-case class BufferStompContent(content:Buffer) extends StompContent {
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+case class BufferContent(content:Buffer) extends StompContent {
   def length = content.length
-  def writeTo(os:DataOutput) = content.writeTo(os)
+  def writeTo(os:OutputStream) = content.writeTo(os)
   def utf8:UTF8Buffer = content.utf8
 }
 
-case class DirectStompContent(direct:DirectBuffer) extends StompContent {
-  def length = direct.size-1
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+case class DirectContent(direct_buffer:DirectBuffer) extends StompContent {
+  def length = direct_buffer.size-1
 
-  def writeTo(os:DataOutput) = {
+  def writeTo(os:OutputStream) = {
     val buff = new Array[Byte](1024*4)
-    val source = direct.buffer.duplicate
-    var remaining = direct.size-1
+    val source = direct_buffer.buffer.duplicate
+    var remaining = direct_buffer.size-1
     while( remaining> 0 ) {
       val c = remaining.min(buff.length)
       source.get(buff, 0, c)
@@ -208,7 +226,7 @@ case class DirectStompContent(direct:DirectBuffer) extends StompContent {
   }
 
   def buffer:Buffer = {
-    val rc = new DataByteArrayOutputStream(direct.size-1)
+    val rc = new DataByteArrayOutputStream(direct_buffer.size-1)
     writeTo(rc)
     rc.toBuffer
   }
@@ -217,8 +235,8 @@ case class DirectStompContent(direct:DirectBuffer) extends StompContent {
     buffer.utf8
   }
 
-  override def retain = direct.retain
-  override def release = direct.release
+  override def retain = direct_buffer.retain
+  override def release = direct_buffer.release
 }
 
 /**
@@ -226,7 +244,7 @@ case class DirectStompContent(direct:DirectBuffer) extends StompContent {
  *
  * @author <a href="http://hiramchirino.com">chirino</a>
  */
-case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:StompContent=NilStompContent, updated_headers:HeaderMap=Nil) {
+case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:StompContent=NilContent, updated_headers:HeaderMap=Nil) {
 
   def size_of_updated_headers = {
     size_of(updated_headers)
@@ -260,12 +278,12 @@ case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:StompCo
   }
 
   def are_headers_in_content_buffer = !headers.isEmpty && 
-          content.isInstanceOf[BufferStompContent] &&
-          ( headers.head._1.data eq content.asInstanceOf[BufferStompContent].content.data )
+          content.isInstanceOf[BufferContent] &&
+          ( headers.head._1.data eq content.asInstanceOf[BufferContent].content.data )
 
   def size:Int = {
      content match {
-       case x:BufferStompContent =>
+       case x:BufferContent =>
          if( (action.data eq x.content.data) && updated_headers==Nil ) {
             return (x.content.offset-action.offset)+x.content.length
          }

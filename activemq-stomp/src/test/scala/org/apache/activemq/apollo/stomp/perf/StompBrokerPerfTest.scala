@@ -40,7 +40,7 @@ class StompBrokerPerfTest extends BaseBrokerPerfSupport {
 
   override def createConsumer() = new StompRemoteConsumer()
 
-  override def getRemoteWireFormat() = "stomp"
+  override def getRemoteProtocolName() = "stomp"
 
 }
 
@@ -52,7 +52,7 @@ class StompPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
 
   override def createConsumer() = new StompRemoteConsumer()
 
-  override def getRemoteWireFormat() = "stomp"
+  override def getRemoteProtocolName() = "stomp"
 
 }
 
@@ -66,7 +66,7 @@ class StompHawtDBPersistentBrokerPerfTest extends BasePersistentBrokerPerfSuppor
 
   override def createConsumer() = new StompRemoteConsumer()
 
-  override def getRemoteWireFormat() = "stomp"
+  override def getRemoteProtocolName() = "stomp"
 
   override def createBrokerConfig(name: String, bindURI: String, connectUri: String): BrokerDTO = {
     val rc = super.createBrokerConfig(name, bindURI, connectUri)
@@ -166,7 +166,7 @@ class StompRemoteProducer extends RemoteProducer {
     //    }
 
     var content = ascii(createPayload());
-    frame = StompFrame(Stomp.Commands.SEND, headers, BufferStompContent(content))
+    frame = StompFrame(Stomp.Commands.SEND, headers, BufferContent(content))
     drain()
   }
 

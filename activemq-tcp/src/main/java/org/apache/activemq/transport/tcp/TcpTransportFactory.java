@@ -19,27 +19,20 @@ package org.apache.activemq.transport.tcp;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.net.ServerSocketFactory;
-import javax.net.SocketFactory;
-
-import org.apache.activemq.transport.Transport;
-import org.apache.activemq.transport.TransportFactory;
+import org.apache.activemq.apollo.transport.Transport;
+import org.apache.activemq.apollo.transport.TransportFactory;
 //import org.apache.activemq.transport.TransportLoggerFactory;
-import org.apache.activemq.transport.TransportFactorySupport;
-import org.apache.activemq.transport.TransportServer;
-import org.apache.activemq.util.IOExceptionSupport;
+import org.apache.activemq.apollo.transport.TransportServer;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.URISupport;
-import org.apache.activemq.wireformat.WireFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import static org.apache.activemq.transport.TransportFactorySupport.configure;
-import static org.apache.activemq.transport.TransportFactorySupport.verify;
+import static org.apache.activemq.apollo.transport.TransportFactorySupport.configure;
+import static org.apache.activemq.apollo.transport.TransportFactorySupport.verify;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

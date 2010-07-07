@@ -22,19 +22,14 @@ import _root_.java.util.concurrent.atomic.AtomicBoolean
 import _root_.java.util.concurrent.atomic.AtomicInteger
 
 import _root_.org.apache.activemq.apollo.broker._
-import _root_.org.apache.activemq.transport.Transport
-import _root_.org.apache.activemq.transport.TransportFactory
-import _root_.org.apache.activemq.transport.TransportServer
-import _root_.org.apache.activemq.transport.pipe.PipeTransport
-import _root_.org.apache.activemq.transport.pipe.PipeTransportFactory
-import _root_.org.apache.activemq.transport.pipe.PipeTransportServer
 import _root_.org.apache.activemq.util.IOExceptionSupport
 import _root_.org.apache.activemq.util.URISupport
-import _root_.org.apache.activemq.transport.TransportFactorySupport.configure
-import _root_.org.apache.activemq.transport.TransportFactorySupport.verify
 
 import _root_.scala.collection.JavaConversions._
-import org.apache.activemq.apollo.dto.ConnectorDTO
+import org.apache.activemq.apollo.transport._
+import org.apache.activemq.apollo.transport.pipe.PipeTransportFactory
+import org.apache.activemq.apollo.transport.pipe.PipeTransport
+import org.apache.activemq.apollo.transport.pipe.PipeTransportServer
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -155,6 +150,7 @@ class VMTransportFactory extends PipeTransportFactory with Logging {
       }
 
       var transport = server.connect()
+      import TransportFactorySupport._
       verify(configure(transport, options), options)
 
     } catch {

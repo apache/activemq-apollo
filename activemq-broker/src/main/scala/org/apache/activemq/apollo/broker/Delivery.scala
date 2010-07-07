@@ -22,7 +22,7 @@ import _root_.org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
 import org.apache.activemq.broker.store.StoreUOW
 import org.apache.activemq.apollo.store.MessageRecord
-import protocol.ProtocolFactory
+import protocol.{Protocol, ProtocolFactory}
 
 /**
  * A producer which sends Delivery objects to a delivery consumer.
@@ -108,9 +108,9 @@ trait Message extends Filterable with Retained {
   def destination: Destination
 
   /**
-   * The protocol encoding of the message.
+   * The protocol of the message
    */
-  def protocol:AsciiBuffer
+  def protocol:Protocol
 
 }
 
@@ -167,11 +167,9 @@ class Delivery extends BaseRetained {
   }
 
   def createMessageRecord() = {
-    val sm = new MessageRecord
-    sm.protocol = message.protocol
-    sm.buffer = ProtocolFactory.get(message.protocol).encode(message)
-    sm.size = size
-    sm
+    val record = message.protocol.encode(message)
+    assert( record.size == size )
+    record
   }
 
 }

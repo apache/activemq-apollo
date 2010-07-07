@@ -24,9 +24,9 @@ import path.PathFilter
 import org.fusesource.hawtbuf.AsciiBuffer
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
+import protocol.Protocol
 import ReporterLevel._
 import org.apache.activemq.broker.store.{Store}
-import org.fusesource.hawtbuf.proto.WireFormat
 import org.apache.activemq.apollo.store.{StoreFactory, QueueRecord}
 import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, CassandraStoreDTO, VirtualHostDTO}
 import java.util.concurrent.TimeUnit
@@ -100,9 +100,8 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
   }
 
   var store:Store = null
-  var memory_pool:DirectBufferPool = null
+  var direct_buffer_pool:DirectBufferPool = null
   var transactionManager:TransactionManagerX = new TransactionManagerX
-  var protocols = Map[AsciiBuffer, WireFormat]()
   val queue_id_counter = new LongCounter
 
   override def toString = if (config==null) "virtual-host" else "virtual-host: "+config.id
@@ -137,8 +136,8 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
     }
 
     if( direct_buffer_pool_config!=null ) {
-      memory_pool = DirectBufferPoolFactory.create(direct_buffer_pool_config)
-      memory_pool.start
+      direct_buffer_pool = DirectBufferPoolFactory.create(direct_buffer_pool_config)
+      direct_buffer_pool.start
     }
 
     if( store!=null ) {
@@ -220,9 +219,9 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
 //        }
 //        done.await();
 
-    if( memory_pool!=null ) {
-      memory_pool.stop
-      memory_pool = null
+    if( direct_buffer_pool!=null ) {
+      direct_buffer_pool.stop
+      direct_buffer_pool = null
     }
 
     if( store!=null ) {

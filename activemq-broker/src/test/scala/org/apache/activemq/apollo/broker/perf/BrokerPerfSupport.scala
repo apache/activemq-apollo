@@ -18,7 +18,6 @@ package org.apache.activemq.apollo.broker.perf
 
 import _root_.java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import _root_.java.lang.{String}
-import org.apache.activemq.transport.TransportFactory
 
 import java.util.ArrayList
 import org.apache.activemq.apollo.broker._
@@ -32,6 +31,7 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch.ScalaDispatch._
 import org.apache.activemq.apollo.dto.BrokerDTO
+import org.apache.activemq.apollo.transport.TransportFactory
 
 /**
  * 
@@ -101,8 +101,8 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
       sendBrokerBindURI = "tcp://localhost:10000"
       receiveBrokerBindURI = "tcp://localhost:20000"
 
-      sendBrokerConnectURI = "tcp://localhost:10000?wireFormat=" + getRemoteWireFormat()
-      receiveBrokerConnectURI = "tcp://localhost:20000?wireFormat=" + getRemoteWireFormat()
+      sendBrokerConnectURI = "tcp://localhost:10000?protocol=" + getRemoteProtocolName()
+      receiveBrokerConnectURI = "tcp://localhost:20000?protocol=" + getRemoteProtocolName()
     } else {
       sendBrokerConnectURI = "pipe://SendBroker"
       receiveBrokerConnectURI = "pipe://ReceiveBroker"
@@ -188,8 +188,8 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
   protected def createConsumer(): RemoteConsumer
   protected def createProducer(): RemoteProducer
 
-  def getBrokerWireFormat() = "multi"
-  def getRemoteWireFormat(): String
+  def getBrokerProtocolName() = "multi"
+  def getRemoteProtocolName(): String
 
   def createBrokerConfig(name: String, bindURI: String, connectUri: String): BrokerDTO = {
 
@@ -197,7 +197,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     val connector = config.connectors.get(0)
     connector.bind = bindURI
     connector.advertise = connectUri
-    connector.protocol = getBrokerWireFormat
+    connector.protocol = getBrokerProtocolName
 
     val host = config.virtual_hosts.get(0)
     host.purge_on_startup = true

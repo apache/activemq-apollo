@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.stomp
 
-import _root_.org.apache.activemq.wireformat.{WireFormat}
 import _root_.org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained}
 import _root_.org.fusesource.hawtbuf._
 import collection.mutable.{ListBuffer, HashMap}
@@ -24,7 +23,8 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
 import AsciiBuffer._
 import org.apache.activemq.apollo.broker._
-import protocol.{Protocol, ProtocolHandler}
+import protocol.{ProtocolFactory, Protocol, ProtocolHandler}
+import java.lang.String
 import Stomp._
 import BufferConversions._
 import StompFrameConstants._
@@ -32,10 +32,15 @@ import java.io.IOException
 import org.apache.activemq.selector.SelectorParser
 import org.apache.activemq.filter.{BooleanExpression, FilterException}
 import org.apache.activemq.broker.store.{StoreUOW}
+import org.apache.activemq.apollo.transport._
+import org.apache.activemq.apollo.store.MessageRecord
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object StompConstants {
 
-  val PROTOCOL = new AsciiBuffer("stomp");
+  val PROTOCOL = "stomp"
 
   val options = new ParserOptions
   options.queuePrefix = new AsciiBuffer("/queue/")
@@ -51,26 +56,56 @@ object StompConstants {
   }
 
 }
+/**
+ * Creates StompCodec objects that encode/decode the
+ * <a href="http://activemq.apache.org/stomp/">Stomp</a> protocol.
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+class StompProtocolCodecFactory extends ProtocolCodecFactory {
+  import Stomp.Commands.CONNECT
+  import Stomp.Commands.STOMP
 
-class StompProtocol extends Protocol {
-  import StompConstants._
-  
-  val wff = new StompWireFormatFactory
+  def createProtocolCodec() = new StompCodec();
 
-  def name = PROTOCOL
+  def isIdentifiable() = true
 
-  def createWireFormat = wff.createWireFormat
+  def maxIdentificaionLength() = CONNECT.length;
+
+  def matchesIdentification(header: Buffer):Boolean = {
+    if (header.length < CONNECT.length) {
+      false
+    } else {
+      header.startsWith(CONNECT) || header.startsWith(STOMP)
+    }
+  }
+}
+
+class StompProtocolFactorySPI extends ProtocolFactory.SPI {
+
+  def create() = StompProtocol
+
+  def create(config: String) = if(config == "stomp") {
+    StompProtocol
+  } else {
+    null
+  }
+
+}
+
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+object StompProtocol extends StompProtocolCodecFactory with Protocol {
 
   def createProtocolHandler = new StompProtocolHandler
 
-  def encode(message: Message) = {
-    val sfm = message.asInstanceOf[StompFrameMessage]
-    createWireFormat.marshal(sfm.frame)
+  def encode(message: Message):MessageRecord = {
+    StompCodec.encode(message.asInstanceOf[StompFrameMessage])
   }
 
-  def decode(message: Buffer) = {
-    val frame = createWireFormat.unmarshal(message).asInstanceOf[StompFrame]
-    StompFrameMessage(frame)
+  def decode(message: MessageRecord) = {
+    StompCodec.decode(message)
   }
 
 }
@@ -79,7 +114,12 @@ import StompConstants._
 
 object StompProtocolHandler extends Log
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
+  
+  def protocol = "stomp"
 
   override protected def log = StompProtocolHandler
   
@@ -95,7 +135,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     })
 
     def matches(delivery:Delivery) = {
-      if( delivery.message.protocol eq PROTOCOL ) {
+      if( delivery.message.protocol eq StompProtocol ) {
         if( selector!=null ) {
           selector._2.matches(delivery.message)
         } else {
@@ -172,9 +212,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     connection.connector.broker.getDefaultVirtualHost(
       queue.wrap { (host)=>
         this.host=host
-        if( this.host.memory_pool!=null ) {
-          val wf = connection.transport.getWireformat.asInstanceOf[StompWireFormat]
-          wf.memory_pool = this.host.memory_pool
+        if( this.host.direct_buffer_pool!=null ) {
+          val wf = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
+          wf.memory_pool = this.host.direct_buffer_pool
         }
         connection.transport.resumeRead
       }
@@ -214,7 +254,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         case StompFrame(Commands.DISCONNECT, headers, content, _t) =>
           info("got command: %s", command)
           connection.stop
-        case s:StompWireFormat =>
+        case s:StompCodec =>
           // this is passed on to us by the protocol discriminator
           // so we know which wire format is being used.
         case StompFrame(unknown, _, _, _) =>
@@ -402,7 +442,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     if( !connection.stopped ) {
       info("Shutting connection down due to: "+msg)
       connection.transport.suspendRead
-      connection.transport.offer(StompFrame(Responses.ERROR, Nil, BufferStompContent(ascii(msg))) )
+      connection.transport.offer(StompFrame(Responses.ERROR, Nil, BufferContent(ascii(msg))) )
       ^ {
         connection.stop()
       } >>: queue

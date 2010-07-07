@@ -16,15 +16,14 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.org.apache.activemq.transport._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import org.fusesource.hawtdispatch.{Dispatch}
 import org.apache.activemq.apollo.dto.{ConnectorDTO}
-import org.apache.activemq.wireformat.WireFormatFactory
+import protocol.{ProtocolFactory, Protocol}
 import ReporterLevel._
 import org.apache.activemq.apollo.util.LongCounter
 import collection.mutable.HashMap
-
+import org.apache.activemq.apollo.transport._
 /**
  * <p>
  * </p>
@@ -76,7 +75,7 @@ class Connector(val broker:Broker, val id:Long) extends BaseService with Dispatc
 
   var config:ConnectorDTO = defaultConfig
   var transportServer:TransportServer = _
-  var wireFormatFactory:WireFormatFactory = _
+  var protocol:Protocol = _
 
   val connections = HashMap[Long, BrokerConnection]()
   override def toString = "connector: "+config.id
@@ -92,13 +91,13 @@ class Connector(val broker:Broker, val id:Long) extends BaseService with Dispatc
     def onAccept(transport: Transport): Unit = {
       debug("Accepted connection from: %s", transport.getRemoteAddress)
 
-      if( wireFormatFactory!=null ) {
-        transport.setWireformat(wireFormatFactory.createWireFormat)
+      if( protocol!=null ) {
+        transport.setProtocolCodec(protocol.createProtocolCodec)
       }
 
       accept_counter.incrementAndGet
       var connection = new BrokerConnection(Connector.this, broker.connection_id_counter.incrementAndGet)
-      connection.protocol = config.protocol
+      connection.protocolHandler = protocol.createProtocolHandler
       connection.transport = transport
 
       if( STICK_ON_THREAD_QUEUES ) {
@@ -138,8 +137,7 @@ class Connector(val broker:Broker, val id:Long) extends BaseService with Dispatc
 
   override def _start(onCompleted:Runnable) = {
     assert(config!=null, "Connector must be configured before it is started.")
-    wireFormatFactory = TransportFactorySupport.createWireFormatFactory(config.protocol)
-
+    protocol = ProtocolFactory.get(config.protocol).get
     transportServer = TransportFactory.bind( config.bind )
     transportServer.setDispatchQueue(dispatchQueue)
     transportServer.setAcceptListener(BrokerAcceptListener)

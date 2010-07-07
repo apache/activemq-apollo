@@ -18,8 +18,8 @@ package org.apache.activemq.apollo.transport.vm;
 
 import java.io.IOException;
 
-import org.apache.activemq.transport.Transport;
-import org.apache.activemq.transport.TransportFactory;
+import org.apache.activemq.apollo.transport.Transport;
+import org.apache.activemq.apollo.transport.TransportFactory;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.junit.Test;
 
@@ -36,7 +36,7 @@ public class VMTransportTest {
 	
 	@Test()
 	public void autoCreateBroker() throws Exception {
-		Transport connect = TransportFactory.connect("vm://test1?wireFormat=mock");
+		Transport connect = TransportFactory.connect("vm://test1?protocol=null");
         connect.setDispatchQueue(Dispatch.createQueue());
 		connect.start();
 		assertNotNull(connect);
@@ -45,12 +45,12 @@ public class VMTransportTest {
 	
 	@Test(expected=IOException.class)
 	public void noAutoCreateBroker() throws Exception {
-		TransportFactory.connect("vm://test2?create=false&wireFormat=mock");
+		TransportFactory.connect("vm://test2?create=false&protocol=null");
 	}
 	
 	@Test(expected=IllegalArgumentException.class)
 	public void badOptions() throws Exception {
-		TransportFactory.connect("vm://test3?crazy-option=false&wireFormat=mock");
+		TransportFactory.connect("vm://test3?crazy-option=false&protocol=null");
 	}
 	
 }

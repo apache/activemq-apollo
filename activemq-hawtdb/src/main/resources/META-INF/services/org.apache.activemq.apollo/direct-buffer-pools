@@ -14,4 +14,4 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ## ---------------------------------------------------------------------------
-org.apache.activemq.broker.store.hawtdb.HawtDBMemoryPoolSPI
+org.apache.activemq.broker.store.hawtdb.HawtDBDirectBufferPoolSPI

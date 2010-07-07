@@ -27,7 +27,7 @@ import org.apache.activemq.apollo.util.ClassFinder
 object DirectBufferPoolFactory {
 
   val finder = ClassFinder[SPI]("META-INF/services/org.apache.activemq.apollo/direct-buffer-pools")
-  var direct_buffer_pools_spis = List[SPI]()
+  var spis = List[SPI]()
 
   trait SPI {
     def create(config:String):DirectBufferPool
@@ -36,11 +36,9 @@ object DirectBufferPoolFactory {
 
   finder.find.foreach{ clazz =>
     try {
-      val SPI = clazz.newInstance.asInstanceOf[SPI]
-      direct_buffer_pools_spis ::= SPI
+      spis ::= clazz.newInstance.asInstanceOf[SPI]
     } catch {
-      case e:Throwable =>
-        e.printStackTrace
+      case e:Throwable => e.printStackTrace
     }
   }
 
@@ -48,7 +46,7 @@ object DirectBufferPoolFactory {
     if( config == null ) {
       return null
     }
-    direct_buffer_pools_spis.foreach { spi=>
+    spis.foreach { spi=>
       val rc = spi.create(config)
       if( rc!=null ) {
         return rc
@@ -62,7 +60,7 @@ object DirectBufferPoolFactory {
     if( config == null ) {
       return true
     } else {
-      direct_buffer_pools_spis.foreach { spi=>
+      spis.foreach { spi=>
         if( spi.validate(config) ) {
           return true
         }

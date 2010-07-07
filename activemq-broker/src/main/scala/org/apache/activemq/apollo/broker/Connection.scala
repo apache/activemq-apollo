@@ -16,18 +16,12 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.java.beans.ExceptionListener
 import _root_.java.io.{IOException}
 import _root_.org.apache.activemq.filter.{BooleanExpression}
-import _root_.org.apache.activemq.transport._
-import _root_.org.apache.activemq.Service
 import _root_.java.lang.{String}
-import _root_.org.apache.activemq.util.{FactoryFinder}
-import _root_.org.apache.activemq.wireformat.WireFormat
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import java.util.concurrent.atomic.AtomicLong
-import org.fusesource.hawtdispatch.Dispatch
 import protocol.{ProtocolFactory, ProtocolHandler}
+import org.apache.activemq.apollo.transport.{DefaultTransportListener, Transport}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -42,7 +36,6 @@ abstract class Connection() extends DefaultTransportListener with BaseService  {
 
   override protected def log = Connection
 
-  import Connection._
   val dispatchQueue = createQueue()
   var stopped = true
   var transport:Transport = null
@@ -86,14 +79,12 @@ abstract class Connection() extends DefaultTransportListener with BaseService  {
  */
 class BrokerConnection(val connector: Connector, val id:Long) extends Connection {
 
-  var protocol = "multi"
   var protocolHandler: ProtocolHandler = null;
 
   override def toString = "id: "+id.toString
 
   override protected  def _start(onCompleted:Runnable) = {
     connector.dispatchQueue.retain
-    protocolHandler = ProtocolFactory.get(protocol).createProtocolHandler
     protocolHandler.setConnection(this);
     super._start(onCompleted)
   }

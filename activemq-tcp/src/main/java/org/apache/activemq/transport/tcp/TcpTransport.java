@@ -16,10 +16,10 @@
  */
 package org.apache.activemq.transport.tcp;
 
+import org.apache.activemq.apollo.transport.ProtocolCodec;
+import org.apache.activemq.apollo.transport.TransportListener;
 import org.apache.activemq.apollo.util.JavaBaseService;
-import org.apache.activemq.transport.Transport;
-import org.apache.activemq.transport.TransportListener;
-import org.apache.activemq.wireformat.WireFormat;
+import org.apache.activemq.apollo.transport.Transport;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.fusesource.hawtdispatch.Dispatch;
@@ -35,7 +35,7 @@ import java.util.LinkedList;
 import java.util.Map;
 
 /**
- * An implementation of the {@link Transport} interface using raw tcp/ip
+ * An implementation of the {@link org.apache.activemq.apollo.transport.Transport} interface using raw tcp/ip
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
@@ -162,7 +162,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
     protected URI localLocation;
     private TransportListener listener;
     private String remoteAddress;
-    private WireFormat wireformat;
+    private ProtocolCodec wireformat;
 
     private SocketChannel channel;
 
@@ -358,7 +358,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
                 throw new IOException("Not running.");
             }
 
-            WireFormat.BufferState rc = wireformat.write(command);
+            ProtocolCodec.BufferState rc = wireformat.write(command);
             switch (rc ) {
                 case FULL:
                     return false;
@@ -383,7 +383,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
             return;
         }
         try {
-            if( wireformat.flush() == WireFormat.BufferState.EMPTY ) {
+            if( wireformat.flush() == ProtocolCodec.BufferState.EMPTY ) {
                 writeSource.suspend();
                 listener.onRefill();
             }
@@ -476,15 +476,15 @@ public class TcpTransport extends JavaBaseService implements Transport {
         this.listener = listener;
     }
 
-    public WireFormat getWireformat() {
+    public ProtocolCodec getProtocolCodec() {
         return wireformat;
     }
 
-    public void setWireformat(WireFormat wireformat) {
-        this.wireformat = wireformat;
+    public void setProtocolCodec(ProtocolCodec protocolCodec) {
+        this.wireformat = protocolCodec;
         if( channel!=null ) {
-            wireformat.setReadableByteChannel(this.channel);
-            wireformat.setWritableByteChannel(this.channel);
+            protocolCodec.setReadableByteChannel(this.channel);
+            protocolCodec.setWritableByteChannel(this.channel);
         }
     }
 

@@ -263,7 +263,6 @@ class Queue(val host: VirtualHost, val destination: Destination, val id: Long) e
   }
 
 
-  var check_counter = 0
   def display_stats: Unit = {
     info("contains: %d messages worth %,.2f MB of data, producers are %s, %d/%d buffer space used.", queue_items, (queue_size.toFloat / (1024 * 1024)), {if (messages.full) "being throttled" else "not being throttled"}, capacity_used, capacity)
     info("total messages enqueued %d, dequeues %d ", enqueue_item_counter, dequeue_item_counter)
@@ -303,16 +302,6 @@ class Queue(val host: VirtualHost, val destination: Destination, val id: Long) e
 
     def slowConsumerCheck = {
       if( serviceState.isStarted ) {
-
-        // Handy for periodically looking at the dispatch state...
-        check_counter += 1
-
-        if( (check_counter%25)==0 ) {
-          display_stats
-//          if (!all_subscriptions.isEmpty) {
-//            display_active_entries
-//          }
-        }
 
         // target tune_min_subscription_rate / sec
         val slow_cursor_delta = (((tune_slow_subscription_rate) * tune_slow_check_interval) / 1000).toInt
@@ -1167,7 +1156,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         queue.loading_size -= size
 
         val delivery = new Delivery()
-        delivery.message = ProtocolFactory.get(messageRecord.protocol).decode(messageRecord.buffer)
+        delivery.message = ProtocolFactory.get(messageRecord.protocol.toString).get.decode(messageRecord)
         delivery.size = messageRecord.size
         delivery.storeKey = messageRecord.key
 
