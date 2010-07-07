@@ -102,4 +102,34 @@
     
   </dependencies>
   
+  <profiles>
+    
+    <profile>
+      <id>benchmark</id>
+      <build>
+        <plugins>
+          
+          <!-- Benchmarks the stomp broker protocol impl  -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>${maven-surefire-plugin-version}</version>
+            <configuration>
+              <failIfNoTests>true</failIfNoTests>
+              <argLine></argLine>
+              <includes>
+                <include>**/StompBrokerPerfTest.*</include>
+              </includes>
+              <excludes>
+                <exclude>**/ignore/**</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+          
+        </plugins>
+      </build>
+    </profile>
+    
+  </profiles>
+    
 </project>

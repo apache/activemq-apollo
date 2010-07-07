@@ -479,6 +479,28 @@
   </reporting>
 
   <profiles>
+    
+    <profile>
+      <id>benchmark</id>
+      <build>
+        <plugins>
+          
+          <!-- skip all tests by default.. modules with benchmarking tests will 
+               enable those tests when this profile is active  -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>${maven-surefire-plugin-version}</version>
+            <configuration>
+              <excludes>
+                <exclude>**/**</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+          
+        </plugins>
+      </build>
+    </profile>
 
     <!--
       To generate a graph of the project dependencies, run: mvn -P graph graph:project
