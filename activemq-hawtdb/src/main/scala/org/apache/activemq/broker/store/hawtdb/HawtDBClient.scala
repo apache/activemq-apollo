@@ -145,7 +145,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     }
   }
 
-  val schedual_version = new AtomicInteger()
+  val schedule_version = new AtomicInteger()
 
   def start(onComplete:Runnable) = {
     lock {
@@ -215,14 +215,14 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
       recover(onComplete)
 
-      // Schedual periodic jobs.. they keep executing while schedual_version remains the same.
-      schedualCleanup(schedual_version.get())
-      // schedualFlush(schedual_version.get())
+      // Schedule periodic jobs.. they keep executing while schedule_version remains the same.
+      scheduleCleanup(schedule_version.get())
+      scheduleFlush(schedule_version.get())
     }
   }
 
   def stop() = {
-    schedual_version.incrementAndGet
+    schedule_version.incrementAndGet
     journal.close
     pageFileFactory.close
     lockFile.unlock
@@ -936,12 +936,12 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   //
   /////////////////////////////////////////////////////////////////////
 
-  def schedualFlush(version:Int): Unit = {
+  def scheduleFlush(version:Int): Unit = {
     def try_flush() = {
-      if (version == schedual_version.get) {
+      if (version == schedule_version.get) {
         hawtDBStore.executor_pool {
           flush
-          schedualFlush(version)
+          scheduleFlush(version)
         }
       }
     }
@@ -957,14 +957,14 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     }
   }
 
-  def schedualCleanup(version:Int): Unit = {
+  def scheduleCleanup(version:Int): Unit = {
     def try_cleanup() = {
-      if (version == schedual_version.get) {
+      if (version == schedule_version.get) {
         hawtDBStore.executor_pool {
           withTx {tx =>
             cleanup(tx)
           }
-          schedualCleanup(version)
+          scheduleCleanup(version)
         }
       }
     }
