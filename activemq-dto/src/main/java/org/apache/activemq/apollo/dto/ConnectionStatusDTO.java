@@ -29,26 +29,13 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="connection-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ConnectionStatusDTO {
-
-    /**
-     * A unique id of the connection.
-     */
-	@XmlAttribute(name="id")
-	public String id;
-
-    /**
-     * The state of the object.
-     */
-	@XmlAttribute(name="state")
-	public String state;
+public class ConnectionStatusDTO extends ServiceStatusDTO {
 
     /**
      * The number of bytes that have been read from the connection.
      */
 	@XmlAttribute(name="read-counter")
 	public Long readCounter;
-
 
     /**
      * The number of bytes that have been written to the connection.

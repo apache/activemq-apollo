@@ -29,13 +29,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="broker-summary")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BrokerSummaryDTO {
-
-    /**
-     * A unique id of the broker.
-     */
-	@XmlAttribute(name="id")
-	public String id;
+public class BrokerSummaryDTO extends IdDTO {
 
     /**
      * The latest revision of the broker config.

@@ -29,31 +29,20 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="broker-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BrokerStatusDTO {
-
-    /**
-     * A unique id of the broker.
-     */
-	@XmlAttribute(name="id")
-	public String id;
-
-    /**
-     * The state of the object.
-     */
-	@XmlAttribute(name="state")
-	public String state;
-    
-    /**
-     * Since when has the broker in in this state?
-     */
-	@XmlAttribute(name="in-state-since")
-	public String inStateSince;
+public class BrokerStatusDTO extends ServiceStatusDTO {
 
     /**
      * The current time on the broker machine.
      */
 	@XmlAttribute(name="current-time")
 	public String currentTime;
+
+    /**
+     * Since when has the broker in in this state?
+     */
+	@XmlAttribute(name="in-state-since")
+	public String inStateSince;
+
 
 
 }

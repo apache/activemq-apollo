@@ -29,18 +29,6 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="virtual-host-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class VirtualHostStatusDTO {
-    
-    /**
-     * A unique id of the virtual host.
-     */
-	@XmlAttribute(name="id")
-	public String id;
-
-    /**
-     * The state of the object.
-     */
-	@XmlAttribute(name="state")
-	public String state;
-    
+public class VirtualHostStatusDTO extends ServiceStatusDTO {
+        
 }

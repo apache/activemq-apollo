@@ -94,7 +94,7 @@ case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
 
   private def config() = {
     Future[Option[BrokerDTO]] { cb=>
-      configStore.getBroker(id, cb)
+      configStore.getBroker(id, false)(cb)
     }.getOrElse(result(NOT_FOUND))
   }
 
@@ -111,14 +111,14 @@ case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
     config.id = id;
     config.rev = rev
     Future[Boolean] { cb=>
-      configStore.putBroker(config, cb)
+      configStore.putBroker(config)(cb)
     } || result(NOT_FOUND)
   }
 
   @DELETE @Path("config/{rev}")
   def delete(@PathParam("rev") rev:Int) = {
     Future[Boolean] { cb=>
-      configStore.removeBroker(id, rev, cb)
+      configStore.removeBroker(id, rev)(cb)
     } || result(NOT_FOUND)
   }
 

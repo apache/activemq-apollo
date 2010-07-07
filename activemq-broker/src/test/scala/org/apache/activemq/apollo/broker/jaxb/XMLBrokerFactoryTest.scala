@@ -27,7 +27,7 @@ import org.apache.activemq.apollo.broker.{FunSuiteSupport, BrokerFactory}
  */
 class XMLBrokerFactoryTest extends FunSuiteSupport {
   test("Simple Config") {
-    val uri = "xml:classpath:org/apache/activemq/apollo/jaxb/testSimpleConfig.xml"
+    val uri = "xml:classpath:org/apache/activemq/apollo/broker/jaxb/testSimpleConfig.xml"
     info("Loading broker configuration from the classpath with URI: " + uri)
     val broker = BrokerFactory.createBroker(uri, false)
 
@@ -70,13 +70,13 @@ class XMLBrokerFactoryTest extends FunSuiteSupport {
     // non-existent classpath
 
     expectException("Creating broker from non-existing url does not throw an exception!") {
-      val uri = "xml:classpath:org/apache/activemq/apollo/jaxb/testUris-fail.xml"
+      val uri = "xml:classpath:org/apache/activemq/apollo/broker/jaxb/testUris-fail.xml"
       BrokerFactory.createBroker(uri, false)
     }
 
     //non-existent file
     expectException("Creating broker from non-existing url does not throw an exception!") {
-      val uri = "xml:file:/org/apache/activemq/apollo/jaxb/testUris-fail.xml"
+      val uri = "xml:file:/org/apache/activemq/apollo/broker/jaxb/testUris-fail.xml"
       BrokerFactory.createBroker(uri, false)
     }
 

@@ -30,26 +30,13 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="broker")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BrokerDTO {
-
-    /**
-     * A unique id of the broker.
-     */
-	@XmlAttribute(name="id")
-	public String id;
+public class BrokerDTO extends ServiceDTO {
 
     /**
      * Used to track config revisions.
      */
     @XmlAttribute(name="rev")
     public int rev;
-
-    /**
-     * Should this broker be running?
-     */
-    @XmlAttribute(name="enabled")
-    public boolean enabled;
-
 
     /**
      * Used to track who last modified the configuration.
@@ -72,7 +59,7 @@ public class BrokerDTO {
     /**
      * A broker accepts connections via it's configured connectors.
      */
-    @XmlElement(name="connectors")
+    @XmlElement(name="connector")
     public List<ConnectorDTO> connectors = new ArrayList<ConnectorDTO>();
 
     /**
@@ -81,5 +68,7 @@ public class BrokerDTO {
      */
     @XmlAttribute(name="basedir")
     public String basedir;
+
+    
 
 }

@@ -25,14 +25,13 @@ import org.apache.activemq.apollo.broker._
 import jaxb.PropertiesReader
 import org.apache.activemq.apollo.dto._
 import java.lang.String
+import XmlEncoderDecoder._
 
 class XmlBrokerFactory extends BrokerFactory.Handler {
 
   def createBroker(value: String): Broker = {
     try {
       var brokerURI = new URI(value)
-      val context = JAXBContext.newInstance("org.apache.activemq.apollo.dto")
-      val unmarshaller = context.createUnmarshaller()
 
       var configURL: URL = null
       brokerURI = URISupport.stripScheme(brokerURI)
@@ -48,10 +47,8 @@ class XmlBrokerFactory extends BrokerFactory.Handler {
       if (configURL == null) {
         throw new IOException("Cannot create broker from non-existent URI: " + brokerURI)
       }
-      val factory = XMLInputFactory.newInstance()
-      val reader = factory.createXMLStreamReader(configURL.openStream())
-      val properties = new PropertiesReader(reader)
-      val xml = unmarshaller.unmarshal(properties).asInstanceOf[BrokerDTO]
+
+      val xml = unmarshalBrokerDTO(configURL, System.getProperties)
       return createMessageBroker(xml)
     } catch {
       case e: Exception =>

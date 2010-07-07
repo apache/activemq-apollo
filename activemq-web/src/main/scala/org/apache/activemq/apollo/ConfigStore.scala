@@ -18,16 +18,17 @@ package org.apache.activemq.apollo
 
 import broker._
 import broker.jaxb.PropertiesReader
+import dto.{XmlEncoderDecoder, ConnectorDTO, VirtualHostDTO, BrokerDTO}
 import java.util.regex.Pattern
 import javax.xml.stream.{XMLOutputFactory, XMLInputFactory}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import dto.{ConnectorDTO, VirtualHostDTO, BrokerDTO}
 import org.apache.activemq.util.{Hasher, IOHelper}
 import java.util.concurrent.{TimeUnit, ExecutorService, Executors}
 import org.fusesource.hawtbuf.{ByteArrayInputStream, ByteArrayOutputStream}
 import org.apache.activemq.Service
 import javax.xml.bind.{Marshaller, JAXBContext}
 import java.io.{OutputStreamWriter, File}
+import XmlEncoderDecoder._
 
 /**
  * <p>
@@ -40,13 +41,13 @@ trait ConfigStore extends Service {
 
   def listBrokers(cb: (List[String]) => Unit):Unit
 
-  def getBroker(id:String, cb: (Option[BrokerDTO]) => Unit):Unit
+  def getBroker(id:String, eval:Boolean)(cb: (Option[BrokerDTO]) => Unit):Unit
 
-  def putBroker(config:BrokerDTO, cb: (Boolean) => Unit):Unit
+  def putBroker(config:BrokerDTO)(cb: (Boolean) => Unit):Unit
 
-  def removeBroker(id:String, rev:Int, cb: (Boolean) => Unit):Unit
+  def removeBroker(id:String, rev:Int)(cb: (Boolean) => Unit):Unit
 
-  def forBroker(cb: (BrokerDTO)=> Unit):Unit
+  def foreachBroker(eval:Boolean)(cb: (BrokerDTO)=> Unit):Unit
 
 }
 
@@ -68,12 +69,6 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     }
   }
   case class StoredBrokerModel(id:String, rev:Int, data:Array[Byte], hash:Int)
-
-  val context = JAXBContext.newInstance("org.apache.activemq.apollo.dto")
-  val unmarshaller = context.createUnmarshaller
-  val marshaller = context.createMarshaller
-  marshaller.setProperty( Marshaller.JAXB_FORMATTED_OUTPUT, java.lang.Boolean.TRUE )
-  val inputfactory = XMLInputFactory.newInstance
 
   var file:File = new File("activemq.xml")
   @volatile
@@ -151,20 +146,20 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
   } >>: dispatchQueue
 
 
-  def forBroker(cb: (BrokerDTO)=> Unit) = using(cb) {
-
+  def foreachBroker(eval:Boolean)(cb: (BrokerDTO)=> Unit) = using(cb) {
+    cb(unmarshall(latest.data, eval))
   }
 
 
-  def getBroker(id:String, cb: (Option[BrokerDTO]) => Unit) = reply(cb) {
+  def getBroker(id:String, eval:Boolean)(cb: (Option[BrokerDTO]) => Unit) = reply(cb) {
     if( latest.id == id ) {
-      Some(unmarshall(latest.data))
+      Some(unmarshall(latest.data, eval))
     } else {
       None
     }
   } >>: dispatchQueue
 
-  def putBroker(config:BrokerDTO, cb: (Boolean) => Unit) = reply(cb) {
+  def putBroker(config:BrokerDTO)(cb: (Boolean) => Unit) = reply(cb) {
     debug("storing broker model: %s ver %d", config.id, config.rev)
     if( latest.id != config.id ) {
       debug("this store can only update broker: "+latest.id)
@@ -178,7 +173,7 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     }
   } >>: dispatchQueue
 
-  def removeBroker(id:String, rev:Int, cb: (Boolean) => Unit) = reply(cb) {
+  def removeBroker(id:String, rev:Int)(cb: (Boolean) => Unit) = reply(cb) {
     // not supported.
     false
   } >>: dispatchQueue
@@ -195,7 +190,7 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
             // has a chance to update the runtime too.
             val c = unmarshall(config.data)
             c.rev = config.rev
-            putBroker(c, null)
+            putBroker(c) { x=> }
           }
           schedualNextUpdateCheck
         }
@@ -243,16 +238,17 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     config
   }
 
-  def unmarshall(in:Array[Byte]) = {
-    val bais = new ByteArrayInputStream(in);
-    val reader = inputfactory.createXMLStreamReader(bais)
-    val properties = new PropertiesReader(reader)
-    unmarshaller.unmarshal(properties).asInstanceOf[BrokerDTO]
+  def unmarshall(in:Array[Byte], evalProps:Boolean=false) = {
+    if (evalProps) {
+      unmarshalBrokerDTO(new ByteArrayInputStream(in), System.getProperties)
+    } else {
+      unmarshalBrokerDTO(new ByteArrayInputStream(in))
+    }
   }
 
   def marshall(in:BrokerDTO) = {
     val baos = new ByteArrayOutputStream
-    marshaller.marshal(in, new OutputStreamWriter(baos));
+    marshalBrokerDTO(in, baos, true)
     baos.toByteArray
   }
 }

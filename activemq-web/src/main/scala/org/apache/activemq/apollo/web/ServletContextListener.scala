@@ -42,21 +42,13 @@ class ServletContextListener extends GuiceServletContextListener {
       BrokerRegistry.configStore = createConfigStore
 
       // Brokers startup async.
-      BrokerRegistry.configStore.listBrokers { ids =>
-        ids.foreach { id=>
-          BrokerRegistry.configStore.getBroker(id, { x=>
-            x match {
-              case Some(config)=>
-                // Only start the broker up if it's enabled..
-                if( config.enabled ) {
-                  val broker = new Broker()
-                  broker.config = config
-                  BrokerRegistry.add(broker)
-                  broker.start()
-                }
-              case None =>
-            }
-          })
+      BrokerRegistry.configStore.foreachBroker(true) { config=>
+        // Only start the broker up if it's enabled..
+        if( config.enabled ) {
+          val broker = new Broker()
+          broker.config = config
+          BrokerRegistry.add(broker)
+          broker.start()
         }
       }
 
@@ -72,15 +64,16 @@ class ServletContextListener extends GuiceServletContextListener {
 
   override def contextDestroyed(servletContextEvent: ServletContextEvent) = {
     super.contextDestroyed(servletContextEvent);
-
-    // un-register/stop brokers we are managing.
-    if( broker!=null ) {
-      BrokerRegistry.remove(broker.id);
-      LoggingTracker("broker shutdown") { tracker =>
-        broker.stop(tracker.task(broker.id))
-        BrokerRegistry.configStore.stop(tracker.task("config store"))
+    val tracker = new LoggingTracker("broker shutdown")
+    BrokerRegistry.configStore.foreachBroker(false) { config=>
+      // remove started brokers what we configured..
+      val broker = BrokerRegistry.remove(config.id);
+      if( broker!=null ) {
+        tracker.stop(broker)
       }
     }
+    tracker.stop(BrokerRegistry.configStore)
+    tracker.await
   }
 
   def getInjector = Guice.createInjector(new ScalateModule() {

@@ -16,21 +16,23 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import java.util.ArrayList;
-
-import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "virtual-host")
+@XmlRootElement(name="service-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class VirtualHostDTO extends ServiceDTO {
+public class ServiceStatusDTO extends IdDTO {
 
-    @XmlElement(name="host-name", required=true)
-    public ArrayList<String> hostNames = new ArrayList<String>();
+    /**
+     * The state of the service.
+     */
+	@XmlAttribute(name="state")
+	public String state;
 
-    @XmlElementRef   
-    public StoreDTO store;
-    
+
 }

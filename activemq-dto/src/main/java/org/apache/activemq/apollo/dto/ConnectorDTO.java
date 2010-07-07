@@ -26,20 +26,8 @@ import javax.xml.bind.annotation.*;
  */
 @XmlRootElement(name = "connector")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ConnectorDTO {
+public class ConnectorDTO extends ServiceDTO {
 
-    /**
-     * A unique id.
-     */
-	@XmlAttribute(name="id")
-	public String id;
-
-    /**
-     * Should this connector be running?
-     */
-    @XmlAttribute(name="enabled")
-    public boolean enabled;
-    
     /**
      * The transport uri which it will accept connections on.
      */
