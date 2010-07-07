@@ -27,14 +27,15 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import AsciiBuffer._
 import Stomp._
 import BufferConversions._
-import StompFrameConstants._;
+import StompFrameConstants._
+import org.apache.activemq.transport.CompletionCallback;
 
 
 class StompProtocolException(msg:String) extends Exception(msg)
 
 object StompConstants {
-  val QUEUE_PREFIX = new AsciiBuffer("/topic/")
-  val TOPIC_PREFIX = new AsciiBuffer("/queue/")
+  val QUEUE_PREFIX = new AsciiBuffer("/queue/")
+  val TOPIC_PREFIX = new AsciiBuffer("/topic/")
 
   implicit def toDestination(value:AsciiBuffer):Destination = {
     if( value.startsWith(QUEUE_PREFIX) ) {
@@ -56,15 +57,18 @@ class StompProtocolHandler extends ProtocolHandler {
   class SimpleConsumer(val dest:AsciiBuffer) extends BaseRetained with DeliveryConsumer {
 
     val queue = StompProtocolHandler.this.dispatchQueue
-    queue.retain
-    setDisposer(^{ queue.release  })
+    val session_manager = new DeliverySessionManager(outboundChannel, queue)
 
-    val deliveryQueue = new DeliveryCreditBufferProtocol(outboundChannel, queue)
+    queue.retain
+    setDisposer(^{
+      session_manager.release
+      queue.release
+    })
 
     def matches(message:Delivery) = true
 
     def open_session(producer_queue:DispatchQueue) = new DeliverySession {
-      val session = deliveryQueue.session(producer_queue)
+      val session = session_manager.session(producer_queue)
 
       val consumer = SimpleConsumer.this
       retain
@@ -79,7 +83,7 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 
   def dispatchQueue = connection.dispatchQueue
-  val outboundChannel  = new DeliveryBuffer
+  val outboundChannel = new DeliveryBuffer
   var closed = false
   var consumer:SimpleConsumer = null
 
@@ -88,17 +92,30 @@ class StompProtocolHandler extends ProtocolHandler {
   var producerRoute:DeliveryProducerRoute=null
   var host:VirtualHost = null
 
+  outboundChannel.eventHandler = ^{
+    var delivery = outboundChannel.receive
+    while( delivery!=null ) {
+      connection.transport.oneway(delivery.message, new CompletionCallback() {
+        def onCompletion() = {
+          outboundChannel.ack(delivery)
+        }
+        def onFailure(e:Exception) = {
+          StompProtocolHandler.this.onException(e)
+        }
+      });
+    }
+  }
+
+
   private def queue = connection.dispatchQueue
 
   def setConnection(connection:BrokerConnection) = {
     this.connection = connection
 
     // We will be using the default virtual host
-    println("waiting for host")
     connection.transport.suspendRead
     connection.broker.runtime.getDefaultVirtualHost(
       queue.wrap { (host)=>
-        println("got host")
         this.host=host
         connection.transport.resumeRead
       }

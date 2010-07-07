@@ -96,21 +96,21 @@ class VMTransportFactory extends PipeTransportFactory with Logging {
 		}
 	}
 
-  override def bind(uri:URI):TransportServer = {
+  override def bind(uri:String):TransportServer = {
     new VmTransportServer();
   }
 
-  override def connect(location:URI):Transport = {
+  override def connect(location:String):Transport = {
 		try {
-
+      var uri = new URI(location)
 			var brokerURI:String = null;
 			var create = true;
-			var name = location.getHost();
+			var name = uri.getHost();
 			if (name == null) {
 				name = DEFAULT_PIPE_NAME;
 			}
 
-			var options = URISupport.parseParamters(location);
+			var options = URISupport.parseParamters(uri);
 			var config = options.remove("broker").asInstanceOf[String]
 			if (config != null) {
 				brokerURI = config;
@@ -139,7 +139,7 @@ class VMTransportFactory extends PipeTransportFactory with Logging {
 				}
 
 				// We want to use a vm transport server impl.
-				var vmTransportServer = TransportFactory.bind(new URI("vm://" + name+"?wireFormat=null")).asInstanceOf[VmTransportServer]
+				var vmTransportServer = TransportFactory.bind("vm://" + name+"?wireFormat=null").asInstanceOf[VmTransportServer]
 				vmTransportServer.setBroker(broker);
 				broker.transportServers.add(vmTransportServer);
 				broker.start();

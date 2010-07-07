@@ -461,9 +461,9 @@ class DeliveryOverflowBuffer(val delivery_buffer:DeliveryBuffer) {
 
 }
 
-class DeliveryCreditBufferProtocol(val delivery_buffer:DeliveryBuffer, val queue:DispatchQueue) extends BaseRetained with Suspendable {
+class DeliverySessionManager(val delivery_buffer:DeliveryBuffer, val queue:DispatchQueue) extends BaseRetained {
 
-  var sessions = List[CreditServer]()
+  var sessions = List[SessionServer]()
 
   var session_min_credits = 1024*4;
   var session_credit_capacity = 1024*32
@@ -478,10 +478,7 @@ class DeliveryCreditBufferProtocol(val delivery_buffer:DeliveryBuffer, val queue
   // use a event aggregating source to coalesce multiple events from the same thread.
   val source = createSource(new ListEventAggregator[Delivery](), queue)
   source.setEventHandler(^{drain_source});
-
-  def suspend() = source.suspend
-  def resume() = source.resume
-  def isSuspended() = source.isSuspended
+  source.resume
 
   def drain_source = {
     val deliveries = source.getData
@@ -491,7 +488,7 @@ class DeliveryCreditBufferProtocol(val delivery_buffer:DeliveryBuffer, val queue
     }
   }
 
-  class CreditServer(val producer_queue:DispatchQueue) {
+  class SessionServer(val producer_queue:DispatchQueue) {
     private var _capacity = 0
 
     def capacity(value:Int) = {
@@ -504,9 +501,9 @@ class DeliveryCreditBufferProtocol(val delivery_buffer:DeliveryBuffer, val queue
       client.drain(callback)
     }
 
-    val client = new CreditClient()
+    val client = new SessionClient()
 
-    class CreditClient() extends DeliveryOverflowBuffer(delivery_buffer) {
+    class SessionClient() extends DeliveryOverflowBuffer(delivery_buffer) {
 
       producer_queue.retain
       val credit_adder = createSource(EventAggregators.INTEGER_ADD , producer_queue)
@@ -560,8 +557,8 @@ class DeliveryCreditBufferProtocol(val delivery_buffer:DeliveryBuffer, val queue
     }
   }
 
-  def session(queue:DispatchQueue) = {
-    val session = new CreditServer(queue)
+  def session(producer_queue:DispatchQueue) = {
+    val session = new SessionServer(producer_queue)
     sessions = session :: sessions
     session.capacity(session_max_credits)
     session.client

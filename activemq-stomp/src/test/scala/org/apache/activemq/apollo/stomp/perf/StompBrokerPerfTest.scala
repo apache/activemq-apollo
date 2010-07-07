@@ -125,7 +125,7 @@ class StompRemoteProducer extends RemoteProducer {
           dispatchQueue << task
         }
       }
-      def onFailure(error:Throwable) = {
+      def onFailure(error:Exception) = {
         println("stopping due to: "+error);
         stop
       }

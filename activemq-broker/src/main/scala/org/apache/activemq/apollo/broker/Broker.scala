@@ -52,11 +52,11 @@ object BrokerFactory {
      * @throws Exception
      */
     def createBroker(brokerURI:String, startBroker:Boolean=false):Broker = {
-      var split = brokerURI.split(":")
-      if (split.length < 2 ) {
+      var scheme = FactoryFinder.getScheme(brokerURI)
+      if (scheme==null ) {
           throw new IllegalArgumentException("Invalid broker URI, no scheme specified: " + brokerURI)
       }
-      var handler = createHandler(split(0))
+      var handler = createHandler(scheme)
       var broker = handler.createBroker(brokerURI)
       if (startBroker) {
           broker.start();
@@ -300,14 +300,16 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
 
   override val queue:DispatchQueue = createQueue("queue:"+destination);
   queue.setTargetQueue(getRandomThreadQueue)
-  setDisposer(^{
-    queue.release
-  })
 
   val delivery_buffer  = new DeliveryBuffer
   delivery_buffer.eventHandler = ^{ drain_delivery_buffer }
 
-  val delivery_sessions = new DeliveryCreditBufferProtocol(delivery_buffer, queue)
+  val session_manager = new DeliverySessionManager(delivery_buffer, queue)
+
+  setDisposer(^{
+    queue.release
+    session_manager.release
+  })
 
   class ConsumerState(val consumer:DeliverySession) {
     var bound=true
@@ -376,7 +378,7 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
 
   def open_session(producer_queue:DispatchQueue) = new DeliverySession {
 
-    val session = delivery_sessions.session(producer_queue)
+    val session = session_manager.session(producer_queue)
     val consumer = Queue.this
     retain
 

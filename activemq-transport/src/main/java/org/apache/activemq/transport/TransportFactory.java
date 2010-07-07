@@ -34,14 +34,14 @@ public class TransportFactory {
     private static final ConcurrentHashMap<String, TransportFactorySPI> TRANSPORT_FACTORYS = new ConcurrentHashMap<String, TransportFactorySPI>();
 
     public interface TransportFactorySPI {
-        public TransportServer bind(URI location) throws Exception;
-        public Transport connect(URI location) throws Exception;
+        public TransportServer bind(String location) throws Exception;
+        public Transport connect(String location) throws Exception;
     }
     
     /**
      */
-    private static TransportFactorySPI factory(URI location) throws IOException {
-        String scheme = location.getScheme();
+    private static TransportFactorySPI factory(String location) throws IOException {
+        String scheme = FactoryFinder.getScheme(location);
         if (scheme == null) {
             throw new IOException("Transport not scheme specified: [" + location + "]");
         }
@@ -71,14 +71,14 @@ public class TransportFactory {
     /**
      * Creates a client transport.
      */
-    public static Transport connect(URI location) throws Exception {
+    public static Transport connect(String location) throws Exception {
         return factory(location).connect(location);
     }
 
     /**
      * Creates a transport server.
      */
-    public static TransportServer bind(URI location) throws Exception {
+    public static TransportServer bind(String location) throws Exception {
         return factory(location).bind(location);
     }
 

@@ -35,8 +35,8 @@ public class PipeTransportFactory implements TransportFactory.TransportFactorySP
 
     public static final HashMap<String, PipeTransportServer> servers = new HashMap<String, PipeTransportServer>();
 
-    public TransportServer bind(URI uri) throws URISyntaxException, IOException {
-
+    public TransportServer bind(String location) throws URISyntaxException, IOException {
+        URI uri = new URI(location);
         Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
         String node = uri.getHost();
         synchronized(servers) {
@@ -58,8 +58,9 @@ public class PipeTransportFactory implements TransportFactory.TransportFactorySP
 
     }
 
-    public Transport connect(URI location) throws IOException, URISyntaxException {
-        String name = location.getHost();
+    public Transport connect(String location) throws IOException, URISyntaxException {
+        URI uri = new URI(location);
+        String name = uri.getHost();
         synchronized(servers) {
             PipeTransportServer server = lookup(name);
             if (server == null) {
@@ -67,7 +68,7 @@ public class PipeTransportFactory implements TransportFactory.TransportFactorySP
             }
             PipeTransport transport = server.connect();
 
-            Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(location));
+            Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
             return verify( configure(transport, options), options);
         }
     }

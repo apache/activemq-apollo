@@ -42,7 +42,7 @@ abstract class RemoteConsumer extends Connection {
   var destination: Destination = null
   var selector: String = null;
   var durable = false;
-  var uri: URI = null
+  var uri: String = null
 
   override def start() = {
     consumerRate.name("Consumer " + name + " Rate");
@@ -78,7 +78,7 @@ abstract class RemoteProducer extends Connection {
 
   var filler: String = null
   var payloadSize = 20
-  var uri: URI = null
+  var uri: String = null
 
   override def start() = {
 
@@ -238,7 +238,7 @@ abstract class BaseBrokerPerfTest {
     consumerCount = 1;
 
     createConnections();
-    producers.get(0).thinkTime = 50;
+    producers.get(0).thinkTime = 500000*1000;
 
     // Start 'em up.
     startClients();
@@ -549,7 +549,7 @@ abstract class BaseBrokerPerfTest {
       }
     }
 
-    consumer.uri = new URI(rcvBroker.connectUris.head)
+    consumer.uri = rcvBroker.connectUris.head
     consumer.destination = destination
     consumer.name = "consumer" + (i + 1)
     consumer.totalConsumerRate = totalConsumerRate
@@ -568,7 +568,7 @@ abstract class BaseBrokerPerfTest {
         }
       }
     }
-    producer.uri = new URI(sendBroker.connectUris.head)
+    producer.uri = sendBroker.connectUris.head
     producer.producerId = id + 1
     producer.name = "producer" + (id + 1)
     producer.destination = destination
@@ -581,7 +581,7 @@ abstract class BaseBrokerPerfTest {
 
   private def createBroker(name: String, bindURI: String, connectUri: String): Broker = {
     val broker = new Broker()
-    broker.transportServers.add(TransportFactory.bind(new URI(bindURI)))
+    broker.transportServers.add(TransportFactory.bind(bindURI))
     broker.connectUris.add(connectUri)
     broker
   }
@@ -622,6 +622,8 @@ abstract class BaseBrokerPerfTest {
       for (connection <- consumers) {
         connection.start();
       }
+    })
+    getGlobalQueue.dispatchAfter(400, TimeUnit.MILLISECONDS, ^{
       for (connection <- producers) {
         connection.start();
       }

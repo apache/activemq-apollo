@@ -48,9 +48,10 @@ import static org.apache.activemq.transport.TransportFactorySupport.verify;
 public class TcpTransportFactory implements TransportFactory.TransportFactorySPI {
     private static final Log LOG = LogFactory.getLog(TcpTransportFactory.class);
 
-    public TransportServer bind(URI location) throws Exception {
-        Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(location));
-        TcpTransportServer server = createTcpTransportServer(location);
+    public TransportServer bind(String location) throws Exception {
+        URI uri = new URI(location);
+        Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
+        TcpTransportServer server = createTcpTransportServer(uri);
         server.setWireFormatFactory(TransportFactorySupport.createWireFormatFactory(options));
         IntrospectionSupport.setProperties(server, options);
         Map<String, Object> transportOptions = IntrospectionSupport.extractProperties(options, "transport.");
@@ -67,12 +68,13 @@ public class TcpTransportFactory implements TransportFactory.TransportFactorySPI
     }
 
 
-    public Transport connect(URI location) throws Exception {
-        Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(location));
-        URI localLocation = getLocalLocation(location);
+    public Transport connect(String location) throws Exception {
+        URI uri = new URI(location);
+        Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
+        URI localLocation = getLocalLocation(uri);
 
         TcpTransport transport = new TcpTransport();
-        transport.connecting(location, localLocation);
+        transport.connecting(uri, localLocation);
 
         Map<String, Object> socketOptions = IntrospectionSupport.extractProperties(options, "socket.");
         transport.setSocketOptions(socketOptions);

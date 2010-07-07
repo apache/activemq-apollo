@@ -14,12 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.transport;
+package org.apache.activemq.apollo.stomp
+
+import org.apache.activemq.apollo.broker.Broker
+import org.apache.activemq.transport.TransportFactory
 
 /**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public interface CompletionCallback {
-    void onCompletion();
-    public void onFailure(Exception caught);
+object StompBroker {
+
+  var address = "0.0.0.0"
+  var port = 61613
+
+  def main(args:Array[String]) = {
+    println("Starting stomp broker...")
+
+    val broker = new Broker()
+
+    val uri = "tcp://"+address+":"+port+"?wireFormat=multi"
+    val server = TransportFactory.bind(uri)
+    broker.transportServers.add(server)
+    broker.start
+
+    println("Startup complete.")
+    System.in.read
+    println("Shutting down...")
+    broker.stop
+    println("Shutdown complete.")
+  }
+
 }

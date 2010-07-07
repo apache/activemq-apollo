@@ -53,7 +53,7 @@ public class BrokerXml {
 		for (String element : transportServers) {
 			TransportServer server;
 			try {
-				server = TransportFactory.bind(new URI(element));
+				server = TransportFactory.bind(element);
 			} catch (Exception e) {
 				throw new Exception("Unable to bind transport server '"+element+" due to: "+e.getMessage(), e);
 			}

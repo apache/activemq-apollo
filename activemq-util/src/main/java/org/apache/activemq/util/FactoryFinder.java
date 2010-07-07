@@ -31,6 +31,14 @@ public class FactoryFinder {
         this.path = path;
     }
 
+    public static String getScheme(String uri) {
+        String split[] = uri.split(":");
+        if (split.length < 2 ) {
+            return null;
+        }
+        return split[0];
+    }
+
     /**
      * Creates a new instance of the given key
      * 

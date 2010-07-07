@@ -364,16 +364,15 @@ public class TcpTransport implements Transport {
             }
 
             Object command=unmarshalSession.unmarshal(readBuffer);
-            if( command==null ) {
-                return;
+            if( command!=null ) {
+                listener.onCommand(command);
+
+                // the transport may be suspended after processing a command.
+                if( transportState==DISPOSED || readSource.isSuspended() ) {
+                    return;
+                }
             }
 
-            listener.onCommand(command);
-
-            // the transport may be suspended after processing a command.
-            if( transportState==DISPOSED || readSource.isSuspended() ) {
-                return;
-            }
         }
     }
 
