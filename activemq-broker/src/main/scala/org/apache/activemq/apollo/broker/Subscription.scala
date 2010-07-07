@@ -113,8 +113,8 @@ class WildcardQueueSubscription(val host:VirtualHost, val destination:Destinatio
 }
 
 class TopicSubscription { // extends BrokerSubscription with DeliveryTarget {
-  def matches(message:MessageDelivery) = false
-  def deliver(message:MessageDelivery) = {}
+  def matches(message:Delivery) = false
+  def deliver(message:Delivery) = {}
   def connect(consumer:ConsumerContext) = {}
   def disconnect(consumer:ConsumerContext) = {}
   def getDestination():Destination = null
@@ -262,7 +262,7 @@ class DurableSubscription(val host:VirtualHost, val destination:Destination, val
     /* (non-Javadoc)
      * @see org.apache.activemq.broker.DeliveryTarget#deliver(org.apache.activemq.broker.MessageDelivery, org.apache.activemq.flow.ISourceController)
      */
-    def deliver(message:MessageDelivery ) = {
+    def deliver(message:Delivery ) = {
 //        TODO:
 //        queue.add(message, source);
     }
@@ -285,7 +285,7 @@ class DurableSubscription(val host:VirtualHost, val destination:Destination, val
 //        }
     }
 
-    def matches(message:MessageDelivery) = {
+    def matches(message:Delivery) = {
         if (selector != null) {
           var selectorContext = message.message.messageEvaluationContext
           selectorContext.setDestination(destination);

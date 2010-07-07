@@ -16,18 +16,7 @@
  */
 package org.apache.activemq.broker;
 
-import java.io.File;
-import java.util.ArrayList;
-
 import junit.framework.TestCase;
-
-import org.apache.activemq.apollo.broker.BrokerDatabase;
-import org.apache.activemq.apollo.broker.BrokerQueueStore;
-import org.apache.activemq.apollo.broker.MessageDelivery;
-import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.StoreFactory;
-import org.fusesource.hawtdispatch.Dispatch;
-import org.fusesource.hawtdispatch.DispatchQueue;
 
 /**
  * @author cmacnaug

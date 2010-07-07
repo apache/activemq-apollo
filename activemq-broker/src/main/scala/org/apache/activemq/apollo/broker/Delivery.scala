@@ -27,15 +27,16 @@ trait DeliveryProducer {
   def collocate(queue:DispatchQueue):Unit
 }
 
-trait DeliveryTargetSession {
-  val consumer:DeliveryTarget
-  def deliver(delivery:MessageDelivery)
+trait DeliverySession {
+  val consumer:DeliveryConsumer
+  def deliver(delivery:Delivery)
   def close:Unit
 }
-trait DeliveryTarget extends Retained {
-  def matches(message:MessageDelivery)
+
+trait DeliveryConsumer extends Retained {
+  def matches(message:Delivery)
   val queue:DispatchQueue;
-  def open_session(producer_queue:DispatchQueue):DeliveryTargetSession
+  def open_session(producer_queue:DispatchQueue):DeliverySession
 }
 
 /**
@@ -82,11 +83,11 @@ trait Message {
 
 }
 
-object MessageDelivery {
-  def apply(o:MessageDelivery) = new MessageDelivery(o.message, o.encoded, o.encoding, o.size, o.ack, o.tx_id, o.store_id)
+object Delivery {
+  def apply(o:Delivery) = new Delivery(o.message, o.encoded, o.encoding, o.size, o.ack, o.tx_id, o.store_id)
 }
 
-case class MessageDelivery (
+case class Delivery (
 
         /**
          *  the message being delivered
@@ -389,7 +390,7 @@ case class MessageDelivery (
  */
 class DeliveryBuffer(var maxSize:Int=1024*32) {
 
-  var deliveries = new LinkedList[MessageDelivery]()
+  var deliveries = new LinkedList[Delivery]()
   private var size = 0
   var eventHandler: Runnable = null
 
@@ -401,7 +402,7 @@ class DeliveryBuffer(var maxSize:Int=1024*32) {
 
   def isEmpty = deliveries.isEmpty
 
-  def send(delivery:MessageDelivery):Unit = {
+  def send(delivery:Delivery):Unit = {
     delivery.retain
     size += delivery.size
     deliveries.addLast(delivery)
@@ -410,7 +411,7 @@ class DeliveryBuffer(var maxSize:Int=1024*32) {
     }
   }
 
-  def ack(delivery:MessageDelivery) = {
+  def ack(delivery:Delivery) = {
     // When a message is delivered to the consumer, we release
     // used capacity in the outbound queue, and can drain the inbound
     // queue
@@ -426,7 +427,7 @@ class DeliveryBuffer(var maxSize:Int=1024*32) {
 
 class DeliveryOverflowBuffer(val delivery_buffer:DeliveryBuffer) {
 
-  private var overflow = new LinkedList[MessageDelivery]()
+  private var overflow = new LinkedList[Delivery]()
 
   protected def drainOverflow:Unit = {
     while( !overflow.isEmpty && !full ) {
@@ -436,7 +437,7 @@ class DeliveryOverflowBuffer(val delivery_buffer:DeliveryBuffer) {
     }
   }
 
-  def send(delivery:MessageDelivery) = {
+  def send(delivery:Delivery) = {
     if( full ) {
       // Deliveries in the overflow queue is remain acquired by us so that
       // producer that sent it to us gets flow controlled.
@@ -447,8 +448,8 @@ class DeliveryOverflowBuffer(val delivery_buffer:DeliveryBuffer) {
     }
   }
 
-  protected def send_to_delivery_queue(value:MessageDelivery) = {
-    var delivery = MessageDelivery(value)
+  protected def send_to_delivery_queue(value:Delivery) = {
+    var delivery = Delivery(value)
     delivery.setDisposer(^{
       drainOverflow
     })
@@ -475,7 +476,7 @@ class DeliveryCreditBufferProtocol(val delivery_buffer:DeliveryBuffer, val queue
   })
 
   // use a event aggregating source to coalesce multiple events from the same thread.
-  val source = createSource(new ListEventAggregator[MessageDelivery](), queue)
+  val source = createSource(new ListEventAggregator[Delivery](), queue)
   source.setEventHandler(^{drain_source});
   source.resume
 
@@ -524,8 +525,8 @@ class DeliveryCreditBufferProtocol(val delivery_buffer:DeliveryBuffer, val queue
 
       override def full = credits <= 0
 
-      override protected def send_to_delivery_queue(value:MessageDelivery) = {
-        var delivery = MessageDelivery(value)
+      override protected def send_to_delivery_queue(value:Delivery) = {
+        var delivery = Delivery(value)
         delivery.setDisposer(^{
           // This is called from the server/consumer thread
           credit_adder.merge(delivery.size);

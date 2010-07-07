@@ -20,7 +20,7 @@
 
   <parent>
     <groupId>org.apache.activemq</groupId>
-    <artifactId>activemq-parent</artifactId>
+    <artifactId>activemq-project</artifactId>
     <version>6.0-SNAPSHOT</version>
   </parent>
 
@@ -32,20 +32,24 @@
   <name>ActiveMQ :: Selector</name>
 
   <dependencies>
+
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-util</artifactId>
+      <version>6.0-SNAPSHOT</version>
+    </dependency>
+
     <!-- TODO: try to remove this dependency -->
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-beans</artifactId>
+      <version>${spring-version}</version>
     </dependency>    
-  
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-util</artifactId>
-    </dependency>
 
     <dependency>
       <groupId>xalan</groupId>
       <artifactId>xalan</artifactId>
+      <version>2.6.0</version>
       <optional>true</optional>
     </dependency>
 
@@ -54,11 +58,13 @@
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
+      <version>${junit-version}</version>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
       <scope>test</scope>
+      <version>${log4j-version}</version>
     </dependency>
   
   </dependencies>

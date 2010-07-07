@@ -337,7 +337,7 @@ object Queue {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val destination:Destination) extends BaseRetained with Route with DeliveryTarget with DeliveryProducer {
+class Queue(val destination:Destination) extends BaseRetained with Route with DeliveryConsumer with DeliveryProducer {
 
 
 
@@ -350,11 +350,11 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
 
   val delivery_buffer  = new DeliveryBuffer
 
-  class ConsumerState(val consumer:DeliveryTargetSession) {
+  class ConsumerState(val consumer:DeliverySession) {
     var bound=true
 
-    def deliver(value:MessageDelivery):Unit = {
-      val delivery = MessageDelivery(value)
+    def deliver(value:Delivery):Unit = {
+      val delivery = Delivery(value)
       delivery.setDisposer(^{
         ^{ completed(value) } ->:queue
       })
@@ -362,7 +362,7 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
       delivery.release
     }
 
-    def completed(delivery:MessageDelivery) = {
+    def completed(delivery:Delivery) = {
       // Lets get back on the readyList if  we are still bound.
       if( bound ) {
         readyConsumers.addLast(this)
@@ -371,11 +371,11 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
     }
   }
 
-  var allConsumers = Map[DeliveryTarget,ConsumerState]()
+  var allConsumers = Map[DeliveryConsumer,ConsumerState]()
   val readyConsumers = new LinkedList[ConsumerState]()
 
-  def connected(consumers:List[DeliveryTarget]) = bind(consumers)
-  def bind(consumers:List[DeliveryTarget]) = retaining(consumers) {
+  def connected(consumers:List[DeliveryConsumer]) = bind(consumers)
+  def bind(consumers:List[DeliveryConsumer]) = retaining(consumers) {
       for ( consumer <- consumers ) {
         val cs = new ConsumerState(consumer.open_session(queue))
         allConsumers += consumer->cs
@@ -384,7 +384,7 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
       delivery_buffer.eventHandler.run
     } ->: queue
 
-  def unbind(consumers:List[DeliveryTarget]) = releasing(consumers) {
+  def unbind(consumers:List[DeliveryConsumer]) = releasing(consumers) {
       for ( consumer <- consumers ) {
         allConsumers.get(consumer) match {
           case Some(cs)=>
@@ -417,19 +417,19 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
 
 
   val deliveryQueue = new DeliveryCreditBufferProtocol(delivery_buffer, queue)
-  def open_session(producer_queue:DispatchQueue) = new DeliveryTargetSession {
+  def open_session(producer_queue:DispatchQueue) = new DeliverySession {
     val session = deliveryQueue.session(producer_queue)
     val consumer = Queue.this
     retain
 
-    def deliver(delivery:MessageDelivery) = session.send(delivery)
+    def deliver(delivery:Delivery) = session.send(delivery)
     def close = {
       session.close
       release
     }
   }
 
-  def matches(message:MessageDelivery) = { true }
+  def matches(message:Delivery) = { true }
 
 //  def open_session(producer_queue:DispatchQueue) = new ConsumerSession {
 //    val consumer = StompQueue.this
@@ -560,8 +560,8 @@ class XQueue(val destination:Destination) {
 //    }
 
   // TODO:
-  def matches(message:MessageDelivery) = false
-  def deliver(message:MessageDelivery) = {
+  def matches(message:Delivery) = false
+  def deliver(message:Delivery) = {
     // TODO:
   }
 

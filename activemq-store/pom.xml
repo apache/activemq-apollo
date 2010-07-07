@@ -20,7 +20,7 @@
 
   <parent>
     <groupId>org.apache.activemq</groupId>
-    <artifactId>activemq-parent</artifactId>
+    <artifactId>activemq-project</artifactId>
     <version>6.0-SNAPSHOT</version>
   </parent>
 
@@ -44,11 +44,13 @@
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
+      <version>${junit-version}</version>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
       <scope>test</scope>
+      <version>${log4j-version}</version>
     </dependency>
   
   </dependencies>

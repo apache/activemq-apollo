@@ -35,13 +35,13 @@ object Domain {
 import Domain._
 class Domain {
 
-  val targets = new PathMap[DeliveryTarget]();
+  val targets = new PathMap[DeliveryConsumer]();
 
-  def bind(name:AsciiBuffer, queue:DeliveryTarget) = {
+  def bind(name:AsciiBuffer, queue:DeliveryConsumer) = {
     targets.put(name, queue);
   }
 
-  def unbind(name:AsciiBuffer, queue:DeliveryTarget) = {
+  def unbind(name:AsciiBuffer, queue:DeliveryConsumer) = {
     targets.remove(name, queue);
   }
 
@@ -68,11 +68,11 @@ class Domain {
 class Router(var queue:DispatchQueue) {
   
   trait DestinationNode {
-    var targets = List[DeliveryTarget]()
+    var targets = List[DeliveryConsumer]()
     var routes = List[DeliveryProducerRoute]()
 
-    def on_bind(x:List[DeliveryTarget]):Unit
-    def on_unbind(x:List[DeliveryTarget]):Boolean
+    def on_bind(x:List[DeliveryConsumer]):Unit
+    def on_unbind(x:List[DeliveryConsumer]):Boolean
     def on_connect(route:DeliveryProducerRoute):Unit
     def on_disconnect(route:DeliveryProducerRoute):Boolean = {
       routes = routes.filterNot({r=> route==r})
@@ -82,14 +82,14 @@ class Router(var queue:DispatchQueue) {
   }
 
   class TopicDestinationNode extends DestinationNode {
-    def on_bind(x:List[DeliveryTarget]) =  {
+    def on_bind(x:List[DeliveryConsumer]) =  {
       targets = x ::: targets
       routes.foreach({r=>
         r.bind(x)
       })
     }
 
-    def on_unbind(x:List[DeliveryTarget]):Boolean = {
+    def on_unbind(x:List[DeliveryConsumer]):Boolean = {
       targets = targets.filterNot({t=>x.contains(t)})
       routes.foreach({r=>
         r.unbind(x)
@@ -106,12 +106,12 @@ class Router(var queue:DispatchQueue) {
   class QueueDestinationNode(destination:Destination) extends DestinationNode {
     val queue = new Queue(destination)
 
-    def on_bind(x:List[DeliveryTarget]) =  {
+    def on_bind(x:List[DeliveryConsumer]) =  {
       targets = x ::: targets
       queue.bind(x)
     }
 
-    def on_unbind(x:List[DeliveryTarget]):Boolean = {
+    def on_unbind(x:List[DeliveryConsumer]):Boolean = {
       targets = targets.filterNot({t=>x.contains(t)})
       queue.unbind(x)
       routes == Nil && targets == Nil
@@ -138,11 +138,11 @@ class Router(var queue:DispatchQueue) {
     result
   }
 
-  def bind(destination:Destination, targets:List[DeliveryTarget]) = retaining(targets) {
+  def bind(destination:Destination, targets:List[DeliveryConsumer]) = retaining(targets) {
       get(destination).on_bind(targets)
     } ->: queue
 
-  def unbind(destination:Destination, targets:List[DeliveryTarget]) = releasing(targets) {
+  def unbind(destination:Destination, targets:List[DeliveryConsumer]) = releasing(targets) {
       if( get(destination).on_unbind(targets) ) {
         destinations.remove(destination)
       }
@@ -182,9 +182,9 @@ trait Route extends Retained {
   val queue:DispatchQueue
   val metric = new AtomicLong();
 
-  def connected(targets:List[DeliveryTarget]):Unit
-  def bind(targets:List[DeliveryTarget]):Unit
-  def unbind(targets:List[DeliveryTarget]):Unit
+  def connected(targets:List[DeliveryConsumer]):Unit
+  def bind(targets:List[DeliveryConsumer]):Unit
+  def unbind(targets:List[DeliveryConsumer]):Unit
   def disconnected():Unit
 
 }
@@ -198,24 +198,24 @@ class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue
     queue.release
   })
 
-  var targets = List[DeliveryTargetSession]()
+  var targets = List[DeliverySession]()
 
-  def connected(targets:List[DeliveryTarget]) = retaining(targets) {
+  def connected(targets:List[DeliveryConsumer]) = retaining(targets) {
     internal_bind(targets)
     on_connected
   } ->: queue
 
-  def bind(targets:List[DeliveryTarget]) = retaining(targets) {
+  def bind(targets:List[DeliveryConsumer]) = retaining(targets) {
     internal_bind(targets)
   } ->: queue
 
-  private def internal_bind(values:List[DeliveryTarget]) = {
+  private def internal_bind(values:List[DeliveryConsumer]) = {
     values.foreach{ x=>
       targets = x.open_session(queue) :: targets
     }
   }
 
-  def unbind(targets:List[DeliveryTarget]) = releasing(targets) {
+  def unbind(targets:List[DeliveryConsumer]) = releasing(targets) {
     this.targets = this.targets.filterNot { x=>
       val rc = targets.contains(x.consumer)
       if( rc ) {

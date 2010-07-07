@@ -58,7 +58,7 @@ abstract class RemoteConsumer extends Connection {
 
     protected def setupSubscription()
 
-    protected def messageReceived( elem:MessageDelivery ) {
+    protected def messageReceived( elem:Delivery ) {
 //        TODO:
 //        if( schedualWait ) {
 //            if (thinkTime > 0) {
@@ -104,7 +104,7 @@ abstract class RemoteProducer extends Connection {
     var destination:Destination =null
     var property:String = null
     var totalProducerRate:MetricAggregator = null
-    var next:MessageDelivery = null
+    var next:Delivery = null
 
     var filler:String = null
     var payloadSize = 20

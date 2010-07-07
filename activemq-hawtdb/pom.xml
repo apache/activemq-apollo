@@ -20,7 +20,7 @@
 
   <parent>
     <groupId>org.apache.activemq</groupId>
-    <artifactId>activemq-parent</artifactId>
+    <artifactId>activemq-project</artifactId>
     <version>6.0-SNAPSHOT</version>
   </parent>
 
@@ -36,6 +36,7 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-store</artifactId>
+      <version>6.0-SNAPSHOT</version>
       <optional>false</optional>
     </dependency>
     
@@ -49,6 +50,7 @@
     <dependency>
       <groupId>org.apache.activemq.protobuf</groupId>
       <artifactId>activemq-protobuf</artifactId>
+      <version>${activemq-protobuf-version}</version>
       <optional>false</optional>
     </dependency>  
   
@@ -56,7 +58,7 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-store</artifactId>
-      <version>${activemq-version}</version>
+      <version>6.0-SNAPSHOT</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -64,13 +66,15 @@
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
+      <version>${junit-version}</version>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
       <scope>test</scope>
+      <version>${log4j-version}</version>
     </dependency>
-    
+
   </dependencies>
 
   <build>
