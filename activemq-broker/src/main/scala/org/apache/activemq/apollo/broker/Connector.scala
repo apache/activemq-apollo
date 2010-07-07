@@ -42,8 +42,8 @@ object Connector extends Log {
     val rc = new ConnectorDTO
     rc.id = "default"
     rc.enabled = true
-    rc.advertise = "tcp://localhost:61616"
-    rc.bind = "tcp://0.0.0.0:61616"
+    rc.advertise = "tcp://localhost:61613"
+    rc.bind = "tcp://0.0.0.0:61613"
     rc.protocol = "multi"
     rc
   }
