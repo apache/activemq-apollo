@@ -58,7 +58,7 @@ object DestinationParser {
             return new SingleDestination(Domain.TEMP_TOPIC_DOMAIN, name);
         } else {
             if( options.defaultDomain==null ) {
-                throw new IllegalArgumentException("Destination domain not provided: "+value);
+                return null;
             }
             return new SingleDestination(options.defaultDomain, value);
         }
@@ -81,7 +81,11 @@ object DestinationParser {
             var rc = value.split(compositeSeparator);
             var md = new MultiDestination();
             for (buffer <- rc) {
-                md.destinations ::= parse(buffer, options)
+              val d = parse(buffer, options)
+              if( d==null ) {
+                return null;
+              }
+              md.destinations = md.destinations ::: d :: Nil
             }
             return md;
         }

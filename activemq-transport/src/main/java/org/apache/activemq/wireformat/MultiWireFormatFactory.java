@@ -118,7 +118,7 @@ public class MultiWireFormatFactory implements WireFormatFactory {
 
                 public void setStartPos(int pos) {
                     if( session!=null ) {
-                        session.setEndPos(pos);
+                        session.setStartPos(pos);
                     } else {
                         start=pos;
                     }

@@ -32,20 +32,19 @@ import org.apache.activemq.transport.CompletionCallback
 import java.io.IOException
 
 
-class StompProtocolException(msg:String) extends Exception(msg)
-
 object StompConstants {
-  val QUEUE_PREFIX = new AsciiBuffer("/queue/")
-  val TOPIC_PREFIX = new AsciiBuffer("/topic/")
+
+  val options = new ParserOptions
+  options.queuePrefix = new AsciiBuffer("/queue/")
+  options.topicPrefix = new AsciiBuffer("/topic/")
+  options.defaultDomain = Domain.QUEUE_DOMAIN
 
   implicit def toDestination(value:AsciiBuffer):Destination = {
-    if( value.startsWith(QUEUE_PREFIX) ) {
-      new SingleDestination(Domain.QUEUE_DOMAIN, value.slice(QUEUE_PREFIX.length, -QUEUE_PREFIX.length))
-    } else if( value.startsWith(TOPIC_PREFIX) ) {
-      new SingleDestination(Domain.TOPIC_DOMAIN, value.slice(TOPIC_PREFIX.length, -TOPIC_PREFIX.length))
-    } else {
-      throw new StompProtocolException("Invalid stomp destiantion name: "+value);
+    val d = DestinationParser.parse(value, options)
+    if( d==null ) {
+      throw new ProtocolException("Invalid stomp destiantion name: "+value);
     }
+    d
   }
 
 }
@@ -60,8 +59,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   
   protected def dispatchQueue:DispatchQueue = connection.dispatchQueue
 
-  class SimpleConsumer(val dest:AsciiBuffer) extends BaseRetained with DeliveryConsumer {
-
+  class SimpleConsumer(val destination:Destination) extends BaseRetained with DeliveryConsumer {
 
     val queue = StompProtocolHandler.this.dispatchQueue
     val session_manager = new DeliverySessionManager(outboundChannel, queue)
@@ -80,7 +78,10 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       val consumer = SimpleConsumer.this
       retain
 
-      def deliver(delivery:Delivery) = session.send(delivery)
+      def deliver(delivery:Delivery) =  {
+//        info("Delivering to consumer session")
+        session.send(delivery)
+      }
 
       def close = {
         session.close
@@ -107,6 +108,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
           connection.onFailure(e)
         }
       });
+      delivery = outboundChannel.receive
     }
   }
 
@@ -115,7 +117,6 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   override def onTransportConnected() = {
     connection.broker.runtime.getDefaultVirtualHost(
       queue.wrap { (host)=>
-        info("got host.. resuming")
         this.host=host
         connection.transport.resumeRead
       }
@@ -132,7 +133,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         producerRoute=null
       }
       if( consumer!=null ) {
-        host.router.unbind(consumer.dest, consumer::Nil)
+        host.router.unbind(consumer.destination, consumer::Nil)
         consumer=null
       }
     }
@@ -188,8 +189,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   def on_stomp_send(frame:StompFrame) = {
     get(frame.headers, Headers.Send.DESTINATION) match {
       case Some(dest)=>
+        val destiantion:Destination = dest
         // create the producer route...
-        if( producerRoute==null || producerRoute.destination!= dest ) {
+        if( producerRoute==null || producerRoute.destination!=destiantion ) {
 
           // clean up the previous producer..
           if( producerRoute!=null ) {
@@ -212,7 +214,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
           // don't process frames until we are connected..
           connection.transport.suspendRead
-          host.router.connect(dest, queue, producer) {
+          host.router.connect(destiantion, queue, producer) {
             (route) =>
               connection.transport.resumeRead
               producerRoute = route
@@ -238,19 +240,22 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         consumer.deliver(delivery)
       })
       delivery.release;
+    } else {
+      // info("Dropping message.  No consumers interested in message.")
     }
   }
 
   def on_stomp_subscribe(headers:HeaderMap) = {
     get(headers, Headers.Subscribe.DESTINATION) match {
       case Some(dest)=>
+        val destiantion:Destination = dest
         if( consumer !=null ) {
           die("Only one subscription supported.")
 
         } else {
-          info("subscribing to: %s", dest)
-          consumer = new SimpleConsumer(dest);
-          host.router.bind(dest, consumer :: Nil)
+          info("subscribing to: %s", destiantion)
+          consumer = new SimpleConsumer(destiantion);
+          host.router.bind(destiantion, consumer :: Nil)
           consumer.release
         }
       case None=>

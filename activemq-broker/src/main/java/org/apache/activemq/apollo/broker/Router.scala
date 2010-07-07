@@ -211,6 +211,7 @@ class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue
 
   private def internal_bind(values:List[DeliveryConsumer]) = {
     values.foreach{ x=>
+      println("producer route attaching to conusmer.")
       targets = x.open_session(queue) :: targets
     }
   }

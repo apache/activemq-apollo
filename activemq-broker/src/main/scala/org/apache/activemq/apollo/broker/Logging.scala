@@ -61,8 +61,8 @@ trait Logging {
         format(message, args.map(_.asInstanceOf[AnyRef]) : _*)
       }
       val exception_id = next_exception_id
-      log.log.error(log_map(m)+" [id:"+exception_id+"]")
-      log.log.debug("[id:"+exception_id+"]", e)
+      log.log.error(log_map(m)+" (ref:"+exception_id+")")
+      log.log.debug("(ref:"+exception_id+")", e)
     }
   }
 
@@ -70,8 +70,8 @@ trait Logging {
     val l = log.log
     if( l.isErrorEnabled ) {
       val exception_id = next_exception_id
-      log.log.error(log_map(e.getMessage)+" [id:"+exception_id+"]")
-      log.log.debug("[id:"+exception_id+"]", e)
+      log.log.error(log_map(e.getMessage)+" (ref:"+exception_id+")")
+      log.log.debug("(ref:"+exception_id+")", e)
     }
   }
 
@@ -96,8 +96,8 @@ trait Logging {
         format(message, args.map(_.asInstanceOf[AnyRef]) : _*)
       }
       val exception_id = next_exception_id
-      log.log.warn(log_map(m)+" [id:"+exception_id+"]")
-      log.log.debug("[id:"+exception_id+"]", e)
+      log.log.warn(log_map(m)+" (ref:"+exception_id+")")
+      log.log.debug("(ref:"+exception_id+")", e)
     }
   }
 
@@ -105,8 +105,8 @@ trait Logging {
     val l = log.log
     if( l.isWarnEnabled ) {
       val exception_id = next_exception_id
-      log.log.warn(log_map(e.getMessage)+" [id:"+exception_id+"]")
-      log.log.debug("[id:"+exception_id+"]", e)
+      log.log.warn(log_map(e.getMessage)+" (ref:"+exception_id+")")
+      log.log.debug("(ref:"+exception_id+")", e)
     }
   }
 
@@ -131,8 +131,8 @@ trait Logging {
         format(message, args.map(_.asInstanceOf[AnyRef]) : _*)
       }
       val exception_id = next_exception_id
-      log.log.info(log_map(m)+" [id:"+exception_id+"]")
-      log.log.debug("[id:"+exception_id+"]", e)
+      log.log.info(log_map(m)+" (ref:"+exception_id+")")
+      log.log.debug("(ref:"+exception_id+")", e)
     }
   }
 
@@ -140,8 +140,8 @@ trait Logging {
     val l = log.log
     if( l.isInfoEnabled ) {
       val exception_id = next_exception_id
-      log.log.info(log_map(e.getMessage)+" [id:"+exception_id+"]")
-      log.log.debug("[id:"+exception_id+"]", e)
+      log.log.info(log_map(e.getMessage)+" (ref:"+exception_id+")")
+      log.log.debug("(ref:"+exception_id+")", e)
     }
   }
 
