@@ -74,7 +74,6 @@
           </jvmArgs>
           <args>
             <arg>-deprecation</arg>
-            <arg>-Xno-varargs-conversion</arg>
           </args>
           <scalaVersion>${scala-version}</scalaVersion>
         </configuration>

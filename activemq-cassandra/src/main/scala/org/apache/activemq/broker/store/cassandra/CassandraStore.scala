@@ -22,7 +22,6 @@ import com.shorrockin.cascal.session._
 import java.util.concurrent.atomic.AtomicLong
 import collection.mutable.ListBuffer
 import java.util.HashMap
-import java.util.concurrent.{TimeUnit, Executors, ExecutorService}
 import org.apache.activemq.apollo.util.IntCounter
 import org.apache.activemq.apollo.store.{QueueEntryRecord, MessageRecord, QueueStatus, QueueRecord}
 import org.apache.activemq.apollo.broker.{Logging, Log, BaseService}
@@ -32,6 +31,7 @@ import org.apache.activemq.apollo.broker.{Reporting, ReporterLevel, Reporter}
 import com.shorrockin.cascal.utils.Conversions._
 import org.fusesource.hawtdispatch.ScalaDispatch._
 import ReporterLevel._
+import java.util.concurrent.{ThreadFactory, TimeUnit, Executors, ExecutorService}
 
 object CassandraStore extends Log {
 
@@ -75,8 +75,8 @@ class CassandraStore extends Store with BaseService with Logging {
   var next_msg_key = new AtomicLong(0)
 
   val client = new CassandraClient()
-  protected var executor_pool:ExecutorService = _
   var config:CassandraStoreDTO = defaultConfig
+  var blocking:BlockingSupport = null
 
   def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[CassandraStoreDTO], reporter)
 
@@ -91,8 +91,10 @@ class CassandraStore extends Store with BaseService with Logging {
     }
   }
 
+
   protected def _start(onCompleted: Runnable) = {
-    executor_pool = Executors.newFixedThreadPool(20)
+
+    blocking = new BlockingSupport
     client.schema = Schema(config.keyspace)
 
     // TODO: move some of this parsing code into validation too.
@@ -111,16 +113,80 @@ class CassandraStore extends Store with BaseService with Logging {
   }
 
   protected def _stop(onCompleted: Runnable) = {
-    new Thread() {
-      override def run = {
-        executor_pool.shutdown
-        executor_pool.awaitTermination(1, TimeUnit.DAYS)
-        executor_pool = null
-        client.stop
-        onCompleted.run
-      }
-    }.start
+    blocking.setDisposer(^{
+      onCompleted
+    })
+    blocking.release
   }
+
+
+  class BlockingSupport extends BaseRetained {
+
+    val name = "cassandra store worker"
+    var workerStackSize = 0
+    val max_workers = 20
+    var executing_workers=0
+
+    val dispatchQueue = createQueue()
+    val queued_executions = ListBuffer[()=>Unit]()
+    var executor_pool = Executors.newCachedThreadPool(new ThreadFactory {
+      def newThread(r: Runnable) = {
+        val thread = new Thread(null, r, name, workerStackSize)
+        thread.setDaemon(true)
+        thread
+      }
+    })
+
+    /**
+     * executes a blocking function in an async thread.
+     */
+    def apply( func: =>Unit ):Unit = {
+      assertRetained
+      dispatchQueue {
+        if( executing_workers >= max_workers ) {
+          queued_executions += func _
+        } else {
+          executing_workers += 1
+          execute(func _)
+        }
+      }
+    }
+
+    private def execute(func: ()=>Unit):Unit = {
+      executor_pool {
+        try {
+          func()
+        } finally {
+          execute_done
+        }
+      }
+    }
+
+    private def execute_done() = ^{
+      if ( queued_executions.isEmpty ) {
+        executing_workers -= 1
+      } else {
+        execute(queued_executions.head)
+        queued_executions.drop(1)
+      }
+      if( retained < 1 ) {
+        check_pool_disposed
+      }
+    } >>: dispatchQueue
+
+    override def dispose = ^{
+      check_pool_disposed
+    } >>: dispatchQueue
+
+    private def check_pool_disposed = {
+      if( executing_workers == 0 ) {
+        executor_pool.shutdown
+        super.dispose
+      }
+    }
+
+  }
+
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -132,7 +198,7 @@ class CassandraStore extends Store with BaseService with Logging {
    * Deletes all stored data from the store.
    */
   def purge(callback: =>Unit) = {
-    executor_pool ^{
+    blocking {
       client.purge
       callback
     }
@@ -141,39 +207,39 @@ class CassandraStore extends Store with BaseService with Logging {
   def addQueue(record: QueueRecord)(callback: (Option[Long]) => Unit) = {
     val key = next_queue_key.incrementAndGet
     record.key = key
-    executor_pool ^{
+    blocking {
       client.addQueue(record)
       callback(Some(key))
     }
   }
 
   def removeQueue(queueKey: Long)(callback: (Boolean) => Unit) = {
-    executor_pool ^{
+    blocking {
       callback(client.removeQueue(queueKey))
     }
   }
 
   def getQueueStatus(id: Long)(callback: (Option[QueueStatus]) => Unit) = {
-    executor_pool ^{
+    blocking {
       callback( client.getQueueStatus(id) )
     }
   }
 
   def listQueues(callback: (Seq[Long]) => Unit) = {
-    executor_pool ^{
+    blocking {
       callback( client.listQueues )
     }
   }
 
   def loadMessage(id: Long)(callback: (Option[MessageRecord]) => Unit) = {
-    executor_pool ^{
+    blocking {
       callback( client.loadMessage(id) )
     }
   }
 
 
   def listQueueEntries(id: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
-    executor_pool ^{
+    blocking {
       callback( client.getQueueEntries(id) )
     }
   }
@@ -384,7 +450,7 @@ class CassandraStore extends Store with BaseService with Logging {
       // suspend so that we don't process more flush requests while
       // we are concurrently executing a flush
       flush_source.suspend
-      executor_pool ^{
+      blocking {
         client.store(txs)
         txs.foreach { x=>
           x.onPerformed

@@ -535,16 +535,26 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   /////////////////////////////////////////////////////////////////////
 
   private def append(data: Buffer)(cb: (Location) => Unit): Unit = {
-    val start = System.currentTimeMillis()
-    journal.write(data, new JournalCallback() {
-      def success(location: Location) = {
-        var end = System.currentTimeMillis()
-        warn("Journal append latencey: %,.3f seconds", ((end - start) / 1000.0f))
-        cb(location)
-        var end2 = System.currentTimeMillis()
-        warn("Index latencey: %,.3f seconds", ((end2 - end) / 1000.0f))
-      }
-    })
+    benchmarkLatency { done =>
+      journal.write(data, new JournalCallback() {
+        def success(location: Location) = {
+          done("journal append")
+          cb(location)
+          done("journal append + index update")
+        }
+      })
+      done("journal enqueue")
+    }
+  }
+
+  /**
+   */
+  def benchmarkLatency[R](func: (String=>Unit)=>R ):R = {
+    val start = System.nanoTime
+    func { label=>
+      var end = System.nanoTime
+      warn("latencey: %s is %,.3f ms", label, ( (end - start).toFloat / TimeUnit.SECONDS.toMillis(1)))
+    }
   }
 
   def read(location: Location) = journal.read(location)

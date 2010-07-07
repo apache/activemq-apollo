@@ -52,8 +52,13 @@ object VirtualHost extends Log {
     rc.id = "default"
     rc.enabled = true
     rc.hostNames.add("localhost")
-    val store = new HawtDBStoreDTO
-    store.directory = new File("activemq-data") 
+
+    val store = new CassandraStoreDTO
+    store.hosts.add("localhost:9160")
+
+//    val store = new HawtDBStoreDTO
+//    store.directory = new File("activemq-data")
+    
     rc.store = store
     rc
   }
@@ -125,10 +130,12 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
       val task = tracker.task("store startup")
       store.start(^{
         if( config.purgeOnStartup ) {
+          task.name = "store purge"
           store.purge {
             task.run
           }
         } else {
+          task.name = "store recover queues"
           store.listQueues { queueKeys =>
             for( queueKey <- queueKeys) {
               val task = tracker.task("store load queue key: "+queueKey)
