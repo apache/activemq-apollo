@@ -182,7 +182,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     } >>: dispatchQueue
 
   def connect(destination:Destination, producer:DeliveryProducer)(completed: (DeliveryProducerRoute)=>Unit) = {
-    val route = new DeliveryProducerRoute(destination, producer) {
+    val route = new DeliveryProducerRoute(this, destination, producer) {
       override def on_connected = {
         completed(this);
       }
@@ -228,7 +228,7 @@ trait Route extends Retained {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class DeliveryProducerRoute(val destination:Destination, val producer:DeliveryProducer) extends BaseRetained with Route with Sink[Delivery] with DispatchLogging {
+class DeliveryProducerRoute(val router:Router, val destination:Destination, val producer:DeliveryProducer) extends BaseRetained with Route with Sink[Delivery] with DispatchLogging {
 
   override protected def log = Router
   override def dispatchQueue = producer.dispatchQueue
@@ -294,19 +294,40 @@ class DeliveryProducerRoute(val destination:Destination, val producer:DeliveryPr
 
   def full = overflow!=null
 
-  def offer(value:Delivery) = {
+  def offer(delivery:Delivery) = {
     if( full ) {
       false
     } else {
+      if( delivery.message.persistent && router.host.store!=null ) {
+        delivery.storeBatch = router.host.store.createStoreBatch
+        delivery.storeKey = delivery.storeBatch.store(delivery.createMessageRecord)
+      }
+
       targets.foreach { target=>
-        if( !target.offer(value) ) {
+        if( !target.offer(delivery) ) {
           overflowSessions ::= target
         }
       }
+
       if( overflowSessions!=Nil ) {
-        overflow = value
+        overflow = delivery
+      } else {
+        delivered(delivery)
       }
       true
+    }
+  }
+
+  private def delivered(delivery: Delivery): Unit = {
+    if (delivery.ack != null) {
+      if (delivery.storeBatch != null) {
+        delivery.storeBatch.setDisposer(^ {delivery.ack(null)})
+      } else {
+        delivery.ack(null)
+      }
+    }
+    if (delivery.storeBatch != null) {
+      delivery.storeBatch.release
     }
   }
 
@@ -320,6 +341,7 @@ class DeliveryProducerRoute(val destination:Destination, val producer:DeliveryPr
         }
       }
       if( overflowSessions==Nil ) {
+        delivered(overflow)
         overflow = null
         refiller.run
       }

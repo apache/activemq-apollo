@@ -18,6 +18,8 @@ package org.apache.activemq.apollo.stomp
 
 import org.apache.activemq.transport.TransportFactory
 import org.apache.activemq.apollo.broker.{LoggingTracker, Broker}
+import java.io.File
+import org.apache.activemq.apollo.dto.{CassandraStoreDTO, HawtDBStoreDTO}
 
 /**
  */
@@ -37,6 +39,14 @@ object StompBroker {
     connector.protocol = "stomp"
     connector.advertise = uri
 
+    val store = new CassandraStoreDTO
+    store.hosts.add("localhost:9160")
+
+//    val store = new HawtDBStoreDTO
+//    store.directory = new File("activemq-data")
+    
+    broker.config.virtualHosts.get(0).store = store
+
     val tracker = new LoggingTracker("broker startup")
     tracker.start(broker)
     tracker.await
@@ -48,4 +58,5 @@ object StompBroker {
     println("Shutdown complete.")
   }
 
+  
 }

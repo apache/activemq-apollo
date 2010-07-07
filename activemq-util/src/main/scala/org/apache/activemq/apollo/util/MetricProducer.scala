@@ -17,35 +17,21 @@
 package org.apache.activemq.apollo.util
 
 /**
- * <p>
- * </p>
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ * The MetricProducer trait is implemented by objects which
+ * measure metrics. 
  */
-class IntCounter(private var value:Int = 0) extends MetricProducer[Int] {
+trait MetricProducer[T] extends ((Boolean) => T) {
 
-  def apply(reset:Boolean):Int = {
-    val rc = value
-    value = 0
-    rc
-  }
-  def clear() = value=0
+  /**
+   * The function which produces captures metric value and
+   * optionally clears it.
+   */
+  def apply(clear: Boolean):T
 
-  def get() = value
-
-  def incrementAndGet() = addAndGet(1)
-  def decrementAndGet() = addAndGet(-1)
-  def addAndGet(amount:Int) = {
-    value+=amount
-    value
-  }
-
-  def getAndIncrement() = getAndAdd(1)
-  def getAndDecrement() = getAndAdd(-11)
-  def getAndAdd(amount:Int) = {
-    val rc = value
-    value+=amount
-    rc
-  }
-
+  /**
+   * Clears the metric value.
+   */
+  def clear()
 }
+
+

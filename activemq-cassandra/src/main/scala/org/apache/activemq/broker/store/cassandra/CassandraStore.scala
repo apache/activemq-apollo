@@ -22,7 +22,6 @@ import com.shorrockin.cascal.session._
 import java.util.concurrent.atomic.AtomicLong
 import collection.mutable.ListBuffer
 import java.util.HashMap
-import org.apache.activemq.apollo.util.IntCounter
 import org.apache.activemq.apollo.store.{QueueEntryRecord, MessageRecord, QueueStatus, QueueRecord}
 import org.apache.activemq.apollo.broker.{Logging, Log, BaseService}
 import org.apache.activemq.apollo.dto.{CassandraStoreDTO, StoreDTO}
@@ -31,7 +30,8 @@ import org.apache.activemq.apollo.broker.{Reporting, ReporterLevel, Reporter}
 import com.shorrockin.cascal.utils.Conversions._
 import org.fusesource.hawtdispatch.ScalaDispatch._
 import ReporterLevel._
-import java.util.concurrent.{ThreadFactory, TimeUnit, Executors, ExecutorService}
+import java.util.concurrent._
+import org.apache.activemq.apollo.util.{TimeCounter, IntCounter}
 
 object CassandraStore extends Log {
 
@@ -71,12 +71,12 @@ class CassandraStore extends Store with BaseService with Logging {
   /////////////////////////////////////////////////////////////////////
   val dispatchQueue = createQueue("cassandra store")
 
-  var next_queue_key = new AtomicLong(0)
-  var next_msg_key = new AtomicLong(0)
+  var next_queue_key = new AtomicLong(1)
+  var next_msg_key = new AtomicLong(1)
 
   val client = new CassandraClient()
   var config:CassandraStoreDTO = defaultConfig
-  var blocking:BlockingSupport = null
+  var blocking:ThreadPoolExecutor = null
 
   def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[CassandraStoreDTO], reporter)
 
@@ -94,7 +94,13 @@ class CassandraStore extends Store with BaseService with Logging {
 
   protected def _start(onCompleted: Runnable) = {
 
-    blocking = new BlockingSupport
+    blocking = new ThreadPoolExecutor(4, 20, 1, TimeUnit.SECONDS, new LinkedBlockingQueue[Runnable](), new ThreadFactory(){
+      def newThread(r: Runnable) = {
+        val rc = new Thread(r, "cassandra client")
+        rc.setDaemon(true)
+        rc
+      }
+    })
     client.schema = Schema(config.keyspace)
 
     // TODO: move some of this parsing code into validation too.
@@ -109,82 +115,12 @@ class CassandraStore extends Store with BaseService with Logging {
     }.toList
 
     client.start
+    schedualDisplayStats
     onCompleted.run
   }
 
   protected def _stop(onCompleted: Runnable) = {
-    blocking.setDisposer(^{
-      onCompleted
-    })
-    blocking.release
-  }
-
-
-  class BlockingSupport extends BaseRetained {
-
-    val name = "cassandra store worker"
-    var workerStackSize = 0
-    val max_workers = 20
-    var executing_workers=0
-
-    val dispatchQueue = createQueue()
-    val queued_executions = ListBuffer[()=>Unit]()
-    var executor_pool = Executors.newCachedThreadPool(new ThreadFactory {
-      def newThread(r: Runnable) = {
-        val thread = new Thread(null, r, name, workerStackSize)
-        thread.setDaemon(true)
-        thread
-      }
-    })
-
-    /**
-     * executes a blocking function in an async thread.
-     */
-    def apply( func: =>Unit ):Unit = {
-      assertRetained
-      dispatchQueue {
-        if( executing_workers >= max_workers ) {
-          queued_executions += func _
-        } else {
-          executing_workers += 1
-          execute(func _)
-        }
-      }
-    }
-
-    private def execute(func: ()=>Unit):Unit = {
-      executor_pool {
-        try {
-          func()
-        } finally {
-          execute_done
-        }
-      }
-    }
-
-    private def execute_done() = ^{
-      if ( queued_executions.isEmpty ) {
-        executing_workers -= 1
-      } else {
-        execute(queued_executions.head)
-        queued_executions.drop(1)
-      }
-      if( retained < 1 ) {
-        check_pool_disposed
-      }
-    } >>: dispatchQueue
-
-    override def dispose = ^{
-      check_pool_disposed
-    } >>: dispatchQueue
-
-    private def check_pool_disposed = {
-      if( executing_workers == 0 ) {
-        executor_pool.shutdown
-        super.dispose
-      }
-    }
-
+    blocking.shutdown
   }
 
 
@@ -193,6 +129,17 @@ class CassandraStore extends Store with BaseService with Logging {
   // Implementation of the BrokerDatabase interface
   //
   /////////////////////////////////////////////////////////////////////
+  val storeLatency = new TimeCounter
+  def schedualDisplayStats:Unit = {
+    def displayStats = {
+      if( serviceState.isStarted ) {
+        val cl = storeLatency.apply(true)
+        info("metrics: store latency: %,.3f ms", cl.avgTime(TimeUnit.MILLISECONDS))
+        schedualDisplayStats
+      }
+    }
+    dispatchQueue.dispatchAfter(5, TimeUnit.SECONDS, ^{ displayStats })
+  }
 
   /**
    * Deletes all stored data from the store.
@@ -200,12 +147,14 @@ class CassandraStore extends Store with BaseService with Logging {
   def purge(callback: =>Unit) = {
     blocking {
       client.purge
+      next_queue_key.set(1)
+      next_msg_key.set(1)
       callback
     }
   }
 
   def addQueue(record: QueueRecord)(callback: (Option[Long]) => Unit) = {
-    val key = next_queue_key.incrementAndGet
+    val key = next_queue_key.getAndIncrement
     record.key = key
     blocking {
       client.addQueue(record)
@@ -249,13 +198,7 @@ class CassandraStore extends Store with BaseService with Logging {
     if( action == null ) {
       callback
     } else {
-      val prevDisposer = action.tx.getDisposer
-      action.tx.setDisposer(^{
-        callback
-        if(prevDisposer!=null) {
-          prevDisposer.run
-        }
-      })
+      action.tx.eagerFlush(callback _)
       flush(action.tx.txid)
     }
 
@@ -288,8 +231,11 @@ class CassandraStore extends Store with BaseService with Logging {
       }
     }
 
+    val txid:Int = next_tx_id.getAndIncrement
     var actions = Map[Long, MessageAction]()
-    var txid:Int = 0
+
+    var flushListeners = ListBuffer[Runnable]()
+    def eagerFlush(callback: Runnable) = if( callback!=null ) { this.synchronized { flushListeners += callback } }
 
     def rm(msg:Long) = {
       actions -= msg
@@ -302,7 +248,7 @@ class CassandraStore extends Store with BaseService with Logging {
     }
 
     def store(record: MessageRecord):Long = {
-      record.key = next_msg_key.incrementAndGet
+      record.key = next_msg_key.getAndIncrement
       val action = new MessageAction
       action.msg = record.key
       action.store = record
@@ -339,7 +285,11 @@ class CassandraStore extends Store with BaseService with Logging {
       transaction_source.merge(this)
     }
 
+
     def onPerformed() {
+      flushListeners.foreach { x=>
+        x.run()
+      }
       super.dispose
     }
   }
@@ -354,20 +304,13 @@ class CassandraStore extends Store with BaseService with Logging {
   var pendingEnqueues = new HashMap[(Long,Long), CassandraBatch#MessageAction]()
   var delayedTransactions = new HashMap[Int, CassandraBatch]()
 
-  var next_tx_id = new IntCounter
+  var next_tx_id = new IntCounter(1)
   
   def drain_transactions = {
     transaction_source.getData.foreach { tx =>
 
-      val tx_id = next_tx_id.incrementAndGet
-      tx.txid = tx_id
+      val tx_id = tx.txid
       delayedTransactions.put(tx_id, tx)
-
-      if( config.flushDelay > 0 ) {
-        dispatchQueue.dispatchAfter(config.flushDelay, TimeUnit.MILLISECONDS, ^{flush(tx_id)})
-      } else {
-        dispatchQueue.dispatchAsync(^{flush(tx_id)})
-      }
 
       tx.actions.foreach { case (msg, action) =>
         if( action.store!=null ) {
@@ -405,6 +348,12 @@ class CassandraStore extends Store with BaseService with Logging {
             }
           }
         }
+      }
+
+      if( !tx.flushListeners.isEmpty || config.flushDelay <= 0 ) {
+        flush(tx_id)
+      } else {
+        dispatchQueue.dispatchAfter(config.flushDelay, TimeUnit.MILLISECONDS, ^{flush(tx_id)})
       }
 
     }
@@ -447,15 +396,16 @@ class CassandraStore extends Store with BaseService with Logging {
     }
 
     if( !txs.isEmpty ) {
-      // suspend so that we don't process more flush requests while
-      // we are concurrently executing a flush
-      flush_source.suspend
-      blocking {
-        client.store(txs)
-        txs.foreach { x=>
-          x.onPerformed
+      storeLatency.start { end =>
+        blocking {
+          client.store(txs)
+          dispatchQueue {
+            end()
+            txs.foreach { x=>
+              x.onPerformed
+            }
+          }
         }
-        flush_source.resume
       }
     }
   }

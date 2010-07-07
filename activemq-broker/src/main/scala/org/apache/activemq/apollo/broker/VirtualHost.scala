@@ -53,13 +53,13 @@ object VirtualHost extends Log {
     rc.enabled = true
     rc.hostNames.add("localhost")
 
-    val store = new CassandraStoreDTO
-    store.hosts.add("localhost:9160")
+//    val store = new CassandraStoreDTO
+//    store.hosts.add("localhost:9160")
 
 //    val store = new HawtDBStoreDTO
 //    store.directory = new File("activemq-data")
     
-    rc.store = store
+    rc.store = null
     rc
   }
 

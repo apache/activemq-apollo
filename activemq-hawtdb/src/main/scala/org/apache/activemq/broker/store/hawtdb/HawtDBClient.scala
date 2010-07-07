@@ -156,6 +156,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       pageFileFactory.setDrainOnClose(false)
       pageFileFactory.setSync(true)
       pageFileFactory.setUseWorkerThread(true)
+      pageFileFactory.setPageSize(512.toShort)
       pageFileFactory.open()
 
       withTx { tx =>
@@ -210,25 +211,25 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   }
 
   def store(txs: Seq[HawtDBStore#HawtDBBatch]) {
-    var batch = List[TypeCreatable]()
+    var batch = ListBuffer[TypeCreatable]()
     txs.foreach {
       tx =>
         tx.actions.foreach {
           case (msg, action) =>
             if (action.messageRecord != null) {
               val update: AddMessage.Bean = action.messageRecord
-              batch ::= update
+              batch += update
             }
             action.enqueues.foreach {
               queueEntry =>
                 val update: AddQueueEntry.Bean = queueEntry
-                batch ::= update
+                batch += update
             }
             action.dequeues.foreach {
               queueEntry =>
                 val qid = queueEntry.queueKey
                 val seq = queueEntry.queueSeq
-                batch ::= new RemoveQueueEntry.Bean().setQueueKey(qid).setQueueSeq(seq)
+                batch += new RemoveQueueEntry.Bean().setQueueKey(qid).setQueueSeq(seq)
             }
         }
     }
@@ -239,9 +240,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     })
   }
 
-  def purge() = {
-    val update = new Purge.Bean()
-    store(update)
+  def purge(callback: Runnable) = {
+    store(new Purge.Bean(), callback)
   }
 
   def listQueues: Seq[Long] = {
@@ -356,7 +356,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     tracker.await
   }
 
-  private def store(updates: List[TypeCreatable], onComplete: Runnable): Unit = {
+  private def store(updates: Seq[TypeCreatable], onComplete: Runnable): Unit = {
     val batch = next_batch_id
     begin(batch)
     updates.foreach {
@@ -747,10 +747,11 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
               addAndGet(messageRefsIndex, new jl.Long(messageKey), 1)
             } else {
+              // TODO perhaps treat this like an update?
               error("Duplicate queue entry seq %d", x.getQueueSeq)
             }
           } else {
-            error("Duplicate queue entry message %d", x.getMessageKey)
+            error("Duplicate queue entry message %d was %d", x.getMessageKey, existing)
           }
         } else {
           error("Queue not found: %d", x.getQueueKey)

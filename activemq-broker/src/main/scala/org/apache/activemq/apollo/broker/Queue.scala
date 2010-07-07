@@ -91,7 +91,7 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
   val session_manager = new SinkMux[Delivery](messages, dispatchQueue, Delivery)
 
   // sequence numbers.. used to track what's in the store.
-  var message_seq_counter = 0L
+  var message_seq_counter = 1L
 
   val headEntry = new QueueEntry(this).tombstone
   var tailEntry = new QueueEntry(this)
@@ -121,16 +121,18 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
 
   def restore(storeId: Long, records:Seq[QueueEntryRecord]) = ^{
     this.storeId = storeId
-    records.foreach { qer =>
-      val entry = new QueueEntry(Queue.this).flushed(qer)
-      entries.addLast(entry)
+    if( !records.isEmpty ) {
+      records.foreach { qer =>
+        val entry = new QueueEntry(Queue.this).flushed(qer)
+        entries.addLast(entry)
+      }
+
+      message_seq_counter = records.last.queueSeq+1
+
+      counter = records.size
+      enqueue_counter += records.size
+      debug("restored: "+records.size )
     }
-    if( !entries.isEmpty ) {
-      message_seq_counter = entries.getTail.seq
-    }
-    counter = records.size
-    enqueue_counter += records.size
-    debug("restored: "+records.size )
   } >>: dispatchQueue
 
   object messages extends Sink[Delivery] {
@@ -149,21 +151,20 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
 
         val entry = tailEntry
         tailEntry = new QueueEntry(Queue.this)
-        entry.created(next_message_seq, delivery)
-
-        if( delivery.ack!=null ) {
-          delivery.ack(delivery.storeBatch)
-        }
-        if (delivery.storeKey != -1) {
-          delivery.storeBatch.enqueue(entry.createQueueEntryRecord)
-          delivery.storeBatch.release
-        }
+        val queueDelivery = delivery.copy
+        entry.created(next_message_seq, queueDelivery)
+        queueDelivery.storeBatch = delivery.storeBatch
 
         size += entry.size
         entries.addLast(entry)
         counter += 1;
         enqueue_counter += 1
         enqueue_size += entry.size
+
+        // Do we need to do a persistent enqueue???
+        if (queueDelivery.storeBatch != null) {
+          queueDelivery.storeBatch.enqueue(entry.createQueueEntryRecord)
+        }
 
         var swap_check = false
         if( !entry.hasSubs ) {
@@ -190,6 +191,12 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
               swap
             }
           })
+        }
+
+        // release the store batch...
+        if (queueDelivery.storeBatch != null) {
+          queueDelivery.storeBatch.release
+          queueDelivery.storeBatch = null
         }
 
         true
@@ -267,19 +274,9 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
         false
       } else {
 
-        // Called from the producer thread before the delivery is
-        // processed by the queue's thread.. We don't
-        // yet know the order of the delivery in the queue.
-        if (delivery.storeKey != -1) {
-          // If the message has a store id, then this delivery will
-          // need a tx to track the store changes.
-          if( delivery.storeBatch == null ) {
-            delivery.storeBatch = host.store.createStoreBatch
-          } else {
-            delivery.storeBatch.retain
-          }
+        if( delivery.storeBatch!=null ) {
+          delivery.storeBatch.retain
         }
-
         val rc = session.offer(delivery)
         assert(rc, "session should accept since it was not full")
         true
@@ -440,7 +437,8 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
   }
 
   def drain_store_flushes() = {
-    store_flush_source.getData.foreach { entry =>
+    val data = store_flush_source.getData
+    data.foreach { entry =>
       flushingSize -= entry.size
 
       // by the time we get called back, subs my be interested in the entry
@@ -708,9 +706,6 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
         delivery.storeKey = tx.store(delivery.createMessageRecord)
         tx.enqueue(createQueueEntryRecord)
         tx.release
-        true
-      } else {
-        false
       }
     }
 
@@ -719,10 +714,18 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
         0
       } else {
         flushing=true
-        store
-        queue.host.store.flushMessage(ref) {
-          queue.store_flush_source.merge(QueueEntry.this)
+
+        if( delivery.storeBatch!=null ) {
+          delivery.storeBatch.eagerFlush(^{
+            queue.store_flush_source.merge(QueueEntry.this)
+          })
+        } else {
+          store
+          queue.host.store.flushMessage(ref) {
+            queue.store_flush_source.merge(QueueEntry.this)
+          }
         }
+
         size
       }
     }

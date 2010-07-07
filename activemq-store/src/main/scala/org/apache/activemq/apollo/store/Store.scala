@@ -60,10 +60,16 @@ trait StoreBatch extends Retained {
    */
   def dequeue(entry:QueueEntryRecord)
 
+
+  /**
+   * Causes the batch to flush eagerly, callback is called once flushed.
+   */
+  def eagerFlush(callback: Runnable)
+
 }
 
 /**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ *  @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait Store extends Service {
 

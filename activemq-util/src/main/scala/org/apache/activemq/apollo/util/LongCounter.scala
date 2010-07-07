@@ -22,7 +22,14 @@ package org.apache.activemq.apollo.util
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class LongCounter(private var value:Long = 0) {
+class LongCounter(private var value:Long = 0) extends MetricProducer[Long] {
+
+  def apply(reset:Boolean):Long = {
+    val rc = value
+    value = 0
+    rc
+  }
+  def clear() = value=0
 
   def get() = value
 

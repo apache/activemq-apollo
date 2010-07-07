@@ -280,10 +280,12 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       delivery.message = message
       delivery.size = message.frame.size
 
-      if( message.persistent && host.store!=null ) {
-        storeBatch = host.store.createStoreBatch
-        delivery.storeBatch = storeBatch
-        delivery.storeKey = delivery.storeBatch.store(delivery.createMessageRecord)
+      // User might be asking for ack that we have prcoessed the message..
+      val receipt = frame.header(Stomp.Headers.RECEIPT_REQUESTED)
+      if( receipt!=null ) {
+        delivery.ack = { storeTx =>
+          connection_sink.offer(StompFrame(Responses.RECEIPT, List((Stomp.Headers.Response.RECEIPT_ID, receipt))))
+        }
       }
 
       // routes can always accept at least 1 delivery...
@@ -299,24 +301,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       // info("Dropping message.  No consumers interested in message.")
     }
 
-    // User might be asking for ack that we have prcoessed the message..
-    val receipt = frame.header(Stomp.Headers.RECEIPT_REQUESTED)
-    if( receipt!=null ) {
-      if( storeBatch==null ) {
-        // message was not persistent we can ack back right away..
-        connection_sink.offer(StompFrame(Responses.RECEIPT, List((Stomp.Headers.Response.RECEIPT_ID, receipt))))
-      } else {
-        // else lets ack back once the persistent operations are processed.
-        storeBatch.setDisposer(^{
-          connection_sink.offer(StompFrame(Responses.RECEIPT, List((Stomp.Headers.Response.RECEIPT_ID, receipt))))
-        })
-      }
-    }
 
-    if( storeBatch!=null ) {
-      // We can now release the batch as we are done using it..
-      storeBatch.release
-    }
   }
 
   def on_stomp_subscribe(headers:HeaderMap) = {

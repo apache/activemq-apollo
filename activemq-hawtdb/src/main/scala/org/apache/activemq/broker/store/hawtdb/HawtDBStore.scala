@@ -70,8 +70,8 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   /////////////////////////////////////////////////////////////////////
   val dispatchQueue = createQueue("hawtdb store")
 
-  var next_queue_key = new AtomicLong(0)
-  var next_msg_key = new AtomicLong(0)
+  var next_queue_key = new AtomicLong(1)
+  var next_msg_key = new AtomicLong(1)
 
   var executor_pool:ExecutorService = _
   var config:HawtDBStoreDTO = defaultConfig
@@ -125,14 +125,15 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
    * Deletes all stored data from the store.
    */
   def purge(callback: =>Unit) = {
-    executor_pool ^{
-      client.purge
+    client.purge(^{
+      next_queue_key.set(1)
+      next_msg_key.set(1)
       callback
-    }
+    })
   }
 
   def addQueue(record: QueueRecord)(callback: (Option[Long]) => Unit) = {
-    val key = next_queue_key.incrementAndGet
+    val key = next_queue_key.getAndIncrement
     record.key = key
     executor_pool ^{
       client.addQueue(record)
@@ -171,22 +172,19 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     }
   }
 
-  def flushMessage(id: Long)(callback: => Unit) = ^{
+  private def doFlush(id: Long, callback:Runnable) = {
     val action: HawtDBBatch#MessageAction = pendingStores.get(id)
     if( action == null ) {
-      callback
+      callback.run
     } else {
-      val prevDisposer = action.tx.getDisposer
-      action.tx.setDisposer(^{
-        callback
-        if(prevDisposer!=null) {
-          prevDisposer.run
-        }
-      })
+      action.tx.eagerFlush(callback)
       flush(action.tx.txid)
     }
-
-  } >>: dispatchQueue
+  }
+  
+  def flushMessage(id: Long)(callback: => Unit) = dispatchQueue {
+    doFlush(id, ^{ callback } )
+  }
 
   def createStoreBatch() = new HawtDBBatch
 
@@ -217,8 +215,11 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
       }
     }
 
+    val txid:Int = next_tx_id.getAndIncrement
     var actions = Map[Long, MessageAction]()
-    var txid:Int = 0
+
+    var flushListeners = ListBuffer[Runnable]()
+    def eagerFlush(callback: Runnable) = if( callback!=null ) { this.synchronized { flushListeners += callback } }
 
     def rm(msg:Long) = {
       actions -= msg
@@ -231,7 +232,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     }
 
     def store(record: MessageRecord):Long = {
-      record.key = next_msg_key.incrementAndGet
+      record.key = next_msg_key.getAndIncrement
       val action = new MessageAction
       action.msg = record.key
       action.messageRecord = record
@@ -269,13 +270,13 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
       transaction_source.merge(this)
     }
 
-    def onPerformed() {
+    def onPerformed() = this.synchronized {
       metric_commit_counter += 1
       val t = TimeUnit.NANOSECONDS.toMillis(System.nanoTime-dispose_start)
-      if( t < 0 ) {
-        println("wtf")
-      }
       metric_commit_latency_counter += t
+      flushListeners.foreach { x=>
+        x.run
+      }
       super.dispose
     }
   }
@@ -302,8 +303,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   var pendingEnqueues = new HashMap[(Long,Long), HawtDBBatch#MessageAction]()
   var delayedTransactions = new HashMap[Int, HawtDBBatch]()
 
-  var next_tx_id = new IntCounter
-
+  var next_tx_id = new IntCounter(1)
 
   def schedualDisplayStats:Unit = {
     val st = System.nanoTime
@@ -329,15 +329,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   def drain_transactions = {
     transaction_source.getData.foreach { tx =>
 
-      val tx_id = next_tx_id.incrementAndGet
-      tx.txid = tx_id
-      delayedTransactions.put(tx_id, tx)
-
-      if( config.flushDelay > 0 ) {
-        dispatchQueue.dispatchAfter(config.flushDelay, TimeUnit.MILLISECONDS, ^{flush(tx_id)})
-      } else {
-        dispatchQueue.dispatchAsync(^{flush(tx_id)})
-      }
+      delayedTransactions.put(tx.txid, tx)
 
       tx.actions.foreach { case (msg, action) =>
         if( action.messageRecord!=null ) {
@@ -380,6 +372,13 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
         }
       }
 
+      val tx_id = tx.txid
+      if( !tx.flushListeners.isEmpty || config.flushDelay <= 0 ) {
+        flush(tx_id)
+      } else {
+        dispatchQueue.dispatchAfter(config.flushDelay, TimeUnit.MILLISECONDS, ^{flush(tx_id)})
+      }
+
     }
   }
 
@@ -402,7 +401,6 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
       // Message may be flushed or canceled before the timeout flush event..
       // tx may be null in those cases
       if (tx!=null) {
-
         tx.actions.foreach { case (msg, action) =>
           if( action.messageRecord !=null ) {
             metric_flushed_message_counter += 1
@@ -422,8 +420,6 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     }
 
     if( !txs.isEmpty ) {
-      // suspend so that we don't process more flush requests while
-      // we are concurrently executing a flush
       client.store(txs)
     }
   }
