@@ -154,6 +154,7 @@
     <module>apollo-dto</module>
     <module>apollo-stomp</module>
     <module>apollo-web</module>
+    <module>apache-activemq-apollo</module>
   </modules>
 
   <scm>
