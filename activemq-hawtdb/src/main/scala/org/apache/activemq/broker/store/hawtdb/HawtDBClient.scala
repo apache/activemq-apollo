@@ -159,6 +159,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       pageFileFactory.setSync(true)
       pageFileFactory.setUseWorkerThread(true)
       pageFileFactory.setPageSize(512.toShort)
+      pageFileFactory.setCacheSize((1024*1024*20)/512); // 20 meg page cache 
       pageFileFactory.open()
 
       val initialized = withTx { tx =>
