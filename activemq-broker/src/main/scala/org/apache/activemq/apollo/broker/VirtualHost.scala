@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.broker;
 
 import _root_.java.util.{LinkedHashMap, ArrayList, HashMap}
+import _root_.org.apache.activemq.broker.store.memory.MemoryStore
 import _root_.org.apache.activemq.broker.store.{Store}
 import _root_.org.apache.activemq.Service
 import _root_.java.lang.{String}
@@ -50,9 +51,9 @@ class VirtualHost() extends Service with Logging {
   }
 
   @BeanProperty
-  var database:BrokerDatabase = null
+  var database:BrokerDatabase = new BrokerDatabase
   @BeanProperty
-  var txnManager:TransactionManager = null
+  var transactionManager:TransactionManager = new TransactionManager
 
 
   def start():Unit = {
@@ -60,6 +61,7 @@ class VirtualHost() extends Service with Logging {
           return;
       }
 
+      database.virtualHost = this
       database.start();
 
 //      router.setDatabase(database);
@@ -84,7 +86,8 @@ class VirtualHost() extends Service with Logging {
 //        }
 
       //Recover transactions:
-      txnManager.loadTransactions();
+      transactionManager.virtualHost = this
+      transactionManager.loadTransactions();
       started = true;
   }
 
@@ -212,7 +215,7 @@ class VirtualHost() extends Service with Logging {
 class BrokerDatabase() extends Service {
 
   @BeanProperty
-  var store:Store=null;
+  var store:Store=new MemoryStore;
 
   @BeanProperty
   var virtualHost:VirtualHost=null;

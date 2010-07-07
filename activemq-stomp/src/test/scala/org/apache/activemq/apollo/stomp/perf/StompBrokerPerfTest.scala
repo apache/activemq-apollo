@@ -30,6 +30,13 @@ import Stomp._
 import _root_.org.apache.activemq.apollo.stomp.StompFrame
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
+object StompBrokerPerfTest {
+  def main(args:Array[String]) = {
+    val test = new StompBrokerPerfTest();
+    test.setUp
+    test.benchmark_1_1_1
+  }
+}
 class StompBrokerPerfTest extends BaseBrokerPerfTest {
 
     override def createProducer() =  new StompRemoteProducer()
@@ -65,6 +72,8 @@ class StompRemoteConsumer extends RemoteConsumer {
         case StompFrame(Responses.CONNECTED, headers, _) =>
         case StompFrame(Responses.MESSAGE, headers, content) =>
           messageReceived();
+        case StompFrame(Responses.ERROR, headers, content) =>
+          onFailure(new Exception("Server reported an error: " + frame.content));
         case _ =>
           onFailure(new Exception("Unexpected stomp command: " + frame.action));
       }
@@ -93,20 +102,27 @@ class StompRemoteProducer extends RemoteProducer {
     val send_next:CompletionCallback = new CompletionCallback() {
       def onCompletion() = {
         rate.increment();
-        if( !stopping ) {
+        val task = ^ {
+          if( !stopping ) {
 
-          var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
-          headers ::= (Stomp.Headers.Send.DESTINATION, stompDestination);
-          if (property != null) {
-              headers ::= (ascii(property), ascii(property));
-          }
+            var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
+            headers ::= (Stomp.Headers.Send.DESTINATION, stompDestination);
+            if (property != null) {
+                headers ::= (ascii(property), ascii(property));
+            }
 //          var p = this.priority;
 //          if (priorityMod > 0) {
 //              p = if ((counter % priorityMod) == 0) { 0 } else { priority }
 //          }
 
-          var content = ascii(createPayload());
-          transport.oneway(StompFrame(Stomp.Commands.SEND, headers, content), send_next)
+            var content = ascii(createPayload());
+            transport.oneway(StompFrame(Stomp.Commands.SEND, headers, content), send_next)
+          }
+        } 
+        if( thinkTime > 0 ) {
+          dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, task)
+        } else {
+          dispatchQueue << task
         }
       }
       def onFailure(error:Throwable) = {
@@ -128,6 +144,8 @@ class StompRemoteProducer extends RemoteProducer {
       var frame = command.asInstanceOf[StompFrame]
       frame match {
         case StompFrame(Responses.CONNECTED, headers, _) =>
+        case StompFrame(Responses.ERROR, headers, content) =>
+          onFailure(new Exception("Server reported an error: " + frame.content.utf8));
         case _ =>
           onFailure(new Exception("Unexpected stomp command: " + frame.action));
       }

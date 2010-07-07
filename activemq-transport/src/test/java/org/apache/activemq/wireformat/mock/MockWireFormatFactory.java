@@ -49,6 +49,10 @@ public class MockWireFormatFactory implements WireFormatFactory {
 	        throw new UnsupportedOperationException();
 		}
 
+        public UnmarshalSession createUnmarshalSession() {
+            throw new UnsupportedOperationException();
+        }
+
         public Object unmarshal(ReadableByteChannel channel) {
             throw new UnsupportedOperationException();
         }

@@ -26,6 +26,7 @@ import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.DispatchSource;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -44,6 +45,7 @@ import static org.apache.activemq.transport.tcp.TcpTransport.TransportState.*;
  */
 public class TcpTransport implements Transport {
     private Map<String, Object> socketOptions;
+    private WireFormat.UnmarshalSession unmarshalSession;
 
     enum SocketState {
         CONNECTING,
@@ -76,6 +78,10 @@ public class TcpTransport implements Transport {
     int maxOutbound = 1024*32;
     ByteBuffer outbound_frame;
     protected boolean useLocalHost = true;
+
+    int READ_BUFFFER_SIZE = 1024*32;
+    ByteBuffer readBuffer = ByteBuffer.allocate(1024*32);
+
 
     static final class OneWay {
         final Buffer buffer;
@@ -114,6 +120,8 @@ public class TcpTransport implements Transport {
     }
 
     public void start() throws Exception {
+        assert Dispatch.getCurrentQueue() == dispatchQueue;
+
         if (dispatchQueue == null) {
             throw new IllegalArgumentException("dispatchQueue is not set");
         }
@@ -124,6 +132,8 @@ public class TcpTransport implements Transport {
             throw new IllegalStateException("can only be started from the created stae");
         }
         transportState=RUNNING;
+        
+        unmarshalSession = wireformat.createUnmarshalSession();
 
         if( socketState == CONNECTING ) {
             channel = SocketChannel.open();
@@ -183,7 +193,11 @@ public class TcpTransport implements Transport {
         readSource = Dispatch.createSource(channel, SelectionKey.OP_READ, dispatchQueue);
         readSource.setEventHandler(new Runnable(){
             public void run() {
-                drainInbound();
+                try {
+                    drainInbound();
+                } catch (IOException e) {
+                    listener.onException(e);
+                }
             }
         });
 
@@ -207,6 +221,8 @@ public class TcpTransport implements Transport {
 
 
     public void stop() throws Exception {
+        assert Dispatch.getCurrentQueue() == dispatchQueue;
+
         if( readSource!=null ) {
             readSource.release();
             readSource = null;
@@ -225,6 +241,7 @@ public class TcpTransport implements Transport {
     }
 
     public void oneway(Object command, CompletionCallback callback) {
+        assert Dispatch.getCurrentQueue() == dispatchQueue;
         try {
             if( socketState != CONNECTED ) {
                 throw new IllegalStateException("Not connected.");
@@ -307,11 +324,56 @@ public class TcpTransport implements Transport {
         return outbound.isEmpty() && outbound_frame==null;
     }
 
-    private void drainInbound() {
-        Object command = null;
-        // the transport may be suspended after processing a command.
-        while( !readSource.isSuspended() && (command=wireformat.unmarshal(channel))!=null ) {
+
+    private void drainInbound() throws IOException {
+        if( transportState==DISPOSED || readSource.isSuspended() ) {
+            return;
+        }
+        while( true ) {
+
+            // do we need to read in more data???
+            if (unmarshalSession.getEndPos() == readBuffer.position()) {
+
+                // do we need a new data buffer to read data into??
+                if (readBuffer.remaining() == 0) {
+
+                    // double the capacity size if needed...
+                    int new_capacity = unmarshalSession.getStartPos() != 0 ? READ_BUFFFER_SIZE : readBuffer.capacity() << 2;
+                    byte[] new_buffer = new byte[new_capacity];
+
+                    // If there was un-consummed data.. move it to the start of the new buffer.
+                    int size = unmarshalSession.getEndPos() - unmarshalSession.getStartPos();
+                    if (size > 0) {
+                        System.arraycopy(readBuffer.array(), unmarshalSession.getStartPos(), new_buffer, 0, size);
+                    }
+
+                    readBuffer = ByteBuffer.wrap(new_buffer);
+                    readBuffer.position(size);
+                    unmarshalSession.setStartPos(0);
+                    unmarshalSession.setEndPos(size);
+                }
+
+                // Try to fill the buffer with data from the socket..
+                int p = readBuffer.position();
+                int count = channel.read(readBuffer);
+                if (count == -1) {
+                    throw new EOFException();
+                } else if (count == 0) {
+                    return;
+                }
+            }
+
+            Object command=unmarshalSession.unmarshal(readBuffer);
+            if( command==null ) {
+                return;
+            }
+
             listener.onCommand(command);
+
+            // the transport may be suspended after processing a command.
+            if( transportState==DISPOSED || readSource.isSuspended() ) {
+                return;
+            }
         }
     }
 

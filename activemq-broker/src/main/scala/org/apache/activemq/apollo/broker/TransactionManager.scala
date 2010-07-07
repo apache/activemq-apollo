@@ -18,15 +18,10 @@ package org.apache.activemq.apollo.broker
 
 import _root_.java.util.{LinkedHashMap, HashMap}
 
-class TransactionManagerConfig {
+class TransactionManager() {
 
-  def apply(host:VirtualHost): TransactionManager = {
-    new TransactionManager(host, this);
-  }
-}
+  var virtualHost:VirtualHost = null
 
-
-class TransactionManager(val virtualHost:VirtualHost, config:TransactionManagerConfig) {
 // TODO:
 //    private static final Log LOG = LogFactory.getLog(TransactionManager.class);
 //    private static final String TX_QUEUE_PREFIX = "TX-";

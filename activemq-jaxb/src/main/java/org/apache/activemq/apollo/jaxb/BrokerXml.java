@@ -57,10 +57,10 @@ public class BrokerXml {
 			} catch (Exception e) {
 				throw new Exception("Unable to bind transport server '"+element+" due to: "+e.getMessage(), e);
 			}
-			rc.addTransportServer(server);
+			rc.transportServers().add(server);
 		}
 		for (String element : connectUris) {
-			rc.addConnectUri(element);
+			rc.connectUris().add(element);
 		}
 		
 		return rc;

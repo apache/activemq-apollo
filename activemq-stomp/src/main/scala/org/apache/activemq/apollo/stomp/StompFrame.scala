@@ -20,6 +20,7 @@ import _root_.java.util.LinkedList
 import _root_.org.apache.activemq.apollo.broker.{BufferConversions, Destination, Message}
 import _root_.org.apache.activemq.filter.{Expression, MessageEvaluationContext}
 import _root_.org.apache.activemq.util.buffer._
+import collection.mutable.ListBuffer
 
 /**
  *
@@ -27,6 +28,7 @@ import _root_.org.apache.activemq.util.buffer._
  */
 object StompFrameConstants {
   type HeaderMap = List[(AsciiBuffer, AsciiBuffer)]
+  type HeaderMapBuffer = ListBuffer[(AsciiBuffer, AsciiBuffer)]
   var NO_DATA = new Buffer(0);
 }
 
@@ -141,6 +143,7 @@ case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:Buffer=
         destination = value
       case (Stomp.Headers.Message.EXPIRATION_TIME, value) =>
         expiration = java.lang.Long.parseLong(value)
+      case _ =>
     }
   }
 }

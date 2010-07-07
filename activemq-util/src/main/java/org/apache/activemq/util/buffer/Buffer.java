@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.util.buffer;
 
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -333,7 +334,35 @@ public class Buffer implements Comparable<Buffer> {
         }
         return length - oLength;
     }
-    
+
+    /**
+     * same as out.write(data, offset, length);
+     */
+    public void writeTo(DataOutput out) throws IOException {
+        out.write(data, offset, length);
+    }
+
+    /**
+     * same as out.write(data, offset, length);
+     */
+    public void writeTo(OutputStream out) throws IOException {
+        out.write(data, offset, length);
+    }
+
+    /**
+     * same as in.readFully(data, offset, length);
+     */
+    public void readFrom(DataInput in) throws IOException {
+        in.readFully(data, offset, length);
+    }
+
+    /**
+     * same as in.read(data, offset, length);
+     */
+    public int readFrom(InputStream in) throws IOException {
+        return in.read(data, offset, length);
+    }
+
     ///////////////////////////////////////////////////////////////////
     // Statics
     ///////////////////////////////////////////////////////////////////

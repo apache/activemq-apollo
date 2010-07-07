@@ -21,8 +21,6 @@ import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportServer;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.util.IntrospectionSupport;
-import org.apache.activemq.util.ServiceSupport;
-import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
@@ -87,7 +85,36 @@ public class TcpTransportServer implements TransportServer {
     }
 
     public void start() throws IOException {
-        bind();
+        URI bind = bindURI;
+
+        String host = bind.getHost();
+        host = (host == null || host.length() == 0) ? "localhost" : host;
+        if (host.equals("localhost")) {
+            host = "0.0.0.0";
+        }
+
+        InetAddress addr = InetAddress.getByName(host);
+        try {
+            channel = ServerSocketChannel.open();
+            channel.configureBlocking(false);
+            channel.socket().bind(new InetSocketAddress(addr, bind.getPort()), backlog);
+        } catch (IOException e) {
+            throw IOExceptionSupport.create("Failed to bind to server socket: " + bind + " due to: " + e, e);
+        }
+
+        try {
+            connectURI = connectURI(resolveHostName(channel.socket(), addr));
+        } catch (URISyntaxException e) {
+            // it could be that the host name contains invalid characters such
+            // as _ on unix platforms
+            // so lets try use the IP address instead
+            try {
+                connectURI = connectURI(addr.getHostAddress());
+            } catch (URISyntaxException e2) {
+                throw IOExceptionSupport.create(e2);
+            }
+        }
+        
         acceptSource = Dispatch.createSource(channel, SelectionKey.OP_ACCEPT, dispatchQueue);
         acceptSource.setEventHandler(new Runnable() {
             public void run() {
@@ -108,37 +135,6 @@ public class TcpTransportServer implements TransportServer {
             }
         });
         acceptSource.resume();
-    }
-
-    public void bind() throws IOException {
-        URI bind = bindURI;
-
-        String host = bind.getHost();
-        host = (host == null || host.length() == 0) ? "localhost" : host;
-        if (host.equals("localhost")) {
-            host = "0.0.0.0";
-        }
-
-        InetAddress addr = InetAddress.getByName(host);
-        try {
-            channel = ServerSocketChannel.open();
-            channel.socket().bind(new InetSocketAddress(addr, bind.getPort()), backlog);
-        } catch (IOException e) {
-            throw IOExceptionSupport.create("Failed to bind to server socket: " + bind + " due to: " + e, e);
-        }
-
-        try {
-            connectURI = connectURI(resolveHostName(channel.socket(), addr));
-        } catch (URISyntaxException e) {
-            // it could be that the host name contains invalid characters such
-            // as _ on unix platforms
-            // so lets try use the IP address instead
-            try {
-                connectURI = connectURI(addr.getHostAddress());
-            } catch (URISyntaxException e2) {
-                throw IOExceptionSupport.create(e2);
-            }
-        }
     }
 
     private URI connectURI(String hostname) throws URISyntaxException {

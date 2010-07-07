@@ -89,7 +89,7 @@ object Destination {
     }
 }
 
-class SingleDestination(var domain:AsciiBuffer=null, var name:AsciiBuffer=null) extends Destination {
+case class SingleDestination(var domain:AsciiBuffer=null, var name:AsciiBuffer=null) extends Destination {
 
   def getDestinations():Seq[Destination] = null;
   def getDomain():AsciiBuffer = domain
@@ -97,8 +97,7 @@ class SingleDestination(var domain:AsciiBuffer=null, var name:AsciiBuffer=null) 
 
   override def toString() = ""+domain+":"+name
 }
-
-class MultiDestination(var destinations:List[Destination]=Nil) extends Destination {
+case class MultiDestination(var destinations:List[Destination]=Nil) extends Destination {
 
   def getDestinations():Seq[Destination] = destinations;
   def getDomain():AsciiBuffer = null

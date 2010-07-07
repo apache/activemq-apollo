@@ -19,6 +19,7 @@ package org.apache.activemq.wireformat;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Map;
@@ -49,13 +50,27 @@ public interface WireFormat {
      * Stream based marshaling 
      */
     void marshal(Object command, DataOutput out) throws IOException;
-    
+
     /**
-     * Packet based un-marshaling 
+     * Stream based un-marshaling
      */
     Object unmarshal(DataInput in) throws IOException;
 
-    Object unmarshal(ReadableByteChannel channel);
+    /**
+      * For a unmarshal session is used for non-blocking
+      * unmarshalling.
+      */
+     interface UnmarshalSession {
+        int getStartPos();
+        void setStartPos(int pos);
+
+        int getEndPos();
+        void setEndPos(int pos);
+
+        Object unmarshal(ByteBuffer buffer) throws IOException;
+    }
+
+    UnmarshalSession createUnmarshalSession();
 
     /**
      * @return The name of the wireformat

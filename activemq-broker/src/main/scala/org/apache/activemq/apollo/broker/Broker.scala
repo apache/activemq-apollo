@@ -27,6 +27,7 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import _root_.org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained}
 
 import _root_.scala.collection.JavaConversions._
+import _root_.scala.reflect.BeanProperty
 
 object BrokerFactory {
 
@@ -94,56 +95,25 @@ class Broker() extends Service with Logging {
   import BrokerConstants._
   override protected def log = BrokerConstants
 
-  class BrokerAcceptListener extends TransportAcceptListener {
-    def onAcceptError(error: Exception): Unit = {
-      warn("Accept error: " + error)
-      debug("Accept error details: ", error)
-    }
-
-    def onAccept(transport: Transport): Unit = {
-      var connection = new BrokerConnection(Broker.this)
-      connection.transport = transport
-      clientConnections.add(connection)
-      try {
-        connection.start
-      }
-      catch {
-        case e1: Exception => {
-          onAcceptError(e1)
-        }
-      }
-    }
-  }
-
-  val q = createQueue("broker");
-
-  var connectUris: List[String] = Nil
+  // The configuration state of the broker... It can be modified directly until the broker
+  // is started.
+  @BeanProperty
+  val connectUris: ArrayList[String] = new ArrayList[String]
+  @BeanProperty
   val virtualHosts: LinkedHashMap[AsciiBuffer, VirtualHost] = new LinkedHashMap[AsciiBuffer, VirtualHost]
+  @BeanProperty
   val transportServers: ArrayList[TransportServer] = new ArrayList[TransportServer]
-  val clientConnections: ArrayList[Connection] = new ArrayList[Connection]
+  @BeanProperty
   var dataDirectory: File = null
-  var state = CONFIGURATION
+  @BeanProperty
   var name = "broker";
+  @BeanProperty
   var defaultVirtualHost: VirtualHost = null
 
-  def removeConnectUri(uri: String): Unit = ^ {
-    this.connectUris = this.connectUris.filterNot(_==uri)
-  } ->: q
+  def start = runtime.start
+  def stop = runtime.stop
 
-  def getVirtualHost(name: AsciiBuffer, cb: (VirtualHost) => Unit) = callback(cb) {
-    virtualHosts.get(name)
-  } ->: q
-
-  def getConnectUris(cb: (List[String]) => Unit) = callback(cb) {
-    connectUris
-  } ->: q
-
-
-  def getDefaultVirtualHost(cb: (VirtualHost) => Unit) = callback(cb) {
-    defaultVirtualHost
-  } ->: q
-
-  def addVirtualHost(host: VirtualHost) = ^ {
+  def addVirtualHost(host: VirtualHost) = {
     if (host.names.isEmpty) {
       throw new IllegalArgumentException("Virtual host must be configured with at least one host name.")
     }
@@ -156,138 +126,127 @@ class Broker() extends Service with Logging {
       virtualHosts.put(name, host)
     }
     if (defaultVirtualHost == null) {
-      setDefaultVirtualHost(host)
+      defaultVirtualHost = host
     }
-  } ->: q
-
-  def addTransportServer(server: TransportServer) = ^ {
-    state match {
-      case RUNNING =>
-        start(server)
-      case CONFIGURATION =>
-        this.transportServers.add(server)
-      case _ =>
-        throw new IllegalStateException("Cannot add a transport server when broker is: " + state)
-    }
-  } ->: q
-
-  def removeTransportServer(server: TransportServer) = ^ {
-    state match {
-      case RUNNING =>
-        stopTransportServerWrapException(server)
-      case STOPPED =>
-        this.transportServers.remove(server)
-      case CONFIGURATION =>
-        this.transportServers.remove(server)
-      case _ =>
-        throw new IllegalStateException("Cannot add a transport server when broker is: " + state)
-    }
-  } ->: q
-
-
-  def getState(cb: (String) => Unit) = callback(cb) {state} ->: q
-
-
-  def addConnectUri(uri: String) = ^ {
-    this.connectUris = this.connectUris ::: uri::Nil 
-  } ->: q
-
-  def removeVirtualHost(host: VirtualHost) = ^ {
-    for (name <- host.names) {
-      virtualHosts.remove(name)
-    }
-    if (host == defaultVirtualHost) {
-      if (virtualHosts.isEmpty) {
-        defaultVirtualHost = null
-      }
-      else {
-        defaultVirtualHost = virtualHosts.values.iterator.next
-      }
-    }
-  } ->: q
-
-  def setDefaultVirtualHost(defaultVirtualHost: VirtualHost) = ^ {
-    this.defaultVirtualHost = defaultVirtualHost
-  } ->: q
-
-  def getName(cb: (String) => Unit) = callback(cb) {
-    name;
-  } ->: q
-
-
-  private def start(server: TransportServer): Unit = {
-    server.setDispatchQueue(q)
-    server.setAcceptListener(new BrokerAcceptListener)
-    server.start
   }
 
+  // Holds the runtime state of the broker all access should be serialized
+  // via a the dispatch queue and therefore all requests are setup to return
+  // results via callbacks.
+  object runtime {
 
-  final def stop: Unit = ^ {
-    if (state == RUNNING) {
-      state = STOPPING
-
-      for (server <- transportServers) {
-        stop(server)
-      }
-      for (connection <- clientConnections) {
-        stop(connection)
-      }
-      for (virtualHost <- virtualHosts.values) {
-        stop(virtualHost)
-      }
-      state = STOPPED;
-    }
-
-  } ->: q
-
-  def getVirtualHosts(cb: (ArrayList[VirtualHost]) => Unit) = callback(cb) {
-    new ArrayList[VirtualHost](virtualHosts.values)
-  } ->: q
-
-  def getTransportServers(cb: (ArrayList[TransportServer]) => Unit) = callback(cb) {
-    new ArrayList[TransportServer](transportServers)
-  } ->: q
-
-
-
-
-  def start = ^ {
-    if (state == CONFIGURATION) {
-      // We can apply defaults now
-      if (dataDirectory == null) {
-        dataDirectory = new File(IOHelper.getDefaultDataDirectory)
+    class BrokerAcceptListener extends TransportAcceptListener {
+      def onAcceptError(error: Exception): Unit = {
+        error.printStackTrace
+        warn("Accept error: " + error)
+        debug("Accept error details: ", error)
       }
 
-      if (defaultVirtualHost == null) {
-        defaultVirtualHost = new VirtualHost()
-        defaultVirtualHost.broker = Broker.this
-        defaultVirtualHost.names = DEFAULT_VIRTUAL_HOST_NAME.toString :: Nil
-        virtualHosts.put(DEFAULT_VIRTUAL_HOST_NAME, defaultVirtualHost)
-      }
-
-      state = STARTING
-
-      for (virtualHost <- virtualHosts.values) {
-        virtualHost.start
-      }
-      for (server <- transportServers) {
-        start(server)
-      }
-      state = RUNNING
-    } else {
-      warn("Can only start a broker that is in the " + CONFIGURATION + " state.  Broker was " + state)
-    }
-  } ->: q
-
-  private def stopTransportServerWrapException(server: TransportServer): Unit = {
-    try {
-      server.stop
-    }
-    catch {
-      case e: Exception => {
-        throw new RuntimeException(e)
+      def onAccept(transport: Transport): Unit = {
+        var connection = new BrokerConnection(Broker.this)
+        connection.transport = transport
+        clientConnections.add(connection)
+        try {
+          connection.start
+        }
+        catch {
+          case e1: Exception => {
+            onAcceptError(e1)
+          }
+        }
       }
     }
+
+    var state = CONFIGURATION
+    val dispatchQueue = createQueue("broker");
+    val clientConnections: ArrayList[Connection] = new ArrayList[Connection]
+
+    def removeConnectUri(uri: String): Unit = ^ {
+      connectUris.remove(uri)
+    } ->: dispatchQueue
+
+    def getVirtualHost(name: AsciiBuffer, cb: (VirtualHost) => Unit) = callback(cb) {
+      virtualHosts.get(name)
+    } ->: dispatchQueue
+
+    def getConnectUris(cb: (ArrayList[String]) => Unit) = callback(cb) {
+      new ArrayList(connectUris)
+    } ->: dispatchQueue
+
+
+    def getDefaultVirtualHost(cb: (VirtualHost) => Unit) = callback(cb) {
+      defaultVirtualHost
+    } ->: dispatchQueue
+
+    def addVirtualHost(host: VirtualHost) = ^ {
+      Broker.this.addVirtualHost(host)
+    } ->: dispatchQueue
+
+    def getState(cb: (String) => Unit) = callback(cb) {state} ->: dispatchQueue
+
+    def addConnectUri(uri: String) = ^ {
+      connectUris.add(uri)
+    } ->: dispatchQueue
+
+    def getName(cb: (String) => Unit) = callback(cb) {
+      name;
+    } ->: dispatchQueue
+
+    def getVirtualHosts(cb: (ArrayList[VirtualHost]) => Unit) = callback(cb) {
+      new ArrayList[VirtualHost](virtualHosts.values)
+    } ->: dispatchQueue
+
+    def getTransportServers(cb: (ArrayList[TransportServer]) => Unit) = callback(cb) {
+      new ArrayList[TransportServer](transportServers)
+    } ->: dispatchQueue
+
+    def start = ^ {
+      if (state == CONFIGURATION) {
+        // We can apply defaults now
+        if (dataDirectory == null) {
+          dataDirectory = new File(IOHelper.getDefaultDataDirectory)
+        }
+
+        if (defaultVirtualHost == null) {
+          defaultVirtualHost = new VirtualHost()
+          defaultVirtualHost.broker = Broker.this
+          defaultVirtualHost.names = DEFAULT_VIRTUAL_HOST_NAME.toString :: Nil
+          virtualHosts.put(DEFAULT_VIRTUAL_HOST_NAME, defaultVirtualHost)
+        }
+
+        state = STARTING
+
+        for (virtualHost <- virtualHosts.values) {
+          virtualHost.start
+        }
+        for (server <- transportServers) {
+          server.setDispatchQueue(dispatchQueue)
+          server.setAcceptListener(new BrokerAcceptListener)
+          server.start
+        }
+        state = RUNNING
+      } else {
+        warn("Can only start a broker that is in the " + CONFIGURATION + " state.  Broker was " + state)
+      }
+    } ->: dispatchQueue
+
+    def stop: Unit = ^ {
+      if (state == RUNNING) {
+        state = STOPPING
+
+        for (server <- transportServers) {
+          stopService(server)
+        }
+        for (connection <- clientConnections) {
+          stopService(connection)
+        }
+        for (virtualHost <- virtualHosts.values) {
+          stopService(virtualHost)
+        }
+        state = STOPPED;
+      }
+
+    } ->: dispatchQueue
   }
 
 
@@ -295,7 +254,7 @@ class Broker() extends Service with Logging {
    * Helper method to help stop broker services and log error if they fail to start.
    * @param server
    */
-  private def stop(server: Service): Unit = {
+  private def stopService(server: Service): Unit = {
     try {
       server.stop
     } catch {
@@ -339,16 +298,16 @@ object Queue {
  */
 class Queue(val destination:Destination) extends BaseRetained with Route with DeliveryConsumer with DeliveryProducer {
 
-
-
   override val queue:DispatchQueue = createQueue("queue:"+destination);
   queue.setTargetQueue(getRandomThreadQueue)
   setDisposer(^{
     queue.release
   })
 
-
   val delivery_buffer  = new DeliveryBuffer
+  delivery_buffer.eventHandler = ^{ drain_delivery_buffer }
+
+  val delivery_sessions = new DeliveryCreditBufferProtocol(delivery_buffer, queue)
 
   class ConsumerState(val consumer:DeliverySession) {
     var bound=true
@@ -381,7 +340,7 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
         allConsumers += consumer->cs
         readyConsumers.addLast(cs)
       }
-      delivery_buffer.eventHandler.run
+      drain_delivery_buffer
     } ->: queue
 
   def unbind(consumers:List[DeliveryConsumer]) = releasing(consumers) {
@@ -407,22 +366,22 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
   }
 
 
-  delivery_buffer.eventHandler = ^{
-    while( !readyConsumers.isEmpty && !delivery_buffer.isEmpty ) {
+  def drain_delivery_buffer: Unit = {
+    while (!readyConsumers.isEmpty && !delivery_buffer.isEmpty) {
       val cs = readyConsumers.removeFirst
       val delivery = delivery_buffer.receive
       cs.deliver(delivery)
     }
   }
 
-
-  val deliveryQueue = new DeliveryCreditBufferProtocol(delivery_buffer, queue)
   def open_session(producer_queue:DispatchQueue) = new DeliverySession {
-    val session = deliveryQueue.session(producer_queue)
+
+    val session = delivery_sessions.session(producer_queue)
     val consumer = Queue.this
     retain
 
     def deliver(delivery:Delivery) = session.send(delivery)
+
     def close = {
       session.close
       release

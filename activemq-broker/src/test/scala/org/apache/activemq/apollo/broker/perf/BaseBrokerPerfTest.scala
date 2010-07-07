@@ -32,6 +32,7 @@ import _root_.org.junit.{Test, Before}
 import org.apache.activemq.transport.TransportFactory
 
 import _root_.scala.collection.JavaConversions._
+import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
 
 abstract class RemoteConsumer extends Connection {
@@ -48,6 +49,10 @@ abstract class RemoteConsumer extends Connection {
     totalConsumerRate.add(consumerRate);
     transport = TransportFactory.connect(uri);
     super.start();
+  }
+
+
+  override def onConnected() = {
     setupSubscription();
   }
 
@@ -69,6 +74,7 @@ abstract class RemoteProducer extends Connection {
   var property: String = null
   var totalProducerRate: MetricAggregator = null
   var next: Delivery = null
+  var thinkTime: Long = 0
 
   var filler: String = null
   var payloadSize = 20
@@ -89,8 +95,11 @@ abstract class RemoteProducer extends Connection {
 
     transport = TransportFactory.connect(uri);
     super.start();
-    setupProducer();
 
+  }
+
+  override def onConnected() = {
+    setupProducer();
   }
 
   def setupProducer()
@@ -119,7 +128,7 @@ def createPayload(): String = {
 }
 
 object BaseBrokerPerfTest {
-  var PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "3"))
+  var PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "3000000"))
   var IO_WORK_AMOUNT = 0
   var FANIN_COUNT = 10
   var FANOUT_COUNT = 10
@@ -229,6 +238,7 @@ abstract class BaseBrokerPerfTest {
     consumerCount = 1;
 
     createConnections();
+    producers.get(0).thinkTime = 50;
 
     // Start 'em up.
     startClients();
@@ -573,8 +583,6 @@ abstract class BaseBrokerPerfTest {
     val broker = new Broker()
     broker.transportServers.add(TransportFactory.bind(new URI(bindURI)))
     broker.connectUris.add(connectUri)
-    //     TODO:
-    //    broker.defaultVirtualHost.setStore(createStore(broker))
     broker
   }
 
@@ -609,14 +617,15 @@ abstract class BaseBrokerPerfTest {
   }
 
   private def startClients() = {
-
-    for (connection <- consumers) {
-      connection.start();
-    }
-
-    for (connection <- producers) {
-      connection.start();
-    }
+    // Start the clients after a delay to give the server a chance to startup.
+    getGlobalQueue.dispatchAfter(200, TimeUnit.MILLISECONDS, ^{
+      for (connection <- consumers) {
+        connection.start();
+      }
+      for (connection <- producers) {
+        connection.start();
+      }
+    })
   }
 
 }

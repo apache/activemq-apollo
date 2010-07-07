@@ -72,6 +72,10 @@ public class ObjectStreamWireFormat implements WireFormat {
         }
     }
 
+    public UnmarshalSession createUnmarshalSession() {
+        throw new UnsupportedOperationException();
+    }
+
     public Object unmarshal(ReadableByteChannel channel) {
         throw new UnsupportedOperationException();
     }

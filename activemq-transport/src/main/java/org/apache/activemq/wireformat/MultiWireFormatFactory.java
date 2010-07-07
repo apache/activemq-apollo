@@ -22,6 +22,7 @@ import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
@@ -100,8 +101,50 @@ public class MultiWireFormatFactory implements WireFormatFactory {
             return rc;
         }
 
-        public Object unmarshal(ReadableByteChannel channel) {
-            throw new UnsupportedOperationException();
+        public UnmarshalSession createUnmarshalSession() {
+            return new UnmarshalSession() {
+                int start=0;
+                int end=0;
+                UnmarshalSession session;
+
+                public int getStartPos() {
+                    return start;
+                }
+
+                public void setStartPos(int pos) {
+                    start=pos;
+                }
+
+                public int getEndPos() {
+                    return end;
+                }
+
+                public void setEndPos(int pos) {
+                    end = pos;
+                }
+
+                public Object unmarshal(ByteBuffer buffer) throws IOException {
+                    if( session!=null ) {
+                        return session.unmarshal(buffer);
+                    }
+
+                    Buffer b = new Buffer(buffer.array(), start, buffer.position());
+                    for (WireFormatFactory wff : wireFormatFactories) {
+                        if (wff.matchesWireformatHeader( b )) {
+                            wireFormat = wff.createWireFormat();
+                            session = wireFormat.createUnmarshalSession();
+                            session.setStartPos(start);
+                            session.setEndPos(end);
+                            return wireFormat;
+                        }
+                    }
+                    
+                    if( end >= maxHeaderLength ) {
+                        throw new IOException("Could not discriminate the protocol.");
+                    }
+                    return null;
+                }
+            };
         }
 
         public void marshal(Object command, DataOutput out) throws IOException {
@@ -109,11 +152,11 @@ public class MultiWireFormatFactory implements WireFormatFactory {
         }
 
         public Buffer marshal(Object command) throws IOException {
-            throw new UnsupportedOperationException();
+            return wireFormat.marshal(command);
         }
 
         public Object unmarshal(Buffer packet) throws IOException {
-            throw new UnsupportedOperationException();
+            return wireFormat.marshal(packet);
         }
 
         public ArrayList<WireFormatFactory> getWireFormatFactories() {

@@ -38,29 +38,28 @@ abstract class Connection() extends TransportListener with Service {
   var transport:Transport = null
   var exceptionListener:ExceptionListener = null;
 
-  def start() = {
+  def start() = ^{
     transport.setDispatchQueue(dispatchQueue);
-    transport.getDispatchQueue.release
-    transport.setTransportListener(this);
+    transport.setTransportListener(Connection.this);
     transport.start()
-  }
+  } ->: dispatchQueue
 
-  def stop() = {
+  def stop() = ^{
     stopping=true
     transport.stop()
     dispatchQueue.release
-  }
+  } ->: dispatchQueue
 
   def onException(error:IOException) = {
-      if (!stopping) {
-          onFailure(error);
-      }
+    if (!stopping) {
+        onFailure(error);
+    }
   }
 
   def onFailure(error:Exception) = {
-      if (exceptionListener != null) {
-          exceptionListener.exceptionThrown(error);
-      }
+    if (exceptionListener != null) {
+        exceptionListener.exceptionThrown(error);
+    }
   }
 
   def onDisconnected() = {

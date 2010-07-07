@@ -1,5 +1,5 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
@@ -16,14 +16,14 @@
  */
 package org.apache.activemq.apollo.stomp
 
+import _root_.java.io.{DataOutput, DataInput, EOFException, IOException}
+import _root_.java.nio.channels.{ReadableByteChannel, SocketChannel}
 import _root_.java.util.{LinkedList, ArrayList}
 import _root_.org.apache.activemq.apollo.broker._
 
-import _root_.org.apache.activemq.wireformat.WireFormat
+import _root_.org.apache.activemq.wireformat.{WireFormatFactory, WireFormat}
 import _root_.org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained}
-import java.nio.channels.{SocketChannel}
 import java.nio.ByteBuffer
-import java.io.{EOFException, IOException}
 import _root_.org.apache.activemq.util.buffer._
 import collection.mutable.{ListBuffer, HashMap}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
@@ -101,9 +101,11 @@ class StompProtocolHandler extends ProtocolHandler {
     this.connection = connection
 
     // We will be using the default virtual host
-    connection.broker.getDefaultVirtualHost(
+    connection.transport.suspendRead
+    connection.broker.runtime.getDefaultVirtualHost(
       queue.wrap { (host)=>
         this.host=host
+        connection.transport.resumeRead
       }
     )
   }
@@ -111,20 +113,24 @@ class StompProtocolHandler extends ProtocolHandler {
   def setWireFormat(wireformat:WireFormat) = { this.wireformat = wireformat}
 
   def onCommand(command:Any) = {
-    val frame = command.asInstanceOf[StompFrame]
-    frame match {
-      case StompFrame(Commands.CONNECT, headers, _) =>
-        on_stomp_connect(headers)
+    command match {
       case StompFrame(Commands.SEND, headers, content) =>
-        on_stomp_send(frame)
-      case StompFrame(Commands.SUBSCRIBE, headers, content) =>
-        on_stomp_subscribe(headers)
+        on_stomp_send(command.asInstanceOf[StompFrame])
       case StompFrame(Commands.ACK, headers, content) =>
         // TODO:
+      case StompFrame(Commands.SUBSCRIBE, headers, content) =>
+        on_stomp_subscribe(headers)
+      case StompFrame(Commands.CONNECT, headers, _) =>
+        on_stomp_connect(headers)
       case StompFrame(Commands.DISCONNECT, headers, content) =>
         stop
+      case s:StompWireFormat =>
+        // this is passed on to us by the protocol discriminator
+        // so we know which wire format is being used.
       case StompFrame(unknown, _, _) =>
         die("Unsupported STOMP command: "+unknown);
+      case _ =>
+        die("Unsupported command: "+command);
     }
   }
 
@@ -230,6 +236,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   def onException(error:Exception) = {
     println("Shutting connection down due to: "+error)
+    error.printStackTrace
     stop
   }
 
@@ -252,6 +259,28 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 }
 
+/**
+ * Creates WireFormat objects that marshalls the <a href="http://activemq.apache.org/stomp/">Stomp</a> protocol.
+ */
+class StompWireFormatFactory extends WireFormatFactory {
+  import Stomp.Commands.CONNECT
+
+    def createWireFormat() = new StompWireFormat();
+
+    def isDiscriminatable() = true
+
+    def maxWireformatHeaderLength() = CONNECT.length+10;
+
+    def matchesWireformatHeader(header:Buffer) = {
+        if( header.length < CONNECT.length) {
+          false
+        } else {
+          // the magic can be preceded with newlines / whitespace..
+          header.trimFront.startsWith(CONNECT);
+        }
+    }
+}
+
 object StompWireFormat {
     val READ_BUFFFER_SIZE = 1024*64;
     val MAX_COMMAND_LENGTH = 1024;
@@ -262,7 +291,7 @@ object StompWireFormat {
     val SIZE_CHECK=false
   }
 
-class StompWireFormat {
+class StompWireFormat extends WireFormat {
   import StompWireFormat._
 
   implicit def wrap(x: Buffer) = ByteBuffer.wrap(x.data, x.offset, x.length);
@@ -270,48 +299,10 @@ class StompWireFormat {
     ByteBuffer.wrap(Array(x));
   }
 
-  var outbound_frame: ByteBuffer = null
-  /**
-   * @retruns true if the source has been drained of StompFrame objects and they are fully written to the socket
-   */
-  def drain_source(socket:SocketChannel)(source: =>StompFrame ):Boolean = {
-    while(true) {
-      // if we have a pending frame that is being sent over the socket...
-      if( outbound_frame!=null ) {
-        socket.write(outbound_frame)
-        if( outbound_frame.remaining != 0 ) {
-          // non blocking socket returned before the buffers were fully written to disk..
-          // we are not yet fully drained.. but need to quit now.
-          return false
-        } else {
-          outbound_frame = null
-        }
-      } else {
-
-        // marshall all the available frames..
-        val buffer = new ByteArrayOutputStream()
-        var frame = source
-        while( frame!=null ) {
-          marshall(buffer, frame)
-          frame = source
-        }
-
-
-        if( buffer.size() ==0 ) {
-          // the source is now drained...
-          return true
-        } else {
-          val b = buffer.toBuffer;
-          outbound_frame = ByteBuffer.wrap(b.data, b.offset, b.length)
-        }
-      }
-    }
-    true
-  }
-
-  def marshall(buffer:ByteArrayOutputStream, frame:StompFrame) = {
-    buffer.write(frame.action)
-    buffer.write(NEWLINE)
+  def marshal(command:Any, os:DataOutput) = {
+    val frame = command.asInstanceOf[StompFrame]
+    frame.action.writeTo(os)
+    os.write(NEWLINE)
 
     // we can optimize a little if the headers and content are in the same buffer..
     if( !frame.headers.isEmpty && !frame.content.isEmpty &&
@@ -321,224 +312,218 @@ class StompWireFormat {
       val buffer1 = frame.headers.head._1;
       val buffer2 = frame.content;
       val length = (buffer2.offset-buffer1.offset)+buffer2.length
-      buffer.write( buffer1.data, offset, length)
+      os.write( buffer1.data, offset, length)
 
     } else {
       for( (key, value) <- frame.headers ) {
-        buffer.write(key)
-        buffer.write(SEPERATOR)
-        buffer.write(value)
-        buffer.write(NEWLINE)
+        key.writeTo(os)
+        os.write(SEPERATOR)
+        value.writeTo(os)
+        os.write(NEWLINE)
       }
-
-      buffer.write(NEWLINE)
-      buffer.write(frame.content)
+      os.write(NEWLINE)
+      frame.content.writeTo(os)
     }
-    buffer.write(END_OF_FRAME_BUFFER)
+    END_OF_FRAME_BUFFER.writeTo(os)
   }
 
+  def marshal(command:Any):Buffer= {
+    val frame = command.asInstanceOf[StompFrame]
+    // make a little bigger since size can be an estimate and we want to avoid
+    // a capacity re-size.
+    val os = new DataByteArrayOutputStream(frame.size + 100);
+    marshal(frame, os)
+    os.toBuffer
+  }
 
-  var read_pos = 0
-  var read_offset = 0
-  var read_data:Array[Byte] = new Array[Byte](READ_BUFFFER_SIZE)
-  var read_bytebuffer:ByteBuffer = ByteBuffer.wrap(read_data)
+  def unmarshal(packet:Buffer) = {
+    throw new UnsupportedOperationException
+  }
+  def unmarshal(in: DataInput):Object = {
+    throw new UnsupportedOperationException
+  }
 
-  def drain_socket(socket:SocketChannel)(handler:(StompFrame)=>Boolean) = {
-    var done = false
+  def getName() = "stomp"
 
-    // keep going until the socket buffer is drained.
-    while( !done ) {
-      val frame = unmarshall()
-      if( frame!=null ) {
-        // the handler might want us to stop looping..
-        done = handler(frame)
-      } else {
+  def getWireFormatFactory() = new StompWireFormatFactory
 
-        // do we need to read in more data???
-        if( read_pos==read_bytebuffer.position ) {
+  //
+  // state associated with un-marshalling stomp frames from
+  // a non-blocking NIO channel.
+  //
+  def createUnmarshalSession() = new StompUnmarshalSession
 
-          // do we need a new data buffer to read data into??
-          if(read_bytebuffer.remaining==0) {
+  class StompUnmarshalSession extends UnmarshalSession {
 
-            // The capacity needed grows by powers of 2...
-            val new_capacity = if( read_offset != 0 ) { READ_BUFFFER_SIZE } else { read_data.length << 2 }
-            val tmp_buffer = new Array[Byte](new_capacity)
+    type FrameReader = (ByteBuffer)=>StompFrame
 
-            // If there was un-consummed data.. copy it over...
-            val size = read_pos - read_offset
-            if( size > 0 ) {
-              System.arraycopy(read_data, read_offset, tmp_buffer, 0, size)
-            }
-            read_data = tmp_buffer
-            read_bytebuffer = ByteBuffer.wrap(read_data)
-            read_bytebuffer.position(size)
-            read_offset = 0;
-            read_pos = size
+    var next_action:FrameReader = read_action
+    var end = 0
+    var start = 0
 
+    def getStartPos() = start
+    def setStartPos(pos:Int):Unit = {start=pos}
+
+    def getEndPos() = end
+    def setEndPos(pos:Int):Unit = { end = pos }
+
+    def unmarshal(buffer:ByteBuffer):Object = {
+      // keep running the next action until
+      // a frame is decoded or we run out of input
+      var rc:StompFrame = null
+      while( rc == null && end!=buffer.position ) {
+        rc = next_action(buffer)
+      }
+      rc
+    }
+
+    def read_line(buffer:ByteBuffer, maxLength:Int, errorMessage:String):Buffer = {
+        val read_limit = buffer.position
+        while( end < read_limit ) {
+          if( buffer.array()(end) =='\n') {
+            var rc = new Buffer(buffer.array, start, end-start)
+            end += 1;
+            start = end;
+            return rc
+          }
+          if (SIZE_CHECK && end-start > maxLength) {
+              throw new IOException(errorMessage);
+          }
+          end += 1;
+        }
+        return null;
+    }
+
+    def read_action:FrameReader = (buffer)=> {
+      val line = read_line(buffer, MAX_COMMAND_LENGTH, "The maximum command length was exceeded")
+      if( line !=null ) {
+        var action = line
+        if( TRIM ) {
+            action = action.trim();
+        }
+        if (action.length() > 0) {
+            next_action = read_headers(action)
+        }
+      }
+      null
+    }
+
+    def read_headers(action:Buffer, headers:HeaderMapBuffer=new HeaderMapBuffer()):FrameReader = (buffer)=> {
+      val line = read_line(buffer, MAX_HEADER_LENGTH, "The maximum header length was exceeded")
+      if( line !=null ) {
+        if( line.trim().length() > 0 ) {
+
+          if (SIZE_CHECK && headers.size > MAX_HEADERS) {
+              throw new IOException("The maximum number of headers was exceeded");
           }
 
-          // Try to fill the buffer with data from the nio socket..
-          var p = read_bytebuffer.position
-          if( socket.read(read_bytebuffer) == -1 ) {
-            throw new EOFException();
-          }
-          // we are done if there was no data on the socket.
-          done = read_bytebuffer.position==p
-        }
-      }
-    }
-  }
-
-
-  type FrameReader = ()=>StompFrame
-  var unmarshall:FrameReader = read_action
-
-  def read_line( maxLength:Int, errorMessage:String):Buffer = {
-      val read_limit = read_bytebuffer.position
-      while( read_pos < read_limit ) {
-        if( read_data(read_pos) =='\n') {
-          var rc = new Buffer(read_data, read_offset, read_pos-read_offset)
-          read_pos += 1;
-          read_offset = read_pos;
-          return rc
-        }
-        if (SIZE_CHECK && read_pos-read_offset > maxLength) {
-            throw new IOException(errorMessage);
-        }
-        read_pos += 1;
-      }
-      return null;
-  }
-
-
-  def read_action:FrameReader = ()=> {
-    val line = read_line(MAX_COMMAND_LENGTH, "The maximum command length was exceeded")
-    if( line !=null ) {
-      var action = line
-      if( TRIM ) {
-          action = action.trim();
-      }
-      if (action.length() > 0) {
-          unmarshall = read_headers(action)
-      }
-    }
-    null
-  }
-
-  def read_headers(action:Buffer, headers:HeaderMap=Nil):FrameReader = ()=> {
-    val line = read_line(MAX_HEADER_LENGTH, "The maximum header length was exceeded")
-    if( line !=null ) {
-      if( line.trim().length() > 0 ) {
-
-        if (SIZE_CHECK && headers.size > MAX_HEADERS) {
-            throw new IOException("The maximum number of headers was exceeded");
-        }
-
-        try {
-            val seperatorIndex = line.indexOf(SEPERATOR);
-            if( seperatorIndex<0 ) {
-                throw new IOException("Header line missing seperator [" + ascii(line) + "]");
-            }
-            var name = line.slice(0, seperatorIndex);
-            if( TRIM ) {
-                name = name.trim();
-            }
-            var value = line.slice(seperatorIndex + 1, line.length());
-            if( TRIM ) {
-                value = value.trim();
-            }
-            headers.add((ascii(name), ascii(value)));
-        } catch {
-            case e:Exception=>
-              throw new IOException("Unable to parser header line [" + line + "]");
-        }
-
-      } else {
-        val contentLength = get(headers, CONTENT_LENGTH)
-        if (contentLength.isDefined) {
-          // Bless the client, he's telling us how much data to read in.
-          var length=0;
           try {
-              length = Integer.parseInt(contentLength.get.trim().toString());
+              val seperatorIndex = line.indexOf(SEPERATOR);
+              if( seperatorIndex<0 ) {
+                  throw new IOException("Header line missing seperator [" + ascii(line) + "]");
+              }
+              var name = line.slice(0, seperatorIndex);
+              if( TRIM ) {
+                  name = name.trim();
+              }
+              var value = line.slice(seperatorIndex + 1, line.length());
+              if( TRIM ) {
+                  value = value.trim();
+              }
+              headers.add((ascii(name), ascii(value)))
           } catch {
-            case e:NumberFormatException=>
-              throw new IOException("Specified content-length is not a valid integer");
+              case e:Exception=>
+                e.printStackTrace
+                throw new IOException("Unable to parser header line [" + line + "]");
           }
-
-          if (SIZE_CHECK && length > MAX_DATA_LENGTH) {
-              throw new IOException("The maximum data length was exceeded");
-          }
-          unmarshall = read_binary_body(action, headers, length)
 
         } else {
-          unmarshall = read_text_body(action, headers)
+          val contentLength = get(headers, CONTENT_LENGTH)
+          if (contentLength.isDefined) {
+            // Bless the client, he's telling us how much data to read in.
+            var length=0;
+            try {
+                length = Integer.parseInt(contentLength.get.trim().toString());
+            } catch {
+              case e:NumberFormatException=>
+                throw new IOException("Specified content-length is not a valid integer");
+            }
+
+            if (SIZE_CHECK && length > MAX_DATA_LENGTH) {
+                throw new IOException("The maximum data length was exceeded");
+            }
+            next_action = read_binary_body(action, headers, length)
+
+          } else {
+            next_action = read_text_body(action, headers)
+          }
         }
       }
-    }
-    null
-  }
-
-  def get(headers:HeaderMap, name:AsciiBuffer):Option[AsciiBuffer] = {
-    val i = headers.iterator
-    while( i.hasNext ) {
-      val entry = i.next
-      if( entry._1 == name ) {
-        return Some(entry._2)
-      }
-    }
-    None
-  }
-
-
-  def read_binary_body(action:Buffer, headers:HeaderMap, contentLength:Int):FrameReader = ()=> {
-    val content:Buffer=read_content(contentLength)
-    if( content != null ) {
-      unmarshall = read_action
-      new StompFrame(ascii(action), headers, content)
-    } else {
       null
     }
-  }
+
+    def get(headers:HeaderMapBuffer, name:AsciiBuffer):Option[AsciiBuffer] = {
+      val i = headers.iterator
+      while( i.hasNext ) {
+        val entry = i.next
+        if( entry._1 == name ) {
+          return Some(entry._2)
+        }
+      }
+      None
+    }
 
 
-  def read_content(contentLength:Int):Buffer = {
-      val read_limit = read_bytebuffer.position
-      if( (read_limit-read_offset) < contentLength+1 ) {
-        read_pos = read_limit;
-        null
+    def read_binary_body(action:Buffer, headers:HeaderMapBuffer, contentLength:Int):FrameReader = (buffer)=> {
+      val content:Buffer=read_content(buffer, contentLength)
+      if( content != null ) {
+        next_action = read_action
+        new StompFrame(ascii(action), headers.toList, content)
       } else {
-        if( read_data(read_offset+contentLength)!= 0 ) {
-           throw new IOException("Exected null termintor after "+contentLength+" content bytes");
-        }
-        var rc = new Buffer(read_data, read_offset, contentLength)
-        read_pos = read_offset+contentLength+1;
-        read_offset = read_pos;
-        rc;
+        null
       }
-  }
+    }
 
-  def read_to_null():Buffer = {
-      val read_limit = read_bytebuffer.position
-      while( read_pos < read_limit ) {
-        if( read_data(read_pos) ==0) {
-          var rc = new Buffer(read_data, read_offset, read_pos-read_offset)
-          read_pos += 1;
-          read_offset = read_pos;
-          return rc;
+
+    def read_content(buffer:ByteBuffer, contentLength:Int):Buffer = {
+        val read_limit = buffer.position
+        if( (read_limit-start) < contentLength+1 ) {
+          end = read_limit;
+          null
+        } else {
+          if( buffer.array()(start+contentLength)!= 0 ) {
+             throw new IOException("Exected null termintor after "+contentLength+" content bytes");
+          }
+          var rc = new Buffer(buffer.array, start, contentLength)
+          end = start+contentLength+1;
+          start = end;
+          rc;
         }
-        read_pos += 1;
+    }
+
+    def read_to_null(buffer:ByteBuffer):Buffer = {
+        val read_limit = buffer.position
+        while( end < read_limit ) {
+          if( buffer.array()(end) ==0) {
+            var rc = new Buffer(buffer.array, start, end-start)
+            end += 1;
+            start = end;
+            return rc;
+          }
+          end += 1;
+        }
+        return null;
+    }
+
+
+    def read_text_body(action:Buffer, headers:HeaderMapBuffer):FrameReader = (buffer)=> {
+      val content:Buffer=read_to_null(buffer)
+      if( content != null ) {
+        next_action = read_action
+        new StompFrame(ascii(action), headers.toList, content)
+      } else {
+        null
       }
-      return null;
-  }
-
-
-  def read_text_body(action:Buffer, headers:HeaderMap):FrameReader = ()=> {
-    val content:Buffer=read_to_null
-    if( content != null ) {
-      unmarshall = read_action
-      new StompFrame(ascii(action), headers, content)
-    } else {
-      null
     }
   }
 
