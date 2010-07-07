@@ -20,6 +20,7 @@ import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.util.buffer.ByteArrayOutputStream;
+import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
@@ -75,23 +76,22 @@ public class TcpTransport implements Transport {
     private DispatchSource readSource;
     private DispatchSource writeSource;
 
-    final LinkedList<OneWay> outbound = new LinkedList<OneWay>();
-    int outboundSize = 0;
-    int maxOutbound = 1024 * 32;
-    ByteBuffer outbound_frame;
-    protected boolean useLocalHost = true;
+    int bufferSize = 1024*64;
 
-    int READ_BUFFFER_SIZE = 1024 * 32;
-    ByteBuffer readBuffer = ByteBuffer.allocate(1024 * 32);
+    final LinkedList<OneWay> outbound = new LinkedList<OneWay>();
+    DataByteArrayOutputStream next_outbound_buffer;
+    ByteBuffer outbound_buffer;
+    protected boolean useLocalHost = true;
+    ByteBuffer readBuffer = ByteBuffer.allocate(bufferSize);
 
 
     static final class OneWay {
-        final Buffer buffer;
+        final Object command;
         final Retained retained;
 
-        public OneWay(Buffer buffer, Retained retained) {
+        public OneWay(Object command, Retained retained) {
+            this.command = command;
             this.retained = retained;
-            this.buffer = buffer;
         }
     }
 
@@ -140,6 +140,11 @@ public class TcpTransport implements Transport {
             channel = SocketChannel.open();
         }
         channel.configureBlocking(false);
+        channel.socket().setSendBufferSize(bufferSize);
+        channel.socket().setReceiveBufferSize(bufferSize);
+        next_outbound_buffer = new DataByteArrayOutputStream(bufferSize);
+        outbound_buffer = ByteBuffer.allocate(0);
+
         if (socketState == CONNECTING) {
 
             if (localLocation != null) {
@@ -186,8 +191,8 @@ public class TcpTransport implements Transport {
     private void fireConnected() {
 
         try {
-            channel.socket().setSendBufferSize(maxOutbound);
-            channel.socket().setReceiveBufferSize(maxOutbound);
+            channel.socket().setSendBufferSize(bufferSize);
+            channel.socket().setReceiveBufferSize(bufferSize);
         } catch (SocketException e) {
         }
 
@@ -235,7 +240,7 @@ public class TcpTransport implements Transport {
 
 
     public boolean isFull() {
-        return outboundSize >= maxOutbound;
+        return next_outbound_buffer.size() >= bufferSize>>2;
     }
 
     public void oneway(Object command, Retained retained) {
@@ -244,35 +249,29 @@ public class TcpTransport implements Transport {
             if (socketState != CONNECTED) {
                 throw new IOException("Not connected.");
             }
+            if (transportState != RUNNING) {
+                throw new IOException("Not running.");
+            }
         } catch (IOException e) {
             listener.onTransportFailure(e);
         }
 
-        // Marshall the command.
-        Buffer buffer = null;
-        try {
-            buffer = wireformat.marshal(command);
-        } catch (IOException e) {
-            listener.onTransportFailure(e);
-            return;
-        }
-
-        OneWay oneway;
+        boolean wasEmpty = next_outbound_buffer.size()==0;
         if (retained!=null && isFull() ) {
             // retaining blocks the sender it is released.
             retained.retain();
-            oneway = new OneWay(buffer, retained);
+            outbound.add(new OneWay(command, retained));
         } else {
-            oneway = new OneWay(buffer, null);
+            try {
+                wireformat.marshal(command, next_outbound_buffer);
+            } catch (IOException e) {
+                listener.onTransportFailure(e);
+            }
+            if ( outbound_buffer.remaining()==0 ) {
+                writeSource.resume();
+            }
         }
-        outbound.add(oneway);
-        outboundSize += buffer.length;
 
-        // wait for write ready events if this write
-        // cannot be drained.
-        if (outbound.size() == 1 && !drainOutbound()) {
-            writeSource.resume();
-        }
     }
 
     /**
@@ -284,56 +283,49 @@ public class TcpTransport implements Transport {
             while (socketState == CONNECTED) {
 
                 // if we have a pending write that is being sent over the socket...
-                if (outbound_frame != null) {
-
-                    channel.write(outbound_frame);
-                    if (outbound_frame.remaining() != 0) {
+                if (outbound_buffer.remaining()!=0) {
+                    channel.write(outbound_buffer);
+                    if (outbound_buffer.remaining() != 0) {
                         return false;
-                    } else {
-                        outbound_frame = null;
                     }
-
                 } else {
-
-                    // marshall all the available frames..
-                    OneWay oneWay = outbound.poll();
-
-                    int size = 0;
-                    ArrayList<Buffer> buffers = new ArrayList<Buffer>(outbound.size());
-                    while (oneWay != null) {
-                        size+=oneWay.buffer.length;
-                        buffers.add(oneWay.buffer);
-                        if (oneWay.retained != null) {
-                            oneWay.retained.release();
-                        }
-                        if (size < maxOutbound) {
-                            oneWay = outbound.poll();
-                        } else {
-                            oneWay = null;
-                        }
-                    }
-
-                    if (size == 0) {
-                        // the source is now drained...
-                        return true;
+                    if( next_outbound_buffer.size()!=0) {
+                        // size of next buffer is based on how much was used in the previous buffer.
+                        int prev_size = Math.min(Math.max(outbound_buffer.position()+512, 512), bufferSize);
+                        outbound_buffer = next_outbound_buffer.toBuffer().toByteBuffer();
+                        next_outbound_buffer = new DataByteArrayOutputStream(prev_size);
                     } else {
-                        // Make the write just one big buffer.
-                        outboundSize -= size;
-                        ByteArrayOutputStream buffer = new ByteArrayOutputStream(size);
-                        for (Buffer b : buffers) {
-                            buffer.write(b);
+                        // marshall all the available frames..
+                        OneWay oneWay = outbound.poll();
+                        while (oneWay != null) {
+                            try {
+                                wireformat.marshal(oneWay.command, next_outbound_buffer);
+                            } catch (IOException e) {
+                                listener.onTransportFailure(e);
+                            }
+                            if (oneWay.retained != null) {
+                                oneWay.retained.release();
+                            }
+                            if ( isFull() ) {
+                                oneWay = null;
+                            } else {
+                                oneWay = outbound.poll();
+                            }
                         }
-                        outbound_frame = buffer.toBuffer().toByteBuffer();
+
+                        if (next_outbound_buffer.size() == 0) {
+                            // the source is now drained...
+                            return true;
+                        }
                     }
                 }
-
             }
 
         } catch (IOException e) {
             listener.onTransportFailure(e);
         }
 
-        return outbound.isEmpty() && outbound_frame == null;
+        return outbound.isEmpty() && outbound_buffer == null;
     }
 
 
@@ -350,7 +342,7 @@ public class TcpTransport implements Transport {
                 if (readBuffer.remaining() == 0) {
 
                     // double the capacity size if needed...
-                    int new_capacity = unmarshalSession.getStartPos() != 0 ? READ_BUFFFER_SIZE : readBuffer.capacity() << 2;
+                    int new_capacity = unmarshalSession.getStartPos() != 0 ? bufferSize : readBuffer.capacity() << 2;
                     byte[] new_buffer = new byte[new_capacity];
 
                     // If there was un-consummed data.. move it to the start of the new buffer.

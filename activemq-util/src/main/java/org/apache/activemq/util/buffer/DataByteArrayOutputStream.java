@@ -39,10 +39,17 @@ public class DataByteArrayOutputStream extends OutputStream implements DataOutpu
      * @exception IllegalArgumentException if size is negative.
      */
     public DataByteArrayOutputStream(int size) {
-        if (size < 0) {
+        if (size <= 0) {
             throw new IllegalArgumentException("Invalid size: " + size);
         }
         buf = new byte[size];
+    }
+    
+    public DataByteArrayOutputStream(byte buf[]) {
+        if ( buf == null || buf.length==0 ) {
+            throw new IllegalArgumentException("Invalid buffer");
+        }
+        this.buf = buf;
     }
 
     /**
