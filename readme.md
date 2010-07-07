@@ -16,7 +16,8 @@ broker. It is focused on simplicity, stability and scalability.
 
 * Persistent Messages
 
-* Message swapping: moves message out of memory to support unlimited queue sizes
+* Message swapping: moves message out of memory to support unlimited
+  queue sizes
 
 * Message Selectors
 
@@ -28,9 +29,23 @@ broker. It is focused on simplicity, stability and scalability.
 
 ## Performance
 
-Considering Apollo only supports STOMP (a text based protocol) right now,
-the performance is awesome. It has a couple of benchmarks that are useful
-for getting an idea of it's performance potential.
+Apollo's performance is awesome considering it is the text based protocol
+Stomp. The source distribution includes a couple of benchmarks that are
+useful for getting an idea of it's performance potential.
+
+The benchmark clients access the server as follows:
+
+* Clients and server run on the same machine. 
+
+* Clients access the server using STOMP over TCP. 
+
+* Producers send non-persistent messages
+
+* Messages contain a 20 byte payload 
+
+* Producers do not wait for a broker ack before sending the next message. 
+
+* Consumers use auto ack.
 
 The following benchmark results were run on a Mac Pro with:
 
@@ -38,13 +53,6 @@ The following benchmark results were run on a Mac Pro with:
   cache per processor .
 
 * 8 GB of RAM
-
-* 1TB 7200 RPM 32MB Cache SATA Hard Drive.
-
-The benchmark clients and Apollo server are run on the same machine. The
-clients access Apollo over TCP using STOMP. Producers are sending
-non-persistent messages with a 20 byte payload and do not wait for a broker
-ack before sending the next message. Consumers auto ack.
 
 ### Queue Cases
 
@@ -94,19 +102,19 @@ are connected to it.
 
 ### Scaling the Number of Queued Messages
 
-Apollo can easily scale to both massive messages and massive amounts of
-messages without blowing up your JVM's memory usage.
+Queues will swap messages out of memory when there are no consumers that
+are likely to need the message soon. Once a message is swapped, the queue
+will replace the message with a reference pointer. When the queue builds a
+large number (more than 10,000) of these swapped out reference pointers,
+they then get consolidated into a single "range entry" and the pointers are
+dropped. 
 
-Queues will swap messages out of memory if there are no consumers that are
-likely to need the message soon. Once it's swapped, the queue only holds on
-to reference pointer to where the message is at in the message store. Once
-you the queue builds up a large number (more than 10,000) of these swapped
-out reference pointers, the get consolidated into a single range entry and
-the pointers are dropped. If a consumer comes along that needs some of
-those messages, the range entry gets converted back to a set of reference
-pointers and the next reference pointers that the consumer is interested in
-get swapped back as regular messages. This allows Apollo's queues to hold
-millions of messages without much impact on JVM memory usage.
+When a consumer comes along that needs some of the swapped out messages,
+it will convert previously consolidated "range entries" to a set of
+reference pointers. The next reference pointers that the consumer is
+interested in get swapped back as regular messages. This allows Apollo's
+queues to hold millions of messages without much impact on JVM memory
+usage.
 
 ### Scaling the Message Size
 
