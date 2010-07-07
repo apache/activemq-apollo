@@ -89,7 +89,9 @@ Apollo aims to support all those usage scenarios.
 
 ### Scaling the Number of Connected Clients
 
-Apollo uses non blocking IO and a reactor thread model.  This means that a running broker uses a constant number of threads no matter how many clients are connected to it.
+Apollo uses non blocking IO and a reactor thread model. This means that a
+running broker uses a constant number of threads no matter how many clients
+are connected to it.
 
 ### Scaling the Number of Queued Messages
 
@@ -132,11 +134,9 @@ TODO
 
 ## Architectural Changes
 
-[Apollo][] is a messaging server working towards becoming the foundation of
-the next generation Apache [ActiveMQ][] message broker. It started as an
-experiment to see what it would take to make ActiveMQ work better on
-machines with higher core counts. It has resulted in broker that is much
-more deterministic, stable, and scaleable.
+Apollo started as an experiment to see what it would take to make ActiveMQ
+work better on machines with higher core counts. It has resulted in broker
+that is much more deterministic, stable, and scaleable.
 
 The major fundamental architectural changes it brings are:
 
@@ -161,9 +161,9 @@ threads.
 
 The thread model allows Apollo to reach very high levels of scaleability and
 efficiency, but it places a huge restriction on the developer: all the tasks
-it executes should be non-blocking and ideally lock-free and wait free. This
+it executes must be non-blocking and ideally lock-free and wait free. This
 means that the previous ActiveMQ broker architecture had to go through a
-major overhaul. For example, synchronous broker interfaces had to be changed
+major overhaul. All synchronous broker interfaces had to be changed
 so that they would instead return results via asynchronous callbacks.
 
 ### Scala 2.8 Implementation
@@ -184,7 +184,12 @@ OpenWire can support.
 
 [OpenWire]:http://activemq.apache.org/openwire.html
 
-The Apollo server is much more modular and protocol agnostic.  All protocols are equal and are built as a plugin to the the broker which just make use of exposed broker services for routing, flow control, queueing services etc.  For example, this means that messages will be persisted in a Store in the original protocol's encoding.  There is no protocol conversion occurring under the covers unless it is required.
+The Apollo server is much more modular and protocol agnostic. All protocols
+are equal and are built as a plugin to the the broker which just make use of
+exposed broker services for routing, flow control, queueing services etc.
+For example, this means that messages will be persisted in a Store in the
+original protocol's encoding. There is no protocol conversion occurring
+under the covers unless it is required.
 
 ### REST Based Management
 
