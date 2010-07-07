@@ -19,8 +19,8 @@ package org.apache.activemq.apollo.broker
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.HashSet
 import org.fusesource.hawtdispatch.ScalaDispatch._
-import org.fusesource.hawtdispatch.{TaskTracker, DispatchQueue}
 import org.apache.activemq.Service
+import org.fusesource.hawtdispatch.{TaskTracker, DispatchQueue}
 
 /**
  * <p>
