@@ -18,7 +18,6 @@ package org.apache.activemq.apollo.broker;
 
 import _root_.java.util.{ArrayList, HashMap}
 import _root_.org.apache.activemq.broker.store.memory.MemoryStore
-import _root_.org.apache.activemq.broker.store.{Store}
 import _root_.org.apache.activemq.Service
 import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch.{ScalaDispatch, DispatchQueue}
@@ -30,6 +29,9 @@ import org.apache.activemq.apollo.dto.VirtualHostDTO
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
 import ReporterLevel._
+import org.apache.activemq.apollo.store.memory.MemoryBrokerDatabase
+import org.apache.activemq.broker.store.{StoredQueue, BrokerDatabase, Store}
+import org.fusesource.hawtbuf.proto.WireFormat
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -86,8 +88,10 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
     this.names = names.toList
   }
 
-  var database:BrokerDatabase = new MemoryBrokerDatabase(this)
+  var database:BrokerDatabase = new MemoryBrokerDatabase()
   var transactionManager:TransactionManagerX = new TransactionManagerX
+
+  var protocols = Map[AsciiBuffer, WireFormat]()
 
   override def toString = if (config==null) "virtual-host" else "virtual-host: "+config.id
 
@@ -117,7 +121,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
           x match {
             case Some(info)=>
             dispatchQueue ^{
-              val dest = DestinationParser.parse(info.record.name, destination_parser_options)
+              val dest = DestinationParser.parse(info.name, destination_parser_options)
               if( dest.getDomain == Domain.QUEUE_DOMAIN ) {
 
                 val queue = new Queue(this, dest, id)
@@ -126,7 +130,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
                 queue.message_seq_counter = info.last+1
                 queue.count = info.count
 
-                queues.put(info.record.name, queue)
+                queues.put(info.name, queue)
               }
             }
             case _ =>
@@ -180,7 +184,8 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 
   def addQueue(dest:Destination)(cb: (Queue)=>Unit ) = ^{
     val name = DestinationParser.toBuffer(dest, destination_parser_options)
-    val record = QueueRecord(0, name, null, null)
+    val record = new StoredQueue
+    record.name = name
     database.addQueue(record) { rc =>
       rc match {
         case Some(id) =>

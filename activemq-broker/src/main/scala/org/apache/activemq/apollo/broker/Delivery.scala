@@ -20,6 +20,8 @@ import _root_.org.apache.activemq.filter.{MessageEvaluationContext}
 import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
+import org.apache.activemq.broker.store.StoreTransaction
+
 /**
  * A producer which sends Delivery objects to a delivery consumer.
  *
@@ -110,7 +112,7 @@ trait Message {
   /**
    * The protocol encoding of the message.
    */
-  def protocol:String
+  def protocol:AsciiBuffer
 
 }
 

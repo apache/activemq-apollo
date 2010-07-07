@@ -27,6 +27,7 @@ import _root_.org.apache.activemq.wireformat.WireFormat
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import java.util.concurrent.atomic.AtomicLong
 import org.fusesource.hawtdispatch.Dispatch
+import protocol.{ProtocolFactory, ProtocolHandler}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -95,7 +96,7 @@ class BrokerConnection(val connector: Connector) extends Connection {
 
   override protected  def _start(onCompleted:Runnable) = {
     connector.dispatchQueue.retain
-    protocolHandler = ProtocolHandlerFactory.createProtocolHandler(protocol)
+    protocolHandler = ProtocolFactory.get(protocol).createProtocolHandler
     protocolHandler.setConnection(this);
     super._start(onCompleted)
   }
@@ -132,70 +133,6 @@ class BrokerConnection(val connector: Connector) extends Connection {
  */
 class ProtocolException(message:String, e:Throwable=null) extends Exception(message, e)
 
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-class MultiProtocolHandler extends ProtocolHandler {
-
-  var connected = false
-
-  override def onTransportCommand(command:Any) = {
-
-    if (!command.isInstanceOf[WireFormat]) {
-      throw new ProtocolException("First command should be a WireFormat");
-    }
-
-    var wireformat:WireFormat = command.asInstanceOf[WireFormat];
-    val protocol = wireformat.getName()
-    val protocolHandler = try {
-      // Create the new protocol handler..
-       ProtocolHandlerFactory.createProtocolHandler(protocol);
-    } catch {
-      case e:Exception=>
-      throw new ProtocolException("No protocol handler available for protocol: " + protocol, e);
-    }
-    protocolHandler.setConnection(connection);
-
-    // replace the current handler with the new one.
-    connection.protocol = protocol
-    connection.protocolHandler = protocolHandler
-    connection.transport.suspendRead
-    protocolHandler.onTransportConnected
-  }
-
-  override def onTransportConnected = {
-    connection.transport.resumeRead
-  }
-
-}
-
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-object ProtocolHandlerFactory {
-    val PROTOCOL_HANDLER_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/apollo/broker/protocol/");
-
-    def createProtocolHandler(protocol:String) = {
-        PROTOCOL_HANDLER_FINDER.newInstance(protocol).asInstanceOf[ProtocolHandler]
-    }
-}
-
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-trait ProtocolHandler extends DefaultTransportListener {
-
-  var connection:BrokerConnection = null;
-
-  def setConnection(brokerConnection:BrokerConnection) = {
-    this.connection = brokerConnection
-  }
-
-  override def onTransportFailure(error:IOException) = {
-    connection.stop()
-  }
-
-}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

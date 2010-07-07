@@ -86,6 +86,14 @@ class StompWireFormat extends WireFormat with DispatchLogging {
     os.toBuffer
   }
 
+  def unmarshal(packet:Buffer):AnyRef = {
+    unmarshal(new DataByteArrayInputStream(packet))
+  }
+
+  def unmarshal(in: DataInput):AnyRef = {
+    throw new UnsupportedOperationException
+  }
+
   def marshal(frame:StompFrame, os:DataOutput) = {
     frame.action.writeTo(os)
     os.write(NEWLINE)
@@ -111,13 +119,6 @@ class StompWireFormat extends WireFormat with DispatchLogging {
       frame.content.writeTo(os)
     }
     END_OF_FRAME_BUFFER.writeTo(os)
-  }
-
-  def unmarshal(packet:Buffer) = {
-    throw new UnsupportedOperationException
-  }
-  def unmarshal(in: DataInput):Object = {
-    throw new UnsupportedOperationException
   }
 
   def getName() = "stomp"

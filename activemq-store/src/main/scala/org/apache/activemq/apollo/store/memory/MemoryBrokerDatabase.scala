@@ -14,7 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker
+package org.apache.activemq.apollo.store.memory
+
 
 import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
@@ -26,81 +27,15 @@ import java.util.{ArrayList, HashSet}
 import collection.mutable.HashMap
 import org.apache.activemq.Service
 import org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained, Retained}
-
-case class QueueRecord(val id:Long, val name:AsciiBuffer, val parent:AsciiBuffer, val config:String)
-case class QueueInfo(record:QueueRecord, first:Long, last:Long, count:Int)
+import org.apache.activemq.apollo.util.BaseService
+import org.apache.activemq.broker.store._
 
 /**
- * A StoreTransaction is used to perform persistent
- * operations as unit of work.
- *
- * The disposer assigned to the store transaction will
- * be executed once all associated persistent operations
- * have been persisted.
+ * <p>
+ * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait StoreTransaction extends Retained {
-
-  /**
-   * Assigns the delivery a store id if it did not already
-   * have one assigned.
-   */
-  def store(delivery:Delivery)
-
-  /**
-   * Adds a delivery to a specified queue at a the specified position in the queue.
-   */
-  def enqueue(queue:Long, seq:Long, msg:Long)
-
-  /**
-   * Removes a delivery from a specified queue at a the specified position in the queue.
-   */
-  def dequeue(queue:Long, seq:Long, msg:Long)
-
-}
-
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-trait BrokerDatabase extends Service {
-
-
-  /**
-   * Stores a queue, calls back with a unquie id for the stored queue.
-   */
-  def addQueue(record:QueueRecord)(cb:(Option[Long])=>Unit):Unit
-
-  /**
-   * Loads the queue information for a given queue id.
-   */
-  def getQueueInfo(id:Long)(cb:(Option[QueueInfo])=>Unit )
-
-  /**
-   * gets a listing of all queues previously added.
-   */
-  def listQueues(cb: (Seq[Long])=>Unit )
-
-  /**
-   * Removes a the delivery associated with the provided from any
-   * internal buffers/caches.  The callback is executed once, the message is
-   * no longer buffered.
-   */
-  def flushDelivery(id:Long)(cb: =>Unit)
-
-  /**
-   * Loads a delivery with the associated id from persistent storage.
-   */
-  def loadDelivery(id:Long)(cb:(Option[Delivery])=>Unit )
-
-  /**
-   * Creates a StoreTransaction which is used to perform persistent
-   * operations as unit of work.
-   */
-  def createStoreTransaction():StoreTransaction
-
-}
-
 class Counter(private var value:Int = 0) {
 
   def get() = value
@@ -126,9 +61,10 @@ class Counter(private var value:Int = 0) {
 /**
  *  @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class MemoryBrokerDatabase(host:VirtualHost) extends BaseService with BrokerDatabase {
+class MemoryBrokerDatabase() extends BaseService with BrokerDatabase {
 
   val dispatchQueue = createQueue("MessagesTable")
+  def getDispatchQueue = dispatchQueue
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -136,11 +72,11 @@ class MemoryBrokerDatabase(host:VirtualHost) extends BaseService with BrokerData
   //
   /////////////////////////////////////////////////////////////////////
 
-  protected def _stop(onCompleted: Runnable) = {
+  def _stop(onCompleted: Runnable) = {
     onCompleted.run
   }
 
-  protected def _start(onCompleted: Runnable) = {
+  def _start(onCompleted: Runnable) = {
     onCompleted.run
   }
 
@@ -152,7 +88,7 @@ class MemoryBrokerDatabase(host:VirtualHost) extends BaseService with BrokerData
   private val queue_id_generator = new AtomicLong
   val queues = new TreeMap[Long, QueueData]
 
-  case class QueueData(val record:QueueRecord) {
+  case class QueueData(val record:StoredQueue) {
     var messges = new TreeMap[Long, Long]()
   }
 
@@ -160,22 +96,26 @@ class MemoryBrokerDatabase(host:VirtualHost) extends BaseService with BrokerData
     JavaConversions.asSet(queues.keySet).toSeq
   } >>: dispatchQueue
 
-  def getQueueInfo(id:Long)(cb:(Option[QueueInfo])=>Unit ) = reply(cb) {
+  def getQueueInfo(id:Long)(cb:(Option[StoredQueue])=>Unit ) = reply(cb) {
     val qd = queues.get(id)
     if( qd == null ) {
       None
     } else {
-      Some(
-        if( qd.messges.isEmpty ) {
-          QueueInfo(qd.record, -1, -1, 0)
-        } else {
-          QueueInfo(qd.record, qd.messges.firstKey, qd.messges.lastKey, qd.messges.size)
-        }
-      )
+      val rc = qd.record
+      if( qd.messges.isEmpty ) {
+        rc.count = 0
+        rc.first = -1
+        rc.last = -1
+      } else {
+        rc.count = qd.messges.size
+        rc.first = qd.messges.firstKey
+        rc.last = qd.messges.lastKey
+      }
+      Some(rc)
     }
   } >>: dispatchQueue
 
-  def addQueue(record:QueueRecord)(cb:(Option[Long])=>Unit):Unit = reply(cb) {
+  def addQueue(record:StoredQueue)(cb:(Option[Long])=>Unit):Unit = reply(cb) {
     val id = queue_id_generator.incrementAndGet
     if( queues.containsKey(id) ) {
       None
@@ -190,7 +130,7 @@ class MemoryBrokerDatabase(host:VirtualHost) extends BaseService with BrokerData
   // Methods related to message storage
   //
   /////////////////////////////////////////////////////////////////////
-  class MessageData(val delivery:Delivery) {
+  class MessageData(val delivery:StoredMessage) {
     val queueRefs = new Counter()
     var onFlush = List[()=>Unit]()
   }
@@ -207,7 +147,7 @@ class MemoryBrokerDatabase(host:VirtualHost) extends BaseService with BrokerData
     }
   } >>: dispatchQueue
 
-  def loadDelivery(ref:Long)(cb:(Option[Delivery])=>Unit ) = reply(cb) {
+  def loadDelivery(ref:Long)(cb:(Option[StoredMessage])=>Unit ) = reply(cb) {
     val rc = messages.get(ref)
     if( rc == null ) {
       None
@@ -235,13 +175,13 @@ class MemoryBrokerDatabase(host:VirtualHost) extends BaseService with BrokerData
 
     val updated = HashMap[Long, MessageData]()
 
-    def store(delivery:Delivery) = {
-      if( delivery.storeId == -1 ) {
-        delivery.storeId = msg_id_generator.incrementAndGet
+    def store(sm:StoredMessage) = {
+      if( sm.id == -1 ) {
+        sm.id = msg_id_generator.incrementAndGet
         using(this) {
-          val md = new MessageData(delivery)
-          updated.put(delivery.storeId, md)
-          messages.put(delivery.storeId, md)
+          val md = new MessageData(sm)
+          updated.put(sm.id, md)
+          messages.put(sm.id, md)
         } >>: dispatchQueue
       }
     }

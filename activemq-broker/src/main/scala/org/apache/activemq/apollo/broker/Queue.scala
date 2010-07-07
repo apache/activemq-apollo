@@ -23,6 +23,8 @@ import org.fusesource.hawtdispatch.{ScalaDispatch, DispatchQueue, BaseRetained}
 import org.apache.activemq.util.TreeMap.TreeEntry
 import java.util.{Collections, ArrayList, LinkedList}
 import org.apache.activemq.util.list.{LinkedNodeList, LinkedNode}
+import org.apache.activemq.broker.store.{StoredMessage, StoreTransaction}
+import protocol.ProtocolFactory
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -76,7 +78,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
   ack_source.setEventHandler(^ {drain_acks});
   ack_source.resume
 
-  val store_load_source = createSource(new ListEventAggregator[(QueueEntry, Delivery)](), dispatchQueue)
+  val store_load_source = createSource(new ListEventAggregator[(QueueEntry, StoredMessage)](), dispatchQueue)
   store_load_source.setEventHandler(^ {drain_store_loads});
   store_load_source.resume
 
@@ -374,8 +376,16 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
           var ref = loaded.delivery.storeId
           if( ref == -1 ) {
             val tx = host.database.createStoreTransaction
-            tx.store(loaded.delivery)
-            tx.enqueue(storeId, entry.seq, loaded.delivery.storeId)
+
+            val message = loaded.delivery.message
+            val sm = new StoredMessage
+            sm.protocol = message.protocol
+            sm.value = ProtocolFactory.get(message.protocol).encode(message)
+            sm.size = loaded.size
+
+            tx.store(sm)
+            loaded.delivery.storeId = sm.id
+            tx.enqueue(storeId, entry.seq, sm.id)
             tx.release
           }
           flushingSize += entry.value.size
@@ -394,7 +404,15 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
 
     data.foreach { event =>
       val entry = event._1
-      entry.loaded(event._2)
+      val stored = event._2
+
+      val delivery = new Delivery()
+      delivery.message = ProtocolFactory.get(stored.protocol).decode(stored.value)
+      delivery.size = stored.size
+      delivery.storeId = stored.id
+
+      entry.loaded(delivery)
+
       size += entry.value.size
 
       if( entry.hasSubs ) {

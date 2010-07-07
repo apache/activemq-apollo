@@ -24,6 +24,7 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
 import AsciiBuffer._
 import org.apache.activemq.apollo.broker._
+import protocol.{Protocol, ProtocolHandler}
 import Stomp._
 import BufferConversions._
 import StompFrameConstants._
@@ -45,6 +46,27 @@ object StompConstants {
       throw new ProtocolException("Invalid stomp destiantion name: "+value);
     }
     d
+  }
+
+}
+
+class StompProtocol extends Protocol {
+  val wff = new StompWireFormatFactory
+
+  def name = new AsciiBuffer("stomp")
+
+  def createWireFormat = wff.createWireFormat
+
+  def createProtocolHandler = new StompProtocolHandler
+
+  def encode(message: Message) = {
+    val sfm = message.asInstanceOf[StompFrameMessage]
+    createWireFormat.marshal(sfm.frame)
+  }
+
+  def decode(message: Buffer) = {
+    val frame = createWireFormat.unmarshal(message).asInstanceOf[StompFrame]
+    StompFrameMessage(frame)
   }
 
 }
