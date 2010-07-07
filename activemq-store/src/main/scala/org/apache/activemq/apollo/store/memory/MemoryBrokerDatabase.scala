@@ -138,7 +138,7 @@ class MemoryBrokerDatabase() extends BaseService with BrokerDatabase {
   private val msg_id_generator = new AtomicLong
   val messages = new TreeMap[Long, MessageData]
 
-  def flushDelivery(msg:Long)(cb: =>Unit) = ^{
+  def flushMessage(msg:Long)(cb: =>Unit) = ^{
     val rc = messages.get(msg)
     if( rc == null ) {
       cb
@@ -147,7 +147,7 @@ class MemoryBrokerDatabase() extends BaseService with BrokerDatabase {
     }
   } >>: dispatchQueue
 
-  def loadDelivery(ref:Long)(cb:(Option[StoredMessage])=>Unit ) = reply(cb) {
+  def loadMessage(ref:Long)(cb:(Option[StoredMessage])=>Unit ) = reply(cb) {
     val rc = messages.get(ref)
     if( rc == null ) {
       None

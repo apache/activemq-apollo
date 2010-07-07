@@ -361,7 +361,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
         if( stored!=null && !stored.loading) {
           // start loading it back...
           stored.loading = true
-          host.database.loadDelivery(stored.ref) { delivery =>
+          host.database.loadMessage(stored.ref) { delivery =>
             // pass off to a source so it can aggregate multiple
             // loads to reduce cross thread synchronization
             if( delivery.isDefined ) {
@@ -389,7 +389,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
             tx.release
           }
           flushingSize += entry.value.size
-          host.database.flushDelivery(ref) {
+          host.database.flushMessage(ref) {
             store_flush_source.merge(entry)
           }
         }

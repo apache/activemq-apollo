@@ -94,12 +94,12 @@ trait BrokerDatabase extends Service {
    * internal buffers/caches.  The callback is executed once, the message is
    * no longer buffered.
    */
-  def flushDelivery(id:Long)(cb: =>Unit)
+  def flushMessage(id:Long)(cb: =>Unit)
 
   /**
    * Loads a delivery with the associated id from persistent storage.
    */
-  def loadDelivery(id:Long)(cb:(Option[StoredMessage])=>Unit )
+  def loadMessage(id:Long)(cb:(Option[StoredMessage])=>Unit )
 
   /**
    * Creates a StoreTransaction which is used to perform persistent
