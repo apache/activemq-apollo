@@ -121,55 +121,61 @@ class HawtDBStore extends Store with BaseService with Logging {
   /**
    * Deletes all stored data from the store.
    */
-  def purge(cb: =>Unit) = {
+  def purge(callback: =>Unit) = {
     executor_pool ^{
       client.purge
-      cb
+      callback
     }
   }
 
-  def addQueue(record: QueueRecord)(cb: (Option[Long]) => Unit) = {
+  def addQueue(record: QueueRecord)(callback: (Option[Long]) => Unit) = {
     val key = next_queue_key.incrementAndGet
     record.key = key
     executor_pool ^{
       client.addQueue(record)
-      cb(Some(key))
+      callback(Some(key))
     }
   }
 
-  def getQueueStatus(id: Long)(cb: (Option[QueueStatus]) => Unit) = {
+  def removeQueue(queueKey: Long)(callback: (Boolean) => Unit) = {
     executor_pool ^{
-      cb( client.getQueueStatus(id) )
+      callback(client.removeQueue(queueKey))
     }
   }
 
-  def listQueues(cb: (Seq[Long]) => Unit) = {
+  def getQueueStatus(id: Long)(callback: (Option[QueueStatus]) => Unit) = {
     executor_pool ^{
-      cb( client.listQueues )
+      callback( client.getQueueStatus(id) )
     }
   }
 
-  def loadMessage(id: Long)(cb: (Option[MessageRecord]) => Unit) = {
+  def listQueues(callback: (Seq[Long]) => Unit) = {
     executor_pool ^{
-      cb( client.loadMessage(id) )
+      callback( client.listQueues )
     }
   }
 
-
-  def getQueueEntries(id: Long)(cb: (Seq[QueueEntryRecord]) => Unit) = {
+  def loadMessage(id: Long)(callback: (Option[MessageRecord]) => Unit) = {
     executor_pool ^{
-      cb( client.getQueueEntries(id) )
+      callback( client.loadMessage(id) )
     }
   }
 
-  def flushMessage(id: Long)(cb: => Unit) = ^{
+
+  def listQueueEntries(id: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
+    executor_pool ^{
+      callback( client.getQueueEntries(id) )
+    }
+  }
+
+  def flushMessage(id: Long)(callback: => Unit) = ^{
     val action: HawtDBBatch#MessageAction = pendingStores.get(id)
     if( action == null ) {
-      cb
+      callback
     } else {
       val prevDisposer = action.tx.getDisposer
       action.tx.setDisposer(^{
-        cb
+        callback
         if(prevDisposer!=null) {
           prevDisposer.run
         }
@@ -280,8 +286,12 @@ class HawtDBStore extends Store with BaseService with Logging {
       val tx_id = next_tx_id.incrementAndGet
       tx.txid = tx_id
       delayedTransactions.put(tx_id, tx)
-      dispatchQueue.dispatchAsync(^{flush(tx_id)})
-      dispatchQueue.dispatchAfter(50, TimeUnit.MILLISECONDS, ^{flush(tx_id)})
+
+      if( config.flushDelay > 0 ) {
+        dispatchQueue.dispatchAfter(config.flushDelay, TimeUnit.MILLISECONDS, ^{flush(tx_id)})
+      } else {
+        dispatchQueue.dispatchAsync(^{flush(tx_id)})
+      }
 
       tx.actions.foreach { case (msg, action) =>
         if( action.store!=null ) {

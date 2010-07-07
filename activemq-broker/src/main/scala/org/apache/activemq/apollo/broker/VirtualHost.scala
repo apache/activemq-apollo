@@ -137,7 +137,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
                 store.getQueueStatus(queueKey) { x =>
                   x match {
                     case Some(info)=>
-                    store.getQueueEntries(queueKey) { entries=>
+                    store.listQueueEntries(queueKey) { entries=>
                       dispatchQueue ^{
                         val dest = DestinationParser.parse(info.record.name, destination_parser_options)
                         val queue = new Queue(this, dest)

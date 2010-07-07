@@ -25,30 +25,38 @@ import org.apache.activemq.apollo.broker.Reporter
 import org.apache.activemq.apollo.dto.StoreDTO
 
 /**
- * A StoreTransaction is used to perform persistent
- * operations as unit of work.
+ * A store batch is used to perform persistent
+ * operations as a unit of work.
+ * 
+ * The batch implements the Retained interface and is
+ * thread safe.  Once the batch is no longer retained,
+ * the unit of work is executed.  
  *
- * The disposer assigned to the store transaction will
- * be executed once all associated persistent operations
- * have been persisted.
+ * The disposer assigned to the batch will
+ * be executed once the unit of work is persisted
+ * or it has been negated by subsequent storage
+ * operations.
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait StoreBatch extends Retained {
 
   /**
-   * Assigns the delivery a store id if it did not already
-   * have one assigned.
+   * Stores a message.  Messages a reference counted, so make sure you also 
+   * enqueue it to queue if you don't want it to be discarded right away.
+   * 
+   * This method auto generates and assigns the key field of the message record and
+   * returns it.
    */
-  def store(delivery:MessageRecord):Long
+  def store(message:MessageRecord):Long
 
   /**
-   * Adds a delivery to a specified queue at a the specified position in the queue.
+   * Adds a queue entry
    */
   def enqueue(entry:QueueEntryRecord)
 
   /**
-   * Removes a delivery from a specified queue at a the specified position in the queue.
+   * Removes a queue entry
    */
   def dequeue(entry:QueueEntryRecord)
 
@@ -59,50 +67,65 @@ trait StoreBatch extends Retained {
  */
 trait Store extends Service {
 
+  /**
+   * Creates a store batch which is used to perform persistent
+   * operations as unit of work.
+   */
+  def createStoreBatch():StoreBatch
+
+  /**
+   * Supplies configuration data to the Store.  This will be called
+   * before the store is started, but may also occur after the the Store 
+   * is started.
+   */
   def configure(config: StoreDTO, reporter:Reporter):Unit
 
   /**
-   * Deletes all stored data from the store.
+   * Removes all previously stored data.
    */
-  def purge(cb: =>Unit):Unit
+  def purge(callback: =>Unit):Unit
 
   /**
-   *  Stores a queue, calls back with a unquie id for the stored queue.
+   * Adds a queue.
+   * 
+   * This method auto generates and assigns the key field of the queue record and
+   * returns it via the callback.
    */
-  def addQueue(record:QueueRecord)(cb:(Option[Long])=>Unit):Unit
+  def addQueue(record:QueueRecord)(callback:(Option[Long])=>Unit):Unit
+
+  /**
+   * Removes a queue. Success is reported via the callback.
+   */
+  def removeQueue(queueKey:Long)(callback:(Boolean)=>Unit):Unit
+
+  /**
+   * Loads the queue information for a given queue key.
+   */
+  def getQueueStatus(queueKey:Long)(callback:(Option[QueueStatus])=>Unit )
+
+  /**
+   * Gets a listing of all queue entry sequences previously added
+   * and reports them to the callback.
+   */
+  def listQueues(callback: (Seq[Long])=>Unit )
 
   /**
    * Loads the queue information for a given queue id.
    */
-  def getQueueStatus(id:Long)(cb:(Option[QueueStatus])=>Unit )
-
-  /**
-   * gets a listing of all queues previously added.
-   */
-  def listQueues(cb: (Seq[Long])=>Unit )
-
-  /**
-   * Loads the queue information for a given queue id.
-   */
-  def getQueueEntries(id:Long)(cb:(Seq[QueueEntryRecord])=>Unit )
+  def listQueueEntries(queueKey:Long)(callback:(Seq[QueueEntryRecord])=>Unit )
 
   /**
    * Removes a the delivery associated with the provided from any
    * internal buffers/caches.  The callback is executed once, the message is
    * no longer buffered.
    */
-  def flushMessage(id:Long)(cb: =>Unit)
+  def flushMessage(messageKey:Long)(callback: =>Unit)
 
   /**
    * Loads a delivery with the associated id from persistent storage.
    */
-  def loadMessage(id:Long)(cb:(Option[MessageRecord])=>Unit )
+  def loadMessage(messageKey:Long)(callback:(Option[MessageRecord])=>Unit )
 
-  /**
-   * Creates a StoreBatch which is used to perform persistent
-   * operations as unit of work.
-   */
-  def createStoreBatch():StoreBatch
 
 }
 

@@ -14,31 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.dto;
+package org.apache.activemq.broker.store.cassandra
 
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlSeeAlso;
-import javax.xml.bind.annotation.XmlType;
-import java.io.File;
+import org.apache.activemq.broker.store.{Store, StoreFunSuiteSupport}
+import org.apache.activemq.broker.store.hawtdb.HawtDBStore
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlType(name = "store-type")
-@XmlSeeAlso({CassandraStoreDTO.class, HawtDBStoreDTO.class})
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
-public abstract class StoreDTO {
+class HawtDBStoreTest extends StoreFunSuiteSupport {
 
-    /**
-     * The flush delay is the amount of time in milliseconds that a store
-     * will delay persisting a messaging unit of work in hopes that it will
-     * be invalidated shortly thereafter by another unit of work which
-     * would negate the operation.
-     */
-    @XmlAttribute(name="flush-delay", required=false)
-    public long flushDelay = 100;
-
+  def createStore(flushDelay:Long):Store = {
+    val rc = new HawtDBStore
+    rc.config.flushDelay = flushDelay
+    rc
+  }
 
 }

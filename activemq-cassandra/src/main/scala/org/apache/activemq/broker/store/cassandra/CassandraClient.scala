@@ -115,6 +115,15 @@ class CassandraClient() {
     }
   }
 
+  def removeQueue(queueKey: Long):Boolean = {
+    withSession {
+      session =>
+        session.remove(schema.entries \ queueKey)
+        session.remove(schema.queue_name \ queueKey)
+    }
+    true
+  }
+
   def listQueues: Seq[Long] = {
     withSession {
       session =>
@@ -137,7 +146,7 @@ class CassandraClient() {
             rc.record.key = id
             rc.record.name = new AsciiBuffer(x.value)
 
-//            rc.count = session.count( schema.entries \ id )
+            rc.count = session.count( schema.entries \ id )
             
             // TODO
             //          rc.count =

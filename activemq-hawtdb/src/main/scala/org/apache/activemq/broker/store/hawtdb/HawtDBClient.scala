@@ -16,6 +16,9 @@
  */
 package org.apache.activemq.broker.store.hawtdb
 
+import java.{lang=>jl}
+import java.{util=>ju}
+
 import model.{AddQueue, AddQueueEntry, AddMessage}
 import org.apache.activemq.apollo.store.{QueueEntryRecord, QueueStatus, MessageRecord}
 import org.apache.activemq.apollo.dto.HawtDBStoreDTO
@@ -39,6 +42,7 @@ import org.apache.activemq.apollo.broker.{Log, Logging, BaseService}
 import collection.mutable.{LinkedHashMap, HashMap, ListBuffer}
 import collection.JavaConversions
 import java.util.{TreeSet, HashSet}
+
 import org.fusesource.hawtdb.api._
 
 object HawtDBClient extends Log {
@@ -70,7 +74,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends Logging {
 
   private var lockFile: LockFile = null
   private val trackingGen = new AtomicLong(0)
-  private val lockedDatatFiles = new HashSet[java.lang.Integer]()
+  private val lockedDatatFiles = new HashSet[jl.Integer]()
 
   private var recovering = false
   private var nextRecoveryPosition: Location = null
@@ -219,6 +223,13 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends Logging {
     update.setName(record.name)
     update.setQueueType(record.queueType)
     store(update)
+  }
+
+  def removeQueue(queueKey: Long):Boolean = {
+    val update = new RemoveQueue.Bean()
+    update.setKey(queueKey)
+    store(update)
+    true
   }
 
   def store(txs: Seq[HawtDBStore#HawtDBBatch]) {
@@ -670,7 +681,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends Logging {
             error("Message replay with different location for: %d", key)
           }
         } else {
-          val fileId:java.lang.Integer = location.getDataFileId()
+          val fileId:jl.Integer = location.getDataFileId()
           addAndGet(dataFileRefIndex, fileId, 1)
         }
       }
@@ -678,7 +689,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends Logging {
       def removeMessage(key:Long) = {
         val location = messageKeyIndex.remove(key)
         if (location != null) {
-          val fileId:java.lang.Integer = location.getDataFileId()
+          val fileId:jl.Integer = location.getDataFileId()
           addAndGet(dataFileRefIndex, fileId, -1)
         } else {
           error("Cannot remove message, it did not exist: %d", key)
@@ -698,8 +709,19 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends Logging {
       def apply(x: RemoveQueue.Getter): Unit = {
         val queueRecord = queueIndex.remove(x.getKey)
         if (queueRecord != null) {
-          queueEntryIndex(queueRecord).destroy
-          queueTrackingIndex(queueRecord).destroy
+          val trackingIndex = queueTrackingIndex(queueRecord)
+          val entryIndex = queueEntryIndex(queueRecord)
+
+          trackingIndex.iterator.map { entry=>
+            val messageKey = entry.getKey
+            if( addAndGet(messageRefsIndex, messageKey, -1) == 0 ) {
+              // message is no longer referenced.. we can remove it..
+              removeMessage(messageKey.longValue)
+            }
+          }
+
+          entryIndex.destroy
+          trackingIndex.destroy
         }
       }
 
@@ -725,7 +747,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends Logging {
               queueRecordUpdate.setSize(queueRecord.getSize + x.getSize)
               queueIndex.put(queueKey, queueRecordUpdate.freeze)
 
-              addAndGet(messageRefsIndex, new java.lang.Long(messageKey), 1)
+              addAndGet(messageRefsIndex, new jl.Long(messageKey), 1)
             } else {
               error("Duplicate queue entry seq %d", x.getQueueSeq)
             }
@@ -752,8 +774,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends Logging {
             if (existing == null) {
               error("Tracking entry not found for message %d", queueEntry.getMessageKey)
             }
-            if( addAndGet(messageRefsIndex, new java.lang.Long(messageKey), -1) == 0 ) {
-              // message is no long referenced.. we can remove it..
+            if( addAndGet(messageRefsIndex, new jl.Long(messageKey), -1) == 0 ) {
+              // message is no longer referenced.. we can remove it..
               removeMessage(messageKey)
             }
           } else {
@@ -869,7 +891,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends Logging {
     import helper._
 
     debug("Cleanup started.")
-    val gcCandidateSet = new TreeSet[Integer](journal.getFileMap().keySet())
+    val gcCandidateSet = new TreeSet[jl.Integer](journal.getFileMap().keySet())
 
     // Don't cleanup locked data files
     if (lockedDatatFiles != null) {
@@ -929,7 +951,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends Logging {
     lazy val messageRefsIndex = MESSAGE_REFS_INDEX_FACTORY.open(_tx, databaseRootRecord.getMessageRefsIndexPage)
     lazy val subscriptionIndex = SUBSCRIPTIONS_INDEX_FACTORY.open(_tx, databaseRootRecord.getSubscriptionIndexPage)
 
-    def addAndGet[K](index:SortedIndex[K, Integer], key:K, amount:Int):Int = {
+    def addAndGet[K](index:SortedIndex[K, jl.Integer], key:K, amount:Int):Int = {
       var counter = index.get(key)
       if( counter == null ) {
         if( amount!=0 ) {
