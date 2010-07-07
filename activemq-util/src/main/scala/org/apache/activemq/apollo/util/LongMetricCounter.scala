@@ -19,19 +19,19 @@ package org.apache.activemq.apollo.util
 import java.util.concurrent.TimeUnit
 
 /**
- * <p>A Timer collects time durations and produces a TimeMetric.</p>
+ * <p>Produces a LongMetric which track Long events</p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class TimeCounter extends MetricProducer[TimeMetric] {
+class LongMetricCounter extends MetricProducer[LongMetric] {
 
   private var max = Long.MinValue
   private var min = Long.MaxValue
   private var total = 0L
   private var count = 0
 
-  def apply(reset: Boolean):TimeMetric = {
-    val rc = TimeMetric(count, total, min, max)
+  def apply(reset: Boolean):LongMetric = {
+    val rc = LongMetric(count, total, min, max)
     if (reset) {
       clear()
     }
@@ -57,35 +57,9 @@ class TimeCounter extends MetricProducer[TimeMetric] {
     }
   }
 
-  /**
-   *
-   */
-  def time[T](func: => T): T = {
-    val startTime = System.nanoTime
-    try {
-      func
-    } finally {
-      this += System.nanoTime - startTime
-    }
-  }
-
-  /**
-   *
-   */
-  def start[T](func: ( ()=>Unit )=> T): T = {
-    val startTime = System.nanoTime
-    def endFunc():Unit = {
-      val end = System.nanoTime
-      this += System.nanoTime - startTime
-    }
-    func(endFunc)
-  }
 }
 
-case class TimeMetric(count:Int, total:Long, min:Long, max:Long) {
-  def maxTime(unit:TimeUnit) = (max).toFloat / unit.toNanos(1)
-  def minTime(unit:TimeUnit) = (min).toFloat / unit.toNanos(1)
-  def totalTime(unit:TimeUnit) = (total).toFloat / unit.toNanos(1)
-  def avgTime(unit:TimeUnit) = if( count==0 ) 0f else totalTime(unit) / count
-  def frequencyTime(unit:TimeUnit) = 1.toFloat / avgTime(unit)
+case class LongMetric(count:Long, total:Long, min:Long, max:Long) {
+  def avg = if( count==0 ) 0f else total.toFloat / count
+  def frequency = 1.toFloat / avg
 }
