@@ -20,6 +20,7 @@ import java.io.IOException;
 
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
+import org.fusesource.hawtdispatch.Dispatch;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -36,6 +37,7 @@ public class VMTransportTest {
 	@Test()
 	public void autoCreateBroker() throws Exception {
 		Transport connect = TransportFactory.connect("vm://test1?wireFormat=mock");
+        connect.setDispatchQueue(Dispatch.createQueue());
 		connect.start();
 		assertNotNull(connect);
 		connect.stop();

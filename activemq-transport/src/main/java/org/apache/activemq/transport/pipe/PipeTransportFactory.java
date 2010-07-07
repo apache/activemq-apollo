@@ -46,7 +46,6 @@ public class PipeTransportFactory implements TransportFactory.TransportFactorySP
             PipeTransportServer server = new PipeTransportServer();
             server.setConnectURI(uri);
             server.setName(node);
-            server.setWireFormatFactory(TransportFactorySupport.createWireFormatFactory(options));
             IntrospectionSupport.setProperties(server, options);
 
             if (!options.isEmpty()) {

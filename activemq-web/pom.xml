@@ -63,6 +63,11 @@
       <artifactId>jackson-xc</artifactId>
       <version>${jackson-version}</version>
     </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback-version}</version>
+    </dependency>
 
     <!-- Scala Support -->
     <dependency>

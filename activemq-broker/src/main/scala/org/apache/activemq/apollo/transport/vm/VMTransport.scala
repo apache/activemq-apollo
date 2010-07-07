@@ -158,8 +158,8 @@ class VMTransportFactory extends PipeTransportFactory with Logging {
       verify(configure(transport, options), options)
 
     } catch {
-      //      case e:URISyntaxException=>
-      //  			throw IOExceptionSupport.create(e)
+      case e:IllegalArgumentException=>
+        throw e
       case e: Exception =>
         throw IOExceptionSupport.create(e)
     }

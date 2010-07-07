@@ -386,10 +386,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     val buffer = baos.toBuffer()
     append(buffer) {
       location =>
-        executeStore(batch, update, null, location)
-    }
-    if(onComplete!=null) {
-      onComplete.run
+        executeStore(batch, update, onComplete, location)
     }
   }
 

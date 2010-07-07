@@ -121,6 +121,15 @@ class CassandraStore extends Store with BaseService with Logging {
 
   protected def _stop(onCompleted: Runnable) = {
     blocking.shutdown
+    new Thread("casandra client shutdown") {
+      override def run = {
+        while( !blocking.awaitTermination(5, TimeUnit.SECONDS) ) {
+          warn("cassandra thread pool is taking a long time to shutdown.")
+        }
+        client.stop
+        onCompleted.run
+      }
+    }.start
   }
 
 
