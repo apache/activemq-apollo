@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.util
 
 import java.io.InputStream
 import java.util.Properties
+import scala.collection.mutable.ListBuffer
 
 /**
  * <p>
@@ -26,7 +27,11 @@ import java.util.Properties
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class ClassFinder[T](path:String, loaders:Seq[ClassLoader]=Thread.currentThread.getContextClassLoader::Nil) {
+class ClassFinder[T](val path:String, val loaders:Array[ClassLoader]) {
+
+  def this(path:String) = this(path, Array(Thread.currentThread.getContextClassLoader))
+
+  def findArray(): Array[Class[T]] = find.toArray
 
   def find(): List[Class[T]] = {
     var classes = List[Class[T]]()
@@ -51,6 +56,18 @@ case class ClassFinder[T](path:String, loaders:Seq[ClassLoader]=Thread.currentTh
     }
 
     return classes.distinct
+  }
+
+  def new_instances() = {
+    val t = ListBuffer[T]()
+    find.foreach {clazz =>
+      try {
+        t += clazz.newInstance.asInstanceOf[T]
+      } catch {
+        case e: Throwable => e.printStackTrace
+      }
+    }
+    t.toList
   }
 
   private def loadProperties(is:InputStream):Properties = {

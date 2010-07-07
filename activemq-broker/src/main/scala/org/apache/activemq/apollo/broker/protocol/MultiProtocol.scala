@@ -31,9 +31,9 @@ import java.lang.String
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class MultiProtocolFactorySPI extends ProtocolFactory.SPI {
+class MultiProtocolFactory extends ProtocolFactory.Provider {
 
-  def all_protocols: Array[Protocol] = ((ProtocolFactory.spis.map(_.create())).filter(_.isIdentifiable)).toArray
+  def all_protocols: Array[Protocol] = ((ProtocolFactory.providers.map(_.create())).filter(_.isIdentifiable)).toArray
 
   def create() = {
     new MultiProtocol(()=>all_protocols)

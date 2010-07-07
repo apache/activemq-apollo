@@ -92,6 +92,10 @@ class VMTransportFactory extends PipeTransportFactory with Logging {
   }
 
   override def connect(location: String): Transport = {
+    if( !location.startsWith("vm:") ) {
+        return null;
+    }
+
     try {
       var uri = new URI(location)
       var brokerURI: String = null;

@@ -36,30 +36,24 @@ class StoreFactory
  */
 object StoreFactory {
 
-  val finder =  ClassFinder[SPI]("META-INF/services/org.apache.activemq.apollo/stores")
-  var storesSPI = List[SPI]()
-
-  trait SPI {
+  trait Provider {
     def create(config:StoreDTO):Store
     def validate(config: StoreDTO, reporter:Reporter):ReporterLevel
   }
 
-  finder.find.foreach{ clazz =>
-    try {
-      val SPI = clazz.newInstance.asInstanceOf[SPI]
-      storesSPI ::= SPI
-    } catch {
-      case e:Throwable =>
-        e.printStackTrace
-    }
+  def discover = {
+    val finder = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/store-factory.index")
+    finder.new_instances
   }
+
+  var providers = discover
 
   def create(config:StoreDTO):Store = {
     if( config == null ) {
       return null
     }
-    storesSPI.foreach { spi=>
-      val rc = spi.create(config)
+    providers.foreach { provider=>
+      val rc = provider.create(config)
       if( rc!=null ) {
         return rc
       }
@@ -72,8 +66,8 @@ object StoreFactory {
     if( config == null ) {
       return INFO
     } else {
-      storesSPI.foreach { spi=>
-        val rc = spi.validate(config, reporter)
+      providers.foreach { provider=>
+        val rc = provider.validate(config, reporter)
         if( rc!=null ) {
           return rc
         }

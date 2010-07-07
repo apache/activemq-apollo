@@ -39,27 +39,24 @@ import ReporterLevel._
  */
 object BrokerFactory {
 
-  val finder = ClassFinder[SPI]("META-INF/services/org.apache.activemq.apollo/brokers")
-  var spis = List[SPI]()
-
-  trait SPI {
+  trait Provider {
     def createBroker(brokerURI:String):Broker
   }
 
-  finder.find.foreach{ clazz =>
-    try {
-      spis ::= clazz.newInstance.asInstanceOf[SPI]
-    } catch {
-      case e:Throwable => e.printStackTrace
-    }
+  def discover = {
+    val finder = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/broker-factory.index")
+    finder.new_instances
   }
+
+  var providers = discover
+
 
   def createBroker(uri:String, start:Boolean=false):Broker = {
     if( uri == null ) {
       return null
     }
-    spis.foreach { spi=>
-      val broker = spi.createBroker(uri)
+    providers.foreach { provider=>
+      val broker = provider.createBroker(uri)
       if( broker!=null ) {
         if (start) {
           broker.start();

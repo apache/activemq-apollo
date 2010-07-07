@@ -81,7 +81,7 @@ class StompProtocolCodecFactory extends ProtocolCodecFactory {
   }
 }
 
-class StompProtocolFactorySPI extends ProtocolFactory.SPI {
+class StompProtocolFactory extends ProtocolFactory.Provider {
 
   def create() = StompProtocol
 

@@ -38,10 +38,14 @@ import static org.apache.activemq.apollo.transport.TransportFactorySupport.verif
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  * @author David Martin Clavo david(dot)martin(dot)clavo(at)gmail.com (logging improvement modifications)
  */
-public class TcpTransportFactory implements TransportFactory.TransportFactorySPI {
+public class TcpTransportFactory implements TransportFactory.Provider {
     private static final Log LOG = LogFactory.getLog(TcpTransportFactory.class);
 
     public TransportServer bind(String location) throws Exception {
+        if( !location.startsWith("tcp:") ) {
+            return null;
+        }
+
         URI uri = new URI(location);
         Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
         TcpTransportServer server = createTcpTransportServer(uri);
@@ -61,6 +65,10 @@ public class TcpTransportFactory implements TransportFactory.TransportFactorySPI
 
 
     public Transport connect(String location) throws Exception {
+        if( !location.startsWith("tcp:") ) {
+            return null;
+        }
+
         URI uri = new URI(location);
         Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
         URI localLocation = getLocalLocation(uri);

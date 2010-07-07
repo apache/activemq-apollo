@@ -34,11 +34,15 @@ import org.apache.activemq.apollo.util.IntrospectionSupport;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class PipeTransportFactory implements TransportFactory.TransportFactorySPI {
+public class PipeTransportFactory implements TransportFactory.Provider {
 
     public static final HashMap<String, PipeTransportServer> servers = new HashMap<String, PipeTransportServer>();
 
     public TransportServer bind(String location) throws URISyntaxException, IOException {
+        if( !location.startsWith("pipe:") ) {
+            return null;
+        }
+
         URI uri = new URI(location);
         Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
         String node = uri.getHost();
@@ -61,6 +65,10 @@ public class PipeTransportFactory implements TransportFactory.TransportFactorySP
     }
 
     public Transport connect(String location) throws IOException, URISyntaxException {
+        if( !location.startsWith("pipe:") ) {
+            return null;
+        }
+
         URI uri = new URI(location);
         String name = uri.getHost();
         synchronized(servers) {

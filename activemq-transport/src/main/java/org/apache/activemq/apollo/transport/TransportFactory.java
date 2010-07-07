@@ -16,11 +16,9 @@
  */
 package org.apache.activemq.apollo.transport;
 
-import org.apache.activemq.apollo.util.FactoryFinder;
-import org.apache.activemq.apollo.util.IOExceptionSupport;
+import org.apache.activemq.apollo.util.ClassFinder;
 
-import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
 
 /**
  *
@@ -28,57 +26,50 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class TransportFactory {
 
-    private static final FactoryFinder TRANSPORT_FACTORY_FINDER = new FactoryFinder("META-INF/services/org.apache.activemq.apollo/transports/");
-    private static final ConcurrentHashMap<String, TransportFactorySPI> TRANSPORT_FACTORYS = new ConcurrentHashMap<String, TransportFactorySPI>();
-
-    public interface TransportFactorySPI {
+    public interface Provider {
         public TransportServer bind(String location) throws Exception;
         public Transport connect(String location) throws Exception;
     }
-    
-    /**
-     */
-    private static TransportFactorySPI factory(String location) throws IOException {
-        String scheme = FactoryFinder.getScheme(location);
-        if (scheme == null) {
-            throw new IOException("Transport not scheme specified: [" + location + "]");
-        }
-        TransportFactorySPI tf = TRANSPORT_FACTORYS.get(scheme);
-        if (tf == null) {
-            // Try to load if from a META-INF property.
+
+    static public ArrayList<Provider> providers;
+
+    static {
+        ClassFinder<Provider> finder = new ClassFinder<Provider>("META-INF/services/org.apache.activemq.apollo/transport-factory.index");
+        ArrayList<Provider> t = new ArrayList<Provider>();
+        for( Class<Provider> clazz: finder.findArray() ) {
             try {
-                tf = (TransportFactorySPI)TRANSPORT_FACTORY_FINDER.newInstance(scheme);
-                TRANSPORT_FACTORYS.put(scheme, tf);
-            } catch (Throwable e) {
-                throw IOExceptionSupport.create("Transport scheme NOT recognized: [" + scheme + "]", e);
+              t.add( clazz.newInstance() );
+            } catch(Throwable e) {
+              e.printStackTrace();
             }
         }
-        return tf;
-    }
-
-
-     /**
-      * Allow registration of a transport factory without wiring via META-INF classes
-     * @param scheme
-     * @param tf
-     */
-    public static void registerTransportFactory(String scheme, TransportFactorySPI tf) {
-        TRANSPORT_FACTORYS.put(scheme, tf);
+        providers = t;
     }
 
     /**
      * Creates a client transport.
      */
     public static Transport connect(String location) throws Exception {
-        return factory(location).connect(location);
+        for( Provider provider : providers) {
+          Transport rc = provider.connect(location);
+          if( rc!=null ) {
+            return rc;
+          }
+        }
+        throw new IllegalArgumentException("Unknown transport connect uri: "+location);
     }
 
     /**
      * Creates a transport server.
      */
     public static TransportServer bind(String location) throws Exception {
-        return factory(location).bind(location);
+        for( Provider spi : providers) {
+          TransportServer rc = spi.bind(location);
+          if( rc!=null ) {
+            return rc;
+          }
+        }
+        throw new IllegalArgumentException("Unknown transport bind uri: "+location);
     }
-
 
 }

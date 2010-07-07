@@ -31,25 +31,21 @@ import org.apache.activemq.apollo.transport._
  */
 object ProtocolFactory {
 
-  trait SPI {
+  trait Provider {
     def create():Protocol
     def create(config:String):Protocol
   }
 
-  val finder =  ClassFinder[SPI]("META-INF/services/org.apache.activemq.apollo/protocols")
-  var spis = List[SPI]()
-
-  finder.find.foreach{ clazz =>
-    try {
-      spis ::= clazz.newInstance.asInstanceOf[SPI]
-    } catch {
-      case e:Throwable => e.printStackTrace
-    }
+  def discover = {
+    val finder = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/protocol-factory.index")
+    finder.new_instances
   }
 
+  var providers = discover
+
   def get(name:String):Option[Protocol] = {
-    spis.foreach { spi=>
-      val rc = spi.create(name)
+    providers.foreach { provider=>
+      val rc = provider.create(name)
       if( rc!=null ) {
         return Some(rc)
       }

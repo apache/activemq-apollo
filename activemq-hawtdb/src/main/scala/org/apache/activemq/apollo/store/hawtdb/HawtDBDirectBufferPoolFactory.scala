@@ -31,7 +31,7 @@ import org.apache.activemq.apollo.util.DirectBufferPoolFactory
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBDirectBufferPoolSPI extends DirectBufferPoolFactory.SPI {
+class HawtDBDirectBufferPoolFactory extends DirectBufferPoolFactory.SPI {
 
   val prefix: String = "hawtdb:"
 

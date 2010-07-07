@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.util
 
+import scala.collection.mutable.ListBuffer
+
 /**
  * <p>
  * </p>
@@ -24,28 +26,24 @@ package org.apache.activemq.apollo.util
  */
 object DirectBufferPoolFactory {
 
-  val finder = ClassFinder[SPI]("META-INF/services/org.apache.activemq.apollo/direct-buffer-pools")
-  var spis = List[SPI]()
-
-  trait SPI {
+  trait Provider {
     def create(config:String):DirectBufferPool
     def validate(config: String):Boolean
   }
 
-  finder.find.foreach{ clazz =>
-    try {
-      spis ::= clazz.newInstance.asInstanceOf[SPI]
-    } catch {
-      case e:Throwable => e.printStackTrace
-    }
+  def discover = {
+    val finder = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/direct-buffer-pool-factory.index")
+    finder.new_instances
   }
+
+  var providers = discover
 
   def create(config:String):DirectBufferPool = {
     if( config == null ) {
       return null
     }
-    spis.foreach { spi=>
-      val rc = spi.create(config)
+    providers.foreach { provider=>
+      val rc = provider.create(config)
       if( rc!=null ) {
         return rc
       }
@@ -58,8 +56,8 @@ object DirectBufferPoolFactory {
     if( config == null ) {
       return true
     } else {
-      spis.foreach { spi=>
-        if( spi.validate(config) ) {
+      providers.foreach { provider=>
+        if( provider.validate(config) ) {
           return true
         }
       }

@@ -14,38 +14,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.store.cassandra
+package org.apache.activemq.apollo.store.hawtdb
 
 import org.apache.activemq.apollo.store.StoreFactory
-import org.apache.activemq.apollo.dto.{CassandraStoreDTO, StoreDTO}
+import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, StoreDTO}
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
 
 /**
  * <p>
- * Hook to use a CassandraStore when a CassandraStoreDTO is
+ * Hook to use a HawtDBStore when a HawtDBStoreDTO is
  * used in a broker configuration.
  * </p>
  * <p>
  * This class is discovered using the following resource file:
  * <code>META-INF/services/org.apache.activemq.apollo/stores</code>
  * </p>
- *
+ * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class CassandraStoreSPI extends StoreFactory.SPI {
+class HawtDBStoreFactory extends StoreFactory.SPI {
 
   def create(config: StoreDTO) = {
-    if( config.isInstanceOf[CassandraStoreDTO]) {
-      new CassandraStore
+    if( config.isInstanceOf[HawtDBStoreDTO]) {
+      new HawtDBStore
     } else {
       null
     }
   }
 
    def validate(config: StoreDTO, reporter:Reporter):ReporterLevel = {
-     if( config.isInstanceOf[CassandraStoreDTO]) {
-       CassandraStore.validate(config.asInstanceOf[CassandraStoreDTO], reporter)
+     if( config.isInstanceOf[HawtDBStoreDTO]) {
+       HawtDBStore.validate(config.asInstanceOf[HawtDBStoreDTO], reporter)
      } else {
        null
      }
