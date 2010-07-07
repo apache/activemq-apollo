@@ -241,6 +241,7 @@ class CassandraStore extends Store with BaseService with Logging {
 
     val txid:Int = next_tx_id.getAndIncrement
     var actions = Map[Long, MessageAction]()
+    var flushing= false
 
     var flushListeners = ListBuffer[Runnable]()
     def eagerFlush(callback: Runnable) = if( callback!=null ) { this.synchronized { flushListeners += callback } }
@@ -263,6 +264,9 @@ class CassandraStore extends Store with BaseService with Logging {
       this.synchronized {
         actions += record.key -> action
       }
+      dispatchQueue {
+        pendingStores.put(record.key, action)
+      }
       record.key
     }
 
@@ -279,7 +283,11 @@ class CassandraStore extends Store with BaseService with Logging {
 
     def enqueue(entry: QueueEntryRecord) = {
       this.synchronized {
-        action(entry.messageKey).enqueues += entry
+        val a = action(entry.messageKey)
+        a.enqueues += entry
+        dispatchQueue {
+          pendingEnqueues.put(key(entry), a)
+        }
       }
     }
 
@@ -321,19 +329,12 @@ class CassandraStore extends Store with BaseService with Logging {
       delayedTransactions.put(tx_id, tx)
 
       tx.actions.foreach { case (msg, action) =>
-        if( action.store!=null ) {
-          pendingStores.put(msg, action)
-        }
-        action.enqueues.foreach { queueEntry=>
-          pendingEnqueues.put(key(queueEntry), action)
-        }
-
 
         // dequeues can cancel out previous enqueues
         action.dequeues.foreach { currentDequeue=>
           val currentKey = key(currentDequeue)
           val prevAction:CassandraBatch#MessageAction = pendingEnqueues.remove(currentKey)
-          if( prevAction!=null ) {
+          if( prevAction!=null && !prevAction.tx.flushing ) {
 
             // yay we can cancel out a previous enqueue
             prevAction.enqueues = prevAction.enqueues.filterNot( x=> key(x) == currentKey )
@@ -386,17 +387,7 @@ class CassandraStore extends Store with BaseService with Logging {
       // Message may be flushed or canceled before the timeout flush event..
       // tx may be null in those cases
       if (tx!=null) {
-
-        tx.actions.foreach { case (msg, action) =>
-          if( action.store!=null ) {
-            pendingStores.remove(msg)
-          }
-          action.enqueues.foreach { queueEntry=>
-            val k = key(queueEntry)
-            pendingEnqueues.remove(k)
-          }
-        }
-
+        tx.flushing = true
         Some(tx)
       } else {
         None
@@ -409,8 +400,19 @@ class CassandraStore extends Store with BaseService with Logging {
           client.store(txs)
           dispatchQueue {
             end()
-            txs.foreach { x=>
-              x.onPerformed
+            txs.foreach { tx=>
+
+              tx.actions.foreach { case (msg, action) =>
+                if( action.store!=null ) {
+                  pendingStores.remove(msg)
+                }
+                action.enqueues.foreach { queueEntry=>
+                  val k = key(queueEntry)
+                  pendingEnqueues.remove(k)
+                }
+              }
+
+              tx.onPerformed
             }
           }
         }

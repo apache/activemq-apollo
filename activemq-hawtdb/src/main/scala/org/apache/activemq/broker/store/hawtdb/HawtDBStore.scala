@@ -173,18 +173,15 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     }
   }
 
-  private def doFlush(id: Long, callback:Runnable) = {
+  def flushMessage(id: Long)(cb: => Unit) = dispatchQueue {
     val action: HawtDBBatch#MessageAction = pendingStores.get(id)
     if( action == null ) {
-      callback.run
+//      println("flush due to not found: "+id)
+      cb
     } else {
-      action.tx.eagerFlush(callback)
+      action.tx.eagerFlush(^{ cb })
       flush(action.tx.txid)
     }
-  }
-  
-  def flushMessage(id: Long)(callback: => Unit) = dispatchQueue {
-    doFlush(id, ^{ callback } )
   }
 
   def createStoreBatch() = new HawtDBBatch
@@ -198,6 +195,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   class HawtDBBatch extends BaseRetained with StoreBatch {
 
     var dispose_start:Long = 0
+    var flushing = false;
 
     class MessageAction {
 
@@ -240,6 +238,10 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
       this.synchronized {
         actions += record.key -> action
       }
+      dispatchQueue {
+        pendingStores.put(record.key, action)
+      }
+
       record.key
     }
 
@@ -255,9 +257,15 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     }
 
     def enqueue(entry: QueueEntryRecord) = {
+
       this.synchronized {
-        action(entry.messageKey).enqueues += entry
+        val a = action(entry.messageKey)
+        a.enqueues += entry
+        dispatchQueue {
+          pendingEnqueues.put(key(entry), a)
+        }
       }
+
     }
 
     def dequeue(entry: QueueEntryRecord) = {
@@ -355,19 +363,12 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
       delayedTransactions.put(tx.txid, tx)
 
       tx.actions.foreach { case (msg, action) =>
-        if( action.messageRecord!=null ) {
-          pendingStores.put(msg, action)
-        }
-        action.enqueues.foreach { queueEntry=>
-          pendingEnqueues.put(key(queueEntry), action)
-        }
-
 
         // dequeues can cancel out previous enqueues
         action.dequeues.foreach { currentDequeue=>
           val currentKey = key(currentDequeue)
           val prevAction:HawtDBBatch#MessageAction = pendingEnqueues.remove(currentKey)
-          if( prevAction!=null ) {
+          if( prevAction!=null && !prevAction.tx.flushing ) {
 
             metric_canceled_enqueue_counter += 1
 
@@ -422,22 +423,12 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     }
     
     val txs = flush_source.getData.flatMap{ tx_id =>
+
       val tx = delayedTransactions.remove(tx_id)
       // Message may be flushed or canceled before the timeout flush event..
       // tx may be null in those cases
       if (tx!=null) {
-        tx.actions.foreach { case (msg, action) =>
-          if( action.messageRecord !=null ) {
-            metric_flushed_message_counter += 1
-            pendingStores.remove(msg)
-          }
-          action.enqueues.foreach { queueEntry=>
-            metric_flushed_enqueue_counter += 1
-            val k = key(queueEntry)
-            pendingEnqueues.remove(k)
-          }
-        }
-
+        tx.flushing = true
         Some(tx)
       } else {
         None
@@ -448,9 +439,23 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
       storeLatency.start { end=>
         client.store(txs, ^{
           dispatchQueue {
+
             end()
             txs.foreach { tx=>
+
+              tx.actions.foreach { case (msg, action) =>
+                if( action.messageRecord !=null ) {
+                  metric_flushed_message_counter += 1
+                  pendingStores.remove(msg)
+                }
+                action.enqueues.foreach { queueEntry=>
+                  metric_flushed_enqueue_counter += 1
+                  val k = key(queueEntry)
+                  pendingEnqueues.remove(k)
+                }
+              }
               tx.onPerformed
+
             }
           }
         })
