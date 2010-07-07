@@ -29,7 +29,7 @@ import Stomp.Headers._
 
 import BufferConversions._
 import _root_.scala.collection.JavaConversions._
-import StompFrameConstants._;
+import StompFrameConstants._
 
 
 /**
@@ -54,18 +54,20 @@ class StompWireFormatFactory extends WireFormatFactory {
     }
 }
 
-object StompWireFormat {
+object StompWireFormat extends Log {
     val READ_BUFFFER_SIZE = 1024*64;
     val MAX_COMMAND_LENGTH = 1024;
     val MAX_HEADER_LENGTH = 1024 * 10;
     val MAX_HEADERS = 1000;
     val MAX_DATA_LENGTH = 1024 * 1024 * 100;
-    val TRIM=false
+    val TRIM=true
     val SIZE_CHECK=false
   }
 
-class StompWireFormat extends WireFormat {
+class StompWireFormat extends WireFormat with DispatchLogging {
+
   import StompWireFormat._
+  protected def log: Log = StompWireFormat
 
   implicit def wrap(x: Buffer) = ByteBuffer.wrap(x.data, x.offset, x.length);
   implicit def wrap(x: Byte) = {
@@ -147,6 +149,8 @@ class StompWireFormat extends WireFormat {
       while( rc == null && end!=buffer.position ) {
         rc = next_action(buffer)
       }
+
+//      trace("unmarshalled: "+rc+", start: "+start+", end: "+end+", buffer position: "+buffer.position)
       rc
     }
 

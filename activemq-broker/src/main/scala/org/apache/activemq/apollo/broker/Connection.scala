@@ -27,221 +27,149 @@ import _root_.org.apache.activemq.util.{FactoryFinder, IOExceptionSupport}
 import _root_.org.apache.activemq.wireformat.WireFormat
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import java.util.concurrent.atomic.AtomicLong
+import org.fusesource.hawtdispatch.Dispatch
 
-abstract class Connection() extends TransportListener with Service {
+object Connection extends Log {
+  val id_generator = new AtomicLong()
+  def next_id = "connection:"+id_generator.incrementAndGet
+}
 
-  val dispatchQueue = createQueue("connection")
+abstract class Connection() extends TransportListener with Service  with DispatchLogging {
+
+  override protected def log = Connection
+
+  import Connection._
+  val id = next_id
+  val dispatchQueue = createQueue(id)
+  dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
+  
   var name = "connection"
   var stopping = false;
 
   var transport:Transport = null
-  var exceptionListener:ExceptionListener = null;
 
-  def start() = ^{
+  def start() = {
     transport.setDispatchQueue(dispatchQueue);
     transport.setTransportListener(Connection.this);
     transport.start()
-  } ->: dispatchQueue
+  }
 
-  def stop() = ^{
+  def stop() = {
     stopping=true
     transport.stop()
     dispatchQueue.release
-  } ->: dispatchQueue
+  }
 
-  def onException(error:IOException) = {
+  def onTransportFailure(error:IOException) = {
     if (!stopping) {
         onFailure(error);
     }
   }
 
   def onFailure(error:Exception) = {
-    if (exceptionListener != null) {
-        exceptionListener.exceptionThrown(error);
-    }
+    warn(error)
+    transport.stop
   }
 
-  def onDisconnected() = {
+  def onTransportDisconnected() = {
   }
 
-  def onConnected() = {
+  def onTransportConnected() = {
   }
 
 }
 
-object BrokerConnection extends Log {
-  val id_generator = new AtomicLong()
-}
+class BrokerConnection(val broker: Broker) extends Connection {
 
-class BrokerConnection(val broker: Broker) extends Connection with Logging {
-
-  override protected def log = BrokerConnection
-  override protected def log_map(message:String) = "connection:"+id+" | "+message
-
-  import BrokerConnection._
-
+  var protocol = "stomp"
   var protocolHandler: ProtocolHandler = null;
-  val id = id_generator.incrementAndGet
 
-  exceptionListener = new ExceptionListener() {
-    def exceptionThrown(error:Exception) = {
-      info("Transport failed before messaging protocol was initialized.", error);
-      stop()
+  override def start() = {
+    protocolHandler = ProtocolHandlerFactory.createProtocolHandler(protocol)
+    protocolHandler.setConnection(this);
+    super.start
+  }
+
+  override def onTransportConnected() = protocolHandler.onTransportConnected
+
+  override def onTransportDisconnected() = protocolHandler.onTransportDisconnected
+
+  def onTransportCommand(command: Object) = {
+    try {
+      protocolHandler.onTransportCommand(command);
+    } catch {
+      case e:Exception =>
+        onFailure(e)
     }
   }
 
-
-  def onCommand(command: Object) = {
-    if (protocolHandler != null) {
-      protocolHandler.onCommand(command);
-    } else {
-      try {
-        var wireformat:WireFormat = null;
-
-        if (command.isInstanceOf[WireFormat]) {
-
-          // First command might be from the wire format decriminator, letting
-          // us know what the actually wireformat is.
-          wireformat = command.asInstanceOf[WireFormat];
-
-          try {
-            protocolHandler = ProtocolHandlerFactory.createProtocolHandler(wireformat.getName());
-          } catch {
-            case e:Exception=>
-            throw IOExceptionSupport.create("No protocol handler available for: " + wireformat.getName(), e);
-          }
-
-          protocolHandler.setConnection(this);
-          protocolHandler.setWireFormat(wireformat);
-          protocolHandler.start();
-
-          exceptionListener = new ExceptionListener() {
-            def exceptionThrown(error:Exception) {
-              protocolHandler.onException(error);
-            }
-          }
-          protocolHandler.onCommand(command);
-
-        } else {
-          throw new IOException("First command should be a WireFormat");
-        }
-
-      } catch {
-        case e:Exception =>
-        onFailure(e);
-      }
-    }
-  }
-
-  override def stop() = {
-    super.stop();
-    if (protocolHandler != null) {
-      protocolHandler.stop();
-    }
-  }
+  override def onTransportFailure(error: IOException) = protocolHandler.onTransportFailure(error)
 }
 
+class ProtocolException(message:String, e:Throwable=null) extends Exception(message, e) 
+
+class MultiProtocolHandler extends ProtocolHandler {
+
+  var connected = false
+
+  def onTransportCommand(command:Any) = {
+
+    if (!command.isInstanceOf[WireFormat]) {
+      throw new ProtocolException("First command should be a WireFormat");
+    }
+
+    var wireformat:WireFormat = command.asInstanceOf[WireFormat];
+    val protocol = wireformat.getName()
+    val protocolHandler = try {
+      // Create the new protocol handler..
+       ProtocolHandlerFactory.createProtocolHandler(protocol);
+    } catch {
+      case e:Exception=>
+      throw new ProtocolException("No protocol handler available for protocol: " + protocol, e);
+    }
+    protocolHandler.setConnection(connection);
+
+    // replace the current handler with the new one.
+    connection.protocol = protocol
+    connection.protocolHandler = protocolHandler
+    connection.transport.suspendRead
+    protocolHandler.onTransportConnected
+  }
+
+  override def onTransportConnected = {
+    connection.transport.resumeRead
+  }
+
+}
 
 object ProtocolHandlerFactory {
-    val PROTOCOL_HANDLER_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/broker/protocol/");
+    val PROTOCOL_HANDLER_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/apollo/broker/protocol/");
 
     def createProtocolHandler(protocol:String) = {
         PROTOCOL_HANDLER_FINDER.newInstance(protocol).asInstanceOf[ProtocolHandler]
     }
 }
 
-trait ProtocolHandler extends Service {
+trait ProtocolHandler extends TransportListener {
 
-    def onCommand(command:Any);
-    def setConnection(brokerConnection:BrokerConnection);
-    def setWireFormat(wireformat:WireFormat);
-    def onException(error:Exception);
+  var connection:BrokerConnection = null;
 
-// TODO:
-//    public void setConnection(BrokerConnection connection);
-//
-//    public BrokerConnection getConnection();
-//
-//    public void onCommand(Object command);
-//
-//    public void onException(Exception error);
-//
-//    public void setWireFormat(WireFormat wf);
-//
-//    public BrokerMessageDelivery createMessageDelivery(MessageRecord record) throws IOException;
-//
-//    /**
-//     * ClientContext
-//     * <p>
-//     * Description: Base interface describing a channel on a physical
-//     * connection.
-//     * </p>
-//     *
-//     * @author cmacnaug
-//     * @version 1.0
-//     */
-//    public interface ClientContext {
-//        public ClientContext getParent();
-//
-//        public Collection<ClientContext> getChildren();
-//
-//        public void addChild(ClientContext context);
-//
-//        public void removeChild(ClientContext context);
-//
-//        public void close();
-//
-//    }
-//
-//    public abstract class AbstractClientContext<E extends MessageDelivery> extends AbstractLimitedFlowResource<E> implements ClientContext {
-//        protected final HashSet<ClientContext> children = new HashSet<ClientContext>();
-//        protected final ClientContext parent;
-//        protected boolean closed = false;
-//
-//        public AbstractClientContext(String name, ClientContext parent) {
-//            super(name);
-//            this.parent = parent;
-//            if (parent != null) {
-//                parent.addChild(this);
-//            }
-//        }
-//
-//        public ClientContext getParent() {
-//            return parent;
-//        }
-//
-//        public void addChild(ClientContext child) {
-//            if (!closed) {
-//                children.add(child);
-//            }
-//        }
-//
-//        public void removeChild(ClientContext child) {
-//            if (!closed) {
-//                children.remove(child);
-//            }
-//        }
-//
-//        public Collection<ClientContext> getChildren() {
-//            return children;
-//        }
-//
-//        public void close() {
-//
-//            closed = true;
-//
-//            for (ClientContext c : children) {
-//                c.close();
-//            }
-//
-//            if (parent != null) {
-//                parent.removeChild(this);
-//            }
-//
-//            super.close();
-//        }
-//    }
-//
+  def setConnection(brokerConnection:BrokerConnection) = {
+    this.connection = brokerConnection
+  }
+
+  def onTransportCommand(command:Any);
+
+  def onTransportFailure(error:IOException) = {
+    connection.stop()
+  }
+
+  def onTransportDisconnected() = {
+  }
+
+  def onTransportConnected() = {
+  }
+
 }
 
 trait ConsumerContext { // extends ClientContext, Subscription<MessageDelivery>, IFlowSink<MessageDelivery> {

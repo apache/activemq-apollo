@@ -66,7 +66,7 @@ class StompRemoteConsumer extends RemoteConsumer {
         transport.oneway(frame);
     }
 
-    def onCommand(command:Object) = {
+    def onTransportCommand(command:Object) = {
       var frame = command.asInstanceOf[StompFrame]
       frame match {
         case StompFrame(Responses.CONNECTED, headers, _) =>
@@ -140,7 +140,7 @@ class StompRemoteProducer extends RemoteProducer {
       transport.oneway(StompFrame(Stomp.Commands.CONNECT), send_next);
     }
 
-    def onCommand(command:Object) = {
+    def onTransportCommand(command:Object) = {
       var frame = command.asInstanceOf[StompFrame]
       frame match {
         case StompFrame(Responses.CONNECTED, headers, _) =>

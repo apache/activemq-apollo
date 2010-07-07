@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo.broker.perf
 
 import _root_.java.beans.ExceptionListener
-import _root_.java.io.{File}
 import _root_.java.net.URI
 import _root_.java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import _root_.java.util.concurrent.TimeUnit
@@ -33,6 +32,7 @@ import org.apache.activemq.transport.TransportFactory
 
 import _root_.scala.collection.JavaConversions._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import java.io.{IOException, File}
 
 
 abstract class RemoteConsumer extends Connection {
@@ -43,6 +43,7 @@ abstract class RemoteConsumer extends Connection {
   var selector: String = null;
   var durable = false;
   var uri: String = null
+  var brokerPerfTest:BaseBrokerPerfTest = null
 
   override def start() = {
     consumerRate.name("Consumer " + name + " Rate");
@@ -52,8 +53,15 @@ abstract class RemoteConsumer extends Connection {
   }
 
 
-  override def onConnected() = {
+  override def onTransportConnected() = {
     setupSubscription();
+  }
+
+  override def onTransportFailure(error: IOException) = {
+    if (!brokerPerfTest.stopping.get()) {
+      System.err.println("Client Async Error:");
+      error.printStackTrace();
+    }
   }
 
   protected def setupSubscription()
@@ -79,6 +87,14 @@ abstract class RemoteProducer extends Connection {
   var filler: String = null
   var payloadSize = 20
   var uri: String = null
+  var brokerPerfTest:BaseBrokerPerfTest = null
+
+  override def onTransportFailure(error: IOException) = {
+    if (!brokerPerfTest.stopping.get()) {
+      System.err.println("Client Async Error:");
+      error.printStackTrace();
+    }
+  }
 
   override def start() = {
 
@@ -98,7 +114,7 @@ abstract class RemoteProducer extends Connection {
 
   }
 
-  override def onConnected() = {
+  override def onTransportConnected() = {
     setupProducer();
   }
 
@@ -171,7 +187,7 @@ abstract class BaseBrokerPerfTest {
   protected var rcvBroker: Broker = null
   protected val brokers = new ArrayList[Broker]()
   protected val msgIdGenerator = new AtomicLong()
-  protected val stopping = new AtomicBoolean()
+  val stopping = new AtomicBoolean()
 
   val producers = new ArrayList[RemoteProducer]()
   val consumers = new ArrayList[RemoteConsumer]()
@@ -540,14 +556,7 @@ abstract class BaseBrokerPerfTest {
   def createConsumer(i: Int, destination: Destination): RemoteConsumer = {
 
     var consumer = createConsumer();
-    consumer.exceptionListener = new ExceptionListener() {
-      def exceptionThrown(error: Exception) = {
-        if (!stopping.get()) {
-          System.err.println("Consumer Async Error:");
-          error.printStackTrace();
-        }
-      }
-    }
+    consumer.brokerPerfTest = this
 
     consumer.uri = rcvBroker.connectUris.head
     consumer.destination = destination
@@ -560,14 +569,7 @@ abstract class BaseBrokerPerfTest {
 
   private def createProducer(id: Int, destination: Destination): RemoteProducer = {
     var producer = createProducer();
-    producer.exceptionListener = new ExceptionListener() {
-      def exceptionThrown(error: Exception) = {
-        if (!stopping.get()) {
-          System.err.println("Producer Async Error:");
-          error.printStackTrace();
-        }
-      }
-    }
+    producer.brokerPerfTest = this
     producer.uri = sendBroker.connectUris.head
     producer.producerId = id + 1
     producer.name = "producer" + (id + 1)

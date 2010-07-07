@@ -29,7 +29,7 @@ public class DefaultTransportListener implements TransportListener {
      * 
      * @param command
      */
-    public void onCommand(Object command) {
+    public void onTransportCommand(Object command) {
     }
 
     /**
@@ -37,20 +37,20 @@ public class DefaultTransportListener implements TransportListener {
      * 
      * @param error
      */
-    public void onException(IOException error) {
+    public void onTransportFailure(IOException error) {
     }
 
     /**
      * The transport has been connected.
      */
-    public void onConnected() {
+    public void onTransportConnected() {
     }
 
     /**
      * The transport has suffered a disconnection from
      * which it hopes to recover
      */
-    public void onDisconnected() {
+    public void onTransportDisconnected() {
     }
 
 }

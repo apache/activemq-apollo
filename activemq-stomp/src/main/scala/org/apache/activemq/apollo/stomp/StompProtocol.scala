@@ -28,7 +28,8 @@ import AsciiBuffer._
 import Stomp._
 import BufferConversions._
 import StompFrameConstants._
-import org.apache.activemq.transport.CompletionCallback;
+import org.apache.activemq.transport.CompletionCallback
+import java.io.IOException
 
 
 class StompProtocolException(msg:String) extends Exception(msg)
@@ -53,16 +54,11 @@ import StompConstants._
 
 object StompProtocolHandler extends Log
 
-class StompProtocolHandler extends ProtocolHandler with Logging {
+class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   override protected def log = StompProtocolHandler
-  override protected def log_map(message:String) = {
-    if( connection==null )
-      message
-    else
-      "connection:"+connection.id+" | "+message
-  }
-
+  
+  protected def dispatchQueue:DispatchQueue = connection.dispatchQueue
 
   class SimpleConsumer(val dest:AsciiBuffer) extends BaseRetained with DeliveryConsumer {
 
@@ -93,13 +89,10 @@ class StompProtocolHandler extends ProtocolHandler with Logging {
     }
   }
 
-  def dispatchQueue = connection.dispatchQueue
   val outboundChannel = new DeliveryBuffer
   var closed = false
   var consumer:SimpleConsumer = null
 
-  var connection:BrokerConnection = null
-  var wireformat:WireFormat = null
   var producerRoute:DeliveryProducerRoute=null
   var host:VirtualHost = null
 
@@ -111,7 +104,7 @@ class StompProtocolHandler extends ProtocolHandler with Logging {
           outboundChannel.ack(delivery)
         }
         def onFailure(e:Exception) = {
-          StompProtocolHandler.this.onException(e)
+          connection.onFailure(e)
         }
       });
     }
@@ -119,15 +112,7 @@ class StompProtocolHandler extends ProtocolHandler with Logging {
 
   private def queue = connection.dispatchQueue
 
-  def setConnection(connection:BrokerConnection) = {
-    this.connection = connection
-  }
-
-  def setWireFormat(wireformat:WireFormat) = { this.wireformat = wireformat}
-
-  def start = {
-    info("start")
-    connection.transport.suspendRead
+  override def onTransportConnected() = {
     connection.broker.runtime.getDefaultVirtualHost(
       queue.wrap { (host)=>
         info("got host.. resuming")
@@ -137,7 +122,8 @@ class StompProtocolHandler extends ProtocolHandler with Logging {
     )
   }
 
-  def stop = {
+
+  override def onTransportDisconnected() = {
     if( !closed ) {
       info("stop")
       closed=true;
@@ -149,13 +135,11 @@ class StompProtocolHandler extends ProtocolHandler with Logging {
         host.router.unbind(consumer.dest, consumer::Nil)
         consumer=null
       }
-      connection.stop
     }
   }
 
 
-  def onCommand(command:Any) = {
-    info("got command: %s", command)
+  def onTransportCommand(command:Any) = {
     try {
       command match {
         case StompFrame(Commands.SEND, headers, content) =>
@@ -163,11 +147,14 @@ class StompProtocolHandler extends ProtocolHandler with Logging {
         case StompFrame(Commands.ACK, headers, content) =>
           // TODO:
         case StompFrame(Commands.SUBSCRIBE, headers, content) =>
+          info("got command: %s", command)
           on_stomp_subscribe(headers)
         case StompFrame(Commands.CONNECT, headers, _) =>
+          info("got command: %s", command)
           on_stomp_connect(headers)
         case StompFrame(Commands.DISCONNECT, headers, content) =>
-          stop
+          info("got command: %s", command)
+          connection.stop
         case s:StompWireFormat =>
           // this is passed on to us by the protocol discriminator
           // so we know which wire format is being used.
@@ -255,13 +242,13 @@ class StompProtocolHandler extends ProtocolHandler with Logging {
   }
 
   def on_stomp_subscribe(headers:HeaderMap) = {
-    println("Consumer on "+Thread.currentThread.getName)
     get(headers, Headers.Subscribe.DESTINATION) match {
       case Some(dest)=>
         if( consumer !=null ) {
           die("Only one subscription supported.")
 
         } else {
+          info("subscribing to: %s", dest)
           consumer = new SimpleConsumer(dest);
           host.router.bind(dest, consumer :: Nil)
           consumer.release
@@ -273,19 +260,17 @@ class StompProtocolHandler extends ProtocolHandler with Logging {
   }
 
   private def die(msg:String) = {
-    println("Shutting connection down due to: "+msg)
+    info("Shutting connection down due to: "+msg)
     connection.transport.suspendRead
     connection.transport.oneway(StompFrame(Responses.ERROR, Nil, ascii(msg)))
     ^ {
-      stop
+      connection.stop()
     } ->: queue
   }
 
-  def onException(error:Exception) = {
-    println("Shutting connection down due to: "+error)
-    error.printStackTrace
-    stop
+  override def onTransportFailure(error: IOException) = {
+    info(error, "Shutting connection down due to: %s", error)
+    super.onTransportFailure(error);
   }
-
 }
 

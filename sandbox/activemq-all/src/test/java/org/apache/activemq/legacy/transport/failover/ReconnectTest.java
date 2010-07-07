@@ -38,7 +38,7 @@ import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.legacy.broker.TransportConnector;
 import org.apache.activemq.transport.mock.MockTransport;
 import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.activemq.transport.TransportListener;
+import org.apache.activemq.apollo.transport.TransportListener;
 import org.apache.activemq.util.ServiceStopper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

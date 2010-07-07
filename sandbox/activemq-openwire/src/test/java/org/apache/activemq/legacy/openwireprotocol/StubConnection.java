@@ -30,7 +30,7 @@ import org.apache.activemq.command.ShutdownInfo;
 
 import org.apache.activemq.transport.DefaultTransportListener;
 import org.apache.activemq.transport.ResponseCorrelator;
-import org.apache.activemq.transport.Transport;
+import org.apache.activemq.apollo.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.util.JMSExceptionSupport;
 import org.apache.activemq.util.ServiceSupport;

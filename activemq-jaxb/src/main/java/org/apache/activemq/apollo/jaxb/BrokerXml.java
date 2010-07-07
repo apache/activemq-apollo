@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.jaxb;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 

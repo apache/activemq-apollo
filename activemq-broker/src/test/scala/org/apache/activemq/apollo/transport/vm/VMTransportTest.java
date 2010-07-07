@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo.transport.vm;
 
 import java.io.IOException;
-import java.net.URI;
 
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;

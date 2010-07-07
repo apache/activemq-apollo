@@ -29,22 +29,22 @@ public interface TransportListener {
      * called to process a command
      * @param command
      */
-    void onCommand(Object command);
+    void onTransportCommand(Object command);
     /**
      * An unrecoverable exception has occured on the transport
      * @param error
      */
-    void onException(IOException error);
+    void onTransportFailure(IOException error);
     
     /**
      * The transport has been connected.
      */
-    public void onConnected();
+    public void onTransportConnected();
 
     /**
      * The transport has suffered a disconnection from
      * which it hopes to recover
      */
-    public void onDisconnected();
+    public void onTransportDisconnected();
 
 }

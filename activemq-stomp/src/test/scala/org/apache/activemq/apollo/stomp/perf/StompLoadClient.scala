@@ -36,7 +36,7 @@ object StompLoadClient {
   import StompLoadClient._
   implicit def toAsciiBuffer(value: String) = new AsciiBuffer(value)
 
-  var producerSleep = 1000*30;
+  var producerSleep = 0;
   var consumerSleep = 0;
   var producers = 1;
   var consumers = 1;
@@ -158,6 +158,7 @@ object StompLoadClient {
 """)
         client.flush
         client.receive("CONNECTED")
+
         proc(client)
       } catch {
         case e: Throwable =>

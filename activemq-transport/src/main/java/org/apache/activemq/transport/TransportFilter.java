@@ -96,8 +96,8 @@ public class TransportFilter implements TransportListener, Transport {
         next.stop();
     }
 
-    public void onCommand(Object command) {
-        transportListener.onCommand(command);
+    public void onTransportCommand(Object command) {
+        transportListener.onTransportCommand(command);
     }
 
 
@@ -115,16 +115,16 @@ public class TransportFilter implements TransportListener, Transport {
     }
 
 
-    public void onException(IOException error) {
-        transportListener.onException(error);
+    public void onTransportFailure(IOException error) {
+        transportListener.onTransportFailure(error);
     }
 
-    public void onDisconnected() {
-        transportListener.onDisconnected();
+    public void onTransportDisconnected() {
+        transportListener.onTransportDisconnected();
     }
 
-    public void onConnected() {
-        transportListener.onConnected();
+    public void onTransportConnected() {
+        transportListener.onTransportConnected();
     }
 
     public <T> T narrow(Class<T> target) {

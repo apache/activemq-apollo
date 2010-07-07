@@ -24,10 +24,9 @@ import _root_.java.lang.{String}
 import _root_.org.apache.activemq.util.buffer.{Buffer, UTF8Buffer, AsciiBuffer}
 import _root_.org.apache.activemq.util.{FactoryFinder, IOHelper}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import _root_.org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained}
-
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.reflect.BeanProperty
+import org.fusesource.hawtdispatch.{Dispatch, DispatchQueue, BaseRetained}
 
 object BrokerFactory {
 
@@ -90,7 +89,7 @@ object BrokerConstants extends Log {
   val DEFAULT_VIRTUAL_HOST_NAME = new AsciiBuffer("default")
 }
 
-class Broker() extends Service with Logging {
+class Broker() extends Service with DispatchLogging {
   
   import BrokerConstants._
   override protected def log = BrokerConstants
@@ -112,6 +111,9 @@ class Broker() extends Service with Logging {
 
   def start = runtime.start
   def stop = runtime.stop
+
+  val dispatchQueue = createQueue("broker");
+  dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
 
   def addVirtualHost(host: VirtualHost) = {
     if (host.names.isEmpty) {
@@ -159,7 +161,6 @@ class Broker() extends Service with Logging {
     }
 
     var state = CONFIGURATION
-    val dispatchQueue = createQueue("broker");
     val clientConnections: ArrayList[Connection] = new ArrayList[Connection]
 
     def removeConnectUri(uri: String): Unit = ^ {

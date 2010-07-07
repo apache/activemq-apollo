@@ -88,9 +88,9 @@ public class PipeTransport implements Transport {
                                 }
 
                                 if (wireformat != null && marshal) {
-                                    listener.onCommand(wireformat.unmarshal((Buffer) o));
+                                    listener.onTransportCommand(wireformat.unmarshal((Buffer) o));
                                 } else {
-                                    listener.onCommand(o);
+                                    listener.onTransportCommand(o);
                                 }
                             }
 
@@ -102,7 +102,7 @@ public class PipeTransport implements Transport {
                                 }
                             });
                         } catch (IOException e) {
-                            listener.onException(e);
+                            listener.onTransportFailure(e);
                         }
 
                     }
@@ -120,7 +120,7 @@ public class PipeTransport implements Transport {
             public void run() {
                 connected = true;
                 dispatchSource.resume();
-                listener.onConnected();
+                listener.onTransportConnected();
                 drainInbound();
             }
         });

@@ -20,7 +20,7 @@ package org.apache.activemq.legacy.transport.tcp;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.activemq.transport.tcp.SslTransportServer;
+import org.apache.activemq.apollo.transport.tcp.SslTransportServer;
 
 import junit.framework.TestCase;
 

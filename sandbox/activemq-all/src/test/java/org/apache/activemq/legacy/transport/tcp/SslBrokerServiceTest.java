@@ -16,18 +16,6 @@
  */
 package org.apache.activemq.legacy.transport.tcp;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.net.URI;
-import java.security.KeyStore;
-
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-
 import junit.framework.Test;
 import junit.textui.TestRunner;
 

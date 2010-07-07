@@ -52,7 +52,7 @@ import org.apache.activemq.command.TransactionInfo;
 import org.apache.activemq.command.XATransactionId;
 import org.apache.activemq.legacy.openwireprotocol.StubConnection;
 import org.apache.activemq.transport.Transport;
-import org.apache.activemq.transport.TransportFactory;
+import org.apache.activemq.apollo.transport.TransportFactory;
 
 public class BrokerTestSupport extends CombinationTestSupport {
 

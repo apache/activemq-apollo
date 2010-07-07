@@ -121,8 +121,6 @@ public class TcpTransport implements Transport {
     }
 
     public void start() throws Exception {
-        assert Dispatch.getCurrentQueue() == dispatchQueue;
-
         if (dispatchQueue == null) {
             throw new IllegalArgumentException("dispatchQueue is not set");
         }
@@ -161,7 +159,7 @@ public class TcpTransport implements Transport {
                             connectSource.release();
                             fireConnected();
                         } catch (IOException e) {
-                            listener.onException(e);
+                            listener.onTransportFailure(e);
                         }
                     }
                 }
@@ -197,7 +195,7 @@ public class TcpTransport implements Transport {
                 try {
                     drainInbound();
                 } catch (IOException e) {
-                    listener.onException(e);
+                    listener.onTransportFailure(e);
                 }
             }
         });
@@ -216,14 +214,11 @@ public class TcpTransport implements Transport {
         });
 
         remoteAddress = channel.socket().getRemoteSocketAddress().toString();
-        listener.onConnected();
-        readSource.resume();
+        listener.onTransportConnected();
     }
 
 
     public void stop() throws Exception {
-        assert Dispatch.getCurrentQueue() == dispatchQueue;
-
         if( readSource!=null ) {
             readSource.release();
             readSource = null;
@@ -319,7 +314,7 @@ public class TcpTransport implements Transport {
             }
 
         } catch (IOException e) {
-            listener.onException(e);
+            listener.onTransportFailure(e);
         }
         
         return outbound.isEmpty() && outbound_frame==null;
@@ -358,7 +353,7 @@ public class TcpTransport implements Transport {
                 int p = readBuffer.position();
                 int count = channel.read(readBuffer);
                 if (count == -1) {
-                    throw new EOFException();
+                    throw new EOFException("Peer disconnected");
                 } else if (count == 0) {
                     return;
                 }
@@ -366,7 +361,7 @@ public class TcpTransport implements Transport {
 
             Object command=unmarshalSession.unmarshal(readBuffer);
             if( command!=null ) {
-                listener.onCommand(command);
+                listener.onTransportCommand(command);
 
                 // the transport may be suspended after processing a command.
                 if( transportState==DISPOSED || readSource.isSuspended() ) {

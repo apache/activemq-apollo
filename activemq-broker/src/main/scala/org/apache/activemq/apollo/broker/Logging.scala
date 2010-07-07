@@ -209,3 +209,17 @@ trait Logging {
   }
 
 }
+
+trait DispatchLogging extends Logging {
+  import org.fusesource.hawtdispatch.ScalaDispatch._
+
+  override protected def log_map(message:String) = {
+    val d = getCurrentQueue
+    if( d!=null ) {
+      d.getLabel+" | "+message
+    } else {
+      message
+    }
+  }
+
+}

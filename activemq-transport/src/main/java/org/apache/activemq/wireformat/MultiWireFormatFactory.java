@@ -42,7 +42,8 @@ public class MultiWireFormatFactory implements WireFormatFactory {
 
     private static final FactoryFinder WIREFORMAT_FACTORY_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/wireformat/");
 
-    private String wireFormats = "openwire, stomp";
+//    private String wireFormats = "openwire, stomp";
+    private String wireFormats = "stomp";
     private ArrayList<WireFormatFactory> wireFormatFactories;
 
     static class MultiWireFormat implements WireFormat {
