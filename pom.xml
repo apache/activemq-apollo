@@ -101,7 +101,8 @@
     
     <scala-version>2.8.0.Beta1</scala-version>
     <scalatest-version>1.0.1-for-scala-2.8.0.Beta1-RC7-with-test-interfaces-0.3-SNAPSHOT</scalatest-version>
-    <scala-plugin-version>2.9.1</scala-plugin-version>
+    <maven-scala-plugin-version>2.13.1</maven-scala-plugin-version>
+    <maven-surefire-plugin-version>2.4.3</maven-surefire-plugin-version>
     
     <site-repo-url>scpexe://people.apache.org/www/activemq.apache.org/maven/</site-repo-url>
   </properties>
@@ -132,6 +133,7 @@
   </distributionManagement>
 
   <modules>
+    <module>activemq-scala</module>
     <module>activemq-util</module>
     <module>activemq-transport</module>
     <module>activemq-store</module>
@@ -141,6 +143,7 @@
     <module>activemq-hawtdb</module>
     <module>activemq-jaxb</module>
     <module>activemq-stomp</module>
+    <module>activemq-web</module>
   </modules>
 
   <scm>
@@ -270,6 +273,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
+          <version>${maven-surefire-plugin-version}</version>
           <configuration>
             <redirectTestOutputToFile>false</redirectTestOutputToFile>
             <forkMode>once</forkMode>
@@ -297,11 +301,11 @@
           <artifactId>maven-bundle-plugin</artifactId>
           <version>${felix-version}</version>
         </plugin>
-        <plugin>
+        <!-- <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>ianal-maven-plugin</artifactId>
           <version>1.0-alpha-1</version>
-        </plugin>
+        </plugin> -->
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>javacc-maven-plugin</artifactId>
@@ -367,7 +371,7 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
+      <!-- <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>ianal-maven-plugin</artifactId>
         <executions>
@@ -380,7 +384,7 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>
+      </plugin> -->
       <!--<plugin>-->
         <!--<groupId>org.apache.felix</groupId>-->
         <!--<artifactId>maven-bundle-plugin</artifactId>-->
@@ -555,12 +559,159 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
+            <version>${maven-surefire-plugin-version}</version>
             <configuration>
               <test>false</test>
             </configuration>
           </plugin>
         </plugins>
       </build>
+    </profile>
+
+
+    <!-- enables extra repositories which may have some
+         goodies that have not reached central yet -->
+    <profile>
+      <id>download</id>
+      <repositories>
+        <repository>
+          <id>repo1.maven</id>
+          <name>Maven Central Repo</name>
+          <url>http://repo1.maven.org/maven2</url>
+        </repository>
+        <repository>
+          <id>fusesource.m2</id>
+          <name>FuseSource Community Release Repository</name>
+          <url>http://repo.fusesource.com/maven2</url>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+        </repository>
+        <repository>
+          <id>fusesource.m2-snapshot</id>
+          <name>FuseSource Community Snapshot Repository</name>
+          <url>http://repo.fusesource.com/maven2-snapshot</url>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+          <releases>
+            <enabled>false</enabled>
+          </releases>
+        </repository>
+
+        <repository>
+          <id>java.net.m2</id>
+          <name>java.net Maven 2 Repo</name>
+          <url>http://download.java.net/maven/2</url>
+        </repository>
+        <repository>
+          <id>openqa-releases</id>
+          <name>OpenQA Releases</name>
+          <url>http://archiva.openqa.org/repository/releases</url>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </repository>
+
+        <repository>
+          <id>glassfish-repo-archive</id>
+          <name>Nexus repository collection for Glassfish</name>
+          <url>http://maven.glassfish.org/content/groups/glassfish</url>
+          <snapshots>
+            <updatePolicy>never</updatePolicy>
+          </snapshots>
+        </repository>
+
+        <repository>
+          <id>scala</id>
+          <name>Scala Tools</name>
+<!--
+          <url>http://nexus.scala-tools.org/content/repositories/releases</url>
+-->
+          <url>http://scala-tools.org/repo-releases</url>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </repository>
+        <repository>
+          <id>snapshots.scala-tools.org</id>
+          <name>Scala-Tools Maven2 Snapshot Repository</name>
+          <url>http://scala-tools.org/repo-snapshots</url>
+          <snapshots>
+            <enabled>true</enabled>
+            <checksumPolicy>fail</checksumPolicy>
+          </snapshots>
+          <releases>
+            <enabled>true</enabled>
+            <checksumPolicy>fail</checksumPolicy>
+          </releases>
+        </repository>
+<!--
+        <repository>
+          <id>nexus.snapshots.scala-tools.org</id>
+          <name>Scala-Tools Maven2 Snapshot Repository</name>
+          <url>http://nexus.scala-tools.org/content/repositories/snapshots</url>
+          <snapshots>
+            <enabled>true</enabled>
+            <checksumPolicy>fail</checksumPolicy>
+          </snapshots>
+          <releases>
+            <enabled>true</enabled>
+            <checksumPolicy>fail</checksumPolicy>
+          </releases>
+        </repository>
+-->
+        <repository>
+          <id>apache.snapshots</id>
+          <name>Apache Development Snapshot Repository</name>
+          <url>https://repository.apache.org/content/repositories/snapshots</url>
+          <releases>
+            <enabled>false</enabled>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+        </repository>
+      </repositories>
+
+      <pluginRepositories>
+        <pluginRepository>
+          <id>scala</id>
+          <name>Scala Tools</name>
+<!--
+          <url>http://nexus.scala-tools.org/content/repositories/releases</url>
+-->
+          <url>http://scala-tools.org/repo-releases</url>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </pluginRepository>
+        <pluginRepository>
+          <id>snapshots.scala-tools.org</id>
+          <name>Scala-Tools Maven2 Snapshot Repository</name>
+          <url>http://scala-tools.org/repo-snapshots</url>
+          <snapshots>
+            <enabled>true</enabled>
+            <checksumPolicy>fail</checksumPolicy>
+          </snapshots>
+          <releases>
+            <enabled>true</enabled>
+            <checksumPolicy>fail</checksumPolicy>
+          </releases>
+        </pluginRepository>
+      </pluginRepositories>
     </profile>
 
   </profiles>
