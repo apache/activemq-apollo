@@ -100,8 +100,8 @@
     <jackson-version>1.5.2</jackson-version>
     <logback-version>0.9.18</logback-version>
     
-    <scala-version>2.8.0.RC3</scala-version>
-    <scalatest-version>1.2-for-scala-2.8.0.RC3-SNAPSHOT</scalatest-version>
+    <scala-version>2.8.0.RC5</scala-version>
+    <scalatest-version>1.2-for-scala-2.8.0.RC5-SNAPSHOT</scalatest-version>
     <maven-scala-plugin-version>2.13.1</maven-scala-plugin-version>
     <maven-surefire-plugin-version>2.4.3</maven-surefire-plugin-version>
     
