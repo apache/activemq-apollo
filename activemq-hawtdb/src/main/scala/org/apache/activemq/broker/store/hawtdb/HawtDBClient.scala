@@ -153,7 +153,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       journal.setMaxWriteBatchSize(config.journalBatchSize);
       journal.setChecksum(true);
       journal.setListener( new JournalListener{
-        def synced(writes: Array[Write]) = {
+        def synced(writes: Array[JournalListener.Write]) = {
           var onCompletes = List[Runnable]()
           withTx { tx=>
             val helper = new TxHelper(tx)
