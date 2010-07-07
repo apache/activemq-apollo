@@ -128,6 +128,16 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     msgKeys
   }
 
+  test("load stored message") {
+    val A = addQueue("A")
+    val msgKeys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
+
+    val rc:Option[MessageRecord] = CB( cb=> store.loadMessage(msgKeys.head)(cb) )
+    expect(ascii("message 1").buffer) {
+      rc.get.value
+    }
+  }
+
   test("add and list queues") {
     val A = addQueue("A")
     val B = addQueue("B")
@@ -161,16 +171,6 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     }
   }
 
-  test("load stored message") {
-    val A = addQueue("A")
-    val msgKeys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
-
-    val rc:Option[MessageRecord] = CB( cb=> store.loadMessage(msgKeys.head)(cb) )
-    expect(ascii("message 1").buffer) {
-      rc.get.value
-    }
-  }
-
   test("batch completes after a delay") {x}
   def x = {
     val A = addQueue("A")
@@ -189,7 +189,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     }
   }
 
-  test("flush cancels the completion delay") {
+  test("flush cancels the delay") {
     val A = addQueue("A")
     var batch = store.createStoreBatch
 

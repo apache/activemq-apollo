@@ -85,7 +85,7 @@ message AddQueueEntry {
   required int64 queueKey=1;
   required int64 queueSeq=2;
   required int64 messageKey=3;
-  required int32 size=4;
+  optional int32 size=4;
   optional bytes attachment=5;
   optional int32 redeliveries = 6;
 }
@@ -152,29 +152,29 @@ message RemoveStream {
 
 
 ///////////////////////////////////////////////////////////////
-// Index Structures
+// Records Stored used in the Indexes
 ///////////////////////////////////////////////////////////////
 message DatabaseRootRecord {
 
-  required fixed32 state=1;
-  required fixed64 lastMessageKey=2;
-  required fixed64 firstInProgressBatch=3;
-  required fixed64 lastUpdateLocation=4;
+  optional fixed64 firstBatchLocation=1;
+  optional fixed64 lastUpdateLocation=2;
+  optional fixed64 lastMessageKey=3;
+  optional fixed64 lastQueueKey=4;
 
-  required fixed32 dataFileRefIndexPage=5;
-  required fixed32 messageKeyIndexPage=6;
-  required fixed32 messageRefsIndexPage=7;
-  required fixed32 queueIndexPage=8;
-  required fixed32 subscriptionIndexPage=10;
-  required fixed32 mapIndexPage=11;
+  optional fixed32 dataFileRefIndexPage=50;
+  optional fixed32 messageKeyIndexPage=51;
+  optional fixed32 messageRefsIndexPage=52;
+  optional fixed32 queueIndexPage=53;
+  optional fixed32 subscriptionIndexPage=54;
+  optional fixed32 mapIndexPage=55;
   
 }
 
 message QueueRootRecord {
-  required AddQueue info=1;
-  required int64 size=2;
-  required int64 count=3;
-  required fixed32 entryIndexPage=4;
-  required fixed32 trackingIndexPage=5;
+  optional AddQueue info=1;
+  optional int64 size=2;
+  optional int64 count=3;
+  optional fixed32 entryIndexPage=4;
+  optional fixed32 trackingIndexPage=5;
 }
 

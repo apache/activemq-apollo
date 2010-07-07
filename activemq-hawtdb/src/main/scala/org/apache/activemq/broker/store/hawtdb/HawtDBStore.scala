@@ -24,13 +24,12 @@ import java.util.HashMap
 import java.util.concurrent.{TimeUnit, Executors, ExecutorService}
 import org.apache.activemq.apollo.util.IntCounter
 import org.apache.activemq.apollo.store.{QueueEntryRecord, MessageRecord, QueueStatus, QueueRecord}
-import org.apache.activemq.apollo.broker.{Logging, Log, BaseService}
 import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, StoreDTO}
 import collection.{JavaConversions, Seq}
-import org.apache.activemq.apollo.broker.{Reporting, ReporterLevel, Reporter}
 import org.fusesource.hawtdispatch.ScalaDispatch._
-import ReporterLevel._
+import org.apache.activemq.apollo.broker._
 import java.io.File
+import ReporterLevel._
 
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
@@ -59,7 +58,7 @@ object HawtDBStore extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBStore extends Store with BaseService with Logging {
+class HawtDBStore extends Store with BaseService with DispatchLogging {
 
   import HawtDBStore._
   override protected def log = HawtDBStore
@@ -95,8 +94,11 @@ class HawtDBStore extends Store with BaseService with Logging {
     executor_pool = Executors.newFixedThreadPool(20)
     client.config = config
     executor_pool {
-      client.start
-      onCompleted.run
+      client.start(^{
+        next_msg_key.set( client.databaseRootRecord.getLastMessageKey.longValue +1 )
+        next_queue_key.set( client.databaseRootRecord.getLastQueueKey.longValue +1 )
+        onCompleted.run
+      })
     }
   }
 
@@ -198,12 +200,12 @@ class HawtDBStore extends Store with BaseService with Logging {
     class MessageAction {
 
       var msg= 0L
-      var store: MessageRecord = null
+      var messageRecord: MessageRecord = null
       var enqueues = ListBuffer[QueueEntryRecord]()
       var dequeues = ListBuffer[QueueEntryRecord]()
 
       def tx = HawtDBBatch.this
-      def isEmpty() = store==null && enqueues==Nil && dequeues==Nil
+      def isEmpty() = messageRecord==null && enqueues==Nil && dequeues==Nil
       def cancel() = {
         tx.rm(msg)
         if( tx.isEmpty ) {
@@ -229,7 +231,7 @@ class HawtDBStore extends Store with BaseService with Logging {
       record.key = next_msg_key.incrementAndGet
       val action = new MessageAction
       action.msg = record.key
-      action.store = record
+      action.messageRecord = record
       this.synchronized {
         actions += record.key -> action
       }
@@ -294,7 +296,7 @@ class HawtDBStore extends Store with BaseService with Logging {
       }
 
       tx.actions.foreach { case (msg, action) =>
-        if( action.store!=null ) {
+        if( action.messageRecord!=null ) {
           pendingStores.put(msg, action)
         }
         action.enqueues.foreach { queueEntry=>
@@ -312,9 +314,9 @@ class HawtDBStore extends Store with BaseService with Logging {
             prevAction.enqueues = prevAction.enqueues.filterNot( x=> key(x) == currentKey )
 
             // if the message is not in any queues.. we can gc it..
-            if( prevAction.enqueues == Nil && prevAction.store !=null ) {
+            if( prevAction.enqueues == Nil && prevAction.messageRecord !=null ) {
               pendingStores.remove(msg)
-              prevAction.store = null
+              prevAction.messageRecord = null
             }
 
             // Cancel the action if it's now empty
@@ -355,7 +357,7 @@ class HawtDBStore extends Store with BaseService with Logging {
       if (tx!=null) {
 
         tx.actions.foreach { case (msg, action) =>
-          if( action.store!=null ) {
+          if( action.messageRecord !=null ) {
             pendingStores.remove(msg)
           }
           action.enqueues.foreach { queueEntry=>

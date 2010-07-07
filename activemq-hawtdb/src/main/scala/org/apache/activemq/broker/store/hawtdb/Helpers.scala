@@ -105,6 +105,7 @@ object Helpers {
 
   implicit def toMessageRecord(pb: AddMessage.Getter): MessageRecord = {
     val rc = new MessageRecord
+    rc.key = pb.getMessageKey
     rc.protocol = pb.getProtocol
     rc.size = pb.getSize
     rc.value = pb.getValue
@@ -115,6 +116,7 @@ object Helpers {
 
   implicit def fromMessageRecord(v: MessageRecord): AddMessage.Bean = {
     val pb = new AddMessage.Bean
+    pb.setMessageKey(v.key)
     pb.setProtocol(v.protocol)
     pb.setSize(v.size)
     pb.setValue(v.value)
