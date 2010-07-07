@@ -1248,15 +1248,15 @@ public class AltJavaGenerator {
 						indent();
 						String type = javaType(field);
 						if (repeated) {
-							p(setter + "("+type+"."+type+"Buffer.parseFramed(input));");
+                          p(setter + "("+javaRelatedType(type, "Buffer")+".parseFramed(input));");
 						} else {
 							p("if (has" + uname + "()) {");
 							indent();
-							p("set" + uname + "(get" + uname + "().copy().mergeFrom("+type+"."+type+"Buffer.parseFramed(input)));");
+                            p("set" + uname + "(get" + uname + "().copy().mergeFrom("+javaRelatedType(type, "Buffer")+".parseFramed(input)));");
 							unindent();
 							p("} else {");
 							indent();
-                            p(setter + "("+type+"."+type+"Buffer.parseFramed(input));");
+                            p(setter + "("+javaRelatedType(type, "Buffer")+".parseFramed(input));");
 							unindent();
 							p("}");
 						}
@@ -1380,7 +1380,7 @@ public class AltJavaGenerator {
                 } else if (field.getTypeDescriptor().isEnum() ) {
                     p("f_"+lname+".add(" + type + ".valueOf(in.readShort()));");
                 } else {
-                    p(""+type+"."+type+"Bean o = new "+type+"."+type+"Bean();");
+                    p(""+javaRelatedType(type, "Bean")+" o = new "+javaRelatedType(type, "Bean")+"();");
                     p("o.readExternal(in);");
                     p("f_"+lname+".add(o);");
                 }
@@ -1457,7 +1457,7 @@ public class AltJavaGenerator {
                 } else {
                     p("if( in.readBoolean() ) {");
                     indent();
-                    p(""+type+"."+type+"Bean o = new "+type+"."+type+"Bean();");
+                    p(""+javaRelatedType(type, "Bean")+" o = new "+javaRelatedType(type, "Bean")+"();");
                     p("o.readExternal(in);");
                     p("f_"+lname+" = o;");
                     unindent();
@@ -2107,7 +2107,7 @@ public class AltJavaGenerator {
             for (EnumFieldDescriptor field : ed.getFields().values()) {
                 p("case "+field.getName()+":");
                 String type = field.getAssociatedType().getName();
-                p("   return new "+type+"."+type+"Bean();");
+                p("   return new "+javaRelatedType(type, "Bean")+"();");
             }
             p("default:");
             p("   return null;");
@@ -2138,7 +2138,7 @@ public class AltJavaGenerator {
         for (EnumFieldDescriptor field : descriptor.getFields().values()) {
             p("case "+field.getName()+":");
             String type = constantToUCamelCase(field.getName());
-            p("   return "+type+"."+type+"Buffer."+methodName+"(data);");
+            p("   return "+javaRelatedType(type, "Buffer")+"."+methodName+"(data);");
         }
         p("default:");
         p("   return null;");
@@ -2253,6 +2253,16 @@ public class AltJavaGenerator {
         return descriptor.getQName();
     }
     
+    private String javaRelatedType(String type, String suffix) {
+        int ix = type.lastIndexOf(".");
+        if (ix == -1) {
+            // type = Foo, result = Foo.FooBean
+            return type+"."+type+suffix;
+        }
+        // type = Foo.Bar, result = Foo.Bar.BarBean
+        return type+"."+type.substring(ix+1)+suffix;
+    }
+
     private boolean equals(String o1, String o2) {
         if( o1==o2 )
             return true;
