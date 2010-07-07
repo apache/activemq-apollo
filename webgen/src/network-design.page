@@ -85,7 +85,7 @@ sort_info: 2
     in the diagram to to the right illustrates the hash values that would map to the
     %%em Broker 2 
     node.  This algorithm has been implemented in the activemq-util modules as the
-    %a{:href=>"http://fisheye6.atlassian.com/browse/activemq/sandbox/activemq-flow/activemq-util/src/main/java/org/apache/activemq/util/HashRing.java?r=HEAD"}
+    %a{:href=>"http://github.com/chirino/activemq-apollo/blob/master/activemq-util/src/main/scala/org/apache/activemq/util/HashRing.java#L47"}
       %em HashRing
     class.
   %p

@@ -120,7 +120,7 @@ class VMTransportFactory extends PipeTransportFactory with Logging {
       if (server == null && create) {
 
         // This is the connector that the broker needs.
-        val connector = Connector.default
+        val connector = Connector.defaultConfig
         connector.id = "vm"
         connector.bind = "vm://" + name
         connector.advertise = connector.bind
@@ -130,7 +130,7 @@ class VMTransportFactory extends PipeTransportFactory with Logging {
         if (brokerURI == null) {
           // Lets create and configure it...
           broker = new Broker()
-          broker.config = Broker.default
+          broker.config = Broker.defaultConfig
           broker.config.connectors.clear
           broker.config.connectors.add(connector)
         } else {

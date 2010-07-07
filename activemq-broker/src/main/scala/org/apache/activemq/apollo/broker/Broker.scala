@@ -94,13 +94,13 @@ object Broker extends Log {
   /**
    * Creates a default a configuration object.
    */
-  def default() = {
+  def defaultConfig() = {
     val rc = new BrokerDTO
     rc.id = "default"
     rc.enabled = true
     rc.notes = "A default configuration"
-    rc.virtualHosts.add(VirtualHost.default)
-    rc.connectors.add(Connector.default)
+    rc.virtualHosts.add(VirtualHost.defaultConfig)
+    rc.connectors.add(Connector.defaultConfig)
     rc.basedir = "./activemq-data/default"
     rc
   }
@@ -144,7 +144,7 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
   import Broker._
   override protected def log = Broker
 
-  var config: BrokerDTO = default
+  var config: BrokerDTO = defaultConfig
 
   var dataDirectory: File = null
   var defaultVirtualHost: VirtualHost = null

@@ -39,7 +39,7 @@ object CassandraStore extends Log {
   /**
    * Creates a default a configuration object.
    */
-  def default() = {
+  def defaultConfig() = {
     val rc = new CassandraStoreDTO
     rc.hosts.add("localhost:9160")
     rc
@@ -77,7 +77,7 @@ class CassandraStore extends Store with BaseService with Logging {
 
   val client = new CassandraClient()
   protected var executor_pool:ExecutorService = _
-  var config:CassandraStoreDTO = default
+  var config:CassandraStoreDTO = defaultConfig
 
   def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[CassandraStoreDTO], reporter)
 

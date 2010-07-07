@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.hawtdb.store;
+package org.apache.activemq.broker.store.hawtdb;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -24,14 +24,16 @@ import org.apache.activemq.apollo.store.QueueRecord;
 import org.apache.activemq.apollo.store.QueueEntryRecord;
 import org.fusesource.hawtbuf.AsciiBuffer;
 import org.fusesource.hawtbuf.Buffer;
-import org.fusesource.hawtdb.util.marshaller.Marshaller;
-import org.fusesource.hawtdb.util.marshaller.VariableMarshaller;
+import org.fusesource.hawtbuf.codec.AsciiBufferCodec;
+import org.fusesource.hawtbuf.codec.BufferCodec;
+import org.fusesource.hawtbuf.codec.Codec;
+import org.fusesource.hawtbuf.codec.VariableCodec;
 
-public class Marshallers {
+public class Codecs {
 
-    public final static Marshaller<QueueEntryRecord> QUEUE_RECORD_MARSHALLER = new VariableMarshaller<QueueEntryRecord>() {
+    public final static Codec<QueueEntryRecord> QUEUE_RECORD_CODEC = new VariableCodec<QueueEntryRecord>() {
 
-        public QueueEntryRecord readPayload(DataInput dataIn) throws IOException {
+        public QueueEntryRecord decode(DataInput dataIn) throws IOException {
             QueueEntryRecord rc = new QueueEntryRecord();
             rc.queueKey = dataIn.readLong();
             rc.messageKey = dataIn.readLong();
@@ -41,12 +43,12 @@ public class Marshallers {
 //            }
             rc.redeliveries = dataIn.readShort();
             if (dataIn.readBoolean()) {
-                rc.attachment = BUFFER_MARSHALLER.readPayload(dataIn);
+                rc.attachment = BUFFER_CODEC.decode(dataIn);
             }
             return rc;
         }
 
-        public void writePayload(QueueEntryRecord object, DataOutput dataOut) throws IOException {
+        public void encode(QueueEntryRecord object, DataOutput dataOut) throws IOException {
             dataOut.writeLong(object.queueKey);
             dataOut.writeLong(object.messageKey);
             dataOut.writeInt(object.size);
@@ -59,7 +61,7 @@ public class Marshallers {
             dataOut.writeShort(object.redeliveries);
             if (object.attachment != null) {
                 dataOut.writeBoolean(true);
-                BUFFER_MARSHALLER.writePayload(object.attachment, dataOut);
+                BUFFER_CODEC.encode(object.attachment, dataOut);
             } else {
                 dataOut.writeBoolean(false);
             }
@@ -70,12 +72,12 @@ public class Marshallers {
         }
     };
 
-    public final static Marshaller<QueueRecord> QUEUE_DESCRIPTOR_MARSHALLER = new VariableMarshaller<QueueRecord>() {
+    public final static Codec<QueueRecord> QUEUE_DESCRIPTOR_CODEC = new VariableCodec<QueueRecord>() {
 
-        public QueueRecord readPayload(DataInput dataIn) throws IOException {
+        public QueueRecord decode(DataInput dataIn) throws IOException {
             QueueRecord record = new QueueRecord();
-            record.queueType = ASCII_BUFFER_MARSHALLER.readPayload(dataIn);
-            record.name = ASCII_BUFFER_MARSHALLER.readPayload(dataIn);
+            record.queueType = ASCII_BUFFER_CODEC.decode(dataIn);
+            record.name = ASCII_BUFFER_CODEC.decode(dataIn);
 //            if (dataIn.readBoolean()) {
 //                record.parent = ASCII_BUFFER_MARSHALLER.readPayload(dataIn)
 //                record.setPartitionId(dataIn.readInt());
@@ -83,9 +85,9 @@ public class Marshallers {
             return record;
         }
 
-        public void writePayload(QueueRecord object, DataOutput dataOut) throws IOException {
-            ASCII_BUFFER_MARSHALLER.writePayload(object.queueType, dataOut);
-            ASCII_BUFFER_MARSHALLER.writePayload(object.name, dataOut);
+        public void encode(QueueRecord object, DataOutput dataOut) throws IOException {
+            ASCII_BUFFER_CODEC.encode(object.queueType, dataOut);
+            ASCII_BUFFER_CODEC.encode(object.name, dataOut);
 //            if (object.parent != null) {
 //                dataOut.writeBoolean(true);
 //                ASCII_BUFFER_MARSHALLER.writePayload(object.parent, dataOut);
@@ -101,14 +103,14 @@ public class Marshallers {
 
 
 
-    static abstract public class AbstractBufferMarshaller<T extends Buffer> extends org.fusesource.hawtdb.util.marshaller.VariableMarshaller<T> {
+    static abstract public class AbstractBufferCodec<T extends Buffer> extends VariableCodec<T> {
 
-        public void writePayload(T value, DataOutput dataOut) throws IOException {
+        public void encode(T value, DataOutput dataOut) throws IOException {
             dataOut.writeInt(value.length);
             dataOut.write(value.data, value.offset, value.length);
         }
 
-        public T readPayload(DataInput dataIn) throws IOException {
+        public T decode(DataInput dataIn) throws IOException {
             int size = dataIn.readInt();
             byte[] data = new byte[size];
             dataIn.readFully(data);
@@ -131,19 +133,7 @@ public class Marshallers {
 
     }
 
-    public final static Marshaller<AsciiBuffer> ASCII_BUFFER_MARSHALLER = new AbstractBufferMarshaller<AsciiBuffer>() {
-        @Override
-        protected AsciiBuffer createBuffer(byte[] data) {
-            return new AsciiBuffer(data);
-        }
-
-    };
-
-    public final static Marshaller<Buffer> BUFFER_MARSHALLER = new AbstractBufferMarshaller<Buffer>() {
-        @Override
-        protected Buffer createBuffer(byte[] data) {
-            return new Buffer(data);
-        }
-    };
+    public final static AsciiBufferCodec ASCII_BUFFER_CODEC = AsciiBufferCodec.INSTANCE;
+    public final static BufferCodec BUFFER_CODEC = BufferCodec.INSTANCE;
 
 }

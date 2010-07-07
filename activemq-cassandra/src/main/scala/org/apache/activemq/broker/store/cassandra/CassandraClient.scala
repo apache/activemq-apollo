@@ -56,7 +56,7 @@ class CassandraClient() {
 
   implicit def decodeMessageRecord(v: Array[Byte]): MessageRecord = {
     import PBMessageRecord._
-    val pb = PBMessageRecordBuffer.parseUnframed(v)
+    val pb = PBMessageRecord.FACTORY.parseUnframed(v)
     val rc = new MessageRecord
     rc.protocol = pb.getProtocol
     rc.size = pb.getSize
@@ -67,8 +67,7 @@ class CassandraClient() {
   }
 
   implicit def encodeMessageRecord(v: MessageRecord): Array[Byte] = {
-    import PBMessageRecord._
-    val pb = new PBMessageRecordBean
+    val pb = new PBMessageRecord.Bean
     pb.setProtocol(v.protocol)
     pb.setSize(v.size)
     pb.setValue(v.value)
@@ -79,7 +78,7 @@ class CassandraClient() {
   
   implicit def decodeQueueEntryRecord(v: Array[Byte]): QueueEntryRecord = {
     import PBQueueEntryRecord._
-    val pb = PBQueueEntryRecordBuffer.parseUnframed(v)
+    val pb = PBQueueEntryRecord.FACTORY.parseUnframed(v)
     val rc = new QueueEntryRecord
     rc.messageKey = pb.getMessageKey
     rc.attachment = pb.getAttachment
@@ -89,8 +88,7 @@ class CassandraClient() {
   }
 
   implicit def encodeQueueEntryRecord(v: QueueEntryRecord): Array[Byte] = {
-    import PBQueueEntryRecord._
-    val pb = new PBQueueEntryRecordBean
+    val pb = new PBQueueEntryRecord.Bean
     pb.setMessageKey(v.messageKey)
     pb.setAttachment(v.attachment)
     pb.setSize(v.size)

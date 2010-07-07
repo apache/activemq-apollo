@@ -45,7 +45,7 @@ object Connector extends Log {
   /**
    * Creates a default a configuration object.
    */
-  def default() = {
+  def defaultConfig() = {
     val rc = new ConnectorDTO
     rc.id = "default"
     rc.enabled = true
@@ -81,7 +81,7 @@ class Connector(val broker:Broker) extends BaseService with DispatchLogging {
   override protected def log = Connector
   override val dispatchQueue = broker.dispatchQueue
 
-  var config:ConnectorDTO = default
+  var config:ConnectorDTO = defaultConfig
   var transportServer:TransportServer = _
   var wireFormatFactory:WireFormatFactory = _
 

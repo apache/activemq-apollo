@@ -1,9 +1,11 @@
 package org.apache.activemq.broker.store.hawtdb.store;
 
 import org.apache.activemq.apollo.store.*;
+import org.apache.activemq.broker.store.hawtdb.model.*;
 import org.fusesource.hawtbuf.AsciiBuffer;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtdb.api.Transaction;
+import org.fusesource.hawtdb.internal.journal.JournalCallback;
 import org.fusesource.hawtdb.internal.journal.Location;
 
 import java.io.IOException;
@@ -18,7 +20,7 @@ import java.util.Iterator;
 */
 class HawtDBSession {
 
-    Data.Type.TypeCreatable atomicUpdate = null;
+    Type.TypeCreatable atomicUpdate = null;
     int updateCount = 0;
 
     private Transaction tx;
@@ -78,14 +80,20 @@ class HawtDBSession {
         }
     }
 
-    public void commit(Runnable onFlush) {
+    public void commit(final Runnable onFlush) {
         try {
 
             boolean flush = false;
             if (atomicUpdate != null) {
                 store.store(atomicUpdate, onFlush, tx);
             } else if (updateCount > 1) {
-                store.journal.write(HawtDBManager.END_UNIT_OF_WORK_DATA, onFlush);
+                store.journal.write(HawtDBManager.END_UNIT_OF_WORK_DATA, new JournalCallback(){
+                    public void success(Location location) {
+                        if( onFlush!=null ) {
+                            onFlush.run();
+                        }
+                    }
+                });
             } else {
                 flush = onFlush != null;
             }
@@ -119,7 +127,7 @@ class HawtDBSession {
         }
     }
 
-    private void addUpdate(Data.Type.TypeCreatable bean) {
+    private void addUpdate(Type.TypeCreatable bean) {
         try {
             //As soon as we do more than one update we'll wrap in a unit of
             //work:
@@ -146,10 +154,10 @@ class HawtDBSession {
         if (message.key < 0) {
             throw new IllegalArgumentException("Key not set");
         }
-        Data.MessageAdd.MessageAddBean bean = new Data.MessageAdd.MessageAddBean();
+        AddMessage.Bean bean = new AddMessage.Bean();
         bean.setMessageKey(message.key);
         bean.setProtocol(message.protocol);
-        bean.setMessageSize(message.size);
+        bean.setSize(message.size);
         Buffer buffer = message.value;
         if (buffer != null) {
             bean.setValue(buffer);
@@ -169,11 +177,11 @@ class HawtDBSession {
             throw new KeyNotFoundException("message key: " + key);
         }
         try {
-            Data.MessageAdd bean = (Data.MessageAdd) store.load(location);
+            AddMessage.Bean bean = (AddMessage.Bean) store.load(location);
             MessageRecord rc = new MessageRecord();
             rc.key = bean.getMessageKey();
             rc.protocol = bean.getProtocol();
-            rc.size = bean.getMessageSize();
+            rc.size = bean.getSize();
             if (bean.hasValue()) {
                 rc.value = bean.getValue();
             }
@@ -190,7 +198,7 @@ class HawtDBSession {
     // Queue related methods.
     // /////////////////////////////////////////////////////////////
     public void queueAdd(QueueRecord record) {
-        Data.QueueAdd.QueueAddBean update = new Data.QueueAdd.QueueAddBean();
+        AddQueue.Bean update = new AddQueue.Bean();
         update.setName(record.name);
         update.setQueueType(record.queueType);
 //        AsciiBuffer parent = record.getParent();
@@ -202,7 +210,7 @@ class HawtDBSession {
     }
 
     public void queueRemove(QueueRecord record) {
-        addUpdate(new Data.QueueRemove.QueueRemoveBean().setKey(record.key));
+        addUpdate(new RemoveQueue.Bean().setKey(record.key));
     }
 
     public Iterator<QueueStatus> queueListByType(AsciiBuffer type, QueueRecord firstQueue, int max) {
@@ -224,11 +232,11 @@ class HawtDBSession {
     }
 
     public void queueAddMessage(QueueRecord queue, QueueEntryRecord entryRecord) throws KeyNotFoundException {
-        Data.QueueAddMessage.QueueAddMessageBean bean = new Data.QueueAddMessage.QueueAddMessageBean();
+        AddQueueEntry.Bean bean = new AddQueueEntry.Bean();
         bean.setQueueKey(queue.key);
         bean.setQueueKey(entryRecord.queueKey);
         bean.setMessageKey(entryRecord.messageKey);
-        bean.setMessageSize(entryRecord.size);
+        bean.setSize(entryRecord.size);
         if (entryRecord.attachment != null) {
             bean.setAttachment(entryRecord.attachment);
         }
@@ -236,9 +244,9 @@ class HawtDBSession {
     }
 
     public void queueRemoveMessage(QueueRecord queue, Long queueKey) throws KeyNotFoundException {
-        Data.QueueRemoveMessage.QueueRemoveMessageBean bean = new Data.QueueRemoveMessage.QueueRemoveMessageBean();
-        bean.setQueueKey(queueKey);
-        bean.setQueueName(queue.name);
+        RemoveQueueEntry.Bean bean = new RemoveQueueEntry.Bean();
+        bean.setQueueKey(queue.key);
+        bean.setQueueSeq(queueKey);
         addUpdate(bean);
     }
 
@@ -286,7 +294,7 @@ class HawtDBSession {
      * exist then it will simply be added.
      */
     public void updateSubscription(SubscriptionRecord record) {
-        Data.SubscriptionAdd.SubscriptionAddBean update = new Data.SubscriptionAdd.SubscriptionAddBean();
+        AddSubscription.Bean update = new AddSubscription.Bean();
         update.setName(record.name);
         update.setDestination(record.destination);
         update.setDurable(record.isDurable);
@@ -307,7 +315,7 @@ class HawtDBSession {
      * Removes a subscription with the given name from the store.
      */
     public void removeSubscription(AsciiBuffer name) {
-        Data.SubscriptionRemove.SubscriptionRemoveBean update = new Data.SubscriptionRemove.SubscriptionRemoveBean();
+        RemoveSubscription.Bean update = new RemoveSubscription.Bean();
         update.setName(name);
         addUpdate(update);
     }
@@ -328,13 +336,13 @@ class HawtDBSession {
     // Map related methods.
     // /////////////////////////////////////////////////////////////
     public void mapAdd(AsciiBuffer map) {
-        Data.MapAdd.MapAddBean update = new Data.MapAdd.MapAddBean();
+        AddMap.Bean update = new AddMap.Bean();
         update.setMapName(map);
         addUpdate(update);
     }
 
     public void mapRemove(AsciiBuffer map) {
-        Data.MapRemove.MapRemoveBean update = new Data.MapRemove.MapRemoveBean();
+        RemoveMap.Bean update = new RemoveMap.Bean();
         update.setMapName(map);
         addUpdate(update);
     }
@@ -345,7 +353,7 @@ class HawtDBSession {
     }
 
     public void mapEntryPut(AsciiBuffer map, AsciiBuffer key, Buffer value) {
-        Data.MapEntryPut.MapEntryPutBean update = new Data.MapEntryPut.MapEntryPutBean();
+        PutMapEntry.Bean update = new PutMapEntry.Bean();
         update.setMapName(map);
         update.setId(key);
         update.setValue(value);
@@ -362,7 +370,7 @@ class HawtDBSession {
     }
 
     public void mapEntryRemove(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException {
-        Data.MapEntryRemove.MapEntryRemoveBean update = new Data.MapEntryRemove.MapEntryRemoveBean();
+        RemoveMapEntry.Bean update = new RemoveMapEntry.Bean();
         update.setMapName(map);
         update.setId(key);
         addUpdate(update);

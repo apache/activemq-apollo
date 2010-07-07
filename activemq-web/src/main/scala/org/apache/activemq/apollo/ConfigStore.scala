@@ -206,7 +206,7 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
 
 
   private def defaultConfig(rev:Int) = {
-    val config = Broker.default
+    val config = Broker.defaultConfig
     config.rev = rev
     config
   }

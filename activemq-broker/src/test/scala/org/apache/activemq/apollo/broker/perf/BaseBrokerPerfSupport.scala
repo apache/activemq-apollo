@@ -563,7 +563,7 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
 
   def createBroker(name: String, bindURI: String, connectUri: String): Broker = {
 
-    val config = Broker.default
+    val config = Broker.defaultConfig
     val connector = config.connectors.get(0)
     connector.bind = bindURI
     connector.advertise = connectUri

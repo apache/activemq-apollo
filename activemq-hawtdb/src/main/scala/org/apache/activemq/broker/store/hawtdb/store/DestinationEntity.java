@@ -29,11 +29,14 @@ import java.util.Map.Entry;
 
 import org.apache.activemq.apollo.store.QueueRecord;
 import org.apache.activemq.apollo.store.QueueEntryRecord;
-import org.apache.activemq.broker.store.hawtdb.store.Data.QueueAddMessage;
+import org.apache.activemq.broker.store.hawtdb.Codecs;
+import org.apache.activemq.broker.store.hawtdb.model.AddQueueEntry;
+import org.fusesource.hawtbuf.codec.LongCodec;
+import org.fusesource.hawtbuf.codec.Codec;
+import org.fusesource.hawtbuf.codec.VariableCodec;
 import org.fusesource.hawtdb.api.BTreeIndexFactory;
 import org.fusesource.hawtdb.api.SortedIndex;
 import org.fusesource.hawtdb.api.Transaction;
-import org.fusesource.hawtdb.util.marshaller.*;
 
 public class DestinationEntity {
 
@@ -42,33 +45,33 @@ public class DestinationEntity {
     private static final BTreeIndexFactory<Long, Long> statsIndexFactory = new BTreeIndexFactory<Long, Long>();
 
     static {
-        queueIndexFactory.setKeyMarshaller(LongMarshaller.INSTANCE);
-        queueIndexFactory.setValueMarshaller(Marshallers.QUEUE_RECORD_MARSHALLER);
+        queueIndexFactory.setKeyCodec(LongCodec.INSTANCE);
+        queueIndexFactory.setValueCodec(Codecs.QUEUE_RECORD_CODEC);
         queueIndexFactory.setDeferredEncoding(true);
 
-        trackingIndexFactory.setKeyMarshaller(LongMarshaller.INSTANCE);
-        trackingIndexFactory.setValueMarshaller(LongMarshaller.INSTANCE);
+        trackingIndexFactory.setKeyCodec(LongCodec.INSTANCE);
+        trackingIndexFactory.setValueCodec(LongCodec.INSTANCE);
         trackingIndexFactory.setDeferredEncoding(true);
 
-        statsIndexFactory.setKeyMarshaller(LongMarshaller.INSTANCE);
-        statsIndexFactory.setValueMarshaller(LongMarshaller.INSTANCE);
+        statsIndexFactory.setKeyCodec(LongCodec.INSTANCE);
+        statsIndexFactory.setValueCodec(LongCodec.INSTANCE);
         statsIndexFactory.setDeferredEncoding(true);
     }
 
-    public final static Marshaller<DestinationEntity> MARSHALLER = new VariableMarshaller<DestinationEntity>() {
+    public final static Codec<DestinationEntity> CODEC = new VariableCodec<DestinationEntity>() {
 
-        public DestinationEntity readPayload(DataInput dataIn) throws IOException {
+        public DestinationEntity decode(DataInput dataIn) throws IOException {
             DestinationEntity value = new DestinationEntity();
             value.queueIndex = dataIn.readInt();
             value.trackingIndex =  dataIn.readInt();
-            value.record = Marshallers.QUEUE_DESCRIPTOR_MARSHALLER.readPayload(dataIn);
+            value.record = Codecs.QUEUE_DESCRIPTOR_CODEC.decode(dataIn);
             return value;
         }
 
-        public void writePayload(DestinationEntity value, DataOutput dataOut) throws IOException {
+        public void encode(DestinationEntity value, DataOutput dataOut) throws IOException {
             dataOut.writeInt(value.queueIndex);
             dataOut.writeInt(value.trackingIndex);
-            Marshallers.QUEUE_DESCRIPTOR_MARSHALLER.writePayload(value.record, dataOut);
+            Codecs.QUEUE_DESCRIPTOR_CODEC.encode(value.record, dataOut);
         }
 
         public int estimatedSize(DestinationEntity object) {
@@ -199,7 +202,7 @@ public class DestinationEntity {
         }
     }
 
-    public void add(Transaction tx, QueueAddMessage command) throws IOException, DuplicateKeyException {
+    public void add(Transaction tx, AddQueueEntry.Getter command) throws IOException, DuplicateKeyException {
 
         Long existing = trackingIndex(tx).put(command.getMessageKey(), command.getQueueKey());
         if (existing == null) {
@@ -207,7 +210,7 @@ public class DestinationEntity {
             value.attachment = command.getAttachment();
             value.messageKey = command.getMessageKey();
             value.queueKey = command.getQueueKey();
-            value.size = command.getMessageSize();
+            value.size = command.getSize();
 
             QueueEntryRecord rc = queueIndex(tx).put(value.queueKey, value);
             if (rc == null) {
@@ -219,7 +222,7 @@ public class DestinationEntity {
                 // It is also possible that we might want to remove this update
                 // altogether in favor of scanning the whole queue at recovery
                 // time (at the cost of startup time)
-                addStats(tx, 1, command.getMessageSize());
+                addStats(tx, 1, command.getSize());
             } else {
                 throw new FatalStoreException(new DuplicateKeyException("Duplicate sequence number " + command.getQueueKey() + " for " + record.name));
             }

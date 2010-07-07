@@ -17,10 +17,10 @@
  */
 package org.apache.activemq.util;
 
-import org.apache.activemq.util.marshaller.Marshaller;
-import org.apache.activemq.util.marshaller.VariableMarshaller;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.DataByteArrayOutputStream;
+import org.fusesource.hawtbuf.codec.Codec;
+import org.fusesource.hawtbuf.codec.VariableCodec;
 
 import java.io.IOException;
 import java.io.DataOutput;
@@ -77,20 +77,20 @@ public interface Hasher<N, K> {
      * @param <K>
      */
     public class BinaryHasher<N, K> implements Hasher<N, K> {
-        private final Marshaller<N> nodeMarshaller;
-        private final Marshaller<K> keyMarshaller;
+        private final Codec<N> nodeCodec;
+        private final Codec<K> keyCodec;
         private final HashAlgorithim hashAlgorithim;
 
-        public BinaryHasher(Marshaller<N> nodeMarshaller, Marshaller<K> keyMarshaller, HashAlgorithim hashAlgorithim) {
-            this.nodeMarshaller = nodeMarshaller;
-            this.keyMarshaller = keyMarshaller;
+        public BinaryHasher(Codec<N> nodeCodec, Codec<K> keyCodec, HashAlgorithim hashAlgorithim) {
+            this.nodeCodec = nodeCodec;
+            this.keyCodec = keyCodec;
             this.hashAlgorithim = hashAlgorithim;
         }
 
         public int hashNode(N node, int i) {
             try {
                 DataByteArrayOutputStream os = new DataByteArrayOutputStream();
-                nodeMarshaller.writePayload(node, os);
+                nodeCodec.encode(node, os);
                 os.write(':');
                 os.writeInt(i);
                 return hash(os.toBuffer());
@@ -102,7 +102,7 @@ public interface Hasher<N, K> {
         public int hashKey(K value) {
             try {
                 DataByteArrayOutputStream os = new DataByteArrayOutputStream();
-                keyMarshaller.writePayload(value, os);
+                keyCodec.encode(value, os);
                 return hash(os.toBuffer());
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -352,12 +352,12 @@ public interface Hasher<N, K> {
      * Used to convert an object to a byte[] by basically doing:
      * Object.toString().getBytes("UTF-8")
      */
-    public class ToStringMarshaller extends VariableMarshaller {
-        public void writePayload(Object o, DataOutput dataOutput) throws IOException {
+    public class ToStringCodec extends VariableCodec {
+        public void encode(Object o, DataOutput dataOutput) throws IOException {
             dataOutput.write(o.toString().getBytes("UTF-8"));
         }
 
-        public Object readPayload(DataInput dataInput) throws IOException {
+        public Object decode(DataInput dataInput) throws IOException {
             throw new UnsupportedOperationException();
         }
 
@@ -381,7 +381,7 @@ public interface Hasher<N, K> {
         }
 
         public ToStringHasher(HashAlgorithim hashAlgorithim) {
-            super(new ToStringMarshaller(), new ToStringMarshaller(), hashAlgorithim);
+            super(new ToStringCodec(), new ToStringCodec(), hashAlgorithim);
         }
 
         @Override

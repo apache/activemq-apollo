@@ -46,7 +46,7 @@ object VirtualHost extends Log {
   /**
    * Creates a default a configuration object.
    */
-  def default() = {
+  def defaultConfig() = {
     val rc = new VirtualHostDTO
     rc.id = "default"
     rc.enabled = true

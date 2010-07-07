@@ -26,20 +26,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.activemq.apollo.store.QueueRecord;
-import org.apache.activemq.broker.store.hawtdb.store.Data.MapAdd;
-import org.apache.activemq.broker.store.hawtdb.store.Data.MapEntryPut;
-import org.apache.activemq.broker.store.hawtdb.store.Data.MapEntryRemove;
-import org.apache.activemq.broker.store.hawtdb.store.Data.MapRemove;
-import org.apache.activemq.broker.store.hawtdb.store.Data.MessageAdd;
-import org.apache.activemq.broker.store.hawtdb.store.Data.QueueAdd;
-import org.apache.activemq.broker.store.hawtdb.store.Data.QueueAddMessage;
-import org.apache.activemq.broker.store.hawtdb.store.Data.QueueRemove;
-import org.apache.activemq.broker.store.hawtdb.store.Data.QueueRemoveMessage;
-import org.apache.activemq.broker.store.hawtdb.store.Data.SubscriptionAdd;
-import org.apache.activemq.broker.store.hawtdb.store.Data.SubscriptionRemove;
-import org.apache.activemq.broker.store.hawtdb.store.Data.Trace;
-import org.apache.activemq.broker.store.hawtdb.store.Data.Type;
-import org.apache.activemq.broker.store.hawtdb.store.Data.Type.TypeCreatable;
+import org.apache.activemq.broker.store.hawtdb.model.*;
+import org.apache.activemq.broker.store.hawtdb.model.Type.*;
 import org.fusesource.hawtbuf.AsciiBuffer;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.DataByteArrayInputStream;
@@ -54,6 +42,7 @@ import org.fusesource.hawtdb.api.Transaction;
 import org.fusesource.hawtdb.api.TxPageFile;
 import org.fusesource.hawtdb.api.TxPageFileFactory;
 import org.fusesource.hawtdb.internal.journal.Journal;
+import org.fusesource.hawtdb.internal.journal.JournalCallback;
 import org.fusesource.hawtdb.internal.journal.Location;
 
 public class HawtDBManager {
@@ -77,7 +66,7 @@ public class HawtDBManager {
     public static final int OPEN_STATE = 2;
 
     protected TxPageFileFactory pageFileFactory = new TxPageFileFactory();
-    protected TxPageFile pageFile;
+    public TxPageFile pageFile;
     protected Journal journal;
 
     protected RootEntity rootEntity = new RootEntity();
@@ -272,7 +261,7 @@ public class HawtDBManager {
         try {
             open();
 
-            store(new Trace.TraceBean().setMessage(new AsciiBuffer("LOADED " + new Date())), null);
+            store(new AddTrace.Bean().setMessage(new AsciiBuffer("LOADED " + new Date())), null);
         } finally {
             indexLock.writeLock().unlock();
         }
@@ -562,7 +551,7 @@ public class HawtDBManager {
      * @throws IOException
      */
     @SuppressWarnings("unchecked")
-    Location store(final TypeCreatable data, Runnable onFlush, Transaction tx) throws IOException {
+    public Location store(final TypeCreatable data, final Runnable onFlush, Transaction tx) throws IOException {
         final MessageBuffer message = ((PBMessage) data).freeze();
         int size = message.serializedSizeUnframed();
         DataByteArrayOutputStream os = new DataByteArrayOutputStream(size + 1);
@@ -579,7 +568,13 @@ public class HawtDBManager {
             long start = System.currentTimeMillis();
             final Location location;
             synchronized (journal) {
-                location = journal.write(os.toBuffer(), onFlush);
+                location = journal.write(os.toBuffer(), new JournalCallback(){
+                    public void success(Location location) {
+                        if( onFlush!=null ) {
+                            onFlush.run();
+                        }
+                    }
+                });
             }
             long start2 = System.currentTimeMillis();
 
@@ -634,66 +629,66 @@ public class HawtDBManager {
         // System.out.println("Updating index" + type.toString() + " loc: " +
         // location);
         switch (type) {
-        case MESSAGE_ADD:
-            messageAdd(tx, (MessageAdd) command, location);
+        case ADD_MESSAGE:
+            messageAdd(tx, (AddMessage.Getter) command, location);
             break;
-        case QUEUE_ADD:
-            queueAdd(tx, (QueueAdd) command, location);
+        case ADD_QUEUE:
+            queueAdd(tx, (AddQueue.Getter) command, location);
             break;
-        case QUEUE_REMOVE:
-            queueRemove(tx, (QueueRemove) command, location);
+        case REMOVE_QUEUE:
+            queueRemove(tx, (RemoveQueue.Getter) command, location);
             break;
-        case QUEUE_ADD_MESSAGE:
-            queueAddMessage(tx, (QueueAddMessage) command, location);
-            break;
-        case QUEUE_REMOVE_MESSAGE:
-            queueRemoveMessage(tx, (QueueRemoveMessage) command, location);
-            break;
-        case SUBSCRIPTION_ADD:
-            rootEntity.addSubscription((SubscriptionAdd) command);
-            break;
-        case SUBSCRIPTION_REMOVE:
-            rootEntity.removeSubscription(((SubscriptionRemove) command).getName());
-            break;
-        case TRANSACTION_BEGIN:
-        case TRANSACTION_ADD_MESSAGE:
-        case TRANSACTION_REMOVE_MESSAGE:
-        case TRANSACTION_COMMIT:
-        case TRANSACTION_ROLLBACK:
-        case MAP_ADD:
-            rootEntity.mapAdd(((MapAdd) command).getMapName(), tx);
-            break;
-        case MAP_REMOVE:
-            rootEntity.mapRemove(((MapRemove) command).getMapName(), tx);
-            break;
-        case MAP_ENTRY_PUT: {
-            MapEntryPut p = (MapEntryPut) command;
-            rootEntity.mapAddEntry(p.getMapName(), p.getId(), p.getValue(), tx);
-            break;
-        }
-        case MAP_ENTRY_REMOVE: {
-            MapEntryRemove p = (MapEntryRemove) command;
-            try {
-                rootEntity.mapRemoveEntry(p.getMapName(), p.getId(), tx);
-            } catch (KeyNotFoundException e) {
-                //yay, removed.
-            }
-            break;
-        }
-        case STREAM_OPEN:
-        case STREAM_WRITE:
-        case STREAM_CLOSE:
-        case STREAM_REMOVE:
-            throw new UnsupportedOperationException();
+//        case QUEUE_ADD_ENTRY:
+//            queueAddMessage(tx, (AddQueueEntry) command, location);
+//            break;
+//        case QUEUE_REMOVE_ENTRY:
+//            queueRemoveMessage(tx, (RemoveQueueEntry) command, location);
+//            break;
+//        case SUBSCRIPTION_ADD:
+//            rootEntity.addSubscription((AddSubscription) command);
+//            break;
+//        case SUBSCRIPTION_REMOVE:
+//            rootEntity.removeSubscription(((RemoveSubscription) command).getName());
+//            break;
+//        case TRANSACTION_BEGIN:
+//        case TRANSACTION_ADD_MESSAGE:
+//        case TRANSACTION_REMOVE_MESSAGE:
+//        case TRANSACTION_COMMIT:
+//        case TRANSACTION_ROLLBACK:
+//        case MAP_ADD:
+//            rootEntity.mapAdd(((AddMap) command).getMapName(), tx);
+//            break;
+//        case MAP_REMOVE:
+//            rootEntity.mapRemove(((RemoveMap) command).getMapName(), tx);
+//            break;
+//        case MAP_ENTRY_PUT: {
+//            PutMapEntry p = (PutMapEntry) command;
+//            rootEntity.mapAddEntry(p.getMapName(), p.getId(), p.getValue(), tx);
+//            break;
+//        }
+//        case MAP_ENTRY_REMOVE: {
+//            RemoveMapEntry p = (RemoveMapEntry) command;
+//            try {
+//                rootEntity.mapRemoveEntry(p.getMapName(), p.getId(), tx);
+//            } catch (KeyNotFoundException e) {
+//                //yay, removed.
+//            }
+//            break;
+//        }
+//        case STREAM_OPEN:
+//        case STREAM_WRITE:
+//        case STREAM_CLOSE:
+//        case STREAM_REMOVE:
+//            throw new UnsupportedOperationException();
         }
         rootEntity.setLastUpdate(location);
     }
 
-    private void messageAdd(Transaction tx, MessageAdd command, Location location) throws IOException {
+    private void messageAdd(Transaction tx, AddMessage.Getter command, Location location) throws IOException {
         rootEntity.messageAdd(tx, command, location);
     }
 
-    private void queueAdd(Transaction tx, QueueAdd command, Location location) throws IOException {
+    private void queueAdd(Transaction tx, AddQueue.Getter command, Location location) throws IOException {
         QueueRecord qd = new QueueRecord();
         qd.name = command.getName();
         qd.queueType = command.getQueueType();
@@ -705,11 +700,11 @@ public class HawtDBManager {
         rootEntity.queueAdd(tx, qd);
     }
 
-    private void queueRemove(Transaction tx, QueueRemove command, Location location) throws IOException {
+    private void queueRemove(Transaction tx, RemoveQueue.Getter command, Location location) throws IOException {
         rootEntity.queueRemove(tx, command.getKey());
     }
 
-    private void queueAddMessage(Transaction tx, QueueAddMessage command, Location location) throws IOException {
+    private void queueAddMessage(Transaction tx, AddQueueEntry.Getter command, Location location) throws IOException {
         QueueRecord qd = new QueueRecord();
         DestinationEntity destination = rootEntity.getDestination(command.getQueueKey());
         if (destination != null) {
@@ -724,7 +719,7 @@ public class HawtDBManager {
         }
     }
 
-    private void queueRemoveMessage(Transaction tx, QueueRemoveMessage command, Location location) throws IOException {
+    private void queueRemoveMessage(Transaction tx, RemoveQueueEntry.Getter command, Location location) throws IOException {
         DestinationEntity destination = rootEntity.getDestination(command.getQueueKey());
         if (destination != null) {
             long messageKey = destination.remove(tx, command.getQueueKey());
@@ -758,8 +753,8 @@ public class HawtDBManager {
         try {
             final CountDownLatch done = new CountDownLatch(1);
             synchronized (journal) {
-                journal.write(FLUSH_DATA, new Runnable() {
-                    public void run() {
+                journal.write(FLUSH_DATA, new JournalCallback(){
+                    public void success(Location location) {
                         done.countDown();
                     }
                 });

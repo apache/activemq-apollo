@@ -19,17 +19,17 @@ package org.apache.activemq.broker.store.hawtdb.store;
 import org.apache.activemq.apollo.store.QueueRecord;
 import org.apache.activemq.apollo.store.QueueStatus;
 import org.apache.activemq.apollo.store.SubscriptionRecord;
-import org.apache.activemq.broker.store.hawtdb.store.Data.MessageAdd;
-import org.apache.activemq.broker.store.hawtdb.store.Data.SubscriptionAdd;
-import org.apache.activemq.broker.store.hawtdb.store.Data.SubscriptionAdd.SubscriptionAddBuffer;
+import org.apache.activemq.broker.store.hawtdb.Codecs;
+import org.apache.activemq.broker.store.hawtdb.model.*;
 import org.fusesource.hawtbuf.AsciiBuffer;
 import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.codec.IntegerCodec;
+import org.fusesource.hawtbuf.codec.LongCodec;
 import org.fusesource.hawtbuf.proto.InvalidProtocolBufferException;
 import org.fusesource.hawtdb.api.*;
 import org.fusesource.hawtdb.internal.journal.Location;
-import org.fusesource.hawtdb.util.marshaller.IntegerMarshaller;
-import org.fusesource.hawtdb.util.marshaller.LocationMarshaller;
-import org.fusesource.hawtdb.util.marshaller.LongMarshaller;
+import org.fusesource.hawtdb.internal.journal.LocationCodec;
+
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -53,28 +53,28 @@ public class RootEntity {
     private static final BTreeIndexFactory<AsciiBuffer, Buffer> mapInstanceIndexFactory = new BTreeIndexFactory<AsciiBuffer, Buffer>();
 
     static {
-        messageKeyIndexFactory.setKeyMarshaller(LongMarshaller.INSTANCE);
-        messageKeyIndexFactory.setValueMarshaller(LocationMarshaller.INSTANCE);
+        messageKeyIndexFactory.setKeyCodec(LongCodec.INSTANCE);
+        messageKeyIndexFactory.setValueCodec(LocationCodec.INSTANCE);
         messageKeyIndexFactory.setDeferredEncoding(true);
 
-        locationIndexFactory.setKeyMarshaller(IntegerMarshaller.INSTANCE);
-        locationIndexFactory.setValueMarshaller(LongMarshaller.INSTANCE);
+        locationIndexFactory.setKeyCodec(IntegerCodec.INSTANCE);
+        locationIndexFactory.setValueCodec(LongCodec.INSTANCE);
         locationIndexFactory.setDeferredEncoding(true);
 
-        messageRefsIndexFactory.setKeyMarshaller(LongMarshaller.INSTANCE);
-        messageRefsIndexFactory.setValueMarshaller(LongMarshaller.INSTANCE);
+        messageRefsIndexFactory.setKeyCodec(LongCodec.INSTANCE);
+        messageRefsIndexFactory.setValueCodec(LongCodec.INSTANCE);
         messageRefsIndexFactory.setDeferredEncoding(true);
 
-        destinationIndexFactory.setKeyMarshaller(LongMarshaller.INSTANCE);
-        destinationIndexFactory.setValueMarshaller(DestinationEntity.MARSHALLER);
+        destinationIndexFactory.setKeyCodec(LongCodec.INSTANCE);
+        destinationIndexFactory.setValueCodec(DestinationEntity.CODEC);
         destinationIndexFactory.setDeferredEncoding(true);
 
-        subscriptionIndexFactory.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
-        subscriptionIndexFactory.setValueMarshaller(Marshallers.BUFFER_MARSHALLER);
+        subscriptionIndexFactory.setKeyCodec(Codecs.ASCII_BUFFER_CODEC);
+        subscriptionIndexFactory.setValueCodec(Codecs.BUFFER_CODEC);
         subscriptionIndexFactory.setDeferredEncoding(true);
 
-        mapIndexFactory.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
-        mapIndexFactory.setValueMarshaller(IntegerMarshaller.INSTANCE);
+        mapIndexFactory.setKeyCodec(Codecs.ASCII_BUFFER_CODEC);
+        mapIndexFactory.setValueCodec(IntegerCodec.INSTANCE);
         mapIndexFactory.setDeferredEncoding(true);
     }
 
@@ -133,7 +133,7 @@ public class RootEntity {
             os.writeInt(object.mapIndex.getPage());
             if (object.lastUpdate != null) {
                 os.writeBoolean(true);
-                LocationMarshaller.INSTANCE.writePayload(object.lastUpdate, os);
+                LocationCodec.INSTANCE.encode(object.lastUpdate, os);
             } else {
                 os.writeBoolean(false);
             }
@@ -153,7 +153,7 @@ public class RootEntity {
             rc.subscriptionIndex = subscriptionIndexFactory.open(paged, is.readInt());
             rc.mapIndex = mapIndexFactory.open(paged, is.readInt());
             if (is.readBoolean()) {
-                rc.lastUpdate = LocationMarshaller.INSTANCE.readPayload(is);
+                rc.lastUpdate = LocationCodec.INSTANCE.decode(is);
             } else {
                 rc.lastUpdate = null;
             }
@@ -202,7 +202,7 @@ public class RootEntity {
         return maxMessageKey;
     }
 
-    public void messageAdd(Transaction tx, MessageAdd command, Location location) throws IOException {
+    public void messageAdd(Transaction tx, AddMessage.Getter command, Location location) throws IOException {
         long id = command.getMessageKey();
         if (id > maxMessageKey) {
             maxMessageKey = id;
@@ -324,7 +324,7 @@ public class RootEntity {
     /**
      * @throws IOException
      */
-    public void addSubscription(SubscriptionAdd subscription) throws IOException {
+    public void addSubscription(AddSubscription.Bean subscription) throws IOException {
         data.subscriptionIndex.put(subscription.getName(), subscription.freeze().toFramedBuffer());
     }
 
@@ -352,7 +352,7 @@ public class RootEntity {
 
         SubscriptionRecord rc = null;
         if (b != null) {
-            SubscriptionAddBuffer sab = SubscriptionAddBuffer.parseFramed(b);
+            AddSubscription.Buffer sab = AddSubscription.FACTORY.parseFramed(b);
             if (sab != null) {
                 rc = new SubscriptionRecord();
                 rc.name = sab.getName();

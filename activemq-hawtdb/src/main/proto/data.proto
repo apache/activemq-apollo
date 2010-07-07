@@ -14,111 +14,121 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-package org.apache.activemq.broker.store.hawtdb.store;
+package org.apache.activemq.broker.store.hawtdb.model;
 
-option java_multiple_files = false;
-option java_outer_classname = "Data";
+option java_multiple_files = true;
+
 
 enum Type {
   //| option java_create_message="true";
-  MESSAGE_ADD = 0;
-  QUEUE_ADD = 10;
-  QUEUE_REMOVE = 11;
-  QUEUE_ADD_MESSAGE = 12;
-  QUEUE_REMOVE_MESSAGE = 13;
-  TRANSACTION_BEGIN = 20;
-  TRANSACTION_ADD_MESSAGE = 21;
-  TRANSACTION_REMOVE_MESSAGE = 22;
-  TRANSACTION_COMMIT = 23;
-  TRANSACTION_ROLLBACK = 24;
-  MAP_ADD = 30;
-  MAP_REMOVE = 31;
-  MAP_ENTRY_PUT = 32;
-  MAP_ENTRY_REMOVE = 33;
-  STREAM_OPEN = 40;
-  STREAM_WRITE = 41;
-  STREAM_CLOSE = 42;
-  STREAM_REMOVE = 43;
-  SUBSCRIPTION_ADD = 50;
-  SUBSCRIPTION_REMOVE = 51;
   
-  TRACE = 100;
+  ADD_MESSAGE = 1;
+  ADD_QUEUE_ENTRY = 2;
+  REMOVE_QUEUE_ENTRY = 3;
+
+  ADD_QUEUE = 10;
+  REMOVE_QUEUE = 11;
+
+  ADD_MAP = 30;
+  REMOVE_MAP = 31;
+  PUT_MAP_ENTRY = 32;
+  REMOVE_MAP_ENTRY = 33;
+
+  OPEN_STREAM = 40;
+  WRITE_STREAM = 41;
+  CLOSE_STREAM = 42;
+  REMOVE_STREAM = 43;
+
+  ADD_SUBSCRIPTION = 50;
+  REMOVE_SUBSCRIPTION = 51;
+
+  PURGE = 90;
+  ADD_TRACE = 100;
 }
 
-message Trace {
-  optional bytes message = 2 [java_override_type = "AsciiBuffer"];
-}  
+message Purge {
+  required int64 messageKey=1;
+}
+
+message AddTrace {
+  required bytes message = 2 [java_override_type = "AsciiBuffer"];
+}
 
 ///////////////////////////////////////////////////////////////
 // Message related operations.
 ///////////////////////////////////////////////////////////////
 
-message MessageAdd {
-  optional int64 messageKey=1;
-  optional bytes protocol = 2 [java_override_type = "AsciiBuffer"];
-  optional bytes value = 3;
-  optional int64 streamKey=4;
-  optional int32 messageSize=5;
-}  
+message AddMessage {
+  required int64 messageKey=1;
+  required bytes protocol = 2 [java_override_type = "AsciiBuffer"];
+  required int32 size = 3;
+  optional bytes value = 4;
+  optional int64 streamKey = 5;
+  optional int64 expiration = 6;
+}
+
 
 ///////////////////////////////////////////////////////////////
 // Queue related operations.
 ///////////////////////////////////////////////////////////////
 
-message QueueAdd {
-  optional int64 key=1;
+message AddQueue {
+  required int64 key=1;
   optional bytes name = 2 [java_override_type = "AsciiBuffer"];
   optional bytes queueType = 3 [java_override_type = "AsciiBuffer"];
 }
-message QueueRemove {
-  optional int64 key=5;
+message RemoveQueue {
+  required int64 key=1;
 }
-message QueueAddMessage {
-  optional int64 queueKey=1;
-  optional int64 queueSeq=2;
-  optional int64 messageKey=3;
-  optional bytes attachment = 4;
-  optional int32 messageSize=5;
-}  
-message QueueRemoveMessage {
-  optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
-  optional int64 queueKey=2;
+
+message AddQueueEntry {
+  required int64 queueKey=1;
+  required int64 queueSeq=2;
+  required int64 messageKey=3;
+  required int32 size=4;
+  optional bytes attachment=5;
+  optional int32 redeliveries = 6;
+}
+
+message RemoveQueueEntry {
+  required int64 queueKey=1;
+  required int64 queueSeq=2;
 }  
 
 
 ///////////////////////////////////////////////////////////////
 // Client related operations.
 ///////////////////////////////////////////////////////////////
-message SubscriptionAdd {
-  optional bytes name        = 1    [java_override_type = "AsciiBuffer"];
+message AddSubscription {
+  required bytes name        = 1    [java_override_type = "AsciiBuffer"];
   optional bytes selector    = 2    [java_override_type = "AsciiBuffer"];
   optional bytes destination = 3    [java_override_type = "AsciiBuffer"];
   optional bool  durable     = 4    [default = false];
   optional int64 tte         = 5    [default = -1];
   optional bytes attachment  = 6;
-  
+
 }
 
-message SubscriptionRemove {
-  optional bytes name = 1 [java_override_type = "AsciiBuffer"];
+message RemoveSubscription {
+  required bytes name = 1 [java_override_type = "AsciiBuffer"];
 }
 
 
 ///////////////////////////////////////////////////////////////
 // Map related operations.
 ///////////////////////////////////////////////////////////////
-message MapAdd {
+message AddMap {
   optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
-}  
-message MapRemove {
+}
+message RemoveMap {
   optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
-}  
-message MapEntryPut {
+}
+message PutMapEntry {
   optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
   optional bytes id = 2 [java_override_type = "AsciiBuffer"];
   optional bytes value = 3;
-} 
-message MapEntryRemove {
+}
+message RemoveMapEntry {
   optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
   optional bytes id = 2 [java_override_type = "AsciiBuffer"];
 }
@@ -126,38 +136,36 @@ message MapEntryRemove {
 ///////////////////////////////////////////////////////////////
 // Stream related operations.
 ///////////////////////////////////////////////////////////////
-message StreamOpen {
-  optional int64 streamKey=1;
+message OpenStream {
+  required int64 streamKey=1;
 }
-message StreamWrite {
-  optional int64 streamKey=1;
+message WriteStream {
+  required int64 streamKey=1;
   optional bytes data = 2;
 }
-message StreamClose {
-  optional int64 streamKey=1;
+message CloseStream {
+  required int64 streamKey=1;
 }
-message StreamRemove {
-  optional int64 streamKey=1;
+message RemoveStream {
+  required int64 streamKey=1;
 }
 
+
 ///////////////////////////////////////////////////////////////
-// Transaction related operations.
+// Index Structures
 ///////////////////////////////////////////////////////////////
-message TransactionBegin {
-  optional bytes txid = 1;
-}
-message TransactionAddMessage {
-  optional bytes txid = 1;
-  optional int64 messageKey=2;
-}
-message TransactionRemoveMessage {
-  optional bytes txid = 1;
-  optional bytes queueName = 2 [java_override_type = "AsciiBuffer"];
-  optional int64 messageKey=3;
-}
-message TransactionCommit {
-  optional bytes txid = 1;
-}
-message TransactionRollback {
-  optional bytes txid = 1;
+message RootRecord {
+
+  required fixed32 state=1;
+  required fixed64 lastMessageKey=2;
+  required fixed64 firstInProgressBatch=3;
+  required fixed64 lastUpdateLocation=4;
+
+  required fixed32 locationIndexPage=5;
+  required fixed32 messageKeyIndexPage=6;
+  required fixed32 messageRefsIndexPage=7;
+  required fixed32 destinationIndexPage=8;
+  required fixed32 subscriptionIndexPage=10;
+  required fixed32 mapIndexPage=11;
+  
 }

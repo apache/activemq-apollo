@@ -29,24 +29,20 @@ import java.io.File;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class HawtDBStoreDTO extends StoreDTO {
 
+    @XmlAttribute(name="directory", required=false)
+    public File directory;
+
 	@XmlAttribute(name="checkpoint-interval", required=false)
-	public Long checkpointInterval;
+	public long checkpointInterval = 5 * 1000L;
+
 	@XmlAttribute(name="cleanup-interval", required=false)
-	public Long cleanupInterval;
-	@XmlAttribute(name="purge-on-startup", required=false)
-	public Boolean purgeOnStartup;
-	@XmlAttribute(name="index-write-async", required=false)
-	public Boolean indexWriteAsync;
-	@XmlAttribute(name="journal-disk-syncs", required=false)
-	public Boolean journalDiskSyncs;
-	@XmlAttribute(name="fail-if-database-is-locked", required=false)
-	public Boolean failIfDatabaseIsLocked;
-	@XmlAttribute(name="index-write-batch-size", required=false)
-	public Integer indexWriteBatchSize;
-	@XmlAttribute(name="journal-max-file-length", required=false)
-	public Integer journalMaxFileLength;
-	@XmlAttribute(name="directory", required=false)
-	public File directory;
+	public long cleanupInterval = 30 * 1000L;
+
+	@XmlAttribute(name="journal-log-size", required=false)
+	public int journalLogSize = 1024*1024*20;
+
+    @XmlAttribute(name="fail-if-locked", required=false)
+    public boolean failIfLocked = false;
 
 
 }

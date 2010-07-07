@@ -16,22 +16,21 @@
  */
 package org.apache.activemq.broker.store.hawtdb
 
-import collection.Seq
-import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.apache.activemq.broker.store.{StoreBatch, Store}
 import org.fusesource.hawtdispatch.BaseRetained
-import java.io.{IOException, File}
-import org.apache.activemq.util.LockFile
-import org.fusesource.hawtdb.internal.journal.{Location, Journal}
-import java.util.HashSet
-import org.fusesource.hawtdb.api.{Transaction, TxPageFileFactory}
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.{Executors, TimeUnit}
-import org.apache.activemq.apollo.broker._
+import collection.mutable.ListBuffer
+import java.util.HashMap
+import java.util.concurrent.{TimeUnit, Executors, ExecutorService}
+import org.apache.activemq.apollo.util.IntCounter
+import org.apache.activemq.apollo.store.{QueueEntryRecord, MessageRecord, QueueStatus, QueueRecord}
+import org.apache.activemq.apollo.broker.{Logging, Log, BaseService}
+import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, StoreDTO}
+import collection.{JavaConversions, Seq}
+import org.apache.activemq.apollo.broker.{Reporting, ReporterLevel, Reporter}
+import org.fusesource.hawtdispatch.ScalaDispatch._
 import ReporterLevel._
-import store.HawtDBManager
-import org.apache.activemq.broker.store.{Store, StoreBatch}
-import org.apache.activemq.apollo.store.{QueueEntryRecord, QueueStatus, MessageRecord, QueueRecord}
-import org.apache.activemq.apollo.dto.{StoreDTO, HawtDBStoreDTO}
+import java.io.File
 
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
@@ -39,7 +38,7 @@ object HawtDBStore extends Log {
   /**
    * Creates a default a configuration object.
    */
-  def default() = {
+  def defaultConfig() = {
     val rc = new HawtDBStoreDTO
     rc.directory = new File("activemq-data")
     rc
@@ -49,64 +48,68 @@ object HawtDBStore extends Log {
    * Validates a configuration object.
    */
   def validate(config: HawtDBStoreDTO, reporter:Reporter):ReporterLevel = {
-     new Reporting(reporter) {
-      if( config.directory == null ) {
-        error("hawtdb store must be configured with a directroy.")
+    new Reporting(reporter) {
+      if( config.directory==null ) {
+        error("The HawtDB Store directory property must be configured.")
       }
     }.result
-  }}
+  }
+}
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBStore extends BaseService with Logging with Store {
+class HawtDBStore extends Store with BaseService with Logging {
+
   import HawtDBStore._
   override protected def log = HawtDBStore
 
-  val dispatchQueue = createQueue("hawtdb message database")
-  val writeQueue = Executors.newSingleThreadExecutor
-  val readQueue = Executors.newCachedThreadPool
-  var config: HawtDBStoreDTO  = default
-  var manager:HawtDBManager = null
+  /////////////////////////////////////////////////////////////////////
+  //
+  // Implementation of the BaseService interface
+  //
+  /////////////////////////////////////////////////////////////////////
+  val dispatchQueue = createQueue("hawtdb store")
 
+  var next_queue_key = new AtomicLong(0)
+  var next_msg_key = new AtomicLong(0)
 
+  protected var executor_pool:ExecutorService = _
+  var config:HawtDBStoreDTO = defaultConfig
+  val client = new HawtDBClient
 
-  /**
-   * Validates and then applies the configuration.
-   */
-  def configure(config: StoreDTO, reporter: Reporter) = {
-    //TODO:
-  }
+  def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[HawtDBStoreDTO], reporter)
 
-  def getQueueEntries(id: Long)(cb: (Seq[QueueEntryRecord]) => Unit) = {}
-
-  def configure(config: HawtDBStoreDTO, reporter:Reporter) = ^{
-    if ( validate(config, reporter) < ERROR ) {
-      this.config = config
+  def configure(config: HawtDBStoreDTO, reporter: Reporter) = {
+    if ( HawtDBStore.validate(config, reporter) < ERROR ) {
       if( serviceState.isStarted ) {
         // TODO: apply changes while he broker is running.
-        reporter.report(WARN, "Updating the hawtdb configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
+        reporter.report(WARN, "Updating cassandra store configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
+      } else {
+        this.config = config
       }
     }
-  } |>>: dispatchQueue
+  }
 
   protected def _start(onCompleted: Runnable) = {
-    writeQueue {
-      manager = new HawtDBManager
-      manager.setStoreDirectory(config.directory)
-      manager.start()
+    executor_pool = Executors.newFixedThreadPool(20)
+    client.config = config
+    executor_pool {
+      client.start
       onCompleted.run
     }
   }
 
   protected def _stop(onCompleted: Runnable) = {
-    writeQueue {
-      manager.stop()
-      onCompleted.run
-    }
+    new Thread() {
+      override def run = {
+        executor_pool.shutdown
+        executor_pool.awaitTermination(1, TimeUnit.DAYS)
+        executor_pool = null
+        client.stop
+        onCompleted.run
+      }
+    }.start
   }
 
   /////////////////////////////////////////////////////////////////////
@@ -115,38 +118,260 @@ class HawtDBStore extends BaseService with Logging with Store {
   //
   /////////////////////////////////////////////////////////////////////
 
-
+  /**
+   * Deletes all stored data from the store.
+   */
   def purge(cb: =>Unit) = {
+    executor_pool ^{
+      client.purge
+      cb
+    }
   }
 
-  def addQueue(record: QueueRecord)(cb: (Option[Long]) => Unit) = {}
+  def addQueue(record: QueueRecord)(cb: (Option[Long]) => Unit) = {
+    val key = next_queue_key.incrementAndGet
+    record.key = key
+    executor_pool ^{
+      client.addQueue(record)
+      cb(Some(key))
+    }
+  }
 
-  def getQueueStatus(id: Long)(cb: (Option[QueueStatus]) => Unit) = {}
+  def getQueueStatus(id: Long)(cb: (Option[QueueStatus]) => Unit) = {
+    executor_pool ^{
+      cb( client.getQueueStatus(id) )
+    }
+  }
 
-  def listQueues(cb: (Seq[Long]) => Unit) = {}
+  def listQueues(cb: (Seq[Long]) => Unit) = {
+    executor_pool ^{
+      cb( client.listQueues )
+    }
+  }
 
-  def loadMessage(id: Long)(cb: (Option[MessageRecord]) => Unit) = {}
+  def loadMessage(id: Long)(cb: (Option[MessageRecord]) => Unit) = {
+    executor_pool ^{
+      cb( client.loadMessage(id) )
+    }
+  }
 
-  def flushMessage(id: Long)(cb: => Unit) = {}
 
-  def createStoreBatch() = new HawtDBStoreBatch
+  def getQueueEntries(id: Long)(cb: (Seq[QueueEntryRecord]) => Unit) = {
+    executor_pool ^{
+      cb( client.getQueueEntries(id) )
+    }
+  }
 
-
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Implementation of the StoreTransaction interface
-  //
-  /////////////////////////////////////////////////////////////////////
-  class HawtDBStoreBatch extends BaseRetained with StoreBatch {
-
-    def store(delivery: MessageRecord):Long = {
-      -1L
+  def flushMessage(id: Long)(cb: => Unit) = ^{
+    val action: HawtDBBatch#MessageAction = pendingStores.get(id)
+    if( action == null ) {
+      cb
+    } else {
+      val prevDisposer = action.tx.getDisposer
+      action.tx.setDisposer(^{
+        cb
+        if(prevDisposer!=null) {
+          prevDisposer.run
+        }
+      })
+      flush(action.tx.txid)
     }
 
-    def dequeue(entry: QueueEntryRecord) = {}
+  } >>: dispatchQueue
 
-    def enqueue(entry: QueueEntryRecord) = {}
+  def createStoreBatch() = new HawtDBBatch
+
+
+  /////////////////////////////////////////////////////////////////////
+  //
+  // Implementation of the StoreBatch interface
+  //
+  /////////////////////////////////////////////////////////////////////
+  class HawtDBBatch extends BaseRetained with StoreBatch {
+
+    class MessageAction {
+
+      var msg= 0L
+      var store: MessageRecord = null
+      var enqueues = ListBuffer[QueueEntryRecord]()
+      var dequeues = ListBuffer[QueueEntryRecord]()
+
+      def tx = HawtDBBatch.this
+      def isEmpty() = store==null && enqueues==Nil && dequeues==Nil
+      def cancel() = {
+        tx.rm(msg)
+        if( tx.isEmpty ) {
+          tx.cancel
+        }
+      }
+    }
+
+    var actions = Map[Long, MessageAction]()
+    var txid:Int = 0
+
+    def rm(msg:Long) = {
+      actions -= msg
+    }
+
+    def isEmpty = actions.isEmpty
+    def cancel = {
+      delayedTransactions.remove(txid)
+      onPerformed
+    }
+
+    def store(record: MessageRecord):Long = {
+      record.key = next_msg_key.incrementAndGet
+      val action = new MessageAction
+      action.msg = record.key
+      action.store = record
+      this.synchronized {
+        actions += record.key -> action
+      }
+      record.key
+    }
+
+    def action(msg:Long) = {
+      actions.get(msg) match {
+        case Some(x) => x
+        case None =>
+          val x = new MessageAction
+          x.msg = msg
+          actions += msg->x
+          x
+      }
+    }
+
+    def enqueue(entry: QueueEntryRecord) = {
+      this.synchronized {
+        action(entry.messageKey).enqueues += entry
+      }
+    }
+
+    def dequeue(entry: QueueEntryRecord) = {
+      this.synchronized {
+        action(entry.messageKey).dequeues += entry
+      }
+    }
+
+    override def dispose = {
+      transaction_source.merge(this)
+    }
+
+    def onPerformed() {
+      super.dispose
+    }
   }
 
+  def key(x:QueueEntryRecord) = (x.queueKey, x.queueSeq)
+
+  val transaction_source = createSource(new ListEventAggregator[HawtDBBatch](), dispatchQueue)
+  transaction_source.setEventHandler(^{drain_transactions});
+  transaction_source.resume
+
+  var pendingStores = new HashMap[Long, HawtDBBatch#MessageAction]()
+  var pendingEnqueues = new HashMap[(Long,Long), HawtDBBatch#MessageAction]()
+  var delayedTransactions = new HashMap[Int, HawtDBBatch]()
+
+  var next_tx_id = new IntCounter
+  
+  def drain_transactions = {
+    transaction_source.getData.foreach { tx =>
+
+      val tx_id = next_tx_id.incrementAndGet
+      tx.txid = tx_id
+      delayedTransactions.put(tx_id, tx)
+      dispatchQueue.dispatchAsync(^{flush(tx_id)})
+      dispatchQueue.dispatchAfter(50, TimeUnit.MILLISECONDS, ^{flush(tx_id)})
+
+      tx.actions.foreach { case (msg, action) =>
+        if( action.store!=null ) {
+          pendingStores.put(msg, action)
+        }
+        action.enqueues.foreach { queueEntry=>
+          pendingEnqueues.put(key(queueEntry), action)
+        }
+
+
+        // dequeues can cancel out previous enqueues
+        action.dequeues.foreach { currentDequeue=>
+          val currentKey = key(currentDequeue)
+          val prevAction:HawtDBBatch#MessageAction = pendingEnqueues.remove(currentKey)
+          if( prevAction!=null ) {
+
+            // yay we can cancel out a previous enqueue
+            prevAction.enqueues = prevAction.enqueues.filterNot( x=> key(x) == currentKey )
+
+            // if the message is not in any queues.. we can gc it..
+            if( prevAction.enqueues == Nil && prevAction.store !=null ) {
+              pendingStores.remove(msg)
+              prevAction.store = null
+            }
+
+            // Cancel the action if it's now empty
+            if( prevAction.isEmpty ) {
+              prevAction.cancel()
+            }
+
+            // since we canceled out the previous enqueue.. now cancel out the action
+            action.dequeues = action.dequeues.filterNot( _ == currentDequeue)
+            if( action.isEmpty ) {
+              action.cancel()
+            }
+          }
+        }
+      }
+
+    }
+  }
+
+  def flush(tx_id:Int) = {
+    flush_source.merge(tx_id)
+  }
+
+  val flush_source = createSource(new ListEventAggregator[Int](), dispatchQueue)
+  flush_source.setEventHandler(^{drain_flushes});
+  flush_source.resume
+
+  def drain_flushes:Unit = {
+
+    if( !serviceState.isStarted ) {
+      return
+    }
+    
+    val txs = flush_source.getData.flatMap{ tx_id =>
+      val tx = delayedTransactions.remove(tx_id)
+      // Message may be flushed or canceled before the timeout flush event..
+      // tx may be null in those cases
+      if (tx!=null) {
+
+        tx.actions.foreach { case (msg, action) =>
+          if( action.store!=null ) {
+            pendingStores.remove(msg)
+          }
+          action.enqueues.foreach { queueEntry=>
+            val k = key(queueEntry)
+            pendingEnqueues.remove(k)
+          }
+        }
+
+        Some(tx)
+      } else {
+        None
+      }
+    }
+
+    if( !txs.isEmpty ) {
+      // suspend so that we don't process more flush requests while
+      // we are concurrently executing a flush
+      flush_source.suspend
+      executor_pool ^{
+        client.store(txs)
+        txs.foreach { x=>
+          x.onPerformed
+        }
+        flush_source.resume
+      }
+    }
+  }
 
 }

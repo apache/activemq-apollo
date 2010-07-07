@@ -21,10 +21,10 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.fusesource.hawtbuf.AsciiBuffer;
-import org.apache.activemq.util.marshaller.Marshaller;
-import org.apache.activemq.util.marshaller.VariableMarshaller;
+import org.fusesource.hawtbuf.codec.Codec;
+import org.fusesource.hawtbuf.codec.VariableCodec;
 import org.fusesource.hawtdb.internal.journal.Location;
-import org.fusesource.hawtdb.util.marshaller.LocationMarshaller;
+import org.fusesource.hawtdb.internal.journal.LocationCodec;
 
 public class MessageKeys {
 
@@ -41,16 +41,16 @@ public class MessageKeys {
         return "["+messageId+","+location+"]";
     }
     
-    public static final Marshaller<MessageKeys> MARSHALLER = new VariableMarshaller<MessageKeys>() {
-        public MessageKeys readPayload(DataInput dataIn) throws IOException {
-            Location location = LocationMarshaller.INSTANCE.readPayload(dataIn);
+    public static final Codec<MessageKeys> CODEC = new VariableCodec<MessageKeys>() {
+        public MessageKeys decode(DataInput dataIn) throws IOException {
+            Location location = LocationCodec.INSTANCE.decode(dataIn);
             byte data[] = new byte[dataIn.readShort()];
             dataIn.readFully(data);
             return new MessageKeys(new AsciiBuffer(data), location);
         }
 
-        public void writePayload(MessageKeys object, DataOutput dataOut) throws IOException {
-            LocationMarshaller.INSTANCE.writePayload(object.location, dataOut);
+        public void encode(MessageKeys object, DataOutput dataOut) throws IOException {
+            LocationCodec.INSTANCE.encode(object.location, dataOut);
             dataOut.writeShort(object.messageId.length);
             dataOut.write(object.messageId.data, object.messageId.offset, object.messageId.length);
         }
