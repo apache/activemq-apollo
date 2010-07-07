@@ -29,6 +29,7 @@ import org.apache.activemq.apollo.transport.pipe.PipeTransportFactory
 import org.apache.activemq.apollo.transport.pipe.PipeTransport
 import org.apache.activemq.apollo.transport.pipe.PipeTransportServer
 import org.apache.activemq.apollo.util._
+import java.lang.String
 
 
 /**
@@ -89,6 +90,13 @@ class VMTransportFactory extends PipeTransportFactory with Logging {
           debug("Failed to stop the broker gracefully: ", e);
       }
     }
+  }
+
+  override def bind(location: String):TransportServer = {
+    if( !location.startsWith("vm:") ) {
+        return null;
+    }
+    super.bind(location.replaceFirst("vm:", "pipe:"))
   }
 
   override def connect(location: String): Transport = {

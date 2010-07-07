@@ -33,7 +33,7 @@ import ReporterLevel._
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBStoreFactory extends StoreFactory.SPI {
+class HawtDBStoreFactory extends StoreFactory.Provider {
 
   def create(config: StoreDTO) = {
     if( config.isInstanceOf[HawtDBStoreDTO]) {
