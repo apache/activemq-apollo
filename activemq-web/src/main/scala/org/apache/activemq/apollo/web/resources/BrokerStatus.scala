@@ -19,6 +19,8 @@ package org.apache.activemq.apollo.web.resources;
 import java.lang.String
 import javax.ws.rs._
 import reflect.{BeanProperty}
+import org.apache.activemq.apollo.dto.{ConnectionStatusDTO, ConnectorStatusDTO, VirtualHostStatusDTO, BrokerStatusDTO}
+
 /**
  * <p>
  * The BrokerStatus is the root container of the runtime status of a broker.
@@ -28,7 +30,11 @@ import reflect.{BeanProperty}
  */
 case class BrokerStatus(parent:Broker, @BeanProperty id:String) extends Resource {
   @GET
-  def get() = this
+  def get() = {
+    val rc = new BrokerStatusDTO
+    rc.id = id
+    rc
+  }
 
   @Path("virtual-hosts")
   def virtualHosts :Array[VirtualHostStatus] = null
@@ -47,22 +53,30 @@ case class BrokerStatus(parent:Broker, @BeanProperty id:String) extends Resource
 }
 
 case class VirtualHostStatus(parent:BrokerStatus, @BeanProperty id: String) extends Resource {
-  var state:String = null
   @GET
-  def get() = this
+  def get() = {
+    val rc = new VirtualHostStatusDTO
+    rc.id = id
+    rc
+  }
 }
 
 case class ConnectorStatus(parent:BrokerStatus, @BeanProperty id: String) extends Resource {
-  var state:String = "unknown";
-  var accepted:Long = 0;
+
   @GET
-  def get() = this
+  def get() = {
+    val rc = new ConnectorStatusDTO
+    rc.id = id
+    rc
+  }
 }
 
 case class ConnectionStatus(parent:BrokerStatus, @BeanProperty id:String) extends Resource {
-  var state:String = "unknown";
-  var readCounter:Long = 0;
-  var writeCounter:Long = 0;
+
   @GET
-  def get() = this
+  def get() = {
+    val rc = new ConnectionStatusDTO
+    rc.id = id
+    rc
+  }
 }

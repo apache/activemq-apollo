@@ -27,7 +27,8 @@ import org.apache.activemq.apollo.{BrokerRegistry, ConfigStore}
 import org.fusesource.hawtdispatch.Future
 import Response._
 import Response.Status._
-import org.apache.activemq.apollo.dto.BrokerDTO
+import org.apache.activemq.apollo.dto.{IdListDTO, BrokerSummaryDTO, BrokerDTO}
+import java.util.{Arrays, Collections}
 
 /**
  * Defines the default representations to be used on resources
@@ -56,14 +57,13 @@ class Root() extends Resource {
   var configStore:ConfigStore = BrokerRegistry.configStore;
 
   @GET
-  def get() = this
-
-  case class BrokerRef(@BeanProperty id:String, @BeanProperty href:String)
-
-  def getBrokers: Array[BrokerRef] = {
-    Future[List[String]] { cb=>
+  def get() = {
+    val rc = new IdListDTO
+    val ids = Future[List[String]] { cb=>
       configStore.listBrokerModels(cb)
-    }.map(x=> new BrokerRef(x, x)).toArray[BrokerRef]
+    }.toArray[String]
+    rc.ids.addAll(Arrays.asList(ids: _*))
+    rc
   }
 
   @Path("{id}")
@@ -78,12 +78,13 @@ case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
   @Context
   var configStore:ConfigStore = BrokerRegistry.configStore;
 
-  case class BrokerSummary(@BeanProperty id:String, @BeanProperty config_rev:Int, @BeanProperty config_href:String, @BeanProperty status_href:String)
-
   @GET
   def get() = {
     val c = config()
-    new BrokerSummary(id, c.rev, "config/"+c.rev, "status")
+    val rc = new BrokerSummaryDTO
+    rc.id = id
+    rc.rev = c.rev
+    rc
   }
 
   @GET @Path("config")
