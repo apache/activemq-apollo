@@ -73,7 +73,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       result.id = broker.id
       result.current_time = System.currentTimeMillis
       result.state = broker.serviceState.toString
-      result.state_since - broker.serviceState.since
+      result.state_since = broker.serviceState.since
       result.config = broker.config
 
       broker.virtualHosts.values.foreach{ host=>
