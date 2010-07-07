@@ -33,7 +33,8 @@ import org.apache.activemq.apollo.broker._
 import org.scalatest._
 import _root_.org.fusesource.hawtbuf._
 import java.io.{PrintStream, FileOutputStream, File, IOException}
-import org.apache.activemq.util.ProcessSupport
+import org.apache.activemq.util.{IOHelper, ProcessSupport}
+import scala.util.matching.Regex
 
 object BaseBrokerPerfSupport {
   var PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "3"))
@@ -87,7 +88,7 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
   val producers = new ArrayList[RemoteProducer]()
   val consumers = new ArrayList[RemoteConsumer]()
 
-  var spread_sheet_stats:List[(String, Any)] = Nil
+  var spread_sheet_stats:List[(String, AnyRef)] = Nil
 
 
   override protected def beforeEach() = {
@@ -126,24 +127,43 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
   }
 
   override protected def afterAll() = {
-    var basedir = new File(System.getProperty("user.home", "."))
-    var csvfile = new File(basedir, "perf-"+getClass.getName+".csv");
-    val exists = csvfile.exists
-    var out = new PrintStream(new FileOutputStream(csvfile, true));
-    val version = new String(ProcessSupport.system("git", "rev-list", "--max-count=1", "HEAD").toByteArray).trim
-    spread_sheet_stats ::= ("Version", version)
-    if( !exists ) {
-      out.println(spread_sheet_stats.map(x=>csv_esc(x._1)).mkString(","))
+    val basedir = new File(System.getProperty("user.home", "."))
+    val csvfile = new File(basedir, "perf-"+getClass.getName+".html");
+
+    val report_parser = """(?s)(.*// DATA-START\r?\n)(.*)(// DATA-END.*)""".r
+
+    // Load the previous dataset if the file exists
+    var report_data = ""
+    if( csvfile.exists ) {
+      IOHelper.readText(csvfile) match {
+        case report_parser(_, data, _) =>
+          report_data = data.stripLineEnd
+        case _ =>
+          println("could not parse existing report file: "+csvfile);
+      }
     }
-    out.println(spread_sheet_stats.map(x=>csv_esc(x._2)).mkString(","))
-    out.close
+
+    // Load the report template and parse it..
+    val template = IOHelper.readText(classOf[BaseBrokerPerfSupport].getResourceAsStream("report.html"))
+    template match {
+      case report_parser(report_header, _, report_footer) =>
+        val version = new String(ProcessSupport.system("git", "rev-list", "--max-count=1", "HEAD").toByteArray).trim
+
+        if( !report_data.isEmpty ) {
+          report_data += ",\n"
+        }
+        report_data += "            // version, "+spread_sheet_stats.map(_._1).mkString(", ")+"\n"
+        report_data += "            ['commit "+version+"', "+spread_sheet_stats.map(x=>String.format("%.2f",x._2)).mkString(", ")+"]\n"
+
+        IOHelper.writeText(csvfile, report_header+report_data+report_footer)  
+      case _ =>
+        println("could not parse template report file");
+    }
+
     println("Updated: "+csvfile);
   }
 
-  def csv_esc(value:Any) = {
-    "\""+value.toString.replace("\"", "\"\"")+"\""
-  }
-
+//
   def getBrokerWireFormat() = "multi"
 
   def getRemoteWireFormat(): String

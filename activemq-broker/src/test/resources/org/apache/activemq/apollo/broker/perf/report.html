@@ -1,0 +1,191 @@
+<html>
+  <head>
+    <style type='text/css'>
+      body { font-family:Verdana; font-size:12px; color:#666666; }
+      #header {
+        margin: 0; padding: 2em; text-align:center; background: #baccd8;
+      }
+      #header h1 {
+        margin: 0; padding: 0; font-size: 180%; line-height: 1em; color: #333;
+      }
+      #wrap {
+        width: 60em; margin: 0 auto; padding: 2em;
+        background: #dae3e9;
+      }
+      #content {
+        width: 60em;
+        padding: 2em 0;
+      }
+      .chart-graph {
+        float:right; width: 66%; height: 15em;  margin: 1em 0 1em 1em;
+      }
+      .chart-section { clear:both; margin-top: 1em; }
+      .clear { clear:both; }
+    </style>
+    <script type='text/javascript' src='http://www.google.com/jsapi'></script>
+    <script type='text/javascript'>
+      var cols_index_map = {}
+      var data = null;
+      google.load('visualization', '1', {'packages':['linechart']});
+      google.setOnLoadCallback(function() {
+        data = new google.visualization.DataTable();
+        data.addColumn('string', 'version');
+        data.addColumn('number', '1->1->0 producer');
+        data.addColumn('number', '1->1->1 producer');
+        data.addColumn('number', '1->1->1 consumer');
+        data.addColumn('number', '2->2->2 producer');
+        data.addColumn('number', '2->2->2 producer sd');
+        data.addColumn('number', '2->2->2 consumer');
+        data.addColumn('number', '2->2->2 consumer sd');
+        data.addColumn('number', '10->1->10 producer');
+        data.addColumn('number', '10->1->10 producer sd');
+        data.addColumn('number', '10->1->10 consumer');
+        data.addColumn('number', '10->1->10 consumer sd');
+        data.addColumn('number', '10->1->1 producer');
+        data.addColumn('number', '10->1->1 producer sd');
+        data.addColumn('number', '10->1->1 consumer');
+        data.addColumn('number', '1->1->10 producer');
+        data.addColumn('number', '1->1->10 consumer');
+        data.addColumn('number', '1->1->10 consumer sd');
+        data.addColumn('number', '10->10->10 producer');
+        data.addColumn('number', '10->10->10 producer sd');
+        data.addColumn('number', '10->10->10 consumer');
+        data.addColumn('number', '10->10->10 consumer sd');
+        data.addColumn('number', '1->1->[1 slow,1 fast] producer');
+        data.addColumn('number', '1->1->[1 slow,1 fast] producer sd');
+        data.addColumn('number', '1->1->[1 slow,1 fast] consumer');
+        data.addColumn('number', '1->1->[1 slow,1 fast] consumer sd');
+        data.addColumn('number', '2->2->[1,1 selecting] producer');
+        data.addColumn('number', '2->2->[1,1 selecting] producer sd');
+        data.addColumn('number', '2->2->[1,1 selecting] consumer');
+        data.addColumn('number', '2->2->[1,1 selecting] consumer sd');
+
+        for( var i=0; i <  data.getNumberOfColumns(); i ++) {
+          cols_index_map[data.getColumnLabel(i)] = i;
+        }
+
+        var data_array = [
+// DATA-START
+      ['555b061e6782136a1a49926f3d1f6b6ab716fdbb', 151405.66, 11196.00, 13107.33, 16008.33, 5532.50, 14253.00, 2875.50, 622.00, 152.36, 3214.00, 1031.43, 4872.33, 696.11, 4779.67, 2176.27, 20076.31, 69.34, 8170.94, 92.81, 8493.50, 421.33, 103.67, 155.50, 19.67, 29.50, 12049.98, 123.00, 12020.66, 18.00],
+      ['555b061e6782136a1a49926f3d1f6b6ab716fdbb', 140957.00, 14202.33, 14158.67, 12854.67, 622.00, 14241.33, 1423.00, 6833.06, 1155.71, 8560.15, 1052.10, 9759.91, 1442.56, 6537.13, 2590.80, 26000.33, 127.60, 13044.33, 535.73, 13001.67, 629.49, 1450.85, 0.00, 19.66, 29.50, 13612.00, 3198.00, 13327.33, 3027.00]
+// DATA-END
+        ];
+        try {
+          data.addRows(data_array);
+        } catch (er) {
+          alert(er);
+        }
+      });
+
+      // Helpers
+      function chart(id, cols, options) {
+        var c = new google.visualization.LineChart(document.getElementById(id));
+        var view = new google.visualization.DataView(data);
+        var col_indexes = new Array(cols.length);
+        for (var i = 0; i < cols.length; i++) {
+          col_indexes[i] = cols_index_map[cols[i]];
+        }
+        view.setColumns(col_indexes);
+        c.draw(view, options);
+      }
+    </script>
+  </head>
+  <body>
+    <div id='wrap'>
+      <div id='header'>
+        <h1>Broker Performance Evolution</h1>
+      </div>
+
+      <div id='content' >
+        <p>
+          This report is used to visualize the how the performance of the broker
+          is changed over time as new code changes are introduced. Click on any data
+          point in the charts to get the data point's exact value and git
+          commit version.
+        </p>
+
+        <div class='chart-section'>
+          <div id='partioned_scaling' class='chart-graph'></div>
+          <script type='text/javascript'>
+            google.setOnLoadCallback(function() {
+              chart('partioned_scaling',
+                ['version', '1->1->1 consumer', '2->2->2 consumer', '10->10->10 consumer'],
+                {showCategories:false, legend: 'bottom', smoothLine:true, titleX:'changes over time', titleY:'messages/sec', enableTooltip:true }
+              );
+            });
+          </script>
+          <h2>Partitioned Scaling</h2>
+          Compares how well the broker scales as partitioned load is increased on it.  Each destination
+          has only one producer and one consumer attached.
+        </div>
+
+        <div class='chart-section'>
+          <div id='raw_producer_rate' class='chart-graph'></div>
+          <script type='text/javascript'>
+            google.setOnLoadCallback(function() {
+              chart('raw_producer_rate',
+                ['version', '1->1->0 producer'],
+                {showCategories:false, legend: 'bottom', smoothLine:true, titleX:'changes over time', titleY:'messages/sec', enableTooltip:true }
+              );
+            });
+          </script>
+          <h2>Max Producer Rate</h2>
+          Compares the maximum producer rate for when there is no attached consumers vs when there is
+          one attached consumer.
+        </div>
+
+        <div class='chart-section'>
+          <div id='fan_in_rate' class='chart-graph'></div>
+          <script type='text/javascript'>
+            google.setOnLoadCallback(function() {
+              chart('fan_in_rate',
+                ['version', '10->1->1 producer', '10->1->1 consumer', '10->1->1 producer sd'],
+                {showCategories:false, legend: 'bottom', smoothLine:true, titleX:'changes over time', titleY:'messages/sec', enableTooltip:true }
+              );
+            });
+          </script>
+          <h2>Producer Fan In</h2>
+          Total producer and consumer rates for when there are many producers on one destination
+          but only one consumer.  The 'producer sd' is standard deviation of the message rate across the
+          producers.
+        </div>
+
+
+        <div class='chart-section'>
+          <div id='fan_out_rate' class='chart-graph'></div>
+          <script type='text/javascript'>
+            google.setOnLoadCallback(function() {
+              chart('fan_out_rate',
+                ['version', '1->1->10 producer', '1->1->10 consumer', '1->1->10 consumer sd'],
+                {showCategories:false, legend: 'bottom', smoothLine:true, titleX:'changes over time', titleY:'messages/sec', enableTooltip:true }
+              );
+            });
+          </script>
+          <h2>Consumer Fan Out</h2>
+          Total producer and consumer rates for when there are many consumers on one destination
+          but only one producer.  The 'consumer sd' is standard deviation of the message rate across the
+          consumers.
+        </div>
+
+
+        <div class='chart-section'>
+          <div id='fan_inout_rate' class='chart-graph'></div>
+          <script type='text/javascript'>
+            google.setOnLoadCallback(function() {
+              chart('fan_inout_rate',
+                ['version', '10->1->10 producer', '10->1->10 consumer', '10->1->10 producer sd', '10->1->10 consumer sd'],
+                {showCategories:false, legend: 'bottom', smoothLine:true, titleX:'changes over time', titleY:'messages/sec', enableTooltip:true }
+              );
+            });
+          </script>
+          <h2>Producer Fan In and Consumer Fan Out</h2>
+          Total producer and consumer rates for when there are many producers and many consumers on one destination.  The 'consumer sd' and 'producer sd'
+          are the standard deviation numbers of the producers and consumers.
+        </div>
+
+        <div class="clear"></div>
+      </div>
+    </div>
+  </body>
+</html>
+

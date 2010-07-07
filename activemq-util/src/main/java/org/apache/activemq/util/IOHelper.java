@@ -16,16 +16,11 @@
  */
 package org.apache.activemq.util;
 
-import java.io.File;
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.lang.reflect.Field;
 
 import org.apache.activemq.util.os.CLibrary;
+import org.fusesource.hawtbuf.ByteArrayOutputStream;
 
 /**
  */
@@ -156,7 +151,54 @@ public final class IOHelper {
         FileOutputStream fileDest = new FileOutputStream(dest);
         copyInputStream(fileSrc, fileDest);
     }
-    
+
+    public static String readText(File path) throws IOException {
+        return readText(path, "UTF-8");
+    }
+    public static String readText(File path, String encoding) throws IOException {
+      return readText(new FileInputStream(path), encoding);
+    }
+
+    public static String readText(InputStream in) throws IOException {
+        return readText(in, "UTF-8");
+    }
+
+    public static String readText(InputStream in, String encoding) throws IOException {
+      return new String(readBytes(in), encoding);
+    }
+
+    public static byte[] readBytes(File path) throws IOException {
+      return readBytes(new FileInputStream(path));
+    }
+
+    public static byte[] readBytes(InputStream in) throws IOException {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      copyInputStream(in, baos);
+      return baos.toByteArray();
+    }
+
+    public static void writeText(File path, String text) throws IOException {
+        writeText(path, text, "UTF-8");
+    }
+
+    public static void writeText(File path, String text, String encoding) throws IOException {
+      OutputStreamWriter out = new OutputStreamWriter(new FileOutputStream(path), encoding);
+      try {
+        out.write(text);
+      } finally {
+        close(out);
+      }
+    }
+
+    public static void writeBinaryFile(File path, byte[] contents) throws IOException {
+      FileOutputStream out = new FileOutputStream(path);
+      try {
+        out.write(contents);
+      } finally {
+        close(out);
+      }
+    }
+
     public static void copyInputStream(InputStream in, OutputStream out) throws IOException {
         try {
             byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
@@ -168,6 +210,13 @@ public final class IOHelper {
         } finally {
             close(in);
             close(out);
+        }
+    }
+
+    public static void close(Writer out) {
+        try {
+            out.close();
+        } catch (IOException e) {
         }
     }
 
