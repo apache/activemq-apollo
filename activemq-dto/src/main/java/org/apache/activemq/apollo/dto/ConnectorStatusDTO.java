@@ -16,10 +16,9 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * <p>
@@ -29,19 +28,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="connector-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ConnectorStatusDTO {
-
-    /**
-     * A unique id of the connector.
-     */
-	@XmlAttribute(name="id")
-	public String id;
-
-    /**
-     * The state of the object.
-     */
-	@XmlAttribute(name="state")
-	public String state;
+public class ConnectorStatusDTO extends ServiceStatusDTO {
 
     /**
      * The number of connections that this connector has accepted.
@@ -49,5 +36,16 @@ public class ConnectorStatusDTO {
 	@XmlAttribute(name="accepted")
 	public Long accepted;
 
-    
+    /**
+     * Ids of all open connections that the connector is managing.
+     */
+    @XmlElement(name="connection")
+    public List<Long> connections = new ArrayList<Long>();
+
+    /**
+     * The current running configuration of the object
+     */
+    @XmlElement(name="config")
+    public ConnectorDTO config = null;
+
 }

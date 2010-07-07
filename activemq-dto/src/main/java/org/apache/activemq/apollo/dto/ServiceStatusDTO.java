@@ -26,7 +26,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="service-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ServiceStatusDTO extends IdDTO {
+public class ServiceStatusDTO extends LongIdDTO {
 
     /**
      * The state of the service.
@@ -34,5 +34,10 @@ public class ServiceStatusDTO extends IdDTO {
 	@XmlAttribute(name="state")
 	public String state;
 
+    /**
+     * Since when has the broker in in this state?  In milliseconds since the epoch. 
+     */
+	@XmlAttribute(name="state-since")
+	public long stateSince;
 
 }

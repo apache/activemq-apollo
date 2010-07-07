@@ -71,7 +71,6 @@ class CassandraStore extends Store with BaseService with Logging {
   /////////////////////////////////////////////////////////////////////
   val dispatchQueue = createQueue("cassandra store")
 
-  var next_queue_key = new AtomicLong(1)
   var next_msg_key = new AtomicLong(1)
 
   val client = new CassandraClient()
@@ -79,6 +78,9 @@ class CassandraStore extends Store with BaseService with Logging {
   var blocking:ExecutorService = null
 
   def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[CassandraStoreDTO], reporter)
+
+
+  def storeType = "cassandra"
 
   def configure(config: CassandraStoreDTO, reporter: Reporter) = {
     if ( CassandraStore.validate(config, reporter) < ERROR ) {
@@ -155,18 +157,23 @@ class CassandraStore extends Store with BaseService with Logging {
   def purge(callback: =>Unit) = {
     blocking {
       client.purge
-      next_queue_key.set(1)
       next_msg_key.set(1)
       callback
     }
   }
 
-  def addQueue(record: QueueRecord)(callback: (Option[Long]) => Unit) = {
-    val key = next_queue_key.getAndIncrement
-    record.key = key
+  /**
+   * Ges the next queue key identifier.
+   */
+  def getLastQueueKey(callback:(Option[Long])=>Unit):Unit = {
+    // TODO:
+    callback( Some(1L) )
+  }
+
+  def addQueue(record: QueueRecord)(callback: (Boolean) => Unit) = {
     blocking {
       client.addQueue(record)
-      callback(Some(key))
+      callback(true)
     }
   }
 

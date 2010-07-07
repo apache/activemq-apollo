@@ -25,7 +25,7 @@ import javax.xml.bind.annotation.*;
  */
 @XmlRootElement(name = "virtual-host")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class VirtualHostDTO extends ServiceDTO {
+public class VirtualHostDTO extends ServiceDTO<String> {
 
     @XmlElement(name="host-name", required=true)
     public ArrayList<String> hostNames = new ArrayList<String>();

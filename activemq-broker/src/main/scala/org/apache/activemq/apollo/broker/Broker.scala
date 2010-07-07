@@ -24,9 +24,11 @@ import org.fusesource.hawtdispatch.{Dispatch}
 import org.fusesource.hawtbuf._
 import ReporterLevel._
 import AsciiBuffer._
-import org.apache.activemq.apollo.dto.{BrokerDTO}
 import collection.{JavaConversions, SortedMap}
-import JavaConversions._ 
+import JavaConversions._
+import org.apache.activemq.apollo.dto.{VirtualHostStatusDTO, ConnectorStatusDTO, BrokerStatusDTO, BrokerDTO}
+import java.util.concurrent.atomic.AtomicLong
+import org.apache.activemq.apollo.util.LongCounter
 
 /**
  * <p>
@@ -88,6 +90,8 @@ object BufferConversions {
 
 
 object Broker extends Log {
+
+  val broker_id_counter = new AtomicLong()
 
   val STICK_ON_THREAD_QUEUES = true
 
@@ -156,9 +160,14 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
     dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
   }
 
-  def id = config.id
+  val id = broker_id_counter.incrementAndGet
+  
+  val virtual_host_id_counter = new LongCounter
+  val connector_id_counter = new LongCounter
+  val connection_id_counter = new LongCounter
 
-  override def toString() = "broker: "+id 
+  override def toString() = "broker: "+id
+
 
   /**
    * Validates and then applies the configuration.
@@ -183,7 +192,7 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
       dataDirectory = new File(config.basedir)
       defaultVirtualHost = null
       for (c <- config.virtualHosts) {
-        val host = new VirtualHost(this)
+        val host = new VirtualHost(this, virtual_host_id_counter.incrementAndGet)
         host.configure(c, this)
         virtualHosts += ascii(c.id)-> host
         // first defined host is the default virtual host
@@ -192,7 +201,7 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
         }
       }
       for (c <- config.connectors) {
-        val connector = new Connector(this)
+        val connector = new Connector(this, connector_id_counter.incrementAndGet)
         connector.configure(c, this)
         connectors ::= connector
       }

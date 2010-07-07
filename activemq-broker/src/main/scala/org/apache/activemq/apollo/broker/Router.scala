@@ -21,9 +21,10 @@ import _root_.org.fusesource.hawtbuf._
 import _root_.org.fusesource.hawtdispatch._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
-import java.util.HashMap
 import path.PathMap
 import collection.JavaConversions
+import org.apache.activemq.apollo.util.LongCounter
+import collection.mutable.HashMap
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -62,7 +63,6 @@ class Domain {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object Router extends Log {
-
 }
 
 /**
@@ -80,10 +80,14 @@ object Router extends Log {
  */
 class Router(val host:VirtualHost) extends DispatchLogging {
 
+  val destination_id_counter = new LongCounter
+
   override protected def log = Router
   protected def dispatchQueue:DispatchQueue = host.dispatchQueue
 
   trait DestinationNode {
+    val destination:Destination
+    val id = destination_id_counter.incrementAndGet
     var targets = List[DeliveryConsumer]()
     var routes = List[DeliveryProducerRoute]()
 
@@ -97,7 +101,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     }
   }
 
-  class TopicDestinationNode extends DestinationNode {
+  class TopicDestinationNode(val destination:Destination) extends DestinationNode {
     def on_bind(x:List[DeliveryConsumer]) =  {
       targets = x ::: targets
       routes.foreach({r=>
@@ -119,7 +123,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     }
   }
 
-  class QueueDestinationNode(destination:Destination) extends DestinationNode {
+  class QueueDestinationNode(val destination:Destination) extends DestinationNode {
     var queue:Queue = null
 
     // once the queue is created.. connect it up with the producers and targets.
@@ -159,16 +163,13 @@ class Router(val host:VirtualHost) extends DispatchLogging {
   var destinations = new HashMap[Destination, DestinationNode]()
 
   private def get(destination:Destination):DestinationNode = {
-    var result = destinations.get(destination)
-    if( result ==null ) {
+    destinations.getOrElseUpdate(destination,
       if( isTopic(destination) ) {
-        result = new TopicDestinationNode
+        new TopicDestinationNode(destination)
       } else {
-        result = new QueueDestinationNode(destination)
+        new QueueDestinationNode(destination)
       }
-      destinations.put(destination, result)
-    }
-    result
+    )
   }
 
   def bind(destination:Destination, targets:List[DeliveryConsumer]) = retaining(targets) {

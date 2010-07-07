@@ -34,8 +34,6 @@ import org.fusesource.hawtdispatch.ScalaDispatch._
  */
 class ServletContextListener extends GuiceServletContextListener {
 
-  var broker:Broker = null
-
   override def contextInitialized(servletContextEvent: ServletContextEvent) = {
 
     try {
@@ -43,19 +41,25 @@ class ServletContextListener extends GuiceServletContextListener {
 
       // Brokers startup async.
       BrokerRegistry.configStore.foreachBroker(true) { config=>
+
+        println("Config store contained broker: "+config.id);
+
         // Only start the broker up if it's enabled..
         if( config.enabled ) {
+
+          println("starting broker: "+config.id);
           val broker = new Broker()
           broker.config = config
           BrokerRegistry.add(broker)
           broker.start()
+
         }
+
       }
 
     }
     catch {
       case e:Exception =>
-        broker = null
         e.printStackTrace
     }
 
@@ -64,7 +68,8 @@ class ServletContextListener extends GuiceServletContextListener {
 
   override def contextDestroyed(servletContextEvent: ServletContextEvent) = {
     super.contextDestroyed(servletContextEvent);
-    val tracker = new LoggingTracker("broker shutdown")
+    
+    val tracker = new LoggingTracker("webapp shutdown")
     BrokerRegistry.configStore.foreachBroker(false) { config=>
       // remove started brokers what we configured..
       val broker = BrokerRegistry.remove(config.id);

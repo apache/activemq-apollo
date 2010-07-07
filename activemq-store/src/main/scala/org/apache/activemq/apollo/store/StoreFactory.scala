@@ -66,7 +66,7 @@ object StoreFactory {
         return rc
       }
     }
-    throw new IllegalArgumentException("Uknonwn store configuration type: "+config.getClass)
+    throw new IllegalArgumentException("Uknonwn store type: "+config.getClass)
   }
 
 
@@ -81,7 +81,7 @@ object StoreFactory {
         }
       }
     }
-    reporter.report(ERROR, "Uknonwn store configuration type: "+config.getClass)
+    reporter.report(ERROR, "Uknonwn store type: "+config.getClass)
     ERROR
   }
 

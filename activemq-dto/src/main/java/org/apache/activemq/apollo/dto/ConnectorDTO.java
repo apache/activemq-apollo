@@ -26,7 +26,7 @@ import javax.xml.bind.annotation.*;
  */
 @XmlRootElement(name = "connector")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ConnectorDTO extends ServiceDTO {
+public class ConnectorDTO extends ServiceDTO<String> {
 
     /**
      * The transport uri which it will accept connections on.

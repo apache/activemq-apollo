@@ -123,6 +123,6 @@ case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
   }
 
   @Path("status")
-  def status = BrokerStatus(this, id)
+  def status = BrokerStatus(this)
 }
 

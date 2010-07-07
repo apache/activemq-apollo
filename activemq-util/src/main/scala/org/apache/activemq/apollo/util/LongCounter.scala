@@ -32,6 +32,7 @@ class LongCounter(private var value:Long = 0) extends MetricProducer[Long] {
   def clear() = value=0
 
   def get() = value
+  def set(value:Long) = this.value = value 
 
   def incrementAndGet() = addAndGet(1)
   def decrementAndGet() = addAndGet(-1)

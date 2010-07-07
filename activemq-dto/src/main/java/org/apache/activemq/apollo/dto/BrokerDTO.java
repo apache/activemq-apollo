@@ -30,7 +30,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="broker")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BrokerDTO extends ServiceDTO {
+public class BrokerDTO extends ServiceDTO<String> {
 
     /**
      * Used to track config revisions.

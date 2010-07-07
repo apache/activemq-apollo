@@ -16,21 +16,14 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.java.io.{File}
 import _root_.org.apache.activemq.transport._
-import _root_.org.apache.activemq.Service
-import _root_.java.lang.{String}
-import _root_.org.apache.activemq.util.{FactoryFinder, IOHelper}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import _root_.scala.reflect.BeanProperty
-import org.fusesource.hawtdispatch.{Dispatch, DispatchQueue, BaseRetained}
-import java.util.{HashSet, LinkedList, LinkedHashMap, ArrayList}
-import org.fusesource.hawtbuf._
-import collection.JavaConversions
-import org.apache.activemq.apollo.dto.{ConnectorDTO, BrokerDTO}
-import JavaConversions._
+import org.fusesource.hawtdispatch.{Dispatch}
+import org.apache.activemq.apollo.dto.{ConnectorDTO}
 import org.apache.activemq.wireformat.WireFormatFactory
 import ReporterLevel._
+import org.apache.activemq.apollo.util.LongCounter
+import collection.mutable.HashMap
 
 /**
  * <p>
@@ -75,7 +68,7 @@ object Connector extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Connector(val broker:Broker) extends BaseService with DispatchLogging {
+class Connector(val broker:Broker, val id:Long) extends BaseService with DispatchLogging {
   import Connector._
 
   override protected def log = Connector
@@ -85,9 +78,9 @@ class Connector(val broker:Broker) extends BaseService with DispatchLogging {
   var transportServer:TransportServer = _
   var wireFormatFactory:WireFormatFactory = _
 
-  val connections: HashSet[Connection] = new HashSet[Connection]
-
+  val connections = HashMap[Long, BrokerConnection]()
   override def toString = "connector: "+config.id
+  val accept_counter = new LongCounter
 
   object BrokerAcceptListener extends TransportAcceptListener {
     def onAcceptError(error: Exception): Unit = {
@@ -103,7 +96,8 @@ class Connector(val broker:Broker) extends BaseService with DispatchLogging {
         transport.setWireformat(wireFormatFactory.createWireFormat)
       }
 
-      var connection = new BrokerConnection(Connector.this)
+      accept_counter.incrementAndGet
+      var connection = new BrokerConnection(Connector.this, broker.connection_id_counter.incrementAndGet)
       connection.transport = transport
 
       if( STICK_ON_THREAD_QUEUES ) {
@@ -112,7 +106,7 @@ class Connector(val broker:Broker) extends BaseService with DispatchLogging {
 
       // We release when it gets removed form the connections list.
       connection.dispatchQueue.retain
-      connections.add(connection)
+      connections.put(connection.id, connection)
 
       try {
         connection.start()
@@ -155,7 +149,7 @@ class Connector(val broker:Broker) extends BaseService with DispatchLogging {
   override def _stop(onCompleted:Runnable): Unit = {
     transportServer.stop(^{
       val tracker = new LoggingTracker(toString, dispatchQueue)
-      for (connection <- connections) {
+      connections.valuesIterator.foreach { connection=>
         tracker.stop(connection)
       }
       tracker.callback(onCompleted)
@@ -166,8 +160,8 @@ class Connector(val broker:Broker) extends BaseService with DispatchLogging {
    * Connections callback into the connector when they are stopped so that we can
    * stop tracking them.
    */
-  def stopped(connection:Connection) = ^{
-    if( connections.remove(connection) ) {
+  def stopped(connection:BrokerConnection) = ^{
+    if( connections.remove(connection.id).isDefined ) {
       connection.dispatchQueue.release
     }
   } |>>: dispatchQueue

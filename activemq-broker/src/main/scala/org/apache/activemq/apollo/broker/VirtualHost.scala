@@ -33,6 +33,7 @@ import org.apache.activemq.apollo.store.{StoreFactory, QueueRecord}
 import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, CassandraStoreDTO, VirtualHostDTO}
 import java.io.File
 import java.util.concurrent.TimeUnit
+import org.apache.activemq.apollo.util.LongCounter
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -84,15 +85,15 @@ object VirtualHost extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging with LoggingReporter {
+class VirtualHost(val broker: Broker, val id:Long) extends BaseService with DispatchLogging with LoggingReporter {
   import VirtualHost._
   
   override protected def log = VirtualHost
   override val dispatchQueue:DispatchQueue = ScalaDispatch.createQueue("virtual-host");
 
   var config:VirtualHostDTO = _
-  private val queues = new HashMap[AsciiBuffer, Queue]()
-  private val durableSubs = new HashMap[String, DurableSubscription]()
+  val queues = new HashMap[AsciiBuffer, Queue]()
+  val durableSubs = new HashMap[String, DurableSubscription]()
   val router = new Router(this)
 
   var names:List[String] = Nil;
@@ -102,8 +103,8 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging w
 
   var store:Store = null
   var transactionManager:TransactionManagerX = new TransactionManagerX
-
   var protocols = Map[AsciiBuffer, WireFormat]()
+  val queue_id_counter = new LongCounter
 
   override def toString = if (config==null) "virtual-host" else "virtual-host: "+config.id
 
@@ -128,15 +129,27 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging w
     store = StoreFactory.create(config.store)
     if( store!=null ) {
       store.configure(config.store, this)
-      val task = tracker.task("store startup")
+      val storeStartupDone = tracker.task("store startup")
       store.start {
+
+        val getKeyDone = tracker.task("store get last queue key")
+        store.getLastQueueKey{ key=>
+          key match {
+            case Some(x)=>
+              queue_id_counter.set(key.get)
+            case None =>
+              warn("Could not get last queue key")
+          }
+          getKeyDone.run
+        }
+
         if( config.purgeOnStartup ) {
-          task.name = "store purge"
+          storeStartupDone.name = "store purge"
           store.purge {
-            task.run
+            storeStartupDone.run
           }
         } else {
-          task.name = "store recover queues"
+          storeStartupDone.name = "store recover queues"
           store.listQueues { queueKeys =>
             for( queueKey <- queueKeys) {
               val task = tracker.task("store load queue key: "+queueKey)
@@ -160,7 +173,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging w
                 }
               }
             }
-            task.run
+            storeStartupDone.run
           }
         }
       }
@@ -263,21 +276,23 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging w
     if( store!=null ) {
       val record = new QueueRecord
       record.name = name
+      record.key = queue_id_counter.incrementAndGet
+
       store.addQueue(record) { rc =>
         rc match {
-          case Some(queueKey) =>
+          case true =>
             dispatchQueue {
-              val queue = new Queue(this, dest, queueKey)
+              val queue = new Queue(this, dest, record.key)
               queue.start()
               queues.put(dest.getName, queue)
               cb(queue)
             }
-          case None => // store could not create
+          case false => // store could not create
             cb(null)
         }
       }
     } else {
-      val queue = new Queue(this, dest)
+      val queue = new Queue(this, dest, queue_id_counter.incrementAndGet)
       queue.start()
       queues.put(dest.getName, queue)
       cb(queue)

@@ -22,20 +22,17 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="broker-summary")
+@XmlRootElement(name="id")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BrokerSummaryDTO extends StringIdDTO {
+public class LongIdDTO {
 
     /**
-     * The latest revision of the broker config.
+     * A unique id of the object within it's container
      */
-	@XmlAttribute(name="rev")
-	public Integer rev;
+	@XmlAttribute(name="id")
+	public long id;
 
 
 }

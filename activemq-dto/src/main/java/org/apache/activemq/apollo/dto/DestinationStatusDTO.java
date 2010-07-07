@@ -16,10 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
 
 /**
  * <p>
@@ -27,15 +24,19 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="broker-summary")
+@XmlRootElement(name="destination-summary")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BrokerSummaryDTO extends StringIdDTO {
+public class DestinationStatusDTO extends IdDTO<Long> {
 
     /**
-     * The latest revision of the broker config.
+     * The destination name
      */
-	@XmlAttribute(name="rev")
-	public Integer rev;
+    @XmlElement(name="name")
+    public String name;
 
-
+    /**
+     * The routing domain
+     */
+    @XmlElement(name="domain")
+    public String domain;
 }

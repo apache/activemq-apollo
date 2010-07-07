@@ -79,6 +79,8 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
 
   def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[HawtDBStoreDTO], reporter)
 
+  def storeType = "hawtdb"
+
   def configure(config: HawtDBStoreDTO, reporter: Reporter) = {
     if ( HawtDBStore.validate(config, reporter) < ERROR ) {
       if( serviceState.isStarted ) {
@@ -139,10 +141,15 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   }
 
 
-  def addQueue(record: QueueRecord)(callback: (Option[Long]) => Unit) = {
-    val key = next_queue_key.getAndIncrement
-    record.key = key
-    client.addQueue(record, ^{ callback(Some(key)) })
+  /**
+   * Ges the last queue key identifier stored.
+   */
+  def getLastQueueKey(callback:(Option[Long])=>Unit):Unit = {
+    callback(Some(client.rootBuffer.getLastQueueKey.longValue))
+  }
+
+  def addQueue(record: QueueRecord)(callback: (Boolean) => Unit) = {
+    client.addQueue(record, ^{ callback(true) })
   }
 
   def removeQueue(queueKey: Long)(callback: (Boolean) => Unit) = {

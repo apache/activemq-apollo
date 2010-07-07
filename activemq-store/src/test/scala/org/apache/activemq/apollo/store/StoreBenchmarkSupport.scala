@@ -25,6 +25,7 @@ import org.apache.activemq.apollo.store.{QueueEntryRecord, QueueStatus, QueueRec
 import org.scalatest.{BeforeAndAfterEach, BeforeAndAfterAll}
 import collection.mutable.ListBuffer
 import java.util.concurrent.atomic.{AtomicLong, AtomicInteger, AtomicBoolean}
+import org.apache.activemq.apollo.util.LongCounter
 
 /**
  * <p>Implements generic testing of Store implementations.</p>
@@ -83,12 +84,15 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
     }
   }
 
+  val queue_key_counter = new LongCounter
+
   def addQueue(name:String):Long = {
     var queueA = new QueueRecord
+    queueA.key = queue_key_counter.incrementAndGet
     queueA.name = ascii(name)
-    val rc:Option[Long] = CB( cb=> store.addQueue(queueA)(cb) )
-    expect(true)(rc.isDefined)
-    rc.get
+    val rc:Boolean = CB( cb=> store.addQueue(queueA)(cb) )
+    expect(true)(rc)
+    queueA.key
   }
 
   def addMessage(batch:StoreUOW, content:String):Long = {

@@ -33,8 +33,6 @@ import protocol.{ProtocolFactory, ProtocolHandler}
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object Connection extends Log {
-  val id_generator = new AtomicLong()
-  def next_id = "connection:"+id_generator.incrementAndGet
 }
 
 /**
@@ -45,13 +43,10 @@ abstract class Connection() extends DefaultTransportListener with BaseService  {
   override protected def log = Connection
 
   import Connection._
-  val id = next_id
-  val dispatchQueue = createQueue(id)
+  val dispatchQueue = createQueue()
   var stopped = true
   var transport:Transport = null
   var transportSink:TransportSink = null 
-
-  override def toString = id
 
   override protected def _start(onCompleted:Runnable) = {
     stopped = false
@@ -89,10 +84,12 @@ abstract class Connection() extends DefaultTransportListener with BaseService  {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class BrokerConnection(val connector: Connector) extends Connection {
+class BrokerConnection(val connector: Connector, val id:Long) extends Connection {
 
   var protocol = "stomp"
   var protocolHandler: ProtocolHandler = null;
+
+  override def toString = "id: "+id.toString
 
   override protected  def _start(onCompleted:Runnable) = {
     connector.dispatchQueue.retain

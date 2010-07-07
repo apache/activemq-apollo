@@ -60,7 +60,7 @@ object Queue extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val host: VirtualHost, val destination: Destination, val queueKey: Long = -1L) extends BaseRetained with Route with DeliveryConsumer with BaseService with DispatchLogging {
+class Queue(val host: VirtualHost, val destination: Destination, val id: Long) extends BaseRetained with Route with DeliveryConsumer with BaseService with DispatchLogging {
   override protected def log = Queue
 
   import Queue._
@@ -112,12 +112,12 @@ class Queue(val host: VirtualHost, val destination: Destination, val queueKey: L
    * Subscribers that consume slower than this rate per seconds will be considered
    * slow.
    */
-  var tune_slow_subscription_rate = 1000*1024
+  var tune_slow_subscription_rate = 500*1024
 
   /**
    * The number of milliseconds between slow consumer checks.
    */
-  var tune_slow_check_interval = 200L
+  var tune_slow_check_interval = 500L
 
   /**
    * Should this queue persistently store it's entries?
@@ -158,8 +158,8 @@ class Queue(val host: VirtualHost, val destination: Destination, val queueKey: L
   var flushing_size = 0
   var flushed_items = 0
 
-  private var capacity = tune_producer_buffer
-  var size = 0
+  var capacity = 0
+  var capacity_used = 0
 
   protected def _start(onCompleted: Runnable) = {
 
@@ -179,7 +179,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val queueKey: L
     }
 
     if( tune_persistent ) {
-      host.store.listQueueEntryRanges(queueKey, tune_flush_range_size) { ranges=>
+      host.store.listQueueEntryRanges(id, tune_flush_range_size) { ranges=>
         dispatchQueue {
           if( !ranges.isEmpty ) {
 
@@ -214,7 +214,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val queueKey: L
 
     var refiller: Runnable = null
 
-    def full = (size >= capacity) || !serviceState.isStarted
+    def full = (capacity_used >= capacity) || !serviceState.isStarted
 
     def offer(delivery: Delivery): Boolean = {
       if (full) {
@@ -265,7 +265,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val queueKey: L
 
   var check_counter = 0
   def display_stats: Unit = {
-    info("contains: %d messages worth %,.2f MB of data, producers are %s, %d/%d buffer space used.", queue_items, (queue_size.toFloat / (1024 * 1024)), {if (messages.full) "being throttled" else "not being throttled"}, size, capacity)
+    info("contains: %d messages worth %,.2f MB of data, producers are %s, %d/%d buffer space used.", queue_items, (queue_size.toFloat / (1024 * 1024)), {if (messages.full) "being throttled" else "not being throttled"}, capacity_used, capacity)
     info("total messages enqueued %d, dequeues %d ", enqueue_item_counter, dequeue_item_counter)
   }
 
@@ -309,9 +309,9 @@ class Queue(val host: VirtualHost, val destination: Destination, val queueKey: L
 
         if( (check_counter%25)==0 ) {
           display_stats
-          if (!all_subscriptions.isEmpty) {
-            display_active_entries
-          }
+//          if (!all_subscriptions.isEmpty) {
+//            display_active_entries
+//          }
         }
 
         // target tune_min_subscription_rate / sec
@@ -327,8 +327,8 @@ class Queue(val host: VirtualHost, val destination: Destination, val queueKey: L
           // Skip over new consumers...
           if( sub.advanced_size != 0 ) {
 
-            val cursor_delta = sub.advanced_size - sub.last_cursored_size
-            sub.last_cursored_size = sub.advanced_size
+            val cursor_delta = sub.advanced_size - sub.last_advanced_size
+            sub.last_advanced_size = sub.advanced_size
 
             // If the subscription is NOT slow if it's been tail parked or
             // it's been parking and cursoring through the data at the tune_slow_subscription_rate 
@@ -634,7 +634,6 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
   def init(delivery:Delivery):QueueEntry = {
     state = new Loaded(delivery, false)
-    queue.size += size
     this
   }
 
@@ -689,7 +688,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
   def toQueueEntryRecord = {
     val qer = new QueueEntryRecord
-    qer.queueKey = queue.queueKey
+    qer.queueKey = queue.id
     qer.queueSeq = seq
     qer.messageKey = state.messageKey
     qer.size = state.size
@@ -713,6 +712,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   def as_flushed = state.as_flushed
   def as_flushed_range = state.as_flushed_range
   def as_loaded = state.as_loaded
+
+  def label = state.label
 
   def is_tail = this == queue.tail_entry
   def is_head = this == queue.head_entry
@@ -761,6 +762,11 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
      * Gets number of messages that this entry represents
      */
     def count = 0
+
+    /**
+     * Retuns a string label used to describe this state.
+     */
+    def label:String
 
     /**
      * Gets the message key for the entry.
@@ -868,6 +874,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    */
   class Head extends EntryState {
 
+    def label = "head"
     override  def toString = "head"
     override def as_head = this
 
@@ -899,6 +906,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    */
   class Tail extends EntryState {
 
+    def label = "tail"
     override  def toString = "tail"
     override def as_tail:Tail = this
 
@@ -919,6 +927,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     var acquired = false
     var flushing = false
 
+    def label = "loaded"
     override def toString = { "loaded:{ stored: "+stored+", flushing: "+flushing+", acquired: "+acquired+", size:"+size+"}" }
 
     override def count = 1
@@ -989,7 +998,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       delivery.uow = null
       if( flushing ) {
         queue.flushing_size-=size
-        queue.size -= size
+        queue.capacity_used -= size
         state = new Flushed(delivery.storeKey, size)
 
         if( can_combine_with_prev ) {
@@ -1010,7 +1019,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         flushing = false
         queue.flushing_size-=size
       }
-      queue.size -= size
+      queue.capacity_used -= size
       super.remove
     }
 
@@ -1111,12 +1120,14 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     var loading = false
 
+
     override def count = 1
 
     override def as_flushed = this
 
     override def is_flushed_or_flushing = true
 
+    def label = "flushed"
     override def toString = { "flushed:{ loading: "+loading+", size:"+size+"}" }
 
     override def load() = {
@@ -1157,7 +1168,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         delivery.size = messageRecord.size
         delivery.storeKey = messageRecord.key
 
-        queue.size += size
+        queue.capacity_used += size
         queue.flushed_items -= 1
         state = new Loaded(delivery, true)
       } else {
@@ -1212,12 +1223,13 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     override def is_flushed_or_flushing = true
 
-    override def toString = { "flushed_group:{ loading: "+loading+", count: "+count+", size: "+size+"}" }
+    def label = "flushed_range"
+    override def toString = { "flushed_range:{ loading: "+loading+", count: "+count+", size: "+size+"}" }
 
     override def load() = {
       if( !loading ) {
         loading = true
-        queue.host.store.listQueueEntries(queue.queueKey, seq, last) { records =>
+        queue.host.store.listQueueEntries(queue.id, seq, last) { records =>
           queue.dispatchQueue {
 
             var item_count=0
@@ -1307,7 +1319,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
   var advanced_size = 0L
 
   // Vars used to detect slow consumers.
-  var last_cursored_size = 0L
+  var last_advanced_size = 0L
   var tail_parkings = 0
   var slow_intervals = 0
 

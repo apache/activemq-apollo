@@ -27,15 +27,42 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="broker-summary")
+@XmlRootElement(name="destination-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BrokerSummaryDTO extends StringIdDTO {
+public class EntryStatusDTO extends IdDTO<Long> {
 
     /**
-     * The latest revision of the broker config.
+     * A unique id of the object within it's container
      */
-	@XmlAttribute(name="rev")
-	public Integer rev;
+	@XmlAttribute(name="enqueue-item-counter")
+	public long id;
 
+    @XmlAttribute(name="enqueue-item-counter")
+    public long enqueueItemCounter;
+    @XmlAttribute(name="dequeue-item-counter")
+    public long dequeueItemCounter;
+    @XmlAttribute(name="enqueue-size-counter")
+    public long enqueueSizeCounter;
+    @XmlAttribute(name="dequeue-size-counter")
+    public long dequeueSizeCounter;
+    @XmlAttribute(name="nack-item-counter")
+    public long nackItemCounter;
+    @XmlAttribute(name="nack-size-counter")
+    public long nackSizeCounter;
+
+    @XmlAttribute(name="queue-size")
+    public long queueSize;
+    @XmlAttribute(name="queue-items")
+    public long queueItems;
+
+    @XmlAttribute(name="loading-size")
+    public int loadingSize;
+    @XmlAttribute(name="flushing-size")
+    public int flushingSize;
+    @XmlAttribute(name="flushed-items")
+    public int flushedItems;
+
+    @XmlAttribute(name="capacity")
+    public int capacity;
 
 }

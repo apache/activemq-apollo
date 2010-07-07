@@ -31,6 +31,8 @@ import org.apache.activemq.apollo.ServiceTrait
  */
 trait Store extends ServiceTrait {
 
+  def storeType:String
+
   /**
    * Creates a store uow which is used to perform persistent
    * operations as unit of work.
@@ -50,12 +52,17 @@ trait Store extends ServiceTrait {
   def purge(callback: =>Unit):Unit
 
   /**
+   * Ges the last queue key identifier stored.
+   */
+  def getLastQueueKey(callback:(Option[Long])=>Unit):Unit
+
+  /**
    * Adds a queue.
    * 
    * This method auto generates and assigns the key field of the queue record and
-   * returns it via the callback.
+   * returns true if it succeeded.
    */
-  def addQueue(record:QueueRecord)(callback:(Option[Long])=>Unit):Unit
+  def addQueue(record:QueueRecord)(callback:(Boolean)=>Unit):Unit
 
   /**
    * Removes a queue. Success is reported via the callback.

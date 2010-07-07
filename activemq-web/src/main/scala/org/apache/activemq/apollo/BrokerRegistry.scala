@@ -16,8 +16,8 @@
  */
 package org.apache.activemq.apollo
 
-import java.util.HashMap
 import org.apache.activemq.apollo.broker.Broker
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * <p>
@@ -29,17 +29,11 @@ object BrokerRegistry {
 
   var configStore:ConfigStore = _
 
-  private val _brokers = new HashMap[String, Broker]()
+  val brokers = new ConcurrentHashMap[String, Broker]()
 
-  def get(id:String) = _brokers.synchronized {
-    _brokers.get(id)
-  }
+  def get(id:String) = brokers.get(id)
 
-  def add(broker:Broker) = _brokers.synchronized {
-    _brokers.put(broker.config.id, broker)
-  }
+  def add(broker:Broker) = brokers.put(broker.config.id, broker)
 
-  def remove(id:String) = _brokers.synchronized {
-    _brokers.remove(id)
-  }
+  def remove(id:String) = brokers.remove(id)
 }

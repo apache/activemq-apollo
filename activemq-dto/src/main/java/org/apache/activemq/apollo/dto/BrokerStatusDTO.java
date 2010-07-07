@@ -16,10 +16,9 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * <p>
@@ -32,17 +31,27 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class BrokerStatusDTO extends ServiceStatusDTO {
 
     /**
-     * The current time on the broker machine.
+     * The current time on the broker machine.  In milliseconds since the epoch.
      */
 	@XmlAttribute(name="current-time")
-	public String currentTime;
+	public long currentTime;
 
     /**
-     * Since when has the broker in in this state?
+     * Ids of all the virtual hosts running on the broker
      */
-	@XmlAttribute(name="in-state-since")
-	public String inStateSince;
+    @XmlElement(name="virtual-host")
+    public List<Long> virtualHosts = new ArrayList<Long>();
 
+    /**
+     * Ids of all the connections running on the broker
+     */
+    @XmlElement(name="connectors")
+    public List<Long> connectors = new ArrayList<Long>();
 
+    /**
+     * The current running configuration of the object
+     */
+    @XmlElement(name="config")
+    public BrokerDTO config = null;
 
 }
