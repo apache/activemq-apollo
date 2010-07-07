@@ -11,7 +11,7 @@
   </description>
 
   <listener>
-    <listener-class>org.fusesource.scalate.samples.bookstore.ServletContextListener</listener-class>
+    <listener-class>org.apache.activemq.apollo.web.ServletContextListener</listener-class>
   </listener>
 
   <filter>

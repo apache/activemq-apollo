@@ -17,8 +17,8 @@
 
   <properties>
     <jetty-port>8080</jetty-port>
-    <scalate-editor>${env.SCALATE_EDITOR}</scalate-editor>
-    <scalate-workdir>${basedir}/target/_scalate</scalate-workdir>
+    <scalate.editor>${env.SCALATE_EDITOR}</scalate.editor>
+    <scalate.workdir>${basedir}/target/_scalate</scalate.workdir>
     <netbeans.hint.deploy.server>Tomcat60</netbeans.hint.deploy.server>
   </properties>
 
@@ -33,6 +33,16 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-jaxb</artifactId>
+      <version>6.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-stomp</artifactId>
+      <version>6.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-tcp</artifactId>
       <version>6.0-SNAPSHOT</version>
     </dependency>
 
@@ -97,7 +107,6 @@
             <include>**/*Test.*</include>
           </includes>
           <excludes>
-            <exclude>**/QueuesTest.*</exclude>
             <exclude>**/htmlunit/**.*</exclude>
           </excludes>
         </configuration>
@@ -115,15 +124,11 @@
           <systemProperties>
             <systemProperty>
               <name>scalate.editor</name>
-              <value>${scalate-editor}</value>
+              <value>${scalate.editor}</value>
             </systemProperty>
             <systemProperty>
-              <name>scalate.temp.workingdir</name>
-              <value>true</value>
-            </systemProperty>
-            <systemProperty>
-              <name>scalate-workdir</name>
-              <value>${scalate-workdir}</value>
+              <name>scalate.workdir</name>
+              <value>${scalate.workdir}</value>
             </systemProperty>
           </systemProperties>
           <scanIntervalSeconds>0</scanIntervalSeconds>

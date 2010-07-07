@@ -1,0 +1,10 @@
+!!!
+-@ import val it: org.apache.activemq.apollo.web.resources.Root
+%html
+  %body
+    %h1 Brokers
+
+    %ul
+      - for( broker <- brokers )
+        %li
+          %a(href="#{broker.id}") #{broker.id}

@@ -42,8 +42,15 @@ public class BrokerXml {
     private List<String> transportServers = new ArrayList<String>();
     @XmlElement(name="connect-uri")
     private List<String> connectUris = new ArrayList<String>();
-	
-	
+
+
+    public BrokerXml() {
+    }
+
+    public BrokerXml(Broker broker) {
+    }
+
+
 	public Broker createMessageBroker() throws Exception {
 		Broker rc = new Broker();
 		for (VirtualHostXml element : virtualHosts) {
