@@ -1,0 +1,23 @@
+- import it._
+- val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
+- import helper._
+
+%p state: #{state} since: #{ new java.util.Date(stateSince) }
+
+%h2 Virtual Hosts
+%ul
+  - for( x <- virtualHosts )
+    %li
+      %a(href="runtime/virtual-hosts/#{x}") #{x}
+
+%h2 Connectors
+%ul
+  - for( x <- connectors )
+    %li
+      %a(href={ path("connectors/"+x) }) #{x}
+
+%h2 Connections
+%ul
+  - for( x <- connections )
+    %li
+      %a(href={ path("connections/"+x) }) #{x}

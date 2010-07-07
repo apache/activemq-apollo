@@ -1,0 +1,16 @@
+- import it._
+- val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
+- import helper._
+
+%h1 Virtual Host: #{config.id}
+
+%p state: #{state} since: #{ new java.util.Date(stateSince) }
+
+%p store type: #{storeType}
+
+%h2 Destinations
+%ul
+  - for( x <- destinations )
+    %li
+      %a(href={ path("destinations/"+x.id) }) #{x.name}
+

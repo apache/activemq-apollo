@@ -28,7 +28,8 @@ import java.net.URI
 /**
  * A broker resource is used to represent the configuration of a broker.
  */
-case class ConfigurationResource(parent:Broker) extends Resource {
+@Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
+case class ConfigurationResource(parent:BrokerResource) extends Resource {
 
 
   def store = ConfigStore()

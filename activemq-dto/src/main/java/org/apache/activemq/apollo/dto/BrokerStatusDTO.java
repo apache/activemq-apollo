@@ -30,7 +30,8 @@ import java.util.List;
  */
 @XmlRootElement(name="broker-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BrokerStatusDTO extends ServiceStatusDTO {
+public class
+        BrokerStatusDTO extends ServiceStatusDTO {
 
     /**
      * The current time on the broker machine.  In milliseconds since the epoch.
@@ -47,11 +48,18 @@ public class BrokerStatusDTO extends ServiceStatusDTO {
     public List<Long> virtualHosts = new ArrayList<Long>();
 
     /**
-     * Ids of all the connections running on the broker
+     * Ids of all the connectors running on the broker
      */
     @JsonProperty("connectors")
     @XmlElement(name="connector")
     public List<Long> connectors = new ArrayList<Long>();
+
+    /**
+     * Ids of all the connections running on the broker
+     */
+    @JsonProperty("connections")
+    @XmlElement(name="connection")
+    public List<Long> connections = new ArrayList<Long>();
 
     /**
      * The current running configuration of the object

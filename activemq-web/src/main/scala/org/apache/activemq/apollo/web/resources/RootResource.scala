@@ -31,16 +31,22 @@ import java.util.{Arrays, Collections}
 import org.apache.activemq.apollo.web.ConfigStore
 import org.apache.activemq.apollo.broker.BrokerRegistry
 import collection.JavaConversions._
+import com.sun.jersey.api.core.ResourceContext
+import org.fusesource.scalate.RenderContext
 
 /**
  * Defines the default representations to be used on resources
  */
 @ImplicitProduces(Array("text/html;qs=5"))
 @Produces(Array("application/json", "application/xml","text/xml"))
-abstract class Resource extends Logging {
+abstract class Resource(private val parent:Resource=null) extends Logging {
 
   @Context
-  val uri_info:UriInfo = null
+  var uri_info:UriInfo = null
+
+  if( parent!=null ) {
+    this.uri_info = parent.uri_info
+  }
 
   def result[T](value:Status, message:Any=null):T = {
     val response = Response.status(value)
@@ -50,13 +56,25 @@ abstract class Resource extends Logging {
     throw new WebApplicationException(response.build)
   }
 
+  def path(value:Any) = uri_info.getAbsolutePathBuilder().path(value.toString).build()
+
+}
+
+class ViewHelper {
+
+  lazy val uri_info = RenderContext().attribute[UriInfo]("uri_info")
+
+  def path(value:Any) = {
+    uri_info.getAbsolutePathBuilder().path(value.toString).build()
+  }
+
 }
 
 /**
  * Manages a collection of broker resources.
  */
 @Path("/brokers")
-class Root() extends Resource {
+class RootResource() extends Resource {
 
   @GET
   def brokers = {
@@ -69,13 +87,15 @@ class Root() extends Resource {
   }
 
   @Path("{id}")
-  def broker(@PathParam("id") id : String): Broker = new Broker(this, id)
+  def broker(@PathParam("id") id : String): BrokerResource = {
+    new BrokerResource(this, id)
+  }
 }
 
 /**
  * Resource that identifies a managed broker.
  */
-case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
+case class BrokerResource(parent:RootResource, @BeanProperty id: String) extends Resource(parent) {
 
   @GET
   def get = {

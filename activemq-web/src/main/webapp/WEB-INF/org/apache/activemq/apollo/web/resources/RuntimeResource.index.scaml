@@ -1,0 +1,7 @@
+-@ import val it: org.apache.activemq.apollo.web.resources.RuntimeResource
+- val broker = it.get
+
+%html
+  %body
+    %h1 Broker: #{broker.config.id}
+    %p state: #{broker.state}

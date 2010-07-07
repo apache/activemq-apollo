@@ -36,7 +36,8 @@ import collection.mutable.ListBuffer
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class RuntimeResource(parent:Broker) extends Resource {
+@Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
+case class RuntimeResource(parent:BrokerResource) extends Resource {
 
   private def with_broker[T](func: (org.apache.activemq.apollo.broker.Broker, Option[T]=>Unit)=>Unit):T = {
     val broker:org.apache.activemq.apollo.broker.Broker = BrokerRegistry.get(parent.id)
@@ -75,14 +76,19 @@ case class RuntimeResource(parent:Broker) extends Resource {
       result.stateSince - broker.serviceState.since
       result.config = broker.config
 
-      broker.connectors.foreach{ c=>
-        result.connectors.add(c.id)
-      }
-
       broker.virtualHosts.values.foreach{ host=>
         result.virtualHosts.add( host.id )
       }
 
+      broker.connectors.foreach{ c=>
+        result.connectors.add(c.id)
+      }
+
+      broker.connectors.foreach{ connector=>
+        connector.connections.keysIterator.foreach { id =>
+          result.connections.add(id)
+        }
+      }
 
       cb(Some(result))
     }
@@ -148,6 +154,7 @@ case class RuntimeResource(parent:Broker) extends Resource {
 
             val result = new QueueStatusDTO
             result.id = q.id
+            result.capacityUsed = q.capacity_used
             result.capacity = q.capacity
 
             result.enqueueItemCounter = q.enqueue_item_counter

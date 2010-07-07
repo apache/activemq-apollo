@@ -1,0 +1,12 @@
+-@ import val it: org.apache.activemq.apollo.web.resources.BrokerResource
+- val broker = it.get
+
+%html
+  %body
+    %h1 Broker: #{broker.id}
+    - if (broker.configurable)
+      %p
+        %a(href={it.path("config")}) configure
+    - if (broker.manageable)
+      %p
+        %a(href={it.path("runtime")}) manage

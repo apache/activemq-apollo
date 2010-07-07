@@ -83,6 +83,10 @@ public class QueueStatusDTO extends LongIdDTO {
     @XmlAttribute(name="flushed-items")
     public int flushedItems;
 
+    @JsonProperty("capacity_used")
+    @XmlAttribute(name="capacity-used")
+    public int capacityUsed;
+
     @JsonProperty
     @XmlAttribute
     public int capacity;

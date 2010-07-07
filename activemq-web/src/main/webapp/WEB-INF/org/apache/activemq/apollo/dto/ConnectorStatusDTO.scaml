@@ -1,0 +1,17 @@
+- import it._
+- val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
+- import helper._
+
+%h1 Connector: #{config.id}
+
+%p state: #{state} since: #{ new java.util.Date(stateSince) }
+
+%p accepted connections: #{accepted}
+
+%h2 Connections
+%ul
+  - for( x <- connections )
+    %li
+      %a(href={ path("../../connections/"+x) }) #{x}
+
+

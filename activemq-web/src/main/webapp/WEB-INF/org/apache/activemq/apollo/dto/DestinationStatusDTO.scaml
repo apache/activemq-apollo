@@ -1,0 +1,27 @@
+- import it._
+- val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
+- import helper._
+
+%h1 Destination: #{name}
+
+%p domain: #{domain}
+
+%h2 Queues
+%ul
+  - for( x <- queues )
+    %li
+      %a(href={ path("../../queues/"+x) }) #{x}
+
+%h2 Producers
+%ul
+  - for( x <- producers )
+    %li
+      %a(href={ path("../../../../connections/"+x) }) #{x}
+
+%h2 Consumers
+%ul
+  - for( x <- consumers )
+    %li
+      %a(href={ path("../../../../connections/"+x) }) #{x}
+
+

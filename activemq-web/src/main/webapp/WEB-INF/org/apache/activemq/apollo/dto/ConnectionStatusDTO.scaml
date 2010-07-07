@@ -1,0 +1,11 @@
+- import it._
+- val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
+- import helper._
+
+%p state: #{state} since: #{ new java.util.Date(stateSince) }
+%p read counter: #{readCounter}
+%p write counter: #{writeCounter}
+%p transport: #{transport}
+%p protocol: #{protocol}
+%p remote address: #{remoteAddress}
+%p user: #{user}

@@ -1,0 +1,55 @@
+- import it._
+- val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
+- import helper._
+
+%h1 Queue: #{id}
+
+%h2 Current Size
+
+%p queue size: #{queueItems} messages
+%p queue size: #{queueSize} bytes
+
+%h2 Enqueue/Deqeueue Counters
+
+%p enqueued: #{enqueueItemCounter} messages
+%p enqueued: #{enqueueSizeCounter} bytes
+
+%p dequeued: #{dequeueItemCounter} messages
+%p dequeued: #{dequeueSizeCounter} bytes
+
+%p nacked: #{nackItemCounter} messages
+%p nacked: #{nackSizeCounter} bytes
+
+%h2 Memory Mangement
+
+%p memory usage: #{capacityUsed}/#{capacity} bytes ( #{ "%,.2f".format(capacityUsed.toFloat/capacity) } )
+%p loading from the store: #{loadingSize} bytes
+%p flushing out of memory: #{flushingSize} bytes
+%p holding : #{flushedItems} flushed message references
+
+- if ( entries.isEmpty )
+  %h2
+    Entries Dump
+    %a(href={ id+"?entries=true" }) (Show)
+- else
+  %h2
+    Entries Dump
+    %a(href={ id })  (Hide)
+  %table
+    %tr
+      %th type
+      %th seq
+      %th count
+      %th size
+      %th consumers
+      %th prefetched
+
+    - for( x <- entries )
+      %tr
+        %td #{x.state}
+        %td #{x.seq}
+        %td #{x.count}
+        %td #{x.size}
+        %td #{x.consumerCount}
+        %td #{x.prefetchCount}
+
