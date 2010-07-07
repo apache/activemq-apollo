@@ -14,40 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo
-
-import broker.LoggingTracker
-import java.io.File
-import java.util.concurrent.{TimeUnit, CountDownLatch}
-import org.fusesource.hawtdispatch.Future
-import org.fusesource.scalate.test.FunSuiteSupport
 
 /**
- * <p>
- * </p>
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ * The JAXB POJOs for the
+ * <a href="http://activemq.apache.org/schema/activemq/apollo/xml-configuration.html">XML Configuration</a>
+ * of the ActiveMQ Broker.
  */
-class FileConfigStoreTest extends FunSuiteSupport {
-  test("file config store") {
-
-    val store = new FileConfigStore
-    store.file = new File("activemq.xml")
-    store
-
-    LoggingTracker("config store startup") { tracker=>
-      store.start(tracker.task())
-    }
-
-    expect(List("default")) {
-      Future[List[String]]{ x=>
-        store.listBrokerModels(x)
-      }
-    }
-
-    LoggingTracker("config store stop") { tracker=>
-      store.stop(tracker.task())
-    }
-  }
-}
+@javax.xml.bind.annotation.XmlSchema(
+        namespace = "http://activemq.apache.org/schema/activemq/apollo",
+        elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
+package org.apache.activemq.apollo.dto;
 

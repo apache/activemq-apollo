@@ -23,12 +23,11 @@ import core.{Response, Context}
 import org.fusesource.scalate.util.Logging
 import reflect.{BeanProperty}
 import com.sun.jersey.api.view.ImplicitProduces
-import org.apache.activemq.apollo.jaxb.BrokerConfig
-import com.google.inject.servlet.RequestScoped
 import org.apache.activemq.apollo.{BrokerRegistry, ConfigStore}
 import org.fusesource.hawtdispatch.Future
 import Response._
 import Response.Status._
+import org.apache.activemq.apollo.dto.BrokerDTO
 
 /**
  * Defines the default representations to be used on resources
@@ -63,7 +62,7 @@ class Root() extends Resource {
 
   def getBrokers: Array[BrokerRef] = {
     Future[List[String]] { cb=>
-      configStore.listBrokerConfigs(cb)
+      configStore.listBrokerModels(cb)
     }.map(x=> new BrokerRef(x, x)).toArray[BrokerRef]
   }
 
@@ -88,18 +87,18 @@ case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
   }
 
   @GET @Path("config")
-  def getConfig():BrokerConfig = {
+  def getConfig():BrokerDTO = {
     config()
   }
 
   private def config() = {
-    Future[Option[BrokerConfig]] { cb=>
-      configStore.getBrokerConfig(id, cb)
+    Future[Option[BrokerDTO]] { cb=>
+      configStore.getBrokerModel(id, cb)
     }.getOrElse(result(NOT_FOUND))
   }
 
   @GET @Path("config/{rev}")
-  def getConfig(@PathParam("rev") rev:Int):BrokerConfig = {
+  def getConfig(@PathParam("rev") rev:Int):BrokerDTO = {
     // that rev may have gone away..
     var c = config()
     c.rev==rev || result(NOT_FOUND)
@@ -107,18 +106,18 @@ case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
   }
 
   @PUT @Path("config/{rev}")
-  def put(@PathParam("rev") rev:Int, config:BrokerConfig) = {
+  def put(@PathParam("rev") rev:Int, config:BrokerDTO) = {
     config.id = id;
     config.rev = rev
     Future[Boolean] { cb=>
-      configStore.putBrokerConfig(config, cb)
+      configStore.putBrokerModel(config, cb)
     } || result(NOT_FOUND)
   }
 
   @DELETE @Path("config/{rev}")
   def delete(@PathParam("rev") rev:Int) = {
     Future[Boolean] { cb=>
-      configStore.removeBrokerConfig(id, rev, cb)
+      configStore.removeBrokerModel(id, rev, cb)
     } || result(NOT_FOUND)
   }
 

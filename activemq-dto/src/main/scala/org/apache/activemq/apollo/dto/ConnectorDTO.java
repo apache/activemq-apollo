@@ -14,40 +14,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo
+package org.apache.activemq.apollo.dto;
 
-import broker.LoggingTracker
-import java.io.File
-import java.util.concurrent.{TimeUnit, CountDownLatch}
-import org.fusesource.hawtdispatch.Future
-import org.fusesource.scalate.test.FunSuiteSupport
+import javax.xml.bind.annotation.*;
 
 /**
- * <p>
- * </p>
+ *
+ * 
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class FileConfigStoreTest extends FunSuiteSupport {
-  test("file config store") {
+@XmlRootElement(name = "connector")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class ConnectorDTO {
 
-    val store = new FileConfigStore
-    store.file = new File("activemq.xml")
-    store
+    /**
+     * A unique id.
+     */
+	@XmlAttribute(name="id")
+	public String id;
 
-    LoggingTracker("config store startup") { tracker=>
-      store.start(tracker.task())
-    }
+    /**
+     * The transport uri which it will accept connections on.
+     */
+    @XmlAttribute
+    public String transport;
 
-    expect(List("default")) {
-      Future[List[String]]{ x=>
-        store.listBrokerModels(x)
-      }
-    }
+    /**
+     * The protocol that the transport will use.
+     */
+    @XmlAttribute
+    public String protocol;
 
-    LoggingTracker("config store stop") { tracker=>
-      store.stop(tracker.task())
-    }
-  }
+    /**
+     * The uri which will be advertised for remote endpoints to connect to.
+     */
+    @XmlAttribute
+    public String advertise;
+    
 }
-

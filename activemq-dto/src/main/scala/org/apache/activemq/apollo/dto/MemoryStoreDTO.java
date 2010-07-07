@@ -14,40 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo
+package org.apache.activemq.apollo.dto;
 
-import broker.LoggingTracker
-import java.io.File
-import java.util.concurrent.{TimeUnit, CountDownLatch}
-import org.fusesource.hawtdispatch.Future
-import org.fusesource.scalate.test.FunSuiteSupport
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class FileConfigStoreTest extends FunSuiteSupport {
-  test("file config store") {
+@XmlRootElement(name="memory-store")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class MemoryStoreDTO extends StoreDTO {
 
-    val store = new FileConfigStore
-    store.file = new File("activemq.xml")
-    store
 
-    LoggingTracker("config store startup") { tracker=>
-      store.start(tracker.task())
-    }
-
-    expect(List("default")) {
-      Future[List[String]]{ x=>
-        store.listBrokerModels(x)
-      }
-    }
-
-    LoggingTracker("config store stop") { tracker=>
-      store.stop(tracker.task())
-    }
-  }
 }
-

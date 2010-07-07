@@ -141,7 +141,7 @@
     <module>activemq-selector</module>
     <module>activemq-tcp</module>
     <module>activemq-hawtdb</module>
-    <module>activemq-jaxb</module>
+    <module>activemq-dto</module>
     <module>activemq-stomp</module>
     <module>activemq-web</module>
   </modules>
@@ -480,6 +480,23 @@
 
   <profiles>
 
+    <!--
+      To generate a graph of the project dependencies, run: mvn -P graph graph:project
+    -->
+    <profile>
+      <id>graph</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.fusesource.mvnplugins</groupId>
+            <artifactId>maven-graph-plugin</artifactId>
+            <version>1.5</version>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+
     <profile>
       <id>eclipse</id>
       <properties>
@@ -492,28 +509,6 @@
             <includes><include>**</include></includes>
           </testResource>
         </testResources>
-      </build>
-    </profile>
-
-    <profile>
-      <id>graph</id>
-      <pluginRepositories>
-        <pluginRepository>
-          <id>mvnplugins.fusesource.org</id>
-          <url>http://mvnplugins.fusesource.org/repo/release</url>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-        </pluginRepository>
-      </pluginRepositories>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.fusesource.mvnplugins</groupId>
-            <artifactId>maven-graph-plugin</artifactId>
-            <version>1.0</version>
-          </plugin>
-        </plugins>
       </build>
     </profile>
 

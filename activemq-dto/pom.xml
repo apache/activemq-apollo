@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements. See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version
+    2.0 (the "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0 Unless required by
+    applicable law or agreed to in writing, software distributed under
+    the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
+    OR CONDITIONS OF ANY KIND, either express or implied. See the
+    License for the specific language governing permissions and
+    limitations under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.apache.activemq</groupId>
+    <artifactId>activemq-scala</artifactId>
+    <version>6.0-SNAPSHOT</version>
+  </parent>
+
+  <groupId>org.apache.activemq</groupId>
+  <artifactId>activemq-dto</artifactId>
+  <packaging>jar</packaging>
+  <version>6.0-SNAPSHOT</version>
+
+  <name>ActiveMQ :: Data Transfer Objects</name>
+  
+  <pluginRepositories>
+  	<!-- For the schemagen plugin -->
+    <pluginRepository>
+      <id>open.iona.m2</id>
+      <name>IONA Open Source Community Release Repository</name>
+      <url>http://repo.open.iona.com/maven2</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </pluginRepository>
+    <pluginRepository>
+      <id>maven2-repository.dev.java.net</id>
+      <name>Java.net Maven  Repository </name>
+      <url>http://download.java.net/maven/2</url>
+    </pluginRepository>
+  </pluginRepositories>
+  
+  <dependencies>
+  
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-core-asl</artifactId>
+      <version>${jackson-version}</version>
+    </dependency>
+
+    <!-- Scala Support -->
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <scope>compile</scope>
+      <version>${scala-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-compiler</artifactId>
+      <version>${scala-version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- Testing Dependencies -->    
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+      <version>${junit-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scalatest</groupId>
+      <artifactId>scalatest</artifactId>
+      <version>${scalatest-version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <scope>test</scope>
+      <version>${log4j-version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+  
+    <resources>
+      <resource>
+        <directory>target/schema</directory>
+        <includes>
+          <include>**/*</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>**/*</include>
+        </includes>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+      
+    <plugins>
+
+<!--
+
+    jaxb schemagen plugin does not work quite well for our use case (classpath problems),
+    so we're using it as an ant task (see below)
+    try to switch back to this in some future version
+
+-->
+<!--
+       <plugin>
+        <groupId>com.sun.tools.jxc.maven2</groupId>
+        <artifactId>maven-jaxb-schemagen-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>process-sources</phase>
+            <configuration>
+              <destdir>${project.build.directory}/schema</destdir>
+              <includes>
+                <include>**/jaxb/package-info.java</include>
+                <include>**/jaxb/*Xml.java</include>
+              </includes>
+              <schemas>
+                <schema>
+                  <namespace>http://activemq.apache.org/schema/activemq/apollo</namespace>
+                  <file>activemq-apollo.xsd</file>
+                </schema>
+              </schemas>
+            </configuration>
+            <goals>
+              <goal>generate</goal>
+            </goals> 
+          </execution>
+        </executions>
+      </plugin>  
+-->
+       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate schema</id>
+            <phase>process-sources</phase>
+            <configuration>
+                <tasks>        
+                <taskdef name="schemagen" classname="com.sun.tools.jxc.SchemaGenTask">
+                    <classpath refid="maven.compile.classpath"/>
+                </taskdef>
+                <mkdir dir="${project.build.directory}/schema"/>
+                <schemagen srcdir="${project.build.sourceDirectory}" destdir="${project.build.directory}/schema">
+                    <schema namespace="http://activemq.apache.org/schema/activemq/apollo" file="activemq-apollo.xsd" />
+                    <classpath refid="maven.compile.classpath"/>
+                    <include name="**/jaxb/package-info.java"/>
+                    <include name="**/jaxb/*Xml.java"/>
+                </schemagen>
+                </tasks>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+        
+        <dependencies>
+          <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-xjc</artifactId>
+            <version>${xjc-version}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-impl</artifactId>
+              </exclusion>
+            </exclusions>            
+          </dependency>  
+          <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>${jaxb-version}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>javax.jws</groupId>
+                <artifactId>jsr181-api</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+    </plugins>
+  </build>
+  
+  <profiles>
+    <profile>
+      <id>jdk-1.5</id>
+      <activation>
+        <jdk>1.5</jdk>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>javax.xml.bind</groupId>
+          <artifactId>jaxb-api</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>com.sun.xml.bind</groupId>
+          <artifactId>jaxb-impl</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
+    
+   <profile>
+      <id>ibmjdk</id>
+      <activation>
+        <file>
+          <exists>${java.home}/../lib/tools.jar</exists>
+        </file>
+      </activation>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-antrun-plugin</artifactId>
+              <dependencies>
+                <dependency>
+                  <groupId>com.sun</groupId>
+                  <artifactId>tools</artifactId>
+                  <!--the real JDK version could be 1.5 or 1.6-->
+                  <version>1.5.0</version>
+                  <scope>system</scope>
+                  <optional>true</optional>
+                  <systemPath>${java.home}/../lib/tools.jar</systemPath>
+                </dependency>
+              </dependencies>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+  </profiles>
+
+</project>

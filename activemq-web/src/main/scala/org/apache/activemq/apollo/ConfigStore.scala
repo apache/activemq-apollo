@@ -17,10 +17,11 @@
 package org.apache.activemq.apollo
 
 import broker._
-import jaxb.{VirtualHostConfig, PropertiesReader, BrokerConfig}
+import broker.jaxb.PropertiesReader
 import java.util.regex.Pattern
 import javax.xml.stream.{XMLOutputFactory, XMLInputFactory}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import dto.{ConnectorDTO, VirtualHostDTO, BrokerDTO}
 import org.apache.activemq.util.{Hasher, IOHelper}
 import java.util.concurrent.{TimeUnit, ExecutorService, Executors}
 import org.fusesource.hawtbuf.{ByteArrayInputStream, ByteArrayOutputStream}
@@ -37,13 +38,13 @@ import java.io.{OutputStreamWriter, File}
  */
 trait ConfigStore extends Service {
 
-  def listBrokerConfigs(cb: (List[String]) => Unit):Unit
+  def listBrokerModels(cb: (List[String]) => Unit):Unit
 
-  def getBrokerConfig(id:String, cb: (Option[BrokerConfig]) => Unit):Unit
+  def getBrokerModel(id:String, cb: (Option[BrokerDTO]) => Unit):Unit
 
-  def putBrokerConfig(config:BrokerConfig, cb: (Boolean) => Unit):Unit
+  def putBrokerModel(config:BrokerDTO, cb: (Boolean) => Unit):Unit
 
-  def removeBrokerConfig(id:String, rev:Int, cb: (Boolean) => Unit):Unit
+  def removeBrokerModel(id:String, rev:Int, cb: (Boolean) => Unit):Unit
 
 }
 
@@ -58,22 +59,23 @@ trait ConfigStore extends Service {
 class FileConfigStore extends ConfigStore with BaseService with Logging {
   override protected def log: Log = FileConfigStore
 
-  object StoredBrokerConfig {
-    def apply(rev:Int, config:BrokerConfig) = {
+  object StoredBrokerModel {
+    def apply(config:BrokerDTO) = {
       val data = marshall(config)
-      new StoredBrokerConfig(config.id, rev, data, Hasher.JENKINS.hash(data, data.length))
+      new StoredBrokerModel(config.id, config.rev, data, Hasher.JENKINS.hash(data, data.length))
     }
   }
-  case class StoredBrokerConfig(id:String, rev:Int, data:Array[Byte], hash:Int)
+  case class StoredBrokerModel(id:String, rev:Int, data:Array[Byte], hash:Int)
 
-  val context = JAXBContext.newInstance("org.apache.activemq.apollo.jaxb")
+  val context = JAXBContext.newInstance("org.apache.activemq.apollo.dto")
   val unmarshaller = context.createUnmarshaller
   val marshaller = context.createMarshaller
   marshaller.setProperty( Marshaller.JAXB_FORMATTED_OUTPUT, java.lang.Boolean.TRUE )
   val inputfactory = XMLInputFactory.newInstance
 
   var file:File = new File("activemq.xml")
-  var latest:StoredBrokerConfig = null
+  @volatile
+  var latest:StoredBrokerModel = null
   var readOnly = false
 
   val dispatchQueue = createQueue("config store")
@@ -117,7 +119,7 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
             if( readOnly ) {
               throw new Exception("file does not exsit: "+file)
             } else {
-              write(StoredBrokerConfig(1, defaultConfig))
+              write(StoredBrokerModel(defaultConfig(1)))
             }
           } else {
             if( readOnly ) {
@@ -142,11 +144,11 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     ioWorker.shutdown
   }
 
-  def listBrokerConfigs(cb: (List[String]) => Unit) = callback(cb) {
+  def listBrokerModels(cb: (List[String]) => Unit) = callback(cb) {
     List(latest.id)
   } >>: dispatchQueue
 
-  def getBrokerConfig(id:String, cb: (Option[BrokerConfig]) => Unit) = callback(cb) {
+  def getBrokerModel(id:String, cb: (Option[BrokerDTO]) => Unit) = callback(cb) {
     if( latest.id == id ) {
       Some(unmarshall(latest.data))
     } else {
@@ -154,17 +156,21 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     }
   } >>: dispatchQueue
 
-  def putBrokerConfig(config:BrokerConfig, cb: (Boolean) => Unit) = callback(cb) {
-    if( latest.id == config.id && latest.rev==config.rev) {
-      config.rev += 1
-      latest = write(StoredBrokerConfig(config.rev, config))
-      true
-    } else {
+  def putBrokerModel(config:BrokerDTO, cb: (Boolean) => Unit) = callback(cb) {
+    debug("storing broker model: %s ver %d", config.id, config.rev)
+    if( latest.id != config.id ) {
+      debug("this store can only update broker: "+latest.id)
       false
+    } else if( latest.rev+1 != config.rev ) {
+      debug("update request does not match next revision: %d", latest.rev+1)
+      false
+    } else {
+      latest = write(StoredBrokerModel(config))
+      true
     }
   } >>: dispatchQueue
 
-  def removeBrokerConfig(id:String, rev:Int, cb: (Boolean) => Unit) = callback(cb) {
+  def removeBrokerModel(id:String, rev:Int, cb: (Boolean) => Unit) = callback(cb) {
     // not supported.
     false
   } >>: dispatchQueue
@@ -175,22 +181,20 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     if( serviceState.isStarted ) {
       ioWorker {
         try {
-          val config = read(0, file)
-          dispatchQueue {
-            if (latest.hash != config.hash) {
-              // looks like user has manually edited the file
-              // on the file system.. treat that like an update.. so we
-              // store the change as a revision.
-
-            }
-            schedualNextUpdateCheck
+          val config = read(latest.rev+1, file)
+          if (latest.hash != config.hash) {
+            // TODO: do this in the controller so that it
+            // has a chance to update the runtime too.
+            val c = unmarshall(config.data)
+            c.rev = config.rev
+            putBrokerModel(c, null)
           }
+          schedualNextUpdateCheck
         }
         catch {
           case e:Exception =>
-            // error reading the file..
-            // TODO: updated it to the latest valid version.
-          schedualNextUpdateCheck
+          // error reading the file..  could be that someone is
+          // in the middle of updating the file.
         }
       }
     }
@@ -198,26 +202,33 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
 
 
 
-  private def defaultConfig() = {
-    val host = new VirtualHostConfig
-    host.hostNames.add("default")
-
-    val config = new BrokerConfig
+  private def defaultConfig(rev:Int) = {
+    val config = new BrokerDTO
     config.id = "default"
-    config.transportServers.add("tcp://0.0.0.0:61613?wireFormat=multi")
-    config.connectUris.add("tcp://localhost:61613")
+    config.rev = rev
+    config.notes = "default configuration"
+
+    var host = new VirtualHostDTO
+    host.hostNames.add("default")
     config.virtualHosts.add(host)
+
+    var connector = new ConnectorDTO
+    connector.transport = "tcp://0.0.0.0:61613"
+    connector.advertise = "tcp://0.0.0.0:61613"
+    connector.protocol = "multi"
+    config.connectors.add( connector )
+    
     config
   }
 
-  private def read(rev:Int, file: File): StoredBrokerConfig = {
+  private def read(rev:Int, file: File): StoredBrokerModel = {
     val data = IOHelper.readBytes(file)
     val config = unmarshall(data) // validates the xml
     val hash = Hasher.JENKINS.hash(data, data.length)
-    StoredBrokerConfig(config.id, rev, data, hash)
+    StoredBrokerModel(config.id, rev, data, hash)
   }
 
-  private  def write(config:StoredBrokerConfig) = {
+  private  def write(config:StoredBrokerModel) = {
     // write to the files..
     IOHelper.writeBinaryFile(file, config.data)
     IOHelper.writeBinaryFile(fileRev(config.rev), config.data)
@@ -228,10 +239,10 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     val bais = new ByteArrayInputStream(in);
     val reader = inputfactory.createXMLStreamReader(bais)
     val properties = new PropertiesReader(reader)
-    unmarshaller.unmarshal(properties).asInstanceOf[BrokerConfig]
+    unmarshaller.unmarshal(properties).asInstanceOf[BrokerDTO]
   }
 
-  def marshall(in:BrokerConfig) = {
+  def marshall(in:BrokerDTO) = {
     val baos = new ByteArrayOutputStream
     marshaller.marshal(in, new OutputStreamWriter(baos));
     baos.toByteArray
