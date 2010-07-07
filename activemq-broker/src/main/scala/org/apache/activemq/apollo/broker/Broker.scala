@@ -260,7 +260,7 @@ trait QueueLifecyleListener {
 
 
 
-object Queue {
+object Queue extends Log {
   val maxOutboundSize = 1024*1204*5
 }
 
@@ -268,18 +268,22 @@ object Queue {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val destination:Destination) extends BaseRetained with Route with DeliveryConsumer with DeliveryProducer {
+class Queue(val destination:Destination) extends BaseRetained with Route with DeliveryConsumer with DeliveryProducer with DispatchLogging {
+  override protected def log = Queue
 
-  override val queue:DispatchQueue = createQueue("queue:"+destination);
-  queue.setTargetQueue(getRandomThreadQueue)
+  override val dispatchQueue:DispatchQueue = createQueue("queue:"+destination);
+  dispatchQueue.setTargetQueue(getRandomThreadQueue)
+  dispatchQueue {
+    debug("created queue for: "+destination)
+  }
 
   val delivery_buffer  = new DeliveryBuffer
   delivery_buffer.eventHandler = ^{ drain_delivery_buffer }
 
-  val session_manager = new DeliverySessionManager(delivery_buffer, queue)
+  val session_manager = new DeliverySessionManager(delivery_buffer, dispatchQueue)
 
   setDisposer(^{
-    queue.release
+    dispatchQueue.release
     session_manager.release
   })
 
@@ -289,7 +293,7 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
     def deliver(value:Delivery):Unit = {
       val delivery = Delivery(value)
       delivery.setDisposer(^{
-        ^{ completed(value) } >>:queue
+        ^{ completed(value) } >>:dispatchQueue
       })
       consumer.deliver(delivery);
       delivery.release
@@ -310,12 +314,12 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
   def connected(consumers:List[DeliveryConsumer]) = bind(consumers)
   def bind(consumers:List[DeliveryConsumer]) = retaining(consumers) {
       for ( consumer <- consumers ) {
-        val cs = new ConsumerState(consumer.open_session(queue))
+        val cs = new ConsumerState(consumer.open_session(dispatchQueue))
         allConsumers += consumer->cs
         readyConsumers.addLast(cs)
       }
       drain_delivery_buffer
-    } >>: queue
+    } >>: dispatchQueue
 
   def unbind(consumers:List[DeliveryConsumer]) = releasing(consumers) {
       for ( consumer <- consumers ) {
@@ -328,14 +332,14 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
           case None=>
         }
       }
-    } >>: queue
+    } >>: dispatchQueue
 
   def disconnected() = throw new RuntimeException("unsupported")
 
   def collocate(value:DispatchQueue):Unit = {
-    if( value.getTargetQueue ne queue.getTargetQueue ) {
-      println(queue.getLabel+" co-locating with: "+value.getLabel);
-      this.queue.setTargetQueue(value.getTargetQueue)
+    if( value.getTargetQueue ne dispatchQueue.getTargetQueue ) {
+      println(dispatchQueue.getLabel+" co-locating with: "+value.getLabel);
+      this.dispatchQueue.setTargetQueue(value.getTargetQueue)
     }
   }
 

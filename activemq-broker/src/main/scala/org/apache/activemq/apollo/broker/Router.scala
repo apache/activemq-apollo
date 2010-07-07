@@ -198,7 +198,7 @@ class Router(var queue:DispatchQueue) extends DispatchLogging {
 trait Route extends Retained {
 
   val destination:Destination
-  val queue:DispatchQueue
+  val dispatchQueue:DispatchQueue
   val metric = new AtomicLong();
 
   def connected(targets:List[DeliveryConsumer]):Unit
@@ -211,15 +211,14 @@ trait Route extends Retained {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue, val producer:DeliveryProducer) extends BaseRetained with Route with DispatchLogging {
+class DeliveryProducerRoute(val destination:Destination, override val dispatchQueue:DispatchQueue, val producer:DeliveryProducer) extends BaseRetained with Route with DispatchLogging {
 
   override protected def log = Router
-  protected def dispatchQueue:DispatchQueue = queue
 
   // Retain the queue while we are retained.
-  queue.retain
+  dispatchQueue.retain
   setDisposer(^{
-    queue.release
+    dispatchQueue.release
   })
 
   var targets = List[DeliverySession]()
@@ -227,16 +226,16 @@ class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue
   def connected(targets:List[DeliveryConsumer]) = retaining(targets) {
     internal_bind(targets)
     on_connected
-  } >>: queue
+  } >>: dispatchQueue
 
   def bind(targets:List[DeliveryConsumer]) = retaining(targets) {
     internal_bind(targets)
-  } >>: queue
+  } >>: dispatchQueue
 
   private def internal_bind(values:List[DeliveryConsumer]) = {
     values.foreach{ x=>
       debug("producer route attaching to conusmer.")
-      targets = x.open_session(queue) :: targets
+      targets = x.open_session(dispatchQueue) :: targets
     }
   }
 
@@ -249,7 +248,7 @@ class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue
       }
       rc
     }
-  } >>: queue
+  } >>: dispatchQueue
 
   def disconnected() = ^ {
     this.targets.foreach { x=>
@@ -257,7 +256,7 @@ class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue
       x.close
       x.consumer.release
     }    
-  } >>: queue
+  } >>: dispatchQueue
 
   protected def on_connected = {}
   protected def on_disconnected = {}

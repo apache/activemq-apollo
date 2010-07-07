@@ -59,13 +59,13 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   class SimpleConsumer(val destination:Destination) extends BaseRetained with DeliveryConsumer {
 
-    val queue = StompProtocolHandler.this.dispatchQueue
-    val session_manager = new DeliverySessionManager(outboundChannel, queue)
+    val dispatchQueue = StompProtocolHandler.this.dispatchQueue
+    val session_manager = new DeliverySessionManager(outboundChannel, dispatchQueue)
 
-    queue.retain
+    dispatchQueue.retain
     setDisposer(^{
       session_manager.release
-      queue.release
+      dispatchQueue.release
     })
 
     def matches(message:Delivery) = true

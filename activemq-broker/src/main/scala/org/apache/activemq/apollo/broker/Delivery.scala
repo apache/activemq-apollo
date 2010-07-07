@@ -45,7 +45,7 @@ trait DeliverySession {
  */
 trait DeliveryConsumer extends Retained {
   def matches(message:Delivery)
-  val queue:DispatchQueue;
+  val dispatchQueue:DispatchQueue;
   def open_session(producer_queue:DispatchQueue):DeliverySession
 }
 

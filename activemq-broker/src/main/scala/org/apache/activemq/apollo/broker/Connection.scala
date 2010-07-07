@@ -46,24 +46,21 @@ abstract class Connection() extends TransportListener with BaseService  {
   import Connection._
   val id = next_id
   val dispatchQueue = createQueue(id)
-  
-  def stopped = serviceState match {
-    case STOPPED => true
-    case x:STOPPING => true
-    case _ => false
-  }
+  var stopped = true
 
   var transport:Transport = null
 
   override def toString = id
 
   override protected def _start(onCompleted:Runnable) = {
+    stopped = false
     transport.setDispatchQueue(dispatchQueue);
     transport.setTransportListener(Connection.this);
     transport.start(onCompleted)
   }
 
   override protected def _stop(onCompleted:Runnable) = {
+    stopped = true
     transport.stop(onCompleted)
   }
 
