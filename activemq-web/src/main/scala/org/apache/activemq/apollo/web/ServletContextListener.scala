@@ -24,6 +24,7 @@ import org.apache.activemq.apollo.broker.{LoggingTracker, Broker}
 import org.apache.activemq.apollo.{FileConfigStore, ConfigStore, BrokerRegistry}
 import java.io.File
 import com.google.inject.{Inject, Provides, Guice, Singleton}
+import org.fusesource.hawtdispatch.ScalaDispatch._
 
 /**
  * A servlet context listener which registers
@@ -37,17 +38,28 @@ class ServletContextListener extends GuiceServletContextListener {
 
   override def contextInitialized(servletContextEvent: ServletContextEvent) = {
 
-
-    // todo: replace this with info accessed from a configuration store.
-    // register/start brokers we are managing.
     try {
       BrokerRegistry.configStore = createConfigStore
 
-      broker = createBroker();
-      BrokerRegistry.add(broker);
-      LoggingTracker("broker startup") { tracker=>
-        broker.start(tracker.task())
+      // Brokers startup async.
+      BrokerRegistry.configStore.listBrokers { ids =>
+        ids.foreach { id=>
+          BrokerRegistry.configStore.getBroker(id, { x=>
+            x match {
+              case Some(config)=>
+                // Only start the broker up if it's enabled..
+                if( config.enabled ) {
+                  val broker = new Broker()
+                  broker.config = config
+                  BrokerRegistry.add(broker)
+                  broker.start()
+                }
+              case None =>
+            }
+          })
+        }
       }
+
     }
     catch {
       case e:Exception =>
@@ -63,9 +75,9 @@ class ServletContextListener extends GuiceServletContextListener {
 
     // un-register/stop brokers we are managing.
     if( broker!=null ) {
-      BrokerRegistry.remove(broker.name);
+      BrokerRegistry.remove(broker.id);
       LoggingTracker("broker shutdown") { tracker =>
-        broker.stop(tracker.task(broker.name))
+        broker.stop(tracker.task(broker.id))
         BrokerRegistry.configStore.stop(tracker.task("config store"))
       }
     }
@@ -97,11 +109,5 @@ class ServletContextListener extends GuiceServletContextListener {
     store
   }
 
-  def createBroker(): Broker = {
-    val broker = new Broker()
-    broker.name = "default"
-    broker.transportServers.add(TransportFactory.bind("tcp://localhost:10000?wireFormat=multi"))
-    broker.connectUris.add("tcp://localhost:10000")
-    broker
-  }
+
 }

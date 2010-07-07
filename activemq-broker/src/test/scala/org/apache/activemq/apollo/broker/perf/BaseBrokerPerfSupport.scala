@@ -42,8 +42,6 @@ object BaseBrokerPerfSupport {
 
   // Set to use tcp IO
   protected var TCP = true;
-  // set to force marshalling even in the NON tcp case.
-  protected var FORCE_MARSHALLING = true;
 
   var USE_KAHA_DB = true;
   var PURGE_STORE = true;
@@ -99,21 +97,17 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
   override protected def beforeAll(configMap: Map[String, Any]) = {
     super.beforeAll(configMap)
     if (TCP) {
-      sendBrokerBindURI = "tcp://localhost:10000?wireFormat=" + getBrokerWireFormat();
-      receiveBrokerBindURI = "tcp://localhost:20000?wireFormat=" + getBrokerWireFormat();
+      sendBrokerBindURI = "tcp://localhost:10000";
+      receiveBrokerBindURI = "tcp://localhost:20000";
 
       sendBrokerConnectURI = "tcp://localhost:10000?wireFormat=" + getRemoteWireFormat();
       receiveBrokerConnectURI = "tcp://localhost:20000?wireFormat=" + getRemoteWireFormat();
     } else {
       sendBrokerConnectURI = "pipe://SendBroker";
       receiveBrokerConnectURI = "pipe://ReceiveBroker";
-      if (FORCE_MARSHALLING) {
-        sendBrokerBindURI = sendBrokerConnectURI + "?wireFormat=" + getBrokerWireFormat();
-        receiveBrokerBindURI = receiveBrokerConnectURI + "?wireFormat=" + getBrokerWireFormat();
-      } else {
-        sendBrokerBindURI = sendBrokerConnectURI;
-        receiveBrokerBindURI = receiveBrokerConnectURI;
-      }
+      
+      sendBrokerBindURI = sendBrokerConnectURI;
+      receiveBrokerBindURI = receiveBrokerConnectURI;
     }
   }
 
@@ -418,18 +412,22 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
       var consumer = createConsumer();
       consumer.brokerPerfTest = this
 
-      consumer.uri = rcvBroker.connectUris.head
+      consumer.uri = connectUri(rcvBroker)
       consumer.destination = destination
       consumer.name = "consumer" + (i + 1)
       consumer.totalConsumerRate = totalConsumerRate
       return consumer;
     }
 
+    def connectUri(broker:Broker) = {
+      broker.config.connectors.get(0).advertise
+    }
+
 
     def _createProducer(id: Int, destination: Destination): RemoteProducer = {
       var producer = createProducer();
       producer.brokerPerfTest = this
-      producer.uri = sendBroker.connectUris.head
+      producer.uri = connectUri(sendBroker)
       producer.producerId = id + 1
       producer.name = "producer" + (id + 1)
       producer.destination = destination
@@ -518,23 +516,27 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
 
   def getBrokerWireFormat() = "multi"
   def getRemoteWireFormat(): String
+
   def createBroker(name: String, bindURI: String, connectUri: String): Broker = {
     val broker = new Broker()
-    broker.transportServers.add(TransportFactory.bind(bindURI))
-    broker.connectUris.add(connectUri)
+    broker.config = Broker.default
+    val connector = broker.config.connectors.get(0)
+    connector.bind = bindURI
+    connector.advertise = connectUri
+    connector.protocol = getBrokerWireFormat
     broker
   }
 
-  def createStore(broker: Broker): Store = {
-    val store = if (USE_KAHA_DB) {
-      StoreFactory.createStore("hawtdb");
-    } else {
-      StoreFactory.createStore("memory");
-    }
-    store.setStoreDirectory(new File("target/test-data/broker-test/" + broker.name));
-    store.setDeleteAllMessages(PURGE_STORE);
-    store
-  }
+//  def createStore(broker: Broker): Store = {
+//    val store = if (USE_KAHA_DB) {
+//      StoreFactory.createStore("hawtdb");
+//    } else {
+//      StoreFactory.createStore("memory");
+//    }
+//    store.setStoreDirectory(new File("target/test-data/broker-test/" + broker.id));
+//    store.setDeleteAllMessages(PURGE_STORE);
+//    store
+//  }
 
 }
 

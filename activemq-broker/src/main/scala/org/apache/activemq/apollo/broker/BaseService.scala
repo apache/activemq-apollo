@@ -20,6 +20,8 @@ import org.apache.activemq.Service
 import org.fusesource.hawtdispatch.DispatchQueue
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
+object BaseService extends Log
+
 /**
  * <p>
  * The BaseService provides helpers for dealing async service state.
@@ -27,7 +29,9 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait BaseService extends Service {
+trait BaseService extends Service with Logging {
+
+  override protected def log:Log = BaseService
 
   sealed class State {
     override def toString = getClass.getSimpleName
@@ -52,7 +56,7 @@ trait BaseService extends Service {
   protected class  STOPPING extends State with CallbackSupport { override def isStopping = true  }
   protected object STOPPED extends State { override def isStopped = true  }
 
-  val dispatchQueue:DispatchQueue
+  protected val dispatchQueue:DispatchQueue
 
   final def start() = start(null)
   final def stop() = stop(null)
@@ -61,14 +65,9 @@ trait BaseService extends Service {
   protected var _serviceState:State = CREATED
   def serviceState = _serviceState
 
-  private def error(msg:String) {
-    try {
-      throw new AssertionError(msg)
-    } catch {
-      case e:Exception =>
-      e.printStackTrace
-    }
-  }
+  @volatile
+  protected var _serviceFailure:Exception = null
+  def serviceFailure = _serviceFailure
 
   final def start(onCompleted:Runnable) = ^{
     def do_start = {
@@ -83,6 +82,8 @@ trait BaseService extends Service {
       }
       catch {
         case e:Exception =>
+          error(e, "Start failed due to %s", e)
+          _serviceFailure = e
           _serviceState = FAILED
           state.done
       }
@@ -103,7 +104,7 @@ trait BaseService extends Service {
         done
       case state =>
         done
-        error("start should not be called from state: "+state);
+        error("Start should not be called from state: %s", state);
     }
   } |>>: dispatchQueue
 
@@ -126,6 +127,8 @@ trait BaseService extends Service {
         }
         catch {
           case e:Exception =>
+            error(e, "Stop failed due to: %s", e)
+            _serviceFailure = e
             _serviceState = FAILED
             state.done
         }
@@ -135,7 +138,7 @@ trait BaseService extends Service {
         done
       case state =>
         done
-        error("stop should not be called from state: "+state);
+        error("Stop should not be called from state: %s", state);
     }
   } |>>: dispatchQueue
 

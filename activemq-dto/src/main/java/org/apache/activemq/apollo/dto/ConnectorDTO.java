@@ -35,10 +35,16 @@ public class ConnectorDTO {
 	public String id;
 
     /**
+     * Should this connector be running?
+     */
+    @XmlAttribute(name="enabled")
+    public boolean enabled;
+    
+    /**
      * The transport uri which it will accept connections on.
      */
     @XmlAttribute
-    public String transport;
+    public String bind;
 
     /**
      * The protocol that the transport will use.

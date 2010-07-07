@@ -21,14 +21,13 @@ import javax.xml.bind.JAXBContext
 import javax.xml.stream.XMLInputFactory
 import org.apache.activemq.util.URISupport
 import java.net.{URL, URI}
-import collection.JavaConversions._
 import org.apache.activemq.apollo.broker._
 import jaxb.PropertiesReader
 import org.apache.activemq.apollo.dto._
-import org.apache.activemq.transport.TransportFactory
+import java.lang.String
 
 class XmlBrokerFactory extends BrokerFactory.Handler {
-  
+
   def createBroker(value: String): Broker = {
     try {
       var brokerURI = new URI(value)
@@ -60,37 +59,22 @@ class XmlBrokerFactory extends BrokerFactory.Handler {
     }
   }
 
-  def createMessageBroker(brokerModel: BrokerDTO): Broker = {
-    val rc = new Broker()
-    for (virtualHostModel <- brokerModel.virtualHosts) {
-      rc.addVirtualHost(createVirtualHost(virtualHostModel))
-    }
-    for (connector <- brokerModel.connectors) {
-      try {
-        val server = TransportFactory.bind(connector.transport)
-        rc.transportServers.add(server)
-      } catch {
-        case e:Exception=>
-          throw new Exception("Unable to bind transport server '" + connector + " due to: " + e.getMessage(), e)
+  def createMessageBroker(config: BrokerDTO): Broker = {
+    import ReporterLevel._
+    val broker = new Broker()
+
+    var errorMessage = "";
+    if( broker.configure(config, new Reporter(){
+      override def report(level: ReporterLevel, message: String) = {
+        level match {
+          case ERROR=> errorMessage+=message+"\n"
+          case _=>
+        }
       }
+    }) == ERROR ) {
+      throw new Exception("Invalid Broker Configuration:\n"+ERROR)
     }
-    for (connector <- brokerModel.connectors) {
-      rc.connectUris.add(connector.advertise)
-    }
-    return rc
-  }
-
-
-  def createVirtualHost(virtualHostModel: VirtualHostDTO): VirtualHost = {
-    val rc = new VirtualHost()
-    rc.setNamesArray(virtualHostModel.hostNames)
-    if (virtualHostModel.store != null) {
-      val database = new BrokerDatabase()
-      database.setVirtualHost(rc)
-//      TODO:
-//      database.setStore( )
-      rc.setDatabase(database)
-    }
-    return rc
+    
+    broker
   }
 }

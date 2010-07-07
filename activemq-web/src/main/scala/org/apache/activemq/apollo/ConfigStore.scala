@@ -38,13 +38,15 @@ import java.io.{OutputStreamWriter, File}
  */
 trait ConfigStore extends Service {
 
-  def listBrokerModels(cb: (List[String]) => Unit):Unit
+  def listBrokers(cb: (List[String]) => Unit):Unit
 
-  def getBrokerModel(id:String, cb: (Option[BrokerDTO]) => Unit):Unit
+  def getBroker(id:String, cb: (Option[BrokerDTO]) => Unit):Unit
 
-  def putBrokerModel(config:BrokerDTO, cb: (Boolean) => Unit):Unit
+  def putBroker(config:BrokerDTO, cb: (Boolean) => Unit):Unit
 
-  def removeBrokerModel(id:String, rev:Int, cb: (Boolean) => Unit):Unit
+  def removeBroker(id:String, rev:Int, cb: (Boolean) => Unit):Unit
+
+  def forBroker(cb: (BrokerDTO)=> Unit):Unit
 
 }
 
@@ -144,11 +146,17 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     ioWorker.shutdown
   }
 
-  def listBrokerModels(cb: (List[String]) => Unit) = callback(cb) {
+  def listBrokers(cb: (List[String]) => Unit) = reply(cb) {
     List(latest.id)
   } >>: dispatchQueue
 
-  def getBrokerModel(id:String, cb: (Option[BrokerDTO]) => Unit) = callback(cb) {
+
+  def forBroker(cb: (BrokerDTO)=> Unit) = using(cb) {
+
+  }
+
+
+  def getBroker(id:String, cb: (Option[BrokerDTO]) => Unit) = reply(cb) {
     if( latest.id == id ) {
       Some(unmarshall(latest.data))
     } else {
@@ -156,7 +164,7 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     }
   } >>: dispatchQueue
 
-  def putBrokerModel(config:BrokerDTO, cb: (Boolean) => Unit) = callback(cb) {
+  def putBroker(config:BrokerDTO, cb: (Boolean) => Unit) = reply(cb) {
     debug("storing broker model: %s ver %d", config.id, config.rev)
     if( latest.id != config.id ) {
       debug("this store can only update broker: "+latest.id)
@@ -170,7 +178,7 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     }
   } >>: dispatchQueue
 
-  def removeBrokerModel(id:String, rev:Int, cb: (Boolean) => Unit) = callback(cb) {
+  def removeBroker(id:String, rev:Int, cb: (Boolean) => Unit) = reply(cb) {
     // not supported.
     false
   } >>: dispatchQueue
@@ -187,7 +195,7 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
             // has a chance to update the runtime too.
             val c = unmarshall(config.data)
             c.rev = config.rev
-            putBrokerModel(c, null)
+            putBroker(c, null)
           }
           schedualNextUpdateCheck
         }
@@ -213,7 +221,7 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     config.virtualHosts.add(host)
 
     var connector = new ConnectorDTO
-    connector.transport = "tcp://0.0.0.0:61613"
+    connector.bind = "tcp://0.0.0.0:61613"
     connector.advertise = "tcp://0.0.0.0:61613"
     connector.protocol = "multi"
     config.connectors.add( connector )

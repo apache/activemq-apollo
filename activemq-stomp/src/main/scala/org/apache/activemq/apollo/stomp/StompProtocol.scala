@@ -105,7 +105,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         }
       }
     }
-    connection.broker.runtime.getDefaultVirtualHost(
+    connection.connector.broker.getDefaultVirtualHost(
       queue.wrap { (host)=>
         this.host=host
         connection.transport.resumeRead

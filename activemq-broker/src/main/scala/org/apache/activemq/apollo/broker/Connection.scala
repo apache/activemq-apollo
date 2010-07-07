@@ -39,7 +39,7 @@ object Connection extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract class Connection() extends TransportListener with BaseService  with DispatchLogging {
+abstract class Connection() extends TransportListener with BaseService  {
 
   override protected def log = Connection
 
@@ -90,21 +90,21 @@ abstract class Connection() extends TransportListener with BaseService  with Dis
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class BrokerConnection(val broker: Broker) extends Connection {
+class BrokerConnection(val connector: Connector) extends Connection {
 
   var protocol = "stomp"
   var protocolHandler: ProtocolHandler = null;
 
   override protected  def _start(onCompleted:Runnable) = {
-    broker.dispatchQueue.retain
+    connector.dispatchQueue.retain
     protocolHandler = ProtocolHandlerFactory.createProtocolHandler(protocol)
     protocolHandler.setConnection(this);
     super._start(onCompleted)
   }
 
   override protected def _stop(onCompleted:Runnable) = {
-    broker.runtime.stopped(this)
-    broker.dispatchQueue.release
+    connector.stopped(this)
+    connector.dispatchQueue.release
     super._stop(onCompleted)
   }
 

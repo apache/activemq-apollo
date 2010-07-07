@@ -45,6 +45,13 @@ public class BrokerDTO {
     public int rev;
 
     /**
+     * Should this broker be running?
+     */
+    @XmlAttribute(name="enabled")
+    public boolean enabled;
+
+
+    /**
      * Used to track who last modified the configuration.
      */
     @XmlAttribute(name="modified-by")
@@ -68,5 +75,11 @@ public class BrokerDTO {
     @XmlElement(name="connectors")
     public List<ConnectorDTO> connectors = new ArrayList<ConnectorDTO>();
 
+    /**
+     * The base data directory of the broker.  It will store
+     * persistent data under it. 
+     */
+    @XmlAttribute(name="basedir")
+    public String basedir;
 
 }

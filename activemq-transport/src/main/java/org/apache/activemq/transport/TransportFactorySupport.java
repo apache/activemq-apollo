@@ -86,6 +86,23 @@ public class  TransportFactorySupport{
             throw IOExceptionSupport.create("Could not create wire format factory for: " + wireFormat + ", reason: " + e, e);
         }
     }
+    static public WireFormatFactory createWireFormatFactory(String location) throws IOException, URISyntaxException {
+        URI uri = new URI(location);
+        Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
+
+        String wireFormat = uri.getPath();
+        if( "null".equals(wireFormat) ) {
+            return null;
+        }
+
+        try {
+            WireFormatFactory wff = (WireFormatFactory)WIREFORMAT_FACTORY_FINDER.newInstance(wireFormat);
+            IntrospectionSupport.setProperties(wff, options);
+            return wff;
+        } catch (Throwable e) {
+            throw IOExceptionSupport.create("Could not create wire format factory for: " + wireFormat + ", reason: " + e, e);
+        }
+    }
 
     static protected String getDefaultWireFormatType() {
         return "default";

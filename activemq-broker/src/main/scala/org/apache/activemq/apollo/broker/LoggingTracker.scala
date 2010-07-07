@@ -20,6 +20,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.HashSet
 import org.fusesource.hawtdispatch.ScalaDispatch._
 import org.fusesource.hawtdispatch.{TaskTracker, DispatchQueue}
+import org.apache.activemq.Service
 
 /**
  * <p>
@@ -38,6 +39,14 @@ class LoggingTracker(name:String, parent:DispatchQueue=getGlobalQueue) extends T
   override protected def onTimeout(duration:Long, tasks: List[String]):Long = {
     info("%s is taking a long time (%d seconds). Waiting on %s", name, (duration/1000), tasks)
     timeout
+  }
+
+  def start(service:Service) = {
+    service.start(task(service.toString))
+  }
+
+  def stop(service:Service) = {
+    service.stop(task(service.toString))
   }
 
 }

@@ -36,7 +36,7 @@ object BrokerRegistry {
   }
 
   def add(broker:Broker) = _brokers.synchronized {
-    _brokers.put(broker.name, broker)
+    _brokers.put(broker.config.id, broker)
   }
 
   def remove(id:String) = _brokers.synchronized {

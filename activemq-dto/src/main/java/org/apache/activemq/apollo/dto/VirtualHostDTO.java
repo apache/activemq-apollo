@@ -33,6 +33,12 @@ public class VirtualHostDTO {
 	@XmlAttribute(name="id")
 	public String id;
 
+    /**
+     * Should this virtual host be running?
+     */
+    @XmlAttribute(name="enabled")
+    public boolean enabled;
+
     @XmlElement(name="host-names", required=true)
     public ArrayList<String> hostNames = new ArrayList<String>();
 

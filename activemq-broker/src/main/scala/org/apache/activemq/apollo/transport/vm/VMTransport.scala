@@ -34,12 +34,13 @@ import _root_.org.apache.activemq.transport.TransportFactorySupport.configure
 import _root_.org.apache.activemq.transport.TransportFactorySupport.verify
 
 import _root_.scala.collection.JavaConversions._
+import org.apache.activemq.apollo.dto.ConnectorDTO
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object VMTransportFactory extends Log {
-  val DEFAULT_PIPE_NAME = BrokerConstants.DEFAULT_VIRTUAL_HOST_NAME.toString();
+  val DEFAULT_PIPE_NAME = "default"
 }
 
 /**
@@ -49,119 +50,119 @@ object VMTransportFactory extends Log {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class VMTransportFactory extends PipeTransportFactory with Logging {
-
   import PipeTransportFactory._
   import VMTransportFactory._
   override protected def log = VMTransportFactory
 
-	/**
-	 * This extension of the PipeTransportServer shuts down the broker
-	 * when all the connections are disconnected.
-	 *
-	 * @author chirino
-	 */
-	class VmTransportServer extends PipeTransportServer {
+  /**
+   * This extension of the PipeTransportServer shuts down the broker
+   * when all the connections are disconnected.
+   *
+   * @author chirino
+   */
+  class VmTransportServer extends PipeTransportServer {
+    val refs = new AtomicInteger()
+    var broker: Broker = null
 
-		val refs = new AtomicInteger()
-		var broker:Broker = null
+    override def createClientTransport(): PipeTransport = {
+      refs.incrementAndGet();
+      new PipeTransport(this) {
+        val stopped = new AtomicBoolean()
 
-		override def createClientTransport():PipeTransport = {
-			refs.incrementAndGet();
-			new PipeTransport(this) {
+        override def stop() = {
+          if (stopped.compareAndSet(false, true)) {
+            super.stop();
+            if (refs.decrementAndGet() == 0) {
+              stopBroker();
+            }
+          }
+        }
+      };
+    }
 
-				val stopped = new AtomicBoolean()
+    def setBroker(broker: Broker) = {
+      this.broker = broker;
+    }
 
-				override def stop() = {
-					if( stopped.compareAndSet(false, true) ) {
-						super.stop();
-						if( refs.decrementAndGet() == 0 ) {
-							stopBroker();
-						}
-					}
-				}
-			};
-		}
-
-		def setBroker(broker:Broker) = {
-			this.broker = broker;
-		}
-
-		def stopBroker() = {
-			try {
-				this.broker.stop();
-				unbind(this);
-			} catch {
-        case e:Exception=>
-				error("Failed to stop the broker gracefully: "+e);
-				debug("Failed to stop the broker gracefully: ", e);
-			}
-		}
-	}
-
-  override def bind(uri:String):TransportServer = {
-    new VmTransportServer();
+    def stopBroker() = {
+      try {
+        this.broker.stop();
+        unbind(this);
+      } catch {
+        case e: Exception =>
+          error("Failed to stop the broker gracefully: " + e);
+          debug("Failed to stop the broker gracefully: ", e);
+      }
+    }
   }
 
-  override def connect(location:String):Transport = {
-		try {
+  override def connect(location: String): Transport = {
+    try {
       var uri = new URI(location)
-			var brokerURI:String = null;
-			var create = true;
-			var name = uri.getHost();
-			if (name == null) {
-				name = DEFAULT_PIPE_NAME;
-			}
+      var brokerURI: String = null;
+      var create = true;
+      var name = uri.getHost();
+      if (name == null) {
+        name = DEFAULT_PIPE_NAME;
+      }
 
-			var options = URISupport.parseParamters(uri);
-			var config = options.remove("broker").asInstanceOf[String]
-			if (config != null) {
-				brokerURI = config;
-			}
-			if ("false".equals(options.remove("create"))) {
-				create = false;
-			}
+      var options = URISupport.parseParamters(uri);
+      var config = options.remove("broker").asInstanceOf[String]
+      if (config != null) {
+        brokerURI = config;
+      }
+      if ("false".equals(options.remove("create"))) {
+        create = false;
+      }
 
 
-			var server = servers.get(name);
-			if (server == null && create) {
+      var server = servers.get(name);
+      if (server == null && create) {
 
-				// Create the broker on demand.
-				var broker = if( brokerURI == null ) {
-					new Broker()
-				} else {
-					BrokerFactory.createBroker(brokerURI);
-				}
+        // This is the connector that the broker needs.
+        val connector = Connector.default
+        connector.id = "vm"
+        connector.bind = "vm://" + name
+        connector.advertise = connector.bind
 
-				// Remove the existing pipe severs if the broker is configured with one...  we want to make sure it
-				// uses the one we explicitly configure here.
-				for (s <- broker.transportServers ) {
-					if (s.isInstanceOf[PipeTransportServer] && name == s.asInstanceOf[PipeTransportServer].getName()) {
-						broker.transportServers.remove(s);
-					}
-				}
+        // Create the broker on demand.
+        var broker: Broker = null
+        if (brokerURI == null) {
+          // Lets create and configure it...
+          broker = new Broker()
+          broker.config = Broker.default
+          broker.config.connectors.clear
+          broker.config.connectors.add(connector)
+        } else {
+          // Use the user specified config
+          broker = BrokerFactory.createBroker(brokerURI);
+          // we need to add in the connector if it was not in the config...
+          if (broker.config.connectors.toList.filter(_.bind == connector.bind).isEmpty) {
+            broker.config.connectors.add(connector)
+          }
+        }
 
-				// We want to use a vm transport server impl.
-				var vmTransportServer = TransportFactory.bind("vm://" + name+"?wireFormat=null").asInstanceOf[VmTransportServer]
-				vmTransportServer.setBroker(broker);
-				broker.transportServers.add(vmTransportServer);
-				broker.start();
+        // TODO: get rid of this blocking wait.
+        val tracker = new LoggingTracker("vm broker startup")
+        tracker.start(broker)
+        tracker.await
 
-				server = servers.get(name);
-			}
+        server = servers.get(name)
+      }
 
-			if (server == null) {
-				throw new IOException("Server is not bound: " + name);
-			}
+      if (server == null) {
+        throw new IOException("Server is not bound: " + name)
+      }
 
-      var transport = server.connect();
-      verify( configure(transport, options), options);
+      var transport = server.connect()
+      verify(configure(transport, options), options)
 
-		} catch {
-//      case e:URISyntaxException=>
-//  			throw IOExceptionSupport.create(e);
-      case e:Exception=>
-  			throw IOExceptionSupport.create(e);
-		}
-	}
+    } catch {
+      //      case e:URISyntaxException=>
+      //  			throw IOExceptionSupport.create(e)
+      case e: Exception =>
+        throw IOExceptionSupport.create(e)
+    }
+  }
 
 }

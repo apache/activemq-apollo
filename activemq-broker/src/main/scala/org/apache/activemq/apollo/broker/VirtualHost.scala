@@ -26,48 +26,82 @@ import _root_.scala.collection.JavaConversions._
 import _root_.scala.reflect.BeanProperty
 import path.PathFilter
 import org.fusesource.hawtbuf.AsciiBuffer
+import org.apache.activemq.apollo.dto.VirtualHostDTO
+import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+
+import ReporterLevel._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object VirtualHost extends Log
+object VirtualHost extends Log {
+
+  /**
+   * Creates a default a configuration object.
+   */
+  def default() = {
+    val rc = new VirtualHostDTO
+    rc.id = "default"
+    rc.enabled = true
+    rc.hostNames.add("localhost")
+    rc
+  }
+
+  /**
+   * Validates a configuration object.
+   */
+  def validate(config: VirtualHostDTO, reporter:Reporter):ReporterLevel = {
+     new Reporting(reporter) {
+      if( config.hostNames.isEmpty ) {
+        error("Virtual host must be configured with at least one host name.")
+      }
+    }.result
+  }
+  
+}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class VirtualHost() extends Service with Logging {
-
+class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
+  import VirtualHost._
+  
   override protected def log = VirtualHost
+  override protected val dispatchQueue:DispatchQueue = ScalaDispatch.createQueue("virtual-host");
 
+  var config:VirtualHostDTO = _
   private val queueStore = new BrokerQueueStore()
   private val queues = new HashMap[AsciiBuffer, Queue]()
   private val durableSubs = new HashMap[String, DurableSubscription]()
-  private val q:DispatchQueue = ScalaDispatch.createQueue("virtual-host");
-  val router = new Router(q)
+  val router = new Router(dispatchQueue)
 
-  private var started = false;
-
-  @BeanProperty
-  var broker: Broker = null
-  @BeanProperty
   var names:List[String] = Nil;
   def setNamesArray( names:ArrayList[String]) = {
     this.names = names.toList
   }
 
-  @BeanProperty
   var database:BrokerDatabase = new BrokerDatabase
-  @BeanProperty
   var transactionManager:TransactionManager = new TransactionManager
 
-  override def toString = names.head
+  override def toString = "virtual-host: "+config.id
 
+  /**
+   * Validates and then applies the configuration.
+   */
+  def configure(config: VirtualHostDTO, reporter:Reporter) = ^{
+    if ( validate(config, reporter) < ERROR ) {
+      this.config = config
 
-  def start() = start(null)
-  def start(onCompleted:Runnable):Unit = {
-    if (started) {
-        return;
+      if( serviceState.isStarted ) {
+        // TODO: apply changes while he broker is running.
+        reporter.report(WARN, "Updating virtual host configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
+
+      }
     }
+  } |>>: dispatchQueue
+
+
+  override protected def _start(onCompleted:Runnable):Unit = {
 
     database.virtualHost = this
     database.start();
@@ -76,7 +110,7 @@ class VirtualHost() extends Service with Logging {
 
     //Recover queues:
     queueStore.setDatabase(database);
-    queueStore.setDispatchQueue(q);
+    queueStore.setDispatchQueue(dispatchQueue);
     queueStore.loadQueues();
 
     // Create Queue instances
@@ -96,20 +130,11 @@ class VirtualHost() extends Service with Logging {
     //Recover transactions:
     transactionManager.virtualHost = this
     transactionManager.loadTransactions();
-    started = true;
-    
-    if( onCompleted!=null ) {
-      onCompleted.run
-    }
+    onCompleted.run
   }
 
 
-  def stop() = start(null)
-  def stop(onCompleted:Runnable):Unit = {
-
-      if (!started) {
-          return;
-      }
+  override protected def _stop(onCompleted:Runnable):Unit = {
 
 //    TODO:
 //      val tmp = new ArrayList[Queue](queues.values())
@@ -125,19 +150,15 @@ class VirtualHost() extends Service with Logging {
 //        }
 //        done.await();
 
-      database.stop();
-      started = false;
-    if( onCompleted!=null ) {
-      onCompleted.run
-    }
-    
+    database.stop();
+    onCompleted.run
   }
 
   def createQueue(dest:Destination) :Queue = {
-      if (!started) {
-          //Queues from the store must be loaded before we can create new ones:
-          throw new IllegalStateException("Can't create queue on unstarted host");
-      }
+//      if (!serviceState.isStarted) {
+//          //Queues from the store must be loaded before we can create new ones:
+//          throw new IllegalStateException("Can't create queue on unstarted host");
+//      }
 
       val queue = queues.get(dest);
 //        TODO:

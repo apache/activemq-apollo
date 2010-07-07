@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 
 import org.apache.activemq.Service;
+import org.apache.activemq.wireformat.WireFormatFactory;
 import org.fusesource.hawtdispatch.DispatchQueue;
 
 /**

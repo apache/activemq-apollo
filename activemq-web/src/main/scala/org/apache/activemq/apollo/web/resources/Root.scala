@@ -60,7 +60,7 @@ class Root() extends Resource {
   def get() = {
     val rc = new IdListDTO
     val ids = Future[List[String]] { cb=>
-      configStore.listBrokerModels(cb)
+      configStore.listBrokers(cb)
     }.toArray[String]
     rc.ids.addAll(Arrays.asList(ids: _*))
     rc
@@ -94,7 +94,7 @@ case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
 
   private def config() = {
     Future[Option[BrokerDTO]] { cb=>
-      configStore.getBrokerModel(id, cb)
+      configStore.getBroker(id, cb)
     }.getOrElse(result(NOT_FOUND))
   }
 
@@ -111,14 +111,14 @@ case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
     config.id = id;
     config.rev = rev
     Future[Boolean] { cb=>
-      configStore.putBrokerModel(config, cb)
+      configStore.putBroker(config, cb)
     } || result(NOT_FOUND)
   }
 
   @DELETE @Path("config/{rev}")
   def delete(@PathParam("rev") rev:Int) = {
     Future[Boolean] { cb=>
-      configStore.removeBrokerModel(id, rev, cb)
+      configStore.removeBroker(id, rev, cb)
     } || result(NOT_FOUND)
   }
 

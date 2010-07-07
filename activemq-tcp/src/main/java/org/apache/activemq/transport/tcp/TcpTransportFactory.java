@@ -52,7 +52,6 @@ public class TcpTransportFactory implements TransportFactory.TransportFactorySPI
         URI uri = new URI(location);
         Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
         TcpTransportServer server = createTcpTransportServer(uri);
-        server.setWireFormatFactory(TransportFactorySupport.createWireFormatFactory(options));
         IntrospectionSupport.setProperties(server, options);
         Map<String, Object> transportOptions = IntrospectionSupport.extractProperties(options, "transport.");
         server.setTransportOption(transportOptions);

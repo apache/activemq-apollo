@@ -42,7 +42,7 @@ import java.util.Map;
 
 public class TcpTransportServer implements TransportServer {
 
-    protected WireFormatFactory wireFormatFactory;
+//    protected WireFormatFactory wireFormatFactory;
     private ServerSocketChannel channel;
     private TransportAcceptListener listener;
     private URI bindURI;
@@ -173,14 +173,6 @@ public class TcpTransportServer implements TransportServer {
         acceptSource.release();
     }
 
-    public WireFormatFactory getWireFormatFactory() {
-        return wireFormatFactory;
-    }
-
-    public void setWireFormatFactory(WireFormatFactory wireFormatFactory) {
-        this.wireFormatFactory = wireFormatFactory;
-    }
-
     public URI getBindURI() {
         return bindURI;
     }
@@ -210,7 +202,6 @@ public class TcpTransportServer implements TransportServer {
 //      options.put("startLogging", Boolean.valueOf(startLogging));
 
         Transport transport = createTransport(socket, options);
-        transport.setWireformat(wireFormatFactory.createWireFormat());
         listener.onAccept(transport);
     }
 

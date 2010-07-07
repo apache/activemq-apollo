@@ -16,8 +16,8 @@
  */
 package org.apache.activemq.apollo.stomp
 
-import org.apache.activemq.apollo.broker.Broker
 import org.apache.activemq.transport.TransportFactory
+import org.apache.activemq.apollo.broker.{LoggingTracker, Broker}
 
 /**
  */
@@ -27,17 +27,21 @@ object StompBroker {
   var port = 61613
 
   def main(args:Array[String]) = {
-    val uri = "tcp://"+address+":"+port+"?wireFormat=multi"
+    val uri = "tcp://"+address+":"+port
 
     println("Starting stomp broker: "+uri)
 
     val broker = new Broker()
+    val connector = broker.config.connectors.get(0)
+    connector.bind = uri
+    connector.protocol = "stomp"
+    connector.advertise = uri
 
-    val server = TransportFactory.bind(uri)
-    broker.transportServers.add(server)
-    broker.start
-
+    val tracker = new LoggingTracker("broker startup")
+    tracker.start(broker)
+    tracker.await
     println("Startup complete.")
+
     System.in.read
     println("Shutting down...")
     broker.stop

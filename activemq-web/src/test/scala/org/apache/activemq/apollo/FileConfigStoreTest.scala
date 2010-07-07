@@ -41,7 +41,7 @@ class FileConfigStoreTest extends FunSuiteSupport {
 
     expect(List("default")) {
       Future[List[String]]{ x=>
-        store.listBrokerModels(x)
+        store.listBrokers(x)
       }
     }
 

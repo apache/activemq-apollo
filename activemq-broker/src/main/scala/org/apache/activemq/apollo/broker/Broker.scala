@@ -17,17 +17,16 @@
 package org.apache.activemq.apollo.broker
 
 import _root_.java.io.{File}
-import _root_.org.apache.activemq.transport._
-import _root_.org.apache.activemq.Service
 import _root_.java.lang.{String}
-import _root_.org.apache.activemq.util.{FactoryFinder, IOHelper}
+import _root_.org.apache.activemq.util.{FactoryFinder}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import _root_.scala.collection.JavaConversions._
-import _root_.scala.reflect.BeanProperty
 import org.fusesource.hawtdispatch.{Dispatch, DispatchQueue, BaseRetained}
-import java.util.{HashSet, LinkedList, LinkedHashMap, ArrayList}
-import java.util.concurrent.{TimeUnit, CountDownLatch}
 import org.fusesource.hawtbuf._
+import ReporterLevel._
+import AsciiBuffer._
+import org.apache.activemq.apollo.dto.{VirtualHostDTO, BrokerDTO}
+import collection.{JavaConversions, SortedMap}
+import java.util.LinkedList
 
 /**
  * <p>
@@ -85,19 +84,50 @@ object BufferConversions {
   implicit def toUTF8Buffer(value:Buffer) = value.utf8
 }
 
-import BufferConversions._
 
-object BrokerConstants extends Log {
-  val CONFIGURATION = "CONFIGURATION"
-  val STOPPED = "STOPPED"
-  val STARTING = "STARTING"
-  val STOPPING = "STOPPING"
-  val RUNNING = "RUNNING"
-  val UNKNOWN = "UNKNOWN"
-  
-  val DEFAULT_VIRTUAL_HOST_NAME = new AsciiBuffer("default")
+
+
+object Broker extends Log {
 
   val STICK_ON_THREAD_QUEUES = true
+
+  /**
+   * Creates a default a configuration object.
+   */
+  def default() = {
+    val rc = new BrokerDTO
+    rc.id = "default"
+    rc.enabled = true
+    rc.virtualHosts.add(VirtualHost.default)
+    rc.connectors.add(Connector.default)
+    rc.basedir = "./activemq-data/default"
+    rc
+  }
+
+  /**
+   * Validates a configuration object.
+   */
+  def validate(config: BrokerDTO, reporter:Reporter):ReporterLevel = {
+    new Reporting(reporter) {
+      if( empty(config.id) ) {
+        error("Broker id must be specified.")
+      }
+      if( config.virtualHosts.isEmpty ) {
+        error("Broker must define at least one virtual host.")
+      }
+      if( empty(config.basedir) ) {
+        error("Broker basedir must be defined.")
+      }
+
+      import JavaConversions._
+      for (host <- config.virtualHosts ) {
+        result |= VirtualHost.validate(host, reporter)
+      }
+      for (connector <- config.connectors ) {
+        result |= Connector.validate(connector, reporter)
+      }
+    }.result
+  }
 }
 
 /**
@@ -109,230 +139,100 @@ object BrokerConstants extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Broker() extends Service with DispatchLogging {
+class Broker() extends BaseService with DispatchLogging with LoggingReporter {
   
-  import BrokerConstants._
-  override protected def log = BrokerConstants
+  import Broker._
+  override protected def log = Broker
 
-  // The configuration state of the broker... It can be modified directly until the broker
-  // is started.
-  @BeanProperty
-  val connectUris: ArrayList[String] = new ArrayList[String]
-  @BeanProperty
-  val virtualHosts: LinkedHashMap[AsciiBuffer, VirtualHost] = new LinkedHashMap[AsciiBuffer, VirtualHost]
-  @BeanProperty
-  val transportServers: ArrayList[TransportServer] = new ArrayList[TransportServer]
-  @BeanProperty
+  var config: BrokerDTO = default
+
   var dataDirectory: File = null
-  @BeanProperty
-  var name = "broker";
-  @BeanProperty
   var defaultVirtualHost: VirtualHost = null
-
-  def start = runtime.start(null)
-  def start(onComplete:Runnable) = runtime.start(onComplete)
-
-  def stop = runtime.stop(null)
-  def stop(onComplete:Runnable) = runtime.stop(onComplete)
+  var virtualHosts: Map[AsciiBuffer, VirtualHost] = Map()
+  var connectors: List[Connector] = Nil
 
   val dispatchQueue = createQueue("broker");
-
   if( STICK_ON_THREAD_QUEUES ) {
     dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
   }
 
-  def addVirtualHost(host: VirtualHost) = {
-    if (host.names.isEmpty) {
-      throw new IllegalArgumentException("Virtual host must be configured with at least one host name.")
-    }
-    for (name <- host.names) {
-      if (virtualHosts.containsKey(name)) {
-        throw new IllegalArgumentException("Virtual host with host name " + name + " already exists.")
-      }
-    }
-    for (name <- host.names) {
-      virtualHosts.put(name, host)
-    }
-    if (defaultVirtualHost == null) {
-      defaultVirtualHost = host
-    }
-  }
+  def id = config.id
 
-  // Holds the runtime state of the broker all access should be serialized
-  // via a the dispatch queue and therefore all requests are setup to return
-  // results via callbacks.
-  object runtime {
-
-    class BrokerAcceptListener extends TransportAcceptListener {
-      def onAcceptError(error: Exception): Unit = {
-        error.printStackTrace
-        warn("Accept error: " + error)
-        debug("Accept error details: ", error)
-      }
-
-      def onAccept(transport: Transport): Unit = {
-        debug("Accepted connection from: %s", transport.getRemoteAddress)
-        var connection = new BrokerConnection(Broker.this)
-        connection.transport = transport
-        connection.dispatchQueue.retain
-        if( STICK_ON_THREAD_QUEUES ) {
-          connection.dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
-        }
-
-        clientConnections.add(connection)
-        try {
-          connection.start()
-        }
-        catch {
-          case e1: Exception => {
-            onAcceptError(e1)
-          }
-        }
-      }
-    }
-
-    var state = CONFIGURATION
-    val clientConnections: HashSet[Connection] = new HashSet[Connection]
-
-    def stopped(connection:Connection) = ^{
-      if( clientConnections.remove(connection) ) {
-        connection.dispatchQueue.release
-      }
-    } >>: dispatchQueue
-
-    def removeConnectUri(uri: String): Unit = ^ {
-      connectUris.remove(uri)
-    } >>: dispatchQueue
-
-    def getVirtualHost(name: AsciiBuffer, cb: (VirtualHost) => Unit) = callback(cb) {
-      virtualHosts.get(name)
-    } >>: dispatchQueue
-
-    def getConnectUris(cb: (ArrayList[String]) => Unit) = callback(cb) {
-      new ArrayList(connectUris)
-    } >>: dispatchQueue
-
-
-    def getDefaultVirtualHost(cb: (VirtualHost) => Unit) = callback(cb) {
-      defaultVirtualHost
-    } >>: dispatchQueue
-
-    def addVirtualHost(host: VirtualHost) = ^ {
-      Broker.this.addVirtualHost(host)
-    } >>: dispatchQueue
-
-    def getState(cb: (String) => Unit) = callback(cb) {state} >>: dispatchQueue
-
-    def addConnectUri(uri: String) = ^ {
-      connectUris.add(uri)
-    } >>: dispatchQueue
-
-    def getName(cb: (String) => Unit) = callback(cb) {
-      name;
-    } >>: dispatchQueue
-
-    def getVirtualHosts(cb: (ArrayList[VirtualHost]) => Unit) = callback(cb) {
-      new ArrayList[VirtualHost](virtualHosts.values)
-    } >>: dispatchQueue
-
-    def getTransportServers(cb: (ArrayList[TransportServer]) => Unit) = callback(cb) {
-      new ArrayList[TransportServer](transportServers)
-    } >>: dispatchQueue
-
-    def start(onCompleted:Runnable) = ^ {
-      _start(onCompleted)
-    } >>: dispatchQueue
-
-    def _start(onCompleted:Runnable) = {
-      if (state == CONFIGURATION) {
-        // We can apply defaults now
-        if (dataDirectory == null) {
-          dataDirectory = new File(IOHelper.getDefaultDataDirectory)
-        }
-
-        if (defaultVirtualHost == null) {
-          defaultVirtualHost = new VirtualHost()
-          defaultVirtualHost.broker = Broker.this
-          defaultVirtualHost.names = DEFAULT_VIRTUAL_HOST_NAME.toString :: Nil
-          virtualHosts.put(DEFAULT_VIRTUAL_HOST_NAME, defaultVirtualHost)
-        }
-
-        state = STARTING
-
-        val tracker = new LoggingTracker("broker startup", dispatchQueue)
-        for (virtualHost <- virtualHosts.values) {
-          virtualHost.start(tracker.task("virtual host: "+virtualHost))
-        }
-        for (server <- transportServers) {
-          server.setDispatchQueue(dispatchQueue)
-          server.setAcceptListener(new BrokerAcceptListener)
-          server.start(tracker.task("transport server: "+server))
-        }
-        tracker.callback {
-          state = RUNNING
-          if( onCompleted!=null ) {
-            onCompleted.run
-          }
-        }
-
-      } else {
-        warn("Can only start a broker that is in the " + CONFIGURATION + " state.  Broker was " + state)
-      }
-    }
-
-
-    def stop(onCompleted:Runnable): Unit = ^ {
-      if (state == RUNNING) {
-        state = STOPPING
-        val tracker = new LoggingTracker("broker shutdown", dispatchQueue)
-
-        // Stop accepting connections..
-        for (server <- transportServers) {
-          stopService(server,tracker)
-        }
-
-        // Kill client connections..
-        for (connection <- clientConnections) {
-          stopService(connection, tracker)
-        }
-
-        // Shutdown the virtual host services
-        for (virtualHost <- virtualHosts.values) {
-          stopService(virtualHost, tracker)
-        }
-
-        def stopped = {
-          state = STOPPED;
-
-        }
-
-        tracker.callback {
-          stopped
-          if( onCompleted!=null ) {
-            onCompleted.run
-          }
-        }
-
-      }
-    } >>: dispatchQueue
-    
-  }
-
-
+  override def toString() = "broker: "+id 
 
   /**
-   * Helper method to help stop broker services and log error if they fail to start.
-   * @param server
+   * Validates and then applies the configuration.
    */
-  private def stopService(service: Service, tracker:LoggingTracker): Unit = {
-    try {
-      service.stop(tracker.task(service.toString))
-    } catch {
-      case e: Exception => {
-        warn(e, "Could not stop " + service + ": " + e)
+  def configure(config: BrokerDTO, reporter:Reporter) = ^{
+    if ( validate(config, reporter) < ERROR ) {
+      this.config = config
+
+      if( serviceState.isStarted ) {
+        // TODO: apply changes while he broker is running.
+        reporter.report(WARN, "Updating broker configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
+
       }
     }
+  } >>: dispatchQueue
+
+
+  override def _start(onCompleted:Runnable) = {
+
+    // create the runtime objects from the config
+    {
+      import JavaConversions._
+      dataDirectory = new File(config.basedir)
+      defaultVirtualHost = null
+      for (c <- config.virtualHosts) {
+        val host = new VirtualHost(this)
+        host.configure(c, this)
+        virtualHosts += ascii(c.id)-> host
+        // first defined host is the default virtual host
+        if( defaultVirtualHost == null ) {
+          defaultVirtualHost = host
+        }
+      }
+      for (c <- config.connectors) {
+        val connector = new Connector(this)
+        connector.configure(c, this)
+        connectors ::= connector
+      }
+    }
+
+    // Start them up..
+    val tracker = new LoggingTracker("broker startup", dispatchQueue)
+    virtualHosts.valuesIterator.foreach( x=>
+      tracker.start(x)
+    )
+    connectors.foreach( x=>
+      tracker.start(x)
+    )
+
+    tracker.callback(onCompleted)
   }
+
+
+  def _stop(onCompleted:Runnable): Unit = {
+    val tracker = new LoggingTracker("broker shutdown", dispatchQueue)
+    // Stop accepting connections..
+    connectors.foreach( x=>
+      tracker.stop(x)
+    )
+    // Shutdown the virtual host services
+    virtualHosts.valuesIterator.foreach( x=>
+      tracker.stop(x)
+    )
+    tracker.callback(onCompleted)
+  }
+
+  def getVirtualHost(name: AsciiBuffer, cb: (VirtualHost) => Unit) = reply(cb) {
+    virtualHosts.getOrElse(name, null)
+  } >>: dispatchQueue
+
+  def getDefaultVirtualHost(cb: (VirtualHost) => Unit) = reply(cb) {
+    defaultVirtualHost
+  } >>: dispatchQueue
+
 }
 
 

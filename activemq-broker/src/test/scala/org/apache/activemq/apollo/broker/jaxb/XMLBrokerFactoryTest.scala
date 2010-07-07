@@ -35,18 +35,19 @@ class XMLBrokerFactoryTest extends FunSuiteSupport {
     //		assertEquals("test dispatcher", p.getName())
 
     expect(1) {
-      broker.transportServers.size()
+      broker.config.connectors.size()
     }
-    val expected = new ArrayList[String]()
-    expected.add("pipe://test1")
-    expected.add("tcp://127.0.0.1:61616")
 
-    expect(expected) {
-      broker.connectUris
+    expect("pipe://test1") {
+      broker.config.connectors.get(0).bind
+    }
+
+    expect("tcp://127.0.0.1:61616") {
+      broker.config.connectors.get(1).bind
     }
 
     expect(2) {
-      broker.virtualHosts.size()
+      broker.config.virtualHosts.size()
     }
 
     //		Assert.assertNotNull(broker.defaultVirtualHost().getDatabase())
