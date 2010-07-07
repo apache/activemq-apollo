@@ -20,7 +20,6 @@ import java.io.IOException;
 
 import javax.transaction.xa.XAException;
 
-import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.util.buffer.Buffer;
 
 /**
@@ -33,58 +32,58 @@ import org.apache.activemq.util.buffer.Buffer;
  * @version 1.0
  */
 public class XATransaction extends Transaction {
-
-    private final Buffer xid;
-
-    XATransaction(TransactionManager manager, long tid, Buffer xid, IQueue<Long, TxOp> opQueue) {
-        super(manager, tid, opQueue);
-        this.xid = xid;
-    }
-
-    public Buffer getXid() {
-        return xid;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.activemq.apollo.broker.Transaction#commit(boolean)
-     */
-    @Override
-    public void commit(boolean onePhase, TransactionListener listener) throws XAException, IOException {
-        // TODO Auto-generated method stub
-
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.activemq.apollo.broker.Transaction#prepare()
-     */
-    @Override
-    public int prepare(TransactionListener listener) throws XAException, IOException {
-        // TODO Auto-generated method stub
-        return 0;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.activemq.apollo.broker.Transaction#rollback()
-     */
-    @Override
-    public void rollback(TransactionListener listener) throws XAException, IOException {
-        // TODO Auto-generated method stub
-
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.activemq.apollo.broker.Transaction#getType()
-     */
-    @Override
-    public byte getType() {
-        return TYPE_XA;
-    }
+// TODO:
+//    private final Buffer xid;
+//
+//    XATransaction(TransactionManager manager, long tid, Buffer xid, IQueue<Long, TxOp> opQueue) {
+//        super(manager, tid, opQueue);
+//        this.xid = xid;
+//    }
+//
+//    public Buffer getXid() {
+//        return xid;
+//    }
+//
+//    /*
+//     * (non-Javadoc)
+//     *
+//     * @see org.apache.activemq.apollo.broker.Transaction#commit(boolean)
+//     */
+//    @Override
+//    public void commit(boolean onePhase, TransactionListener listener) throws XAException, IOException {
+//        // TODO Auto-generated method stub
+//
+//    }
+//
+//    /*
+//     * (non-Javadoc)
+//     *
+//     * @see org.apache.activemq.apollo.broker.Transaction#prepare()
+//     */
+//    @Override
+//    public int prepare(TransactionListener listener) throws XAException, IOException {
+//        // TODO Auto-generated method stub
+//        return 0;
+//    }
+//
+//    /*
+//     * (non-Javadoc)
+//     *
+//     * @see org.apache.activemq.apollo.broker.Transaction#rollback()
+//     */
+//    @Override
+//    public void rollback(TransactionListener listener) throws XAException, IOException {
+//        // TODO Auto-generated method stub
+//
+//    }
+//
+//    /*
+//     * (non-Javadoc)
+//     *
+//     * @see org.apache.activemq.apollo.broker.Transaction#getType()
+//     */
+//    @Override
+//    public byte getType() {
+//        return TYPE_XA;
+//    }
 }

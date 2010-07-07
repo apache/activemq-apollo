@@ -26,7 +26,6 @@ import org.apache.activemq.apollo.broker.BrokerQueueStore;
 import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
-import org.apache.activemq.queue.IQueue;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
 
@@ -36,77 +35,77 @@ import org.fusesource.hawtdispatch.DispatchQueue;
  */
 public class SharedQueueTest extends TestCase {
 
-
-    DispatchQueue dispatchQueue;
-    BrokerDatabase database;
-    BrokerQueueStore queueStore;
-    private static final boolean USE_KAHA_DB = true;
-    private static final boolean PERSISTENT = true;
-    private static final boolean PURGE_STORE = false;
-
-    protected ArrayList<IQueue<Long, MessageDelivery>> queues = new ArrayList<IQueue<Long, MessageDelivery>>();
-
-    protected DispatchQueue createDispatcher() {
-        return Dispatch.createQueue();
-    }
-
-    protected int consumerStartDelay = 0;
-
-    @Override
-    protected void setUp() throws Exception {
-    	startServices();
-    }
-    
-    @Override
-    protected void tearDown() throws Exception {
-    	stopServices();
-    }
-    
-    protected void startServices() throws Exception {
-        dispatchQueue = createDispatcher();
-        dispatchQueue.resume();
-        database = new BrokerDatabase(createStore());
-        database.setDispatchQueue(dispatchQueue);
-        database.start();
-        queueStore = new BrokerQueueStore();
-        queueStore.setDatabase(database);
-        queueStore.loadQueues();
-    }
-
-    protected void stopServices() throws Exception {
-        database.stop();
-        dispatchQueue.release();
-        queues.clear();
-    }
-
-    protected Store createStore() throws Exception {
-        Store store = null;
-        if (USE_KAHA_DB) {
-            store = StoreFactory.createStore("kaha-db");
-        } else {
-            store = StoreFactory.createStore("memory");
-        }
-
-        store.setStoreDirectory(new File("target/test-data/shared-queue-test/"));
-        store.setDeleteAllMessages(PURGE_STORE);
-        return store;
-    }
-    
-    private final void createQueues(int count) {
-        for (int i = 0; i < count; i++) {
-            IQueue<Long, MessageDelivery> queue = queueStore.createSharedQueue("queue-" + (i + 1));
-            queues.add(queue);
-        }
-    }
-
-    protected void cleanup() throws Exception {
-        queues.clear();
-        stopServices();
-    }
-    
-    public void testExpiration() {
-        createQueues(1);
-        IQueue<Long, MessageDelivery> queue = queues.get(0);
-    }
+// TODO:
+//    DispatchQueue dispatchQueue;
+//    BrokerDatabase database;
+//    BrokerQueueStore queueStore;
+//    private static final boolean USE_KAHA_DB = true;
+//    private static final boolean PERSISTENT = true;
+//    private static final boolean PURGE_STORE = false;
+//
+//    protected ArrayList<IQueue<Long, MessageDelivery>> queues = new ArrayList<IQueue<Long, MessageDelivery>>();
+//
+//    protected DispatchQueue createDispatcher() {
+//        return Dispatch.createQueue();
+//    }
+//
+//    protected int consumerStartDelay = 0;
+//
+//    @Override
+//    protected void setUp() throws Exception {
+//    	startServices();
+//    }
+//
+//    @Override
+//    protected void tearDown() throws Exception {
+//    	stopServices();
+//    }
+//
+//    protected void startServices() throws Exception {
+//        dispatchQueue = createDispatcher();
+//        dispatchQueue.resume();
+//        database = new BrokerDatabase(createStore());
+//        database.setDispatchQueue(dispatchQueue);
+//        database.start();
+//        queueStore = new BrokerQueueStore();
+//        queueStore.setDatabase(database);
+//        queueStore.loadQueues();
+//    }
+//
+//    protected void stopServices() throws Exception {
+//        database.stop();
+//        dispatchQueue.release();
+//        queues.clear();
+//    }
+//
+//    protected Store createStore() throws Exception {
+//        Store store = null;
+//        if (USE_KAHA_DB) {
+//            store = StoreFactory.createStore("kaha-db");
+//        } else {
+//            store = StoreFactory.createStore("memory");
+//        }
+//
+//        store.setStoreDirectory(new File("target/test-data/shared-queue-test/"));
+//        store.setDeleteAllMessages(PURGE_STORE);
+//        return store;
+//    }
+//
+//    private final void createQueues(int count) {
+//        for (int i = 0; i < count; i++) {
+//            IQueue<Long, MessageDelivery> queue = queueStore.createSharedQueue("queue-" + (i + 1));
+//            queues.add(queue);
+//        }
+//    }
+//
+//    protected void cleanup() throws Exception {
+//        queues.clear();
+//        stopServices();
+//    }
+//
+//    public void testExpiration() {
+//        createQueues(1);
+//        IQueue<Long, MessageDelivery> queue = queues.get(0);
+//    }
 
 }

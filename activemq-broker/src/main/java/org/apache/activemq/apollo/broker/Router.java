@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -87,43 +86,43 @@ final public class Router {
         }
     }
 
-    public void route(final MessageDelivery msg, ISourceController<?> controller, boolean autoCreate) {
-
-        //If the message is part of transaction send it to the transaction manager
-        if(msg.getTransactionId() >= 0)
-        {
-            virtualHost.getTransactionManager().newMessage(msg, controller);
-            return;
-        }
-        
-        Collection<DeliveryTarget> targets = route(msg.getDestination(), msg, autoCreate);
-        
-        //Set up the delivery for persistence:
-        msg.beginDispatch(database);
-
-        try {
-            // TODO:
-            // Consider doing some caching of this sub list. Most producers
-            // always send to the same destination.
-            if (targets != null) {
-                // The sinks will request persistence via MessageDelivery.persist()
-                // if they require persistence:
-                for (DeliveryTarget target : targets) {
-                    target.deliver(msg, controller);
-                }
-            }
-        } finally {
-            try {
-                msg.finishDispatch(controller);
-            } catch (IOException ioe) {
-                //TODO: Error serializing the message, this should trigger an error
-                //This is a pretty severe error as we've already delivered
-                //the message to the recipients. If we send an error response
-                //back it could result in a duplicate. Does this mean that we
-                //should persist the message prior to sending to the recips?
-                ioe.printStackTrace();
-            }
-        }
+    public void route(final MessageDelivery msg, boolean autoCreate) {
+// TODO:
+//        //If the message is part of transaction send it to the transaction manager
+//        if(msg.getTransactionId() >= 0)
+//        {
+//            virtualHost.getTransactionManager().newMessage(msg, controller);
+//            return;
+//        }
+//
+//        Collection<DeliveryTarget> targets = route(msg.getDestination(), msg, autoCreate);
+//
+//        //Set up the delivery for persistence:
+//        msg.beginDispatch(database);
+//
+//        try {
+//            // TODO:
+//            // Consider doing some caching of this sub list. Most producers
+//            // always send to the same destination.
+//            if (targets != null) {
+//                // The sinks will request persistence via MessageDelivery.persist()
+//                // if they require persistence:
+//                for (DeliveryTarget target : targets) {
+//                    target.deliver(msg, controller);
+//                }
+//            }
+//        } finally {
+//            try {
+//                msg.finishDispatch(controller);
+//            } catch (IOException ioe) {
+//                //TODO: Error serializing the message, this should trigger an error
+//                //This is a pretty severe error as we've already delivered
+//                //the message to the recipients. If we send an error response
+//                //back it could result in a duplicate. Does this mean that we
+//                //should persist the message prior to sending to the recips?
+//                ioe.printStackTrace();
+//            }
+//        }
     }
 
     private Collection<DeliveryTarget> route(Destination destination, MessageDelivery msg, boolean autoCreate) {

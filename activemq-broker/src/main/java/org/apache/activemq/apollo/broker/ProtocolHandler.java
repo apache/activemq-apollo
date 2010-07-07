@@ -23,98 +23,102 @@ import java.util.HashSet;
 import org.apache.activemq.Service;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.filter.BooleanExpression;
-import org.apache.activemq.flow.AbstractLimitedFlowResource;
-import org.apache.activemq.flow.IFlowSink;
-import org.apache.activemq.queue.Subscription;
 import org.apache.activemq.wireformat.WireFormat;
 
 public interface ProtocolHandler extends Service {
+    void onCommand(Object command);
+    void setConnection(BrokerConnection brokerConnection);
 
-    public void setConnection(BrokerConnection connection);
+    void setWireFormat(WireFormat wireformat);
 
-    public BrokerConnection getConnection();
+    void onException(Exception error);
 
-    public void onCommand(Object command);
-
-    public void onException(Exception error);
-
-    public void setWireFormat(WireFormat wf);
-
-    public BrokerMessageDelivery createMessageDelivery(MessageRecord record) throws IOException;
-
-    /**
-     * ClientContext
-     * <p>
-     * Description: Base interface describing a channel on a physical
-     * connection.
-     * </p>
-     * 
-     * @author cmacnaug
-     * @version 1.0
-     */
-    public interface ClientContext {
-        public ClientContext getParent();
-
-        public Collection<ClientContext> getChildren();
-
-        public void addChild(ClientContext context);
-
-        public void removeChild(ClientContext context);
-
-        public void close();
-
-    }
-
-    public abstract class AbstractClientContext<E extends MessageDelivery> extends AbstractLimitedFlowResource<E> implements ClientContext {
-        protected final HashSet<ClientContext> children = new HashSet<ClientContext>();
-        protected final ClientContext parent;
-        protected boolean closed = false;
-
-        public AbstractClientContext(String name, ClientContext parent) {
-            super(name);
-            this.parent = parent;
-            if (parent != null) {
-                parent.addChild(this);
-            }
-        }
-
-        public ClientContext getParent() {
-            return parent;
-        }
-
-        public void addChild(ClientContext child) {
-            if (!closed) {
-                children.add(child);
-            }
-        }
-
-        public void removeChild(ClientContext child) {
-            if (!closed) {
-                children.remove(child);
-            }
-        }
-
-        public Collection<ClientContext> getChildren() {
-            return children;
-        }
-
-        public void close() {
-
-            closed = true;
-            
-            for (ClientContext c : children) {
-                c.close();
-            }
-
-            if (parent != null) {
-                parent.removeChild(this);
-            }
-
-            super.close();
-        }
-    }
-
-    public interface ConsumerContext extends ClientContext, Subscription<MessageDelivery>, IFlowSink<MessageDelivery> {
+// TODO:    
+//    public void setConnection(BrokerConnection connection);
+//
+//    public BrokerConnection getConnection();
+//
+//    public void onCommand(Object command);
+//
+//    public void onException(Exception error);
+//
+//    public void setWireFormat(WireFormat wf);
+//
+//    public BrokerMessageDelivery createMessageDelivery(MessageRecord record) throws IOException;
+//
+//    /**
+//     * ClientContext
+//     * <p>
+//     * Description: Base interface describing a channel on a physical
+//     * connection.
+//     * </p>
+//     *
+//     * @author cmacnaug
+//     * @version 1.0
+//     */
+//    public interface ClientContext {
+//        public ClientContext getParent();
+//
+//        public Collection<ClientContext> getChildren();
+//
+//        public void addChild(ClientContext context);
+//
+//        public void removeChild(ClientContext context);
+//
+//        public void close();
+//
+//    }
+//
+//    public abstract class AbstractClientContext<E extends MessageDelivery> extends AbstractLimitedFlowResource<E> implements ClientContext {
+//        protected final HashSet<ClientContext> children = new HashSet<ClientContext>();
+//        protected final ClientContext parent;
+//        protected boolean closed = false;
+//
+//        public AbstractClientContext(String name, ClientContext parent) {
+//            super(name);
+//            this.parent = parent;
+//            if (parent != null) {
+//                parent.addChild(this);
+//            }
+//        }
+//
+//        public ClientContext getParent() {
+//            return parent;
+//        }
+//
+//        public void addChild(ClientContext child) {
+//            if (!closed) {
+//                children.add(child);
+//            }
+//        }
+//
+//        public void removeChild(ClientContext child) {
+//            if (!closed) {
+//                children.remove(child);
+//            }
+//        }
+//
+//        public Collection<ClientContext> getChildren() {
+//            return children;
+//        }
+//
+//        public void close() {
+//
+//            closed = true;
+//
+//            for (ClientContext c : children) {
+//                c.close();
+//            }
+//
+//            if (parent != null) {
+//                parent.removeChild(this);
+//            }
+//
+//            super.close();
+//        }
+//    }
+//
+    public interface ConsumerContext { // extends ClientContext, Subscription<MessageDelivery>, IFlowSink<MessageDelivery> {
 
         public String getConsumerId();
 
@@ -131,7 +135,7 @@ public interface ProtocolHandler extends Service {
         /**
          * If the destination does not exist, should it automatically be
          * created?
-         * 
+         *
          * @return
          */
         public boolean autoCreateDestination();

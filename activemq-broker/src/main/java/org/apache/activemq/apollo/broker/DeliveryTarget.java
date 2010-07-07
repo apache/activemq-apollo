@@ -17,11 +17,10 @@
 package org.apache.activemq.apollo.broker;
 
 import org.apache.activemq.apollo.broker.MessageDelivery;
-import org.apache.activemq.flow.ISourceController;
 
 public interface DeliveryTarget {
     
-    public void deliver(MessageDelivery message, ISourceController<?> source);
+    public void deliver(MessageDelivery message);
     
     public boolean hasSelector();
     

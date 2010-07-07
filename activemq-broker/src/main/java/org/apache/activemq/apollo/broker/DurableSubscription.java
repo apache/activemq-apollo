@@ -20,22 +20,19 @@ import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
 import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.filter.MessageEvaluationContext;
-import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.queue.IQueue;
-import org.apache.activemq.queue.Subscription;
 
 public class DurableSubscription implements BrokerSubscription, DeliveryTarget {
 
-    private final IQueue<Long, MessageDelivery> queue;
+//    private final IQueue<Long, MessageDelivery> queue;
     private final VirtualHost host;
     private final Destination destination;
-    private Subscription<MessageDelivery> connectedSub;
+//    private Subscription<MessageDelivery> connectedSub;
     boolean started = false;
     BooleanExpression selector;
 
-    DurableSubscription(VirtualHost host, Destination destination, BooleanExpression selector, IQueue<Long, MessageDelivery> queue) {
+    DurableSubscription(VirtualHost host, Destination destination, BooleanExpression selector) {
         this.host = host;
-        this.queue = queue;
+//        this.queue = queue;
         this.destination = destination;
         this.selector = selector;
         //TODO If a durable subscribes to a queue 
@@ -52,24 +49,27 @@ public class DurableSubscription implements BrokerSubscription, DeliveryTarget {
     /* (non-Javadoc)
      * @see org.apache.activemq.broker.DeliveryTarget#deliver(org.apache.activemq.broker.MessageDelivery, org.apache.activemq.flow.ISourceController)
      */
-    public void deliver(MessageDelivery message, ISourceController<?> source) {
-        queue.add(message, source);
+    public void deliver(MessageDelivery message) {
+//        TODO:
+//        queue.add(message, source);
     }
 
     public synchronized void connect(final ConsumerContext subscription) throws UserAlreadyConnectedException {
-        if (this.connectedSub == null) {
-            this.connectedSub = subscription;
-            queue.addSubscription(connectedSub);
-        } else if (connectedSub != subscription) {
-            throw new UserAlreadyConnectedException();
-        }
+//        TODO:
+//        if (this.connectedSub == null) {
+//            this.connectedSub = subscription;
+//            queue.addSubscription(connectedSub);
+//        } else if (connectedSub != subscription) {
+//            throw new UserAlreadyConnectedException();
+//        }
     }
 
     public synchronized void disconnect(final ConsumerContext subscription) {
-        if (connectedSub != null && connectedSub == subscription) {
-            queue.removeSubscription(connectedSub);
-            connectedSub = null;
-        }
+//        TODO:
+//        if (connectedSub != null && connectedSub == subscription) {
+//            queue.removeSubscription(connectedSub);
+//            connectedSub = null;
+//        }
     }
 
     public boolean matches(MessageDelivery message) {

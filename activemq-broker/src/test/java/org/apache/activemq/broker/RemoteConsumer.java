@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.activemq.apollo.Connection;
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.MessageDelivery;
-import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
 import org.apache.activemq.transport.TransportFactory;
@@ -33,39 +32,40 @@ abstract public class RemoteConsumer extends Connection {
         initialize();
         super.start();
         setupSubscription();
-        
+
     }
 
-    
+
     abstract protected void setupSubscription() throws Exception;
 
-    protected void messageReceived(final ISourceController<MessageDelivery> controller, final MessageDelivery elem) {
-        if( schedualWait ) {
-            if (thinkTime > 0) {
-                dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, new Runnable(){
-                    public void run() {
-                        consumerRate.increment();
-                        controller.elementDispatched(elem);
-                    }
-                });
-                
-            }
-            else
-            {
-                consumerRate.increment();
-                controller.elementDispatched(elem);
-            }
-
-        } else {
-            if( thinkTime>0 ) {
-                try {
-                    Thread.sleep(thinkTime);
-                } catch (InterruptedException e) {
-                }
-            }
-            consumerRate.increment();
-            controller.elementDispatched(elem);
-        }
+    protected void messageReceived(final MessageDelivery elem) {
+//        TODO:
+//        if( schedualWait ) {
+//            if (thinkTime > 0) {
+//                dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, new Runnable(){
+//                    public void run() {
+//                        consumerRate.increment();
+//                        controller.elementDispatched(elem);
+//                    }
+//                });
+//
+//            }
+//            else
+//            {
+//                consumerRate.increment();
+//                controller.elementDispatched(elem);
+//            }
+//
+//        } else {
+//            if( thinkTime>0 ) {
+//                try {
+//                    Thread.sleep(thinkTime);
+//                } catch (InterruptedException e) {
+//                }
+//            }
+//            consumerRate.increment();
+//            controller.elementDispatched(elem);
+//        }
     }
 
     public MetricAggregator getTotalConsumerRate() {
@@ -75,7 +75,7 @@ abstract public class RemoteConsumer extends Connection {
     public void setTotalConsumerRate(MetricAggregator totalConsumerRate) {
         this.totalConsumerRate = totalConsumerRate;
     }
-    
+
     public boolean isDurable() {
         return durable;
     }
@@ -118,4 +118,5 @@ abstract public class RemoteConsumer extends Connection {
 
     public void setUri(URI uri) {
         this.uri = uri;
-    }}
+    }
+}

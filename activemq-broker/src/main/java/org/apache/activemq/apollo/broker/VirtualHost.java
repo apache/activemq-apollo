@@ -27,12 +27,11 @@ import org.apache.activemq.apollo.broker.ProtocolHandler.ConsumerContext;
 import org.apache.activemq.apollo.broker.path.PathFilter;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
-import org.apache.activemq.dispatch.internal.RunnableCountDownLatch;
-import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.util.IOHelper;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
+import org.fusesource.hawtdispatch.internal.util.RunnableCountDownLatch;
 
 /**
  * @author chirino
@@ -132,17 +131,18 @@ public class VirtualHost implements Service {
         queueStore.loadQueues();
 
         // Create Queue instances
-        for (IQueue<Long, MessageDelivery> iQueue : queueStore.getSharedQueues()) {
-            Queue queue = new Queue(iQueue);
-            Domain domain = router.getDomain(Router.QUEUE_DOMAIN);
-            Destination dest = new Destination.SingleDestination(Router.QUEUE_DOMAIN, iQueue.getDescriptor().getQueueName());
-            queue.setDestination(dest);
-            domain.bind(dest.getName(), queue);
-            queues.put(dest.getName(), queue);
-        }
-        for (Queue queue : queues.values()) {
-            queue.start();
-        }
+//        TODO:
+//        for (IQueue<Long, MessageDelivery> iQueue : queueStore.getSharedQueues()) {
+//            Queue queue = new Queue(iQueue);
+//            Domain domain = router.getDomain(Router.QUEUE_DOMAIN);
+//            Destination dest = new Destination.SingleDestination(Router.QUEUE_DOMAIN, iQueue.getDescriptor().getQueueName());
+//            queue.setDestination(dest);
+//            domain.bind(dest.getName(), queue);
+//            queues.put(dest.getName(), queue);
+//        }
+//        for (Queue queue : queues.values()) {
+//            queue.start();
+//        }
 
         //Recover transactions:
         txnManager = new TransactionManager(this);
@@ -173,12 +173,13 @@ public class VirtualHost implements Service {
         }
         done.await();
 
-        ArrayList<IQueue<Long, MessageDelivery>> durableQueues = new ArrayList<IQueue<Long,MessageDelivery>>(queueStore.getDurableQueues());
-        done = new RunnableCountDownLatch(durableQueues.size());
-        for (IQueue<Long, MessageDelivery> queue : durableQueues) {
-            queue.shutdown(done);
-        }
-        done.await();
+// TODO:
+//        ArrayList<IQueue<Long, MessageDelivery>> durableQueues = new ArrayList<IQueue<Long,MessageDelivery>>(queueStore.getDurableQueues());
+//        done = new RunnableCountDownLatch(durableQueues.size());
+//        for (IQueue<Long, MessageDelivery> queue : durableQueues) {
+//            queue.shutdown(done);
+//        }
+//        done.await();
         
         database.stop();
         started = false;
@@ -191,20 +192,21 @@ public class VirtualHost implements Service {
         }
 
         Queue queue = queues.get(dest);
-        // If the queue doesn't exist create it:
-        if (queue == null) {
-            IQueue<Long, MessageDelivery> iQueue = queueStore.createSharedQueue(dest.getName().toString());
-            queue = new Queue(iQueue);
-            queue.setDestination(dest);
-            Domain domain = router.getDomain(dest.getDomain());
-            domain.bind(dest.getName(), queue);
-            queues.put(dest.getName(), queue);
-
-            for (QueueLifecyleListener l : queueLifecyleListeners) {
-                l.onCreate(queue);
-            }
-        }
-        queue.start();
+//        TODO:
+//        // If the queue doesn't exist create it:
+//        if (queue == null) {
+//            IQueue<Long, MessageDelivery> iQueue = queueStore.createSharedQueue(dest.getName().toString());
+//            queue = new Queue(iQueue);
+//            queue.setDestination(dest);
+//            Domain domain = router.getDomain(dest.getDomain());
+//            domain.bind(dest.getName(), queue);
+//            queues.put(dest.getName(), queue);
+//
+//            for (QueueLifecyleListener l : queueLifecyleListeners) {
+//                l.onCreate(queue);
+//            }
+//        }
+//        queue.start();
         return queue;
     }
 
@@ -239,16 +241,19 @@ public class VirtualHost implements Service {
             if (consumer.isDurable()) {
                 DurableSubscription dsub = durableSubs.get(consumer.getSubscriptionName());
                 if (dsub == null) {
-                    IQueue<Long, MessageDelivery> queue = queueStore.createDurableQueue(consumer.getSubscriptionName());
-                    queue.start();
-                    dsub = new DurableSubscription(this, destination, consumer.getSelectorExpression(), queue);
-                    durableSubs.put(consumer.getSubscriptionName(), dsub);
+//                    TODO:
+//                    IQueue<Long, MessageDelivery> queue = queueStore.createDurableQueue(consumer.getSubscriptionName());
+//                    queue.start();
+//                    dsub = new DurableSubscription(this, destination, consumer.getSelectorExpression(), queue);
+//                    durableSubs.put(consumer.getSubscriptionName(), dsub);
                 }
                 return dsub;
             }
 
             // return a standard subscription
-            return new TopicSubscription(this, destination, consumer.getSelectorExpression());
+//            TODO:
+//            return new TopicSubscription(this, destination, consumer.getSelectorExpression());
+            return null;
         }
 
         // It looks like a wild card subscription on a queue.. 
@@ -265,7 +270,9 @@ public class VirtualHost implements Service {
                 throw new IllegalStateException("The queue does not exist: " + destination.getName());
             }
         }
-        return new Queue.QueueSubscription(queue);
+//        TODO:
+//        return new Queue.QueueSubscription(queue);
+        return null;
     }
 
     public Broker getBroker() {

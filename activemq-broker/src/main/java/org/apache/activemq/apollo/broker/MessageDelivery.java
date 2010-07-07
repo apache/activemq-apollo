@@ -20,8 +20,6 @@ import java.io.IOException;
 
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.filter.MessageEvaluationContext;
-import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.queue.SaveableQueueElement;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 
 public interface MessageDelivery {
@@ -90,7 +88,7 @@ public interface MessageDelivery {
 
     public void beginDispatch(BrokerDatabase database); 
     
-    public void finishDispatch(ISourceController<?> controller) throws IOException;
+//    public void finishDispatch(ISourceController<?> controller) throws IOException;
     
     /**
      * Sets the unique id used to identify this message in the store.
@@ -98,36 +96,36 @@ public interface MessageDelivery {
      */
     public void setStoreTracking(long tracking);
     
-    /**
-     * Called by a queue to request that the element be persisted. The save is
-     * done asynchronously, and depending on the state of the message delivery
-     * may not even be issued to the underlying persistence store until a later
-     * date. As such callers should use the acknowledge method to delete this
-     * message rather than directly issuing a delete through the message store
-     * itself. Direct delete from the message store is only safe once the
-     * message has been saved to the store, so callers should request
-     * notification of the save via the
-     * {@link SaveableQueueElement#requestSaveNotify()} method before attempting
-     * to acces the store directly.
-     * 
-     * @param sqe
-     *            The element to save
-     * @param controller
-     *            A flow controller to use in the event that there isn't room in
-     *            the database.
-     * @param delayable
-     *            Whether or not the save operation can be delayed.
-     */
-    public void persist(SaveableQueueElement<MessageDelivery> sqe, ISourceController<?> controller, boolean delayable);
-
-    /**
-     * Acknowledges the message for a particular queue. This will cause it to be
-     * deleted from the message store.
-     * 
-     * @param sqe
-     *            The queue element to delete
-     */
-    public void acknowledge(SaveableQueueElement<MessageDelivery> sqe);
+//    /**
+//     * Called by a queue to request that the element be persisted. The save is
+//     * done asynchronously, and depending on the state of the message delivery
+//     * may not even be issued to the underlying persistence store until a later
+//     * date. As such callers should use the acknowledge method to delete this
+//     * message rather than directly issuing a delete through the message store
+//     * itself. Direct delete from the message store is only safe once the
+//     * message has been saved to the store, so callers should request
+//     * notification of the save via the
+//     * {@link SaveableQueueElement#requestSaveNotify()} method before attempting
+//     * to acces the store directly.
+//     *
+//     * @param sqe
+//     *            The element to save
+//     * @param controller
+//     *            A flow controller to use in the event that there isn't room in
+//     *            the database.
+//     * @param delayable
+//     *            Whether or not the save operation can be delayed.
+//     */
+//    public void persist(SaveableQueueElement<MessageDelivery> sqe, ISourceController<?> controller, boolean delayable);
+//
+//    /**
+//     * Acknowledges the message for a particular queue. This will cause it to be
+//     * deleted from the message store.
+//     *
+//     * @param sqe
+//     *            The queue element to delete
+//     */
+//    public void acknowledge(SaveableQueueElement<MessageDelivery> sqe);
 
     /**
      * Gets the tracking number used to identify this message in the message

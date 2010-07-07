@@ -30,8 +30,6 @@ import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.apollo.broker.Router;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
-import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.Period;
 import org.apache.activemq.transport.TransportFactory;
@@ -87,7 +85,6 @@ public abstract class BrokerTestBase {
     protected Broker sendBroker;
     protected Broker rcvBroker;
     protected ArrayList<Broker> brokers = new ArrayList<Broker>();
-    protected Dispatcher dispatcher;
     protected final AtomicLong msgIdGenerator = new AtomicLong();
     protected final AtomicBoolean stopping = new AtomicBoolean();
 
@@ -96,9 +93,7 @@ public abstract class BrokerTestBase {
 
     @Before
     public void setUp() throws Exception {
-        dispatcher = createDispatcher();
-        dispatcher.resume();
-        
+
         if (tcp) {
             sendBrokerBindURI = "tcp://localhost:10000?wireFormat=" + getBrokerWireFormat();
             receiveBrokerBindURI = "tcp://localhost:20000?wireFormat=" + getBrokerWireFormat();
@@ -133,10 +128,6 @@ public abstract class BrokerTestBase {
     }
 
     protected abstract String getRemoteWireFormat();
-
-    protected Dispatcher createDispatcher() {
-        return DispatcherConfig.create("test", asyncThreadPoolSize);
-    }
 
     @Test
     public void benchmark_1_1_0() throws Exception {
@@ -533,9 +524,6 @@ public abstract class BrokerTestBase {
         }
         for (RemoteConsumer connection : consumers) {
             connection.stop();
-        }
-        if (dispatcher != null) {
-            dispatcher.release();
         }
     }
 
