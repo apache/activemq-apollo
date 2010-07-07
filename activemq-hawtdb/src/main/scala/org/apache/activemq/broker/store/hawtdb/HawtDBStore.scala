@@ -424,14 +424,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     if( !txs.isEmpty ) {
       // suspend so that we don't process more flush requests while
       // we are concurrently executing a flush
-      flush_source.suspend
-      executor_pool ^{
-        client.store(txs)
-        txs.foreach { x=>
-          x.onPerformed
-        }
-        flush_source.resume
-      }
+      client.store(txs)
     }
   }
 

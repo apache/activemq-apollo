@@ -232,7 +232,11 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
             }
         }
     }
-    store(batch)
+    store(batch, ^{
+      txs.foreach { tx=>
+        tx.onPerformed
+      }
+    })
   }
 
   def purge() = {
@@ -535,16 +539,11 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   /////////////////////////////////////////////////////////////////////
 
   private def append(data: Buffer)(cb: (Location) => Unit): Unit = {
-    benchmarkLatency { done =>
-      journal.write(data, new JournalCallback() {
-        def success(location: Location) = {
-          done("journal append")
-          cb(location)
-          done("journal append + index update")
-        }
-      })
-      done("journal enqueue")
-    }
+    journal.write(data, new JournalCallback() {
+      def success(location: Location) = {
+        cb(location)
+      }
+    })
   }
 
   /**
@@ -553,7 +552,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     val start = System.nanoTime
     func { label=>
       var end = System.nanoTime
-      warn("latencey: %s is %,.3f ms", label, ( (end - start).toFloat / TimeUnit.SECONDS.toMillis(1)))
+      warn("latencey: %s is %,.3f ms", label, ( (end - start).toFloat / TimeUnit.MILLISECONDS.toNanos(1)))
     }
   }
 
