@@ -30,13 +30,14 @@ import org.apache.activemq.apollo.dto.{IdListDTO, BrokerSummaryDTO, BrokerDTO}
 import java.util.{Arrays, Collections}
 import org.apache.activemq.apollo.web.ConfigStore
 import org.apache.activemq.apollo.broker.BrokerRegistry
+import collection.JavaConversions._
 
 /**
  * Defines the default representations to be used on resources
  */
 @ImplicitProduces(Array("text/html;qs=5"))
 @Produces(Array("application/json", "application/xml","text/xml"))
-trait Resource extends Logging {
+abstract class Resource extends Logging {
 
   def result[T](value:Status, message:Any=null):T = {
     val response = Response.status(value)
@@ -55,17 +56,17 @@ trait Resource extends Logging {
 class Root() extends Resource {
 
   @GET
-  def brokers = {
+  def brokers: Seq[String] = {
     val rc = new IdListDTO
     val ids = Future[List[String]] { cb=>
       ConfigStore().listBrokers(cb)
     }.toArray[String]
     rc.ids.addAll(Arrays.asList(ids: _*))
-    rc
+    rc.ids
   }
 
   @Path("{id}")
-  def brokers(@PathParam("id") id : String): Broker = new Broker(this, id)
+  def broker(@PathParam("id") id : String): Broker = new Broker(this, id)
 }
 
 /**

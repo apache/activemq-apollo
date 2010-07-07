@@ -5,6 +5,6 @@
     %h1 Brokers
 
     %ul
-      - for( broker <- brokers )
+      - for( brokerId <- brokers )
         %li
-          %a(href="#{broker.id}") #{broker.id}
+          %a(href="brokers/#{brokerId}") #{brokerId}
