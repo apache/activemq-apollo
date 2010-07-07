@@ -51,7 +51,7 @@
     <dependency>
       <groupId>com.shorrockin</groupId>
       <artifactId>cascal</artifactId>
-      <version>1.2-SNAPSHOT</version>
+      <version>1.2-Scala.2.8.0.RC3-SNAPSHOT</version>
     </dependency>
 
     <dependency>

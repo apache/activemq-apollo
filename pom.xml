@@ -167,6 +167,14 @@
          <enabled>false</enabled>
        </releases>
      </repository>
+     <repository>
+       <id>java.net</id>
+       <url>http://download.java.net/maven/2</url>
+     </repository>
+     <repository>
+       <id>shorrockin</id>
+       <url>http://maven.shorrockin.com</url>
+     </repository>
    </repositories>
 
   <!-- This is only here since the activemq-protobuf plugin has not been released yet -->
