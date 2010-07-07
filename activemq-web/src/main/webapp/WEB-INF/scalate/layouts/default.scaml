@@ -1,0 +1,37 @@
+!!! Basic
+-@ var body: String
+-@ var title : String = "ActiveMQ Appollo Web Console"
+- response.setContentType("text/html") 
+%html(lang="en")
+  %head
+    %meta(http-equiv="Content-Type" content="text/html; charset=utf-8")
+    %meta(name="description" content="ActiveMQ Apollo Web Console")
+    %meta(name="keywords" content="ActiveMQ,Apollo,Console")
+    %meta(name="author" content="Apache Software Foundation")
+
+    / = include("/org/fusesource/scalate/console/console_head.scaml")
+
+    %link(href={uri("/css/style.css")} rel="stylesheet" type="text/css")
+    / %link(href={uri("/css/scalate/console.css")} rel="stylesheet" type="text/css")
+    %title
+      = title
+  
+  %body
+    #navigation
+      .wrapper
+        %ul
+          %li
+            - if (requestURI.startsWith("/index."))
+              %span Home
+            - else
+              %a(href={uri("/index.scaml")}) Home
+
+    #content
+      .wrapper
+        !~~ body
+    
+    #footer
+      .wrapper
+        %hr
+        / = include("/org/fusesource/scalate/console/console.scaml")
+        
