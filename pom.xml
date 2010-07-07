@@ -492,6 +492,10 @@
             <artifactId>maven-surefire-plugin</artifactId>
             <version>${maven-surefire-plugin-version}</version>
             <configuration>
+              <argLine>-server</argLine>
+              <systemPropertyVariables>
+                <notes>${notes}</notes>
+              </systemPropertyVariables>
               <excludes>
                 <exclude>**/**</exclude>
               </excludes>

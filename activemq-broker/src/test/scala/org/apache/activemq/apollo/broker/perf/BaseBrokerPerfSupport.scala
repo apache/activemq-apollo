@@ -37,8 +37,8 @@ import org.apache.activemq.util.{IOHelper, ProcessSupport}
 import scala.util.matching.Regex
 
 object BaseBrokerPerfSupport {
-  var PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "5"))
-  var SAMPLE_PERIOD = java.lang.Long.parseLong(System.getProperty("SAMPLE_PERIOD", "3000"))
+  var PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "6"))
+  var SAMPLE_PERIOD = java.lang.Long.parseLong(System.getProperty("SAMPLE_PERIOD", "1000"))
 
   // Set to use tcp IO
   protected var TCP = true;
@@ -77,8 +77,7 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
   val producers = new ArrayList[RemoteProducer]()
   val consumers = new ArrayList[RemoteConsumer]()
 
-  var spread_sheet_stats:List[(String, AnyRef)] = Nil
-
+  var samples:List[(String, AnyRef)] = Nil
 
   override protected def beforeEach() = {
     totalProducerRate.removeAllMetrics
@@ -132,11 +131,16 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
     val template = IOHelper.readText(classOf[BaseBrokerPerfSupport].getResourceAsStream("report.html"))
     template match {
       case report_parser(report_header, _, report_footer) =>
-        val version = new String(ProcessSupport.system("git", "rev-list", "--max-count=1", "HEAD").toByteArray).trim
+        var notes = System.getProperty("notes")
+        if( notes==null ) {
+          val version = new String(ProcessSupport.system("git", "rev-list", "--max-count=1", "HEAD").toByteArray).trim
+          notes = "commit "+version
+        }
+
         if( !report_data.isEmpty ) {
           report_data += ",\n"
         }
-        report_data += "            ['commit "+version+"', "+spread_sheet_stats.map(x=>String.format("%.2f",x._2)).mkString(", ")+"]\n"
+        report_data += "            ['"+jsescape(notes)+"', "+samples.map(x=>String.format("%.2f",x._2)).mkString(", ")+"]\n"
         IOHelper.writeText(csvfile, report_header+report_data+report_footer)
       case _ =>
         println("could not parse template report file");
@@ -145,10 +149,25 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
     println("Updated: "+csvfile);
     
     if( DUMP_REPORT_COLS ) {
-      spread_sheet_stats.map(_._1).foreach{x=>
+      samples.map(_._1).foreach{x=>
         println("          data.addColumn('number', '"+x+"');");
       }
     }
+  }
+
+  def jsescape(value:String) = {
+    var rc = ""
+    value.foreach{ c=>
+      c match {
+        case '\n'=> rc+="\\n"
+        case '\r'=> rc+="\\r"
+        case '\t'=> rc+="\\t"
+        case '\''=> rc+="\\\'"
+        case '\"'=> rc+="\\\""
+        case _ => rc+=c
+      }
+    }
+    rc
   }
 
   // Test all the combinations
@@ -476,9 +495,19 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
     }
 
     def reportRates() = {
-      val best_sample = PERFORMANCE_SAMPLES/2
 
-      println("Checking "+(if (PTP) "ptp" else "topic")+" rates...");
+      println("Warming up...");
+      Thread.sleep(SAMPLE_PERIOD);
+      totalProducerRate.reset();
+      totalConsumerRate.reset();
+
+      println("Sampling rates");
+
+      case class Summary(producer:java.lang.Float, pdev:java.lang.Float, consumer:java.lang.Float, cdev:java.lang.Float)
+
+      val sample_rates = new Array[Summary](PERFORMANCE_SAMPLES)
+      var best = 0;
+
       for (i <- 0 until PERFORMANCE_SAMPLES) {
         var p = new Period();
         Thread.sleep(SAMPLE_PERIOD);
@@ -489,24 +518,32 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
           println(totalConsumerRate.getRateSummary(p));
         }
 
-        if( i == best_sample ) {
-          if( producerCount > 0 ) {
-            spread_sheet_stats = spread_sheet_stats ::: ( testName+" producer", totalProducerRate.total(p) ) :: Nil
-            if( producerCount > 1 ) {
-              spread_sheet_stats = spread_sheet_stats ::: ( testName+" producer sd", totalProducerRate.deviation ) :: Nil
-            }
-          }
-          if( consumerCount > 0 ) {
-            spread_sheet_stats = spread_sheet_stats ::: ( testName+" consumer", totalConsumerRate.total(p) ) :: Nil
-            if( consumerCount > 1 ) {
-              spread_sheet_stats = spread_sheet_stats ::: ( testName+" consumer sd", totalConsumerRate.deviation ) :: Nil
-            }
-          }
+        sample_rates(i) = Summary(totalProducerRate.total(p), totalProducerRate.deviation, totalConsumerRate.total(p), totalConsumerRate.deviation)
+
+        val current_sum = sample_rates(i).producer.longValue + sample_rates(i).consumer.longValue
+        val best_sum = sample_rates(i).producer.longValue + sample_rates(i).consumer.longValue
+        if( current_sum > best_sum ) {
+          best = i
         }
 
         totalProducerRate.reset();
         totalConsumerRate.reset();
       }
+
+
+      if( producerCount > 0 ) {
+        samples = samples ::: ( testName+" producer", sample_rates(best).producer ) :: Nil
+        if( producerCount > 1 ) {
+          samples = samples ::: ( testName+" producer sd", sample_rates(best).pdev ) :: Nil
+        }
+      }
+      if( consumerCount > 0 ) {
+        samples = samples ::: ( testName+" consumer", sample_rates(best).consumer ) :: Nil
+        if( consumerCount > 1 ) {
+          samples = samples ::: ( testName+" consumer sd", sample_rates(best).cdev ) :: Nil
+        }
+      }
+
 
     }
   }

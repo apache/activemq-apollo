@@ -100,7 +100,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   override def onTransportConnected() = {
     outboundChannel = new TransportDeliverySink(connection.transport) {
       override def send(delivery: Delivery) = {
-        if( !connection.stopped ) {
+        if( transport.isConnected ) {
           transport.oneway(delivery.message.asInstanceOf[StompFrameMessage].frame, delivery)
         }
       }

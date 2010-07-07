@@ -116,7 +116,6 @@
             <version>${maven-surefire-plugin-version}</version>
             <configuration>
               <failIfNoTests>true</failIfNoTests>
-              <argLine></argLine>
               <includes>
                 <include>**/StompBrokerPerfTest.*</include>
               </includes>

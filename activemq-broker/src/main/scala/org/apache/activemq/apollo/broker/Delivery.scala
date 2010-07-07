@@ -412,7 +412,7 @@ trait DeliverySink {
  */
 class TransportDeliverySink(var transport:Transport) extends DeliverySink {
   def full:Boolean = transport.isFull
-  def send(delivery:Delivery) = transport.oneway(delivery.message, delivery)
+  def send(delivery:Delivery) = if( transport.isConnected ) { transport.oneway(delivery.message, delivery) }
 }
 
 /**
