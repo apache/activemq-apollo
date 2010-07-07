@@ -16,8 +16,11 @@
  */
 package org.apache.activemq.apollo
 
-import java.util.HashMap
-import org.apache.activemq.apollo.broker.Broker
+import broker.LoggingTracker
+import java.io.File
+import java.util.concurrent.{TimeUnit, CountDownLatch}
+import org.fusesource.hawtdispatch.Future
+import org.fusesource.scalate.test.FunSuiteSupport
 
 /**
  * <p>
@@ -25,21 +28,26 @@ import org.apache.activemq.apollo.broker.Broker
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object BrokerRegistry {
+class FileConfigStoreTest extends FunSuiteSupport {
+  test("file config store") {
 
-  var configStore:ConfigStore = _
+    val store = new FileConfigStore
+    store.file = new File("activemq.xml")
+    store
 
-  private val _brokers = new HashMap[String, Broker]()
+    LoggingTracker("config store startup") { tracker=>
+      store.start(tracker.task())
+    }
 
-  def get(id:String) = _brokers.synchronized {
-    _brokers.get(id)
-  }
+    expect(List("default")) {
+      Future[List[String]]{ x=>
+        store.listBrokerConfigs(x)
+      }
+    }
 
-  def add(broker:Broker) = _brokers.synchronized {
-    _brokers.put(broker.name, broker)
-  }
-
-  def remove(id:String) = _brokers.synchronized {
-    _brokers.remove(id)
+    LoggingTracker("config store stop") { tracker=>
+      store.stop(tracker.task())
+    }
   }
 }
+

@@ -95,7 +95,7 @@
     
     <jetty-version>6.1.22</jetty-version>
     <jetty-plugin-version>7.0.1.v20091125</jetty-plugin-version>
-    <scalate-version>1.1-SNAPSHOT</scalate-version>
+    <scalate-version>1.1</scalate-version>
     <servlet-api-version>2.5</servlet-api-version>
     <jackson-version>1.5.2</jackson-version>
     

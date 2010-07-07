@@ -29,9 +29,15 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class BrokerConfig {
 	
-	@XmlAttribute(name="name")
-	public String name;
-	
+	@XmlAttribute(name="id")
+	public String id;
+
+    /**
+     * Used to track config revisions.
+     */
+    @XmlAttribute(name="rev")
+    public int rev;
+
     @XmlElement(name="virtual-host")
     public List<VirtualHostConfig> virtualHosts = new ArrayList<VirtualHostConfig>();
     @XmlElement(name="transport-server")
@@ -62,11 +68,11 @@ public class BrokerConfig {
 		this.connectUris = connectUris;
 	}
 
-    public String getName() {
-        return name;
+    public String getId() {
+        return id;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setId(String id) {
+        this.id = id;
     }
 }

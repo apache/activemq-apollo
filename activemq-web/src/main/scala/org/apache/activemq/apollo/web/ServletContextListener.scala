@@ -18,11 +18,12 @@ package org.apache.activemq.apollo.web
 
 import com.google.inject.servlet.GuiceServletContextListener
 import org.fusesource.scalate.guice.ScalateModule
-import com.google.inject.Guice
 import javax.servlet.ServletContextEvent
 import org.apache.activemq.transport.TransportFactory
-import org.apache.activemq.apollo.BrokerRegistry
-import org.apache.activemq.apollo.broker.{CompletionTracker, Broker}
+import org.apache.activemq.apollo.broker.{LoggingTracker, Broker}
+import org.apache.activemq.apollo.{FileConfigStore, ConfigStore, BrokerRegistry}
+import java.io.File
+import com.google.inject.{Inject, Provides, Guice, Singleton}
 
 /**
  * A servlet context listener which registers
@@ -36,12 +37,17 @@ class ServletContextListener extends GuiceServletContextListener {
 
   override def contextInitialized(servletContextEvent: ServletContextEvent) = {
 
+
     // todo: replace this with info accessed from a configuration store.
     // register/start brokers we are managing.
     try {
+      BrokerRegistry.configStore = createConfigStore
+
       broker = createBroker();
       BrokerRegistry.add(broker);
-      broker.start
+      LoggingTracker("broker startup") { tracker=>
+        broker.start(tracker.task())
+      }
     }
     catch {
       case e:Exception =>
@@ -52,32 +58,24 @@ class ServletContextListener extends GuiceServletContextListener {
     super.contextInitialized(servletContextEvent);
   }
 
-  def createBroker(): Broker = {
-    val broker = new Broker()
-    broker.name = "default"
-    broker.transportServers.add(TransportFactory.bind("tcp://localhost:10000?wireFormat=multi"))
-    broker.connectUris.add("tcp://localhost:10000")
-    broker
-  }
-
   override def contextDestroyed(servletContextEvent: ServletContextEvent) = {
     super.contextDestroyed(servletContextEvent);
 
     // un-register/stop brokers we are managing.
     if( broker!=null ) {
-      val tracker = new CompletionTracker("broker shutdown")
       BrokerRegistry.remove(broker.name);
-      broker.stop(tracker.task(broker.name))
-      tracker.await()
+      LoggingTracker("broker shutdown") { tracker =>
+        broker.stop(tracker.task(broker.name))
+        BrokerRegistry.configStore.stop(tracker.task("config store"))
+      }
     }
   }
 
   def getInjector = Guice.createInjector(new ScalateModule() {
 
-    // TODO add some custom provider methods here
-    // which can then be injected into resources or templates
-    //
-    // @Provides def createSomething = new MyThing()
+    @Singleton
+    @Provides
+    def provideConfigStore:ConfigStore = createConfigStore
 
     // lets add any package names which contain JAXRS resources
     // https://jersey.dev.java.net/issues/show_bug.cgi?id=485
@@ -87,5 +85,23 @@ class ServletContextListener extends GuiceServletContextListener {
       super.resourcePackageNames
   })
 
+  def createConfigStore():ConfigStore = {
+    println("created store")
+    val store = new FileConfigStore
+    store.file = new File("activemq.xml")
+    LoggingTracker("config store startup") { tracker=>
+      println("starting store")
+      store.start(tracker.task())
+    }
+    println("store started")
+    store
+  }
 
+  def createBroker(): Broker = {
+    val broker = new Broker()
+    broker.name = "default"
+    broker.transportServers.add(TransportFactory.bind("tcp://localhost:10000?wireFormat=multi"))
+    broker.connectUris.add("tcp://localhost:10000")
+    broker
+  }
 }

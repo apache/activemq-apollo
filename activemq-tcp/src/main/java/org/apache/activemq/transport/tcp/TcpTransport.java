@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.transport.tcp;
 
-import org.apache.activemq.apollo.BaseService;
+import org.apache.activemq.apollo.util.BaseService;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.wireformat.WireFormat;

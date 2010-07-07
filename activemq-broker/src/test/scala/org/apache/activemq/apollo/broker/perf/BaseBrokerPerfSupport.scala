@@ -441,7 +441,7 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
 
     def stopServices() = {
       stopping.set(true);
-      val tracker = new CompletionTracker("test shutdown")
+      val tracker = new LoggingTracker("test shutdown")
       for (broker <- brokers) {
         broker.stop(tracker.task("broker"));
       }
@@ -456,7 +456,7 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
     }
 
     def startBrokers() = {
-      val tracker = new CompletionTracker("test broker startup")
+      val tracker = new LoggingTracker("test broker startup")
       for (broker <- brokers) {
         broker.start(tracker.task("broker"));
       }
@@ -465,12 +465,12 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
 
 
     def startClients() = {
-      var tracker = new CompletionTracker("test consumer startup")
+      var tracker = new LoggingTracker("test consumer startup")
       for (connection <- consumers) {
         connection.start(tracker.task(connection.toString));
       }
       tracker.await
-      tracker = new CompletionTracker("test producer startup")
+      tracker = new LoggingTracker("test producer startup")
       for (connection <- producers) {
         connection.start(tracker.task(connection.toString));
       }

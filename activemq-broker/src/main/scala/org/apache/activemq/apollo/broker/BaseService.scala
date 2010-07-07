@@ -31,27 +31,35 @@ trait BaseService extends Service {
 
   sealed class State {
     override def toString = getClass.getSimpleName
+    def isCreated = false
+    def isStarting = false
+    def isStarted = false
+    def isStopping = false
+    def isStopped= false
+    def isFailed= false
   }
 
   trait CallbackSupport {
     var callbacks:List[Runnable] = Nil
     def << (r:Runnable) = if(r!=null) { callbacks ::= r }
-    def done = callbacks.foreach(_.run)
+    def done = { callbacks.foreach(_.run); callbacks=Nil }
   }
 
-  object CREATED extends State
-  class  STARTING extends State with CallbackSupport
-  object STARTED extends State
-  class  STOPPING extends State with CallbackSupport
-  object STOPPED extends State
+  protected object CREATED extends State { override def isCreated = true  }
+  protected class  STARTING extends State with CallbackSupport { override def isStarting = true  }
+  protected object FAILED extends State { override def isFailed = true  }
+  protected object STARTED extends State { override def isStarted = true  }
+  protected class  STOPPING extends State with CallbackSupport { override def isStopping = true  }
+  protected object STOPPED extends State { override def isStopped = true  }
 
   val dispatchQueue:DispatchQueue
 
   final def start() = start(null)
   final def stop() = stop(null)
 
+  @volatile
   protected var _serviceState:State = CREATED
-  protected def serviceState = _serviceState
+  def serviceState = _serviceState
 
   private def error(msg:String) {
     try {
@@ -67,10 +75,17 @@ trait BaseService extends Service {
       val state = new STARTING()
       state << onCompleted
       _serviceState = state
-      _start(^{
-        _serviceState = STARTED
-        state.done
-      })
+      try {
+        _start(^ {
+          _serviceState = STARTED
+          state.done
+        })
+      }
+      catch {
+        case e:Exception =>
+          _serviceState = FAILED
+          state.done
+      }
     }
     def done = {
       if( onCompleted!=null ) {
@@ -103,10 +118,17 @@ trait BaseService extends Service {
         val state = new STOPPING
         state << onCompleted
         _serviceState = state
-        _stop(^{
-          _serviceState = STOPPED
-          state.done
-        })
+        try {
+          _stop(^ {
+            _serviceState = STOPPED
+            state.done
+          })
+        }
+        catch {
+          case e:Exception =>
+            _serviceState = FAILED
+            state.done
+        }
       case state:STOPPING =>
         state << onCompleted
       case STOPPED =>

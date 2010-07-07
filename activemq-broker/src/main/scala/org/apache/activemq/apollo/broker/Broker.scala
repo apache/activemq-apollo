@@ -259,7 +259,7 @@ class Broker() extends Service with DispatchLogging {
 
         state = STARTING
 
-        val tracker = new CompletionTracker("broker startup", dispatchQueue)
+        val tracker = new LoggingTracker("broker startup", dispatchQueue)
         for (virtualHost <- virtualHosts.values) {
           virtualHost.start(tracker.task("virtual host: "+virtualHost))
         }
@@ -284,7 +284,7 @@ class Broker() extends Service with DispatchLogging {
     def stop(onCompleted:Runnable): Unit = ^ {
       if (state == RUNNING) {
         state = STOPPING
-        val tracker = new CompletionTracker("broker shutdown", dispatchQueue)
+        val tracker = new LoggingTracker("broker shutdown", dispatchQueue)
 
         // Stop accepting connections..
         for (server <- transportServers) {
@@ -324,7 +324,7 @@ class Broker() extends Service with DispatchLogging {
    * Helper method to help stop broker services and log error if they fail to start.
    * @param server
    */
-  private def stopService(service: Service, tracker:CompletionTracker): Unit = {
+  private def stopService(service: Service, tracker:LoggingTracker): Unit = {
     try {
       service.stop(tracker.task(service.toString))
     } catch {
