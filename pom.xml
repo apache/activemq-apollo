@@ -357,9 +357,47 @@
           <configuration>
           </configuration>
         </plugin>
+        
       </plugins>
     </pluginManagement>
     <plugins>
+      <plugin>
+        <groupId>com.mycila.maven-license-plugin</groupId>
+        <artifactId>maven-license-plugin</artifactId>
+        <version>1.6.0</version>
+        <configuration>
+          <quiet>false</quiet>
+          <header>license-header.txt</header>
+          <includes>
+              <include>src/**</include>
+              <include>**/pom.xml</include>
+          </includes>
+          <excludes>
+            <exclude>**/.svn/**</exclude>
+            <exclude>**/LICENSE.txt</exclude>
+            <exclude>**/LICENSE</exclude>
+            <exclude>**/release.properties</exclude>
+            <exclude>**/cobertura.ser</exclude>
+            <exclude>**/.clover/**</exclude>
+            <exclude>**/.classpath</exclude>
+            <exclude>**/.project</exclude>
+            <exclude>**/.settings/**</exclude>
+            <exclude>**/*.iml</exclude>
+            <exclude>**/*.ipr</exclude>
+            <exclude>**/*.iws</exclude>
+            <exclude>**/*.jpg</exclude>
+            <exclude>**/*.png</exclude>
+            <exclude>**/*.gif</exclude>
+            <exclude>**/*.ico</exclude>
+            <exclude>**/*.class</exclude>
+            <exclude>**/*.keystore</exclude>
+            <exclude>**/*.js</exclude>
+            <exclude>**/*.jspf</exclude>
+          </excludes>
+          <useDefaultExcludes>false</useDefaultExcludes>
+        </configuration>
+      </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -542,7 +580,6 @@
         </plugins>
       </build>
     </profile>
-
 
     <profile>
       <id>eclipse</id>
@@ -770,7 +807,6 @@
         </pluginRepository>
       </pluginRepositories>
     </profile>
-
   </profiles>
 
 </project>
