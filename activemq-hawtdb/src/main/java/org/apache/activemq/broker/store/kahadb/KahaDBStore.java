@@ -128,9 +128,17 @@ public class KahaDBStore implements Store {
         if (started.compareAndSet(false, true)) {
             try {
                 load();
+
             } catch (Exception e) {
                 LOG.error("Error loading store", e);
             }
+        }
+    }
+
+    public void start(Runnable onComplete) throws Exception {
+        start();
+        if( onComplete!=null ) {
+            onComplete.run();
         }
     }
 
@@ -138,6 +146,13 @@ public class KahaDBStore implements Store {
         if (started.compareAndSet(true, false)) {
             flush();
             unload();
+        }
+    }
+
+    public void stop(Runnable onComplete) throws Exception {
+        stop();
+        if( onComplete!=null ) {
+            onComplete.run();
         }
     }
 

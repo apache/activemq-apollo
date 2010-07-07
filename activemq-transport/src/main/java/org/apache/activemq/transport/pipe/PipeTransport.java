@@ -67,6 +67,9 @@ public class PipeTransport implements Transport {
     }
 
     public void start() throws Exception {
+        start(null);
+    }
+    public void start(final Runnable onCompleted) throws Exception {
         if (dispatchQueue == null) {
             throw new IllegalArgumentException("dispatchQueue is not set");
         }
@@ -107,6 +110,10 @@ public class PipeTransport implements Transport {
                     fireConnected();
                     peer.fireConnected();
                 }
+                if( onCompleted!=null ) {
+                    onCompleted.run();
+                }
+
             }
         });
     }
@@ -123,10 +130,14 @@ public class PipeTransport implements Transport {
     }
 
     public void stop() throws Exception {
+        stop(null);
+    }
+    public void stop(Runnable onCompleted) throws Exception {
         if( connected ) {
             peer.dispatchSource.merge(EOF_TOKEN);
         }
         if( dispatchSource!=null ) {
+            dispatchSource.setDisposer(onCompleted);
             dispatchSource.release();
             dispatchSource = null;
         }

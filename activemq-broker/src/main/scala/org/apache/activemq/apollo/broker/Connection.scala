@@ -44,19 +44,25 @@ abstract class Connection() extends TransportListener with Service  with Dispatc
   
   var name = "connection"
   var stopped = false;
-
   var transport:Transport = null
 
-  def start() = {
+  def start() = start(null)
+
+  def start(onCompleted:Runnable) = {
     transport.setDispatchQueue(dispatchQueue);
     transport.setTransportListener(Connection.this);
-    transport.start()
+    transport.start(onCompleted)
   }
 
-  def stop() = {
-    stopped=true
-    transport.stop()
-    dispatchQueue.release
+  def stop() = stop(null)
+
+  def stop(onCompleted:Runnable) = {
+    if( !stopped ) {
+      stopped=true
+      transport.stop()
+      dispatchQueue.setDisposer(onCompleted)
+      dispatchQueue.release
+    }
   }
 
   def onTransportFailure(error:IOException) = {
@@ -83,10 +89,19 @@ class BrokerConnection(val broker: Broker) extends Connection {
   var protocol = "stomp"
   var protocolHandler: ProtocolHandler = null;
 
-  override def start() = {
+  override def start(onCompleted:Runnable) = {
+    broker.dispatchQueue.retain
     protocolHandler = ProtocolHandlerFactory.createProtocolHandler(protocol)
     protocolHandler.setConnection(this);
-    super.start
+    super.start(onCompleted)
+  }
+
+  override def stop(onCompleted:Runnable) = {
+    if( !stopped ) {
+      broker.runtime.stopped(this)
+      broker.dispatchQueue.release
+      super.stop(onCompleted)
+    }
   }
 
   override def onTransportConnected() = protocolHandler.onTransportConnected

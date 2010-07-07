@@ -19,18 +19,35 @@ package org.apache.activemq;
 
 /**
  * The core lifecyle interface for ActiveMQ components.
- *  
- * If there was a standard way to do so, it'd be good to register this 
- * interface with Spring so it treats the start/stop methods as those of
- * {@link org.springframework.beans.factory.InitializingBean} 
- * and {@link org.springframework.beans.factory.DisposableBean}
- * 
+ *
  * @version $Revision: 1.1 $
  */
 public interface Service {
 
+    /**
+     * Starts the service.  No guarantee is given that the service has fully started
+     * by the time this method returns.
+     */
     void start() throws Exception;
-    
+
+    /**
+     * Starts the service.  Executes the onComplete runnable once the service has fully started up.
+     *
+     * @param onComplete my be set to null if not interested in a callback.
+     */
+    void start(Runnable onComplete) throws Exception;
+
+    /**
+     * Stops the service.  No guarantee is given that the service has fully stopped
+     * by the time this method returns.
+     */
     void stop() throws Exception;
-    
+
+    /**
+     * Stops the service.  Executes the onComplete runnable once the service has fully stopped.
+     *
+     * @param onComplete my be set to null if not interested in a callback.
+     */
+    void stop(Runnable onComplete) throws Exception;
+
 }

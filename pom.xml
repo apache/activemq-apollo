@@ -135,7 +135,6 @@
     <module>activemq-tcp</module>
     <module>activemq-hawtdb</module>
     <module>activemq-jaxb</module>
-    <module>activemq-scala</module>
     <module>activemq-stomp</module>
   </modules>
 

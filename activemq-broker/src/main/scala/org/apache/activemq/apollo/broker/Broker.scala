@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo.broker
 
 import _root_.java.io.{File}
-import _root_.java.util.{LinkedList, LinkedHashMap, ArrayList}
 import _root_.org.apache.activemq.transport._
 import _root_.org.apache.activemq.Service
 import _root_.java.lang.{String}
@@ -27,6 +26,8 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.reflect.BeanProperty
 import org.fusesource.hawtdispatch.{Dispatch, DispatchQueue, BaseRetained}
+import java.util.{HashSet, LinkedList, LinkedHashMap, ArrayList}
+import java.util.concurrent.{TimeUnit, CountDownLatch}
 
 object BrokerFactory {
 
@@ -63,6 +64,63 @@ object BrokerFactory {
       return broker;
     }
 
+}
+
+class CompletionTracker(val queue:DispatchQueue=getGlobalQueue) {
+  private[this] val tasks = new HashSet[Runnable]()
+  private[this] var _callback:Runnable = null
+  queue.retain
+
+  def task(name:String="unknown"):Runnable = {
+    val rc = new Runnable() {
+      def run():Unit = {
+        tasks.synchronized {
+          if( tasks.remove(this) ) {
+            if( tasks.isEmpty && _callback!=null ) {
+              _callback ->: queue
+              queue.release
+            }
+          }
+        }
+      }
+      override def toString = name
+    }
+    tasks.synchronized {
+      if( _callback!=null ) {
+        throw new IllegalStateException("all tasks should be created before setting the callback");
+      }
+      tasks.add(rc)
+    }
+    return rc
+  }
+
+  def callback(handler: =>Unit ) {
+    tasks.synchronized {
+      _callback = handler _
+      if(  tasks.isEmpty ) {
+        _callback ->: queue
+        queue.release
+      }
+    }
+  }
+
+  def await() = {
+    val latch =new CountDownLatch(1)
+    callback {
+      latch.countDown
+    }
+    latch.await
+  }
+
+  def await(timeout:Long, unit:TimeUnit) = {
+    val latch = new CountDownLatch(1)
+    callback {
+      latch.countDown
+    }
+    latch.await(timeout, unit)
+  }
+
+  override def toString = tasks.synchronized { "waiting on: "+tasks }
 }
 
 object BufferConversions {
@@ -109,8 +167,11 @@ class Broker() extends Service with DispatchLogging {
   @BeanProperty
   var defaultVirtualHost: VirtualHost = null
 
-  def start = runtime.start
-  def stop = runtime.stop
+  def start = runtime.start(null)
+  def start(onComplete:Runnable) = runtime.start(onComplete)
+
+  def stop = runtime.stop(null)
+  def stop(onComplete:Runnable) = runtime.stop(onComplete)
 
   val dispatchQueue = createQueue("broker");
   dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
@@ -148,9 +209,10 @@ class Broker() extends Service with DispatchLogging {
         debug("Accepted connection from: %s", transport.getRemoteAddress)
         var connection = new BrokerConnection(Broker.this)
         connection.transport = transport
+        connection.dispatchQueue.retain
         clientConnections.add(connection)
         try {
-          connection.start
+          connection.start()
         }
         catch {
           case e1: Exception => {
@@ -161,7 +223,13 @@ class Broker() extends Service with DispatchLogging {
     }
 
     var state = CONFIGURATION
-    val clientConnections: ArrayList[Connection] = new ArrayList[Connection]
+    val clientConnections: HashSet[Connection] = new HashSet[Connection]
+
+    def stopped(connection:Connection) = ^{
+      if( clientConnections.remove(connection) ) {
+        connection.dispatchQueue.release
+      }
+    } ->: dispatchQueue
 
     def removeConnectUri(uri: String): Unit = ^ {
       connectUris.remove(uri)
@@ -202,7 +270,11 @@ class Broker() extends Service with DispatchLogging {
       new ArrayList[TransportServer](transportServers)
     } ->: dispatchQueue
 
-    def start = ^ {
+    def start(onCompleted:Runnable) = ^ {
+      _start(onCompleted)
+    } ->: dispatchQueue
+
+    def _start(onCompleted:Runnable) = {
       if (state == CONFIGURATION) {
         // We can apply defaults now
         if (dataDirectory == null) {
@@ -218,23 +290,37 @@ class Broker() extends Service with DispatchLogging {
 
         state = STARTING
 
+        val tracker = new CompletionTracker(dispatchQueue)
         for (virtualHost <- virtualHosts.values) {
-          virtualHost.start
+          virtualHost.start(tracker.task("virtual host: "+virtualHost))
         }
         for (server <- transportServers) {
           server.setDispatchQueue(dispatchQueue)
           server.setAcceptListener(new BrokerAcceptListener)
-          server.start
+          server.start(tracker.task("transport server: "+server))
         }
-        state = RUNNING
+        tracker.callback {
+          state = RUNNING
+          if( onCompleted!=null ) {
+            onCompleted.run
+          }
+        }
+
       } else {
         warn("Can only start a broker that is in the " + CONFIGURATION + " state.  Broker was " + state)
       }
-    } ->: dispatchQueue
+    }
 
-    def stop: Unit = ^ {
+
+    def stop(onCompleted:Runnable): Unit = ^ {
       if (state == RUNNING) {
         state = STOPPING
+        dispatchQueue.setDisposer(^{
+          if( onCompleted!=null ) {
+            state = STOPPED;
+            onCompleted.run
+          }
+        })
 
         for (server <- transportServers) {
           stopService(server)
@@ -245,9 +331,8 @@ class Broker() extends Service with DispatchLogging {
         for (virtualHost <- virtualHosts.values) {
           stopService(virtualHost)
         }
-        state = STOPPED;
+        dispatchQueue.release
       }
-
     } ->: dispatchQueue
   }
 

@@ -119,6 +119,9 @@ public class TcpTransport implements Transport {
     }
 
     public void start() throws Exception {
+        start(null);
+    }
+    public void start(Runnable onCompleted) throws Exception {
         if (dispatchQueue == null) {
             throw new IllegalArgumentException("dispatchQueue is not set");
         }
@@ -169,6 +172,10 @@ public class TcpTransport implements Transport {
         } else {
             fireConnected();
         }
+        if( onCompleted!=null ) {
+            dispatchQueue.execute(onCompleted);
+        }
+
     }
 
 
@@ -232,11 +239,15 @@ public class TcpTransport implements Transport {
 
 
     public void stop() throws Exception {
+        stop(null);
+    }
+    public void stop(Runnable onCompleted) throws Exception {
         if (transportState != RUNNING) {
             throw new IllegalStateException("stop can only be used from the started state");
         }
         transportState = DISPOSED;
         readSource.cancel();
+        writeSource.setDisposer(onCompleted);
         writeSource.cancel();
     }
 

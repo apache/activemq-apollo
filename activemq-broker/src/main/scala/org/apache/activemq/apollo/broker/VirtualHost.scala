@@ -54,23 +54,26 @@ class VirtualHost() extends Service with Logging {
   @BeanProperty
   var transactionManager:TransactionManager = new TransactionManager
 
+  override def toString = names.head
 
-  def start():Unit = {
-      if (started) {
-          return;
-      }
 
-      database.virtualHost = this
-      database.start();
+  def start() = start(null)
+  def start(onCompleted:Runnable):Unit = {
+    if (started) {
+        return;
+    }
+
+    database.virtualHost = this
+    database.start();
 
 //      router.setDatabase(database);
 
-      //Recover queues:
-      queueStore.setDatabase(database);
-      queueStore.setDispatchQueue(q);
-      queueStore.loadQueues();
+    //Recover queues:
+    queueStore.setDatabase(database);
+    queueStore.setDispatchQueue(q);
+    queueStore.loadQueues();
 
-      // Create Queue instances
+    // Create Queue instances
 //        TODO:
 //        for (IQueue<Long, MessageDelivery> iQueue : queueStore.getSharedQueues()) {
 //            Queue queue = new Queue(iQueue);
@@ -84,15 +87,19 @@ class VirtualHost() extends Service with Logging {
 //            queue.start();
 //        }
 
-      //Recover transactions:
-      transactionManager.virtualHost = this
-      transactionManager.loadTransactions();
-      started = true;
+    //Recover transactions:
+    transactionManager.virtualHost = this
+    transactionManager.loadTransactions();
+    started = true;
+    
+    if( onCompleted!=null ) {
+      onCompleted.run
+    }
   }
 
 
-
-  def stop():Unit = {
+  def stop() = start(null)
+  def stop(onCompleted:Runnable):Unit = {
 
       if (!started) {
           return;
@@ -211,7 +218,7 @@ class VirtualHost() extends Service with Logging {
   }
 }
 
-class BrokerDatabase() extends Service {
+class BrokerDatabase() {
 
   @BeanProperty
   var store:Store=new MemoryStore;

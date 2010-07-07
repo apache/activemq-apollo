@@ -26,6 +26,11 @@ trait Log {
   val log = LogFactory.getLog(getClass.getName)
 }
 
+class NamedLog(name:String) extends Log {
+  def this(clazz:Class[_]) = this(clazz.getName)
+  override val log = LogFactory.getLog(name)
+}
+
 object Logging {
   val exception_id_generator = new AtomicLong(System.currentTimeMillis)
   def next_exception_id = exception_id_generator.incrementAndGet.toHexString
@@ -37,7 +42,7 @@ object Logging {
 trait Logging {
 
   import Logging._
-  protected def log: Log
+  protected def log: Log = new NamedLog(getClass)
   protected def log_map(message:String) = message
 
   protected def error(message: => String, args:Any*): Unit = {

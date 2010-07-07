@@ -30,14 +30,7 @@ import _root_.org.apache.activemq.apollo.stomp.StompFrame
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import org.fusesource.hawtdispatch.BaseRetained
 
-object StompBrokerPerfTest {
-  def main(args:Array[String]) = {
-    val test = new StompBrokerPerfTest();
-    test.setUp
-    test.benchmark_1_1_1
-  }
-}
-class StompBrokerPerfTest extends BaseBrokerPerfTest {
+class StompBrokerPerfTest extends BaseBrokerPerfSupport {
 
     override def createProducer() =  new StompRemoteProducer()
     override def createConsumer() = new StompRemoteConsumer()

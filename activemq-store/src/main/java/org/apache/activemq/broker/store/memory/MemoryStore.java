@@ -641,7 +641,19 @@ public class MemoryStore implements Store {
     public void start() throws Exception {
     }
 
+    public void start(Runnable onComplete) throws Exception {
+        if( onComplete!=null ) {
+            onComplete.run();
+        }
+    }
+
     public void stop() throws Exception {
+    }
+
+    public void stop(Runnable onComplete) throws Exception {
+        if( onComplete!=null ) {
+            onComplete.run();
+        }
     }
 
     public <R, T extends Exception> R execute(Callback<R, T> callback, Runnable runnable) throws T {

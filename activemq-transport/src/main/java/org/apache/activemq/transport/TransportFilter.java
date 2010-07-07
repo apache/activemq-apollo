@@ -90,11 +90,19 @@ public class TransportFilter implements TransportListener, Transport {
         next.start();
     }
 
+    public void start(Runnable onComplete) throws Exception {
+        next.start(onComplete);
+    }
+
     /**
      * @see org.apache.activemq.Service#stop()
      */
     public void stop() throws Exception {
         next.stop();
+    }
+
+    public void stop(Runnable onComplete) throws Exception {
+        next.stop(onComplete);
     }
 
     public void onTransportCommand(Object command) {

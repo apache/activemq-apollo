@@ -84,7 +84,10 @@ public class TcpTransportServer implements TransportServer {
         acceptSource.resume();
     }
 
-    public void start() throws IOException {
+    public void start() throws Exception {
+        start(null);
+    }
+    public void start(Runnable onCompleted) throws IOException {
         URI bind = bindURI;
 
         String host = bind.getHost();
@@ -138,6 +141,9 @@ public class TcpTransportServer implements TransportServer {
             }
         });
         acceptSource.resume();
+        if( onCompleted!=null ) {
+            dispatchQueue.execute(onCompleted);
+        }
     }
 
     private URI connectURI(String hostname) throws URISyntaxException {
@@ -160,6 +166,10 @@ public class TcpTransportServer implements TransportServer {
     }
 
     public void stop() throws Exception {
+        stop(null);
+    }
+    public void stop(Runnable onCompleted) throws Exception {
+        acceptSource.setDisposer(onCompleted);
         acceptSource.release();
     }
 

@@ -25,126 +25,18 @@ import org.apache.activemq.transport.TransportFactory
 
 import _root_.scala.collection.JavaConversions._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import org.apache.activemq.apollo.broker._
 import org.apache.activemq.util.buffer.AsciiBuffer
 import org.apache.activemq.broker.store.{Store, StoreFactory}
 import java.io.{File, IOException}
-import java.util.concurrent.TimeUnit
 import java.util.ArrayList
+import org.scalatest.Informer
+import org.fusesource.hawtdispatch.BaseRetained
+import java.util.concurrent.{CountDownLatch, TimeUnit}
+import org.apache.activemq.apollo.broker._
 
 
-abstract class RemoteConsumer extends Connection {
-  val consumerRate = new MetricCounter();
-  var totalConsumerRate: MetricAggregator = null
-  var thinkTime: Long = 0
-  var destination: Destination = null
-  var selector: String = null;
-  var durable = false;
-  var uri: String = null
-  var brokerPerfTest:BaseBrokerPerfTest = null
-
-  override def start() = {
-    consumerRate.name("Consumer " + name + " Rate");
-    totalConsumerRate.add(consumerRate);
-    transport = TransportFactory.connect(uri);
-    super.start();
-  }
-
-
-  override def onTransportConnected() = {
-    setupSubscription();
-    transport.resumeRead
-  }
-
-  override def onTransportFailure(error: IOException) = {
-    if (!brokerPerfTest.stopping.get()) {
-      System.err.println("Client Async Error:");
-      error.printStackTrace();
-    }
-  }
-
-  protected def setupSubscription()
-
-}
-
-
-abstract class RemoteProducer extends Connection {
-  val rate = new MetricCounter();
-
-  var messageIdGenerator: AtomicLong = null
-  var priority = 0
-  var persistentDelivery = false
-  var priorityMod = 0
-  var counter = 0
-  var producerId = 0
-  var destination: Destination = null
-  var property: String = null
-  var totalProducerRate: MetricAggregator = null
-  var next: Delivery = null
-  var thinkTime: Long = 0
-
-  var filler: String = null
-  var payloadSize = 20
-  var uri: String = null
-  var brokerPerfTest:BaseBrokerPerfTest = null
-
-  override def onTransportFailure(error: IOException) = {
-    if (!brokerPerfTest.stopping.get()) {
-      System.err.println("Client Async Error:");
-      error.printStackTrace();
-    }
-  }
-
-  override def start() = {
-
-    if (payloadSize > 0) {
-      var sb = new StringBuilder(payloadSize);
-      for (i <- 0 until payloadSize) {
-        sb.append(('a' + (i % 26)).toChar);
-      }
-      filler = sb.toString();
-    }
-
-    rate.name("Producer " + name + " Rate");
-    totalProducerRate.add(rate);
-
-    transport = TransportFactory.connect(uri);
-    super.start();
-
-  }
-
-  override def onTransportConnected() = {
-    setupProducer();
-    transport.resumeRead
-  }
-
-  def setupProducer()
-
-def createPayload(): String = {
-    if (payloadSize >= 0) {
-      var sb = new StringBuilder(payloadSize);
-      sb.append(name);
-      sb.append(':');
-      counter += 1
-      sb.append(counter);
-      sb.append(':');
-      var length = sb.length;
-      if (length <= payloadSize) {
-        sb.append(filler.subSequence(0, payloadSize - length));
-        return sb.toString();
-      } else {
-        return sb.substring(0, payloadSize);
-      }
-    } else {
-      counter += 1
-      return name + ":" + (counter);
-    }
-  }
-
-}
-
-object BaseBrokerPerfTest {
-  var PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "3000000"))
+object BaseBrokerPerfSupport {
+  var PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "3"))
   var IO_WORK_AMOUNT = 0
   var FANIN_COUNT = 10
   var FANOUT_COUNT = 10
@@ -157,8 +49,9 @@ object BaseBrokerPerfTest {
   var DURABLE = false;
 
 }
-abstract class BaseBrokerPerfTest {
-  import BaseBrokerPerfTest._
+
+abstract class BaseBrokerPerfSupport extends FunSuiteSupport {
+  import BaseBrokerPerfSupport._
 
   // Set to put senders and consumers on separate brokers.
   protected var multibroker = false;
@@ -191,10 +84,10 @@ abstract class BaseBrokerPerfTest {
 
   val producers = new ArrayList[RemoteProducer]()
   val consumers = new ArrayList[RemoteConsumer]()
-  var name: String = null;
 
-  @Before
-  def setUp() = {
+
+  override protected def beforeAll(configMap: Map[String, Any]) = {
+    super.beforeAll(configMap)
     if (tcp) {
       sendBrokerBindURI = "tcp://localhost:10000?wireFormat=" + getBrokerWireFormat();
       receiveBrokerBindURI = "tcp://localhost:20000?wireFormat=" + getBrokerWireFormat();
@@ -214,41 +107,28 @@ abstract class BaseBrokerPerfTest {
     }
   }
 
-  def setName(name: String) = {
-    if (this.name == null) {
-      this.name = name;
-    }
-  }
-
-  def getName() = name
-
   def getBrokerWireFormat() = "multi"
 
   def getRemoteWireFormat(): String
 
-  @Test
-  def benchmark_1_1_0(): Unit = {
-    setName("1 producer -> 1 destination -> 0 consumers");
-    if (ptp) {
-      return;
-    }
-    producerCount = 1;
-    destCount = 1;
+  if (!ptp) {
+    test("1 producer -> 1 destination -> 0 consumers") {
+      producerCount = 1;
+      destCount = 1;
 
-    createConnections();
+      createConnections();
 
-    // Start 'em up.
-    startClients();
-    try {
-      reportRates();
-    } finally {
-      stopServices();
+      // Start 'em up.
+      startClients();
+      try {
+        reportRates();
+      } finally {
+        stopServices();
+      }
     }
   }
 
-  @Test
-  def benchmark_1_1_1() = {
-    setName("1 producer -> 1 destination -> 1 consumers");
+  test("1 producer -> 1 destination -> 1 consumers") {
     producerCount = 1;
     destCount = 1;
     consumerCount = 1;
@@ -265,9 +145,7 @@ abstract class BaseBrokerPerfTest {
     }
   }
 
-  @Test
-  def benchmark_10_1_10() = {
-    setName(format("%d producers -> 1 destination -> %d consumers", FANIN_COUNT, FANOUT_COUNT));
+  test(format("%d producers -> 1 destination -> %d consumers", FANIN_COUNT, FANOUT_COUNT)) {
     producerCount = FANIN_COUNT;
     consumerCount = FANOUT_COUNT;
     destCount = 1;
@@ -283,9 +161,7 @@ abstract class BaseBrokerPerfTest {
     }
   }
 
-  @Test
-  def benchmark_10_1_1() = {
-    setName(format("%d producers -> 1 destination -> 1 consumer", FANIN_COUNT));
+  test(format("%d producers -> 1 destination -> 1 consumer", FANIN_COUNT)) {
     producerCount = FANIN_COUNT;
     destCount = 1;
     consumerCount = 1;
@@ -301,9 +177,7 @@ abstract class BaseBrokerPerfTest {
     }
   }
 
-  @Test
-  def benchmark_1_1_10() = {
-    setName(format("1 producer -> 1 destination -> %d consumers", FANOUT_COUNT));
+  test(format("1 producer -> 1 destination -> %d consumers", FANOUT_COUNT)) {
     producerCount = 1;
     destCount = 1;
     consumerCount = FANOUT_COUNT;
@@ -319,9 +193,7 @@ abstract class BaseBrokerPerfTest {
     }
   }
 
-  @Test
-  def benchmark_2_2_2() = {
-    setName(format("2 producer -> 2 destination -> 2 consumers"));
+  test("2 producer -> 2 destination -> 2 consumers") {
     producerCount = 2;
     destCount = 2;
     consumerCount = 2;
@@ -337,9 +209,7 @@ abstract class BaseBrokerPerfTest {
     }
   }
 
-  @Test
-  def benchmark_10_10_10() = {
-    setName(format("10 producers -> 10 destinations -> 10 consumers"));
+  test("10 producers -> 10 destinations -> 10 consumers") {
     producerCount = 10;
     destCount = 10;
     consumerCount = 10;
@@ -362,9 +232,7 @@ abstract class BaseBrokerPerfTest {
    *
    * @throws Exception
    */
-  @Test
-  def benchmark_2_2_2_SlowConsumer() = {
-    setName(format("2 producer -> 2 destination -> 2 slow consumers"));
+  test("2 producer -> 2 destination -> 2 slow consumers") {
     producerCount = 2;
     destCount = 2;
     consumerCount = 2;
@@ -381,9 +249,7 @@ abstract class BaseBrokerPerfTest {
     }
   }
 
-  @Test
-  def benchmark_2_2_2_Selector() = {
-    setName(format("2 producer -> 2 destination -> 2 selector consumers"));
+  test("2 producer -> 2 destination -> 2 selector consumers") {
     producerCount = 2;
     destCount = 2;
     consumerCount = 2;
@@ -412,10 +278,7 @@ abstract class BaseBrokerPerfTest {
    *
    * @throws Exception
    */
-  @Test
-  def benchmark_2_1_1_HighPriorityProducer() = {
-
-    setName(format("1 high and 1 normal priority producer -> 1 destination -> 1 consumer"));
+  test("1 high and 1 normal priority producer -> 1 destination -> 1 consumer") {
     producerCount = 2;
     destCount = 1;
     consumerCount = 1;
@@ -430,14 +293,13 @@ abstract class BaseBrokerPerfTest {
     // Start 'em up.
     startClients();
     try {
-
-      System.out.println("Checking rates for test: " + getName());
+      println("Checking rates...");
       for (i <- 0 until PERFORMANCE_SAMPLES) {
         var p = new Period();
         Thread.sleep(1000 * 5);
-        System.out.println(producer.rate.getRateSummary(p));
-        System.out.println(totalProducerRate.getRateSummary(p));
-        System.out.println(totalConsumerRate.getRateSummary(p));
+        println(producer.rate.getRateSummary(p));
+        println(totalProducerRate.getRateSummary(p));
+        println(totalConsumerRate.getRateSummary(p));
         totalProducerRate.reset();
         totalConsumerRate.reset();
       }
@@ -453,10 +315,7 @@ abstract class BaseBrokerPerfTest {
    *
    * @throws Exception
    */
-  @Test
-  def benchmark_2_1_1_MixedHighPriorityProducer() = {
-
-    setName(format("1 high/mixed and 1 normal priority producer -> 1 destination -> 1 consumer"));
+  test("1 high/mixed and 1 normal priority producer -> 1 destination -> 1 consumer") {
     producerCount = 2;
     destCount = 1;
     consumerCount = 1;
@@ -473,13 +332,13 @@ abstract class BaseBrokerPerfTest {
     startClients();
     try {
 
-      System.out.println("Checking rates for test: " + getName());
+      println("Checking rates...");
       for (i <- 0 until PERFORMANCE_SAMPLES) {
         var p = new Period();
         Thread.sleep(1000 * 5);
-        System.out.println(producer.rate.getRateSummary(p));
-        System.out.println(totalProducerRate.getRateSummary(p));
-        System.out.println(totalConsumerRate.getRateSummary(p));
+        println(producer.rate.getRateSummary(p));
+        println(totalProducerRate.getRateSummary(p));
+        println(totalConsumerRate.getRateSummary(p));
         totalProducerRate.reset();
         totalConsumerRate.reset();
       }
@@ -490,12 +349,12 @@ abstract class BaseBrokerPerfTest {
   }
 
   def reportRates() = {
-    System.out.println("Checking rates for test: " + getName() + ", " + (if (ptp) {"ptp"} else {"topic"}));
+    println("Checking "+(if (ptp) "ptp" else "topic")+" rates...");
     for (i <- 0 until PERFORMANCE_SAMPLES) {
       var p = new Period();
       Thread.sleep(1000 * 5);
-      System.out.println(totalProducerRate.getRateSummary(p));
-      System.out.println(totalConsumerRate.getRateSummary(p));
+      println(totalProducerRate.getRateSummary(p));
+      println(totalConsumerRate.getRateSummary(p));
       totalProducerRate.reset();
       totalConsumerRate.reset();
     }
@@ -601,35 +460,154 @@ abstract class BaseBrokerPerfTest {
 
   private def stopServices() = {
     stopping.set(true);
+    val tracker = new CompletionTracker
     for (broker <- brokers) {
-      broker.stop();
+      broker.stop(tracker.task());
     }
+    brokers.clear
     for (connection <- producers) {
-      connection.stop();
+      connection.stop(tracker.task());
     }
+    producers.clear
     for (connection <- consumers) {
-      connection.stop();
+      connection.stop(tracker.task());
     }
+    consumers.clear
+    println("waiting for services to stop");
+    tracker.await
+    stopping.set(false)
   }
 
   private def startBrokers() = {
+    val tracker = new CompletionTracker
     for (broker <- brokers) {
-      broker.start();
+      broker.start(tracker.task());
+    }
+    tracker.await
+  }
+
+
+  private def startClients() = {
+    var tracker = new CompletionTracker
+    for (connection <- consumers) {
+      connection.start(tracker.task());
+    }
+    tracker.await
+    tracker = new CompletionTracker
+    for (connection <- producers) {
+      connection.start(tracker.task());
+    }
+    tracker.await
+  }
+
+}
+
+abstract class RemoteConsumer extends Connection {
+  val consumerRate = new MetricCounter();
+  var totalConsumerRate: MetricAggregator = null
+  var thinkTime: Long = 0
+  var destination: Destination = null
+  var selector: String = null;
+  var durable = false;
+  var uri: String = null
+  var brokerPerfTest:BaseBrokerPerfSupport = null
+
+  override def start(onComplete:Runnable) = {
+    consumerRate.name("Consumer " + name + " Rate");
+    totalConsumerRate.add(consumerRate);
+    transport = TransportFactory.connect(uri);
+    super.start(onComplete);
+  }
+
+
+  override def onTransportConnected() = {
+    setupSubscription();
+    transport.resumeRead
+  }
+
+  override def onTransportFailure(error: IOException) = {
+    if (!brokerPerfTest.stopping.get()) {
+      System.err.println("Client Async Error:");
+      error.printStackTrace();
     }
   }
 
-  private def startClients() = {
-    // Start the clients after a delay to give the server a chance to startup.
-    getGlobalQueue.dispatchAfter(200, TimeUnit.MILLISECONDS, ^{
-      for (connection <- consumers) {
-        connection.start();
+  protected def setupSubscription()
+
+}
+
+
+abstract class RemoteProducer extends Connection {
+  val rate = new MetricCounter();
+
+  var messageIdGenerator: AtomicLong = null
+  var priority = 0
+  var persistentDelivery = false
+  var priorityMod = 0
+  var counter = 0
+  var producerId = 0
+  var destination: Destination = null
+  var property: String = null
+  var totalProducerRate: MetricAggregator = null
+  var next: Delivery = null
+  var thinkTime: Long = 0
+
+  var filler: String = null
+  var payloadSize = 20
+  var uri: String = null
+  var brokerPerfTest:BaseBrokerPerfSupport = null
+
+  override def onTransportFailure(error: IOException) = {
+    if (!brokerPerfTest.stopping.get()) {
+      System.err.println("Client Async Error:");
+      error.printStackTrace();
+    }
+  }
+
+  override def start(onComplete:Runnable) = {
+
+    if (payloadSize > 0) {
+      var sb = new StringBuilder(payloadSize);
+      for (i <- 0 until payloadSize) {
+        sb.append(('a' + (i % 26)).toChar);
       }
-    })
-    getGlobalQueue.dispatchAfter(400, TimeUnit.MILLISECONDS, ^{
-      for (connection <- producers) {
-        connection.start();
+      filler = sb.toString();
+    }
+
+    rate.name("Producer " + name + " Rate");
+    totalProducerRate.add(rate);
+
+    transport = TransportFactory.connect(uri);
+    super.start(onComplete);
+
+  }
+
+  override def onTransportConnected() = {
+    setupProducer();
+    transport.resumeRead
+  }
+
+  def setupProducer()
+
+def createPayload(): String = {
+    if (payloadSize >= 0) {
+      var sb = new StringBuilder(payloadSize);
+      sb.append(name);
+      sb.append(':');
+      counter += 1
+      sb.append(counter);
+      sb.append(':');
+      var length = sb.length;
+      if (length <= payloadSize) {
+        sb.append(filler.subSequence(0, payloadSize - length));
+        return sb.toString();
+      } else {
+        return sb.substring(0, payloadSize);
       }
-    })
+    } else {
+      counter += 1
+      return name + ":" + (counter);
+    }
   }
 
 }

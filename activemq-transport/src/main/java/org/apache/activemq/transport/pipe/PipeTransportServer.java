@@ -75,6 +75,9 @@ public class PipeTransportServer implements TransportServer {
     }
 
     public void start() throws Exception {
+        start(null);
+    }
+    public void start(Runnable onCompleted) throws Exception {
         acceptSource = Dispatch.createSource(EventAggregators.<PipeTransport>linkedList(), dispatchQueue);
         acceptSource.setEventHandler(new Runnable() {
             public void run() {
@@ -84,11 +87,18 @@ public class PipeTransportServer implements TransportServer {
                 }
             }
         });
+        if( onCompleted!=null ) {
+            dispatchQueue.execute(onCompleted);
+        }
     }
 
     public void stop() throws Exception {
-        acceptSource.release();
+        stop(null);
+    }
+    public void stop(Runnable onCompleted) throws Exception {
         PipeTransportFactory.unbind(this);
+        acceptSource.setDisposer(onCompleted);
+        acceptSource.release();
     }
 
     public void setConnectURI(URI connectURI) {
