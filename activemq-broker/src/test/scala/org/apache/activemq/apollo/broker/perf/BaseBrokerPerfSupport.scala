@@ -160,7 +160,7 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
   // Test all the combinations
   for( PTP<- List(true,false) ; PERSISTENT <- List(false); DURABLE <- List(false) ; size <- List(20,1024,1024*256)) {
 
-    val prefix = (if( PTP ) "queue " else "topic ") +(if( PERSISTENT ) "persistent " else "")+(if((size%1024)==0) (size/1024)+"k" else size.toString)+" "
+    val prefix = (if( PTP ) "queue " else "topic ") +(if( PERSISTENT ) "persistent " else "")+(if((size%1024)==0) (size/1024)+"k" else size+"b" )+" "
     val suffix = (if( DURABLE ) " durable" else "")
 
     if( PTP && DURABLE ) {

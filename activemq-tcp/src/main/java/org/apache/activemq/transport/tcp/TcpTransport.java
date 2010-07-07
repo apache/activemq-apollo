@@ -458,12 +458,12 @@ public class TcpTransport extends BaseService implements Transport {
                 // do we need a new data buffer to read data into??
                 if (readBuffer.remaining() == 0) {
 
-                    // double the capacity size if needed...
-                    int new_capacity = this.wireformat.unmarshalStartPos() != 0 ? bufferSize : readBuffer.capacity() << 2;
+                    // How much data is still not consumed by the wireformat
+                    int size = this.wireformat.unmarshalEndPos() - this.wireformat.unmarshalStartPos();
+
+                    int new_capacity = this.wireformat.unmarshalStartPos() == 0 ? size+bufferSize : (size > bufferSize ? size+bufferSize : bufferSize);
                     byte[] new_buffer = new byte[new_capacity];
 
-                    // If there was un-consummed data.. move it to the start of the new buffer.
-                    int size = this.wireformat.unmarshalEndPos() - this.wireformat.unmarshalStartPos();
                     if (size > 0) {
                         System.arraycopy(readBuffer.array(), this.wireformat.unmarshalStartPos(), new_buffer, 0, size);
                     }
@@ -485,6 +485,11 @@ public class TcpTransport extends BaseService implements Transport {
             }
 
             Object command = this.wireformat.unmarshalNB(readBuffer);
+
+            // Sanity checks to make sure the wireformat is behaving as expected.
+            assert wireformat.unmarshalStartPos() <= wireformat.unmarshalEndPos();
+            assert wireformat.unmarshalEndPos() <= readBuffer.position();
+
             if (command != null) {
                 listener.onTransportCommand(command);
 
