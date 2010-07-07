@@ -337,15 +337,16 @@ public class TcpTransport extends BaseService implements Transport {
 
     private void dispose() {
 
-//        OneWay oneWay = outbound.poll();
-//        while (oneWay != null) {
-//            if (oneWay.retained != null) {
-//                oneWay.retained.release();
-//            }
-//            oneWay = outbound.poll();
-//        }
-        readSource.release();
-        writeSource.release();
+        if( readSource!=null ) {
+            readSource.release();
+            readSource=null;
+        }
+
+        if( writeSource!=null ) {
+            writeSource.release();
+            writeSource=null;
+        }
+        
         dispatchQueue.release();
         next_outbound_buffer = null;
         outbound_buffer = null;
