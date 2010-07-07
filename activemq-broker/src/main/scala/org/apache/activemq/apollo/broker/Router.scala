@@ -200,12 +200,12 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     } >>: dispatchQueue
 
 
-   def each(proc:(Destination, DestinationNode)=>Unit) = {
+   def each(proc:(Destination, DestinationNode)=>Unit) = dispatchQueue {
      import JavaConversions._
      for( (destination, node) <- destinations ) {
         proc(destination, node)
      }
-   }
+   } 
 
 }
 
