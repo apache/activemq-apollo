@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.broker.store.hawtdb
 
-import model.RootRecord
 import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
 import org.fusesource.hawtdb.api._
 import org.fusesource.hawtbuf.proto.{MessageBuffer, PBMessageFactory, PBMessage}
@@ -37,37 +36,7 @@ class DestinationEntity {
 //}
 
 object RootEntity {
-//  val messageKeyIndexFactory = new BTreeIndexFactory[Long, Long]();
-//  val locationIndexFactory = new BTreeIndexFactory[Integer, Long]();
-//  val messageRefsIndexFactory = new BTreeIndexFactory[Long, Long]();
-//  val destinationIndexFactory = new BTreeIndexFactory[Long, DestinationEntity]();
-//  val subscriptionIndexFactory = new BTreeIndexFactory[AsciiBuffer, Buffer]();
-//  val mapIndexFactory = new BTreeIndexFactory[AsciiBuffer, Integer]();
-//  val mapInstanceIndexFactory = new BTreeIndexFactory[AsciiBuffer, Buffer]();
-//
-//  messageKeyIndexFactory.setKeyCodec(LongCodec.INSTANCE);
-//  messageKeyIndexFactory.setValueCodec(LongCodec.INSTANCE);
-//  messageKeyIndexFactory.setDeferredEncoding(true);
-//
-//  locationIndexFactory.setKeyCodec(IntegerCodec.INSTANCE);
-//  locationIndexFactory.setValueCodec(LongCodec.INSTANCE);
-//  locationIndexFactory.setDeferredEncoding(true);
-//
-//  messageRefsIndexFactory.setKeyCodec(LongCodec.INSTANCE);
-//  messageRefsIndexFactory.setValueCodec(LongCodec.INSTANCE);
-//  messageRefsIndexFactory.setDeferredEncoding(true);
-//
-//  destinationIndexFactory.setKeyCodec(LongCodec.INSTANCE);
-//  destinationIndexFactory.setValueCodec(DestinationEntity.MARSHALLER);
-//  destinationIndexFactory.setDeferredEncoding(true);
-//
-//  subscriptionIndexFactory.setKeyCodec(Codecs.ASCII_BUFFER_CODEC);
-//  subscriptionIndexFactory.setValueCodec(Codecs.BUFFER_CODEC);
-//  subscriptionIndexFactory.setDeferredEncoding(true);
-//
-//  mapIndexFactory.setKeyCodec(Codecs.ASCII_BUFFER_CODEC);
-//  mapIndexFactory.setValueCodec(IntegerCodec.INSTANCE);
-//  mapIndexFactory.setDeferredEncoding(true);
+
 //
 //  val DATA_ENCODER_DECODER = PBEncoderDecoder(RootRecord.FACTORY)
 

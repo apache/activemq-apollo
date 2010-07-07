@@ -154,18 +154,27 @@ message RemoveStream {
 ///////////////////////////////////////////////////////////////
 // Index Structures
 ///////////////////////////////////////////////////////////////
-message RootRecord {
+message DatabaseRootRecord {
 
   required fixed32 state=1;
   required fixed64 lastMessageKey=2;
   required fixed64 firstInProgressBatch=3;
   required fixed64 lastUpdateLocation=4;
 
-  required fixed32 locationIndexPage=5;
+  required fixed32 dataFileRefIndexPage=5;
   required fixed32 messageKeyIndexPage=6;
   required fixed32 messageRefsIndexPage=7;
-  required fixed32 destinationIndexPage=8;
+  required fixed32 queueIndexPage=8;
   required fixed32 subscriptionIndexPage=10;
   required fixed32 mapIndexPage=11;
   
 }
+
+message QueueRootRecord {
+  required AddQueue info=1;
+  required int64 size=2;
+  required int64 count=3;
+  required fixed32 entryIndexPage=4;
+  required fixed32 trackingIndexPage=5;
+}
+

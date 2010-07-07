@@ -32,8 +32,8 @@ public class HawtDBStoreDTO extends StoreDTO {
     @XmlAttribute(name="directory", required=false)
     public File directory;
 
-	@XmlAttribute(name="checkpoint-interval", required=false)
-	public long checkpointInterval = 5 * 1000L;
+	@XmlAttribute(name="index-flush-interval", required=false)
+	public long indexFlushInterval = 5 * 1000L;
 
 	@XmlAttribute(name="cleanup-interval", required=false)
 	public long cleanupInterval = 30 * 1000L;

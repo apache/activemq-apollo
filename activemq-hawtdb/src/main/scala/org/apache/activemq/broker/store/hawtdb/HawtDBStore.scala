@@ -74,9 +74,9 @@ class HawtDBStore extends Store with BaseService with Logging {
   var next_queue_key = new AtomicLong(0)
   var next_msg_key = new AtomicLong(0)
 
-  protected var executor_pool:ExecutorService = _
+  var executor_pool:ExecutorService = _
   var config:HawtDBStoreDTO = defaultConfig
-  val client = new HawtDBClient
+  val client = new HawtDBClient(this)
 
   def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[HawtDBStoreDTO], reporter)
 
