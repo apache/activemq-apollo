@@ -23,28 +23,33 @@ import javax.ws.rs._
 import core.MediaType
 import org.fusesource.scalate.util.Logging
 import reflect.{BeanProperty, BeanInfo}
+import org.codehaus.jackson.annotate.JsonProperty
+import com.sun.jersey.api.view.ImplicitProduces
+import org.apache.activemq.apollo.jaxb.BrokerConfig
 
 /**
  * Defines the default representations to be used on resources
  */
-//@ImplicitProduces(Array("text/html;qs=5"))
-//@Produces(Array("application/json", "application/xml","text/xml"))
-@Consumes(Array(MediaType.APPLICATION_JSON))
-@Produces(Array(MediaType.APPLICATION_JSON))
-trait Resource extends Logging
+@ImplicitProduces(Array("text/html;qs=5"))
+@Produces(Array("application/json", "application/xml","text/xml"))
+trait Resource extends Logging {
+}
 
 @Path("/")
 class Root() extends Resource {
 
+  @GET
+  def get() = this
+
   @BeanProperty
-  var brokers: Array[Broker] = List(
+  var brokers: Array[Broker] = Array(
     new Broker(this, "default"),
     new Broker(this, "example")
-  ).toArray[Broker]
+  )
 
   @Path("{id}")
   def broker(@PathParam("id") id : String): Broker = {
-    if( id == "default" ) {
+    if( id == "default" || id=="example" ) {
       new Broker(this, id)
     } else {
       throw new NotFoundException("Broker " + id + " not found")
@@ -52,64 +57,59 @@ class Root() extends Resource {
   }
 }
 
-case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
-  @Path("config")
-  def config =  BrokerConfig(this, id)
+case class Broker(parent:Root, @BeanProperty @BeanProperty id: String) extends Resource {
+  @GET
+  def get():AnyRef = {
+    if( id == "default") {
+      val config = new BrokerConfig();
+      config.setName(id);
+      return config
+    } else {
+      return null;
+    }
+  }
+
   @Path("status")
   def status = BrokerStatus(this, id)
 }
 
-case class BrokerConfig(parent:Broker, @BeanProperty id:String) extends Resource {
-
-  @Path("virtual-hosts")
-  def virtualHosts :List[VirtualHostConfig] = List(
-    new VirtualHostConfig(this, "host1"),
-    new VirtualHostConfig(this, "host2")
-  )
-  @Path("virtual-hosts/{id}")
-  def virtualHost(@PathParam("id") id : String):VirtualHostConfig = null
-
-  @Path("connectors")
-  def connectors :List[ConnectorConfig] = null
-  @Path("connectors/{id}")
-  def connector(@PathParam("id") id : String):ConnectorConfig = null
-}
-
 case class BrokerStatus(parent:Broker, @BeanProperty id:String) extends Resource {
+  @GET
+  def get() = this
+
   @Path("virtual-hosts")
-  def virtualHosts :List[VirtualHostStatus] = null
-  @Path("virtual-host/{id}")
+  def virtualHosts :Array[VirtualHostStatus] = null
+  @Path("virtual-hosts/{id}")
   def virtualHost(@PathParam("id") id : String):VirtualHostStatus = null
 
   @Path("connectors")
-  def connectors :List[ConnectorStatus] = null
+  def connectors :Array[ConnectorStatus] = null
   @Path("connectors/{id}")
   def connector(@PathParam("id") id : String):ConnectorStatus = null
 
   @Path("connections")
-  def connections :List[ConnectionStatus] = null
+  def connections :Array[ConnectionStatus] = null
   @Path("connections/{id}")
   def connection(@PathParam("id") id : String):ConnectionStatus = null
 }
 
-case class VirtualHostConfig(parent:BrokerConfig, @BeanProperty id: String) extends Resource {
-  var names:List[String] = null
-}
 case class VirtualHostStatus(parent:BrokerStatus, @BeanProperty id: String) extends Resource {
   var state:String = null
+  @GET
+  def get() = this
 }
 
-case class ConnectorConfig(parent:BrokerConfig, @BeanProperty id:String) extends Resource {
-  var uri:String = null;
-  var connect:String = null;
-}
 case class ConnectorStatus(parent:BrokerStatus, @BeanProperty id: String) extends Resource {
   var state:String = "unknown";
   var accepted:Long = 0;
+  @GET
+  def get() = this
 }
 
 case class ConnectionStatus(parent:BrokerStatus, @BeanProperty id:String) extends Resource {
   var state:String = "unknown";
   var readCounter:Long = 0;
   var writeCounter:Long = 0;
+  @GET
+  def get() = this
 }

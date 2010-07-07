@@ -28,7 +28,7 @@ import org.apache.activemq.broker.store.hawtdb.HawtDBStore;
 
 @XmlRootElement(name="kahadb-store")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class KahaDBStoreXml extends StoreXml {
+public class KahaDBStoreConfig extends StoreXml {
 
 	@XmlAttribute(name="checkpoint-interval", required=false)
 	private Long checkpointInterval;

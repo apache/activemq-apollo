@@ -25,64 +25,27 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.activemq.apollo.broker.Broker;
-import org.apache.activemq.transport.TransportFactory;
-import org.apache.activemq.transport.TransportServer;
-
 @XmlRootElement(name="broker")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BrokerXml {
+public class BrokerConfig {
 	
 	@XmlAttribute(name="name")
-	String name;
+	public String name;
 	
     @XmlElement(name="virtual-host")
-    private List<VirtualHostXml> virtualHosts = new ArrayList<VirtualHostXml>();
+    public List<VirtualHostConfig> virtualHosts = new ArrayList<VirtualHostConfig>();
     @XmlElement(name="transport-server")
-    private List<String> transportServers = new ArrayList<String>();
+    public List<String> transportServers = new ArrayList<String>();
     @XmlElement(name="connect-uri")
-    private List<String> connectUris = new ArrayList<String>();
+    public List<String> connectUris = new ArrayList<String>();
 
 
-    public BrokerXml() {
-    }
-
-    public BrokerXml(Broker broker) {
-    }
-
-
-	public Broker createMessageBroker() throws Exception {
-		Broker rc = new Broker();
-		for (VirtualHostXml element : virtualHosts) {
-			rc.addVirtualHost(element.createVirtualHost(this));
-		}
-		for (String element : transportServers) {
-			TransportServer server;
-			try {
-				server = TransportFactory.bind(element);
-			} catch (Exception e) {
-				throw new Exception("Unable to bind transport server '"+element+" due to: "+e.getMessage(), e);
-			}
-			rc.transportServers().add(server);
-		}
-		for (String element : connectUris) {
-			rc.connectUris().add(element);
-		}
-		
-		return rc;
-	}
-	
-	public VirtualHostXml getDefaultVirtualHost() {
-		return null;
-	}
-
-	public List<VirtualHostXml> getVirtualHosts() {
+	public List<VirtualHostConfig> getVirtualHosts() {
 		return virtualHosts;
 	}
-	public void setVirtualHosts(List<VirtualHostXml> virtualHosts) {
+	public void setVirtualHosts(List<VirtualHostConfig> virtualHosts) {
 		this.virtualHosts = virtualHosts;
 	}
-
 
 	public List<String> getTransportServers() {
 		return transportServers;
@@ -99,4 +62,11 @@ public class BrokerXml {
 		this.connectUris = connectUris;
 	}
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 }

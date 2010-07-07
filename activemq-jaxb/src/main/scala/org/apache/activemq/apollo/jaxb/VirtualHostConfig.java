@@ -29,24 +29,14 @@ import org.apache.activemq.apollo.broker.VirtualHost;
 
 @XmlRootElement(name = "virtual-host")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class VirtualHostXml {
+public class VirtualHostConfig {
 	
     @XmlElement(name="host-name", required=true)
-    private ArrayList<String> hostNames = new ArrayList<String>();
+    public ArrayList<String> hostNames = new ArrayList<String>();
 
     @XmlElementRef   
-    private StoreXml store;
+    public StoreXml store;
     
-	public VirtualHost createVirtualHost(BrokerXml brokerXml) throws Exception {
-		VirtualHost rc = new VirtualHost();
-		rc.setNamesArray(hostNames);
-		if( store != null ) {
-            BrokerDatabase database = new BrokerDatabase();
-            database.setVirtualHost(rc);
-            database.setStore(store.createStore());
-            rc.setDatabase(database);
-		}
-		return rc;
-	}
+
 
 }
