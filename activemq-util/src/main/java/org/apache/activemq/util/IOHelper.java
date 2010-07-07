@@ -158,16 +158,33 @@ public final class IOHelper {
     }
     
     public static void copyInputStream(InputStream in, OutputStream out) throws IOException {
-        byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
-        int len = in.read(buffer);
-        while (len >= 0) {
-            out.write(buffer, 0, len);
-            len = in.read(buffer);
+        try {
+            byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
+            int len = in.read(buffer);
+            while (len >= 0) {
+                out.write(buffer, 0, len);
+                len = in.read(buffer);
+            }
+        } finally {
+            close(in);
+            close(out);
         }
-        in.close();
-        out.close();
     }
-    
+
+    public static void close(OutputStream out) {
+        try {
+            out.close();
+        } catch (IOException e) {
+        }
+    }
+
+    public static void close(InputStream in) {
+        try {
+            in.close();
+        } catch (IOException e) {
+        }
+    }
+
     static {
         MAX_DIR_NAME_LENGTH = Integer.valueOf(System.getProperty("MaximumDirNameLength","200")).intValue();  
         MAX_FILE_NAME_LENGTH = Integer.valueOf(System.getProperty("MaximumFileNameLength","64")).intValue();             

@@ -26,13 +26,14 @@ import org.apache.activemq.transport.TransportFactory
 import _root_.scala.collection.JavaConversions._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import org.apache.activemq.broker.store.{Store, StoreFactory}
-import java.io.{File, IOException}
 import java.util.ArrayList
 import org.fusesource.hawtdispatch.BaseRetained
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import org.apache.activemq.apollo.broker._
 import org.scalatest._
 import _root_.org.fusesource.hawtbuf._
+import java.io.{PrintStream, FileOutputStream, File, IOException}
+import org.apache.activemq.util.ProcessSupport
 
 object BaseBrokerPerfSupport {
   var PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "3"))
@@ -124,17 +125,23 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
     }
   }
 
-
-  override protected def afterEach() = {
-    println("Spread sheet stats:")
-    println(spread_sheet_stats.map(_._1).mkString(","))
-    println(spread_sheet_stats.map(_._2).mkString(","))
+  override protected def afterAll() = {
+    var basedir = new File(System.getProperty("user.home", "."))
+    var csvfile = new File(basedir, "perf-"+getClass.getName+".csv");
+    val exists = csvfile.exists
+    var out = new PrintStream(new FileOutputStream(csvfile, true));
+    val version = new String(ProcessSupport.system("git", "rev-list", "--max-count=1", "HEAD").toByteArray).trim
+    spread_sheet_stats ::= ("Version", version)
+    if( !exists ) {
+      out.println(spread_sheet_stats.map(x=>csv_esc(x._1)).mkString(","))
+    }
+    out.println(spread_sheet_stats.map(x=>csv_esc(x._2)).mkString(","))
+    out.close
+    println("Updated: "+csvfile);
   }
 
-  override protected def afterAll() = {
-    println("Spread sheet stats:")
-    println(spread_sheet_stats.map(_._1).mkString(","))
-    println(spread_sheet_stats.map(_._2).mkString(","))
+  def csv_esc(value:Any) = {
+    "\""+value.toString.replace("\"", "\"\"")+"\""
   }
 
   def getBrokerWireFormat() = "multi"
