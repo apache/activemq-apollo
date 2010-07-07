@@ -26,6 +26,7 @@ import collection.JavaConversions
 import org.fusesource.hawtdispatch.{ScalaDispatch, Future}
 import ScalaDispatch._
 import org.apache.activemq.apollo.broker._
+import collection.mutable.ListBuffer
 
 /**
  * <p>
@@ -34,36 +35,55 @@ import org.apache.activemq.apollo.broker._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class StatusResource(parent:Broker) extends Resource {
+case class RuntimeResource(parent:Broker) extends Resource {
 
-  val broker:org.apache.activemq.apollo.broker.Broker = BrokerRegistry.get(parent.id)
-  if( broker == null ) {
-    result(NOT_FOUND)
+  private def with_broker[T](func: (org.apache.activemq.apollo.broker.Broker, Option[T]=>Unit)=>Unit):T = {
+    val broker:org.apache.activemq.apollo.broker.Broker = BrokerRegistry.get(parent.id)
+    if( broker == null ) {
+      result(NOT_FOUND)
+    } else {
+      Future[Option[T]] { cb=>
+        broker.dispatchQueue {
+          func(broker, cb)
+        }
+      }.getOrElse(result(NOT_FOUND))
+    }
   }
+
+  private def with_virtual_host[T](id:Long)(func: (VirtualHost, Option[T]=>Unit)=>Unit):T = {
+    with_broker { case (broker, cb) =>
+      broker.virtualHosts.valuesIterator.find( _.id == id) match {
+        case Some(virtualHost)=>
+          virtualHost.dispatchQueue {
+            func(virtualHost, cb)
+          }
+        case None=> cb(None)
+      }
+    }
+  }
+
 
   @GET
   def get() = {
-    Future[BrokerStatusDTO] { cb=>
-      broker.dispatchQueue {
-        val result = new BrokerStatusDTO
+    with_broker[BrokerStatusDTO] { case (broker, cb) =>
+      val result = new BrokerStatusDTO
 
-        result.id = broker.id
-        result.currentTime = System.currentTimeMillis
-        result.state = broker.serviceState.toString
-        result.stateSince - broker.serviceState.since
-        result.config = broker.config
+      result.id = broker.id
+      result.currentTime = System.currentTimeMillis
+      result.state = broker.serviceState.toString
+      result.stateSince - broker.serviceState.since
+      result.config = broker.config
 
-        broker.connectors.foreach{ c=>
-          result.connectors.add(c.id)
-        }
-
-        broker.virtualHosts.values.foreach{ host=>
-          result.virtualHosts.add( host.id )
-        }
-
-
-        cb(result)
+      broker.connectors.foreach{ c=>
+        result.connectors.add(c.id)
       }
+
+      broker.virtualHosts.values.foreach{ host=>
+        result.virtualHosts.add( host.id )
+      }
+
+
+      cb(Some(result))
     }
   }
 
@@ -72,18 +92,6 @@ case class StatusResource(parent:Broker) extends Resource {
   def virtualHosts :Array[jl.Long] = {
     val list: List[jl.Long] = get.virtualHosts
     list.toArray(new Array[jl.Long](list.size))
-  }
-
-  private def with_virtual_host[T](id:Long)(func: (VirtualHost, Option[T]=>Unit)=>Unit):T = {
-    Future[Option[T]] { cb=>
-      broker.virtualHosts.valuesIterator.find( _.id == id) match {
-        case Some(virtualHost)=>
-          virtualHost.dispatchQueue {
-            func(virtualHost, cb)
-          }
-        case None=> cb(None)
-      }
-    }.getOrElse(result(NOT_FOUND))
   }
 
   @GET @Path("virtual-hosts/{id}")
@@ -130,7 +138,7 @@ case class StatusResource(parent:Broker) extends Resource {
   }
 
   @GET @Path("virtual-hosts/{id}/queues/{queue}")
-  def queue(@PathParam("id") id : Long, @PathParam("queue") qid : Long):QueueStatusDTO = {
+  def queue(@PathParam("id") id : Long, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean ):QueueStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
       import JavaConversions._
       virtualHost.queues.valuesIterator.find { _.id == qid } match {
@@ -155,24 +163,25 @@ case class StatusResource(parent:Broker) extends Resource {
             result.flushingSize = q.flushing_size
             result.flushedItems = q.flushed_items
 
+            if( entries ) {
+              var cur = q.head_entry
+              while( cur!=null ) {
 
-            var cur = q.head_entry
-            while( cur!=null ) {
+                val e = new EntryStatusDTO
+                e.seq = cur.seq
+                e.count = cur.count
+                e.size = cur.size
+                e.consumerCount = cur.parked.size
+                e.prefetchCount = cur.prefetched
+                e.state = cur.label
 
-              val e = new EntryStatusDTO
-              e.seq = cur.seq
-              e.count = cur.count
-              e.size = cur.size
-              e.consumerCount = cur.parked.size
-              e.prefetchCount = cur.prefetched
-              e.state = cur.label
+                result.entries.add(e)
 
-              result.entries.add(e)
-
-              cur = if( cur == q.tail_entry ) {
-                null
-              } else {
-                cur.nextOrTail
+                cur = if( cur == q.tail_entry ) {
+                  null
+                } else {
+                  cur.nextOrTail
+                }
               }
             }
 
@@ -193,27 +202,61 @@ case class StatusResource(parent:Broker) extends Resource {
 
   @GET @Path("connectors/{id}")
   def connector(@PathParam("id") id : Long):ConnectorStatusDTO = {
-
-    Future[Option[ConnectorStatusDTO]] { cb=>
+    with_broker { case (broker, cb) =>
       broker.connectors.find(_.id == id) match {
+        case None=> cb(None)
         case Some(connector)=>
-          connector.dispatchQueue {
-            val result = new ConnectorStatusDTO
-            result.id = connector.id
-            result.state = connector.serviceState.toString
-            result.stateSince = connector.serviceState.since
-            result.config = connector.config
 
-            result.accepted = connector.accept_counter.get
-            connector.connections.keysIterator.foreach { id=>
-              result.connections.add(id)
-            }
+          val result = new ConnectorStatusDTO
+          result.id = connector.id
+          result.state = connector.serviceState.toString
+          result.stateSince = connector.serviceState.since
+          result.config = connector.config
+
+          result.accepted = connector.accept_counter.get
+          connector.connections.keysIterator.foreach { id=>
+            result.connections.add(id)
+          }
+          cb(Some(result))
+      }
+    }
+  }
+
+
+  @GET @Path("connections")
+  def connections :Array[Long] = {
+    val rc:Array[Long] = with_broker { case (broker, cb) =>
+      val rc = ListBuffer[Long]()
+      broker.connectors.foreach { connector=>
+        connector.connections.keys.foreach { id =>
+          rc += id.longValue
+        }
+      }
+      cb(Some(rc.toArray))
+    }
+    rc.sorted
+  }
+
+  @GET @Path("connections/{id}")
+  def connections(@PathParam("id") id : Long):ConnectionStatusDTO = {
+    with_broker { case (broker, cb) =>
+      broker.connectors.flatMap{ _.connections.get(id) }.headOption match {
+        case None => cb(None)
+        case Some(connection:BrokerConnection) =>
+          connection.dispatchQueue {
+            val result = new ConnectionStatusDTO
+            result.id = connection.id
+            result.state = connection.serviceState.toString
+            result.stateSince = connection.serviceState.since
+            result.protocol = connection.protocol
+            result.transport = connection.transport.getTypeId
+            result.remoteAddress = connection.transport.getRemoteAddress
+            result.writeCounter = connection.transport.getWriteCounter
+            result.readCounter = connection.transport.getReadCounter
             cb(Some(result))
           }
-        case None=> cb(None)
       }
-    }.getOrElse(result(NOT_FOUND))
-
+    }
   }
 
 }

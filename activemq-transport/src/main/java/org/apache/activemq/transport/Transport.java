@@ -92,6 +92,16 @@ public interface Transport extends Service {
     String getRemoteAddress();
 
     /**
+     * @return The number of bytes sent by the transport.
+     */
+    long getWriteCounter();
+
+    /**
+     * @return The number of bytes received by the transport.
+     */
+    long getReadCounter();
+
+    /**
      * Indicates if the transport can handle faults
      * 
      * @return true if fault tolerant
@@ -122,4 +132,8 @@ public interface Transport extends Service {
      */
     void reconnect(URI uri);
 
+    /**
+     * @return the identifier for the transport type.  Example "tcp" for the tcp transport. 
+     */
+    String getTypeId();
 }

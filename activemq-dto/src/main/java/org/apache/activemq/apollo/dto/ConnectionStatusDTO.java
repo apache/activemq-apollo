@@ -52,6 +52,13 @@ public class ConnectionStatusDTO extends ServiceStatusDTO {
      */
     @JsonProperty
 	@XmlAttribute
+	public String transport;
+
+    /**
+     * The protocol the connection is using.
+     */
+    @JsonProperty
+	@XmlAttribute
 	public String protocol;
 
     /**

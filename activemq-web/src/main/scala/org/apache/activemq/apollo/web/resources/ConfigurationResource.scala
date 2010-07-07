@@ -29,7 +29,6 @@ import Response.Status._
 import org.apache.activemq.apollo.dto.{IdListDTO, BrokerSummaryDTO, BrokerDTO}
 import java.util.{Arrays, Collections}
 import org.apache.activemq.apollo.web.ConfigStore
-import org.apache.activemq.apollo.broker.BrokerRegistry
 
 /**
  * Defines the default representations to be used on resources
@@ -49,46 +48,81 @@ trait Resource extends Logging {
 }
 
 /**
- * Manages a collection of broker resources.
+ * Manages a collection of broeker resources.
  */
-@Path("/brokers")
+@Path("/")
 class Root() extends Resource {
 
+  @Context
+  var configStore = ConfigStore()
+
   @GET
-  def brokers = {
+  def get() = {
     val rc = new IdListDTO
     val ids = Future[List[String]] { cb=>
-      ConfigStore().listBrokers(cb)
+      configStore.listBrokers(cb)
     }.toArray[String]
     rc.ids.addAll(Arrays.asList(ids: _*))
     rc
   }
 
   @Path("{id}")
-  def brokers(@PathParam("id") id : String): Broker = new Broker(this, id)
+  def broker(@PathParam("id") id : String): Broker = new Broker(this, id)
 }
 
 /**
- * Resource that identifies a managed broker.
+ * A broker resource is used to represent the configuration and runtime status of a broker.
  */
 case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
 
+  @Context
+  var configStore = ConfigStore()
+
   @GET
-  def get = {
+  def get() = {
+    val c = config()
     val rc = new BrokerSummaryDTO
     rc.id = id
-    rc.manageable = BrokerRegistry.get(id)!=null
-    rc.configurable = Future[Option[BrokerDTO]] { cb=>
-        ConfigStore().getBroker(id, false)(cb)
-      }.isDefined
+    rc.rev = c.rev
     rc
   }
 
-  @Path("config")
-  def config = ConfigurationResource(this)
+  @GET @Path("config")
+  def getConfig():BrokerDTO = {
+    config()
+  }
 
-  @Path("runtime")
-  def runtime = RuntimeResource(this)
+  private def config() = {
+    Future[Option[BrokerDTO]] { cb=>
+      configStore.getBroker(id, false)(cb)
+    }.getOrElse(result(NOT_FOUND))
+  }
 
+  @GET @Path("config/{rev}")
+  def getConfig(@PathParam("rev") rev:Int):BrokerDTO = {
+    // that rev may have gone away..
+    var c = config()
+    c.rev==rev || result(NOT_FOUND)
+    c
+  }
+
+  @PUT @Path("config/{rev}")
+  def put(@PathParam("rev") rev:Int, config:BrokerDTO) = {
+    config.id = id;
+    config.rev = rev
+    Future[Boolean] { cb=>
+      configStore.putBroker(config)(cb)
+    } || result(NOT_FOUND)
+  }
+
+  @DELETE @Path("config/{rev}")
+  def delete(@PathParam("rev") rev:Int) = {
+    Future[Boolean] { cb=>
+      configStore.removeBroker(id, rev)(cb)
+    } || result(NOT_FOUND)
+  }
+
+  @Path("status")
+  def status = RuntimeResource(this)
 }
 

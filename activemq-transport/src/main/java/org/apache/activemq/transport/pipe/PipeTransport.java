@@ -49,6 +49,9 @@ public class PipeTransport implements Transport {
     private CustomDispatchSource<Object,LinkedList<Object>> dispatchSource;
     private boolean connected;
 
+    private long writeCounter = 0;
+    private long readCounter = 0;
+
     public PipeTransport(PipeTransportServer server) {
         this.server = server;
     }
@@ -89,6 +92,7 @@ public class PipeTransport implements Transport {
                                 if (wireformat != null && marshal) {
                                     listener.onTransportCommand(wireformat.unmarshal((Buffer) o));
                                 } else {
+                                    readCounter ++;
                                     listener.onTransportCommand(o);
                                 }
                             }
@@ -180,8 +184,23 @@ public class PipeTransport implements Transport {
     }
 
     private void transmit(Object command) {
+        writeCounter++;
         outbound++;
         peer.dispatchSource.merge(command);
+    }
+
+    /**
+     * @return The number of bytes sent by the transport.
+     */
+    public long getWriteCounter() {
+        return writeCounter;
+    }
+
+    /**
+     * @return The number of bytes received by the transport.
+     */
+    public long getReadCounter() {
+        return readCounter;
     }
 
     public String getRemoteAddress() {
@@ -204,6 +223,10 @@ public class PipeTransport implements Transport {
     }
     public void reconnect(URI uri) {
         throw new UnsupportedOperationException();
+    }
+
+    public String getTypeId() {
+        return "pipe";
     }
 
     public void setRemoteAddress(String remoteAddress) {

@@ -47,6 +47,8 @@ public class TcpTransport extends BaseService implements Transport {
     private static final Log LOG = LogFactory.getLog(TcpTransport.class);
 
     private Map<String, Object> socketOptions;
+    private long writeCounter;
+    private long readCounter;
 
     abstract static class SocketState {
         void onStop(Runnable onCompleted) {
@@ -407,8 +409,11 @@ public class TcpTransport extends BaseService implements Transport {
             while (socketState.is(CONNECTED.class) ) {
 
                 // if we have a pending write that is being sent over the socket...
-                if (outbound_buffer.remaining()!=0) {
+                int remaining = outbound_buffer.remaining();
+                if (remaining!=0) {
                     channel.write(outbound_buffer);
+                    int count = remaining - outbound_buffer.remaining();
+                    writeCounter += count;
                     if (outbound_buffer.remaining() != 0) {
                         return false;
                     }
@@ -477,6 +482,7 @@ public class TcpTransport extends BaseService implements Transport {
                 } else if (count == 0) {
                     return;
                 }
+                readCounter += count;
             }
 
             Object command = this.wireformat.unmarshalNB(readBuffer);
@@ -501,6 +507,21 @@ public class TcpTransport extends BaseService implements Transport {
     public String getRemoteAddress() {
         return remoteAddress;
     }
+
+    /**
+     * @return The number of bytes sent by the transport.
+     */
+    public long getWriteCounter() {
+        return writeCounter;
+    }
+
+    /**
+     * @return The number of bytes received by the transport.
+     */
+    public long getReadCounter() {
+        return readCounter;
+    }
+
 
     public <T> T narrow(Class<T> target) {
         if (target.isAssignableFrom(getClass())) {
@@ -532,6 +553,10 @@ public class TcpTransport extends BaseService implements Transport {
         if( isConnected() && readSource!=null ) {
             readSource.resume();
         }
+    }
+
+    public String getTypeId() {
+        return "tcp";
     }
 
     public void reconnect(URI uri) {

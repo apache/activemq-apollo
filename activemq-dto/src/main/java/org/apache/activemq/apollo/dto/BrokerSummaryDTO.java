@@ -34,11 +34,17 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class BrokerSummaryDTO extends StringIdDTO {
 
     /**
-     * The latest revision of the broker config.
+     * Is a running broker accessible via management API calls?
      */
     @JsonProperty
 	@XmlAttribute
-	public Integer rev;
+	public boolean manageable;
 
+    /**
+     * Is the broker configuration accessible via API calls? 
+     */
+    @JsonProperty
+	@XmlAttribute
+	public boolean configurable;
 
 }

@@ -99,14 +99,11 @@ class ServletContextListener extends GuiceServletContextListener {
 
 
   def createConfigStore():ConfigStore = {
-    println("created store")
     val store = new FileConfigStore
     store.file = new File("activemq.xml")
     LoggingTracker("config store startup") { tracker=>
-      println("starting store")
       store.start(tracker.task())
     }
-    println("store started")
     store
   }
 
