@@ -159,7 +159,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       pageFileFactory.setPageSize(512.toShort)
       pageFileFactory.open()
 
-      withTx { tx =>
+      val initialized = withTx { tx =>
           val helper = new TxHelper(tx)
           import helper._
 
@@ -175,12 +175,17 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
             tx.put(DATABASE_ROOT_RECORD_ACCESSOR, 0, databaseRootRecord.freeze)
             databaseRootRecord = databaseRootRecord.copy
+            true
           } else {
             databaseRootRecord = tx.get(DATABASE_ROOT_RECORD_ACCESSOR, 0).copy
+            false
           }
       }
 
-      pageFile.flush()
+      if( initialized ) {
+        pageFile.flush()
+      }
+
       recover(onComplete)
 
       // Schedual periodic jobs.. they keep executing while schedual_version remains the same.
@@ -192,7 +197,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   def stop() = {
     schedual_version.incrementAndGet
     journal.close
-    flush
     pageFileFactory.close
     lockFile.unlock
   }
