@@ -36,28 +36,24 @@ public class
     /**
      * The current time on the broker machine.  In milliseconds since the epoch.
      */
-    @JsonProperty("current_time")
 	@XmlAttribute(name="current-time")
-	public long currentTime;
+	public long current_time;
 
     /**
      * Ids of all the virtual hosts running on the broker
      */
-    @JsonProperty("virtual_hosts")
     @XmlElement(name="virtual-host")
-    public List<Long> virtualHosts = new ArrayList<Long>();
+    public List<Long> virtual_hosts = new ArrayList<Long>();
 
     /**
      * Ids of all the connectors running on the broker
      */
-    @JsonProperty("connectors")
     @XmlElement(name="connector")
     public List<Long> connectors = new ArrayList<Long>();
 
     /**
      * Ids of all the connections running on the broker
      */
-    @JsonProperty("connections")
     @XmlElement(name="connection")
     public List<Long> connections = new ArrayList<Long>();
 

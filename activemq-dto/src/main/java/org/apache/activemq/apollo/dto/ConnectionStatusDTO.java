@@ -36,16 +36,14 @@ public class ConnectionStatusDTO extends ServiceStatusDTO {
     /**
      * The number of bytes that have been read from the connection.
      */
-    @JsonProperty("read_counter")
 	@XmlAttribute(name="read-counter")
-	public Long readCounter;
+	public long read_counter;
 
     /**
      * The number of bytes that have been written to the connection.
      */
-    @JsonProperty("write_counter")
 	@XmlAttribute(name="write-counter")
-	public Long writeCounter;
+	public long write_counter;
 
     /**
      * The protocol the connection is using.
@@ -64,9 +62,8 @@ public class ConnectionStatusDTO extends ServiceStatusDTO {
     /**
      * The remote address of the connection
      */
-    @JsonProperty("remote_address")
 	@XmlAttribute(name="remote-address")
-	public String remoteAddress;
+	public String remote_address;
 
     /**
      * The connected user

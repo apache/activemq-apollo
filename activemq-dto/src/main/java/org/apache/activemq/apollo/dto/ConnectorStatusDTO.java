@@ -35,14 +35,12 @@ public class ConnectorStatusDTO extends ServiceStatusDTO {
     /**
      * The number of connections that this connector has accepted.
      */
-    @JsonProperty
-	@XmlAttribute
-	public Long accepted;
+    @XmlAttribute
+    public long accepted;
 
     /**
      * Ids of all open connections that the connector is managing.
      */
-    @JsonProperty("connections")
     @XmlElement(name="connection")
     public List<Long> connections = new ArrayList<Long>();
 

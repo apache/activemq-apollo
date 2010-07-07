@@ -33,6 +33,7 @@ import org.apache.activemq.apollo.broker.BrokerRegistry
 import collection.JavaConversions._
 import com.sun.jersey.api.core.ResourceContext
 import org.fusesource.scalate.RenderContext
+import java.util.concurrent.TimeUnit
 
 /**
  * Defines the default representations to be used on resources
@@ -60,7 +61,23 @@ abstract class Resource(private val parent:Resource=null) extends Logging {
 
 }
 
+object ViewHelper {
+
+  val KB: Long = 1024
+  val MB: Long = KB * 1024
+  val GB: Long = MB * 1024
+  val TB: Long = GB * 1024
+
+  val SECONDS: Long = TimeUnit.SECONDS.toMillis(1)
+  val MINUTES: Long = TimeUnit.MINUTES.toMillis(1)
+  val HOURS: Long = TimeUnit.HOURS.toMillis(1)
+  val DAYS: Long = TimeUnit.DAYS.toMillis(1)
+  val YEARS: Long = DAYS * 365
+
+
+}
 class ViewHelper {
+  import ViewHelper._
 
   lazy val uri_info = RenderContext().attribute[UriInfo]("uri_info")
 
@@ -68,6 +85,38 @@ class ViewHelper {
     uri_info.getAbsolutePathBuilder().path(value.toString).build()
   }
 
+  def memory(value:Int):String = memory(value.toLong)
+  def memory(value:Long):String = {
+
+    if( value < KB ) {
+      "%d bytes".format(value)
+    } else if( value < MB ) {
+       "%,.2f kb".format(value.toFloat/KB)
+    } else if( value < GB ) {
+      "%,.3f mb".format(value.toFloat/MB)
+    } else if( value < TB ) {
+      "%,.4f gb".format(value.toDouble/GB)
+    } else {
+      "%,.5f tb".format(value.toDouble/TB)
+    }
+  }
+
+  def uptime(value:Long):String = {
+    val duration = System.currentTimeMillis - value
+    if( duration < SECONDS ) {
+      "%d ms".format(duration)
+    } else if (duration < MINUTES) {
+      "%,.2f seconds".format(duration.toFloat / SECONDS)
+    } else if (duration < HOURS) {
+      "%,.2f minutes".format(duration.toFloat / MINUTES)
+    } else if (duration < DAYS) {
+      "%,.2f hours".format(duration.toFloat / HOURS)
+    } else if (duration < YEARS) {
+      "%,.2f days".format(duration.toDouble / DAYS)
+    } else {
+      "%,.2f years".format(duration.toDouble / YEARS)
+    }
+  }
 }
 
 /**

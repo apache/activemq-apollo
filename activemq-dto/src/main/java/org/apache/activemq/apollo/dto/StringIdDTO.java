@@ -32,7 +32,6 @@ public class StringIdDTO {
     /**
      * A unique id of the object within it's container
      */
-    @JsonProperty
 	@XmlAttribute
 	public String id;
 

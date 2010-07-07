@@ -33,15 +33,13 @@ public class DestinationSummaryDTO extends LongIdDTO {
     /**
      * The destination name
      */
-    @JsonProperty
-    @XmlElement
+    @XmlAttribute
     public String name;
 
     /**
      * The routing domain
      */
-    @JsonProperty
-    @XmlElement
+    @XmlAttribute
     public String domain;
     
 }

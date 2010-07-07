@@ -199,8 +199,8 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     connector.advertise = connectUri
     connector.protocol = getBrokerWireFormat
 
-    val host = config.virtualHosts.get(0)
-    host.purgeOnStartup = true
+    val host = config.virtual_hosts.get(0)
+    host.purge_on_startup = true
     config
   }
 

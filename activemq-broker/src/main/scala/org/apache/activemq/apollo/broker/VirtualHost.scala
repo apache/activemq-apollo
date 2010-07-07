@@ -54,7 +54,7 @@ object VirtualHost extends Log {
     val rc = new VirtualHostDTO
     rc.id = "default"
     rc.enabled = true
-    rc.hostNames.add("localhost")
+    rc.host_names.add("localhost")
 
 //    val store = new CassandraStoreDTO
 //    store.hosts.add("localhost:9160")
@@ -72,7 +72,7 @@ object VirtualHost extends Log {
   def validate(config: VirtualHostDTO, reporter:Reporter):ReporterLevel = {
      new Reporting(reporter) {
 
-      if( config.hostNames.isEmpty ) {
+      if( config.host_names.isEmpty ) {
         error("Virtual host must be configured with at least one host name.")
       }
 
@@ -145,7 +145,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
           getKeyDone.run
         }
 
-        if( config.purgeOnStartup ) {
+        if( config.purge_on_startup ) {
           storeStartupDone.name = "store purge"
           store.purge {
             storeStartupDone.run
@@ -221,7 +221,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
       cb(null)
     } else {
       var queue = queues.get(destination.getName);
-      if( queue==null && config.autoCreateQueues ) {
+      if( queue==null && config.auto_create_queues ) {
         addQueue(destination)(cb)
       } else  {
         cb(queue)

@@ -61,8 +61,8 @@ object StompBroker {
         rc.hosts.add("localhost:9160")
         rc
     }
-    broker.config.virtualHosts.get(0).store = store
-    broker.config.virtualHosts.get(0).purgeOnStartup = purge
+    broker.config.virtual_hosts.get(0).store = store
+    broker.config.virtual_hosts.get(0).purge_on_startup = purge
 
 
 

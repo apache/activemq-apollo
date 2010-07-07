@@ -71,13 +71,13 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       val result = new BrokerStatusDTO
 
       result.id = broker.id
-      result.currentTime = System.currentTimeMillis
+      result.current_time = System.currentTimeMillis
       result.state = broker.serviceState.toString
-      result.stateSince - broker.serviceState.since
+      result.state_since - broker.serviceState.since
       result.config = broker.config
 
       broker.virtualHosts.values.foreach{ host=>
-        result.virtualHosts.add( host.id )
+        result.virtual_hosts.add( host.id )
       }
 
       broker.connectors.foreach{ c=>
@@ -97,7 +97,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
   @GET @Path("virtual-hosts")
   def virtualHosts :Array[jl.Long] = {
-    val list: List[jl.Long] = get.virtualHosts
+    val list: List[jl.Long] = get.virtual_hosts
     list.toArray(new Array[jl.Long](list.size))
   }
 
@@ -107,13 +107,9 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       val result = new VirtualHostStatusDTO
       result.id = virtualHost.id
       result.state = virtualHost.serviceState.toString
-      result.stateSince = virtualHost.serviceState.since
+      result.state_since = virtualHost.serviceState.since
       result.config = virtualHost.config
 
-
-      if( virtualHost.store != null ) {
-        result.storeType = virtualHost.store.storeType
-      }
       virtualHost.router.destinations.valuesIterator.foreach { node=>
         val summary = new DestinationSummaryDTO
         summary.id = node.id
@@ -121,8 +117,25 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
         summary.domain = node.destination.getDomain.toString
         result.destinations.add(summary)
       }
-      cb(Some(result))
+
+      if( virtualHost.store != null ) {
+        virtualHost.store.storeStatusDTO { x=>
+          result.store = x
+          cb(Some(result))
+        }
+      } else {
+        cb(Some(result))
+      }
     }
+  }
+
+  @GET @Path("virtual-hosts/{id}/store")
+  def store(@PathParam("id") id : Long):StoreStatusDTO = {
+    val rc =  virtualHost(id).store
+    if( rc == null ) {
+      result(NOT_FOUND)
+    }
+    rc
   }
 
   @GET @Path("virtual-hosts/{id}/destinations/{dest}")
@@ -154,22 +167,22 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
             val result = new QueueStatusDTO
             result.id = q.id
-            result.capacityUsed = q.capacity_used
+            result.capacity_used = q.capacity_used
             result.capacity = q.capacity
 
-            result.enqueueItemCounter = q.enqueue_item_counter
-            result.dequeueItemCounter = q.dequeue_item_counter
-            result.enqueueSizeCounter = q.enqueue_size_counter
-            result.dequeueSizeCounter = q.dequeue_size_counter
-            result.nackItemCounter = q.nack_item_counter
-            result.nackSizeCounter = q.nack_size_counter
+            result.enqueue_item_counter = q.enqueue_item_counter
+            result.dequeue_item_counter = q.dequeue_item_counter
+            result.enqueue_size_counter = q.enqueue_size_counter
+            result.dequeue_size_counter = q.dequeue_size_counter
+            result.nack_item_counter = q.nack_item_counter
+            result.nack_size_counter = q.nack_size_counter
 
-            result.queueSize = q.queue_size
-            result.queueItems = q.queue_items
+            result.queue_size = q.queue_size
+            result.queue_items = q.queue_items
 
-            result.loadingSize = q.loading_size
-            result.flushingSize = q.flushing_size
-            result.flushedItems = q.flushed_items
+            result.loading_size = q.loading_size
+            result.flushing_size = q.flushing_size
+            result.flushed_items = q.flushed_items
 
             if( entries ) {
               var cur = q.head_entry
@@ -179,8 +192,8 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
                 e.seq = cur.seq
                 e.count = cur.count
                 e.size = cur.size
-                e.consumerCount = cur.parked.size
-                e.prefetchCount = cur.prefetched
+                e.consumer_count = cur.parked.size
+                e.prefetch_count = cur.prefetched
                 e.state = cur.label
 
                 result.entries.add(e)
@@ -218,7 +231,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
           val result = new ConnectorStatusDTO
           result.id = connector.id
           result.state = connector.serviceState.toString
-          result.stateSince = connector.serviceState.since
+          result.state_since = connector.serviceState.since
           result.config = connector.config
 
           result.accepted = connector.accept_counter.get
@@ -255,14 +268,14 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
             val result = new ConnectionStatusDTO
             result.id = connection.id
             result.state = connection.serviceState.toString
-            result.stateSince = connection.serviceState.since
+            result.state_since = connection.serviceState.since
             result.protocol = connection.protocol
             result.transport = connection.transport.getTypeId
-            result.remoteAddress = connection.transport.getRemoteAddress
+            result.remote_address = connection.transport.getRemoteAddress
             val wf = connection.transport.getWireformat
             if( wf!=null ) {
-              result.writeCounter = wf.getWriteCounter
-              result.readCounter = wf.getReadCounter
+              result.write_counter = wf.getWriteCounter
+              result.read_counter = wf.getReadCounter
             }
             cb(Some(result))
           }

@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicLong
 import collection.mutable.ListBuffer
 import java.util.HashMap
 import org.apache.activemq.apollo.broker.{Logging, Log, BaseService}
-import org.apache.activemq.apollo.dto.{CassandraStoreDTO, StoreDTO}
 import collection.{JavaConversions, Seq}
 import org.apache.activemq.apollo.broker.{Reporting, ReporterLevel, Reporter}
 import com.shorrockin.cascal.utils.Conversions._
@@ -32,6 +31,7 @@ import ReporterLevel._
 import java.util.concurrent._
 import org.apache.activemq.apollo.util.{TimeCounter, IntCounter}
 import org.apache.activemq.apollo.store._
+import org.apache.activemq.apollo.dto.{StoreStatusDTO, CassandraStoreDTO, StoreDTO}
 
 object CassandraStore extends Log {
 
@@ -80,7 +80,12 @@ class CassandraStore extends Store with BaseService with Logging {
   def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[CassandraStoreDTO], reporter)
 
 
-  def storeType = "cassandra"
+  def storeStatusDTO(callback:(StoreStatusDTO)=>Unit) = dispatchQueue {
+    val rc = new StoreStatusDTO
+    rc.state = serviceState.toString
+    rc.state_since = serviceState.since
+    callback(rc)
+  }
 
   def configure(config: CassandraStoreDTO, reporter: Reporter) = {
     if ( CassandraStore.validate(config, reporter) < ERROR ) {
@@ -380,10 +385,10 @@ class CassandraStore extends Store with BaseService with Logging {
         }
       }
 
-      if( !uow.completeListeners.isEmpty || config.flushDelay <= 0 ) {
+      if( !uow.completeListeners.isEmpty || config.flush_delay <= 0 ) {
         flush(uow_id)
       } else {
-        dispatchQueue.dispatchAfter(config.flushDelay, TimeUnit.MILLISECONDS, ^{flush(uow_id)})
+        dispatchQueue.dispatchAfter(config.flush_delay, TimeUnit.MILLISECONDS, ^{flush(uow_id)})
       }
 
     }

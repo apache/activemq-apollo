@@ -16,25 +16,25 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="id")
+@XmlRootElement(name="hawtdb-store-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class LongIdDTO {
+public class HawtDBStoreStatusDTO extends StoreStatusDTO {
 
-    /**
-     * A unique id of the object within it's container
-     */
-	@XmlAttribute
-	public long id;
+    @XmlElement(name="journal-append-latency")
+    public TimeMetricDTO journal_append_latency;
 
+    @XmlElement(name="index-update-latency")
+    public TimeMetricDTO index_update_latency;
+
+    @XmlElement(name="message-load-batch-size")
+    public IntMetricDTO message_load_batch_size;
 
 }

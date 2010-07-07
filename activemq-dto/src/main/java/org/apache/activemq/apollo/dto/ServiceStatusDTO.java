@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
@@ -32,16 +30,15 @@ public class ServiceStatusDTO extends LongIdDTO {
 
     /**
      * The state of the service.
+	 * @XmlAttribute
      */
-    @JsonProperty
-	@XmlAttribute
+    @XmlAttribute
 	public String state;
 
     /**
      * Since when has the broker in in this state?  In milliseconds since the epoch. 
      */
-    @JsonProperty("state_since")
 	@XmlAttribute(name="state-since")
-	public long stateSince;
+	public long state_since;
 
 }

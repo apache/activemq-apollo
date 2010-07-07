@@ -126,7 +126,7 @@ object Broker extends Log {
     rc.id = "default"
     rc.enabled = true
     rc.notes = "A default configuration"
-    rc.virtualHosts.add(VirtualHost.defaultConfig)
+    rc.virtual_hosts.add(VirtualHost.defaultConfig)
     rc.connectors.add(Connector.defaultConfig)
     rc.basedir = "./activemq-data/default"
     rc
@@ -140,14 +140,14 @@ object Broker extends Log {
       if( empty(config.id) ) {
         error("Broker id must be specified.")
       }
-      if( config.virtualHosts.isEmpty ) {
+      if( config.virtual_hosts.isEmpty ) {
         error("Broker must define at least one virtual host.")
       }
       if( empty(config.basedir) ) {
         error("Broker basedir must be defined.")
       }
 
-      for (host <- config.virtualHosts ) {
+      for (host <- config.virtual_hosts ) {
         result |= VirtualHost.validate(host, reporter)
       }
       for (connector <- config.connectors ) {
@@ -214,7 +214,7 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
     {
       dataDirectory = new File(config.basedir)
       defaultVirtualHost = null
-      for (c <- config.virtualHosts) {
+      for (c <- config.virtual_hosts) {
         val host = new VirtualHost(this, virtual_host_id_counter.incrementAndGet)
         host.configure(c, this)
         virtualHosts += ascii(c.id)-> host

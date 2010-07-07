@@ -97,13 +97,13 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
   private def directory = config.directory
 
-  private def journalMaxFileLength = config.journalLogSize
+  private def journalMaxFileLength = config.journal_log_size
 
-  private def checkpointInterval = config.indexFlushInterval
+  private def checkpointInterval = config.index_flush_interval
 
-  private def cleanupInterval = config.cleanupInterval
+  private def cleanupInterval = config.cleanup_interval
 
-  private def failIfDatabaseIsLocked = config.failIfLocked
+  private def failIfDatabaseIsLocked = config.fail_if_locked
 
   private def indexFile = indexFileFactory.getTxPageFile()
 
@@ -150,8 +150,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
       journal = new Journal()
       journal.setDirectory(directory)
-      journal.setMaxFileLength(config.journalLogSize)
-      journal.setMaxWriteBatchSize(config.journalBatchSize);
+      journal.setMaxFileLength(config.journal_log_size)
+      journal.setMaxWriteBatchSize(config.journal_batch_size);
       journal.setChecksum(true);
       journal.setListener( new JournalListener{
         def synced(writes: Array[JournalListener.Write]) = {
@@ -168,8 +168,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
         }
       })
 
-      if( config.archiveDirectory!=null ) {
-        journal.setDirectoryArchive(config.archiveDirectory)
+      if( config.archive_directory!=null ) {
+        journal.setDirectoryArchive(config.archive_directory)
         journal.setArchiveDataLogs(true)
       }
       journal.start
@@ -178,8 +178,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       indexFileFactory.setDrainOnClose(false)
       indexFileFactory.setSync(true)
       indexFileFactory.setUseWorkerThread(true)
-      indexFileFactory.setPageSize(config.indexPageSize)
-      indexFileFactory.setCacheSize(config.indexCacheSize);
+      indexFileFactory.setPageSize(config.index_page_size)
+      indexFileFactory.setCacheSize(config.index_cache_size);
 
       indexFileFactory.open
 
@@ -372,15 +372,18 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     rc
   }
 
-  val metric_load_from_index = new TimeCounter
-  val metric_load_from_journal = new TimeCounter
+  val metric_load_from_index_counter = new TimeCounter
+  var metric_load_from_index = metric_load_from_index_counter(false)
+
+  val metric_load_from_journal_counter = new TimeCounter
+  var metric_load_from_journal = metric_load_from_journal_counter(false)
 
   def loadMessages(requests: ListBuffer[(Long, (Option[MessageRecord])=>Unit)]) = {
     val locations = withTx { tx =>
       val helper = new TxHelper(tx)
       import helper._
       requests.flatMap { case (messageKey, callback)=>
-        val location = metric_load_from_index.time {
+        val location = metric_load_from_index_counter.time {
           messageKeyIndex.get(messageKey)
         }
         if( location==null ) {
@@ -394,7 +397,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     }
 
     locations.foreach { case (location, callback)=>
-      val addMessage = metric_load_from_journal.time {
+      val addMessage = metric_load_from_journal_counter.time {
         load(location, classOf[AddMessage.Getter])
       }
       callback( addMessage.map( x => toMessageRecord(x) ) )
@@ -403,7 +406,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   }
 
   def loadMessage(messageKey: Long): Option[MessageRecord] = {
-    metric_load_from_index.start { end =>
+    metric_load_from_index_counter.start { end =>
       withTx { tx =>
         val helper = new TxHelper(tx)
         import helper._
@@ -412,7 +415,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
         end()
 
         if (location != null) {
-          metric_load_from_journal.time {
+          metric_load_from_journal_counter.time {
             load(location, classOf[AddMessage.Getter]) match {
               case Some(x) =>
                 val messageRecord: MessageRecord = x
@@ -462,8 +465,11 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
   private def _store(update: TypeCreatable, onComplete: Runnable): Unit = _store(-1, update, onComplete)
 
-  val metric_journal_append = new TimeCounter
-  val metric_index_update = new TimeCounter
+  val metric_journal_append_counter = new TimeCounter
+  var metric_journal_append = metric_journal_append_counter(false)
+
+  val metric_index_update_counter = new TimeCounter
+  var metric_index_update = metric_index_update_counter(false)
 
   /**
    * All updated are are funneled through this method. The updates are logged to
@@ -482,7 +488,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
     val buffer = baos.toBuffer()
     append(buffer) { (helper, location) =>
-      metric_index_update.time {
+      metric_index_update_counter.time {
         executeStore(helper, location, batch, update, onComplete)
       }
     }
@@ -636,7 +642,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   /////////////////////////////////////////////////////////////////////
 
   private def append(data: Buffer)(cb: (TxHelper, Location) => List[Runnable]): Unit = {
-    metric_journal_append.start { end =>
+    metric_journal_append_counter.start { end =>
       def cbintercept(tx:TxHelper,location:Location) = {
         end()
         cb(tx, location)
@@ -934,7 +940,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
         }
       }
     }
-    dispatchQueue.dispatchAfter(config.indexFlushInterval, TimeUnit.MILLISECONDS, ^ {try_flush})
+    dispatchQueue.dispatchAfter(config.index_flush_interval, TimeUnit.MILLISECONDS, ^ {try_flush})
   }
 
   def flush() = {
@@ -957,7 +963,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
         }
       }
     }
-    dispatchQueue.dispatchAfter(config.cleanupInterval, TimeUnit.MILLISECONDS, ^ {try_cleanup})
+    dispatchQueue.dispatchAfter(config.cleanup_interval, TimeUnit.MILLISECONDS, ^ {try_cleanup})
   }
 
   /**

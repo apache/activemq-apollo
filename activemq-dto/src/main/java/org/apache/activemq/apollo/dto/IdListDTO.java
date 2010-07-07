@@ -35,8 +35,7 @@ public class IdListDTO {
     /**
      * A list of ids.
      */
-    @JsonProperty("ids")
-    @XmlElement
+    @XmlElement(name="id")
     public List<String> ids = new ArrayList<String>();
 
 }

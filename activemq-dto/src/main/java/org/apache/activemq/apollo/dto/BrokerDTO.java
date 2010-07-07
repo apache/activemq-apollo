@@ -44,9 +44,8 @@ public class BrokerDTO extends ServiceDTO<String> {
     /**
      * Used to track who last modified the configuration.
      */
-    @JsonProperty("modified_by")
     @XmlAttribute(name="modified-by")
-    public String modifiedBy;
+    public String modified_by;
 
     /**
      * Used to store any configuration notes.
@@ -58,9 +57,8 @@ public class BrokerDTO extends ServiceDTO<String> {
     /**
      * A broker can service many virtual hosts.
      */
-    @JsonProperty("virtual_hosts")
     @XmlElement(name="virtual-host")
-    public List<VirtualHostDTO> virtualHosts = new ArrayList<VirtualHostDTO>();
+    public List<VirtualHostDTO> virtual_hosts = new ArrayList<VirtualHostDTO>();
 
     /**
      * A broker accepts connections via it's configured connectors.

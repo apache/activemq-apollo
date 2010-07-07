@@ -20,7 +20,6 @@ import org.fusesource.hawtdispatch.BaseRetained
 import java.util.concurrent.atomic.AtomicLong
 import collection.mutable.ListBuffer
 import java.util.HashMap
-import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, StoreDTO}
 import collection.{JavaConversions, Seq}
 import org.fusesource.hawtdispatch.ScalaDispatch._
 import org.apache.activemq.apollo.broker._
@@ -28,8 +27,9 @@ import java.io.File
 import ReporterLevel._
 import java.util.concurrent._
 import org.apache.activemq.apollo.store._
-import org.apache.activemq.apollo.util.{IntMetricCounter, TimeCounter, IntCounter}
 import org.apache.activemq.broker.store.{StoreUOW, Store}
+import org.apache.activemq.apollo.dto._
+import org.apache.activemq.apollo.util._
 
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
@@ -79,8 +79,6 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
 
   def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[HawtDBStoreDTO], reporter)
 
-  def storeType = "hawtdb"
-
   def configure(config: HawtDBStoreDTO, reporter: Reporter) = {
     if ( HawtDBStore.validate(config, reporter) < ERROR ) {
       if( serviceState.isStarted ) {
@@ -101,7 +99,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
       }
     })
     client.config = config
-    schedualDisplayStats
+    poll_stats
     executor_pool {
       client.start(^{
         next_msg_key.set( client.rootBuffer.getLastMessageKey.longValue +1 )
@@ -184,7 +182,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
 
 
   def loadMessage(messageKey: Long)(callback: (Option[MessageRecord]) => Unit) = {
-    message_load_latency.start { end=>
+    message_load_latency_counter.start { end=>
       load_source.merge((messageKey, { (result)=>
         end()
         callback(result)
@@ -194,7 +192,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
 
   def drain_loads = {
     var data = load_source.getData
-    message_load_batch_size += data.size
+    message_load_batch_size_counter += data.size
     executor_pool ^{
       client.loadMessages(data)
     }
@@ -262,7 +260,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
 
     var delayable_actions = 0
 
-    def delayable = !disableDelay && delayable_actions>0 && config.flushDelay>=0
+    def delayable = !disableDelay && delayable_actions>0 && config.flush_delay>=0
 
     def rm(msg:Long) = {
       actions -= msg
@@ -327,7 +325,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     }
 
     def onPerformed() = this.synchronized {
-      commit_latency += System.nanoTime-dispose_start
+      commit_latency_counter += System.nanoTime-dispose_start
       completeListeners.foreach { x=>
         x.run
       }
@@ -340,9 +338,14 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   var metric_flushed_message_counter:Long = 0
   var metric_flushed_enqueue_counter:Long = 0
 
-  val commit_latency = new TimeCounter
-  val message_load_batch_size = new IntMetricCounter
-  val message_load_latency = new TimeCounter
+  val commit_latency_counter = new TimeCounter
+  var commit_latency = commit_latency_counter(false)
+
+  val message_load_latency_counter = new TimeCounter
+  var message_load_latency = message_load_latency_counter(false)
+
+  val message_load_batch_size_counter = new IntMetricCounter
+  var message_load_batch_size = message_load_batch_size_counter(false)
 
   var canceled_add_message:Long = 0
   var canceled_enqueue:Long = 0
@@ -360,49 +363,62 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
 
   var next_batch_id = new IntCounter(1)
 
-  def schedualDisplayStats:Unit = {
-    val st = System.nanoTime
-    val ss = (metric_canceled_message_counter, metric_canceled_enqueue_counter, metric_flushed_message_counter, metric_flushed_enqueue_counter)
+  implicit def toTimeMetricDTO( m: TimeMetric) = {
+    val rc = new TimeMetricDTO()
+    rc.count = m.count
+    rc.max = m.max
+    rc.min = m.min
+    rc.total = m.total
+    rc
+  }
+
+  implicit def toIntMetricDTO( m: IntMetric) = {
+    val rc = new IntMetricDTO()
+    rc.count = m.count
+    rc.max = m.max
+    rc.min = m.min
+    rc.total = m.total
+    rc
+  }
+
+  def storeStatusDTO(callback:(StoreStatusDTO)=>Unit) = dispatchQueue {
+    val rc = new HawtDBStoreStatusDTO
+
+    rc.state = serviceState.toString
+    rc.state_since = serviceState.since
+
+    rc.flush_latency = flush_latency
+    rc.message_load_latency = message_load_latency
+    rc.message_load_batch_size = message_load_batch_size
+
+    rc.journal_append_latency = client.metric_journal_append
+    rc.index_update_latency = client.metric_index_update
+
+    rc.canceled_message_counter = metric_canceled_message_counter
+    rc.canceled_enqueue_counter = metric_canceled_enqueue_counter
+    rc.flushed_message_counter = metric_flushed_message_counter
+    rc.flushed_enqueue_counter = metric_flushed_enqueue_counter
+
+    callback(rc)
+  }
+
+
+  def poll_stats:Unit = {
     def displayStats = {
       if( serviceState.isStarted ) {
-        val et = System.nanoTime
-        val es = (metric_canceled_message_counter, metric_canceled_enqueue_counter, metric_flushed_message_counter, metric_flushed_enqueue_counter)
-        def rate(x:Long, y:Long):Float = ((y-x)*1000.0f)/TimeUnit.NANOSECONDS.toMillis(et-st)
 
-        val m1 = rate(ss._1,es._1)
-        val m2 = rate(ss._2,es._2)
-        val m3 = rate(ss._3,es._3)
-        val m4 = rate(ss._4,es._4)
+        flush_latency = flush_latency_counter(true)
+        message_load_latency = message_load_latency_counter(true)
+        client.metric_journal_append = client.metric_journal_append_counter(true)
+        client.metric_index_update = client.metric_index_update_counter(true)
+        commit_latency = commit_latency_counter(true)
+        message_load_batch_size =  message_load_batch_size_counter(true)
 
-        if( m1>0f || m2>0f || m3>0f || m4>0f ) {
-          info("metrics: cancled: { messages: %,.3f, enqeues: %,.3f }, flushed: { messages: %,.3f, enqeues: %,.3f }",
-            m1, m2, m3, m4 )
-        }
-
-        def displayTime(name:String, counter:TimeCounter) = {
-          var t = counter.apply(true)
-          if( t.count > 0 ) {
-            info("%s latency in ms: avg: %,.3f, min: %,.3f, max: %,.3f", name, t.avgTime(TimeUnit.MILLISECONDS), t.minTime(TimeUnit.MILLISECONDS), t.maxTime(TimeUnit.MILLISECONDS))
-          }
-        }
-        def displayInt(name:String, counter:IntMetricCounter) = {
-          var t = counter.apply(true)
-          if( t.count > 0 ) {
-            info("%s: avg: %,.3f, min: %d, max: %d", name, t.avg, t.min, t.max )
-          }
-        }
-
-        displayTime("commit", commit_latency)
-        displayTime("store", store_latency)
-        displayTime("message load", message_load_latency)
-        displayTime("journal append", client.metric_journal_append)
-        displayTime("index update", client.metric_index_update)
-        displayInt("load batch size", message_load_batch_size)
-
-        schedualDisplayStats
+        poll_stats
       }
     }
-    dispatchQueue.dispatchAfter(5, TimeUnit.SECONDS, ^{ displayStats })
+    
+    dispatchQueue.dispatchAfter(1, TimeUnit.SECONDS, ^{ displayStats })
   }
 
   def drain_uows = {
@@ -455,7 +471,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
 
       val batch_id = uow.uow_id
       if( uow.delayable ) {
-        dispatchQueue.dispatchAfter(config.flushDelay, TimeUnit.MILLISECONDS, ^{flush(batch_id)})
+        dispatchQueue.dispatchAfter(config.flush_delay, TimeUnit.MILLISECONDS, ^{flush(batch_id)})
       } else {
         flush(batch_id)
       }
@@ -471,7 +487,8 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   flush_source.setEventHandler(^{drain_flushes});
   flush_source.resume
 
-  val store_latency = new TimeCounter
+  val flush_latency_counter = new TimeCounter
+  var flush_latency = flush_latency_counter(false)
 
   def drain_flushes:Unit = {
 
@@ -493,7 +510,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     }
 
     if( !uows.isEmpty ) {
-      store_latency.start { end=>
+      flush_latency_counter.start { end=>
         executor_pool {
           client.store(uows, ^{
             dispatchQueue {

@@ -29,11 +29,9 @@ import javax.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class VirtualHostDTO extends ServiceDTO<String> {
 
-    @JsonProperty("host_names")
     @XmlElement(name="host-name", required=true)
-    public ArrayList<String> hostNames = new ArrayList<String>();
+    public ArrayList<String> host_names = new ArrayList<String>();
 
-    @JsonProperty
     @XmlElementRef
     public StoreDTO store;
 
@@ -43,12 +41,11 @@ public class VirtualHostDTO extends ServiceDTO<String> {
      */
     @JsonProperty("auto_create_queues")
     @XmlAttribute(name="auto-create-queues")
-    public boolean autoCreateQueues = true;
+    public boolean auto_create_queues = true;
 
     /**
      * Should queues be purged on startup?
      */
-    @JsonProperty("purge_on_startup")
     @XmlAttribute(name="purge-on-startup")
-    public boolean purgeOnStartup = false;
+    public boolean purge_on_startup = false;
 }

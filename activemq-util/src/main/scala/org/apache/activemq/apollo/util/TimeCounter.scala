@@ -31,7 +31,11 @@ class TimeCounter extends MetricProducer[TimeMetric] {
   private var count = 0
 
   def apply(reset: Boolean):TimeMetric = {
-    val rc = TimeMetric(count, total, min, max)
+    val rc = if(count==0) {
+      TimeMetric(0, 0, 0, 0)
+    } else {
+      TimeMetric(count, total, min, max)
+    }
     if (reset) {
       clear()
     }

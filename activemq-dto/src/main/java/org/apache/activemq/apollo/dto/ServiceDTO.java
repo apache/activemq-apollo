@@ -33,7 +33,6 @@ public class ServiceDTO<ID> extends StringIdDTO {
     /**
      * Should this service be running?
      */
-    @JsonProperty
     @XmlAttribute
     public boolean enabled = true;
 

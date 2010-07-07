@@ -18,8 +18,8 @@ package org.apache.activemq.broker.store
 
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.broker.Reporter
-import org.apache.activemq.apollo.dto.StoreDTO
 import org.apache.activemq.apollo.ServiceTrait
+import org.apache.activemq.apollo.dto.{StoreStatusDTO, StoreDTO}
 
 /**
  * <p>
@@ -31,7 +31,7 @@ import org.apache.activemq.apollo.ServiceTrait
  */
 trait Store extends ServiceTrait {
 
-  def storeType:String
+  def storeStatusDTO(callback:(StoreStatusDTO)=>Unit)
 
   /**
    * Creates a store uow which is used to perform persistent

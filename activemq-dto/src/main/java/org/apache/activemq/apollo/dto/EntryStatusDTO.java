@@ -36,28 +36,22 @@ public class EntryStatusDTO {
     /**
      * A unique id of the object within it's container
      */
-    @JsonProperty
 	@XmlAttribute
 	public long seq;
 
-    @JsonProperty
     @XmlAttribute
     public int count;
 
-    @JsonProperty
     @XmlAttribute
     public int size;
 
-    @JsonProperty
     @XmlAttribute
     public String state;
 
-    @JsonProperty("consumer_count")
     @XmlAttribute(name = "consumer-count")
-    public int consumerCount;
+    public int consumer_count;
 
-    @JsonProperty("prefetch_count")
     @XmlAttribute(name = "prefetch-count")
-    public int prefetchCount;
+    public int prefetch_count;
 
 }

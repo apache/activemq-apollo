@@ -22,19 +22,46 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.concurrent.TimeUnit;
 
 /**
+ *
+ *
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="id")
+@XmlRootElement(name = "int-metric")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class LongIdDTO {
+public class IntMetricDTO {
 
     /**
-     * A unique id of the object within it's container
+     * The number of events
      */
-	@XmlAttribute
-	public long id;
+    @XmlAttribute
+    public int count;
+
+    /**
+     * The total amount added
+     */
+    @XmlAttribute
+    public int total;
+
+    /**
+     * The maximum amount added in an event
+     */
+    @XmlAttribute
+    public int max;
+
+    /**
+     * The minimum amount added in an event
+     */
+    @XmlAttribute
+    public int min;
+
+
+    public float avg() {
+        return count==0 ? 0f : ((float)total) / count;
+    }
 
 
 }

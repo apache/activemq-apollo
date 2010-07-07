@@ -38,9 +38,8 @@ public abstract class StoreDTO {
      * be invalidated shortly thereafter by another unit of work which
      * would negate the operation.
      */
-    @JsonProperty("flush_delay")
     @XmlAttribute(name="flush-delay", required=false)
-    public long flushDelay = 100;
+    public long flush_delay = 100;
 
 
 }

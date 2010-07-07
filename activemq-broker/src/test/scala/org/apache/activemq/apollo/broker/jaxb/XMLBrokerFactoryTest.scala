@@ -47,7 +47,7 @@ class XMLBrokerFactoryTest extends FunSuiteSupport {
     }
 
     expect(2) {
-      broker.config.virtualHosts.size()
+      broker.config.virtual_hosts.size()
     }
 
     //		Assert.assertNotNull(broker.defaultVirtualHost().getDatabase())

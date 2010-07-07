@@ -39,10 +39,10 @@ public class XmlEncoderDecoderTest {
         assertNotNull(dto);
         assertEquals("default", dto.id);
         assertEquals(true, dto.enabled);
-        assertEquals("vh-local", dto.virtualHosts.get(0).id);
-        assertEquals(true, dto.virtualHosts.get(0).enabled);
-        assertEquals("localhost", dto.virtualHosts.get(0).hostNames.get(0));
-        assertEquals("example.com", dto.virtualHosts.get(0).hostNames.get(1));
+        assertEquals("vh-local", dto.virtual_hosts.get(0).id);
+        assertEquals(true, dto.virtual_hosts.get(0).enabled);
+        assertEquals("localhost", dto.virtual_hosts.get(0).host_names.get(0));
+        assertEquals("example.com", dto.virtual_hosts.get(0).host_names.get(1));
     }
 
 
@@ -55,9 +55,9 @@ public class XmlEncoderDecoderTest {
         VirtualHostDTO host = new VirtualHostDTO();
         host.id = "vh-local";
         host.enabled = true;
-        host.hostNames.add("localhost");
-        host.hostNames.add("example.com");
-        broker.virtualHosts.add(host);
+        host.host_names.add("localhost");
+        host.host_names.add("example.com");
+        broker.virtual_hosts.add(host);
 
         ConnectorDTO connector = new ConnectorDTO();
         connector.id = "port-61616";

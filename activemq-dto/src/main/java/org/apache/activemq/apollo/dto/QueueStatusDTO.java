@@ -35,66 +35,51 @@ public class QueueStatusDTO extends LongIdDTO {
     /**
      * A unique id of the object within it's container
      */
-    @JsonProperty
 	@XmlAttribute
 	public long id;
 
-    @JsonProperty("enqueue_item_counter")
     @XmlAttribute(name="enqueue-item-counter")
-    public long enqueueItemCounter;
+    public long enqueue_item_counter;
 
-    @JsonProperty("dequeue_item_counter")
     @XmlAttribute(name="dequeue-item-counter")
-    public long dequeueItemCounter;
+    public long dequeue_item_counter;
 
-    @JsonProperty("enqueue_size_counter")
     @XmlAttribute(name="enqueue-size-counter")
-    public long enqueueSizeCounter;
+    public long enqueue_size_counter;
 
-    @JsonProperty("dequeue_size_counter")
     @XmlAttribute(name="dequeue-size-counter")
-    public long dequeueSizeCounter;
+    public long dequeue_size_counter;
 
-    @JsonProperty("nack_item_counter")
     @XmlAttribute(name="nack-item-counter")
-    public long nackItemCounter;
+    public long nack_item_counter;
 
-    @JsonProperty("nack_size_counter")
     @XmlAttribute(name="nack-size-counter")
-    public long nackSizeCounter;
+    public long nack_size_counter;
 
-    @JsonProperty("queue_size")
     @XmlAttribute(name="queue-size")
-    public long queueSize;
+    public long queue_size;
 
-    @JsonProperty("queue_items")
     @XmlAttribute(name="queue-items")
-    public long queueItems;
+    public long queue_items;
 
-    @JsonProperty("loading_size")
     @XmlAttribute(name="loading-size")
-    public int loadingSize;
+    public int loading_size;
 
-    @JsonProperty("flushing_size")
     @XmlAttribute(name="flushing-size")
-    public int flushingSize;
+    public int flushing_size;
 
-    @JsonProperty("flushing_items")
     @XmlAttribute(name="flushed-items")
-    public int flushedItems;
+    public int flushed_items;
 
-    @JsonProperty("capacity_used")
     @XmlAttribute(name="capacity-used")
-    public int capacityUsed;
+    public int capacity_used;
 
-    @JsonProperty
     @XmlAttribute
     public int capacity;
 
     /**
      * Status of the entries in the queue
      */
-    @JsonProperty("entries")
     @XmlElement(name="entry")
     public List<EntryStatusDTO> entries = new ArrayList<EntryStatusDTO>();
 

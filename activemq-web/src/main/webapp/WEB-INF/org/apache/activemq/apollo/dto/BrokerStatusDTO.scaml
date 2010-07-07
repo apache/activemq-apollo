@@ -2,11 +2,11 @@
 - val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
 - import helper._
 
-%p state: #{state} since: #{ new java.util.Date(stateSince) }
+%p state: #{state} for #{ uptime(state_since) }
 
 %h2 Virtual Hosts
 %ul
-  - for( x <- virtualHosts )
+  - for( x <- virtual_hosts )
     %li
       %a(href="runtime/virtual-hosts/#{x}") #{x}
 

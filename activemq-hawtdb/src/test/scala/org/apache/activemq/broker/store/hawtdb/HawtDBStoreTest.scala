@@ -26,7 +26,7 @@ class HawtDBStoreTest extends StoreFunSuiteSupport {
 
   def createStore(flushDelay:Long):Store = {
     val rc = new HawtDBStore
-    rc.config.flushDelay = flushDelay
+    rc.config.flush_delay = flushDelay
     rc
   }
 

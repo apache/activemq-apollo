@@ -16,22 +16,19 @@
  */
 package org.apache.activemq.transport.tcp;
 
-import org.apache.activemq.apollo.util.BaseService;
+import org.apache.activemq.apollo.util.JavaBaseService;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.DispatchSource;
 import org.fusesource.hawtdispatch.Retained;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.net.*;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
@@ -42,7 +39,7 @@ import java.util.Map;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class TcpTransport extends BaseService implements Transport {
+public class TcpTransport extends JavaBaseService implements Transport {
 
     private static final Log LOG = LogFactory.getLog(TcpTransport.class);
 

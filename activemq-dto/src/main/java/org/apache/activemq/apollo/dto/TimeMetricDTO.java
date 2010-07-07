@@ -22,19 +22,59 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.concurrent.TimeUnit;
 
 /**
+ *
+ *
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="id")
+@XmlRootElement(name = "time-metric")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class LongIdDTO {
+public class TimeMetricDTO {
 
     /**
-     * A unique id of the object within it's container
+     * The number of timed events
      */
-	@XmlAttribute
-	public long id;
+    @XmlAttribute
+    public long count;
+
+    /**
+     * The total time in nanoseconds
+     */
+    @XmlAttribute
+    public long total;
+
+    /**
+     * The maximum time in nanoseconds spent in an event
+     */
+    @XmlAttribute
+    public long max;
+
+    /**
+     * The minimum time in nanoseconds spent in an event
+     */
+    @XmlAttribute
+    public long min;
 
 
+    public float max(TimeUnit unit) {
+        return ((float)max) / unit.toNanos(1);
+    }
+    public float min(TimeUnit unit) {
+        return ((float)min) / unit.toNanos(1);
+    }
+    public float total(TimeUnit unit) {
+        return ((float)total) / unit.toNanos(1);
+    }
+
+    public float avg(TimeUnit unit) {
+        return count==0 ? 0f : total(unit) / count;
+    }
+
+    public float frequency(TimeUnit unit) {
+        return ((float)1) / avg(unit);
+    }
+    
 }

@@ -33,16 +33,14 @@ import java.util.List;
 public class VirtualHostStatusDTO extends ServiceStatusDTO {
 
     /**
-     * The type of store the virtual host is using.
+     * The status of the store
      */
-    @JsonProperty("store_type")
-    @XmlAttribute(name="store-type")
-    public String storeType;
+    @XmlElementRef
+    public StoreStatusDTO store;
 
     /**
      * Ids of all the destinations running on the broker
      */
-    @JsonProperty("destinations")
     @XmlElement(name="destination")
     public List<DestinationSummaryDTO> destinations = new ArrayList<DestinationSummaryDTO>();
 
@@ -50,7 +48,6 @@ public class VirtualHostStatusDTO extends ServiceStatusDTO {
     /**
      * The current running configuration of the object
      */
-    @JsonProperty
     @XmlElement
     public VirtualHostDTO config = null;
 

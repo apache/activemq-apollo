@@ -4,9 +4,12 @@
 
 %h1 Virtual Host: #{config.id}
 
-%p state: #{state} since: #{ new java.util.Date(stateSince) }
+%p state: #{state} for #{ uptime(state_since) }
 
-%p store type: #{storeType}
+- if ( store !=null )
+  %p
+    %a(href={ path("store") }) store
+
 
 %h2 Destinations
 %ul

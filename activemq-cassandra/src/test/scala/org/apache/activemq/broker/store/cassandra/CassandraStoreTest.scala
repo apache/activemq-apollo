@@ -25,7 +25,7 @@ class CassandraStoreTest extends StoreFunSuiteSupport with CassandraServerMixin 
 
   def createStore(flushDelay:Long):Store = {
     val rc = new CassandraStore
-    rc.config.flushDelay = flushDelay
+    rc.config.flush_delay = flushDelay
     rc
   }
 

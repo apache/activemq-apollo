@@ -74,7 +74,7 @@ class StompHawtDBPersistentBrokerPerfTest extends BasePersistentBrokerPerfSuppor
     val store = new HawtDBStoreDTO
     store.directory = new File(new File(testDataDir, getClass.getName), name)
 
-    rc.virtualHosts.get(0).store = store
+    rc.virtual_hosts.get(0).store = store
     rc
   }
 

@@ -6,26 +6,26 @@
 
 %h2 Current Size
 
-%p queue size: #{queueItems} messages
-%p queue size: #{queueSize} bytes
+%p queue size: #{queue_items} messages
+%p queue size: #{memory(queue_size)}
+%p memory used: #{ "%,.2f".format(capacity_used.toFloat*100.0/capacity) } (#{memory(capacity_used)}/#{memory(capacity)})
 
 %h2 Enqueue/Deqeueue Counters
 
-%p enqueued: #{enqueueItemCounter} messages
-%p enqueued: #{enqueueSizeCounter} bytes
+%p enqueued: #{enqueue_item_counter} messages
+%p enqueued: #{memory(enqueue_size_counter)}
 
-%p dequeued: #{dequeueItemCounter} messages
-%p dequeued: #{dequeueSizeCounter} bytes
+%p dequeued: #{dequeue_item_counter} messages
+%p dequeued: #{memory(dequeue_size_counter)}
 
-%p nacked: #{nackItemCounter} messages
-%p nacked: #{nackSizeCounter} bytes
+%p nacked: #{nack_item_counter} messages
+%p nacked: #{memory(nack_size_counter)}
 
 %h2 Memory Mangement
 
-%p memory usage: #{capacityUsed}/#{capacity} bytes ( #{ "%,.2f".format(capacityUsed.toFloat/capacity) } )
-%p loading from the store: #{loadingSize} bytes
-%p flushing out of memory: #{flushingSize} bytes
-%p holding : #{flushedItems} flushed message references
+%p loading from the store: #{memory(loading_size)}
+%p flushing out of memory: #{memory(flushing_size)}
+%p holding : #{flushed_items} flushed message references
 
 - if ( entries.isEmpty )
   %h2
@@ -50,6 +50,6 @@
         %td #{x.seq}
         %td #{x.count}
         %td #{x.size}
-        %td #{x.consumerCount}
-        %td #{x.prefetchCount}
+        %td #{x.consumer_count}
+        %td #{x.prefetch_count}
 

@@ -31,41 +31,32 @@ import java.io.File;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class HawtDBStoreDTO extends StoreDTO {
 
-    @JsonProperty
     @XmlAttribute
     public File directory;
 
-    @JsonProperty("archive_directory")
     @XmlAttribute(name="archive-directory")
-    public File archiveDirectory;
+    public File archive_directory;
 
-    @JsonProperty("index_flush_interval")
 	@XmlAttribute(name="index-flush-interval")
-	public long indexFlushInterval = 5 * 1000L;
+	public long index_flush_interval = 5 * 1000L;
 
-    @JsonProperty("cleanup_interval")
 	@XmlAttribute(name="cleanup-interval")
-	public long cleanupInterval = 30 * 1000L;
+	public long cleanup_interval = 30 * 1000L;
 
-    @JsonProperty("journal_log_size")
 	@XmlAttribute(name="journal-log-size")
-	public int journalLogSize = 1024*1024*64;
+	public int journal_log_size = 1024*1024*64;
 
-    @JsonProperty("journal_batch_size")
     @XmlAttribute(name="journal-batch-size")
-    public int journalBatchSize = 1024*256;
+    public int journal_batch_size = 1024*256;
 
-    @JsonProperty("index_cache_size")
     @XmlAttribute(name="index-cache-size")
-    public int indexCacheSize = 5000;
+    public int index_cache_size = 5000;
 
-    @JsonProperty("index_page_size")
     @XmlAttribute(name="index-page-size")
-    public short indexPageSize = 512;
+    public short index_page_size = 512;
 
-    @JsonProperty("fail_if_locked")
     @XmlAttribute(name="fail-if-locked")
-    public boolean failIfLocked = false;
+    public boolean fail_if_locked = false;
 
 
 }

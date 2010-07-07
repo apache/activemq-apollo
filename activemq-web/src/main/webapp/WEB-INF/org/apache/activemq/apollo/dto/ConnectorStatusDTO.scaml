@@ -4,7 +4,7 @@
 
 %h1 Connector: #{config.id}
 
-%p state: #{state} since: #{ new java.util.Date(stateSince) }
+%p state: #{state} for #{ uptime(state_since) }
 
 %p accepted connections: #{accepted}
 
