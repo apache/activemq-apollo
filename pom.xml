@@ -154,36 +154,30 @@
     <url>http://svn.apache.org/viewvc/activemq/sandbox/activemq-flow/</url>
   </scm>
 
-  <!-- for the hawtdispatch dep -->
+  <!-- For the dependencies that have not yet made it to central -->
   <repositories>
-     <repository>
-       <id>fusesource.snapshots</id>
-       <name>FuseSource Snapshot Repository</name>
-       <url>http://repo.fusesource.com/nexus/content/repositories/snapshots</url>
-       <snapshots>
-         <enabled>true</enabled>
-       </snapshots>
-       <releases>
-         <enabled>false</enabled>
-       </releases>
-     </repository>
-     <repository>
-       <id>java.net</id>
-       <url>http://download.java.net/maven/2</url>
-     </repository>
-     <repository>
-       <id>shorrockin</id>
-       <url>http://maven.shorrockin.com</url>
-     </repository>
-   </repositories>
-
-  <!-- This is only here since the activemq-protobuf plugin has not been released yet -->
-  <!--<pluginRepositories>-->
-    <!--<pluginRepository>-->
-      <!--<id>apache.snapshots</id>-->
-      <!--<url>https://repository.apache.org/content/repositories/snapshots/</url>-->
-    <!--</pluginRepository>-->
-  <!--</pluginRepositories>-->
+    <repository>
+      <id>fusesource.snapshots</id>
+      <name>FuseSource Snapshot Repository</name>
+      <url>http://repo.fusesource.com/nexus/content/repositories/snapshots</url>
+      <snapshots><enabled>true</enabled></snapshots>
+      <releases><enabled>true</enabled></releases>
+    </repository>
+    <repository>
+      <id>java.net</id>
+      <url>http://download.java.net/maven/2</url>
+    </repository>
+    <repository>
+      <id>shorrockin</id>
+      <url>http://maven.shorrockin.com</url>
+    </repository>
+    <repository>
+      <id>snapshots.scala-tools.org</id>
+      <url>http://scala-tools.org/repo-snapshots</url>
+      <snapshots><enabled>true</enabled></snapshots>
+      <releases><enabled>true</enabled></releases>
+    </repository>
+  </repositories>
 
   <dependencyManagement>
     <dependencies>
