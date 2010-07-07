@@ -22,13 +22,12 @@ import org.apache.activemq.apollo.dto.{XmlEncoderDecoder, ConnectorDTO, VirtualH
 import java.util.regex.Pattern
 import javax.xml.stream.{XMLOutputFactory, XMLInputFactory}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import org.apache.activemq.util.{Hasher, IOHelper}
 import java.util.concurrent.{TimeUnit, ExecutorService, Executors}
 import org.fusesource.hawtbuf.{ByteArrayInputStream, ByteArrayOutputStream}
-import org.apache.activemq.Service
 import javax.xml.bind.{Marshaller, JAXBContext}
 import java.io.{OutputStreamWriter, File}
 import XmlEncoderDecoder._
+import org.apache.activemq.apollo.util._
 
 object ConfigStore {
 

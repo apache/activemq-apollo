@@ -26,7 +26,7 @@ import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.OpenDataException;
 import javax.management.openmbean.TabularData;
 
-import org.apache.activemq.filter.FilterException;
+import org.apache.activemq.apollo.filter.FilterException;
 
 public interface DestinationViewMBean {
 

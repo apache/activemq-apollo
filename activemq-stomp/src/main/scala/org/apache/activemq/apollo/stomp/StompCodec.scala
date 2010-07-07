@@ -28,12 +28,11 @@ import _root_.scala.collection.JavaConversions._
 import StompFrameConstants._
 import java.io.{EOFException, DataOutput, DataInput, IOException}
 import java.nio.channels.{SocketChannel, WritableByteChannel, ReadableByteChannel}
-import org.apache.activemq.apollo.{DirectBuffer, DirectBufferPool}
 import org.apache.activemq.apollo.transport._
 import org.apache.activemq.apollo.store.MessageRecord
 import _root_.org.fusesource.hawtbuf._
 import Buffer._
-
+import org.apache.activemq.apollo.util._
 
 object StompCodec extends Log {
     val READ_BUFFFER_SIZE = 1024*64;

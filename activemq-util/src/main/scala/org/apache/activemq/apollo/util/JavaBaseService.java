@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.util;
 
-import org.apache.activemq.Service;
 import org.fusesource.hawtdispatch.DispatchQueue;
 
 import java.util.LinkedList;

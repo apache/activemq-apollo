@@ -28,7 +28,7 @@ import org.apache.activemq.util.IOHelper;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.apache.activemq.util.list.LinkedNode;
-import org.apache.activemq.util.list.LinkedNodeList;
+import org.apache.activemq.apollo.util.list.LinkedNodeList;
 
 /**
  * An optimized writer to do batch appends to a data file. This object is thread

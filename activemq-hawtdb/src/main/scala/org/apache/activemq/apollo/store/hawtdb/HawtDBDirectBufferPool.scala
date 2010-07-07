@@ -16,12 +16,13 @@
  */
 package org.apache.activemq.apollo.store.hawtdb
 
+import java.nio.ByteBuffer
+import java.io.File
+
 import org.fusesource.hawtdispatch.BaseRetained
 import org.fusesource.hawtdb.api.Paged.SliceType
-import org.apache.activemq.apollo.{DirectBuffer, DirectBufferPool}
-import java.nio.ByteBuffer
 import org.fusesource.hawtdb.api.PageFileFactory
-import java.io.File
+import org.apache.activemq.apollo.util.{DirectBuffer, DirectBufferPool}
 
 /**
  * <p>

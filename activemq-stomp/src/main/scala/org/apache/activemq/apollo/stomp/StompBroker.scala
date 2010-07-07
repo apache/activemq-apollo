@@ -16,9 +16,10 @@
  */
 package org.apache.activemq.apollo.stomp
 
-import org.apache.activemq.apollo.broker.{LoggingTracker, Broker}
+import org.apache.activemq.apollo.broker.Broker
 import java.io.File
 import org.apache.activemq.apollo.dto.{CassandraStoreDTO, HawtDBStoreDTO}
+import org.apache.activemq.apollo.util._
 
 /**
  */

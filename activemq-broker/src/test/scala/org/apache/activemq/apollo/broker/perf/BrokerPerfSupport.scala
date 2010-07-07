@@ -19,12 +19,10 @@ package org.apache.activemq.apollo.broker.perf
 import _root_.java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import _root_.java.lang.{String}
 
-import java.util.ArrayList
 import org.apache.activemq.apollo.broker._
 import org.scalatest._
 import java.io.{File, IOException}
-import org.apache.activemq.util.{IOHelper, ProcessSupport}
-import org.apache.activemq.metric.{Period, MetricAggregator, MetricCounter}
+import org.apache.activemq.apollo.util.metric.{Period, MetricAggregator, MetricCounter}
 import org.fusesource.hawtbuf.AsciiBuffer
 import collection.mutable.ListBuffer
 import java.net.URL
@@ -32,6 +30,7 @@ import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch.ScalaDispatch._
 import org.apache.activemq.apollo.dto.BrokerDTO
 import org.apache.activemq.apollo.transport.TransportFactory
+import org.apache.activemq.apollo.util._
 
 /**
  * 

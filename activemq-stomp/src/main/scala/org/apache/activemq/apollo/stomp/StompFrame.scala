@@ -17,12 +17,12 @@
 package org.apache.activemq.apollo.stomp
 
 import _root_.java.util.LinkedList
-import _root_.org.apache.activemq.filter.{Expression, Filterable}
+import _root_.org.apache.activemq.apollo.filter.{Expression, Filterable}
 import _root_.org.fusesource.hawtbuf._
 import collection.mutable.ListBuffer
 import java.lang.{String, Class}
 import org.apache.activemq.apollo.broker._
-import org.apache.activemq.apollo.DirectBuffer
+import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch.BaseRetained
 import java.io.{OutputStream, DataOutput}
 

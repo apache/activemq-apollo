@@ -16,8 +16,8 @@
  */
 package org.apache.activemq.apollo.transport;
 
-import org.apache.activemq.util.FactoryFinder;
-import org.apache.activemq.util.IOExceptionSupport;
+import org.apache.activemq.apollo.util.FactoryFinder;
+import org.apache.activemq.apollo.util.IOExceptionSupport;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;

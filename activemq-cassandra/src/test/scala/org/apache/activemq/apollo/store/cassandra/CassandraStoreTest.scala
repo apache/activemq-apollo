@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.store.cassandra
 
-import org.apache.activemq.broker.store.{Store, StoreFunSuiteSupport}
+import org.apache.activemq.apollo.store._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

@@ -23,7 +23,6 @@ import model.{AddQueue, AddQueueEntry, AddMessage}
 import org.apache.activemq.apollo.dto.HawtDBStoreDTO
 import java.io.File
 import java.io.IOException
-import org.apache.activemq.util.LockFile
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 import org.fusesource.hawtdb.internal.journal.{JournalListener, Journal, Location}
 import org.apache.activemq.apollo.store.hawtdb.model.Type._
@@ -34,12 +33,10 @@ import collection.mutable.{LinkedHashMap, HashMap, ListBuffer}
 import collection.JavaConversions
 import ju.{TreeSet, HashSet}
 
-import org.fusesource.hawtdb.api._
-import org.apache.activemq.apollo.broker.{DispatchLogging, Log, Logging, BaseService}
-import org.apache.activemq.apollo.util.TimeCounter
-import org.apache.activemq.apollo.store._
 import java.util.concurrent.TimeUnit
-
+import org.fusesource.hawtdb.api._
+import org.apache.activemq.apollo.store._
+import org.apache.activemq.apollo.util._
 
 object HawtDBClient extends Log {
   val BEGIN = -1

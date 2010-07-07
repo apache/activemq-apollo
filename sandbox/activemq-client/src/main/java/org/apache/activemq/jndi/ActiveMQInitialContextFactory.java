@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.jndi;
+package org.apache.activemq.apollo.util.jndi;
 
 import java.net.URISyntaxException;
 import java.util.ArrayList;

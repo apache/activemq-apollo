@@ -24,7 +24,7 @@ import java.util.Map;
 
 import javolution.io.Struct;
 
-import org.apache.activemq.metric.MetricCounter;
+import org.apache.activemq.apollo.util.metric.MetricCounter;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.apache.hawtdb.internal.Benchmarker.BenchmarkAction;

@@ -20,9 +20,7 @@ package org.apache.activemq.apollo.broker.path;
 import java.util.ArrayList;
 
 import org.apache.activemq.apollo.broker.Destination;
-import org.apache.activemq.filter.BooleanExpression;
-import org.apache.activemq.filter.FilterException;
-import org.apache.activemq.filter.Filterable;
+import org.apache.activemq.apollo.filter.FilterException;
 import org.fusesource.hawtbuf.AsciiBuffer;
 
 

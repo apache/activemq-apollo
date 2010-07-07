@@ -36,7 +36,7 @@ import javax.jms.TopicConnectionFactory;
 import javax.naming.Context;
 
 import org.apache.activemq.blob.BlobTransferPolicy;
-import org.apache.activemq.jndi.JNDIBaseStorable;
+import org.apache.activemq.apollo.util.jndi.JNDIBaseStorable;
 import org.apache.activemq.management.JMSStatsImpl;
 import org.apache.activemq.management.StatsCapable;
 import org.apache.activemq.management.StatsImpl;

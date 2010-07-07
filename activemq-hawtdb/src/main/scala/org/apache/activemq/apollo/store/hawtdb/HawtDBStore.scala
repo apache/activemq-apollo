@@ -20,16 +20,14 @@ import org.fusesource.hawtdispatch.BaseRetained
 import java.util.concurrent.atomic.AtomicLong
 import collection.mutable.ListBuffer
 import java.util.HashMap
-import collection.{JavaConversions, Seq}
+import collection.{Seq}
 import org.fusesource.hawtdispatch.ScalaDispatch._
-import org.apache.activemq.apollo.broker._
 import java.io.File
-import ReporterLevel._
 import java.util.concurrent._
-import org.apache.activemq.apollo.store._
-import org.apache.activemq.broker.store.{StoreUOW, Store}
 import org.apache.activemq.apollo.dto._
+import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
+import ReporterLevel._
 
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;

@@ -14,12 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store
+package org.apache.activemq.apollo.store
 
-import org.apache.activemq.apollo.store._
-import org.apache.activemq.apollo.broker.Reporter
-import org.apache.activemq.apollo.ServiceTrait
 import org.apache.activemq.apollo.dto.{StoreStatusDTO, StoreDTO}
+import org.apache.activemq.apollo.util._
+import ReporterLevel._
 
 /**
  * <p>

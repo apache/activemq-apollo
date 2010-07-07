@@ -21,7 +21,8 @@ import org.fusesource.scalate.guice.ScalateModule
 import javax.servlet.ServletContextEvent
 import java.io.File
 import com.google.inject.{Provides, Guice, Singleton}
-import org.apache.activemq.apollo.broker.{BrokerRegistry, LoggingTracker, Broker}
+import org.apache.activemq.apollo.broker.{BrokerRegistry, Broker}
+import org.apache.activemq.apollo.util._
 
 
 /**

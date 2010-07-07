@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.store.cassandra
 
-import org.apache.activemq.apollo.broker.{Logging, BaseService}
 import com.shorrockin.cascal.session._
 import com.shorrockin.cascal.utils.Conversions._
 import java.util.{HashMap}

@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.store.hawtdb
 
 import java.io.File
 import java.lang.String
-import org.apache.activemq.apollo.DirectBufferPoolFactory
+import org.apache.activemq.apollo.util.DirectBufferPoolFactory
 
 /**
  * <p>

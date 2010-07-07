@@ -74,7 +74,7 @@ public class TransportFilter implements TransportListener, Transport {
     }
 
     /**
-     * @see org.apache.activemq.Service#start()
+     * @see org.apache.activemq.apollo.util.Service#start()
      * @throws IOException
      *             if the next channel has not been set.
      */
@@ -93,7 +93,7 @@ public class TransportFilter implements TransportListener, Transport {
     }
 
     /**
-     * @see org.apache.activemq.Service#stop()
+     * @see org.apache.activemq.apollo.util.Service#stop()
      */
     public void stop() throws Exception {
         next.stop();

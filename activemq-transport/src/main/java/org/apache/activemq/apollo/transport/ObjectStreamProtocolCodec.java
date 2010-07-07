@@ -27,7 +27,7 @@ import java.io.OutputStream;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-import org.apache.activemq.util.ClassLoadingAwareObjectInputStream;
+import org.apache.activemq.apollo.util.ClassLoadingAwareObjectInputStream;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.ByteArrayInputStream;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;

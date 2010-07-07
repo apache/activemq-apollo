@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.transport;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.activemq.Service;
+import org.apache.activemq.apollo.util.Service;
 import org.fusesource.hawtdispatch.DispatchQueue;
 
 /**

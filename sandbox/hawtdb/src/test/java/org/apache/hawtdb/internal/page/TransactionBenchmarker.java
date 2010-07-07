@@ -19,7 +19,7 @@ package org.apache.hawtdb.internal.page;
 import java.io.File;
 import java.util.ArrayList;
 
-import org.apache.activemq.metric.MetricCounter;
+import org.apache.activemq.apollo.util.metric.MetricCounter;
 import org.apache.hawtdb.internal.Action;
 import org.apache.hawtdb.internal.Benchmarker;
 import org.apache.hawtdb.internal.Benchmarker.BenchmarkAction;

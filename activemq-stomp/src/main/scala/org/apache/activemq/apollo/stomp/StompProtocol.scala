@@ -29,11 +29,11 @@ import Stomp._
 import BufferConversions._
 import StompFrameConstants._
 import java.io.IOException
-import org.apache.activemq.selector.SelectorParser
-import org.apache.activemq.filter.{BooleanExpression, FilterException}
-import org.apache.activemq.broker.store.{StoreUOW}
+import org.apache.activemq.apollo.selector.SelectorParser
+import org.apache.activemq.apollo.filter.{BooleanExpression, FilterException}
 import org.apache.activemq.apollo.transport._
-import org.apache.activemq.apollo.store.MessageRecord
+import org.apache.activemq.apollo.store._
+import org.apache.activemq.apollo.util._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

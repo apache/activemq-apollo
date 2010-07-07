@@ -12,7 +12,7 @@ import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.Message;
 import org.apache.activemq.command.TransactionId;
-import org.apache.activemq.filter.Expression;
+import org.apache.activemq.apollo.filter.Expression;
 import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.filter.MessageEvaluationContext;
 import org.fusesource.hawtbuf.Buffer;

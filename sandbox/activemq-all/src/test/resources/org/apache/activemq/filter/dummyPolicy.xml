@@ -19,10 +19,10 @@
 <beans>
   <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer"/>
 
-  <bean id="policy" class="org.apache.activemq.filter.DummyPolicy">
+  <bean id="policy" class="org.apache.activemq.apollo.filter.DummyPolicy">
     <property name="entries">
       <list>
-        <bean class="org.apache.activemq.filter.DummyPolicyEntry">
+        <bean class="org.apache.activemq.apollo.filter.DummyPolicyEntry">
           <property name="topic" value="FOO.>" />
           <property name="description" value="Edam" />
         </bean>

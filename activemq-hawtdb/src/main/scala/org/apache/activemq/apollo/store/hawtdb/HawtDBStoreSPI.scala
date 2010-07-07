@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.store.hawtdb
 
 import org.apache.activemq.apollo.store.StoreFactory
 import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, StoreDTO}
-import org.apache.activemq.apollo.broker.{Reporting, ReporterLevel, Reporter}
+import org.apache.activemq.apollo.util._
 import ReporterLevel._
 
 /**

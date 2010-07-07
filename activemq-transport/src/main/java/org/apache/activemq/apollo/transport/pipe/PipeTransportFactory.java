@@ -27,8 +27,8 @@ import static org.apache.activemq.apollo.transport.TransportFactorySupport.*;
 import org.apache.activemq.apollo.transport.Transport;
 import org.apache.activemq.apollo.transport.TransportFactory;
 import org.apache.activemq.apollo.transport.TransportServer;
-import org.apache.activemq.util.IntrospectionSupport;
-import org.apache.activemq.util.URISupport;
+import org.apache.activemq.apollo.util.URISupport;
+import org.apache.activemq.apollo.util.IntrospectionSupport;
 
 /**
  *

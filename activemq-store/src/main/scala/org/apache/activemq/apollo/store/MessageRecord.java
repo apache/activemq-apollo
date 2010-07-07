@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.store;
 
-import org.apache.activemq.apollo.DirectBuffer;
+import org.apache.activemq.apollo.util.DirectBuffer;
 import org.fusesource.hawtbuf.AsciiBuffer;
 import org.fusesource.hawtbuf.Buffer;
 

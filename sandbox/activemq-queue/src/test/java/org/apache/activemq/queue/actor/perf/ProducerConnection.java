@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.activemq.actor.ActorProxy;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.metric.MetricAggregator;
-import org.apache.activemq.metric.MetricCounter;
+import org.apache.activemq.apollo.util.metric.MetricCounter;
 
 import static java.util.concurrent.TimeUnit.*;
 

@@ -27,9 +27,9 @@ import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.flow.Commands.Destination;
 import org.apache.activemq.flow.Commands.Destination.DestinationBean;
 import org.apache.activemq.flow.Commands.Destination.DestinationBuffer;
-import org.apache.activemq.metric.MetricAggregator;
-import org.apache.activemq.metric.MetricCounter;
-import org.apache.activemq.metric.Period;
+import org.apache.activemq.apollo.util.metric.MetricAggregator;
+import org.apache.activemq.apollo.util.metric.MetricCounter;
+import org.apache.activemq.apollo.util.metric.Period;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.fusesource.hawtbuf.AsciiBuffer;
 

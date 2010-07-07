@@ -16,10 +16,8 @@
  */
 package org.apache.activemq.apollo.store
 
-import org.apache.activemq.apollo.util.ClassFinder
-import org.apache.activemq.broker.store.Store
 import org.apache.activemq.apollo.dto.StoreDTO
-import org.apache.activemq.apollo.broker.{ReporterLevel, Reporter}
+import org.apache.activemq.apollo.util._
 import ReporterLevel._
 
 /**

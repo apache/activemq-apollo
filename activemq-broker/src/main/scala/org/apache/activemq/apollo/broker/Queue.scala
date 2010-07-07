@@ -16,19 +16,19 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import org.apache.activemq.util.TreeMap
-import collection.{SortedMap}
-import org.fusesource.hawtdispatch.{ScalaDispatch, DispatchQueue, BaseRetained}
-import org.apache.activemq.util.TreeMap.TreeEntry
-import org.apache.activemq.util.list.{LinkedNodeList, LinkedNode}
-import org.apache.activemq.broker.store.{StoreUOW}
-import protocol.ProtocolFactory
 import java.util.concurrent.TimeUnit
-import java.util.{HashSet, Collections, ArrayList, LinkedList}
-import org.apache.activemq.apollo.store.{QueueEntryRange, QueueEntryRecord, MessageRecord}
-import collection.mutable.ListBuffer
+
+import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import java.util.concurrent.atomic.AtomicInteger
+
+import collection.{SortedMap}
+import org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained}
+import org.apache.activemq.apollo.store.{StoreUOW}
+import protocol.ProtocolFactory
+import collection.mutable.ListBuffer
+import org.apache.activemq.apollo.store._
+import org.apache.activemq.apollo.util._
+import org.apache.activemq.apollo.util.list._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -62,8 +62,6 @@ object Queue extends Log {
  */
 class Queue(val host: VirtualHost, val destination: Destination, val id: Long) extends BaseRetained with Route with DeliveryConsumer with BaseService with DispatchLogging {
   override protected def log = Queue
-
-  import Queue._
 
   var all_subscriptions = Map[DeliveryConsumer, Subscription]()
   var fast_subscriptions = List[Subscription]()
@@ -594,8 +592,6 @@ object QueueEntry extends Sizer[QueueEntry] {
 
 class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] with Comparable[QueueEntry] with Runnable with DispatchLogging {
   override protected def log = Queue
-  import QueueEntry._
-
   // Subscriptions waiting to dispatch this entry.
   var parked:List[Subscription] = Nil
 

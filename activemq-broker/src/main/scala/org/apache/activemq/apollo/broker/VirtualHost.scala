@@ -24,14 +24,11 @@ import path.PathFilter
 import org.fusesource.hawtbuf.AsciiBuffer
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
-import protocol.Protocol
-import ReporterLevel._
-import org.apache.activemq.broker.store.{Store}
-import org.apache.activemq.apollo.store.{StoreFactory, QueueRecord}
-import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, CassandraStoreDTO, VirtualHostDTO}
+import org.apache.activemq.apollo.dto.{VirtualHostDTO}
 import java.util.concurrent.TimeUnit
-import org.apache.activemq.apollo.util.LongCounter
-import org.apache.activemq.apollo.{DirectBufferPoolFactory, DirectBufferPool}
+import org.apache.activemq.apollo.store.{Store, StoreFactory, QueueRecord}
+import org.apache.activemq.apollo.util._
+import ReporterLevel._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -52,13 +49,6 @@ object VirtualHost extends Log {
     rc.id = "default"
     rc.enabled = true
     rc.host_names.add("localhost")
-
-//    val store = new CassandraStoreDTO
-//    store.hosts.add("localhost:9160")
-
-//    val store = new HawtDBStoreDTO
-//    store.directory = new File("activemq-data")
-    
     rc.store = null
     rc
   }

@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.transport;
 
 import java.io.IOException;
 
-import org.apache.activemq.Service;
+import org.apache.activemq.apollo.util.Service;
 
 /**
  * An agent used to discover other instances of a service. 

@@ -16,10 +16,10 @@
  */
 package org.apache.activemq.apollo.transport;
 
-import org.apache.activemq.util.FactoryFinder;
-import org.apache.activemq.util.IOExceptionSupport;
-import org.apache.activemq.util.IntrospectionSupport;
-import org.apache.activemq.util.URISupport;
+import org.apache.activemq.apollo.util.FactoryFinder;
+import org.apache.activemq.apollo.util.IOExceptionSupport;
+import org.apache.activemq.apollo.util.IntrospectionSupport;
+import org.apache.activemq.apollo.util.URISupport;
 
 import java.io.IOException;
 import java.net.URI;

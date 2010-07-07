@@ -16,22 +16,19 @@
  */
 package org.apache.activemq.apollo.store.cassandra
 
-import org.apache.activemq.broker.store.{StoreUOW, Store}
 import org.fusesource.hawtdispatch.BaseRetained
 import com.shorrockin.cascal.session._
 import java.util.concurrent.atomic.AtomicLong
 import collection.mutable.ListBuffer
 import java.util.HashMap
-import org.apache.activemq.apollo.broker.{Logging, Log, BaseService}
 import collection.{JavaConversions, Seq}
-import org.apache.activemq.apollo.broker.{Reporting, ReporterLevel, Reporter}
 import com.shorrockin.cascal.utils.Conversions._
 import org.fusesource.hawtdispatch.ScalaDispatch._
-import ReporterLevel._
 import java.util.concurrent._
-import org.apache.activemq.apollo.util.{TimeCounter, IntCounter}
+import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.store._
-import org.apache.activemq.apollo.dto.{StoreStatusDTO, CassandraStoreDTO, StoreDTO}
+import org.apache.activemq.apollo.util._
+import ReporterLevel._
 
 object CassandraStore extends Log {
 
@@ -77,7 +74,7 @@ class CassandraStore extends Store with BaseService with Logging {
   var config:CassandraStoreDTO = defaultConfig
   var blocking:ExecutorService = null
 
-  def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[CassandraStoreDTO], reporter)
+  def configure(config: StoreDTO, reporter: Reporter):Unit = configure(config.asInstanceOf[CassandraStoreDTO], reporter)
 
 
   def storeStatusDTO(callback:(StoreStatusDTO)=>Unit) = dispatchQueue {
@@ -87,7 +84,7 @@ class CassandraStore extends Store with BaseService with Logging {
     callback(rc)
   }
 
-  def configure(config: CassandraStoreDTO, reporter: Reporter) = {
+  def configure(config: CassandraStoreDTO, reporter: Reporter):Unit = {
     if ( CassandraStore.validate(config, reporter) < ERROR ) {
       if( serviceState.isStarted ) {
         // TODO: apply changes while he broker is running.

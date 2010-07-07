@@ -41,7 +41,7 @@ import org.apache.activemq.util.Combinator;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.MemoryPropertyEditor;
-import org.apache.activemq.util.cli.CommonsCLISupport;
+import org.apache.activemq.apollo.util.cli.CommonsCLISupport;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;

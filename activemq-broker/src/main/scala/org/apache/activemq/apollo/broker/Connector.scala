@@ -20,10 +20,12 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import org.fusesource.hawtdispatch.{Dispatch}
 import org.apache.activemq.apollo.dto.{ConnectorDTO}
 import protocol.{ProtocolFactory, Protocol}
-import ReporterLevel._
-import org.apache.activemq.apollo.util.LongCounter
 import collection.mutable.HashMap
 import org.apache.activemq.apollo.transport._
+import org.apache.activemq.apollo.util._
+import ReporterLevel._
+
+
 /**
  * <p>
  * </p>

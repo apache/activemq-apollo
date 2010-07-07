@@ -17,11 +17,12 @@
 package org.apache.activemq.apollo.broker
 
 import _root_.java.io.{IOException}
-import _root_.org.apache.activemq.filter.{BooleanExpression}
 import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import protocol.{ProtocolFactory, ProtocolHandler}
+import protocol.{ProtocolHandler}
 import org.apache.activemq.apollo.transport.{DefaultTransportListener, Transport}
+import org.apache.activemq.apollo.util.{Log, BaseService}
+import org.apache.activemq.apollo.filter.BooleanExpression
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

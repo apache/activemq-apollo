@@ -16,7 +16,9 @@
  */
 package org.apache.activemq.apollo.store.hawtdb
 
-import org.apache.activemq.broker.store.{StoreBenchmarkSupport, Store}
+import org.apache.activemq.apollo.store.StoreBenchmarkSupport
+import org.apache.activemq.apollo.store.Store
+
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

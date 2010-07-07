@@ -50,7 +50,7 @@ import org.apache.activemq.filter.FilterException;
 import org.apache.activemq.management.JMSConsumerStatsImpl;
 import org.apache.activemq.management.StatsCapable;
 import org.apache.activemq.management.StatsImpl;
-import org.apache.activemq.selector.SelectorParser;
+import org.apache.activemq.apollo.selector.SelectorParser;
 import org.apache.activemq.thread.Scheduler;
 import org.apache.activemq.transaction.Synchronization;
 import org.apache.activemq.util.Callback;

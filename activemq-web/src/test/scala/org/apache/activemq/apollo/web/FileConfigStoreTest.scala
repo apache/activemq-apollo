@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.web
 import java.io.File
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import org.fusesource.hawtdispatch.Future
-import org.apache.activemq.apollo.broker.{FunSuiteSupport, LoggingTracker}
+import org.apache.activemq.apollo.util._
 
 /**
  * <p>

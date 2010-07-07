@@ -16,13 +16,12 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.org.apache.activemq.filter.{Filterable}
 import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
-import org.apache.activemq.broker.store.StoreUOW
-import org.apache.activemq.apollo.store.MessageRecord
-import protocol.{Protocol, ProtocolFactory}
+import protocol.Protocol
+import org.apache.activemq.apollo.filter.Filterable
+import org.apache.activemq.apollo.store.{StoreUOW, MessageRecord}
 
 /**
  * A producer which sends Delivery objects to a delivery consumer.

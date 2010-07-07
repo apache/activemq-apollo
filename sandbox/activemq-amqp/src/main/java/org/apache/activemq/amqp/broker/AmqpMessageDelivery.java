@@ -6,7 +6,7 @@ import org.apache.activemq.amqp.wireformat.AmqpWireFormat;
 import org.apache.activemq.amqp.protocol.types.AmqpTransfer;
 import org.apache.activemq.apollo.broker.BrokerMessageDelivery;
 import org.apache.activemq.apollo.broker.Destination;
-import org.apache.activemq.filter.MessageEvaluationContext;
+import org.apache.activemq.apollo.filter.MessageEvaluationContext;
 import org.fusesource.hawtbuf.AsciiBuffer;
 import org.fusesource.hawtbuf.Buffer;
 

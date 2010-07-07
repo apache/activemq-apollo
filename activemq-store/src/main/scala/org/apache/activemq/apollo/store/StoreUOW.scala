@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store
+package org.apache.activemq.apollo.store
 
 import org.fusesource.hawtdispatch.{Retained}
 import org.apache.activemq.apollo.store._

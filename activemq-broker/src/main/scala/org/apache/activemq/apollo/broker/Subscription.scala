@@ -17,9 +17,10 @@
 package org.apache.activemq.apollo.broker
 
 import _root_.java.util.{ArrayList}
-import _root_.org.apache.activemq.filter.{FilterException, BooleanExpression}
+import _root_.org.apache.activemq.apollo.filter.{FilterException, BooleanExpression}
 import _root_.scala.collection.JavaConversions._
 import path.PathFilter
+import org.apache.activemq.apollo.util._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

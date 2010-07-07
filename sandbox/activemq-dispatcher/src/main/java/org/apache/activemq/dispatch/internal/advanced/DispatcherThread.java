@@ -17,7 +17,6 @@
 package org.apache.activemq.dispatch.internal.advanced;
 
 import java.io.IOException;
-import java.nio.channels.SelectableChannel;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.concurrent.Executor;

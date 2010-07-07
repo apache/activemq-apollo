@@ -16,8 +16,8 @@
  */
 package org.apache.activemq.apollo.broker.jaxb
 
-import java.util.ArrayList
-import org.apache.activemq.apollo.broker.{FunSuiteSupport, BrokerFactory}
+import org.apache.activemq.apollo.broker.BrokerFactory
+import org.apache.activemq.apollo.util.FunSuiteSupport
 
 /**
  * <p>

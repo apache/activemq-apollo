@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.transport;
 
 import java.net.URI;
 
-import org.apache.activemq.util.ServiceSupport;
+import org.apache.activemq.apollo.util.ServiceSupport;
 
 /**
  * A useful base class for implementations of {@link TransportServer}

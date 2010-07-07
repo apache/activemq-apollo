@@ -14,17 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store
+package org.apache.activemq.apollo.store
 
 import org.fusesource.hawtbuf.AsciiBuffer._
 import org.fusesource.hawtdispatch.ScalaDispatch._
 import org.fusesource.hawtdispatch.TaskTracker
-import org.apache.activemq.apollo.broker.{LoggingTracker, FunSuiteSupport}
 import java.util.concurrent.{TimeUnit, CountDownLatch}
-import org.apache.activemq.apollo.store.{QueueEntryRecord, QueueStatus, QueueRecord, MessageRecord}
 import org.scalatest.{BeforeAndAfterEach, BeforeAndAfterAll}
 import collection.mutable.ListBuffer
-import org.apache.activemq.apollo.util.LongCounter
+import org.apache.activemq.apollo.util.{LoggingTracker, FunSuiteSupport, LongCounter}
 
 /**
  * <p>Implements generic testing of Store implementations.</p>
