@@ -28,6 +28,7 @@ object StompBroker {
   var address = "0.0.0.0"
   var port = 61613
   var storeType = "hawtdb"
+  var purge = true
 
   def main(args:Array[String]) = run
 
@@ -61,6 +62,7 @@ object StompBroker {
         rc
     }
     broker.config.virtualHosts.get(0).store = store
+    broker.config.virtualHosts.get(0).purgeOnStartup = purge
 
 
 
@@ -89,6 +91,7 @@ object StompBroker {
     "address          = "+address+"\n"+
     "port             = "+port+"\n"+
     "storeType        = "+storeType+"\n" +
+    "purge            = "+purge+"\n"+
     ""
   }  
 }
