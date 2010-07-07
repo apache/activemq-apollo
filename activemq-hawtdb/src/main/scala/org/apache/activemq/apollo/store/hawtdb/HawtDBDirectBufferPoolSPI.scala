@@ -14,40 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.cassandra
+package org.apache.activemq.apollo.store.hawtdb
 
-import org.apache.activemq.apollo.store.StoreFactory
-import org.apache.activemq.apollo.dto.{CassandraStoreDTO, StoreDTO}
-import org.apache.activemq.apollo.broker.{Reporting, ReporterLevel, Reporter}
-import ReporterLevel._
+import java.io.File
+import java.lang.String
+import org.apache.activemq.apollo.DirectBufferPoolFactory
 
 /**
  * <p>
- * Hook to use a CassandraStore when a CassandraStoreDTO is
- * used in a broker configuration.
+ * Hook to use a HawtDBDirectBufferPool for the memory pool implementation.
  * </p>
  * <p>
  * This class is discovered using the following resource file:
- * <code>META-INF/services/org.apache.activemq.apollo/stores</code>
+ * <code>META-INF/services/org.apache.activemq.apollo/direct-buffer-pools</code>
  * </p>
- *
+ * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class CassandraStoreSPI extends StoreFactory.SPI {
+class HawtDBDirectBufferPoolSPI extends DirectBufferPoolFactory.SPI {
 
-  def create(config: StoreDTO) = {
-    if( config.isInstanceOf[CassandraStoreDTO]) {
-      new CassandraStore
+  val prefix: String = "hawtdb:"
+
+  def create(config: String) = {
+    if( config.startsWith(prefix) ) {
+      val file = new File(config.substring(prefix.length))
+      new HawtDBDirectBufferPool(file)
     } else {
       null
     }
   }
 
-   def validate(config: StoreDTO, reporter:Reporter):ReporterLevel = {
-     if( config.isInstanceOf[CassandraStoreDTO]) {
-       CassandraStore.validate(config.asInstanceOf[CassandraStoreDTO], reporter)
-     } else {
-       null
-     }
+   def validate(config: String):Boolean = {
+     config.startsWith(prefix) && !config.substring(prefix.length).isEmpty
    }
 }

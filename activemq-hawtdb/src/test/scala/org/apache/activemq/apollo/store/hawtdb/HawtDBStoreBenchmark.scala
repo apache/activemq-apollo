@@ -14,17 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.cassandra
+package org.apache.activemq.apollo.store.hawtdb
 
-import org.apache.activemq.broker.store.{Store, StoreFunSuiteSupport}
+import org.apache.activemq.broker.store.{StoreBenchmarkSupport, Store}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class CassandraStoreTest extends StoreFunSuiteSupport with CassandraServerMixin {
+class HawtDBStoreBenchmark extends StoreBenchmarkSupport {
 
   def createStore(flushDelay:Long):Store = {
-    val rc = new CassandraStore
+    val rc = new HawtDBStore
     rc.config.flush_delay = flushDelay
     rc
   }

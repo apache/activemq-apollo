@@ -19,7 +19,7 @@ package org.apache.activemq.legacy.transport.tcp;
 
 import javax.net.ssl.SSLSocket;
 
-import org.apache.activemq.transport.tcp.SslTransport;
+import org.apache.activemq.apollo.transport.tcp.SslTransport;
 import org.apache.activemq.wireformat.WireFormat;
 
 public class StubSslTransport extends SslTransport {

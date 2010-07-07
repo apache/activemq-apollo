@@ -26,7 +26,7 @@ import javax.net.ssl.SSLSocket;
 import junit.framework.TestCase;
 import org.apache.activemq.command.ConnectionInfo;
 import org.apache.activemq.legacy.transport.StubTransportListener;
-import org.apache.activemq.transport.tcp.SslTransport;
+import org.apache.activemq.apollo.transport.tcp.SslTransport;
 import org.apache.activemq.wireformat.ObjectStreamWireFormat;
 
 /**

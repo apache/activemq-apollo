@@ -37,7 +37,7 @@ import org.apache.activemq.apollo.test1.JmsTestSupport;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
-import org.apache.activemq.transport.tcp.TcpTransport;
+import org.apache.activemq.apollo.transport.tcp.TcpTransport;
 
 public class ProducerFlowControlTest extends JmsTestSupport {
 

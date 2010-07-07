@@ -24,8 +24,8 @@ import java.util.Map;
 
 import junit.framework.TestCase;
 import org.apache.activemq.openwire.OpenWireFormat;
-import org.apache.activemq.transport.tcp.SslTransportFactory;
-import org.apache.activemq.transport.tcp.SslTransportServer;
+import org.apache.activemq.apollo.transport.tcp.SslTransportFactory;
+import org.apache.activemq.apollo.transport.tcp.SslTransportServer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

@@ -32,7 +32,7 @@ import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.transport.TransportServer;
-import org.apache.activemq.transport.tcp.TcpTransport;
+import org.apache.activemq.apollo.transport.tcp.TcpTransport;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

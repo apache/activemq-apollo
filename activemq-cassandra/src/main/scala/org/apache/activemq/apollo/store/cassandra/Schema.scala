@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.cassandra
+package org.apache.activemq.apollo.store.cassandra
 
 import org.fusesource.hawtbuf.AsciiBuffer._
 import org.fusesource.hawtbuf.Buffer

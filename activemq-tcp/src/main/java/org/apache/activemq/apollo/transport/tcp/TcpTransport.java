@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.transport.tcp;
+package org.apache.activemq.apollo.transport.tcp;
 
 import org.apache.activemq.apollo.transport.ProtocolCodec;
 import org.apache.activemq.apollo.transport.TransportListener;

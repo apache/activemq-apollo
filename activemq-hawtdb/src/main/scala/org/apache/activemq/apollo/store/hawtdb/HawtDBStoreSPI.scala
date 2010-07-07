@@ -14,37 +14,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.hawtdb
+package org.apache.activemq.apollo.store.hawtdb
 
-import java.io.File
-import java.lang.String
-import org.apache.activemq.apollo.DirectBufferPoolFactory
+import org.apache.activemq.apollo.store.StoreFactory
+import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, StoreDTO}
+import org.apache.activemq.apollo.broker.{Reporting, ReporterLevel, Reporter}
+import ReporterLevel._
 
 /**
  * <p>
- * Hook to use a HawtDBDirectBufferPool for the memory pool implementation.
+ * Hook to use a HawtDBStore when a HawtDBStoreDTO is
+ * used in a broker configuration.
  * </p>
  * <p>
  * This class is discovered using the following resource file:
- * <code>META-INF/services/org.apache.activemq.apollo/direct-buffer-pools</code>
+ * <code>META-INF/services/org.apache.activemq.apollo/stores</code>
  * </p>
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBDirectBufferPoolSPI extends DirectBufferPoolFactory.SPI {
+class HawtDBStoreSPI extends StoreFactory.SPI {
 
-  val prefix: String = "hawtdb:"
-
-  def create(config: String) = {
-    if( config.startsWith(prefix) ) {
-      val file = new File(config.substring(prefix.length))
-      new HawtDBDirectBufferPool(file)
+  def create(config: StoreDTO) = {
+    if( config.isInstanceOf[HawtDBStoreDTO]) {
+      new HawtDBStore
     } else {
       null
     }
   }
 
-   def validate(config: String):Boolean = {
-     config.startsWith(prefix) && !config.substring(prefix.length).isEmpty
+   def validate(config: StoreDTO, reporter:Reporter):ReporterLevel = {
+     if( config.isInstanceOf[HawtDBStoreDTO]) {
+       HawtDBStore.validate(config.asInstanceOf[HawtDBStoreDTO], reporter)
+     } else {
+       null
+     }
    }
 }

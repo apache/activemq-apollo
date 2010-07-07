@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.hawtdb
+package org.apache.activemq.apollo.store.hawtdb
 
 import java.{lang=>jl}
 import java.{util=>ju}
@@ -26,8 +26,8 @@ import java.io.IOException
 import org.apache.activemq.util.LockFile
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 import org.fusesource.hawtdb.internal.journal.{JournalListener, Journal, Location}
-import org.apache.activemq.broker.store.hawtdb.model.Type._
-import org.apache.activemq.broker.store.hawtdb.model._
+import org.apache.activemq.apollo.store.hawtdb.model.Type._
+import org.apache.activemq.apollo.store.hawtdb.model._
 import org.fusesource.hawtbuf._
 import org.fusesource.hawtdispatch.ScalaDispatch._
 import collection.mutable.{LinkedHashMap, HashMap, ListBuffer}
@@ -38,9 +38,7 @@ import org.fusesource.hawtdb.api._
 import org.apache.activemq.apollo.broker.{DispatchLogging, Log, Logging, BaseService}
 import org.apache.activemq.apollo.util.TimeCounter
 import org.apache.activemq.apollo.store._
-import org.fusesource.hawtdb.api.Paged.SliceType
 import java.util.concurrent.TimeUnit
-
 
 
 object HawtDBClient extends Log {

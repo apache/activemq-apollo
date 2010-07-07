@@ -1,4 +1,4 @@
-package org.apache.activemq.broker.store.cassandra
+package org.apache.activemq.apollo.store.cassandra
 
 import org.apache.cassandra.thrift.CassandraDaemon
 import org.apache.cassandra.config.DatabaseDescriptor

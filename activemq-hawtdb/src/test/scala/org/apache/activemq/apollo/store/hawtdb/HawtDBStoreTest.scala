@@ -14,15 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.cassandra
+package org.apache.activemq.apollo.store.hawtdb
 
-import org.apache.activemq.broker.store.hawtdb.HawtDBStore
-import org.apache.activemq.broker.store.{StoreBenchmarkSupport, Store}
+import org.apache.activemq.broker.store.{Store, StoreFunSuiteSupport}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBStoreBenchmark extends StoreBenchmarkSupport {
+class HawtDBStoreTest extends StoreFunSuiteSupport {
 
   def createStore(flushDelay:Long):Store = {
     val rc = new HawtDBStore
