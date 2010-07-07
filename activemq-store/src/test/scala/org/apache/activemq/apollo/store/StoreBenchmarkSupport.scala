@@ -144,20 +144,28 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
     msgKeys
   }
 
-  test("store enqueue latencey") {
+  test("store enqueue and load latencey") {
     val A = addQueue("A")
-    var seq = 0
+    var messageKeys = storeMessages(A)
+    loadMessages(A, messageKeys)
+  }
+
+  def storeMessages(queue:Long) = {
+
+    var seq = 0L
+    var messageKeys = ListBuffer[Long]()
 
     val content = payload("message\n", 1024)
-    val metric = benchmark {
+    var metric = benchmarkCount(100000) {
       seq += 1
 
       var batch = store.createStoreBatch
       val message = addMessage(batch, content)
-      batch.enqueue(entry(A, seq, message))
+      messageKeys += message
+      batch.enqueue(entry(queue, seq, message))
 
       val latch = new CountDownLatch(1)
-      batch.setDisposer(^{cd(latch)} )
+      batch.setDisposer(^{latch.countDown} )
       batch.release
       store.flushMessage(message) {}
 
@@ -167,12 +175,27 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
     println("enqueue metrics: "+metric)
     println("enqueue latency is: "+metric.latency(TimeUnit.MILLISECONDS)+" ms")
     println("enqueue rate is: "+metric.rate(TimeUnit.SECONDS)+" enqueues/s")
+    messageKeys.toList
   }
 
-  def cd(latch:CountDownLatch) = {
-    latch.countDown
-  }
+  def loadMessages(queue:Long, messageKeys: List[Long]) = {
+    
+    var keys = messageKeys.toList
+    val metric = benchmarkCount(keys.size) {
+      val latch = new CountDownLatch(1)
+      store.loadMessage(keys.head) { msg=>
+        assert(msg.isDefined, "message key not found: "+keys.head)
+        latch.countDown
+      }
+      latch.await
+      keys = keys.drop(1)
+    }
 
+    println("load metrics: "+metric)
+    println("load latency is: "+metric.latency(TimeUnit.MILLISECONDS)+" ms")
+    println("load rate is: "+metric.rate(TimeUnit.SECONDS)+" loads/s")
+
+  }
 
   case class Metric(count:Long, duration:Long) {
     def latency(unit:TimeUnit) = {
@@ -183,14 +206,20 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
     }
   }
 
-  def benchmark(func: =>Unit ) = {
+  def benchmarkFor(duration:Int)(func: =>Unit ) = {
 
     val counter = new AtomicLong()
     val done = new AtomicBoolean()
+    val warmup = new AtomicBoolean(true)
+
     var startT = 0L
     var endT = 0L
     val thread = new Thread("benchmarked task") {
+
       override def run = {
+        while(warmup.get) {
+          func
+        }
         startT = System.nanoTime();
         while(!done.get) {
           func
@@ -201,12 +230,24 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
     }
 
     thread.start()
-    Thread.sleep(1000*30)
+
+    Thread.sleep(1000*5)
+    warmup.set(false)
+    Thread.sleep(1000*duration)
     done.set(true)
     thread.join
 
     Metric(counter.get, endT-startT)
   }
 
-
+  def benchmarkCount(iterations:Int)(func: =>Unit ) = {
+    val startT = System.nanoTime();
+    var i = 0
+    while( i < iterations) {
+      func
+      i += 1
+    }
+    val endT = System.nanoTime();
+    Metric(iterations, endT-startT)
+  }
 }

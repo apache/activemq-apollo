@@ -91,7 +91,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   }
 
   protected def _start(onCompleted: Runnable) = {
-    executor_pool = new ThreadPoolExecutor(4, 20, 1, TimeUnit.SECONDS, new LinkedBlockingQueue[Runnable](), new ThreadFactory(){
+    executor_pool = Executors.newFixedThreadPool(20, new ThreadFactory(){
       def newThread(r: Runnable) = {
         val rc = new Thread(r, "hawtdb store client")
         rc.setDaemon(true)
@@ -102,8 +102,8 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     schedualDisplayStats
     executor_pool {
       client.start(^{
-        next_msg_key.set( client.databaseRootRecord.getLastMessageKey.longValue +1 )
-        next_queue_key.set( client.databaseRootRecord.getLastQueueKey.longValue +1 )
+        next_msg_key.set( client.rootBuffer.getLastMessageKey.longValue +1 )
+        next_queue_key.set( client.rootBuffer.getLastQueueKey.longValue +1 )
         onCompleted.run
       })
     }
@@ -162,10 +162,10 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
 
   def loadMessage(id: Long)(callback: (Option[MessageRecord]) => Unit) = {
     executor_pool ^{
-      callback( client.loadMessage(id) )
+      val rc = client.loadMessage(id)
+      callback( rc )
     }
   }
-
 
   def listQueueEntries(id: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
     executor_pool ^{
@@ -319,9 +319,30 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
 
         def rate(x:Long, y:Long):Float = ((y-x)*1000.0f)/TimeUnit.NANOSECONDS.toMillis(et-st)
 
+        val m1 = rate(ss._1,es._1)
+        val m2 = rate(ss._2,es._2)
+        val m3 = rate(ss._3,es._3)
+        val m4 = rate(ss._4,es._4)
 
-        info("metrics: cancled: { messages: %,.3f, enqeues: %,.3f }, flushed: { messages: %,.3f, enqeues: %,.3f }, commit latency: %,.3f, store latency: %,.3f",
-          rate(ss._1,es._1), rate(ss._2,es._2), rate(ss._3,es._3), rate(ss._4,es._4), avgCommitLatency, storeLatency(true).avgTime(TimeUnit.MILLISECONDS) )
+        if( m1>0f || m2>0f || m3>0f || m4>0f ) {
+          info("metrics: cancled: { messages: %,.3f, enqeues: %,.3f }, flushed: { messages: %,.3f, enqeues: %,.3f }, commit latency: %,.3f, store latency: %,.3f",
+            m1, m2, m3, m3, avgCommitLatency, storeLatency(true).avgTime(TimeUnit.MILLISECONDS) )
+        }
+
+
+        def display(name:String, counter:TimeCounter) {
+          var t = counter.apply(true)
+          if( t.count > 0 ) {
+            info("%s latency in ms: avg: %,.3f, max: %,.3f, min: %,.3f", name, t.avgTime(TimeUnit.MILLISECONDS), t.maxTime(TimeUnit.MILLISECONDS), t.minTime(TimeUnit.MILLISECONDS))
+          }
+        }
+
+//        display("total msg load", loadMessageTimer)
+//        display("index read", client.indexLoad)
+//        display("toal journal load", client.journalLoad)
+//        display("journal read", client.journalRead)
+//        display("journal decode", client.journalDecode)
+
         schedualDisplayStats
       }
     }

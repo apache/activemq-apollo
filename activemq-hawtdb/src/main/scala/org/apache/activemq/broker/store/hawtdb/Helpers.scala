@@ -178,7 +178,7 @@ object Helpers {
     if (t == null) {
       throw new IOException("Could not load journal record. Invalid type at location: " + location);
     }
-    t.parseUnframed(value).asInstanceOf[TypeCreatable]
+    t.parseFramed(value).asInstanceOf[TypeCreatable]
   }
 
   //

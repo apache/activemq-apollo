@@ -44,6 +44,7 @@ import java.util.{TreeSet, HashSet}
 
 import org.fusesource.hawtdb.api._
 import org.apache.activemq.apollo.broker.{DispatchLogging, Log, Logging, BaseService}
+import org.apache.activemq.apollo.util.TimeCounter
 
 object HawtDBClient extends Log {
   val BEGIN = -1
@@ -81,7 +82,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   private var lastRecoveryPosition: Location = null
   private var recoveryCounter = 0
 
-  var databaseRootRecord = new DatabaseRootRecord.Bean
+  @volatile
+  var rootBuffer = (new DatabaseRootRecord.Bean()).freeze
 
 
   val next_batch_counter = new AtomicInteger(0)
@@ -167,17 +169,17 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
             val rootPage = tx.alloc()
             assert(rootPage == 0)
 
-            databaseRootRecord.setQueueIndexPage(alloc(QUEUE_INDEX_FACTORY))
-            databaseRootRecord.setMessageKeyIndexPage(alloc(MESSAGE_KEY_INDEX_FACTORY))
-            databaseRootRecord.setDataFileRefIndexPage(alloc(DATA_FILE_REF_INDEX_FACTORY))
-            databaseRootRecord.setMessageRefsIndexPage(alloc(MESSAGE_REFS_INDEX_FACTORY))
-            databaseRootRecord.setSubscriptionIndexPage(alloc(SUBSCRIPTIONS_INDEX_FACTORY))
+            rootBean.setQueueIndexPage(alloc(QUEUE_INDEX_FACTORY))
+            rootBean.setMessageKeyIndexPage(alloc(MESSAGE_KEY_INDEX_FACTORY))
+            rootBean.setDataFileRefIndexPage(alloc(DATA_FILE_REF_INDEX_FACTORY))
+            rootBean.setMessageRefsIndexPage(alloc(MESSAGE_REFS_INDEX_FACTORY))
+            rootBean.setSubscriptionIndexPage(alloc(SUBSCRIPTIONS_INDEX_FACTORY))
+            rootBuffer = rootBean.freeze
 
-            tx.put(DATABASE_ROOT_RECORD_ACCESSOR, 0, databaseRootRecord.freeze)
-            databaseRootRecord = databaseRootRecord.copy
+            tx.put(DATABASE_ROOT_RECORD_ACCESSOR, 0, rootBuffer)
             true
           } else {
-            databaseRootRecord = tx.get(DATABASE_ROOT_RECORD_ACCESSOR, 0).copy
+            rootBuffer = tx.get(DATABASE_ROOT_RECORD_ACCESSOR, 0)
             false
           }
       }
@@ -306,23 +308,35 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     }
   }
 
+  val metric_load_from_index = new TimeCounter
+  val metric_load_from_journal = new TimeCounter
+
   def loadMessage(messageKey: Long): Option[MessageRecord] = {
-    withTx { tx =>
+    metric_load_from_index.start { end =>
+      withTx { tx =>
+        val idxPage = rootBuffer.getMessageKeyIndexPage
+
         val helper = new TxHelper(tx)
         import JavaConversions._
         import helper._
 
         val location = messageKeyIndex.get(messageKey)
+        end()
+
         if (location != null) {
-          load(location, classOf[AddMessage.Getter]) match {
-            case Some(x) =>
-              val messageRecord: MessageRecord = x
-              Some(messageRecord)
-            case None => None
+          metric_load_from_journal.time {
+            load(location, classOf[AddMessage.Getter]) match {
+              case Some(x) =>
+                val messageRecord: MessageRecord = x
+                Some(messageRecord)
+              case None => None
+            }
           }
         } else {
+          debug("Message not indexed.  Journal location could not be determined for message: %s", messageKey)
           None
         }
+      }
     }
   }
 
@@ -336,12 +350,14 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   private def load[T <: TypeCreatable](location: Location, expected: Class[T]): Option[T] = {
     try {
       load(location) match {
-        case (updateType, batch, data) =>
-          Some(expected.cast(decode(location, updateType, data)))
+          case (updateType, batch, data) =>
+            val decoded = expected.cast(decode(location, updateType, data))
+            val rc = Some(decoded)
+            rc
       }
     } catch {
-      case e: Exception =>
-        debug("Could not load journal record at: %s", location)
+      case e: Throwable =>
+        debug(e, "Could not load journal record at: %s", location)
         None
     }
   }
@@ -368,10 +384,10 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   private def _store(batch: Int, update: TypeCreatable, onComplete: Runnable): Unit = {
     val kind = update.asInstanceOf[TypeCreatable]
     val frozen = update.freeze
-    val baos = new DataByteArrayOutputStream(frozen.serializedSizeUnframed + 1)
+    val baos = new DataByteArrayOutputStream(frozen.serializedSizeFramed + 5)
     baos.writeByte(kind.toType().getNumber())
     baos.writeInt(batch)
-    frozen.writeUnframed(baos)
+    frozen.writeFramed(baos)
 
     val buffer = baos.toBuffer()
     append(buffer) {
@@ -464,14 +480,14 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
     // Is this our first incremental recovery pass?
     if (lastRecoveryPosition == null) {
-      if (databaseRootRecord.hasFirstBatchLocation) {
+      if (rootBuffer.hasFirstBatchLocation) {
         // we have to start at the first in progress batch usually...
-        nextRecoveryPosition = databaseRootRecord.getFirstBatchLocation
+        nextRecoveryPosition = rootBuffer.getFirstBatchLocation
       } else {
         // but perhaps there were no batches in progress..
-        if (databaseRootRecord.hasLastUpdateLocation) {
+        if (rootBuffer.hasLastUpdateLocation) {
           // then we can just continue from the last update applied to the index
-          lastRecoveryPosition = databaseRootRecord.getLastUpdateLocation
+          lastRecoveryPosition = rootBuffer.getLastUpdateLocation
           nextRecoveryPosition = journal.getNextLocation(lastRecoveryPosition)
         } else {
           // no updates in the index?.. start from the first record in the journal.
@@ -533,16 +549,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     })
   }
 
-  /**
-   */
-  def benchmarkLatency[R](func: (String=>Unit)=>R ):R = {
-    val start = System.nanoTime
-    func { label=>
-      var end = System.nanoTime
-      warn("latencey: %s is %,.3f ms", label, ( (end - start).toFloat / TimeUnit.MILLISECONDS.toNanos(1)))
-    }
-  }
-
   def read(location: Location) = journal.read(location)
 
   /////////////////////////////////////////////////////////////////////
@@ -565,12 +571,13 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
         // after the last update location.
         if (!recovering || isAfterLastUpdateLocation(location)) {
           withTx { tx =>
-            // index the updates
+              val helper = new TxHelper(tx)
+              // index the updates
               updates.foreach {
                 update =>
-                  index(tx, update.update, update.location)
+                  index(helper, update.update, update.location)
               }
-              updateLocations(tx, location)
+              helper.updateLocations(location)
           }
         }
       case None =>
@@ -589,7 +596,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       case Some((_, _)) =>
         if (!recovering || isAfterLastUpdateLocation(location)) {
           withTx { tx =>
-              updateLocations(tx, location)
+            val helper = new TxHelper(tx)
+            helper.updateLocations(location)
           }
         }
       case None =>
@@ -610,9 +618,9 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       // after the last update location.
       if (!recovering || isAfterLastUpdateLocation(location)) {
         withTx { tx =>
-          // index the update now.
-            index(tx, update, location)
-            updateLocations(tx, location)
+            val helper = new TxHelper(tx)
+            index(helper, update, location)
+            helper.updateLocations(location)
         }
       }
 
@@ -637,9 +645,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   }
 
 
-  private def index(tx: Transaction, update: TypeCreatable, location: Location): Unit = {
-
-    val helper = new TxHelper(tx)
+  private def index(helper:TxHelper, update: TypeCreatable, location: Location): Unit = {
     import JavaConversions._
     import helper._
 
@@ -649,7 +655,9 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
         val fileId:jl.Integer = location.getDataFileId()
         addAndGet(dataFileRefIndex, fileId, -1)
       } else {
-        error("Cannot remove message, it did not exist: %d", key)
+        if( !recovering ) {
+          error("Cannot remove message, it did not exist: %d", key)
+        }
       }
     }
 
@@ -677,8 +685,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       case x: AddMessage.Getter =>
 
         val messageKey = x.getMessageKey()
-        if (messageKey > databaseRootRecord.getLastMessageKey) {
-          databaseRootRecord.setLastMessageKey(messageKey)
+        if (messageKey > rootBean.getLastMessageKey) {
+          rootBean.setLastMessageKey(messageKey)
         }
 
         val prevLocation = messageKeyIndex.put(messageKey, location)
@@ -743,26 +751,33 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
           if (queueEntry != null) {
             val messageKey = queueEntry.getMessageKey
             val existing = trackingIndex.remove(messageKey)
-            if (existing == null) {
-              error("Tracking entry not found for message %d", queueEntry.getMessageKey)
-            }
-            if( addAndGet(messageRefsIndex, new jl.Long(messageKey), -1) == 0 ) {
-              // message is no longer referenced.. we can remove it..
-              removeMessage(messageKey)
+            if (existing != null) {
+              if( addAndGet(messageRefsIndex, new jl.Long(messageKey), -1) == 0 ) {
+                // message is no longer referenced.. we can remove it..
+                removeMessage(messageKey)
+              }
+            } else {
+              if( !recovering ) {
+                error("Tracking entry not found for message %d", queueEntry.getMessageKey)
+              }
             }
           } else {
-            error("Queue entry not found for seq %d", x.getQueueSeq)
+            if( !recovering ) {
+              error("Queue entry not found for seq %d", x.getQueueSeq)
+            }
           }
         } else {
-          error("Queue not found: %d", x.getQueueKey)
+          if( !recovering ) {
+            error("Queue not found: %d", x.getQueueKey)
+          }
         }
 
       case x: AddQueue.Getter =>
         val queueKey = x.getKey
         if (queueIndex.get(queueKey) == null) {
 
-          if (queueKey > databaseRootRecord.getLastQueueKey) {
-            databaseRootRecord.setLastQueueKey(queueKey)
+          if (queueKey > rootBean.getLastQueueKey) {
+            rootBean.setLastQueueKey(queueKey)
           }
 
           val queueRecord = new QueueRootRecord.Bean
@@ -790,9 +805,9 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
         messageKeyIndex.clear
         messageRefsIndex.clear
         dataFileRefIndex.clear
-        databaseRootRecord.setLastMessageKey(0)
+        rootBean.setLastMessageKey(0)
 
-        cleanup(tx);
+        cleanup(_tx);
         info("Store purged.");
 
       case x: AddSubscription.Getter =>
@@ -870,11 +885,11 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     }
 
     // Don't GC files that we will need for recovery..
-    val upto = if (databaseRootRecord.hasFirstBatchLocation) {
-      Some(databaseRootRecord.getFirstBatchLocation.getDataFileId)
+    val upto = if (rootBuffer.hasFirstBatchLocation) {
+      Some(rootBuffer.getFirstBatchLocation.getDataFileId)
     } else {
-      if (databaseRootRecord.hasLastUpdateLocation) {
-        Some(databaseRootRecord.getLastUpdateLocation.getDataFileId)
+      if (rootBuffer.hasLastUpdateLocation) {
+        Some(rootBuffer.getLastUpdateLocation.getDataFileId)
       } else {
         None
       }
@@ -915,12 +930,12 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
   private case class Update(update: TypeCreatable, location: Location)
 
-  private class TxHelper(private val _tx: Transaction) {
-    lazy val queueIndex = QUEUE_INDEX_FACTORY.open(_tx, databaseRootRecord.getQueueIndexPage)
-    lazy val dataFileRefIndex = DATA_FILE_REF_INDEX_FACTORY.open(_tx, databaseRootRecord.getDataFileRefIndexPage)
-    lazy val messageKeyIndex = MESSAGE_KEY_INDEX_FACTORY.open(_tx, databaseRootRecord.getMessageKeyIndexPage)
-    lazy val messageRefsIndex = MESSAGE_REFS_INDEX_FACTORY.open(_tx, databaseRootRecord.getMessageRefsIndexPage)
-    lazy val subscriptionIndex = SUBSCRIPTIONS_INDEX_FACTORY.open(_tx, databaseRootRecord.getSubscriptionIndexPage)
+  private class TxHelper(val _tx: Transaction) {
+    lazy val queueIndex = QUEUE_INDEX_FACTORY.open(_tx, rootBuffer.getQueueIndexPage)
+    lazy val dataFileRefIndex = DATA_FILE_REF_INDEX_FACTORY.open(_tx, rootBuffer.getDataFileRefIndexPage)
+    lazy val messageKeyIndex = MESSAGE_KEY_INDEX_FACTORY.open(_tx, rootBuffer.getMessageKeyIndexPage)
+    lazy val messageRefsIndex = MESSAGE_REFS_INDEX_FACTORY.open(_tx, rootBuffer.getMessageRefsIndexPage)
+    lazy val subscriptionIndex = SUBSCRIPTIONS_INDEX_FACTORY.open(_tx, rootBuffer.getSubscriptionIndexPage)
 
     def addAndGet[K](index:SortedIndex[K, jl.Integer], key:K, amount:Int):Int = {
       var counter = index.get(key)
@@ -949,6 +964,24 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       factory.create(_tx, rc)
       rc
     }
+
+    val rootBean = rootBuffer.copy
+
+    def lastUpdateLocation(location:Location) = {
+      rootBean.setLastUpdateLocation(location)
+    }
+
+    def updateLocations(lastUpdate: Location): Unit = {
+      rootBean.setLastUpdateLocation(lastUpdate)
+      if (batches.isEmpty) {
+        rootBean.clearFirstBatchLocation
+      } else {
+        rootBean.setFirstBatchLocation(batches.head._2._1)
+      }
+      rootBuffer = rootBean.freeze
+      _tx.put(DATABASE_ROOT_RECORD_ACCESSOR, 0, rootBuffer)
+    }
+
   }
 
   private def withTx[T](func: (Transaction) => T): T = {
@@ -981,18 +1014,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   }
 
   private def isAfterLastUpdateLocation(location: Location) = {
-    val lastUpdate: Location = databaseRootRecord.getLastUpdateLocation
+    val lastUpdate: Location = rootBuffer.getLastUpdateLocation
     lastUpdate.compareTo(location) < 0
   }
 
-  private def updateLocations(tx: Transaction, lastUpdate: Location): Unit = {
-    databaseRootRecord.setLastUpdateLocation(lastUpdate)
-    if (batches.isEmpty) {
-      databaseRootRecord.clearFirstBatchLocation
-    } else {
-      databaseRootRecord.setFirstBatchLocation(batches.head._2._1)
-    }
-    tx.put(DATABASE_ROOT_RECORD_ACCESSOR, 0, databaseRootRecord.freeze)
-    databaseRootRecord = databaseRootRecord.copy
-  }
 }

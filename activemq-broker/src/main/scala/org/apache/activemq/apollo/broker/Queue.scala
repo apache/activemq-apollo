@@ -197,21 +197,14 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
           queueDelivery.storeBatch.enqueue(entry.createQueueEntryRecord)
         }
 
-//        var haveQuickConsumer = false
-//        fastSubs.foreach{ sub=>
-//          if( sub.pos.seq < entry.seq ) {
-//            haveQuickConsumer = true
-//          }
-//        }
 
-        def haveQuickConsumer = fastSubs.find( sub=> !sub.slow && sub.pos.seq <= entry.seq ).isDefined
+        def haveQuickConsumer = fastSubs.find( sub=> sub.pos.seq <= entry.seq ).isDefined
 
         var dispatched = false
         if( entry.prefetched > 0 || haveQuickConsumer ) {
           // try to dispatch it directly...
           entry.dispatch
         } else {
-//          println("flush: "+delivery.message.getProperty("color"))
           // we flush the entry out right away if it looks
           // it wont be needed.
           entry.flush
@@ -228,22 +221,26 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
     }
   }
 
+
+  var checkCounter = 0
   def schedualSlowConsumerCheck:Unit = {
 
     def slowConsumerCheck = {
       if( retained > 0 ) {
+        checkCounter += 1
 
         // target tune_min_subscription_rate / sec
         val slowCursorDelta = (((tune_slow_subscription_rate) * tune_slow_check_interval) / 1000).toInt
 
         var idleConsumerCount = 0
 
-
-//        if( consumerSubs.isEmpty ) {
+// Handy for periodically looking at the dispatch state...
+//
+//        if( !consumerSubs.isEmpty && (checkCounter%100)==0 ) {
 //          println("using "+size+" out of "+capacity+" buffer space.");
 //          var cur = entries.getHead
 //          while( cur!=null ) {
-//            if( cur.asLoaded!=null ) {
+//            if( cur.asLoaded!=null || cur.hasSubs || cur.prefetched>0 ) {
 //              println("  => "+cur)
 //            }
 //            cur = cur.getNext
@@ -290,6 +287,20 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
             fastSubs ::= sub
           }
         }
+
+        // flush tail entries that are still loaded but which have no fast subs that can process them.
+        var cur = entries.getTail
+        while( cur!=null ) {
+          def haveQuickConsumer = fastSubs.find( sub=> sub.pos.seq <= cur.seq ).isDefined
+          if( !cur.hasSubs && cur.prefetched==0 && cur.asFlushed==null && !haveQuickConsumer ) {
+            // then flush out to make space...
+            cur.flush
+            cur = cur.getPrevious
+          } else {
+            cur = null
+          }
+        }
+
 
         // Trigger a swap if we have slow consumers and we are full..
         if( idleConsumerCount > 0 && messages.full && flushingSize==0 ) {
@@ -339,8 +350,6 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
         entry.unlink
         ack(entry.value, tx)
     }
-    
-//    println("acked... full: "+messages.full)
     messages.refiller.run
   }
   
@@ -512,10 +521,13 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
 
 
 object QueueEntry extends Sizer[QueueEntry] {
+
   def size(value: QueueEntry): Int = value.size
 }
 
-class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] with Comparable[QueueEntry] with Runnable {
+class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] with Comparable[QueueEntry] with Runnable with DispatchLogging {
+  override protected def log = Queue
+
   import QueueEntry._
 
   var competing:List[Subscription] = Nil
@@ -567,11 +579,14 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     // remove from prefetch counters..
     var cur = this;
-    while( prefetched > 0 ) {
+    while( cur!=null && prefetched > 0 ) {
       if( cur.hasSubs ) {
         (cur.browsing ::: cur.competing).foreach { sub => if( sub.prefetched(cur) ) { sub.removePrefetch(cur) } }
       }
       cur = cur.getPrevious
+      if( cur == null ) {
+        error("illegal prefetch state detected.")
+      }
     }
 
     this.value = new Tombstone()
@@ -749,6 +764,13 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           // loads to reduce cross thread synchronization
           if( delivery.isDefined ) {
             queue.store_load_source.merge((QueueEntry.this, delivery.get))
+          } else {
+            // Looks like someone else removed the message from the store.. lets just
+            // tombstone this entry now.
+            queue.dispatchQueue {
+              debug("Detected store drop of message key: %d", ref)
+              tombstone
+            }
           }
         }
       }
@@ -873,7 +895,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           p.addCompeting(competingFastSubs)
 
           // flush this entry out if it's not going to be needed soon.
-          def haveQuickConsumer = queue.fastSubs.find( sub=> !sub.slow && sub.pos.seq <= seq ).isDefined
+          def haveQuickConsumer = queue.fastSubs.find( sub=> sub.pos.seq <= seq ).isDefined
           if( !hasSubs && prefetched==0 && !aquired && !haveQuickConsumer ) {
             // then flush out to make space...
             flush
@@ -947,9 +969,9 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
   }
 
   def removePrefetch(value:QueueEntry):Unit = {
-//    trace("prefetch rm: "+value.seq)
     value.prefetched -= 1
     prefetchSize -= value.size
+
     fillPrefetch()
   }
 
@@ -961,7 +983,6 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
   }
 
   def addPrefetch(value:QueueEntry):Unit = {
-//    trace("prefetch add: "+value.seq)
     prefetchSize += value.size
     value.prefetched += 1
     value.load
