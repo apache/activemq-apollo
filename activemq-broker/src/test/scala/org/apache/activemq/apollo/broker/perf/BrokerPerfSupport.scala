@@ -132,6 +132,9 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
           report_data = data.stripLineEnd
         case _ =>
           println("could not parse existing report file: "+htmlFile)
+          val backup: File = new File(htmlFile.getParentFile, htmlFile.getName + ".bak")
+          println("backing up to: "+backup)
+          IOHelper.copyFile(htmlFile, backup )
       }
     }
 
