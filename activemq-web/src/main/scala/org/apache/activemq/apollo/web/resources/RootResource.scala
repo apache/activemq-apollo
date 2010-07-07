@@ -120,6 +120,14 @@ class ViewHelper {
 }
 
 /**
+ * Index resource
+ */
+@Path("/")
+class IndexResource() extends Resource {
+}
+
+
+/**
  * Manages a collection of broker resources.
  */
 @Path("/brokers")
