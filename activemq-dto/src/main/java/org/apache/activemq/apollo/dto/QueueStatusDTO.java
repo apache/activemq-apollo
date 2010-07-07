@@ -16,10 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,25 +26,49 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="destination-status")
+@XmlRootElement(name="queue-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class QueueStatusDTO extends DestinationSummaryDTO {
+public class QueueStatusDTO extends LongIdDTO {
 
     /**
-     * Ids of all connections that are producing to the destination
+     * A unique id of the object within it's container
      */
-    @XmlElement(name="producer")
-    public List<Long> producers = new ArrayList<Long>();
+	@XmlAttribute(name="enqueue-item-counter")
+	public long id;
+
+    @XmlAttribute(name="enqueue-item-counter")
+    public long enqueueItemCounter;
+    @XmlAttribute(name="dequeue-item-counter")
+    public long dequeueItemCounter;
+    @XmlAttribute(name="enqueue-size-counter")
+    public long enqueueSizeCounter;
+    @XmlAttribute(name="dequeue-size-counter")
+    public long dequeueSizeCounter;
+    @XmlAttribute(name="nack-item-counter")
+    public long nackItemCounter;
+    @XmlAttribute(name="nack-size-counter")
+    public long nackSizeCounter;
+
+    @XmlAttribute(name="queue-size")
+    public long queueSize;
+    @XmlAttribute(name="queue-items")
+    public long queueItems;
+
+    @XmlAttribute(name="loading-size")
+    public int loadingSize;
+    @XmlAttribute(name="flushing-size")
+    public int flushingSize;
+    @XmlAttribute(name="flushed-items")
+    public int flushedItems;
+
+    @XmlAttribute(name="capacity")
+    public int capacity;
 
     /**
-     * Ids of all connections that are consuming from the destination
+     * Status of the entries in the queue
      */
-    @XmlElement(name="consumer")
-    public List<Long> consumers = new ArrayList<Long>();
+    @XmlElement(name="entry")
+    public List<EntryStatusDTO> entries = new ArrayList<EntryStatusDTO>();
 
-    /**
-     * Ids of all queues that are associated with the destination
-     */
-    @XmlElement(name="queue")
-    public List<Long> queues = new ArrayList<Long>();
+
 }

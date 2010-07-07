@@ -17,8 +17,6 @@
 package org.apache.activemq.apollo.dto;
 
 import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * <p>
@@ -26,20 +24,20 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="virtual-host-status")
+@XmlRootElement(name="destination-summary")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationSummaryDTO extends ServiceStatusDTO {
+public class DestinationSummaryDTO extends LongIdDTO {
 
     /**
-     * The type of store the virtual host is using.
+     * The destination name
      */
-    @XmlAttribute(name="store-type")
-    public String storeType;
+    @XmlElement(name="name")
+    public String name;
 
     /**
-     * Ids of all the destinations running on the broker
+     * The routing domain
      */
-    @XmlElement(name="destination")
-    public List<Long> destinations = new ArrayList<Long>();
-
+    @XmlElement(name="domain")
+    public String domain;
+    
 }

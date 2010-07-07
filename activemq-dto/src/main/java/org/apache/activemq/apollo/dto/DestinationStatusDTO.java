@@ -16,7 +16,12 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * <p>
@@ -24,19 +29,25 @@ import javax.xml.bind.annotation.*;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="destination-summary")
+@XmlRootElement(name="destination-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationStatusDTO extends IdDTO<Long> {
+public class DestinationStatusDTO extends DestinationSummaryDTO {
 
     /**
-     * The destination name
+     * Ids of all connections that are producing to the destination
      */
-    @XmlElement(name="name")
-    public String name;
+    @XmlElement(name="producer")
+    public List<Long> producers = new ArrayList<Long>();
 
     /**
-     * The routing domain
+     * Ids of all connections that are consuming from the destination
      */
-    @XmlElement(name="domain")
-    public String domain;
+    @XmlElement(name="consumer")
+    public List<Long> consumers = new ArrayList<Long>();
+
+    /**
+     * Ids of all queues that are associated with the destination
+     */
+    @XmlElement(name="queue")
+    public List<Long> queues = new ArrayList<Long>();
 }

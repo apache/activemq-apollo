@@ -27,42 +27,29 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="destination-status")
+@XmlRootElement(name="entry-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class EntryStatusDTO extends IdDTO<Long> {
+public class EntryStatusDTO {
 
     /**
      * A unique id of the object within it's container
      */
-	@XmlAttribute(name="enqueue-item-counter")
-	public long id;
+	@XmlAttribute(name="seq")
+	public long seq;
 
-    @XmlAttribute(name="enqueue-item-counter")
-    public long enqueueItemCounter;
-    @XmlAttribute(name="dequeue-item-counter")
-    public long dequeueItemCounter;
-    @XmlAttribute(name="enqueue-size-counter")
-    public long enqueueSizeCounter;
-    @XmlAttribute(name="dequeue-size-counter")
-    public long dequeueSizeCounter;
-    @XmlAttribute(name="nack-item-counter")
-    public long nackItemCounter;
-    @XmlAttribute(name="nack-size-counter")
-    public long nackSizeCounter;
+    @XmlAttribute(name="count")
+    public int count;
 
-    @XmlAttribute(name="queue-size")
-    public long queueSize;
-    @XmlAttribute(name="queue-items")
-    public long queueItems;
+    @XmlAttribute(name="size")
+    public int size;
 
-    @XmlAttribute(name="loading-size")
-    public int loadingSize;
-    @XmlAttribute(name="flushing-size")
-    public int flushingSize;
-    @XmlAttribute(name="flushed-items")
-    public int flushedItems;
+    @XmlAttribute(name="state")
+    public String state;
 
-    @XmlAttribute(name="capacity")
-    public int capacity;
+    @XmlAttribute(name="consumers")
+    public int consumers;
+
+    @XmlAttribute(name="prefetched")
+    public int prefetched;
 
 }
