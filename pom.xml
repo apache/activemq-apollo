@@ -124,17 +124,16 @@
   </distributionManagement>
 
   <modules>
-    <module>activemq-bio</module>
-    <module>activemq-broker</module>
-    <module>activemq-jaxb</module>
-    <module>activemq-kaha</module>
-    <module>activemq-stomp</module>
-    <module>activemq-store</module>
-    <module>activemq-scala</module>
-    <module>activemq-transport</module>
     <module>activemq-util</module>
     <module>activemq-protobuf</module>
+    <module>activemq-transport</module>
+    <module>activemq-store</module>
+    <module>activemq-broker</module>
     <module>activemq-selector</module>
+    <module>activemq-tcp</module>
+    <module>activemq-hawtdb</module>
+    <module>activemq-jaxb</module>
+    <module>activemq-scala</module>
   </modules>
 
   <scm>
