@@ -36,10 +36,9 @@ object StompBroker {
     println("Press ENTER to shutdown");
     println("=======================")
     println("")
-
     val uri = "tcp://"+address+":"+port
-
     println("Starting stomp broker: "+uri)
+    println("log4j at: "+getClass.getClassLoader.getResource("log4j.properties"))
 
     val broker = new Broker()
     val connector = broker.config.connectors.get(0)
