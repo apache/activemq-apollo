@@ -308,7 +308,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val queueKey: L
         check_counter += 1
 
         if( (check_counter%10)==0  ) {
-          display_stats
+//          display_stats
         }
 
         if( (check_counter%25)==0 ) {
@@ -985,7 +985,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
               // advance: not interested.
               advancing += sub
             } else {
-              if( sub.full ) {
+
+              // Is the sub flow controlled?
+              if( sub.full || (sub.prefetchFull && !sub.is_prefetched(entry) ) ) {
                 // hold back: flow controlled
                 heldBack += sub
               } else {
@@ -1009,13 +1011,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       // The acquiring sub is added last to the list so that
       // the other competing subs get first dibs at the next entry.
       if( acquiringSub != null ) {
-
-        // Advancing may need to be held back because the sub's prefetch is full
-        if( acquiringSub.prefetchFull && !acquiringSub.is_prefetched(getNext) ) {
-          heldBack += acquiringSub
-        } else {
-          advancing += acquiringSub
-        }
+        advancing += acquiringSub
       }
 
       if ( advancing.isEmpty ) {
@@ -1233,7 +1229,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
   }
 
   def close() = {
-    pos.-=(this)
+    pos -= this
 
     invalidate_prefetch
 
@@ -1249,11 +1245,6 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
       next = next.getNext
       cur.nack // this unlinks the entry.
     }
-
-    // show the queue entries... after we disconnect.
-    queue.dispatchQueue.dispatchAfter(1, TimeUnit.SECONDS, ^{
-      queue.display_active_entries
-    })
   }
 
   /**
@@ -1262,11 +1253,14 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
    */
   def advance(value:QueueEntry):Unit = {
     assert(value!=null)
+    assert(pos!=null) 
 
     // Remove the previous pos from the prefetch counters.
     if( prefetch_tail!=null && !pos.is_head) {
       remove_from_prefetch(pos)
     }
+
+
     advanced_size += pos.size
 
     pos = value
@@ -1399,8 +1393,12 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
 
       // we may now be able to prefetch some messages..
       acquired_size -= entry.size
+
+      val next = entry.nextOrTail
       entry.remove // entry size changes to 0
+
       refill_prefetch
+      next.run
     }
 
     def nack = {
