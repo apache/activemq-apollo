@@ -90,6 +90,8 @@ object StompLoadClient {
     val sampleThread = new Thread() {
       override def run() = {
         try {
+          var totalProducerCount = 0L
+          var totalConsumerCount = 0L
           producerCounter.set(0)
           consumerCounter.set(0)
           var start = System.nanoTime()
@@ -97,10 +99,14 @@ object StompLoadClient {
             Thread.sleep(sampleInterval)
             val end = System.nanoTime()
             if( producers > 0 ) {
-              printRate("Producer", producerCounter, end - start)
+              val count = producerCounter.getAndSet(0)
+              totalProducerCount += count
+              printRate("Producer", count, totalProducerCount, end - start)
             }
             if( consumers > 0 ) {
-              printRate("Consumer", consumerCounter, end - start)
+              val count = consumerCounter.getAndSet(0)
+              totalConsumerCount += count
+              printRate("Consumer", count, totalConsumerCount, end - start)
             }
             start = end
           }
@@ -158,10 +164,9 @@ object StompLoadClient {
 
   }
 
-  def printRate(name: String, counter: AtomicLong, nanos: Long) = {
-    val c = counter.getAndSet(0)
-    val rate_per_second: java.lang.Float = ((1.0f * c / nanos) * NANOS_PER_SECOND)
-    println(format("%s rate: %,.3f per second", name, rate_per_second))
+  def printRate(name: String, periodCount:Long, totalCount:Long, nanos: Long) = {
+    val rate_per_second: java.lang.Float = ((1.0f * periodCount / nanos) * NANOS_PER_SECOND)
+    println("%s rate: %,.3f per second, total: %,d".format(name, rate_per_second, totalCount))
   }
 
   def destination(i:Int) = "/"+destinationType+"/load-"+(i%destinationCount)
