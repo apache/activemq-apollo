@@ -66,12 +66,12 @@ public class TransportFilter implements TransportListener, Transport {
         next.setDispatchQueue(queue);
     }
 
-    public void suspend() {
-        next.suspend();
+    public void suspendRead() {
+        next.suspendRead();
     }
 
-    public void resume() {
-        next.resume();
+    public void resumeRead() {
+        next.resumeRead();
     }
 
     /**

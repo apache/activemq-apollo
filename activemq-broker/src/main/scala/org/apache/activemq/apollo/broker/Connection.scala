@@ -31,7 +31,7 @@ class ConnectionConfig {
 }
 abstract class Connection() extends TransportListener with Service {
 
-  val q = createQueue("connection")
+  val dispatchQueue = createQueue("connection")
   var name = "connection"
   var stopping = false;
 
@@ -39,7 +39,7 @@ abstract class Connection() extends TransportListener with Service {
   var exceptionListener:ExceptionListener = null;
 
   def start() = {
-    transport.setDispatchQueue(q);
+    transport.setDispatchQueue(dispatchQueue);
     transport.getDispatchQueue.release
     transport.setTransportListener(this);
     transport.start()
@@ -48,7 +48,7 @@ abstract class Connection() extends TransportListener with Service {
   def stop() = {
     stopping=true
     transport.stop()
-    q.release
+    dispatchQueue.release
   }
 
   def onException(error:IOException) = {

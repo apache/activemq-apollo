@@ -84,25 +84,15 @@ trait Message {
 }
 
 object Delivery {
-  def apply(o:Delivery) = new Delivery(o.message, o.encoded, o.encoding, o.size, o.ack, o.tx_id, o.store_id)
+  def apply(o:Delivery) = new Delivery(o.message, o.size, o.encoded, o.encoding, o.ack, o.tx_id, o.store_id)
 }
 
 case class Delivery (
 
-        /**
-         *  the message being delivered
-         */
+  /**
+   *  the message being delivered
+   */
   message: Message,
-
-  /**
-   * the encoded form of the message being delivered.
-   */
-  encoded: Buffer,
-
-  /**
-   * the encoding format of the message
-   */
-  encoding: String,
 
   /**
    * memory size of the delivery.  Used for resource allocation tracking
@@ -110,15 +100,25 @@ case class Delivery (
   size:Int,
 
   /**
+   * the encoded form of the message being delivered.
+   */
+  encoded: Buffer = null,
+
+  /**
+   * the encoding format of the message
+   */
+  encoding: String = null,
+
+  /**
    *  true if this delivery requires acknowledgment.
    */
-  ack:Boolean,
+  ack:Boolean = false,
 
   /**
    * The id used to identify the transaction that the message
    * belongs to.
    */
-  tx_id:Long,
+  tx_id:Long = -1,
 
   /**
    * The id used to identify this message in the message
@@ -126,7 +126,7 @@ case class Delivery (
    *
    * @return The store tracking or -1 if not set.
    */
-  store_id: Long
+  store_id: Long = -1
 
 ) extends BaseRetained {
 

@@ -19,15 +19,16 @@ package org.apache.activemq.apollo.stomp;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.activemq.util.buffer.Buffer;
 
+
 public interface Stomp {
-    
+
     Buffer EMPTY_BUFFER = new Buffer(0);
     byte NULL = 0;
     Buffer NULL_BUFFER = new Buffer(new byte[]{NULL});
     byte NEWLINE = '\n';
     Buffer NEWLINE_BUFFER = new Buffer(new byte[]{NEWLINE});
     Buffer END_OF_FRAME_BUFFER = new Buffer(new byte[]{NULL, NEWLINE});
-    
+
     AsciiBuffer TRUE = new AsciiBuffer("true");
     AsciiBuffer FALSE = new AsciiBuffer("false");
 
@@ -35,8 +36,8 @@ public interface Stomp {
         AsciiBuffer CONNECT = new AsciiBuffer("CONNECT");
         AsciiBuffer SEND = new AsciiBuffer("SEND");
         AsciiBuffer DISCONNECT = new AsciiBuffer("DISCONNECT");
-        AsciiBuffer SUBSCRIBE = new AsciiBuffer("SUB");
-        AsciiBuffer UNSUBSCRIBE = new AsciiBuffer("UNSUB");
+        AsciiBuffer SUBSCRIBE = new AsciiBuffer("SUBSCRIBE");
+        AsciiBuffer UNSUBSCRIBE = new AsciiBuffer("UNSUBSCRIBE");
 
         AsciiBuffer BEGIN_TRANSACTION = new AsciiBuffer("BEGIN");
         AsciiBuffer COMMIT_TRANSACTION = new AsciiBuffer("COMMIT");
@@ -57,7 +58,7 @@ public interface Stomp {
     public interface Headers {
         byte SEPERATOR = ':';
         Buffer SEPERATOR_BUFFER = new Buffer(new byte[]{SEPERATOR});
-        
+
         AsciiBuffer RECEIPT_REQUESTED = new AsciiBuffer("receipt");
         AsciiBuffer TRANSACTION = new AsciiBuffer("transaction");
         AsciiBuffer CONTENT_LENGTH = new AsciiBuffer("content-length");
@@ -129,16 +130,16 @@ public interface Stomp {
             AsciiBuffer MESSAGE_ID = new AsciiBuffer("message-id");
         }
     }
-    
+
 	public enum Transformations {
 		JMS_BYTE, JMS_OBJECT_XML, JMS_OBJECT_JSON, JMS_MAP_XML, JMS_MAP_JSON;
-		
+
 		public String toString() {
 			return name().replaceAll("_", "-").toLowerCase();
 		}
-		
+
 		public static Transformations getValue(String value) {
 			return valueOf(value.replaceAll("-", "_").toUpperCase());
 		}
-	}    
+	}
 }

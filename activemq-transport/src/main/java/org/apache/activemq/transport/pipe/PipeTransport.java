@@ -193,11 +193,11 @@ public class PipeTransport implements Transport {
         return null;
     }
 
-    public void suspend() {
+    public void suspendRead() {
         dispatchSource.suspend();
     }
 
-    public void resume() {
+    public void resumeRead() {
         dispatchSource.resume();
     }
     public void reconnect(URI uri, CompletionCallback callback) {

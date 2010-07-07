@@ -74,12 +74,12 @@ public interface Transport extends Service {
     /**
      * suspend delivery of commands.
      */
-    void suspend();
+    void suspendRead();
 
     /**
      * resume delivery of commands.
      */
-    void resume();
+    void resumeRead();
 
     /**
      * @param target

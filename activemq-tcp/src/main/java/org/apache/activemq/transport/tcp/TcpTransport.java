@@ -327,11 +327,11 @@ public class TcpTransport implements Transport {
         return null;
     }
 
-    public void suspend() {
+    public void suspendRead() {
         readSource.suspend();
     }
 
-    public void resume() {
+    public void resumeRead() {
         readSource.resume();
     }
     

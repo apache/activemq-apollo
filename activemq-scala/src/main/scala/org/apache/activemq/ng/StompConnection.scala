@@ -17,7 +17,6 @@
 package org.apache.activemq.ng
 
 import _root_.java.util.{LinkedList}
-import _root_.org.apache.activemq.ng.Stomp
 import java.nio.channels.SelectionKey._
 import _root_.org.apache.activemq.util.buffer._
 import _root_.org.fusesource.hawtdispatch._
