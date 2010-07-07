@@ -367,7 +367,7 @@
         <version>1.6.0</version>
         <configuration>
           <quiet>false</quiet>
-          <header>license-header.txt</header>
+          <header>src/main/resources/license-header.txt</header>
           <includes>
               <include>src/**</include>
               <include>**/pom.xml</include>
@@ -375,24 +375,18 @@
           <excludes>
             <!-- can remove once http://code.google.com/p/maven-license-plugin/issues/detail?id=72 is resolved -->
             <exclude>**/*.scaml</exclude>
-
-            <exclude>**/.svn/**</exclude>
             <exclude>**/LICENSE.txt</exclude>
             <exclude>**/LICENSE</exclude>
-            <exclude>**/release.properties</exclude>
-            <exclude>**/cobertura.ser</exclude>
-            <exclude>**/.clover/**</exclude>
-            <exclude>**/.classpath</exclude>
-            <exclude>**/.project</exclude>
-            <exclude>**/.settings/**</exclude>
-            <exclude>**/*.iml</exclude>
-            <exclude>**/*.ipr</exclude>
-            <exclude>**/*.iws</exclude>
+            <exclude>**/.svn/**</exclude>
+            
+            <!-- ignore files produced during a build -->
+            <exclude>**/target/**</exclude>
+            
+            <!-- ignore binary files -->
             <exclude>**/*.jpg</exclude>
             <exclude>**/*.png</exclude>
             <exclude>**/*.gif</exclude>
             <exclude>**/*.ico</exclude>
-            <exclude>**/*.class</exclude>
             <exclude>**/*.keystore</exclude>
           </excludes>
           <useDefaultExcludes>false</useDefaultExcludes>
@@ -402,6 +396,13 @@
               <index>SCRIPT_STYLE</index>
           </mapping>
         </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>        
       </plugin>
 
       <plugin>
