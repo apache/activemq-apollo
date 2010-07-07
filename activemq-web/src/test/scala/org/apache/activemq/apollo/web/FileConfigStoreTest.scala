@@ -14,7 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.hawtdb
+package org.apache.activemq.apollo.web
+
+import java.io.File
+import java.util.concurrent.{TimeUnit, CountDownLatch}
+import org.fusesource.hawtdispatch.Future
+import org.apache.activemq.apollo.broker.{FunSuiteSupport, LoggingTracker}
 
 /**
  * <p>
@@ -22,4 +27,26 @@ package org.apache.activemq.broker.store.hawtdb
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBMemoryPool
+class FileConfigStoreTest extends FunSuiteSupport {
+  test("file config store") {
+
+    val store = new FileConfigStore
+    store.file = new File("activemq.xml")
+    store
+
+    LoggingTracker("config store startup") { tracker=>
+      store.start(tracker.task())
+    }
+
+    expect(List("default")) {
+      Future[List[String]]{ x=>
+        store.listBrokers(x)
+      }
+    }
+
+    LoggingTracker("config store stop") { tracker=>
+      store.stop(tracker.task())
+    }
+  }
+}
+

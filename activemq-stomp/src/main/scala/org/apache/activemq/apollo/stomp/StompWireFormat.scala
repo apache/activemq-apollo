@@ -167,7 +167,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
   def getWriteCounter = write_counter
 
 
-  def write(command: Any):BufferState =  {
+  def write(command: Any):WireFormat.BufferState =  {
     if ( is_full) {
       WireFormat.BufferState.FULL
     } else {
@@ -181,7 +181,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
     }
   }
 
-  def flush():BufferState = {
+  def flush():WireFormat.BufferState = {
     
     // if we have a pending write that is being sent over the socket...
     if ( !is_empty ) {

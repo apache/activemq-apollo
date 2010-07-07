@@ -37,7 +37,8 @@ class HawtDBMemoryPoolSPI extends StoreFactory.SPI {
 
   def create(config: StoreDTO) = {
     if( config.isInstanceOf[HawtDBStoreDTO]) {
-      new HawtDBStore
+// TODO:      new HawtDBMemoryPool
+      null
     } else {
       null
     }

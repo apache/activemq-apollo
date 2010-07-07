@@ -109,7 +109,6 @@ object Helpers {
     rc.protocol = pb.getProtocol
     rc.size = pb.getSize
     rc.value = pb.getValue
-    rc.directKey = pb.getStreamKey
     rc.expiration = pb.getExpiration
     rc
   }
@@ -120,7 +119,6 @@ object Helpers {
     pb.setProtocol(v.protocol)
     pb.setSize(v.size)
     pb.setValue(v.value)
-    pb.setStreamKey(v.directKey)
     pb.setExpiration(v.expiration)
     pb
   }
@@ -227,10 +225,5 @@ object Helpers {
   SUBSCRIPTIONS_INDEX_FACTORY.setKeyCodec(AsciiBufferCodec.INSTANCE);
   SUBSCRIPTIONS_INDEX_FACTORY.setValueCodec(AddSubscription.FRAMED_CODEC);
   SUBSCRIPTIONS_INDEX_FACTORY.setDeferredEncoding(true);
-
-  val DIRECT_INDEX_FACTORY = new BTreeIndexFactory[jl.Long, AddDirect.Buffer]();
-  DIRECT_INDEX_FACTORY.setKeyCodec(LongCodec.INSTANCE);
-  DIRECT_INDEX_FACTORY.setValueCodec(AddDirect.FRAMED_CODEC);
-  DIRECT_INDEX_FACTORY.setDeferredEncoding(true);
 
 }

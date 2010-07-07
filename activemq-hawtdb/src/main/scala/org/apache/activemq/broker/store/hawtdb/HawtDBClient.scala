@@ -67,7 +67,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   def dispatchQueue = hawtDBStore.dispatchQueue
 
 
-  private val directFileFactory = new PageFileFactory()
   private val indexFileFactory = new TxPageFileFactory()
   private var journal: Journal = null
 
@@ -105,8 +104,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   private def cleanupInterval = config.cleanupInterval
 
   private def failIfDatabaseIsLocked = config.failIfLocked
-
-  private def directFile = directFileFactory.getPageFile
 
   private def indexFile = indexFileFactory.getTxPageFile()
 
@@ -177,11 +174,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       }
       journal.start
 
-      directFileFactory.setFile(new File(directory, "direct"));
-      directFileFactory.setHeaderSize(0);
-      directFileFactory.setPageSize(1024)
-      directFileFactory.open
-
       indexFileFactory.setFile(new File(directory, "db"))
       indexFileFactory.setDrainOnClose(false)
       indexFileFactory.setSync(true)
@@ -204,7 +196,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
             rootBean.setDataFileRefIndexPage(alloc(DATA_FILE_REF_INDEX_FACTORY))
             rootBean.setMessageRefsIndexPage(alloc(MESSAGE_REFS_INDEX_FACTORY))
             rootBean.setSubscriptionIndexPage(alloc(SUBSCRIPTIONS_INDEX_FACTORY))
-            rootBean.setDirectIndexPage(alloc(DIRECT_INDEX_FACTORY))
             storedRootBuffer = rootBean.freeze
             helper.storeRootBean
 
@@ -222,20 +213,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
       recover(onComplete)
 
-      // update the allocated free list in the direct file
-      // by unfreeing the items contained in the direct index.
-      withTx { tx =>
-        val helper = new TxHelper(tx)
-        import JavaConversions._
-        import helper._
-
-        directIndex.iterator.foreach { entry =>
-          val record = entry.getValue
-          val page_count: Int = directFile.pages(record.getSize)
-          directFile.allocator.unfree(record.getPage, page_count)
-        }
-      }
-
       // Schedule periodic jobs.. they keep executing while schedule_version remains the same.
       scheduleCleanup(schedule_version.get())
       scheduleFlush(schedule_version.get())
@@ -248,8 +225,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     indexFileFactory.close
     lockFile.unlock
   }
-
-  val last_direct_key = new AtomicLong
 
   def addQueue(record: QueueRecord, callback:Runnable) = {
     val update = new AddQueue.Bean()
@@ -1057,7 +1032,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     lazy val messageKeyIndex = MESSAGE_KEY_INDEX_FACTORY.open(_tx, rootBuffer.getMessageKeyIndexPage)
     lazy val messageRefsIndex = MESSAGE_REFS_INDEX_FACTORY.open(_tx, rootBuffer.getMessageRefsIndexPage)
     lazy val subscriptionIndex = SUBSCRIPTIONS_INDEX_FACTORY.open(_tx, rootBuffer.getSubscriptionIndexPage)
-    lazy val directIndex = DIRECT_INDEX_FACTORY.open(_tx, rootBuffer.getDirectIndexPage)
 
     def addAndGet[K](index:SortedIndex[K, jl.Integer], key:K, amount:Int):Int = {
       var counter = index.get(key)
