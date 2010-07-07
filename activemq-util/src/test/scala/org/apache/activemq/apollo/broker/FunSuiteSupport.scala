@@ -23,6 +23,12 @@ abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfter
     new File(_basedir)
   }
 
+  /**
+   * Returns ${basedir}/target/test-data
+   */
+  def testDataDir = {
+    new File(new File(_basedir, "target"), "test-data")
+  }
 
   override protected def beforeAll(map: Map[String, Any]): Unit = {
     _basedir = map.get("basedir") match {

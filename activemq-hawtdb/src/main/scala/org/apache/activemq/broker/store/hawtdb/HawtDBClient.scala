@@ -190,9 +190,11 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   }
 
   def stop() = {
-    // this cancels schedualed jobs...
     schedual_version.incrementAndGet
+    journal.close
     flush
+    pageFileFactory.close
+    lockFile.unlock
   }
 
   def addQueue(record: QueueRecord, callback:Runnable) = {
@@ -633,10 +635,42 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
   private def index(tx: Transaction, update: TypeCreatable, location: Location): Unit = {
 
-    object Process extends TxHelper(tx) {
-      import JavaConversions._
+    val helper = new TxHelper(tx)
+    import JavaConversions._
+    import helper._
 
-      def apply(x: AddMessage.Getter): Unit = {
+    def removeMessage(key:Long) = {
+      val location = messageKeyIndex.remove(key)
+      if (location != null) {
+        val fileId:jl.Integer = location.getDataFileId()
+        addAndGet(dataFileRefIndex, fileId, -1)
+      } else {
+        error("Cannot remove message, it did not exist: %d", key)
+      }
+    }
+
+    def removeQueue(queueKey:Long) = {
+      val queueRecord = queueIndex.remove(queueKey)
+      if (queueRecord != null) {
+        val trackingIndex = queueTrackingIndex(queueRecord)
+        val entryIndex = queueEntryIndex(queueRecord)
+
+        trackingIndex.iterator.map { entry=>
+          val messageKey = entry.getKey
+          if( addAndGet(messageRefsIndex, messageKey, -1) == 0 ) {
+            // message is no longer referenced.. we can remove it..
+            removeMessage(messageKey.longValue)
+          }
+        }
+
+        entryIndex.destroy
+        trackingIndex.destroy
+      }
+
+    }
+
+    update match {
+      case x: AddMessage.Getter =>
 
         val messageKey = x.getMessageKey()
         if (messageKey > databaseRootRecord.getLastMessageKey) {
@@ -657,54 +691,9 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
           val fileId:jl.Integer = location.getDataFileId()
           addAndGet(dataFileRefIndex, fileId, 1)
         }
-      }
 
-      def removeMessage(key:Long) = {
-        val location = messageKeyIndex.remove(key)
-        if (location != null) {
-          val fileId:jl.Integer = location.getDataFileId()
-          addAndGet(dataFileRefIndex, fileId, -1)
-        } else {
-          error("Cannot remove message, it did not exist: %d", key)
-        }
-      }
+      case x: AddQueueEntry.Getter =>
 
-      def apply(x: AddQueue.Getter): Unit = {
-        val queueKey = x.getKey
-        if (queueIndex.get(queueKey) == null) {
-
-          if (queueKey > databaseRootRecord.getLastQueueKey) {
-            databaseRootRecord.setLastQueueKey(queueKey)
-          }
-
-          val queueRecord = new QueueRootRecord.Bean
-          queueRecord.setEntryIndexPage(alloc(QUEUE_ENTRY_INDEX_FACTORY))
-          queueRecord.setTrackingIndexPage(alloc(QUEUE_TRACKING_INDEX_FACTORY))
-          queueRecord.setInfo(x)
-          queueIndex.put(queueKey, queueRecord.freeze)
-        }
-      }
-
-      def apply(x: RemoveQueue.Getter): Unit = {
-        val queueRecord = queueIndex.remove(x.getKey)
-        if (queueRecord != null) {
-          val trackingIndex = queueTrackingIndex(queueRecord)
-          val entryIndex = queueEntryIndex(queueRecord)
-
-          trackingIndex.iterator.map { entry=>
-            val messageKey = entry.getKey
-            if( addAndGet(messageRefsIndex, messageKey, -1) == 0 ) {
-              // message is no longer referenced.. we can remove it..
-              removeMessage(messageKey.longValue)
-            }
-          }
-
-          entryIndex.destroy
-          trackingIndex.destroy
-        }
-      }
-
-      def apply(x: AddQueueEntry.Getter): Unit = {
         val queueKey = x.getQueueKey
         val queueRecord = queueIndex.get(queueKey)
         if (queueRecord != null) {
@@ -737,9 +726,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
         } else {
           error("Queue not found: %d", x.getQueueKey)
         }
-      }
 
-      def apply(x: RemoveQueueEntry.Getter): Unit = {
+      case x: RemoveQueueEntry.Getter =>
         val queueKey = x.getQueueKey
         val queueRecord = queueIndex.get(queueKey)
         if (queueRecord != null) {
@@ -764,17 +752,34 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
         } else {
           error("Queue not found: %d", x.getQueueKey)
         }
-      }
 
-      def apply(x: Purge.Getter): Unit = {
+      case x: AddQueue.Getter =>
+        val queueKey = x.getKey
+        if (queueIndex.get(queueKey) == null) {
 
+          if (queueKey > databaseRootRecord.getLastQueueKey) {
+            databaseRootRecord.setLastQueueKey(queueKey)
+          }
+
+          val queueRecord = new QueueRootRecord.Bean
+          queueRecord.setEntryIndexPage(alloc(QUEUE_ENTRY_INDEX_FACTORY))
+          queueRecord.setTrackingIndexPage(alloc(QUEUE_TRACKING_INDEX_FACTORY))
+          queueRecord.setInfo(x)
+          queueIndex.put(queueKey, queueRecord.freeze)
+        }
+
+      case x: RemoveQueue.Getter =>
+        removeQueue(x.getKey)
+
+      case x: AddTrace.Getter =>
+        // trace messages are informational messages in the journal used to log
+        // historical info about store state.  They don't update the indexes.
+
+      case x: Purge.Getter =>
         // Remove all the queues...
-        queueIndex.iterator.map {
-          entry =>
-            entry.getKey
-        }.foreach {
-          key =>
-            apply(new RemoveQueue.Bean().setKey(key.intValue))
+        val queueKeys = queueIndex.iterator.map( _.getKey ).toList
+        queueKeys.foreach { key =>
+          removeQueue(key.longValue)
         }
 
         // Remove stored messages...
@@ -785,31 +790,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
         cleanup(tx);
         info("Store purged.");
-      }
-
-      def apply(x: AddTrace.Getter): Unit = {
-        // trace messages are informational messages in the journal used to log
-        // historical info about store state.  They don't update the indexes.
-      }
-    }
-
-    update match {
-      case x: AddMessage.Getter =>
-        Process(x)
-      case x: AddQueueEntry.Getter =>
-        Process(x)
-      case x: RemoveQueueEntry.Getter =>
-        Process(x)
-
-      case x: AddQueue.Getter =>
-        Process(x)
-      case x: RemoveQueue.Getter =>
-        Process(x)
-
-      case x: AddTrace.Getter =>
-        Process(x)
-      case x: Purge.Getter =>
-        Process(x)
 
       case x: AddSubscription.Getter =>
       case x: RemoveSubscription.Getter =>

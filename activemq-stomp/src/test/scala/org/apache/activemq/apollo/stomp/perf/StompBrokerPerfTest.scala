@@ -28,6 +28,8 @@ import AsciiBuffer._
 import Stomp._
 import _root_.org.apache.activemq.apollo.stomp.StompFrame
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import java.io.File
+import org.apache.activemq.apollo.dto.{BrokerDTO, HawtDBStoreDTO}
 
 
 class StompBrokerPerfTest extends BaseBrokerPerfSupport {
@@ -47,6 +49,29 @@ class StompPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
   override def createConsumer() = new StompRemoteConsumer()
 
   override def getRemoteWireFormat() = "stomp"
+
+}
+
+class StompHawtDBPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
+
+  println(getClass.getClassLoader.getResource("log4j.properties"))
+
+  override def createProducer() = new StompRemoteProducer()
+
+  override def createConsumer() = new StompRemoteConsumer()
+
+  override def getRemoteWireFormat() = "stomp"
+
+  override def createBrokerConfig(name: String, bindURI: String, connectUri: String): BrokerDTO = {
+    val rc = super.createBrokerConfig(name, bindURI, connectUri)
+
+    val store = new HawtDBStoreDTO
+    store.directory = new File(new File(testDataDir, getClass.getName), name)
+
+    rc.virtualHosts.get(0).store = store
+    rc
+  }
+
 
 }
 

@@ -31,6 +31,7 @@ import collection.mutable.ListBuffer
 import java.net.URL
 import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.apache.activemq.apollo.dto.BrokerDTO
 
 /**
  * 
@@ -183,7 +184,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
   def getBrokerWireFormat() = "multi"
   def getRemoteWireFormat(): String
 
-  def createBroker(name: String, bindURI: String, connectUri: String): Broker = {
+  def createBrokerConfig(name: String, bindURI: String, connectUri: String): BrokerDTO = {
 
     val config = Broker.defaultConfig
     val connector = config.connectors.get(0)
@@ -193,22 +194,22 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
 
     val host = config.virtualHosts.get(0)
     host.purgeOnStartup = true
-
-    val broker = new Broker()
-    broker.config = config
-    broker
+    config
   }
 
   def createConnections() = {
 
     if (MULTI_BROKER) {
-      sendBroker = createBroker("SendBroker", sendBrokerBindURI, sendBrokerConnectURI)
-      rcvBroker = createBroker("RcvBroker", receiveBrokerBindURI, receiveBrokerConnectURI)
+      sendBroker = new Broker()
+      sendBroker.config = createBrokerConfig("SendBroker", sendBrokerBindURI, sendBrokerConnectURI)
+      rcvBroker = new Broker()
+      rcvBroker.config = createBrokerConfig("RcvBroker", receiveBrokerBindURI, receiveBrokerConnectURI)
       brokers += (sendBroker)
       brokers += (rcvBroker)
     } else {
-      sendBroker = createBroker("Broker", sendBrokerBindURI, sendBrokerConnectURI)
+      sendBroker = new Broker()
       rcvBroker = sendBroker
+      sendBroker.config = createBrokerConfig("Broker", sendBrokerBindURI, sendBrokerConnectURI)
       brokers += (sendBroker)
     }
 

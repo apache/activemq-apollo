@@ -83,7 +83,7 @@ object VirtualHost extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
+class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging with LoggingReporter {
   import VirtualHost._
   
   override protected def log = VirtualHost
@@ -126,6 +126,8 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
   override protected def _start(onCompleted:Runnable):Unit = {
     val tracker = new LoggingTracker("virtual host startup", dispatchQueue)
     store = StoreFactory.create(config.store)
+    
+    store.configure(config.store, this)
     if( store!=null ) {
       val task = tracker.task("store startup")
       store.start(^{
@@ -192,9 +194,10 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 //        done.await();
 
     if( store!=null ) {
-      store.stop();
+      store.stop(onCompleted);
+    } else {
+      onCompleted.run
     }
-    onCompleted.run
   }
 
   def getQueue(destination:Destination)(cb: (Queue)=>Unit ) = ^{
