@@ -135,7 +135,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
         if( delivery.ack!=null ) {
           delivery.ack(delivery.storeBatch)
         }
-        if (delivery.storeId != -1) {
+        if (delivery.storeKey != -1) {
           delivery.storeBatch.enqueue(entry.createQueueEntryRecord)
           delivery.storeBatch.release
         }
@@ -229,7 +229,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
         // Called from the producer thread before the delivery is
         // processed by the queue's thread.. We don't
         // yet know the order of the delivery in the queue.
-        if (delivery.storeId != -1) {
+        if (delivery.storeKey != -1) {
           // If the message has a store id, then this delivery will
           // need a tx to track the store changes.
           if( delivery.storeBatch == null ) {
@@ -371,19 +371,10 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
         // Chuck the reset out...
         val loaded = entry.value.asLoaded
         if( loaded!=null ) {
-          var ref = loaded.delivery.storeId
+          var ref = loaded.delivery.storeKey
           if( ref == -1 ) {
             val tx = host.store.createStoreBatch
-
-            val message = loaded.delivery.message
-            val sm = new MessageRecord
-            sm.protocol = message.protocol
-            sm.value = ProtocolFactory.get(message.protocol).encode(message)
-            sm.size = loaded.size
-
-            tx.store(sm)
-            loaded.delivery.storeId = sm.id
-
+            loaded.delivery.storeKey = tx.store(loaded.delivery.createMessageRecord)
             tx.enqueue(entry.createQueueEntryRecord)
             tx.release
           }
@@ -408,7 +399,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
       val delivery = new Delivery()
       delivery.message = ProtocolFactory.get(stored.protocol).decode(stored.value)
       delivery.size = stored.size
-      delivery.storeId = stored.id
+      delivery.storeKey = stored.key
 
       entry.loaded(delivery)
 
@@ -478,7 +469,7 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
 
   def stored() = {
     val loaded = value.asLoaded
-    this.value = new Stored(loaded.delivery.storeId, loaded.size)
+    this.value = new Stored(loaded.delivery.storeKey, loaded.size)
     this
   }
 
@@ -620,7 +611,7 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
   class Loaded(val delivery: Delivery) extends EntryType {
 
     var aquired = false
-    def ref = delivery.storeId
+    def ref = delivery.storeKey
     def size = delivery.size
     def flushing = false
     

@@ -16,16 +16,20 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="memory-store")
+@XmlRootElement(name="cassandra-store")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class MemoryStoreDTO extends StoreDTO {
+public class CassandraStoreDTO extends StoreDTO {
 
+    @XmlAttribute(name="keyspace")
+    public String keyspace="ActiveMQ";
+
+    @XmlElement(name="host", required=true)
+    public ArrayList<String> hosts = new ArrayList<String>();    
 
 }

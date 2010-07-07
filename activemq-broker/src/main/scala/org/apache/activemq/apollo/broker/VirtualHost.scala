@@ -24,13 +24,13 @@ import _root_.scala.collection.JavaConversions._
 import _root_.scala.reflect.BeanProperty
 import path.PathFilter
 import org.fusesource.hawtbuf.AsciiBuffer
-import org.apache.activemq.apollo.dto.VirtualHostDTO
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
 import ReporterLevel._
 import org.apache.activemq.broker.store.{Store}
 import org.fusesource.hawtbuf.proto.WireFormat
-import org.apache.activemq.apollo.store.QueueRecord
+import org.apache.activemq.apollo.store.{StoreFactory, QueueRecord}
+import org.apache.activemq.apollo.dto.{CassandraStoreDTO, VirtualHostDTO}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -51,6 +51,9 @@ object VirtualHost extends Log {
     rc.id = "default"
     rc.enabled = true
     rc.hostNames.add("localhost")
+    val store = new CassandraStoreDTO
+    store.hosts.add("127.0.0.1:9160")
+    rc.store = store
     rc
   }
 
@@ -59,9 +62,13 @@ object VirtualHost extends Log {
    */
   def validate(config: VirtualHostDTO, reporter:Reporter):ReporterLevel = {
      new Reporting(reporter) {
+
       if( config.hostNames.isEmpty ) {
         error("Virtual host must be configured with at least one host name.")
       }
+
+      result |= StoreFactory.validate(config.store, reporter)
+       
     }.result
   }
   
@@ -111,16 +118,19 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 
 
   override protected def _start(onCompleted:Runnable):Unit = {
+    val tracker = new LoggingTracker("virtual host startup", dispatchQueue)
+    store = StoreFactory.create(config.store)
     if( store!=null ) {
-      store.start();
-      store.listQueues { ids =>
-        for( id <- ids) {
-          store.getQueueStatus(id) { x =>
-            x match {
-              case Some(info)=>
-              dispatchQueue ^{
-                val dest = DestinationParser.parse(info.record.name , destination_parser_options)
-                if( dest.getDomain == Domain.QUEUE_DOMAIN ) {
+      val task = tracker.task("store startup")
+
+      store.start(^{
+        store.listQueues { ids =>
+          for( id <- ids) {
+            store.getQueueStatus(id) { x =>
+              x match {
+                case Some(info)=>
+                dispatchQueue ^{
+                  val dest = new SingleDestination(Domain.QUEUE_DOMAIN, info.record.name)
 
                   val queue = new Queue(this, dest, id)
                   queue.first_seq = info.first
@@ -130,19 +140,22 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 
                   queues.put(info.record.name, queue)
                 }
+                case _ =>
               }
-              case _ =>
             }
           }
         }
-      }
+        task.run
+
+      });
     }
 
 
     //Recover transactions:
     transactionManager.virtualHost = this
     transactionManager.loadTransactions();
-    onCompleted.run
+
+    tracker.callback(onCompleted)
   }
 
 

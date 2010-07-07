@@ -374,11 +374,11 @@ public class RootEntity {
     // Queue Methods.
     // /////////////////////////////////////////////////////////////////
     public void queueAdd(Transaction tx, QueueRecord queue) throws IOException {
-        if (data.destinationIndex.get(queue.id) == null) {
+        if (data.destinationIndex.get(queue.key) == null) {
             DestinationEntity rc = new DestinationEntity();
             rc.setQueueDescriptor(queue);
             rc.allocate(tx);
-            data.destinationIndex.put(queue.id, rc);
+            data.destinationIndex.put(queue.key, rc);
         }
     }
 
@@ -405,7 +405,7 @@ public class RootEntity {
         LinkedList<org.apache.activemq.apollo.store.QueueStatus> results = new LinkedList<org.apache.activemq.apollo.store.QueueStatus>();
 
         final Iterator<Entry<Long, DestinationEntity>> i;
-        Long x = firstQueue==null? null : (Long)firstQueue.id;
+        Long x = firstQueue==null? null : (Long)firstQueue.key;
         i = data.destinationIndex.iterator(x);
         while (i.hasNext()) {
             Entry<Long, DestinationEntity> entry = i.next();

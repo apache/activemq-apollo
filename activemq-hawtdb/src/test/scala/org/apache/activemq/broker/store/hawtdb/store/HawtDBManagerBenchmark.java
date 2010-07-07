@@ -235,8 +235,7 @@ public class HawtDBManagerBenchmark extends TestCase {
                     enqueuePermits.acquire();
 
                     final MessageRecord messageRecord = new MessageRecord();
-                    messageRecord.id = store.allocateStoreTracking();
-                    messageRecord.messageId = new AsciiBuffer("" + i);
+                    messageRecord.key = store.allocateStoreTracking();
                     messageRecord.protocol = new AsciiBuffer("encoding");
                     messageRecord.value = buffer;
                     messageRecord.size = buffer.getLength();
@@ -252,7 +251,7 @@ public class HawtDBManagerBenchmark extends TestCase {
                         public void run(HawtDBSession session) throws Exception {
                             session.messageAdd(messageRecord);
                             QueueEntryRecord queueEntryRecord = new QueueEntryRecord();
-                            queueEntryRecord.messageKey = messageRecord.id;
+                            queueEntryRecord.messageKey = messageRecord.key;
                             queueEntryRecord.queueKey = queueKey.incrementAndGet();
                             queueEntryRecord.size = messageRecord.size;
                             session.queueAddMessage(queueId, queueEntryRecord);

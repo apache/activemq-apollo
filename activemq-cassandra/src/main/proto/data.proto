@@ -19,12 +19,11 @@ package org.apache.activemq.broker.store.cassandra;
 option java_multiple_files = true;
 
 message PBMessageRecord {
-  required bytes messageId = 2 [java_override_type = "AsciiBuffer"];
-  required bytes protocol = 3 [java_override_type = "AsciiBuffer"];
-  required int32 size = 4;
-  optional bytes value = 5;
-  optional int64 stream = 6;
-  optional int64 expiration = 7;
+  required bytes protocol = 1 [java_override_type = "AsciiBuffer"];
+  required int32 size = 2;
+  optional bytes value = 3;
+  optional int64 stream = 4;
+  optional int64 expiration = 5;
 }
 
 message PBQueueEntryRecord {

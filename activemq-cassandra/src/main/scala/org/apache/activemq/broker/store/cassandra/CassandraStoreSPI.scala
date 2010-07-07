@@ -14,19 +14,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.dto;
+package org.apache.activemq.broker.store.cassandra
 
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-
-import javax.xml.bind.annotation.XmlSeeAlso;
-import javax.xml.bind.annotation.XmlType;
+import org.apache.activemq.apollo.store.StoreFactory
+import org.apache.activemq.apollo.dto.{CassandraStoreDTO, StoreDTO}
+import org.apache.activemq.apollo.broker.{Reporting, ReporterLevel, Reporter}
+import ReporterLevel._
 
 /**
+ * <p>
+ * Hook to use a CassandraStore when a CassandraStoreDTO is
+ * used in a broker configuration.
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlType(name = "store-type")
-@XmlSeeAlso({CassandraStoreDTO.class, HawtDBStoreDTO.class})
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
-public abstract class StoreDTO {
+class CassandraStoreSPI extends StoreFactory.SPI {
 
+  def create(config: StoreDTO) = {
+    if( config.isInstanceOf[CassandraStoreDTO]) {
+      new CassandraStore
+    } else {
+      null
+    }
+  }
+
+   def validate(config: StoreDTO, reporter:Reporter):ReporterLevel = {
+     if( config.isInstanceOf[CassandraStoreDTO]) {
+       CassandraStore.validate(config.asInstanceOf[CassandraStoreDTO], reporter)
+     } else {
+       null
+     }
+   }
 }

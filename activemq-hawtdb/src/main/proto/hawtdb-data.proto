@@ -55,11 +55,10 @@ message Trace {
 
 message MessageAdd {
   optional int64 messageKey=1;
-  optional bytes messageId = 2 [java_override_type = "AsciiBuffer"];
-  optional bytes protocol = 3 [java_override_type = "AsciiBuffer"];
-  optional bytes value = 4;
-  optional int64 streamKey=5;
-  optional int32 messageSize=6;
+  optional bytes protocol = 2 [java_override_type = "AsciiBuffer"];
+  optional bytes value = 3;
+  optional int64 streamKey=4;
+  optional int32 messageSize=5;
 }  
 
 ///////////////////////////////////////////////////////////////

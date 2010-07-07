@@ -58,7 +58,6 @@ class CassandraClient() {
     import PBMessageRecord._
     val pb = PBMessageRecordBuffer.parseUnframed(v)
     val rc = new MessageRecord
-    rc.messageId = pb.getMessageId
     rc.protocol = pb.getProtocol
     rc.size = pb.getSize
     rc.value = pb.getValue
@@ -70,7 +69,6 @@ class CassandraClient() {
   implicit def encodeMessageRecord(v: MessageRecord): Array[Byte] = {
     import PBMessageRecord._
     val pb = new PBMessageRecordBean
-    pb.setMessageId(v.messageId)
     pb.setProtocol(v.protocol)
     pb.setSize(v.size)
     pb.setValue(v.value)
@@ -103,7 +101,7 @@ class CassandraClient() {
   def addQueue(record: QueueRecord) = {
     withSession {
       session =>
-        session.insert(schema.queue_name \ (record.id, record.name))
+        session.insert(schema.queue_name \ (record.key, record.name))
     }
   }
 
@@ -126,7 +124,7 @@ class CassandraClient() {
 
             val rc = new QueueStatus
             rc.record = new QueueRecord
-            rc.record.id = id
+            rc.record.key = id
             rc.record.name = new AsciiBuffer(x)
 
             rc.count = session.count( schema.entries \ id )
@@ -180,7 +178,7 @@ class CassandraClient() {
         session.get(schema.message_data \ id) match {
           case Some(x) =>
             val rc: MessageRecord = x.value
-            rc.id = id
+            rc.key = id
             Some(rc)
           case None =>
             None

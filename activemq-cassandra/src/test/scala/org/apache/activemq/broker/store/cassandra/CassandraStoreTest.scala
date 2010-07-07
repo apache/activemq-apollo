@@ -73,21 +73,20 @@ class CassandraStoreTest extends FunSuiteSupport with CassandraServerMixin {
 
   def addMessage() {
     var queueA = new QueueRecord
-    queueA.id =1
+    queueA.key =1
     queueA.name = ascii("queue:1")
 
     val rc:Option[Long] = CB( cb=> store.addQueue(queueA)(cb) )
-    queueA.id = rc.get
+    queueA.key = rc.get
 
-    val expected:Seq[Long] = List(queueA.id)
+    val expected:Seq[Long] = List(queueA.key)
     expectCB(expected) { cb=>
       store.listQueues(cb)
     }
 
     var tx = store.createStoreBatch
     var message = new MessageRecord
-    message.id = 35
-    message.messageId = ascii("msg-35")
+    message.key = 35
     message.protocol = ascii("test-protocol")
     message.value = ascii("test content").buffer
     message.size = message.value.length
@@ -97,8 +96,8 @@ class CassandraStoreTest extends FunSuiteSupport with CassandraServerMixin {
     val disposed = new CountDownLatch(1)
 
     var queueEntry = new QueueEntryRecord
-    queueEntry.queueKey = queueA.id
-    queueEntry.messageKey = message.id
+    queueEntry.queueKey = queueA.key
+    queueEntry.messageKey = message.key
     queueEntry.queueSeq = 1
 
     tx.enqueue(queueEntry)
@@ -111,7 +110,7 @@ class CassandraStoreTest extends FunSuiteSupport with CassandraServerMixin {
     }
 
     var flushed = new CountDownLatch(1)
-    store.flushMessage(message.id) {
+    store.flushMessage(message.key) {
       flushed.countDown
     }
 
@@ -127,27 +126,26 @@ class CassandraStoreTest extends FunSuiteSupport with CassandraServerMixin {
     // add another message to the queue..
     tx = store.createStoreBatch
     message = new MessageRecord
-    message.id = 36
-    message.messageId = ascii("msg-35")
+    message.key = 36
     message.protocol = ascii("test-protocol")
     message.value = ascii("test content").buffer
     message.size = message.value.length
     tx.store(message)
 
     queueEntry = new QueueEntryRecord
-    queueEntry.queueKey = queueA.id
-    queueEntry.messageKey = message.id
+    queueEntry.queueKey = queueA.key
+    queueEntry.messageKey = message.key
     queueEntry.queueSeq = 2
 
     tx.enqueue(queueEntry)
 
     flushed = new CountDownLatch(1)
-    store.flushMessage(message.id) {
+    store.flushMessage(message.key) {
       flushed.countDown
     }
     flushed.await
 
-    val qso:Option[QueueStatus] = CB( cb=> store.getQueueStatus(queueA.id)(cb) )
+    val qso:Option[QueueStatus] = CB( cb=> store.getQueueStatus(queueA.key)(cb) )
     expect(ascii("queue:1")) {
       qso.get.record.name
     }

@@ -16,69 +16,13 @@
  */
 package org.apache.activemq.apollo.broker.protocol
 
-import java.util.Properties
-import java.net.{URLClassLoader, URL}
 import org.apache.activemq.transport.DefaultTransportListener
-import java.io.{IOException, File, InputStream}
+import java.io.{IOException}
 import org.apache.activemq.apollo.broker.{Message, BrokerConnection}
 import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
 import org.apache.activemq.wireformat.WireFormat
+import org.apache.activemq.apollo.util.ClassFinder
 
-
-/**
- * <p>
- * Used to discover classes using the META-INF discovery trick.
- * </p>
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-case class ClassFinder[T](path:String, loaders:Seq[ClassLoader]=Thread.currentThread.getContextClassLoader::Nil) {
-
-  def find(): List[Class[T]] = {
-    var classes = List[Class[T]]()
-    loaders.foreach { loader=>
-
-      val resources = loader.getResources(path)
-      var classNames: List[String] = Nil
-      while(resources.hasMoreElements) {
-        val url = resources.nextElement;
-        val p = loadProperties(url.openStream)
-        val enum = p.keys
-        while (enum.hasMoreElements) {
-          classNames = classNames ::: enum.nextElement.asInstanceOf[String] :: Nil
-        }
-      }
-      classNames = classNames.removeDuplicates
-
-      classes :::= classNames.map { name=>
-        loader.loadClass(name).asInstanceOf[Class[T]]
-      }
-
-    }
-
-    return classes.removeDuplicates
-  }
-
-  private def loadProperties(is:InputStream):Properties = {
-    if( is==null ) {
-      return null;
-    }
-    try {
-      val p = new Properties()
-      p.load(is);
-      return p
-    } catch {
-      case e:Exception =>
-      return null
-    } finally {
-      try {
-        is.close()
-      } catch {
-        case _ =>
-      }
-    }
-  }
-}
 
 /**
  * <p>

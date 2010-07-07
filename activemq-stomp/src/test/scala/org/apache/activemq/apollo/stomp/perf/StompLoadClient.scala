@@ -45,6 +45,8 @@ object StompLoadClient {
   var bufferSize = 64*1204
   var messageSize = 1024;
   var useContentLength=true
+  var persistent = false;
+  var syncProducer = false;
 
   var destinationType = "topic";
   var destinationCount = 1;
@@ -131,6 +133,8 @@ object StompLoadClient {
     "destinationType  = "+destinationType+"\n"+
     "destinationCount = "+destinationCount+"\n" +
     "messageSize      = "+messageSize+"\n"+
+    "persistent       = "+persistent+"\n"+
+    "syncProducer     = "+syncProducer+"\n"+
     "producerSleep    = "+producerSleep+"\n"+
     "consumerSleep    = "+consumerSleep+"\n"+
     "bufferSize       = "+bufferSize+"\n"+
@@ -254,6 +258,8 @@ object StompLoadClient {
     var client:StompClient=null
     val content = ("SEND\n" +
               "destination:"+destination(id)+"\n"+
+               { if(persistent) "persistent:true\n" else "" } +
+               { if(syncProducer) "receipt:xxx\n" else "" } +
                { if(useContentLength) "content-length:"+messageSize+"\n" else "" } +
               "\n"+message(name)).getBytes("UTF-8")
 
@@ -264,6 +270,11 @@ object StompLoadClient {
           var i =0;
           while (!done.get) {
             client.send(content)
+            if( syncProducer ) {
+              // waits for the reply..
+              client.flush
+              client.skip
+            }
             producerCounter.incrementAndGet();
             if(producerSleep > 0) {
               client.flush

@@ -143,12 +143,11 @@ class HawtDBSession {
     // /////////////////////////////////////////////////////////////
 
     public void messageAdd(MessageRecord message) {
-        if (message.id < 0) {
+        if (message.key < 0) {
             throw new IllegalArgumentException("Key not set");
         }
         Data.MessageAdd.MessageAddBean bean = new Data.MessageAdd.MessageAddBean();
-        bean.setMessageKey(message.id);
-        bean.setMessageId(message.messageId);
+        bean.setMessageKey(message.key);
         bean.setProtocol(message.protocol);
         bean.setMessageSize(message.size);
         Buffer buffer = message.value;
@@ -172,8 +171,7 @@ class HawtDBSession {
         try {
             Data.MessageAdd bean = (Data.MessageAdd) store.load(location);
             MessageRecord rc = new MessageRecord();
-            rc.id = bean.getMessageKey();
-            rc.messageId = bean.getMessageId();
+            rc.key = bean.getMessageKey();
             rc.protocol = bean.getProtocol();
             rc.size = bean.getMessageSize();
             if (bean.hasValue()) {
@@ -204,7 +202,7 @@ class HawtDBSession {
     }
 
     public void queueRemove(QueueRecord record) {
-        addUpdate(new Data.QueueRemove.QueueRemoveBean().setKey(record.id));
+        addUpdate(new Data.QueueRemove.QueueRemoveBean().setKey(record.key));
     }
 
     public Iterator<QueueStatus> queueListByType(AsciiBuffer type, QueueRecord firstQueue, int max) {
@@ -227,7 +225,7 @@ class HawtDBSession {
 
     public void queueAddMessage(QueueRecord queue, QueueEntryRecord entryRecord) throws KeyNotFoundException {
         Data.QueueAddMessage.QueueAddMessageBean bean = new Data.QueueAddMessage.QueueAddMessageBean();
-        bean.setQueueKey(queue.id);
+        bean.setQueueKey(queue.key);
         bean.setQueueKey(entryRecord.queueKey);
         bean.setMessageKey(entryRecord.messageKey);
         bean.setMessageSize(entryRecord.size);
@@ -246,7 +244,7 @@ class HawtDBSession {
 
     public Iterator<QueueEntryRecord> queueListMessagesQueue(QueueRecord queue, Long firstQueueKey, Long maxQueueKey, int max) throws KeyNotFoundException {
         storeAtomic();
-        DestinationEntity destination = store.rootEntity.getDestination(queue.id);
+        DestinationEntity destination = store.rootEntity.getDestination(queue.key);
         if (destination == null) {
             throw new KeyNotFoundException("queue key: " + queue);
         }

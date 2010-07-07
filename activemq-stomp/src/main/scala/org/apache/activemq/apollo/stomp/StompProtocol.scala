@@ -29,6 +29,7 @@ import Stomp._
 import BufferConversions._
 import StompFrameConstants._
 import java.io.IOException
+import org.apache.activemq.broker.store.StoreBatch
 
 
 object StompConstants {
@@ -263,6 +264,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   }
 
   def send_via_route(route:DeliveryProducerRoute, frame:StompFrame) = {
+    var storeBatch:StoreBatch=null
     if( !route.targets.isEmpty ) {
 
       // We may need to add some headers..
@@ -277,13 +279,14 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       val delivery = new Delivery
       delivery.message = message
       delivery.size = message.frame.size
-      if( message.persistent ) {
-        // TODO:
-//        val content = ascii("todo")
-//        delivery.ref = host.database.createMessageRecord(message.id, content, PROTOCOL)
+
+      if( message.persistent && host.store!=null ) {
+        storeBatch = host.store.createStoreBatch
+        delivery.storeBatch = storeBatch
+        delivery.storeKey = delivery.storeBatch.store(delivery.createMessageRecord)
       }
 
-      // routes can allways accept at least 1 delivery...
+      // routes can always accept at least 1 delivery...
       assert( !route.full )
       route.offer(delivery)
       if( route.full ) {
@@ -291,8 +294,28 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         // until it's not full anymore.
         connection.transport.suspendRead
       }
+
     } else {
       // info("Dropping message.  No consumers interested in message.")
+    }
+
+    // User might be asking for ack that we have prcoessed the message..
+    val receipt = frame.header(Stomp.Headers.RECEIPT_REQUESTED)
+    if( receipt!=null ) {
+      if( storeBatch==null ) {
+        // message was not persistent we can ack back right away..
+        connection_sink.offer(StompFrame(Responses.RECEIPT, List((Stomp.Headers.Response.RECEIPT_ID, receipt))))
+      } else {
+        // else lets ack back once the persistent operations are processed.
+        storeBatch.setDisposer(^{
+          connection_sink.offer(StompFrame(Responses.RECEIPT, List((Stomp.Headers.Response.RECEIPT_ID, receipt))))
+        })
+      }
+    }
+
+    if( storeBatch!=null ) {
+      // We can now release the batch as we are done using it..
+      storeBatch.release
     }
   }
 

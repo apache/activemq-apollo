@@ -21,6 +21,8 @@ import org.fusesource.hawtbuf._
 import org.apache.activemq.Service
 import org.fusesource.hawtdispatch.{Retained}
 import org.apache.activemq.apollo.store._
+import org.apache.activemq.apollo.broker.Reporter
+import org.apache.activemq.apollo.dto.StoreDTO
 
 /**
  * A StoreTransaction is used to perform persistent
@@ -38,7 +40,7 @@ trait StoreBatch extends Retained {
    * Assigns the delivery a store id if it did not already
    * have one assigned.
    */
-  def store(delivery:MessageRecord)
+  def store(delivery:MessageRecord):Long
 
   /**
    * Adds a delivery to a specified queue at a the specified position in the queue.
@@ -57,6 +59,7 @@ trait StoreBatch extends Retained {
  */
 trait Store extends Service {
 
+  def configure(config: StoreDTO, reporter:Reporter):Unit
 
   /**
    * Stores a queue, calls back with a unquie id for the stored queue.

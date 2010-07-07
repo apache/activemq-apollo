@@ -66,8 +66,7 @@ public class HawtDBManagerTest extends TestCase {
         final MessageRecord expected = new MessageRecord();
         expected.value = new AsciiBuffer("buffer").buffer();
         expected.protocol = new AsciiBuffer("encoding");
-        expected.messageId = new AsciiBuffer("1000");
-        expected.id = store.allocateStoreTracking();
+        expected.key = store.allocateStoreTracking();
         expected.size = expected.value.getLength();
 
         store.execute(new VoidCallback<Exception>() {
@@ -79,7 +78,7 @@ public class HawtDBManagerTest extends TestCase {
         store.execute(new VoidCallback<Exception>() {
             @Override
             public void run(HawtDBSession session) throws Exception {
-                MessageRecord actual = session.messageGetRecord(expected.id);
+                MessageRecord actual = session.messageGetRecord(expected.key);
                 assertEquals(expected, actual);
             }
         }, null);
@@ -119,12 +118,11 @@ public class HawtDBManagerTest extends TestCase {
         final MessageRecord message = new MessageRecord();
         message.value = new AsciiBuffer("buffer").buffer();
         message.protocol = new AsciiBuffer("encoding");
-        message.messageId = new AsciiBuffer("1000");
-        message.id = store.allocateStoreTracking();
+        message.key = store.allocateStoreTracking();
         message.size = message.value.getLength();
 
         final QueueEntryRecord qEntryRecord = new QueueEntryRecord();
-        qEntryRecord.messageKey = message.id;
+        qEntryRecord.messageKey = message.key;
         qEntryRecord.queueKey = 1L;
         qEntryRecord.size = message.size;
 
@@ -377,7 +375,7 @@ public class HawtDBManagerTest extends TestCase {
                 Assert.assertTrue(qRecords.hasNext());
                 QueueEntryRecord qr = qRecords.next();
                 Assert.assertEquals(qEntryRecord.queueKey, qr.queueKey);
-                Assert.assertEquals(qEntryRecord.messageKey, message.id);
+                Assert.assertEquals(qEntryRecord.messageKey, message.key);
                 MessageRecord record = session.messageGetRecord(qr.messageKey);
                 assertEquals(record, message);
             }
@@ -416,7 +414,6 @@ public class HawtDBManagerTest extends TestCase {
     static void assertEquals(MessageRecord expected, MessageRecord actual) {
         Assert.assertEquals(expected.value, actual.value);
         Assert.assertEquals(expected.protocol, actual.protocol);
-        Assert.assertEquals(expected.messageId, actual.messageId);
         Assert.assertEquals(expected.stream, actual.stream);
         Assert.assertEquals(expected.size, actual.size);
     }

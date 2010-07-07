@@ -24,7 +24,7 @@ import org.fusesource.hawtbuf.AsciiBuffer;
  */
 public class QueueRecord {
 
-    public long id = -1;
+    public long key = -1;
     public AsciiBuffer name;
     public AsciiBuffer queueType;
 

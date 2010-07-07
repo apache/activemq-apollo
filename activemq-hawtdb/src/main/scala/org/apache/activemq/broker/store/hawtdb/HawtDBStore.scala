@@ -26,12 +26,12 @@ import java.util.HashSet
 import org.fusesource.hawtdb.api.{Transaction, TxPageFileFactory}
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{Executors, TimeUnit}
-import org.apache.activemq.apollo.dto.HawtDBStoreDTO
 import org.apache.activemq.apollo.broker._
 import ReporterLevel._
 import store.HawtDBManager
 import org.apache.activemq.broker.store.{Store, StoreBatch}
 import org.apache.activemq.apollo.store.{QueueEntryRecord, QueueStatus, MessageRecord, QueueRecord}
+import org.apache.activemq.apollo.dto.{StoreDTO, HawtDBStoreDTO}
 
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
@@ -72,9 +72,15 @@ class HawtDBStore extends BaseService with Logging with Store {
   var config: HawtDBStoreDTO  = default
   var manager:HawtDBManager = null
 
+
+
   /**
    * Validates and then applies the configuration.
    */
+  def configure(config: StoreDTO, reporter: Reporter) = {
+    //TODO:
+  }
+
   def getQueueEntries(id: Long)(cb: (Seq[QueueEntryRecord]) => Unit) = {}
 
   def configure(config: HawtDBStoreDTO, reporter:Reporter) = ^{
@@ -129,8 +135,8 @@ class HawtDBStore extends BaseService with Logging with Store {
   /////////////////////////////////////////////////////////////////////
   class HawtDBStoreBatch extends BaseRetained with StoreBatch {
 
-    def store(delivery: MessageRecord) = {
-
+    def store(delivery: MessageRecord):Long = {
+      -1L
     }
 
     def dequeue(entry: QueueEntryRecord) = {}

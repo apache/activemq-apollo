@@ -24,8 +24,7 @@ import org.fusesource.hawtbuf.Buffer;
  */
 public class MessageRecord {
 
-    public long id = -1;
-    public AsciiBuffer messageId;
+    public long key = -1;
     public AsciiBuffer protocol;
     public int size;
     public Buffer value;

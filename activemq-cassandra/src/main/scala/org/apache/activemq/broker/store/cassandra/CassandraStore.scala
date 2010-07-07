@@ -18,28 +18,52 @@ package org.apache.activemq.broker.store.cassandra
 
 import org.apache.activemq.broker.store.{StoreBatch, Store}
 import org.fusesource.hawtdispatch.BaseRetained
-import org.apache.activemq.apollo.broker.{Logging, Log, BaseService}
 import com.shorrockin.cascal.session._
-import org.fusesource.hawtdispatch.ScalaDispatch._
 import java.util.concurrent.atomic.AtomicLong
 import collection.mutable.ListBuffer
-import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
-import com.shorrockin.cascal.model.Key
-import org.apache.log.output.db.ColumnType
-import java.util.{HashSet, HashMap}
+import java.util.HashMap
 import java.util.concurrent.{TimeUnit, Executors, ExecutorService}
 import org.apache.activemq.apollo.util.IntCounter
-import com.shorrockin.cascal.utils.Conversions._
 import org.apache.activemq.apollo.store.{QueueEntryRecord, MessageRecord, QueueStatus, QueueRecord}
-import collection.Seq
+import org.apache.activemq.apollo.broker.{Logging, Log, BaseService}
+import org.apache.activemq.apollo.dto.{CassandraStoreDTO, StoreDTO}
+import collection.{JavaConversions, Seq}
+import org.apache.activemq.apollo.broker.{Reporting, ReporterLevel, Reporter}
+import com.shorrockin.cascal.utils.Conversions._
+import org.fusesource.hawtdispatch.ScalaDispatch._
+import ReporterLevel._
+
+object CassandraStore extends Log {
+  val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
+
+  /**
+   * Creates a default a configuration object.
+   */
+  def default() = {
+    val rc = new CassandraStoreDTO
+    rc.hosts.add("localhost:9160")
+    rc
+  }
+
+  /**
+   * Validates a configuration object.
+   */
+  def validate(config: CassandraStoreDTO, reporter:Reporter):ReporterLevel = {
+    new Reporting(reporter) {
+      if( config.hosts.isEmpty ) {
+        error("At least one cassandra host must be configured.")
+      }
+    }.result
+  }
+}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class CassandraStore extends Store with BaseService with Logging {
 
-  import CassandraStoreHelper._
-  override protected def log = CassandraStoreHelper
+  import CassandraStore._
+  override protected def log = CassandraStore
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -53,10 +77,36 @@ class CassandraStore extends Store with BaseService with Logging {
 
   val client = new CassandraClient()
   protected var executor_pool:ExecutorService = _
+  var config:CassandraStoreDTO = default
+
+  def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[CassandraStoreDTO], reporter)
+
+  def configure(config: CassandraStoreDTO, reporter: Reporter) = {
+    if ( CassandraStore.validate(config, reporter) < ERROR ) {
+      if( serviceState.isStarted ) {
+        // TODO: apply changes while he broker is running.
+        reporter.report(WARN, "Updating cassandra store configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
+      } else {
+        this.config = config
+      }
+    }
+  }
 
   protected def _start(onCompleted: Runnable) = {
     executor_pool = Executors.newCachedThreadPool
-    client.schema = Schema("ActiveMQ")
+    client.schema = Schema(config.keyspace)
+
+    // TODO: move some of this parsing code into validation too.
+    val HostPort = """([^:]+)(:(\d+))?""".r
+    import JavaConversions._
+    client.hosts = config.hosts.flatMap { x=>
+      x match {
+        case HostPort(host,_,port)=>
+          Some(Host(host, port.toInt, 3000))
+        case _=> None
+      }
+    }.toList
+
     client.start
     onCompleted.run
   }
@@ -169,14 +219,15 @@ class CassandraStore extends Store with BaseService with Logging {
       onPerformed
     }
 
-    def store(record: MessageRecord) = {
-      record.id = next_msg_key.incrementAndGet
+    def store(record: MessageRecord):Long = {
+      record.key = next_msg_key.incrementAndGet
       val action = new MessageAction
-      action.msg = record.id
+      action.msg = record.key
       action.store = record
       this.synchronized {
-        actions += record.id -> action
+        actions += record.key -> action
       }
+      record.key
     }
 
     def action(msg:Long) = {
@@ -229,7 +280,8 @@ class CassandraStore extends Store with BaseService with Logging {
       val tx_id = next_tx_id.incrementAndGet
       tx.txid = tx_id
       delayedTransactions.put(tx_id, tx)
-      dispatchQueue.dispatchAfter(30, TimeUnit.SECONDS, ^{flush(tx_id)})
+      dispatchQueue.dispatchAsync(^{flush(tx_id)})
+      dispatchQueue.dispatchAfter(50, TimeUnit.MILLISECONDS, ^{flush(tx_id)})
 
       tx.actions.foreach { case (msg, action) =>
         if( action.store!=null ) {
@@ -257,11 +309,11 @@ class CassandraStore extends Store with BaseService with Logging {
 
             // Cancel the action if it's now empty
             if( prevAction.isEmpty ) {
-              action.cancel()
+              prevAction.cancel()
             }
 
             // since we canceled out the previous enqueue.. now cancel out the action
-            action.dequeues = action.dequeues.filterNot( x=> key(x) == currentDequeue)
+            action.dequeues = action.dequeues.filterNot( _ == currentDequeue)
             if( action.isEmpty ) {
               action.cancel()
             }
@@ -292,7 +344,8 @@ class CassandraStore extends Store with BaseService with Logging {
             pendingStores.remove(msg)
           }
           action.enqueues.foreach { queueEntry=>
-            pendingEnqueues.remove(key(queueEntry), action)
+            val k = key(queueEntry)
+            pendingEnqueues.remove(k)
           }
         }
 
@@ -316,28 +369,4 @@ class CassandraStore extends Store with BaseService with Logging {
     }
   }
 
-}
-
-object CassandraStoreHelper extends Log {
-  val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
-
-//  /**
-//   * Creates a default a configuration object.
-//   */
-//  def default() = {
-//    val rc = new HawtDBStoreDTO
-//    rc.directory = new File("activemq-data")
-//    rc
-//  }
-//
-//  /**
-//   * Validates a configuration object.
-//   */
-//  def validate(config: HawtDBStoreDTO, reporter:Reporter):ReporterLevel = {
-//     new Reporting(reporter) {
-//      if( config.directory == null ) {
-//        error("hawtdb store must be configured with a directroy.")
-//      }
-//    }.result
-//  }
 }

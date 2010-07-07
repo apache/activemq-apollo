@@ -21,6 +21,8 @@ import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
 import org.apache.activemq.broker.store.StoreBatch
+import org.apache.activemq.apollo.store.MessageRecord
+import protocol.ProtocolFactory
 
 /**
  * A producer which sends Delivery objects to a delivery consumer.
@@ -146,7 +148,7 @@ class Delivery extends BaseRetained {
   /**
    * A reference to the stored version of the message.
    */
-  var storeId:Long = -1
+  var storeKey:Long = -1
 
   /**
    * The transaction the delivery is participating in.
@@ -164,8 +166,16 @@ class Delivery extends BaseRetained {
   def set(other:Delivery) = {
     size = other.size
     message = other.message
-    storeId = other.storeId
+    storeKey = other.storeKey
     this
+  }
+
+  def createMessageRecord() = {
+    val sm = new MessageRecord
+    sm.protocol = message.protocol
+    sm.value = ProtocolFactory.get(message.protocol).encode(message)
+    sm.size = size
+    sm
   }
 
 }
