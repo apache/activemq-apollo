@@ -31,6 +31,9 @@ import org.apache.commons.logging.LogFactory
  */
 object Main {
 
+  println("log4j at: "+getClass.getClassLoader.getResource("log4j.properties"))
+  
+
   @transient
   private final val LOG = LogFactory.getLog(this.getClass)
 
