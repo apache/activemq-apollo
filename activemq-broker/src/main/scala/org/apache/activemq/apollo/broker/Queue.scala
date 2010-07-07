@@ -23,8 +23,9 @@ import org.fusesource.hawtdispatch.{ScalaDispatch, DispatchQueue, BaseRetained}
 import org.apache.activemq.util.TreeMap.TreeEntry
 import java.util.{Collections, ArrayList, LinkedList}
 import org.apache.activemq.util.list.{LinkedNodeList, LinkedNode}
-import org.apache.activemq.broker.store.{StoredMessage, StoreTransaction}
+import org.apache.activemq.broker.store.{StoreTransaction}
 import protocol.ProtocolFactory
+import org.apache.activemq.apollo.store.MessageRecord
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -78,7 +79,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
   ack_source.setEventHandler(^ {drain_acks});
   ack_source.resume
 
-  val store_load_source = createSource(new ListEventAggregator[(QueueEntry, StoredMessage)](), dispatchQueue)
+  val store_load_source = createSource(new ListEventAggregator[(QueueEntry, MessageRecord)](), dispatchQueue)
   store_load_source.setEventHandler(^ {drain_store_loads});
   store_load_source.resume
 
@@ -378,7 +379,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
             val tx = host.database.createStoreTransaction
 
             val message = loaded.delivery.message
-            val sm = new StoredMessage
+            val sm = new MessageRecord
             sm.protocol = message.protocol
             sm.value = ProtocolFactory.get(message.protocol).encode(message)
             sm.size = loaded.size

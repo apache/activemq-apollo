@@ -14,27 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.hawtdb;
+package org.apache.activemq.broker.store.hawtdb.store;
 
-import java.io.*;
-import java.util.*;
-import java.util.Map.Entry;
-
-import org.apache.activemq.broker.store.QueueDescriptor;
-import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.Store.KeyNotFoundException;
-import org.apache.activemq.broker.store.Store.QueueQueryResult;
-import org.apache.activemq.broker.store.Store.SubscriptionRecord;
-import org.apache.activemq.broker.store.hawtdb.Data.MessageAdd;
-import org.apache.activemq.broker.store.hawtdb.Data.SubscriptionAdd;
-import org.apache.activemq.broker.store.hawtdb.Data.SubscriptionAdd.SubscriptionAddBuffer;
+import org.apache.activemq.apollo.store.QueueRecord;
+import org.apache.activemq.apollo.store.QueueStatus;
+import org.apache.activemq.apollo.store.SubscriptionRecord;
+import org.apache.activemq.broker.store.hawtdb.store.Data.MessageAdd;
+import org.apache.activemq.broker.store.hawtdb.store.Data.SubscriptionAdd;
+import org.apache.activemq.broker.store.hawtdb.store.Data.SubscriptionAdd.SubscriptionAddBuffer;
+import org.fusesource.hawtbuf.AsciiBuffer;
+import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.proto.InvalidProtocolBufferException;
 import org.fusesource.hawtdb.api.*;
 import org.fusesource.hawtdb.internal.journal.Location;
-import org.fusesource.hawtbuf.*;
-import org.fusesource.hawtdb.util.marshaller.LongMarshaller;
 import org.fusesource.hawtdb.util.marshaller.IntegerMarshaller;
 import org.fusesource.hawtdb.util.marshaller.LocationMarshaller;
+import org.fusesource.hawtdb.util.marshaller.LongMarshaller;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
 
 public class RootEntity {
 
@@ -46,7 +47,7 @@ public class RootEntity {
     private static final BTreeIndexFactory<Long, Location> messageKeyIndexFactory = new BTreeIndexFactory<Long, Location>();
     private static final BTreeIndexFactory<Integer, Long> locationIndexFactory = new BTreeIndexFactory<Integer, Long>();
     private static final BTreeIndexFactory<Long, Long> messageRefsIndexFactory = new BTreeIndexFactory<Long, Long>();
-    private static final BTreeIndexFactory<AsciiBuffer, DestinationEntity> destinationIndexFactory = new BTreeIndexFactory<AsciiBuffer, DestinationEntity>();
+    private static final BTreeIndexFactory<Long, DestinationEntity> destinationIndexFactory = new BTreeIndexFactory<Long, DestinationEntity>();
     private static final BTreeIndexFactory<AsciiBuffer, Buffer> subscriptionIndexFactory = new BTreeIndexFactory<AsciiBuffer, Buffer>();
     private static final BTreeIndexFactory<AsciiBuffer, Integer> mapIndexFactory = new BTreeIndexFactory<AsciiBuffer, Integer>();
     private static final BTreeIndexFactory<AsciiBuffer, Buffer> mapInstanceIndexFactory = new BTreeIndexFactory<AsciiBuffer, Buffer>();
@@ -64,7 +65,7 @@ public class RootEntity {
         messageRefsIndexFactory.setValueMarshaller(LongMarshaller.INSTANCE);
         messageRefsIndexFactory.setDeferredEncoding(true);
 
-        destinationIndexFactory.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
+        destinationIndexFactory.setKeyMarshaller(LongMarshaller.INSTANCE);
         destinationIndexFactory.setValueMarshaller(DestinationEntity.MARSHALLER);
         destinationIndexFactory.setDeferredEncoding(true);
 
@@ -96,7 +97,7 @@ public class RootEntity {
         // count:
 
         // The destinations
-        private SortedIndex<AsciiBuffer, DestinationEntity> destinationIndex;
+        private SortedIndex<Long, DestinationEntity> destinationIndex;
 
         // Subscriptions
         private SortedIndex<AsciiBuffer, Buffer> subscriptionIndex;
@@ -105,7 +106,7 @@ public class RootEntity {
         private SortedIndex<AsciiBuffer, Integer> mapIndex;
 
         public void create(Transaction tx) {
-            state = HawtDBStore.CLOSED_STATE;
+            state = HawtDBManager.CLOSED_STATE;
             messageKeyIndex = messageKeyIndexFactory.create(tx, tx.alloc());
             if (USE_LOC_INDEX)
                 locationIndex = locationIndexFactory.create(tx, tx.alloc());
@@ -186,34 +187,6 @@ public class RootEntity {
             }
         }
 
-        // Build up the queue partition hierarchy:
-        try {
-            constructQueueHierarchy();
-        } catch (KeyNotFoundException e) {
-            IOException ioe = new IOException("Inconsistent store");
-            ioe.initCause(e);
-            throw ioe;
-        }
-    }
-
-    /**
-     * Constructs the mapping of parent queues to child queues.
-     * 
-     * @throws KeyNotFoundException
-     */
-    private void constructQueueHierarchy() throws KeyNotFoundException {
-        for (Entry<AsciiBuffer, DestinationEntity> entry : data.destinationIndex) {
-            DestinationEntity destination = entry.getValue();
-            QueueDescriptor queue = destination.getDescriptor();
-            if (queue.getParent() != null) {
-                DestinationEntity parent = data.destinationIndex.get(queue.getParent());
-                if (parent == null) {
-                    throw new KeyNotFoundException("Parent queue for " + queue.getQueueName() + " not found");
-                } else {
-                    parent.addPartition(destination);
-                }
-            }
-        }
     }
 
     @Deprecated // TODO: keep data immutable
@@ -270,7 +243,7 @@ public class RootEntity {
         return data.messageKeyIndex.get(messageKey);
     }
 
-    public void addMessageRef(Transaction tx, AsciiBuffer queueName, Long messageKey) {
+    public void addMessageRef(Transaction tx, Long messageKey) {
         try {
             Long refs = data.messageRefsIndex.get(messageKey);
             if (refs == null) {
@@ -279,12 +252,12 @@ public class RootEntity {
                 data.messageRefsIndex.put(messageKey, new Long(1 + refs.longValue()));
             }
         } catch (RuntimeException e) {
-            throw new Store.FatalStoreException(e);
+            throw new FatalStoreException(e);
         }
 
     }
 
-    public void removeMessageRef(Transaction tx, AsciiBuffer queueName, Long messageKey) {
+    public void removeMessageRef(Transaction tx, Long messageKey) {
         try {
             Long refs = data.messageRefsIndex.get(messageKey);
             if (refs != null) {
@@ -297,7 +270,7 @@ public class RootEntity {
                 }
             }
         } catch (RuntimeException e) {
-            throw new Store.FatalStoreException(e);
+            throw new FatalStoreException(e);
         }
     }
 
@@ -307,7 +280,7 @@ public class RootEntity {
 
     /**
      * Returns a list of all of the stored subscriptions.
-     * 
+     *
      * @param tx
      *            The transaction under which this is to be executed.
      * @return a list of all of the stored subscriptions.
@@ -327,7 +300,7 @@ public class RootEntity {
                     try {
                         rc.add(toSubscriptionRecord(b));
                     } catch (InvalidProtocolBufferException e) {
-                        throw new Store.FatalStoreException(e);
+                        throw new FatalStoreException(e);
                     }
                 }
             }
@@ -366,7 +339,7 @@ public class RootEntity {
 
     /**
      * Converts a Subscription buffer to a SubscriptionRecord.
-     * 
+     *
      * @param b
      *            The buffer
      * @return The record.
@@ -382,15 +355,15 @@ public class RootEntity {
             SubscriptionAddBuffer sab = SubscriptionAddBuffer.parseFramed(b);
             if (sab != null) {
                 rc = new SubscriptionRecord();
-                rc.setName(sab.getName());
-                rc.setDestination(sab.getDestination());
-                rc.setIsDurable(sab.getDurable());
+                rc.name = sab.getName();
+                rc.destination = sab.getDestination();
+                rc.isDurable = sab.getDurable();
                 if (sab.hasAttachment())
-                    rc.setAttachment(sab.getAttachment());
+                    rc.attachment = sab.getAttachment();
                 if (sab.hasSelector())
-                    rc.setSelector(sab.getSelector());
+                    rc.selector = sab.getSelector();
                 if (sab.hasTte())
-                    rc.setTte(sab.getTte());
+                    rc.expiration = sab.getTte();
 
             }
         }
@@ -400,68 +373,70 @@ public class RootEntity {
     // /////////////////////////////////////////////////////////////////
     // Queue Methods.
     // /////////////////////////////////////////////////////////////////
-    public void queueAdd(Transaction tx, QueueDescriptor queue) throws IOException {
-        if (data.destinationIndex.get(queue.getQueueName()) == null) {
+    public void queueAdd(Transaction tx, QueueRecord queue) throws IOException {
+        if (data.destinationIndex.get(queue.id) == null) {
             DestinationEntity rc = new DestinationEntity();
             rc.setQueueDescriptor(queue);
             rc.allocate(tx);
-            data.destinationIndex.put(queue.getQueueName(), rc);
+            data.destinationIndex.put(queue.id, rc);
         }
     }
 
-    public void queueRemove(Transaction tx, QueueDescriptor queue) throws IOException {
-        DestinationEntity destination = data.destinationIndex.get(queue.getQueueName());
+    public void queueRemove(Transaction tx, Long queueKey) throws IOException {
+        DestinationEntity destination = data.destinationIndex.get(queueKey);
         if (destination != null) {
             // Remove the message references.
             // TODO this should probably be optimized.
             Iterator<Entry<Long, Long>> messages = destination.listTrackingNums(tx);
             while (messages.hasNext()) {
                 Long messageKey = messages.next().getKey();
-                removeMessageRef(tx, queue.getQueueName(), messageKey);
+                removeMessageRef(tx, messageKey);
             }
-            data.destinationIndex.remove(queue.getQueueName());
+            data.destinationIndex.remove(queueKey);
             destination.deallocate(tx);
         }
     }
 
-    public DestinationEntity getDestination(QueueDescriptor queue) {
-        return data.destinationIndex.get(queue.getQueueName());
+    public DestinationEntity getDestination(Long queue) {
+        return data.destinationIndex.get(queue);
     }
 
-    public Iterator<QueueQueryResult> queueList(Transaction tx, short type, QueueDescriptor firstQueue, int max) throws IOException {
-        LinkedList<QueueQueryResult> results = new LinkedList<QueueQueryResult>();
+    public Iterator<org.apache.activemq.apollo.store.QueueStatus> queueList(Transaction tx, AsciiBuffer type, QueueRecord firstQueue, int max) throws IOException {
+        LinkedList<org.apache.activemq.apollo.store.QueueStatus> results = new LinkedList<org.apache.activemq.apollo.store.QueueStatus>();
 
-        final Iterator<Entry<AsciiBuffer, DestinationEntity>> i;
-        i = data.destinationIndex.iterator(firstQueue==null? null : firstQueue.getQueueName());
+        final Iterator<Entry<Long, DestinationEntity>> i;
+        Long x = firstQueue==null? null : (Long)firstQueue.id;
+        i = data.destinationIndex.iterator(x);
         while (i.hasNext()) {
-            Entry<AsciiBuffer, DestinationEntity> entry = i.next();
+            Entry<Long, DestinationEntity> entry = i.next();
             DestinationEntity de = entry.getValue();
             if (results.size() >= max) {
                 break;
             }
 
-            if (type == -1 || de.getDescriptor().getApplicationType() == type) {
+            if (type == null || type.equals(de.getQueueRecord().queueType) ) {
                 results.add(queryQueue(tx, de));
             }
         }
         return results.iterator();
     }
 
-    private final QueueQueryResult queryQueue(Transaction tx, DestinationEntity de) throws IOException {
+    private final org.apache.activemq.apollo.store.QueueStatus queryQueue(Transaction tx, DestinationEntity de) throws IOException {
 
-        QueueQueryResultImpl result = new QueueQueryResultImpl();
+        QueueStatus result = new QueueStatus();
         result.count = de.getCount(tx);
         result.size = de.getSize(tx);
-        result.firstSequence = de.getFirstSequence(tx);
-        result.lastSequence = de.getLastSequence(tx);
-        result.desc = de.getDescriptor().copy();
-        Iterator<DestinationEntity> partitions = de.getPartitions();
-        if (partitions != null && partitions.hasNext()) {
-            result.partitions = new LinkedList<QueueQueryResult>();
-            while (partitions.hasNext()) {
-                result.partitions.add(queryQueue(tx, getDestination(partitions.next().getDescriptor()) ));
-            }
-        }
+        result.first = de.getFirstSequence(tx);
+        result.last = de.getLastSequence(tx);
+        result.record = de.getQueueRecord();
+        
+//        Iterator<DestinationEntity> partitions = de.getPartitions();
+//        if (partitions != null && partitions.hasNext()) {
+//            result.partitions = new LinkedList<org.apache.activemq.apollo.store.QueueStatus>();
+//            while (partitions.hasNext()) {
+//                result.partitions.add(queryQueue(tx, getDestination(partitions.next().getQueueRecord()) ));
+//            }
+//        }
 
         return result;
     }
@@ -574,40 +549,6 @@ public class RootEntity {
     @Deprecated // TODO: keep data immutable
     public void setLastUpdate(Location lastUpdate) {
         this.data.lastUpdate = lastUpdate;
-    }
-
-    private static class QueueQueryResultImpl implements QueueQueryResult {
-
-        QueueDescriptor desc;
-        Collection<QueueQueryResult> partitions;
-        long size;
-        int count;
-        long firstSequence;
-        long lastSequence;
-
-        public QueueDescriptor getDescriptor() {
-            return desc;
-        }
-
-        public Collection<QueueQueryResult> getPartitions() {
-            return partitions;
-        }
-
-        public long getSize() {
-            return size;
-        }
-
-        public int getCount() {
-            return count;
-        }
-
-        public long getFirstSequence() {
-            return firstSequence;
-        }
-
-        public long getLastSequence() {
-            return lastSequence;
-        }
     }
 
     /**

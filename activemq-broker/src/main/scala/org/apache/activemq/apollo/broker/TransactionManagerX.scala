@@ -735,10 +735,10 @@ abstract class TransactionX {
 //         */
 //        public final MessageRecord createMessageRecord() {
 //            MessageRecord ret = new MessageRecord();
-//            ret.setEncoding(TxAck.ENCODING);
-//            ret.setKey(storeTracking);
+//            ret.setProtocol(TxAck.ENCODING);
+//            ret.setId(storeTracking);
 //            ret.setSize(MEM_SIZE);
-//            ret.setBuffer(new Buffer(toBytes().getData()));
+//            ret.setValue(new Buffer(toBytes().getData()));
 //            return null;
 //        }
 //
@@ -766,8 +766,8 @@ abstract class TransactionX {
 //        }
 //
 //        public final static TxAck createFromMessageRecord(MessageRecord record, Transaction tx) {
-//            TxAck ret = new TxAck(null, -1, record.getKey(), tx);
-//            ret.fromBytes(record.getBuffer().getData());
+//            TxAck ret = new TxAck(null, -1, record.getId(), tx);
+//            ret.fromBytes(record.getValue().getData());
 //            return ret;
 //        }
 //
@@ -791,7 +791,7 @@ abstract class TransactionX {
 //     * @return
 //     */
 //    public static TxOp createTxOp(MessageRecord record, Transaction tx) {
-//        if (record.getEncoding().equals(TxAck.ENCODING)) {
+//        if (record.getProtocol().equals(TxAck.ENCODING)) {
 //            return TxAck.createFromMessageRecord(record, tx);
 //        } else {
 //            MessageDelivery delivery = tx.manager.getVirtualHost().getQueueStore().getMessageMarshaller().unMarshall(record, tx.opQueue.getDescriptor());

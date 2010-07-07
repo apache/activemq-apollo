@@ -27,9 +27,9 @@
   <bean id="jndiTemplate" class="org.springframework.jndi.JndiTemplate">
     <property name="environment">
       <props>
-        <prop key="java.naming.factory.initial">org.apache.activemq.jndi.ActiveMQInitialContextFactory</prop>
+        <prop id="java.naming.factory.initial">org.apache.activemq.jndi.ActiveMQInitialContextFactory</prop>
         <!-- lets register some destinations -->
-        <prop key="topic.MyTopic">example.Spring.MyTopic</prop>
+        <prop id="topic.MyTopic">example.Spring.MyTopic</prop>
       </props>
     </property>
   </bean>

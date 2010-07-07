@@ -32,7 +32,7 @@
   <name>${pom.artifactId}</name>
   <description>
     HawtDB is a library for managing a database. The database is a file that allows you to store data in indexes. 
-    Each index is a map of key value pairs.</description>
+    Each index is a map of id value pairs.</description>
 
   <repositories>
     <repository>

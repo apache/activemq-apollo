@@ -5,7 +5,7 @@
 Goals:
   * Provide a simple collections based interface for storing persistent
     data.
-  * Provide a lower level key value interface for storing data. Secondary
+  * Provide a lower level id value interface for storing data. Secondary
     keys should be supported.
   * Fast recovery
 

@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-package org.apache.activemq.broker.store.hawtdb;
+package org.apache.activemq.broker.store.hawtdb.store;
 
 option java_multiple_files = false;
 option java_outer_classname = "Data";
@@ -56,8 +56,8 @@ message Trace {
 message MessageAdd {
   optional int64 messageKey=1;
   optional bytes messageId = 2 [java_override_type = "AsciiBuffer"];
-  optional bytes encoding = 3 [java_override_type = "AsciiBuffer"];
-  optional bytes buffer = 4;
+  optional bytes protocol = 3 [java_override_type = "AsciiBuffer"];
+  optional bytes value = 4;
   optional int64 streamKey=5;
   optional int32 messageSize=6;
 }  
@@ -67,18 +67,16 @@ message MessageAdd {
 ///////////////////////////////////////////////////////////////
 
 message QueueAdd {
-  optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
-  optional int32 applicationType = 2; 
-  optional bytes parentName = 3 [java_override_type = "AsciiBuffer"];
-  optional int32 queueType = 4;
-  optional int32 partitionId = 5;
-}  
+  optional int64 key=1;
+  optional bytes name = 2 [java_override_type = "AsciiBuffer"];
+  optional bytes queueType = 3 [java_override_type = "AsciiBuffer"];
+}
 message QueueRemove {
-  optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
-}  
+  optional int64 key=5;
+}
 message QueueAddMessage {
-  optional bytes queueName = 1 [java_override_type = "AsciiBuffer"];
-  optional int64 queueKey=2;
+  optional int64 queueKey=1;
+  optional int64 queueSeq=2;
   optional int64 messageKey=3;
   optional bytes attachment = 4;
   optional int32 messageSize=5;
@@ -118,12 +116,12 @@ message MapRemove {
 }  
 message MapEntryPut {
   optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
-  optional bytes key = 2 [java_override_type = "AsciiBuffer"];
+  optional bytes id = 2 [java_override_type = "AsciiBuffer"];
   optional bytes value = 3;
 } 
 message MapEntryRemove {
   optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
-  optional bytes key = 2 [java_override_type = "AsciiBuffer"];
+  optional bytes id = 2 [java_override_type = "AsciiBuffer"];
 }
 
 ///////////////////////////////////////////////////////////////

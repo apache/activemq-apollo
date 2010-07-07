@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.hawtdb;
+package org.apache.activemq.broker.store.hawtdb.store;
 
 import java.io.DataInput;
 import java.io.DataOutput;

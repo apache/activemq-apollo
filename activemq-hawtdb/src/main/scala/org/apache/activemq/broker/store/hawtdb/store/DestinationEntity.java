@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.hawtdb;
+package org.apache.activemq.broker.store.hawtdb.store;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -27,11 +27,9 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.activemq.broker.store.QueueDescriptor;
-import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.Store.DuplicateKeyException;
-import org.apache.activemq.broker.store.Store.QueueRecord;
-import org.apache.activemq.broker.store.hawtdb.Data.QueueAddMessage;
+import org.apache.activemq.apollo.store.QueueRecord;
+import org.apache.activemq.apollo.store.QueueEntryRecord;
+import org.apache.activemq.broker.store.hawtdb.store.Data.QueueAddMessage;
 import org.fusesource.hawtdb.api.BTreeIndexFactory;
 import org.fusesource.hawtdb.api.SortedIndex;
 import org.fusesource.hawtdb.api.Transaction;
@@ -39,7 +37,7 @@ import org.fusesource.hawtdb.util.marshaller.*;
 
 public class DestinationEntity {
 
-    private static final BTreeIndexFactory<Long, QueueRecord> queueIndexFactory = new BTreeIndexFactory<Long, QueueRecord>();
+    private static final BTreeIndexFactory<Long, QueueEntryRecord> queueIndexFactory = new BTreeIndexFactory<Long, QueueEntryRecord>();
     private static final BTreeIndexFactory<Long, Long> trackingIndexFactory = new BTreeIndexFactory<Long, Long>();
     private static final BTreeIndexFactory<Long, Long> statsIndexFactory = new BTreeIndexFactory<Long, Long>();
 
@@ -63,14 +61,14 @@ public class DestinationEntity {
             DestinationEntity value = new DestinationEntity();
             value.queueIndex = dataIn.readInt();
             value.trackingIndex =  dataIn.readInt();
-            value.descriptor = Marshallers.QUEUE_DESCRIPTOR_MARSHALLER.readPayload(dataIn);
+            value.record = Marshallers.QUEUE_DESCRIPTOR_MARSHALLER.readPayload(dataIn);
             return value;
         }
 
         public void writePayload(DestinationEntity value, DataOutput dataOut) throws IOException {
             dataOut.writeInt(value.queueIndex);
             dataOut.writeInt(value.trackingIndex);
-            Marshallers.QUEUE_DESCRIPTOR_MARSHALLER.writePayload(value.descriptor, dataOut);
+            Marshallers.QUEUE_DESCRIPTOR_MARSHALLER.writePayload(value.record, dataOut);
         }
 
         public int estimatedSize(DestinationEntity object) {
@@ -88,7 +86,7 @@ public class DestinationEntity {
     private int statsIndex;
 
     // Descriptor for this queue:
-    private QueueDescriptor descriptor;
+    private QueueRecord record;
 
     // Child Partitions:
     private HashSet<DestinationEntity> partitions;
@@ -119,7 +117,7 @@ public class DestinationEntity {
         tx.free(statsIndex);
     }
 
-    private SortedIndex<Long, QueueRecord> queueIndex(Transaction tx) {
+    private SortedIndex<Long, QueueEntryRecord> queueIndex(Transaction tx) {
         return queueIndexFactory.open(tx, queueIndex);
     }
     private SortedIndex<Long, Long> trackingIndex(Transaction tx) {
@@ -149,29 +147,29 @@ public class DestinationEntity {
     }
 
     public long getFirstSequence(Transaction tx) throws IOException {
-        Entry<Long, QueueRecord> entry = queueIndex(tx).getFirst();
+        Entry<Long, QueueEntryRecord> entry = queueIndex(tx).getFirst();
         if( entry!=null ) {
-            return entry.getValue().getQueueKey();
+            return entry.getValue().queueKey;
         } else {
             return 0;
         }
     }
 
     public long getLastSequence(Transaction tx) throws IOException {
-        Entry<Long, QueueRecord> entry = queueIndex(tx).getLast();
+        Entry<Long, QueueEntryRecord> entry = queueIndex(tx).getLast();
         if( entry!=null ) {
-            return entry.getValue().getQueueKey();
+            return entry.getValue().queueKey;
         } else {
             return 0;
         }
     }
 
-    public void setQueueDescriptor(QueueDescriptor queue) {
-        descriptor = queue;
+    public void setQueueDescriptor(QueueRecord queue) {
+        record = queue;
     }
 
-    public QueueDescriptor getDescriptor() {
-        return descriptor;
+    public QueueRecord getQueueRecord() {
+        return record;
     }
 
     public void addPartition(DestinationEntity destination) {
@@ -205,13 +203,13 @@ public class DestinationEntity {
 
         Long existing = trackingIndex(tx).put(command.getMessageKey(), command.getQueueKey());
         if (existing == null) {
-            QueueRecord value = new QueueRecord();
-            value.setAttachment(command.getAttachment());
-            value.setMessageKey(command.getMessageKey());
-            value.setQueueKey(command.getQueueKey());
-            value.setSize(command.getMessageSize());
+            QueueEntryRecord value = new QueueEntryRecord();
+            value.attachment = command.getAttachment();
+            value.messageKey = command.getMessageKey();
+            value.queueKey = command.getQueueKey();
+            value.size = command.getMessageSize();
 
-            QueueRecord rc = queueIndex(tx).put(value.getQueueKey(), value);
+            QueueEntryRecord rc = queueIndex(tx).put(value.queueKey, value);
             if (rc == null) {
                 // TODO It seems a little inefficient to continually serialize
                 // the queue size. It might be better to update this only at
@@ -223,10 +221,10 @@ public class DestinationEntity {
                 // time (at the cost of startup time)
                 addStats(tx, 1, command.getMessageSize());
             } else {
-                throw new Store.FatalStoreException(new Store.DuplicateKeyException("Duplicate sequence number " + command.getQueueKey() + " for " + descriptor.getQueueName()));
+                throw new FatalStoreException(new DuplicateKeyException("Duplicate sequence number " + command.getQueueKey() + " for " + record.name));
             }
         } else {
-            throw new Store.DuplicateKeyException("Duplicate tracking " + command.getMessageKey() + " for " + descriptor.getQueueName());
+            throw new DuplicateKeyException("Duplicate tracking " + command.getMessageKey() + " for " + record.name);
         }
     }
 
@@ -250,25 +248,25 @@ public class DestinationEntity {
      * @throws IOException
      */
     public long remove(Transaction tx, long queueKey) throws IOException {
-        QueueRecord qr = queueIndex(tx).remove(queueKey);
+        QueueEntryRecord qr = queueIndex(tx).remove(queueKey);
         if(qr != null)
         {
-            trackingIndex(tx).remove(qr.getMessageKey());
-            addStats(tx, -1, -qr.getSize());
-            return qr.getMessageKey();
+            trackingIndex(tx).remove(qr.messageKey);
+            addStats(tx, -1, -qr.size);
+            return qr.messageKey;
         }
         return -1;
     }
 
-    public Iterator<QueueRecord> listMessages(Transaction tx, Long firstQueueKey, Long maxQueueKey, final int max) throws IOException {
-        Collection<QueueRecord> rc;
+    public Iterator<QueueEntryRecord> listMessages(Transaction tx, Long firstQueueKey, Long maxQueueKey, final int max) throws IOException {
+        Collection<QueueEntryRecord> rc;
         if (unlimited(max)) {
-            rc = new LinkedList<QueueRecord>();
+            rc = new LinkedList<QueueEntryRecord>();
         } else {
-            rc = new ArrayList<QueueRecord>(max);
+            rc = new ArrayList<QueueEntryRecord>(max);
         }
         
-        Iterator<Entry<Long, QueueRecord>> iterator;
+        Iterator<Entry<Long, QueueEntryRecord>> iterator;
         if (unlimited(firstQueueKey)) {
             iterator = queueIndex(tx).iterator();
 
@@ -281,8 +279,8 @@ public class DestinationEntity {
             if (countLimited && rc.size() >= max) {
                 break;
             }
-            Map.Entry<Long, QueueRecord> entry = iterator.next();
-            if (sequenceLimited && entry.getValue().getQueueKey() > maxQueueKey) {
+            Map.Entry<Long, QueueEntryRecord> entry = iterator.next();
+            if (sequenceLimited && entry.getValue().queueKey > maxQueueKey) {
                 break;
             }
             rc.add(entry.getValue());

@@ -25,7 +25,7 @@ import org.apache.activemq.transport.TransportFactory
 
 import _root_.scala.collection.JavaConversions._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import org.apache.activemq.broker.store.{Store, StoreFactory}
+import org.apache.activemq.broker.store.Store
 import java.util.ArrayList
 import org.fusesource.hawtdispatch.BaseRetained
 import java.util.concurrent.{CountDownLatch, TimeUnit}

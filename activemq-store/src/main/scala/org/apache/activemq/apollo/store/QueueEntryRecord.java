@@ -14,26 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.memory;
+package org.apache.activemq.apollo.store;
 
-import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.StoreTestBase;
+import org.fusesource.hawtbuf.Buffer;
 
-public class MemoryStoreTest extends StoreTestBase {
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+public class QueueEntryRecord {
 
-    @Override
-    protected Store createStore(boolean delete) {
-        return new MemoryStore();
-    }
-
-    @Override
-    protected boolean isStorePersistent() {
-        return false;
-    }
-
-    @Override
-    protected boolean isStoreTransactional() {
-        return false;
-    }
+    public long queueKey;
+    public long messageKey;
+    public Buffer attachment;
+    public int size;
+    public short redeliveries;
 
 }

@@ -14,22 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.hawtdb;
+package org.apache.activemq.apollo.store;
 
-import java.io.File;
+import org.fusesource.hawtbuf.AsciiBuffer;
+import org.fusesource.hawtbuf.Buffer;
 
-import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.StorePerformanceBase;
-import org.apache.activemq.broker.store.hawtdb.HawtDBStore;
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+public class SubscriptionRecord {
 
-public class HawtDBStorePerformance extends StorePerformanceBase {
-
-    @Override
-    protected Store createStore() {
-        HawtDBStore rc = new HawtDBStore();
-        rc.setStoreDirectory(new File("target/test-data/kahadb-store-performance"));
-        rc.setDeleteAllMessages(true);
-        return rc;
-    }
+    public AsciiBuffer name;
+    public AsciiBuffer selector;
+    public AsciiBuffer destination;
+    public boolean isDurable;
+    public long expiration = -1;
+    public Buffer attachment;
 
 }

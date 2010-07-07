@@ -14,32 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.hawtdb;
+package org.apache.activemq.apollo.store;
 
-import java.io.File;
+import org.fusesource.hawtbuf.AsciiBuffer;
 
-import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.StoreTestBase;
-import org.apache.activemq.broker.store.hawtdb.HawtDBStore;
 
-public class HawtDBStoreTest extends StoreTestBase {
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+public class QueueRecord {
 
-    @Override
-    protected Store createStore(boolean delete) {
-        HawtDBStore rc = new HawtDBStore();
-        rc.setStoreDirectory(new File("target/test-data/kahadb-store-test"));
-        rc.setDeleteAllMessages(delete);
-        return rc;
-    }
+    public long id = -1;
+    public AsciiBuffer name;
+    public AsciiBuffer queueType;
 
-    @Override
-    protected boolean isStorePersistent() {
-        return true;
-    }
-
-    @Override
-    protected boolean isStoreTransactional() {
-        return true;
-    }
+//    public AsciiBuffer parent;
 
 }

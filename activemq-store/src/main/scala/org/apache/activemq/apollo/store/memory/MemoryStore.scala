@@ -29,6 +29,7 @@ import org.apache.activemq.Service
 import org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained, Retained}
 import org.apache.activemq.apollo.util.BaseService
 import org.apache.activemq.broker.store._
+import org.apache.activemq.apollo.store.{QueueStatus, MessageRecord, QueueRecord}
 
 /**
  * <p>
@@ -61,7 +62,7 @@ class Counter(private var value:Int = 0) {
 /**
  *  @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class MemoryBrokerDatabase() extends BaseService with BrokerDatabase {
+class MemoryStore() extends BaseService with Store {
 
   val dispatchQueue = createQueue("MessagesTable")
   def getDispatchQueue = dispatchQueue
@@ -88,7 +89,7 @@ class MemoryBrokerDatabase() extends BaseService with BrokerDatabase {
   private val queue_id_generator = new AtomicLong
   val queues = new TreeMap[Long, QueueData]
 
-  case class QueueData(val record:StoredQueue) {
+  case class QueueData(val record:QueueRecord) {
     var messges = new TreeMap[Long, Long]()
   }
 
@@ -96,26 +97,29 @@ class MemoryBrokerDatabase() extends BaseService with BrokerDatabase {
     JavaConversions.asSet(queues.keySet).toSeq
   } >>: dispatchQueue
 
-  def getQueueInfo(id:Long)(cb:(Option[StoredQueue])=>Unit ) = reply(cb) {
+  def getQueueStatus(id:Long)(cb:(Option[QueueStatus])=>Unit ) = reply(cb) {
     val qd = queues.get(id)
     if( qd == null ) {
       None
     } else {
-      val rc = qd.record
+      val rc = new QueueStatus
+      rc.record = qd.record
       if( qd.messges.isEmpty ) {
         rc.count = 0
+        rc.size = 0
         rc.first = -1
         rc.last = -1
       } else {
         rc.count = qd.messges.size
         rc.first = qd.messges.firstKey
         rc.last = qd.messges.lastKey
+        rc.size = 0 // TODO
       }
       Some(rc)
     }
   } >>: dispatchQueue
 
-  def addQueue(record:StoredQueue)(cb:(Option[Long])=>Unit):Unit = reply(cb) {
+  def addQueue(record:QueueRecord)(cb:(Option[Long])=>Unit):Unit = reply(cb) {
     val id = queue_id_generator.incrementAndGet
     if( queues.containsKey(id) ) {
       None
@@ -130,7 +134,7 @@ class MemoryBrokerDatabase() extends BaseService with BrokerDatabase {
   // Methods related to message storage
   //
   /////////////////////////////////////////////////////////////////////
-  class MessageData(val delivery:StoredMessage) {
+  class MessageData(val delivery:MessageRecord) {
     val queueRefs = new Counter()
     var onFlush = List[()=>Unit]()
   }
@@ -147,7 +151,7 @@ class MemoryBrokerDatabase() extends BaseService with BrokerDatabase {
     }
   } >>: dispatchQueue
 
-  def loadMessage(ref:Long)(cb:(Option[StoredMessage])=>Unit ) = reply(cb) {
+  def loadMessage(ref:Long)(cb:(Option[MessageRecord])=>Unit ) = reply(cb) {
     val rc = messages.get(ref)
     if( rc == null ) {
       None
@@ -175,7 +179,7 @@ class MemoryBrokerDatabase() extends BaseService with BrokerDatabase {
 
     val updated = HashMap[Long, MessageData]()
 
-    def store(sm:StoredMessage) = {
+    def store(sm:MessageRecord) = {
       if( sm.id == -1 ) {
         sm.id = msg_id_generator.incrementAndGet
         using(this) {

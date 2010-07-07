@@ -14,8 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store;
+package org.apache.activemq.broker.store.hawtdb.store;
 
+import junit.framework.Assert;
+import junit.framework.TestCase;
+import org.apache.activemq.apollo.store.MessageRecord;
+import org.apache.activemq.apollo.store.QueueRecord;
+import org.apache.activemq.apollo.store.QueueStatus;
+import org.apache.activemq.apollo.store.QueueEntryRecord;
+import org.apache.activemq.metric.MetricAggregator;
+import org.apache.activemq.metric.MetricCounter;
+import org.apache.activemq.metric.Period;
+import org.fusesource.hawtbuf.AsciiBuffer;
+import org.fusesource.hawtbuf.Buffer;
+
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -24,26 +37,14 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import junit.framework.TestCase;
+public class HawtDBManagerBenchmark extends TestCase {
 
-import org.apache.activemq.broker.store.Store.MessageRecord;
-import org.apache.activemq.broker.store.Store.QueueRecord;
-import org.apache.activemq.broker.store.Store.Session;
-import org.apache.activemq.broker.store.Store.VoidCallback;
-import org.apache.activemq.metric.MetricAggregator;
-import org.apache.activemq.metric.MetricCounter;
-import org.apache.activemq.metric.Period;
-import org.fusesource.hawtbuf.AsciiBuffer;
-import org.fusesource.hawtbuf.Buffer;
-
-public abstract class StorePerformanceBase extends TestCase {
-    
     private static int PERFORMANCE_SAMPLES = 50;
     private static boolean SYNC_TO_DISK = true;
     private static final boolean USE_SHARED_WRITER = true;
 
-    private Store store;
-    private QueueDescriptor queueId;
+    private HawtDBManager store;
+    private QueueRecord queueId;
     private AtomicLong queueKey = new AtomicLong(0);
 
     protected MetricAggregator totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items");
@@ -52,10 +53,15 @@ public abstract class StorePerformanceBase extends TestCase {
     protected ArrayList<Consumer> consumers = new ArrayList<Consumer>();
     protected ArrayList<Producer> producers = new ArrayList<Producer>();
 
-    abstract protected Store createStore();
+    protected HawtDBManager createStore() {
+        HawtDBManager rc = new HawtDBManager();
+        rc.setStoreDirectory(new File("target/test-data/kahadb-store-performance"));
+        rc.setDeleteAllMessages(true);
+        return rc;
+    }
 
     private SharedWriter writer = null;
-    
+
     private Semaphore enqueuePermits;
     private Semaphore dequeuePermits;
 
@@ -69,30 +75,30 @@ public abstract class StorePerformanceBase extends TestCase {
             writer = new SharedWriter();
             writer.start();
         }
-        
+
         enqueuePermits = new Semaphore(20000000);
         dequeuePermits = new Semaphore(0);
-        
-        queueId = new QueueDescriptor();
-        queueId.setQueueName(new AsciiBuffer("test"));
+
+        queueId = new QueueRecord();
+        queueId.name = new AsciiBuffer("test");
         store.execute(new VoidCallback<Exception>() {
             @Override
-            public void run(Session session) throws Exception {
+            public void run(HawtDBSession session) throws Exception {
                 session.queueAdd(queueId);
             }
         }, null);
-        
+
         store.execute(new VoidCallback<Exception>() {
             @Override
-            public void run(Session session) throws Exception {
-                Iterator<Store.QueueQueryResult> qqrs = session.queueList(queueId, 1);
-                assertTrue(qqrs.hasNext());
-                Store.QueueQueryResult qqr = qqrs.next();
-                if(qqr.getSize() > 0)
+            public void run(HawtDBSession session) throws Exception {
+                Iterator<QueueStatus> qqrs = session.queueList(queueId, 1);
+                Assert.assertTrue(qqrs.hasNext());
+                QueueStatus qqr = qqrs.next();
+                if(qqr.size > 0)
                 {
-                    queueKey.set(qqr.getLastSequence() + 1);
-                    System.out.println("Recovered queue: " + qqr.getDescriptor().getQueueName() + " with " + qqr.getCount() + " messages");
-                }                   
+                    queueKey.set(qqr.last + 1);
+                    System.out.println("Recovered queue: " + qqr.record.name + " with " + qqr.count + " messages");
+                }
             }
         }, null);
     }
@@ -135,10 +141,10 @@ public abstract class StorePerformanceBase extends TestCase {
                 public void run() {
                 }
             };
-            op.op = new Store.VoidCallback<Exception>() {
+            op.op = new VoidCallback<Exception>() {
 
                 @Override
-                public void run(Session session) throws Exception {
+                public void run(HawtDBSession session) throws Exception {
                     // TODO Auto-generated method stub
                 }
             };
@@ -148,7 +154,7 @@ public abstract class StorePerformanceBase extends TestCase {
         }
 
         public void run() {
-            Session session = store.getSession();
+            HawtDBSession session = store.getSession();
             try {
                 LinkedList<Runnable> processed = new LinkedList<Runnable>();
                 while (!stopped.get()) {
@@ -229,11 +235,11 @@ public abstract class StorePerformanceBase extends TestCase {
                     enqueuePermits.acquire();
 
                     final MessageRecord messageRecord = new MessageRecord();
-                    messageRecord.setKey(store.allocateStoreTracking());
-                    messageRecord.setMessageId(new AsciiBuffer("" + i));
-                    messageRecord.setEncoding(new AsciiBuffer("encoding"));
-                    messageRecord.setBuffer(buffer);
-                    messageRecord.setSize(buffer.getLength());
+                    messageRecord.id = store.allocateStoreTracking();
+                    messageRecord.messageId = new AsciiBuffer("" + i);
+                    messageRecord.protocol = new AsciiBuffer("encoding");
+                    messageRecord.value = buffer;
+                    messageRecord.size = buffer.getLength();
 
                     SharedQueueOp op = new SharedQueueOp() {
                         public void run() {
@@ -243,13 +249,13 @@ public abstract class StorePerformanceBase extends TestCase {
 
                     op.op = new VoidCallback<Exception>() {
                         @Override
-                        public void run(Session session) throws Exception {
+                        public void run(HawtDBSession session) throws Exception {
                             session.messageAdd(messageRecord);
-                            QueueRecord queueRecord = new Store.QueueRecord();
-                            queueRecord.setMessageKey(messageRecord.getKey());
-                            queueRecord.setQueueKey(queueKey.incrementAndGet());
-                            queueRecord.setSize(messageRecord.getSize());
-                            session.queueAddMessage(queueId, queueRecord);
+                            QueueEntryRecord queueEntryRecord = new QueueEntryRecord();
+                            queueEntryRecord.messageKey = messageRecord.id;
+                            queueEntryRecord.queueKey = queueKey.incrementAndGet();
+                            queueEntryRecord.size = messageRecord.size;
+                            session.queueAddMessage(queueId, queueEntryRecord);
                             dequeuePermits.release();
                         }
                     };
@@ -318,11 +324,11 @@ public abstract class StorePerformanceBase extends TestCase {
 
                     op.op = new VoidCallback<Exception>() {
                         @Override
-                        public void run(Session session) throws Exception {
-                            Iterator<QueueRecord> queueRecords = session.queueListMessagesQueue(queueId, 0L, -1L, 1000);
-                            for (Iterator<QueueRecord> iterator = queueRecords; iterator.hasNext();) {
-                                QueueRecord r = iterator.next();
-                                records.add(session.messageGetRecord(r.getMessageKey()));
+                        public void run(HawtDBSession session) throws Exception {
+                            Iterator<QueueEntryRecord> queueRecords = session.queueListMessagesQueue(queueId, 0L, -1L, 1000);
+                            for (Iterator<QueueEntryRecord> iterator = queueRecords; iterator.hasNext();) {
+                                QueueEntryRecord r = iterator.next();
+                                records.add(session.messageGetRecord(r.messageKey));
                                 session.queueRemoveMessage(queueId, r.queueKey);
                             }
                         }
@@ -355,8 +361,8 @@ public abstract class StorePerformanceBase extends TestCase {
         startProducers(1);
         reportRates();
     }
-    
-    
+
+
     public void test1_1_1() throws Exception {
         startProducers(1);
         startConsumers(1);

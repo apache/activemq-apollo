@@ -23,14 +23,14 @@
   <bean id="environment" class="org.springframework.beans.factory.config.PropertiesFactoryBean">
     <property name="properties">
       <props>
-        <prop key="java.naming.security.authentication">simple</prop>
-        <prop key="java.naming.security.principal">uid=admin,ou=system</prop>
-        <prop key="java.naming.security.credentials">secret</prop>
-        <!--<prop key="kdc.entryBaseDn">ou=users,dc=example,dc=com</prop>-->
-        <!--<prop key="kdc.java.naming.security.credentials">secret</prop>-->
-        <!--<prop key="changepw.entryBaseDn">ou=users,dc=example,dc=com</prop>-->
-        <!--<prop key="changepw.java.naming.security.credentials">secret</prop>-->
-        <!-- Set this key to a space delimited set of attributeType descriptions
+        <prop id="java.naming.security.authentication">simple</prop>
+        <prop id="java.naming.security.principal">uid=admin,ou=system</prop>
+        <prop id="java.naming.security.credentials">secret</prop>
+        <!--<prop id="kdc.entryBaseDn">ou=users,dc=example,dc=com</prop>-->
+        <!--<prop id="kdc.java.naming.security.credentials">secret</prop>-->
+        <!--<prop id="changepw.entryBaseDn">ou=users,dc=example,dc=com</prop>-->
+        <!--<prop id="changepw.java.naming.security.credentials">secret</prop>-->
+        <!-- Set this id to a space delimited set of attributeType descriptions
              and their OID's if you want an attributeType to be handled as 
              binary content.
  
@@ -40,7 +40,7 @@
              must add both the OID and all the names an attributeType can have.
         -->
         <!-- 
-        <prop key="java.naming.ldap.attributes.binary"></prop>
+        <prop id="java.naming.ldap.attributes.binary"></prop>
         -->
       </props>
     </property>
@@ -204,7 +204,7 @@
   <bean class="org.springframework.beans.factory.config.CustomEditorConfigurer">
     <property name="customEditors">
       <map>
-        <entry key="javax.naming.directory.Attributes">
+        <entry id="javax.naming.directory.Attributes">
           <bean class="org.apache.directory.server.core.configuration.AttributesPropertyEditor"/>
         </entry>
       </map>

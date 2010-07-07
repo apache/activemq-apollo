@@ -14,47 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.hawtdb;
+package org.apache.activemq.broker.store.hawtdb.store;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.activemq.broker.store.QueueDescriptor;
-import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.hawtdb.Data.MapAdd;
-import org.apache.activemq.broker.store.hawtdb.Data.MapEntryPut;
-import org.apache.activemq.broker.store.hawtdb.Data.MapEntryRemove;
-import org.apache.activemq.broker.store.hawtdb.Data.MapRemove;
-import org.apache.activemq.broker.store.hawtdb.Data.MessageAdd;
-import org.apache.activemq.broker.store.hawtdb.Data.QueueAdd;
-import org.apache.activemq.broker.store.hawtdb.Data.QueueAddMessage;
-import org.apache.activemq.broker.store.hawtdb.Data.QueueRemove;
-import org.apache.activemq.broker.store.hawtdb.Data.QueueRemoveMessage;
-import org.apache.activemq.broker.store.hawtdb.Data.SubscriptionAdd;
-import org.apache.activemq.broker.store.hawtdb.Data.SubscriptionRemove;
-import org.apache.activemq.broker.store.hawtdb.Data.Trace;
-import org.apache.activemq.broker.store.hawtdb.Data.Type;
-import org.apache.activemq.broker.store.hawtdb.Data.MapAdd.MapAddBean;
-import org.apache.activemq.broker.store.hawtdb.Data.MapEntryPut.MapEntryPutBean;
-import org.apache.activemq.broker.store.hawtdb.Data.MapEntryRemove.MapEntryRemoveBean;
-import org.apache.activemq.broker.store.hawtdb.Data.MapRemove.MapRemoveBean;
-import org.apache.activemq.broker.store.hawtdb.Data.MessageAdd.MessageAddBean;
-import org.apache.activemq.broker.store.hawtdb.Data.QueueAdd.QueueAddBean;
-import org.apache.activemq.broker.store.hawtdb.Data.QueueAddMessage.QueueAddMessageBean;
-import org.apache.activemq.broker.store.hawtdb.Data.QueueRemove.QueueRemoveBean;
-import org.apache.activemq.broker.store.hawtdb.Data.QueueRemoveMessage.QueueRemoveMessageBean;
-import org.apache.activemq.broker.store.hawtdb.Data.SubscriptionAdd.SubscriptionAddBean;
-import org.apache.activemq.broker.store.hawtdb.Data.SubscriptionRemove.SubscriptionRemoveBean;
-import org.apache.activemq.broker.store.hawtdb.Data.Type.TypeCreatable;
+import org.apache.activemq.apollo.store.QueueRecord;
+import org.apache.activemq.broker.store.hawtdb.store.Data.MapAdd;
+import org.apache.activemq.broker.store.hawtdb.store.Data.MapEntryPut;
+import org.apache.activemq.broker.store.hawtdb.store.Data.MapEntryRemove;
+import org.apache.activemq.broker.store.hawtdb.store.Data.MapRemove;
+import org.apache.activemq.broker.store.hawtdb.store.Data.MessageAdd;
+import org.apache.activemq.broker.store.hawtdb.store.Data.QueueAdd;
+import org.apache.activemq.broker.store.hawtdb.store.Data.QueueAddMessage;
+import org.apache.activemq.broker.store.hawtdb.store.Data.QueueRemove;
+import org.apache.activemq.broker.store.hawtdb.store.Data.QueueRemoveMessage;
+import org.apache.activemq.broker.store.hawtdb.store.Data.SubscriptionAdd;
+import org.apache.activemq.broker.store.hawtdb.store.Data.SubscriptionRemove;
+import org.apache.activemq.broker.store.hawtdb.store.Data.Trace;
+import org.apache.activemq.broker.store.hawtdb.store.Data.Type;
+import org.apache.activemq.broker.store.hawtdb.store.Data.Type.TypeCreatable;
 import org.fusesource.hawtbuf.AsciiBuffer;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.DataByteArrayInputStream;
@@ -71,20 +56,22 @@ import org.fusesource.hawtdb.api.TxPageFileFactory;
 import org.fusesource.hawtdb.internal.journal.Journal;
 import org.fusesource.hawtdb.internal.journal.Location;
 
-public class HawtDBStore implements Store {
+public class HawtDBManager {
 
-    private static final int BEGIN_UNIT_OF_WORK = -1;
-    private static final int END_UNIT_OF_WORK = -2;
-    private static final int FLUSH = -3;
-    private static final int CANCEL_UNIT_OF_WORK = -4;
+    // Message related methods.
 
-    private static final Log LOG = LogFactory.getLog(HawtDBStore.class);
-    private static final int DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
+    static final int BEGIN_UNIT_OF_WORK = -1;
+    static final int END_UNIT_OF_WORK = -2;
+    static final int FLUSH = -3;
+    static final int CANCEL_UNIT_OF_WORK = -4;
 
-    private static final Buffer BEGIN_UNIT_OF_WORK_DATA = new Buffer(new byte[] { BEGIN_UNIT_OF_WORK });
-    private static final Buffer END_UNIT_OF_WORK_DATA = new Buffer(new byte[] { END_UNIT_OF_WORK });
-    private static final Buffer CANCEL_UNIT_OF_WORK_DATA = new Buffer(new byte[] { CANCEL_UNIT_OF_WORK });
-    private static final Buffer FLUSH_DATA = new Buffer(new byte[] { FLUSH });
+    static final Log LOG = LogFactory.getLog(HawtDBManager.class);
+    static final int DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
+
+    static final Buffer BEGIN_UNIT_OF_WORK_DATA = new Buffer(new byte[] { BEGIN_UNIT_OF_WORK });
+    static final Buffer END_UNIT_OF_WORK_DATA = new Buffer(new byte[] { END_UNIT_OF_WORK });
+    static final Buffer CANCEL_UNIT_OF_WORK_DATA = new Buffer(new byte[] { CANCEL_UNIT_OF_WORK });
+    static final Buffer FLUSH_DATA = new Buffer(new byte[] { FLUSH });
 
     public static final int CLOSED_STATE = 1;
     public static final int OPEN_STATE = 2;
@@ -575,7 +562,7 @@ public class HawtDBStore implements Store {
      * @throws IOException
      */
     @SuppressWarnings("unchecked")
-    private Location store(final TypeCreatable data, Runnable onFlush, Transaction tx) throws IOException {
+    Location store(final TypeCreatable data, Runnable onFlush, Transaction tx) throws IOException {
         final MessageBuffer message = ((PBMessage) data).freeze();
         int size = message.serializedSizeUnframed();
         DataByteArrayOutputStream os = new DataByteArrayOutputStream(size + 1);
@@ -626,7 +613,7 @@ public class HawtDBStore implements Store {
      * @return
      * @throws IOException
      */
-    private TypeCreatable load(Location location) throws IOException {
+    TypeCreatable load(Location location) throws IOException {
         Buffer data = journal.read(location);
         return load(location, data);
     }
@@ -681,13 +668,13 @@ public class HawtDBStore implements Store {
             break;
         case MAP_ENTRY_PUT: {
             MapEntryPut p = (MapEntryPut) command;
-            rootEntity.mapAddEntry(p.getMapName(), p.getKey(), p.getValue(), tx);
+            rootEntity.mapAddEntry(p.getMapName(), p.getId(), p.getValue(), tx);
             break;
         }
         case MAP_ENTRY_REMOVE: {
             MapEntryRemove p = (MapEntryRemove) command;
             try {
-                rootEntity.mapRemoveEntry(p.getMapName(), p.getKey(), tx);
+                rootEntity.mapRemoveEntry(p.getMapName(), p.getId(), tx);
             } catch (KeyNotFoundException e) {
                 //yay, removed.
             }
@@ -707,28 +694,24 @@ public class HawtDBStore implements Store {
     }
 
     private void queueAdd(Transaction tx, QueueAdd command, Location location) throws IOException {
-        QueueDescriptor qd = new QueueDescriptor();
-        qd.setQueueName(command.getQueueName());
-        qd.setApplicationType((short) command.getApplicationType());
-        qd.setQueueType((short) command.getQueueType());
-        if (command.hasParentName()) {
-            qd.setParent(command.getParentName());
-            qd.setPartitionId(command.getPartitionId());
-        }
+        QueueRecord qd = new QueueRecord();
+        qd.name = command.getName();
+        qd.queueType = command.getQueueType();
+//        if (command.hasParentName()) {
+//            qd.setParent(command.getParentName());
+//            qd.setPartitionId(command.getPartitionId());
+//        }
 
         rootEntity.queueAdd(tx, qd);
     }
 
     private void queueRemove(Transaction tx, QueueRemove command, Location location) throws IOException {
-        QueueDescriptor qd = new QueueDescriptor();
-        qd.setQueueName(command.getQueueName());
-        rootEntity.queueRemove(tx, qd);
+        rootEntity.queueRemove(tx, command.getKey());
     }
 
     private void queueAddMessage(Transaction tx, QueueAddMessage command, Location location) throws IOException {
-        QueueDescriptor qd = new QueueDescriptor();
-        qd.setQueueName(command.getQueueName());
-        DestinationEntity destination = rootEntity.getDestination(qd);
+        QueueRecord qd = new QueueRecord();
+        DestinationEntity destination = rootEntity.getDestination(command.getQueueKey());
         if (destination != null) {
             try {
                 destination.add(tx, command);
@@ -737,426 +720,22 @@ public class HawtDBStore implements Store {
                     throw new FatalStoreException(e);
                 }
             }
-            rootEntity.addMessageRef(tx, command.getQueueName(), command.getMessageKey());
+            rootEntity.addMessageRef(tx, command.getMessageKey());
         }
     }
 
     private void queueRemoveMessage(Transaction tx, QueueRemoveMessage command, Location location) throws IOException {
-        QueueDescriptor qd = new QueueDescriptor();
-        qd.setQueueName(command.getQueueName());
-        DestinationEntity destination = rootEntity.getDestination(qd);
+        DestinationEntity destination = rootEntity.getDestination(command.getQueueKey());
         if (destination != null) {
             long messageKey = destination.remove(tx, command.getQueueKey());
             if (messageKey >= 0) {
-                rootEntity.removeMessageRef(tx, command.getQueueName(), command.getQueueKey());
+                rootEntity.removeMessageRef(tx, command.getQueueKey());
             }
         }
     }
 
-    class KahaDBSession implements Session {
-        TypeCreatable atomicUpdate = null;
-        int updateCount = 0;
-
-        private Transaction tx;
-
-        private Transaction tx() {
-            acquireLock();
-            return tx;
-        }
-
-        public final void commit() {
-            commit(null);
-        }
-
-        public final void rollback() {
-            try {
-                if (tx != null) {
-                    if (updateCount > 1) {
-                        journal.write(CANCEL_UNIT_OF_WORK_DATA, false);
-                    }
-                    tx.rollback();
-                } else {
-                    throw new IllegalStateException("Not in Transaction");
-                }
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
-            } finally {
-                if (tx != null) {
-                    tx = null;
-                    updateCount = 0;
-                    atomicUpdate = null;
-                }
-            }
-        }
-
-        /**
-         * Indicates callers intent to start a transaction.
-         */
-        public final void acquireLock() {
-            if (tx == null) {
-                indexLock.writeLock().lock();
-                tx = pageFile.tx();
-            }
-        }
-
-        public final void releaseLock() {
-            try {
-                if (tx != null) {
-                    rollback();
-                }
-            } finally {
-                indexLock.writeLock().unlock();
-            }
-        }
-
-        public void commit(Runnable onFlush) {
-            try {
-
-                boolean flush = false;
-                if (atomicUpdate != null) {
-                    store(atomicUpdate, onFlush, tx);
-                } else if (updateCount > 1) {
-                    journal.write(END_UNIT_OF_WORK_DATA, onFlush);
-                } else {
-                    flush = onFlush != null;
-                }
-
-                if (tx != null) {
-                    tx.commit();
-                }
-
-                if (flush) {
-                    onFlush.run();
-                }
-
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
-            } finally {
-                tx = null;
-                updateCount = 0;
-                atomicUpdate = null;
-            }
-        }
-
-        private void storeAtomic() {
-            if (atomicUpdate != null) {
-                try {
-                    journal.write(BEGIN_UNIT_OF_WORK_DATA, false);
-                    store(atomicUpdate, null, tx);
-                    atomicUpdate = null;
-                } catch (IOException ioe) {
-                    throw new FatalStoreException(ioe);
-                }
-            }
-        }
-
-        private void addUpdate(TypeCreatable bean) {
-            try {
-                //As soon as we do more than one update we'll wrap in a unit of 
-                //work:
-                if (updateCount == 0) {
-                    atomicUpdate = bean;
-                    updateCount++;
-                    return;
-                }
-                storeAtomic();
-
-                updateCount++;
-                store(bean, null, tx);
-
-            } catch (IOException ioe) {
-                throw new FatalStoreException(ioe);
-            }
-        }
-
-        // /////////////////////////////////////////////////////////////
-        // Message related methods.
-        // /////////////////////////////////////////////////////////////
-
-        public void messageAdd(MessageRecord message) {
-            if (message.getKey() < 0) {
-                throw new IllegalArgumentException("Key not set");
-            }
-            MessageAddBean bean = new MessageAddBean();
-            bean.setMessageKey(message.getKey());
-            bean.setMessageId(message.getMessageId());
-            bean.setEncoding(message.getEncoding());
-            bean.setMessageSize(message.getSize());
-            Buffer buffer = message.getBuffer();
-            if (buffer != null) {
-                bean.setBuffer(buffer);
-            }
-            Long streamKey = message.getStreamKey();
-            if (streamKey != null) {
-                bean.setStreamKey(streamKey);
-            }
-
-            addUpdate(bean);
-        }
-
-        public MessageRecord messageGetRecord(Long key) throws KeyNotFoundException {
-            storeAtomic();
-            Location location = rootEntity.messageGetLocation(tx(), key);
-            if (location == null) {
-                throw new KeyNotFoundException("message key: " + key);
-            }
-            try {
-                MessageAdd bean = (MessageAdd) load(location);
-                MessageRecord rc = new MessageRecord();
-                rc.setKey(bean.getMessageKey());
-                rc.setMessageId(bean.getMessageId());
-                rc.setEncoding(bean.getEncoding());
-                rc.setSize(bean.getMessageSize());
-                if (bean.hasBuffer()) {
-                    rc.setBuffer(bean.getBuffer());
-                }
-                if (bean.hasStreamKey()) {
-                    rc.setStreamKey(bean.getStreamKey());
-                }
-                return rc;
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
-            }
-        }
-
-        // /////////////////////////////////////////////////////////////
-        // Queue related methods.
-        // /////////////////////////////////////////////////////////////
-        public void queueAdd(QueueDescriptor descriptor) {
-            QueueAddBean update = new QueueAddBean();
-            update.setQueueName(descriptor.getQueueName());
-            update.setQueueType(descriptor.getQueueType());
-            update.setApplicationType(descriptor.getApplicationType());
-            AsciiBuffer parent = descriptor.getParent();
-            if (parent != null) {
-                update.setParentName(parent);
-                update.setPartitionId(descriptor.getPartitionKey());
-            }
-            addUpdate(update);
-        }
-
-        public void queueRemove(QueueDescriptor descriptor) {
-            addUpdate(new QueueRemoveBean().setQueueName(descriptor.getQueueName()));
-        }
-
-        public Iterator<QueueQueryResult> queueListByType(short type, QueueDescriptor firstQueue, int max) {
-            storeAtomic();
-            try {
-                return rootEntity.queueList(tx(), type, firstQueue, max);
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
-            }
-        }
-
-        public Iterator<QueueQueryResult> queueList(QueueDescriptor firstQueue, int max) {
-            storeAtomic();
-            try {
-                return rootEntity.queueList(tx(), (short) -1, firstQueue, max);
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
-            }
-        }
-
-        public void queueAddMessage(QueueDescriptor queue, QueueRecord record) throws KeyNotFoundException {
-            QueueAddMessageBean bean = new QueueAddMessageBean();
-            bean.setQueueName(queue.getQueueName());
-            bean.setQueueKey(record.getQueueKey());
-            bean.setMessageKey(record.getMessageKey());
-            bean.setMessageSize(record.getSize());
-            if (record.getAttachment() != null) {
-                bean.setAttachment(record.getAttachment());
-            }
-            addUpdate(bean);
-        }
-
-        public void queueRemoveMessage(QueueDescriptor queue, Long queueKey) throws KeyNotFoundException {
-            QueueRemoveMessageBean bean = new QueueRemoveMessageBean();
-            bean.setQueueKey(queueKey);
-            bean.setQueueName(queue.getQueueName());
-            addUpdate(bean);
-        }
-
-        public Iterator<QueueRecord> queueListMessagesQueue(QueueDescriptor queue, Long firstQueueKey, Long maxQueueKey, int max) throws KeyNotFoundException {
-            storeAtomic();
-            DestinationEntity destination = rootEntity.getDestination(queue);
-            if (destination == null) {
-                throw new KeyNotFoundException("queue key: " + queue);
-            }
-            try {
-                return destination.listMessages(tx(), firstQueueKey, maxQueueKey, max);
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
-            }
-        }
-
-        ////////////////////////////////////////////////////////////////
-        //Client related methods
-        ////////////////////////////////////////////////////////////////
-
-        /**
-         * Adds a subscription to the store.
-         * 
-         * @throws DuplicateKeyException
-         *             if a subscription with the same name already exists
-         * 
-         */
-        public void addSubscription(SubscriptionRecord record) throws DuplicateKeyException {
-            storeAtomic();
-            SubscriptionRecord old;
-            try {
-                old = rootEntity.getSubscription(record.getName());
-                if (old != null && !old.equals(record)) {
-                    throw new DuplicateKeyException("Subscription already exists: " + record.getName());
-                } else {
-                    updateSubscription(record);
-                }
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
-            }
-        }
-
-        /**
-         * Updates a subscription in the store. If the subscription does not
-         * exist then it will simply be added.
-         */
-        public void updateSubscription(SubscriptionRecord record) {
-            SubscriptionAddBean update = new SubscriptionAddBean();
-            update.setName(record.getName());
-            update.setDestination(record.getDestination());
-            update.setDurable(record.getIsDurable());
-
-            if (record.getAttachment() != null) {
-                update.setAttachment(record.getAttachment());
-            }
-            if (record.getSelector() != null) {
-                update.setSelector(record.getSelector());
-            }
-            if (record.getTte() != -1) {
-                update.setTte(record.getTte());
-            }
-            addUpdate(update);
-        }
-
-        /**
-         * Removes a subscription with the given name from the store.
-         */
-        public void removeSubscription(AsciiBuffer name) {
-            SubscriptionRemoveBean update = new SubscriptionRemoveBean();
-            update.setName(name);
-            addUpdate(update);
-        }
-
-        /**
-         * @return A list of subscriptions
-         */
-        public Iterator<SubscriptionRecord> listSubscriptions() {
-            storeAtomic();
-            try {
-                return rootEntity.listSubsriptions(tx);
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
-            }
-        }
-
-        // /////////////////////////////////////////////////////////////
-        // Map related methods.
-        // /////////////////////////////////////////////////////////////
-        public void mapAdd(AsciiBuffer map) {
-            MapAddBean update = new MapAddBean();
-            update.setMapName(map);
-            addUpdate(update);
-        }
-
-        public void mapRemove(AsciiBuffer map) {
-            MapRemoveBean update = new MapRemoveBean();
-            update.setMapName(map);
-            addUpdate(update);
-        }
-
-        public Iterator<AsciiBuffer> mapList(AsciiBuffer first, int max) {
-            storeAtomic();
-            return rootEntity.mapList(first, max, tx);
-        }
-
-        public void mapEntryPut(AsciiBuffer map, AsciiBuffer key, Buffer value) {
-            MapEntryPutBean update = new MapEntryPutBean();
-            update.setMapName(map);
-            update.setKey(key);
-            update.setValue(value);
-            addUpdate(update);
-        }
-
-        public Buffer mapEntryGet(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException {
-            storeAtomic();
-            try {
-                return rootEntity.mapGetEntry(map, key, tx);
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
-            }
-        }
-
-        public void mapEntryRemove(AsciiBuffer map, AsciiBuffer key) throws KeyNotFoundException {
-            MapEntryRemoveBean update = new MapEntryRemoveBean();
-            update.setMapName(map);
-            update.setKey(key);
-            addUpdate(update);
-        }
-
-        public Iterator<AsciiBuffer> mapEntryListKeys(AsciiBuffer map, AsciiBuffer first, int max) throws KeyNotFoundException {
-            storeAtomic();
-            try {
-                return rootEntity.mapListKeys(map, first, max, tx);
-            } catch (IOException e) {
-                throw new FatalStoreException(e);
-            }
-        }
-
-        // /////////////////////////////////////////////////////////////
-        // Stream related methods.
-        // /////////////////////////////////////////////////////////////
-        public Long streamOpen() {
-            return null;
-        }
-
-        public void streamWrite(Long streamKey, Buffer message) throws KeyNotFoundException {
-        }
-
-        public void streamClose(Long streamKey) throws KeyNotFoundException {
-        }
-
-        public Buffer streamRead(Long streamKey, int offset, int max) throws KeyNotFoundException {
-            return null;
-        }
-
-        public boolean streamRemove(Long streamKey) {
-            return false;
-        }
-
-        // /////////////////////////////////////////////////////////////
-        // Transaction related methods.
-        // /////////////////////////////////////////////////////////////
-        public void transactionAdd(Buffer txid) {
-        }
-
-        public void transactionAddMessage(Buffer txid, Long messageKey) throws KeyNotFoundException {
-        }
-
-        public void transactionCommit(Buffer txid) throws KeyNotFoundException {
-        }
-
-        public Iterator<Buffer> transactionList(Buffer first, int max) {
-            return null;
-        }
-
-        public void transactionRemoveMessage(Buffer txid, QueueDescriptor queueName, Long messageKey) throws KeyNotFoundException {
-        }
-
-        public void transactionRollback(Buffer txid) throws KeyNotFoundException {
-        }
-    }
-
-    public Session getSession() {
-        return new KahaDBSession();
+    public HawtDBSession getSession() {
+        return new HawtDBSession(this);
     }
 
     /**
@@ -1164,7 +743,7 @@ public class HawtDBStore implements Store {
      * transaction.
      */
     public <R, T extends Exception> R execute(final Callback<R, T> callback, final Runnable onFlush) throws T {
-        KahaDBSession session = new KahaDBSession();
+        HawtDBSession session = new HawtDBSession(this);
         session.acquireLock();
         try {
             R rc = callback.execute(session);

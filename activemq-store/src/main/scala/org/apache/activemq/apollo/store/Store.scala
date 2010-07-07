@@ -20,23 +20,7 @@ import _root_.java.lang.{String}
 import org.fusesource.hawtbuf._
 import org.apache.activemq.Service
 import org.fusesource.hawtdispatch.{Retained}
-
-class StoredQueue {
-  var id:Long = -1
-  var name:AsciiBuffer = null
-  var parent:AsciiBuffer = null
-  var config:String = null
-  var first:Long = -1
-  var last:Long = -1
-  var count:Int = 0
-}
-
-class StoredMessage {
-  var id:Long = -1
-  var protocol:AsciiBuffer = null
-  var value:Buffer = null
-  var size:Int = 0
-}
+import org.apache.activemq.apollo.store._
 
 /**
  * A StoreTransaction is used to perform persistent
@@ -54,7 +38,7 @@ trait StoreTransaction extends Retained {
    * Assigns the delivery a store id if it did not already
    * have one assigned.
    */
-  def store(delivery:StoredMessage)
+  def store(delivery:MessageRecord)
 
   /**
    * Adds a delivery to a specified queue at a the specified position in the queue.
@@ -71,18 +55,18 @@ trait StoreTransaction extends Retained {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait BrokerDatabase extends Service {
+trait Store extends Service {
 
 
   /**
    * Stores a queue, calls back with a unquie id for the stored queue.
    */
-  def addQueue(record:StoredQueue)(cb:(Option[Long])=>Unit):Unit
+  def addQueue(record:QueueRecord)(cb:(Option[Long])=>Unit):Unit
 
   /**
    * Loads the queue information for a given queue id.
    */
-  def getQueueInfo(id:Long)(cb:(Option[StoredQueue])=>Unit )
+  def getQueueStatus(id:Long)(cb:(Option[QueueStatus])=>Unit )
 
   /**
    * gets a listing of all queues previously added.
@@ -99,7 +83,7 @@ trait BrokerDatabase extends Service {
   /**
    * Loads a delivery with the associated id from persistent storage.
    */
-  def loadMessage(id:Long)(cb:(Option[StoredMessage])=>Unit )
+  def loadMessage(id:Long)(cb:(Option[MessageRecord])=>Unit )
 
   /**
    * Creates a StoreTransaction which is used to perform persistent

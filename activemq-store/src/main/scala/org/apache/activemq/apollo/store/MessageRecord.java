@@ -14,17 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store;
+package org.apache.activemq.apollo.store;
 
-import java.io.IOException;
+import org.fusesource.hawtbuf.AsciiBuffer;
+import org.fusesource.hawtbuf.Buffer;
 
-import org.apache.activemq.util.FactoryFinder;
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+public class MessageRecord {
 
-public class StoreFactory {
+    public long id = -1;
+    public AsciiBuffer messageId;
+    public AsciiBuffer protocol;
+    public int size;
+    public Buffer value;
+    public long stream = -1;
+    public long expiration = 0;
 
-    static private final FactoryFinder STORE_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/broker/store/");
-
-    public static Store createStore(String type) throws IllegalAccessException, InstantiationException, IOException, ClassNotFoundException {
-        return (Store) STORE_FINDER.newInstance(type);
-    }
 }

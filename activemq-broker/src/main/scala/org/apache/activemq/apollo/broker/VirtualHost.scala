@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo.broker;
 
 import _root_.java.util.{ArrayList, HashMap}
-import _root_.org.apache.activemq.broker.store.memory.MemoryStore
 import _root_.org.apache.activemq.Service
 import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch.{ScalaDispatch, DispatchQueue}
@@ -29,9 +28,10 @@ import org.apache.activemq.apollo.dto.VirtualHostDTO
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
 import ReporterLevel._
-import org.apache.activemq.apollo.store.memory.MemoryBrokerDatabase
-import org.apache.activemq.broker.store.{StoredQueue, BrokerDatabase, Store}
+import org.apache.activemq.apollo.store.memory.MemoryStore
+import org.apache.activemq.broker.store.{Store}
 import org.fusesource.hawtbuf.proto.WireFormat
+import org.apache.activemq.apollo.store.QueueRecord
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -88,7 +88,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
     this.names = names.toList
   }
 
-  var database:BrokerDatabase = new MemoryBrokerDatabase()
+  var database:Store = new MemoryStore()
   var transactionManager:TransactionManagerX = new TransactionManagerX
 
   var protocols = Map[AsciiBuffer, WireFormat]()
@@ -117,11 +117,11 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 
     database.listQueues { ids =>
       for( id <- ids) {
-        database.getQueueInfo(id) { x =>
+        database.getQueueStatus(id) { x =>
           x match {
             case Some(info)=>
             dispatchQueue ^{
-              val dest = DestinationParser.parse(info.name, destination_parser_options)
+              val dest = DestinationParser.parse(info.record.name , destination_parser_options)
               if( dest.getDomain == Domain.QUEUE_DOMAIN ) {
 
                 val queue = new Queue(this, dest, id)
@@ -130,7 +130,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
                 queue.message_seq_counter = info.last+1
                 queue.count = info.count
 
-                queues.put(info.name, queue)
+                queues.put(info.record.name, queue)
               }
             }
             case _ =>
@@ -184,7 +184,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 
   def addQueue(dest:Destination)(cb: (Queue)=>Unit ) = ^{
     val name = DestinationParser.toBuffer(dest, destination_parser_options)
-    val record = new StoredQueue
+    val record = new QueueRecord
     record.name = name
     database.addQueue(record) { rc =>
       rc match {
@@ -1341,14 +1341,14 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 //                            throw new RuntimeException("Error creating message record for " + brokerDelivery.getMsgId());
 //                        }
 //                    }
-//                    record.setKey(brokerDelivery.getStoreTracking());
+//                    record.setId(brokerDelivery.getStoreTracking());
 //                    session.messageAdd(record);
 //
 //                    for (SaveableQueueElement<MessageDelivery> target : targets) {
 //                        try {
 //                            QueueRecord queueRecord = new QueueRecord();
 //                            queueRecord.setAttachment(null);
-//                            queueRecord.setMessageKey(record.getKey());
+//                            queueRecord.setMessageKey(record.getId());
 //                            queueRecord.setSize(brokerDelivery.getFlowLimiterSize());
 //                            queueRecord.setQueueKey(target.getSequenceNumber());
 //                            session.queueAddMessage(target.getQueueDescriptor(), queueRecord);
@@ -1375,7 +1375,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 //                try {
 //                    QueueRecord queueRecord = new QueueRecord();
 //                    queueRecord.setAttachment(null);
-//                    queueRecord.setMessageKey(record.getKey());
+//                    queueRecord.setMessageKey(record.getId());
 //                    queueRecord.setSize(brokerDelivery.getFlowLimiterSize());
 //                    queueRecord.setQueueKey(singleElement.getSequenceNumber());
 //                    session.queueAddMessage(singleElement.getQueueDescriptor(), queueRecord);
@@ -1564,7 +1564,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 //            try {
 //                QueueRecord queueRecord = new QueueRecord();
 //                queueRecord.setAttachment(null);
-//                queueRecord.setMessageKey(record.getKey());
+//                queueRecord.setMessageKey(record.getId());
 //                queueRecord.setSize(record.getSize());
 //                queueRecord.setQueueKey(op.getSequenceNumber());
 //                session.queueAddMessage(op.getQueueDescriptor(), queueRecord);
@@ -1574,7 +1574,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 //        }
 //
 //        public String toString() {
-//            return "AddTxOpOperation " + record.getKey() + super.toString();
+//            return "AddTxOpOperation " + record.getId() + super.toString();
 //        }
 //    }
 //
@@ -1653,13 +1653,13 @@ class BrokerQueueStore { // implements QueueStore<Long, MessageDelivery> {
 //         * #unMarshall(org.apache.activemq.broker.store.Store.MessageRecord)
 //         */
 //        public MessageDelivery unMarshall(MessageRecord record, QueueDescriptor queue) {
-//            ProtocolHandler handler = protocolHandlers.get(record.getEncoding().toString());
+//            ProtocolHandler handler = protocolHandlers.get(record.getProtocol().toString());
 //            if (handler == null) {
 //                try {
-//                    handler = ProtocolHandlerFactory.createProtocolHandler(record.getEncoding().toString());
-//                    protocolHandlers.put(record.getEncoding().toString(), handler);
+//                    handler = ProtocolHandlerFactory.createProtocolHandler(record.getProtocol().toString());
+//                    protocolHandlers.put(record.getProtocol().toString(), handler);
 //                } catch (Throwable thrown) {
-//                    throw new RuntimeException("Unknown message format" + record.getEncoding().toString(), thrown);
+//                    throw new RuntimeException("Unknown message format" + record.getProtocol().toString(), thrown);
 //                }
 //            }
 //            try {
@@ -2060,7 +2060,7 @@ class BrokerQueueStore { // implements QueueStore<Long, MessageDelivery> {
 //        database.deleteQueue(queue);
 //    }
 
-    def setDatabase(database:BrokerDatabase ) = {
+    def setDatabase(database:Store ) = {
     }
 
     def setDispatchQueue(dispatchQueue:DispatchQueue )= {
