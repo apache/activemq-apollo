@@ -269,7 +269,7 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
         check_counter += 1
 
         if( (check_counter%10)==0  ) {
-          display_stats
+//          display_stats
         }
 
 //        if( (check_counter%100)==0 ) {
@@ -298,15 +298,15 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
             // it's been parking and cursoring through the data at the tune_slow_subscription_rate 
             if( (sub.tail_parked && sub.tail_parkings==0) || ( sub.tail_parkings > 0 && cursor_delta >= slow_cursor_delta ) ) {
               if( sub.slow ) {
-                info("subscription is now fast: %s", sub)
+                debug("subscription is now fast: %s", sub)
                 sub.slow_intervals = 0
               }
             } else {
               if( !sub.slow ) {
-                info("slow interval: %d, %d, %d", sub.slow_intervals, sub.tail_parkings, cursor_delta)
+                trace("slow interval: %d, %d, %d", sub.slow_intervals, sub.tail_parkings, cursor_delta)
                 sub.slow_intervals += 1
                 if( sub.slow ) {
-                  info("subscription is now slow: %s", sub)
+                  debug("subscription is now slow: %s", sub)
                 }
               }
             }
@@ -538,6 +538,13 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
     }
   }
 
+  def collocate(value:DispatchQueue):Unit = {
+    if( value.getTargetQueue ne dispatchQueue.getTargetQueue ) {
+      println(dispatchQueue.getLabel+" co-locating with: "+value.getLabel);
+      this.dispatchQueue.setTargetQueue(value.getTargetQueue)
+    }
+  }
+  
 }
 
 object QueueEntry extends Sizer[QueueEntry] {

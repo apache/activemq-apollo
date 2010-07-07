@@ -22,8 +22,8 @@ import _root_.org.fusesource.hawtdispatch._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
 import java.util.HashMap
-import collection.JavaConversions
 import path.PathMap
+import collection.JavaConversions
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -201,7 +201,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
 
    def each(proc:(Destination, DestinationNode)=>Unit) = {
-     import JavaConversions._;
+     import JavaConversions._
      for( (destination, node) <- destinations ) {
         proc(destination, node)
      }
