@@ -14,21 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.jaxb;
+package org.apache.activemq.broker;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
+import java.beans.ExceptionListener;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.activemq.apollo.broker.Broker;
+import org.apache.activemq.apollo.broker.Destination;
+import org.apache.activemq.apollo.broker.Router;
 import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.memory.MemoryStore;
+import org.apache.activemq.broker.store.StoreFactory;
+import org.apache.activemq.metric.MetricAggregator;
+import org.apache.activemq.metric.Period;
+import org.apache.activemq.transport.TransportFactory;
+import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.junit.Before;
+import org.junit.Test;
 
-@XmlRootElement(name="memory-store")
-@XmlAccessorType(XmlAccessType.FIELD)
-public class MemoryStoreXml extends StoreXml {
+import static java.lang.String.*;
 
-	public Store createStore() {
-		return new MemoryStore();
-	}
-
-}

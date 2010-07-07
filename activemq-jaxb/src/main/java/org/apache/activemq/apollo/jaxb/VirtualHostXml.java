@@ -27,6 +27,7 @@ import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.adapters.XmlAdapter;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
+import org.apache.activemq.apollo.broker.BrokerDatabase;
 import org.apache.activemq.apollo.broker.VirtualHost;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 
@@ -34,19 +35,20 @@ import org.apache.activemq.util.buffer.AsciiBuffer;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class VirtualHostXml {
 	
-    @XmlJavaTypeAdapter(AsciiBufferAdapter.class)
     @XmlElement(name="host-name", required=true)
-    private ArrayList<AsciiBuffer> hostNames = new ArrayList<AsciiBuffer>();
+    private ArrayList<String> hostNames = new ArrayList<String>();
 
     @XmlElementRef   
     private StoreXml store;
     
 	public VirtualHost createVirtualHost(BrokerXml brokerXml) throws Exception {
 		VirtualHost rc = new VirtualHost();
-		rc.setHostNames(hostNames);
-		
+		rc.setNamesArray(hostNames);
 		if( store != null ) {
-			rc.setStore(store.createStore());
+            BrokerDatabase database = new BrokerDatabase();
+            database.setVirtualHost(rc);
+            database.setStore(store.createStore());
+            rc.setDatabase(database);
 		}
 		return rc;
 	}

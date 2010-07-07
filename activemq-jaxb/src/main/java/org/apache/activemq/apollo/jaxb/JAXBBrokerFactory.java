@@ -32,31 +32,32 @@ import org.apache.activemq.util.URISupport;
 
 public class JAXBBrokerFactory implements BrokerFactory.Handler {
 
-	public Broker createBroker(URI brokerURI) throws Exception {
-		JAXBContext context = JAXBContext.newInstance("org.apache.activemq.apollo.jaxb");
-		Unmarshaller unmarshaller = context.createUnmarshaller();
+	public Broker createBroker(String value) {
+        try {
+            URI brokerURI = new URI(value);
+            JAXBContext context = JAXBContext.newInstance("org.apache.activemq.apollo.jaxb");
+            Unmarshaller unmarshaller = context.createUnmarshaller();
 
-		URL configURL;
-		brokerURI = URISupport.stripScheme(brokerURI);
-		String scheme = brokerURI.getScheme();
-		if( scheme==null || "file".equals(scheme) ) {
-			configURL = URISupport.changeScheme(URISupport.stripScheme(brokerURI), "file").toURL();
-		} else if( "classpath".equals(scheme) ) {
-			configURL = Thread.currentThread().getContextClassLoader().getResource(brokerURI.getSchemeSpecificPart());
-		} else {
-			configURL = URISupport.changeScheme(brokerURI, scheme).toURL();
-		}
-		if (configURL == null) {
-			throw new IOException("Cannot create broker from non-existent URI: " + brokerURI);
-		}
-		XMLInputFactory factory = XMLInputFactory.newInstance();
-		XMLStreamReader reader = factory.createXMLStreamReader(configURL.openStream());
-		XMLStreamReader properties = new PropertiesReader(reader);
-		try {
+            URL configURL;
+            brokerURI = URISupport.stripScheme(brokerURI);
+            String scheme = brokerURI.getScheme();
+            if( scheme==null || "file".equals(scheme) ) {
+                configURL = URISupport.changeScheme(URISupport.stripScheme(brokerURI), "file").toURL();
+            } else if( "classpath".equals(scheme) ) {
+                configURL = Thread.currentThread().getContextClassLoader().getResource(brokerURI.getSchemeSpecificPart());
+            } else {
+                configURL = URISupport.changeScheme(brokerURI, scheme).toURL();
+            }
+            if (configURL == null) {
+                throw new IOException("Cannot create broker from non-existent URI: " + brokerURI);
+            }
+            XMLInputFactory factory = XMLInputFactory.newInstance();
+            XMLStreamReader reader = factory.createXMLStreamReader(configURL.openStream());
+            XMLStreamReader properties = new PropertiesReader(reader);
 			BrokerXml xml = (BrokerXml) unmarshaller.unmarshal(properties);
 			return xml.createMessageBroker();
-		} catch (UnmarshalException e) {
-			throw new IOException("Cannot create broker from URI: " + brokerURI + ", reason: " + e.getCause());
+		} catch (Exception e) {
+			throw new RuntimeException("Cannot create broker from URI: " + value, e);
 		}	
 	}
 

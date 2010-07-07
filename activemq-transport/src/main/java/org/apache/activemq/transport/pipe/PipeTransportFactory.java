@@ -33,7 +33,7 @@ import org.apache.activemq.util.URISupport;
  */
 public class PipeTransportFactory implements TransportFactory.TransportFactorySPI {
 
-    static protected final HashMap<String, PipeTransportServer> servers = new HashMap<String, PipeTransportServer>();
+    public static final HashMap<String, PipeTransportServer> servers = new HashMap<String, PipeTransportServer>();
 
     public TransportServer bind(URI uri) throws URISyntaxException, IOException {
 
