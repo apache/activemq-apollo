@@ -157,6 +157,7 @@ public class TcpTransport extends BaseService implements Transport {
                 disposed = true;
                 dispose();
             }
+            onCompleted.run();
         }
     }
 

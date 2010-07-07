@@ -121,33 +121,39 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
     val tracker = new LoggingTracker("virtual host startup", dispatchQueue)
     store = StoreFactory.create(config.store)
     if( store!=null ) {
-      val task = tracker.task("store list queue keys")
+      val task = tracker.task("store startup")
       store.start(^{
-        store.listQueues { queueKeys =>
-          for( queueKey <- queueKeys) {
-            val task = tracker.task("store load queue key: "+queueKey)
-            // Use a global queue to so we concurrently restore
-            // the queues.
-            globalQueue {
-              store.getQueueStatus(queueKey) { x =>
-                x match {
-                  case Some(info)=>
-                  store.getQueueEntries(queueKey) { entries=>
-                    dispatchQueue ^{
-                      val dest = DestinationParser.parse(info.record.name, destination_parser_options)
-                      val queue = new Queue(this, dest)
-                      queue.restore(queueKey, entries)
-                      queues.put(dest.getName, queue)
-                      task.run
+        if( config.purgeOnStartup ) {
+          store.purge {
+            task.run
+          }
+        } else {
+          store.listQueues { queueKeys =>
+            for( queueKey <- queueKeys) {
+              val task = tracker.task("store load queue key: "+queueKey)
+              // Use a global queue to so we concurrently restore
+              // the queues.
+              globalQueue {
+                store.getQueueStatus(queueKey) { x =>
+                  x match {
+                    case Some(info)=>
+                    store.getQueueEntries(queueKey) { entries=>
+                      dispatchQueue ^{
+                        val dest = DestinationParser.parse(info.record.name, destination_parser_options)
+                        val queue = new Queue(this, dest)
+                        queue.restore(queueKey, entries)
+                        queues.put(dest.getName, queue)
+                        task.run
+                      }
                     }
+                    case _ =>
+                      task.run
                   }
-                  case _ =>
-                    task.run
                 }
               }
             }
+            task.run
           }
-          task.run
         }
       });
     }

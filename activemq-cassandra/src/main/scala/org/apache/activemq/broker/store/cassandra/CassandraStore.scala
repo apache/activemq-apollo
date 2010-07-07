@@ -93,7 +93,7 @@ class CassandraStore extends Store with BaseService with Logging {
   }
 
   protected def _start(onCompleted: Runnable) = {
-    executor_pool = Executors.newCachedThreadPool
+    executor_pool = Executors.newFixedThreadPool(20)
     client.schema = Schema(config.keyspace)
 
     // TODO: move some of this parsing code into validation too.
@@ -112,12 +112,12 @@ class CassandraStore extends Store with BaseService with Logging {
   }
 
   protected def _stop(onCompleted: Runnable) = {
-    client.stop
     new Thread() {
       override def run = {
         executor_pool.shutdown
         executor_pool.awaitTermination(1, TimeUnit.DAYS)
         executor_pool = null
+        client.stop
         onCompleted.run
       }
     }.start
@@ -128,6 +128,16 @@ class CassandraStore extends Store with BaseService with Logging {
   // Implementation of the BrokerDatabase interface
   //
   /////////////////////////////////////////////////////////////////////
+
+  /**
+   * Deletes all stored data from the store.
+   */
+  def purge(cb: =>Unit) = {
+    executor_pool ^{
+      client.purge
+      cb
+    }
+  }
 
   def addQueue(record: QueueRecord)(cb: (Option[Long]) => Unit) = {
     val key = next_queue_key.incrementAndGet
@@ -333,7 +343,12 @@ class CassandraStore extends Store with BaseService with Logging {
   flush_source.setEventHandler(^{drain_flushes});
   flush_source.resume
 
-  def drain_flushes = {
+  def drain_flushes:Unit = {
+
+    if( !serviceState.isStarted ) {
+      return
+    }
+    
     val txs = flush_source.getData.flatMap{ tx_id =>
       val tx = delayedTransactions.remove(tx_id)
       // Message may be flushed or canceled before the timeout flush event..

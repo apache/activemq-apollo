@@ -108,39 +108,42 @@ trait BaseService extends Service with Logging {
     }
   } |>>: dispatchQueue
 
-  final def stop(onCompleted:Runnable) = ^{
-    def done = {
-      if( onCompleted!=null ) {
-        onCompleted.run
+  final def stop(onCompleted:Runnable) = {
+    def stop_task = {
+      def done = {
+        if( onCompleted!=null ) {
+          onCompleted.run
+        }
+      }
+      _serviceState match {
+        case STARTED =>
+          val state = new STOPPING
+          state << onCompleted
+          _serviceState = state
+          try {
+            _stop(^ {
+              _serviceState = STOPPED
+              state.done
+            })
+          }
+          catch {
+            case e:Exception =>
+              error(e, "Stop failed due to: %s", e)
+              _serviceFailure = e
+              _serviceState = FAILED
+              state.done
+          }
+        case state:STOPPING =>
+          state << onCompleted
+        case STOPPED =>
+          done
+        case state =>
+          done
+          error("Stop should not be called from state: %s", state);
       }
     }
-    _serviceState match {
-      case STARTED =>
-        val state = new STOPPING
-        state << onCompleted
-        _serviceState = state
-        try {
-          _stop(^ {
-            _serviceState = STOPPED
-            state.done
-          })
-        }
-        catch {
-          case e:Exception =>
-            error(e, "Stop failed due to: %s", e)
-            _serviceFailure = e
-            _serviceState = FAILED
-            state.done
-        }
-      case state:STOPPING =>
-        state << onCompleted
-      case STOPPED =>
-        done
-      case state =>
-        done
-        error("Stop should not be called from state: %s", state);
-    }
-  } |>>: dispatchQueue
+    ^{ stop_task } |>>: dispatchQueue
+  }
 
   protected def _start(onCompleted:Runnable)
   protected def _stop(onCompleted:Runnable)

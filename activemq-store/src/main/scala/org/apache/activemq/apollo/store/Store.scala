@@ -62,7 +62,12 @@ trait Store extends Service {
   def configure(config: StoreDTO, reporter:Reporter):Unit
 
   /**
-   * Stores a queue, calls back with a unquie id for the stored queue.
+   * Deletes all stored data from the store.
+   */
+  def purge(cb: =>Unit):Unit
+
+  /**
+   *  Stores a queue, calls back with a unquie id for the stored queue.
    */
   def addQueue(record:QueueRecord)(cb:(Option[Long])=>Unit):Unit
 

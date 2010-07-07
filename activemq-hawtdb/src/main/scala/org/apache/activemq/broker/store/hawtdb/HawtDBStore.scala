@@ -115,6 +115,10 @@ class HawtDBStore extends BaseService with Logging with Store {
   //
   /////////////////////////////////////////////////////////////////////
 
+
+  def purge(cb: =>Unit) = {
+  }
+
   def addQueue(record: QueueRecord)(cb: (Option[Long]) => Unit) = {}
 
   def getQueueStatus(id: Long)(cb: (Option[QueueStatus]) => Unit) = {}

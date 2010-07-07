@@ -123,7 +123,7 @@ public abstract class BaseService implements Service {
                         }
                     });
                 } else if (_serviceState instanceof STOPPING) {
-                    ((STARTING) _serviceState).add(onCompleted);
+                    ((STOPPING) _serviceState).add(onCompleted);
                 } else if (_serviceState == STOPPED) {
                     if (onCompleted != null) {
                         onCompleted.run();

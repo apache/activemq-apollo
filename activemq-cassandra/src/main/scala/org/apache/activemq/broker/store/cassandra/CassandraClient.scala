@@ -37,7 +37,7 @@ class CassandraClient() {
   protected var pool: SessionPool = null
 
   def start() = {
-    val params = new PoolParams(10, ExhaustionPolicy.Fail, 500L, 6, 2)
+    val params = new PoolParams(20, ExhaustionPolicy.Fail, 500L, 6, 2)
     pool = new SessionPool(hosts, params, Consistency.One)
   }
 
@@ -96,6 +96,18 @@ class CassandraClient() {
     pb.setSize(v.size)
     pb.setRedeliveries(v.redeliveries)
     pb.freeze.toUnframedByteArray
+  }
+
+  def purge() = {
+    withSession {
+      session =>
+        session.list(schema.queue_name).map { x =>
+          val qid: Long = x.name
+          session.remove(schema.entries \ qid)
+        }
+        session.remove(schema.queue_name)
+        session.remove(schema.message_data)
+    }
   }
 
   def addQueue(record: QueueRecord) = {

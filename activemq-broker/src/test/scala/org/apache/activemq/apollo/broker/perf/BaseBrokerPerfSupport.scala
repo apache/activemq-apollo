@@ -35,6 +35,7 @@ import _root_.org.fusesource.hawtbuf._
 import java.io.{PrintStream, FileOutputStream, File, IOException}
 import org.apache.activemq.util.{IOHelper, ProcessSupport}
 import scala.util.matching.Regex
+import org.apache.activemq.apollo.dto.BrokerDTO
 
 object BaseBrokerPerfSupport {
   var PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "6"))
@@ -457,25 +458,29 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
     }
 
     def stopServices() = {
-      stopping.set(true);
-      val tracker = new LoggingTracker("test shutdown")
-      for (broker <- brokers) {
-        broker.stop(tracker.task("broker"));
-      }
-      for (connection <- producers) {
-        connection.stop(tracker.task(connection.toString));
-      }
-      for (connection <- consumers) {
-        connection.stop(tracker.task(connection.toString));
-      }
       println("waiting for services to stop");
+      stopping.set(true);
+      var tracker = new LoggingTracker("broker shutdown")
+      for (broker <- brokers) {
+        tracker.stop(broker)
+      }
+      tracker.await
+      tracker = new LoggingTracker("producer shutdown")
+      for (connection <- producers) {
+        tracker.stop(connection)
+      }
+      tracker.await
+      tracker = new LoggingTracker("consumer shutdown")
+      for (connection <- consumers) {
+        tracker.stop(connection)
+      }
       tracker.await
     }
 
     def startBrokers() = {
       val tracker = new LoggingTracker("test broker startup")
       for (broker <- brokers) {
-        broker.start(tracker.task("broker"));
+        tracker.start(broker)
       }
       tracker.await
     }
@@ -484,12 +489,14 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
     def startClients() = {
       var tracker = new LoggingTracker("test consumer startup")
       for (connection <- consumers) {
-        connection.start(tracker.task(connection.toString));
+        tracker.start(connection)
       }
       tracker.await
+      // let the consumers drain the destination for a bit...
+      Thread.sleep(1000)
       tracker = new LoggingTracker("test producer startup")
       for (connection <- producers) {
-        connection.start(tracker.task(connection.toString));
+        tracker.start(connection)
       }
       tracker.await
     }
@@ -555,12 +562,18 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
   def getRemoteWireFormat(): String
 
   def createBroker(name: String, bindURI: String, connectUri: String): Broker = {
-    val broker = new Broker()
-    broker.config = Broker.default
-    val connector = broker.config.connectors.get(0)
+
+    val config = Broker.default
+    val connector = config.connectors.get(0)
     connector.bind = bindURI
     connector.advertise = connectUri
     connector.protocol = getBrokerWireFormat
+
+    val host = config.virtualHosts.get(0)
+    host.purgeOnStartup = true
+
+    val broker = new Broker()
+    broker.config = config
     broker
   }
 
@@ -604,9 +617,12 @@ abstract class RemoteConsumer extends Connection {
   }
 
   override def onTransportFailure(error: IOException) = {
-    if (!brokerPerfTest.stopping.get()) {
-      System.err.println("Client Async Error:");
-      error.printStackTrace();
+    if (!stopped) {
+      if(brokerPerfTest.stopping.get()) {
+        transport.stop
+      } else {
+        onFailure(error);
+      }
     }
   }
 

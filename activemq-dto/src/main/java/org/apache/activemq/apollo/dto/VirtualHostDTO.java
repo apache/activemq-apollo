@@ -40,5 +40,9 @@ public class VirtualHostDTO extends ServiceDTO {
     @XmlAttribute(name="auto-create-queues")
     public boolean autoCreateQueues = true;
 
-
+    /**
+     * Should queues be purged on startup?
+     */
+    @XmlAttribute(name="purge-on-startup")
+    public boolean purgeOnStartup = false;
 }

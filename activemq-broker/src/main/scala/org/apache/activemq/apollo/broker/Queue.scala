@@ -26,6 +26,7 @@ import org.apache.activemq.util.list.{LinkedNodeList, LinkedNode}
 import org.apache.activemq.broker.store.{StoreBatch}
 import protocol.ProtocolFactory
 import org.apache.activemq.apollo.store.{QueueEntryRecord, MessageRecord}
+import java.util.concurrent.TimeUnit
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -99,6 +100,7 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
   val entries = new LinkedNodeList[QueueEntry]()
   entries.addFirst(headEntry)
 
+  var loadingSize = 0
   var flushingSize = 0
   var storeId: Long = -1L
 
@@ -108,18 +110,26 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
   var tune_max_size = 1024 * 32
   var tune_subscription_prefetch = 1024*32
   var tune_max_outbound_size = 1024 * 1204 * 5
+  var tune_swap_delay = 100L
+
+  var enqueue_counter = 0L
+  var dequeue_counter = 0L
+  var enqueue_size = 0L
+  var dequeue_size = 0L
 
   private var size = 0
 
   def restore(storeId: Long, records:Seq[QueueEntryRecord]) = ^{
     this.storeId = storeId
     records.foreach { qer =>
-      val entry = new QueueEntry(Queue.this).stored(qer)
+      val entry = new QueueEntry(Queue.this).flushed(qer)
       entries.addLast(entry)
     }
     if( !entries.isEmpty ) {
       message_seq_counter = entries.getTail.seq
     }
+    counter = records.size
+    enqueue_counter += records.size
     debug("restored: "+records.size )
   } >>: dispatchQueue
 
@@ -149,24 +159,46 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
           delivery.storeBatch.release
         }
 
-        size += entry.value.size
+        size += entry.size
         entries.addLast(entry)
         counter += 1;
+        enqueue_counter += 1
+        enqueue_size += entry.size
 
-        if( full && host.store!=null ) {
-//          swap
+        var swap_check = false
+        if( !entry.hasSubs ) {
+          // we flush the entry out right away if it looks
+          // it wont be needed.
+          if( entry.getPrevious.isFlushedOrFlushing ) {
+            flushingSize += entry.flush
+          } else {
+            swap_check=true
+          }
+        } else {
+          //  entry.dispatch==null if the entry was fully dispatched
+          swap_check = entry.dispatch!=null
         }
 
-        if( entry.hasSubs ) {
-          entry.dispatch
+        // Does it look like we need to start swapping to make room
+        // for more messages?
+        if( swap_check && host.store!=null &&  full ) {
+          val wasAt = dequeue_size
+          dispatchQueue.dispatchAfter(tune_swap_delay, TimeUnit.MILLISECONDS, ^{
+            // start swapping if was still blocked after a short delay
+            if( dequeue_size == wasAt && full ) {
+              println("swapping...")
+              swap
+            }
+          })
         }
+
         true
       }
     }
   }
 
   def ack(entry: QueueEntry, sb:StoreBatch) = {
-    if (entry.value.ref != -1) {
+    if (entry.ref != -1) {
       val storeBatch = if( sb == null ) {
         host.store.createStoreBatch
       } else {
@@ -181,13 +213,13 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
       sb.release
     }
 
+    dequeue_counter += 1
     counter -= 1
-    size -= entry.value.size
+    dequeue_size += entry.size
+    size -= entry.size
     entry.tombstone
 
-    if (counter == 0) {
-      messages.refiller.run
-    }
+    messages.refiller.run
   }
 
 
@@ -301,7 +333,18 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
     rc
   }
 
-  def swap() = {
+  /**
+   * Prioritizes all the queue entries so that entries most likely to be consumed
+   * next are a higher priority.  All messages with the highest priority are loaded
+   * and messages with the lowest priority are flushed to make room to accept more
+   * messages from the producer.
+   */
+  def swap():Unit = {
+
+    if( !host.serviceState.isStarted ) {
+      return
+    }
+
     class Prio(val entry:QueueEntry) extends Comparable[Prio] {
       var value = 0
       def compareTo(o: Prio) = o.value - value
@@ -311,7 +354,7 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
 
     var entry = entries.getHead
     while( entry!=null ) {
-      if( entry.value.asTombstone == null ) {
+      if( entry.asTombstone == null ) {
         prios.add(new Prio(entry))
       }
       entry = entry.getNext
@@ -325,7 +368,7 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
     def prioritize(i:Int, size:Int, p:Int):Unit = {
       val prio = prios.get(i)
       prio.value += p
-      val remainingSize = size - prio.entry.value.size
+      val remainingSize = size - prio.entry.size
       if( remainingSize > 0 ) {
         val next = i + 1
         if( next < prios.size ) {
@@ -363,27 +406,10 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
       val prio = prios.get(i)
       val entry = prio.entry
       if( remaining > 0 ) {
-        remaining -= entry.value.size
-        val stored = entry.value.asStored
-        if( stored!=null && !stored.loading) {
-          stored.load
-        }
+        loadingSize += entry.load
+        remaining -= entry.size
       } else {
-        // Chuck the reset out...
-        val loaded = entry.value.asLoaded
-        if( loaded!=null ) {
-          var ref = loaded.delivery.storeKey
-          if( ref == -1 ) {
-            val tx = host.store.createStoreBatch
-            loaded.delivery.storeKey = tx.store(loaded.delivery.createMessageRecord)
-            tx.enqueue(entry.createQueueEntryRecord)
-            tx.release
-          }
-          flushingSize += entry.value.size
-          host.store.flushMessage(ref) {
-            store_flush_source.merge(entry)
-          }
-        }
+        flushingSize += entry.flush
       }
       i += 1
     }
@@ -391,20 +417,22 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
 
   def drain_store_loads() = {
     val data = store_load_source.getData
-    data.foreach { case (entry,stored) =>
+    data.foreach { case (entry,flushed) =>
+
+      loadingSize -= entry.size
 
       val delivery = new Delivery()
-      delivery.message = ProtocolFactory.get(stored.protocol).decode(stored.value)
-      delivery.size = stored.size
-      delivery.storeKey = stored.key
+      delivery.message = ProtocolFactory.get(flushed.protocol).decode(flushed.value)
+      delivery.size = flushed.size
+      delivery.storeKey = flushed.key
 
       entry.loaded(delivery)
 
-      size += entry.value.size
+      size += entry.size
 
     }
 
-    data.foreach { case (entry,stored) =>
+    data.foreach { case (entry,_) =>
       if( entry.hasSubs ) {
         entry.run
       }
@@ -413,22 +441,25 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
 
   def drain_store_flushes() = {
     store_flush_source.getData.foreach { entry =>
-      flushingSize -= entry.value.size
+      flushingSize -= entry.size
 
       // by the time we get called back, subs my be interested in the entry
       // or it may have been acked.
-      if( !entry.hasSubs && entry.value.asLoaded!=null ) {
-        size += entry.value.size
-        entry.stored
+      if( !entry.hasSubs && entry.asLoaded!=null ) {
+        size -= entry.size
+        entry.flushed
       }
     }
+    
+    messages.refiller.run
+
   }
 
 }
 
 
 object QueueEntry extends Sizer[QueueEntry] {
-  def size(value: QueueEntry): Int = value.value.size
+  def size(value: QueueEntry): Int = value.size
 }
 
 class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable[QueueEntry] with Runnable {
@@ -463,15 +494,15 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
     this
   }
 
-  def stored() = {
+  def flushed() = {
     val loaded = value.asLoaded
-    this.value = new Stored(loaded.delivery.storeKey, loaded.size)
+    this.value = new Flushed(loaded.delivery.storeKey, loaded.size)
     this
   }
 
-  def stored(qer:QueueEntryRecord) = {
+  def flushed(qer:QueueEntryRecord) = {
     this.seq = qer.queueSeq
-    this.value = new Stored(qer.messageKey, qer.size)
+    this.value = new Flushed(qer.messageKey, qer.size)
     this
   }
 
@@ -519,22 +550,12 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
     this
   }
 
-
   def hasSubs = !(competing == Nil && browsing == Nil)
 
   def run() = {
     var next = dispatch()
     while( next!=null ) {
       next = next.dispatch
-    }
-  }
-
-  def dispatch():QueueEntry = {
-    if( value == null ) {
-      // tail entry can't be dispatched.
-      null
-    } else {
-      value.dispatch
     }
   }
 
@@ -566,6 +587,25 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
     entry
   }
 
+  def size = this.value.size
+  def flush = this.value.flush
+  def load = this.value.load
+  def ref = this.value.ref
+
+  def asTombstone = this.value.asTombstone
+  def asFlushed = this.value.asFlushed
+  def asLoaded = this.value.asLoaded
+  def isFlushedOrFlushing = value.isFlushedOrFlushing
+
+  def dispatch():QueueEntry = {
+    if( value == null ) {
+      // tail entry can't be dispatched.
+      null
+    } else {
+      value.dispatch
+    }
+  }
+
 
   trait EntryType {
     def size:Int
@@ -573,8 +613,12 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
     def ref:Long
 
     def asTombstone:Tombstone = null
-    def asStored:Stored = null
+    def asFlushed:Flushed = null
     def asLoaded:Loaded = null
+
+    def flush:Int = 0
+    def load:Int = 0
+    def isFlushedOrFlushing = false
   }
 
   class Tombstone extends EntryType {
@@ -597,13 +641,15 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
     
   }
 
-  class Stored(val ref:Long, val size:Int) extends EntryType {
+  class Flushed(val ref:Long, val size:Int) extends EntryType {
 
     var loading = false
 
-    override def asStored = this
+    override def asFlushed = this
 
-    // Stored entries can't be dispatched until
+    override def isFlushedOrFlushing = true
+
+    // Flushed entries can't be dispatched until
     // they get loaded.
     def dispatch():QueueEntry = {
       if( !loading ) {
@@ -613,10 +659,10 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
         // make sure the next few entries are loaded too..
         var cur = getNext
         while( remaining>0 && cur!=null ) {
-          remaining -= cur.value.size
-          val stored = cur.value.asStored
-          if( stored!=null && !stored.loading) {
-            stored.load
+          remaining -= cur.size
+          val flushed = cur.asFlushed
+          if( flushed!=null && !flushed.loading) {
+            flushed.load
           }
           cur = getNext
         }
@@ -625,15 +671,20 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
       null
     }
 
-    def load() = {
-      // start loading it back...
-      loading = true
-      queue.host.store.loadMessage(ref) { delivery =>
-        // pass off to a source so it can aggregate multiple
-        // loads to reduce cross thread synchronization
-        if( delivery.isDefined ) {
-          queue.store_load_source.merge((QueueEntry.this, delivery.get))
+    override def load():Int = {
+      if( loading ) {
+        0
+      } else {
+        // start loading it back...
+        loading = true
+        queue.host.store.loadMessage(ref) { delivery =>
+          // pass off to a source so it can aggregate multiple
+          // loads to reduce cross thread synchronization
+          if( delivery.isDefined ) {
+            queue.store_load_source.merge((QueueEntry.this, delivery.get))
+          }
         }
+        size
       }
     }
   }
@@ -643,9 +694,38 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
     var aquired = false
     def ref = delivery.storeKey
     def size = delivery.size
-    def flushing = false
+    var flushing = false
     
+    override def isFlushedOrFlushing = {
+      flushing
+    }
+
     override  def asLoaded = this
+
+    def store() = {
+      if( delivery.storeKey == -1 ) {
+        val tx = queue.host.store.createStoreBatch
+        delivery.storeKey = tx.store(delivery.createMessageRecord)
+        tx.enqueue(createQueueEntryRecord)
+        tx.release
+        true
+      } else {
+        false
+      }
+    }
+
+    override def flush():Int = {
+      if( flushing ) {
+        0
+      } else {
+        flushing=true
+        store
+        queue.host.store.flushMessage(ref) {
+          queue.store_flush_source.merge(QueueEntry.this)
+        }
+        size
+      }
+    }
 
     def dispatch():QueueEntry = {
       if( delivery==null ) {
