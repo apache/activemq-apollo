@@ -18,12 +18,11 @@ package org.apache.activemq.apollo.broker
 
 import _root_.java.beans.ExceptionListener
 import _root_.java.io.{IOException}
-import _root_.java.util.{LinkedHashMap, HashMap}
 import _root_.org.apache.activemq.filter.{BooleanExpression}
 import _root_.org.apache.activemq.transport._
 import _root_.org.apache.activemq.Service
 import _root_.java.lang.{String}
-import _root_.org.apache.activemq.util.{FactoryFinder, IOExceptionSupport}
+import _root_.org.apache.activemq.util.{FactoryFinder}
 import _root_.org.apache.activemq.wireformat.WireFormat
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import java.util.concurrent.atomic.AtomicLong

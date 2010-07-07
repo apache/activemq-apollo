@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.broker;
 
-import _root_.java.util.{LinkedHashMap, ArrayList, HashMap}
+import _root_.java.util.{ArrayList, HashMap}
 import _root_.org.apache.activemq.broker.store.memory.MemoryStore
 import _root_.org.apache.activemq.broker.store.{Store}
 import _root_.org.apache.activemq.Service
@@ -25,8 +25,7 @@ import _root_.org.apache.activemq.util.buffer.{AsciiBuffer}
 import _root_.org.fusesource.hawtdispatch.{ScalaDispatch, DispatchQueue}
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.reflect.BeanProperty
-
-import path.{PathFilter}
+import path.PathFilter
 
 object VirtualHost extends Log
 

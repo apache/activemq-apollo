@@ -17,7 +17,7 @@
 package org.apache.activemq.apollo.broker
 
 import _root_.java.io.{File}
-import _root_.java.util.{LinkedList, LinkedHashMap, ArrayList, HashMap}
+import _root_.java.util.{LinkedList, LinkedHashMap, ArrayList}
 import _root_.org.apache.activemq.transport._
 import _root_.org.apache.activemq.Service
 import _root_.java.lang.{String}

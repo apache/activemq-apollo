@@ -44,7 +44,6 @@ import static org.apache.activemq.transport.tcp.TcpTransport.TransportState.*;
  */
 public class TcpTransport implements Transport {
     private Map<String, Object> socketOptions;
-    private WireFormat.UnmarshalSession unmarshalSession;
 
     enum SocketState {
         CONNECTING,
@@ -130,8 +129,6 @@ public class TcpTransport implements Transport {
             throw new IllegalStateException("start can only be used from the created state");
         }
         transportState = RUNNING;
-
-        unmarshalSession = wireformat.createUnmarshalSession();
 
         if (socketState == CONNECTING) {
             channel = SocketChannel.open();
@@ -260,7 +257,7 @@ public class TcpTransport implements Transport {
             setDispatchQueue(null);
             next_outbound_buffer = null;
             outbound_buffer = null;
-            unmarshalSession = null;
+            this.wireformat = null;
         }
     }
 
@@ -369,25 +366,25 @@ public class TcpTransport implements Transport {
         while (true) {
 
             // do we need to read in more data???
-            if (unmarshalSession.getEndPos() == readBuffer.position()) {
+            if (this.wireformat.unmarshalEndPos() == readBuffer.position()) {
 
                 // do we need a new data buffer to read data into??
                 if (readBuffer.remaining() == 0) {
 
                     // double the capacity size if needed...
-                    int new_capacity = unmarshalSession.getStartPos() != 0 ? bufferSize : readBuffer.capacity() << 2;
+                    int new_capacity = this.wireformat.unmarshalStartPos() != 0 ? bufferSize : readBuffer.capacity() << 2;
                     byte[] new_buffer = new byte[new_capacity];
 
                     // If there was un-consummed data.. move it to the start of the new buffer.
-                    int size = unmarshalSession.getEndPos() - unmarshalSession.getStartPos();
+                    int size = this.wireformat.unmarshalEndPos() - this.wireformat.unmarshalStartPos();
                     if (size > 0) {
-                        System.arraycopy(readBuffer.array(), unmarshalSession.getStartPos(), new_buffer, 0, size);
+                        System.arraycopy(readBuffer.array(), this.wireformat.unmarshalStartPos(), new_buffer, 0, size);
                     }
 
                     readBuffer = ByteBuffer.wrap(new_buffer);
                     readBuffer.position(size);
-                    unmarshalSession.setStartPos(0);
-                    unmarshalSession.setEndPos(size);
+                    this.wireformat.unmarshalStartPos(0);
+                    this.wireformat.unmarshalEndPos(size);
                 }
 
                 // Try to fill the buffer with data from the socket..
@@ -400,7 +397,7 @@ public class TcpTransport implements Transport {
                 }
             }
 
-            Object command = unmarshalSession.unmarshal(readBuffer);
+            Object command = this.wireformat.unmarshalNB(readBuffer);
             if (command != null) {
                 listener.onTransportCommand(command);
 

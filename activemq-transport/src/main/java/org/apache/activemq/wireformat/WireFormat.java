@@ -37,6 +37,11 @@ import org.apache.activemq.util.buffer.Buffer;
 public interface WireFormat {
 
     /**
+     * @return The name of the wireformat
+     */
+    String getName();
+
+    /**
      * Packet based marshaling 
      */
     Buffer marshal(Object command) throws IOException;
@@ -56,31 +61,18 @@ public interface WireFormat {
      */
     Object unmarshal(DataInput in) throws IOException;
 
-    /**
-      * For a unmarshal session is used for non-blocking
-      * unmarshalling.
-      */
-     interface UnmarshalSession {
-        int getStartPos();
-        void setStartPos(int pos);
+    int unmarshalStartPos();
+    void unmarshalStartPos(int pos);
 
-        int getEndPos();
-        void setEndPos(int pos);
-
-        Object unmarshal(ByteBuffer buffer) throws IOException;
-    }
-
-    UnmarshalSession createUnmarshalSession();
+    int unmarshalEndPos();
+    void unmarshalEndPos(int pos);
 
     /**
-     * @return The name of the wireformat
+     * For a unmarshal session is used for non-blocking
+     * unmarshalling.
      */
-    String getName();
-    
-    /**
-     * Returns a WireFormatFactory which can create WireFormat of this type.
-     * @return
-     */
-    WireFormatFactory getWireFormatFactory();
+    Object unmarshalNB(ByteBuffer buffer) throws IOException;
+
+
 
 }

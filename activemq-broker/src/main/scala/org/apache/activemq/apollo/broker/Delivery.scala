@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.java.util.{LinkedList, LinkedHashMap, HashMap}
+import _root_.java.util.{LinkedList}
 import _root_.org.apache.activemq.filter.{MessageEvaluationContext}
 import _root_.java.lang.{String}
 import _root_.org.apache.activemq.util.buffer.{Buffer, AsciiBuffer}

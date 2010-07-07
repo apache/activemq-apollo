@@ -23,12 +23,9 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
-import org.apache.activemq.transport.Transport;
 import org.apache.activemq.util.FactoryFinder;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.util.buffer.ByteArrayInputStream;
@@ -53,10 +50,9 @@ public class MultiWireFormatFactory implements WireFormatFactory {
         ArrayList<WireFormatFactory> wireFormatFactories = new ArrayList<WireFormatFactory>();
         WireFormat wireFormat;
         int maxHeaderLength;
+        int start=0;
+        int end=0;
 
-        public int getVersion() {
-            return 0;
-        }
 
         private ByteArrayInputStream peeked;
 
@@ -102,66 +98,57 @@ public class MultiWireFormatFactory implements WireFormatFactory {
             return rc;
         }
 
-        public UnmarshalSession createUnmarshalSession() {
-            return new UnmarshalSession() {
-                int start=0;
-                int end=0;
-                UnmarshalSession session;
+        public int unmarshalStartPos() {
+            if( wireFormat!=null ) {
+                return wireFormat.unmarshalStartPos();
+            } else {
+                return start;
+            }
+        }
 
-                public int getStartPos() {
-                    if( session!=null ) {
-                        return session.getStartPos();
-                    } else {
-                        return start;
-                    }
+        public void unmarshalStartPos(int pos) {
+            if( wireFormat!=null ) {
+                wireFormat.unmarshalStartPos(pos);
+            } else {
+                start=pos;
+            }
+        }
+
+        public int unmarshalEndPos() {
+            if( wireFormat!=null ) {
+                return wireFormat.unmarshalEndPos();
+            } else {
+                return end;
+            }
+        }
+
+        public void unmarshalEndPos(int pos) {
+            if( wireFormat!=null ) {
+                wireFormat.unmarshalEndPos(pos);
+            } else {
+                end = pos;
+            }
+        }
+
+        public Object unmarshalNB(ByteBuffer buffer) throws IOException {
+            if( wireFormat!=null ) {
+                return wireFormat.unmarshalNB(buffer);
+            }
+
+            Buffer b = new Buffer(buffer.array(), start, buffer.position());
+            for (WireFormatFactory wff : wireFormatFactories) {
+                if (wff.matchesWireformatHeader( b )) {
+                    wireFormat = wff.createWireFormat();
+                    wireFormat.unmarshalStartPos(start);
+                    wireFormat.unmarshalEndPos(end);
+                    return wireFormat;
                 }
+            }
 
-                public void setStartPos(int pos) {
-                    if( session!=null ) {
-                        session.setStartPos(pos);
-                    } else {
-                        start=pos;
-                    }
-                }
-
-                public int getEndPos() {
-                    if( session!=null ) {
-                        return session.getEndPos();
-                    } else {
-                        return end;
-                    }
-                }
-
-                public void setEndPos(int pos) {
-                    if( session!=null ) {
-                        session.setEndPos(pos);
-                    } else {
-                        end = pos;
-                    }
-                }
-
-                public Object unmarshal(ByteBuffer buffer) throws IOException {
-                    if( session!=null ) {
-                        return session.unmarshal(buffer);
-                    }
-
-                    Buffer b = new Buffer(buffer.array(), start, buffer.position());
-                    for (WireFormatFactory wff : wireFormatFactories) {
-                        if (wff.matchesWireformatHeader( b )) {
-                            wireFormat = wff.createWireFormat();
-                            session = wireFormat.createUnmarshalSession();
-                            session.setStartPos(start);
-                            session.setEndPos(end);
-                            return wireFormat;
-                        }
-                    }
-                    
-                    if( end >= maxHeaderLength ) {
-                        throw new IOException("Could not discriminate the protocol.");
-                    }
-                    return null;
-                }
-            };
+            if( end >= maxHeaderLength ) {
+                throw new IOException("Could not discriminate the protocol.");
+            }
+            return null;
         }
 
         public void marshal(Object command, DataOutput out) throws IOException {
@@ -195,10 +182,6 @@ public class MultiWireFormatFactory implements WireFormatFactory {
                 return wireFormat.getName();
             }
         }
-
-		public WireFormatFactory getWireFormatFactory() {
-			return new MultiWireFormatFactory(wireFormatFactories);
-		}
     }
 
     public MultiWireFormatFactory() {

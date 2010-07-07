@@ -122,187 +122,180 @@ class StompWireFormat extends WireFormat with DispatchLogging {
 
   def getName() = "stomp"
 
-  def getWireFormatFactory() = new StompWireFormatFactory
-
   //
   // state associated with un-marshalling stomp frames from
-  // a non-blocking NIO channel.
+  // with the  unmarshalNB method.
   //
-  def createUnmarshalSession() = new StompUnmarshalSession
+  type FrameReader = (ByteBuffer)=>StompFrame
 
-  class StompUnmarshalSession extends UnmarshalSession {
+  var next_action:FrameReader = read_action
+  var end = 0
+  var start = 0
 
-    type FrameReader = (ByteBuffer)=>StompFrame
+  def unmarshalStartPos() = start
+  def unmarshalStartPos(pos:Int):Unit = {start=pos}
 
-    var next_action:FrameReader = read_action
-    var end = 0
-    var start = 0
+  def unmarshalEndPos() = end
+  def unmarshalEndPos(pos:Int):Unit = { end = pos }
 
-    def getStartPos() = start
-    def setStartPos(pos:Int):Unit = {start=pos}
-
-    def getEndPos() = end
-    def setEndPos(pos:Int):Unit = { end = pos }
-
-    def unmarshal(buffer:ByteBuffer):Object = {
-      // keep running the next action until
-      // a frame is decoded or we run out of input
-      var rc:StompFrame = null
-      while( rc == null && end!=buffer.position ) {
-        rc = next_action(buffer)
-      }
+  def unmarshalNB(buffer:ByteBuffer):Object = {
+    // keep running the next action until
+    // a frame is decoded or we run out of input
+    var rc:StompFrame = null
+    while( rc == null && end!=buffer.position ) {
+      rc = next_action(buffer)
+    }
 
 //      trace("unmarshalled: "+rc+", start: "+start+", end: "+end+", buffer position: "+buffer.position)
-      rc
-    }
+    rc
+  }
 
-    def read_line(buffer:ByteBuffer, maxLength:Int, errorMessage:String):Buffer = {
-        val read_limit = buffer.position
-        while( end < read_limit ) {
-          if( buffer.array()(end) =='\n') {
-            var rc = new Buffer(buffer.array, start, end-start)
-            end += 1;
-            start = end;
-            return rc
-          }
-          if (SIZE_CHECK && end-start > maxLength) {
-              throw new IOException(errorMessage);
-          }
+  def read_line(buffer:ByteBuffer, maxLength:Int, errorMessage:String):Buffer = {
+      val read_limit = buffer.position
+      while( end < read_limit ) {
+        if( buffer.array()(end) =='\n') {
+          var rc = new Buffer(buffer.array, start, end-start)
           end += 1;
-        }
-        return null;
-    }
-
-    def read_action:FrameReader = (buffer)=> {
-      val line = read_line(buffer, MAX_COMMAND_LENGTH, "The maximum command length was exceeded")
-      if( line !=null ) {
-        var action = line
-        if( TRIM ) {
-            action = action.trim();
-        }
-        if (action.length() > 0) {
-            next_action = read_headers(action)
-        }
-      }
-      null
-    }
-
-    def read_headers(action:Buffer, headers:HeaderMapBuffer=new HeaderMapBuffer()):FrameReader = (buffer)=> {
-      val line = read_line(buffer, MAX_HEADER_LENGTH, "The maximum header length was exceeded")
-      if( line !=null ) {
-        if( line.trim().length() > 0 ) {
-
-          if (SIZE_CHECK && headers.size > MAX_HEADERS) {
-              throw new IOException("The maximum number of headers was exceeded");
-          }
-
-          try {
-              val seperatorIndex = line.indexOf(SEPERATOR);
-              if( seperatorIndex<0 ) {
-                  throw new IOException("Header line missing seperator [" + ascii(line) + "]");
-              }
-              var name = line.slice(0, seperatorIndex);
-              if( TRIM ) {
-                  name = name.trim();
-              }
-              var value = line.slice(seperatorIndex + 1, line.length());
-              if( TRIM ) {
-                  value = value.trim();
-              }
-              headers.add((ascii(name), ascii(value)))
-          } catch {
-              case e:Exception=>
-                e.printStackTrace
-                throw new IOException("Unable to parser header line [" + line + "]");
-          }
-
-        } else {
-          val contentLength = get(headers, CONTENT_LENGTH)
-          if (contentLength.isDefined) {
-            // Bless the client, he's telling us how much data to read in.
-            var length=0;
-            try {
-                length = Integer.parseInt(contentLength.get.trim().toString());
-            } catch {
-              case e:NumberFormatException=>
-                throw new IOException("Specified content-length is not a valid integer");
-            }
-
-            if (SIZE_CHECK && length > MAX_DATA_LENGTH) {
-                throw new IOException("The maximum data length was exceeded");
-            }
-            next_action = read_binary_body(action, headers, length)
-
-          } else {
-            next_action = read_text_body(action, headers)
-          }
-        }
-      }
-      null
-    }
-
-    def get(headers:HeaderMapBuffer, name:AsciiBuffer):Option[AsciiBuffer] = {
-      val i = headers.iterator
-      while( i.hasNext ) {
-        val entry = i.next
-        if( entry._1 == name ) {
-          return Some(entry._2)
-        }
-      }
-      None
-    }
-
-
-    def read_binary_body(action:Buffer, headers:HeaderMapBuffer, contentLength:Int):FrameReader = (buffer)=> {
-      val content:Buffer=read_content(buffer, contentLength)
-      if( content != null ) {
-        next_action = read_action
-        new StompFrame(ascii(action), headers.toList, content)
-      } else {
-        null
-      }
-    }
-
-
-    def read_content(buffer:ByteBuffer, contentLength:Int):Buffer = {
-        val read_limit = buffer.position
-        if( (read_limit-start) < contentLength+1 ) {
-          end = read_limit;
-          null
-        } else {
-          if( buffer.array()(start+contentLength)!= 0 ) {
-             throw new IOException("Exected null termintor after "+contentLength+" content bytes");
-          }
-          var rc = new Buffer(buffer.array, start, contentLength)
-          end = start+contentLength+1;
           start = end;
-          rc;
+          return rc
         }
-    }
-
-    def read_to_null(buffer:ByteBuffer):Buffer = {
-        val read_limit = buffer.position
-        while( end < read_limit ) {
-          if( buffer.array()(end) ==0) {
-            var rc = new Buffer(buffer.array, start, end-start)
-            end += 1;
-            start = end;
-            return rc;
-          }
-          end += 1;
+        if (SIZE_CHECK && end-start > maxLength) {
+            throw new IOException(errorMessage);
         }
-        return null;
-    }
-
-
-    def read_text_body(action:Buffer, headers:HeaderMapBuffer):FrameReader = (buffer)=> {
-      val content:Buffer=read_to_null(buffer)
-      if( content != null ) {
-        next_action = read_action
-        new StompFrame(ascii(action), headers.toList, content)
-      } else {
-        null
+        end += 1;
       }
+      return null;
+  }
+
+  def read_action:FrameReader = (buffer)=> {
+    val line = read_line(buffer, MAX_COMMAND_LENGTH, "The maximum command length was exceeded")
+    if( line !=null ) {
+      var action = line
+      if( TRIM ) {
+          action = action.trim();
+      }
+      if (action.length() > 0) {
+          next_action = read_headers(action)
+      }
+    }
+    null
+  }
+
+  def read_headers(action:Buffer, headers:HeaderMapBuffer=new HeaderMapBuffer()):FrameReader = (buffer)=> {
+    val line = read_line(buffer, MAX_HEADER_LENGTH, "The maximum header length was exceeded")
+    if( line !=null ) {
+      if( line.trim().length() > 0 ) {
+
+        if (SIZE_CHECK && headers.size > MAX_HEADERS) {
+            throw new IOException("The maximum number of headers was exceeded");
+        }
+
+        try {
+            val seperatorIndex = line.indexOf(SEPERATOR);
+            if( seperatorIndex<0 ) {
+                throw new IOException("Header line missing seperator [" + ascii(line) + "]");
+            }
+            var name = line.slice(0, seperatorIndex);
+            if( TRIM ) {
+                name = name.trim();
+            }
+            var value = line.slice(seperatorIndex + 1, line.length());
+            if( TRIM ) {
+                value = value.trim();
+            }
+            headers.add((ascii(name), ascii(value)))
+        } catch {
+            case e:Exception=>
+              e.printStackTrace
+              throw new IOException("Unable to parser header line [" + line + "]");
+        }
+
+      } else {
+        val contentLength = get(headers, CONTENT_LENGTH)
+        if (contentLength.isDefined) {
+          // Bless the client, he's telling us how much data to read in.
+          var length=0;
+          try {
+              length = Integer.parseInt(contentLength.get.trim().toString());
+          } catch {
+            case e:NumberFormatException=>
+              throw new IOException("Specified content-length is not a valid integer");
+          }
+
+          if (SIZE_CHECK && length > MAX_DATA_LENGTH) {
+              throw new IOException("The maximum data length was exceeded");
+          }
+          next_action = read_binary_body(action, headers, length)
+
+        } else {
+          next_action = read_text_body(action, headers)
+        }
+      }
+    }
+    null
+  }
+
+  def get(headers:HeaderMapBuffer, name:AsciiBuffer):Option[AsciiBuffer] = {
+    val i = headers.iterator
+    while( i.hasNext ) {
+      val entry = i.next
+      if( entry._1 == name ) {
+        return Some(entry._2)
+      }
+    }
+    None
+  }
+
+
+  def read_binary_body(action:Buffer, headers:HeaderMapBuffer, contentLength:Int):FrameReader = (buffer)=> {
+    val content:Buffer=read_content(buffer, contentLength)
+    if( content != null ) {
+      next_action = read_action
+      new StompFrame(ascii(action), headers.toList, content)
+    } else {
+      null
+    }
+  }
+
+
+  def read_content(buffer:ByteBuffer, contentLength:Int):Buffer = {
+      val read_limit = buffer.position
+      if( (read_limit-start) < contentLength+1 ) {
+        end = read_limit;
+        null
+      } else {
+        if( buffer.array()(start+contentLength)!= 0 ) {
+           throw new IOException("Exected null termintor after "+contentLength+" content bytes");
+        }
+        var rc = new Buffer(buffer.array, start, contentLength)
+        end = start+contentLength+1;
+        start = end;
+        rc;
+      }
+  }
+
+  def read_to_null(buffer:ByteBuffer):Buffer = {
+      val read_limit = buffer.position
+      while( end < read_limit ) {
+        if( buffer.array()(end) ==0) {
+          var rc = new Buffer(buffer.array, start, end-start)
+          end += 1;
+          start = end;
+          return rc;
+        }
+        end += 1;
+      }
+      return null;
+  }
+
+
+  def read_text_body(action:Buffer, headers:HeaderMapBuffer):FrameReader = (buffer)=> {
+    val content:Buffer=read_to_null(buffer)
+    if( content != null ) {
+      next_action = read_action
+      new StompFrame(ascii(action), headers.toList, content)
+    } else {
+      null
     }
   }
 

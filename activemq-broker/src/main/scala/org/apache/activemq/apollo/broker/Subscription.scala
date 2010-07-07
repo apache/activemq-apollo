@@ -16,10 +16,10 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.java.util.{LinkedHashMap, ArrayList, HashMap}
+import _root_.java.util.{ArrayList}
 import _root_.org.apache.activemq.filter.{FilterException, BooleanExpression}
-import path.{PathFilter}
 import _root_.scala.collection.JavaConversions._
+import path.PathFilter
 
 trait BrokerSubscription {
 

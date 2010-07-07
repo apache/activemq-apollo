@@ -3,6 +3,7 @@ package org.apache.activemq.wireformat.mock;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Map;
 
@@ -14,23 +15,9 @@ import org.apache.activemq.wireformat.WireFormatFactory;
 public class MockWireFormatFactory implements WireFormatFactory {
 
     public class MockWireFormat implements WireFormat {
-		public Transport createTransportFilters(Transport transport, Map options) {
-			return transport;
-		}
 
 		public String getName() {
 			return "mock";
-		}
-
-		public int getVersion() {
-			return 0;
-		}
-
-		public boolean inReceive() {
-			return false;
-		}
-
-		public void setVersion(int version) {
 		}
 
 		public Buffer marshal(Object command) throws IOException {
@@ -49,17 +36,26 @@ public class MockWireFormatFactory implements WireFormatFactory {
 	        throw new UnsupportedOperationException();
 		}
 
-        public UnmarshalSession createUnmarshalSession() {
+        public int unmarshalStartPos() {
             throw new UnsupportedOperationException();
         }
 
-        public Object unmarshal(ReadableByteChannel channel) {
+        public void unmarshalStartPos(int pos) {
             throw new UnsupportedOperationException();
         }
 
-        public WireFormatFactory getWireFormatFactory() {
-			return new MockWireFormatFactory();
-		}
+        public int unmarshalEndPos() {
+            throw new UnsupportedOperationException();
+        }
+
+        public void unmarshalEndPos(int pos) {
+            throw new UnsupportedOperationException();
+        }
+
+        public Object unmarshalNB(ByteBuffer buffer) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
     }
 
 	public WireFormat createWireFormat() {

@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.java.util.{LinkedHashMap, HashMap}
 import _root_.org.apache.activemq.util.buffer.{AsciiBuffer}
 import BufferConversions._
 
@@ -26,12 +25,6 @@ class ParserOptions {
   var topicPrefix:AsciiBuffer = null
   var tempQueuePrefix:AsciiBuffer = null
   var tempTopicPrefix:AsciiBuffer = null
-}
-
-trait Destination {
-  def getDomain(): AsciiBuffer
-  def getName(): AsciiBuffer
-  def getDestinations():Seq[Destination]
 }
 
 object DestinationParser {
@@ -79,15 +72,15 @@ object DestinationParser {
 
         if( value.contains(compositeSeparator) ) {
             var rc = value.split(compositeSeparator);
-            var md = new MultiDestination();
+            var dl:List[Destination] = Nil
             for (buffer <- rc) {
               val d = parse(buffer, options)
               if( d==null ) {
                 return null;
               }
-              md.destinations = md.destinations ::: d :: Nil
+              dl = dl ::: d :: Nil
             }
-            return md;
+            return new MultiDestination(dl.toArray[Destination]);
         }
         return parse(value, options);
     }
@@ -95,15 +88,15 @@ object DestinationParser {
 
 case class SingleDestination(var domain:AsciiBuffer=null, var name:AsciiBuffer=null) extends Destination {
 
-  def getDestinations():Seq[Destination] = null;
+  def getDestinations():Array[Destination] = null;
   def getDomain():AsciiBuffer = domain
   def getName():AsciiBuffer = name
 
   override def toString() = ""+domain+":"+name
 }
-case class MultiDestination(var destinations:List[Destination]=Nil) extends Destination {
+case class MultiDestination(var destinations:Array[Destination]) extends Destination {
 
-  def getDestinations():Seq[Destination] = destinations;
+  def getDestinations():Array[Destination] = destinations;
   def getDomain():AsciiBuffer = null
   def getName():AsciiBuffer = null
 

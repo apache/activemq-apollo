@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.stomp
 
-import _root_.org.apache.activemq.apollo.broker._
-
 import _root_.org.apache.activemq.wireformat.{WireFormat}
 import _root_.org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained}
 import _root_.org.apache.activemq.util.buffer._
@@ -25,6 +23,7 @@ import collection.mutable.{ListBuffer, HashMap}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
 import AsciiBuffer._
+import org.apache.activemq.apollo.broker._
 import Stomp._
 import BufferConversions._
 import StompFrameConstants._

@@ -16,23 +16,21 @@
  */
 package org.apache.activemq.apollo.broker.perf
 
-import _root_.java.beans.ExceptionListener
-import _root_.java.net.URI
 import _root_.java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
-import _root_.java.util.concurrent.TimeUnit
-import _root_.java.util.{LinkedHashMap, ArrayList, HashMap}
-import _root_.org.apache.activemq.apollo.broker._
-import _root_.org.apache.activemq.broker.store.{StoreFactory, Store}
 import _root_.org.apache.activemq.metric.{Period, MetricAggregator, MetricCounter}
 import _root_.java.lang.{String}
-import _root_.org.apache.activemq.util.buffer.{AsciiBuffer}
 import _root_.org.junit.{Test, Before}
 
 import org.apache.activemq.transport.TransportFactory
 
 import _root_.scala.collection.JavaConversions._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import java.io.{IOException, File}
+import org.apache.activemq.apollo.broker._
+import org.apache.activemq.util.buffer.AsciiBuffer
+import org.apache.activemq.broker.store.{Store, StoreFactory}
+import java.io.{File, IOException}
+import java.util.concurrent.TimeUnit
+import java.util.ArrayList
 
 
 abstract class RemoteConsumer extends Connection {

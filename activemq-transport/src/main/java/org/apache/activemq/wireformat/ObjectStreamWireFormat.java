@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Map;
 
@@ -41,6 +42,7 @@ import org.apache.activemq.util.buffer.ByteArrayOutputStream;
 public class ObjectStreamWireFormat implements WireFormat {
 
     public static final String WIREFORMAT_NAME = "object";
+    
     public Buffer marshal(Object command) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream ds = new DataOutputStream(baos);
@@ -72,35 +74,28 @@ public class ObjectStreamWireFormat implements WireFormat {
         }
     }
 
-    public UnmarshalSession createUnmarshalSession() {
+    public int unmarshalStartPos() {
         throw new UnsupportedOperationException();
     }
 
-    public Object unmarshal(ReadableByteChannel channel) {
+    public void unmarshalStartPos(int pos) {
         throw new UnsupportedOperationException();
     }
 
-    public void setVersion(int version) {
+    public int unmarshalEndPos() {
+        throw new UnsupportedOperationException();
     }
 
-    public int getVersion() {
-        return 0;
+    public void unmarshalEndPos(int pos) {
+        throw new UnsupportedOperationException();
+    }
+
+    public Object unmarshalNB(ByteBuffer buffer) throws IOException {
+        throw new UnsupportedOperationException();
     }
 
     public String getName() {
         return WIREFORMAT_NAME;
     }
 
-    public boolean inReceive() {
-        // TODO implement the inactivity monitor
-        return false;
-    }
-
-    public Transport createTransportFilters(Transport transport, Map options) {
-        return transport;
-    }
-
-	public WireFormatFactory getWireFormatFactory() {
-		return new ObjectStreamWireFormatFactory();
-	}
 }
