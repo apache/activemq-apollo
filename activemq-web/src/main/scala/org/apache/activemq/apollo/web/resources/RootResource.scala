@@ -26,14 +26,14 @@ import com.sun.jersey.api.view.ImplicitProduces
 import org.fusesource.hawtdispatch.Future
 import Response._
 import Response.Status._
-import org.apache.activemq.apollo.dto.{IdListDTO, BrokerSummaryDTO, BrokerDTO}
-import java.util.{Arrays, Collections}
 import org.apache.activemq.apollo.web.ConfigStore
 import org.apache.activemq.apollo.broker.BrokerRegistry
 import collection.JavaConversions._
 import com.sun.jersey.api.core.ResourceContext
 import org.fusesource.scalate.RenderContext
 import java.util.concurrent.TimeUnit
+import org.apache.activemq.apollo.dto._
+import java.util.{Arrays, Collections}
 
 /**
  * Defines the default representations to be used on resources
@@ -127,11 +127,12 @@ class RootResource() extends Resource {
 
   @GET
   def brokers = {
-    val rc = new IdListDTO
-    val ids = Future[List[String]] { cb=>
+    val rc = new StringIdListDTO
+    Future[List[String]] { cb=>
       ConfigStore().listBrokers(cb)
-    }.toArray[String]
-    rc.ids.addAll(Arrays.asList(ids: _*))
+    }.foreach { x=> 
+      rc.items.add( new StringIdLabeledDTO(x,x) )
+    }
     rc
   }
 

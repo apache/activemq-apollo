@@ -8,16 +8,16 @@
 %ul
   - for( x <- virtual_hosts )
     %li
-      %a(href="runtime/virtual-hosts/#{x}") #{x}
+      %a(href={ path("virtual-hosts/"+ x.id) }) #{x.label}
 
 %h2 Connectors
 %ul
   - for( x <- connectors )
     %li
-      %a(href={ path("connectors/"+x) }) #{x}
+      %a(href={ path("connectors/"+x.id) }) #{x.label}
 
 %h2 Connections
 %ul
   - for( x <- connections )
     %li
-      %a(href={ path("connections/"+x) }) #{x}
+      %a(href={ path("connections/"+x.id) }) #{x.label}

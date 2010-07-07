@@ -16,24 +16,29 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
-import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.List;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="broker-summaries")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BrokerSummariesDTO {
+public class StringIdLabeledDTO extends StringIdDTO {
 
-    /**
-     * The list of broker summaries. 
-     */
-    @JsonProperty
-    @XmlElement
-    public List<BrokerSummaryDTO> brokers = new ArrayList<BrokerSummaryDTO>();
+    @XmlAttribute
+    public String label;
 
+
+    public StringIdLabeledDTO() {
+    }
+
+    public StringIdLabeledDTO(String id) {
+        super(id);
+    }
+
+    public StringIdLabeledDTO(String id, String label) {
+        super(id);
+        this.label = label;
+    }
 }

@@ -42,7 +42,7 @@ public class ConnectorStatusDTO extends ServiceStatusDTO {
      * Ids of all open connections that the connector is managing.
      */
     @XmlElement(name="connection")
-    public List<Long> connections = new ArrayList<Long>();
+    public List<LongIdLabeledDTO> connections = new ArrayList<LongIdLabeledDTO>();
 
     /**
      * The current running configuration of the object

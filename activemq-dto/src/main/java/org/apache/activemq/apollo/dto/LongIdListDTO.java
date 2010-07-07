@@ -28,14 +28,14 @@ import java.util.List;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="id-list")
+@XmlRootElement(name="ll")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class IdListDTO {
+public class LongIdListDTO {
 
     /**
      * A list of ids.
      */
-    @XmlElement(name="id")
-    public List<String> ids = new ArrayList<String>();
+    @XmlElement(name="item")
+    public List<LongIdLabeledDTO> items = new ArrayList<LongIdLabeledDTO>();
 
 }

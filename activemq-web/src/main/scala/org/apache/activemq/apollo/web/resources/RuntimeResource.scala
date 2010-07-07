@@ -77,16 +77,18 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       result.config = broker.config
 
       broker.virtualHosts.values.foreach{ host=>
-        result.virtual_hosts.add( host.id )
+        // TODO: may need to sync /w virtual host's dispatch queue
+        result.virtual_hosts.add( new LongIdLabeledDTO(host.id, host.config.id) )
       }
 
       broker.connectors.foreach{ c=>
-        result.connectors.add(c.id)
+        result.connectors.add( new LongIdLabeledDTO(c.id, c.config.id) )
       }
 
       broker.connectors.foreach{ connector=>
-        connector.connections.keysIterator.foreach { id =>
-          result.connections.add(id)
+        connector.connections.foreach { case (id,connection) =>
+          // TODO: may need to sync /w connection's dispatch queue
+          result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ) )
         }
       }
 
@@ -96,9 +98,10 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
 
   @GET @Path("virtual-hosts")
-  def virtualHosts :Array[jl.Long] = {
-    val list: List[jl.Long] = get.virtual_hosts
-    list.toArray(new Array[jl.Long](list.size))
+  def virtualHosts = {
+    val rc = new LongIdListDTO
+    rc.items.addAll(get.virtual_hosts)
+    rc
   }
 
   @GET @Path("virtual-hosts/{id}")
@@ -111,11 +114,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       result.config = virtualHost.config
 
       virtualHost.router.destinations.valuesIterator.foreach { node=>
-        val summary = new DestinationSummaryDTO
-        summary.id = node.id
-        summary.name = node.destination.getName.toString
-        summary.domain = node.destination.getDomain.toString
-        result.destinations.add(summary)
+        result.destinations.add(new LongIdLabeledDTO(node.id, node.destination.getName.toString))
       }
 
       if( virtualHost.store != null ) {
@@ -149,7 +148,8 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
         node match {
           case qdn:virtualHost.router.QueueDestinationNode =>
-            result.queues.add(qdn.queue.id)
+            // todo give queues some descriptive name of what they are being used for.
+            result.queues.add(new LongIdLabeledDTO(qdn.queue.id, qdn.queue.id.toString))
           case _ =>
         }
         result
@@ -216,9 +216,10 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
 
   @GET @Path("connectors")
-  def connectors :Array[jl.Long] = {
-    val list: List[jl.Long] = get.connectors
-    list.toArray(new Array[jl.Long](list.size))
+  def connectors = {
+    val rc = new LongIdListDTO
+    rc.items.addAll(get.connectors)
+    rc
   }
 
   @GET @Path("connectors/{id}")
@@ -235,9 +236,11 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
           result.config = connector.config
 
           result.accepted = connector.accept_counter.get
-          connector.connections.keysIterator.foreach { id=>
-            result.connections.add(id)
+          connector.connections.foreach { case (id,connection) =>
+            // TODO: may need to sync /w connection's dispatch queue
+            result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ) )
           }
+
           cb(Some(result))
       }
     }
@@ -245,17 +248,19 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
 
   @GET @Path("connections")
-  def connections :Array[Long] = {
-    val rc:Array[Long] = with_broker { case (broker, cb) =>
-      val rc = ListBuffer[Long]()
+  def connections:LongIdListDTO = {
+    with_broker { case (broker, cb) =>
+      val rc = new LongIdListDTO
+
       broker.connectors.foreach { connector=>
-        connector.connections.keys.foreach { id =>
-          rc += id.longValue
+        connector.connections.foreach { case (id,connection) =>
+          // TODO: may need to sync /w connection's dispatch queue
+          rc.items.add(new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ))
         }
       }
-      cb(Some(rc.toArray))
+      
+      cb(Some(rc))
     }
-    rc.sorted
   }
 
   @GET @Path("connections/{id}")

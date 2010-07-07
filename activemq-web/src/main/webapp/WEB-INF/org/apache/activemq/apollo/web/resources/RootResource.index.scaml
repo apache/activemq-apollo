@@ -4,6 +4,6 @@
     %h1 Brokers
 
     %ul
-      - for( x <- brokers.ids )
+      - for( x <- brokers.items )
         %li
-          %a(href="brokers/#{x}") #{x}
+          %a(href="brokers/#{x.id}") #{x.label}

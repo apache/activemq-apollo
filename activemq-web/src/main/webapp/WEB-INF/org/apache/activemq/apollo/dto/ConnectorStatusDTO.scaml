@@ -12,6 +12,6 @@
 %ul
   - for( x <- connections )
     %li
-      %a(href={ path("../../connections/"+x) }) #{x}
+      %a(href={ path("../../connections/"+x.id) }) #{x.label}
 
 

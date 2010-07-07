@@ -10,18 +10,18 @@
 %ul
   - for( x <- queues )
     %li
-      %a(href={ path("../../queues/"+x) }) #{x}
+      %a(href={ path("../../queues/"+x.id) }) #{x.label}
 
 %h2 Producers
 %ul
   - for( x <- producers )
     %li
-      %a(href={ path("../../../../connections/"+x) }) #{x}
+      %a(href={ path("../../../../connections/"+x.id) }) #{x.label}
 
 %h2 Consumers
 %ul
   - for( x <- consumers )
     %li
-      %a(href={ path("../../../../connections/"+x) }) #{x}
+      %a(href={ path("../../../../connections/"+x.id) }) #{x.label}
 
 

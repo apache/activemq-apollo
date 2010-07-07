@@ -16,30 +16,29 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="destination-summary")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationSummaryDTO extends LongIdDTO {
+public class LongIdLabeledDTO extends LongIdDTO {
 
-    /**
-     * The destination name
-     */
     @XmlAttribute
-    public String name;
+    public String label;
 
-    /**
-     * The routing domain
-     */
-    @XmlAttribute
-    public String domain;
-    
+
+    public LongIdLabeledDTO() {
+    }
+
+    public LongIdLabeledDTO(long id) {
+        super(id);
+    }
+
+    public LongIdLabeledDTO(long id, String label) {
+        super(id);
+        this.label = label;
+    }
 }

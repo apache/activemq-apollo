@@ -42,7 +42,7 @@ public class VirtualHostStatusDTO extends ServiceStatusDTO {
      * Ids of all the destinations running on the broker
      */
     @XmlElement(name="destination")
-    public List<DestinationSummaryDTO> destinations = new ArrayList<DestinationSummaryDTO>();
+    public List<LongIdLabeledDTO> destinations = new ArrayList<LongIdLabeledDTO>();
 
 
     /**

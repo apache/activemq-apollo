@@ -16,49 +16,24 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
-import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="destination-status")
+@XmlRootElement(name="sl")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationStatusDTO extends LongIdDTO {
+public class StringIdListDTO {
 
     /**
-     * The destination name
+     * A list of ids.
      */
-    @XmlAttribute
-    public String name;
+    @XmlElement(name="item")
+    public List<StringIdLabeledDTO> items = new ArrayList<StringIdLabeledDTO>();
 
-    /**
-     * The routing domain
-     */
-    @XmlAttribute
-    public String domain;
-
-    /**
-     * Ids of all connections that are producing to the destination
-     */
-    @XmlElement(name="producer")
-    public List<LongIdLabeledDTO> producers = new ArrayList<LongIdLabeledDTO>();
-
-    /**
-     * Ids of all connections that are consuming from the destination
-     */
-    @XmlElement(name="consumer")
-    public List<LongIdLabeledDTO> consumers = new ArrayList<LongIdLabeledDTO>();
-
-    /**
-     * Ids of all queues that are associated with the destination
-     */
-    @XmlElement(name="queue")
-    public List<LongIdLabeledDTO> queues = new ArrayList<LongIdLabeledDTO>();
 }

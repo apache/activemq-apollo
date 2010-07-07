@@ -26,7 +26,6 @@ import javax.xml.bind.annotation.XmlRootElement;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="id")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class LongIdDTO {
 
@@ -36,5 +35,10 @@ public class LongIdDTO {
 	@XmlAttribute
 	public long id;
 
-
+    public LongIdDTO() {
+    }
+    
+    public LongIdDTO(long id) {
+        this.id = id;
+    }
 }

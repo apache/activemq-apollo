@@ -25,7 +25,6 @@ import java.util.List;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="id")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class StringIdDTO {
 
@@ -35,5 +34,10 @@ public class StringIdDTO {
 	@XmlAttribute
 	public String id;
 
+    public StringIdDTO() {
+    }
+    public StringIdDTO(String id){
+        this.id = id;
+    }
 
 }

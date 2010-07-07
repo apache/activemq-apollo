@@ -10,10 +10,9 @@
   %p
     %a(href={ path("store") }) store
 
-
 %h2 Destinations
 %ul
   - for( x <- destinations )
     %li
-      %a(href={ path("destinations/"+x.id) }) #{x.name}
+      %a(href={ path("destinations/"+x.id) }) #{x.label}
 
