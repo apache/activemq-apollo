@@ -84,6 +84,9 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   @volatile
   var rootBuffer = (new DatabaseRootRecord.Bean()).freeze
 
+  @volatile
+  var storedRootBuffer = (new DatabaseRootRecord.Bean()).freeze
+
 
   val next_batch_counter = new AtomicInteger(0)
   private var batches = new LinkedHashMap[Int, (Location, ListBuffer[Update])]()
@@ -195,12 +198,13 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
             rootBean.setDataFileRefIndexPage(alloc(DATA_FILE_REF_INDEX_FACTORY))
             rootBean.setMessageRefsIndexPage(alloc(MESSAGE_REFS_INDEX_FACTORY))
             rootBean.setSubscriptionIndexPage(alloc(SUBSCRIPTIONS_INDEX_FACTORY))
-
+            storedRootBuffer = rootBean.freeze
             helper.storeRootBean
 
             true
           } else {
             rootBuffer = tx.get(DATABASE_ROOT_RECORD_ACCESSOR, 0)
+            storedRootBuffer = rootBuffer;
             false
           }
       }
@@ -981,11 +985,14 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     }
 
     // Don't GC files that we will need for recovery..
-    val upto = if (rootBuffer.hasFirstBatchLocation) {
-      Some(rootBuffer.getFirstBatchLocation.getDataFileId)
+
+    // Notice we are using the storedRootBuffer and not the rootBuffer field.
+    // rootBuffer has the latest updates, which they may not survive restart.
+    val upto = if (storedRootBuffer.hasFirstBatchLocation) {
+      Some(storedRootBuffer.getFirstBatchLocation.getDataFileId)
     } else {
-      if (rootBuffer.hasLastUpdateLocation) {
-        Some(rootBuffer.getLastUpdateLocation.getDataFileId)
+      if (storedRootBuffer.hasLastUpdateLocation) {
+        Some(storedRootBuffer.getLastUpdateLocation.getDataFileId)
       } else {
         None
       }
@@ -1077,8 +1084,17 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     }
 
     def storeRootBean() = {
-      rootBuffer = rootBean.freeze
+      val frozen = rootBean.freeze
+      rootBuffer = frozen
       _tx.put(DATABASE_ROOT_RECORD_ACCESSOR, 0, rootBuffer)
+
+      // Since the index flushes updates async, hook a callback to know when
+      // the update has hit disk.  storedRootBuffer is used by the
+      // cleanup task to know when which data logs are safe to cleanup.
+      _tx.onFlush(^{
+        storedRootBuffer = frozen
+      })
+
     }
 
   }
