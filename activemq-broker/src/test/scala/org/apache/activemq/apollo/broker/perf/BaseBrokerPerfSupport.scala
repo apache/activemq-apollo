@@ -396,12 +396,12 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
         val name = new AsciiBuffer("dest" + (i + 1))
         var bean = new SingleDestination(domain, name)
         dests(i) = bean;
-        if (PTP) {
-          sendBroker.defaultVirtualHost.createQueue(dests(i));
-          if (MULTI_BROKER) {
-            rcvBroker.defaultVirtualHost.createQueue(dests(i));
-          }
-        }
+//        if (PTP) {
+//          sendBroker.defaultVirtualHost.createQueue(dests(i));
+//          if (MULTI_BROKER) {
+//            rcvBroker.defaultVirtualHost.createQueue(dests(i));
+//          }
+//        }
       }
 
       for (i <- 0 until producerCount) {

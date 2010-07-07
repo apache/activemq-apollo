@@ -23,11 +23,12 @@ import BufferConversions._
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class ParserOptions {
-  var defaultDomain:AsciiBuffer = null
-  var queuePrefix:AsciiBuffer = null
-  var topicPrefix:AsciiBuffer = null
-  var tempQueuePrefix:AsciiBuffer = null
-  var tempTopicPrefix:AsciiBuffer = null
+  var defaultDomain: AsciiBuffer = null
+  var queuePrefix: AsciiBuffer = null
+  var topicPrefix: AsciiBuffer = null
+  var tempQueuePrefix: AsciiBuffer = null
+  var tempTopicPrefix: AsciiBuffer = null
+  var separator: Option[Byte] = None
 }
 
 /**
@@ -35,83 +36,107 @@ class ParserOptions {
  */
 object DestinationParser {
 
-    /**
-     * Parses a simple destination.
-     *
-     * @param value
-     * @param options
-     * @return
-     */
-    def parse(value:AsciiBuffer, options:ParserOptions ):Destination = {
-        if (options.queuePrefix!=null && value.startsWith(options.queuePrefix)) {
-            var name = value.slice(options.queuePrefix.length, value.length).ascii();
-            return new SingleDestination(Domain.QUEUE_DOMAIN, name);
-        } else if (options.topicPrefix!=null && value.startsWith(options.topicPrefix)) {
-            var name = value.slice(options.topicPrefix.length, value.length).ascii();
-            return new SingleDestination(Domain.TOPIC_DOMAIN, name);
-        } else if (options.tempQueuePrefix!=null && value.startsWith(options.tempQueuePrefix)) {
-            var name = value.slice(options.tempQueuePrefix.length, value.length).ascii();
-            return new SingleDestination(Domain.TEMP_QUEUE_DOMAIN, name);
-        } else if (options.tempTopicPrefix!=null && value.startsWith(options.tempTopicPrefix)) {
-            var name = value.slice(options.tempTopicPrefix.length, value.length).ascii();
-            return new SingleDestination(Domain.TEMP_TOPIC_DOMAIN, name);
+  def toBuffer(value: Destination, options: ParserOptions): AsciiBuffer = {
+    if (value == null) {
+      null
+    } else {
+      val baos = new ByteArrayOutputStream
+      def write(value: Destination):Unit = {
+        if (value.getDestinations != null) {
+          assert( options.separator.isDefined )
+          val first = true
+          for (d <- value.getDestinations) {
+            if (!first) {
+              baos.write(options.separator.get)
+            }
+            write(d)
+          }
         } else {
-            if( options.defaultDomain==null ) {
-                return null;
-            }
-            return new SingleDestination(options.defaultDomain, value);
+          value.getDomain match {
+            case Domain.QUEUE_DOMAIN =>
+              baos.write(options.queuePrefix)
+            case Domain.TOPIC_DOMAIN =>
+              baos.write(options.topicPrefix)
+            case Domain.TEMP_QUEUE_DOMAIN =>
+              baos.write(options.tempQueuePrefix)
+            case Domain.TEMP_TOPIC_DOMAIN =>
+              baos.write(options.tempTopicPrefix)
+          }
+          baos.write(value.getName)
         }
+      }
+      write(value)
+      baos.toBuffer.ascii
+    }
+  }
+
+  /**
+   * Parses a destination which may or may not be a composite.
+   *
+   * @param value
+   * @param options
+   * @param compositeSeparator
+   * @return
+   */
+  def parse(value: AsciiBuffer, options: ParserOptions): Destination = {
+    if (value == null) {
+      return null;
     }
 
-    /**
-     * Parses a destination which may or may not be a composite.
-     *
-     * @param value
-     * @param options
-     * @param compositeSeparator
-     * @return
-     */
-    def parse(value:AsciiBuffer, options:ParserOptions , compositeSeparator:Byte ):Destination = {
-        if( value == null ) {
-            return null;
+    if (options.separator.isDefined && value.contains(options.separator.get)) {
+      var rc = value.split(options.separator.get);
+      var dl: List[Destination] = Nil
+      for (buffer <- rc) {
+        val d = parse(buffer, options)
+        if (d == null) {
+          return null;
         }
-
-        if( value.contains(compositeSeparator) ) {
-            var rc = value.split(compositeSeparator);
-            var dl:List[Destination] = Nil
-            for (buffer <- rc) {
-              val d = parse(buffer, options)
-              if( d==null ) {
-                return null;
-              }
-              dl = dl ::: d :: Nil
-            }
-            return new MultiDestination(dl.toArray[Destination]);
+        dl = dl ::: d :: Nil
+      }
+      return new MultiDestination(dl.toArray[Destination]);
+    } else {
+      if (options.queuePrefix != null && value.startsWith(options.queuePrefix)) {
+        var name = value.slice(options.queuePrefix.length, value.length).ascii();
+        return new SingleDestination(Domain.QUEUE_DOMAIN, name);
+      } else if (options.topicPrefix != null && value.startsWith(options.topicPrefix)) {
+        var name = value.slice(options.topicPrefix.length, value.length).ascii();
+        return new SingleDestination(Domain.TOPIC_DOMAIN, name);
+      } else if (options.tempQueuePrefix != null && value.startsWith(options.tempQueuePrefix)) {
+        var name = value.slice(options.tempQueuePrefix.length, value.length).ascii();
+        return new SingleDestination(Domain.TEMP_QUEUE_DOMAIN, name);
+      } else if (options.tempTopicPrefix != null && value.startsWith(options.tempTopicPrefix)) {
+        var name = value.slice(options.tempTopicPrefix.length, value.length).ascii();
+        return new SingleDestination(Domain.TEMP_TOPIC_DOMAIN, name);
+      } else {
+        if (options.defaultDomain == null) {
+          return null;
         }
-        return parse(value, options);
+        return new SingleDestination(options.defaultDomain, value);
+      }
     }
+  }
 }
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class SingleDestination(var domain:AsciiBuffer=null, var name:AsciiBuffer=null) extends Destination {
+case class SingleDestination(var domain: AsciiBuffer = null, var name: AsciiBuffer = null) extends Destination {
+  def getDestinations(): Array[Destination] = null;
+  def getDomain(): AsciiBuffer = domain
 
-  def getDestinations():Array[Destination] = null;
-  def getDomain():AsciiBuffer = domain
-  def getName():AsciiBuffer = name
+  def getName(): AsciiBuffer = name
 
-  override def toString() = ""+domain+":"+name
+  override def toString() = "" + domain + ":" + name
 }
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class MultiDestination(var destinations:Array[Destination]) extends Destination {
+case class MultiDestination(var destinations: Array[Destination]) extends Destination {
+  def getDestinations(): Array[Destination] = destinations;
+  def getDomain(): AsciiBuffer = null
 
-  def getDestinations():Array[Destination] = destinations;
-  def getDomain():AsciiBuffer = null
-  def getName():AsciiBuffer = null
+  def getName(): AsciiBuffer = null
 
   override def toString() = destinations.mkString(",")
 }

@@ -16,15 +16,19 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.java.util.{LinkedList}
 import _root_.org.apache.activemq.filter.{MessageEvaluationContext}
 import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import org.apache.activemq.transport.Transport
 import org.fusesource.hawtbuf._
+import org.apache.activemq.util.TreeMap
+import java.util.concurrent.atomic.{AtomicLong, AtomicInteger}
+import java.util.{HashSet, LinkedList}
 
 /**
+ * A producer which sends Delivery objects to a delivery consumer.
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait DeliveryProducer {
@@ -32,6 +36,21 @@ trait DeliveryProducer {
 }
 
 /**
+ * The delivery consumer accepts messages from a delivery producer.
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+trait DeliveryConsumer extends Retained {
+  def matches(message:Delivery)
+  val dispatchQueue:DispatchQueue;
+  def connect(producer:DispatchQueue):DeliverySession
+}
+
+/**
+ * Before a derlivery producer can send Delivery objects to a delivery
+ * consumer, it creates a Delivery session which it uses to send
+ * the deliveries over.
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait DeliverySession {
@@ -40,14 +59,6 @@ trait DeliverySession {
   def close:Unit
 }
 
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-trait DeliveryConsumer extends Retained {
-  def matches(message:Delivery)
-  val dispatchQueue:DispatchQueue;
-  def open_session(producer_queue:DispatchQueue):DeliverySession
-}
 
 /**
  * Abstracts wire protocol message implementations.  Each wire protocol
@@ -95,311 +106,68 @@ trait Message {
 
 }
 
+case class StoredMessageRef(id:Long) extends BaseRetained
+
 /**
+ * <p>
+ * A new Delivery object is created every time a message is transfered between a producer and
+ * it's consumer or consumers.  Consumers will retain the object to flow control the producer.
+ * </p>
+ * <p>
+ * Once this object is disposed, the producer is free to send more deliveries to the consumers.
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object Delivery {
-  def apply(o:Delivery) = new Delivery(o.message, o.size, o.encoded, o.encoding, o.ack, o.tx_id, o.store_id)
+//  def apply(o:Delivery) = {
+//    rc new Delivery();
+//    o.message, o.size, o.encoded, o.encoding, o.ack, o.tx_id, o.store_id)
+//  }
 }
 
-case class Delivery (
 
-  /**
-   *  the message being delivered
-   */
-  message: Message,
+class Delivery extends BaseRetained {
 
   /**
    * memory size of the delivery.  Used for resource allocation tracking
    */
-  size:Int,
-
-  /**
-   * the encoded form of the message being delivered.
-   */
-  encoded: Buffer = null,
+  var size:Int = 0
 
   /**
    * the encoding format of the message
    */
-  encoding: String = null,
+  var encoding: String = null
 
   /**
-   *  true if this delivery requires acknowledgment.
+   *  the message being delivered
    */
-  ack:Boolean = false,
+  var message: Message = null
 
   /**
-   * The id used to identify the transaction that the message
-   * belongs to.
+   * the encoded form of the message being delivered.
    */
-  tx_id:Long = -1,
+  var encoded: Buffer = null
 
-  /**
-   * The id used to identify this message in the message
-   * store.
-   *
-   * @return The store tracking or -1 if not set.
-   */
-  store_id: Long = -1
+  var ref:StoredMessageRef = null
 
-) extends BaseRetained {
+  def copy() = (new Delivery).set(this)
+
+  def set(other:Delivery) = {
+    size = other.size
+    encoding = other.encoding
+    message = other.message
+    encoded = other.encoded
+    ref = other.ref
+    this
+  }
 
 }
 
-//abstract class BrokerMessageDelivery extends MessageDelivery {
-// TODO:
-//    // True while the message is being dispatched to the delivery targets:
-//    boolean dispatching = false;
-//
-//    // A non null pending save indicates that the message is the
-//    // saver queue and that the message
-//    OperationContext<?> pendingSave;
-//
-//    // List of persistent targets for which the message should be saved
-//    // when dispatch is complete:
-//    HashMap<QueueDescriptor, SaveableQueueElement<MessageDelivery>> persistentTargets;
-//    SaveableQueueElement<MessageDelivery> singleTarget;
-//
-//    long storeTracking = -1;
-//    BrokerDatabase store;
-//    boolean fromStore = false;
-//    boolean enableFlushDelay = true;
-//    private int limiterSize = -1;
-//    private long tid=-1;
-//
-//    public void setFromDatabase(BrokerDatabase database, MessageRecord mRecord) {
-//        fromStore = true;
-//        store = database;
-//        storeTracking = mRecord.getKey();
-//        limiterSize = mRecord.getSize();
-//    }
-//
-//    public final int getFlowLimiterSize() {
-//        if (limiterSize == -1) {
-//            limiterSize = getMemorySize();
-//        }
-//        return limiterSize;
-//    }
-//
-//    /**
-//     * When an application wishes to include a message in a broker transaction
-//     * it must set this the tid returned by {@link Transaction#getTid()}
-//     *
-//     * @param tid
-//     *            Sets the tid used to identify the transaction at the broker.
-//     */
-//    public void setTransactionId(long tid) {
-//        this.tid = tid;
-//    }
-//
-//    /**
-//     * @return The tid used to identify the transaction at the broker.
-//     */
-//    public final long getTransactionId() {
-//        return tid;
-//    }
-//
-//    public final void clearTransactionId() {
-//        tid = -1;
-//    }
-//
-//    /**
-//     * Subclass must implement this to return their current memory size
-//     * estimate.
-//     *
-//     * @return The memory size of the message.
-//     */
-//    public abstract int getMemorySize();
-//
-//    public final boolean isFromStore() {
-//        return fromStore;
-//    }
-//
-//    public final void persist(SaveableQueueElement<MessageDelivery> sqe, ISourceController<?> controller, boolean delayable) {
-//        synchronized (this) {
-//            // Can flush of this message to the store be delayed?
-//            if (enableFlushDelay && !delayable) {
-//                enableFlushDelay = false;
-//            }
-//            // If this message is being dispatched then add the queue to the
-//            // list of queues for which to save the message when dispatch is
-//            // finished:
-//            if (dispatching) {
-//                addPersistentTarget(sqe);
-//                return;
-//            }
-//            // Otherwise, if it is still in the saver queue, we can add this
-//            // queue to the queue list:
-//            else if (pendingSave != null) {
-//                addPersistentTarget(sqe);
-//                if (!delayable) {
-//                    pendingSave.requestFlush();
-//                }
-//                return;
-//            }
-//        }
-//
-//        store.saveMessage(sqe, controller, delayable);
-//    }
-//
-//    public final void acknowledge(SaveableQueueElement<MessageDelivery> sqe) {
-//        boolean firePersistListener = false;
-//        boolean deleted = false;
-//        synchronized (this) {
-//            // If the message hasn't been saved to the database
-//            // then we don't need to issue a delete:
-//            if (dispatching || pendingSave != null) {
-//
-//                deleted = true;
-//
-//                removePersistentTarget(sqe.getQueueDescriptor());
-//                // We get a save context when we place the message in the
-//                // database queue. If it has been added to the queue,
-//                // and we've removed the last queue, see if we can cancel
-//                // the save:
-//                if (pendingSave != null && !hasPersistentTargets()) {
-//                    if (pendingSave.cancel()) {
-//                        pendingSave = null;
-//                        if (isPersistent()) {
-//                            firePersistListener = true;
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//
-//        if (!deleted) {
-//            store.deleteQueueElement(sqe);
-//        }
-//
-//        if (firePersistListener) {
-//            onMessagePersisted();
-//        }
-//
-//    }
-//
-//    public final void setStoreTracking(long tracking) {
-//        if (storeTracking == -1) {
-//            storeTracking = tracking;
-//        }
-//    }
-//
-//    public final void beginDispatch(BrokerDatabase database) {
-//        this.store = database;
-//        dispatching = true;
-//        setStoreTracking(database.allocateStoreTracking());
-//    }
-//
-//    public long getStoreTracking() {
-//        return storeTracking;
-//    }
-//
-//    public synchronized Collection<SaveableQueueElement<MessageDelivery>> getPersistentQueues() {
-//        if (singleTarget != null) {
-//            ArrayList<SaveableQueueElement<MessageDelivery>> list = new ArrayList<SaveableQueueElement<MessageDelivery>>(1);
-//            list.add(singleTarget);
-//            return list;
-//        } else if (persistentTargets != null) {
-//            return persistentTargets.values();
-//        }
-//        return null;
-//    }
-//
-//    public void beginStore() {
-//        synchronized (this) {
-//            pendingSave = null;
-//        }
-//    }
-//
-//    private final boolean hasPersistentTargets() {
-//        return (persistentTargets != null && !persistentTargets.isEmpty()) || singleTarget != null;
-//    }
-//
-//    private final void removePersistentTarget(QueueDescriptor queue) {
-//        if (persistentTargets != null) {
-//            persistentTargets.remove(queue);
-//            return;
-//        }
-//
-//        if (singleTarget != null && singleTarget.getQueueDescriptor().equals(queue)) {
-//            singleTarget = null;
-//        }
-//    }
-//
-//    private final void addPersistentTarget(SaveableQueueElement<MessageDelivery> elem) {
-//        if (persistentTargets != null) {
-//            persistentTargets.put(elem.getQueueDescriptor(), elem);
-//            return;
-//        }
-//
-//        if (singleTarget == null) {
-//            singleTarget = elem;
-//            return;
-//        }
-//
-//        if (elem.getQueueDescriptor() != singleTarget.getQueueDescriptor()) {
-//            persistentTargets = new HashMap<QueueDescriptor, SaveableQueueElement<MessageDelivery>>();
-//            persistentTargets.put(elem.getQueueDescriptor(), elem);
-//            persistentTargets.put(singleTarget.getQueueDescriptor(), singleTarget);
-//            singleTarget = null;
-//        }
-//    }
-//
-//    public final void finishDispatch(ISourceController<?> controller) throws IOException {
-//        boolean firePersistListener = false;
-//        synchronized (this) {
-//            // If any of the targets requested save then save the message
-//            // Note that this could be the case even if the message isn't
-//            // persistent if a target requested that the message be spooled
-//            // for some other reason such as queue memory overflow.
-//            if (hasPersistentTargets()) {
-//                pendingSave = store.persistReceivedMessage(this, controller);
-//            }
-//
-//            // If none of the targets required persistence, then fire the
-//            // persist listener:
-//            if (pendingSave == null || !isPersistent()) {
-//                firePersistListener = true;
-//            }
-//            dispatching = false;
-//        }
-//
-//        if (firePersistListener) {
-//            onMessagePersisted();
-//        }
-//    }
-//
-//    public final MessageRecord createMessageRecord() {
-//
-//        MessageRecord record = new MessageRecord();
-//        record.setEncoding(getStoreEncoding());
-//        record.setBuffer(getStoreEncoded());
-//        record.setStreamKey((long) 0);
-//        record.setMessageId(getMsgId());
-//        record.setSize(getFlowLimiterSize());
-//        record.setKey(getStoreTracking());
-//        return record;
-//    }
-//
-//    /**
-//     * @return A buffer representation of the message to be stored in the store.
-//     * @throws
-//     */
-//    protected abstract Buffer getStoreEncoded();
-//
-//    /**
-//     * @return The encoding scheme used to store the message.
-//     */
-//    protected abstract AsciiBuffer getStoreEncoding();
-//
-//    public boolean isFlushDelayable() {
-//        // TODO Auto-generated method stub
-//        return enableFlushDelay;
-//    }
-//}
-
 /**
+ * <p>
+ * Defines the interface for objects which you can send flow controlled deliveries to.
+ * <p>
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait DeliverySink {
@@ -408,6 +176,11 @@ trait DeliverySink {
 }
 
 /**
+ * <p>
+ * A delivery sink which is connected to a transport. It expects the caller's dispatch
+ * queue to be the same as the transport's/
+ * <p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class TransportDeliverySink(var transport:Transport) extends DeliverySink {
@@ -416,6 +189,21 @@ class TransportDeliverySink(var transport:Transport) extends DeliverySink {
 }
 
 /**
+ * <p>
+ * A delivery sink which buffers deliveries sent to it up to it's
+ * maxSize settings after which it starts flow controlling the sender.
+ * <p>
+ *
+ * <p>
+ * It executes the eventHandler when it has buffered deliveries.  The event handler
+ * should call receive to get the queued deliveries and then ack the delivery
+ * once it has been processed.  The producer will now be resumed until
+ * the ack occurs.
+ * <p>
+ *
+ * <p>
+ * This class should only be called from a single serial dispatch queue.
+ * <p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
@@ -457,6 +245,10 @@ class DeliveryBuffer(var maxSize:Int=1024*32) extends DeliverySink {
 }
 
 /**
+ * Implements a delivery sink which sends to a 'down stream' delivery sink. If the
+ * down stream delivery sink is full, this sink buffers the overflow deliveries. So that the
+ * down stream sink does not need to worry about overflow.
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class DeliveryOverflowBuffer(val delivery_buffer:DeliverySink) extends DeliverySink {
@@ -483,7 +275,7 @@ class DeliveryOverflowBuffer(val delivery_buffer:DeliverySink) extends DeliveryS
   }
 
   protected def send_to_delivery_buffer(value:Delivery) = {
-    var delivery = Delivery(value)
+    var delivery = value.copy
     delivery.setDisposer(^{
       drainOverflow
     })
@@ -496,11 +288,27 @@ class DeliveryOverflowBuffer(val delivery_buffer:DeliverySink) extends DeliveryS
 }
 
 /**
+ * <p>
+ * A DeliverySessionManager manages multiple credit based
+ * transmission windows from multiple producers to a single consumer.
+ * </p>
+ *
+ * <p>
+ * Producers and consumers are typically executing on different threads and
+ * the overhead of doing cross thread flow control is much higher than if
+ * a credit window is used.  The credit window allows the producer to
+ * send multiple messages to the consumer without needing to wait for
+ * consumer events.  Only when the producer runs out of credit, does the
+ * he start overflowing the producer.  This class makes heavy
+ * use of Dispatch Source objects to coalesce cross thread events
+ * like the sending messages or credits.
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class DeliverySessionManager(val sink:DeliverySink, val queue:DispatchQueue) extends BaseRetained {
+class DeliverySessionManager(val targetSink:DeliverySink, val queue:DispatchQueue) extends BaseRetained {
 
-  var sessions = List[SessionServer]()
+  var sessions = List[Session]()
 
   var session_min_credits = 1024*4;
   var session_credit_capacity = 1024*32
@@ -513,6 +321,7 @@ class DeliverySessionManager(val sink:DeliverySink, val queue:DispatchQueue) ext
   })
 
   // use a event aggregating source to coalesce multiple events from the same thread.
+  // all the sessions send to the same source.
   val source = createSource(new ListEventAggregator[Delivery](), queue)
   source.setEventHandler(^{drain_source});
   source.resume
@@ -520,92 +329,107 @@ class DeliverySessionManager(val sink:DeliverySink, val queue:DispatchQueue) ext
   def drain_source = {
     val deliveries = source.getData
     deliveries.foreach { delivery=>
-      sink.send(delivery)
+      targetSink.send(delivery)
       delivery.release
     }
   }
 
-  class SessionServer(val producer_queue:DispatchQueue) {
+  /**
+   * tracks one producer to consumer session / credit window.
+   */
+  class Session(val producer_queue:DispatchQueue) extends DeliveryOverflowBuffer(targetSink)  {
+
+    // retain since the producer will be using this source to send messages
+    // to the consumer
+    source.retain
+
+    ///////////////////////////////////////////////////
+    // These members are used from the context of the
+    // producer serial dispatch queue
+    ///////////////////////////////////////////////////
+
+    // create a source to coalesce credit events back to the producer side...
+    val credit_adder = createSource(EventAggregators.INTEGER_ADD , producer_queue)
+    credit_adder.setEventHandler(^{
+      internal_credit(credit_adder.getData.intValue)
+    });
+    credit_adder.resume
+
+    private var credits = 0;
+
+    private var closed = false
+
+    def close = {
+      credit_adder.release
+      source.release
+      closed=true
+    }
+
+    override def full = credits <= 0
+
+    override def send(delivery: Delivery) = {
+      // retain the storage ref.. the target sink should
+      // release once it no longer needs it.
+      if( delivery.ref !=null ) {
+        delivery.ref.retain
+      }
+      super.send(delivery)
+    }
+
+    override protected def send_to_delivery_buffer(value:Delivery) = {
+      if( !closed ) {
+        var delivery = value.copy
+        credit_adder.retain
+        delivery.setDisposer(^{
+          // once the delivery is received by the consumer, event
+          // the producer the credit.
+          credit_adder.merge(delivery.size);
+          credit_adder.release
+        })
+        internal_credit(-delivery.size)
+        // use the source to send the consumer a delivery event.
+        source.merge(delivery)
+      }
+    }
+
+    def internal_credit(value:Int) = {
+      credits += value;
+      if( closed || credits <= 0 ) {
+        credits = 0
+      } else {
+        drainOverflow
+      }
+    }
+
+    ///////////////////////////////////////////////////
+    // These members are used from the context of the
+    // consumer serial dispatch queue
+    ///////////////////////////////////////////////////
+
     private var _capacity = 0
+
+    def credit(value:Int) = ^{
+      internal_credit(value)
+    } >>: producer_queue
 
     def capacity(value:Int) = {
       val change = value - _capacity;
       _capacity = value;
-      client.credit(change)
+      credit(change)
     }
 
-    def drain(callback:Runnable) = {
-      client.drain(callback)
-    }
-
-    val client = new SessionClient()
-
-    class SessionClient() extends DeliveryOverflowBuffer(sink) {
-
-      val credit_adder = createSource(EventAggregators.INTEGER_ADD , producer_queue)
-      credit_adder.setEventHandler(^{
-        internal_credit(credit_adder.getData.intValue)
-      });
-      credit_adder.resume
-      source.retain
-      var closed = false
-
-      private var credits = 0;
-
-      ///////////////////////////////////////////////////
-      // These methods get called from the client/producer thread...
-      ///////////////////////////////////////////////////
-      def close = {
-        credit_adder.release
-        source.release
-        closed=true
-      }
-
-      override def full = credits <= 0
-
-      override protected def send_to_delivery_buffer(value:Delivery) = {
-        if( !closed ) {
-          var delivery = Delivery(value)
-          credit_adder.retain
-          delivery.setDisposer(^{
-            // This is called from the server/consumer thread
-            credit_adder.merge(delivery.size);
-            credit_adder.release
-          })
-          internal_credit(-delivery.size)
-          source.merge(delivery)
-        }
-      }
-
-      def internal_credit(value:Int) = {
-        credits += value;
-        if( closed || credits <= 0 ) {
-          credits = 0
-        } else {
-          drainOverflow
-        }
-      }
-
-      ///////////////////////////////////////////////////
-      // These methods get called from the server/consumer thread...
-      ///////////////////////////////////////////////////
-      def credit(value:Int) = ^{ internal_credit(value) } >>: producer_queue
-
-      def drain(callback:Runnable) = {
-        credits = 0
-        if( callback!=null ) {
-          queue << callback
-        }
-      }
-    }
   }
 
-  def session(producer_queue:DispatchQueue) = {
-    val session = new SessionServer(producer_queue)
+  def open(producer_queue:DispatchQueue):DeliverySink = {
+    val session = createSession(producer_queue)
     sessions = session :: sessions
     session.capacity(session_max_credits)
-    session.client
+    session
   }
 
+  def close(session:DeliverySink) = {
+    session.asInstanceOf[DeliverySessionManager#Session].close
+  }
 
+  protected def createSession(producer_queue:DispatchQueue) = new Session(producer_queue)
 }

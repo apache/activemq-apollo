@@ -36,6 +36,12 @@ import ReporterLevel._
  */
 object VirtualHost extends Log {
 
+  val destination_parser_options = new ParserOptions
+  destination_parser_options.queuePrefix = new AsciiBuffer("queue:")
+  destination_parser_options.topicPrefix = new AsciiBuffer("topic:")
+  destination_parser_options.tempQueuePrefix = new AsciiBuffer("temp-queue:")
+  destination_parser_options.tempTopicPrefix = new AsciiBuffer("temp-topic:")
+
   /**
    * Creates a default a configuration object.
    */
@@ -67,20 +73,20 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
   import VirtualHost._
   
   override protected def log = VirtualHost
-  override protected val dispatchQueue:DispatchQueue = ScalaDispatch.createQueue("virtual-host");
+  override val dispatchQueue:DispatchQueue = ScalaDispatch.createQueue("virtual-host");
 
   var config:VirtualHostDTO = _
   private val queueStore = new BrokerQueueStore()
   private val queues = new HashMap[AsciiBuffer, Queue]()
   private val durableSubs = new HashMap[String, DurableSubscription]()
-  val router = new Router(dispatchQueue)
+  val router = new Router(this)
 
   var names:List[String] = Nil;
   def setNamesArray( names:ArrayList[String]) = {
     this.names = names.toList
   }
 
-  var database:BrokerDatabase = new BrokerDatabase
+  var database:BrokerDatabase = new BrokerDatabase(this)
   var transactionManager:TransactionManager = new TransactionManager
 
   override def toString = if (config==null) "virtual-host" else "virtual-host: "+config.id
@@ -103,29 +109,32 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 
   override protected def _start(onCompleted:Runnable):Unit = {
 
-    database.virtualHost = this
     database.start();
 
-//      router.setDatabase(database);
+    database.listQueues { ids =>
+      for( id <- ids) {
+        database.getQueueInfo(id) { x =>
+          x match {
+            case Some(info)=>
+            dispatchQueue ^{
+              val dest = DestinationParser.parse(info.record.name, destination_parser_options)
+              if( dest.getDomain == Domain.QUEUE_DOMAIN ) {
 
-    //Recover queues:
-    queueStore.setDatabase(database);
-    queueStore.setDispatchQueue(dispatchQueue);
-    queueStore.loadQueues();
+                val queue = new Queue(dest, id)
+                queue.first_seq = info.first
+                queue.last_seq = info.last
+                queue.message_seq_counter = info.last+1
+                queue.count = info.count
 
-    // Create Queue instances
-//        TODO:
-//        for (IQueue<Long, MessageDelivery> iQueue : queueStore.getSharedQueues()) {
-//            Queue queue = new Queue(iQueue);
-//            Domain domain = router.getDomain(Router.QUEUE_DOMAIN);
-//            Destination dest = new Destination.SingleDestination(Router.QUEUE_DOMAIN, iQueue.getDescriptor().getQueueName());
-//            queue.setDestination(dest);
-//            domain.bind(dest.getName(), queue);
-//            queues.put(dest.getName(), queue);
-//        }
-//        for (Queue queue : queues.values()) {
-//            queue.start();
-//        }
+                queues.put(info.record.name, queue)
+              }
+            }
+            case _ =>
+          }
+        }
+      }
+    }
+
 
     //Recover transactions:
     transactionManager.virtualHost = this
@@ -154,31 +163,38 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
     onCompleted.run
   }
 
-  def createQueue(dest:Destination) :Queue = {
-//      if (!serviceState.isStarted) {
-//          //Queues from the store must be loaded before we can create new ones:
-//          throw new IllegalStateException("Can't create queue on unstarted host");
-//      }
+  def getQueue(destination:Destination)(cb: (Queue)=>Unit ) = ^{
+    if( !serviceState.isStarted ) {
+      error("getQueue can only be called while the service is running.")
+      cb(null)
+    } else {
+      var queue = queues.get(destination);
+      if( queue==null && config.autoCreateQueues ) {
+        addQueue(destination)(cb)
+      } else  {
+        cb(queue)
+      }
+    }
+  } |>>: dispatchQueue
 
-      val queue = queues.get(dest);
-//        TODO:
-//        // If the queue doesn't exist create it:
-//        if (queue == null) {
-//            IQueue<Long, MessageDelivery> iQueue = queueStore.createSharedQueue(dest.getName().toString());
-//            queue = new Queue(iQueue);
-//            queue.setDestination(dest);
-//            Domain domain = router.getDomain(dest.getDomain());
-//            domain.bind(dest.getName(), queue);
-//            queues.put(dest.getName(), queue);
-//
-//            for (QueueLifecyleListener l : queueLifecyleListeners) {
-//                l.onCreate(queue);
-//            }
-//        }
-//        queue.start();
-      queue;
-  }
 
+  def addQueue(dest:Destination)(cb: (Queue)=>Unit ) = ^{
+    val name = DestinationParser.toBuffer(dest, destination_parser_options)
+    val record = QueueRecord(0, name, null, null)
+    database.addQueue(record) { rc =>
+      rc match {
+        case Some(id) =>
+          dispatchQueue ^ {
+            val queue = new Queue(dest, id)
+            queues.put(name, queue)
+            cb(queue)
+          }
+        case None => // store could not create
+          cb(null)
+      }
+    }
+    null
+  } |>>: dispatchQueue
 
   def createSubscription(consumer:ConsumerContext):BrokerSubscription = {
       createSubscription(consumer, consumer.getDestination());
@@ -227,7 +243,8 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
       var queue = queues.get(destination.getName());
       if (queue == null) {
           if (consumer.autoCreateDestination()) {
-              queue = createQueue(destination);
+//            TODO
+//              queue = createQueue(destination);
           } else {
               throw new IllegalStateException("The queue does not exist: " + destination.getName());
           }
@@ -249,25 +266,25 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
   }
 }
 
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-class BrokerDatabase() {
-
-  @BeanProperty
-  var store:Store=new MemoryStore;
-
-  @BeanProperty
-  var virtualHost:VirtualHost=null;
-
-    def start() ={
-        //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    def stop() = {
-        //To change body of implemented methods use File | Settings | File Templates.
-    }
-
+///**
+// * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+// */
+//class BrokerDatabase() {
+//
+//  @BeanProperty
+//  var store:Store=new MemoryStore;
+//
+//  @BeanProperty
+//  var virtualHost:VirtualHost=null;
+//
+//    def start() ={
+//        //To change body of implemented methods use File | Settings | File Templates.
+//    }
+//
+//    def stop() = {
+//        //To change body of implemented methods use File | Settings | File Templates.
+//    }
+//
 // TODO: re-implement.
 //    private static final boolean DEBUG = false;
 //
@@ -1587,8 +1604,8 @@ class BrokerDatabase() {
 //    public void setStoreBypass(boolean enable) {
 //        this.storeBypass = enable;
 //    }
-
-}
+//
+//}
 
 
 

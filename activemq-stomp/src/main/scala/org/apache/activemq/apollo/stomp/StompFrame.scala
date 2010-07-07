@@ -100,12 +100,14 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
     header match {
       case (Stomp.Headers.Message.MESSAGE_ID, value) =>
         id = value
-      case (Stomp.Headers.Message.PRORITY, value) =>
+      case (Stomp.Headers.Send.PRIORITY, value) =>
         priority = java.lang.Integer.parseInt(value).toByte
-      case (Stomp.Headers.Message.DESTINATION, value) =>
+      case (Stomp.Headers.Send.DESTINATION, value) =>
         destination = value
-      case (Stomp.Headers.Message.EXPIRATION_TIME, value) =>
+      case (Stomp.Headers.Send.EXPIRATION_TIME, value) =>
         expiration = java.lang.Long.parseLong(value)
+      case (Stomp.Headers.Send.PERSISTENT, value) =>
+        persistent = java.lang.Boolean.parseBoolean(value)
       case _ =>
     }
   }

@@ -269,7 +269,7 @@ object Queue extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val destination:Destination) extends BaseRetained with Route with DeliveryConsumer with DeliveryProducer with DispatchLogging {
+class Queue(val destination:Destination, val storeId:Long) extends BaseRetained with Route with DeliveryConsumer with DeliveryProducer with DispatchLogging {
   override protected def log = Queue
 
   override val dispatchQueue:DispatchQueue = createQueue("queue:"+destination);
@@ -278,7 +278,33 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
     debug("created queue for: "+destination)
   }
 
-  val delivery_buffer  = new DeliveryBuffer
+  // sequence numbers.. used to track what's in the store.
+  var first_seq = -1L
+  var last_seq = -1L
+  var message_seq_counter=0L
+  def next_message_seq = {
+    val rc = message_seq_counter
+    message_seq_counter += 1
+    rc
+  }
+
+  var count = 0
+
+  val delivery_buffer  = new DeliveryBuffer {
+
+    override def send(delivery: Delivery) = {
+      // Is it a persistent message?
+      if( delivery.ref!=null ) {
+        // next_message_seq
+
+      }
+      super.send(delivery)
+    }
+
+    override def ack(delivery: Delivery) = {
+      super.ack(delivery)
+    }
+  }
   delivery_buffer.eventHandler = ^{ drain_delivery_buffer }
 
   val session_manager = new DeliverySessionManager(delivery_buffer, dispatchQueue)
@@ -292,7 +318,7 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
     var bound=true
 
     def deliver(value:Delivery):Unit = {
-      val delivery = Delivery(value)
+      val delivery = value.copy
       delivery.setDisposer(^{
         ^{ completed(value) } >>:dispatchQueue
       })
@@ -315,7 +341,7 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
   def connected(consumers:List[DeliveryConsumer]) = bind(consumers)
   def bind(consumers:List[DeliveryConsumer]) = retaining(consumers) {
       for ( consumer <- consumers ) {
-        val cs = new ConsumerState(consumer.open_session(dispatchQueue))
+        val cs = new ConsumerState(consumer.connect(dispatchQueue))
         allConsumers += consumer->cs
         readyConsumers.addLast(cs)
       }
@@ -353,16 +379,16 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
     }
   }
 
-  def open_session(producer_queue:DispatchQueue) = new DeliverySession {
+  def connect(producer_queue:DispatchQueue) = new DeliverySession {
 
-    val session = session_manager.session(producer_queue)
+    val session = session_manager.open(producer_queue)
     val consumer = Queue.this
     retain
 
     def deliver(delivery:Delivery) = session.send(delivery)
 
     def close = {
-      session.close
+      session_manager.close(session)
       release
     }
   }

@@ -32,5 +32,13 @@ public class VirtualHostDTO extends ServiceDTO {
 
     @XmlElementRef   
     public StoreDTO store;
-    
+
+    /**
+     * Should queues be auto created when they are first accessed
+     * by clients?
+     */
+    @XmlAttribute(name="auto-create-queues")
+    public boolean autoCreateQueues = true;
+
+
 }

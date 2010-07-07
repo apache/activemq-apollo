@@ -32,6 +32,8 @@ import java.io.IOException
 
 object StompConstants {
 
+  val PROTOCOL = new AsciiBuffer("stomp");
+
   val options = new ParserOptions
   options.queuePrefix = new AsciiBuffer("/queue/")
   options.topicPrefix = new AsciiBuffer("/topic/")
@@ -70,8 +72,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
     def matches(message:Delivery) = true
 
-    def open_session(producer_queue:DispatchQueue) = new DeliverySession {
-      val session = session_manager.session(producer_queue)
+    def connect(producer_queue:DispatchQueue) = new DeliverySession {
+      val session = session_manager.open(producer_queue)
 
       val consumer = SimpleConsumer.this
       retain
@@ -82,7 +84,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       }
 
       def close = {
-        session.close
+        session_manager.close(session)
         release
       }
     }
@@ -240,7 +242,15 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         StompFrameMessage(StompFrame(Stomp.Responses.MESSAGE, frame.headers, frame.content))
       }
       
-      val delivery = Delivery(message, message.frame.size)
+      val delivery = new Delivery
+      delivery.message = message
+      delivery.size = message.frame.size
+      if( message.persistent ) {
+        // TODO:
+//        val content = ascii("todo")
+//        delivery.ref = host.database.createMessageRecord(message.id, content, PROTOCOL)
+      }
+
       connection.transport.suspendRead
       delivery.setDisposer(^{
         connection.transport.resumeRead

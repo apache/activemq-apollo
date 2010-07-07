@@ -78,10 +78,10 @@ object Router extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Router(var queue:DispatchQueue) extends DispatchLogging {
+class Router(val host:VirtualHost) extends DispatchLogging {
 
   override protected def log = Router
-  protected def dispatchQueue:DispatchQueue = queue
+  protected def dispatchQueue:DispatchQueue = host.dispatchQueue
 
   trait DestinationNode {
     var targets = List[DeliveryConsumer]()
@@ -120,22 +120,39 @@ class Router(var queue:DispatchQueue) extends DispatchLogging {
   }
 
   class QueueDestinationNode(destination:Destination) extends DestinationNode {
-    val queue = new Queue(destination)
+    var queue:Queue = null
+
+    // once the queue is created.. connect it up with the producers and targets.
+    host.getQueue(destination) { q =>
+      dispatchQueue {
+        queue = q;
+        queue.bind(targets)
+        routes.foreach({route=>
+          route.connected(queue :: Nil)
+        })
+      }
+    }
 
     def on_bind(x:List[DeliveryConsumer]) =  {
       targets = x ::: targets
-      queue.bind(x)
+      if( queue!=null ) {
+        queue.bind(x)
+      }
     }
 
     def on_unbind(x:List[DeliveryConsumer]):Boolean = {
       targets = targets.filterNot({t=>x.contains(t)})
-      queue.unbind(x)
+      if( queue!=null ) {
+        queue.unbind(x)
+      }
       routes == Nil && targets == Nil
     }
 
     def on_connect(route:DeliveryProducerRoute) = {
       routes = route :: routes
-      route.connected(queue :: Nil)
+      if( queue!=null ) {
+        route.connected(queue :: Nil)
+      }
     }
   }
 
@@ -156,13 +173,13 @@ class Router(var queue:DispatchQueue) extends DispatchLogging {
 
   def bind(destination:Destination, targets:List[DeliveryConsumer]) = retaining(targets) {
       get(destination).on_bind(targets)
-    } >>: queue
+    } >>: dispatchQueue
 
   def unbind(destination:Destination, targets:List[DeliveryConsumer]) = releasing(targets) {
       if( get(destination).on_unbind(targets) ) {
         destinations.remove(destination)
       }
-    } >>: queue
+    } >>: dispatchQueue
 
   def connect(destination:Destination, routeQueue:DispatchQueue, producer:DeliveryProducer)(completed: (DeliveryProducerRoute)=>Unit) = {
     val route = new DeliveryProducerRoute(destination, routeQueue, producer) {
@@ -172,7 +189,7 @@ class Router(var queue:DispatchQueue) extends DispatchLogging {
     }
     ^ {
       get(destination).on_connect(route)
-    } >>: queue
+    } >>: dispatchQueue
   }
 
   def isTopic(destination:Destination) = destination.getDomain == TOPIC_DOMAIN
@@ -180,7 +197,7 @@ class Router(var queue:DispatchQueue) extends DispatchLogging {
 
   def disconnect(route:DeliveryProducerRoute) = releasing(route) {
       get(route.destination).on_disconnect(route)
-    } >>: queue
+    } >>: dispatchQueue
 
 
    def each(proc:(Destination, DestinationNode)=>Unit) = {
@@ -235,7 +252,7 @@ class DeliveryProducerRoute(val destination:Destination, override val dispatchQu
   private def internal_bind(values:List[DeliveryConsumer]) = {
     values.foreach{ x=>
       debug("producer route attaching to conusmer.")
-      targets = x.open_session(dispatchQueue) :: targets
+      targets = x.connect(dispatchQueue) :: targets
     }
   }
 
