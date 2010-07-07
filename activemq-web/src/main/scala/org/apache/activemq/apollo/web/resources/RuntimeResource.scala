@@ -37,7 +37,7 @@ import collection.mutable.ListBuffer
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
-case class RuntimeResource(parent:BrokerResource) extends Resource {
+case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
   private def with_broker[T](func: (org.apache.activemq.apollo.broker.Broker, Option[T]=>Unit)=>Unit):T = {
     val broker:org.apache.activemq.apollo.broker.Broker = BrokerRegistry.get(parent.id)

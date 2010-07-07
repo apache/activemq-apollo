@@ -21,15 +21,16 @@ import core.{UriInfo, Response, Context}
 import org.fusesource.hawtdispatch.Future
 import Response.Status._
 import Response._
-import org.apache.activemq.apollo.dto.{BrokerDTO}
 import org.apache.activemq.apollo.web.ConfigStore
 import java.net.URI
+import java.io.ByteArrayInputStream
+import org.apache.activemq.apollo.dto.{XmlEncoderDecoder, BrokerDTO}
 
 /**
  * A broker resource is used to represent the configuration of a broker.
  */
 @Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
-case class ConfigurationResource(parent:BrokerResource) extends Resource {
+case class ConfigurationResource(parent:BrokerResource) extends Resource(parent) {
 
 
   def store = ConfigStore()
@@ -44,7 +45,7 @@ case class ConfigurationResource(parent:BrokerResource) extends Resource {
   @GET
   def get(@Context uriInfo:UriInfo) = {
     val ub = uriInfo.getAbsolutePathBuilder()
-    seeOther(ub.path(config.rev.toString).build()).build
+    seeOther(path(config.rev)).build
   }
 
   @GET @Path("{rev}")
@@ -52,6 +53,13 @@ case class ConfigurationResource(parent:BrokerResource) extends Resource {
     // that rev may have gone away..
     config.rev==rev || result(NOT_FOUND)
     config
+  }
+
+  @POST @Path("{rev}")
+  def post(@PathParam("rev") rev:Int, @FormParam("config") config:String) = {
+    val dto = XmlEncoderDecoder.unmarshalBrokerDTO(new ByteArrayInputStream(config.getBytes("UTF-8")))
+    put(rev, dto)
+    seeOther(path("../"+dto.rev)).build
   }
 
   @PUT @Path("{rev}")

@@ -1,0 +1,15 @@
+- val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
+- import helper._
+- import org.fusesource.hawtbuf._
+- import org.apache.activemq.apollo.dto.XmlEncoderDecoder._
+
+%form(method="post" action={it.rev+1})
+  %div
+    %input(type="submit" value="Update")
+  %div
+    %textarea(rows="40" cols="80" name="config")<
+      - val baos = new ByteArrayOutputStream
+      - marshalBrokerDTO(it, baos, true)
+      ~~ new String(baos.toByteArray, "UTF-8")
+  %div
+    %input(type="submit" value="Update")
