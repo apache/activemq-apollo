@@ -2,9 +2,8 @@
 
 ## Synopsis
 
-[Apollo][] is a fork of the Apache [ActiveMQ][] message broke working
-towards becoming the foundation of the next generation Apache [ActiveMQ][]
-message broker.
+[Apollo][] is a forked and stripped down Apache [ActiveMQ][] message
+broker. It is focused on simplicity, stability and scalability.
 
 [Apollo]:http://github.com/chirino/activemq-apollo
 [ActiveMQ]:http://activemq.apache.org/
