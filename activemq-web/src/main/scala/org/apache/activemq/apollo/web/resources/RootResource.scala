@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.web.resources
 import java.lang.String
 import com.sun.jersey.api.NotFoundException
 import javax.ws.rs._
-import core.{Response, Context}
+import core.{UriInfo, Response, Context}
 import org.fusesource.scalate.util.Logging
 import reflect.{BeanProperty}
 import com.sun.jersey.api.view.ImplicitProduces
@@ -39,6 +39,9 @@ import collection.JavaConversions._
 @Produces(Array("application/json", "application/xml","text/xml"))
 abstract class Resource extends Logging {
 
+  @Context
+  val uri_info:UriInfo = null
+
   def result[T](value:Status, message:Any=null):T = {
     val response = Response.status(value)
     if( message!=null ) {
@@ -56,13 +59,13 @@ abstract class Resource extends Logging {
 class Root() extends Resource {
 
   @GET
-  def brokers: Seq[String] = {
+  def brokers = {
     val rc = new IdListDTO
     val ids = Future[List[String]] { cb=>
       ConfigStore().listBrokers(cb)
     }.toArray[String]
     rc.ids.addAll(Arrays.asList(ids: _*))
-    rc.ids
+    rc
   }
 
   @Path("{id}")
