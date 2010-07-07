@@ -166,7 +166,7 @@ class StompRemoteProducer extends RemoteProducer {
     //    }
 
     var content = ascii(createPayload());
-    frame = StompFrame(Stomp.Commands.SEND, headers, content)
+    frame = StompFrame(Stomp.Commands.SEND, headers, BufferStompContent(content))
     drain()
   }
 

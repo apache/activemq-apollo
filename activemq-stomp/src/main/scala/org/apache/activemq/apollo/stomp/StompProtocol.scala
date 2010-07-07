@@ -400,7 +400,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     if( !connection.stopped ) {
       info("Shutting connection down due to: "+msg)
       connection.transport.suspendRead
-      connection.transport.offer(StompFrame(Responses.ERROR, Nil, ascii(msg)))
+      connection.transport.offer(StompFrame(Responses.ERROR, Nil, BufferStompContent(ascii(msg))) )
       ^ {
         connection.stop()
       } >>: queue

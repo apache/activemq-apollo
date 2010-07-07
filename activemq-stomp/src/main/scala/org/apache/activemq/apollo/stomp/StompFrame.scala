@@ -20,8 +20,10 @@ import _root_.java.util.LinkedList
 import _root_.org.apache.activemq.filter.{Expression, Filterable}
 import _root_.org.fusesource.hawtbuf._
 import collection.mutable.ListBuffer
-import org.apache.activemq.apollo.broker.{Sizer, Destination, BufferConversions, Message}
 import java.lang.{String, Class}
+import java.io.DataOutput
+import org.apache.activemq.apollo.broker._
+import org.apache.activemq.apollo.MemoryAllocation
 
 /**
  *
@@ -91,16 +93,33 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
   }
 
   def getBodyAs[T](toType : Class[T]) = {
-    (if( toType == classOf[String] ) {
-      frame.content.utf8
-    } else if (toType == classOf[Buffer]) {
-      frame.content
-    } else if (toType == classOf[AsciiBuffer]) {
-      frame.content.ascii
-    } else if (toType == classOf[UTF8Buffer]) {
-      frame.content.utf8
-    } else {
-      null
+    (frame.content match {
+      case x:BufferStompContent =>
+        if( toType == classOf[String] ) {
+          x.content.utf8
+        } else if (toType == classOf[Buffer]) {
+          x.content
+        } else if (toType == classOf[AsciiBuffer]) {
+          x.content.ascii
+        } else if (toType == classOf[UTF8Buffer]) {
+          x.content.utf8
+        } else {
+          null
+        }
+      case x:DirectStompContent =>
+        null
+      case NilStompContent =>
+        if( toType == classOf[String] ) {
+          ""
+        } else if (toType == classOf[Buffer]) {
+          new Buffer(0)
+        } else if (toType == classOf[AsciiBuffer]) {
+          new AsciiBuffer("")
+        } else if (toType == classOf[UTF8Buffer]) {
+          new UTF8Buffer("")
+        } else {
+          null
+        }
     }).asInstanceOf[T]
   }
 
@@ -142,12 +161,61 @@ object StompFrame extends Sizer[StompFrame] {
   def size(value:StompFrame) = value.size   
 }
 
+trait StompContent {
+  def length:Int
+
+  def isEmpty = length == 0
+
+  def writeTo(os:DataOutput)
+
+  def utf8:UTF8Buffer
+
+}
+
+object NilStompContent extends StompContent {
+  def length = 0
+  def writeTo(os:DataOutput) = {}
+  val utf8 = new UTF8Buffer("")
+}
+
+case class BufferStompContent(content:Buffer) extends StompContent {
+  def length = content.length
+  def writeTo(os:DataOutput) = content.writeTo(os)
+  def utf8:UTF8Buffer = content.utf8
+}
+
+case class DirectStompContent(direct:MemoryAllocation) extends StompContent {
+  def length = direct.size-1
+
+  def writeTo(os:DataOutput) = {
+    val buff = new Array[Byte](1024*4)
+    val source = direct.buffer.duplicate
+    var remaining = direct.size-1
+    while( remaining> 0 ) {
+      val c = remaining.min(buff.length)
+      source.get(buff, 0, c)
+      os.write(buff, 0, c)
+      remaining -= c
+    }
+  }
+
+  def buffer:Buffer = {
+    val rc = new DataByteArrayOutputStream(direct.size-1)
+    writeTo(rc)
+    rc.toBuffer
+  }
+
+  def utf8:UTF8Buffer = {
+    buffer.utf8
+  }
+}
+
 /**
  * Represents all the data in a STOMP frame.
  *
  * @author <a href="http://hiramchirino.com">chirino</a>
  */
-case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:Buffer=NO_DATA, updated_headers:HeaderMap=Nil) {
+case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:StompContent=NilStompContent, updated_headers:HeaderMap=Nil) {
 
   def size_of_updated_headers = {
     size_of(updated_headers)
@@ -180,14 +248,22 @@ case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:Buffer=
     rc
   }
 
-  def size = {
-     if( (action.data eq content.data) && updated_headers==Nil ) {
-        (content.offset-action.offset)+content.length
-     } else {
-       action.length + 1 +
-       size_of_updated_headers +
-       size_of_original_headers + 1 + content.length
+  def are_headers_in_content_buffer = !headers.isEmpty && 
+          content.isInstanceOf[BufferStompContent] &&
+          ( headers.head._1.data eq content.asInstanceOf[BufferStompContent].content.data )
+
+  def size:Int = {
+     content match {
+       case x:BufferStompContent =>
+         if( (action.data eq x.content.data) && updated_headers==Nil ) {
+            return (x.content.offset-action.offset)+x.content.length
+         }
+       case _ =>
      }
+
+     action.length + 1 +
+     size_of_updated_headers +
+     size_of_original_headers + 1 + content.length
   }
 
   def header(name:AsciiBuffer) = {

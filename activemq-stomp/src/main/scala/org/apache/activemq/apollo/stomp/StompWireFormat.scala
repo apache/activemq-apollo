@@ -31,7 +31,7 @@ import _root_.scala.collection.JavaConversions._
 import StompFrameConstants._
 import java.io.{EOFException, DataOutput, DataInput, IOException}
 import java.nio.channels.{SocketChannel, WritableByteChannel, ReadableByteChannel}
-import org.apache.activemq.apollo.MemoryPool
+import org.apache.activemq.apollo.{MemoryAllocation, MemoryPool}
 
 /**
  * Creates WireFormat objects that marshalls the <a href="http://activemq.apache.org/stomp/">Stomp</a> protocol.
@@ -116,12 +116,11 @@ class StompWireFormat extends WireFormat with DispatchLogging {
     }
 
     // we can optimize a little if the headers and content are in the same buffer..
-    if( !frame.headers.isEmpty && !frame.content.isEmpty &&
-            ( frame.headers.head._1.data eq frame.content.data ) ) {
+    if( frame.are_headers_in_content_buffer ) {
 
       val offset = frame.headers.head._1.offset;
       val buffer1 = frame.headers.head._1;
-      val buffer2 = frame.content;
+      val buffer2 = frame.content.asInstanceOf[BufferStompContent].content;
       val length = (buffer2.offset-buffer1.offset)+buffer2.length
       os.write( buffer1.data, offset, length)                                                                                            
 
@@ -152,10 +151,13 @@ class StompWireFormat extends WireFormat with DispatchLogging {
   var write_channel:WritableByteChannel = null
 
   var next_write_buffer = new DataByteArrayOutputStream(write_buffer_size)
-  var write_buffer = ByteBuffer.allocate(0)
+  var next_write_direct:ByteBuffer = null
 
-  def is_full = next_write_buffer.size() >= (write_buffer_size >> 2)
-  def is_empty = write_buffer.remaining() == 0
+  var write_buffer = ByteBuffer.allocate(0)
+  var write_direct:ByteBuffer = null
+
+  def is_full = next_write_direct!=null || next_write_buffer.size() >= (write_buffer_size >> 2)
+  def is_empty = write_buffer.remaining() == 0 && write_direct==null
 
   def setWritableByteChannel(channel: WritableByteChannel) = {
     this.write_channel = channel
@@ -172,7 +174,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
       WireFormat.BufferState.FULL
     } else {
       val was_empty = is_empty
-      marshal(command, next_write_buffer);
+      marshalX(command.asInstanceOf[StompFrame], next_write_buffer);
       if( was_empty ) {
         WireFormat.BufferState.WAS_EMPTY
       } else {
@@ -181,19 +183,70 @@ class StompWireFormat extends WireFormat with DispatchLogging {
     }
   }
 
-  def flush():WireFormat.BufferState = {
-    
+  def marshalX(frame:StompFrame, os:DataOutput) = {
+    frame.action.writeTo(os)
+    os.write(NEWLINE)
+
+    // Write any updated headers first...
+    if( !frame.updated_headers.isEmpty ) {
+      for( (key, value) <- frame.updated_headers ) {
+        key.writeTo(os)
+        os.write(SEPERATOR)
+        value.writeTo(os)
+        os.write(NEWLINE)
+      }
+    }
+
+    // we can optimize a little if the headers and content are in the same buffer..
+    if( frame.are_headers_in_content_buffer ) {
+
+      val offset = frame.headers.head._1.offset;
+      val buffer1 = frame.headers.head._1;
+      val buffer2 = frame.content.asInstanceOf[BufferStompContent].content;
+      val length = (buffer2.offset-buffer1.offset)+buffer2.length
+      os.write( buffer1.data, offset, length)
+
+    } else {
+      for( (key, value) <- frame.headers ) {
+        key.writeTo(os)
+        os.write(SEPERATOR)
+        value.writeTo(os)
+        os.write(NEWLINE)
+      }
+      os.write(NEWLINE)
+
+      frame.content match {
+        case x:DirectStompContent=>
+          next_write_direct = x.direct.buffer.duplicate
+          next_write_direct.limit(next_write_direct.limit-1)
+        case x:BufferStompContent=>
+          x.content.writeTo(os)
+        case _=>
+      }
+
+    }
+    END_OF_FRAME_BUFFER.writeTo(os)
+  }
+
+
+  def flush():BufferState = {
+
     // if we have a pending write that is being sent over the socket...
-    if ( !is_empty ) {
-        write_counter += write_channel.write(write_buffer)
+    if ( write_buffer.remaining() != 0 ) {
+      write_counter += write_channel.write(write_buffer)
+    }
+    if ( write_buffer.remaining() == 0 && write_direct!=null ) {
+      write_counter += write_channel.write(write_direct)
     }
 
     // if it is now empty try to refill...
     if ( is_empty && next_write_buffer.size()!=0 ) {
         // size of next buffer is based on how much was used in the previous buffer.
-        val prev_size = Math.min(Math.max(write_buffer.position()+512, 512), write_buffer_size)
+        val prev_size = (write_buffer.position()+512).max(512).min(write_buffer_size)
         write_buffer = next_write_buffer.toBuffer().toByteBuffer()
+        write_direct = next_write_direct
         next_write_buffer = new DataByteArrayOutputStream(prev_size)
+        next_write_direct = null
     }
 
     if ( is_empty ) {
@@ -336,6 +389,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
   }
 
   def read_headers(action:Buffer, headers:HeaderMapBuffer=new HeaderMapBuffer()):FrameReader = (buffer)=> {
+    var rc:StompFrame = null
     val line = read_line(buffer, MAX_HEADER_LENGTH, "The maximum header length was exceeded")
     if( line !=null ) {
       if( line.trim().length() > 0 ) {
@@ -379,14 +433,51 @@ class StompWireFormat extends WireFormat with DispatchLogging {
           if (SIZE_CHECK && length > MAX_DATA_LENGTH) {
               throw new IOException("The maximum data length was exceeded")
           }
-          next_action = read_binary_body(action, headers, length)
+
+          if( length > 1024 && memory_pool!=null ) {
+
+            val ma = memory_pool.alloc(length+1)
+
+            val read_limit = buffer.position
+            if( (read_limit-read_start) < length+1 ) {
+              // buffer did not contain the fully stomp body
+
+              ma.buffer.put( buffer.array, read_start, read_limit-read_start )
+
+              read_buffer = ma.buffer
+              read_end = read_limit-read_start
+              read_start = 0
+
+              next_action = read_binary_body_direct(action, headers, ma)
+
+            } else {
+              // The current buffer already read in all the data...
+
+              if( buffer.array()(read_start+length)!= 0 ) {
+                 throw new IOException("Expected null termintor after "+length+" content bytes")
+              }
+
+              // copy the body out to the direct buffer
+              ma.buffer.put( buffer.array, read_start, read_limit-read_start )
+
+              // and reposition to reuse non-direct space.
+              buffer.position(read_start)
+              read_end = read_start
+
+              next_action = read_action
+              rc = new StompFrame(ascii(action), headers.toList, DirectStompContent(ma))
+            }
+
+          } else {
+            next_action = read_binary_body(action, headers, length)
+          }
 
         } else {
           next_action = read_text_body(action, headers)
         }
       }
     }
-    null
+    rc
   }
 
   def get(headers:HeaderMapBuffer, name:AsciiBuffer):Option[AsciiBuffer] = {
@@ -401,16 +492,44 @@ class StompWireFormat extends WireFormat with DispatchLogging {
   }
 
 
-  def read_binary_body(action:Buffer, headers:HeaderMapBuffer, contentLength:Int):FrameReader = (buffer)=> {
-    val content:Buffer=read_content(buffer, contentLength)
-    if( content != null ) {
+  def read_binary_body_direct(action:Buffer, headers:HeaderMapBuffer, ma:MemoryAllocation):FrameReader = (buffer)=> {
+    if( read_content_direct(ma) ) {
       next_action = read_action
-      new StompFrame(ascii(action), headers.toList, content)
+      new StompFrame(ascii(action), headers.toList, DirectStompContent(ma))
     } else {
       null
     }
   }
 
+  def read_content_direct(ma:MemoryAllocation) = {
+      val read_limit = ma.buffer.position
+      if( read_limit < ma.size ) {
+        read_end = read_limit
+        false
+      } else {
+        ma.buffer.position(ma.size-1)
+        if( ma.buffer.get != 0 ) {
+           throw new IOException("Expected null termintor after "+(ma.size-1)+" content bytes")
+        }
+        ma.buffer.rewind
+        ma.buffer.limit(ma.size-1)
+
+        read_buffer = ByteBuffer.allocate(read_buffer_size)
+        read_end = 0
+        read_start = 0
+        true
+      }
+  }
+
+  def read_binary_body(action:Buffer, headers:HeaderMapBuffer, contentLength:Int):FrameReader = (buffer)=> {
+    val content:Buffer=read_content(buffer, contentLength)
+    if( content != null ) {
+      next_action = read_action
+      new StompFrame(ascii(action), headers.toList, BufferStompContent(content))
+    } else {
+      null
+    }
+  }
 
   def read_content(buffer:ByteBuffer, contentLength:Int):Buffer = {
       val read_limit = buffer.position
@@ -419,7 +538,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
         null
       } else {
         if( buffer.array()(read_start+contentLength)!= 0 ) {
-           throw new IOException("Exected null termintor after "+contentLength+" content bytes")
+           throw new IOException("Expected null termintor after "+contentLength+" content bytes")
         }
         var rc = new Buffer(buffer.array, read_start, contentLength)
         read_end = read_start+contentLength+1
@@ -447,7 +566,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
     val content:Buffer=read_to_null(buffer)
     if( content != null ) {
       next_action = read_action
-      new StompFrame(ascii(action), headers.toList, content)
+      new StompFrame(ascii(action), headers.toList, BufferStompContent(content))
     } else {
       null
     }
