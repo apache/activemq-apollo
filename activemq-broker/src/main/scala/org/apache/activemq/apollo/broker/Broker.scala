@@ -198,50 +198,50 @@ class Broker() extends Service with DispatchLogging {
       if( clientConnections.remove(connection) ) {
         connection.dispatchQueue.release
       }
-    } ->: dispatchQueue
+    } >>: dispatchQueue
 
     def removeConnectUri(uri: String): Unit = ^ {
       connectUris.remove(uri)
-    } ->: dispatchQueue
+    } >>: dispatchQueue
 
     def getVirtualHost(name: AsciiBuffer, cb: (VirtualHost) => Unit) = callback(cb) {
       virtualHosts.get(name)
-    } ->: dispatchQueue
+    } >>: dispatchQueue
 
     def getConnectUris(cb: (ArrayList[String]) => Unit) = callback(cb) {
       new ArrayList(connectUris)
-    } ->: dispatchQueue
+    } >>: dispatchQueue
 
 
     def getDefaultVirtualHost(cb: (VirtualHost) => Unit) = callback(cb) {
       defaultVirtualHost
-    } ->: dispatchQueue
+    } >>: dispatchQueue
 
     def addVirtualHost(host: VirtualHost) = ^ {
       Broker.this.addVirtualHost(host)
-    } ->: dispatchQueue
+    } >>: dispatchQueue
 
-    def getState(cb: (String) => Unit) = callback(cb) {state} ->: dispatchQueue
+    def getState(cb: (String) => Unit) = callback(cb) {state} >>: dispatchQueue
 
     def addConnectUri(uri: String) = ^ {
       connectUris.add(uri)
-    } ->: dispatchQueue
+    } >>: dispatchQueue
 
     def getName(cb: (String) => Unit) = callback(cb) {
       name;
-    } ->: dispatchQueue
+    } >>: dispatchQueue
 
     def getVirtualHosts(cb: (ArrayList[VirtualHost]) => Unit) = callback(cb) {
       new ArrayList[VirtualHost](virtualHosts.values)
-    } ->: dispatchQueue
+    } >>: dispatchQueue
 
     def getTransportServers(cb: (ArrayList[TransportServer]) => Unit) = callback(cb) {
       new ArrayList[TransportServer](transportServers)
-    } ->: dispatchQueue
+    } >>: dispatchQueue
 
     def start(onCompleted:Runnable) = ^ {
       _start(onCompleted)
-    } ->: dispatchQueue
+    } >>: dispatchQueue
 
     def _start(onCompleted:Runnable) = {
       if (state == CONFIGURATION) {
@@ -314,7 +314,7 @@ class Broker() extends Service with DispatchLogging {
         }
 
       }
-    } ->: dispatchQueue
+    } >>: dispatchQueue
     
   }
 
@@ -389,7 +389,7 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
     def deliver(value:Delivery):Unit = {
       val delivery = Delivery(value)
       delivery.setDisposer(^{
-        ^{ completed(value) } ->:queue
+        ^{ completed(value) } >>:queue
       })
       consumer.deliver(delivery);
       delivery.release
@@ -415,7 +415,7 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
         readyConsumers.addLast(cs)
       }
       drain_delivery_buffer
-    } ->: queue
+    } >>: queue
 
   def unbind(consumers:List[DeliveryConsumer]) = releasing(consumers) {
       for ( consumer <- consumers ) {
@@ -428,7 +428,7 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
           case None=>
         }
       }
-    } ->: queue
+    } >>: queue
 
   def disconnected() = throw new RuntimeException("unsupported")
 
@@ -471,7 +471,7 @@ class Queue(val destination:Destination) extends BaseRetained with Route with De
 //
 //    def deliver(delivery:Delivery) = using(delivery) {
 //      deliveryQueue.send(delivery)
-//    } ->: queue
+//    } >>: queue
 //
 //    def close = {
 //      release

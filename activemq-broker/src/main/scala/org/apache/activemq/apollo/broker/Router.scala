@@ -156,13 +156,13 @@ class Router(var queue:DispatchQueue) extends DispatchLogging {
 
   def bind(destination:Destination, targets:List[DeliveryConsumer]) = retaining(targets) {
       get(destination).on_bind(targets)
-    } ->: queue
+    } >>: queue
 
   def unbind(destination:Destination, targets:List[DeliveryConsumer]) = releasing(targets) {
       if( get(destination).on_unbind(targets) ) {
         destinations.remove(destination)
       }
-    } ->: queue
+    } >>: queue
 
   def connect(destination:Destination, routeQueue:DispatchQueue, producer:DeliveryProducer)(completed: (DeliveryProducerRoute)=>Unit) = {
     val route = new DeliveryProducerRoute(destination, routeQueue, producer) {
@@ -172,7 +172,7 @@ class Router(var queue:DispatchQueue) extends DispatchLogging {
     }
     ^ {
       get(destination).on_connect(route)
-    } ->: queue
+    } >>: queue
   }
 
   def isTopic(destination:Destination) = destination.getDomain == TOPIC_DOMAIN
@@ -180,7 +180,7 @@ class Router(var queue:DispatchQueue) extends DispatchLogging {
 
   def disconnect(route:DeliveryProducerRoute) = releasing(route) {
       get(route.destination).on_disconnect(route)
-    } ->: queue
+    } >>: queue
 
 
    def each(proc:(Destination, DestinationNode)=>Unit) = {
@@ -227,11 +227,11 @@ class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue
   def connected(targets:List[DeliveryConsumer]) = retaining(targets) {
     internal_bind(targets)
     on_connected
-  } ->: queue
+  } >>: queue
 
   def bind(targets:List[DeliveryConsumer]) = retaining(targets) {
     internal_bind(targets)
-  } ->: queue
+  } >>: queue
 
   private def internal_bind(values:List[DeliveryConsumer]) = {
     values.foreach{ x=>
@@ -249,7 +249,7 @@ class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue
       }
       rc
     }
-  } ->: queue
+  } >>: queue
 
   def disconnected() = ^ {
     this.targets.foreach { x=>
@@ -257,7 +257,7 @@ class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue
       x.close
       x.consumer.release
     }    
-  } ->: queue
+  } >>: queue
 
   protected def on_connected = {}
   protected def on_disconnected = {}

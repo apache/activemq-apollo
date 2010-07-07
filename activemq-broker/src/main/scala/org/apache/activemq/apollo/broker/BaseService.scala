@@ -90,7 +90,7 @@ trait BaseService extends Service {
         done
         error("start should not be called from state: "+state);
     }
-  } ->: dispatchQueue
+  } |>>: dispatchQueue
 
   final def stop(onCompleted:Runnable) = ^{
     def done = {
@@ -115,7 +115,7 @@ trait BaseService extends Service {
         done
         error("stop should not be called from state: "+state);
     }
-  } ->: dispatchQueue
+  } |>>: dispatchQueue
 
   protected def _start(onCompleted:Runnable)
   protected def _stop(onCompleted:Runnable)

@@ -548,6 +548,7 @@ class DeliverySessionManager(val sink:DeliverySink, val queue:DispatchQueue) ext
       });
       credit_adder.resume
       source.retain
+      var closed = false
 
       private var credits = 0;
 
@@ -557,25 +558,28 @@ class DeliverySessionManager(val sink:DeliverySink, val queue:DispatchQueue) ext
       def close = {
         credit_adder.release
         source.release
+        closed=true
       }
 
       override def full = credits <= 0
 
       override protected def send_to_delivery_buffer(value:Delivery) = {
-        var delivery = Delivery(value)
-        credit_adder.retain
-        delivery.setDisposer(^{
-          // This is called from the server/consumer thread
-          credit_adder.merge(delivery.size);
-          credit_adder.release
-        })
-        internal_credit(-delivery.size)
-        source.merge(delivery)
+        if( !closed ) {
+          var delivery = Delivery(value)
+          credit_adder.retain
+          delivery.setDisposer(^{
+            // This is called from the server/consumer thread
+            credit_adder.merge(delivery.size);
+            credit_adder.release
+          })
+          internal_credit(-delivery.size)
+          source.merge(delivery)
+        }
       }
 
       def internal_credit(value:Int) = {
         credits += value;
-        if( credits <= 0 ) {
+        if( closed || credits <= 0 ) {
           credits = 0
         } else {
           drainOverflow
@@ -585,7 +589,7 @@ class DeliverySessionManager(val sink:DeliverySink, val queue:DispatchQueue) ext
       ///////////////////////////////////////////////////
       // These methods get called from the server/consumer thread...
       ///////////////////////////////////////////////////
-      def credit(value:Int) = ^{ internal_credit(value) } ->: producer_queue
+      def credit(value:Int) = ^{ internal_credit(value) } >>: producer_queue
 
       def drain(callback:Runnable) = {
         credits = 0

@@ -30,9 +30,12 @@ import java.util.LinkedList;
  */
 public abstract class BaseService implements Service {
 
-    static class State {
+    public static class State {
         public String toString() {
             return getClass().getSimpleName();
+        }
+        public boolean isStarted() {
+            return false;
         }
     }
 
@@ -55,7 +58,11 @@ public abstract class BaseService implements Service {
     public static final State CREATED = new State();
     public static class STARTING extends CallbackSupport {
     }
-    public static final State STARTED = new State();
+    public static final State STARTED = new State() {
+        public boolean isStarted() {
+            return true;
+        }
+    };
     public static class STOPPING extends CallbackSupport {
     }
 

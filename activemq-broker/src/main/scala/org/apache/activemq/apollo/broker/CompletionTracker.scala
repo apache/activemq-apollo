@@ -50,7 +50,7 @@ class CompletionTracker(val name:String, val parent:DispatchQueue=getGlobalQueue
     ^ {
       assert(_callback==null)
       tasks.add(rc)
-    }  ->: queue
+    }  >>: queue
     return rc
   }
 
@@ -59,7 +59,7 @@ class CompletionTracker(val name:String, val parent:DispatchQueue=getGlobalQueue
     ^ {
       _callback = handler _
       checkDone()
-    }  ->: queue
+    }  >>: queue
 
     def displayStatus = {
       if( _callback!=null ) {
@@ -76,12 +76,12 @@ class CompletionTracker(val name:String, val parent:DispatchQueue=getGlobalQueue
     if( tasks.remove(r) ) {
       checkDone()
     }
-  } ->: queue
+  } >>: queue
 
   private def checkDone() = {
     if( tasks.isEmpty && _callback!=null ) {
       trace("executing callback for %s", name)
-      _callback ->: queue
+      _callback >>: queue
       _callback = null
       queue.release
     } else {

@@ -44,9 +44,6 @@ import java.util.Map;
  */
 public class TcpTransport extends BaseService implements Transport {
 
-    static {
-        System.out.println(TcpTransport.class.getClassLoader().getResource("log4j.properties"));
-    }
     private static final Log LOG = LogFactory.getLog(TcpTransport.class);
 
     private Map<String, Object> socketOptions;
@@ -450,7 +447,7 @@ public class TcpTransport extends BaseService implements Transport {
     }
 
     private void drainInbound() throws IOException {
-        if (getServiceState() == STARTED || readSource.isSuspended()) {
+        if (!getServiceState().isStarted() || readSource.isSuspended()) {
             return;
         }
         while (true) {

@@ -125,7 +125,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         host.router.unbind(consumer.destination, consumer::Nil)
         consumer=null
       }
-      info("stomp protocol resources released")
+      trace("stomp protocol resources released")
     }
   }
 
@@ -199,7 +199,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 //                read_source.setTargetQueue(queue)
 //              }
 
-            } ->: queue
+            } >>: queue
           }
 
           // don't process frames until we are connected..
@@ -280,12 +280,13 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       connection.transport.oneway(StompFrame(Responses.ERROR, Nil, ascii(msg)), null)
       ^ {
         connection.stop()
-      } ->: queue
+      } >>: queue
     }
   }
 
   override def onTransportFailure(error: IOException) = {
     if( !connection.stopped ) {
+      connection.transport.suspendRead
       info(error, "Shutting connection down due to: %s", error)
       super.onTransportFailure(error);
     }
