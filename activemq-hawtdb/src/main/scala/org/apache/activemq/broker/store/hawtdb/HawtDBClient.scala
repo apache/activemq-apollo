@@ -251,60 +251,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
   val last_direct_key = new AtomicLong
 
-  def createDirectRecord(size: Int)(callback: (DirectRecord) => Unit) = {
-
-    val page_count: Int = directFile.pages(size)
-    val page = directFile.allocator.alloc(page_count)
-    val buffer = directFile.slice(SliceType.READ_WRITE, page, page_count)
-    val key = last_direct_key.incrementAndGet
-
-    val pb = new AddDirect.Bean
-    pb.setDirectKey(key)
-    pb.setSize(size)
-    pb.setPage(page)
-    _store(pb, null)
-
-    val record = new DirectRecord
-    record.key = key
-    record.size = size
-    record.buffer = buffer
-    callback(record)
-  }
-
-  def openDirectRecord(key: Long)(callback: (Option[DirectRecord]) => Unit) = {
-    val result = withTx { tx =>
-      val helper = new TxHelper(tx)
-      import helper._
-      val pb:AddDirect.Getter = directIndex.get(key)
-      if( pb!=null ) {
-        val page_count: Int = directFile.pages(pb.getSize)
-        val buffer = directFile.slice(SliceType.READ, pb.getPage, page_count)
-
-        val record = new DirectRecord
-        record.key = key
-        record.size = pb.getSize
-        record.buffer = buffer
-
-        Some(record)
-      } else {
-        None
-      }
-    }
-    callback(result)
-  }
-
-
-  def closeDirectRecord(record: DirectRecord) = {
-    directFile.unslice(record.buffer)
-  }
-
-  def removeDirectRecord(key: Long)(callback: (Boolean) => Unit) = {
-    val update = new RemoveDirect.Bean
-    update.setDirectKey(key)
-    _store(update, null)
-  }
-
-
   def addQueue(record: QueueRecord, callback:Runnable) = {
     val update = new AddQueue.Bean()
     update.setKey(record.key)
@@ -993,18 +939,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       case x: RemoveMap.Getter =>
       case x: PutMapEntry.Getter =>
       case x: RemoveMapEntry.Getter =>
-
-      case x: AddDirect.Getter =>
-
-        directIndex.put(x.key, x.freeze)
-
-      case x: RemoveDirect.Getter =>
-
-        val record:AddDirect.Getter = directIndex.remove(x.getDirectKey)
-        if( record!=null ) {
-          val page_count: Int = directFile.pages(record.getSize)
-          directFile.allocator.free(record.getPage, page_count)
-        }
 
     }
   }

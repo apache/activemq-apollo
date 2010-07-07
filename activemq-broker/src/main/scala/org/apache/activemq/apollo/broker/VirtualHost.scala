@@ -102,6 +102,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
   }
 
   var store:Store = null
+  var memory_pool:MemoryPool = null
   var transactionManager:TransactionManagerX = new TransactionManagerX
   var protocols = Map[AsciiBuffer, WireFormat]()
   val queue_id_counter = new LongCounter

@@ -29,7 +29,7 @@ import ReporterLevel._
 import java.util.concurrent._
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util.{IntMetricCounter, TimeCounter, IntCounter}
-import org.apache.activemq.broker.store.{DirectRecordStore, StoreUOW, Store}
+import org.apache.activemq.broker.store.{StoreUOW, Store}
 
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
@@ -58,7 +58,7 @@ object HawtDBStore extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBStore extends Store with DirectRecordStore with BaseService with DispatchLogging {
+class HawtDBStore extends Store with BaseService with DispatchLogging {
 
   import HawtDBStore._
   override protected def log = HawtDBStore
@@ -121,36 +121,6 @@ class HawtDBStore extends Store with DirectRecordStore with BaseService with Dis
         onCompleted.run
       }
     }.start
-  }
-
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Implementation of the DirectRecordStore interface
-  //
-  /////////////////////////////////////////////////////////////////////
-
-  def createDirectRecord(size: Int)(callback: (DirectRecord) => Unit) = {
-    executor_pool {
-      client.createDirectRecord(size)(callback)
-    }
-  }
-
-  def openDirectRecord(key: Long)(callback: (Option[DirectRecord]) => Unit) = {
-    executor_pool {
-      client.openDirectRecord(key)(callback)
-    }
-  }
-
-  def closeDirectRecord(record: DirectRecord) = {
-    executor_pool {
-      client.closeDirectRecord(record)
-    }
-  }
-
-  def removeDirectRecord(key: Long)(callback: (Boolean) => Unit) = {
-    executor_pool {
-      client.removeDirectRecord(key)(callback)
-    }
   }
 
   /////////////////////////////////////////////////////////////////////

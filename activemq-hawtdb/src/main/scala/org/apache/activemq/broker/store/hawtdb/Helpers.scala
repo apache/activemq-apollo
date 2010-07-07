@@ -24,7 +24,7 @@ import java.io.{IOException, DataInput, DataOutput}
 import org.fusesource.hawtdb.internal.journal.{LocationCodec, Location}
 import org.fusesource.hawtdb.api._
 import org.fusesource.hawtbuf.proto.{MessageBuffer, PBMessage}
-import org.apache.activemq.apollo.store.{DirectRecord, MessageRecord, QueueRecord, QueueEntryRecord}
+import org.apache.activemq.apollo.store.{MessageRecord, QueueRecord, QueueEntryRecord}
 
 /**
  * <p>
@@ -147,13 +147,6 @@ object Helpers {
     pb
   }
 
-  implicit def toDirectRecord(pb: AddDirect.Getter): DirectRecord = {
-    val rc = new DirectRecord
-    rc.key = pb.getDirectKey
-    rc.size = pb.getSize
-    rc
-  }
-  
   implicit def toLocation(value: Long): Location = {
     val temp = new Buffer(8)
     val editor = temp.bigEndianEditor

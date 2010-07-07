@@ -34,9 +34,6 @@ enum Type {
   PUT_MAP_ENTRY = 32;
   REMOVE_MAP_ENTRY = 33;
 
-  ADD_DIRECT = 40;
-  REMOVE_DIRECT = 41;
-
   ADD_SUBSCRIPTION = 50;
   REMOVE_SUBSCRIPTION = 51;
 
@@ -132,20 +129,6 @@ message RemoveMapEntry {
 }
 
 ///////////////////////////////////////////////////////////////
-// Direct buffer related operations.
-///////////////////////////////////////////////////////////////
-message AddDirect {
-  required int64 directKey=1;
-  required int32 size=2;
-  required int32 page=3;
-}
-
-message RemoveDirect {
-  required int64 directKey=1;
-}
-
-
-///////////////////////////////////////////////////////////////
 // Records Stored used in the Indexes
 ///////////////////////////////////////////////////////////////
 message DatabaseRootRecord {
@@ -161,7 +144,6 @@ message DatabaseRootRecord {
   optional fixed32 queueIndexPage=53;
   optional fixed32 subscriptionIndexPage=54;
   optional fixed32 mapIndexPage=55;
-  optional fixed32 directIndexPage=56;
 
 }
 

@@ -14,22 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.store;
-
-import org.fusesource.hawtbuf.AsciiBuffer;
-import org.fusesource.hawtbuf.Buffer;
-
-import java.nio.ByteBuffer;
+package org.apache.activemq.broker.store.hawtdb
 
 /**
- * A memory mapped direct buffer associated with a key
+ * <p>
+ * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class DirectRecord {
-
-    public long key = -1;
-    public int size = 0;
-    public ByteBuffer buffer;
-
-}
+class HawtDBMemoryPool
