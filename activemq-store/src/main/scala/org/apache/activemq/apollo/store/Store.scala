@@ -105,6 +105,24 @@ trait Store extends ServiceTrait {
    */
   def loadMessage(messageKey:Long)(callback:(Option[MessageRecord])=>Unit )
 
-
 }
 
+/**
+ * Optional interface that stores can implement to give protocols direct access to the file system
+ * for them to be able to do
+ */
+trait DirectRecordStore {
+
+  def createDirectRecord(size:Int)(callback:(DirectRecord)=>Unit):Unit
+
+  def openDirectRecord(key:Long)(callback:(Option[DirectRecord])=>Unit):Unit
+
+  def closeDirectRecord(record:DirectRecord):Unit 
+
+  def removeDirectRecord(record:DirectRecord)(callback:(Boolean)=>Unit):Unit = {
+    removeDirectRecord(record.key)( callback )
+  }
+  def removeDirectRecord(key:Long)(callback:(Boolean)=>Unit):Unit
+
+
+}

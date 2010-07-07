@@ -28,7 +28,7 @@ public class MessageRecord {
     public AsciiBuffer protocol;
     public int size;
     public Buffer value;
-    public long stream = -1;
+    public long directKey = -1;
     public long expiration = 0;
 
 }

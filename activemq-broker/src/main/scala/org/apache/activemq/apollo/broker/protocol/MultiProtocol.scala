@@ -50,7 +50,7 @@ class MultiProtocolHandler extends ProtocolHandler {
   override def onTransportCommand(command:Any) = {
 
     if (!command.isInstanceOf[WireFormat]) {
-      throw new ProtocolException("First command should be a WireFormat");
+      throw new ProtocolException("Expected WireFormat");
     }
 
     var wireformat:WireFormat = command.asInstanceOf[WireFormat];
@@ -67,6 +67,8 @@ class MultiProtocolHandler extends ProtocolHandler {
     // replace the current handler with the new one.
     connection.protocol = protocol
     connection.protocolHandler = protocolHandler
+    connection.transport.setWireformat(wireformat)
+    
     connection.transport.suspendRead
     protocolHandler.onTransportConnected
   }

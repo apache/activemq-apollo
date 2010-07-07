@@ -70,7 +70,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
   import StompWireFormat._
   override protected def log: Log = StompWireFormat
 
-  var directRecordStore:DirectRecordStore = null
+  var direct_record_store:DirectRecordStore = null
 
   implicit def wrap(x: Buffer) = ByteBuffer.wrap(x.data, x.offset, x.length);
   implicit def wrap(x: Byte) = {

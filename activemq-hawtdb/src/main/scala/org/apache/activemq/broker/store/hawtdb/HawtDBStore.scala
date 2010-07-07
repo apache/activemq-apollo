@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.broker.store.hawtdb
 
-import org.apache.activemq.broker.store.{StoreUOW, Store}
 import org.fusesource.hawtdispatch.BaseRetained
 import java.util.concurrent.atomic.AtomicLong
 import collection.mutable.ListBuffer
@@ -30,6 +29,7 @@ import ReporterLevel._
 import java.util.concurrent._
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util.{IntMetricCounter, TimeCounter, IntCounter}
+import org.apache.activemq.broker.store.{DirectRecordStore, StoreUOW, Store}
 
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
@@ -58,7 +58,7 @@ object HawtDBStore extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBStore extends Store with BaseService with DispatchLogging {
+class HawtDBStore extends Store with DirectRecordStore with BaseService with DispatchLogging {
 
   import HawtDBStore._
   override protected def log = HawtDBStore
@@ -125,7 +125,37 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
 
   /////////////////////////////////////////////////////////////////////
   //
-  // Implementation of the BrokerDatabase interface
+  // Implementation of the DirectRecordStore interface
+  //
+  /////////////////////////////////////////////////////////////////////
+
+  def createDirectRecord(size: Int)(callback: (DirectRecord) => Unit) = {
+    executor_pool {
+      client.createDirectRecord(size)(callback)
+    }
+  }
+
+  def openDirectRecord(key: Long)(callback: (Option[DirectRecord]) => Unit) = {
+    executor_pool {
+      client.openDirectRecord(key)(callback)
+    }
+  }
+
+  def closeDirectRecord(record: DirectRecord) = {
+    executor_pool {
+      client.closeDirectRecord(record)
+    }
+  }
+
+  def removeDirectRecord(key: Long)(callback: (Boolean) => Unit) = {
+    executor_pool {
+      client.removeDirectRecord(key)(callback)
+    }
+  }
+
+  /////////////////////////////////////////////////////////////////////
+  //
+  // Implementation of the Store interface
   //
   /////////////////////////////////////////////////////////////////////
 
@@ -133,11 +163,13 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
    * Deletes all stored data from the store.
    */
   def purge(callback: =>Unit) = {
-    client.purge(^{
-      next_queue_key.set(1)
-      next_msg_key.set(1)
-      callback
-    })
+    executor_pool {
+      client.purge(^{
+        next_queue_key.set(1)
+        next_msg_key.set(1)
+        callback
+      })
+    }
   }
 
 
@@ -145,28 +177,36 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
    * Ges the last queue key identifier stored.
    */
   def getLastQueueKey(callback:(Option[Long])=>Unit):Unit = {
-    callback(Some(client.rootBuffer.getLastQueueKey.longValue))
+    executor_pool {
+      callback(Some(client.rootBuffer.getLastQueueKey.longValue))
+    }
   }
 
   def addQueue(record: QueueRecord)(callback: (Boolean) => Unit) = {
-    client.addQueue(record, ^{ callback(true) })
+    executor_pool {
+     client.addQueue(record, ^{ callback(true) })
+    }
   }
 
   def removeQueue(queueKey: Long)(callback: (Boolean) => Unit) = {
-    client.removeQueue(queueKey,^{ callback(true) })
+    executor_pool {
+      client.removeQueue(queueKey,^{ callback(true) })
+    }
   }
 
   def getQueueStatus(queueKey: Long)(callback: (Option[QueueStatus]) => Unit) = {
-    executor_pool ^{
+    executor_pool {
       callback( client.getQueueStatus(queueKey) )
     }
   }
 
   def listQueues(callback: (Seq[Long]) => Unit) = {
-    executor_pool ^{
+    executor_pool {
       callback( client.listQueues )
     }
   }
+
+  
 
   val load_source = createSource(new ListEventAggregator[(Long, (Option[MessageRecord])=>Unit)](), dispatchQueue)
   load_source.setEventHandler(^{drain_loads});

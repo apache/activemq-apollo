@@ -22,13 +22,14 @@ import org.fusesource.hawtbuf.Buffer;
 import java.nio.ByteBuffer;
 
 /**
- * A memory mapped record.
+ * A memory mapped direct buffer associated with a key
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class DirectRecord {
 
     public long key = -1;
+    public int size = 0;
     public ByteBuffer buffer;
 
 }

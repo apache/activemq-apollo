@@ -62,7 +62,7 @@ class CassandraClient() {
     rc.protocol = pb.getProtocol
     rc.size = pb.getSize
     rc.value = pb.getValue
-    rc.stream = pb.getStream
+    rc.directKey = pb.getStream
     rc.expiration = pb.getExpiration
     rc
   }
@@ -72,7 +72,7 @@ class CassandraClient() {
     pb.setProtocol(v.protocol)
     pb.setSize(v.size)
     pb.setValue(v.value)
-    pb.setStream(v.stream)
+    pb.setStream(v.directKey)
     pb.setExpiration(v.expiration)
     pb.freeze.toUnframedByteArray
   }

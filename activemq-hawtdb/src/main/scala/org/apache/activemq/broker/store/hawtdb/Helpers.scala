@@ -18,13 +18,13 @@ package org.apache.activemq.broker.store.hawtdb
 
 import model._
 import model.Type.TypeCreatable
-import org.apache.activemq.apollo.store.{MessageRecord, QueueRecord, QueueEntryRecord}
 import org.fusesource.hawtbuf.codec._
 import org.fusesource.hawtbuf.{UTF8Buffer, AsciiBuffer, Buffer}
 import java.io.{IOException, DataInput, DataOutput}
 import org.fusesource.hawtdb.internal.journal.{LocationCodec, Location}
 import org.fusesource.hawtdb.api._
 import org.fusesource.hawtbuf.proto.{MessageBuffer, PBMessage}
+import org.apache.activemq.apollo.store.{DirectRecord, MessageRecord, QueueRecord, QueueEntryRecord}
 
 /**
  * <p>
@@ -109,7 +109,7 @@ object Helpers {
     rc.protocol = pb.getProtocol
     rc.size = pb.getSize
     rc.value = pb.getValue
-    rc.stream = pb.getStreamKey
+    rc.directKey = pb.getStreamKey
     rc.expiration = pb.getExpiration
     rc
   }
@@ -120,7 +120,7 @@ object Helpers {
     pb.setProtocol(v.protocol)
     pb.setSize(v.size)
     pb.setValue(v.value)
-    pb.setStreamKey(v.stream)
+    pb.setStreamKey(v.directKey)
     pb.setExpiration(v.expiration)
     pb
   }
@@ -147,6 +147,13 @@ object Helpers {
     pb
   }
 
+  implicit def toDirectRecord(pb: AddDirect.Getter): DirectRecord = {
+    val rc = new DirectRecord
+    rc.key = pb.getDirectKey
+    rc.size = pb.getSize
+    rc
+  }
+  
   implicit def toLocation(value: Long): Location = {
     val temp = new Buffer(8)
     val editor = temp.bigEndianEditor
@@ -227,5 +234,10 @@ object Helpers {
   SUBSCRIPTIONS_INDEX_FACTORY.setKeyCodec(AsciiBufferCodec.INSTANCE);
   SUBSCRIPTIONS_INDEX_FACTORY.setValueCodec(AddSubscription.FRAMED_CODEC);
   SUBSCRIPTIONS_INDEX_FACTORY.setDeferredEncoding(true);
+
+  val DIRECT_INDEX_FACTORY = new BTreeIndexFactory[jl.Long, AddDirect.Buffer]();
+  DIRECT_INDEX_FACTORY.setKeyCodec(LongCodec.INSTANCE);
+  DIRECT_INDEX_FACTORY.setValueCodec(AddDirect.FRAMED_CODEC);
+  DIRECT_INDEX_FACTORY.setDeferredEncoding(true);
 
 }

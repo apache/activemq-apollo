@@ -34,10 +34,8 @@ enum Type {
   PUT_MAP_ENTRY = 32;
   REMOVE_MAP_ENTRY = 33;
 
-  OPEN_STREAM = 40;
-  WRITE_STREAM = 41;
-  CLOSE_STREAM = 42;
-  REMOVE_STREAM = 43;
+  ADD_DIRECT = 40;
+  REMOVE_DIRECT = 41;
 
   ADD_SUBSCRIPTION = 50;
   REMOVE_SUBSCRIPTION = 51;
@@ -134,20 +132,16 @@ message RemoveMapEntry {
 }
 
 ///////////////////////////////////////////////////////////////
-// Stream related operations.
+// Direct buffer related operations.
 ///////////////////////////////////////////////////////////////
-message OpenStream {
-  required int64 streamKey=1;
+message AddDirect {
+  required int64 directKey=1;
+  required int32 size=2;
+  required int32 page=3;
 }
-message WriteStream {
-  required int64 streamKey=1;
-  optional bytes data = 2;
-}
-message CloseStream {
-  required int64 streamKey=1;
-}
-message RemoveStream {
-  required int64 streamKey=1;
+
+message RemoveDirect {
+  required int64 directKey=1;
 }
 
 
@@ -167,7 +161,8 @@ message DatabaseRootRecord {
   optional fixed32 queueIndexPage=53;
   optional fixed32 subscriptionIndexPage=54;
   optional fixed32 mapIndexPage=55;
-  
+  optional fixed32 directIndexPage=56;
+
 }
 
 message QueueRootRecord {
