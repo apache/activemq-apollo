@@ -206,21 +206,8 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
 
 
   private def defaultConfig(rev:Int) = {
-    val config = new BrokerDTO
-    config.id = "default"
+    val config = Broker.default
     config.rev = rev
-    config.notes = "default configuration"
-
-    var host = new VirtualHostDTO
-    host.hostNames.add("default")
-    config.virtualHosts.add(host)
-
-    var connector = new ConnectorDTO
-    connector.bind = "tcp://0.0.0.0:61613"
-    connector.advertise = "tcp://0.0.0.0:61613"
-    connector.protocol = "multi"
-    config.connectors.add( connector )
-    
     config
   }
 

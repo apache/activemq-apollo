@@ -98,6 +98,7 @@ object Broker extends Log {
     val rc = new BrokerDTO
     rc.id = "default"
     rc.enabled = true
+    rc.notes = "A default configuration"
     rc.virtualHosts.add(VirtualHost.default)
     rc.connectors.add(Connector.default)
     rc.basedir = "./activemq-data/default"

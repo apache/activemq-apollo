@@ -32,7 +32,7 @@ public class ServiceDTO extends IdDTO {
      * Should this service be running?
      */
     @XmlAttribute(name="enabled")
-    public boolean enabled;
+    public boolean enabled = true;
 
 
 }
