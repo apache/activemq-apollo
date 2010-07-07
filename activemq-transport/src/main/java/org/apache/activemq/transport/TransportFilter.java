@@ -20,15 +20,28 @@ import java.io.IOException;
 import java.net.URI;
 
 import org.apache.activemq.wireformat.WireFormat;
+import org.fusesource.hawtdispatch.DispatchQueue;
 
 /**
  * @version $Revision: 1.5 $
  */
 public class TransportFilter implements TransportListener, Transport {
-    protected final Transport next;
+
+    protected Transport next;
     protected TransportListener transportListener;
 
     public TransportFilter(Transport next) {
+        this.next = next;
+    }
+
+    /**
+     * @return Returns the next transport.
+     */
+    public Transport getNext() {
+        return next;
+    }
+
+    public void setNext(Transport next) {
         this.next = next;
     }
 
@@ -36,13 +49,29 @@ public class TransportFilter implements TransportListener, Transport {
         return transportListener;
     }
 
-    public void setTransportListener(TransportListener channelListener) {
-        this.transportListener = channelListener;
-        if (channelListener == null) {
+    public void setTransportListener(TransportListener listener) {
+        this.transportListener = listener;
+        if (listener == null) {
             next.setTransportListener(null);
         } else {
             next.setTransportListener(this);
         }
+    }
+
+    public DispatchQueue getDispatchQueue() {
+        return next.getDispatchQueue();
+    }
+
+    public void setDispatchQueue(DispatchQueue queue) {
+        next.setDispatchQueue(queue);
+    }
+
+    public void suspend() {
+        next.suspend();
+    }
+
+    public void resume() {
+        next.resume();
     }
 
     /**
@@ -52,7 +81,7 @@ public class TransportFilter implements TransportListener, Transport {
      */
     public void start() throws Exception {
         if (next == null) {
-            throw new IOException("The next channel has not been set.");
+            throw new IOException("The next transport has not been set.");
         }
         if (transportListener == null) {
             throw new IOException("The command listener has not been set.");
@@ -71,43 +100,31 @@ public class TransportFilter implements TransportListener, Transport {
         transportListener.onCommand(command);
     }
 
-    /**
-     * @return Returns the next.
-     */
-    public Transport getNext() {
-        return next;
-    }
 
     public String toString() {
         return next.toString();
     }
 
-    public void oneway(Object command) throws IOException {
-        next.oneway(command);
+    @Deprecated
+    public void oneway(Object command) {
+        oneway(command, null);
     }
 
-    public FutureResponse asyncRequest(Object command, ResponseCallback responseCallback) throws IOException {
-        return next.asyncRequest(command, null);
+    public void oneway(Object command, CompletionCallback callback) {
+        next.oneway(command, callback);
     }
 
-    public Object request(Object command) throws IOException {
-        return next.request(command);
-    }
-
-    public Object request(Object command, int timeout) throws IOException {
-        return next.request(command, timeout);
-    }
 
     public void onException(IOException error) {
         transportListener.onException(error);
     }
 
-    public void transportInterupted() {
-        transportListener.transportInterupted();
+    public void onDisconnected() {
+        transportListener.onDisconnected();
     }
 
-    public void transportResumed() {
-        transportListener.transportResumed();
+    public void onConnected() {
+        transportListener.onConnected();
     }
 
     public <T> T narrow(Class<T> target) {
@@ -137,15 +154,16 @@ public class TransportFilter implements TransportListener, Transport {
         return next.isConnected();
     }
 
-    public void reconnect(URI uri) throws IOException {
-        next.reconnect(uri);
-    }
-
-    public boolean isUseInactivityMonitor() {
-        return next.isUseInactivityMonitor();
+    public void reconnect(URI uri, CompletionCallback callback) {
+        next.reconnect(uri, callback);
     }
 
     public WireFormat getWireformat() {
         return next.getWireformat();
     }
+    public void setWireformat(WireFormat wireformat) {
+        next.setWireformat(wireformat);
+    }
+
+
 }

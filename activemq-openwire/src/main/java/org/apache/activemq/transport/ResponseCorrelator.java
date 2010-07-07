@@ -17,10 +17,13 @@
 package org.apache.activemq.transport;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.activemq.command.Command;
 import org.apache.activemq.command.ExceptionResponse;
@@ -39,7 +42,7 @@ import org.apache.commons.logging.LogFactory;
 public class ResponseCorrelator extends TransportFilter {
 
     private static final Log LOG = LogFactory.getLog(ResponseCorrelator.class);
-    private final Map<Integer, FutureResponse> requestMap = new HashMap<Integer, FutureResponse>();
+    private final Map<Integer, RequestCallback> requestMap = new HashMap<Integer, RequestCallback>();
     private IntSequenceGenerator sequenceGenerator;
     private final boolean debug = LOG.isDebugEnabled();
     private IOException error;
@@ -53,36 +56,66 @@ public class ResponseCorrelator extends TransportFilter {
         this.sequenceGenerator = sequenceGenerator;
     }
 
-    public void oneway(Object o) throws IOException {
-        Command command = (Command)o;
-        command.setCommandId(sequenceGenerator.getNextSequenceId());
-        command.setResponseRequired(false);
-        next.oneway(command);
-    }
-
-    public FutureResponse asyncRequest(Object o, ResponseCallback responseCallback) throws IOException {
-        Command command = (Command)o;
-        command.setCommandId(sequenceGenerator.getNextSequenceId());
-        command.setResponseRequired(true);
-        FutureResponse future = new FutureResponse(responseCallback);
-        synchronized (requestMap) {
-            if( this.error !=null ) {
-                throw error;
+    @Override
+    public void oneway(final Object o, final CompletionCallback callback) {
+        next.getDispatchQueue().execute(new Runnable(){
+            public void run() {
+                Command command = (Command)o;
+                command.setCommandId(sequenceGenerator.getNextSequenceId());
+                command.setResponseRequired(false);
+                next.oneway(command, callback);
             }
-            requestMap.put(new Integer(command.getCommandId()), future);
+        });
+    }
+
+    public <T> void request(final Object o, final RequestCallback<T> responseCallback) throws IOException {
+        next.getDispatchQueue().execute(new Runnable(){
+            public void run() {
+                Command command = (Command)o;
+                command.setCommandId(sequenceGenerator.getNextSequenceId());
+                command.setResponseRequired(true);
+                requestMap.put(command.getCommandId(), responseCallback);
+                oneway(command, null);
+            }
+        });
+    }
+
+    public Object request(final Object o) throws IOException {
+        return request(o, -1);
+    }
+
+    public Object request(final Object o, final int timeout) throws IOException {
+        final CountDownLatch done = new CountDownLatch(1);
+        final Object[] result = new Object [2];
+        request(o, new RequestCallback() {
+            public void onCompletion(Object resp) {
+                result[0] = resp;
+                done.countDown();
+            }
+            public void onFailure(Throwable caught) {
+                result[1] = caught;
+                done.countDown();
+            }
+        });
+        try {
+            if( timeout < 0 ) {
+                done.await();
+            } else {
+                if( !done.await(timeout, TimeUnit.MILLISECONDS) ) {
+                    return null;
+                }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new InterruptedIOException();
         }
-        next.oneway(command);
-        return future;
-    }
-
-    public Object request(Object command) throws IOException {
-        FutureResponse response = asyncRequest(command, null);
-        return response.getResult();
-    }
-
-    public Object request(Object command, int timeout) throws IOException {
-        FutureResponse response = asyncRequest(command, null);
-        return response.getResult(timeout);
+        if( result[1]!=null ) {
+            if( result[1] instanceof IOException ) {
+                throw (IOException)result[1];
+            }
+            throw new RuntimeException((Throwable)result[1]);
+        }
+        return result[0];
     }
 
     public void onCommand(Object o) {
@@ -94,12 +127,10 @@ public class ResponseCorrelator extends TransportFilter {
         }
         if (command.isResponse()) {
             Response response = (Response)command;
-            FutureResponse future = null;
-            synchronized (requestMap) {
-                future = requestMap.remove(Integer.valueOf(response.getCorrelationId()));
-            }
-            if (future != null) {
-                future.set(response);
+            RequestCallback callback = null;
+            callback = requestMap.remove(Integer.valueOf(response.getCorrelationId()));
+            if (callback != null) {
+                callback.onCompletion(response);
             } else {
                 if (debug) {
                     LOG.debug("Received unexpected response: {" + command + "}for command id: " + response.getCorrelationId());
@@ -126,18 +157,17 @@ public class ResponseCorrelator extends TransportFilter {
     }
 
     private void dispose(IOException error) {
-        ArrayList<FutureResponse> requests=null; 
+        ArrayList<RequestCallback> requests=null;
         synchronized(requestMap) {
             if( this.error==null) {
                 this.error = error;
-                requests = new ArrayList<FutureResponse>(requestMap.values());
+                requests = new ArrayList<RequestCallback>(requestMap.values());
                 requestMap.clear();
             }
         }
         if( requests!=null ) {
-            for (Iterator<FutureResponse> iter = requests.iterator(); iter.hasNext();) {
-                FutureResponse fr = iter.next();
-                fr.set(new ExceptionResponse(error));
+            for (RequestCallback callback : requests) {
+                callback.onFailure(error);
             }
         }
     }
@@ -146,7 +176,4 @@ public class ResponseCorrelator extends TransportFilter {
         return sequenceGenerator;
     }
 
-    public String toString() {
-        return next.toString();
-    }
 }

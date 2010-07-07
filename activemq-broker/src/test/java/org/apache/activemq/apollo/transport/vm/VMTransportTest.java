@@ -36,7 +36,7 @@ public class VMTransportTest {
 	
 	@Test()
 	public void autoCreateBroker() throws Exception {
-		Transport connect = TransportFactory.compositeConnect(new URI("vm://test1?wireFormat=mock"));
+		Transport connect = TransportFactory.connect(new URI("vm://test1?wireFormat=mock"));
 		connect.start();
 		assertNotNull(connect);
 		connect.stop();
@@ -44,12 +44,12 @@ public class VMTransportTest {
 	
 	@Test(expected=IOException.class)
 	public void noAutoCreateBroker() throws Exception {
-		TransportFactory.compositeConnect(new URI("vm://test2?create=false&wireFormat=mock"));
+		TransportFactory.connect(new URI("vm://test2?create=false&wireFormat=mock"));
 	}
 	
 	@Test(expected=IllegalArgumentException.class)
 	public void badOptions() throws Exception {
-		TransportFactory.compositeConnect(new URI("vm://test3?crazy-option=false&wireFormat=mock"));
+		TransportFactory.connect(new URI("vm://test3?crazy-option=false&wireFormat=mock"));
 	}
 	
 }

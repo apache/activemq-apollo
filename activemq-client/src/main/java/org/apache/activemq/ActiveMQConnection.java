@@ -89,6 +89,7 @@ import org.apache.activemq.management.StatsCapable;
 import org.apache.activemq.management.StatsImpl;
 import org.apache.activemq.state.CommandVisitorAdapter;
 import org.apache.activemq.thread.TaskRunnerFactory;
+import org.apache.activemq.transport.ResponseCorrelator;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.util.IdGenerator;
@@ -148,7 +149,7 @@ public class ActiveMQConnection implements Connection, TopicConnection, QueueCon
     private int sendTimeout =0;
     private boolean sendAcksAsync=true;
 
-    private final Transport transport;
+    private final ResponseCorrelator transport;
     private final IdGenerator clientIdGenerator;
     private final JMSStatsImpl factoryStats;
     private final JMSConnectionStatsImpl stats;
@@ -196,7 +197,7 @@ public class ActiveMQConnection implements Connection, TopicConnection, QueueCon
      */
     protected ActiveMQConnection(final Transport transport, IdGenerator clientIdGenerator, JMSStatsImpl factoryStats) throws Exception {
 
-        this.transport = transport;
+        this.transport = new ResponseCorrelator(transport);
         this.clientIdGenerator = clientIdGenerator;
         this.factoryStats = factoryStats;
 
@@ -1221,11 +1222,11 @@ public class ActiveMQConnection implements Connection, TopicConnection, QueueCon
     }
 
 	private void doAsyncSendPacket(Command command) throws JMSException {
-		try {
+//		try {
 		    this.transport.oneway(command);
-		} catch (IOException e) {
-		    throw JMSExceptionSupport.create(e);
-		}
+//		} catch (IOException e) {
+//		    throw JMSExceptionSupport.create(e);
+//		}
 	}
 
     /**
@@ -1820,21 +1821,21 @@ public class ActiveMQConnection implements Connection, TopicConnection, QueueCon
 		}
 	}
 
-    public void transportInterupted() {
+    public void onDisconnected() {
         for (Iterator<ActiveMQSession> i = this.sessions.iterator(); i.hasNext();) {
             ActiveMQSession s = i.next();
             s.clearMessagesInProgress();
         }
         for (Iterator<TransportListener> iter = transportListeners.iterator(); iter.hasNext();) {
             TransportListener listener = iter.next();
-            listener.transportInterupted();
+            listener.onDisconnected();
         }
     }
 
-    public void transportResumed() {
+    public void onConnected() {
         for (Iterator<TransportListener> iter = transportListeners.iterator(); iter.hasNext();) {
             TransportListener listener = iter.next();
-            listener.transportResumed();
+            listener.onConnected();
         }
     }
 

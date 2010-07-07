@@ -476,7 +476,6 @@ public abstract class BrokerTestBase {
         consumer.setDestination(destination);
         consumer.setName("consumer" + (i + 1));
         consumer.setTotalConsumerRate(totalConsumerRate);
-        consumer.setDispatcher(dispatcher);
         return consumer;
     }
 
@@ -498,7 +497,6 @@ public abstract class BrokerTestBase {
         producer.setDestination(destination);
         producer.setMessageIdGenerator(msgIdGenerator);
         producer.setTotalProducerRate(totalProducerRate);
-        producer.setDispatcher(dispatcher);
         return producer;
     }
 
@@ -508,7 +506,6 @@ public abstract class BrokerTestBase {
         Broker broker = new Broker();
         broker.addTransportServer(TransportFactory.bind(new URI(bindURI)));
         broker.addConnectUri(connectUri);
-        broker.setDispatcher(dispatcher);
         broker.getDefaultVirtualHost().setStore(createStore(broker));
         return broker;
     }

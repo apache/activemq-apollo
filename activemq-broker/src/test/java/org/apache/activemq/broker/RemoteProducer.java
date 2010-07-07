@@ -31,7 +31,6 @@ abstract public class RemoteProducer extends Connection implements FlowUnblockLi
     protected String property;
     protected MetricAggregator totalProducerRate;
     protected MessageDelivery next;
-    protected DispatchQueue dispatchQueue;
     protected Runnable dispatchTask;
     protected String filler;
     protected int payloadSize = 20;
@@ -55,13 +54,12 @@ abstract public class RemoteProducer extends Connection implements FlowUnblockLi
         totalProducerRate.add(rate);
 
 
-        transport = TransportFactory.compositeConnect(uri);
+        transport = TransportFactory.connect(uri);
         initialize();
         super.start();
         
         setupProducer();
         
-        dispatchQueue = getDispatcher().createSerialQueue(name + "-client", STICK_TO_CALLER_THREAD);
         dispatchTask = new Runnable(){
             public void run() {
                 dispatch();

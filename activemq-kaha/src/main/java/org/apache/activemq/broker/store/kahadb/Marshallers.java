@@ -20,13 +20,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store.QueueRecord;
-import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.marshaller.Marshaller;
-import org.apache.activemq.util.marshaller.VariableMarshaller;
-import org.apache.kahadb.journal.Location;
+import org.fusesource.hawtdb.util.marshaller.Marshaller;
+import org.fusesource.hawtdb.util.marshaller.VariableMarshaller;
 
 public class Marshallers {
 
@@ -71,74 +70,6 @@ public class Marshallers {
         }
     };
 
-    public final static Marshaller<Location> LOCATION_MARSHALLER = new Marshaller<Location>() {
-
-        public Location readPayload(DataInput dataIn) throws IOException {
-            Location rc = new Location();
-            rc.setDataFileId(dataIn.readInt());
-            rc.setOffset(dataIn.readInt());
-            return rc;
-        }
-
-        public void writePayload(Location object, DataOutput dataOut) throws IOException {
-            dataOut.writeInt(object.getDataFileId());
-            dataOut.writeInt(object.getOffset());
-        }
-
-        public boolean isDeepCopySupported() {
-            return true;
-        }
-
-        public Location deepCopy(Location source) {
-            return new Location(source);
-        }
-
-        public int getFixedSize() {
-            return 8;
-        }
-
-        public int estimatedSize(Location object) {
-            throw new UnsupportedOperationException();
-        }
-
-    };
-
-    public final static Marshaller<AsciiBuffer> ASCII_BUFFER_MARSHALLER = new VariableMarshaller<AsciiBuffer>() {
-
-        public AsciiBuffer readPayload(DataInput dataIn) throws IOException {
-            byte data[] = new byte[dataIn.readShort()];
-            dataIn.readFully(data);
-            return new AsciiBuffer(data);
-        }
-
-        public void writePayload(AsciiBuffer object, DataOutput dataOut) throws IOException {
-            dataOut.writeShort(object.length);
-            dataOut.write(object.data, object.offset, object.length);
-        }
-
-        public int estimatedSize(AsciiBuffer object) {
-            throw new UnsupportedOperationException();
-        }
-    };
-
-    public final static Marshaller<Buffer> BUFFER_MARSHALLER = new VariableMarshaller<Buffer>() {
-
-        public Buffer readPayload(DataInput dataIn) throws IOException {
-            byte data[] = new byte[dataIn.readShort()];
-            dataIn.readFully(data);
-            return new Buffer(data);
-        }
-
-        public void writePayload(Buffer object, DataOutput dataOut) throws IOException {
-            dataOut.writeShort(object.length);
-            dataOut.write(object.data, object.offset, object.length);
-        }
-
-        public int estimatedSize(Buffer object) {
-            throw new UnsupportedOperationException();
-        }
-    };
-
     public final static Marshaller<QueueDescriptor> QUEUE_DESCRIPTOR_MARSHALLER = new VariableMarshaller<QueueDescriptor>() {
 
         public QueueDescriptor readPayload(DataInput dataIn) throws IOException {
@@ -169,4 +100,52 @@ public class Marshallers {
             throw new UnsupportedOperationException();
         }
     };
+
+
+
+    static abstract public class AbstractBufferMarshaller<T extends Buffer> extends org.fusesource.hawtdb.util.marshaller.VariableMarshaller<T> {
+
+        public void writePayload(T value, DataOutput dataOut) throws IOException {
+            dataOut.writeInt(value.length);
+            dataOut.write(value.data, value.offset, value.length);
+        }
+
+        public T readPayload(DataInput dataIn) throws IOException {
+            int size = dataIn.readInt();
+            byte[] data = new byte[size];
+            dataIn.readFully(data);
+            return createBuffer(data);
+        }
+
+        abstract protected T createBuffer(byte [] data);
+
+        public T deepCopy(T source) {
+            return createBuffer(source.deepCopy().data);
+        }
+
+        public boolean isDeepCopySupported() {
+            return true;
+        }
+
+        public int estimatedSize(T object) {
+            return object.length+4;
+        }
+
+    }
+
+    public final static Marshaller<AsciiBuffer> ASCII_BUFFER_MARSHALLER = new AbstractBufferMarshaller<AsciiBuffer>() {
+        @Override
+        protected AsciiBuffer createBuffer(byte[] data) {
+            return new AsciiBuffer(data);
+        }
+
+    };
+
+    public final static Marshaller<Buffer> BUFFER_MARSHALLER = new AbstractBufferMarshaller<Buffer>() {
+        @Override
+        protected Buffer createBuffer(byte[] data) {
+            return new Buffer(data);
+        }
+    };
+
 }

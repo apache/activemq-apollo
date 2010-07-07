@@ -36,6 +36,8 @@ public class OpenwireRemoteProducer extends RemoteProducer {
     private ProducerInfo producerInfo;
     private ActiveMQDestination activemqDestination;
     private WindowLimiter<MessageDelivery> outboundLimiter;
+    private int outputWindowSize = 1024*4;
+    private int outputResumeThreshold = 1024*4;
 
     protected void setupProducer() throws Exception, IOException {
         if (destination.getDomain().equals(Router.QUEUE_DOMAIN)) {
@@ -45,12 +47,12 @@ public class OpenwireRemoteProducer extends RemoteProducer {
         }
 
         connectionInfo = createConnectionInfo(name);
-        transport.oneway(connectionInfo);
+        transport.oneway(connectionInfo, null);
         sessionInfo = createSessionInfo(connectionInfo);
-        transport.oneway(sessionInfo);
+        transport.oneway(sessionInfo, null);
         producerInfo = createProducerInfo(sessionInfo);
         producerInfo.setWindowSize(outputWindowSize);
-        transport.oneway(producerInfo);
+        transport.oneway(producerInfo, null);
     }
 
     protected void initialize() {

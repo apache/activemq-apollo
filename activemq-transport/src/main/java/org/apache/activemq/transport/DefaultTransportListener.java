@@ -41,15 +41,16 @@ public class DefaultTransportListener implements TransportListener {
     }
 
     /**
-     * The transport has suffered an interuption from which it hopes to recover
+     * The transport has been connected.
      */
-    public void transportInterupted() {
+    public void onConnected() {
     }
 
     /**
-     * The transport has resumed after an interuption
+     * The transport has suffered a disconnection from
+     * which it hopes to recover
      */
-    public void transportResumed() {
+    public void onDisconnected() {
     }
 
 }

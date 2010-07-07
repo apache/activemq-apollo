@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.kahadb.Data.MapAdd;
 import org.apache.activemq.broker.store.kahadb.Data.MapEntryPut;
@@ -57,7 +58,6 @@ import org.apache.activemq.broker.store.kahadb.Data.Type.TypeCreatable;
 import org.apache.activemq.protobuf.InvalidProtocolBufferException;
 import org.apache.activemq.protobuf.MessageBuffer;
 import org.apache.activemq.protobuf.PBMessage;
-import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.activemq.util.LockFile;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.activemq.util.buffer.Buffer;
@@ -65,11 +65,11 @@ import org.apache.activemq.util.buffer.DataByteArrayInputStream;
 import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.kahadb.journal.Journal;
-import org.apache.kahadb.journal.Location;
-import org.apache.kahadb.page.Page;
-import org.apache.kahadb.page.PageFile;
-import org.apache.kahadb.page.Transaction;
+import org.fusesource.hawtdb.api.Transaction;
+import org.fusesource.hawtdb.api.TxPageFile;
+import org.fusesource.hawtdb.api.TxPageFileFactory;
+import org.fusesource.hawtdb.internal.journal.Journal;
+import org.fusesource.hawtdb.internal.journal.Location;
 
 public class KahaDBStore implements Store {
 
@@ -81,15 +81,16 @@ public class KahaDBStore implements Store {
     private static final Log LOG = LogFactory.getLog(KahaDBStore.class);
     private static final int DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
 
-    private static final Buffer BEGIN_UNIT_OF_WORK_DATA = new Buffer(new byte[] { BEGIN_UNIT_OF_WORK });
-    private static final Buffer END_UNIT_OF_WORK_DATA = new Buffer(new byte[] { END_UNIT_OF_WORK });
-    private static final Buffer CANCEL_UNIT_OF_WORK_DATA = new Buffer(new byte[] { CANCEL_UNIT_OF_WORK });
-    private static final Buffer FLUSH_DATA = new Buffer(new byte[] { FLUSH });
+    private static final org.fusesource.hawtdb.util.buffer.Buffer BEGIN_UNIT_OF_WORK_DATA = new org.fusesource.hawtdb.util.buffer.Buffer(new byte[] { BEGIN_UNIT_OF_WORK });
+    private static final org.fusesource.hawtdb.util.buffer.Buffer END_UNIT_OF_WORK_DATA = new org.fusesource.hawtdb.util.buffer.Buffer(new byte[] { END_UNIT_OF_WORK });
+    private static final org.fusesource.hawtdb.util.buffer.Buffer CANCEL_UNIT_OF_WORK_DATA = new org.fusesource.hawtdb.util.buffer.Buffer(new byte[] { CANCEL_UNIT_OF_WORK });
+    private static final org.fusesource.hawtdb.util.buffer.Buffer FLUSH_DATA = new org.fusesource.hawtdb.util.buffer.Buffer(new byte[] { FLUSH });
 
     public static final int CLOSED_STATE = 1;
     public static final int OPEN_STATE = 2;
 
-    protected PageFile pageFile;
+    protected TxPageFileFactory pageFileFactory = new TxPageFileFactory();
+    protected TxPageFile pageFile;
     protected Journal journal;
 
     protected RootEntity rootEntity = new RootEntity();
@@ -98,12 +99,9 @@ public class KahaDBStore implements Store {
     protected boolean deleteAllMessages;
     protected File directory;
     protected Thread checkpointThread;
-    protected boolean enableJournalDiskSyncs = true;
+
     long checkpointInterval = 5 * 1000;
     long cleanupInterval = 30 * 1000;
-    int journalMaxFileLength = Journal.DEFAULT_MAX_FILE_LENGTH;
-    boolean enableIndexWriteAsync = false;
-    int setIndexWriteBatchSize = PageFile.DEFAULT_WRITE_BATCH_SIZE;
 
     protected AtomicBoolean started = new AtomicBoolean();
     protected AtomicBoolean opened = new AtomicBoolean();
@@ -115,6 +113,7 @@ public class KahaDBStore implements Store {
     protected final ReentrantReadWriteLock indexLock = new ReentrantReadWriteLock();
     private final HashSet<Integer> journalFilesBeingReplicated = new HashSet<Integer>();
     private boolean recovering;
+    private int journalMaxFileLength = 1024*1024*20;
 
     private static class UoWOperation {
         public TypeCreatable bean;
@@ -156,16 +155,11 @@ public class KahaDBStore implements Store {
     private void loadPageFile() throws IOException {
         indexLock.writeLock().lock();
         try {
-            final PageFile pageFile = getPageFile();
-            pageFile.load();
-            pageFile.tx().execute(new Transaction.Closure<IOException>() {
+            final TxPageFile pageFile = getPageFile();
+            execute(new Closure<IOException>() {
                 public void execute(Transaction tx) throws IOException {
-                    if (pageFile.getPageCount() == 0) {
+                    if ( !tx.allocator().isAllocated(0) ) {
                         rootEntity.allocate(tx);
-                    } else {
-                        Page<RootEntity> page = tx.load(0, RootEntity.MARSHALLER);
-                        rootEntity = page.get();
-                        rootEntity.setPageId(0);
                     }
                     rootEntity.load(tx);
                 }
@@ -174,6 +168,24 @@ public class KahaDBStore implements Store {
 
         } finally {
             indexLock.writeLock().unlock();
+        }
+    }
+
+    interface Closure<T extends Exception> {
+        public void execute(Transaction tx) throws T;
+    }
+
+    private <T extends Exception> void execute(Closure<T> closure) throws T {
+        Transaction tx = pageFile.tx();
+        boolean committed=false;
+        try {
+            closure.execute(tx);
+            tx.commit();
+            committed=true;
+        } finally {
+            if( !committed ) {
+                tx.rollback();
+            }
         }
     }
 
@@ -210,7 +222,7 @@ public class KahaDBStore implements Store {
                 journal.delete();
                 journal.close();
                 journal = null;
-                getPageFile().delete();
+                pageFileFactory.getFile().delete();
                 rootEntity = new RootEntity();
                 LOG.info("Persistence store purged.");
                 deleteAllMessages = false;
@@ -270,7 +282,8 @@ public class KahaDBStore implements Store {
 
             indexLock.writeLock().lock();
             try {
-                pageFile.unload();
+                pageFileFactory.close();
+                pageFile = null;
                 rootEntity = new RootEntity();
                 journal.close();
             } finally {
@@ -284,11 +297,11 @@ public class KahaDBStore implements Store {
     }
 
     public void unload() throws IOException, InterruptedException {
-        if (pageFile.isLoaded()) {
+        if (pageFile !=null) {
             indexLock.writeLock().lock();
             try {
                 rootEntity.setState(CLOSED_STATE);
-                pageFile.tx().execute(new Transaction.Closure<IOException>() {
+                execute(new Closure<IOException>() {
                     public void execute(Transaction tx) throws IOException {
                         // Set the last update to the next update (otherwise
                         // we'll replay the last update
@@ -315,7 +328,6 @@ public class KahaDBStore implements Store {
      * 
      * @throws IOException
      * @throws IOException
-     * @throws InvalidLocationException
      * @throws IllegalStateException
      */
     private void recover() throws IllegalStateException, IOException {
@@ -330,7 +342,7 @@ public class KahaDBStore implements Store {
                 int uowCounter = 0;
                 while (recoveryPosition != null) {
 
-                    Buffer data = journal.read(recoveryPosition);
+                    Buffer data = convert(journal.read(recoveryPosition));
                     if (data.length == 1 && data.data[0] == BEGIN_UNIT_OF_WORK) {
                         uow = pageFile.tx();
                     } else if (data.length == 1 && data.data[0] == END_UNIT_OF_WORK) {
@@ -352,7 +364,7 @@ public class KahaDBStore implements Store {
                             updateIndex(uow, message.toType(), (MessageBuffer) message, location);
                             uowCounter++;
                         } else {
-                            pageFile.tx().execute(new Transaction.Closure<IOException>() {
+                            execute(new Closure<IOException>() {
                                 public void execute(Transaction tx) throws IOException {
                                     updateIndex(tx, message.toType(), (MessageBuffer) message, location);
                                     rootEntity.setLastUpdate(location);
@@ -369,7 +381,7 @@ public class KahaDBStore implements Store {
             }
 
             // We may have to undo some index updates.
-            pageFile.tx().execute(new Transaction.Closure<IOException>() {
+            execute(new Closure<IOException>() {
                 public void execute(Transaction tx) throws IOException {
                     recoverIndex(tx);
                 }
@@ -378,6 +390,10 @@ public class KahaDBStore implements Store {
             recovering = false;
             indexLock.writeLock().unlock();
         }
+    }
+
+    private Buffer convert(org.fusesource.hawtdb.util.buffer.Buffer buffer) {
+        return new Buffer(buffer.data, buffer.offset, buffer.length);
     }
 
     public void incrementalRecover() throws IOException {
@@ -397,7 +413,7 @@ public class KahaDBStore implements Store {
                 final TypeCreatable message = load(lastRecoveryPosition);
                 final Location location = lastRecoveryPosition;
 
-                pageFile.tx().execute(new Transaction.Closure<IOException>() {
+                execute(new Closure<IOException>() {
                     public void execute(Transaction tx) throws IOException {
                         updateIndex(tx, message.toType(), (MessageBuffer) message, location);
                     }
@@ -449,7 +465,7 @@ public class KahaDBStore implements Store {
                 if (!opened.get()) {
                     return;
                 }
-                pageFile.tx().execute(new Transaction.Closure<IOException>() {
+                execute(new Closure<IOException>() {
                     public void execute(Transaction tx) throws IOException {
                         checkpointUpdate(tx, cleanup);
                     }
@@ -473,7 +489,7 @@ public class KahaDBStore implements Store {
     public void checkpoint(org.apache.activemq.util.Callback closure) throws Exception {
         indexLock.writeLock().lock();
         try {
-            pageFile.tx().execute(new Transaction.Closure<IOException>() {
+            execute(new Closure<IOException>() {
                 public void execute(Transaction tx) throws IOException {
                     checkpointUpdate(tx, false);
                 }
@@ -565,12 +581,12 @@ public class KahaDBStore implements Store {
             long start = System.currentTimeMillis();
             final Location location;
             synchronized (journal) {
-                location = journal.write(os.toBuffer(), onFlush);
+                location = journal.write(convert(os.toBuffer()), onFlush);
             }
             long start2 = System.currentTimeMillis();
 
             if (tx == null) {
-                pageFile.tx().execute(new Transaction.Closure<IOException>() {
+                execute(new Closure<IOException>() {
                     public void execute(Transaction tx) throws IOException {
                         updateIndex(tx, data.toType(), message, location);
                     }
@@ -592,6 +608,10 @@ public class KahaDBStore implements Store {
 
     }
 
+    private org.fusesource.hawtdb.util.buffer.Buffer convert(Buffer buffer) {
+        return new org.fusesource.hawtdb.util.buffer.Buffer(buffer.data, buffer.offset, buffer.length);
+    }
+
     /**
      * Loads a previously stored PBMessage
      * 
@@ -600,7 +620,7 @@ public class KahaDBStore implements Store {
      * @throws IOException
      */
     private TypeCreatable load(Location location) throws IOException {
-        Buffer data = journal.read(location);
+        Buffer data = convert(journal.read(location));
         return load(location, data);
     }
 
@@ -636,10 +656,10 @@ public class KahaDBStore implements Store {
             queueRemoveMessage(tx, (QueueRemoveMessage) command, location);
             break;
         case SUBSCRIPTION_ADD:
-            rootEntity.addSubscription(tx, (SubscriptionAdd) command);
+            rootEntity.addSubscription((SubscriptionAdd) command);
             break;
         case SUBSCRIPTION_REMOVE:
-            rootEntity.removeSubscription(tx, ((SubscriptionRemove) command).getName());
+            rootEntity.removeSubscription(((SubscriptionRemove) command).getName());
             break;
         case TRANSACTION_BEGIN:
         case TRANSACTION_ADD_MESSAGE:
@@ -977,7 +997,7 @@ public class KahaDBStore implements Store {
             storeAtomic();
             SubscriptionRecord old;
             try {
-                old = rootEntity.getSubscription(tx, record.getName());
+                old = rootEntity.getSubscription(record.getName());
                 if (old != null && !old.equals(record)) {
                     throw new DuplicateKeyException("Subscription already exists: " + record.getName());
                 } else {
@@ -1175,30 +1195,23 @@ public class KahaDBStore implements Store {
     // IoC Properties.
     // /////////////////////////////////////////////////////////////////
 
-    protected PageFile createPageFile() {
-        PageFile index = new PageFile(directory, "db");
-        index.setEnableWriteThread(isEnableIndexWriteAsync());
-        index.setWriteBatchSize(getIndexWriteBatchSize());
-        return index;
-    }
-
-    protected Journal createJournal() {
-        Journal manager = new Journal();
-        manager.setDirectory(directory);
-        manager.setMaxFileLength(getJournalMaxFileLength());
-        return manager;
-    }
-
-    private PageFile getPageFile() {
+    private TxPageFile getPageFile() {
         if (pageFile == null) {
-            pageFile = createPageFile();
+            pageFileFactory.setFile(new File(directory, "db"));
+            pageFileFactory.setDrainOnClose(false);
+            pageFileFactory.setSync(true);
+            pageFileFactory.setUseWorkerThread(true);
+            pageFileFactory.open();
+            pageFile = pageFileFactory.getTxPageFile();
         }
         return pageFile;
     }
 
     private Journal getJournal() {
         if (journal == null) {
-            journal = createJournal();
+            journal = new Journal();
+            journal.setDirectory(directory);
+            journal.setMaxFileLength(getJournalMaxFileLength());
         }
         return journal;
     }
@@ -1223,30 +1236,6 @@ public class KahaDBStore implements Store {
         this.deleteAllMessages = deleteAllMessages;
     }
 
-    public void setIndexWriteBatchSize(int setIndexWriteBatchSize) {
-        this.setIndexWriteBatchSize = setIndexWriteBatchSize;
-    }
-
-    public int getIndexWriteBatchSize() {
-        return setIndexWriteBatchSize;
-    }
-
-    public void setEnableIndexWriteAsync(boolean enableIndexWriteAsync) {
-        this.enableIndexWriteAsync = enableIndexWriteAsync;
-    }
-
-    boolean isEnableIndexWriteAsync() {
-        return enableIndexWriteAsync;
-    }
-
-    public boolean isEnableJournalDiskSyncs() {
-        return enableJournalDiskSyncs;
-    }
-
-    public void setEnableJournalDiskSyncs(boolean syncWrites) {
-        this.enableJournalDiskSyncs = syncWrites;
-    }
-
     public long getCheckpointInterval() {
         return checkpointInterval;
     }
@@ -1263,14 +1252,6 @@ public class KahaDBStore implements Store {
         this.cleanupInterval = cleanupInterval;
     }
 
-    public void setJournalMaxFileLength(int journalMaxFileLength) {
-        this.journalMaxFileLength = journalMaxFileLength;
-    }
-
-    public int getJournalMaxFileLength() {
-        return journalMaxFileLength;
-    }
-
     public boolean isFailIfDatabaseIsLocked() {
         return failIfDatabaseIsLocked;
     }
@@ -1279,4 +1260,31 @@ public class KahaDBStore implements Store {
         this.failIfDatabaseIsLocked = failIfDatabaseIsLocked;
     }
 
+    public int getJournalMaxFileLength() {
+        return journalMaxFileLength;
+    }
+    public void setJournalMaxFileLength(int journalMaxFileLength) {
+        this.journalMaxFileLength = journalMaxFileLength;
+    }
+
+    public int getIndexMaxPages() {
+        return pageFileFactory.getMaxPages();
+    }
+    public void setIndexMaxPages(int maxPages) {
+        pageFileFactory.setMaxPages(maxPages);
+    }
+
+    public short getIndexPageSize() {
+        return pageFileFactory.getPageSize();
+    }
+    public void setIndexPageSize(short pageSize) {
+        pageFileFactory.setPageSize(pageSize);
+    }
+
+    public int getIndexMappingSegementSize() {
+        return pageFileFactory.getMappingSegementSize();
+    }
+    public void setIndexMappingSegementSize(int mappingSegementSize) {
+        pageFileFactory.setMappingSegementSize(mappingSegementSize);
+    }
 }

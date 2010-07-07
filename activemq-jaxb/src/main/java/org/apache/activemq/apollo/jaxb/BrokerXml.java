@@ -43,15 +43,10 @@ public class BrokerXml {
     private List<String> transportServers = new ArrayList<String>();
     @XmlElement(name="connect-uri")
     private List<String> connectUris = new ArrayList<String>();
-    @XmlElement(required = false)
-    private DispatcherXml dispatcher;
 	
 	
 	public Broker createMessageBroker() throws Exception {
 		Broker rc = new Broker();
-		if( dispatcher!=null ) {
-			rc.setDispatcher(dispatcher.createDispatcher(this));
-		}
 		for (VirtualHostXml element : virtualHosts) {
 			rc.addVirtualHost(element.createVirtualHost(this));
 		}
@@ -97,14 +92,5 @@ public class BrokerXml {
 	public void setConnectUris(List<String> connectUris) {
 		this.connectUris = connectUris;
 	}
-
-
-	public DispatcherXml getDispatcher() {
-		return dispatcher;
-	}
-	public void setDispatcher(DispatcherXml dispatcher) {
-		this.dispatcher = dispatcher;
-	}
-
 
 }

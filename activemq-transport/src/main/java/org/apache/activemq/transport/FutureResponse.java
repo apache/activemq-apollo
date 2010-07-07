@@ -27,10 +27,10 @@ import org.apache.commons.logging.LogFactory;
 public class FutureResponse<T> {
     private static final Log LOG = LogFactory.getLog(FutureResponse.class);
 
-    private final ResponseCallback<T> responseCallback;
+    private final RequestCallback<T> responseCallback;
     private final ArrayBlockingQueue<T> responseSlot = new ArrayBlockingQueue<T>(1);
 
-    public FutureResponse(ResponseCallback<T> responseCallback) {
+    public FutureResponse(RequestCallback<T> responseCallback) {
         this.responseCallback = responseCallback;
     }
 
@@ -57,7 +57,7 @@ public class FutureResponse<T> {
     public void set(T result) {
         if (responseSlot.offer(result)) {
             if (responseCallback != null) {
-                responseCallback.onCompletion(this);
+                responseCallback.onCompletion(result);
             }
         }
     }

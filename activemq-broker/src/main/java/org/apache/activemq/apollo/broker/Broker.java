@@ -25,9 +25,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.apollo.Connection;
-import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatcherConfig;
-import org.apache.activemq.dispatch.DispatcherAware;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportAcceptListener;
 import org.apache.activemq.transport.TransportServer;
@@ -35,6 +32,8 @@ import org.apache.activemq.util.IOHelper;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.fusesource.hawtdispatch.Dispatch;
+import org.fusesource.hawtdispatch.DispatchQueue;
 
 public class Broker implements Service {
 
@@ -42,16 +41,14 @@ public class Broker implements Service {
 
 	static final private Log LOG = LogFactory.getLog(Broker.class);
 	
-    public static final int MAX_USER_PRIORITY = 10;
-    public static final int MAX_PRIORITY = MAX_USER_PRIORITY + 1;
-
     private final ArrayList<Connection> clientConnections = new ArrayList<Connection>();
     private final ArrayList<TransportServer> transportServers = new ArrayList<TransportServer>();
     private final ArrayList<String> connectUris = new ArrayList<String>();
 
     private final LinkedHashMap<AsciiBuffer, VirtualHost> virtualHosts = new LinkedHashMap<AsciiBuffer, VirtualHost>();
     private VirtualHost defaultVirtualHost;
-    private Dispatcher dispatcher;
+
+    private DispatchQueue dispatchQueue = Dispatch.createQueue("broker");
     private File dataDirectory;
 
     private final class BrokerAcceptListener implements TransportAcceptListener {
@@ -59,8 +56,6 @@ public class Broker implements Service {
 		    BrokerConnection connection = new BrokerConnection();
 		    connection.setBroker(Broker.this);
 		    connection.setTransport(transport);
-		    connection.setPriorityLevels(MAX_PRIORITY);
-		    connection.setDispatcher(dispatcher);
 		    clientConnections.add(connection);
 		    try {
 		        connection.start();
@@ -125,21 +120,12 @@ public class Broker implements Service {
 		// Create the default virtual host if not explicitly defined.
 		getDefaultVirtualHost();
 
-		// Don't change the state to STARTING yet as we may need to 
-		// apply some default configuration to this broker instance before it's started.
-		if( dispatcher == null ) {
-			int threads = Runtime.getRuntime().availableProcessors();
-			dispatcher = DispatcherConfig.create(getName(), threads);
-		}
-		
 
 	    // Ok now we are ready to start the broker up....
 		if ( !state.compareAndSet(State.CONFIGURATION, State.STARTING) ) {
     		throw new IllegalStateException("Can only start a broker that is in the "+State.CONFIGURATION +" state.  Broker was "+state.get());
     	}
     	try {
-		    dispatcher.resume();
-
 	    	synchronized(virtualHosts) {
 			    for (VirtualHost virtualHost : virtualHosts.values()) {
 			    	virtualHost.setBroker(this);
@@ -184,8 +170,6 @@ public class Broker implements Service {
         for (VirtualHost virtualHost : virtualHosts.values()) {
         	stop(virtualHost);
         }
-        
-        dispatcher.release();
     	state.set(State.STOPPED);
     }
         
@@ -374,17 +358,6 @@ public class Broker implements Service {
     }
 
     // /////////////////////////////////////////////////////////////////
-    // Property Accessors
-    // /////////////////////////////////////////////////////////////////
-    public Dispatcher getDispatcher() {
-        return dispatcher;
-    }
-    public void setDispatcher(Dispatcher dispatcher) {
-    	assertInConfigurationState();
-        this.dispatcher = dispatcher;
-    }
-
-    // /////////////////////////////////////////////////////////////////
     // Helper Methods
     // /////////////////////////////////////////////////////////////////
 
@@ -416,10 +389,8 @@ public class Broker implements Service {
 	}
     
 	private void startTransportServer(TransportServer server) throws Exception {
+        server.setDispatchQueue(dispatchQueue);
 		server.setAcceptListener(new BrokerAcceptListener());
-		if (server instanceof DispatcherAware ) {
-			((DispatcherAware) server).setDispatcher(dispatcher);
-		}
 		server.start();
 	}
 
@@ -449,6 +420,9 @@ public class Broker implements Service {
 		}
 	}
 
+    public DispatchQueue getDispatchQueue() {
+        return dispatchQueue;
+    }
 
 
 }

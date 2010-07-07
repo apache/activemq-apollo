@@ -17,9 +17,8 @@
 package org.apache.activemq.queue;
 
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.util.buffer.AsciiBuffer;
-import org.apache.activemq.util.buffer.Buffer;
 
 public interface QueueStore<K, V> {
 

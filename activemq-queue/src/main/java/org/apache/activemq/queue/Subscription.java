@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.queue;
 
-import org.apache.activemq.flow.IFlowSink;
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.flow.ISourceController;
 
 public interface Subscription<E> {

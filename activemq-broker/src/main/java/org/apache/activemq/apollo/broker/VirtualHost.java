@@ -31,6 +31,8 @@ import org.apache.activemq.dispatch.internal.RunnableCountDownLatch;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.util.IOHelper;
 import org.apache.activemq.util.buffer.AsciiBuffer;
+import org.fusesource.hawtdispatch.Dispatch;
+import org.fusesource.hawtdispatch.DispatchQueue;
 
 /**
  * @author chirino
@@ -47,6 +49,8 @@ public class VirtualHost implements Service {
     private boolean started;
     private BrokerDatabase database;
     private TransactionManager txnManager;
+
+    private DispatchQueue dispatchQueue = Dispatch.createQueue("virtual-host");
 
     public VirtualHost() {
         this.router.setVirtualHost(this);
@@ -117,14 +121,14 @@ public class VirtualHost implements Service {
             database = new BrokerDatabase(store);
         }
 
-        database.setDispatcher(broker.getDispatcher());
+        database.setDispatchQueue(broker.getDispatchQueue());
         database.start();
 
         router.setDatabase(database);
 
         //Recover queues:
         queueStore.setDatabase(database);
-        queueStore.setDispatcher(broker.getDispatcher());
+        queueStore.setDispatchQueue(dispatchQueue);
         queueStore.loadQueues();
 
         // Create Queue instances
@@ -277,14 +281,14 @@ public class VirtualHost implements Service {
         /**
          * A destination has bean created
          * 
-         * @param destination
+         * @param queue
          */
         public void onCreate(Queue queue);
 
         /**
          * A destination has bean destroyed
          * 
-         * @param destination
+         * @param queue
          */
         public void onDestroy(Queue queue);
 

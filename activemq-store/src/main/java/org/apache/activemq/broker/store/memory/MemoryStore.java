@@ -27,11 +27,8 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.Store.DuplicateKeyException;
-import org.apache.activemq.broker.store.Store.Session;
-import org.apache.activemq.broker.store.Store.SubscriptionRecord;
-import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.activemq.util.Comparators;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.activemq.util.buffer.Buffer;

@@ -26,9 +26,9 @@ import org.apache.activemq.apollo.broker.BrokerQueueStore;
 import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.StoreFactory;
-import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.queue.IQueue;
+import org.fusesource.hawtdispatch.Dispatch;
+import org.fusesource.hawtdispatch.DispatchQueue;
 
 /**
  * @author cmacnaug
@@ -37,7 +37,7 @@ import org.apache.activemq.queue.IQueue;
 public class SharedQueueTest extends TestCase {
 
 
-    Dispatcher dispatcher;
+    DispatchQueue dispatchQueue;
     BrokerDatabase database;
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
@@ -46,8 +46,8 @@ public class SharedQueueTest extends TestCase {
 
     protected ArrayList<IQueue<Long, MessageDelivery>> queues = new ArrayList<IQueue<Long, MessageDelivery>>();
 
-    protected Dispatcher createDispatcher() {
-        return DispatcherConfig.create("test", Runtime.getRuntime().availableProcessors());
+    protected DispatchQueue createDispatcher() {
+        return Dispatch.createQueue();
     }
 
     protected int consumerStartDelay = 0;
@@ -63,20 +63,19 @@ public class SharedQueueTest extends TestCase {
     }
     
     protected void startServices() throws Exception {
-        dispatcher = createDispatcher();
-        dispatcher.resume();
+        dispatchQueue = createDispatcher();
+        dispatchQueue.resume();
         database = new BrokerDatabase(createStore());
-        database.setDispatcher(dispatcher);
+        database.setDispatchQueue(dispatchQueue);
         database.start();
         queueStore = new BrokerQueueStore();
         queueStore.setDatabase(database);
-        queueStore.setDispatcher(dispatcher);
         queueStore.loadQueues();
     }
 
     protected void stopServices() throws Exception {
         database.stop();
-        dispatcher.release();
+        dispatchQueue.release();
         queues.clear();
     }
 

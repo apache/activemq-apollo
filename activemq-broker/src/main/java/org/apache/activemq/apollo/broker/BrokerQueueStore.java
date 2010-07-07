@@ -22,9 +22,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
-import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.PrioritySizeLimiter;
 import org.apache.activemq.flow.SizeLimiter;
@@ -33,7 +33,6 @@ import org.apache.activemq.queue.IPartitionedQueue;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.PartitionedQueue;
 import org.apache.activemq.queue.PersistencePolicy;
-import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.RestoreListener;
 import org.apache.activemq.queue.SaveableQueueElement;
@@ -44,6 +43,7 @@ import org.apache.activemq.util.Mapper;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.fusesource.hawtdispatch.DispatchQueue;
 
 public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
 
@@ -52,7 +52,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
     private static final boolean USE_PRIORITY_QUEUES = true;
 
     private BrokerDatabase database;
-    private Dispatcher dispatcher;
+    private DispatchQueue dispatchQueue;
 
     private static HashMap<String, ProtocolHandler> protocolHandlers = new HashMap<String, ProtocolHandler>();
     private static final BrokerDatabase.MessageRecordMarshaller<MessageDelivery> MESSAGE_MARSHALLER = new BrokerDatabase.MessageRecordMarshaller<MessageDelivery>() {
@@ -226,8 +226,8 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         this.database = database;
     }
 
-    public void setDispatcher(Dispatcher dispatcher) {
-        this.dispatcher = dispatcher;
+    public void setDispatchQueue(DispatchQueue dispatchQueue) {
+        this.dispatchQueue = dispatchQueue;
     }
 
     public void loadQueues() throws Exception {
@@ -380,7 +380,6 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
             }
         };
         queue = new ExclusivePersistentQueue<Long, MessageDelivery>(name, limiter);
-        queue.setDispatcher(dispatcher);
         queue.setStore(this);
         queue.setPersistencePolicy(DURABLE_QUEUE_PERSISTENCE_POLICY);
         queue.setExpirationMapper(EXPIRATION_MAPPER);
@@ -409,7 +408,7 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
             break;
         }
         case QueueDescriptor.SHARED_PRIORITY: {
-            PrioritySizeLimiter<MessageDelivery> limiter = new PrioritySizeLimiter<MessageDelivery>(DEFAULT_SHARED_QUEUE_SIZE, DEFAULT_SHARED_QUEUE_RESUME_THRESHOLD, Broker.MAX_PRIORITY);
+            PrioritySizeLimiter<MessageDelivery> limiter = new PrioritySizeLimiter<MessageDelivery>(DEFAULT_SHARED_QUEUE_SIZE, DEFAULT_SHARED_QUEUE_RESUME_THRESHOLD, 10);
             limiter.setPriorityMapper(PRIORITY_MAPPER);
             limiter.setSizeMapper(SIZE_MAPPER);
             SharedPriorityQueue<Long, MessageDelivery> queue = new SharedPriorityQueue<Long, MessageDelivery>(name, limiter);
@@ -444,7 +443,6 @@ public class BrokerQueueStore implements QueueStore<Long, MessageDelivery> {
         }
         }
         ret.getDescriptor().setApplicationType(SUBPARTITION_TYPE);
-        ret.setDispatcher(dispatcher);
         ret.setStore(this);
         ret.setPersistencePolicy(SHARED_QUEUE_PERSISTENCE_POLICY);
         ret.setExpirationMapper(EXPIRATION_MAPPER);

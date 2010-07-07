@@ -19,6 +19,8 @@ package org.apache.activemq.wireformat;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.SocketChannel;
 import java.util.Map;
 
 import org.apache.activemq.transport.Transport;
@@ -52,39 +54,18 @@ public interface WireFormat {
      * Packet based un-marshaling 
      */
     Object unmarshal(DataInput in) throws IOException;
-    
-    /**
-     * @param the version of the wire format
-     */
-    void setVersion(int version);
-    
-    /**
-     * @return the version of the wire format
-     */
-    int getVersion();
-    
+
+    Object unmarshal(ReadableByteChannel channel);
+
     /**
      * @return The name of the wireformat
      */
     String getName();
     
     /**
-     * @return true if message is being received
-     */
-    boolean inReceive();
-    
-    /**
-     * Creates any transport filters appropriate for the given wire format:
-     * 
-     * @param transport The transport to filter.
-     * @param options The options with which the transport was created. 
-     * @return Either the given transport or a Transport filter wrapping the onw provided. 
-     */
-    Transport createTransportFilters(Transport transport, Map options);
-
-    /**
      * Returns a WireFormatFactory which can create WireFormat of this type.
      * @return
      */
     WireFormatFactory getWireFormatFactory();
+
 }

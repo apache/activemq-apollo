@@ -38,10 +38,6 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.command.MessageId;
 import org.apache.activemq.command.ProducerId;
-import org.apache.activemq.dispatch.DispatchPriority;
-import org.apache.activemq.dispatch.DispatchQueue;
-import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatcherConfig;
 import org.apache.activemq.flow.AbstractLimitedFlowResource;
 import org.apache.activemq.flow.Flow;
 import org.apache.activemq.flow.FlowController;
@@ -60,6 +56,8 @@ import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.QueueDispatchTarget;
 import org.apache.activemq.queue.SingleFlowRelay;
 import org.apache.activemq.queue.Subscription;
+import org.fusesource.hawtdispatch.Dispatch;
+import org.fusesource.hawtdispatch.DispatchQueue;
 
 import static org.apache.activemq.dispatch.DispatchOption.*;
 
@@ -67,7 +65,6 @@ public class SharedQueuePerfTest extends TestCase {
 
     private static int PERFORMANCE_SAMPLES = 5;
 
-    Dispatcher dispatcher;
     BrokerDatabase database;
     BrokerQueueStore queueStore;
     private static final boolean USE_KAHA_DB = true;
@@ -84,17 +81,11 @@ public class SharedQueuePerfTest extends TestCase {
     protected ArrayList<Producer> producers = new ArrayList<Producer>();
     protected ArrayList<IQueue<Long, MessageDelivery>> queues = new ArrayList<IQueue<Long, MessageDelivery>>();
 
-    protected Dispatcher createDispatcher() {
-        return DispatcherConfig.create("pref-test", THREAD_POOL_SIZE);
-    }
-
     protected int consumerStartDelay = 0;
 
     protected void startServices() throws Exception {
-        dispatcher = createDispatcher();
-        dispatcher.resume();
         database = new BrokerDatabase(createStore());
-        database.setDispatcher(dispatcher);
+        database.setDispatchQueue(Dispatch.createQueue());
         if( TEST_MAX_STORE_LATENCY ) {
         	database.setFlushDelay(0);
         	database.setStoreBypass(false);
@@ -102,13 +93,11 @@ public class SharedQueuePerfTest extends TestCase {
         database.start();
         queueStore = new BrokerQueueStore();
         queueStore.setDatabase(database);
-        queueStore.setDispatcher(dispatcher);
         queueStore.loadQueues();
     }
 
     protected void stopServices() throws Exception {
         database.stop();
-        dispatcher.release();
         consumers.clear();
         producers.clear();
         queues.clear();
@@ -218,7 +207,7 @@ public class SharedQueuePerfTest extends TestCase {
             };
 
             if (consumerStartDelay > 0) {
-                dispatcher.getGlobalQueue().dispatchAfter(startConsumers, consumerStartDelay, TimeUnit.SECONDS);
+                Dispatch.getGlobalQueue().dispatchAfter(consumerStartDelay, TimeUnit.SECONDS, startConsumers);
             } else {
                 startConsumers.run();
             }
@@ -310,7 +299,7 @@ public class SharedQueuePerfTest extends TestCase {
             sendRate.name("Producer " + name + " Rate");
             totalProducerRate.add(sendRate);
             
-            dispatchQueue = dispatcher.createSerialQueue(name, STICK_TO_CALLER_THREAD);
+            dispatchQueue = Dispatch.createQueue(name);
             dispatchTask = new Runnable(){
                 public void run() {
                     dispatch();
@@ -334,7 +323,7 @@ public class SharedQueuePerfTest extends TestCase {
 
             Flow flow = new Flow(name, true);
             outboundQueue = new SingleFlowRelay<OpenWireMessageDelivery>(flow, name, limiter);
-            outboundQueue.setFlowExecutor(dispatcher.getGlobalQueue(DispatchPriority.HIGH));
+            outboundQueue.setFlowExecutor(Dispatch.getGlobalQueue());
             outboundQueue.setDrain(new QueueDispatchTarget<OpenWireMessageDelivery>() {
 
                 public void drain(OpenWireMessageDelivery elem, ISourceController<OpenWireMessageDelivery> controller) {
@@ -451,7 +440,7 @@ public class SharedQueuePerfTest extends TestCase {
 
             controller = new FlowController<MessageDelivery>(null, flow, limiter, this);
             controller.useOverFlowQueue(false);
-            controller.setExecutor(dispatcher.getGlobalQueue(DispatchPriority.HIGH));
+            controller.setExecutor(Dispatch.getGlobalQueue());
 
             rate.name("Consumer " + name + " Rate");
             totalConsumerRate.add(rate);

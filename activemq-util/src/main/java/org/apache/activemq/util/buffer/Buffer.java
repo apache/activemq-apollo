@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.util.buffer;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -367,6 +368,9 @@ public class Buffer implements Comparable<Buffer> {
 
         return new Buffer(data, 0, size);
     }
-    
 
+
+    public ByteBuffer toByteBuffer() {
+        return ByteBuffer.wrap(data, offset, length);
+    }
 }

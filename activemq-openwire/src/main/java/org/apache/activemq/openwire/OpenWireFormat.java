@@ -16,27 +16,24 @@
  */
 package org.apache.activemq.openwire;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.activemq.command.CommandTypes;
 import org.apache.activemq.command.DataStructure;
 import org.apache.activemq.command.WireFormatInfo;
-import org.apache.activemq.transport.InactivityMonitor;
-import org.apache.activemq.transport.ResponseCorrelator;
-import org.apache.activemq.transport.Transport;
-import org.apache.activemq.transport.WireFormatNegotiator;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.util.buffer.BufferEditor;
 import org.apache.activemq.util.buffer.DataByteArrayInputStream;
 import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.activemq.wireformat.WireFormatFactory;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.nio.channels.ReadableByteChannel;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 
@@ -282,6 +279,10 @@ public final class OpenWireFormat implements WireFormat {
             // dataIn = bytesIn;
         }
         return doUnmarshal(dataIn);
+    }
+
+    public Object unmarshal(ReadableByteChannel channel) {
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -586,9 +587,6 @@ public final class OpenWireFormat implements WireFormat {
         return preferedWireFormatInfo;
     }
 
-    public boolean inReceive() {
-        return receivingMessage.get();
-    }
 
     public void renegotiateWireFormat(WireFormatInfo info) throws IOException {
 
@@ -645,16 +643,6 @@ public final class OpenWireFormat implements WireFormat {
         return version2;
     }
 
-    public Transport createTransportFilters(Transport transport, Map options) {
-
-        if (transport.isUseInactivityMonitor()) {
-            transport = new InactivityMonitor(transport, this);
-        }
-
-        transport = new WireFormatNegotiator(transport, this, 1);
-        transport = new ResponseCorrelator(transport);
-        return transport;
-    }
 
 	public WireFormatFactory getWireFormatFactory() {
 		return new OpenWireFormatFactory();

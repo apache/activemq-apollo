@@ -117,7 +117,7 @@ public class BrokerTestScenario implements Service, CombinationAware {
         return broker;
     }
 
-	public TransportServer createTransnportServer() throws IOException, URISyntaxException {
+	public TransportServer createTransnportServer() throws Exception {
 		return TransportFactory.bind(new URI(getBindURI()));
 	}
 

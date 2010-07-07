@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.activemq.apollo.broker.BrokerDatabase.OperationContext;
 import org.apache.activemq.apollo.broker.Transaction.TxOp;
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
 import org.apache.activemq.flow.ISourceController;
@@ -31,7 +32,6 @@ import org.apache.activemq.flow.SizeLimiter;
 import org.apache.activemq.queue.ExclusivePersistentQueue;
 import org.apache.activemq.queue.IQueue;
 import org.apache.activemq.queue.PersistencePolicy;
-import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.activemq.queue.QueueStore;
 import org.apache.activemq.queue.RestoreListener;
 import org.apache.activemq.queue.SaveableQueueElement;
@@ -314,7 +314,6 @@ public class TransactionManager {
             }
         };
         queue = new ExclusivePersistentQueue<Long, TxOp>(name, limiter);
-        queue.setDispatcher(host.getBroker().getDispatcher());
         queue.setStore(txStore);
         queue.setPersistencePolicy(DEFAULT_TX_QUEUE_PERSISTENCE_POLICY);
         queue.setExpirationMapper(EXPIRATION_MAPPER);

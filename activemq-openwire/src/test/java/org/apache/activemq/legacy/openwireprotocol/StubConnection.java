@@ -29,6 +29,7 @@ import org.apache.activemq.command.Response;
 import org.apache.activemq.command.ShutdownInfo;
 
 import org.apache.activemq.transport.DefaultTransportListener;
+import org.apache.activemq.transport.ResponseCorrelator;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.util.JMSExceptionSupport;
@@ -37,12 +38,12 @@ import org.apache.activemq.util.ServiceSupport;
 public class StubConnection implements Service {
 
     private final BlockingQueue<Object> dispatchQueue = new LinkedBlockingQueue<Object>();
-    private Transport transport;
+    private ResponseCorrelator transport;
     private TransportListener listener;
     public AtomicReference<Throwable> error = new AtomicReference<Throwable>();
 
     public StubConnection(Transport transport) throws Exception {
-        this.transport = transport;
+        this.transport = new ResponseCorrelator(transport);
         transport.setTransportListener(new DefaultTransportListener() {
             public void onCommand(Object command) {
                 try {
@@ -79,7 +80,7 @@ public class StubConnection implements Service {
             message.setProducerId(message.getMessageId().getProducerId());
         }
         command.setResponseRequired(false);
-        transport.oneway(command);
+        transport.oneway(command, null);
     }
 
     public Response request(Command command) throws Exception {
@@ -105,10 +106,7 @@ public class StubConnection implements Service {
 
     public void stop() throws Exception {
         if (transport != null) {
-            try {
-                transport.oneway(new ShutdownInfo());
-            } catch (IOException e) {
-            }
+            transport.oneway(new ShutdownInfo(), null);
             ServiceSupport.dispose(transport);
         }
     }

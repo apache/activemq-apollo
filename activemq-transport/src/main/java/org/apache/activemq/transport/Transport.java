@@ -21,104 +21,65 @@ import java.net.URI;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.wireformat.WireFormat;
+import org.fusesource.hawtdispatch.DispatchQueue;
 
 /**
- * Represents the client side of a transport allowing messages to be sent
- * synchronously, asynchronously and consumed.
+ * Represents an abstract connection.  It can be a client side or server side connection.
  * 
- * @version $Revision: 1.5 $
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public interface Transport extends Service {
 
-    /**
-     * A one way asynchronous send
-     * 
-     * @param command
-     * @throws IOException
-     */
-    void oneway(Object command) throws IOException;
+    @Deprecated
+    void oneway(Object command);
 
     /**
-     * An asynchronous request response where the Receipt will be returned in
-     * the future. If responseCallback is not null, then it will be called when
-     * the response has been completed.
+     * A one way asynchronous send.  Once the command is transmitted the callback
+     * is invoked.
      * 
      * @param command
-     * @param responseCallback TODO
-     * @return the FutureResponse
+     * @param callback
      * @throws IOException
      */
-    <T> FutureResponse<T> asyncRequest(Object command, ResponseCallback<T> responseCallback) throws IOException;
-
-    /**
-     * A synchronous request response
-     * 
-     * @param command
-     * @return the response
-     * @throws IOException
-     */
-    Object request(Object command) throws IOException;
-
-    /**
-     * A synchronous request response
-     * 
-     * @param command
-     * @param timeout
-     * @return the repsonse or null if timeout
-     * @throws IOException
-     */
-    Object request(Object command, int timeout) throws IOException;
-
-    // /**
-    // * A one way asynchronous send
-    // * @param command
-    // * @throws IOException
-    // */
-    // void oneway(Command command) throws IOException;
-    //
-    // /**
-    // * An asynchronous request response where the Receipt will be returned
-    // * in the future. If responseCallback is not null, then it will be called
-    // * when the response has been completed.
-    // *
-    // * @param command
-    // * @param responseCallback TODO
-    // * @return the FutureResponse
-    // * @throws IOException
-    // */
-    // FutureResponse asyncRequest(Command command, ResponseCallback
-    // responseCallback) throws IOException;
-    //    
-    // /**
-    // * A synchronous request response
-    // * @param command
-    // * @return the response
-    // * @throws IOException
-    // */
-    // Response request(Command command) throws IOException;
-    //
-    // /**
-    // * A synchronous request response
-    // * @param command
-    // * @param timeout
-    // * @return the repsonse or null if timeout
-    // * @throws IOException
-    // */
-    // Response request(Command command, int timeout) throws IOException;
+    void oneway(Object command, CompletionCallback callback);
 
     /**
      * Returns the current transport listener
-     * 
+     *
      * @return
      */
     TransportListener getTransportListener();
 
     /**
      * Registers an inbound command listener
-     * 
+     *
      * @param commandListener
      */
     void setTransportListener(TransportListener commandListener);
+
+    /**
+     * Returns the dispatch queue used by the transport
+     *
+     * @return
+     */
+    DispatchQueue getDispatchQueue();
+
+    /**
+     * Sets the dispatch queue used by the transport
+     *
+     * @param queue
+     */
+    void setDispatchQueue(DispatchQueue queue);
+
+    /**
+     * suspend delivery of commands.
+     */
+    void suspend();
+
+    /**
+     * resume delivery of commands.
+     */
+    void resume();
 
     /**
      * @param target
@@ -137,16 +98,7 @@ public interface Transport extends Service {
      * @return true if fault tolerant
      */
     boolean isFaultTolerant();
-    
-    /**
-     * Indicates that the transport needs inactivity monitoring. This 
-     * is true for transports like tcp that may not otherwise detect
-     * a transport failure in a timely fashion. 
-     * 
-     * @return true if the transport requires inactivity monitoring.
-     */
-    boolean isUseInactivityMonitor();
-    
+
     /**
      * @return true if the transport is disposed
      */
@@ -161,12 +113,14 @@ public interface Transport extends Service {
      * @return The wireformat for the connection.
      */
     WireFormat getWireformat();
-    
+
+    void setWireformat(WireFormat wireformat);
+
     /**
      * reconnect to another location
      * @param uri
      * @throws IOException on failure of if not supported
      */
-    void reconnect(URI uri) throws IOException;
+    void reconnect(URI uri, CompletionCallback callback);
 
 }

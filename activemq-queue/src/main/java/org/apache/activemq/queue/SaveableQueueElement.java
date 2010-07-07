@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.queue;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
+
 public interface SaveableQueueElement<V> {
 
     /**

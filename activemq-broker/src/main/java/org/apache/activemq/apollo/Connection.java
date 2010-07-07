@@ -19,33 +19,25 @@ package org.apache.activemq.apollo;
 import java.beans.ExceptionListener;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.Service;
 import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.transport.DispatchableTransport;
+import org.apache.activemq.transport.CompletionCallback;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
+import org.fusesource.hawtdispatch.Dispatch;
+import org.fusesource.hawtdispatch.DispatchQueue;
 
 abstract public class Connection implements TransportListener, Service {
 
     protected Transport transport;
     protected String name;
 
-    private int priorityLevels;
-    protected int outputWindowSize = 1024 * 1024;
-    protected int outputResumeThreshold = 900 * 1024;
-    protected int inputWindowSize = 1024 * 1024;
-    protected int inputResumeThreshold = 512 * 1024;
-    protected boolean useAsyncWriteThread = true;
-
-    private Dispatcher dispatcher;
-    private final AtomicBoolean stopping = new AtomicBoolean();
-    private ExecutorService blockingWriter;
-    private ExceptionListener exceptionListener;
+    protected DispatchQueue dispatchQueue = Dispatch.createQueue();
+    protected boolean stopping;
+    protected ExceptionListener exceptionListener;
 
     public void setTransport(Transport transport) {
         this.transport = transport;
@@ -53,44 +45,20 @@ abstract public class Connection implements TransportListener, Service {
 
     public void start() throws Exception {
         transport.setTransportListener(this);
-        
-        if (transport instanceof DispatchableTransport) {
-            DispatchableTransport dt = ((DispatchableTransport) transport);
-            if (name != null) {
-                dt.setName(name);
-            }
-            dt.setDispatcher(getDispatcher());
-        } else {
-            if (useAsyncWriteThread) {
-                blockingWriter = Executors.newSingleThreadExecutor(new ThreadFactory() {
-                    public Thread newThread(Runnable r) {
-                        return new Thread(r, "Writer-" + name);
-                    }
-                });
-            }
-        }
+        transport.setDispatchQueue(dispatchQueue);
         transport.start();
     }
 
     public void stop() throws Exception {
-        stopping.set(true);
+        stopping = true;
         if (transport != null) {
             transport.stop();
         }
-        if (blockingWriter != null) {
-            blockingWriter.shutdown();
-        }
+        dispatchQueue.release();
     }
 
     public void setName(String name) {
         this.name = name;
-        if (blockingWriter != null) {
-            blockingWriter.execute(new Runnable() {
-                public void run() {
-                    Thread.currentThread().setName("Writer-" + Connection.this.name);
-                }
-            });
-        }
     }
 
     public String getName() {
@@ -104,36 +72,8 @@ abstract public class Connection implements TransportListener, Service {
         write(o, null);
     }
 
-    public final void write(final Object o, final Runnable onCompleted) {
-        if (blockingWriter == null) {
-            try {
-                transport.oneway(o);
-                if (onCompleted != null) {
-                    onCompleted.run();
-                }
-            } catch (IOException e) {
-                onException(e);
-            }
-        } else {
-            try {
-                blockingWriter.execute(new Runnable() {
-                    public void run() {
-                        if (!stopping.get()) {
-                            try {
-                                transport.oneway(o);
-                                if (onCompleted != null) {
-                                    onCompleted.run();
-                                }
-                            } catch (IOException e) {
-                                onException(e);
-                            }
-                        }
-                    }
-                });
-            } catch (RejectedExecutionException re) {
-                // Must be shutting down.
-            }
-        }
+    public final void write(final Object o, final CompletionCallback callback) {
+        transport.oneway(o, callback);
     }
 
     final public void onException(IOException error) {
@@ -149,49 +89,21 @@ abstract public class Connection implements TransportListener, Service {
     }
 
     public void setStopping() {
-        stopping.set(true);
+        stopping = true;
     }
     
     public boolean isStopping() {
-        return stopping.get();
+        return stopping;
     }
 
-    public void transportInterupted() {
+    public void onDisconnected() {
     }
 
-    public void transportResumed() {
+    public void onConnected() {
     }
 
-    public int getPriorityLevels() {
-        return priorityLevels;
-    }
-
-    public void setPriorityLevels(int priorityLevels) {
-        this.priorityLevels = priorityLevels;
-    }
-
-    public Dispatcher getDispatcher() {
-        return dispatcher;
-    }
-
-    public void setDispatcher(Dispatcher dispatcher) {
-        this.dispatcher = dispatcher;
-    }
-
-    public int getOutputWindowSize() {
-        return outputWindowSize;
-    }
-
-    public int getOutputResumeThreshold() {
-        return outputResumeThreshold;
-    }
-
-    public int getInputWindowSize() {
-        return inputWindowSize;
-    }
-
-    public int getInputResumeThreshold() {
-        return inputResumeThreshold;
+    public DispatchQueue getDispatchQueue() {
+        return dispatchQueue;
     }
 
     public Transport getTransport() {
@@ -204,14 +116,6 @@ abstract public class Connection implements TransportListener, Service {
 
     public void setExceptionListener(ExceptionListener exceptionListener) {
         this.exceptionListener = exceptionListener;
-    }
-
-    public boolean isUseAsyncWriteThread() {
-        return useAsyncWriteThread;
-    }
-
-    public void setUseAsyncWriteThread(boolean useAsyncWriteThread) {
-        this.useAsyncWriteThread = useAsyncWriteThread;
     }
 
 }

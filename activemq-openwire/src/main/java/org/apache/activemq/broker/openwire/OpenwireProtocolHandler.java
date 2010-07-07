@@ -94,6 +94,7 @@ import org.apache.activemq.state.CommandVisitor;
 import org.apache.activemq.transport.WireFormatNegotiator;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
+import org.fusesource.hawtdispatch.Dispatch;
 
 public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener {
 
@@ -634,7 +635,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
                 };
             } else {
 
-                limiter = new SizeLimiter<OpenWireMessageDelivery>(connection.getInputWindowSize(), connection.getInputResumeThreshold());
+                limiter = new SizeLimiter<OpenWireMessageDelivery>(1024*64, 1024*32);
             }
 
             controller = new FlowController<OpenWireMessageDelivery>(new FlowControllable<OpenWireMessageDelivery>() {
@@ -694,7 +695,7 @@ public class OpenwireProtocolHandler implements ProtocolHandler, PersistListener
             }
             controller = new FlowController<MessageDelivery>(null, flow, limiter, this);
             controller.useOverFlowQueue(false);
-            controller.setExecutor(connection.getDispatcher().getGlobalQueue(DispatchPriority.HIGH));
+            controller.setExecutor(Dispatch.getGlobalQueue());
             super.onFlowOpened(controller);
         }
 

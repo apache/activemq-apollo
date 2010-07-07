@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.dispatch.Dispatcher;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.util.Mapper;

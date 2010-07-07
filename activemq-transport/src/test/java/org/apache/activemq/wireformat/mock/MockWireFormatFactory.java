@@ -3,6 +3,7 @@ package org.apache.activemq.wireformat.mock;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.channels.ReadableByteChannel;
 import java.util.Map;
 
 import org.apache.activemq.transport.Transport;
@@ -48,7 +49,11 @@ public class MockWireFormatFactory implements WireFormatFactory {
 	        throw new UnsupportedOperationException();
 		}
 
-		public WireFormatFactory getWireFormatFactory() {
+        public Object unmarshal(ReadableByteChannel channel) {
+            throw new UnsupportedOperationException();
+        }
+
+        public WireFormatFactory getWireFormatFactory() {
 			return new MockWireFormatFactory();
 		}
     }

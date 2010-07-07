@@ -238,7 +238,7 @@ public class ActiveMQConnectionFactory extends JNDIBaseStorable implements Conne
      */
     protected Transport createTransport() throws JMSException {
         try {
-            return TransportFactory.connect(brokerURL, DEFAULT_CONNECTION_EXECUTOR);
+            return TransportFactory.connect(brokerURL);
         } catch (Exception e) {
             throw JMSExceptionSupport.create("Could not create Transport. Reason: " + e, e);
         }

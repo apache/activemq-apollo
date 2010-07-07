@@ -37,16 +37,14 @@ public interface TransportListener {
     void onException(IOException error);
     
     /**
-     * The transport has suffered an interuption from which it hopes to recover
-     *
+     * The transport has been connected.
      */
-    void transportInterupted();
-    
-    
+    public void onConnected();
+
     /**
-     * The transport has resumed after an interuption
-     *
+     * The transport has suffered a disconnection from
+     * which it hopes to recover
      */
-    void transportResumed();
-    
+    public void onDisconnected();
+
 }

@@ -16,18 +16,11 @@
  */
 package org.apache.activemq.broker.store.kahadb;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.io.*;
+import java.util.*;
 import java.util.Map.Entry;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.Store.KeyNotFoundException;
 import org.apache.activemq.broker.store.Store.QueueQueryResult;
@@ -36,97 +29,137 @@ import org.apache.activemq.broker.store.kahadb.Data.MessageAdd;
 import org.apache.activemq.broker.store.kahadb.Data.SubscriptionAdd;
 import org.apache.activemq.broker.store.kahadb.Data.SubscriptionAdd.SubscriptionAddBuffer;
 import org.apache.activemq.protobuf.InvalidProtocolBufferException;
-import org.apache.activemq.queue.QueueDescriptor;
-import org.apache.activemq.util.buffer.AsciiBuffer;
-import org.apache.activemq.util.buffer.Buffer;
-import org.apache.activemq.util.marshaller.IntegerMarshaller;
-import org.apache.activemq.util.marshaller.LongMarshaller;
-import org.apache.activemq.util.marshaller.Marshaller;
-import org.apache.activemq.util.marshaller.VariableMarshaller;
-import org.apache.kahadb.index.BTreeIndex;
-import org.apache.kahadb.index.BTreeVisitor;
-import org.apache.kahadb.journal.Location;
-import org.apache.kahadb.page.Page;
-import org.apache.kahadb.page.Transaction;
+import org.fusesource.hawtdb.api.*;
+import org.fusesource.hawtdb.internal.journal.Location;
+import org.apache.activemq.util.buffer.*;
+import org.fusesource.hawtdb.util.marshaller.LongMarshaller;
+import org.fusesource.hawtdb.util.marshaller.IntegerMarshaller;
+import org.fusesource.hawtdb.util.marshaller.LocationMarshaller;
 
 public class RootEntity {
 
-    //TODO remove this one performance testing is complete. 
+    //TODO remove this once performance testing is complete. 
     private static final boolean USE_LOC_INDEX = true;
-
     private static final int VERSION = 0;
 
-    public final static Marshaller<RootEntity> MARSHALLER = new VariableMarshaller<RootEntity>() {
-        public RootEntity readPayload(DataInput is) throws IOException {
-            RootEntity rc = new RootEntity();
-            rc.state = is.readInt();
-            is.readInt(); //VERSION 
-            rc.maxMessageKey = is.readLong();
-            rc.messageKeyIndex = new BTreeIndex<Long, Location>(is.readLong());
-            if (USE_LOC_INDEX)
-                rc.locationIndex = new BTreeIndex<Integer, Long>(is.readLong());
-            rc.destinationIndex = new BTreeIndex<AsciiBuffer, DestinationEntity>(is.readLong());
-            rc.messageRefsIndex = new BTreeIndex<Long, Long>(is.readLong());
-            rc.subscriptionIndex = new BTreeIndex<AsciiBuffer, Buffer>(is.readLong());
-            rc.mapIndex = new BTreeIndex<AsciiBuffer, Long>(is.readLong());
-            if (is.readBoolean()) {
-                rc.lastUpdate = Marshallers.LOCATION_MARSHALLER.readPayload(is);
-            } else {
-                rc.lastUpdate = null;
-            }
-            return rc;
-        }
 
-        public void writePayload(RootEntity object, DataOutput os) throws IOException {
-            os.writeInt(object.state);
-            os.writeInt(VERSION);
-            os.writeLong(object.maxMessageKey);
-            os.writeLong(object.messageKeyIndex.getPageId());
-            if (USE_LOC_INDEX)
-                os.writeLong(object.locationIndex.getPageId());
-            os.writeLong(object.destinationIndex.getPageId());
-            os.writeLong(object.messageRefsIndex.getPageId());
-            os.writeLong(object.subscriptionIndex.getPageId());
-            os.writeLong(object.mapIndex.getPageId());
-            if (object.lastUpdate != null) {
-                os.writeBoolean(true);
-                Marshallers.LOCATION_MARSHALLER.writePayload(object.lastUpdate, os);
-            } else {
-                os.writeBoolean(false);
-            }
-        }
+    private static final BTreeIndexFactory<Long, Location> messageKeyIndexFactory = new BTreeIndexFactory<Long, Location>();
+    private static final BTreeIndexFactory<Integer, Long> locationIndexFactory = new BTreeIndexFactory<Integer, Long>();
+    private static final BTreeIndexFactory<Long, Long> messageRefsIndexFactory = new BTreeIndexFactory<Long, Long>();
+    private static final BTreeIndexFactory<AsciiBuffer, DestinationEntity> destinationIndexFactory = new BTreeIndexFactory<AsciiBuffer, DestinationEntity>();
+    private static final BTreeIndexFactory<AsciiBuffer, Buffer> subscriptionIndexFactory = new BTreeIndexFactory<AsciiBuffer, Buffer>();
+    private static final BTreeIndexFactory<AsciiBuffer, Integer> mapIndexFactory = new BTreeIndexFactory<AsciiBuffer, Integer>();
+    private static final BTreeIndexFactory<AsciiBuffer, Buffer> mapInstanceIndexFactory = new BTreeIndexFactory<AsciiBuffer, Buffer>();
 
-        public int estimatedSize(RootEntity object) {
-            throw new UnsupportedOperationException();
-        }
-    };
+    static {
+        messageKeyIndexFactory.setKeyMarshaller(LongMarshaller.INSTANCE);
+        messageKeyIndexFactory.setValueMarshaller(LocationMarshaller.INSTANCE);
+        messageKeyIndexFactory.setDeferredEncoding(true);
+
+        locationIndexFactory.setKeyMarshaller(IntegerMarshaller.INSTANCE);
+        locationIndexFactory.setValueMarshaller(LongMarshaller.INSTANCE);
+        locationIndexFactory.setDeferredEncoding(true);
+
+        messageRefsIndexFactory.setKeyMarshaller(LongMarshaller.INSTANCE);
+        messageRefsIndexFactory.setValueMarshaller(LongMarshaller.INSTANCE);
+        messageRefsIndexFactory.setDeferredEncoding(true);
+
+        destinationIndexFactory.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
+        destinationIndexFactory.setValueMarshaller(DestinationEntity.MARSHALLER);
+        destinationIndexFactory.setDeferredEncoding(true);
+
+        subscriptionIndexFactory.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
+        subscriptionIndexFactory.setValueMarshaller(Marshallers.BUFFER_MARSHALLER);
+        subscriptionIndexFactory.setDeferredEncoding(true);
+
+        mapIndexFactory.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
+        mapIndexFactory.setValueMarshaller(IntegerMarshaller.INSTANCE);
+        mapIndexFactory.setDeferredEncoding(true);
+    }
 
     // The root page the this object's state is stored on.
     // private Page<StoredDBState> page;
 
     // State information about the index
-    private long pageId;
-    private int state;
-    private Location lastUpdate;
-    private boolean loaded;
-
-    // Message Indexes
+    Data data;
     private long maxMessageKey;
-    private BTreeIndex<Long, Location> messageKeyIndex;
-    private BTreeIndex<Integer, Long> locationIndex;
-    private BTreeIndex<Long, Long> messageRefsIndex; // Maps message key to ref
-    // count:
 
-    // The destinations
-    private BTreeIndex<AsciiBuffer, DestinationEntity> destinationIndex;
-    private final TreeMap<AsciiBuffer, DestinationEntity> destinations = new TreeMap<AsciiBuffer, DestinationEntity>();
+    static class Data {
+        private int state;
+        // Message Indexes
+        private long maxMessageKey;
+        private Location lastUpdate;
+        
+        private SortedIndex<Long, Location> messageKeyIndex;
+        private SortedIndex<Integer, Long> locationIndex;
+        private SortedIndex<Long, Long> messageRefsIndex; // Maps message key to ref
+        // count:
 
-    // Subscriptions
-    private BTreeIndex<AsciiBuffer, Buffer> subscriptionIndex;
+        // The destinations
+        private SortedIndex<AsciiBuffer, DestinationEntity> destinationIndex;
 
-    // Maps:
-    private BTreeIndex<AsciiBuffer, Long> mapIndex;
-    private TreeMap<AsciiBuffer, BTreeIndex<AsciiBuffer, Buffer>> mapCache = new TreeMap<AsciiBuffer, BTreeIndex<AsciiBuffer,Buffer>>();
+        // Subscriptions
+        private SortedIndex<AsciiBuffer, Buffer> subscriptionIndex;
+
+        // Maps:
+        private SortedIndex<AsciiBuffer, Integer> mapIndex;
+
+        public void create(Transaction tx) {
+            state = KahaDBStore.CLOSED_STATE;
+            messageKeyIndex = messageKeyIndexFactory.create(tx, tx.alloc());
+            if (USE_LOC_INDEX)
+                locationIndex = locationIndexFactory.create(tx, tx.alloc());
+            destinationIndex = destinationIndexFactory.create(tx, tx.alloc());
+            messageRefsIndex = messageRefsIndexFactory.create(tx, tx.alloc());
+            subscriptionIndex = subscriptionIndexFactory.create(tx, tx.alloc());
+            mapIndex = mapIndexFactory.create(tx, tx.alloc());
+
+        }
+    }
+
+    EncoderDecoder<Data>  DATA_ENCODER_DECODER = new AbstractStreamEncoderDecoder<Data>() {
+        @Override
+        protected void encode(Paged paged, DataOutputStream os, Data object) throws IOException {
+            os.writeInt(object.state);
+            os.writeInt(VERSION);
+            os.writeLong(object.maxMessageKey);
+            os.writeInt(object.messageKeyIndex.getPage());
+            if (USE_LOC_INDEX)
+                os.writeInt(object.locationIndex.getPage());
+            os.writeInt(object.destinationIndex.getPage());
+            os.writeInt(object.messageRefsIndex.getPage());
+            os.writeInt(object.subscriptionIndex.getPage());
+            os.writeInt(object.mapIndex.getPage());
+            if (object.lastUpdate != null) {
+                os.writeBoolean(true);
+                LocationMarshaller.INSTANCE.writePayload(object.lastUpdate, os);
+            } else {
+                os.writeBoolean(false);
+            }
+        }
+
+        @Override
+        protected RootEntity.Data decode(Paged paged, DataInputStream is) throws IOException {
+            Data rc = new Data();
+            rc.state = is.readInt();
+            is.readInt(); //VERSION
+            rc.maxMessageKey = is.readLong();
+            rc.messageKeyIndex = messageKeyIndexFactory.open(paged, is.readInt());
+            if (USE_LOC_INDEX)
+                rc.locationIndex = locationIndexFactory.open(paged, is.readInt());
+            rc.destinationIndex = destinationIndexFactory.open(paged, is.readInt());
+            rc.messageRefsIndex = messageRefsIndexFactory.open(paged, is.readInt());
+            rc.subscriptionIndex = subscriptionIndexFactory.open(paged, is.readInt());
+            rc.mapIndex = mapIndexFactory.open(paged, is.readInt());
+            if (is.readBoolean()) {
+                rc.lastUpdate = LocationMarshaller.INSTANCE.readPayload(is);
+            } else {
+                rc.lastUpdate = null;
+            }
+            return rc;
+        }
+    };
+
 
     // /////////////////////////////////////////////////////////////////
     // Lifecycle Methods.
@@ -134,68 +167,22 @@ public class RootEntity {
 
     public void allocate(Transaction tx) throws IOException {
         // First time this is created.. Initialize a new pagefile.
-        Page<RootEntity> page = tx.allocate();
-        pageId = page.getPageId();
+        int pageId = tx.alloc();
         assert pageId == 0;
-
-        state = KahaDBStore.CLOSED_STATE;
-
-        messageKeyIndex = new BTreeIndex<Long, Location>(tx.getPageFile(), tx.allocate().getPageId());
-        if (USE_LOC_INDEX)
-            locationIndex = new BTreeIndex<Integer, Long>(tx.getPageFile(), tx.allocate().getPageId());
-        destinationIndex = new BTreeIndex<AsciiBuffer, DestinationEntity>(tx.getPageFile(), tx.allocate().getPageId());
-        messageRefsIndex = new BTreeIndex<Long, Long>(tx.getPageFile(), tx.allocate().getPageId());
-        subscriptionIndex = new BTreeIndex<AsciiBuffer, Buffer>(tx.getPageFile(), tx.allocate().getPageId());
-        mapIndex = new BTreeIndex<AsciiBuffer, Long>(tx.getPageFile(), tx.allocate().getPageId());
-
-        page.set(this);
-        tx.store(page, MARSHALLER, true);
+        data = new Data();
+        data.create(tx);
+        tx.put(DATA_ENCODER_DECODER, pageId, data);
     }
 
     public void load(Transaction tx) throws IOException {
-        messageKeyIndex.setPageFile(tx.getPageFile());
-        messageKeyIndex.setKeyMarshaller(LongMarshaller.INSTANCE);
-        messageKeyIndex.setValueMarshaller(Marshallers.LOCATION_MARSHALLER);
-        messageKeyIndex.load(tx);
+        data = tx.get(DATA_ENCODER_DECODER, 0);
+
         // Update max message key:
-        Entry<Long, Location> last = messageKeyIndex.getLast(tx);
+        maxMessageKey = data.maxMessageKey;
+        Entry<Long, Location> last = data.messageKeyIndex.getLast();
         if (last != null) {
             if (last.getKey() > maxMessageKey) {
                 maxMessageKey = last.getKey();
-            }
-        }
-
-        if (USE_LOC_INDEX) {
-            locationIndex.setPageFile(tx.getPageFile());
-            locationIndex.setKeyMarshaller(IntegerMarshaller.INSTANCE);
-            locationIndex.setValueMarshaller(LongMarshaller.INSTANCE);
-            locationIndex.load(tx);
-        }
-
-        subscriptionIndex.setPageFile(tx.getPageFile());
-        subscriptionIndex.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
-        subscriptionIndex.setValueMarshaller(Marshallers.BUFFER_MARSHALLER);
-        subscriptionIndex.load(tx);
-
-        destinationIndex.setPageFile(tx.getPageFile());
-        destinationIndex.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
-        destinationIndex.setValueMarshaller(DestinationEntity.MARSHALLER);
-        destinationIndex.load(tx);
-
-        messageRefsIndex.setPageFile(tx.getPageFile());
-        messageRefsIndex.setKeyMarshaller(LongMarshaller.INSTANCE);
-        messageRefsIndex.setValueMarshaller(LongMarshaller.INSTANCE);
-        messageRefsIndex.load(tx);
-
-        // Keep the StoredDestinations loaded
-        destinations.clear();
-        for (Iterator<Entry<AsciiBuffer, DestinationEntity>> iterator = destinationIndex.iterator(tx); iterator.hasNext();) {
-            Entry<AsciiBuffer, DestinationEntity> entry = iterator.next();
-            entry.getValue().load(tx);
-            try {
-                addToDestinationCache(entry.getValue());
-            } catch (KeyNotFoundException e) {
-                //
             }
         }
 
@@ -207,61 +194,6 @@ public class RootEntity {
             ioe.initCause(e);
             throw ioe;
         }
-
-        //Load Maps:
-        mapIndex.setPageFile(tx.getPageFile());
-        mapIndex.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
-        mapIndex.setValueMarshaller(LongMarshaller.INSTANCE);
-        mapIndex.load(tx);
-
-        //Load all of the maps and cache them:
-        for (Iterator<Entry<AsciiBuffer, Long>> iterator = mapIndex.iterator(tx); iterator.hasNext();) {
-            Entry<AsciiBuffer, Long> entry = iterator.next();
-            BTreeIndex<AsciiBuffer, Buffer> map = new BTreeIndex<AsciiBuffer, Buffer>(tx.getPageFile(), entry.getValue());
-            map.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
-            map.setValueMarshaller(Marshallers.BUFFER_MARSHALLER);
-            map.load(tx);
-            mapCache.put(entry.getKey(), map);
-        }
-
-    }
-
-    /**
-     * Adds the destination to the destination cache
-     * 
-     * @param entity
-     *            The destination to cache.
-     * @throws KeyNotFoundException
-     *             If the parent queue could not be found.
-     */
-    private void addToDestinationCache(DestinationEntity entity) throws KeyNotFoundException {
-        QueueDescriptor queue = entity.getDescriptor();
-
-        // If loaded add a reference to us from the parent:
-        if (loaded) {
-            if (queue.getParent() != null) {
-                DestinationEntity parent = destinations.get(queue.getParent());
-                if (parent == null) {
-                    throw new KeyNotFoundException("Parent queue for " + queue.getQueueName() + " not found");
-                }
-                parent.addPartition(entity);
-            }
-        }
-
-        destinations.put(queue.getQueueName(), entity);
-    }
-
-    private void removeFromDestinationCache(DestinationEntity entity) {
-        QueueDescriptor queue = entity.getDescriptor();
-
-        // If the queue is loaded remove the parent reference:
-        if (loaded) {
-            if (queue.getParent() != null) {
-                DestinationEntity parent = destinations.get(queue.getParent());
-                parent.removePartition(entity);
-            }
-        }
-        destinations.remove(queue.getQueueName());
     }
 
     /**
@@ -270,10 +202,11 @@ public class RootEntity {
      * @throws KeyNotFoundException
      */
     private void constructQueueHierarchy() throws KeyNotFoundException {
-        for (DestinationEntity destination : destinations.values()) {
+        for (Entry<AsciiBuffer, DestinationEntity> entry : data.destinationIndex) {
+            DestinationEntity destination = entry.getValue();
             QueueDescriptor queue = destination.getDescriptor();
             if (queue.getParent() != null) {
-                DestinationEntity parent = destinations.get(queue.getParent());
+                DestinationEntity parent = data.destinationIndex.get(queue.getParent());
                 if (parent == null) {
                     throw new KeyNotFoundException("Parent queue for " + queue.getQueueName() + " not found");
                 } else {
@@ -283,10 +216,10 @@ public class RootEntity {
         }
     }
 
+    @Deprecated // TODO: keep data immutable
     public void store(Transaction tx) throws IOException {
-        Page<RootEntity> page = tx.load(pageId, null);
-        page.set(this);
-        tx.store(page, RootEntity.MARSHALLER, true);
+        // TODO: need ot make Data immutable..
+        tx.put(DATA_ENCODER_DECODER, 0, data);
     }
 
     // /////////////////////////////////////////////////////////////////
@@ -301,55 +234,51 @@ public class RootEntity {
         if (id > maxMessageKey) {
             maxMessageKey = id;
         }
-        Location previous = messageKeyIndex.put(tx, id, location);
+        Location previous = data.messageKeyIndex.put(id, location);
         if (previous != null) {
             // Message existed.. undo the index update we just did. Chances
             // are it's a transaction replay.
-            messageKeyIndex.put(tx, id, previous);
+            data.messageKeyIndex.put(id, previous);
         } else {
             if (USE_LOC_INDEX) {
-                Long refs = locationIndex.get(tx, location.getDataFileId());
+                Long refs = data.locationIndex.get(location.getDataFileId());
                 if (refs == null) {
-                    locationIndex.put(tx, location.getDataFileId(), new Long(1));
+                    data.locationIndex.put(location.getDataFileId(), new Long(1));
                 } else {
-                    locationIndex.put(tx, location.getDataFileId(), new Long(refs.longValue() + 1));
+                    data.locationIndex.put(location.getDataFileId(), new Long(refs.longValue() + 1));
                 }
             }
         }
     }
 
-    public void messageRemove(Transaction tx, Long messageKey) throws IOException {
+    public void messageRemove(Long messageKey) {
         // Location location = messageKeyIndex.remove(tx, messageKey);
-        Location location = messageKeyIndex.remove(tx, messageKey);
+        Location location = data.messageKeyIndex.remove(messageKey);
         if (USE_LOC_INDEX && location != null) {
-            Long refs = locationIndex.get(tx, location.getDataFileId());
+            Long refs = data.locationIndex.get(location.getDataFileId());
             if (refs != null) {
                 if (refs.longValue() <= 1) {
-                    locationIndex.remove(tx, location.getDataFileId());
+                    data.locationIndex.remove(location.getDataFileId());
                 } else {
-                    locationIndex.put(tx, location.getDataFileId(), new Long(refs.longValue() - 1));
+                    data.locationIndex.put(location.getDataFileId(), new Long(refs.longValue() - 1));
                 }
             }
         }
     }
 
     public Location messageGetLocation(Transaction tx, Long messageKey) {
-        try {
-            return messageKeyIndex.get(tx, messageKey);
-        } catch (IOException e) {
-            throw new Store.FatalStoreException(e);
-        }
+        return data.messageKeyIndex.get(messageKey);
     }
 
     public void addMessageRef(Transaction tx, AsciiBuffer queueName, Long messageKey) {
         try {
-            Long refs = messageRefsIndex.get(tx, messageKey);
+            Long refs = data.messageRefsIndex.get(messageKey);
             if (refs == null) {
-                messageRefsIndex.put(tx, messageKey, new Long(1));
+                data.messageRefsIndex.put(messageKey, new Long(1));
             } else {
-                messageRefsIndex.put(tx, messageKey, new Long(1 + refs.longValue()));
+                data.messageRefsIndex.put(messageKey, new Long(1 + refs.longValue()));
             }
-        } catch (IOException e) {
+        } catch (RuntimeException e) {
             throw new Store.FatalStoreException(e);
         }
 
@@ -357,17 +286,17 @@ public class RootEntity {
 
     public void removeMessageRef(Transaction tx, AsciiBuffer queueName, Long messageKey) {
         try {
-            Long refs = messageRefsIndex.get(tx, messageKey);
+            Long refs = data.messageRefsIndex.get(messageKey);
             if (refs != null) {
                 if (refs.longValue() <= 1) {
-                    messageRefsIndex.remove(tx, messageKey);
+                    data.messageRefsIndex.remove(messageKey);
                     // If this is the last record remove, the message
-                    messageRemove(tx, messageKey);
+                    messageRemove(messageKey);
                 } else {
-                    messageRefsIndex.put(tx, messageKey, new Long(refs.longValue() - 1));
+                    data.messageRefsIndex.put(messageKey, new Long(refs.longValue() - 1));
                 }
             }
-        } catch (IOException e) {
+        } catch (RuntimeException e) {
             throw new Store.FatalStoreException(e);
         }
     }
@@ -388,7 +317,7 @@ public class RootEntity {
 
         final LinkedList<SubscriptionRecord> rc = new LinkedList<SubscriptionRecord>();
 
-        subscriptionIndex.visit(tx, new BTreeVisitor<AsciiBuffer, Buffer>() {
+        data.subscriptionIndex.visit(new IndexVisitor<AsciiBuffer, Buffer>() {
             public boolean isInterestedInKeysBetween(AsciiBuffer first, AsciiBuffer second) {
                 return true;
             }
@@ -412,21 +341,18 @@ public class RootEntity {
     }
 
     /**
-     * @param tx
      * @param name
      * @throws IOException
      */
-    public void removeSubscription(Transaction tx, AsciiBuffer name) throws IOException {
-        subscriptionIndex.remove(tx, name);
+    public void removeSubscription(AsciiBuffer name) throws IOException {
+        data.subscriptionIndex.remove(name);
     }
 
     /**
-     * @param tx
-     * @param name
      * @throws IOException
      */
-    public void addSubscription(Transaction tx, SubscriptionAdd subscription) throws IOException {
-        subscriptionIndex.put(tx, subscription.getName(), subscription.freeze().toFramedBuffer());
+    public void addSubscription(SubscriptionAdd subscription) throws IOException {
+        data.subscriptionIndex.put(subscription.getName(), subscription.freeze().toFramedBuffer());
     }
 
     /**
@@ -434,8 +360,8 @@ public class RootEntity {
      * @return
      * @throws IOException
      */
-    public SubscriptionRecord getSubscription(Transaction tx, AsciiBuffer name) throws IOException {
-        return toSubscriptionRecord(subscriptionIndex.get(tx, name));
+    public SubscriptionRecord getSubscription(AsciiBuffer name) throws IOException {
+        return toSubscriptionRecord(data.subscriptionIndex.get(name));
     }
 
     /**
@@ -475,22 +401,16 @@ public class RootEntity {
     // Queue Methods.
     // /////////////////////////////////////////////////////////////////
     public void queueAdd(Transaction tx, QueueDescriptor queue) throws IOException {
-        if (destinationIndex.get(tx, queue.getQueueName()) == null) {
+        if (data.destinationIndex.get(queue.getQueueName()) == null) {
             DestinationEntity rc = new DestinationEntity();
             rc.setQueueDescriptor(queue);
             rc.allocate(tx);
-            destinationIndex.put(tx, queue.getQueueName(), rc);
-            rc.load(tx);
-            try {
-                addToDestinationCache(rc);
-            } catch (KeyNotFoundException e) {
-                throw new Store.FatalStoreException("Inconsistent QueueStore: " + e.getMessage(), e);
-            }
+            data.destinationIndex.put(queue.getQueueName(), rc);
         }
     }
 
     public void queueRemove(Transaction tx, QueueDescriptor queue) throws IOException {
-        DestinationEntity destination = destinations.get(queue.getQueueName());
+        DestinationEntity destination = data.destinationIndex.get(queue.getQueueName());
         if (destination != null) {
             // Remove the message references.
             // TODO this should probably be optimized.
@@ -499,21 +419,23 @@ public class RootEntity {
                 Long messageKey = messages.next().getKey();
                 removeMessageRef(tx, queue.getQueueName(), messageKey);
             }
-            destinationIndex.remove(tx, queue.getQueueName());
-            removeFromDestinationCache(destination);
+            data.destinationIndex.remove(queue.getQueueName());
             destination.deallocate(tx);
         }
     }
 
     public DestinationEntity getDestination(QueueDescriptor queue) {
-        return destinations.get(queue.getQueueName());
+        return data.destinationIndex.get(queue.getQueueName());
     }
 
     public Iterator<QueueQueryResult> queueList(Transaction tx, short type, QueueDescriptor firstQueue, int max) throws IOException {
         LinkedList<QueueQueryResult> results = new LinkedList<QueueQueryResult>();
-        Collection<DestinationEntity> values = (firstQueue == null ? destinations.values() : destinations.tailMap(firstQueue.getQueueName()).values());
 
-        for (DestinationEntity de : values) {
+        final Iterator<Entry<AsciiBuffer, DestinationEntity>> i;
+        i = data.destinationIndex.iterator(firstQueue==null? null : firstQueue.getQueueName());
+        while (i.hasNext()) {
+            Entry<AsciiBuffer, DestinationEntity> entry = i.next();
+            DestinationEntity de = entry.getValue();
             if (results.size() >= max) {
                 break;
             }
@@ -537,7 +459,7 @@ public class RootEntity {
         if (partitions != null && partitions.hasNext()) {
             result.partitions = new LinkedList<QueueQueryResult>();
             while (partitions.hasNext()) {
-                result.partitions.add(queryQueue(tx, destinations.get(partitions.next().getDescriptor().getQueueName())));
+                result.partitions.add(queryQueue(tx, getDestination(partitions.next().getDescriptor()) ));
             }
         }
 
@@ -548,84 +470,82 @@ public class RootEntity {
     // Map Methods.
     // /////////////////////////////////////////////////////////////////
     public final void mapAdd(AsciiBuffer key, Transaction tx) throws IOException {
-        BTreeIndex<AsciiBuffer, Buffer> map = mapCache.get(key);
-
-        if (map == null) {
-            long pageId = tx.allocate().getPageId();
-            map = new BTreeIndex<AsciiBuffer, Buffer>(tx.getPageFile(), pageId);
-            map.setKeyMarshaller(Marshallers.ASCII_BUFFER_MARSHALLER);
-            map.setValueMarshaller(Marshallers.BUFFER_MARSHALLER);
-            map.load(tx);
-            mapIndex.put(tx, key, pageId);
-            mapCache.put(key, map);
+        final Integer page = data.mapIndex.get(key);
+        if (page == null) {
+            int pageId = tx.alloc();
+            SortedIndex<AsciiBuffer, Buffer> map = mapInstanceIndexFactory.create(tx, pageId);
+            data.mapIndex.put(key, pageId);
         }
     }
 
     public final void mapRemove(AsciiBuffer key, Transaction tx) throws IOException {
-        BTreeIndex<AsciiBuffer, Buffer> map = mapCache.remove(key);
-        if (map != null) {
-            map.clear(tx);
-            map.unload(tx);
-            mapIndex.remove(tx, key);
+        final Integer pageId = data.mapIndex.remove(key);
+        if (pageId != null) {
+            SortedIndex<AsciiBuffer, Buffer> map = mapInstanceIndexFactory.open(tx, pageId);
+            map.clear();
+            tx.free(pageId);
         }
     }
 
     public final void mapAddEntry(AsciiBuffer name, AsciiBuffer key, Buffer value, Transaction tx) throws IOException {
-        BTreeIndex<AsciiBuffer, Buffer> map = mapCache.get(name);
-        if (map == null) {
-            mapAdd(name, tx);
-            map = mapCache.get(name);
+        Integer pageId = data.mapIndex.get(name);
+        if (pageId == null) {
+            pageId = tx.alloc();
+            SortedIndex<AsciiBuffer, Buffer> map = mapInstanceIndexFactory.create(tx, pageId);
+            data.mapIndex.put(key, pageId);
         }
-
-        map.put(tx, key, value);
-
+        SortedIndex<AsciiBuffer, Buffer> map = mapInstanceIndexFactory.open(tx, pageId);
+        map.put(key, value);
     }
 
     public final void mapRemoveEntry(AsciiBuffer name, AsciiBuffer key, Transaction tx) throws IOException, KeyNotFoundException {
-        BTreeIndex<AsciiBuffer, Buffer> map = mapCache.get(name);
-        if (map == null) {
+        Integer pageId = data.mapIndex.get(name);
+        if (pageId == null) {
             throw new KeyNotFoundException(name.toString());
         }
-        map.remove(tx, key);
+        SortedIndex<AsciiBuffer, Buffer> map = mapInstanceIndexFactory.open(tx, pageId);
+        map.remove(key);
     }
 
     public final Buffer mapGetEntry(AsciiBuffer name, AsciiBuffer key, Transaction tx) throws IOException, KeyNotFoundException {
-        BTreeIndex<AsciiBuffer, Buffer> map = mapCache.get(name);
-        if (map == null) {
+        Integer pageId = data.mapIndex.get(name);
+        if (pageId == null) {
             throw new KeyNotFoundException(name.toString());
         }
-        return map.get(tx, key);
+        SortedIndex<AsciiBuffer, Buffer> map = mapInstanceIndexFactory.open(tx, pageId);
+        return map.get(key);
     }
 
     public final Iterator<AsciiBuffer> mapList(AsciiBuffer first, int count, Transaction tx) {
         LinkedList<AsciiBuffer> results = new LinkedList<AsciiBuffer>();
 
-        Collection<AsciiBuffer> values = (first == null ? mapCache.keySet() : mapCache.tailMap(first).keySet());
-        for (AsciiBuffer key : values) {
-            results.add(key);
+        final Iterator<Entry<AsciiBuffer, Integer>> i = data.mapIndex.iterator(first);
+        while (i.hasNext()) {
+            final Entry<AsciiBuffer, Integer> entry = i.next();
+            results.add(entry.getKey());
         }
 
         return results.iterator();
     }
 
     public final Iterator<AsciiBuffer> mapListKeys(AsciiBuffer name, AsciiBuffer first, int count, Transaction tx) throws IOException, KeyNotFoundException {
-        BTreeIndex<AsciiBuffer, Buffer> map = mapCache.get(name);
-        if (map == null) {
+        Integer pageId = data.mapIndex.get(name);
+        if (pageId == null) {
             throw new KeyNotFoundException(name.toString());
         }
 
+        SortedIndex<AsciiBuffer, Buffer> map = mapInstanceIndexFactory.open(tx, pageId);
         final LinkedList<AsciiBuffer> results = new LinkedList<AsciiBuffer>();
 
         if (first != null && count > 0) {
-            map.visit(tx, new BTreeVisitor.GTEVisitor<AsciiBuffer, Buffer>(first, count) {
-
+            map.visit(new IndexVisitor.PredicateVisitor<AsciiBuffer, Buffer>(IndexVisitor.PredicateVisitor.gte(first), count){
                 @Override
                 protected void matched(AsciiBuffer key, Buffer value) {
                     results.add(key);
                 }
             });
         } else {
-            Iterator<Entry<AsciiBuffer, Buffer>> iterator = map.iterator(tx);
+            Iterator<Entry<AsciiBuffer, Buffer>> iterator = map.iterator();
             while (iterator.hasNext()) {
                 Entry<AsciiBuffer, Buffer> e = iterator.next();
                 results.add(e.getKey());
@@ -638,29 +558,22 @@ public class RootEntity {
     // /////////////////////////////////////////////////////////////////
     // Map Methods.
     // /////////////////////////////////////////////////////////////////
-
-    public long getPageId() {
-        return pageId;
-    }
-
-    public void setPageId(long pageId) {
-        this.pageId = pageId;
-    }
-
     public int getState() {
-        return state;
+        return data.state;
     }
 
+    @Deprecated // TODO: keep data immutable
     public void setState(int state) {
-        this.state = state;
+        this.data.state = state;
     }
 
     public Location getLastUpdate() {
-        return lastUpdate;
+        return data.lastUpdate;
     }
 
+    @Deprecated // TODO: keep data immutable
     public void setLastUpdate(Location lastUpdate) {
-        this.lastUpdate = lastUpdate;
+        this.data.lastUpdate = lastUpdate;
     }
 
     private static class QueueQueryResultImpl implements QueueQueryResult {
@@ -713,7 +626,7 @@ public class RootEntity {
         //so that we can be sure that all journal entries are on disk prior to 
         //index update. 
 
-        //Scan MessageKey Index to find message keys past the last append 
+        //Scan MessageKey SortedIndex to find message keys past the last append 
         //location:
         //        final ArrayList<Long> matches = new ArrayList<Long>();
         //        messageKeyIndex.visit(tx, new BTreeVisitor.GTEVisitor<Location, Long>(lastAppendLocation) {
@@ -776,7 +689,7 @@ public class RootEntity {
     final void removeGCCandidates(final TreeSet<Integer> gcCandidateSet, Transaction tx) throws IOException {
 
         // Don't GC files after the first in progress tx
-        Location firstTxLocation = lastUpdate;
+        Location firstTxLocation = data.lastUpdate;
 
         if (firstTxLocation != null) {
             while (!gcCandidateSet.isEmpty()) {
@@ -799,7 +712,7 @@ public class RootEntity {
 
         // Go through the location index to see if we can remove gc candidates:
         // Use a visitor to cut down the number of pages that we load
-        locationIndex.visit(tx, new BTreeVisitor<Integer, Long>() {
+        data.locationIndex.visit(new IndexVisitor<Integer, Long>() {
             int last = -1;
 
             public boolean isInterestedInKeysBetween(Integer first, Integer second) {

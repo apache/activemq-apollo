@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 
 import org.apache.activemq.Service;
+import org.fusesource.hawtdispatch.DispatchQueue;
 
 /**
  * A TransportServer asynchronously accepts {@see Transport} objects and then
@@ -45,5 +46,29 @@ public interface TransportServer extends Service {
      *         connections on a socket.
      */
     InetSocketAddress getSocketAddress();
+
+    /**
+     * Returns the dispatch queue used by the transport
+     *
+     * @return
+     */
+    DispatchQueue getDispatchQueue();
+
+    /**
+     * Sets the dispatch queue used by the transport
+     *
+     * @param queue
+     */
+    void setDispatchQueue(DispatchQueue queue);
+
+    /**
+     * suspend accepting new transports
+     */
+    void suspend();
+
+    /**
+     * resume accepting new transports
+     */
+    void resume();
 
 }

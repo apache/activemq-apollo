@@ -117,7 +117,7 @@ public class ConnectionStateTracker extends CommandVisitorAdapter {
         // Restore the connections.
         for (Iterator<ConnectionState> iter = connectionStates.values().iterator(); iter.hasNext();) {
             ConnectionState connectionState = iter.next();
-            transport.oneway(connectionState.getInfo());
+            transport.oneway(connectionState.getInfo(), null);
             restoreTempDestinations(transport, connectionState);
 
             if (restoreSessions) {
@@ -130,7 +130,7 @@ public class ConnectionStateTracker extends CommandVisitorAdapter {
         }
         //now flush messages
         for (Message msg:messageCache.values()) {
-            transport.oneway(msg);
+            transport.oneway(msg, null);
         }
     }
 
@@ -145,7 +145,7 @@ public class ConnectionStateTracker extends CommandVisitorAdapter {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("tx replay: " + command);
                 }
-                transport.oneway(command);
+                transport.oneway(command, null);
             }
         }
     }
@@ -159,7 +159,7 @@ public class ConnectionStateTracker extends CommandVisitorAdapter {
         // Restore the connection's sessions
         for (Iterator iter2 = connectionState.getSessionStates().iterator(); iter2.hasNext();) {
             SessionState sessionState = (SessionState)iter2.next();
-            transport.oneway(sessionState.getInfo());
+            transport.oneway(sessionState.getInfo(), null);
 
             if (restoreProducers) {
                 restoreProducers(transport, sessionState);
@@ -180,7 +180,7 @@ public class ConnectionStateTracker extends CommandVisitorAdapter {
         // Restore the session's consumers
         for (Iterator iter3 = sessionState.getConsumerStates().iterator(); iter3.hasNext();) {
             ConsumerState consumerState = (ConsumerState)iter3.next();
-            transport.oneway(consumerState.getInfo());
+            transport.oneway(consumerState.getInfo(), null);
         }
     }
 
@@ -193,7 +193,7 @@ public class ConnectionStateTracker extends CommandVisitorAdapter {
         // Restore the session's producers
         for (Iterator iter3 = sessionState.getProducerStates().iterator(); iter3.hasNext();) {
             ProducerState producerState = (ProducerState)iter3.next();
-            transport.oneway(producerState.getInfo());
+            transport.oneway(producerState.getInfo(), null);
         }
     }
 
@@ -206,7 +206,7 @@ public class ConnectionStateTracker extends CommandVisitorAdapter {
         throws IOException {
         // Restore the connection's temp destinations.
         for (Iterator iter2 = connectionState.getTempDesinations().iterator(); iter2.hasNext();) {
-            transport.oneway((DestinationInfo)iter2.next());
+            transport.oneway((DestinationInfo)iter2.next(), null);
         }
     }
 

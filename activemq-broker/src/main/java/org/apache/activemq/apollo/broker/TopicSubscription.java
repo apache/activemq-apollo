@@ -98,7 +98,6 @@ class TopicSubscription implements BrokerSubscription, DeliveryTarget {
 		String name = subscription.getResourceName();
 		IFlowLimiter<MessageDelivery> limiter = new SizeLimiter<MessageDelivery>(100, 50);
 		ExclusiveQueue<MessageDelivery> queue = new ExclusiveQueue<MessageDelivery>(flow, name, limiter);
-		queue.setDispatcher(host.getBroker().getDispatcher());
 		queue.setDrain( new QueueDispatchTarget<MessageDelivery>() {
             public void drain(MessageDelivery elem, ISourceController<MessageDelivery> controller) {
                 subscription.add(elem, controller);

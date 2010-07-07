@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,13 +30,17 @@ import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
-import org.apache.activemq.transport.pipe.Pipe;
+import org.apache.activemq.transport.pipe.PipeTransport;
 import org.apache.activemq.transport.pipe.PipeTransportFactory;
+import org.apache.activemq.transport.pipe.PipeTransportServer;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.util.URISupport;
 import org.apache.activemq.wireformat.WireFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import static org.apache.activemq.transport.TransportFactorySupport.configure;
+import static org.apache.activemq.transport.TransportFactorySupport.verify;
 
 /**
  * Implements the vm transport which behaves like the pipe transport except that
@@ -46,7 +51,8 @@ import org.apache.commons.logging.LogFactory;
  */
 public class VMTransportFactory extends PipeTransportFactory {
 	static final private Log LOG = LogFactory.getLog(VMTransportFactory.class);
-	
+    private static final String DEFAULT_PIPE_NAME = Broker.DEFAULT_VIRTUAL_HOST_NAME.toString();
+
 	/**
 	 * This extension of the PipeTransportServer shuts down the broker
 	 * when all the connections are disconnected.
@@ -58,10 +64,9 @@ public class VMTransportFactory extends PipeTransportFactory {
 		private Broker broker;
 
 		@Override
-		protected PipeTransport createClientTransport(Pipe<Object> pipe) {
+		protected PipeTransport createClientTransport() {
 			refs.incrementAndGet();
-
-			return new PipeTransport(pipe) {
+			return new PipeTransport(this) {
 				AtomicBoolean stopped = new AtomicBoolean();
 				@Override
 				public void stop() throws Exception {
@@ -90,20 +95,13 @@ public class VMTransportFactory extends PipeTransportFactory {
 		}
 	}
 
-
-	private static final String DEFAULT_PIPE_NAME = Broker.DEFAULT_VIRTUAL_HOST_NAME.toString();
-
-	@Override
-	public Transport compositeConfigure(Transport transport, WireFormat format, Map options) {
-		// Wishing right now the options would have been passed to the createTransport(URI location, WireFormat wf) method so we did don't
-		// need to remove these here.
-		options.remove("create");
-		options.remove("broker");
-		return super.compositeConfigure(transport, format, options);
+    @Override
+    public TransportServer bind(URI uri) {
+		return new VmTransportServer();
 	}
-	
-	@Override
-    protected Transport createTransport(URI location, WireFormat wf) throws UnknownHostException, IOException {
+
+    @Override
+    public Transport connect(URI location) throws IOException {
 		try {
 			
 			String brokerURI = null;
@@ -147,7 +145,6 @@ public class VMTransportFactory extends PipeTransportFactory {
 				// We want to use a vm transport server impl.
 				VmTransportServer vmTransportServer = (VmTransportServer) TransportFactory.bind(new URI("vm://" + name+"?wireFormat=null"));
 				vmTransportServer.setBroker(broker);
-				vmTransportServer.setWireFormatFactory(wf.getWireFormatFactory());
 				broker.addTransportServer(vmTransportServer);
 				broker.start();
 				
@@ -159,9 +156,8 @@ public class VMTransportFactory extends PipeTransportFactory {
 			}
 			
 	        PipeTransport transport = server.connect();
-	        transport.setWireFormat(wf);
-	        return transport;
-			
+            return verify( configure(transport, options), options);
+
 		} catch (URISyntaxException e) {
 			throw IOExceptionSupport.create(e);
 		} catch (Exception e) {
@@ -169,10 +165,4 @@ public class VMTransportFactory extends PipeTransportFactory {
 		}
 	}
 
-
-	@Override
-	protected PipeTransportServer createTransportServer() {
-		return new VmTransportServer();
-	}
-		
 }

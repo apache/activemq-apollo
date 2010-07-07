@@ -92,16 +92,22 @@ public class WireFormatNegotiator extends TransportFilter {
         readyCountDownLatch.countDown();
     }
 
-    public void oneway(Object command) throws IOException {
+    public void oneway(Object command, CompletionCallback callback) {
         try {
-            if (!readyCountDownLatch.await(negotiateTimeout, TimeUnit.MILLISECONDS)) {
-                throw new IOException("Wire format negotiation timeout: peer did not send his wire format.");
+            try {
+                if (!readyCountDownLatch.await(negotiateTimeout, TimeUnit.MILLISECONDS)) {
+                    throw new IOException("Wire format negotiation timeout: peer did not send his wire format.");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new InterruptedIOException();
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new InterruptedIOException();
+        } catch (IOException e) {
+            if( callback!=null) {
+                callback.onFailure(e);
+            }
         }
-        super.oneway(command);
+        super.oneway(command, callback);
     }
 
     public void onCommand(Object o) {
@@ -165,7 +171,7 @@ public class WireFormatNegotiator extends TransportFilter {
     }
 
     protected void sendWireFormat(WireFormatInfo info) throws IOException {
-        next.oneway(info);
+        next.oneway(info, null);
     }
 
     protected void onWireFormatNegotiated(WireFormatInfo info) {

@@ -16,40 +16,12 @@
  */
 package org.apache.activemq.apollo.broker;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.activemq.Service;
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store;
-import org.apache.activemq.broker.store.Store.Callback;
-import org.apache.activemq.broker.store.Store.FatalStoreException;
-import org.apache.activemq.broker.store.Store.KeyNotFoundException;
-import org.apache.activemq.broker.store.Store.MessageRecord;
-import org.apache.activemq.broker.store.Store.QueueQueryResult;
-import org.apache.activemq.broker.store.Store.QueueRecord;
-import org.apache.activemq.broker.store.Store.Session;
-import org.apache.activemq.dispatch.Dispatcher;
-import org.apache.activemq.dispatch.DispatcherAware;
-import org.apache.activemq.flow.AbstractLimitedFlowResource;
-import org.apache.activemq.flow.Flow;
-import org.apache.activemq.flow.FlowController;
-import org.apache.activemq.flow.IFlowResource;
-import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.flow.SizeLimiter;
+import org.apache.activemq.broker.store.Store.*;
+import org.apache.activemq.flow.*;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
-import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.activemq.queue.RestoreListener;
 import org.apache.activemq.queue.RestoredElement;
 import org.apache.activemq.queue.SaveableQueueElement;
@@ -59,8 +31,16 @@ import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.util.list.LinkedNode;
 import org.apache.activemq.util.list.LinkedNodeList;
+import org.fusesource.hawtdispatch.Dispatch;
+import org.fusesource.hawtdispatch.DispatchQueue;
 
-public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.OperationBase<?>> implements Service, DispatcherAware {
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
+public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.OperationBase<?>> implements Service {
 
     private static final boolean DEBUG = false;
 
@@ -71,7 +51,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     private final FlowController<OperationBase<?>> storeController;
     private final int FLUSH_QUEUE_SIZE = 10000 * 1024;
 
-    private Dispatcher dispatcher;
+    private DispatchQueue dispatcher;
     private Thread flushThread;
     private AtomicBoolean running = new AtomicBoolean(false);
     private DatabaseListener listener;
@@ -328,7 +308,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
         if (requestedDelayedFlushPointer == -1) {
             requestedDelayedFlushPointer = delayedFlushPointer;
-            dispatcher.getGlobalQueue().dispatchAfter(flushDelayCallback, flushDelay, TimeUnit.MILLISECONDS);
+            Dispatch.getGlobalQueue().dispatchAfter(flushDelay, TimeUnit.MILLISECONDS, flushDelayCallback);
         }
 
     }
@@ -566,10 +546,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     /**
      * Deletes the given message from the store for the given queue.
      * 
-     * @param storeTracking
-     *            The tracking number of the element being deleted
-     * @param queue
-     *            The queue.
+     * @param queueElement
      * @return The {@link OperationContext} associated with the operation
      */
     public OperationContext<?> deleteQueueElement(SaveableQueueElement<?> queueElement) {
@@ -578,7 +555,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
     /**
      * Loads a batch of messages for the specified queue. The loaded messages
-     * are given the provided {@link MessageRestoreListener}.
+     * are given the provided {@link RestoreListener}.
      * <p>
      * <b><i>NOTE:</i></b> This method uses the queue sequence number for the
      * message not the store tracking number.
@@ -592,7 +569,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
      *            begining)
      * @param maxSequence
      *            The maximum sequence number to load (-1 if no limit)
-     * @param max
+     * @param maxCount
      *            The maximum number of messages to load (-1 if no limit)
      * @param listener
      *            The listener to which messags should be passed.
@@ -632,7 +609,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
     /**
      * This interface is used to execute transacted code.
      * 
-     * It is used by the {@link Store#execute(Callback)} method, often as
+     * It is used by the {@link Store#execute(org.apache.activemq.broker.store.Store.Callback, Runnable)} method, often as
      * anonymous class.
      */
     public interface Operation<V> extends OperationContext<V> {
@@ -646,8 +623,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         public boolean beginExecute();
 
         /**
-         * Gets called by the
-         * {@link Store#add(Operation, ISourceController, boolean)} method
+         * Gets called by the {@link Store}
          * within a transactional context. If any exception is thrown including
          * Runtime exception, the transaction is rolled back.
          * 
@@ -760,7 +736,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
 
         /**
          * Gets called by the
-         * {@link Store#add(Operation, ISourceController, boolean)} method
+         * {@link Store} method
          * within a transactional context. If any exception is thrown including
          * Runtime exception, the transaction is rolled back.
          * 
@@ -867,7 +843,7 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
          * to complete, and then retrieves its result, if available.
          *
          * @param timeout the maximum time to wait
-         * @param unit the time unit of the timeout argument
+         * @param tu the time unit of the timeout argument
          * @return the computed result
          * @throws CancellationException if the computation was cancelled
          * @throws ExecutionException if the computation threw an
@@ -1288,12 +1264,8 @@ public class BrokerDatabase extends AbstractLimitedFlowResource<BrokerDatabase.O
         return store.allocateStoreTracking();
     }
 
-    public Dispatcher getDispatcher() {
-        return dispatcher;
-    }
-
-    public void setDispatcher(Dispatcher dispatcher) {
-        this.dispatcher = dispatcher;
+    public void setDispatchQueue(DispatchQueue queue) {
+        this.dispatcher = queue;
     }
 
     public Store getStore() {

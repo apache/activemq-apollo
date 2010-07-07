@@ -29,6 +29,7 @@ import javax.net.SocketFactory;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportFactory;
 //import org.apache.activemq.transport.TransportLoggerFactory;
+import org.apache.activemq.transport.TransportFactorySupport;
 import org.apache.activemq.transport.TransportServer;
 import org.apache.activemq.util.IOExceptionSupport;
 import org.apache.activemq.util.IntrospectionSupport;
@@ -37,87 +38,50 @@ import org.apache.activemq.wireformat.WireFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import static org.apache.activemq.transport.TransportFactorySupport.configure;
+import static org.apache.activemq.transport.TransportFactorySupport.verify;
+
 /**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  * @author David Martin Clavo david(dot)martin(dot)clavo(at)gmail.com (logging improvement modifications)
  */
-public class TcpTransportFactory extends TransportFactory {
+public class TcpTransportFactory implements TransportFactory.TransportFactorySPI {
     private static final Log LOG = LogFactory.getLog(TcpTransportFactory.class);
 
-    public TransportServer doBind(final URI location) throws IOException {
-        try {
-            Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(location));
-
-            ServerSocketFactory serverSocketFactory = createServerSocketFactory();
-            TcpTransportServer server = createTcpTransportServer(location, serverSocketFactory);
-            server.setWireFormatFactory(createWireFormatFactory(options));
-            IntrospectionSupport.setProperties(server, options);
-            Map<String, Object> transportOptions = IntrospectionSupport.extractProperties(options, "transport.");
-            server.setTransportOption(transportOptions);
-            server.bind();
-
-            return server;
-        } catch (URISyntaxException e) {
-            throw IOExceptionSupport.create(e);
-        }
+    public TransportServer bind(URI location) throws Exception {
+        Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(location));
+        TcpTransportServer server = createTcpTransportServer(location);
+        server.setWireFormatFactory(TransportFactorySupport.createWireFormatFactory(options));
+        IntrospectionSupport.setProperties(server, options);
+        Map<String, Object> transportOptions = IntrospectionSupport.extractProperties(options, "transport.");
+        server.setTransportOption(transportOptions);
+        return server;
     }
 
     /**
      * Allows subclasses of TcpTransportFactory to create custom instances of
      * TcpTransportServer.
-     * 
-     * @param location
-     * @param serverSocketFactory
-     * @return
-     * @throws IOException
-     * @throws URISyntaxException
      */
-    protected TcpTransportServer createTcpTransportServer(final URI location, ServerSocketFactory serverSocketFactory) throws IOException, URISyntaxException {
-        return new TcpTransportServer(this, location, serverSocketFactory);
+    protected TcpTransportServer createTcpTransportServer(final URI location) throws IOException, URISyntaxException {
+        return new TcpTransportServer(location);
     }
 
-    public Transport compositeConfigure(Transport transport, WireFormat format, Map options) {
 
-        TcpTransport tcpTransport = (TcpTransport)transport.narrow(TcpTransport.class);
-        IntrospectionSupport.setProperties(tcpTransport, options);
+    public Transport connect(URI location) throws Exception {
+        Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(location));
+        URI localLocation = getLocalLocation(location);
+
+        TcpTransport transport = new TcpTransport();
+        transport.connecting(location, localLocation);
 
         Map<String, Object> socketOptions = IntrospectionSupport.extractProperties(options, "socket.");
-        tcpTransport.setSocketOptions(socketOptions);
-        
-        if (tcpTransport.isTrace()) {
-            throw new UnsupportedOperationException("Trace not implemented");
-//            try {
-//                transport = TransportLoggerFactory.getInstance().createTransportLogger(transport, tcpTransport.getLogWriterName(),
-//                        tcpTransport.isDynamicManagement(), tcpTransport.isStartLogging(), tcpTransport.getJmxPort());
-//            } catch (Throwable e) {
-//                LOG.error("Could not create TransportLogger object for: " + tcpTransport.getLogWriterName() + ", reason: " + e, e);
-//            }
-        }
-        
-        boolean useInactivityMonitor = "true".equals(getOption(options, "useInactivityMonitor", "true"));
-        tcpTransport.setUseInactivityMonitor(useInactivityMonitor && isUseInactivityMonitor(transport));
-        
+        transport.setSocketOptions(socketOptions);
 
-        transport = format.createTransportFilters(transport, options);
-        
-        return transport;
+        configure(transport, options);
+        return verify(transport, options);
     }
 
-    protected String getOption(Map options, String key, String def) {
-        String rc = (String) options.remove(key);
-        if( rc == null ) {
-            rc = def;
-        }
-        return rc;
-    }
-
-    /**
-     * Returns true if the inactivity monitor should be used on the transport
-     */
-    protected boolean isUseInactivityMonitor(Transport transport) {
-        return true;
-    }
-
-    protected Transport createTransport(URI location, WireFormat wf) throws UnknownHostException, IOException {
+    private URI getLocalLocation(URI location) {
         URI localLocation = null;
         String path = location.getPath();
         // see if the path is a local URI location
@@ -131,31 +95,15 @@ public class TcpTransportFactory extends TransportFactory {
                 LOG.warn("path isn't a valid local location for TcpTransport to use", e);
             }
         }
-        SocketFactory socketFactory = createSocketFactory();
-        return createTcpTransport(wf, socketFactory, location, localLocation);
+        return localLocation;
     }
 
-    /**
-     * Allows subclasses of TcpTransportFactory to provide a create custom
-     * TcpTransport intances.
-     * 
-     * @param location
-     * @param wf
-     * @param socketFactory
-     * @param localLocation
-     * @return
-     * @throws UnknownHostException
-     * @throws IOException
-     */
-    protected TcpTransport createTcpTransport(WireFormat wf, SocketFactory socketFactory, URI location, URI localLocation) throws UnknownHostException, IOException {
-        return new TcpTransport(wf, socketFactory, location, localLocation);
+    protected String getOption(Map options, String key, String def) {
+        String rc = (String) options.remove(key);
+        if( rc == null ) {
+            rc = def;
+        }
+        return rc;
     }
 
-    protected ServerSocketFactory createServerSocketFactory() throws IOException {
-        return ServerSocketFactory.getDefault();
-    }
-
-    protected SocketFactory createSocketFactory() throws IOException {
-        return SocketFactory.getDefault();
-    }
 }

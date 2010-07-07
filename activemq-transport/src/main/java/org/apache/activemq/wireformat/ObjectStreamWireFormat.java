@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.nio.channels.ReadableByteChannel;
 import java.util.Map;
 
 import org.apache.activemq.transport.Transport;
@@ -69,6 +70,10 @@ public class ObjectStreamWireFormat implements WireFormat {
         } catch (ClassNotFoundException e) {
             throw (IOException) new IOException("unmarshal failed: " + e).initCause(e);
         }
+    }
+
+    public Object unmarshal(ReadableByteChannel channel) {
+        throw new UnsupportedOperationException();
     }
 
     public void setVersion(int version) {

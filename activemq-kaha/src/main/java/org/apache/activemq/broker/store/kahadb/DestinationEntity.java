@@ -27,36 +27,50 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store;
 import org.apache.activemq.broker.store.Store.DuplicateKeyException;
 import org.apache.activemq.broker.store.Store.QueueRecord;
 import org.apache.activemq.broker.store.kahadb.Data.QueueAddMessage;
-import org.apache.activemq.queue.QueueDescriptor;
-import org.apache.activemq.util.marshaller.LongMarshaller;
-import org.apache.activemq.util.marshaller.Marshaller;
-import org.apache.activemq.util.marshaller.VariableMarshaller;
-import org.apache.kahadb.index.BTreeIndex;
-import org.apache.kahadb.page.Page;
-import org.apache.kahadb.page.Transaction;
+import org.fusesource.hawtdb.api.BTreeIndexFactory;
+import org.fusesource.hawtdb.api.SortedIndex;
+import org.fusesource.hawtdb.api.Transaction;
+import org.fusesource.hawtdb.util.marshaller.*;
 
 public class DestinationEntity {
+
+    private static final BTreeIndexFactory<Long, QueueRecord> queueIndexFactory = new BTreeIndexFactory<Long, QueueRecord>();
+    private static final BTreeIndexFactory<Long, Long> trackingIndexFactory = new BTreeIndexFactory<Long, Long>();
+    private static final BTreeIndexFactory<Long, Long> statsIndexFactory = new BTreeIndexFactory<Long, Long>();
+
+    static {
+        queueIndexFactory.setKeyMarshaller(LongMarshaller.INSTANCE);
+        queueIndexFactory.setValueMarshaller(Marshallers.QUEUE_RECORD_MARSHALLER);
+        queueIndexFactory.setDeferredEncoding(true);
+
+        trackingIndexFactory.setKeyMarshaller(LongMarshaller.INSTANCE);
+        trackingIndexFactory.setValueMarshaller(LongMarshaller.INSTANCE);
+        trackingIndexFactory.setDeferredEncoding(true);
+
+        statsIndexFactory.setKeyMarshaller(LongMarshaller.INSTANCE);
+        statsIndexFactory.setValueMarshaller(LongMarshaller.INSTANCE);
+        statsIndexFactory.setDeferredEncoding(true);
+    }
 
     public final static Marshaller<DestinationEntity> MARSHALLER = new VariableMarshaller<DestinationEntity>() {
 
         public DestinationEntity readPayload(DataInput dataIn) throws IOException {
             DestinationEntity value = new DestinationEntity();
-            value.queueIndex = new BTreeIndex<Long, QueueRecord>(dataIn.readLong());
-            value.trackingIndex = new BTreeIndex<Long, Long>(dataIn.readLong());
+            value.queueIndex = dataIn.readInt();
+            value.trackingIndex =  dataIn.readInt();
             value.descriptor = Marshallers.QUEUE_DESCRIPTOR_MARSHALLER.readPayload(dataIn);
-            value.metaData = new Page<DestinationMetaData>(dataIn.readLong());
             return value;
         }
 
         public void writePayload(DestinationEntity value, DataOutput dataOut) throws IOException {
-            dataOut.writeLong(value.queueIndex.getPageId());
-            dataOut.writeLong(value.trackingIndex.getPageId());
+            dataOut.writeInt(value.queueIndex);
+            dataOut.writeInt(value.trackingIndex);
             Marshallers.QUEUE_DESCRIPTOR_MARSHALLER.writePayload(value.descriptor, dataOut);
-            dataOut.writeLong(value.metaData.getPageId());
         }
 
         public int estimatedSize(DestinationEntity object) {
@@ -65,30 +79,13 @@ public class DestinationEntity {
 
     };
 
-    public final static Marshaller<DestinationMetaData> META_DATA_MARSHALLER = new VariableMarshaller<DestinationMetaData>() {
-        public DestinationMetaData readPayload(DataInput dataIn) throws IOException {
-            DestinationMetaData value = new DestinationMetaData();
-            value.count = dataIn.readInt();
-            value.size = dataIn.readLong();
-            return value;
-        }
-
-        public void writePayload(DestinationMetaData value, DataOutput dataOut) throws IOException {
-            dataOut.writeInt(value.count);
-            dataOut.writeLong(value.size);
-        }
-
-        public int estimatedSize(DestinationMetaData object) {
-            throw new UnsupportedOperationException();
-        }
-    };
-
     public Class<DestinationEntity> getType() {
         return DestinationEntity.class;
     }
 
-    private BTreeIndex<Long, QueueRecord> queueIndex;
-    private BTreeIndex<Long, Long> trackingIndex;
+    private int queueIndex;
+    private int trackingIndex;
+    private int statsIndex;
 
     // Descriptor for this queue:
     private QueueDescriptor descriptor;
@@ -96,78 +93,77 @@ public class DestinationEntity {
     // Child Partitions:
     private HashSet<DestinationEntity> partitions;
 
-    // Holds volatile queue meta data
-    private Page<DestinationMetaData> metaData;
-
     // /////////////////////////////////////////////////////////////////
     // Lifecycle Methods.
     // /////////////////////////////////////////////////////////////////
     public void allocate(Transaction tx) throws IOException {
-        queueIndex = new BTreeIndex<Long, QueueRecord>(tx.allocate());
-        trackingIndex = new BTreeIndex<Long, Long>(tx.allocate());
-        metaData = tx.allocate();
-        metaData.set(new DestinationMetaData());
-        tx.store(metaData, META_DATA_MARSHALLER, true);
+        queueIndex = tx.alloc();
+        queueIndexFactory.create(tx, queueIndex);
+
+        trackingIndex = tx.alloc();
+        trackingIndexFactory.create(tx, trackingIndex);
+
+        statsIndex = tx.alloc();
+        statsIndexFactory.create(tx, statsIndex);
+        setStats(tx, 0,0);
     }
 
     public void deallocate(Transaction tx) throws IOException {
-        queueIndex.clear(tx);
-        trackingIndex.clear(tx);
-        tx.free(trackingIndex.getPageId());
-        tx.free(queueIndex.getPageId());
-        tx.free(metaData.getPageId());
-        queueIndex = null;
-        trackingIndex = null;
-        metaData = null;
+        queueIndex(tx).clear();
+        tx.free(trackingIndex);
+
+        trackingIndex(tx).clear();
+        tx.free(queueIndex);
+
+        statsIndex(tx).clear();
+        tx.free(statsIndex);
     }
 
-    public void load(Transaction tx) throws IOException {
-        if (queueIndex.getPageFile() == null) {
-
-            queueIndex.setPageFile(tx.getPageFile());
-            queueIndex.setKeyMarshaller(LongMarshaller.INSTANCE);
-            queueIndex.setValueMarshaller(Marshallers.QUEUE_RECORD_MARSHALLER);
-            queueIndex.load(tx);
-        }
-
-        if (trackingIndex.getPageFile() == null) {
-
-            trackingIndex.setPageFile(tx.getPageFile());
-            trackingIndex.setKeyMarshaller(LongMarshaller.INSTANCE);
-            trackingIndex.setValueMarshaller(LongMarshaller.INSTANCE);
-            trackingIndex.load(tx);
-        }
-
-        tx.load(metaData, META_DATA_MARSHALLER);
+    private SortedIndex<Long, QueueRecord> queueIndex(Transaction tx) {
+        return queueIndexFactory.open(tx, queueIndex);
+    }
+    private SortedIndex<Long, Long> trackingIndex(Transaction tx) {
+        return trackingIndexFactory.open(tx, trackingIndex);
+    }
+    private SortedIndex<Long, Long> statsIndex(Transaction tx) {
+        return statsIndexFactory.open(tx, statsIndex);
     }
 
     private static final boolean unlimited(Number val) {
         return val == null || val.longValue() < 0;
     }
 
-    private DestinationMetaData getMetaData(Transaction tx) throws IOException {
-        tx.load(metaData, META_DATA_MARSHALLER);
-        return metaData.get();
-    }
-
     // /////////////////////////////////////////////////////////////////
     // Message Methods.
     // /////////////////////////////////////////////////////////////////
-    
+
+    public static final Long SIZE_STAT = 0L;
+    public static final Long COUNT_STAT = 0L;
+
     public long getSize(Transaction tx) throws IOException {
-        return getMetaData(tx).size;
+        return statsIndex(tx).get(SIZE_STAT);
     }
 
     public int getCount(Transaction tx) throws IOException {
-        return getMetaData(tx).count;
+        return (int)(long)statsIndex(tx).get(COUNT_STAT);
     }
 
     public long getFirstSequence(Transaction tx) throws IOException {
-        return getMetaData(tx).count == 0 ? 0 : queueIndex.getFirst(tx).getValue().getQueueKey();
+        Entry<Long, QueueRecord> entry = queueIndex(tx).getFirst();
+        if( entry!=null ) {
+            return entry.getValue().getQueueKey();
+        } else {
+            return 0;
+        }
     }
 
     public long getLastSequence(Transaction tx) throws IOException {
-        return getMetaData(tx).count == 0 ? 0 : queueIndex.getLast(tx).getValue().getQueueKey();
+        Entry<Long, QueueRecord> entry = queueIndex(tx).getLast();
+        if( entry!=null ) {
+            return entry.getValue().getQueueKey();
+        } else {
+            return 0;
+        }
     }
 
     public void setQueueDescriptor(QueueDescriptor queue) {
@@ -207,7 +203,7 @@ public class DestinationEntity {
 
     public void add(Transaction tx, QueueAddMessage command) throws IOException, DuplicateKeyException {
 
-        Long existing = trackingIndex.put(tx, command.getMessageKey(), command.getQueueKey());
+        Long existing = trackingIndex(tx).put(command.getMessageKey(), command.getQueueKey());
         if (existing == null) {
             QueueRecord value = new QueueRecord();
             value.setAttachment(command.getAttachment());
@@ -215,7 +211,7 @@ public class DestinationEntity {
             value.setQueueKey(command.getQueueKey());
             value.setSize(command.getMessageSize());
 
-            QueueRecord rc = queueIndex.put(tx, value.getQueueKey(), value);
+            QueueRecord rc = queueIndex(tx).put(value.getQueueKey(), value);
             if (rc == null) {
                 // TODO It seems a little inefficient to continually serialize
                 // the queue size. It might be better to update this only at
@@ -225,14 +221,25 @@ public class DestinationEntity {
                 // It is also possible that we might want to remove this update
                 // altogether in favor of scanning the whole queue at recovery
                 // time (at the cost of startup time)
-                getMetaData(tx).update(1, command.getMessageSize());
-                tx.store(metaData, META_DATA_MARSHALLER, true);
+                addStats(tx, 1, command.getMessageSize());
             } else {
                 throw new Store.FatalStoreException(new Store.DuplicateKeyException("Duplicate sequence number " + command.getQueueKey() + " for " + descriptor.getQueueName()));
             }
         } else {
             throw new Store.DuplicateKeyException("Duplicate tracking " + command.getMessageKey() + " for " + descriptor.getQueueName());
         }
+    }
+
+    private void addStats(Transaction tx, int count, int size) {
+        SortedIndex<Long, Long> index = statsIndex(tx);
+        index.put(COUNT_STAT, index.get(COUNT_STAT)+count);
+        index.put(SIZE_STAT, index.get(SIZE_STAT)+size);
+    }
+    
+    private void setStats(Transaction tx, int count, int size) {
+        SortedIndex<Long, Long> index = statsIndex(tx);
+        index.put(COUNT_STAT, new Long(count));
+        index.put(SIZE_STAT, new Long(size));
     }
 
     /**
@@ -243,12 +250,11 @@ public class DestinationEntity {
      * @throws IOException
      */
     public long remove(Transaction tx, long queueKey) throws IOException {
-        QueueRecord qr = queueIndex.remove(tx, queueKey);
+        QueueRecord qr = queueIndex(tx).remove(queueKey);
         if(qr != null)
         {
-            trackingIndex.remove(tx, qr.getMessageKey());
-            getMetaData(tx).update(-1, -qr.getSize());
-            tx.store(metaData, META_DATA_MARSHALLER, true);
+            trackingIndex(tx).remove(qr.getMessageKey());
+            addStats(tx, -1, -qr.getSize());
             return qr.getMessageKey();
         }
         return -1;
@@ -264,10 +270,10 @@ public class DestinationEntity {
         
         Iterator<Entry<Long, QueueRecord>> iterator;
         if (unlimited(firstQueueKey)) {
-            iterator = queueIndex.iterator(tx);
+            iterator = queueIndex(tx).iterator();
 
         } else {
-            iterator = queueIndex.iterator(tx, firstQueueKey);
+            iterator = queueIndex(tx).iterator(firstQueueKey);
         }
         boolean sequenceLimited = !unlimited(maxQueueKey);
         boolean countLimited = !unlimited(max);
@@ -286,21 +292,8 @@ public class DestinationEntity {
     }
 
     public Iterator<Entry<Long, Long>> listTrackingNums(Transaction tx) throws IOException {
-        return trackingIndex.iterator(tx);
+        return trackingIndex(tx).iterator();
     }
 
-    public static class DestinationMetaData {
-        int count;
-        long size;
 
-        public void update(int count, long size) {
-            this.count += count;
-            this.size += size;
-        }
-
-        public void set(int count, long size) {
-            this.count = count;
-            this.size = size;
-        }
-    }
 }

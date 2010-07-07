@@ -17,6 +17,8 @@
 package org.apache.activemq.queue;
 
 import java.util.ArrayList;
+
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.flow.PrioritySizeLimiter;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 

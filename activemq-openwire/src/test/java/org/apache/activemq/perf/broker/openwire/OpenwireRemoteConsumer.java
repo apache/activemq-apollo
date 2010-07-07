@@ -28,6 +28,7 @@ import org.apache.activemq.flow.FlowController;
 import org.apache.activemq.flow.IFlowResource;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.flow.ISinkController.FlowControllable;
+import org.fusesource.hawtdispatch.Dispatch;
 
 public class OpenwireRemoteConsumer extends RemoteConsumer {
 
@@ -40,6 +41,8 @@ public class OpenwireRemoteConsumer extends RemoteConsumer {
     private ConsumerInfo consumerInfo;
 
     private Message lastMessage;
+    private int inputWindowSize;
+    private int inputResumeThreshold;
 
     protected void initialize() {
         inputWindowSize = 1000;
@@ -71,7 +74,7 @@ public class OpenwireRemoteConsumer extends RemoteConsumer {
                 return null;
             }
         }, flow, limiter, inboundMutex);
-        inboundController.setExecutor(getDispatcher().getGlobalQueue(DispatchPriority.HIGH));
+        inboundController.setExecutor(Dispatch.getGlobalQueue());
 
     }
 
@@ -83,12 +86,12 @@ public class OpenwireRemoteConsumer extends RemoteConsumer {
         }
 
         connectionInfo = createConnectionInfo(name);
-        transport.oneway(connectionInfo);
+        transport.oneway(connectionInfo, null);
         sessionInfo = createSessionInfo(connectionInfo);
-        transport.oneway(sessionInfo);
+        transport.oneway(sessionInfo, null);
         consumerInfo = createConsumerInfo(sessionInfo, activemqDestination, isDurable() ? name : null);
         consumerInfo.setPrefetchSize(inputWindowSize);
-        transport.oneway(consumerInfo);
+        transport.oneway(consumerInfo, null);
     }
 
     public void onCommand(Object command) {

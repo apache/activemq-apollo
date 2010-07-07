@@ -23,7 +23,8 @@ import java.io.IOException;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.activemq.util.marshaller.Marshaller;
 import org.apache.activemq.util.marshaller.VariableMarshaller;
-import org.apache.kahadb.journal.Location;
+import org.fusesource.hawtdb.internal.journal.Location;
+import org.fusesource.hawtdb.util.marshaller.LocationMarshaller;
 
 public class MessageKeys {
 
@@ -42,14 +43,14 @@ public class MessageKeys {
     
     public static final Marshaller<MessageKeys> MARSHALLER = new VariableMarshaller<MessageKeys>() {
         public MessageKeys readPayload(DataInput dataIn) throws IOException {
-            Location location = Marshallers.LOCATION_MARSHALLER.readPayload(dataIn);
+            Location location = LocationMarshaller.INSTANCE.readPayload(dataIn);
             byte data[] = new byte[dataIn.readShort()];
             dataIn.readFully(data);
             return new MessageKeys(new AsciiBuffer(data), location);
         }
 
         public void writePayload(MessageKeys object, DataOutput dataOut) throws IOException {
-            Marshallers.LOCATION_MARSHALLER.writePayload(object.location, dataOut);
+            LocationMarshaller.INSTANCE.writePayload(object.location, dataOut);
             dataOut.writeShort(object.messageId.length);
             dataOut.write(object.messageId.data, object.messageId.offset, object.messageId.length);
         }

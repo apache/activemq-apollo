@@ -44,7 +44,6 @@ public class JAXBConfigTest extends TestCase {
 		LOG.info("Loading broker configuration from the classpath with URI: " + uri);
 		Broker broker = BrokerFactory.createBroker(uri);
 		
-		Dispatcher p = (Dispatcher)broker.getDispatcher();
 //		assertEquals(4, p.getSize());
 //		assertEquals("test dispatcher", p.getName());
 		

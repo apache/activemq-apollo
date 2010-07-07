@@ -19,7 +19,7 @@ package org.apache.activemq.queue;
 import java.util.Collection;
 
 /**
- * A callback used with the {@link BrokerDatabase#restoreMessages(QueueDescriptor, boolean, long, long, int, RestoreListener)} method.
+ * A callback used with the {@link BrokerDatabase#restoreMessages(org.apache.activemq.broker.store.QueueDescriptor , boolean, long, long, int, RestoreListener)} method.
  */
 public interface RestoreListener<V> {
 

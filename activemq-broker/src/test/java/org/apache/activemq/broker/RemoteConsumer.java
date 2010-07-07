@@ -9,7 +9,6 @@ import org.apache.activemq.apollo.broker.MessageDelivery;
 import org.apache.activemq.flow.ISourceController;
 import org.apache.activemq.metric.MetricAggregator;
 import org.apache.activemq.metric.MetricCounter;
-import org.apache.activemq.transport.DispatchableTransport;
 import org.apache.activemq.transport.TransportFactory;
 
 abstract public class RemoteConsumer extends Connection {
@@ -29,11 +28,8 @@ abstract public class RemoteConsumer extends Connection {
         consumerRate.name("Consumer " + name + " Rate");
         totalConsumerRate.add(consumerRate);
 
-        transport = TransportFactory.compositeConnect(uri);
-        if(transport instanceof DispatchableTransport)
-        {
-            schedualWait = true;
-        }
+        transport = TransportFactory.connect(uri);
+        schedualWait = true;
         initialize();
         super.start();
         setupSubscription();
@@ -46,12 +42,12 @@ abstract public class RemoteConsumer extends Connection {
     protected void messageReceived(final ISourceController<MessageDelivery> controller, final MessageDelivery elem) {
         if( schedualWait ) {
             if (thinkTime > 0) {
-                getDispatcher().getGlobalQueue().dispatchAfter(new Runnable(){
+                dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, new Runnable(){
                     public void run() {
                         consumerRate.increment();
                         controller.elementDispatched(elem);
                     }
-                }, thinkTime, TimeUnit.MILLISECONDS);
+                });
                 
             }
             else

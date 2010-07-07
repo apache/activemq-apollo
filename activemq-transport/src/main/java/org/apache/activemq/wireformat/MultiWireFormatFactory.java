@@ -22,6 +22,7 @@ import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -53,14 +54,6 @@ public class MultiWireFormatFactory implements WireFormatFactory {
 
         public int getVersion() {
             return 0;
-        }
-
-        public boolean inReceive() {
-            return wireFormat.inReceive();
-        }
-
-        public void setVersion(int version) {
-            wireFormat.setVersion(version);
         }
 
         private ByteArrayInputStream peeked;
@@ -107,6 +100,10 @@ public class MultiWireFormatFactory implements WireFormatFactory {
             return rc;
         }
 
+        public Object unmarshal(ReadableByteChannel channel) {
+            throw new UnsupportedOperationException();
+        }
+
         public void marshal(Object command, DataOutput out) throws IOException {
             wireFormat.marshal(command, out);
         }
@@ -129,14 +126,6 @@ public class MultiWireFormatFactory implements WireFormatFactory {
             for (WireFormatFactory wff : wireFormatFactories) {
                 maxHeaderLength = Math.max(maxHeaderLength, wff.maxWireformatHeaderLength());
             }
-        }
-
-        public Transport createTransportFilters(Transport transport, Map options) {
-        	if( wireFormat==null ) {
-        		return transport;
-        	} else {
-        		return wireFormat.createTransportFilters(transport, options);
-        	}
         }
 
         public String getName() {

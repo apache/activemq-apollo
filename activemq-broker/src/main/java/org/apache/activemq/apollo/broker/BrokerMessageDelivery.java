@@ -22,9 +22,9 @@ import java.util.Collection;
 import java.util.HashMap;
 
 import org.apache.activemq.apollo.broker.BrokerDatabase.OperationContext;
+import org.apache.activemq.broker.store.QueueDescriptor;
 import org.apache.activemq.broker.store.Store.MessageRecord;
 import org.apache.activemq.flow.ISourceController;
-import org.apache.activemq.queue.QueueDescriptor;
 import org.apache.activemq.queue.SaveableQueueElement;
 import org.apache.activemq.util.buffer.AsciiBuffer;
 import org.apache.activemq.util.buffer.Buffer;
