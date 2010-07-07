@@ -86,7 +86,7 @@ abstract class Connection() extends DefaultTransportListener with BaseService  {
  */
 class BrokerConnection(val connector: Connector, val id:Long) extends Connection {
 
-  var protocol = "stomp"
+  var protocol = "multi"
   var protocolHandler: ProtocolHandler = null;
 
   override def toString = "id: "+id.toString

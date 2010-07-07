@@ -42,10 +42,10 @@ object StompBroker {
     println("log4j at: "+getClass.getClassLoader.getResource("log4j.properties"))
 
     val broker = new Broker()
-    val connector = broker.config.connectors.get(0)
-    connector.bind = uri
-    connector.protocol = "stomp"
-    connector.advertise = uri
+//    val connector = broker.config.connectors.get(0)
+//    connector.bind = uri
+//    connector.protocol = "stomp"
+//    connector.advertise = uri
 
     val store = storeType match {
       case "none" =>

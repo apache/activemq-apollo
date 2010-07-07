@@ -98,6 +98,7 @@ class Connector(val broker:Broker, val id:Long) extends BaseService with Dispatc
 
       accept_counter.incrementAndGet
       var connection = new BrokerConnection(Connector.this, broker.connection_id_counter.incrementAndGet)
+      connection.protocol = config.protocol
       connection.transport = transport
 
       if( STICK_ON_THREAD_QUEUES ) {
