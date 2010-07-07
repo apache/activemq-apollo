@@ -19,7 +19,7 @@
       .chart-graph {
         float:right; width: 66%; height: 15em;  margin: 1em 0 1em 1em;
       }
-      .chart-section { clear:both; margin-top: 1em; }
+      .chart-section { clear:both; margin-top: 1em; padding-left:2em; }
       .clear { clear:both; }
     </style>
     <script type='text/javascript' src='http://www.google.com/jsapi'></script>
@@ -30,35 +30,63 @@
       google.setOnLoadCallback(function() {
         data = new google.visualization.DataTable();
         data.addColumn('string', 'version');
-        data.addColumn('number', '1->1->0 producer');
-        data.addColumn('number', '1->1->1 producer');
-        data.addColumn('number', '1->1->1 consumer');
-        data.addColumn('number', '2->2->2 producer');
-        data.addColumn('number', '2->2->2 producer sd');
-        data.addColumn('number', '2->2->2 consumer');
-        data.addColumn('number', '2->2->2 consumer sd');
-        data.addColumn('number', '10->1->10 producer');
-        data.addColumn('number', '10->1->10 producer sd');
-        data.addColumn('number', '10->1->10 consumer');
-        data.addColumn('number', '10->1->10 consumer sd');
-        data.addColumn('number', '10->1->1 producer');
-        data.addColumn('number', '10->1->1 producer sd');
-        data.addColumn('number', '10->1->1 consumer');
-        data.addColumn('number', '1->1->10 producer');
-        data.addColumn('number', '1->1->10 consumer');
-        data.addColumn('number', '1->1->10 consumer sd');
-        data.addColumn('number', '10->10->10 producer');
-        data.addColumn('number', '10->10->10 producer sd');
-        data.addColumn('number', '10->10->10 consumer');
-        data.addColumn('number', '10->10->10 consumer sd');
-        data.addColumn('number', '1->1->[1 slow,1 fast] producer');
-        data.addColumn('number', '1->1->[1 slow,1 fast] producer sd');
-        data.addColumn('number', '1->1->[1 slow,1 fast] consumer');
-        data.addColumn('number', '1->1->[1 slow,1 fast] consumer sd');
-        data.addColumn('number', '2->2->[1,1 selecting] producer');
-        data.addColumn('number', '2->2->[1,1 selecting] producer sd');
-        data.addColumn('number', '2->2->[1,1 selecting] consumer');
-        data.addColumn('number', '2->2->[1,1 selecting] consumer sd');
+        data.addColumn('number', 'queue 20 1->1->1 producer');
+        data.addColumn('number', 'queue 20 1->1->1 consumer');
+        data.addColumn('number', 'queue 20 2->2->2 producer');
+        data.addColumn('number', 'queue 20 2->2->2 producer sd');
+        data.addColumn('number', 'queue 20 2->2->2 consumer');
+        data.addColumn('number', 'queue 20 2->2->2 consumer sd');
+        data.addColumn('number', 'queue 20 4->4->4 producer');
+        data.addColumn('number', 'queue 20 4->4->4 producer sd');
+        data.addColumn('number', 'queue 20 4->4->4 consumer');
+        data.addColumn('number', 'queue 20 4->4->4 consumer sd');
+        data.addColumn('number', 'queue 20 8->8->8 producer');
+        data.addColumn('number', 'queue 20 8->8->8 producer sd');
+        data.addColumn('number', 'queue 20 8->8->8 consumer');
+        data.addColumn('number', 'queue 20 8->8->8 consumer sd');
+        data.addColumn('number', 'queue 20 10->10->10 producer');
+        data.addColumn('number', 'queue 20 10->10->10 producer sd');
+        data.addColumn('number', 'queue 20 10->10->10 consumer');
+        data.addColumn('number', 'queue 20 10->10->10 consumer sd');
+        data.addColumn('number', 'queue 20 10->1->1 producer');
+        data.addColumn('number', 'queue 20 10->1->1 producer sd');
+        data.addColumn('number', 'queue 20 10->1->1 consumer');
+        data.addColumn('number', 'queue 20 1->1->10 producer');
+        data.addColumn('number', 'queue 20 1->1->10 consumer');
+        data.addColumn('number', 'queue 20 1->1->10 consumer sd');
+        data.addColumn('number', 'queue 20 10->1->10 producer');
+        data.addColumn('number', 'queue 20 10->1->10 producer sd');
+        data.addColumn('number', 'queue 20 10->1->10 consumer');
+        data.addColumn('number', 'queue 20 10->1->10 consumer sd');
+        data.addColumn('number', 'topic 20 1->1->0 producer');
+        data.addColumn('number', 'topic 20 1->1->1 producer');
+        data.addColumn('number', 'topic 20 1->1->1 consumer');
+        data.addColumn('number', 'topic 20 2->2->2 producer');
+        data.addColumn('number', 'topic 20 2->2->2 producer sd');
+        data.addColumn('number', 'topic 20 2->2->2 consumer');
+        data.addColumn('number', 'topic 20 2->2->2 consumer sd');
+        data.addColumn('number', 'topic 20 4->4->4 producer');
+        data.addColumn('number', 'topic 20 4->4->4 producer sd');
+        data.addColumn('number', 'topic 20 4->4->4 consumer');
+        data.addColumn('number', 'topic 20 4->4->4 consumer sd');
+        data.addColumn('number', 'topic 20 8->8->8 producer');
+        data.addColumn('number', 'topic 20 8->8->8 producer sd');
+        data.addColumn('number', 'topic 20 8->8->8 consumer');
+        data.addColumn('number', 'topic 20 8->8->8 consumer sd');
+        data.addColumn('number', 'topic 20 10->10->10 producer');
+        data.addColumn('number', 'topic 20 10->10->10 producer sd');
+        data.addColumn('number', 'topic 20 10->10->10 consumer');
+        data.addColumn('number', 'topic 20 10->10->10 consumer sd');
+        data.addColumn('number', 'topic 20 10->1->1 producer');
+        data.addColumn('number', 'topic 20 10->1->1 producer sd');
+        data.addColumn('number', 'topic 20 10->1->1 consumer');
+        data.addColumn('number', 'topic 20 1->1->10 producer');
+        data.addColumn('number', 'topic 20 1->1->10 consumer');
+        data.addColumn('number', 'topic 20 1->1->10 consumer sd');
+        data.addColumn('number', 'topic 20 10->1->10 producer');
+        data.addColumn('number', 'topic 20 10->1->10 producer sd');
+        data.addColumn('number', 'topic 20 10->1->10 consumer');
+        data.addColumn('number', 'topic 20 10->1->10 consumer sd');
 
         for( var i=0; i <  data.getNumberOfColumns(); i ++) {
           cols_index_map[data.getColumnLabel(i)] = i;
@@ -66,8 +94,7 @@
 
         var data_array = [
 // DATA-START
-      ['555b061e6782136a1a49926f3d1f6b6ab716fdbb', 151405.66, 11196.00, 13107.33, 16008.33, 5532.50, 14253.00, 2875.50, 622.00, 152.36, 3214.00, 1031.43, 4872.33, 696.11, 4779.67, 2176.27, 20076.31, 69.34, 8170.94, 92.81, 8493.50, 421.33, 103.67, 155.50, 19.67, 29.50, 12049.98, 123.00, 12020.66, 18.00],
-      ['555b061e6782136a1a49926f3d1f6b6ab716fdbb', 140957.00, 14202.33, 14158.67, 12854.67, 622.00, 14241.33, 1423.00, 6833.06, 1155.71, 8560.15, 1052.10, 9759.91, 1442.56, 6537.13, 2590.80, 26000.33, 127.60, 13044.33, 535.73, 13001.67, 629.49, 1450.85, 0.00, 19.66, 29.50, 13612.00, 3198.00, 13327.33, 3027.00]
+      ['commit f1ce02f4ec7bec08a46319895c4b6b30bc9e73df', 9508.81, 9471.25, 6116.33, 466.50, 7064.00, 1577.00, 8186.94, 4294.59, 5738.09, 1043.13, 6012.67, 2299.88, 6369.00, 1371.98, 6529.00, 1356.70, 2517.33, 528.98, 3104.83, 695.42, 2237.94, 4976.00, 4998.00, 19.68, 3110.00, 481.80, 2014.00, 253.15, 113277.23, 9637.79, 9489.50, 9948.68, 4976.00, 9981.01, 1635.50, 11084.94, 1791.63, 9300.80, 637.45, 9537.33, 602.25, 9084.00, 647.53, 9834.33, 646.34, 8926.00, 486.86, 4983.32, 490.75, 5365.60, 1655.36, 16238.52, 51.49, 0.00, 0.00, 0.00, 0.00]
 // DATA-END
         ];
         try {
@@ -104,47 +131,54 @@
           commit version.
         </p>
 
-        <div class='chart-section'>
-          <div id='partioned_scaling' class='chart-graph'></div>
-          <script type='text/javascript'>
-            google.setOnLoadCallback(function() {
-              chart('partioned_scaling',
-                ['version', '1->1->1 consumer', '2->2->2 consumer', '10->10->10 consumer'],
-                {showCategories:false, legend: 'bottom', smoothLine:true, titleX:'changes over time', titleY:'messages/sec', enableTooltip:true }
-              );
-            });
-          </script>
-          <h2>Partitioned Scaling</h2>
-          Compares how well the broker scales as partitioned load is increased on it.  Each destination
-          has only one producer and one consumer attached.
-        </div>
+        <h2>General</h2>
 
         <div class='chart-section'>
           <div id='raw_producer_rate' class='chart-graph'></div>
           <script type='text/javascript'>
             google.setOnLoadCallback(function() {
               chart('raw_producer_rate',
-                ['version', '1->1->0 producer'],
+                ['version', 'topic 20 1->1->0 producer'],
                 {showCategories:false, legend: 'bottom', smoothLine:true, titleX:'changes over time', titleY:'messages/sec', enableTooltip:true }
               );
             });
           </script>
-          <h2>Max Producer Rate</h2>
-          Compares the maximum producer rate for when there is no attached consumers vs when there is
-          one attached consumer.
+          <h3>Max Producer Rate</h3>
+          The maximum rate that a single producer can send to a broker.  The producer is setup
+          on a topic with no consumers.  This rate is has a close correlation to your processor
+          speed.
+        </div>
+
+        <div class="clear"></div>
+        <h2>Queue Performce</h2>
+        <p></p>
+        <div class='chart-section'>
+          <div id='queue_partioned_scaling' class='chart-graph'></div>
+          <script type='text/javascript'>
+            google.setOnLoadCallback(function() {
+              chart('queue_partioned_scaling',
+                ['version', 'queue 20 1->1->1 consumer', 'queue 20 2->2->2 consumer', 'queue 20 4->4->4 consumer', 'queue 20 8->8->8 consumer', 'queue 20 10->10->10 consumer'],
+                {showCategories:false, legend: 'bottom', smoothLine:true, titleX:'changes over time', titleY:'messages/sec', enableTooltip:true }
+              );
+            });
+          </script>
+          <h3>Partitioned Scaling</h3>
+          Compares how well the broker scales as partitioned load is increased on it.  Each destination
+          has only one producer and one consumer attached.  This should scale up on machines with many
+          processing cores. 
         </div>
 
         <div class='chart-section'>
-          <div id='fan_in_rate' class='chart-graph'></div>
+          <div id='queue_fan_in_rate' class='chart-graph'></div>
           <script type='text/javascript'>
             google.setOnLoadCallback(function() {
-              chart('fan_in_rate',
-                ['version', '10->1->1 producer', '10->1->1 consumer', '10->1->1 producer sd'],
+              chart('queue_fan_in_rate',
+                ['version', 'queue 20 10->1->1 producer', 'queue 20 10->1->1 consumer', 'queue 20 10->1->1 producer sd'],
                 {showCategories:false, legend: 'bottom', smoothLine:true, titleX:'changes over time', titleY:'messages/sec', enableTooltip:true }
               );
             });
           </script>
-          <h2>Producer Fan In</h2>
+          <h3>Producer Fan In</h3>
           Total producer and consumer rates for when there are many producers on one destination
           but only one consumer.  The 'producer sd' is standard deviation of the message rate across the
           producers.
@@ -152,16 +186,16 @@
 
 
         <div class='chart-section'>
-          <div id='fan_out_rate' class='chart-graph'></div>
+          <div id='queue_fan_out_rate' class='chart-graph'></div>
           <script type='text/javascript'>
             google.setOnLoadCallback(function() {
-              chart('fan_out_rate',
-                ['version', '1->1->10 producer', '1->1->10 consumer', '1->1->10 consumer sd'],
+              chart('queue_fan_out_rate',
+                ['version', 'queue 20 1->1->10 producer', 'queue 20 1->1->10 consumer', 'queue 20 1->1->10 consumer sd'],
                 {showCategories:false, legend: 'bottom', smoothLine:true, titleX:'changes over time', titleY:'messages/sec', enableTooltip:true }
               );
             });
           </script>
-          <h2>Consumer Fan Out</h2>
+          <h3>Consumer Fan Out</h3>
           Total producer and consumer rates for when there are many consumers on one destination
           but only one producer.  The 'consumer sd' is standard deviation of the message rate across the
           consumers.
@@ -169,16 +203,16 @@
 
 
         <div class='chart-section'>
-          <div id='fan_inout_rate' class='chart-graph'></div>
+          <div id='queue_fan_inout_rate' class='chart-graph'></div>
           <script type='text/javascript'>
             google.setOnLoadCallback(function() {
-              chart('fan_inout_rate',
-                ['version', '10->1->10 producer', '10->1->10 consumer', '10->1->10 producer sd', '10->1->10 consumer sd'],
+              chart('queue_fan_inout_rate',
+                ['version', 'queue 20 10->1->10 producer', 'queue 20 10->1->10 consumer', 'queue 20 10->1->10 producer sd', 'queue 20 10->1->10 consumer sd'],
                 {showCategories:false, legend: 'bottom', smoothLine:true, titleX:'changes over time', titleY:'messages/sec', enableTooltip:true }
               );
             });
           </script>
-          <h2>Producer Fan In and Consumer Fan Out</h2>
+          <h3>Producer Fan In and Consumer Fan Out</h3>
           Total producer and consumer rates for when there are many producers and many consumers on one destination.  The 'consumer sd' and 'producer sd'
           are the standard deviation numbers of the producers and consumers.
         </div>
