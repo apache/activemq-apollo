@@ -126,9 +126,8 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging w
   override protected def _start(onCompleted:Runnable):Unit = {
     val tracker = new LoggingTracker("virtual host startup", dispatchQueue)
     store = StoreFactory.create(config.store)
-    
-    store.configure(config.store, this)
     if( store!=null ) {
+      store.configure(config.store, this)
       val task = tracker.task("store startup")
       store.start(^{
         if( config.purgeOnStartup ) {
