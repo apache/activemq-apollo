@@ -28,42 +28,44 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import java.util.concurrent.atomic.AtomicLong
 import org.fusesource.hawtdispatch.Dispatch
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object Connection extends Log {
   val id_generator = new AtomicLong()
   def next_id = "connection:"+id_generator.incrementAndGet
 }
 
-abstract class Connection() extends TransportListener with Service  with DispatchLogging {
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+abstract class Connection() extends TransportListener with BaseService  with DispatchLogging {
 
   override protected def log = Connection
 
   import Connection._
   val id = next_id
   val dispatchQueue = createQueue(id)
-  dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
   
-  var name = "connection"
-  var stopped = false;
+  def stopped = serviceState match {
+    case STOPPED() | STOPPING() => true
+    case _ => false
+  }
+
   var transport:Transport = null
 
-  def start() = start(null)
+  override def toString = id
 
-  def start(onCompleted:Runnable) = {
+  override protected def _start(onCompleted:Runnable) = {
     transport.setDispatchQueue(dispatchQueue);
     transport.setTransportListener(Connection.this);
     transport.start(onCompleted)
   }
 
-  def stop() = stop(null)
-
-  def stop(onCompleted:Runnable) = {
-    if( !stopped ) {
-      stopped=true
-      transport.stop()
-      dispatchQueue.setDisposer(onCompleted)
-      dispatchQueue.release
-    }
+  override protected def _stop(onCompleted:Runnable) = {
+    transport.stop(onCompleted)
   }
+
 
   def onTransportFailure(error:IOException) = {
     if (!stopped) {
@@ -84,23 +86,26 @@ abstract class Connection() extends TransportListener with Service  with Dispatc
 
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class BrokerConnection(val broker: Broker) extends Connection {
 
   var protocol = "stomp"
   var protocolHandler: ProtocolHandler = null;
 
-  override def start(onCompleted:Runnable) = {
+  override protected  def _start(onCompleted:Runnable) = {
     broker.dispatchQueue.retain
     protocolHandler = ProtocolHandlerFactory.createProtocolHandler(protocol)
     protocolHandler.setConnection(this);
-    super.start(onCompleted)
+    super._start(onCompleted)
   }
 
-  override def stop(onCompleted:Runnable) = {
+  override protected def _stop(onCompleted:Runnable) = {
     if( !stopped ) {
       broker.runtime.stopped(this)
       broker.dispatchQueue.release
-      super.stop(onCompleted)
+      super._stop(onCompleted)
     }
   }
 
@@ -120,8 +125,14 @@ class BrokerConnection(val broker: Broker) extends Connection {
   override def onTransportFailure(error: IOException) = protocolHandler.onTransportFailure(error)
 }
 
-class ProtocolException(message:String, e:Throwable=null) extends Exception(message, e) 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+class ProtocolException(message:String, e:Throwable=null) extends Exception(message, e)
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class MultiProtocolHandler extends ProtocolHandler {
 
   var connected = false
@@ -156,6 +167,9 @@ class MultiProtocolHandler extends ProtocolHandler {
 
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object ProtocolHandlerFactory {
     val PROTOCOL_HANDLER_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/apollo/broker/protocol/");
 
@@ -164,6 +178,9 @@ object ProtocolHandlerFactory {
     }
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait ProtocolHandler extends TransportListener {
 
   var connection:BrokerConnection = null;
@@ -186,6 +203,9 @@ trait ProtocolHandler extends TransportListener {
 
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait ConsumerContext { // extends ClientContext, Subscription<MessageDelivery>, IFlowSink<MessageDelivery> {
 
     def getConsumerId() : String

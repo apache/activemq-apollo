@@ -29,6 +29,13 @@ import org.fusesource.hawtdispatch.{Dispatch, DispatchQueue, BaseRetained}
 import java.util.{HashSet, LinkedList, LinkedHashMap, ArrayList}
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 
+/**
+ * <p>
+ * The BrokerFactory creates Broker objects from a URI.
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object BrokerFactory {
 
     val BROKER_FACTORY_HANDLER_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/apollo/broker/");
@@ -66,62 +73,6 @@ object BrokerFactory {
 
 }
 
-class CompletionTracker(val queue:DispatchQueue=getGlobalQueue) {
-  private[this] val tasks = new HashSet[Runnable]()
-  private[this] var _callback:Runnable = null
-  queue.retain
-
-  def task(name:String="unknown"):Runnable = {
-    val rc = new Runnable() {
-      def run():Unit = {
-        tasks.synchronized {
-          if( tasks.remove(this) ) {
-            if( tasks.isEmpty && _callback!=null ) {
-              _callback ->: queue
-              queue.release
-            }
-          }
-        }
-      }
-      override def toString = name
-    }
-    tasks.synchronized {
-      if( _callback!=null ) {
-        throw new IllegalStateException("all tasks should be created before setting the callback");
-      }
-      tasks.add(rc)
-    }
-    return rc
-  }
-
-  def callback(handler: =>Unit ) {
-    tasks.synchronized {
-      _callback = handler _
-      if(  tasks.isEmpty ) {
-        _callback ->: queue
-        queue.release
-      }
-    }
-  }
-
-  def await() = {
-    val latch =new CountDownLatch(1)
-    callback {
-      latch.countDown
-    }
-    latch.await
-  }
-
-  def await(timeout:Long, unit:TimeUnit) = {
-    val latch = new CountDownLatch(1)
-    callback {
-      latch.countDown
-    }
-    latch.await(timeout, unit)
-  }
-
-  override def toString = tasks.synchronized { "waiting on: "+tasks }
-}
 
 object BufferConversions {
 
@@ -145,8 +96,19 @@ object BrokerConstants extends Log {
   val UNKNOWN = "UNKNOWN"
   
   val DEFAULT_VIRTUAL_HOST_NAME = new AsciiBuffer("default")
+
+  val STICK_ON_THREAD_QUEUES = true
 }
 
+/**
+ * <p>
+ * A Broker is parent object of all services assoicated with the serverside of
+ * a message passing system.  It keeps track of all running connections,
+ * virtual hosts and assoicated messaging destintations.
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class Broker() extends Service with DispatchLogging {
   
   import BrokerConstants._
@@ -174,7 +136,10 @@ class Broker() extends Service with DispatchLogging {
   def stop(onComplete:Runnable) = runtime.stop(onComplete)
 
   val dispatchQueue = createQueue("broker");
-  dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
+
+  if( STICK_ON_THREAD_QUEUES ) {
+    dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
+  }
 
   def addVirtualHost(host: VirtualHost) = {
     if (host.names.isEmpty) {
@@ -210,6 +175,10 @@ class Broker() extends Service with DispatchLogging {
         var connection = new BrokerConnection(Broker.this)
         connection.transport = transport
         connection.dispatchQueue.retain
+        if( STICK_ON_THREAD_QUEUES ) {
+          connection.dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
+        }
+
         clientConnections.add(connection)
         try {
           connection.start()
@@ -290,7 +259,7 @@ class Broker() extends Service with DispatchLogging {
 
         state = STARTING
 
-        val tracker = new CompletionTracker(dispatchQueue)
+        val tracker = new CompletionTracker("broker startup", dispatchQueue)
         for (virtualHost <- virtualHosts.values) {
           virtualHost.start(tracker.task("virtual host: "+virtualHost))
         }
@@ -315,45 +284,61 @@ class Broker() extends Service with DispatchLogging {
     def stop(onCompleted:Runnable): Unit = ^ {
       if (state == RUNNING) {
         state = STOPPING
-        dispatchQueue.setDisposer(^{
+        val tracker = new CompletionTracker("broker shutdown", dispatchQueue)
+
+        // Stop accepting connections..
+        for (server <- transportServers) {
+          stopService(server,tracker)
+        }
+
+        // Kill client connections..
+        for (connection <- clientConnections) {
+          stopService(connection, tracker)
+        }
+
+        // Shutdown the virtual host services
+        for (virtualHost <- virtualHosts.values) {
+          stopService(virtualHost, tracker)
+        }
+
+        def stopped = {
+          state = STOPPED;
+
+        }
+
+        tracker.callback {
+          stopped
           if( onCompleted!=null ) {
-            state = STOPPED;
             onCompleted.run
           }
-        })
+        }
 
-        for (server <- transportServers) {
-          stopService(server)
-        }
-        for (connection <- clientConnections) {
-          stopService(connection)
-        }
-        for (virtualHost <- virtualHosts.values) {
-          stopService(virtualHost)
-        }
-        dispatchQueue.release
       }
     } ->: dispatchQueue
+    
   }
+
 
 
   /**
    * Helper method to help stop broker services and log error if they fail to start.
    * @param server
    */
-  private def stopService(server: Service): Unit = {
+  private def stopService(service: Service, tracker:CompletionTracker): Unit = {
     try {
-      server.stop
+      service.stop(tracker.task(service.toString))
     } catch {
       case e: Exception => {
-        warn("Could not stop " + server + ": " + e)
-        debug("Could not stop " + server + " due to: ", e)
+        warn(e, "Could not stop " + service + ": " + e)
       }
     }
   }
 }
 
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait QueueLifecyleListener {
 
     /**

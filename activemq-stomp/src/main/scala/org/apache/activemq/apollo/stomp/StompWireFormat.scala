@@ -67,7 +67,7 @@ object StompWireFormat extends Log {
 class StompWireFormat extends WireFormat with DispatchLogging {
 
   import StompWireFormat._
-  protected def log: Log = StompWireFormat
+  override protected def log: Log = StompWireFormat
 
   implicit def wrap(x: Buffer) = ByteBuffer.wrap(x.data, x.offset, x.length);
   implicit def wrap(x: Byte) = {

@@ -35,6 +35,9 @@ import _root_.org.apache.activemq.transport.TransportFactorySupport.verify
 
 import _root_.scala.collection.JavaConversions._
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object VMTransportFactory extends Log {
   val DEFAULT_PIPE_NAME = BrokerConstants.DEFAULT_VIRTUAL_HOST_NAME.toString();
 }
@@ -43,8 +46,7 @@ object VMTransportFactory extends Log {
  * Implements the vm transport which behaves like the pipe transport except that
  * it can start embedded brokers up on demand.
  *
- * @author chirino
- *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class VMTransportFactory extends PipeTransportFactory with Logging {
 

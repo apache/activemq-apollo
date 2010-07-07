@@ -25,6 +25,9 @@ import java.util.HashMap
 import collection.JavaConversions
 import path.PathMap
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object Domain {
   val TOPIC_DOMAIN = new AsciiBuffer("topic");
   val QUEUE_DOMAIN = new AsciiBuffer("queue");
@@ -33,6 +36,9 @@ object Domain {
 }
 
 import Domain._
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class Domain {
 
   val targets = new PathMap[DeliveryConsumer]();
@@ -52,6 +58,9 @@ class Domain {
 
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object Router extends Log {
 
 }
@@ -67,6 +76,7 @@ object Router extends Log {
  * get the current set of consumers that are bound
  * to the destination. 
  *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class Router(var queue:DispatchQueue) extends DispatchLogging {
 
@@ -182,6 +192,9 @@ class Router(var queue:DispatchQueue) extends DispatchLogging {
 
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait Route extends Retained {
 
   val destination:Destination
@@ -195,6 +208,9 @@ trait Route extends Retained {
 
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class DeliveryProducerRoute(val destination:Destination, val queue:DispatchQueue, val producer:DeliveryProducer) extends BaseRetained with Route with DispatchLogging {
 
   override protected def log = Router

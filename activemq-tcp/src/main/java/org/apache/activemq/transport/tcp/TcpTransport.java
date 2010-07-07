@@ -20,6 +20,8 @@ import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.util.buffer.DataByteArrayOutputStream;
 import org.apache.activemq.wireformat.WireFormat;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.DispatchSource;
@@ -43,6 +45,12 @@ import static org.apache.activemq.transport.tcp.TcpTransport.TransportState.*;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class TcpTransport implements Transport {
+
+    static {
+        System.out.println(TcpTransport.class.getClassLoader().getResource("log4j.properties"));
+    }
+    private static final Log LOG = LogFactory.getLog(TcpTransport.class);
+
     private Map<String, Object> socketOptions;
 
     enum SocketState {
@@ -209,8 +217,9 @@ public class TcpTransport implements Transport {
         });
         readSource.setCancelHandler(new Runnable() {
             public void run() {
-                readSource.release();
-                releaseResources();
+                trace("Read canceled");
+                writeSource.cancel();
+                trace("Canceling write");
             }
         });
 
@@ -228,8 +237,10 @@ public class TcpTransport implements Transport {
         });
         writeSource.setCancelHandler(new Runnable() {
             public void run() {
-                writeSource.release();
-                releaseResources();
+                trace("Write canceled");
+                writeSource.cancel();
+                trace("Disposeing");
+                dispose();
             }
         });
 
@@ -241,35 +252,46 @@ public class TcpTransport implements Transport {
     public void stop() throws Exception {
         stop(null);
     }
-    public void stop(Runnable onCompleted) throws Exception {
+    public void stop(final Runnable onCompleted) throws Exception {
         if (transportState != RUNNING) {
-            throw new IllegalStateException("stop can only be used from the started state");
+            throw new IllegalStateException("stop can only be used from the started state but was "+transportState);
         }
+        trace("Canceling read");
         transportState = DISPOSED;
+        writeSource.setDisposer(new Runnable(){
+            public void run() {
+                trace("running callback: "+onCompleted);
+                if( onCompleted!=null ) {
+                    onCompleted.run();
+                }
+            }
+        });
         readSource.cancel();
-        writeSource.setDisposer(onCompleted);
-        writeSource.cancel();
     }
 
-    private void releaseResources() {
-        if( writeSource.isReleased() && writeSource.isReleased() ) {
-            try {
-                channel.close();
-            } catch (IOException ignore) {
-            }
-            listener.onTransportDisconnected();
-            OneWay oneWay = outbound.poll();
-            while (oneWay != null) {
-                if (oneWay.retained != null) {
-                    oneWay.retained.release();
-                }
-                oneWay = outbound.poll();
-            }
-            setDispatchQueue(null);
-            next_outbound_buffer = null;
-            outbound_buffer = null;
-            this.wireformat = null;
+    private void dispose() {
+
+        assert dispatchQueue!=null;
+        assert Dispatch.getCurrentQueue() == dispatchQueue;
+
+        try {
+            channel.close();
+        } catch (IOException ignore) {
         }
+        listener.onTransportDisconnected();
+//        OneWay oneWay = outbound.poll();
+//        while (oneWay != null) {
+//            if (oneWay.retained != null) {
+//                oneWay.retained.release();
+//            }
+//            oneWay = outbound.poll();
+//        }
+        readSource.release();
+        writeSource.release();
+        dispatchQueue.release();
+        next_outbound_buffer = null;
+        outbound_buffer = null;
+        this.wireformat = null;
     }
 
     public void onTransportFailure(IOException error) {
@@ -323,6 +345,7 @@ public class TcpTransport implements Transport {
      * @retruns true if the outbound has been drained of all objects and there are no in progress writes.
      */
     private boolean drainOutbound() {
+        assert Dispatch.getCurrentQueue() == dispatchQueue;
         try {
 
             while (socketState == CONNECTED) {
@@ -433,12 +456,29 @@ public class TcpTransport implements Transport {
         return null;
     }
 
-    public void suspendRead() {
-        readSource.suspend();
+    private boolean assertConnected() {
+        try {
+            if (socketState != CONNECTED) {
+                throw new IOException("Not connected.");
+            }
+            return true;
+        } catch (IOException e) {
+            onTransportFailure(e);
+        }
+        return false;
     }
 
+    public void suspendRead() {
+        if( assertConnected() ) {
+            readSource.suspend();
+        }
+    }
+
+
     public void resumeRead() {
-        readSource.resume();
+        if( assertConnected() ) {
+            readSource.resume();
+        }
     }
 
     public void reconnect(URI uri) {
@@ -488,6 +528,18 @@ public class TcpTransport implements Transport {
      */
     public void setUseLocalHost(boolean useLocalHost) {
         this.useLocalHost = useLocalHost;
+    }
+
+
+    private void trace(String message) {
+        if( LOG.isTraceEnabled() ) {
+            final String label = dispatchQueue.getLabel();
+            if( label !=null ) {
+                LOG.trace(label +" | "+message);
+            } else {
+                LOG.trace(message);
+            }
+        }
     }
 
 }

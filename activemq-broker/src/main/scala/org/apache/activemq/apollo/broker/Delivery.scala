@@ -24,16 +24,25 @@ import _root_.org.fusesource.hawtdispatch._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import org.apache.activemq.transport.Transport
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait DeliveryProducer {
   def collocate(queue:DispatchQueue):Unit
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait DeliverySession {
   val consumer:DeliveryConsumer
   def deliver(delivery:Delivery)
   def close:Unit
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait DeliveryConsumer extends Retained {
   def matches(message:Delivery)
   val queue:DispatchQueue;
@@ -43,6 +52,8 @@ trait DeliveryConsumer extends Retained {
 /**
  * Abstracts wire protocol message implementations.  Each wire protocol
  * will provide it's own type of Message.
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait Message {
 
@@ -84,6 +95,9 @@ trait Message {
 
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object Delivery {
   def apply(o:Delivery) = new Delivery(o.message, o.size, o.encoded, o.encoding, o.ack, o.tx_id, o.store_id)
 }
@@ -385,11 +399,17 @@ case class Delivery (
 //    }
 //}
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait DeliverySink {
   def full:Boolean
   def send(delivery:Delivery):Unit
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class TransportDeliverySink(var transport:Transport) extends DeliverySink {
   def full:Boolean = transport.isFull
   def send(delivery:Delivery) = transport.oneway(delivery.message, delivery)
@@ -436,6 +456,9 @@ class DeliveryBuffer(var maxSize:Int=1024*32) extends DeliverySink {
 
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class DeliveryOverflowBuffer(val delivery_buffer:DeliverySink) extends DeliverySink {
 
   private var overflow = new LinkedList[Delivery]()
@@ -472,6 +495,9 @@ class DeliveryOverflowBuffer(val delivery_buffer:DeliverySink) extends DeliveryS
 
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class DeliverySessionManager(val sink:DeliverySink, val queue:DispatchQueue) extends BaseRetained {
 
   var sessions = List[SessionServer]()
@@ -516,12 +542,12 @@ class DeliverySessionManager(val sink:DeliverySink, val queue:DispatchQueue) ext
 
     class SessionClient() extends DeliveryOverflowBuffer(sink) {
 
-      producer_queue.retain
       val credit_adder = createSource(EventAggregators.INTEGER_ADD , producer_queue)
       credit_adder.setEventHandler(^{
         internal_credit(credit_adder.getData.intValue)
       });
       credit_adder.resume
+      source.retain
 
       private var credits = 0;
 
@@ -530,16 +556,18 @@ class DeliverySessionManager(val sink:DeliverySink, val queue:DispatchQueue) ext
       ///////////////////////////////////////////////////
       def close = {
         credit_adder.release
-        producer_queue.release
+        source.release
       }
 
       override def full = credits <= 0
 
       override protected def send_to_delivery_buffer(value:Delivery) = {
         var delivery = Delivery(value)
+        credit_adder.retain
         delivery.setDisposer(^{
           // This is called from the server/consumer thread
           credit_adder.merge(delivery.size);
+          credit_adder.release
         })
         internal_credit(-delivery.size)
         source.merge(delivery)

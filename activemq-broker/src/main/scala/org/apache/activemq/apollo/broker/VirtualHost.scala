@@ -27,8 +27,14 @@ import _root_.scala.collection.JavaConversions._
 import _root_.scala.reflect.BeanProperty
 import path.PathFilter
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object VirtualHost extends Log
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class VirtualHost() extends Service with Logging {
 
   override protected def log = VirtualHost
@@ -121,6 +127,10 @@ class VirtualHost() extends Service with Logging {
 
       database.stop();
       started = false;
+    if( onCompleted!=null ) {
+      onCompleted.run
+    }
+    
   }
 
   def createQueue(dest:Destination) :Queue = {
@@ -218,6 +228,9 @@ class VirtualHost() extends Service with Logging {
   }
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class BrokerDatabase() {
 
   @BeanProperty
@@ -1558,9 +1571,15 @@ class BrokerDatabase() {
 
 
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class UserAlreadyConnectedException extends Exception
 
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class BrokerQueueStore { // implements QueueStore<Long, MessageDelivery> {
 // TODO:
 //    private static final Log LOG = LogFactory.getLog(BrokerQueueStore.class);

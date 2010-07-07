@@ -21,6 +21,9 @@ import _root_.org.apache.activemq.filter.{FilterException, BooleanExpression}
 import _root_.scala.collection.JavaConversions._
 import path.PathFilter
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait BrokerSubscription {
 
     def connect(consumer:ConsumerContext)
@@ -32,6 +35,9 @@ trait BrokerSubscription {
 }
 
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class CompositeSubscription(val destination:Destination, val subscriptions:List[BrokerSubscription] ) extends BrokerSubscription {
 
 
@@ -51,12 +57,18 @@ class CompositeSubscription(val destination:Destination, val subscriptions:List[
 
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object WildcardQueueSubscription extends Log {
 
 }
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class WildcardQueueSubscription(val host:VirtualHost, val destination:Destination, val consumer:ConsumerContext) extends BrokerSubscription with QueueLifecyleListener with Logging {
 
-  protected def log = WildcardQueueSubscription
+  override protected def log = WildcardQueueSubscription
 
     var filter = PathFilter.parseFilter(destination.getName());
     val childSubs = new ArrayList[BrokerSubscription]();
@@ -112,6 +124,9 @@ class WildcardQueueSubscription(val host:VirtualHost, val destination:Destinatio
 
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class TopicSubscription { // extends BrokerSubscription with DeliveryTarget {
   def matches(message:Delivery) = false
   def deliver(message:Delivery) = {}
@@ -246,6 +261,9 @@ class TopicSubscription { // extends BrokerSubscription with DeliveryTarget {
 
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class DurableSubscription(val host:VirtualHost, val destination:Destination, val selector:BooleanExpression) { // extends BrokerSubscription with DeliveryTarget {
 
 //    private final IQueue<Long, MessageDelivery> queue;

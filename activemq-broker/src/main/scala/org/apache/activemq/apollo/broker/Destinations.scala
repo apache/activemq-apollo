@@ -19,6 +19,9 @@ package org.apache.activemq.apollo.broker
 import _root_.org.apache.activemq.util.buffer.{AsciiBuffer}
 import BufferConversions._
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class ParserOptions {
   var defaultDomain:AsciiBuffer = null
   var queuePrefix:AsciiBuffer = null
@@ -27,6 +30,9 @@ class ParserOptions {
   var tempTopicPrefix:AsciiBuffer = null
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object DestinationParser {
 
     /**
@@ -86,6 +92,9 @@ object DestinationParser {
     }
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 case class SingleDestination(var domain:AsciiBuffer=null, var name:AsciiBuffer=null) extends Destination {
 
   def getDestinations():Array[Destination] = null;
@@ -94,6 +103,10 @@ case class SingleDestination(var domain:AsciiBuffer=null, var name:AsciiBuffer=n
 
   override def toString() = ""+domain+":"+name
 }
+
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 case class MultiDestination(var destinations:Array[Destination]) extends Destination {
 
   def getDestinations():Array[Destination] = destinations;

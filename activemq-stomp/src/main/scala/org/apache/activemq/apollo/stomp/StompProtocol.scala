@@ -99,7 +99,11 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   override def onTransportConnected() = {
     outboundChannel = new TransportDeliverySink(connection.transport) {
-      override def send(delivery: Delivery) = transport.oneway(delivery.message.asInstanceOf[StompFrameMessage].frame, delivery)
+      override def send(delivery: Delivery) = {
+        if( !connection.stopped ) {
+          transport.oneway(delivery.message.asInstanceOf[StompFrameMessage].frame, delivery)
+        }
+      }
     }
     connection.broker.runtime.getDefaultVirtualHost(
       queue.wrap { (host)=>
@@ -112,7 +116,6 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   override def onTransportDisconnected() = {
     if( !closed ) {
-      info("cleaning up resources")
       closed=true;
       if( producerRoute!=null ) {
         host.router.disconnect(producerRoute)
@@ -122,6 +125,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         host.router.unbind(consumer.destination, consumer::Nil)
         consumer=null
       }
+      info("stomp protocol resources released")
     }
   }
 
@@ -202,9 +206,11 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
           connection.transport.suspendRead
           host.router.connect(destiantion, queue, producer) {
             (route) =>
-              connection.transport.resumeRead
-              producerRoute = route
-              send_via_route(producerRoute, frame)
+              if( !connection.stopped ) {
+                connection.transport.resumeRead
+                producerRoute = route
+                send_via_route(producerRoute, frame)
+              }
           }
         } else {
           // we can re-use the existing producer route

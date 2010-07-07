@@ -31,6 +31,7 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import org.fusesource.hawtdispatch.BaseRetained
 
 class StompBrokerPerfTest extends BaseBrokerPerfSupport {
+  println(getClass.getClassLoader.getResource("log4j.properties"));
 
     override def createProducer() =  new StompRemoteProducer()
     override def createConsumer() = new StompRemoteConsumer()

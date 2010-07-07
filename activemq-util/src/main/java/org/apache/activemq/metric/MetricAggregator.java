@@ -41,6 +41,10 @@ public class MetricAggregator extends Metric {
         return metrics.remove(metric);
     }
 
+    public void removeAllMetrics() {
+        metrics.clear();
+    }
+
     public Float average() {
         if (metrics.isEmpty()) {
             return null;
@@ -52,6 +56,31 @@ public class MetricAggregator extends Metric {
             count++;
         }
         return rc * 1.0f / count;
+    }
+
+    public Float deviation() {
+        if (metrics.isEmpty()) {
+            return null;
+        }
+        long values[] = new long[metrics.size()];
+
+        long sum=0;
+        for (int i=0; i < values.length; i++) {
+            values[i] = metrics.get(i).counter();
+            sum += values[i];
+        }
+
+        double mean = (1.0 * sum) / values.length;
+        double rc = 0;
+        for (long value : values) {
+            double v = value - mean;
+            rc += (v*v);
+        }
+        return (float)Math.sqrt(rc / values.length);
+    }
+
+    public Float total(Period p) {
+        return p.rate(total());
     }
 
     public long total() {

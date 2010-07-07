@@ -22,15 +22,25 @@ import _root_.org.apache.commons.logging.LogFactory
 import _root_.org.apache.commons.logging.{Log => Logger}
 import java.util.concurrent.atomic.AtomicLong
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait Log {
-  val log = LogFactory.getLog(getClass.getName)
+  val log = LogFactory.getLog(getClass.getName.stripSuffix("$"))
+
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class NamedLog(name:String) extends Log {
-  def this(clazz:Class[_]) = this(clazz.getName)
+  def this(clazz:Class[_]) = this(clazz.getName.stripSuffix("$"))
   override val log = LogFactory.getLog(name)
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object Logging {
   val exception_id_generator = new AtomicLong(System.currentTimeMillis)
   def next_exception_id = exception_id_generator.incrementAndGet.toHexString
@@ -215,6 +225,9 @@ trait Logging {
 
 }
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait DispatchLogging extends Logging {
   import org.fusesource.hawtdispatch.ScalaDispatch._
 
