@@ -267,7 +267,11 @@ object StompLoadClient {
         case e: Throwable =>
           if(!done.get) {
             println("failure occured: "+e)
-            Thread.sleep(1000)
+            try {
+              Thread.sleep(1000)
+            } catch {
+              case _ => // ignore
+            }
           }
       } finally {
         try {
