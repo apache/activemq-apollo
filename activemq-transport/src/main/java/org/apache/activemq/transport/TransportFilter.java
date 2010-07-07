@@ -21,6 +21,7 @@ import java.net.URI;
 
 import org.apache.activemq.wireformat.WireFormat;
 import org.fusesource.hawtdispatch.DispatchQueue;
+import org.fusesource.hawtdispatch.Retained;
 
 /**
  * @version $Revision: 1.5 $
@@ -105,15 +106,13 @@ public class TransportFilter implements TransportListener, Transport {
         return next.toString();
     }
 
-    @Deprecated
-    public void oneway(Object command) {
-        oneway(command, null);
+    public void oneway(Object command, Retained retained) {
+        next.oneway(command, retained);
     }
 
-    public void oneway(Object command, CompletionCallback callback) {
-        next.oneway(command, callback);
+    public boolean isFull() {
+        return next.isFull();
     }
-
 
     public void onTransportFailure(IOException error) {
         transportListener.onTransportFailure(error);
@@ -154,8 +153,8 @@ public class TransportFilter implements TransportListener, Transport {
         return next.isConnected();
     }
 
-    public void reconnect(URI uri, CompletionCallback callback) {
-        next.reconnect(uri, callback);
+    public void reconnect(URI uri) {
+        next.reconnect(uri);
     }
 
     public WireFormat getWireformat() {

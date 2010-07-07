@@ -21,7 +21,6 @@ import _root_.org.apache.activemq.apollo.broker._
 import _root_.org.apache.activemq.apollo.broker.perf._
 import _root_.org.apache.activemq.apollo.stomp._
 
-import _root_.org.apache.activemq.transport.CompletionCallback
 import _root_.org.apache.activemq.util.buffer._
 import collection.mutable.{ListBuffer, HashMap}
 
@@ -29,6 +28,7 @@ import AsciiBuffer._
 import Stomp._
 import _root_.org.apache.activemq.apollo.stomp.StompFrame
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch.BaseRetained
 
 object StompBrokerPerfTest {
   def main(args:Array[String]) = {
@@ -55,7 +55,7 @@ class StompRemoteConsumer extends RemoteConsumer {
         }
 
         var frame = StompFrame(Stomp.Commands.CONNECT);
-        transport.oneway(frame);
+        transport.oneway(frame, null);
 
         var headers:List[(AsciiBuffer, AsciiBuffer)] = Nil
         headers ::= (Stomp.Headers.Subscribe.DESTINATION, stompDestination)
@@ -63,7 +63,7 @@ class StompRemoteConsumer extends RemoteConsumer {
         headers ::= (Stomp.Headers.Subscribe.ACK_MODE, Stomp.Headers.Subscribe.AckModeValues.AUTO)
 
         frame = StompFrame(Stomp.Commands.SUBSCRIBE, headers);
-        transport.oneway(frame);
+        transport.oneway(frame, null);
     }
 
     def onTransportCommand(command:Object) = {
@@ -99,36 +99,35 @@ class StompRemoteProducer extends RemoteProducer {
 
     var stompDestination:AsciiBuffer = null
 
-    val send_next:CompletionCallback = new CompletionCallback() {
-      def onCompletion() = {
+    def send_next:Unit = {
+      var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
+      headers ::= (Stomp.Headers.Send.DESTINATION, stompDestination);
+      if (property != null) {
+          headers ::= (ascii(property), ascii(property));
+      }
+//    var p = this.priority;
+//    if (priorityMod > 0) {
+//        p = if ((counter % priorityMod) == 0) { 0 } else { priority }
+//    }
+
+      var content = ascii(createPayload());
+      val frame = StompFrame(Stomp.Commands.SEND, headers, content)
+      val delivery = new BaseRetained()
+      delivery.setDisposer(^{
         rate.increment();
         val task = ^ {
           if( !stopping ) {
-
-            var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
-            headers ::= (Stomp.Headers.Send.DESTINATION, stompDestination);
-            if (property != null) {
-                headers ::= (ascii(property), ascii(property));
-            }
-//          var p = this.priority;
-//          if (priorityMod > 0) {
-//              p = if ((counter % priorityMod) == 0) { 0 } else { priority }
-//          }
-
-            var content = ascii(createPayload());
-            transport.oneway(StompFrame(Stomp.Commands.SEND, headers, content), send_next)
+            send_next
           }
-        } 
+        }
         if( thinkTime > 0 ) {
           dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, task)
         } else {
           dispatchQueue << task
         }
-      }
-      def onFailure(error:Exception) = {
-        println("stopping due to: "+error);
-        stop
-      }
+      })
+      transport.oneway(frame, delivery)
+      delivery.release
     }
 
     override def setupProducer() = {
@@ -137,7 +136,8 @@ class StompRemoteProducer extends RemoteProducer {
       } else {
           stompDestination = ascii("/topic/"+destination.getName().toString());
       }
-      transport.oneway(StompFrame(Stomp.Commands.CONNECT), send_next);
+      transport.oneway(StompFrame(Stomp.Commands.CONNECT), null);
+
     }
 
     def onTransportCommand(command:Object) = {

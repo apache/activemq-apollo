@@ -22,6 +22,7 @@ import _root_.java.lang.{String}
 import _root_.org.apache.activemq.util.buffer.{Buffer, AsciiBuffer}
 import _root_.org.fusesource.hawtdispatch._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import org.apache.activemq.transport.Transport
 
 trait DeliveryProducer {
   def collocate(queue:DispatchQueue):Unit
@@ -384,11 +385,21 @@ case class Delivery (
 //    }
 //}
 
+trait DeliverySink {
+  def full:Boolean
+  def send(delivery:Delivery):Unit
+}
+
+class TransportDeliverySink(val transport:Transport) extends DeliverySink {
+  def full:Boolean = transport.isFull
+  def send(delivery:Delivery) = transport.oneway(delivery.message, delivery)
+}
+
 /**
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class DeliveryBuffer(var maxSize:Int=1024*32) {
+class DeliveryBuffer(var maxSize:Int=1024*32) extends DeliverySink {
 
   var deliveries = new LinkedList[Delivery]()
   private var size = 0
@@ -425,7 +436,7 @@ class DeliveryBuffer(var maxSize:Int=1024*32) {
 
 }
 
-class DeliveryOverflowBuffer(val delivery_buffer:DeliveryBuffer) {
+class DeliveryOverflowBuffer(val delivery_buffer:DeliverySink) extends DeliverySink {
 
   private var overflow = new LinkedList[Delivery]()
 
@@ -433,7 +444,7 @@ class DeliveryOverflowBuffer(val delivery_buffer:DeliveryBuffer) {
     while( !overflow.isEmpty && !full ) {
       val delivery = overflow.removeFirst
       delivery.release
-      send_to_delivery_queue(delivery)
+      send_to_delivery_buffer(delivery)
     }
   }
 
@@ -444,11 +455,11 @@ class DeliveryOverflowBuffer(val delivery_buffer:DeliveryBuffer) {
       delivery.retain
       overflow.addLast(delivery)
     } else {
-      send_to_delivery_queue(delivery)
+      send_to_delivery_buffer(delivery)
     }
   }
 
-  protected def send_to_delivery_queue(value:Delivery) = {
+  protected def send_to_delivery_buffer(value:Delivery) = {
     var delivery = Delivery(value)
     delivery.setDisposer(^{
       drainOverflow
@@ -461,7 +472,7 @@ class DeliveryOverflowBuffer(val delivery_buffer:DeliveryBuffer) {
 
 }
 
-class DeliverySessionManager(val delivery_buffer:DeliveryBuffer, val queue:DispatchQueue) extends BaseRetained {
+class DeliverySessionManager(val delivery_buffer:DeliverySink, val queue:DispatchQueue) extends BaseRetained {
 
   var sessions = List[SessionServer]()
 
@@ -524,7 +535,7 @@ class DeliverySessionManager(val delivery_buffer:DeliveryBuffer, val queue:Dispa
 
       override def full = credits <= 0
 
-      override protected def send_to_delivery_queue(value:Delivery) = {
+      override protected def send_to_delivery_buffer(value:Delivery) = {
         var delivery = Delivery(value)
         delivery.setDisposer(^{
           // This is called from the server/consumer thread

@@ -74,8 +74,19 @@ class StompWireFormat extends WireFormat with DispatchLogging {
     ByteBuffer.wrap(Array(x));
   }
 
+
   def marshal(command:Any, os:DataOutput) = {
+    marshal(command.asInstanceOf[StompFrame], os)
+  }
+
+  def marshal(command:Any):Buffer= {
     val frame = command.asInstanceOf[StompFrame]
+    val os = new DataByteArrayOutputStream(frame.size);
+    marshal(frame, os)
+    os.toBuffer
+  }
+
+  def marshal(frame:StompFrame, os:DataOutput) = {
     frame.action.writeTo(os)
     os.write(NEWLINE)
 
@@ -100,15 +111,6 @@ class StompWireFormat extends WireFormat with DispatchLogging {
       frame.content.writeTo(os)
     }
     END_OF_FRAME_BUFFER.writeTo(os)
-  }
-
-  def marshal(command:Any):Buffer= {
-    val frame = command.asInstanceOf[StompFrame]
-    // make a little bigger since size can be an estimate and we want to avoid
-    // a capacity re-size.
-    val os = new DataByteArrayOutputStream(frame.size + 100);
-    marshal(frame, os)
-    os.toBuffer
   }
 
   def unmarshal(packet:Buffer) = {

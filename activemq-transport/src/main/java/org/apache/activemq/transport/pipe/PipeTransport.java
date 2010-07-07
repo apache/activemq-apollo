@@ -16,15 +16,11 @@
  */
 package org.apache.activemq.transport.pipe;
 
-import org.apache.activemq.transport.CompletionCallback;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.util.buffer.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
-import org.fusesource.hawtdispatch.CustomDispatchSource;
-import org.fusesource.hawtdispatch.Dispatch;
-import org.fusesource.hawtdispatch.DispatchQueue;
-import org.fusesource.hawtdispatch.EventAggregators;
+import org.fusesource.hawtdispatch.*;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -139,11 +135,11 @@ public class PipeTransport implements Transport {
 
     static final class OneWay {
         final Object command;
-        final CompletionCallback callback;
+        final Retained retained;
 
-        public OneWay(Object command, CompletionCallback callback) {
-            this.callback = callback;
+        public OneWay(Object command, Retained retained) {
             this.command = command;
+            this.retained = retained;
         }
     }
 
@@ -151,34 +147,34 @@ public class PipeTransport implements Transport {
     int outbound = 0;
     int maxOutbound = 100;
 
-    @Deprecated
-    public void oneway(Object command) {
-        oneway(command, null);
+    public boolean isFull() {
+        return outbound >= maxOutbound;
     }
 
-    public void oneway(Object command, CompletionCallback callback) {
+    public void oneway(Object command, Retained retained) {
         if( !connected ) {
             throw new IllegalStateException("Not connected.");
         }
-        if( outbound < maxOutbound ) {
-            transmit(command, callback);
+        if( isFull() && retained!=null) {
+            retained.retain();
+            inbound.add(new OneWay(command, retained));
         } else {
-            inbound.add(new OneWay(command, callback));
+            transmit(command, null);
         }
     }
 
     private void drainInbound() {
-        while( outbound < maxOutbound && !inbound.isEmpty() ) {
+        while( !isFull() && !inbound.isEmpty() ) {
             OneWay oneWay = inbound.poll();
-            transmit(oneWay.command, oneWay.callback);
+            transmit(oneWay.command, oneWay.retained);
         }
     }
 
-    private void transmit(Object command, CompletionCallback callback) {
+    private void transmit(Object command, Retained retained) {
         outbound++;
         peer.dispatchSource.merge(command);
-        if( callback!=null ) {
-            callback.onCompletion();
+        if( retained!=null ) {
+            retained.release();
         }
     }
 
@@ -200,7 +196,7 @@ public class PipeTransport implements Transport {
     public void resumeRead() {
         dispatchSource.resume();
     }
-    public void reconnect(URI uri, CompletionCallback callback) {
+    public void reconnect(URI uri) {
         throw new UnsupportedOperationException();
     }
 

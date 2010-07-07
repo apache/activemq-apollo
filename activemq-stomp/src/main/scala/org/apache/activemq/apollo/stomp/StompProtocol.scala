@@ -28,7 +28,6 @@ import AsciiBuffer._
 import Stomp._
 import BufferConversions._
 import StompFrameConstants._
-import org.apache.activemq.transport.CompletionCallback
 import java.io.IOException
 
 
@@ -90,31 +89,17 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     }
   }
 
-  val outboundChannel = new DeliveryBuffer
+  var outboundChannel:TransportDeliverySink = null
   var closed = false
   var consumer:SimpleConsumer = null
 
   var producerRoute:DeliveryProducerRoute=null
   var host:VirtualHost = null
 
-  outboundChannel.eventHandler = ^{
-    var delivery = outboundChannel.receive
-    while( delivery!=null ) {
-      connection.transport.oneway(delivery.message, new CompletionCallback() {
-        def onCompletion() = {
-          outboundChannel.ack(delivery)
-        }
-        def onFailure(e:Exception) = {
-          connection.onFailure(e)
-        }
-      });
-      delivery = outboundChannel.receive
-    }
-  }
-
   private def queue = connection.dispatchQueue
 
   override def onTransportConnected() = {
+    outboundChannel = new TransportDeliverySink(connection.transport)
     connection.broker.runtime.getDefaultVirtualHost(
       queue.wrap { (host)=>
         this.host=host
@@ -172,7 +157,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
 
   def on_stomp_connect(headers:HeaderMap) = {
-    connection.transport.oneway(StompFrame(Responses.CONNECTED))
+    connection.transport.oneway(StompFrame(Responses.CONNECTED), null)
   }
 
   def get(headers:HeaderMap, name:AsciiBuffer):Option[AsciiBuffer] = {
@@ -267,7 +252,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   private def die(msg:String) = {
     info("Shutting connection down due to: "+msg)
     connection.transport.suspendRead
-    connection.transport.oneway(StompFrame(Responses.ERROR, Nil, ascii(msg)))
+    connection.transport.oneway(StompFrame(Responses.ERROR, Nil, ascii(msg)), null)
     ^ {
       connection.stop()
     } ->: queue

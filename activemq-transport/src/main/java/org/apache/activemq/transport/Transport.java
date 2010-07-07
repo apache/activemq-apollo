@@ -22,6 +22,7 @@ import java.net.URI;
 import org.apache.activemq.Service;
 import org.apache.activemq.wireformat.WireFormat;
 import org.fusesource.hawtdispatch.DispatchQueue;
+import org.fusesource.hawtdispatch.Retained;
 
 /**
  * Represents an abstract connection.  It can be a client side or server side connection.
@@ -30,18 +31,16 @@ import org.fusesource.hawtdispatch.DispatchQueue;
  */
 public interface Transport extends Service {
 
-    @Deprecated
-    void oneway(Object command);
+
+    boolean isFull();
 
     /**
-     * A one way asynchronous send.  Once the command is transmitted the callback
-     * is invoked.
+     * A one way asynchronous send.
      * 
      * @param command
-     * @param callback
      * @throws IOException
      */
-    void oneway(Object command, CompletionCallback callback);
+    void oneway(Object command, Retained retained);
 
     /**
      * Returns the current transport listener
@@ -121,6 +120,6 @@ public interface Transport extends Service {
      * @param uri
      * @throws IOException on failure of if not supported
      */
-    void reconnect(URI uri, CompletionCallback callback);
+    void reconnect(URI uri);
 
 }

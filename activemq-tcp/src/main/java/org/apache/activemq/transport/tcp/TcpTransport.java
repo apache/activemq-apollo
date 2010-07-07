@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.transport.tcp;
 
-import org.apache.activemq.transport.CompletionCallback;
 import org.apache.activemq.transport.Transport;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.util.buffer.Buffer;
@@ -25,6 +24,7 @@ import org.apache.activemq.wireformat.WireFormat;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.DispatchSource;
+import org.fusesource.hawtdispatch.Retained;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -32,6 +32,7 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Map;
 
@@ -40,7 +41,7 @@ import static org.apache.activemq.transport.tcp.TcpTransport.TransportState.*;
 
 /**
  * An implementation of the {@link Transport} interface using raw tcp/ip
- * 
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class TcpTransport implements Transport {
@@ -75,20 +76,21 @@ public class TcpTransport implements Transport {
     private DispatchSource writeSource;
 
     final LinkedList<OneWay> outbound = new LinkedList<OneWay>();
-    int maxOutbound = 1024*32;
+    int outboundSize = 0;
+    int maxOutbound = 1024 * 32;
     ByteBuffer outbound_frame;
     protected boolean useLocalHost = true;
 
-    int READ_BUFFFER_SIZE = 1024*32;
-    ByteBuffer readBuffer = ByteBuffer.allocate(1024*32);
+    int READ_BUFFFER_SIZE = 1024 * 32;
+    ByteBuffer readBuffer = ByteBuffer.allocate(1024 * 32);
 
 
     static final class OneWay {
         final Buffer buffer;
-        final CompletionCallback callback;
+        final Retained retained;
 
-        public OneWay(Buffer buffer, CompletionCallback callback) {
-            this.callback = callback;
+        public OneWay(Buffer buffer, Retained retained) {
+            this.retained = retained;
             this.buffer = buffer;
         }
     }
@@ -111,11 +113,11 @@ public class TcpTransport implements Transport {
     }
 
     public void setDispatchQueue(DispatchQueue queue) {
-        if( dispatchQueue!=null ) {
+        if (dispatchQueue != null) {
             dispatchQueue.release();
         }
         this.dispatchQueue = queue;
-        if( dispatchQueue!=null ) {
+        if (dispatchQueue != null) {
             dispatchQueue.retain();
         }
     }
@@ -127,18 +129,18 @@ public class TcpTransport implements Transport {
         if (listener == null) {
             throw new IllegalArgumentException("listener is not set");
         }
-        if( transportState!=CREATED ) {
+        if (transportState != CREATED) {
             throw new IllegalStateException("can only be started from the created stae");
         }
-        transportState=RUNNING;
-        
+        transportState = RUNNING;
+
         unmarshalSession = wireformat.createUnmarshalSession();
 
-        if( socketState == CONNECTING ) {
+        if (socketState == CONNECTING) {
             channel = SocketChannel.open();
         }
         channel.configureBlocking(false);
-        if( socketState == CONNECTING ) {
+        if (socketState == CONNECTING) {
 
             if (localLocation != null) {
                 InetSocketAddress localAddress = new InetSocketAddress(InetAddress.getByName(localLocation.getHost()), localLocation.getPort());
@@ -152,7 +154,7 @@ public class TcpTransport implements Transport {
             final DispatchSource connectSource = Dispatch.createSource(channel, SelectionKey.OP_CONNECT, dispatchQueue);
             connectSource.setEventHandler(new Runnable() {
                 public void run() {
-                    if( transportState==RUNNING ) {
+                    if (transportState == RUNNING) {
                         try {
                             socketState = CONNECTED;
                             channel.finishConnect();
@@ -190,7 +192,7 @@ public class TcpTransport implements Transport {
         }
 
         readSource = Dispatch.createSource(channel, SelectionKey.OP_READ, dispatchQueue);
-        readSource.setEventHandler(new Runnable(){
+        readSource.setEventHandler(new Runnable() {
             public void run() {
                 try {
                     drainInbound();
@@ -201,12 +203,12 @@ public class TcpTransport implements Transport {
         });
 
         writeSource = Dispatch.createSource(channel, SelectionKey.OP_WRITE, dispatchQueue);
-        writeSource.setEventHandler(new Runnable(){
+        writeSource.setEventHandler(new Runnable() {
             public void run() {
-                if( transportState==RUNNING ) {
+                if (transportState == RUNNING) {
                     // once the outbound is drained.. we can suspend getting
                     // write events.
-                    if( drainOutbound() ) {
+                    if (drainOutbound()) {
                         writeSource.suspend();
                     }
                 }
@@ -219,33 +221,31 @@ public class TcpTransport implements Transport {
 
 
     public void stop() throws Exception {
-        if( readSource!=null ) {
+        if (readSource != null) {
             readSource.release();
             readSource = null;
         }
-        if( writeSource!=null ) {
+        if (writeSource != null) {
             writeSource.release();
             writeSource = null;
         }
         setDispatchQueue(null);
-        transportState=DISPOSED;
+        transportState = DISPOSED;
     }
 
-    @Deprecated
-    public void oneway(Object command) {
-        oneway(command, null);
+
+    public boolean isFull() {
+        return outboundSize >= maxOutbound;
     }
 
-    public void oneway(Object command, CompletionCallback callback) {
+    public void oneway(Object command, Retained retained) {
         assert Dispatch.getCurrentQueue() == dispatchQueue;
         try {
-            if( socketState != CONNECTED ) {
-                throw new IllegalStateException("Not connected.");
+            if (socketState != CONNECTED) {
+                throw new IOException("Not connected.");
             }
-        } catch (IllegalStateException e) {
-            if( callback!=null ) {
-                callback.onFailure(e);
-            }
+        } catch (IOException e) {
+            listener.onTransportFailure(e);
         }
 
         // Marshall the command.
@@ -253,79 +253,95 @@ public class TcpTransport implements Transport {
         try {
             buffer = wireformat.marshal(command);
         } catch (IOException e) {
-            callback.onFailure(e);
+            listener.onTransportFailure(e);
             return;
         }
 
-        outbound.add(new OneWay(buffer, callback));
+        OneWay oneway;
+        if (retained!=null && isFull() ) {
+            // retaining blocks the sender it is released.
+            retained.retain();
+            oneway = new OneWay(buffer, retained);
+        } else {
+            oneway = new OneWay(buffer, null);
+        }
+        outbound.add(oneway);
+        outboundSize += buffer.length;
 
         // wait for write ready events if this write
         // cannot be drained.
-        if( outbound.size()==1 && !drainOutbound() ) {
+        if (outbound.size() == 1 && !drainOutbound()) {
             writeSource.resume();
         }
     }
 
     /**
-    * @retruns true if the outbound has been drained of all objects and there are no in progress writes.
-    */
+     * @retruns true if the outbound has been drained of all objects and there are no in progress writes.
+     */
     private boolean drainOutbound() {
         try {
-            
-            while(socketState == CONNECTED) {
-                
-              // if we have a pending write that is being sent over the socket...
-              if( outbound_frame!=null ) {
 
-                channel.write(outbound_frame);
-                if( outbound_frame.remaining() != 0 ) {
-                  return false;
-                } else {
-                  outbound_frame = null;
-                }
+            while (socketState == CONNECTED) {
 
-              } else {
+                // if we have a pending write that is being sent over the socket...
+                if (outbound_frame != null) {
 
-                // marshall all the available frames..
-                ByteArrayOutputStream buffer = new ByteArrayOutputStream(maxOutbound << 2);
-                OneWay oneWay = outbound.poll();
-
-                while( oneWay!=null) {
-                    buffer.write(oneWay.buffer);
-                    if( oneWay.callback!=null ) {
-                        oneWay.callback.onCompletion();
-                    }
-                    if( buffer.size() < maxOutbound ) {
-                        oneWay = outbound.poll();
+                    channel.write(outbound_frame);
+                    if (outbound_frame.remaining() != 0) {
+                        return false;
                     } else {
-                        oneWay = null;
+                        outbound_frame = null;
+                    }
+
+                } else {
+
+                    // marshall all the available frames..
+                    OneWay oneWay = outbound.poll();
+
+                    int size = 0;
+                    ArrayList<Buffer> buffers = new ArrayList<Buffer>(outbound.size());
+                    while (oneWay != null) {
+                        size+=oneWay.buffer.length;
+                        buffers.add(oneWay.buffer);
+                        if (oneWay.retained != null) {
+                            oneWay.retained.release();
+                        }
+                        if (size < maxOutbound) {
+                            oneWay = outbound.poll();
+                        } else {
+                            oneWay = null;
+                        }
+                    }
+
+                    if (size == 0) {
+                        // the source is now drained...
+                        return true;
+                    } else {
+                        // Make the write just one big buffer.
+                        outboundSize -= size;
+                        ByteArrayOutputStream buffer = new ByteArrayOutputStream(size);
+                        for (Buffer b : buffers) {
+                            buffer.write(b);
+                        }
+                        outbound_frame = buffer.toBuffer().toByteBuffer();
                     }
                 }
-
-
-                if( buffer.size()==0 ) {
-                  // the source is now drained...
-                  return true;
-                } else {
-                  outbound_frame = buffer.toBuffer().toByteBuffer();
-                }
-              }
 
             }
 
         } catch (IOException e) {
             listener.onTransportFailure(e);
         }
-        
-        return outbound.isEmpty() && outbound_frame==null;
+
+        return outbound.isEmpty() && outbound_frame == null;
     }
 
 
     private void drainInbound() throws IOException {
-        if( transportState==DISPOSED || readSource.isSuspended() ) {
+        if (transportState == DISPOSED || readSource.isSuspended()) {
             return;
         }
-        while( true ) {
+        while (true) {
 
             // do we need to read in more data???
             if (unmarshalSession.getEndPos() == readBuffer.position()) {
@@ -359,12 +375,12 @@ public class TcpTransport implements Transport {
                 }
             }
 
-            Object command=unmarshalSession.unmarshal(readBuffer);
-            if( command!=null ) {
+            Object command = unmarshalSession.unmarshal(readBuffer);
+            if (command != null) {
                 listener.onTransportCommand(command);
 
                 // the transport may be suspended after processing a command.
-                if( transportState==DISPOSED || readSource.isSuspended() ) {
+                if (transportState == DISPOSED || readSource.isSuspended()) {
                     return;
                 }
             }
@@ -391,14 +407,15 @@ public class TcpTransport implements Transport {
     public void resumeRead() {
         readSource.resume();
     }
-    
-    public void reconnect(URI uri, CompletionCallback callback) {
+
+    public void reconnect(URI uri) {
         throw new UnsupportedOperationException();
     }
 
     public TransportListener getTransportListener() {
         return listener;
     }
+
     public void setTransportListener(TransportListener listener) {
         this.listener = listener;
     }
@@ -406,6 +423,7 @@ public class TcpTransport implements Transport {
     public WireFormat getWireformat() {
         return wireformat;
     }
+
     public void setWireformat(WireFormat wireformat) {
         this.wireformat = wireformat;
     }
@@ -417,6 +435,7 @@ public class TcpTransport implements Transport {
     public boolean isDisposed() {
         return transportState == DISPOSED;
     }
+
     public boolean isFaultTolerant() {
         return false;
     }
@@ -677,6 +696,7 @@ public class TcpTransport implements Transport {
 //        this.minmumWireFormatVersion = minmumWireFormatVersion;
 //    }
 //
+
     public boolean isUseLocalHost() {
         return useLocalHost;
     }
