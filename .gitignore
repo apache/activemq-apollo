@@ -12,7 +12,8 @@ target
 .classpath
 .settings
 eclipse-classes
-activemq-web/overlays
-activemq-web/src/main/webapp/WEB-INF/_scalate
-activemq-web/activemq.xml*
 activemq.tmp
+apollo-web/activemq.xml
+apollo-web/activemq.xml.*
+apollo-web/overlays/
+apollo-web/src/main/webapp/WEB-INF/_scalate/

@@ -48,11 +48,6 @@
       <artifactId>apollo-selector</artifactId>
       <version>6.0-SNAPSHOT</version>
     </dependency>
-    <!-- <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-hawtdb</artifactId>
-      <version>6.0-SNAPSHOT</version>
-    </dependency> -->
 
     <dependency>
       <groupId>org.fusesource.hawtdispatch</groupId>
