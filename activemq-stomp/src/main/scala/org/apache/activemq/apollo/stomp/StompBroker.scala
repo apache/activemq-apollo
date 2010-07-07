@@ -39,11 +39,11 @@ object StompBroker {
     connector.protocol = "stomp"
     connector.advertise = uri
 
-    val store = new CassandraStoreDTO
-    store.hosts.add("localhost:9160")
+//    val store = new CassandraStoreDTO
+//    store.hosts.add("localhost:9160")
 
-//    val store = new HawtDBStoreDTO
-//    store.directory = new File("activemq-data")
+    val store = new HawtDBStoreDTO
+    store.directory = new File("activemq-data")
     
     broker.config.virtualHosts.get(0).store = store
 

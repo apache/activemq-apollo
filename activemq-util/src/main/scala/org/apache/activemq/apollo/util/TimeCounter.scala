@@ -19,14 +19,14 @@ package org.apache.activemq.apollo.util
 import java.util.concurrent.TimeUnit
 
 /**
- * <p>A Timer collects time durations and produces a TimingMetric.</p>
+ * <p>A Timer collects time durations and produces a TimeMetric.</p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class TimeCounter extends MetricProducer[TimeMetric] {
 
-  private var maximum = Math.MIN_LONG
-  private var minimum = Math.MAX_LONG
+  private var maximum = Long.MinValue
+  private var minimum = Long.MaxValue
   private var total = 0L
   private var count = 0
 
@@ -39,8 +39,8 @@ class TimeCounter extends MetricProducer[TimeMetric] {
   }
 
   def clear() = {
-    maximum = Math.MIN_INT
-    minimum = Math.MAX_INT
+    maximum = Long.MinValue
+    minimum = Long.MaxValue
     total = 0L
     count = 0
   }

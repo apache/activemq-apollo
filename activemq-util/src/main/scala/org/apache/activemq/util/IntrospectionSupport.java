@@ -254,7 +254,7 @@ public final class IntrospectionSupport {
     }
 
     public static String toString(Object target) {
-        return toString(target, Object.class, null, null);
+        return toString(target, Object.class, null, (String[])null);
     }
     
     public static String toString(Object target, String...fields) {
@@ -262,7 +262,7 @@ public final class IntrospectionSupport {
     }
     
     public static String toString(Object target, Class<?> stopClass) {
-    	return toString(target, stopClass, null, null);
+    	return toString(target, stopClass, null, (String[])null);
     }
 
     public static String toString(Object target, Map<String, Object> overrideFields, String...fields) {

@@ -21,8 +21,6 @@ import org.fusesource.hawtdispatch.BaseRetained
 import java.util.concurrent.atomic.AtomicLong
 import collection.mutable.ListBuffer
 import java.util.HashMap
-import java.util.concurrent.{TimeUnit, Executors, ExecutorService}
-import org.apache.activemq.apollo.util.IntCounter
 import org.apache.activemq.apollo.store.{QueueEntryRecord, MessageRecord, QueueStatus, QueueRecord}
 import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, StoreDTO}
 import collection.{JavaConversions, Seq}
@@ -30,6 +28,8 @@ import org.fusesource.hawtdispatch.ScalaDispatch._
 import org.apache.activemq.apollo.broker._
 import java.io.File
 import ReporterLevel._
+import org.apache.activemq.apollo.util.{TimeCounter, IntCounter}
+import java.util.concurrent._
 
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
@@ -91,7 +91,13 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   }
 
   protected def _start(onCompleted: Runnable) = {
-    executor_pool = Executors.newFixedThreadPool(20)
+    executor_pool = new ThreadPoolExecutor(4, 20, 1, TimeUnit.SECONDS, new LinkedBlockingQueue[Runnable](), new ThreadFactory(){
+      def newThread(r: Runnable) = {
+        val rc = new Thread(r, "hawtdb store client")
+        rc.setDaemon(true)
+        rc
+      }
+    })
     client.config = config
     schedualDisplayStats
     executor_pool {
@@ -135,16 +141,11 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   def addQueue(record: QueueRecord)(callback: (Option[Long]) => Unit) = {
     val key = next_queue_key.getAndIncrement
     record.key = key
-    executor_pool ^{
-      client.addQueue(record)
-      callback(Some(key))
-    }
+    client.addQueue(record, ^{ callback(Some(key)) })
   }
 
   def removeQueue(queueKey: Long)(callback: (Boolean) => Unit) = {
-    executor_pool ^{
-      callback(client.removeQueue(queueKey))
-    }
+    client.removeQueue(queueKey,^{ callback(true) })
   }
 
   def getQueueStatus(id: Long)(callback: (Option[QueueStatus]) => Unit) = {
@@ -318,8 +319,9 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
 
         def rate(x:Long, y:Long):Float = ((y-x)*1000.0f)/TimeUnit.NANOSECONDS.toMillis(et-st)
 
-        info("metrics: cancled: { messages: %,.3f, enqeues: %,.3f }, flushed: { messages: %,.3f, enqeues: %,.3f }, commit latency: %,.3f",
-          rate(ss._1,es._1), rate(ss._2,es._2), rate(ss._3,es._3), rate(ss._4,es._4), avgCommitLatency)
+
+        info("metrics: cancled: { messages: %,.3f, enqeues: %,.3f }, flushed: { messages: %,.3f, enqeues: %,.3f }, commit latency: %,.3f, store latency: %,.3f",
+          rate(ss._1,es._1), rate(ss._2,es._2), rate(ss._3,es._3), rate(ss._4,es._4), avgCommitLatency, storeLatency(true).avgTime(TimeUnit.MILLISECONDS) )
         schedualDisplayStats
       }
     }
@@ -390,6 +392,8 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
   flush_source.setEventHandler(^{drain_flushes});
   flush_source.resume
 
+  val storeLatency = new TimeCounter
+
   def drain_flushes:Unit = {
 
     if( !serviceState.isStarted ) {
@@ -420,7 +424,16 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     }
 
     if( !txs.isEmpty ) {
-      client.store(txs)
+      storeLatency.start { end=>
+        client.store(txs, ^{
+          dispatchQueue {
+            end()
+            txs.foreach { tx=>
+              tx.onPerformed
+            }
+          }
+        })
+      }
     }
   }
 

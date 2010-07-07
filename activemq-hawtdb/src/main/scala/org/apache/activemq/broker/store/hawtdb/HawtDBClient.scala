@@ -195,22 +195,21 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     flush
   }
 
-  def addQueue(record: QueueRecord) = {
+  def addQueue(record: QueueRecord, callback:Runnable) = {
     val update = new AddQueue.Bean()
     update.setKey(record.key)
     update.setName(record.name)
     update.setQueueType(record.queueType)
-    store(update)
+    _store(update, callback)
   }
 
-  def removeQueue(queueKey: Long):Boolean = {
+  def removeQueue(queueKey: Long, callback:Runnable) = {
     val update = new RemoveQueue.Bean()
     update.setKey(queueKey)
-    store(update)
-    true
+    _store(update, callback)
   }
 
-  def store(txs: Seq[HawtDBStore#HawtDBBatch]) {
+  def store(txs: Seq[HawtDBStore#HawtDBBatch], callback:Runnable) {
     var batch = ListBuffer[TypeCreatable]()
     txs.foreach {
       tx =>
@@ -233,15 +232,12 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
             }
         }
     }
-    store(batch, ^{
-      txs.foreach { tx=>
-        tx.onPerformed
-      }
-    })
+    _store(batch, callback)
   }
 
+
   def purge(callback: Runnable) = {
-    store(new Purge.Bean(), callback)
+    _store(new Purge.Bean(), callback)
   }
 
   def listQueues: Seq[Long] = {
@@ -344,29 +340,17 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     }
   }
 
-  private def store(updates: List[TypeCreatable]): Unit = {
-    val tracker = new TaskTracker("storing")
-    store(updates, tracker.task(updates))
-    tracker.await
-  }
-
-  private def store(update: TypeCreatable): Unit = {
-    val tracker = new TaskTracker("storing")
-    store(update, tracker.task(update))
-    tracker.await
-  }
-
-  private def store(updates: Seq[TypeCreatable], onComplete: Runnable): Unit = {
+  private def _store(updates: Seq[TypeCreatable], onComplete: Runnable): Unit = {
     val batch = next_batch_id
     begin(batch)
     updates.foreach {
       update =>
-        store(batch, update, null)
+        _store(batch, update, null)
     }
     commit(batch, onComplete)
   }
 
-  private def store(update: TypeCreatable, onComplete: Runnable): Unit = store(-1, update, onComplete)
+  private def _store(update: TypeCreatable, onComplete: Runnable): Unit = _store(-1, update, onComplete)
 
   /**
    * All updated are are funneled through this method. The updates are logged to
@@ -375,7 +359,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
    *
    * @throws IOException
    */
-  private def store(batch: Int, update: TypeCreatable, onComplete: Runnable): Unit = {
+  private def _store(batch: Int, update: TypeCreatable, onComplete: Runnable): Unit = {
     val kind = update.asInstanceOf[TypeCreatable]
     val frozen = update.freeze
     val baos = new DataByteArrayOutputStream(frozen.serializedSizeUnframed + 1)
@@ -452,7 +436,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     val start = System.currentTimeMillis()
     incrementalRecover
 
-    store(new AddTrace.Bean().setMessage("RECOVERED"), ^ {
+    _store(new AddTrace.Bean().setMessage("RECOVERED"), ^ {
       // Rollback any batches that did not complete.
       batches.keysIterator.foreach {
         batch =>

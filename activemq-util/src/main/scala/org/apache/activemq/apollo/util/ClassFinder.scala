@@ -42,7 +42,7 @@ case class ClassFinder[T](path:String, loaders:Seq[ClassLoader]=Thread.currentTh
           classNames = classNames ::: enum.nextElement.asInstanceOf[String] :: Nil
         }
       }
-      classNames = classNames.removeDuplicates
+      classNames = classNames.distinct
 
       classes :::= classNames.map { name=>
         loader.loadClass(name).asInstanceOf[Class[T]]
@@ -50,7 +50,7 @@ case class ClassFinder[T](path:String, loaders:Seq[ClassLoader]=Thread.currentTh
 
     }
 
-    return classes.removeDuplicates
+    return classes.distinct
   }
 
   private def loadProperties(is:InputStream):Properties = {

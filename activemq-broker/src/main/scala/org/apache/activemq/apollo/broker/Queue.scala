@@ -107,7 +107,7 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
   /**
    * Tunning options.
    */
-  var tune_max_size = 1024 * 32
+  var tune_max_size = 1024 * 1024 * 4
   var tune_subscription_prefetch = 1024*32
   var tune_max_outbound_size = 1024 * 1204 * 5
   var tune_swap_delay = 100L
@@ -170,12 +170,33 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
         if( !entry.hasSubs ) {
           // we flush the entry out right away if it looks
           // it wont be needed.
+
           if( entry.getPrevious.isFlushedOrFlushing ) {
+            // in this case take it out of memory too...
             flushingSize += entry.flush
           } else {
+            if( slow_consumers ) {
+              if( delivery.storeBatch!=null ) {
+                // just make it hit the disk quick.. but keep it in memory.
+                delivery.storeBatch.eagerFlush(^{})
+              }
+            } else {
+              if( !checking_for_slow_consumers ) {
+                checking_for_slow_consumers=true
+                val tail_consumer_counter_copy = tail_consumer_counter
+                dispatchQueue.dispatchAfter(tune_swap_delay, TimeUnit.MILLISECONDS, ^{
+                  if( tail_consumer_counter_copy == tail_consumer_counter ) {
+                    slow_consumers = true
+                  }
+                  checking_for_slow_consumers = false
+                })
+              }
+            }
             swap_check=true
           }
         } else {
+          slow_consumers = false
+          tail_consumer_counter += 1
           //  entry.dispatch==null if the entry was fully dispatched
           swap_check = entry.dispatch!=null
         }
@@ -203,6 +224,10 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
       }
     }
   }
+
+  var tail_consumer_counter = 0L
+  var checking_for_slow_consumers = false
+  var slow_consumers = false
 
   def ack(entry: QueueEntry, sb:StoreBatch) = {
     if (entry.ref != -1) {
