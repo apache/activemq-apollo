@@ -172,6 +172,23 @@ public class LinkedNodeList<T extends LinkedNode<T>> implements Iterable<T> {
         return rc;
     }
 
+
+    /**
+     * Copies the nodes of the LinkedNodeList to the specified array.
+     * @return the passed array.
+     */
+    public T[] toArray(T[] array) {
+        int pos = 0;
+    	ArrayList<T> rc = new ArrayList<T>(size);
+    	T cur = head;
+    	while( cur!=null ) {
+    		array[pos] = cur;
+            pos ++;
+    		cur = cur.getNext();
+    	}
+        return array;
+    }
+    
     public Iterator<T> iterator() {
         return new Iterator<T>() {
             T next = getHead();
