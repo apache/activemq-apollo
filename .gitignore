@@ -13,3 +13,6 @@ target
 .settings
 eclipse-classes
 activemq-web/overlays
+activemq-web/src/main/webapp/WEB-INF/_scalate
+activemq-web/activemq.xml*
+activemq.tmp
