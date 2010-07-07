@@ -16,169 +16,40 @@
  */
 package org.apache.activemq.apollo.broker.perf
 
-import _root_.java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
-import _root_.org.apache.activemq.metric.{Period, MetricAggregator, MetricCounter}
-import _root_.java.lang.{String}
-import _root_.org.junit.{Test, Before}
-
-import org.apache.activemq.transport.TransportFactory
-
-import _root_.scala.collection.JavaConversions._
-import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import org.apache.activemq.broker.store.Store
-import java.util.ArrayList
-import org.fusesource.hawtdispatch.BaseRetained
-import java.util.concurrent.{CountDownLatch, TimeUnit}
+import _root_.org.apache.activemq.metric.{Period}
 import org.apache.activemq.apollo.broker._
-import org.scalatest._
 import _root_.org.fusesource.hawtbuf._
-import java.io.{PrintStream, FileOutputStream, File, IOException}
-import org.apache.activemq.util.{IOHelper, ProcessSupport}
-import scala.util.matching.Regex
-import org.apache.activemq.apollo.dto.BrokerDTO
+import java.net.URL
 
-object BaseBrokerPerfSupport {
-  var PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "6"))
-  var SAMPLE_PERIOD = java.lang.Long.parseLong(System.getProperty("SAMPLE_PERIOD", "1000"))
+/**
+ * 
+ */
+abstract class BaseBrokerPerfSupport extends BrokerPerfSupport {
 
-  // Set to use tcp IO
-  protected var TCP = true;
+  PERSISTENT = false
 
-  var USE_KAHA_DB = true;
-  var PURGE_STORE = true;
+  def reportResourceTemplate():URL = { classOf[BaseBrokerPerfSupport].getResource("report.html") }
+  def partitionedLoad = List(1, 2, 4, 8, 10)
+  def highContention = 10
+  def messageSizes = List(20,1024,1024*256)
 
-  // Set to put senders and consumers on separate brokers.
-  var MULTI_BROKER = false;
+  // benchmark( all the combinations
+  for( ptp<- List(true,false) ; durable <- List(false) ; messageSize <- messageSizes ) {
 
-  var DUMP_REPORT_COLS = true;
-}
-
-abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach {
-  import BaseBrokerPerfSupport._
-
-
-  protected var sendBrokerBindURI: String = null
-  protected var receiveBrokerBindURI: String = null
-  protected var sendBrokerConnectURI: String = null
-  protected var receiveBrokerConnectURI: String = null
-
-  protected var producerCount = 0
-  protected var consumerCount = 0
-  protected var destCount = 0
-
-  protected val totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items")
-  protected val totalConsumerRate = new MetricAggregator().name("Aggregate Consumer Rate").unit("items")
-
-  protected var sendBroker: Broker = null
-  protected var rcvBroker: Broker = null
-  protected val brokers = new ArrayList[Broker]()
-  protected val msgIdGenerator = new AtomicLong()
-  val stopping = new AtomicBoolean()
-
-  val producers = new ArrayList[RemoteProducer]()
-  val consumers = new ArrayList[RemoteConsumer]()
-
-  var samples:List[(String, AnyRef)] = Nil
-
-  override protected def beforeEach() = {
-    totalProducerRate.removeAllMetrics
-    totalConsumerRate.removeAllMetrics
-    brokers.clear
-    producers.clear
-    consumers.clear
-    stopping.set(false)
-    rcvBroker=null
-    sendBroker=null
-    producerCount = 0
-    consumerCount = 0
-    destCount =0
-  }
-
-  override protected def beforeAll(configMap: Map[String, Any]) = {
-    super.beforeAll(configMap)
-    if (TCP) {
-      sendBrokerBindURI = "tcp://localhost:10000";
-      receiveBrokerBindURI = "tcp://localhost:20000";
-
-      sendBrokerConnectURI = "tcp://localhost:10000?wireFormat=" + getRemoteWireFormat();
-      receiveBrokerConnectURI = "tcp://localhost:20000?wireFormat=" + getRemoteWireFormat();
-    } else {
-      sendBrokerConnectURI = "pipe://SendBroker";
-      receiveBrokerConnectURI = "pipe://ReceiveBroker";
-      
-      sendBrokerBindURI = sendBrokerConnectURI;
-      receiveBrokerBindURI = receiveBrokerConnectURI;
-    }
-  }
-
-  override protected def afterAll() = {
-    val basedir = new File(System.getProperty("user.home", "."))
-    val csvfile = new File(basedir, "perf-"+getClass.getName+".html");
-
-    val report_parser = """(?s)(.*// DATA-START\r?\n)(.*)(// DATA-END.*)""".r
-
-    // Load the previous dataset if the file exists
-    var report_data = ""
-    if( csvfile.exists ) {
-      IOHelper.readText(csvfile) match {
-        case report_parser(_, data, _) =>
-          report_data = data.stripLineEnd
-        case _ =>
-          println("could not parse existing report file: "+csvfile);
+    def benchmark(name:String)(func: =>Unit) {
+      test(name) {
+        this.PTP = ptp
+        this.DURABLE = durable
+        this.MESSAGE_SIZE = messageSize
+        func
       }
     }
 
-    // Load the report template and parse it..
-    val template = IOHelper.readText(classOf[BaseBrokerPerfSupport].getResourceAsStream("report.html"))
-    template match {
-      case report_parser(report_header, _, report_footer) =>
-        var notes = System.getProperty("notes")
-        if( notes==null ) {
-          val version = new String(ProcessSupport.system("git", "rev-list", "--max-count=1", "HEAD").toByteArray).trim
-          notes = "commit "+version
-        }
+    val prefix = (if( ptp ) "queue " else "topic ") +(if((messageSize%1024)==0) (messageSize/1024)+"k" else messageSize+"b" )+" "
+    val suffix = (if( durable ) " durable" else "")
 
-        if( !report_data.isEmpty ) {
-          report_data += ",\n"
-        }
-        report_data += "            ['"+jsescape(notes)+"', "+samples.map(x=>String.format("%.2f",x._2)).mkString(", ")+"]\n"
-        IOHelper.writeText(csvfile, report_header+report_data+report_footer)
-      case _ =>
-        println("could not parse template report file");
-    }
-
-    println("Updated: "+csvfile);
-    
-    if( DUMP_REPORT_COLS ) {
-      samples.map(_._1).foreach{x=>
-        println("          data.addColumn('number', '"+x+"');");
-      }
-    }
-  }
-
-  def jsescape(value:String) = {
-    var rc = ""
-    value.foreach{ c=>
-      c match {
-        case '\n'=> rc+="\\n"
-        case '\r'=> rc+="\\r"
-        case '\t'=> rc+="\\t"
-        case '\''=> rc+="\\\'"
-        case '\"'=> rc+="\\\""
-        case _ => rc+=c
-      }
-    }
-    rc
-  }
-
-  // Test all the combinations
-  for( PTP<- List(true,false) ; PERSISTENT <- List(false); DURABLE <- List(false) ; size <- List(20,1024,1024*256)) {
-
-    val prefix = (if( PTP ) "queue " else "topic ") +(if( PERSISTENT ) "persistent " else "")+(if((size%1024)==0) (size/1024)+"k" else size+"b" )+" "
-    val suffix = (if( DURABLE ) " durable" else "")
-
-    if( PTP && DURABLE ) {
-      // skip this iteration since queues and durable subs don't mix.
+    if( ptp && durable ) {
+      // skip this combination since queues and durable subs don't mix.
     } else {
 
       /**
@@ -186,8 +57,8 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
        * Divide by 2 and compare against 1-1-1 to figure out what the broker dispatching
        * overhead is.
        */
-      if (!PTP) {
-        test(prefix+"1->1->0"+suffix) {
+      if (!ptp) {
+        benchmark(prefix+"1->1->0"+suffix) {
           producerCount = 1;
           destCount = 1;
 
@@ -204,11 +75,10 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
       }
 
       /**
-       * Test increasing partitioned load.  Should linearly scale up on multi-core
-       * machines until CPU usage is maxed.
+       * benchmark( increasing partitioned load.
        */
-      for( count <- List(1, 2, 4, 8, 10) ) {
-        test(format("%s%d->%d->%d%s", prefix, count, count, count, suffix)) {
+      for( count <- partitionedLoad ) {
+        benchmark(format("%s%d->%d->%d%s", prefix, count, count, count, suffix)) {
           println(testName)
           producerCount = count;
           destCount = count;
@@ -226,11 +96,11 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
       }
 
       /**
-       * Test the effects of high producer and consumer contention on a single
+       * benchmark( the effects of high producer and consumer contention on a single
        * destination.
        */
-      for( (producers, consumers) <- List((10, 1), (1, 10), (10, 10)) ) {
-        test(format("%s%d->1->%d%s", prefix, producers, consumers, suffix)) {
+      for( (producers, consumers) <- List((highContention, 1), (1, highContention), (highContention, highContention)) ) {
+        benchmark(format("%s%d->1->%d%s", prefix, producers, consumers, suffix)) {
           producerCount = producers;
           consumerCount = consumers;
           destCount = 1;
@@ -248,7 +118,7 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
       }
 
 //    /**
-//     *  Tests 1 producers sending to 1 destination with 1 slow and 1 fast consumer.
+//     *  benchmark(s 1 producers sending to 1 destination with 1 slow and 1 fast consumer.
 //     *
 //     * queue case: the producer should not slow down since it can dispatch to the
 //     *             fast consumer
@@ -257,7 +127,7 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
 //     *             slow consumer.
 //     *
 //     */
-//    test("1->1->[1 slow,1 fast]") {
+//    benchmark("1->1->[1 slow,1 fast]") {
 //      producerCount = 2;
 //      destCount = 1;
 //      consumerCount = 2;
@@ -274,7 +144,7 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
 //      }
 //    }
 //
-//    test("2->2->[1,1 selecting]") {
+//    benchmark("2->2->[1,1 selecting]") {
 //      producerCount = 2;
 //      destCount = 2;
 //      consumerCount = 2;
@@ -298,12 +168,12 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
 //    }
 
 //    /**
-//     * Test sending with 1 high priority sender. The high priority sender should
+//     * benchmark( sending with 1 high priority sender. The high priority sender should
 //     * have higher throughput than the other low priority senders.
 //     *
 //     * @throws Exception
 //     */
-//    test("[1 high, 1 normal]->1->1") {
+//    benchmark("[1 high, 1 normal]->1->1") {
 //      producerCount = 2;
 //      destCount = 1;
 //      consumerCount = 1;
@@ -335,12 +205,12 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
 //    }
 
 //    /**
-//     * Test sending with 1 high priority sender. The high priority sender should
+//     * benchmark( sending with 1 high priority sender. The high priority sender should
 //     * have higher throughput than the other low priority senders.
 //     *
 //     * @throws Exception
 //     */
-//    test("[1 high, 1 mixed, 1 normal]->1->1") {
+//    benchmark("[1 high, 1 mixed, 1 normal]->1->1") {
 //      producerCount = 2;
 //      destCount = 1;
 //      consumerCount = 1;
@@ -375,336 +245,6 @@ abstract class BaseBrokerPerfSupport extends FunSuiteSupport with BeforeAndAfter
 
     }
 
-    def createConnections() = {
-
-      if (MULTI_BROKER) {
-        sendBroker = createBroker("SendBroker", sendBrokerBindURI, sendBrokerConnectURI);
-        rcvBroker = createBroker("RcvBroker", receiveBrokerBindURI, receiveBrokerConnectURI);
-        brokers.add(sendBroker);
-        brokers.add(rcvBroker);
-      } else {
-        sendBroker = createBroker("Broker", sendBrokerBindURI, sendBrokerConnectURI);
-        rcvBroker = sendBroker
-        brokers.add(sendBroker);
-      }
-
-      startBrokers();
-
-      var dests = new Array[Destination](destCount);
-
-      for (i <- 0 until destCount) {
-        val domain = if (PTP) {Domain.QUEUE_DOMAIN} else {Domain.TOPIC_DOMAIN}
-        val name = new AsciiBuffer("dest" + (i + 1))
-        var bean = new SingleDestination(domain, name)
-        dests(i) = bean;
-//        if (PTP) {
-//          sendBroker.defaultVirtualHost.createQueue(dests(i));
-//          if (MULTI_BROKER) {
-//            rcvBroker.defaultVirtualHost.createQueue(dests(i));
-//          }
-//        }
-      }
-
-      for (i <- 0 until producerCount) {
-        var destination = dests(i % destCount);
-        var producer = _createProducer(i, destination);
-        producer.persistentDelivery = PERSISTENT;
-        producers.add(producer);
-      }
-
-      for (i <- 0 until consumerCount) {
-        var destination = dests(i % destCount);
-        var consumer = _createConsumer(i, destination);
-        consumer.durable = DURABLE;
-        consumers.add(consumer);
-      }
-
-      // Create MultiBroker connections:
-      // if (multibroker) {
-      // Pipe<Message> pipe = new Pipe<Message>();
-      // sendBroker.createBrokerConnection(rcvBroker, pipe);
-      // rcvBroker.createBrokerConnection(sendBroker, pipe.connect());
-      // }
-    }
-
-    def _createConsumer(i: Int, destination: Destination): RemoteConsumer = {
-
-      var consumer = createConsumer();
-      consumer.brokerPerfTest = this
-
-      consumer.uri = connectUri(rcvBroker)
-      consumer.destination = destination
-      consumer.name = "consumer" + (i + 1)
-      consumer.totalConsumerRate = totalConsumerRate
-      return consumer;
-    }
-
-    def connectUri(broker:Broker) = {
-      broker.config.connectors.get(0).advertise
-    }
-
-
-    def _createProducer(id: Int, destination: Destination): RemoteProducer = {
-      var producer = createProducer();
-      producer.brokerPerfTest = this
-      producer.uri = connectUri(sendBroker)
-      producer.producerId = id + 1
-      producer.name = "producer" + (id + 1)
-      producer.destination = destination
-      producer.messageIdGenerator = msgIdGenerator
-      producer.totalProducerRate = totalProducerRate
-      producer.payloadSize = size;
-      producer
-    }
-
-    def stopServices() = {
-      println("waiting for services to stop");
-      stopping.set(true);
-      var tracker = new LoggingTracker("broker shutdown")
-      for (broker <- brokers) {
-        tracker.stop(broker)
-      }
-      tracker.await
-      tracker = new LoggingTracker("producer shutdown")
-      for (connection <- producers) {
-        tracker.stop(connection)
-      }
-      tracker.await
-      tracker = new LoggingTracker("consumer shutdown")
-      for (connection <- consumers) {
-        tracker.stop(connection)
-      }
-      tracker.await
-    }
-
-    def startBrokers() = {
-      val tracker = new LoggingTracker("test broker startup")
-      for (broker <- brokers) {
-        tracker.start(broker)
-      }
-      tracker.await
-    }
-
-
-    def startClients() = {
-      var tracker = new LoggingTracker("test consumer startup")
-      for (connection <- consumers) {
-        tracker.start(connection)
-      }
-      tracker.await
-      // let the consumers drain the destination for a bit...
-      Thread.sleep(1000)
-      tracker = new LoggingTracker("test producer startup")
-      for (connection <- producers) {
-        tracker.start(connection)
-      }
-      tracker.await
-    }
-
-    def reportRates() = {
-
-      println("Warming up...");
-      Thread.sleep(SAMPLE_PERIOD);
-      totalProducerRate.reset();
-      totalConsumerRate.reset();
-
-      println("Sampling rates");
-
-      case class Summary(producer:java.lang.Float, pdev:java.lang.Float, consumer:java.lang.Float, cdev:java.lang.Float)
-
-      val sample_rates = new Array[Summary](PERFORMANCE_SAMPLES)
-      var best = 0;
-
-      for (i <- 0 until PERFORMANCE_SAMPLES) {
-        var p = new Period();
-        Thread.sleep(SAMPLE_PERIOD);
-        if( producerCount > 0 ) {
-          println(totalProducerRate.getRateSummary(p));
-        }
-        if( consumerCount > 0 ) {
-          println(totalConsumerRate.getRateSummary(p));
-        }
-
-        sample_rates(i) = Summary(totalProducerRate.total(p), totalProducerRate.deviation, totalConsumerRate.total(p), totalConsumerRate.deviation)
-
-        val current_sum = sample_rates(i).producer.longValue + sample_rates(i).consumer.longValue
-        val best_sum = sample_rates(i).producer.longValue + sample_rates(i).consumer.longValue
-        if( current_sum > best_sum ) {
-          best = i
-        }
-
-        totalProducerRate.reset();
-        totalConsumerRate.reset();
-      }
-
-
-      if( producerCount > 0 ) {
-        samples = samples ::: ( testName+" producer", sample_rates(best).producer ) :: Nil
-        if( producerCount > 1 ) {
-          samples = samples ::: ( testName+" producer sd", sample_rates(best).pdev ) :: Nil
-        }
-      }
-      if( consumerCount > 0 ) {
-        samples = samples ::: ( testName+" consumer", sample_rates(best).consumer ) :: Nil
-        if( consumerCount > 1 ) {
-          samples = samples ::: ( testName+" consumer sd", sample_rates(best).cdev ) :: Nil
-        }
-      }
-
-
-    }
-  }
-  
-  protected def createConsumer(): RemoteConsumer
-  protected def createProducer(): RemoteProducer
-
-  def getBrokerWireFormat() = "multi"
-  def getRemoteWireFormat(): String
-
-  def createBroker(name: String, bindURI: String, connectUri: String): Broker = {
-
-    val config = Broker.defaultConfig
-    val connector = config.connectors.get(0)
-    connector.bind = bindURI
-    connector.advertise = connectUri
-    connector.protocol = getBrokerWireFormat
-
-    val host = config.virtualHosts.get(0)
-    host.purgeOnStartup = true
-
-    val broker = new Broker()
-    broker.config = config
-    broker
-  }
-
-//  def createStore(broker: Broker): Store = {
-//    val store = if (USE_KAHA_DB) {
-//      StoreFactory.createStore("hawtdb");
-//    } else {
-//      StoreFactory.createStore("memory");
-//    }
-//    store.setStoreDirectory(new File("target/test-data/broker-test/" + broker.id));
-//    store.setDeleteAllMessages(PURGE_STORE);
-//    store
-//  }
-
-}
-
-abstract class RemoteConsumer extends Connection {
-  val consumerRate = new MetricCounter();
-  var totalConsumerRate: MetricAggregator = null
-  var thinkTime: Long = 0
-  var destination: Destination = null
-  var selector: String = null;
-  var durable = false;
-  var uri: String = null
-  var name:String = null
-  var brokerPerfTest:BaseBrokerPerfSupport = null
-
-  override protected def _start(onComplete:Runnable) = {
-    if( consumerRate.getName == null ) {
-      consumerRate.name("Consumer " + name + " Rate");
-    }
-    totalConsumerRate.add(consumerRate);
-    transport = TransportFactory.connect(uri);
-    super._start(onComplete);
-  }
-
-
-  override def onTransportConnected() = {
-    setupSubscription();
-    transport.resumeRead
-  }
-
-  override def onTransportFailure(error: IOException) = {
-    if (!stopped) {
-      if(brokerPerfTest.stopping.get()) {
-        transport.stop
-      } else {
-        onFailure(error);
-      }
-    }
-  }
-
-  protected def setupSubscription()
-
-}
-
-
-abstract class RemoteProducer extends Connection {
-  val rate = new MetricCounter();
-
-  var name:String = null
-  var messageIdGenerator: AtomicLong = null
-  var priority = 0
-  var persistentDelivery = false
-  var priorityMod = 0
-  var counter = 0
-  var producerId = 0
-  var destination: Destination = null
-  var property: String = null
-  var totalProducerRate: MetricAggregator = null
-  var next: Delivery = null
-  var thinkTime: Long = 0
-
-  var filler: String = null
-  var payloadSize = 20
-  var uri: String = null
-  var brokerPerfTest:BaseBrokerPerfSupport = null
-
-  override def onTransportFailure(error: IOException) = {
-    if (!brokerPerfTest.stopping.get()) {
-      System.err.println("Client Async Error:");
-      error.printStackTrace();
-    }
-  }
-
-  override protected def _start(onComplete:Runnable) = {
-
-    if (payloadSize > 0) {
-      var sb = new StringBuilder(payloadSize);
-      for (i <- 0 until payloadSize) {
-        sb.append(('a' + (i % 26)).toChar);
-      }
-      filler = sb.toString();
-    }
-
-    if( rate.getName == null ) {
-      rate.name("Producer " + name + " Rate");
-    }
-    totalProducerRate.add(rate);
-
-    transport = TransportFactory.connect(uri);
-    super._start(onComplete);
-
-  }
-
-  override def onTransportConnected() = {
-    setupProducer();
-    transport.resumeRead
-  }
-
-  def setupProducer()
-
-def createPayload(): String = {
-    if (payloadSize >= 0) {
-      var sb = new StringBuilder(payloadSize);
-      sb.append(name);
-      sb.append(':');
-      counter += 1
-      sb.append(counter);
-      sb.append(':');
-      var length = sb.length;
-      if (length <= payloadSize) {
-        sb.append(filler.subSequence(0, payloadSize - length));
-        return sb.toString();
-      } else {
-        return sb.substring(0, payloadSize);
-      }
-    } else {
-      counter += 1
-      return name + ":" + (counter);
-    }
   }
 
 }

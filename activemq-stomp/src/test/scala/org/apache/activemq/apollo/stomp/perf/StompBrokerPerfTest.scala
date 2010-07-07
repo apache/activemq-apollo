@@ -28,10 +28,9 @@ import AsciiBuffer._
 import Stomp._
 import _root_.org.apache.activemq.apollo.stomp.StompFrame
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-import org.fusesource.hawtdispatch.BaseRetained
+
 
 class StompBrokerPerfTest extends BaseBrokerPerfSupport {
-  println(getClass.getClassLoader.getResource("log4j.properties"));
 
   override def createProducer() = new StompRemoteProducer()
 
@@ -41,10 +40,21 @@ class StompBrokerPerfTest extends BaseBrokerPerfSupport {
 
 }
 
+class StompPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
+  
+  override def createProducer() = new StompRemoteProducer()
+
+  override def createConsumer() = new StompRemoteConsumer()
+
+  override def getRemoteWireFormat() = "stomp"
+
+}
+
+
 class StompRemoteConsumer extends RemoteConsumer {
   var outboundSink: OverflowSink[StompFrame] = null
 
-  def setupSubscription() = {
+  def onConnected() = {
     outboundSink = new OverflowSink[StompFrame](MapSink(transportSink){ x=>x })
     outboundSink.refiller = ^{}
 
@@ -60,7 +70,10 @@ class StompRemoteConsumer extends RemoteConsumer {
     var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
     headers ::= (Stomp.Headers.Subscribe.DESTINATION, stompDestination)
     headers ::= (Stomp.Headers.Subscribe.ID, ascii("stomp-sub-" + name))
-    headers ::= (Stomp.Headers.Subscribe.ACK_MODE, Stomp.Headers.Subscribe.AckModeValues.AUTO)
+
+    if( persistent ) {
+      headers ::= (Stomp.Headers.Subscribe.ACK_MODE, Stomp.Headers.Subscribe.AckModeValues.CLIENT)
+    }
 
     frame = StompFrame(Stomp.Commands.SUBSCRIBE, headers);
     outboundSink.offer(frame);
@@ -72,6 +85,13 @@ class StompRemoteConsumer extends RemoteConsumer {
       case StompFrame(Responses.CONNECTED, headers, _, _) =>
       case StompFrame(Responses.MESSAGE, headers, content, _) =>
         messageReceived();
+
+        // we client ack if persistent messages are being used.
+        if( persistent ) {
+          var rc = List((Stomp.Headers.Ack.MESSAGE_ID, frame.header(Stomp.Headers.Message.MESSAGE_ID)))
+          outboundSink.offer(StompFrame(Stomp.Commands.ACK, rc));
+        }
+
       case StompFrame(Responses.ERROR, headers, content, _) =>
         onFailure(new Exception("Server reported an error: " + frame.content));
       case _ =>
@@ -83,13 +103,13 @@ class StompRemoteConsumer extends RemoteConsumer {
     if (thinkTime > 0) {
       transport.suspendRead
       dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, ^ {
-        consumerRate.increment();
+        rate.increment();
         if (!stopped) {
           transport.resumeRead
         }
       })
     } else {
-      consumerRate.increment();
+      rate.increment();
     }
   }
 
@@ -105,6 +125,9 @@ class StompRemoteProducer extends RemoteProducer {
     headers ::= (Stomp.Headers.Send.DESTINATION, stompDestination);
     if (property != null) {
       headers ::= (ascii(property), ascii(property));
+    }
+    if( persistent ) {
+      headers ::= ((Stomp.Headers.RECEIPT_REQUESTED, ascii("x")));
     }
     //    var p = this.priority;
     //    if (priorityMod > 0) {
@@ -127,16 +150,21 @@ class StompRemoteProducer extends RemoteProducer {
             send_next
           }
         }
-        if (thinkTime > 0) {
-          dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, task)
-        } else {
-          dispatchQueue << task
+
+        if( !persistent ) {
+          // if we are not going to wait for an ack back from the server,
+          // then jut send the next one...
+          if (thinkTime > 0) {
+            dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, task)
+          } else {
+            dispatchQueue << task
+          }
         }
       }
     }
   }
 
-  override def setupProducer() = {
+  override def onConnected() = {
     outboundSink = new OverflowSink[StompFrame](MapSink(transportSink){ x=>x })
     outboundSink.refiller = ^ { drain }
 
@@ -152,6 +180,11 @@ class StompRemoteProducer extends RemoteProducer {
   override def onTransportCommand(command: Object) = {
     var frame = command.asInstanceOf[StompFrame]
     frame match {
+      case StompFrame(Responses.RECEIPT, headers, _, _) =>
+        assert( persistent )
+        // we got the ack for the previous message we sent.. now send the next one.
+        send_next
+
       case StompFrame(Responses.CONNECTED, headers, _, _) =>
       case StompFrame(Responses.ERROR, headers, content, _) =>
         onFailure(new Exception("Server reported an error: " + frame.content.utf8));
