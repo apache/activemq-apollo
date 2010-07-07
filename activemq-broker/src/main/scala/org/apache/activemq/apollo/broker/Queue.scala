@@ -107,7 +107,7 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
   /**
    * Tunning options.
    */
-  var tune_max_size = 1024 * 1024 * 4
+  var tune_max_size = 1024 * 256
   var tune_subscription_prefetch = 1024*32
   var tune_max_outbound_size = 1024 * 1204 * 5
   var tune_swap_delay = 100L

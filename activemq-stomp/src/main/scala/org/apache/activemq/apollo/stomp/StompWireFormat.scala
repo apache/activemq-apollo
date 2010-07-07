@@ -102,6 +102,16 @@ class StompWireFormat extends WireFormat with DispatchLogging {
     frame.action.writeTo(os)
     os.write(NEWLINE)
 
+    // Write any updated headers first...
+    if( !frame.updated_headers.isEmpty ) {
+      for( (key, value) <- frame.updated_headers ) {
+        key.writeTo(os)
+        os.write(SEPERATOR)
+        value.writeTo(os)
+        os.write(NEWLINE)
+      }
+    }
+
     // we can optimize a little if the headers and content are in the same buffer..
     if( !frame.headers.isEmpty && !frame.content.isEmpty &&
             ( frame.headers.head._1.data eq frame.content.data ) ) {

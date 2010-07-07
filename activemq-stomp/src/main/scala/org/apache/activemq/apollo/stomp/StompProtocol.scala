@@ -52,9 +52,11 @@ object StompConstants {
 }
 
 class StompProtocol extends Protocol {
+  import StompConstants._
+  
   val wff = new StompWireFormatFactory
 
-  def name = new AsciiBuffer("stomp")
+  def name = PROTOCOL
 
   def createWireFormat = wff.createWireFormat
 
@@ -82,7 +84,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   
   protected def dispatchQueue:DispatchQueue = connection.dispatchQueue
 
-  class SimpleConsumer(val destination:Destination) extends BaseRetained with DeliveryConsumer {
+  class StompConsumer(val destination:Destination, val ackMode:AsciiBuffer, val selector:AsciiBuffer) extends BaseRetained with DeliveryConsumer {
     val dispatchQueue = StompProtocolHandler.this.dispatchQueue
 
     dispatchQueue.retain
@@ -92,15 +94,18 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     })
 
     def matches(delivery:Delivery) = {
-      // TODO add selector support here...
-      delivery.message.isInstanceOf[StompFrameMessage]
+      if( delivery.message.protocol eq PROTOCOL ) {
+        true
+      } else {
+        false
+      }
     }
 
     def connect(p:DeliveryProducer) = new DeliverySession {
       retain
 
       def producer = p
-      def consumer = SimpleConsumer.this
+      def consumer = StompConsumer.this
 
       val session = session_manager.open(producer.dispatchQueue)
 
@@ -115,8 +120,17 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         if( session.full ) {
           false
         } else {
-          if( delivery.ack!=null ) {
-            delivery.ack(null)
+          if( delivery.ack!=null) {
+            if( ackMode eq Headers.Subscribe.AckModeValues.AUTO ) {
+              delivery.ack(null)
+            } else {
+              // switch the the queue context.. this method is in the producer's context.
+              queue {
+                // we need to correlate acks from the client.. to invoke the
+                // delivery ack.
+                pendingAcks += ( delivery.message.id->delivery.ack )
+              }
+            }
           }
           val frame = delivery.message.asInstanceOf[StompFrameMessage].frame
           val rc = session.offer(frame)
@@ -135,12 +149,13 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   var connection_sink:Sink[StompFrame] = null
 
   var closed = false
-  var consumer:SimpleConsumer = null
+  var consumers = Map[AsciiBuffer, StompConsumer]()
 
-  var producerRoute:DeliveryProducerRoute=null
+  var producerRoutes = Map[Destination, DeliveryProducerRoute]()
   var host:VirtualHost = null
 
   private def queue = connection.dispatchQueue
+  var pendingAcks = HashMap[AsciiBuffer, (StoreBatch)=>Unit]()
 
   override def onTransportConnected() = {
     session_manager = new SinkMux[StompFrame]( MapSink(connection.transportSink){ x=>x }, dispatchQueue, StompFrame)
@@ -158,14 +173,15 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   override def onTransportDisconnected() = {
     if( !closed ) {
       closed=true;
-      if( producerRoute!=null ) {
-        host.router.disconnect(producerRoute)
-        producerRoute=null
+      producerRoutes.foreach{
+        case(_,route)=> host.router.disconnect(route)
       }
-      if( consumer!=null ) {
+      producerRoutes = Map()
+      consumers.foreach {
+        case (_,consumer)=>
         host.router.unbind(consumer.destination, consumer::Nil)
-        consumer=null
       }
+      consumers = Map()
       trace("stomp protocol resources released")
     }
   }
@@ -177,7 +193,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         case StompFrame(Commands.SEND, headers, content, _) =>
           on_stomp_send(command.asInstanceOf[StompFrame])
         case StompFrame(Commands.ACK, headers, content, _) =>
-          // TODO:
+          on_stomp_ack(headers)
         case StompFrame(Commands.SUBSCRIBE, headers, content, _) =>
           info("got command: %s", command)
           on_stomp_subscribe(headers)
@@ -221,36 +237,34 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     get(frame.headers, Headers.Send.DESTINATION) match {
       case Some(dest)=>
         val destiantion:Destination = dest
-        // create the producer route...
-        if( producerRoute==null || producerRoute.destination!=destiantion ) {
 
-          // clean up the previous producer..
-          if( producerRoute!=null ) {
-            host.router.disconnect(producerRoute)
-            producerRoute=null
-          }
+        producerRoutes.get(destiantion) match {
+          case None=>
+            // create the producer route...
 
-          val producer = new DeliveryProducer() {
-            override def dispatchQueue = queue
-          }
+            val producer = new DeliveryProducer() {
+              override def dispatchQueue = queue
+            }
 
-          // don't process frames until we are connected..
-          connection.transport.suspendRead
-          host.router.connect(destiantion, producer) {
-            (route) =>
-              if( !connection.stopped ) {
-                connection.transport.resumeRead
-                producerRoute = route
-                producerRoute.refiller = ^{
+            // don't process frames until producer is connected...
+            connection.transport.suspendRead
+            host.router.connect(destiantion, producer) { route =>
+                if( !connection.stopped ) {
                   connection.transport.resumeRead
+                  route.refiller = ^{
+                    connection.transport.resumeRead
+                  }
+                  producerRoutes += destiantion->route
+                  send_via_route(route, frame)
                 }
-                send_via_route(producerRoute, frame)
-              }
-          }
-        } else {
-          // we can re-use the existing producer route
-          send_via_route(producerRoute, frame)
+            }
+
+          case Some(route)=>
+            // we can re-use the existing producer route
+            send_via_route(route, frame)
+
         }
+
       case None=>
         die("destination not set.")
     }
@@ -268,14 +282,15 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     if( !route.targets.isEmpty ) {
 
       // We may need to add some headers..
-      var message = if( frame.header(Stomp.Headers.Message.MESSAGE_ID)==null ) {
-        var updated_headers:HeaderMap=Nil;
-        updated_headers ::= (Stomp.Headers.Message.MESSAGE_ID, next_message_id)
-        StompFrameMessage(StompFrame(Stomp.Responses.MESSAGE, frame.headers, frame.content, updated_headers))
-      } else {
-        StompFrameMessage(StompFrame(Stomp.Responses.MESSAGE, frame.headers, frame.content))
+      var message = get( frame.headers, Stomp.Headers.Message.MESSAGE_ID) match {
+        case None=>
+          var updated_headers:HeaderMap=Nil;
+          updated_headers ::= (Stomp.Headers.Message.MESSAGE_ID, next_message_id)
+          StompFrameMessage(StompFrame(Stomp.Responses.MESSAGE, frame.headers, frame.content, updated_headers))
+        case Some(id)=>
+          StompFrameMessage(StompFrame(Stomp.Responses.MESSAGE, frame.headers, frame.content))
       }
-      
+
       val delivery = new Delivery
       delivery.message = message
       delivery.size = message.frame.size
@@ -308,14 +323,37 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     get(headers, Headers.Subscribe.DESTINATION) match {
       case Some(dest)=>
         val destiantion:Destination = dest
-        if( consumer !=null ) {
-          die("Only one subscription supported.")
 
-        } else {
-          info("subscribing to: %s", destiantion)
-          consumer = new SimpleConsumer(destiantion);
-          host.router.bind(destiantion, consumer :: Nil)
-          consumer.release
+        var id:AsciiBuffer = get(headers, Headers.Subscribe.ID) match {
+          case None => dest
+          case Some(x)=> x
+        }
+
+        val ack:AsciiBuffer = get(headers, Headers.Subscribe.ACK_MODE) match {
+          case None=> Headers.Subscribe.AckModeValues.AUTO
+          case Some(x)=> x match {
+            case Headers.Subscribe.AckModeValues.AUTO=> Headers.Subscribe.AckModeValues.AUTO
+            case Headers.Subscribe.AckModeValues.CLIENT=> Headers.Subscribe.AckModeValues.CLIENT
+            case ack:AsciiBuffer => die("Unsuported ack mode: "+ack); null
+          }
+        }
+
+        val selector = get(headers, Headers.Subscribe.SELECTOR) match {
+          case None=> null
+          case Some(x)=> x
+        }
+
+
+        consumers.get(id) match {
+          case None=>
+            info("subscribing to: %s", destiantion)
+            val consumer = new StompConsumer(destiantion, ack, selector);
+            host.router.bind(destiantion, consumer :: Nil)
+            consumer.release
+            consumers += (id -> consumer)
+
+          case Some(_)=>
+            die("A subscription with identified with '"+id+"' allready exists")
         }
       case None=>
         die("destination not set.")
@@ -323,11 +361,25 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   }
 
+  def on_stomp_ack(headers:HeaderMap) = {
+    get(headers, Headers.Ack.MESSAGE_ID) match {
+      case Some(messageId)=>
+        pendingAcks.remove(messageId) match {
+          case Some(ack) =>
+            ack(null)
+          case None =>
+            die("The specified message id is not waiting for a client ack: "+messageId)
+        }
+      case None=> die("message id header not set")
+    }
+  }
+
+
   private def die(msg:String) = {
     if( !connection.stopped ) {
       info("Shutting connection down due to: "+msg)
       connection.transport.suspendRead
-      connection.transport.offer(StompFrame(Responses.ERROR, Nil, ascii(msg)), null)
+      connection.transport.offer(StompFrame(Responses.ERROR, Nil, ascii(msg)))
       ^ {
         connection.stop()
       } >>: queue

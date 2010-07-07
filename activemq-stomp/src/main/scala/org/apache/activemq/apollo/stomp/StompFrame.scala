@@ -29,7 +29,8 @@ import org.apache.activemq.apollo.broker.{Sizer, Destination, BufferConversions,
 object StompFrameConstants {
   type HeaderMap = List[(AsciiBuffer, AsciiBuffer)]
   type HeaderMapBuffer = ListBuffer[(AsciiBuffer, AsciiBuffer)]
-  var NO_DATA = new Buffer(0);
+  val NO_DATA = new Buffer(0);
+
 }
 
 import StompFrameConstants._
@@ -38,7 +39,7 @@ import BufferConversions._
 
 case class StompFrameMessage(frame:StompFrame) extends Message {
   
-  def protocol = "stomp"
+  def protocol = PROTOCOL
 
   /**
    * the globally unique id of the message

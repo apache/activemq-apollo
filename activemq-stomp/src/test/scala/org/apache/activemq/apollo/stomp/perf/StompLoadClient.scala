@@ -19,11 +19,14 @@ package org.apache.activemq.apollo.stomp.perf
 import _root_.java.io._
 import _root_.java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import _root_.org.fusesource.hawtbuf.AsciiBuffer
+import _root_.org.fusesource.hawtbuf.{ByteArrayOutputStream => BAOS}
+
 import java.net.{ProtocolException, InetSocketAddress, URI, Socket}
 
 import java.lang.String._
 import java.util.concurrent.TimeUnit._
 import collection.mutable.Map
+import org.apache.activemq.apollo.stomp.Stomp
 
 /**
  *
@@ -46,9 +49,10 @@ object StompLoadClient {
   var messageSize = 1024;
   var useContentLength=true
   var persistent = false;
-  var syncProducer = false;
+  var syncSend = false;
+  var ack = "client";
 
-  var destinationType = "topic";
+  var destinationType = "queue";
   var destinationCount = 1;
 
   val producerCounter = new AtomicLong();
@@ -128,18 +132,24 @@ object StompLoadClient {
     "StompLoadClient Properties\n"+
     "--------------------------------------\n"+
     "uri              = "+uri+"\n"+
-    "producers        = "+producers+"\n"+
-    "consumers        = "+consumers+"\n"+
     "destinationType  = "+destinationType+"\n"+
     "destinationCount = "+destinationCount+"\n" +
+    "sampleInterval   = "+sampleInterval+"\n"
+    "\n"+
+    "--- Producer Properties ---\n"+
+    "producers        = "+producers+"\n"+
     "messageSize      = "+messageSize+"\n"+
     "persistent       = "+persistent+"\n"+
-    "syncProducer     = "+syncProducer+"\n"+
-    "producerSleep    = "+producerSleep+"\n"+
-    "consumerSleep    = "+consumerSleep+"\n"+
-    "bufferSize       = "+bufferSize+"\n"+
+    "syncSend         = "+syncSend+"\n"+
     "useContentLength = "+useContentLength+"\n"+
-    "sampleInterval   = "+sampleInterval+"\n"
+    "producerSleep    = "+producerSleep+"\n"+
+    "\n"+
+    "--- Consumer Properties ---\n"+
+    "consumers        = "+consumers+"\n"+
+    "consumerSleep    = "+consumerSleep+"\n"+
+    "ack              = "+ack+"\n"+
+    ""
+
   }
 
   def printRate(name: String, counter: AtomicLong, nanos: Long) = {
@@ -231,11 +241,24 @@ object StompLoadClient {
     }
 
     def receive():String = {
-      val buffer = new ByteArrayOutputStream(500)
+      val buffer = new ByteArrayOutputStream(messageSize+200)
       var c = in.read;
       while( c >= 0 ) {
         if( c==0 ) {
           return new String(buffer.toByteArray, "UTF-8")
+        }
+        buffer.write(c);
+        c = in.read()
+      }
+      throw new EOFException()
+    }
+
+    def receiveAscii():AsciiBuffer = {
+      val buffer = new BAOS(messageSize+200)
+      var c = in.read;
+      while( c >= 0 ) {
+        if( c==0 ) {
+          return buffer.toBuffer.ascii
         }
         buffer.write(c);
         c = in.read()
@@ -259,7 +282,7 @@ object StompLoadClient {
     val content = ("SEND\n" +
               "destination:"+destination(id)+"\n"+
                { if(persistent) "persistent:true\n" else "" } +
-               { if(syncProducer) "receipt:xxx\n" else "" } +
+               { if(syncSend) "receipt:xxx\n" else "" } +
                { if(useContentLength) "content-length:"+messageSize+"\n" else "" } +
               "\n"+message(name)).getBytes("UTF-8")
 
@@ -270,7 +293,7 @@ object StompLoadClient {
           var i =0;
           while (!done.get) {
             client.send(content)
-            if( syncProducer ) {
+            if( syncSend ) {
               // waits for the reply..
               client.flush
               client.skip
@@ -312,17 +335,37 @@ object StompLoadClient {
           val headers = Map[AsciiBuffer, AsciiBuffer]();
           client.send("""
 SUBSCRIBE
+ack:"""+ack+"""
 destination:"""+destination(id)+"""
 
 """)
           client.flush
-
-          while (!done.get) {
-            client.skip
-            consumerCounter.incrementAndGet();
-            Thread.sleep(consumerSleep);
-          }
+          receiveLoop
         }
+      }
+    }
+
+    def receiveLoop() = {
+      val clientAck = ack == "client"
+      while (!done.get) {
+        if( clientAck ) {
+          val msg = client.receiveAscii()
+          val start = msg.indexOf(Stomp.Headers.Message.MESSAGE_ID)
+          assert( start >= 0 )
+          val end = msg.indexOf("\n", start)
+          val msgId = msg.slice(start+Stomp.Headers.Message.MESSAGE_ID.length+1, end).ascii
+          client.send("""
+ACK
+message-id:"""+msgId+"""
+
+""")
+          client.flush
+
+        } else {
+          client.skip
+        }
+        consumerCounter.incrementAndGet();
+        Thread.sleep(consumerSleep);
       }
     }
   }
