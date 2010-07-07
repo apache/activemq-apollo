@@ -24,11 +24,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.activemq</groupId>
-  <artifactId>activemq-project</artifactId>
+  <artifactId>apollo-project</artifactId>
   <version>6.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
-  <name>ActiveMQ Project</name>
+  <name>Apache ActiveMQ Apollo Project</name>
   <inceptionYear>2005</inceptionYear>
 
   <properties>
@@ -38,8 +38,8 @@
     <site-repo-url>scpexe://people.apache.org/www/activemq.apache.org/maven/</site-repo-url>
 
     <target-dir>target</target-dir>
-    <activemq-version>6.0-SNAPSHOT</activemq-version>
-    <siteId>activemq-${activemq-version}</siteId>
+    <apollo-version>6.0-SNAPSHOT</apollo-version>
+    <siteId>apollo-${apollo-version}</siteId>
     <projectName>Apache ActiveMQ</projectName>
 
     <!-- dependencies that track scala version changes -->
@@ -134,9 +134,9 @@
   <distributionManagement>
     <site>
       <!-- this needs to match a server in your settings.xml with upload settings -->
-      <id>activemq-website</id>
+      <id>apollo-website</id>
       <!-- set the staging.siteURL in your ~/.m2/settings.xml in a release or other profile -->
-      <url>${staging.siteURL}/${siteId}/maven/${activemq-version}</url>
+      <url>${staging.siteURL}/${siteId}/maven/${apollo-version}</url>
       <!--<url>${site-repo-url}</url>-->
     </site>
   </distributionManagement>
@@ -157,9 +157,9 @@
   </modules>
 
   <scm>
-    <connection>scm:svn:https://svn.apache.org/repos/asf/activemq/sandbox/activemq-flow</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/activemq/sandbox/activemq-flow</developerConnection>
-    <url>http://svn.apache.org/viewvc/activemq/sandbox/activemq-flow/</url>
+    <connection>scm:svn:https://svn.apache.org/repos/asf/activemq/sandbox/apollo-flow</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/activemq/sandbox/apollo-flow</developerConnection>
+    <url>http://svn.apache.org/viewvc/activemq/sandbox/apollo-flow/</url>
   </scm>
 
   <!-- For the dependencies that have not yet made it to central -->

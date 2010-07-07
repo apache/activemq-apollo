@@ -23,16 +23,16 @@
 
   <parent>
     <groupId>org.apache.activemq</groupId>
-    <artifactId>activemq-scala</artifactId>
+    <artifactId>apollo-scala</artifactId>
     <version>6.0-SNAPSHOT</version>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
-  <artifactId>activemq-web</artifactId>
+  <artifactId>apollo-web</artifactId>
   <packaging>war</packaging>
   <version>6.0-SNAPSHOT</version>
 
-  <name>ActiveMQ :: Web</name>
+  <name>${artifactId}</name>
 
   <properties>
     <jetty-port>8080</jetty-port>
@@ -46,17 +46,17 @@
     <!-- ActiveMQ APIs -->
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-broker</artifactId>
+      <artifactId>apollo-broker</artifactId>
       <version>6.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-stomp</artifactId>
+      <artifactId>apollo-stomp</artifactId>
       <version>6.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-tcp</artifactId>
+      <artifactId>apollo-tcp</artifactId>
       <version>6.0-SNAPSHOT</version>
     </dependency>
 
@@ -131,7 +131,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-util</artifactId>
+      <artifactId>apollo-util</artifactId>
       <version>6.0-SNAPSHOT</version>
       <type>test-jar</type>
       <scope>test</scope>

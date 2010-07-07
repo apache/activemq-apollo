@@ -20,16 +20,16 @@
 
   <parent>
     <groupId>org.apache.activemq</groupId>
-    <artifactId>activemq-project</artifactId>
+    <artifactId>apollo-project</artifactId>
     <version>6.0-SNAPSHOT</version>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
-  <artifactId>activemq-scala</artifactId>
+  <artifactId>apollo-scala</artifactId>
   <packaging>pom</packaging>
   <version>6.0-SNAPSHOT</version>
 
-  <name>ActiveMQ :: Scala Settings</name>
+  <name>${artifactId}</name>
   <description>Holds the common Maven settings for Scala based modules.</description>
   
   <build>

@@ -20,39 +20,39 @@
 
   <parent>
     <groupId>org.apache.activemq</groupId>
-    <artifactId>activemq-scala</artifactId>
+    <artifactId>apollo-scala</artifactId>
     <version>6.0-SNAPSHOT</version>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
-  <artifactId>activemq-stomp</artifactId>
+  <artifactId>apollo-stomp</artifactId>
   <packaging>jar</packaging>
   <version>6.0-SNAPSHOT</version>
 
-  <name>ActiveMQ :: Stomp</name>
+  <name>${artifactId}</name>
 
   <dependencies>
 
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-broker</artifactId>
+      <artifactId>apollo-broker</artifactId>
       <version>6.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-tcp</artifactId>
+      <artifactId>apollo-tcp</artifactId>
       <version>6.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-cassandra</artifactId>
+      <artifactId>apollo-cassandra</artifactId>
       <version>6.0-SNAPSHOT</version>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-hawtdb</artifactId>
+      <artifactId>apollo-hawtdb</artifactId>
       <version>6.0-SNAPSHOT</version>
       <optional>true</optional>
     </dependency>
@@ -81,14 +81,14 @@
     <!-- Testing Dependencies -->
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-broker</artifactId>
+      <artifactId>apollo-broker</artifactId>
       <version>6.0-SNAPSHOT</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-util</artifactId>
+      <artifactId>apollo-util</artifactId>
       <version>6.0-SNAPSHOT</version>
       <type>test-jar</type>
       <scope>test</scope>

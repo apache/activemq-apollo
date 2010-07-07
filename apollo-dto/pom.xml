@@ -20,16 +20,16 @@
 
   <parent>
     <groupId>org.apache.activemq</groupId>
-    <artifactId>activemq-project</artifactId>
+    <artifactId>apollo-project</artifactId>
     <version>6.0-SNAPSHOT</version>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
-  <artifactId>activemq-dto</artifactId>
+  <artifactId>apollo-dto</artifactId>
   <packaging>jar</packaging>
   <version>6.0-SNAPSHOT</version>
 
-  <name>ActiveMQ :: Data Transfer Objects</name>
+  <name>${artifactId}</name>
   
   <dependencies>
   
@@ -97,7 +97,7 @@
               <schemas>
                 <schema>
                   <namespace>http://activemq.apache.org/schema/activemq/apollo</namespace>
-                  <file>activemq-apollo.xsd</file>
+                  <file>apollo-apollo.xsd</file>
                 </schema>
               </schemas>
             </configuration>
@@ -122,7 +122,7 @@
                 </taskdef>
                 <mkdir dir="${project.build.directory}/schema"/>
                 <schemagen srcdir="${project.build.sourceDirectory}" destdir="${project.build.directory}/schema">
-                    <schema namespace="http://activemq.apache.org/schema/activemq/apollo" file="activemq-apollo.xsd" />
+                    <schema namespace="http://activemq.apache.org/schema/activemq/apollo" file="apollo-apollo.xsd" />
                     <classpath refid="maven.compile.classpath"/>
                     <include name="**/jaxb/package-info.java"/>
                     <include name="**/jaxb/*Xml.java"/>

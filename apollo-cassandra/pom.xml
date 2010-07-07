@@ -20,16 +20,16 @@
 
   <parent>
     <groupId>org.apache.activemq</groupId>
-    <artifactId>activemq-scala</artifactId>
+    <artifactId>apollo-scala</artifactId>
     <version>6.0-SNAPSHOT</version>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
-  <artifactId>activemq-cassandra</artifactId>
+  <artifactId>apollo-cassandra</artifactId>
   <packaging>jar</packaging>
   <version>6.0-SNAPSHOT</version>
 
-  <name>ActiveMQ :: Store :: Cassandra</name>
+  <name>${artifactId}</name>
 
   <repositories>
     <repository>
@@ -42,7 +42,7 @@
 
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-store</artifactId>
+      <artifactId>apollo-store</artifactId>
       <version>6.0-SNAPSHOT</version>
     </dependency>
     
@@ -60,7 +60,7 @@
 
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-dto</artifactId>
+      <artifactId>apollo-dto</artifactId>
       <version>6.0-SNAPSHOT</version>
     </dependency>
 
@@ -88,14 +88,14 @@
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-store</artifactId>
+      <artifactId>apollo-store</artifactId>
       <version>6.0-SNAPSHOT</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-util</artifactId>
+      <artifactId>apollo-util</artifactId>
       <version>6.0-SNAPSHOT</version>
       <type>test-jar</type>
       <scope>test</scope>
