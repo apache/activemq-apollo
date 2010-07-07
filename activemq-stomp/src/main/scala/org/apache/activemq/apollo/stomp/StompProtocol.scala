@@ -92,8 +92,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         if( session.full ) {
           false
         } else {
-          if( delivery.ack ) {
-            producer.ack(delivery)
+          if( delivery.ack!=null ) {
+            producer.ack(delivery.ack)
           }
           val frame = delivery.message.asInstanceOf[StompFrameMessage].frame
           val rc = session.offer(frame)

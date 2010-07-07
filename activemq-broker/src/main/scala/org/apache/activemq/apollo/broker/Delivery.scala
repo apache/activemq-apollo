@@ -28,7 +28,7 @@ import org.fusesource.hawtbuf._
 trait DeliveryProducer {
 
   def dispatchQueue:DispatchQueue
-  def ack(message:Delivery) = {}
+  def ack(value:Any) = {}
 
   def collocate(value:DispatchQueue):Unit = {
     if( value.getTargetQueue ne dispatchQueue.getTargetQueue ) {
@@ -152,9 +152,9 @@ class Delivery extends BaseRetained {
   def copy() = (new Delivery).set(this)
 
   /**
-   * Does the producer require this message delivery to be ack?
+   * Set if the producer requires an ack to be sent back
    */
-  var ack = false
+  var ack:Any = null
 
   def set(other:Delivery) = {
     size = other.size
