@@ -142,18 +142,18 @@
   </distributionManagement>
 
   <modules>
-    <module>activemq-scala</module>
-    <module>activemq-util</module>
-    <module>activemq-transport</module>
-    <module>activemq-store</module>
-    <module>activemq-cassandra</module>
-    <module>activemq-broker</module>
-    <module>activemq-selector</module>
-    <module>activemq-tcp</module>
-    <module>activemq-hawtdb</module>
-    <module>activemq-dto</module>
-    <module>activemq-stomp</module>
-    <module>activemq-web</module>
+    <module>apollo-scala</module>
+    <module>apollo-util</module>
+    <module>apollo-transport</module>
+    <module>apollo-store</module>
+    <module>apollo-cassandra</module>
+    <module>apollo-broker</module>
+    <module>apollo-selector</module>
+    <module>apollo-tcp</module>
+    <module>apollo-hawtdb</module>
+    <module>apollo-dto</module>
+    <module>apollo-stomp</module>
+    <module>apollo-web</module>
   </modules>
 
   <scm>
