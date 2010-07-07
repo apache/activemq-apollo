@@ -76,7 +76,7 @@ class CassandraStore extends Store with BaseService with Logging {
 
   val client = new CassandraClient()
   var config:CassandraStoreDTO = defaultConfig
-  var blocking:ThreadPoolExecutor = null
+  var blocking:ExecutorService = null
 
   def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[CassandraStoreDTO], reporter)
 
@@ -93,8 +93,7 @@ class CassandraStore extends Store with BaseService with Logging {
 
 
   protected def _start(onCompleted: Runnable) = {
-
-    blocking = new ThreadPoolExecutor(4, 20, 1, TimeUnit.SECONDS, new LinkedBlockingQueue[Runnable](), new ThreadFactory(){
+    blocking = Executors.newFixedThreadPool(20, new ThreadFactory(){
       def newThread(r: Runnable) = {
         val rc = new Thread(r, "cassandra client")
         rc.setDaemon(true)
