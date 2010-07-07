@@ -522,14 +522,14 @@ public class TcpTransport extends BaseService implements Transport {
     }
 
     public void suspendRead() {
-        if( isConnected() ) {
+        if( isConnected() && readSource!=null ) {
             readSource.suspend();
         }
     }
 
 
     public void resumeRead() {
-        if( isConnected() ) {
+        if( isConnected() && readSource!=null ) {
             readSource.resume();
         }
     }
