@@ -1,0 +1,14 @@
+*~
+*.swp
+.idea
+.idea/*
+*.iml
+*.ipr
+*.iws
+target
+.DS_Store
+.scala_dependencies
+.project
+.classpath
+.settings
+eclipse-classes
