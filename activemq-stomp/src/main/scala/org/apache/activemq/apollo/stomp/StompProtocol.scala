@@ -51,10 +51,21 @@ object StompConstants {
 
 import StompConstants._
 
-class StompProtocolHandler extends ProtocolHandler {
+object StompProtocolHandler extends Log
+
+class StompProtocolHandler extends ProtocolHandler with Logging {
+
+  override protected def log = StompProtocolHandler
+  override protected def log_map(message:String) = {
+    if( connection==null )
+      message
+    else
+      "connection:"+connection.id+" | "+message
+  }
 
 
   class SimpleConsumer(val dest:AsciiBuffer) extends BaseRetained with DeliveryConsumer {
+
 
     val queue = StompProtocolHandler.this.dispatchQueue
     val session_manager = new DeliverySessionManager(outboundChannel, queue)
@@ -106,25 +117,45 @@ class StompProtocolHandler extends ProtocolHandler {
     }
   }
 
-
   private def queue = connection.dispatchQueue
 
   def setConnection(connection:BrokerConnection) = {
     this.connection = connection
+  }
 
-    // We will be using the default virtual host
+  def setWireFormat(wireformat:WireFormat) = { this.wireformat = wireformat}
+
+  def start = {
+    info("start")
     connection.transport.suspendRead
     connection.broker.runtime.getDefaultVirtualHost(
       queue.wrap { (host)=>
+        info("got host.. resuming")
         this.host=host
         connection.transport.resumeRead
       }
     )
   }
 
-  def setWireFormat(wireformat:WireFormat) = { this.wireformat = wireformat}
+  def stop = {
+    if( !closed ) {
+      info("stop")
+      closed=true;
+      if( producerRoute!=null ) {
+        host.router.disconnect(producerRoute)
+        producerRoute=null
+      }
+      if( consumer!=null ) {
+        host.router.unbind(consumer.dest, consumer::Nil)
+        consumer=null
+      }
+      connection.stop
+    }
+  }
+
 
   def onCommand(command:Any) = {
+    info("got command: %s", command)
     try {
       command match {
         case StompFrame(Commands.SEND, headers, content) =>
@@ -153,7 +184,6 @@ class StompProtocolHandler extends ProtocolHandler {
 
 
   def on_stomp_connect(headers:HeaderMap) = {
-    println("connected on: "+Thread.currentThread.getName);
     connection.transport.oneway(StompFrame(Responses.CONNECTED))
   }
 
@@ -257,22 +287,5 @@ class StompProtocolHandler extends ProtocolHandler {
     stop
   }
 
-  def start = {
-  }
-  
-  def stop = {
-    if( !closed ) {
-      closed=true;
-      if( producerRoute!=null ) {
-        host.router.disconnect(producerRoute)
-        producerRoute=null
-      }
-      if( consumer!=null ) {
-        host.router.unbind(consumer.dest, consumer::Nil)
-        consumer=null
-      }
-      connection.stop
-    }
-  }
 }
 

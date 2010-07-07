@@ -89,7 +89,7 @@
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
-      <scope>test</scope>
+      <!--<scope>test</scope>-->
       <version>${log4j-version}</version>
     </dependency>
     

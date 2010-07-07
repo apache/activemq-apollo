@@ -36,7 +36,7 @@ object StompLoadClient {
   import StompLoadClient._
   implicit def toAsciiBuffer(value: String) = new AsciiBuffer(value)
 
-  var producerSleep = 0;
+  var producerSleep = 1000*30;
   var consumerSleep = 0;
   var producers = 1;
   var consumers = 1;
@@ -46,7 +46,7 @@ object StompLoadClient {
   var messageSize = 1024;
   var useContentLength=true
 
-  var destinationType = "queue";
+  var destinationType = "topic";
   var destinationCount = 1;
 
   val producerCounter = new AtomicLong();

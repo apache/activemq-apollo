@@ -27,11 +27,12 @@ object StompBroker {
   var port = 61613
 
   def main(args:Array[String]) = {
-    println("Starting stomp broker...")
+    val uri = "tcp://"+address+":"+port+"?wireFormat=multi"
+
+    println("Starting stomp broker: "+uri)
 
     val broker = new Broker()
 
-    val uri = "tcp://"+address+":"+port+"?wireFormat=multi"
     val server = TransportFactory.bind(uri)
     broker.transportServers.add(server)
     broker.start

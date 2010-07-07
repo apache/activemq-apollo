@@ -34,7 +34,7 @@ trait Destination {
   def getDestinations():Seq[Destination]
 }
 
-object Destination {
+object DestinationParser {
 
     /**
      * Parses a simple destination.

@@ -143,6 +143,7 @@ class Broker() extends Service with Logging {
       }
 
       def onAccept(transport: Transport): Unit = {
+        debug("Accepted connection from: %s", transport.getRemoteAddress)
         var connection = new BrokerConnection(Broker.this)
         connection.transport = transport
         clientConnections.add(connection)

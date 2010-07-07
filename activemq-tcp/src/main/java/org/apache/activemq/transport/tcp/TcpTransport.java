@@ -95,6 +95,7 @@ public class TcpTransport implements Transport {
 
     public void connected(SocketChannel channel) {
         this.channel = channel;
+        this.remoteAddress = channel.socket().getRemoteSocketAddress().toString();
         this.socketState = CONNECTED;
     }
 

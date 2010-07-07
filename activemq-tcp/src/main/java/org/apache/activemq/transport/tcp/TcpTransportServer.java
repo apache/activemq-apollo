@@ -120,7 +120,10 @@ public class TcpTransportServer implements TransportServer {
             public void run() {
                 try {
                     SocketChannel client = channel.accept();
-                    handleSocket(client);
+                    while( client!=null ) {
+                        handleSocket(client);
+                        client = channel.accept();
+                    }
                 } catch (IOException e) {
                     listener.onAcceptError(e);
                 }

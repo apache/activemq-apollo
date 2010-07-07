@@ -26,9 +26,8 @@ import _root_.java.lang.{String}
 import _root_.org.apache.activemq.util.{FactoryFinder, IOExceptionSupport}
 import _root_.org.apache.activemq.wireformat.WireFormat
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
-class ConnectionConfig {
+import java.util.concurrent.atomic.AtomicLong
 
-}
 abstract class Connection() extends TransportListener with Service {
 
   val dispatchQueue = createQueue("connection")
@@ -70,12 +69,19 @@ abstract class Connection() extends TransportListener with Service {
 
 }
 
-object BrokerConnection extends Log
+object BrokerConnection extends Log {
+  val id_generator = new AtomicLong()
+}
 
 class BrokerConnection(val broker: Broker) extends Connection with Logging {
+
   override protected def log = BrokerConnection
+  override protected def log_map(message:String) = "connection:"+id+" | "+message
+
+  import BrokerConnection._
 
   var protocolHandler: ProtocolHandler = null;
+  val id = id_generator.incrementAndGet
 
   exceptionListener = new ExceptionListener() {
     def exceptionThrown(error:Exception) = {
