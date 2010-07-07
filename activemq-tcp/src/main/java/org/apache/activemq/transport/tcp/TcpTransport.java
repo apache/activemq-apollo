@@ -255,6 +255,7 @@ public class TcpTransport implements Transport {
                 if (oneWay.retained != null) {
                     oneWay.retained.release();
                 }
+                oneWay = outbound.poll();
             }
             setDispatchQueue(null);
             next_outbound_buffer = null;
