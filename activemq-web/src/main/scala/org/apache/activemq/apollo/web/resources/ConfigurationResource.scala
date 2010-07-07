@@ -16,113 +16,58 @@
  */
 package org.apache.activemq.apollo.web.resources
 
-import java.lang.String
-import com.sun.jersey.api.NotFoundException
 import javax.ws.rs._
-import core.{Response, Context}
-import org.fusesource.scalate.util.Logging
-import reflect.{BeanProperty}
-import com.sun.jersey.api.view.ImplicitProduces
+import core.{UriInfo, Response, Context}
 import org.fusesource.hawtdispatch.Future
-import Response._
 import Response.Status._
-import org.apache.activemq.apollo.dto.{IdListDTO, BrokerSummaryDTO, BrokerDTO}
-import java.util.{Arrays, Collections}
+import Response._
+import org.apache.activemq.apollo.dto.{BrokerDTO}
 import org.apache.activemq.apollo.web.ConfigStore
+import java.net.URI
 
 /**
- * Defines the default representations to be used on resources
+ * A broker resource is used to represent the configuration of a broker.
  */
-@ImplicitProduces(Array("text/html;qs=5"))
-@Produces(Array("application/json", "application/xml","text/xml"))
-trait Resource extends Logging {
+case class ConfigurationResource(parent:Broker) extends Resource {
 
-  def result[T](value:Status, message:Any=null):T = {
-    val response = Response.status(value)
-    if( message!=null ) {
-      response.entity(message)
-    }
-    throw new WebApplicationException(response.build)
-  }
 
-}
+  def store = ConfigStore()
 
-/**
- * Manages a collection of broeker resources.
- */
-@Path("/")
-class Root() extends Resource {
-
-  @Context
-  var configStore = ConfigStore()
-
-  @GET
-  def get() = {
-    val rc = new IdListDTO
-    val ids = Future[List[String]] { cb=>
-      configStore.listBrokers(cb)
-    }.toArray[String]
-    rc.ids.addAll(Arrays.asList(ids: _*))
-    rc
-  }
-
-  @Path("{id}")
-  def broker(@PathParam("id") id : String): Broker = new Broker(this, id)
-}
-
-/**
- * A broker resource is used to represent the configuration and runtime status of a broker.
- */
-case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
-
-  @Context
-  var configStore = ConfigStore()
-
-  @GET
-  def get() = {
-    val c = config()
-    val rc = new BrokerSummaryDTO
-    rc.id = id
-    rc.rev = c.rev
-    rc
-  }
-
-  @GET @Path("config")
-  def getConfig():BrokerDTO = {
-    config()
-  }
-
-  private def config() = {
+  lazy val config = {
     Future[Option[BrokerDTO]] { cb=>
-      configStore.getBroker(id, false)(cb)
+      store.getBroker(parent.id, false)(cb)
     }.getOrElse(result(NOT_FOUND))
   }
 
-  @GET @Path("config/{rev}")
+
+  @GET
+  def get(@Context uriInfo:UriInfo) = {
+    val ub = uriInfo.getAbsolutePathBuilder()
+    seeOther(ub.path(config.rev.toString).build()).build
+  }
+
+  @GET @Path("{rev}")
   def getConfig(@PathParam("rev") rev:Int):BrokerDTO = {
     // that rev may have gone away..
-    var c = config()
-    c.rev==rev || result(NOT_FOUND)
-    c
+    config.rev==rev || result(NOT_FOUND)
+    config
   }
 
-  @PUT @Path("config/{rev}")
+  @PUT @Path("{rev}")
   def put(@PathParam("rev") rev:Int, config:BrokerDTO) = {
-    config.id = id;
+    config.id = parent.id;
     config.rev = rev
     Future[Boolean] { cb=>
-      configStore.putBroker(config)(cb)
+      store.putBroker(config)(cb)
     } || result(NOT_FOUND)
   }
 
-  @DELETE @Path("config/{rev}")
+  @DELETE @Path("{rev}")
   def delete(@PathParam("rev") rev:Int) = {
     Future[Boolean] { cb=>
-      configStore.removeBroker(id, rev)(cb)
+      store.removeBroker(parent.id, rev)(cb)
     } || result(NOT_FOUND)
   }
 
-  @Path("status")
-  def status = RuntimeResource(this)
 }
 

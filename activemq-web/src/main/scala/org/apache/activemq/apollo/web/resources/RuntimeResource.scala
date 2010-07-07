@@ -30,7 +30,8 @@ import collection.mutable.ListBuffer
 
 /**
  * <p>
- * The BrokerStatus is the root container of the runtime status of a broker.
+ * The RuntimeResource resource manages access to the runtime state of a broker.  It is used
+ * to see the status of the broker and to apply management operations against the broker.
  * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
