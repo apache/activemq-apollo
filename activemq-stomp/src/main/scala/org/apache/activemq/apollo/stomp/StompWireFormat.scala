@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.stomp
 
-import _root_.java.io.{DataOutput, DataInput, IOException}
 import _root_.org.apache.activemq.apollo.broker._
 
 import _root_.org.apache.activemq.wireformat.{WireFormatFactory, WireFormat}
@@ -30,7 +29,9 @@ import Stomp.Headers._
 import BufferConversions._
 import _root_.scala.collection.JavaConversions._
 import StompFrameConstants._
-
+import java.io.{EOFException, DataOutput, DataInput, IOException}
+import org.apache.activemq.broker.store.DirectRecordStore
+import java.nio.channels.{SocketChannel, WritableByteChannel, ReadableByteChannel}
 
 /**
  * Creates WireFormat objects that marshalls the <a href="http://activemq.apache.org/stomp/">Stomp</a> protocol.
@@ -69,6 +70,8 @@ class StompWireFormat extends WireFormat with DispatchLogging {
   import StompWireFormat._
   override protected def log: Log = StompWireFormat
 
+  var directRecordStore:DirectRecordStore = null
+
   implicit def wrap(x: Buffer) = ByteBuffer.wrap(x.data, x.offset, x.length);
   implicit def wrap(x: Byte) = {
     ByteBuffer.wrap(Array(x));
@@ -87,8 +90,8 @@ class StompWireFormat extends WireFormat with DispatchLogging {
   }
 
   def unmarshal(packet:Buffer):AnyRef = {
-    start = packet.offset
-    end = packet.offset
+    read_start = packet.offset
+    read_end = packet.offset
     val bb = packet.toByteBuffer
     bb.position(packet.offset + packet.length)
     unmarshalNB(bb)
@@ -120,7 +123,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
       val buffer1 = frame.headers.head._1;
       val buffer2 = frame.content;
       val length = (buffer2.offset-buffer1.offset)+buffer2.length
-      os.write( buffer1.data, offset, length)
+      os.write( buffer1.data, offset, length)                                                                                            
 
     } else {
       for( (key, value) <- frame.headers ) {
@@ -137,27 +140,163 @@ class StompWireFormat extends WireFormat with DispatchLogging {
 
   def getName() = "stomp"
 
+  
+  /////////////////////////////////////////////////////////////////////
   //
-  // state associated with un-marshalling stomp frames from
-  // with the  unmarshalNB method.
+  // Non blocking write imp
   //
+  /////////////////////////////////////////////////////////////////////
+
+  var write_buffer_size = 1024*64;
+  var write_counter = 0L
+  var write_channel:WritableByteChannel = null
+
+  var next_write_buffer = new DataByteArrayOutputStream(write_buffer_size)
+  var write_buffer = ByteBuffer.allocate(0)
+
+  def is_full = next_write_buffer.size() >= (write_buffer_size >> 2)
+  def is_empty = write_buffer.remaining() == 0
+
+  def setWritableByteChannel(channel: WritableByteChannel) = {
+    this.write_channel = channel
+    if( this.write_channel.isInstanceOf[SocketChannel] ) {
+      this.write_channel.asInstanceOf[SocketChannel].socket().setSendBufferSize(write_buffer_size);
+    }
+  }
+
+  def getWriteCounter = write_counter
+
+
+  def write(command: Any):BufferState =  {
+    if ( is_full) {
+      WireFormat.BufferState.FULL
+    } else {
+      val was_empty = is_empty
+      marshal(command, next_write_buffer);
+      if( was_empty ) {
+        WireFormat.BufferState.WAS_EMPTY
+      } else {
+        WireFormat.BufferState.NOT_EMPTY
+      }
+    }
+  }
+
+  def flush():BufferState = {
+    
+    // if we have a pending write that is being sent over the socket...
+    if ( !is_empty ) {
+        write_counter += write_channel.write(write_buffer)
+    }
+
+    // if it is now empty try to refill...
+    if ( is_empty && next_write_buffer.size()!=0 ) {
+        // size of next buffer is based on how much was used in the previous buffer.
+        val prev_size = Math.min(Math.max(write_buffer.position()+512, 512), write_buffer_size)
+        write_buffer = next_write_buffer.toBuffer().toByteBuffer()
+        next_write_buffer = new DataByteArrayOutputStream(prev_size)
+    }
+
+    if ( is_empty ) {
+      WireFormat.BufferState.EMPTY
+    } else {
+      WireFormat.BufferState.NOT_EMPTY
+    }
+
+  }
+
+
+  /////////////////////////////////////////////////////////////////////
+  //
+  // Non blocking read impl 
+  //
+  /////////////////////////////////////////////////////////////////////
+  
   type FrameReader = (ByteBuffer)=>StompFrame
 
+  var read_counter = 0L
+  var read_buffer_size = 1024*64
+  var read_channel:ReadableByteChannel = null
+
+  var read_buffer = ByteBuffer.allocate(read_buffer_size)
+  var read_end = 0
+  var read_start = 0
   var next_action:FrameReader = read_action
-  var end = 0
-  var start = 0
 
-  def unmarshalStartPos() = start
-  def unmarshalStartPos(pos:Int):Unit = {start=pos}
+  def setReadableByteChannel(channel: ReadableByteChannel) = {
+    this.read_channel = channel
+    if( this.read_channel.isInstanceOf[SocketChannel] ) {
+      this.read_channel.asInstanceOf[SocketChannel].socket().setReceiveBufferSize(read_buffer_size);
+    }
+  }
 
-  def unmarshalEndPos() = end
-  def unmarshalEndPos(pos:Int):Unit = { end = pos }
+  def unread(buffer: Buffer) = {
+    assert(read_counter == 0)
+    read_buffer.put(buffer.data, buffer.offset, buffer.length)
+    read_counter += buffer.length
+  }
+
+  def getReadCounter = read_counter
+
+  override def read():Object = {
+
+    var command:Object = null
+    while( command==null ) {
+      // do we need to read in more data???
+      if (read_end == read_buffer.position()) {
+
+          // do we need a new data buffer to read data into??
+          if (read_buffer.remaining() == 0) {
+
+              // How much data is still not consumed by the wireformat
+              var size = read_end - read_start
+
+              var new_capacity = if(read_start == 0) {
+                size+read_buffer_size
+              } else {
+                if (size > read_buffer_size) {
+                  size+read_buffer_size
+                } else {
+                  read_buffer_size
+                }
+              }
+
+              var new_buffer = new Array[Byte](new_capacity)
+
+              if (size > 0) {
+                  System.arraycopy(read_buffer.array(), read_start, new_buffer, 0, size)
+              }
+
+              read_buffer = ByteBuffer.wrap(new_buffer)
+              read_buffer.position(size)
+              read_start = 0
+              read_end = size
+          }
+
+          // Try to fill the buffer with data from the socket..
+          var p = read_buffer.position()
+          var count = read_channel.read(read_buffer)
+          if (count == -1) {
+              throw new EOFException("Peer disconnected")
+          } else if (count == 0) {
+              return null
+          }
+          read_counter += count
+      }
+
+      command = next_action(read_buffer)
+
+      // Sanity checks to make sure the wireformat is behaving as expected.
+      assert(read_start <= read_end)
+      assert(read_end <= read_buffer.position())
+    }
+    return command
+  }
 
   def unmarshalNB(buffer:ByteBuffer):Object = {
     // keep running the next action until
     // a frame is decoded or we run out of input
     var rc:StompFrame = null
-    while( rc == null && end!=buffer.position ) {
+    while( rc == null && read_end!=buffer.position ) {
       rc = next_action(buffer)
     }
 
@@ -167,19 +306,19 @@ class StompWireFormat extends WireFormat with DispatchLogging {
 
   def read_line(buffer:ByteBuffer, maxLength:Int, errorMessage:String):Buffer = {
       val read_limit = buffer.position
-      while( end < read_limit ) {
-        if( buffer.array()(end) =='\n') {
-          var rc = new Buffer(buffer.array, start, end-start)
-          end += 1;
-          start = end;
+      while( read_end < read_limit ) {
+        if( buffer.array()(read_end) =='\n') {
+          var rc = new Buffer(buffer.array, read_start, read_end-read_start)
+          read_end += 1
+          read_start = read_end
           return rc
         }
-        if (SIZE_CHECK && end-start > maxLength) {
-            throw new IOException(errorMessage);
+        if (SIZE_CHECK && read_end-read_start > maxLength) {
+            throw new IOException(errorMessage)
         }
-        end += 1;
+        read_end += 1
       }
-      return null;
+      return null
   }
 
   def read_action:FrameReader = (buffer)=> {
@@ -187,7 +326,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
     if( line !=null ) {
       var action = line
       if( TRIM ) {
-          action = action.trim();
+          action = action.trim()
       }
       if (action.length() > 0) {
           next_action = read_headers(action)
@@ -202,43 +341,43 @@ class StompWireFormat extends WireFormat with DispatchLogging {
       if( line.trim().length() > 0 ) {
 
         if (SIZE_CHECK && headers.size > MAX_HEADERS) {
-            throw new IOException("The maximum number of headers was exceeded");
+            throw new IOException("The maximum number of headers was exceeded")
         }
 
         try {
-            val seperatorIndex = line.indexOf(SEPERATOR);
+            val seperatorIndex = line.indexOf(SEPERATOR)
             if( seperatorIndex<0 ) {
-                throw new IOException("Header line missing seperator [" + ascii(line) + "]");
+                throw new IOException("Header line missing seperator [" + ascii(line) + "]")
             }
-            var name = line.slice(0, seperatorIndex);
+            var name = line.slice(0, seperatorIndex)
             if( TRIM ) {
-                name = name.trim();
+                name = name.trim()
             }
-            var value = line.slice(seperatorIndex + 1, line.length());
+            var value = line.slice(seperatorIndex + 1, line.length())
             if( TRIM ) {
-                value = value.trim();
+                value = value.trim()
             }
             headers.add((ascii(name), ascii(value)))
         } catch {
             case e:Exception=>
               e.printStackTrace
-              throw new IOException("Unable to parser header line [" + line + "]");
+              throw new IOException("Unable to parser header line [" + line + "]")
         }
 
       } else {
         val contentLength = get(headers, CONTENT_LENGTH)
         if (contentLength.isDefined) {
           // Bless the client, he's telling us how much data to read in.
-          var length=0;
+          var length=0
           try {
-              length = Integer.parseInt(contentLength.get.trim().toString());
+              length = Integer.parseInt(contentLength.get.trim().toString())
           } catch {
             case e:NumberFormatException=>
-              throw new IOException("Specified content-length is not a valid integer");
+              throw new IOException("Specified content-length is not a valid integer")
           }
 
           if (SIZE_CHECK && length > MAX_DATA_LENGTH) {
-              throw new IOException("The maximum data length was exceeded");
+              throw new IOException("The maximum data length was exceeded")
           }
           next_action = read_binary_body(action, headers, length)
 
@@ -275,32 +414,32 @@ class StompWireFormat extends WireFormat with DispatchLogging {
 
   def read_content(buffer:ByteBuffer, contentLength:Int):Buffer = {
       val read_limit = buffer.position
-      if( (read_limit-start) < contentLength+1 ) {
-        end = read_limit;
+      if( (read_limit-read_start) < contentLength+1 ) {
+        read_end = read_limit
         null
       } else {
-        if( buffer.array()(start+contentLength)!= 0 ) {
-           throw new IOException("Exected null termintor after "+contentLength+" content bytes");
+        if( buffer.array()(read_start+contentLength)!= 0 ) {
+           throw new IOException("Exected null termintor after "+contentLength+" content bytes")
         }
-        var rc = new Buffer(buffer.array, start, contentLength)
-        end = start+contentLength+1;
-        start = end;
-        rc;
+        var rc = new Buffer(buffer.array, read_start, contentLength)
+        read_end = read_start+contentLength+1
+        read_start = read_end
+        rc
       }
   }
 
   def read_to_null(buffer:ByteBuffer):Buffer = {
       val read_limit = buffer.position
-      while( end < read_limit ) {
-        if( buffer.array()(end) ==0) {
-          var rc = new Buffer(buffer.array, start, end-start)
-          end += 1;
-          start = end;
-          return rc;
+      while( read_end < read_limit ) {
+        if( buffer.array()(read_end) ==0) {
+          var rc = new Buffer(buffer.array, read_start, read_end-read_start)
+          read_end += 1
+          read_start = read_end
+          return rc
         }
-        end += 1;
+        read_end += 1
       }
-      return null;
+      return null
   }
 
 

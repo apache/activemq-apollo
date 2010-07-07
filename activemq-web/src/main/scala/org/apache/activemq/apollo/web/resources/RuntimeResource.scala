@@ -252,8 +252,11 @@ case class RuntimeResource(parent:Broker) extends Resource {
             result.protocol = connection.protocol
             result.transport = connection.transport.getTypeId
             result.remoteAddress = connection.transport.getRemoteAddress
-            result.writeCounter = connection.transport.getWriteCounter
-            result.readCounter = connection.transport.getReadCounter
+            val wf = connection.transport.getWireformat
+            if( wf!=null ) {
+              result.writeCounter = wf.getWriteCounter
+              result.readCounter = wf.getReadCounter
+            }
             cb(Some(result))
           }
       }

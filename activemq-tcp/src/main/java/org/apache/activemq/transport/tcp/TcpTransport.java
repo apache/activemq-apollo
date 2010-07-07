@@ -47,8 +47,6 @@ public class TcpTransport extends BaseService implements Transport {
     private static final Log LOG = LogFactory.getLog(TcpTransport.class);
 
     private Map<String, Object> socketOptions;
-    private long writeCounter;
-    private long readCounter;
 
     abstract static class SocketState {
         void onStop(Runnable onCompleted) {
@@ -177,12 +175,7 @@ public class TcpTransport extends BaseService implements Transport {
     private DispatchSource readSource;
     private DispatchSource writeSource;
 
-    int bufferSize = 1024*64;
-
-    DataByteArrayOutputStream next_outbound_buffer;
-    ByteBuffer outbound_buffer;
     protected boolean useLocalHost = true;
-    ByteBuffer readBuffer = ByteBuffer.allocate(bufferSize);
     boolean full = false;
 
     private final Runnable CANCEL_HANDLER = new Runnable() {
@@ -203,6 +196,12 @@ public class TcpTransport extends BaseService implements Transport {
 
     public void connected(SocketChannel channel) throws IOException {
         this.channel = channel;
+
+        if( wireformat!=null ) {
+            wireformat.setReadableByteChannel(this.channel);
+            wireformat.setWritableByteChannel(this.channel);
+        }
+
         this.channel.configureBlocking(false);
         this.remoteAddress = channel.socket().getRemoteSocketAddress().toString();
         this.socketState = new CONNECTED();
@@ -213,6 +212,11 @@ public class TcpTransport extends BaseService implements Transport {
         this.channel.configureBlocking(false);
         this.remoteLocation = remoteLocation;
         this.localLocation = localLocation;
+
+        if( wireformat!=null ) {
+            wireformat.setReadableByteChannel(this.channel);
+            wireformat.setWritableByteChannel(this.channel);
+        }
 
         if (localLocation != null) {
             InetSocketAddress localAddress = new InetSocketAddress(InetAddress.getByName(localLocation.getHost()), localLocation.getPort());
@@ -298,12 +302,6 @@ public class TcpTransport extends BaseService implements Transport {
 
     private void onConnected() throws SocketException {
 
-        channel.socket().setSendBufferSize(bufferSize);
-        channel.socket().setReceiveBufferSize(bufferSize);
-
-        next_outbound_buffer = new DataByteArrayOutputStream(bufferSize);
-        outbound_buffer = ByteBuffer.allocate(0);
-
         readSource = Dispatch.createSource(channel, SelectionKey.OP_READ, dispatchQueue);
         writeSource = Dispatch.createSource(channel, SelectionKey.OP_WRITE, dispatchQueue);
 
@@ -312,22 +310,12 @@ public class TcpTransport extends BaseService implements Transport {
 
         readSource.setEventHandler(new Runnable() {
             public void run() {
-                try {
-                    drainInbound();
-                } catch (IOException e) {
-                    onTransportFailure(e);
-                }
+                drainInbound();
             }
         });
         writeSource.setEventHandler(new Runnable() {
             public void run() {
-                if (getServiceState() == STARTED) {
-                    // once the outbound is drained.. we can suspend getting
-                    // write events.
-                    if (drainOutbound()) {
-                        writeSource.suspend();
-                    }
-                }
+                drainOutbound();
             }
         });
 
@@ -350,8 +338,6 @@ public class TcpTransport extends BaseService implements Transport {
         }
         
         dispatchQueue.release();
-        next_outbound_buffer = null;
-        outbound_buffer = null;
         this.wireformat = null;
     }
 
@@ -374,27 +360,19 @@ public class TcpTransport extends BaseService implements Transport {
             if (getServiceState() != STARTED) {
                 throw new IOException("Not running.");
             }
+
+            WireFormat.BufferState rc = wireformat.write(command);
+            switch (rc ) {
+                case FULL:
+                    return false;
+                case WAS_EMPTY:
+                    writeSource.resume();
+                default:
+                    return true;
+            }
         } catch (IOException e) {
             onTransportFailure(e);
             return false;
-        }
-
-        if ( full ) {
-            return false;
-        } else {
-            try {
-                wireformat.marshal(command, next_outbound_buffer);
-                if( next_outbound_buffer.size() >= bufferSize>>2 ) {
-                    full  = true;
-                }
-            } catch (IOException e) {
-                onTransportFailure(e);
-                return false;
-            }
-            if ( outbound_buffer.remaining()==0 ) {
-                writeSource.resume();
-            }
-            return true;
         }
 
     }
@@ -402,104 +380,44 @@ public class TcpTransport extends BaseService implements Transport {
     /**
      * @retruns true if there are no in progress writes.
      */
-    private boolean drainOutbound() {
+    private void drainOutbound() {
         assert Dispatch.getCurrentQueue() == dispatchQueue;
+        if (getServiceState() != STARTED || !socketState.is(CONNECTED.class)) {
+            return;
+        }
         try {
-
-            while (socketState.is(CONNECTED.class) ) {
-
-                // if we have a pending write that is being sent over the socket...
-                int remaining = outbound_buffer.remaining();
-                if (remaining!=0) {
-                    channel.write(outbound_buffer);
-                    int count = remaining - outbound_buffer.remaining();
-                    writeCounter += count;
-                    if (outbound_buffer.remaining() != 0) {
-                        return false;
-                    }
-                } else {
-                    if( next_outbound_buffer.size()!=0) {
-                        // size of next buffer is based on how much was used in the previous buffer.
-                        int prev_size = Math.min(Math.max(outbound_buffer.position()+512, 512), bufferSize);
-                        outbound_buffer = next_outbound_buffer.toBuffer().toByteBuffer();
-                        next_outbound_buffer = new DataByteArrayOutputStream(prev_size);
-                    } else {
-                        if( full ) {
-                            full = false;
-                            listener.onRefill();
-                            // If the listener did not have anything for us...
-                            if (next_outbound_buffer.size() == 0) {
-                                // the source is now drained...
-                                return true;
-                            }
-                        } else {
-                            return true;
-                        }
-                    }
-                }
+            if( wireformat.flush() == WireFormat.BufferState.EMPTY ) {
+                writeSource.suspend();
+                listener.onRefill();
             }
-
         } catch (IOException e) {
             onTransportFailure(e);
-            return true;
         }
-        return outbound_buffer.remaining() == 0;
     }
 
-    private void drainInbound() throws IOException {
+    private void drainInbound() {
         if (!getServiceState().isStarted() || readSource.isSuspended()) {
             return;
         }
-        while (true) {
-
-            // do we need to read in more data???
-            if (this.wireformat.unmarshalEndPos() == readBuffer.position()) {
-
-                // do we need a new data buffer to read data into??
-                if (readBuffer.remaining() == 0) {
-
-                    // How much data is still not consumed by the wireformat
-                    int size = this.wireformat.unmarshalEndPos() - this.wireformat.unmarshalStartPos();
-
-                    int new_capacity = this.wireformat.unmarshalStartPos() == 0 ? size+bufferSize : (size > bufferSize ? size+bufferSize : bufferSize);
-                    byte[] new_buffer = new byte[new_capacity];
-
-                    if (size > 0) {
-                        System.arraycopy(readBuffer.array(), this.wireformat.unmarshalStartPos(), new_buffer, 0, size);
-                    }
-
-                    readBuffer = ByteBuffer.wrap(new_buffer);
-                    readBuffer.position(size);
-                    this.wireformat.unmarshalStartPos(0);
-                    this.wireformat.unmarshalEndPos(size);
+        try {
+            Object command = wireformat.read();
+            while ( command!=null ) {
+                try {
+                    listener.onTransportCommand(command);
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                    onTransportFailure(new IOException("Transport listener failure."));
                 }
-
-                // Try to fill the buffer with data from the socket..
-                int p = readBuffer.position();
-                int count = channel.read(readBuffer);
-                if (count == -1) {
-                    throw new EOFException("Peer disconnected");
-                } else if (count == 0) {
-                    return;
-                }
-                readCounter += count;
-            }
-
-            Object command = this.wireformat.unmarshalNB(readBuffer);
-
-            // Sanity checks to make sure the wireformat is behaving as expected.
-            assert wireformat.unmarshalStartPos() <= wireformat.unmarshalEndPos();
-            assert wireformat.unmarshalEndPos() <= readBuffer.position();
-
-            if (command != null) {
-                listener.onTransportCommand(command);
 
                 // the transport may be suspended after processing a command.
                 if (getServiceState() == STOPPED || readSource.isSuspended()) {
                     return;
                 }
-            }
 
+                command = wireformat.read();
+            }
+        } catch (IOException e) {
+            onTransportFailure(e);
         }
     }
 
@@ -507,21 +425,6 @@ public class TcpTransport extends BaseService implements Transport {
     public String getRemoteAddress() {
         return remoteAddress;
     }
-
-    /**
-     * @return The number of bytes sent by the transport.
-     */
-    public long getWriteCounter() {
-        return writeCounter;
-    }
-
-    /**
-     * @return The number of bytes received by the transport.
-     */
-    public long getReadCounter() {
-        return readCounter;
-    }
-
 
     public <T> T narrow(Class<T> target) {
         if (target.isAssignableFrom(getClass())) {
@@ -552,6 +455,11 @@ public class TcpTransport extends BaseService implements Transport {
     public void resumeRead() {
         if( isConnected() && readSource!=null ) {
             readSource.resume();
+            dispatchQueue.execute(new Runnable(){
+                public void run() {
+                    drainInbound();
+                }
+            });
         }
     }
 
@@ -577,6 +485,10 @@ public class TcpTransport extends BaseService implements Transport {
 
     public void setWireformat(WireFormat wireformat) {
         this.wireformat = wireformat;
+        if( channel!=null ) {
+            wireformat.setReadableByteChannel(this.channel);
+            wireformat.setWritableByteChannel(this.channel);
+        }
     }
 
     public boolean isConnected() {

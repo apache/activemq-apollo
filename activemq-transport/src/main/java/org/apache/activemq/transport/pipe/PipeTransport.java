@@ -190,14 +190,14 @@ public class PipeTransport implements Transport {
     }
 
     /**
-     * @return The number of bytes sent by the transport.
+     * @return The number of objects sent by the transport.
      */
     public long getWriteCounter() {
         return writeCounter;
     }
 
     /**
-     * @return The number of bytes received by the transport.
+     * @return The number of objects received by the transport.
      */
     public long getReadCounter() {
         return readCounter;

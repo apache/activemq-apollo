@@ -23,6 +23,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,117 +52,73 @@ public class MultiWireFormatFactory implements WireFormatFactory {
         ArrayList<WireFormatFactory> wireFormatFactories = new ArrayList<WireFormatFactory>();
         WireFormat wireFormat;
         int maxHeaderLength;
-        int start=0;
-        int end=0;
+        private ReadableByteChannel readableChannel;
+        private ByteBuffer buffer;
 
-
-        private ByteArrayInputStream peeked;
-
-        public Object unmarshal(DataInput in) throws IOException {
-
-            if (wireFormat == null) {
-                ByteArrayOutputStream baos = new ByteArrayOutputStream(maxHeaderLength);
-                while (wireFormat == null) {
-    
-                    int readByte = ((InputStream) in).read();
-                    if (readByte < 0) {
-                        throw new EOFException();
-                    }
-                    baos.write(readByte);
-    
-                    // Try to discriminate what we have read so far.
-                    for (WireFormatFactory wff : wireFormatFactories) {
-                        if (wff.matchesWireformatHeader(baos.toBuffer())) {
-                            wireFormat = wff.createWireFormat();
-                            break;
-                        }
-                    }
-    
-                    if (baos.size() >= maxHeaderLength && wireFormat==null) {
-                        throw new IOException("Could not discriminate the protocol.");
-                    }
-                }
-                peeked = new ByteArrayInputStream(baos.toBuffer());
-                return wireFormat;
-            }
-
-            // If we have some peeked data we need to feed that back..  Only happens
-            // for the first few bytes of the protocol header.
-            if (peeked != null) {
-                if (peeked.available() <= 0) {
-                    peeked = null;
-                } else {
-                    in = new DataInputStream(new ConcatInputStream(peeked, (InputStream) in));
-                }
-            }
-
-            Object rc = wireFormat.unmarshal(in);
-            return rc;
+        public void setReadableByteChannel(ReadableByteChannel readableChannel) {
+            this.readableChannel = readableChannel;
+            this.buffer = ByteBuffer.allocate(maxHeaderLength);
         }
 
-        public int unmarshalStartPos() {
+        public Object read() throws IOException {
             if( wireFormat!=null ) {
-                return wireFormat.unmarshalStartPos();
-            } else {
-                return start;
+                throw new IOException("Protocol already discriminated.");
             }
-        }
+            readableChannel.read(buffer);
 
-        public void unmarshalStartPos(int pos) {
-            if( wireFormat!=null ) {
-                wireFormat.unmarshalStartPos(pos);
-            } else {
-                start=pos;
-            }
-        }
-
-        public int unmarshalEndPos() {
-            if( wireFormat!=null ) {
-                return wireFormat.unmarshalEndPos();
-            } else {
-                return end;
-            }
-        }
-
-        public void unmarshalEndPos(int pos) {
-            if( wireFormat!=null ) {
-                wireFormat.unmarshalEndPos(pos);
-            } else {
-                end = pos;
-            }
-        }
-
-        public Object unmarshalNB(ByteBuffer buffer) throws IOException {
-            if( wireFormat!=null ) {
-                return wireFormat.unmarshalNB(buffer);
-            }
-
-            Buffer b = new Buffer(buffer.array(), start, buffer.position());
+            Buffer b = new Buffer(buffer.array(), 0, buffer.position());
             for (WireFormatFactory wff : wireFormatFactories) {
                 if (wff.matchesWireformatHeader( b )) {
                     wireFormat = wff.createWireFormat();
-                    wireFormat.unmarshalStartPos(start);
-                    wireFormat.unmarshalEndPos(end);
+                    wireFormat.unread(b);
                     return wireFormat;
                 }
             }
 
-            if( end >= maxHeaderLength ) {
+            if( buffer.position() >= maxHeaderLength ) {
                 throw new IOException("Could not discriminate the protocol.");
             }
             return null;
         }
 
+        public void unread(Buffer buffer) {
+            throw new UnsupportedOperationException();
+        }
+
+        public long getReadCounter() {
+            return buffer.position();
+        }
+
+        public void setWritableByteChannel(WritableByteChannel writableChannel) {
+        }
+
+        public BufferState write(Object value) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        public BufferState flush() throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        public long getWriteCounter() {
+            return 0;
+        }
+
+
         public void marshal(Object command, DataOutput out) throws IOException {
-            wireFormat.marshal(command, out);
+            throw new UnsupportedOperationException();
         }
 
         public Buffer marshal(Object command) throws IOException {
-            return wireFormat.marshal(command);
+            throw new UnsupportedOperationException();
         }
 
         public Object unmarshal(Buffer packet) throws IOException {
-            return wireFormat.marshal(packet);
+            throw new UnsupportedOperationException();
+        }
+
+        public Object unmarshal(DataInput in) throws IOException {
+            throw new UnsupportedOperationException();
         }
 
         public ArrayList<WireFormatFactory> getWireFormatFactories() {

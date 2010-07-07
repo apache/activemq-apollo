@@ -25,6 +25,8 @@ import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 import org.apache.activemq.util.ClassLoadingAwareObjectInputStream;
 import org.fusesource.hawtbuf.Buffer;
@@ -71,23 +73,35 @@ public class ObjectStreamWireFormat implements WireFormat {
         }
     }
 
-    public int unmarshalStartPos() {
+    public void setReadableByteChannel(ReadableByteChannel channel) {
         throw new UnsupportedOperationException();
     }
 
-    public void unmarshalStartPos(int pos) {
+    public Object read() throws IOException {
         throw new UnsupportedOperationException();
     }
 
-    public int unmarshalEndPos() {
+    public void unread(Buffer buffer) {
         throw new UnsupportedOperationException();
     }
 
-    public void unmarshalEndPos(int pos) {
+    public long getReadCounter() {
         throw new UnsupportedOperationException();
     }
 
-    public Object unmarshalNB(ByteBuffer buffer) throws IOException {
+    public void setWritableByteChannel(WritableByteChannel channel) {
+        throw new UnsupportedOperationException();
+    }
+
+    public BufferState write(Object value) throws IOException {
+        throw new UnsupportedOperationException();
+    }
+
+    public BufferState flush() throws IOException {
+        throw new UnsupportedOperationException();
+    }
+
+    public long getWriteCounter() {
         throw new UnsupportedOperationException();
     }
 

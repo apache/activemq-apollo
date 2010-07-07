@@ -33,6 +33,7 @@ public interface Stomp {
     AsciiBuffer FALSE = new AsciiBuffer("false");
 
     public static interface Commands {
+        AsciiBuffer STOMP = new AsciiBuffer("STOMP");
         AsciiBuffer CONNECT = new AsciiBuffer("CONNECT");
         AsciiBuffer SEND = new AsciiBuffer("SEND");
         AsciiBuffer DISCONNECT = new AsciiBuffer("DISCONNECT");

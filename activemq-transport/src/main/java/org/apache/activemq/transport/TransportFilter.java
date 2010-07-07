@@ -149,14 +149,6 @@ public class TransportFilter implements TransportListener, Transport {
         return next.getRemoteAddress();
     }
 
-    public long getReadCounter() {
-        return next.getReadCounter();
-    }
-
-    public long getWriteCounter() {
-        return next.getWriteCounter();
-    }
-
     /**
      * @return
      * @see org.apache.activemq.transport.Transport#isFaultTolerant()

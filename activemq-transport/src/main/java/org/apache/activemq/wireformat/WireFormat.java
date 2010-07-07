@@ -20,6 +20,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 import org.fusesource.hawtbuf.Buffer;
 
@@ -31,6 +33,13 @@ import org.fusesource.hawtbuf.Buffer;
  * @version $Revision: 1.1 $
  */
 public interface WireFormat {
+
+    enum BufferState {
+        EMPTY,
+        WAS_EMPTY,
+        NOT_EMPTY,
+        FULL,
+    }
 
     /**
      * @return The name of the wireformat
@@ -57,18 +66,67 @@ public interface WireFormat {
      */
     Object unmarshal(DataInput in) throws IOException;
 
-    int unmarshalStartPos();
-    void unmarshalStartPos(int pos);
-
-    int unmarshalEndPos();
-    void unmarshalEndPos(int pos);
+    /**
+     * @param channel
+     */
+    public void setReadableByteChannel(ReadableByteChannel channel);
 
     /**
-     * For a unmarshal session is used for non-blocking
-     * unmarshalling.
+     * Non-blocking channel based decoding.
+     * 
+     * @return
+     * @throws IOException
      */
-    Object unmarshalNB(ByteBuffer buffer) throws IOException;
+    Object read() throws IOException;
 
+    /**
+     * Pushes back a buffer as being unread.  The protocol
+     * discriminator may do this before before any reads occur.
+     *
+     * @param buffer
+     */
+    void unread(Buffer buffer);
+
+
+    /**
+     * @return The number of bytes received.
+     */
+    public long getReadCounter();
+
+
+    public void setWritableByteChannel(WritableByteChannel channel);
+
+    /**
+     * Non-blocking channel based encoding.
+     *
+     * @return true if the write completed.
+     * @throws IOException
+     */
+    BufferState write(Object value) throws IOException;
+
+    /**
+     * Attempts to complete the previous write which did not complete.
+     * @return
+     * @throws IOException
+     */
+    BufferState flush() throws IOException;
+
+    /**
+     * @return The number of bytes written.
+     */
+    public long getWriteCounter() ;
+
+
+//    void unmarshalStartPos(int pos);
+//
+//    int unmarshalEndPos();
+//    void unmarshalEndPos(int pos);
+//
+//    /**
+//     * For a unmarshal session is used for non-blocking
+//     * unmarshalling.
+//     */
+//    Object unmarshalNB(ByteBuffer buffer) throws IOException;
 
 
 }

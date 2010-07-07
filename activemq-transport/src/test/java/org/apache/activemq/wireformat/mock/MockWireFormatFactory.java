@@ -4,6 +4,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 import org.fusesource.hawtbuf.Buffer;
 import org.apache.activemq.wireformat.WireFormat;
@@ -33,26 +35,36 @@ public class MockWireFormatFactory implements WireFormatFactory {
 	        throw new UnsupportedOperationException();
 		}
 
-        public int unmarshalStartPos() {
+        public void setReadableByteChannel(ReadableByteChannel channel) {
             throw new UnsupportedOperationException();
         }
 
-        public void unmarshalStartPos(int pos) {
+        public Object read() throws IOException {
             throw new UnsupportedOperationException();
         }
 
-        public int unmarshalEndPos() {
+        public void unread(Buffer buffer) {
             throw new UnsupportedOperationException();
         }
 
-        public void unmarshalEndPos(int pos) {
+        public long getReadCounter() {
             throw new UnsupportedOperationException();
         }
 
-        public Object unmarshalNB(ByteBuffer buffer) throws IOException {
+        public void setWritableByteChannel(WritableByteChannel channel) {
             throw new UnsupportedOperationException();
         }
 
+        public BufferState write(Object value) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+        public BufferState flush() throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        public long getWriteCounter() {
+            throw new UnsupportedOperationException();
+        }
     }
 
 	public WireFormat createWireFormat() {
