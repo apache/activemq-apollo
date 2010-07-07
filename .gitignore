@@ -12,3 +12,4 @@ target
 .classpath
 .settings
 eclipse-classes
+activemq-web/overlays
