@@ -15,8 +15,11 @@
 # limitations under the License.
 
 title: Architecture
---- name:content
+--- name:overview
 
+{project_slogan:}
+
+--- name:content
 ## Architectural Changes
 
 Apollo started as an experiment to see what it would take to make ActiveMQ

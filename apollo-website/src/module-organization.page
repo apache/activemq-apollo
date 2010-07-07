@@ -15,9 +15,15 @@
 # limitations under the License.
 
 title: Module Organization
----
+--- name:overview
+
+{project_slogan:}
+
+--- name:content
 
 # Module Organization
+
+## Dependency Diagram
 
 <img style="width: 70%; height: auto; display: block; margin-left: auto;  margin-right: auto" 
     src="images/module-deps-graph.png" alt="dependencies graph">

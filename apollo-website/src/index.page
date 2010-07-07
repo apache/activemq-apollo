@@ -17,9 +17,7 @@
 title: Home
 in_menu: true
 sort_info: 1
---- name:overview pipeline:haml,tags
-
-%h1 {project_name:}
+--- name:overview
 
 {project_slogan:}
 
@@ -49,7 +47,7 @@ broker. It is focused on simplicity, stability and scalability.
 
 ## Project Notes:
 
- * [Performance and Scaling]({relocatable:/performance-scaling.html})
+ * [Performance and Scaling](performance-scaling.html)
  * [Architecture]({relocatable:/architecture.html})
  * [Module Organization]({relocatable:/module-organization.html})
  * [TODO Items]({relocatable:/todo.html})

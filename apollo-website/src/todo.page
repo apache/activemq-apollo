@@ -14,79 +14,144 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-title: TODO
---- name:overview pipeline:haml,tags
+title: The TODO List
+--- name:overview
 
-%h1 The TODO list
+{project_slogan:}
+
+--- name:content
+
+# The TODO List
 
 Stuff that still needs to get done.  Contributions Welcomed!
 
---- name:content pipeline:textile
+## Transactions
 
-h2. Networks / Federations
+Transaction support is not yet implemented.
 
-Based on this [Network Design]({relocatable:/network-design.html})
+The current plan is for protocols to create a private Queue type object per
+open transaction session. Every transactional operation would get enqueued to
+the queue (begin, send, ack, prepare, commit, rollback, etc.). On commit, the
+transaction operations would be dequeued and performed, messages acked, or
+sent to the Router for delivery. Using queue allows us to support recoverable
+transactions needed to support XA, also lets us support large transactions
+since queues already know how to swap queue entries out of memory if needed.
 
-h2. Transactions:
+## Durable Subscriptions
 
-* Should be backed by cursored queue
+Durable subscriptions should be Queues which are attached to a topic
+destination so that it gets a copy of every message sent to the topic. It
+will involve:
 
-h2. Large Message Support:
+* Enhancing the store interfaces to persistently keep track of the created
+  subscriptions and the queue that they are associated with.
+* Router needs to be enhanced to route to the queues and have durable
+  subscriptions subscribe to it's queue instead of the topic.
 
-* There are some stubs in the Store interface for this, but basically for large messages we should be able to stage them to disk, and when given to a consumer chunk the payload out to keep memory low. The cursored queue will need to be updated to handle this.
+## Queue Features
 
-h2. Protocol Support
+Queues are being kept simple for now since Apollo has been focused on making
+them more scaleable, in terms giving good performance even when they are
+holding a large number of messages.  The plan is to also use them to support
+durable subscriptions and transactions which the features below may not apply 
+so it may be best to first implement those features with queues so that 
+the common queue features/abstractions can be determined.
 
-Lots of work still to be done here\!
+* Priority Queues: Needs some more thought on how to best implement
+* Message Expiration
+* Scheduled Delivery
+* Message Groups / Stick Routing
+* Exclusive Consumers
 
-* Protocol Handlers are there for OpenWire and STOMP, and we'll want to add proto buf as well.
-* Do we convert things to a common message format on arrival or keep them in their native format doing transforms on the fly?
-* Common interfaces for Connection/Session/*Consumer for the broker to interact with?
-* Threading model ... We should probably come up with a good abstract base class for the protocol handlers that helps to provide a threading model that will make synchronization between I/O events (exceptions etc), protocol events and message dispatch). 
+## Broker Networks, a.k.a Federations
 
-h2. Standalone Broker Server
+Broker networks are typically use to horizontally scale the processing
+capacity of a messaging system.
 
-The standalone broker would be probably best implemented as a set of OSGi services running in the Apache Karaf server.  Karaf is basically a small OSGi based micro server.
-* Implement Karaf 'features' bundles for the ActiveMQ sevices
-* Setup a customized binary distro of Karaf with the ActiveMQ features.  Ideally the Karaf distro is customized so that it displays ActiveMQ branding.
+* ideally something based on this [Network Design]({relocatable:/network-design.html})
 
-h2. JMX / Management Integration
+* network layer will need to hook into the Router class so that it can
+  directly forward to master brokers for a destination.
 
-In 5.x all the JMX bits are tightly coupled to the broker core implementation which made it hard to extend or provide alternative management interfaces to the broker.   What would be ideal is if the broker core did not depend on any management modules.  This would require all interesting broker resources to be easy to navigate to and be externally watched by the management modules.  Some more research would be needed in this area.
+## Protocol Support
 
-h2. IoC / Container Integration
+The initial protocol implementation was STOMP because it is popular yet easy
+to implement, but Apollo has been designed to support multiple protocol
+concurrently.
 
-h3. Spring Integration
+### ActiveMQ 5.x Openwire Support
+
+Once ActiveMQ 5.x's Openwire protocol is fully supported, the broker will be
+fully JMS compliant and have tight integration with J2EE servers since we can
+just reuse the ActiveMQ 5.x client and J2EE resource adapter implementations.  It would 
+also provide existing ActiveMQ users a smoother migration path to Apollo.
+
+Implementation should be not be hard once Apollo support the the features
+that Openwire requires like transaction support.  We should be able
+to reuse it's codecs and most of the ActiveMQ unit tests.
+
+### AMQP 1.0 Support
+
+AMQP 1.0 is now available for public review and implementors are being
+encouraged to build prototypes and provide feedback. Supporting a standardized
+messaging protocol like AMQP would be a killer feature.
+
+Implementation will be more tricky since there the spec is so new there and
+a freely available compliance test suite is not yet available.
+
+But the first steps needed is to:
+
+* Build or find a good AMQP 1.0 codec
+  library. Perhaps: 
+  [HawtBuf AMQP library](http://github.com/chirino/hawtbuf/tree/master/hawtbuf-amqp/)  
+* Get involved with [AMQP Client Dev Group](http://groups.google.com/group/amqp-client-dev)
+  to make sure the Apollo implementation works well with 1.0 clients
+* Provide feedback to the AMQP working group to resolve ambiguities in the
+  spec
+
+## Standalone Server Process
+
+The standalone broker would be probably best implemented as a set of OSGi
+services running in Apache Karaf. Karaf is an OSGi based server component
+framework.
+
+* Implement Karaf 'features' bundles for the Apollo services
+* Setup a customized binary distribution of Karaf with the ActiveMQ features.
+* Used an embedded Jetty to host the management interfaces of Apollo
+
+## JMX
+
+The REST based management interface will be the primary management interface
+for Apollo, but there are a tremendous number of existing tools that can
+generically work against JMX interfaces, so having some level of support
+for JMX would help folks out.
+
+We should make sure that the JMX view stay course grained so that the broker
+avoids avoids registering large number of JMX objects to avoid bottlenecks in
+the JMX layer.
+
+## IoC / Container Integration
+
+### Spring Integration
 
 Need to make sure it easy to:
+
 * configure and embedded broker in Spring xml files
-* create connection factories (including the XA and pooled variants) in spring xml 
 
-We should put all the spring bits in the activemq-spring module to avoid tightly coupling the broker with Spring like was the case with the 5.x version of the broker.
+We should put all the spring bits in an apollo-spring module to avoid tightly
+coupling the broker with Spring like was the case with the 5.x version of the
+broker.
 
-h3. J2EE Resource Adapter
+## High Availability 
 
-The 5.x Resource Adapter will need to get ported to support integrating with J2EE servers like Geronimio.
+The Cassandra based message store can provide High Availability of the 
+messages it stores when run against a Cassandra cluster with the proper 
+amount of replication.  Additional smarts are going to be needed to take
+care of starting up new brokers to take over the persistent messages 
+of broker nodes that have failed.  Also more testing is needed in general
+for scalability, error handling, and the handling of inconsistencies that 
+could occur due to the relaxed consistency model Cassandra supports.
 
-h2. General Interface cleanliness
 
-A fair amount of clean up work needs to be done to clean up and harden interfaces in the prototype. 
 
-h2. Testing
-
-As much of the work to date has been largely experimental in nature, testing up to now has focussed mainly on end to end type performance tests, but more unit testing and functional testing of edge cases such as slow subscriber test etc are needed. 
-
-Almost all the 5.x tests have been copied over into the activemq-all module under a legacy package.  The build is configured not to run any of the legacy tests. We need to try to port legacy tests to the 6.x APIs and try to make them pass then move them out of the legacy package once they are passing so that they are run by the maven build.
-
-h2. Misc Tasks
-
-* InactivityMonitor needs to get inserted for OpenWire on the server side of MultiWireFormat negotiation.
-* BIO SSL Transport does not currently pass Client Certificate chain in OpenWire ConnectionInfo command. This used to be done by the SSL transport but this shouldn't have OpenWire dependencies; instead protocol handler should be able to retrieve it from the underlying transport as needed. 
-* Add javadoc to all classes
-* Add nice toString() methods to aid when debugging.
-
-h2. General Cleanup / Abstraction Leaks / Smelly Stuff
-
-* TransportFactory Spaghetti Inheritance: It's way too complicated for folks implementing a TransportFactory to know which methods to override and to get it right.  Might be better to avoid the base class and just provide static utility methods.
-* Factories that take a URI should probably be changed to just take a String.  More generic, and easier to use from a end user perspective.  If a factory does require a String to be URI formated, it can under the covers still parse the string with a URI class.
 
