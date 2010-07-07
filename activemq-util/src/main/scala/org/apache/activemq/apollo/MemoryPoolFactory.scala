@@ -24,14 +24,6 @@ import org.apache.activemq.apollo.util.ClassFinder
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class MemoryPoolFactory
-
-/**
- * <p>
- * </p>
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
 object MemoryPoolFactory {
 
   val finder = ClassFinder[SPI]("META-INF/services/org.apache.activemq.apollo/memory-pools")
