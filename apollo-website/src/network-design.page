@@ -3,8 +3,6 @@
 # subsidiaries or affiliates.  All rights reserved.
 
 title: Network Design
-in_menu: true
-sort_info: 2
 --- name:overview pipeline:haml,tags
 
 %h1 A Scaleable Network Design

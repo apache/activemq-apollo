@@ -15,7 +15,6 @@
 # limitations under the License.
 
 title: TODO
-in_menu: true
 --- name:overview pipeline:haml,tags
 
 %h1 The TODO list
@@ -23,6 +22,10 @@ in_menu: true
 Stuff that still needs to get done.  Contributions Welcomed!
 
 --- name:content pipeline:textile
+
+h2. Networks / Federations
+
+Based on this [Network Design]({relocatable:/network-design.html})
 
 h2. Transactions:
 

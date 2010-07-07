@@ -27,12 +27,29 @@ sort_info: 1
 
 # {project_name:}
 
-Eventually this could be flushed out so that it can become the project website.  For now we are using webgen to keep
-track of notes we make along the way.
+## Synopsis
 
+[Apollo][] is a forked and stripped down Apache [ActiveMQ][] message
+broker. It is focused on simplicity, stability and scalability.
+
+[Apollo]:http://github.com/chirino/activemq-apollo
+[ActiveMQ]:http://activemq.apache.org/
+
+## Implemented Features
+
+* Topic style message routing
+* Queue style message routing
+* Persistent Messages
+* Message paging/swapping
+  queue sizes
+* Message Selectors
+* Queue Browsers
+* REST based management
+* [Stomp](http://stomp.github.com/) Protocol Support
 
 ## Project Notes:
 
+ * [Performance and Scaling]({relocatable:/performance-scaling.html})
  * [Architecture]({relocatable:/architecture.html})
- * [TODO Items]({relocatable:/todo.html})
  * [Module Organization]({relocatable:/module-organization.html})
+ * [TODO Items]({relocatable:/todo.html})

@@ -31,7 +31,7 @@
   # pages using the {var:} syntax.
   # -------------------------------------------------------------------
   project_name: "Apollo"
-  project_slogan: "The message broker focused on simplicity, stability and scalability"
+  project_slogan: "Advanced messaging simplifed"
   description: "Apollo, the message broker focused on simplicity, stability and scalability"
   keywords: "ActiveMQ Apollo message broker simplicity stability scalability"
   project_logo: /images/project-logo.png

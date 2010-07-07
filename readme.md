@@ -11,20 +11,13 @@ broker. It is focused on simplicity, stability and scalability.
 ## Implemented Features
 
 * Topic style message routing
-
 * Queue style message routing
-
 * Persistent Messages
-
 * Message swapping: moves message out of memory to support unlimited
   queue sizes
-
 * Message Selectors
-
 * Queue Browsers
-
 * REST based management
-
 * [Stomp](http://stomp.github.com/) Protocol Support
 
 ## Performance
@@ -36,35 +29,26 @@ useful for getting an idea of it's performance potential.
 The benchmark clients access the server as follows:
 
 * Clients and server run on the same machine. 
-
 * Clients access the server using STOMP over TCP. 
-
 * Producers send non-persistent messages
-
 * Messages contain a 20 byte payload 
-
 * Producers do not wait for a broker ack before sending the next message. 
-
 * Consumers use auto ack.
 
 The following benchmark results were run on a Mac Pro with:
 
 * Dual socket 3 ghz Quad-Core Intel Xeon (8 total cores) with 12 MB L2
   cache per processor .
-
 * 8 GB of RAM
 
 ### Queue Cases
 
 * 1 producer sending to 1 consumer via 1 queue can hit rates of 250,000
   messages/second.
-
 * 8 producers sending to 8 consumers via 8 queues can hit rates of 540,000
   messages/second.
-
 * 1 producer sending to 10 consumers via 1 queue can hit rates of 230,000
   messages/second.
-
 * 10 producers sending to 1 consumers via 1 queue can hit rates of 280,000
   messages/second.
 
@@ -74,10 +58,8 @@ Rates reported are the total consumer rate.
 
 * 1 producer sending to 1 consumer via 1 topic can hit a rates of 420,000
   messages/second.
-
 * 8 producers sending to 8 consumers via 8 topics can hit rates of 810,000
   messages/second.
-
 * 10 producer sending to 10 consumers via 1 topic can hit rates of
   1,3000,000 messages/second.
 
@@ -87,9 +69,7 @@ There are many different extreme ways that a messaging system can be used.
 Some folks like to:
 
 * connect a large number of clients.
-
 * hold a large number of messages in their queues.  
-
 * move around large messages.
 
 Apollo aims to support all those usage scenarios.
@@ -205,17 +185,14 @@ natural choice since ActiveMQ is Java based, but JMX has a couple of
 serious limitations:
 
 * No cross language support
-
 * Not scaleable for exposing many objects. Registering and unregistering
   management objects in JMX can become a bottle neck.
-
 * Rich data types are hard to expose
 
 Apollo exposes a rich and detailed state of the sever using REST based JSON
 or XML services.
 
 * A management client can easily be implemented in any language.
-
 * There is very little management overhead since there is no special
   registration with the management system. The JAX-RS based management web
   application knows how to navigate the internal structure of a broker to

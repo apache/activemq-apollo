@@ -14,110 +14,85 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-title: Architectural Overview
-in_menu: true
---- name:overview pipeline:haml,tags
+title: Architecture
+--- name:content
 
-%h1 {project_name:} Architecture
+## Architectural Changes
 
-Explore the core components that make this next generation Broker work.
+Apollo started as an experiment to see what it would take to make ActiveMQ
+work better on machines with higher core counts. It has resulted in broker
+that is much more deterministic, stable, and scaleable.
 
---- name:content pipeline:tags,textile
+The major fundamental architectural changes it brings are:
 
-h1. Getting Started:
+* Reactor Based Thread Model
+* Scala 2.8 Implementation
+* Protocol Agnostic
+* REST Based Management
 
-Some pointers to get you going with the prototype:
+### Reactor Based Thread Model
 
-It is located in the activemq sandbox at: "https://svn.apache.org/repos/asf/activemq/sandbox/activemq-flow":https://svn.apache.org/repos/asf/activemq/sandbox/activemq-flow
+Apollo uses [HawtDispatch][] to implement the sever using a multi-threaded
+non-blocking variation of the [reactor][] design pattern. HawtDispatch is a
+Java clone of [libdispatch][] (aka [Grand Central Dispatch][gcd]). It uses a
+fixed sized thread pool and only executes non-blocking tasks on those
+threads.
 
-Running some testcases:
-
-When running these testcases you should use the -server jvm argument:
-
-# *activemq-queue module org.apache.activemq.flow.MockBrokerTest*. This is a good starting point for looking at some of the flow control, dispatcher and queue modules. It is a very basic MockBroker which uses a lightweight proto-buf based protocol. You should feel free to play around with some of the hardcoded options in the test (e.g. ptp=true, tcp=true, threadsPerDispatcher etc).
-# *activemq-openwire module org.apache.activemq.broker.SharedQueuePerfTest.* This test does performance testing against the SharedQueue implementation and is a good place to start looking at queue persistence and the CursoredQueue. It employs openwire messages with using network connecitons. Check out *org.apache.activemq.broker.BrokerQueueStore* which currently hardcodes the queue sizes; you can change DEFAULT_SHARED_QUEUE_PAGING_THRESHOLD and the associated persistence policy to play around with paging.
-# *activemq-all module org.apache.activemq.broker.openwire.OpenWireBrokerTest*. This test uses the full blown broker, adds in a tcp transport layert and provides options for persistence and durable subscriptions (albeit asynchronous at the moment). It extends *org.apache.activemq.broker.BrokerTest* in the activemq-broker module which has some additional hard coded options to play around with. Again refer to *org.apache.activemq.broker.BrokerQueueStore* to mess around with queue sizes.
-
-
-h1. Flow Control
-
-The activemq-flow package is meant to be a standalone module that deals generically with Resources and Flow's of elements that flow through and between them. Each resource creates a FlowController for each of it's Flows which is assigned a corresponding FlowLimiter. As elements (e.g. messages) pass from one resource to another they are passed through the downstream resource's FlowController which updates its Limiter. If propagation of an element from one resource to another causes the downstream limiter to become throttled the associated FlowController will block the source of the element. The flow module is used heavily by the rest of the core for memory and disk management.
-
-* _Memory Mangement:_ Memory is manged based on the resources in play \-\- the usage is computed by summing of the space allocated to each of the resources' limiters. This strategy intentionally avoids a centralized memory limit which leads to complicated logic to track when a centralized limiter needs to be decremented and avoids contention between multiple resources/threads accessing the limiter and also reduces the potential for memory limiter related deadlocks. However, it should be noted that this approach doesn't preclude implementing centralized limiters in the future.
-* _Flow Control:_ As messages propagate from one resource A to another B, then if A overflows B's limit, B will block A and A can't release it's limiter space until B unblocks it. This allowance for overflow into downstream resources is a key concept in flow control performance and ease of use. Provided that the upstream resource has already accounted for the message's memory it can freely overflow any downstream limiter providing it reserves space from elements that caused overflow.
-* _Threading Model:_ Note that as a message propagates from A to B, that the general contract is that A won't release it's memory if B blocks it during the course of dispatch. This means that it is not safe to perform a thread handoff during dispatch between two resources since the thread dispatching A relies on the message making it to B (so that B can block it) prior to A completing dispatch.
-* _Management/Visibility:_ Another intended use of the activemq-flow module is to assist in visibility e.g. provide an underlying map of resources that can be exposed via tooling to see the relationships between sources and sinks of messages and to find bottlenecks ... this aspect has been downplayed for now as we have been focusing more on the queueing/memory management model in the prototype, but eventually the flow package itself will provide a handy way of providing visibility in the system particularly in terms of finding performance bottlenecks.
-
-*FlowResource (FlowSink and FlowSource):* A container for FlowControllers providing some lifecycle related logic. The base resource class handles interaction/registration with the FlowManager (below).
-
-*FlowManager:* Registry for Flow's and FlowResources. The manager will provide some hooks into system visibility. As mentioned above this aspect has been downplayed somewhat for the present time.
-
-*FlowController*: Wraps a FlowLimiter and actually implements block/resume logic
-
-*FlowLimiter*: Defines the limits enforced by a FlowController. Currently the package has size based limiter implementations, but eventually should also support other common limiter types such as rate based limiters. The limiter's are also extended at other points in the broker (for example implementing a protocol based WindowLimiter). It is also likely that we would want to introduce CompositeLimiters to combine various limiter types.
-
-*Flow*: The concept of a flow is not used very heavily right now. But a Flow defines the stream of elements that can be blocked. In general the prototype creates a single flow per resource, but in the future a source may break it's elements down into more granular flows on which downstream sinks may block it. One case where this is anticipated as being useful is in networks of brokers where-in it may be desirable to partition messages into more granular flows (e.g based on producer or destination) to avoid blocking the broker-broker connection uncessarily).
-
-h1. Dispatcher / Threading Model
-
-The dispatcher package is basically a smart thread pool \-\- at the new broker core almost everything should be driven by a dispatcher to keep thread count down and scalability up.
-
-    * Components in the core create DispatchContexts which they use to request dispatch via a Dispatcher. The dispatch attempts to be smart about grouping together dispatch contexts that interact with one another to reduce contended synchronization. For example if we have a producer->queue->consumer scenario each with their own dispatch context, the dispatcher attempts to group them all on the same thread to avoid contention.
-    * The Dispatcher is priority based which in conjunction with partitioned queues assists in dispatching higher priority messages
-    * The Dispatcher also support creation of simple Executors that operate on the dispatch threads.
-    * Supports timer callbacks.
-
-h1. Persistence Store
-
-KahaDB based. As it stands now there is a single worker thread / queue that drives the store impl (BrokerDatabase).
-
-    * Like other resources, the BrokerDatabase employs a flow controller so as elements are added to the queue they may block the source (e.g. a producer) if the configured memory limit is exceeded.
-    * The BrokerDatabase allows events to be delayed. This is at a key optimization for persistent delivery (in conjunction with the CursoredQueue implementation). When a persistent message is placed on a queue with consumers that are keeping up, it is placed on the DB queue with a flush delay. If the consumer, acknowledged the message prior to the delay expiring it is removed from the queue and doesn't have to hit the disk.
-
-The approach of a single worker thread driving the store is still under debate. It's pros are that it reduces contention at the store layer, allows batching of several operations into a single disk sync, and simplifies ordering of interrelated db operations. The major downside is that it doesn't allow the store to leverage all cpus for encoding decoding work. The store implementation itself is not yet complete and needs more work.
-
-h1. Queues
-
-The activemq-queue module contains basic queue implementations and a Subscription interfaces. It relies heavily on activemq-flow and activemq-dispatcher modules. The intent is to allow the queue module to be used by both the broker and the client. The queue module has 3 basic queue types:
-* Exclusive Queue: Only one subscription is attached to the queue (e.g. topic subscriber or durable)
-* Share Queue: A load balanced queue where messages are loadbalanced across multiple consumers.
-* Relay: Like a queue but simply a pass through (useful in cases where it doesn't make sense to buffer up messages but where you still want to a FlowController to throttle sources.
-
-In addition the queue module defines partitioned queues to allow segmenting messages based on arbitrary criteria (more below). It also has priority based implementations built in.
+[reactor]:http://en.wikipedia.org/wiki/Reactor_pattern
+[libdispatch]:http://en.wikipedia.org/wiki/Libdispatch
+[HawtDispatch]:http://hawtdispatch.fusesource.org/
+[gcd]:http://images.apple.com/macosx/technology/docs/GrandCentral_TB_brief_20090903.pdf
 
 
-h2. CursoredQueue
+The thread model allows Apollo to reach very high levels of scaleability and
+efficiency, but it places a huge restriction on the developer: all the tasks
+it executes must be non-blocking and ideally lock-free and wait free. This
+means that the previous ActiveMQ broker architecture had to go through a
+major overhaul. All synchronous broker interfaces had to be changed
+so that they would instead return results via asynchronous callbacks.
 
-The hope is to use the CursoredQueue as the single persistence mechanism for messages, and serves as the basis for other queue types that require persistence. It supports browsing and expiration.
-It the case of SharedQueues, Durables, Transactions and even non durables that wish to offload messages to the store when the consumer is too slow.
+### Scala 2.8 Implementation
 
-* Transactions: usecase is to hold messages in memory until commit time, spooling to disk if transaction memory limit is reached.
-* SharedQueue store queue messages.
-* DurableQueue store durable messsages
-* TopicSubscription when configured to
+Even though Apollo started as a fork of ActiveMQ 5.x, the new reactor design
+restrictions required major changes from the network IO handling, to the
+flow control design, all the way to the Store interfaces. Scala provided a
+much more concise way to express callbacks, namely by it's support for
+partial functions and closures.
 
-It can operate in a couple of different modes:
+### Protocol Agnostic
 
-* Keep all elements in memory and throttle sources to the memory limit \-\- persisting only elements whose QoS level dictates it.
-* Two paging modes otherwise. Offload the message itself but keep a placeholder in memory (increases performance), or page out place holders to allow for very large queue backlogs (where the placeholders themselves become a memory burden).
+ActiveMQ has supported multiple protocols for many years, but under the
+covers what it's doing is converting all the protocols to use the
+[OpenWire][] messaging protocol. Naturally, this approach is not optimal if
+you want to efficiently support other protocols and not be limited by what
+OpenWire can support.
 
-There is still a fair amount of policy work /customization to be done here with respect to paging queues, particular with respect to slow or disconnected subscribers:
+[OpenWire]:http://activemq.apache.org/openwire.html
 
-* Expunge Policy: When to discard messages (if ever)
-* Handling of temporary bursts: In general if subscribers can keep up with the publishers it is best to keep messages in memory instead of paging them out, however, for the case of a temporary burst paging to disk can be appropriate
-* When paging out page out a reduced rate or as fast as possible?
-* Disconnected Subscriber (no subs on queue or disconnected durable): throttle the rate at which producers send messages to the store to improve recovery time?
-* Other usecases/scenarios?
+The Apollo server is much more modular and protocol agnostic. All protocols
+are equal and are built as a plugin to the the broker which just make use of
+exposed broker services for routing, flow control, queueing services etc.
+For example, this means that messages will be persisted in a Store in the
+original protocol's encoding. There is no protocol conversion occurring
+under the covers unless it is required.
 
+### REST Based Management
 
-h2. Partitioning of queues
+ActiveMQ choose to exposed it's management interfaces via JMX. JMX was a
+natural choice since ActiveMQ is Java based, but JMX has a couple of
+serious limitations:
 
-We've also introduced the concept of partitioned queue in which a single queue can be partitioned to increase parallelization of queue processing. Additionally:
+* No cross language support
+* Not scaleable for exposing many objects. Registering and unregistering
+  management objects in JMX can become a bottle neck.
+* Rich data types are hard to expose
 
-* Priority based partitions allow dispatch of higher priority messages first.
-* Can be used for JMSXGroupID (not implemented yet)
-* For clustering connections partitioning can be used to create parallel independently limited message flows between brokers (so if there is a slow consumer at the other side only only the streams of messages being sent to it will be blocked).
+Apollo exposes a rich and detailed state of the sever using REST based JSON
+or XML services.
 
-h1. Work in Progress
+* A management client can easily be implemented in any language.
+* There is very little management overhead since there is no special
+  registration with the management system. The JAX-RS based management web
+  application knows how to navigate the internal structure of a broker to
+  access all the need status and statistics.
 
-There are still some architectural details that need to get ironed out.  See the "TODO Items":{relocatable:/todo.html} for a more detailed list.

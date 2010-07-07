@@ -15,33 +15,6 @@
 # limitations under the License.
 
 title: Migration Guide
-in_menu: true
---- name:overview pipeline:haml,tags
-
-%h1 Migration Guide
-
-Lets keep track of all differences that end users will notice between ActiveMQ 5 and ActiveMQ 6.
-
 --- name:content pipeline:textile
 
-h3. vm:// Transport URI format change:
-
-The VM transport configuration is much simpler now.  It now only supports 2 options:
-
-  * broker: Set to a broker Factory URI used to configure the embedded broker
-  * create: If the embedded broker should get created if it does not yet exist.  Defaults to true.
-
-Example: _vm://localhost?broker=jaxb:conf/activemq.xml&create=true_
-  
-Furthermore, the host name part of the URI does not need to the broker name anymore.  It is just 
-the name of the 'pipe' to the broker.  The first VMTransport associate a pipe name with a broker
-wins in cases where you have multiple VM client connections trying to crate different broker 
-configurations with the same pipe name.  For example you may get non determinist results if:
-
-bq. Client on Thread 1 tries to create a connection to 
-    _vm://localhost?broker=jaxb:conf/brokerA.xml_ 
-    and concurrently Client on Thread 2 tries to create a connection to 
-    _vm://localhost?broker=jaxb:conf/brokerB.xml_
-
-As the first thread to associate the "localhost" pipe name to a broker instance will win and the 
-other thread will connect to the first threads broker.
+TODO
