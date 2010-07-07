@@ -896,9 +896,13 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
       case x: Purge.Getter =>
         // Remove all the queues...
-        val queueKeys = queueIndex.iterator.map( _.getKey )
+        val queueKeys = ListBuffer[Long]()
+        queueIndex.iterator.foreach { entry =>
+          queueKeys += entry.getKey.longValue
+        }
+
         queueKeys.foreach { key =>
-          removeQueue(key.longValue)
+          removeQueue(key)
         }
 
         // Remove stored messages...
