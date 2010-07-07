@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.store;
 
+import org.apache.activemq.apollo.DirectBuffer;
 import org.fusesource.hawtbuf.AsciiBuffer;
 import org.fusesource.hawtbuf.Buffer;
 
@@ -27,8 +28,8 @@ public class MessageRecord {
     public long key = -1;
     public AsciiBuffer protocol;
     public int size;
-    public Buffer value;
-    public long directKey = -1;
+    public Buffer buffer;
+    public DirectBuffer direct_buffer = null;
     public long expiration = 0;
 
 }

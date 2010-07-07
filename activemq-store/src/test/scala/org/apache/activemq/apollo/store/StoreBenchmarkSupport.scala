@@ -98,8 +98,8 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
   def addMessage(batch:StoreUOW, content:String):Long = {
     var message = new MessageRecord
     message.protocol = ascii("test-protocol")
-    message.value = ascii(content).buffer
-    message.size = message.value.length
+    message.buffer = ascii(content).buffer
+    message.size = message.buffer.length
     batch.store(message)
   }
 

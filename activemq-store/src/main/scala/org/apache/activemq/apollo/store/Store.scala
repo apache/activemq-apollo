@@ -34,6 +34,12 @@ trait Store extends ServiceTrait {
   def storeStatusDTO(callback:(StoreStatusDTO)=>Unit)
 
   /**
+   * @returns true if the store implementation can handle accepting
+   *          MessageRecords with DirectBuffers in them.
+   */
+  def supportsDirectBuffers() = false
+
+  /**
    * Creates a store uow which is used to perform persistent
    * operations as unit of work.
    */

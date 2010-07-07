@@ -55,24 +55,22 @@ class CassandraClient() {
     }
   }
 
-  implicit def decodeMessageRecord(v: Array[Byte]): MessageRecord = {
+  def decodeMessageRecord(v: Array[Byte]): MessageRecord = {
     import PBMessageRecord._
     val pb = PBMessageRecord.FACTORY.parseUnframed(v)
     val rc = new MessageRecord
     rc.protocol = pb.getProtocol
     rc.size = pb.getSize
-    rc.value = pb.getValue
-    rc.directKey = pb.getStream
+    rc.buffer = pb.getValue
     rc.expiration = pb.getExpiration
     rc
   }
 
-  implicit def encodeMessageRecord(v: MessageRecord): Array[Byte] = {
+  def encodeMessageRecord(v: MessageRecord): Array[Byte] = {
     val pb = new PBMessageRecord.Bean
     pb.setProtocol(v.protocol)
     pb.setSize(v.size)
-    pb.setValue(v.value)
-    pb.setStream(v.directKey)
+    pb.setValue(v.buffer)
     pb.setExpiration(v.expiration)
     pb.freeze.toUnframedByteArray
   }
@@ -172,7 +170,7 @@ class CassandraClient() {
               case (msg, action) =>
                 var rc =
                 if (action.store != null) {
-                  operations ::= Insert( schema.message_data \ (msg, action.store) )
+                  operations ::= Insert( schema.message_data \ (msg, encodeMessageRecord(action.store) ) ) 
                 }
                 action.enqueues.foreach {
                   queueEntry =>
@@ -197,7 +195,7 @@ class CassandraClient() {
       session =>
         session.get(schema.message_data \ id) match {
           case Some(x) =>
-            val rc: MessageRecord = x.value
+            val rc: MessageRecord = decodeMessageRecord(x.value)
             rc.key = id
             Some(rc)
           case None =>

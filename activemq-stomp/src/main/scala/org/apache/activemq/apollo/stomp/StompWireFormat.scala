@@ -31,7 +31,7 @@ import _root_.scala.collection.JavaConversions._
 import StompFrameConstants._
 import java.io.{EOFException, DataOutput, DataInput, IOException}
 import java.nio.channels.{SocketChannel, WritableByteChannel, ReadableByteChannel}
-import org.apache.activemq.apollo.{MemoryAllocation, MemoryPool}
+import org.apache.activemq.apollo.{DirectBuffer, DirectBufferPool}
 
 /**
  * Creates WireFormat objects that marshalls the <a href="http://activemq.apache.org/stomp/">Stomp</a> protocol.
@@ -70,7 +70,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
   import StompWireFormat._
   override protected def log: Log = StompWireFormat
 
-  var memory_pool:MemoryPool = null
+  var memory_pool:DirectBufferPool = null
 
   implicit def wrap(x: Buffer) = ByteBuffer.wrap(x.data, x.offset, x.length);
   implicit def wrap(x: Byte) = {
@@ -507,7 +507,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
   }
 
 
-  def read_binary_body_direct(action:AsciiBuffer, headers:HeaderMapBuffer, ma:MemoryAllocation):FrameReader = (buffer)=> {
+  def read_binary_body_direct(action:AsciiBuffer, headers:HeaderMapBuffer, ma:DirectBuffer):FrameReader = (buffer)=> {
     if( read_content_direct(ma) ) {
       next_action = read_action
       new StompFrame(ascii(action), headers.toList, DirectStompContent(ma))
@@ -516,7 +516,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
     }
   }
 
-  def read_content_direct(ma:MemoryAllocation) = {
+  def read_content_direct(ma:DirectBuffer) = {
       val read_limit = ma.buffer.position
       if( read_limit < ma.size ) {
         read_end = read_limit

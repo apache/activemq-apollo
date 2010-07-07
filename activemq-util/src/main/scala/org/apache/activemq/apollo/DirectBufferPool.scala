@@ -14,37 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.broker.store.hawtdb
+package org.apache.activemq.apollo
 
-import java.io.File
-import java.lang.String
-import org.apache.activemq.apollo.MemoryPoolFactory
+import java.nio.ByteBuffer
+import org.fusesource.hawtdispatch.Retained
+import org.apache.activemq.Service
 
 /**
  * <p>
- * Hook to use a HawtDBMemoryPool for the memory pool implementation.
+ * A DirectBuffer holds a reference counted Direct ByteBuffer
  * </p>
- * <p>
- * This class is discovered using the following resource file:
- * <code>META-INF/services/org.apache.activemq.apollo/memory-pools</code>
- * </p>
- * 
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBMemoryPoolSPI extends MemoryPoolFactory.SPI {
+trait DirectBuffer extends Retained {
+  def size = buffer.capacity
+  def buffer:ByteBuffer
+}
 
-  val prefix: String = "hawtdb:"
-
-  def create(config: String) = {
-    if( config.startsWith(prefix) ) {
-      val file = new File(config.substring(prefix.length))
-      new HawtDBMemoryPool(file)
-    } else {
-      null
-    }
-  }
-
-   def validate(config: String):Boolean = {
-     config.startsWith(prefix) && !config.substring(prefix.length).isEmpty
-   }
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+trait DirectBufferPool extends Service {
+  def alloc(size:Int):DirectBuffer
 }

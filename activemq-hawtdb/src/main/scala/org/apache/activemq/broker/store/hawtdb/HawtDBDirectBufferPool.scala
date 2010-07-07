@@ -18,7 +18,7 @@ package org.apache.activemq.broker.store.hawtdb
 
 import org.fusesource.hawtdispatch.BaseRetained
 import org.fusesource.hawtdb.api.Paged.SliceType
-import org.apache.activemq.apollo.{MemoryAllocation, MemoryPool}
+import org.apache.activemq.apollo.{DirectBuffer, DirectBufferPool}
 import java.nio.ByteBuffer
 import org.fusesource.hawtdb.api.PageFileFactory
 import java.io.File
@@ -29,7 +29,7 @@ import java.io.File
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBMemoryPool(val file:File) extends MemoryPool {
+class HawtDBDirectBufferPool(val file:File) extends DirectBufferPool {
 
   private val pageFilefactory = new PageFileFactory()
   private def pageFile = pageFilefactory.getPageFile
@@ -56,10 +56,7 @@ class HawtDBMemoryPool(val file:File) extends MemoryPool {
     }
   }
 
-  class HawtMemoryAllocation(page:Int, page_count:Int, alloc_size:Int, original:ByteBuffer, slice:ByteBuffer) extends BaseRetained with MemoryAllocation {
-    def size = alloc_size
-    def buffer = slice
-
+  class HawtMemoryAllocation(val page:Int, val page_count:Int, val original:ByteBuffer, val buffer:ByteBuffer) extends BaseRetained with DirectBuffer {
     override def dispose = {
       pageFile.unslice(original)
       pageFile.allocator.free(page, page_count)
@@ -70,10 +67,8 @@ class HawtDBMemoryPool(val file:File) extends MemoryPool {
     val page_count: Int = pageFile.pages(alloc_size)
     val page = pageFile.allocator.alloc(page_count)
     val original = pageFile.slice(SliceType.READ_WRITE, page, page_count)
-
     original.limit(original.position+alloc_size)
-
     val slice = original.slice
-    new HawtMemoryAllocation(page, page_count, alloc_size, original, slice)
+    new HawtMemoryAllocation(page, page_count, original, slice)
   }
 }

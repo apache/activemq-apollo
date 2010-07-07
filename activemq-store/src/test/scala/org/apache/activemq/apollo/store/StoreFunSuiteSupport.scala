@@ -97,8 +97,8 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
   def addMessage(batch:StoreUOW, content:String):Long = {
     var message = new MessageRecord
     message.protocol = ascii("test-protocol")
-    message.value = ascii(content).buffer
-    message.size = message.value.length
+    message.buffer = ascii(content).buffer
+    message.size = message.buffer.length
     batch.store(message)
   }
 
@@ -138,7 +138,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
 
     val rc:Option[MessageRecord] = CB( cb=> store.loadMessage(msgKeys.head)(cb) )
     expect(ascii("message 1").buffer) {
-      rc.get.value
+      rc.get.buffer
     }
   }
 

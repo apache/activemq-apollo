@@ -108,7 +108,7 @@ object Helpers {
     rc.key = pb.getMessageKey
     rc.protocol = pb.getProtocol
     rc.size = pb.getSize
-    rc.value = pb.getValue
+    rc.buffer = pb.getValue
     rc.expiration = pb.getExpiration
     rc
   }
@@ -118,7 +118,7 @@ object Helpers {
     pb.setMessageKey(v.key)
     pb.setProtocol(v.protocol)
     pb.setSize(v.size)
-    pb.setValue(v.value)
+    pb.setValue(v.buffer)
     pb.setExpiration(v.expiration)
     pb
   }

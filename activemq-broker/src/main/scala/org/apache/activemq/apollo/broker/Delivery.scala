@@ -169,7 +169,7 @@ class Delivery extends BaseRetained {
   def createMessageRecord() = {
     val sm = new MessageRecord
     sm.protocol = message.protocol
-    sm.value = ProtocolFactory.get(message.protocol).encode(message)
+    sm.buffer = ProtocolFactory.get(message.protocol).encode(message)
     sm.size = size
     sm
   }

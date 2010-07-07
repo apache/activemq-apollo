@@ -23,7 +23,7 @@ import collection.mutable.ListBuffer
 import java.lang.{String, Class}
 import java.io.DataOutput
 import org.apache.activemq.apollo.broker._
-import org.apache.activemq.apollo.MemoryAllocation
+import org.apache.activemq.apollo.DirectBuffer
 import org.fusesource.hawtdispatch.BaseRetained
 
 /**
@@ -192,7 +192,7 @@ case class BufferStompContent(content:Buffer) extends StompContent {
   def utf8:UTF8Buffer = content.utf8
 }
 
-case class DirectStompContent(direct:MemoryAllocation) extends StompContent {
+case class DirectStompContent(direct:DirectBuffer) extends StompContent {
   def length = direct.size-1
 
   def writeTo(os:DataOutput) = {

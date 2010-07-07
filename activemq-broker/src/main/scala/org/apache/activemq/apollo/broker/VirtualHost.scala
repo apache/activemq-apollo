@@ -17,11 +17,9 @@
 package org.apache.activemq.apollo.broker;
 
 import _root_.java.util.{ArrayList, HashMap}
-import _root_.org.apache.activemq.Service
 import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch.{ScalaDispatch, DispatchQueue}
 import _root_.scala.collection.JavaConversions._
-import _root_.scala.reflect.BeanProperty
 import path.PathFilter
 import org.fusesource.hawtbuf.AsciiBuffer
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
@@ -31,10 +29,9 @@ import org.apache.activemq.broker.store.{Store}
 import org.fusesource.hawtbuf.proto.WireFormat
 import org.apache.activemq.apollo.store.{StoreFactory, QueueRecord}
 import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, CassandraStoreDTO, VirtualHostDTO}
-import java.io.File
 import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.util.LongCounter
-import org.apache.activemq.apollo.{MemoryPoolFactory, MemoryPool}
+import org.apache.activemq.apollo.{DirectBufferPoolFactory, DirectBufferPool}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -103,7 +100,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
   }
 
   var store:Store = null
-  var memory_pool:MemoryPool = null
+  var memory_pool:DirectBufferPool = null
   var transactionManager:TransactionManagerX = new TransactionManagerX
   var protocols = Map[AsciiBuffer, WireFormat]()
   val queue_id_counter = new LongCounter
@@ -128,18 +125,22 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
 
   override protected def _start(onCompleted:Runnable):Unit = {
 
-//    val memory_pool_config: String = null
-    val memory_pool_config: String = "hawtdb:activemq.tmp"
-
-    if( MemoryPoolFactory.validate(memory_pool_config) ) {
-      memory_pool = MemoryPoolFactory.create(memory_pool_config)
-      if( memory_pool!=null ) {
-        memory_pool.start
-      }
-    }
-
     val tracker = new LoggingTracker("virtual host startup", dispatchQueue)
     store = StoreFactory.create(config.store)
+
+    //    val memory_pool_config: String = null
+    var direct_buffer_pool_config: String = "hawtdb:activemq.tmp"
+
+    if( direct_buffer_pool_config!=null &&  (store!=null && !store.supportsDirectBuffers) ) {
+      warn("The direct buffer pool will not be used because the configured store does not support them.")
+      direct_buffer_pool_config = null
+    }
+
+    if( direct_buffer_pool_config!=null ) {
+      memory_pool = DirectBufferPoolFactory.create(direct_buffer_pool_config)
+      memory_pool.start
+    }
+
     if( store!=null ) {
       store.configure(config.store, this)
       val storeStartupDone = tracker.task("store startup")
