@@ -129,7 +129,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging w
     if( store!=null ) {
       store.configure(config.store, this)
       val task = tracker.task("store startup")
-      store.start(^{
+      store.start {
         if( config.purgeOnStartup ) {
           task.name = "store purge"
           store.purge {
@@ -163,7 +163,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging w
             task.run
           }
         }
-      });
+      }
     }
 
 
