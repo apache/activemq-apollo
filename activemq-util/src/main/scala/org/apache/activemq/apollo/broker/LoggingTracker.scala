@@ -30,7 +30,7 @@ import org.fusesource.hawtdispatch.{TaskTracker, DispatchQueue}
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class LoggingTracker(name:String, parent:DispatchQueue=getGlobalQueue) extends TaskTracker(name, parent) with Logging {
+class LoggingTracker(name:String, parent:DispatchQueue=globalQueue) extends TaskTracker(name, parent) with Logging {
 
   timeout = 1000;
 
@@ -52,7 +52,7 @@ class LoggingTracker(name:String, parent:DispatchQueue=getGlobalQueue) extends T
 }
 
 object LoggingTracker extends Log {
-  def apply[R](name:String, parent:DispatchQueue=getGlobalQueue)(func: (LoggingTracker)=>Unit ) = {
+  def apply[R](name:String, parent:DispatchQueue=globalQueue)(func: (LoggingTracker)=>Unit ) = {
     val t = new LoggingTracker(name, parent)
     func(t)
     t.await

@@ -121,32 +121,34 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
     val tracker = new LoggingTracker("virtual host startup", dispatchQueue)
     store = StoreFactory.create(config.store)
     if( store!=null ) {
-      val task = tracker.task("store startup")
-
+      val task = tracker.task("store list queue keys")
       store.start(^{
-        store.listQueues { ids =>
-          for( id <- ids) {
-            store.getQueueStatus(id) { x =>
-              x match {
-                case Some(info)=>
-                dispatchQueue ^{
-                  val dest = new SingleDestination(Domain.QUEUE_DOMAIN, info.record.name)
-
-                  val queue = new Queue(this, dest, id)
-                  queue.first_seq = info.first
-                  queue.last_seq = info.last
-                  queue.message_seq_counter = info.last+1
-                  queue.count = info.count
-
-                  queues.put(info.record.name, queue)
+        store.listQueues { queueKeys =>
+          for( queueKey <- queueKeys) {
+            val task = tracker.task("store load queue key: "+queueKey)
+            // Use a global queue to so we concurrently restore
+            // the queues.
+            globalQueue {
+              store.getQueueStatus(queueKey) { x =>
+                x match {
+                  case Some(info)=>
+                  store.getQueueEntries(queueKey) { entries=>
+                    dispatchQueue ^{
+                      val dest = DestinationParser.parse(info.record.name, destination_parser_options)
+                      val queue = new Queue(this, dest)
+                      queue.restore(queueKey, entries)
+                      queues.put(dest.getName, queue)
+                      task.run
+                    }
+                  }
+                  case _ =>
+                    task.run
                 }
-                case _ =>
               }
             }
           }
+          task.run
         }
-        task.run
-
       });
     }
 
@@ -186,7 +188,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
       error("getQueue can only be called while the service is running.")
       cb(null)
     } else {
-      var queue = queues.get(destination);
+      var queue = queues.get(destination.getName);
       if( queue==null && config.autoCreateQueues ) {
         addQueue(destination)(cb)
       } else  {
@@ -203,10 +205,11 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
       record.name = name
       store.addQueue(record) { rc =>
         rc match {
-          case Some(id) =>
+          case Some(queueKey) =>
             dispatchQueue ^ {
-              val queue = new Queue(this, dest, id)
-              queues.put(name, queue)
+              val queue = new Queue(this, dest)
+              queue.restore(queueKey, Nil)
+              queues.put(dest.getName, queue)
               cb(queue)
             }
           case None => // store could not create
@@ -214,8 +217,8 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
         }
       }
     } else {
-      val queue = new Queue(this, dest, -1)
-      queues.put(name, queue)
+      val queue = new Queue(this, dest)
+      queues.put(dest.getName, queue)
       cb(queue)
     }
 

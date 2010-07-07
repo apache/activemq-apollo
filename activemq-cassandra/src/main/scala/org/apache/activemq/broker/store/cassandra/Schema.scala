@@ -23,8 +23,6 @@ import com.shorrockin.cascal.session.ColumnPredicate
 
 case class Schema(name:String) {
 
-  implicit def toByteArray(buffer:Buffer) = buffer.toByteArray
-
   val keyspace = Keyspace(name)
 
   /**

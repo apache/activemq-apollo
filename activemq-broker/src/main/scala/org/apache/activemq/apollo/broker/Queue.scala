@@ -56,14 +56,14 @@ object Queue extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val host: VirtualHost, val destination: Destination, val storeId: Long) extends BaseRetained with Route with DeliveryConsumer with DispatchLogging {
+class Queue(val host: VirtualHost, val destination: Destination) extends BaseRetained with Route with DeliveryConsumer with DispatchLogging {
   override protected def log = Queue
 
   import Queue._
 
   var consumerSubs = Map[DeliveryConsumer, Subscription]()
 
-  override val dispatchQueue: DispatchQueue = createQueue("queue:" + destination);
+  override val dispatchQueue: DispatchQueue = createQueue(destination.toString);
   dispatchQueue.setTargetQueue(getRandomThreadQueue)
   dispatchQueue {
     debug("created queue for: " + destination)
@@ -90,11 +90,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
   val session_manager = new SinkMux[Delivery](messages, dispatchQueue, Delivery)
 
   // sequence numbers.. used to track what's in the store.
-  var first_seq = -1L
-  var last_seq = -1L
   var message_seq_counter = 0L
-  var count = 0
-
 
   val headEntry = new QueueEntry(this).tombstone
   var tailEntry = new QueueEntry(this)
@@ -104,6 +100,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
   entries.addFirst(headEntry)
 
   var flushingSize = 0
+  var storeId: Long = -1L
 
   /**
    * Tunning options.
@@ -113,6 +110,18 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
   var tune_max_outbound_size = 1024 * 1204 * 5
 
   private var size = 0
+
+  def restore(storeId: Long, records:Seq[QueueEntryRecord]) = ^{
+    this.storeId = storeId
+    records.foreach { qer =>
+      val entry = new QueueEntry(Queue.this).stored(qer)
+      entries.addLast(entry)
+    }
+    if( !entries.isEmpty ) {
+      message_seq_counter = entries.getTail.seq
+    }
+    debug("restored: "+records.size )
+  } >>: dispatchQueue
 
   object messages extends Sink[Delivery] {
 
@@ -298,7 +307,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
       def compareTo(o: Prio) = o.value - value
     }
 
-    val prios = new ArrayList[Prio](count)
+    val prios = new ArrayList[Prio](entries.size())
 
     var entry = entries.getHead
     while( entry!=null ) {
@@ -357,15 +366,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
         remaining -= entry.value.size
         val stored = entry.value.asStored
         if( stored!=null && !stored.loading) {
-          // start loading it back...
-          stored.loading = true
-          host.store.loadMessage(stored.ref) { delivery =>
-            // pass off to a source so it can aggregate multiple
-            // loads to reduce cross thread synchronization
-            if( delivery.isDefined ) {
-              store_load_source.merge((entry, delivery.get))
-            }
-          }
+          stored.load
         }
       } else {
         // Chuck the reset out...
@@ -390,11 +391,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
 
   def drain_store_loads() = {
     val data = store_load_source.getData
-    var ready = List[QueueEntry]()
-
-    data.foreach { event =>
-      val entry = event._1
-      val stored = event._2
+    data.foreach { case (entry,stored) =>
 
       val delivery = new Delivery()
       delivery.message = ProtocolFactory.get(stored.protocol).decode(stored.value)
@@ -405,13 +402,12 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
 
       size += entry.value.size
 
-      if( entry.hasSubs ) {
-        ready ::= entry
-      }
     }
 
-    ready.foreach { entry =>
-      entry.dispatch
+    data.foreach { case (entry,stored) =>
+      if( entry.hasSubs ) {
+        entry.run
+      }
     }
   }
 
@@ -470,6 +466,12 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
   def stored() = {
     val loaded = value.asLoaded
     this.value = new Stored(loaded.delivery.storeKey, loaded.size)
+    this
+  }
+
+  def stored(qer:QueueEntryRecord) = {
+    this.seq = qer.queueSeq
+    this.value = new Stored(qer.messageKey, qer.size)
     this
   }
 
@@ -604,7 +606,35 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
     // Stored entries can't be dispatched until
     // they get loaded.
     def dispatch():QueueEntry = {
+      if( !loading ) {
+        var remaining = queue.tune_subscription_prefetch - size
+        load
+
+        // make sure the next few entries are loaded too..
+        var cur = getNext
+        while( remaining>0 && cur!=null ) {
+          remaining -= cur.value.size
+          val stored = cur.value.asStored
+          if( stored!=null && !stored.loading) {
+            stored.load
+          }
+          cur = getNext
+        }
+
+      }
       null
+    }
+
+    def load() = {
+      // start loading it back...
+      loading = true
+      queue.host.store.loadMessage(ref) { delivery =>
+        // pass off to a source so it can aggregate multiple
+        // loads to reduce cross thread synchronization
+        if( delivery.isDefined ) {
+          queue.store_load_source.merge((QueueEntry.this, delivery.get))
+        }
+      }
     }
   }
 

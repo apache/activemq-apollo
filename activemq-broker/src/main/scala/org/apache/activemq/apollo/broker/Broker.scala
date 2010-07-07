@@ -198,16 +198,21 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
       }
     }
 
-    // Start them up..
+    // Start up the virtual hosts
     val tracker = new LoggingTracker("broker startup", dispatchQueue)
     virtualHosts.valuesIterator.foreach( x=>
       tracker.start(x)
     )
-    connectors.foreach( x=>
-      tracker.start(x)
-    )
 
-    tracker.callback(onCompleted)
+    // Once virtual hosts are up.. start up the connectors.
+    tracker.callback(^{
+      val tracker = new LoggingTracker("broker startup", dispatchQueue)
+      connectors.foreach( x=>
+        tracker.start(x)
+      )
+      tracker.callback(onCompleted)
+    })
+
   }
 
 

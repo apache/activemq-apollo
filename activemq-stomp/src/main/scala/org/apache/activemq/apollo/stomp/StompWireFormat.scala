@@ -87,7 +87,11 @@ class StompWireFormat extends WireFormat with DispatchLogging {
   }
 
   def unmarshal(packet:Buffer):AnyRef = {
-    unmarshalNB(packet.toByteBuffer)
+    start = packet.offset
+    end = packet.offset
+    val bb = packet.toByteBuffer
+    bb.position(packet.offset + packet.length)
+    unmarshalNB(bb)
   }
 
   def unmarshal(in: DataInput):AnyRef = {

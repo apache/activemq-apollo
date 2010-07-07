@@ -125,9 +125,9 @@ class CassandraClient() {
             val rc = new QueueStatus
             rc.record = new QueueRecord
             rc.record.key = id
-            rc.record.name = new AsciiBuffer(x)
+            rc.record.name = new AsciiBuffer(x.value)
 
-            rc.count = session.count( schema.entries \ id )
+//            rc.count = session.count( schema.entries \ id )
             
             // TODO
             //          rc.count =
@@ -145,30 +145,30 @@ class CassandraClient() {
   def store(txs:Seq[CassandraStore#CassandraBatch]) {
     withSession {
       session =>
-        var batch = List[Operation]()
+        var operations = List[Operation]()
         txs.foreach {
           tx =>
             tx.actions.foreach {
               case (msg, action) =>
                 var rc =
                 if (action.store != null) {
-                  batch ::= Insert( schema.message_data \ (msg, action.store) )
+                  operations ::= Insert( schema.message_data \ (msg, action.store) )
                 }
                 action.enqueues.foreach {
                   queueEntry =>
                     val qid = queueEntry.queueKey
                     val seq = queueEntry.queueSeq
-                    batch ::= Insert( schema.entries \ qid \ (seq, queueEntry) )
+                    operations ::= Insert( schema.entries \ qid \ (seq, queueEntry) )
                 }
                 action.dequeues.foreach {
                   queueEntry =>
                     val qid = queueEntry.queueKey
                     val seq = queueEntry.queueSeq
-                    batch ::= Delete( schema.entries \ qid, ColumnPredicate(seq :: Nil) )
+                    operations ::= Delete( schema.entries \ qid, ColumnPredicate(seq :: Nil) )
                 }
             }
         }
-        session.batch(batch)
+        session.batch(operations)
     }
   }
 

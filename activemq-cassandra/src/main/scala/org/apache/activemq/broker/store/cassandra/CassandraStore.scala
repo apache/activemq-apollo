@@ -131,6 +131,7 @@ class CassandraStore extends Store with BaseService with Logging {
 
   def addQueue(record: QueueRecord)(cb: (Option[Long]) => Unit) = {
     val key = next_queue_key.incrementAndGet
+    record.key = key
     executor_pool ^{
       client.addQueue(record)
       cb(Some(key))
