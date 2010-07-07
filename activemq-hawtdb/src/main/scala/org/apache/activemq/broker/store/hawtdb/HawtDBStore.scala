@@ -183,7 +183,7 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     }
   }
 
-  def listQueueEntryGroups(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryGroup]) => Unit) = {
+  def listQueueEntryRanges(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryRange]) => Unit) = {
     executor_pool ^{
       callback( client.listQueueEntryGroups(queueKey, limit) )
     }

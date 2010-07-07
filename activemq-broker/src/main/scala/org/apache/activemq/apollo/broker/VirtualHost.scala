@@ -268,9 +268,9 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging w
           case Some(queueKey) =>
             dispatchQueue {
               val queue = new Queue(this, dest, queueKey)
+              queue.start()
               queues.put(dest.getName, queue)
               cb(queue)
-              queue.start()
             }
           case None => // store could not create
             cb(null)
@@ -278,6 +278,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging w
       }
     } else {
       val queue = new Queue(this, dest)
+      queue.start()
       queues.put(dest.getName, queue)
       cb(queue)
     }

@@ -195,7 +195,7 @@ class CassandraStore extends Store with BaseService with Logging {
   }
 
 
-  def listQueueEntryGroups(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryGroup]) => Unit) = {
+  def listQueueEntryRanges(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryRange]) => Unit) = {
     blocking {
       callback( client.listQueueEntryGroups(queueKey, limit) )
     }

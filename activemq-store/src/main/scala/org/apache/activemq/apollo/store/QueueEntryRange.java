@@ -22,8 +22,8 @@ import org.fusesource.hawtbuf.Buffer;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class QueueEntryRange {
-    public long firstSeq;
-    public long lastSeq;
+    public long firstQueueSeq;
+    public long lastQueueSeq;
     public int count;
     public int size;
 }

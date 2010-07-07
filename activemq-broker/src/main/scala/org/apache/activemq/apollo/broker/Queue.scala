@@ -26,7 +26,8 @@ import org.apache.activemq.broker.store.{StoreUOW}
 import protocol.ProtocolFactory
 import java.util.concurrent.TimeUnit
 import java.util.{HashSet, Collections, ArrayList, LinkedList}
-import org.apache.activemq.apollo.store.{QueueEntryGroup, QueueEntryRecord, MessageRecord}
+import org.apache.activemq.apollo.store.{QueueEntryRange, QueueEntryRecord, MessageRecord}
+import collection.mutable.ListBuffer
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -87,11 +88,9 @@ class Queue(val host: VirtualHost, val destination: Destination, val queueKey: L
   var message_seq_counter = 1L
 
   val entries = new LinkedNodeList[QueueEntry]()
-  val head_entry = new QueueEntry(this, 0L);
-  var tail_entry = new QueueEntry(this, next_message_seq)
-
+  val head_entry = new QueueEntry(this, 0L).head
+  var tail_entry = new QueueEntry(this, next_message_seq).tail
   entries.addFirst(head_entry)
-  head_entry.tombstone
 
   var loading_size = 0
   var flushing_size = 0
@@ -180,31 +179,17 @@ class Queue(val host: VirtualHost, val destination: Destination, val queueKey: L
     }
 
     if( tune_persistent ) {
-      host.store.listQueueEntryGroups(queueKey, tune_entry_group_size) { groups=>
+      host.store.listQueueEntryRanges(queueKey, tune_entry_group_size) { ranges=>
         dispatchQueue {
-          if( !groups.isEmpty ) {
+          if( !ranges.isEmpty ) {
 
-            // adjust the head tombstone.
-            head_entry.as_tombstone.count = groups.head.firstSeq
-
-            var last:QueueEntryGroup = null
-            groups.foreach { group =>
-
-              // if groups were not adjacent.. create tombstone entry.
-              if( last!=null && (last.lastSeq+1 != group.firstSeq) ) {
-                val entry = new QueueEntry(Queue.this, last.lastSeq+1)
-                entry.tombstone.as_tombstone.count = group.firstSeq - (last.lastSeq+1)
-                entries.addLast(entry)
-              }
-
-              val entry = new QueueEntry(Queue.this, group.firstSeq).init(group)
+            ranges.foreach { range =>
+              val entry = new QueueEntry(Queue.this, range.firstQueueSeq).init(range)
               entries.addLast(entry)
 
-              message_seq_counter = group.lastSeq
-              enqueue_item_counter += group.count
-              enqueue_size_counter += group.size
-
-              last = group
+              message_seq_counter = range.lastQueueSeq + 1
+              enqueue_item_counter += range.count
+              enqueue_size_counter += range.size
             }
 
             debug("restored: "+enqueue_item_counter)
@@ -297,7 +282,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val queueKey: L
       if (cur.is_flushed || cur.is_loaded) {
         total_items += 1
       } else if (cur.is_flushed_group ) {
-        total_items += cur.as_flushed_group.items
+        total_items += cur.as_flushed_group.count
       }
       
       cur = cur.getNext
@@ -541,21 +526,17 @@ class Queue(val host: VirtualHost, val destination: Destination, val queueKey: L
     
     debug("swapping...")
 
-    var entry = entries.getHead
+    var entry = head_entry.getNext
     while( entry!=null ) {
-      if( entry.as_tombstone == null ) {
+      val loaded = entry.as_loaded
 
-        val loaded = entry.as_loaded
-
-        // Keep around prefetched and loaded entries.
-        if( entry.is_prefetched || (loaded!=null && loaded.acquired)) {
-          entry.load
-        } else {
-          // flush the the others out of memory.
-          entry.flush
-        }
+      // Keep around prefetched and loaded entries.
+      if( entry.is_prefetched || (loaded!=null && loaded.acquired)) {
+        entry.load
+      } else {
+        // flush the the others out of memory.
+        entry.flush
       }
-
       entry = entry.getNext
     }
   }
@@ -594,7 +575,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val queueKey: L
 
   def collocate(value:DispatchQueue):Unit = {
     if( value.getTargetQueue ne dispatchQueue.getTargetQueue ) {
-      println(dispatchQueue.getLabel+" co-locating with: "+value.getLabel);
+      debug(dispatchQueue.getLabel+" co-locating with: "+value.getLabel);
       this.dispatchQueue.setTargetQueue(value.getTargetQueue)
     }
   }
@@ -610,7 +591,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   import QueueEntry._
 
   // Subscriptions waiting to dispatch this entry.
-  var subscriptions:List[Subscription] = Nil
+  var parked:List[Subscription] = Nil
+
   // The number of subscriptions which have requested this entry to be prefeteched (held in memory) so that it's
   // ready for them to get dispatched.
   var prefetched = 0
@@ -620,44 +602,56 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
   def is_prefetched = prefetched>0
 
+  def head():QueueEntry = {
+    state = new Head
+    this
+  }
+
+  def tail():QueueEntry = {
+    state = new Tail
+    this
+  }
+
   def init(delivery:Delivery):QueueEntry = {
-    this.state = new Loaded(delivery, false)
+    state = new Loaded(delivery, false)
     queue.size += size
     this
   }
 
   def init(qer:QueueEntryRecord):QueueEntry = {
-    this.state = new Flushed(qer.messageKey, qer.size)
+    state = new Flushed(qer.messageKey, qer.size)
     this
   }
 
-  def init(group:QueueEntryGroup):QueueEntry = {
-    val count = (((group.lastSeq+1)-group.firstSeq)).toInt
-    val tombstones = count-group.count
-    this.state = new FlushedGroup(count, group.size, tombstones)
+  def init(range:QueueEntryRange):QueueEntry = {
+    state = new FlushedRange(range.lastQueueSeq, range.count, range.size)
     this
   }
 
-  def hasSubs = !(subscriptions == Nil )
+  def hasSubs = !parked.isEmpty
 
   /**
    * Dispatches this entry to the consumers and continues dispatching subsequent
-   * entries if it has subscriptions which accept the dispatch.
+   * entries as long as the dispatch results in advancing in their dispatch position.
    */
   def run() = {
-    var next = dispatch()
-    while( next!=null ) {
-      next = next.dispatch
+    var next = this;
+    while( next!=null && next.dispatch) {
+      next = next.getNext
     }
   }
 
-  def addSubscriptions(l:List[Subscription]) = {
-    subscriptions :::= l
+  def ::=(sub:Subscription) = {
+    parked ::= sub
+  }
+
+  def :::=(l:List[Subscription]) = {
+    parked :::= l
   }
 
 
-  def removeSubscriptions(s:Subscription) = {
-    subscriptions = subscriptions.filterNot(_ == s)
+  def -=(s:Subscription) = {
+    parked = parked.filterNot(_ == s)
   }
 
   def nextOrTail():QueueEntry = {
@@ -683,7 +677,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   }
 
   override def toString = {
-    "{seq: "+seq+", prefetched: "+prefetched+", value: "+state+", subscriptions: "+subscriptions+"}"
+    "{seq: "+seq+", prefetched: "+prefetched+", value: "+state+", subscriptions: "+parked+"}"
   }
 
   /////////////////////////////////////////////////////
@@ -693,11 +687,12 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   /////////////////////////////////////////////////////
 
   // What state is it in?
-  def as_tombstone = this.state.as_tombstone
-  def as_flushed = this.state.as_flushed
-  def as_flushed_group = this.state.as_flushed_group
-  def as_loaded = this.state.as_loaded
-  def as_tail = this.state.as_tail
+  def as_head = state.as_head
+  def as_tail = state.as_tail
+
+  def as_flushed = state.as_flushed
+  def as_flushed_group = state.as_flushed_group
+  def as_loaded = state.as_loaded
 
   def is_tail = this == queue.tail_entry
   def is_head = this == queue.head_entry
@@ -705,18 +700,17 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   def is_loaded = as_loaded!=null
   def is_flushed = as_flushed!=null
   def is_flushed_group = as_flushed_group!=null
-  def is_tombstone = as_tombstone!=null
 
   // These should not change the current state.
-  def size = this.state.size
-  def messageKey = this.state.messageKey
+  def size = state.size
+  def messageKey = state.messageKey
   def is_flushed_or_flushing = state.is_flushed_or_flushing
-  def dispatch():QueueEntry = state.dispatch
+  def dispatch() = state.dispatch
 
   // These methods may cause a change in the current state.
-  def flush:QueueEntry = this.state.flush
-  def load:QueueEntry = this.state.load
-  def tombstone:QueueEntry = this.state.tombstone
+  def flush = state.flush
+  def load = state.load
+  def remove = state.remove
 
   trait EntryState {
 
@@ -725,18 +719,46 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     def as_tail:Tail = null
     def as_loaded:Loaded = null
     def as_flushed:Flushed = null
-    def as_flushed_group:FlushedGroup = null
-    def as_tombstone:Tombstone = null
+    def as_flushed_group:FlushedRange = null
+    def as_head:Head = null
 
-    def size:Int
-    def dispatch():QueueEntry
-    def messageKey:Long
+    /**
+     * Gets the size of this entry in bytes.  The head and tail entries allways return 0.
+     */
+    def size = 0
+
+    /**
+     * Gets the message key for the entry.
+     * @returns -1 if it is not known.
+     */
+    def messageKey = -1L
+
+    /**
+     * Attempts to dispatch the current entry to the subscriptions position at the entry.
+     * @returns true if at least one subscription advanced to the next entry as a result of dispatching.
+     */
+    def dispatch() = false
+
+    /**
+     * @returns true if the entry is either flushed or flushing.
+     */
     def is_flushed_or_flushing = false
 
-    def load = entry
+    /**
+     * Triggers the entry to get loaded if it's not already loaded.
+     */
+    def load = {}
 
-    def flush = entry
+    /**
+     * Triggers the entry to get flushed if it's not already flushed.
+     */
+    def flush = {}
 
+    /**
+     * Takes the current entry out of the prefetch of all subscriptions
+     * which have prefetched the entry.  Returns the list of subscriptions which
+     * had prefetched it.
+     */
     def prefetch_remove = {
       var rc = List[Subscription]()
       if( queue.tune_flush_to_store ) {
@@ -744,7 +766,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         var cur = entry
         while( cur!=null && is_prefetched ) {
           if( cur.hasSubs ) {
-            (cur.subscriptions).foreach { sub =>
+            (cur.parked).foreach { sub =>
               if( sub.is_prefetched(entry) ) {
                 sub.remove_from_prefetch(entry)
                 rc ::= sub
@@ -758,45 +780,62 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       rc
     }
 
-    def tombstone = {
-
+    /**
+     * Removes the entry from the queue's linked list of entries.  This gets called
+     * as a result of an aquired ack.
+     */
+    def remove = {
+      // take us out of subscription prefetches..
       var refill_preftch_list = prefetch_remove
-
-      // if rv and lv are both adjacent tombstones, then this merges the rv
-      // tombstone into lv, unlinks rv, and returns lv, otherwise it returns
-      // rv.
-      def merge(lv:QueueEntry, rv:QueueEntry):QueueEntry = {
-        if( lv==null || rv==null) {
-          return rv
-        }
-
-        val lts = lv.state.as_tombstone
-        val rts = rv.state.as_tombstone
-
-        if( lts==null ||  rts==null ) {
-          return rv
-        }
-
-        // Sanity check: the the entries are adjacent.. this should
-        // always be the case.
-        assert( lv.seq + lts.count  == rv.seq , "entries are not adjacent.")
-
-        lts.count += rts.count
-        rv.dispatch // moves the subs to the next entry.
-        rv.unlink
-        return lv
-      }
-
-      state = new Tombstone()
-      merge(entry, getNext)
-      val rc = merge(getPrevious, entry)
-
+      // advance subscriptions that were on this entry..
+      parked.foreach(_.advance(next))
+      nextOrTail :::= parked
+      parked = Nil
+      // take the entry of the entries list..
+      unlink
+      // refill the subscription prefetches..
       refill_preftch_list.foreach( _.refill_prefetch )
-
-      rc.run // dispatch to move the subs to the next entry..
-      rc
     }
 
+    /**
+     * Advances the specified subscriptions to the next entry in
+     * the linked list
+     */
+    def advance(advancing: Seq[Subscription]): Unit = {
+      val nextPos = nextOrTail
+      nextPos :::= advancing.toList
+      advancing.foreach(_.advance(nextPos))
+    }
+
+  }
+
+  /**
+   *  Used for the head entry.  This is the starting point for all new subscriptions.
+   */
+  class Head extends EntryState {
+
+    override  def toString = "head"
+    override def as_head = this
+
+    /**
+     * New subs get parked here at the Head.  There is nothing to actually dispatch
+     * in this entry.. just advance the parked subs onto the next entry.
+     */
+    override def dispatch() = {
+      if( parked != Nil ) {
+
+        advance(parked)
+        parked = Nil
+        true
+
+      } else {
+        false
+      }
+    }
+
+    override def remove = throw new AssertionError("Head entry cannot be removed")
+    override def load = throw new AssertionError("Head entry cannot be loaded")
+    override def flush = throw new AssertionError("Head entry cannot be flushed")
   }
 
   /**
@@ -806,30 +845,30 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    */
   class Tail extends EntryState {
 
+    override  def toString = "tail"
     override def as_tail:Tail = this
-    def size = 0
-    def messageKey = -1
-    def dispatch():QueueEntry = null
 
-    override  def toString = { "tail" }
-
+    override def remove = throw new AssertionError("Tail entry cannot be removed")
     override def load = throw new AssertionError("Tail entry cannot be loaded")
     override def flush = throw new AssertionError("Tail entry cannot be flushed")
 
   }
 
   /**
-   * This state is used while a message is loaded in memory.  A message must be in this state
-   * before it can be dispatched to a consumer.  It can transition to Flushed or Tombstone.
+   * The entry is in this state while a message is loaded in memory.  A message must be in this state
+   * before it can be dispatched to a subscription.
    */
-  class Loaded(val delivery: Delivery, var store_completed:Boolean) extends EntryState {
+  class Loaded(val delivery: Delivery, var stored:Boolean) extends EntryState {
+
+    assert( delivery!=null, "delivery cannot be null")
 
     var acquired = false
-    def messageKey = delivery.storeKey
-    def size = delivery.size
     var flushing = false
 
-    override def toString = { "loaded:{ flushing: "+flushing+", acquired: "+acquired+", size:"+size+"}" }
+    override def toString = { "loaded:{ stored: "+stored+", flushing: "+flushing+", acquired: "+acquired+", size:"+size+"}" }
+
+    override def size = delivery.size
+    override def messageKey = delivery.storeKey
 
     override def is_flushed_or_flushing = {
       flushing
@@ -846,7 +885,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     override def flush() = {
       if( queue.tune_flush_to_store ) {
-        if( store_completed ) {
+        if( stored ) {
           flushing=true
           flushed
         } else {
@@ -882,12 +921,10 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           }
         }
       }
-
-      entry
     }
 
     def flushed() = {
-      store_completed = true
+      stored = true
       delivery.uow = null
       if( flushing ) {
         queue.flushing_size-=size
@@ -901,66 +938,56 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         flushing = false
         queue.flushing_size-=size
       }
-      entry
     }
 
-    override def tombstone = {
+    override def remove = {
       if( flushing ) {
         flushing = false
         queue.flushing_size-=size
       }
       queue.size -= size
-      super.tombstone
+      super.remove
     }
 
-    def dispatch():QueueEntry = {
+    override def dispatch():Boolean = {
 
       // Nothing to dispatch if we don't have subs..
-      if( subscriptions==Nil ) {
-        // This usualy happens when a new consumer connects, it's not marked as slow but
-        // is not at the tail.  And this entry is an entry just sent by a producer.
-        return nextOrTail
+      if( parked.isEmpty ) {
+        return false
       }
 
-      // can't dispatch until the delivery is set.
-      if( delivery==null ) {
-        // TODO: check to see if this ever happens
-        return null
-      }
-
-      var heldBack:List[Subscription] = Nil
-      var advancing:List[Subscription] = Nil
-
+      var heldBack = ListBuffer[Subscription]()
+      var advancing = ListBuffer[Subscription]()
 
       var acquiringSub: Subscription = null
-      subscriptions.foreach{ sub=>
+      parked.foreach{ sub=>
 
         if( sub.browser ) {
           if (!sub.matches(delivery)) {
             // advance: not interested.
-            advancing ::= sub
+            advancing += sub
           } else {
             if (sub.offer(delivery)) {
               // advance: accepted...
-              advancing ::= sub
+              advancing == sub
             } else {
               // hold back: flow controlled
-              heldBack ::= sub
+              heldBack += sub
             }
           }
 
         } else {
           if( acquired ) {
             // advance: another sub already acquired this entry..
-            advancing = advancing ::: sub :: Nil
+            advancing += sub
           } else {
             if (!sub.matches(delivery)) {
               // advance: not interested.
-              advancing = advancing ::: sub :: Nil
+              advancing += sub
             } else {
               if( sub.full ) {
                 // hold back: flow controlled
-                heldBack = heldBack ::: sub :: Nil
+                heldBack += sub
               } else {
                 // advance: accepted...
                 acquiringSub = sub
@@ -983,23 +1010,23 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       // the other competing subs get first dibs at the next entry.
       if( acquiringSub != null ) {
 
-        // Advancing may need to be held back because the sub's prefetch is full.
-        if( acquiringSub.prefetchFull ) {
-          advancing = advancing ::: acquiringSub :: Nil
+        // Advancing may need to be held back because the sub's prefetch is full
+        if( acquiringSub.prefetchFull && !acquiringSub.is_prefetched(getNext) ) {
+          heldBack += acquiringSub
         } else {
-          heldBack = heldBack ::: acquiringSub :: Nil
+          advancing += acquiringSub
         }
       }
 
-      // The held back subs stay on this entry..
-      subscriptions = heldBack
+      if ( advancing.isEmpty ) {
+        return false
+      } else {
 
-      // the advancing subs move on to the next entry...
-      if ( advancing!=Nil ) {
+        // The held back subs stay on this entry..
+        parked = heldBack.toList
 
-        val next = nextOrTail
-        next.addSubscriptions(advancing)
-        advancing.foreach(_.advance(next))
+        // the advancing subs move on to the next entry...
+        advance(advancing)
 
         // flush this entry out if it's not going to be needed soon.
         def haveQuickConsumer = queue.fast_subscriptions.find( sub=> sub.pos.seq <= seq ).isDefined
@@ -1007,144 +1034,17 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           // then flush out to make space...
           flush
         }
-
-        return next
-      } else {
-        return null
+        return true
       }
     }
   }
 
-
   /**
-   * Entries which have been deleted get put into the Tombstone state.  Adjacent entries in the
-   * Tombstone state get merged into a single entry.
+   * Loaded entries are moved into the Flushed state reduce memory usage.  Once a Loaded
+   * entry is persisted, it can move into this state.  This state only holds onto the
+   * the massage key so that it can reload the message from the store quickly when needed.
    */
-  class Tombstone extends EntryState {
-
-    /** The number of adjacent entries this Tombstone represents. */
-    var count = 1L
-
-    def size = 0
-    def messageKey = -1
-
-    override def as_tombstone = this
-
-    /**
-     * Nothing ot dispatch in a Tombstone, move the subscriptions to the next entry.
-     */
-    def dispatch():QueueEntry = {
-      assert(prefetched==0, "tombstones should never be prefetched.")
-
-      val next = nextOrTail
-      next.addSubscriptions(subscriptions)
-      subscriptions.foreach(_.advance(next))
-      subscriptions = Nil
-      next
-    }
-
-    override def tombstone = throw new AssertionError("Tombstone entry cannot be tombstoned")
-    override  def toString = { "tombstone:{ count: "+count+"}" }
-
-  }
-
-
-  class FlushedGroup(
-   /** The number of adjacent entries this FlushedGroup represents. */
-   var count:Long,
-   /** size in bytes of the group */
-   var size:Int,
-   /** The number of tombstone entries in the groups */
-   var tombstones:Int ) extends EntryState {
-
-
-    def items = count - tombstones
-
-    def messageKey = -1
-
-    var loading = false
-
-    override def as_flushed_group = this
-
-    override def is_flushed_or_flushing = true
-
-    override def toString = { "flushed_group:{ loading: "+loading+", items: "+items+", size: "+size+"}" }
-
-    // Flushed entries can't be dispatched until
-    // they get loaded.
-    def dispatch():QueueEntry = {
-      null
-    }
-
-    override def load() = {
-      if( !loading ) {
-        loading = true
-        queue.host.store.listQueueEntries(queue.queueKey, seq, seq+count-1) { records =>
-          queue.dispatchQueue {
-
-            var item_count=0
-            var size_count=0
-            var last:QueueEntryRecord = null
-
-            val tmpList = new LinkedNodeList[QueueEntry]()
-            records.foreach { record =>
-
-              // if entries were not adjacent.. create tombstone entry.
-              if( last!=null && (last.queueSeq+1 != record.queueSeq) ) {
-                val entry = new QueueEntry(queue, last.queueSeq+1)
-                entry.tombstone.as_tombstone.count = record.queueSeq - (last.queueSeq+1)
-                tmpList.addLast(entry)
-              }
-
-              val entry = new QueueEntry(queue, record.queueSeq).init(record)
-              tmpList.addLast(entry)
-
-              item_count += 1
-              size_count += record.size
-              last = record
-            }
-
-            // we may need to adjust the enqueue count if entries
-            // were dropped at the store level
-            var item_delta = (items - item_count)
-            val size_delta: Int = size - size_count
-
-            if ( item_delta!=0 || size_delta!=0 ) {
-              assert(item_delta <= 0)
-              assert(size_delta <= 0)
-              info("Detected store dropped %d message(s) in seq range %d to %d using %d bytes", item_delta, seq, seq+count-1, size_delta)
-              queue.enqueue_item_counter += item_delta
-              queue.enqueue_size_counter += size_delta
-            }
-
-            var refill_preftch_list = prefetch_remove
-
-            linkAfter(tmpList)
-            val next = getNext
-
-            // move the subs to the first entry that we just loaded.
-            subscriptions.foreach(_.advance(next))
-            next.addSubscriptions(subscriptions)
-
-            unlink
-            refill_preftch_list.foreach( _.refill_prefetch )
-          }
-        }
-      }
-      entry
-    }
-
-    override def tombstone = {
-      throw new AssertionError("Flush group cannbot be tombstone.");
-    }
-  }
-
-  /**
-   * Entries in the Flushed state are not holding the referenced messages in memory anymore.
-   * This state can transition to Loaded or Tombstone.
-   *
-   */
-  class Flushed(val messageKey:Long, val size:Int) extends EntryState {
+  class Flushed(override val messageKey:Long, override val size:Int) extends EntryState {
 
     var loading = false
 
@@ -1153,15 +1053,6 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     override def is_flushed_or_flushing = true
 
     override def toString = { "flushed:{ loading: "+loading+", size:"+size+"}" }
-
-    // Flushed entries can't be dispatched until
-    // they get loaded.
-    def dispatch():QueueEntry = {
-      // This dispatch can happen when a subscription is holding onto lots of acquired entries
-      // it can't prefetch anymore as it's waiting for ack on those messages to avoid
-      // blowing it's memory limits.
-      null
-    }
 
     override def load() = {
       if( !loading ) {
@@ -1173,8 +1064,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           // pass off to a source so it can aggregate multiple
           // loads to reduce cross thread synchronization
           if( delivery.isDefined ) {
-//            debug("Store found message seq: %d", seq)
-            queue.store_load_source.merge((this, delivery.get))
+            queue.dispatchQueue {
+              queue.store_load_source.merge((this, delivery.get))
+            }
           } else {
 
             info("Detected store dropped message at seq: %d", seq)
@@ -1182,12 +1074,11 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
             // Looks like someone else removed the message from the store.. lets just
             // tombstone this entry now.
             queue.dispatchQueue {
-              tombstone
+              remove
             }
           }
         }
       }
-      entry
     }
 
     def loaded(messageRecord:MessageRecord) = {
@@ -1209,16 +1100,91 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     }
 
 
-    override def tombstone = {
+    override def remove = {
       if( loading ) {
-//        debug("Tombstoned, will ignore store load of seq: ", seq)
         loading = false
         queue.loading_size -= size
       }
-      super.tombstone
+      super.remove
     }
   }
 
+  /**
+   * A FlushedRange stat is assigned entry is used to represent a rage of flushed entries.
+   *
+   * Even when entries that are Flushed can us a significant amount of memory if the queue is holding
+   * thousands of them.  Multiple entries in the Flushed state can be combined into a single entry in
+   * the FlushedRange state thereby conserving even more memory.  A FlushedRange entry only tracks
+   * the first, and last sequnce ids of the range.  When the entry needs to be loaded from the range
+   * it replaces the FlushedRange entry with all the Flushed entries by querying the store of all the
+   * message keys for the entries in the range.
+   */
+  class FlushedRange(
+    /** the last seq id in the range */
+    var last:Long,
+    /** the number of items in the range */
+    var count:Int,
+    /** size in bytes of the range */
+    override val size:Int) extends EntryState {
+
+    var loading = false
+
+    override def as_flushed_group = this
+
+    override def is_flushed_or_flushing = true
+
+    override def toString = { "flushed_group:{ loading: "+loading+", count: "+count+", size: "+size+"}" }
+
+    override def load() = {
+      if( !loading ) {
+        loading = true
+        queue.host.store.listQueueEntries(queue.queueKey, seq, last) { records =>
+          queue.dispatchQueue {
+
+            var item_count=0
+            var size_count=0
+
+            val tmpList = new LinkedNodeList[QueueEntry]()
+            records.foreach { record =>
+              val entry = new QueueEntry(queue, record.queueSeq).init(record)
+              tmpList.addLast(entry)
+              item_count += 1
+              size_count += record.size
+            }
+
+            // we may need to adjust the enqueue count if entries
+            // were dropped at the store level
+            var item_delta = (count - item_count)
+            val size_delta: Int = size - size_count
+
+            if ( item_delta!=0 || size_delta!=0 ) {
+              assert(item_delta <= 0)
+              assert(size_delta <= 0)
+              info("Detected store dropped %d message(s) in seq range %d to %d using %d bytes", item_delta, seq, last, size_delta)
+              queue.enqueue_item_counter += item_delta
+              queue.enqueue_size_counter += size_delta
+            }
+
+            var refill_preftch_list = prefetch_remove
+
+            linkAfter(tmpList)
+            val next = getNext
+
+            // move the subs to the first entry that we just loaded.
+            parked.foreach(_.advance(next))
+            next :::= parked
+
+            unlink
+            refill_preftch_list.foreach( _.refill_prefetch )
+          }
+        }
+      }
+    }
+
+    override def remove = {
+      throw new AssertionError("Flushed range cannbot be removed.");
+    }
+  }
 
 
 }
@@ -1248,7 +1214,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
 
   override def toString = {
     def seq(entry:QueueEntry) = if(entry==null) null else entry.seq
-    "{ acquired_size: "+acquired_size+", prefetch_size: "+prefetched_size+", pos: "+seq(pos)+" prefetch_tail: "+seq(prefetch_tail)+" }"
+    "{ acquired_size: "+acquired_size+", prefetch_size: "+prefetched_size+", pos: "+seq(pos)+" prefetch_tail: "+seq(prefetch_tail)+", tail_parkings: "+tail_parkings+"}"
   }
 
   def browser = session.consumer.browser
@@ -1257,7 +1223,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
     pos = queue.head_entry;
     session = consumer.connect(this)
     session.refiller = pos
-    queue.head_entry.addSubscriptions(this :: Nil)
+    queue.head_entry ::= this
 
     if( queue.serviceState.isStarted ) {
       // kick off the initial dispatch.
@@ -1267,7 +1233,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
   }
 
   def close() = {
-    pos.removeSubscriptions(this)
+    pos.-=(this)
 
     invalidate_prefetch
 
@@ -1298,7 +1264,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
     assert(value!=null)
 
     // Remove the previous pos from the prefetch counters.
-    if( prefetch_tail!=null && !pos.is_tombstone) {
+    if( prefetch_tail!=null && !pos.is_head) {
       remove_from_prefetch(pos)
     }
     advanced_size += pos.size
@@ -1329,7 +1295,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
       // release the prefetch counters...
       var cur = pos
       while (cur.seq <= prefetch_tail.seq) {
-        if (!cur.is_tombstone) {
+        if (!cur.is_head) {
           prefetched_size -= cur.size
           cur.prefetched -= 1
         }
@@ -1344,12 +1310,12 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
    * Is the specified queue entry prefeteched by this subscription?
    */
   def is_prefetched(value:QueueEntry) = {
-    prefetch_tail!=null && pos.seq <= value.seq && value.seq <= prefetch_tail.seq
+    prefetch_tail!=null && value!=null && pos.seq <= value.seq && value.seq <= prefetch_tail.seq
   }
 
 
   def add_to_prefetch(entry:QueueEntry):Unit = {
-    assert( !entry.is_tombstone, "tombstones should not be prefetched..")
+    assert( !entry.is_head, "tombstones should not be prefetched..")
     prefetched_size += entry.size
     entry.prefetched += 1
     entry.load
@@ -1386,7 +1352,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
       // attempts to fill the prefetch...
       var next = next_prefetch_pos
       while( !prefetchFull && next!=null ) {
-        if( !next.is_tombstone ) {
+        if( !next.is_head ) {
           add_to_prefetch(next)
         }
         next = next.getNext
@@ -1433,7 +1399,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
 
       // we may now be able to prefetch some messages..
       acquired_size -= entry.size
-      entry.tombstone // entry size changes to 0
+      entry.remove // entry size changes to 0
       refill_prefetch
     }
 

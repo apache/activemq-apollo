@@ -206,11 +206,11 @@ class CassandraClient() {
     }
   }
 
-  def listQueueEntryGroups(queueKey: Long, limit: Int): Seq[QueueEntryGroup] = {
+  def listQueueEntryGroups(queueKey: Long, limit: Int): Seq[QueueEntryRange] = {
     withSession {
       session =>
-        var rc = ListBuffer[QueueEntryGroup]()
-        var group:QueueEntryGroup = null
+        var rc = ListBuffer[QueueEntryRange]()
+        var group:QueueEntryRange = null
 
         // TODO: this is going to bring back lots of entries.. not good.
         session.list(schema.entries \ queueKey).foreach { x=>
@@ -218,10 +218,10 @@ class CassandraClient() {
           val record:QueueEntryRecord = x.value
 
           if( group == null ) {
-            group = new QueueEntryGroup
-            group.firstSeq = record.queueSeq
+            group = new QueueEntryRange
+            group.firstQueueSeq = record.queueSeq
           }
-          group.lastSeq = record.queueSeq
+          group.lastQueueSeq = record.queueSeq
           group.count += 1
           group.size += record.size
           if( group.count == limit) {

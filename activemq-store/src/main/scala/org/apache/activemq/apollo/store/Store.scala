@@ -74,10 +74,11 @@ trait Store extends Service {
   def listQueues(callback: (Seq[Long])=>Unit )
 
   /**
-   * Groups all the entries in the specified queue into groups containing limit entries and returns those
-   * groups.  Allows you to quickly get a rough idea of the items in queue without consuming too much memory.
+   * Groups all the entries in the specified queue into ranges containing up limit entries
+   * big and returns those ranges.  Allows you to incrementally, load all the entries in
+   * a queue.
    */
-  def listQueueEntryGroups(queueKey:Long, limit:Int)(callback:(Seq[QueueEntryGroup])=>Unit )
+  def listQueueEntryRanges(queueKey:Long, limit:Int)(callback:(Seq[QueueEntryRange])=>Unit )
 
   /**
    * Loads all the queue entry records for the given queue id between the first and last provided

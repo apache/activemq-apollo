@@ -28,7 +28,7 @@ import org.fusesource.hawtbuf.proto.MessageBuffer
 import org.fusesource.hawtbuf.proto.PBMessage
 import org.apache.activemq.util.LockFile
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
-import org.fusesource.hawtdb.internal.journal.{JournalCallback, Journal, Location}
+import org.fusesource.hawtdb.internal.journal.{JournalListener, Journal, Location}
 import org.fusesource.hawtdispatch.TaskTracker
 
 import org.fusesource.hawtbuf.AsciiBuffer._
@@ -152,6 +152,20 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       journal.setMaxFileLength(config.journalLogSize)
       journal.setMaxWriteBatchSize(config.journalBatchSize);
       journal.setChecksum(true);
+      journal.setListener( new JournalListener{
+        def synced(writes: Array[Write]) = {
+          var onCompletes = List[Runnable]()
+          withTx { tx=>
+            val helper = new TxHelper(tx)
+            writes.foreach { write=>
+              val func = write.getAttachment.asInstanceOf[(TxHelper, Location)=>List[Runnable]]
+              onCompletes = onCompletes ::: func(helper, write.getLocation)
+            }
+            helper.storeRootBean
+          }
+          onCompletes.foreach( _.run )
+        }
+      })
 
       if( config.archiveDirectory!=null ) {
         journal.setDirectoryArchive(config.archiveDirectory)
@@ -169,10 +183,10 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       pageFileFactory.open()
 
       val initialized = withTx { tx =>
-          val helper = new TxHelper(tx)
-          import helper._
-
           if (!tx.allocator().isAllocated(0)) {
+            val helper = new TxHelper(tx)
+            import helper._
+
             val rootPage = tx.alloc()
             assert(rootPage == 0)
 
@@ -181,9 +195,9 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
             rootBean.setDataFileRefIndexPage(alloc(DATA_FILE_REF_INDEX_FACTORY))
             rootBean.setMessageRefsIndexPage(alloc(MESSAGE_REFS_INDEX_FACTORY))
             rootBean.setSubscriptionIndexPage(alloc(SUBSCRIPTIONS_INDEX_FACTORY))
-            rootBuffer = rootBean.freeze
 
-            tx.put(DATABASE_ROOT_RECORD_ACCESSOR, 0, rootBuffer)
+            helper.storeRootBean
+
             true
           } else {
             rootBuffer = tx.get(DATABASE_ROOT_RECORD_ACCESSOR, 0)
@@ -296,7 +310,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     }
   }
 
-  def listQueueEntryGroups(queueKey: Long, limit: Int) : Seq[QueueEntryGroup] = {
+  def listQueueEntryGroups(queueKey: Long, limit: Int) : Seq[QueueEntryRange] = {
     withTx { tx =>
         val helper = new TxHelper(tx)
         import JavaConversions._
@@ -307,15 +321,15 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
         if (queueRecord != null) {
           val entryIndex = queueEntryIndex(queueRecord)
 
-          var rc = ListBuffer[QueueEntryGroup]()
-          var group:QueueEntryGroup = null
+          var rc = ListBuffer[QueueEntryRange]()
+          var group:QueueEntryRange = null
 
           entryIndex.iterator.foreach { entry =>
             if( group == null ) {
-              group = new QueueEntryGroup
-              group.firstSeq = entry.getKey.longValue
+              group = new QueueEntryRange
+              group.firstQueueSeq = entry.getKey.longValue
             }
-            group.lastSeq = entry.getKey.longValue
+            group.lastQueueSeq = entry.getKey.longValue
             group.count += 1
             group.size += entry.getValue.getSize
             if( group.count == limit) {
@@ -470,11 +484,10 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     frozen.writeFramed(baos)
 
     val buffer = baos.toBuffer()
-    append(buffer) {
-      location =>
-        metric_index_update.time {
-          executeStore(batch, update, onComplete, location)
-        }
+    append(buffer) { (helper, location) =>
+      metric_index_update.time {
+        executeStore(helper, location, batch, update, onComplete)
+      }
     }
   }
 
@@ -484,9 +497,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     val baos = new DataByteArrayOutputStream(5)
     baos.writeByte(BEGIN)
     baos.writeInt(batch)
-    append(baos.toBuffer) {
-      location =>
-        executeBegin(batch, location)
+    append(baos.toBuffer) { (helper,location) =>
+      executeBegin(helper, location, batch)
     }
   }
 
@@ -496,9 +508,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     val baos = new DataByteArrayOutputStream(5)
     baos.writeByte(COMMIT)
     baos.writeInt(batch)
-    append(baos.toBuffer) {
-      location =>
-        executeCommit(batch, onComplete, location)
+    append(baos.toBuffer) { (helper,location) =>
+      executeCommit(helper, location, batch, onComplete)
     }
   }
 
@@ -506,9 +517,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     val baos = new DataByteArrayOutputStream(5)
     baos.writeByte(ROLLBACK)
     baos.writeInt(batch)
-    append(baos.toBuffer) {
-      location =>
-        executeRollback(batch, onComplete, location)
+    append(baos.toBuffer) { (helper,location) =>
+      executeRollback(helper, location, batch, onComplete)
     }
   }
 
@@ -606,12 +616,16 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     val updateType = editor.readByte()
     val batch = editor.readInt()
 
-    updateType match {
-      case BEGIN => executeBegin(batch, location)
-      case COMMIT => executeCommit(batch, null, location)
-      case _ =>
-        val update = decode(location, updateType, data)
-        executeStore(batch, update, null, location)
+    withTx { tx=>
+      val helper = new TxHelper(tx)
+      updateType match {
+        case BEGIN => executeBegin(helper, location, batch)
+        case COMMIT => executeCommit(helper, location, batch, null)
+        case _ =>
+          val update = decode(location, updateType, data)
+          executeStore(helper, location, batch, update, null)
+      }
+      helper.storeRootBean
     }
 
     recoveryCounter += 1
@@ -624,14 +638,13 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   //
   /////////////////////////////////////////////////////////////////////
 
-  private def append(data: Buffer)(cb: (Location) => Unit): Unit = {
+  private def append(data: Buffer)(cb: (TxHelper, Location) => List[Runnable]): Unit = {
     metric_journal_append.start { end =>
-      journal.write(data, new JournalCallback() {
-        def success(location: Location) = {
-          end()
-          cb(location)
-        }
-      })
+      def cbintercept(tx:TxHelper,location:Location) = {
+        end()
+        cb(tx, location)
+      }
+      journal.write(data, cbintercept _ )
     }
   }
 
@@ -644,74 +657,70 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   //
   /////////////////////////////////////////////////////////////////////
 
-  private def executeBegin(batch: Int, location: Location): Unit = {
+  private def executeBegin(helper:TxHelper, location: Location, batch: Int):List[Runnable] = {
     assert(batches.get(batch).isEmpty)
     batches.put(batch, (location, ListBuffer()))
+    Nil
   }
 
-  private def executeCommit(batch: Int, onComplete: Runnable, location: Location): Unit = {
+  private def executeCommit(helper:TxHelper, location: Location, batch: Int, onComplete: Runnable):List[Runnable] = {
     // apply all the updates in the batch as a single unit of work.
     batches.remove(batch) match {
       case Some((_, updates)) =>
         // When recovering.. we only want to redo updates that committed
         // after the last update location.
         if (!recovering || isAfterLastUpdateLocation(location)) {
-          withTx { tx =>
-              val helper = new TxHelper(tx)
-              // index the updates
-              updates.foreach {
-                update =>
-                  index(helper, update.update, update.location)
-              }
-              helper.updateLocations(location)
-          }
+            // index the updates
+            updates.foreach {
+              update =>
+                index(helper, update.update, update.location)
+            }
+            helper.updateLocations(location)
         }
       case None =>
         // when recovering..  we are more lax due recovery starting
         // in the middle of a stream of in progress batches
         assert(recovering)
     }
-    if (onComplete != null) {
-      onComplete.run
+    if(onComplete!=null) {
+      return List(onComplete)
+    } else {
+      Nil
     }
   }
 
-  private def executeRollback(batch: Int, onComplete: Runnable, location: Location): Unit = {
+  private def executeRollback(helper:TxHelper, location: Location, batch: Int, onComplete: Runnable): List[Runnable] = {
     // apply all the updates in the batch as a single unit of work.
     batches.remove(batch) match {
       case Some((_, _)) =>
         if (!recovering || isAfterLastUpdateLocation(location)) {
-          withTx { tx =>
-            val helper = new TxHelper(tx)
-            helper.updateLocations(location)
-          }
+          helper.updateLocations(location)
         }
       case None =>
         // when recovering..  we are more lax due recovery starting
         // in the middle of a stream of in progress batches
         assert(recovering)
     }
-    if (onComplete != null) {
-      onComplete.run
+    if(onComplete!=null) {
+      return List(onComplete)
+    } else {
+      Nil
     }
   }
 
-  private def executeStore(batch: Int, update: TypeCreatable, onComplete: Runnable, location: Location): Unit = {
+  private def executeStore(helper:TxHelper, location: Location, batch: Int, update: TypeCreatable, onComplete: Runnable): List[Runnable] = {
     if (batch == -1) {
       // update is not part of the batch..
 
       // When recovering.. we only want to redo updates that happen
       // after the last update location.
       if (!recovering || isAfterLastUpdateLocation(location)) {
-        withTx { tx =>
-            val helper = new TxHelper(tx)
-            index(helper, update, location)
-            helper.updateLocations(location)
-        }
+          index(helper, update, location)
+          helper.updateLocations(location)
       }
 
-      if (onComplete != null) {
-        onComplete.run
+      if ( onComplete != null) {
+        return List(onComplete)
       }
     } else {
 
@@ -728,6 +737,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
           assert(recovering)
       }
     }
+    return Nil
   }
 
 
@@ -1064,6 +1074,9 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       } else {
         rootBean.setFirstBatchLocation(batches.head._2._1)
       }
+    }
+
+    def storeRootBean() = {
       rootBuffer = rootBean.freeze
       _tx.put(DATABASE_ROOT_RECORD_ACCESSOR, 0, rootBuffer)
     }
