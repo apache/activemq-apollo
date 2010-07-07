@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
@@ -31,7 +33,8 @@ public class LongIdDTO {
     /**
      * A unique id of the object within it's container
      */
-	@XmlAttribute(name="id")
+    @JsonProperty
+	@XmlAttribute
 	public long id;
 
 

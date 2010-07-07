@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 
 import javax.xml.bind.annotation.XmlAttribute;
@@ -37,6 +38,7 @@ public abstract class StoreDTO {
      * be invalidated shortly thereafter by another unit of work which
      * would negate the operation.
      */
+    @JsonProperty("flush_delay")
     @XmlAttribute(name="flush-delay", required=false)
     public long flushDelay = 100;
 

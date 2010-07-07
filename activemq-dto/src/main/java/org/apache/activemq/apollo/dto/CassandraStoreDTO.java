@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 
@@ -26,10 +28,12 @@ import java.util.ArrayList;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class CassandraStoreDTO extends StoreDTO {
 
-    @XmlAttribute(name="keyspace")
+    @JsonProperty
+    @XmlAttribute
     public String keyspace="ActiveMQ";
 
-    @XmlElement(name="host", required=true)
+    @JsonProperty
+    @XmlElement(required=true)
     public ArrayList<String> hosts = new ArrayList<String>();    
 
 }

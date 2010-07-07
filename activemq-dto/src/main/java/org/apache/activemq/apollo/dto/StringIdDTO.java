@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +32,8 @@ public class StringIdDTO {
     /**
      * A unique id of the object within it's container
      */
-	@XmlAttribute(name="id")
+    @JsonProperty
+	@XmlAttribute
 	public String id;
 
 

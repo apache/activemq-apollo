@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo
+package org.apache.activemq.apollo.web
 
-import broker._
-import broker.jaxb.PropertiesReader
-import dto.{XmlEncoderDecoder, ConnectorDTO, VirtualHostDTO, BrokerDTO}
+import org.apache.activemq.apollo.broker._
+import org.apache.activemq.apollo.broker.jaxb.PropertiesReader
+import org.apache.activemq.apollo.dto.{XmlEncoderDecoder, ConnectorDTO, VirtualHostDTO, BrokerDTO}
 import java.util.regex.Pattern
 import javax.xml.stream.{XMLOutputFactory, XMLInputFactory}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
@@ -29,6 +29,15 @@ import org.apache.activemq.Service
 import javax.xml.bind.{Marshaller, JAXBContext}
 import java.io.{OutputStreamWriter, File}
 import XmlEncoderDecoder._
+
+object ConfigStore {
+
+  var store:ConfigStore = null
+
+  def apply() = store
+  def update(value:ConfigStore) = store=value
+
+}
 
 /**
  * <p>
@@ -146,9 +155,9 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
   } >>: dispatchQueue
 
 
-  def foreachBroker(eval:Boolean)(cb: (BrokerDTO)=> Unit) = using(cb) {
-    cb(unmarshall(latest.data, eval))
-  }
+  def foreachBroker(eval:Boolean)(cb: (BrokerDTO)=> Unit) = reply(cb) {
+    unmarshall(latest.data, eval)
+  } >>: dispatchQueue
 
 
   def getBroker(id:String, eval:Boolean)(cb: (Option[BrokerDTO]) => Unit) = reply(cb) {

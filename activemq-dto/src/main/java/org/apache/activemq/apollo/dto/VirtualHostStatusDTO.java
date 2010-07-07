@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,12 +35,14 @@ public class VirtualHostStatusDTO extends ServiceStatusDTO {
     /**
      * The type of store the virtual host is using.
      */
+    @JsonProperty("store_type")
     @XmlAttribute(name="store-type")
     public String storeType;
 
     /**
      * Ids of all the destinations running on the broker
      */
+    @JsonProperty("destinations")
     @XmlElement(name="destination")
     public List<DestinationSummaryDTO> destinations = new ArrayList<DestinationSummaryDTO>();
 
@@ -46,7 +50,8 @@ public class VirtualHostStatusDTO extends ServiceStatusDTO {
     /**
      * The current running configuration of the object
      */
-    @XmlElement(name="config")
+    @JsonProperty
+    @XmlElement
     public VirtualHostDTO config = null;
 
 }

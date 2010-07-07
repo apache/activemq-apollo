@@ -29,6 +29,7 @@ import JavaConversions._
 import org.apache.activemq.apollo.dto.{VirtualHostStatusDTO, ConnectorStatusDTO, BrokerStatusDTO, BrokerDTO}
 import java.util.concurrent.atomic.AtomicLong
 import org.apache.activemq.apollo.util.LongCounter
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * <p>
@@ -87,13 +88,35 @@ object BufferConversions {
 }
 
 
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+object BrokerRegistry {
 
+  val brokers = new ConcurrentHashMap[String, Broker]()
+
+  def list():Seq[String] = {
+    import JavaConversions._
+    brokers.keys.toSeq
+  }
+
+  def get(id:String) = brokers.get(id)
+
+  def add(id:String, broker:Broker) = brokers.put(id, broker)
+
+  def remove(id:String) = brokers.remove(id)
+
+}
 
 object Broker extends Log {
 
   val broker_id_counter = new AtomicLong()
 
   val STICK_ON_THREAD_QUEUES = true
+
 
   /**
    * Creates a default a configuration object.

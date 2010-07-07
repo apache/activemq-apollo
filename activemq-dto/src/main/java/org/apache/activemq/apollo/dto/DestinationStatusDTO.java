@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -36,18 +38,21 @@ public class DestinationStatusDTO extends DestinationSummaryDTO {
     /**
      * Ids of all connections that are producing to the destination
      */
+    @JsonProperty("producers")
     @XmlElement(name="producer")
     public List<Long> producers = new ArrayList<Long>();
 
     /**
      * Ids of all connections that are consuming from the destination
      */
+    @JsonProperty("consumers")
     @XmlElement(name="consumer")
     public List<Long> consumers = new ArrayList<Long>();
 
     /**
      * Ids of all queues that are associated with the destination
      */
+    @JsonProperty("queues")
     @XmlElement(name="queue")
     public List<Long> queues = new ArrayList<Long>();
 }

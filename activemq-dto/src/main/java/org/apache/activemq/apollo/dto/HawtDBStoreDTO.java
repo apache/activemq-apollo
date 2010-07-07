@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
@@ -29,31 +31,40 @@ import java.io.File;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class HawtDBStoreDTO extends StoreDTO {
 
-    @XmlAttribute(name="directory", required=false)
+    @JsonProperty
+    @XmlAttribute
     public File directory;
 
-    @XmlAttribute(name="archive-directory", required=false)
+    @JsonProperty("archive_directory")
+    @XmlAttribute(name="archive-directory")
     public File archiveDirectory;
 
-	@XmlAttribute(name="index-flush-interval", required=false)
+    @JsonProperty("index_flush_interval")
+	@XmlAttribute(name="index-flush-interval")
 	public long indexFlushInterval = 5 * 1000L;
 
-	@XmlAttribute(name="cleanup-interval", required=false)
+    @JsonProperty("cleanup_interval")
+	@XmlAttribute(name="cleanup-interval")
 	public long cleanupInterval = 30 * 1000L;
 
-	@XmlAttribute(name="journal-log-size", required=false)
+    @JsonProperty("journal_log_size")
+	@XmlAttribute(name="journal-log-size")
 	public int journalLogSize = 1024*1024*64;
 
-    @XmlAttribute(name="journal-batch-size", required=false)
+    @JsonProperty("journal_batch_size")
+    @XmlAttribute(name="journal-batch-size")
     public int journalBatchSize = 1024*256;
 
-    @XmlAttribute(name="index-cache-size", required=false)
+    @JsonProperty("index_cache_size")
+    @XmlAttribute(name="index-cache-size")
     public int indexCacheSize = 5000;
 
-    @XmlAttribute(name="index-page-size", required=false)
+    @JsonProperty("index_page_size")
+    @XmlAttribute(name="index-page-size")
     public short indexPageSize = 512;
 
-    @XmlAttribute(name="fail-if-locked", required=false)
+    @JsonProperty("fail_if_locked")
+    @XmlAttribute(name="fail-if-locked")
     public boolean failIfLocked = false;
 
 

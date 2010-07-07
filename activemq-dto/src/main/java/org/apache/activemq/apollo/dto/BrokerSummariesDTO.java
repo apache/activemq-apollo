@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +32,7 @@ public class BrokerSummariesDTO {
     /**
      * The list of broker summaries. 
      */
+    @JsonProperty
     @XmlElement
     public List<BrokerSummaryDTO> brokers = new ArrayList<BrokerSummaryDTO>();
 

@@ -18,7 +18,6 @@ package org.apache.activemq.apollo.web.resources;
 
 import javax.ws.rs._
 import core.Response
-import org.apache.activemq.apollo.BrokerRegistry
 import Response.Status._
 import java.util.List
 import org.apache.activemq.apollo.dto._
@@ -35,20 +34,17 @@ import org.apache.activemq.apollo.broker._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class BrokerStatus(parent:Broker) extends Resource {
+case class StatusResource(parent:Broker) extends Resource {
 
   val broker:org.apache.activemq.apollo.broker.Broker = BrokerRegistry.get(parent.id)
   if( broker == null ) {
-    println("not in regisitry: "+BrokerRegistry.brokers)
     result(NOT_FOUND)
   }
 
   @GET
   def get() = {
-    println("get hit")
     Future[BrokerStatusDTO] { cb=>
       broker.dispatchQueue {
-        println("building result...")
         val result = new BrokerStatusDTO
 
         result.id = broker.id
@@ -72,7 +68,7 @@ case class BrokerStatus(parent:Broker) extends Resource {
   }
 
 
-  @Path("virtual-hosts")
+  @GET @Path("virtual-hosts")
   def virtualHosts :Array[jl.Long] = {
     val list: List[jl.Long] = get.virtualHosts
     list.toArray(new Array[jl.Long](list.size))
@@ -90,7 +86,7 @@ case class BrokerStatus(parent:Broker) extends Resource {
     }.getOrElse(result(NOT_FOUND))
   }
 
-  @Path("virtual-hosts/{id}")
+  @GET @Path("virtual-hosts/{id}")
   def virtualHost(@PathParam("id") id : Long):VirtualHostStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
       val result = new VirtualHostStatusDTO
@@ -98,6 +94,7 @@ case class BrokerStatus(parent:Broker) extends Resource {
       result.state = virtualHost.serviceState.toString
       result.stateSince = virtualHost.serviceState.since
       result.config = virtualHost.config
+
 
       if( virtualHost.store != null ) {
         result.storeType = virtualHost.store.storeType
@@ -113,7 +110,7 @@ case class BrokerStatus(parent:Broker) extends Resource {
     }
   }
 
-  @Path("virtual-hosts/{id}/destinations/{dest}")
+  @GET @Path("virtual-hosts/{id}/destinations/{dest}")
   def destination(@PathParam("id") id : Long, @PathParam("dest") dest : Long):DestinationStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
       cb(virtualHost.router.destinations.valuesIterator.find { _.id == dest } map { node=>
@@ -132,7 +129,7 @@ case class BrokerStatus(parent:Broker) extends Resource {
     }
   }
 
-  @Path("virtual-hosts/{id}/queues/{queue}")
+  @GET @Path("virtual-hosts/{id}/queues/{queue}")
   def queue(@PathParam("id") id : Long, @PathParam("queue") qid : Long):QueueStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
       import JavaConversions._
@@ -166,8 +163,8 @@ case class BrokerStatus(parent:Broker) extends Resource {
               e.seq = cur.seq
               e.count = cur.count
               e.size = cur.size
-              e.consumers = cur.parked.size
-              e.prefetched = cur.prefetched
+              e.consumerCount = cur.parked.size
+              e.prefetchCount = cur.prefetched
               e.state = cur.label
 
               result.entries.add(e)
@@ -188,13 +185,13 @@ case class BrokerStatus(parent:Broker) extends Resource {
   }
 
 
-  @Path("connectors")
+  @GET @Path("connectors")
   def connectors :Array[jl.Long] = {
     val list: List[jl.Long] = get.connectors
     list.toArray(new Array[jl.Long](list.size))
   }
 
-  @Path("connectors/{id}")
+  @GET @Path("connectors/{id}")
   def connector(@PathParam("id") id : Long):ConnectorStatusDTO = {
 
     Future[Option[ConnectorStatusDTO]] { cb=>

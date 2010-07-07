@@ -19,12 +19,10 @@ package org.apache.activemq.apollo.web
 import com.google.inject.servlet.GuiceServletContextListener
 import org.fusesource.scalate.guice.ScalateModule
 import javax.servlet.ServletContextEvent
-import org.apache.activemq.transport.TransportFactory
-import org.apache.activemq.apollo.broker.{LoggingTracker, Broker}
-import org.apache.activemq.apollo.{FileConfigStore, ConfigStore, BrokerRegistry}
 import java.io.File
-import com.google.inject.{Inject, Provides, Guice, Singleton}
-import org.fusesource.hawtdispatch.ScalaDispatch._
+import com.google.inject.{Provides, Guice, Singleton}
+import org.apache.activemq.apollo.broker.{BrokerRegistry, LoggingTracker, Broker}
+
 
 /**
  * A servlet context listener which registers
@@ -34,13 +32,16 @@ import org.fusesource.hawtdispatch.ScalaDispatch._
  */
 class ServletContextListener extends GuiceServletContextListener {
 
+  var configStore:ConfigStore = null
+
   override def contextInitialized(servletContextEvent: ServletContextEvent) = {
 
     try {
-      BrokerRegistry.configStore = createConfigStore
+      configStore = createConfigStore
+      ConfigStore() = configStore
 
       // Brokers startup async.
-      BrokerRegistry.configStore.foreachBroker(true) { config=>
+      configStore.foreachBroker(true) { config=>
 
         println("Config store contained broker: "+config.id);
 
@@ -50,7 +51,7 @@ class ServletContextListener extends GuiceServletContextListener {
           println("starting broker: "+config.id);
           val broker = new Broker()
           broker.config = config
-          BrokerRegistry.add(broker)
+          BrokerRegistry.add(config.id, broker)
           broker.start()
 
         }
@@ -70,22 +71,23 @@ class ServletContextListener extends GuiceServletContextListener {
     super.contextDestroyed(servletContextEvent);
     
     val tracker = new LoggingTracker("webapp shutdown")
-    BrokerRegistry.configStore.foreachBroker(false) { config=>
+    configStore.foreachBroker(false) { config=>
       // remove started brokers what we configured..
       val broker = BrokerRegistry.remove(config.id);
       if( broker!=null ) {
         tracker.stop(broker)
       }
     }
-    tracker.stop(BrokerRegistry.configStore)
+    tracker.stop(configStore)
     tracker.await
+    configStore = null
   }
 
   def getInjector = Guice.createInjector(new ScalateModule() {
 
     @Singleton
     @Provides
-    def provideConfigStore:ConfigStore = createConfigStore
+    def provideConfigStore:ConfigStore = configStore
 
     // lets add any package names which contain JAXRS resources
     // https://jersey.dev.java.net/issues/show_bug.cgi?id=485
@@ -94,6 +96,7 @@ class ServletContextListener extends GuiceServletContextListener {
       "org.codehaus.jackson.jaxrs" ::
       super.resourcePackageNames
   })
+
 
   def createConfigStore():ConfigStore = {
     println("created store")

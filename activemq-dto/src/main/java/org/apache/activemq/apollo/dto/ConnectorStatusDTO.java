@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,19 +35,21 @@ public class ConnectorStatusDTO extends ServiceStatusDTO {
     /**
      * The number of connections that this connector has accepted.
      */
-	@XmlAttribute(name="accepted")
+    @JsonProperty
+	@XmlAttribute
 	public Long accepted;
 
     /**
      * Ids of all open connections that the connector is managing.
      */
+    @JsonProperty("connections")
     @XmlElement(name="connection")
     public List<Long> connections = new ArrayList<Long>();
 
     /**
      * The current running configuration of the object
      */
-    @XmlElement(name="config")
+    @XmlElement
     public ConnectorDTO config = null;
 
 }

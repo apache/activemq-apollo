@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.*;
 
 /**
@@ -31,18 +33,21 @@ public class ConnectorDTO extends ServiceDTO<String> {
     /**
      * The transport uri which it will accept connections on.
      */
+    @JsonProperty
     @XmlAttribute
     public String bind;
 
     /**
      * The protocol that the transport will use.
      */
+    @JsonProperty
     @XmlAttribute
     public String protocol;
 
     /**
      * The uri which will be advertised for remote endpoints to connect to.
      */
+    @JsonProperty
     @XmlAttribute
     public String advertise;
     

@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
@@ -34,7 +36,8 @@ public class BrokerSummaryDTO extends StringIdDTO {
     /**
      * The latest revision of the broker config.
      */
-	@XmlAttribute(name="rev")
+    @JsonProperty
+	@XmlAttribute
 	public Integer rev;
 
 

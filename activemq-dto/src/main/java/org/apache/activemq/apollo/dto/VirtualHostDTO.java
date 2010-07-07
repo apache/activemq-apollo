@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import java.util.ArrayList;
 
 import javax.xml.bind.annotation.*;
@@ -27,22 +29,26 @@ import javax.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class VirtualHostDTO extends ServiceDTO<String> {
 
+    @JsonProperty("host_names")
     @XmlElement(name="host-name", required=true)
     public ArrayList<String> hostNames = new ArrayList<String>();
 
-    @XmlElementRef   
+    @JsonProperty
+    @XmlElementRef
     public StoreDTO store;
 
     /**
      * Should queues be auto created when they are first accessed
      * by clients?
      */
+    @JsonProperty("auto_create_queues")
     @XmlAttribute(name="auto-create-queues")
     public boolean autoCreateQueues = true;
 
     /**
      * Should queues be purged on startup?
      */
+    @JsonProperty("purge_on_startup")
     @XmlAttribute(name="purge-on-startup")
     public boolean purgeOnStartup = false;
 }

@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,40 +35,62 @@ public class QueueStatusDTO extends LongIdDTO {
     /**
      * A unique id of the object within it's container
      */
-	@XmlAttribute(name="enqueue-item-counter")
+    @JsonProperty
+	@XmlAttribute
 	public long id;
 
+    @JsonProperty("enqueue_item_counter")
     @XmlAttribute(name="enqueue-item-counter")
     public long enqueueItemCounter;
+
+    @JsonProperty("dequeue_item_counter")
     @XmlAttribute(name="dequeue-item-counter")
     public long dequeueItemCounter;
+
+    @JsonProperty("enqueue_size_counter")
     @XmlAttribute(name="enqueue-size-counter")
     public long enqueueSizeCounter;
+
+    @JsonProperty("dequeue_size_counter")
     @XmlAttribute(name="dequeue-size-counter")
     public long dequeueSizeCounter;
+
+    @JsonProperty("nack_item_counter")
     @XmlAttribute(name="nack-item-counter")
     public long nackItemCounter;
+
+    @JsonProperty("nack_size_counter")
     @XmlAttribute(name="nack-size-counter")
     public long nackSizeCounter;
 
+    @JsonProperty("queue_size")
     @XmlAttribute(name="queue-size")
     public long queueSize;
+
+    @JsonProperty("queue_items")
     @XmlAttribute(name="queue-items")
     public long queueItems;
 
+    @JsonProperty("loading_size")
     @XmlAttribute(name="loading-size")
     public int loadingSize;
+
+    @JsonProperty("flushing_size")
     @XmlAttribute(name="flushing-size")
     public int flushingSize;
+
+    @JsonProperty("flushing_items")
     @XmlAttribute(name="flushed-items")
     public int flushedItems;
 
-    @XmlAttribute(name="capacity")
+    @JsonProperty
+    @XmlAttribute
     public int capacity;
 
     /**
      * Status of the entries in the queue
      */
+    @JsonProperty("entries")
     @XmlElement(name="entry")
     public List<EntryStatusDTO> entries = new ArrayList<EntryStatusDTO>();
 

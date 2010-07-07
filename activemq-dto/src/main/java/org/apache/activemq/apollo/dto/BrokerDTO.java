@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,38 +37,44 @@ public class BrokerDTO extends ServiceDTO<String> {
     /**
      * Used to track config revisions.
      */
-    @XmlAttribute(name="rev")
+    @JsonProperty
+    @XmlAttribute
     public int rev;
 
     /**
      * Used to track who last modified the configuration.
      */
+    @JsonProperty("modified_by")
     @XmlAttribute(name="modified-by")
     public String modifiedBy;
 
     /**
      * Used to store any configuration notes.
      */
+    @JsonProperty
     @XmlElement
     public String notes;
 
     /**
      * A broker can service many virtual hosts.
      */
+    @JsonProperty("virtual_hosts")
     @XmlElement(name="virtual-host")
     public List<VirtualHostDTO> virtualHosts = new ArrayList<VirtualHostDTO>();
 
     /**
      * A broker accepts connections via it's configured connectors.
      */
-    @XmlElement(name="connector")
+    @JsonProperty
+    @XmlElement
     public List<ConnectorDTO> connectors = new ArrayList<ConnectorDTO>();
 
     /**
      * The base data directory of the broker.  It will store
      * persistent data under it. 
      */
-    @XmlAttribute(name="basedir")
+    @JsonProperty
+    @XmlAttribute
     public String basedir;
 
     

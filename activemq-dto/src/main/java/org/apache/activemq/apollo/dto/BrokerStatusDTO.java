@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,25 +35,29 @@ public class BrokerStatusDTO extends ServiceStatusDTO {
     /**
      * The current time on the broker machine.  In milliseconds since the epoch.
      */
+    @JsonProperty("current_time")
 	@XmlAttribute(name="current-time")
 	public long currentTime;
 
     /**
      * Ids of all the virtual hosts running on the broker
      */
+    @JsonProperty("virtual_hosts")
     @XmlElement(name="virtual-host")
     public List<Long> virtualHosts = new ArrayList<Long>();
 
     /**
      * Ids of all the connections running on the broker
      */
-    @XmlElement(name="connectors")
+    @JsonProperty("connectors")
+    @XmlElement(name="connector")
     public List<Long> connectors = new ArrayList<Long>();
 
     /**
      * The current running configuration of the object
      */
-    @XmlElement(name="config")
+    @JsonProperty
+    @XmlElement
     public BrokerDTO config = null;
 
 }

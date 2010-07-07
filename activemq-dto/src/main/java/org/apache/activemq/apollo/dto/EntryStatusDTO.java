@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
@@ -34,22 +36,28 @@ public class EntryStatusDTO {
     /**
      * A unique id of the object within it's container
      */
-	@XmlAttribute(name="seq")
+    @JsonProperty
+	@XmlAttribute
 	public long seq;
 
-    @XmlAttribute(name="count")
+    @JsonProperty
+    @XmlAttribute
     public int count;
 
-    @XmlAttribute(name="size")
+    @JsonProperty
+    @XmlAttribute
     public int size;
 
-    @XmlAttribute(name="state")
+    @JsonProperty
+    @XmlAttribute
     public String state;
 
-    @XmlAttribute(name="consumers")
-    public int consumers;
+    @JsonProperty("consumer_count")
+    @XmlAttribute(name = "consumer-count")
+    public int consumerCount;
 
-    @XmlAttribute(name="prefetched")
-    public int prefetched;
+    @JsonProperty("prefetch_count")
+    @XmlAttribute(name = "prefetch-count")
+    public int prefetchCount;
 
 }

@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
@@ -31,7 +33,8 @@ public class ServiceDTO<ID> extends StringIdDTO {
     /**
      * Should this service be running?
      */
-    @XmlAttribute(name="enabled")
+    @JsonProperty
+    @XmlAttribute
     public boolean enabled = true;
 
 

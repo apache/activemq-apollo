@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import javax.xml.bind.annotation.*;
 
 /**
@@ -31,13 +33,15 @@ public class DestinationSummaryDTO extends LongIdDTO {
     /**
      * The destination name
      */
-    @XmlElement(name="name")
+    @JsonProperty
+    @XmlElement
     public String name;
 
     /**
      * The routing domain
      */
-    @XmlElement(name="domain")
+    @JsonProperty
+    @XmlElement
     public String domain;
     
 }

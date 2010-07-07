@@ -23,12 +23,12 @@ import core.{Response, Context}
 import org.fusesource.scalate.util.Logging
 import reflect.{BeanProperty}
 import com.sun.jersey.api.view.ImplicitProduces
-import org.apache.activemq.apollo.{BrokerRegistry, ConfigStore}
 import org.fusesource.hawtdispatch.Future
 import Response._
 import Response.Status._
 import org.apache.activemq.apollo.dto.{IdListDTO, BrokerSummaryDTO, BrokerDTO}
 import java.util.{Arrays, Collections}
+import org.apache.activemq.apollo.web.ConfigStore
 
 /**
  * Defines the default representations to be used on resources
@@ -38,7 +38,7 @@ import java.util.{Arrays, Collections}
 trait Resource extends Logging {
 
   def result[T](value:Status, message:Any=null):T = {
-    val response = status(value);
+    val response = Response.status(value)
     if( message!=null ) {
       response.entity(message)
     }
@@ -54,7 +54,7 @@ trait Resource extends Logging {
 class Root() extends Resource {
 
   @Context
-  var configStore:ConfigStore = BrokerRegistry.configStore;
+  var configStore = ConfigStore()
 
   @GET
   def get() = {
@@ -76,7 +76,7 @@ class Root() extends Resource {
 case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
 
   @Context
-  var configStore:ConfigStore = BrokerRegistry.configStore;
+  var configStore = ConfigStore()
 
   @GET
   def get() = {
@@ -123,6 +123,6 @@ case class Broker(parent:Root, @BeanProperty id: String) extends Resource {
   }
 
   @Path("status")
-  def status = BrokerStatus(this)
+  def status = StatusResource(this)
 }
 
