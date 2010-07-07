@@ -17,8 +17,16 @@
 package org.apache.activemq.apollo
 
 import java.nio.ByteBuffer
+import org.fusesource.hawtdispatch.Retained
+import org.apache.activemq.Service
 
-trait MemoryAllocation {
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+trait MemoryAllocation extends Retained {
   def size:Int
   def buffer:ByteBuffer
 }
@@ -29,7 +37,6 @@ trait MemoryAllocation {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait MemoryPool {
+trait MemoryPool extends Service {
   def alloc(size:Int):MemoryAllocation
-  def free(ma:MemoryAllocation)
 }

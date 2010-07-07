@@ -16,39 +16,35 @@
  */
 package org.apache.activemq.broker.store.hawtdb
 
-import org.apache.activemq.apollo.store.StoreFactory
-import org.apache.activemq.apollo.dto.{HawtDBStoreDTO, StoreDTO}
-import org.apache.activemq.apollo.broker.{Reporting, ReporterLevel, Reporter}
-import ReporterLevel._
+import java.io.File
+import java.lang.String
+import org.apache.activemq.apollo.MemoryPoolFactory
 
 /**
  * <p>
- * Hook to use a HawtDBStore when a HawtDBStoreDTO is
- * used in a broker configuration.
+ * Hook to use a HawtDBMemoryPool for the memory pool implementation.
  * </p>
  * <p>
  * This class is discovered using the following resource file:
- * <code>META-INF/services/org.apache.activemq.apollo/stores</code>
+ * <code>META-INF/services/org.apache.activemq.apollo/memory-pools</code>
  * </p>
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBMemoryPoolSPI extends StoreFactory.SPI {
+class HawtDBMemoryPoolSPI extends MemoryPoolFactory.SPI {
 
-  def create(config: StoreDTO) = {
-    if( config.isInstanceOf[HawtDBStoreDTO]) {
-// TODO:      new HawtDBMemoryPool
-      null
+  val prefix: String = "hawtdb:"
+
+  def create(config: String) = {
+    if( config.startsWith(prefix) ) {
+      val file = new File(config.substring(prefix.length))
+      new HawtDBMemoryPool(file)
     } else {
       null
     }
   }
 
-   def validate(config: StoreDTO, reporter:Reporter):ReporterLevel = {
-     if( config.isInstanceOf[HawtDBStoreDTO]) {
-       HawtDBStore.validate(config.asInstanceOf[HawtDBStoreDTO], reporter)
-     } else {
-       null
-     }
+   def validate(config: String):Boolean = {
+     config.startsWith(prefix) && !config.substring(prefix.length).isEmpty
    }
 }
