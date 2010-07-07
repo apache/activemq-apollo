@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.org.apache.activemq.filter.{MessageEvaluationContext}
+import _root_.org.apache.activemq.filter.{Filterable}
 import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
@@ -73,7 +73,7 @@ trait DeliverySession extends Sink[Delivery] {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait Message {
+trait Message extends Filterable {
 
   /**
    * the globally unique id of the message
@@ -105,11 +105,6 @@ trait Message {
    * where the message was sent to.
    */
   def destination: Destination
-
-  /**
-   * used to apply a selector against the message.
-   */
-  def messageEvaluationContext:MessageEvaluationContext
 
   /**
    * The protocol encoding of the message.

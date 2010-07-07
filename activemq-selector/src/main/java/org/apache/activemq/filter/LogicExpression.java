@@ -35,7 +35,7 @@ public abstract class LogicExpression extends BinaryExpression implements Boolea
     public static BooleanExpression createOR(BooleanExpression lvalue, BooleanExpression rvalue) {
         return new LogicExpression(lvalue, rvalue) {
 
-            public Object evaluate(MessageEvaluationContext message) throws FilterException {
+            public Object evaluate(Filterable message) throws FilterException {
 
                 Boolean lv = (Boolean)left.evaluate(message);
                 // Can we do an OR shortcut??
@@ -56,7 +56,7 @@ public abstract class LogicExpression extends BinaryExpression implements Boolea
     public static BooleanExpression createAND(BooleanExpression lvalue, BooleanExpression rvalue) {
         return new LogicExpression(lvalue, rvalue) {
 
-            public Object evaluate(MessageEvaluationContext message) throws FilterException {
+            public Object evaluate(Filterable message) throws FilterException {
 
                 Boolean lv = (Boolean)left.evaluate(message);
 
@@ -78,9 +78,9 @@ public abstract class LogicExpression extends BinaryExpression implements Boolea
         };
     }
 
-    public abstract Object evaluate(MessageEvaluationContext message) throws FilterException;
+    public abstract Object evaluate(Filterable message) throws FilterException;
 
-    public boolean matches(MessageEvaluationContext message) throws FilterException {
+    public boolean matches(Filterable message) throws FilterException {
         Object object = evaluate(message);
         return object != null && object == Boolean.TRUE;
     }

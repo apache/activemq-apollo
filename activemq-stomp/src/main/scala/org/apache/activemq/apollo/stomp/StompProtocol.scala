@@ -30,7 +30,8 @@ import BufferConversions._
 import StompFrameConstants._
 import java.io.IOException
 import org.apache.activemq.broker.store.StoreBatch
-
+import org.apache.activemq.selector.SelectorParser
+import org.apache.activemq.filter.{BooleanExpression, FilterException}
 
 object StompConstants {
 
@@ -84,7 +85,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   
   protected def dispatchQueue:DispatchQueue = connection.dispatchQueue
 
-  class StompConsumer(val destination:Destination, val ackMode:AsciiBuffer, val selector:AsciiBuffer) extends BaseRetained with DeliveryConsumer {
+  class StompConsumer(val destination:Destination, val ackMode:AsciiBuffer, val selector:(AsciiBuffer, BooleanExpression)) extends BaseRetained with DeliveryConsumer {
     val dispatchQueue = StompProtocolHandler.this.dispatchQueue
 
     dispatchQueue.retain
@@ -95,7 +96,11 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
     def matches(delivery:Delivery) = {
       if( delivery.message.protocol eq PROTOCOL ) {
-        true
+        if( selector!=null ) {
+          selector._2.matches(delivery.message)
+        } else {
+          true
+        }
       } else {
         false
       }
@@ -279,6 +284,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   def send_via_route(route:DeliveryProducerRoute, frame:StompFrame) = {
     var storeBatch:StoreBatch=null
+    // User might be asking for ack that we have prcoessed the message..
+    val receipt = frame.header(Stomp.Headers.RECEIPT_REQUESTED)
+
     if( !route.targets.isEmpty ) {
 
       // We may need to add some headers..
@@ -295,8 +303,6 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       delivery.message = message
       delivery.size = message.frame.size
 
-      // User might be asking for ack that we have prcoessed the message..
-      val receipt = frame.header(Stomp.Headers.RECEIPT_REQUESTED)
       if( receipt!=null ) {
         delivery.ack = { storeTx =>
           connection_sink.offer(StompFrame(Responses.RECEIPT, List((Stomp.Headers.Response.RECEIPT_ID, receipt))))
@@ -314,6 +320,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
     } else {
       // info("Dropping message.  No consumers interested in message.")
+      if( receipt!=null ) {
+        connection_sink.offer(StompFrame(Responses.RECEIPT, List((Stomp.Headers.Response.RECEIPT_ID, receipt))))
+      }
     }
 
 
@@ -341,8 +350,14 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         val selector = get(headers, Headers.Subscribe.SELECTOR) match {
           case None=> null
           case Some(x)=> x
+            try {
+              (x, SelectorParser.parse(x.utf8.toString))
+            } catch {
+              case e:FilterException =>
+                die("Invalid selector expression: "+e.getMessage)
+              null
+            }
         }
-
 
         consumers.get(id) match {
           case None=>
@@ -368,7 +383,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
           case Some(ack) =>
             ack(null)
           case None =>
-            die("The specified message id is not waiting for a client ack: "+messageId)
+            // This can easily happen if the consumer is doing client acks on something like
+            // a non-durable topic.
+            // trace("The specified message id is not waiting for a client ack: %s", messageId)
         }
       case None=> die("message id header not set")
     }

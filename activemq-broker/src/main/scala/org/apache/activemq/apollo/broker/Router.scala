@@ -298,14 +298,24 @@ class DeliveryProducerRoute(val router:Router, val destination:Destination, val 
     if( full ) {
       false
     } else {
-      if( delivery.message.persistent && router.host.store!=null ) {
-        delivery.storeBatch = router.host.store.createStoreBatch
-        delivery.storeKey = delivery.storeBatch.store(delivery.createMessageRecord)
-      }
+
+      // Do we need to store the message if we have a matching consumer?
+      var storeOnMatch = delivery.message.persistent && router.host.store!=null
 
       targets.foreach { target=>
-        if( !target.offer(delivery) ) {
-          overflowSessions ::= target
+
+        // only delivery to matching consumers
+        if( target.consumer.matches(delivery) ) {
+          
+          if( storeOnMatch ) {
+            delivery.storeBatch = router.host.store.createStoreBatch
+            delivery.storeKey = delivery.storeBatch.store(delivery.createMessageRecord)
+            storeOnMatch = false
+          }
+
+          if( !target.offer(delivery) ) {
+            overflowSessions ::= target
+          }
         }
       }
 

@@ -27,8 +27,16 @@ object StompBroker {
 
   var address = "0.0.0.0"
   var port = 61613
+  var storeType = "hawtdb"
 
-  def main(args:Array[String]) = {
+  def main(args:Array[String]) = run
+
+  def run = {
+    println("=======================")
+    println("Press ENTER to shutdown");
+    println("=======================")
+    println("")
+
     val uri = "tcp://"+address+":"+port
 
     println("Starting stomp broker: "+uri)
@@ -39,24 +47,49 @@ object StompBroker {
     connector.protocol = "stomp"
     connector.advertise = uri
 
-//    val store = new CassandraStoreDTO
-//    store.hosts.add("localhost:9160")
+    val store = storeType match {
+      case "none" =>
+        null
 
-    val store = new HawtDBStoreDTO
-    store.directory = new File("activemq-data")
-    
+      case "hawtdb" =>
+        val rc = new HawtDBStoreDTO
+        rc.directory = new File("activemq-data")
+        rc
+
+      case "cassandra" =>
+        val rc = new CassandraStoreDTO
+        rc.hosts.add("localhost:9160")
+        rc
+    }
     broker.config.virtualHosts.get(0).store = store
 
-    val tracker = new LoggingTracker("broker startup")
+
+
+    var tracker = new LoggingTracker("broker startup")
     tracker.start(broker)
     tracker.await
     println("Startup complete.")
 
     System.in.read
+
     println("Shutting down...")
-    broker.stop
-    println("Shutdown complete.")
+    tracker = new LoggingTracker("broker shutdown")
+    tracker.stop(broker)
+    tracker.await
+    
+    println("=======================")
+    println("Shutdown");
+    println("=======================")
+
   }
 
-  
+  override def toString() = {
+    "--------------------------------------\n"+
+    "StompBroker Properties\n"+
+    "--------------------------------------\n"+
+    "address          = "+address+"\n"+
+    "port             = "+port+"\n"+
+    "storeType        = "+storeType+"\n" +
+    ""
+  }  
 }

@@ -17,10 +17,11 @@
 package org.apache.activemq.apollo.stomp
 
 import _root_.java.util.LinkedList
-import _root_.org.apache.activemq.filter.{Expression, MessageEvaluationContext}
+import _root_.org.apache.activemq.filter.{Expression, Filterable}
 import _root_.org.fusesource.hawtbuf._
 import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.broker.{Sizer, Destination, BufferConversions, Message}
+import java.lang.{String, Class}
 
 /**
  *
@@ -36,6 +37,7 @@ object StompFrameConstants {
 import StompFrameConstants._
 import StompConstants._;
 import BufferConversions._
+import Buffer._
 
 case class StompFrameMessage(frame:StompFrame) extends Message {
   
@@ -72,33 +74,6 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
    */
   var destination: Destination = null
 
-  /**
-   * used to apply a selector against the message.
-   */
-  lazy val messageEvaluationContext = new MessageEvaluationContext() {
-
-    def getBodyAs[T](clazz:Class[T]) = {
-      throw new UnsupportedOperationException
-    }
-
-    def getPropertyExpression(name:String):Expression = {
-      throw new UnsupportedOperationException
-    }
-
-    @deprecated("this should go away.")
-    def getLocalConnectionId() = {
-      throw new UnsupportedOperationException
-    }
-
-    def getDestination[T]():T = {
-      throw new UnsupportedOperationException
-    }
-
-    def setDestination(destination:Any):Unit = {
-      throw new UnsupportedOperationException
-    }
-  }
-
   for( header <- (frame.updated_headers ::: frame.headers).reverse ) {
     header match {
       case (Stomp.Headers.Message.MESSAGE_ID, value) =>
@@ -114,7 +89,54 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
       case _ =>
     }
   }
+
+  def getBodyAs[T](toType : Class[T]) = {
+    (if( toType == classOf[String] ) {
+      frame.content.utf8
+    } else if (toType == classOf[Buffer]) {
+      frame.content
+    } else if (toType == classOf[AsciiBuffer]) {
+      frame.content.ascii
+    } else if (toType == classOf[UTF8Buffer]) {
+      frame.content.utf8
+    } else {
+      null
+    }).asInstanceOf[T]
+  }
+
+  def getLocalConnectionId = {
+    val pos = id.indexOf(':')
+    assert(pos >0 )
+    id.slice(id.offset, pos).toString
+  }
+
+  /* avoid paying the price of creating the header index. lots of times we don't need it */
+  lazy val headerIndex: Map[AsciiBuffer, AsciiBuffer] =  {
+    var rc = Map[AsciiBuffer, AsciiBuffer]()
+    for( header <- (frame.updated_headers ::: frame.headers).reverse ) {
+      rc += (header._1 -> header._2)
+    }
+    rc
+  }
+
+  def getProperty(name: String):AnyRef = {
+    (name match {
+      // TODO: handle more of the JMS Types that ActiveMQ 5 supports.
+      case "JMSMessageID" =>
+        Some(id)
+      case "JMSType" =>
+        headerIndex.get(ascii("type"))
+      case _=>
+        headerIndex.get(ascii(name))
+    }) match {
+      case Some(rc) => rc.utf8.toString
+      case None => null
+    }
+  }
+
 }
+
+
 
 object StompFrame extends Sizer[StompFrame] {
   def size(value:StompFrame) = value.size   

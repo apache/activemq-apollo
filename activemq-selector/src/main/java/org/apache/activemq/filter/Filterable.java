@@ -14,54 +14,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.activemq.filter;
 
-
 /**
- * Represents a property expression
+ * A Filterable is the object being evaluated by the filters.  It provides
+ * access to filtered properties.
  * 
- * @version $Revision: 1.5 $
+ * @version $Revision: 1.4 $
  */
-public class PropertyExpression implements Expression {
-
-    private final String name;
-
-    public PropertyExpression(String name) {
-        this.name = name;
-    }
-
-    public Object evaluate(Filterable message) throws FilterException {
-        return message.getProperty(name);
-    }
-
-    public String getName() {
-        return name;
-    }
+public interface Filterable {
 
     /**
-     * @see java.lang.Object#toString()
+     * This method is used by message filters which do content based routing (Like the XPath
+     * based selectors).
+     *
+     * @param <T>
+     * @param type
+     * @return
+     * @throws FilterException
      */
-    public String toString() {
-        return name;
-    }
+    <T> T getBodyAs(Class<T> type) throws FilterException;
 
     /**
-     * @see java.lang.Object#hashCode()
+     * Extracts the named message property
+     *
+     * @param name
+     * @return
      */
-    public int hashCode() {
-        return name.hashCode();
-    }
+    Object getProperty(String name);
 
     /**
-     * @see java.lang.Object#equals(java.lang.Object)
+     * Used by the NoLocal filter.
+     *
+     * @return a unique id for the connection that produced the message.
      */
-    public boolean equals(Object o) {
-        if (o == null || !this.getClass().equals(o.getClass())) {
-            return false;
-        }
-        return name.equals(((PropertyExpression)o).name);
-
-    }
+    Object getLocalConnectionId();
 
 }

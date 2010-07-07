@@ -23,14 +23,14 @@ import junit.framework.TestCase;
 import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.filter.Expression;
 import org.apache.activemq.filter.FilterException;
-import org.apache.activemq.filter.MessageEvaluationContext;
+import org.apache.activemq.filter.Filterable;
 
 /**
  * @version $Revision: 1.7 $
  */
 public class SelectorTest extends TestCase {
 		
-    class MockMessage implements MessageEvaluationContext {
+    class MockMessage implements Filterable {
 
     	HashMap<String, Object> properties = new HashMap<String, Object>();
 		private String text;
@@ -95,7 +95,17 @@ public class SelectorTest extends TestCase {
 			return null;
 		}
 
-		public <T> T getDestination() {
+        public Object getProperty(String name) {
+            if( "JMSType".equals(name) ) {
+                return type;
+            }
+            if( "JMSMessageID".equals(name) ) {
+                return messageId;
+            }
+            return properties.get(name);
+        }
+
+        public <T> T getDestination() {
 			return (T)destination;
 		}
 
@@ -103,20 +113,6 @@ public class SelectorTest extends TestCase {
 			return localConnectionId;
 		}
 
-		public Expression getPropertyExpression(final String name) {
-			return new Expression() {
-		        public Object evaluate(MessageEvaluationContext mc) throws FilterException {
-	                MockMessage mockMessage = (MockMessage)mc;
-	    			if( "JMSType".equals(name) ) {
-	    				return mockMessage.type;
-	    			}
-	    			if( "JMSMessageID".equals(name) ) {
-	    				return mockMessage.messageId;
-	    			}
-					return mockMessage.properties.get(name);
-		        }
-			};
-		}
     	
     }
 

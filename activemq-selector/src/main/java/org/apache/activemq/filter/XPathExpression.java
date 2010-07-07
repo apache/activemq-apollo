@@ -58,7 +58,7 @@ public final class XPathExpression implements BooleanExpression {
     private final XPathEvaluator evaluator;
 
     public static interface XPathEvaluator {
-        boolean evaluate(MessageEvaluationContext message) throws FilterException;
+        boolean evaluate(Filterable message) throws FilterException;
     }
 
     XPathExpression(String xpath) {
@@ -88,7 +88,7 @@ public final class XPathExpression implements BooleanExpression {
         }
     }
 
-    public Object evaluate(MessageEvaluationContext message) throws FilterException {
+    public Object evaluate(Filterable message) throws FilterException {
         return evaluator.evaluate(message) ? Boolean.TRUE : Boolean.FALSE;
     }
 
@@ -101,7 +101,7 @@ public final class XPathExpression implements BooleanExpression {
      * @return true if the expression evaluates to Boolean.TRUE.
      * @throws FilterException
      */
-    public boolean matches(MessageEvaluationContext message) throws FilterException {
+    public boolean matches(Filterable message) throws FilterException {
         Object object = evaluate(message);
         return object != null && object == Boolean.TRUE;
     }

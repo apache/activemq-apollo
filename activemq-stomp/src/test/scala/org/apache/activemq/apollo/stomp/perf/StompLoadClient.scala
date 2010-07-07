@@ -50,7 +50,9 @@ object StompLoadClient {
   var useContentLength=true
   var persistent = false;
   var syncSend = false;
+  var headers = List[String]()
   var ack = "client";
+  var selector:String = null
 
   var destinationType = "queue";
   var destinationCount = 1;
@@ -105,7 +107,6 @@ object StompLoadClient {
 
 
     System.in.read()
-    println("=======================")
     done.set(true)
 
     // wait for the threads to finish..
@@ -122,6 +123,7 @@ object StompLoadClient {
     sampleThread.interrupt
     sampleThread.join
 
+    println("=======================")
     println("Shutdown");
     println("=======================")
 
@@ -134,7 +136,7 @@ object StompLoadClient {
     "uri              = "+uri+"\n"+
     "destinationType  = "+destinationType+"\n"+
     "destinationCount = "+destinationCount+"\n" +
-    "sampleInterval   = "+sampleInterval+"\n"
+    "sampleInterval   = "+sampleInterval+"\n" +
     "\n"+
     "--- Producer Properties ---\n"+
     "producers        = "+producers+"\n"+
@@ -143,11 +145,13 @@ object StompLoadClient {
     "syncSend         = "+syncSend+"\n"+
     "useContentLength = "+useContentLength+"\n"+
     "producerSleep    = "+producerSleep+"\n"+
+    "headers          = "+headers+"\n"+
     "\n"+
     "--- Consumer Properties ---\n"+
     "consumers        = "+consumers+"\n"+
     "consumerSleep    = "+consumerSleep+"\n"+
     "ack              = "+ack+"\n"+
+    "selector         = "+selector+"\n"+
     ""
 
   }
@@ -283,6 +287,7 @@ object StompLoadClient {
               "destination:"+destination(id)+"\n"+
                { if(persistent) "persistent:true\n" else "" } +
                { if(syncSend) "receipt:xxx\n" else "" } +
+               { headers.foldLeft("") { case (sum, v)=> sum+v+"\n" } } +
                { if(useContentLength) "content-length:"+messageSize+"\n" else "" } +
               "\n"+message(name)).getBytes("UTF-8")
 
@@ -334,7 +339,10 @@ object StompLoadClient {
           this.client=client
           val headers = Map[AsciiBuffer, AsciiBuffer]();
           client.send("""
-SUBSCRIBE
+SUBSCRIBE""" + (if(selector==null) {""} else {
+"""
+selector: """+selector
+}) + """
 ack:"""+ack+"""
 destination:"""+destination(id)+"""
 

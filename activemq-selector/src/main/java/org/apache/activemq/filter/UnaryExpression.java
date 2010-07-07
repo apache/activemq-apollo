@@ -39,7 +39,7 @@ public abstract class UnaryExpression implements Expression {
 
     public static Expression createNegate(Expression left) {
         return new UnaryExpression(left) {
-            public Object evaluate(MessageEvaluationContext message) throws FilterException {
+            public Object evaluate(Filterable message) throws FilterException {
                 Object rvalue = right.evaluate(message);
                 if (rvalue == null) {
                     return null;
@@ -70,7 +70,7 @@ public abstract class UnaryExpression implements Expression {
         final Collection<Object> inList = t;
 
         return new BooleanUnaryExpression(right) {
-            public Object evaluate(MessageEvaluationContext message) throws FilterException {
+            public Object evaluate(Filterable message) throws FilterException {
 
                 Object rvalue = right.evaluate(message);
                 if (rvalue == null) {
@@ -124,7 +124,7 @@ public abstract class UnaryExpression implements Expression {
             super(left);
         }
 
-        public boolean matches(MessageEvaluationContext message) throws FilterException {
+        public boolean matches(Filterable message) throws FilterException {
             Object object = evaluate(message);
             return object != null && object == Boolean.TRUE;
         }
@@ -132,7 +132,7 @@ public abstract class UnaryExpression implements Expression {
 
     public static BooleanExpression createNOT(BooleanExpression left) {
         return new BooleanUnaryExpression(left) {
-            public Object evaluate(MessageEvaluationContext message) throws FilterException {
+            public Object evaluate(Filterable message) throws FilterException {
                 Boolean lvalue = (Boolean)right.evaluate(message);
                 if (lvalue == null) {
                     return null;
@@ -156,7 +156,7 @@ public abstract class UnaryExpression implements Expression {
 
     public static BooleanExpression createBooleanCast(Expression left) {
         return new BooleanUnaryExpression(left) {
-            public Object evaluate(MessageEvaluationContext message) throws FilterException {
+            public Object evaluate(Filterable message) throws FilterException {
                 Object rvalue = right.evaluate(message);
                 if (rvalue == null) {
                     return null;

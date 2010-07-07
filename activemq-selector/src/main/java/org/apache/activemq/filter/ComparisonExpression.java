@@ -118,9 +118,9 @@ public abstract class ComparisonExpression extends BinaryExpression implements B
         }
 
         /**
-         * @see org.apache.activemq.filter.Expression#evaluate(MessageEvaluationContext)
+         * @see org.apache.activemq.filter.Expression#evaluate(Filterable)
          */
-        public Object evaluate(MessageEvaluationContext message) throws FilterException {
+        public Object evaluate(Filterable message) throws FilterException {
 
             Object rv = this.getRight().evaluate(message);
 
@@ -137,7 +137,7 @@ public abstract class ComparisonExpression extends BinaryExpression implements B
             return likePattern.matcher((String)rv).matches() ? Boolean.TRUE : Boolean.FALSE;
         }
 
-        public boolean matches(MessageEvaluationContext message) throws FilterException {
+        public boolean matches(Filterable message) throws FilterException {
             Object object = evaluate(message);
             return object != null && object == Boolean.TRUE;
         }
@@ -199,7 +199,7 @@ public abstract class ComparisonExpression extends BinaryExpression implements B
     private static BooleanExpression doCreateEqual(Expression left, Expression right) {
         return new ComparisonExpression(left, right) {
 
-            public Object evaluate(MessageEvaluationContext message) throws FilterException {
+            public Object evaluate(Filterable message) throws FilterException {
                 Object lv = left.evaluate(message);
                 Object rv = right.evaluate(message);
 
@@ -332,7 +332,7 @@ public abstract class ComparisonExpression extends BinaryExpression implements B
         }
     }
 
-    public Object evaluate(MessageEvaluationContext message) throws FilterException {
+    public Object evaluate(Filterable message) throws FilterException {
         Comparable<Comparable> lv = (Comparable)left.evaluate(message);
         if (lv == null) {
             return null;
@@ -425,7 +425,7 @@ public abstract class ComparisonExpression extends BinaryExpression implements B
 
     protected abstract boolean asBoolean(int answer);
 
-    public boolean matches(MessageEvaluationContext message) throws FilterException {
+    public boolean matches(Filterable message) throws FilterException {
         Object object = evaluate(message);
         return object != null && object == Boolean.TRUE;
     }

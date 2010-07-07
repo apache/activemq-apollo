@@ -31,7 +31,7 @@ public class ConstantExpression implements Expression {
             super(value);
         }
 
-        public boolean matches(MessageEvaluationContext message) throws FilterException {
+        public boolean matches(Filterable message) throws FilterException {
             Object object = evaluate(message);
             return object != null && object == Boolean.TRUE;
         }
@@ -92,7 +92,7 @@ public class ConstantExpression implements Expression {
         return new ConstantExpression(value);
     }
 
-    public Object evaluate(MessageEvaluationContext message) throws FilterException {
+    public Object evaluate(Filterable message) throws FilterException {
         return value;
     }
 

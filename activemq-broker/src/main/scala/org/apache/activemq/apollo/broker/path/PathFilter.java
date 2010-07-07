@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import org.apache.activemq.apollo.broker.Destination;
 import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.filter.FilterException;
-import org.apache.activemq.filter.MessageEvaluationContext;
+import org.apache.activemq.filter.Filterable;
 import org.fusesource.hawtbuf.AsciiBuffer;
 
 
@@ -31,18 +31,17 @@ import org.fusesource.hawtbuf.AsciiBuffer;
  * 
  * @version $Revision: 1.3 $
  */
-public abstract class PathFilter implements BooleanExpression {
+public abstract class PathFilter {
 
     public static final AsciiBuffer ANY_DESCENDENT = new AsciiBuffer(">");
     public static final AsciiBuffer ANY_CHILD = new AsciiBuffer("*");
     
-	public boolean matches(MessageEvaluationContext message) throws FilterException {
-		Destination destination = message.getDestination();
+	public boolean matches(Destination destination) throws FilterException {
 		return matches(destination.getName());
 	}
 	
-	public Object evaluate(MessageEvaluationContext message) throws FilterException {
-		return matches(message) ? Boolean.TRUE : Boolean.FALSE;
+	public Object evaluate(Destination destination) throws FilterException {
+		return matches(destination) ? Boolean.TRUE : Boolean.FALSE;
 	}
 	
     public abstract boolean matches(AsciiBuffer path);

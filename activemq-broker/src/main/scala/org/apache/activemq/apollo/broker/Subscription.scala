@@ -303,12 +303,10 @@ class DurableSubscription(val host:VirtualHost, val destination:Destination, val
 //        }
     }
 
-    def matches(message:Delivery) = {
+    def matches(delivery:Delivery) = {
         if (selector != null) {
-          var selectorContext = message.message.messageEvaluationContext
-          selectorContext.setDestination(destination);
           try {
-              (selector.matches(selectorContext));
+              (selector.matches( delivery.message ));
           } catch {
             case e:FilterException=>
               e.printStackTrace();

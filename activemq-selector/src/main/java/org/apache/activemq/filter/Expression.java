@@ -29,6 +29,6 @@ public interface Expression {
     /**
      * @return the value of this expression
      */
-    Object evaluate(MessageEvaluationContext message) throws FilterException;
+    Object evaluate(Filterable message) throws FilterException;
     
 }

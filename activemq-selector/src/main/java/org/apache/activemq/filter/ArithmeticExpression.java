@@ -181,7 +181,7 @@ public abstract class ArithmeticExpression extends BinaryExpression {
         }
     }
 
-    public Object evaluate(MessageEvaluationContext message) throws FilterException {
+    public Object evaluate(Filterable message) throws FilterException {
         Object lvalue = left.evaluate(message);
         if (lvalue == null) {
             return null;
