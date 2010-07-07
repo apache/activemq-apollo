@@ -146,14 +146,13 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging w
                 store.getQueueStatus(queueKey) { x =>
                   x match {
                     case Some(info)=>
-                    store.listQueueEntries(queueKey) { entries=>
-                      dispatchQueue ^{
-                        val dest = DestinationParser.parse(info.record.name, destination_parser_options)
-                        val queue = new Queue(this, dest)
-                        queue.restore(queueKey, entries)
-                        queues.put(dest.getName, queue)
-                        task.run
-                      }
+
+                    dispatchQueue ^{
+                      val dest = DestinationParser.parse(info.record.name, destination_parser_options)
+                      val queue = new Queue(this, dest, queueKey)
+                      queue.start
+                      queues.put(dest.getName, queue)
+                      task.run
                     }
                     case _ =>
                       task.run
@@ -267,11 +266,11 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging w
       store.addQueue(record) { rc =>
         rc match {
           case Some(queueKey) =>
-            dispatchQueue ^ {
-              val queue = new Queue(this, dest)
-              queue.restore(queueKey, Nil)
+            dispatchQueue {
+              val queue = new Queue(this, dest, queueKey)
               queues.put(dest.getName, queue)
               cb(queue)
+              queue.start()
             }
           case None => // store could not create
             cb(null)

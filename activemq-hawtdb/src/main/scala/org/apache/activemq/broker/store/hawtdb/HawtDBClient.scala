@@ -20,12 +20,10 @@ import java.{lang=>jl}
 import java.{util=>ju}
 
 import model.{AddQueue, AddQueueEntry, AddMessage}
-import org.apache.activemq.apollo.store.{QueueEntryRecord, QueueStatus, MessageRecord}
 import org.apache.activemq.apollo.dto.HawtDBStoreDTO
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
-import org.apache.activemq.apollo.store.QueueRecord
 import org.fusesource.hawtbuf.proto.MessageBuffer
 import org.fusesource.hawtbuf.proto.PBMessage
 import org.apache.activemq.util.LockFile
@@ -40,11 +38,12 @@ import org.fusesource.hawtbuf._
 import org.fusesource.hawtdispatch.ScalaDispatch._
 import collection.mutable.{LinkedHashMap, HashMap, ListBuffer}
 import collection.JavaConversions
-import java.util.{TreeSet, HashSet}
+import ju.{TreeSet, HashSet}
 
 import org.fusesource.hawtdb.api._
 import org.apache.activemq.apollo.broker.{DispatchLogging, Log, Logging, BaseService}
 import org.apache.activemq.apollo.util.TimeCounter
+import org.apache.activemq.apollo.store._
 
 object HawtDBClient extends Log {
   val BEGIN = -1
@@ -134,16 +133,13 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
         func
       } else {
         info("Database " + lockFileName + " is locked... waiting " + (DATABASE_LOCKED_WAIT_DELAY / 1000) + " seconds for the database to be unlocked.")
-        dispatchQueue.dispatchAfter(DATABASE_LOCKED_WAIT_DELAY, TimeUnit.MILLISECONDS, ^ {lock(func _)})
+        dispatchQueue.dispatchAfter(DATABASE_LOCKED_WAIT_DELAY, TimeUnit.MILLISECONDS, ^ {
+          hawtDBStore.executor_pool {
+            lock(func _)
+          }
+        })
       }
     }
-  }
-
-  def createJournal() = {
-    val journal = new Journal()
-    journal.setDirectory(directory)
-    journal.setMaxFileLength(config.journalLogSize)
-    journal
   }
 
   val schedual_version = new AtomicInteger()
@@ -151,18 +147,24 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   def start(onComplete:Runnable) = {
     lock {
 
-      journal = createJournal()
+      journal = new Journal()
+      journal.setDirectory(directory)
+      journal.setMaxFileLength(config.journalLogSize)
+      journal.setMaxWriteBatchSize(config.journalBatchSize);
+      journal.setChecksum(true);
+
+      if( config.archiveDirectory!=null ) {
+        journal.setDirectoryArchive(config.archiveDirectory)
+        journal.setArchiveDataLogs(true)
+      }
       journal.start
 
       pageFileFactory.setFile(new File(directory, "db"))
       pageFileFactory.setDrainOnClose(false)
       pageFileFactory.setSync(true)
       pageFileFactory.setUseWorkerThread(true)
-      pageFileFactory.setPageSize(512.toShort)
-
-      // Empirically found (using profiler) that a cached BTree page retains
-      // about 4000 bytes of mem ON 64 bit platform.
-      pageFileFactory.setCacheSize((1024*1024*20)/4000 );
+      pageFileFactory.setPageSize(config.indexPageSize)
+      pageFileFactory.setCacheSize(config.indexCacheSize);
 
       pageFileFactory.open()
 
@@ -222,7 +224,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     _store(update, callback)
   }
 
-  def store(txs: Seq[HawtDBStore#HawtDBBatch], callback:Runnable) {
+  def store(txs: Seq[HawtDBStore#HawtDBUOW], callback:Runnable) {
     var batch = ListBuffer[TypeCreatable]()
     txs.foreach {
       tx =>
@@ -239,9 +241,9 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
             }
             action.dequeues.foreach {
               queueEntry =>
-                val qid = queueEntry.queueKey
-                val seq = queueEntry.queueSeq
-                batch += new RemoveQueueEntry.Bean().setQueueKey(qid).setQueueSeq(seq)
+                val queueKey = queueEntry.queueKey
+                val queueSeq = queueEntry.queueSeq
+                batch += new RemoveQueueEntry.Bean().setQueueKey(queueKey).setQueueSeq(queueSeq)
             }
         }
     }
@@ -254,15 +256,17 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   }
 
   def listQueues: Seq[Long] = {
+    val rc = ListBuffer[Long]()
     withTx { tx =>
-        val helper = new TxHelper(tx)
-        import JavaConversions._
-        import helper._
-        queueIndex.iterator.map {
-          entry =>
-            entry.getKey.longValue
-        }.toSeq
+      val helper = new TxHelper(tx)
+      import JavaConversions._
+      import helper._
+
+      queueIndex.iterator.foreach { entry =>
+        rc += entry.getKey.longValue
+      }
     }
+    rc
   }
 
   def getQueueStatus(queueKey: Long): Option[QueueStatus] = {
@@ -292,25 +296,67 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     }
   }
 
-
-  def getQueueEntries(queueKey: Long): Seq[QueueEntryRecord] = {
+  def listQueueEntryGroups(queueKey: Long, limit: Int) : Seq[QueueEntryGroup] = {
     withTx { tx =>
         val helper = new TxHelper(tx)
         import JavaConversions._
         import helper._
+        import Predicates._
 
         val queueRecord = queueIndex.get(queueKey)
         if (queueRecord != null) {
           val entryIndex = queueEntryIndex(queueRecord)
-          entryIndex.iterator.map {
-            entry =>
-              val rc: QueueEntryRecord = entry.getValue
-              rc
-          }.toSeq
+
+          var rc = ListBuffer[QueueEntryGroup]()
+          var group:QueueEntryGroup = null
+
+          entryIndex.iterator.foreach { entry =>
+            if( group == null ) {
+              group = new QueueEntryGroup
+              group.firstSeq = entry.getKey.longValue
+            }
+            group.lastSeq = entry.getKey.longValue
+            group.count += 1
+            group.size += entry.getValue.getSize
+            if( group.count == limit) {
+              rc += group
+              group = null
+            }
+          }
+
+          if( group!=null ) {
+            rc += group
+          }
+          rc
         } else {
-          Nil.toSeq
+          null
         }
     }
+  }
+
+  def getQueueEntries(queueKey: Long, firstSeq:Long, lastSeq:Long): Seq[QueueEntryRecord] = {
+    var rc = ListBuffer[QueueEntryRecord]()
+    withTx { tx =>
+      val helper = new TxHelper(tx)
+      import JavaConversions._
+      import helper._
+      import Predicates._
+
+      val queueRecord = queueIndex.get(queueKey)
+      if (queueRecord != null) {
+        val entryIndex = queueEntryIndex(queueRecord)
+
+        val where = and(gte(new jl.Long(firstSeq)), lte(new jl.Long(lastSeq)))
+        entryIndex.iterator( where ).foreach {
+          entry =>
+            val record: QueueEntryRecord = entry.getValue
+            rc += record
+        }
+      } else {
+        rc = null
+      }
+    }
+    rc
   }
 
   val metric_load_from_index = new TimeCounter
@@ -405,6 +451,9 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
   private def _store(update: TypeCreatable, onComplete: Runnable): Unit = _store(-1, update, onComplete)
 
+  val metric_journal_append = new TimeCounter
+  val metric_index_update = new TimeCounter
+
   /**
    * All updated are are funneled through this method. The updates are logged to
    * the journal and then the indexes are update.  onFlush will be called back once
@@ -423,7 +472,9 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     val buffer = baos.toBuffer()
     append(buffer) {
       location =>
-        executeStore(batch, update, onComplete, location)
+        metric_index_update.time {
+          executeStore(batch, update, onComplete, location)
+        }
     }
   }
 
@@ -488,6 +539,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     lastRecoveryPosition = null
     val start = System.currentTimeMillis()
     incrementalRecover
+
 
     _store(new AddTrace.Bean().setMessage("RECOVERED"), ^ {
       // Rollback any batches that did not complete.
@@ -573,11 +625,14 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   /////////////////////////////////////////////////////////////////////
 
   private def append(data: Buffer)(cb: (Location) => Unit): Unit = {
-    journal.write(data, new JournalCallback() {
-      def success(location: Location) = {
-        cb(location)
-      }
-    })
+    metric_journal_append.start { end =>
+      journal.write(data, new JournalCallback() {
+        def success(location: Location) = {
+          end()
+          cb(location)
+        }
+      })
+    }
   }
 
   def read(location: Location) = journal.read(location)
@@ -698,7 +753,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
         val trackingIndex = queueTrackingIndex(queueRecord)
         val entryIndex = queueEntryIndex(queueRecord)
 
-        trackingIndex.iterator.map { entry=>
+        trackingIndex.iterator.foreach { entry=>
           val messageKey = entry.getKey
           if( addAndGet(messageRefsIndex, messageKey, -1) == 0 ) {
             // message is no longer referenced.. we can remove it..
@@ -827,7 +882,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
       case x: Purge.Getter =>
         // Remove all the queues...
-        val queueKeys = queueIndex.iterator.map( _.getKey ).toList
+        val queueKeys = queueIndex.iterator.map( _.getKey )
         queueKeys.foreach { key =>
           removeQueue(key.longValue)
         }
@@ -1028,6 +1083,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       } else {
         tx.rollback
       }
+      tx.close
     }
   }
 

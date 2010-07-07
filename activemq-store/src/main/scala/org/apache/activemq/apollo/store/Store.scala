@@ -16,68 +16,26 @@
  */
 package org.apache.activemq.broker.store
 
-import _root_.java.lang.{String}
-import org.fusesource.hawtbuf._
 import org.apache.activemq.Service
-import org.fusesource.hawtdispatch.{Retained}
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.broker.Reporter
 import org.apache.activemq.apollo.dto.StoreDTO
 
 /**
- * A store batch is used to perform persistent
- * operations as a unit of work.
- * 
- * The batch implements the Retained interface and is
- * thread safe.  Once the batch is no longer retained,
- * the unit of work is executed.  
+ * <p>
+ * The Store is service which offers asynchronous persistence services
+ * to a Broker.
+ * </p>
  *
- * The disposer assigned to the batch will
- * be executed once the unit of work is persisted
- * or it has been negated by subsequent storage
- * operations.
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-trait StoreBatch extends Retained {
-
-  /**
-   * Stores a message.  Messages a reference counted, so make sure you also 
-   * enqueue it to queue if you don't want it to be discarded right away.
-   * 
-   * This method auto generates and assigns the key field of the message record and
-   * returns it.
-   */
-  def store(message:MessageRecord):Long
-
-  /**
-   * Adds a queue entry
-   */
-  def enqueue(entry:QueueEntryRecord)
-
-  /**
-   * Removes a queue entry
-   */
-  def dequeue(entry:QueueEntryRecord)
-
-
-  /**
-   * Causes the batch to flush eagerly, callback is called once flushed.
-   */
-  def eagerFlush(callback: Runnable)
-
-}
-
-/**
  *  @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait Store extends Service {
 
   /**
-   * Creates a store batch which is used to perform persistent
+   * Creates a store uow which is used to perform persistent
    * operations as unit of work.
    */
-  def createStoreBatch():StoreBatch
+  def createStoreUOW():StoreUOW
 
   /**
    * Supplies configuration data to the Store.  This will be called
@@ -116,9 +74,16 @@ trait Store extends Service {
   def listQueues(callback: (Seq[Long])=>Unit )
 
   /**
-   * Loads the queue information for a given queue id.
+   * Groups all the entries in the specified queue into groups containing limit entries and returns those
+   * groups.  Allows you to quickly get a rough idea of the items in queue without consuming too much memory.
    */
-  def listQueueEntries(queueKey:Long)(callback:(Seq[QueueEntryRecord])=>Unit )
+  def listQueueEntryGroups(queueKey:Long, limit:Int)(callback:(Seq[QueueEntryGroup])=>Unit )
+
+  /**
+   * Loads all the queue entry records for the given queue id between the first and last provided
+   * queue sequences (inclusive).
+   */
+  def listQueueEntries(queueKey:Long, firstSeq:Long, lastSeq:Long)(callback:(Seq[QueueEntryRecord])=>Unit )
 
   /**
    * Removes a the delivery associated with the provided from any

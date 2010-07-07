@@ -29,7 +29,7 @@ import Stomp._
 import BufferConversions._
 import StompFrameConstants._
 import java.io.IOException
-import org.apache.activemq.broker.store.StoreBatch
+import org.apache.activemq.broker.store.StoreUOW
 import org.apache.activemq.selector.SelectorParser
 import org.apache.activemq.filter.{BooleanExpression, FilterException}
 
@@ -160,7 +160,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   var host:VirtualHost = null
 
   private def queue = connection.dispatchQueue
-  var pendingAcks = HashMap[AsciiBuffer, (StoreBatch)=>Unit]()
+  var pendingAcks = HashMap[AsciiBuffer, (StoreUOW)=>Unit]()
 
   override def onTransportConnected() = {
     session_manager = new SinkMux[StompFrame]( MapSink(connection.transportSink){ x=>x }, dispatchQueue, StompFrame)
@@ -283,7 +283,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   }
 
   def send_via_route(route:DeliveryProducerRoute, frame:StompFrame) = {
-    var storeBatch:StoreBatch=null
+    var storeBatch:StoreUOW=null
     // User might be asking for ack that we have prcoessed the message..
     val receipt = frame.header(Stomp.Headers.RECEIPT_REQUESTED)
 

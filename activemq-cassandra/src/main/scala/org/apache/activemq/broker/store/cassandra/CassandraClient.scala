@@ -22,7 +22,8 @@ import com.shorrockin.cascal.utils.Conversions._
 import java.util.{HashMap}
 import org.fusesource.hawtbuf.AsciiBuffer._
 import org.fusesource.hawtbuf.{AsciiBuffer, DataByteArrayInputStream, DataByteArrayOutputStream, Buffer}
-import org.apache.activemq.apollo.store.{QueueEntryRecord, QueueStatus, MessageRecord, QueueRecord}
+import org.apache.activemq.apollo.store._
+import collection.mutable.ListBuffer
 
 /**
  *
@@ -161,7 +162,7 @@ class CassandraClient() {
   }
 
 
-  def store(txs:Seq[CassandraStore#CassandraBatch]) {
+  def store(txs:Seq[CassandraStore#CassandraUOW]) {
     withSession {
       session =>
         var operations = List[Operation]()
@@ -205,12 +206,43 @@ class CassandraClient() {
     }
   }
 
-  def getQueueEntries(qid: Long): Seq[QueueEntryRecord] = {
+  def listQueueEntryGroups(queueKey: Long, limit: Int): Seq[QueueEntryGroup] = {
     withSession {
       session =>
-        session.list(schema.entries \ qid).map { x=>
+        var rc = ListBuffer[QueueEntryGroup]()
+        var group:QueueEntryGroup = null
+
+        // TODO: this is going to bring back lots of entries.. not good.
+        session.list(schema.entries \ queueKey).foreach { x=>
+
+          val record:QueueEntryRecord = x.value
+
+          if( group == null ) {
+            group = new QueueEntryGroup
+            group.firstSeq = record.queueSeq
+          }
+          group.lastSeq = record.queueSeq
+          group.count += 1
+          group.size += record.size
+          if( group.count == limit) {
+            rc += group
+            group = null
+          }
+        }
+
+        if( group!=null ) {
+          rc += group
+        }
+        rc
+    }
+  }
+
+  def getQueueEntries(queueKey: Long, firstSeq:Long, lastSeq:Long): Seq[QueueEntryRecord] = {
+    withSession {
+      session =>
+        session.list(schema.entries \ queueKey, RangePredicate(firstSeq, lastSeq)).map { x=>
           val rc:QueueEntryRecord = x.value
-          rc.queueKey = qid
+          rc.queueKey = queueKey
           rc.queueSeq = x.name
           rc
         }

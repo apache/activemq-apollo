@@ -20,7 +20,7 @@ import _root_.org.apache.activemq.filter.{Filterable}
 import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
-import org.apache.activemq.broker.store.StoreBatch
+import org.apache.activemq.broker.store.StoreUOW
 import org.apache.activemq.apollo.store.MessageRecord
 import protocol.ProtocolFactory
 
@@ -149,13 +149,13 @@ class Delivery extends BaseRetained {
   /**
    * The transaction the delivery is participating in.
    */
-  var storeBatch:StoreBatch = null
+  var uow:StoreUOW = null
 
   /**
    * Set if the producer requires an ack to be sent back.  Consumer
    * should execute once the message is processed.
    */
-  var ack:(StoreBatch)=>Unit = null
+  var ack:(StoreUOW)=>Unit = null
 
   def copy() = (new Delivery).set(this)
 

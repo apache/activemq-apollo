@@ -91,7 +91,7 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
     rc.get
   }
 
-  def addMessage(batch:StoreBatch, content:String):Long = {
+  def addMessage(batch:StoreUOW, content:String):Long = {
     var message = new MessageRecord
     message.protocol = ascii("test-protocol")
     message.value = ascii(content).buffer
@@ -124,7 +124,7 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
   }
 
   def populate(queueKey:Long, messages:List[String], firstSeq:Long=1) = {
-    var batch = store.createStoreBatch
+    var batch = store.createStoreUOW
     var msgKeys = ListBuffer[Long]()
     var nextSeq = firstSeq
 
@@ -159,7 +159,7 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
     var metric = benchmarkCount(100000) {
       seq += 1
 
-      var batch = store.createStoreBatch
+      var batch = store.createStoreUOW
       val message = addMessage(batch, content)
       messageKeys += message
       batch.enqueue(entry(queue, seq, message))

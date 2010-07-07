@@ -308,8 +308,8 @@ class DeliveryProducerRoute(val router:Router, val destination:Destination, val 
         if( target.consumer.matches(delivery) ) {
           
           if( storeOnMatch ) {
-            delivery.storeBatch = router.host.store.createStoreBatch
-            delivery.storeKey = delivery.storeBatch.store(delivery.createMessageRecord)
+            delivery.uow = router.host.store.createStoreUOW
+            delivery.storeKey = delivery.uow.store(delivery.createMessageRecord)
             storeOnMatch = false
           }
 
@@ -330,14 +330,14 @@ class DeliveryProducerRoute(val router:Router, val destination:Destination, val 
 
   private def delivered(delivery: Delivery): Unit = {
     if (delivery.ack != null) {
-      if (delivery.storeBatch != null) {
-        delivery.storeBatch.setDisposer(^ {delivery.ack(null)})
+      if (delivery.uow != null) {
+        delivery.uow.setDisposer(^ {delivery.ack(null)})
       } else {
         delivery.ack(null)
       }
     }
-    if (delivery.storeBatch != null) {
-      delivery.storeBatch.release
+    if (delivery.uow != null) {
+      delivery.uow.release
     }
   }
 

@@ -16,13 +16,12 @@
  */
 package org.apache.activemq.broker.store.cassandra
 
-import org.apache.activemq.broker.store.{StoreBatch, Store}
+import org.apache.activemq.broker.store.{StoreUOW, Store}
 import org.fusesource.hawtdispatch.BaseRetained
 import com.shorrockin.cascal.session._
 import java.util.concurrent.atomic.AtomicLong
 import collection.mutable.ListBuffer
 import java.util.HashMap
-import org.apache.activemq.apollo.store.{QueueEntryRecord, MessageRecord, QueueStatus, QueueRecord}
 import org.apache.activemq.apollo.broker.{Logging, Log, BaseService}
 import org.apache.activemq.apollo.dto.{CassandraStoreDTO, StoreDTO}
 import collection.{JavaConversions, Seq}
@@ -32,6 +31,7 @@ import org.fusesource.hawtdispatch.ScalaDispatch._
 import ReporterLevel._
 import java.util.concurrent._
 import org.apache.activemq.apollo.util.{TimeCounter, IntCounter}
+import org.apache.activemq.apollo.store._
 
 object CassandraStore extends Log {
 
@@ -195,24 +195,31 @@ class CassandraStore extends Store with BaseService with Logging {
   }
 
 
-  def listQueueEntries(id: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
+  def listQueueEntryGroups(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryGroup]) => Unit) = {
     blocking {
-      callback( client.getQueueEntries(id) )
+      callback( client.listQueueEntryGroups(queueKey, limit) )
+    }
+  }
+
+
+  def listQueueEntries(queueKey: Long, firstSeq: Long, lastSeq: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
+    blocking {
+      callback( client.getQueueEntries(queueKey, firstSeq, lastSeq) )
     }
   }
 
   def flushMessage(id: Long)(callback: => Unit) = ^{
-    val action: CassandraBatch#MessageAction = pendingStores.get(id)
+    val action: CassandraUOW#MessageAction = pendingStores.get(id)
     if( action == null ) {
       callback
     } else {
-      action.tx.eagerFlush(callback _)
-      flush(action.tx.txid)
+      action.uow.onComplete(callback _)
+      flush(action.uow.uow_id)
     }
 
   } >>: dispatchQueue
 
-  def createStoreBatch() = new CassandraBatch
+  def createStoreUOW() = new CassandraUOW
 
 
   /////////////////////////////////////////////////////////////////////
@@ -220,7 +227,7 @@ class CassandraStore extends Store with BaseService with Logging {
   // Implementation of the StoreBatch interface
   //
   /////////////////////////////////////////////////////////////////////
-  class CassandraBatch extends BaseRetained with StoreBatch {
+  class CassandraUOW extends BaseRetained with StoreUOW {
 
     class MessageAction {
 
@@ -229,22 +236,29 @@ class CassandraStore extends Store with BaseService with Logging {
       var enqueues = ListBuffer[QueueEntryRecord]()
       var dequeues = ListBuffer[QueueEntryRecord]()
 
-      def tx = CassandraBatch.this
+      def uow = CassandraUOW.this
       def isEmpty() = store==null && enqueues==Nil && dequeues==Nil
       def cancel() = {
-        tx.rm(msg)
-        if( tx.isEmpty ) {
-          tx.cancel
+        uow.rm(msg)
+        if( uow.isEmpty ) {
+          uow.cancel
         }
       }
     }
 
-    val txid:Int = next_tx_id.getAndIncrement
+    val uow_id:Int = next_uow_id.getAndIncrement
     var actions = Map[Long, MessageAction]()
     var flushing= false
 
-    var flushListeners = ListBuffer[Runnable]()
-    def eagerFlush(callback: Runnable) = if( callback!=null ) { this.synchronized { flushListeners += callback } }
+    var completeListeners = ListBuffer[Runnable]()
+
+    def onComplete(callback: Runnable) = if( callback!=null ) { this.synchronized { completeListeners += callback } }
+
+    var disableDelay = false
+    def completeASAP() = this.synchronized { disableDelay=true }
+
+    def delayable = !disableDelay
+
 
     def rm(msg:Long) = {
       actions -= msg
@@ -252,7 +266,7 @@ class CassandraStore extends Store with BaseService with Logging {
 
     def isEmpty = actions.isEmpty
     def cancel = {
-      delayedTransactions.remove(txid)
+      delayedUOWs.remove(uow_id)
       onPerformed
     }
 
@@ -298,12 +312,12 @@ class CassandraStore extends Store with BaseService with Logging {
     }
 
     override def dispose = {
-      transaction_source.merge(this)
+      uow_source.merge(this)
     }
 
 
     def onPerformed() {
-      flushListeners.foreach { x=>
+      completeListeners.foreach { x=>
         x.run()
       }
       super.dispose
@@ -312,29 +326,29 @@ class CassandraStore extends Store with BaseService with Logging {
 
   def key(x:QueueEntryRecord) = (x.queueKey, x.queueSeq)
 
-  val transaction_source = createSource(new ListEventAggregator[CassandraBatch](), dispatchQueue)
-  transaction_source.setEventHandler(^{drain_transactions});
-  transaction_source.resume
+  val uow_source = createSource(new ListEventAggregator[CassandraUOW](), dispatchQueue)
+  uow_source.setEventHandler(^{drain_uows});
+  uow_source.resume
 
-  var pendingStores = new HashMap[Long, CassandraBatch#MessageAction]()
-  var pendingEnqueues = new HashMap[(Long,Long), CassandraBatch#MessageAction]()
-  var delayedTransactions = new HashMap[Int, CassandraBatch]()
+  var pendingStores = new HashMap[Long, CassandraUOW#MessageAction]()
+  var pendingEnqueues = new HashMap[(Long,Long), CassandraUOW#MessageAction]()
+  var delayedUOWs = new HashMap[Int, CassandraUOW]()
 
-  var next_tx_id = new IntCounter(1)
+  var next_uow_id = new IntCounter(1)
   
-  def drain_transactions = {
-    transaction_source.getData.foreach { tx =>
+  def drain_uows = {
+    uow_source.getData.foreach { uow =>
 
-      val tx_id = tx.txid
-      delayedTransactions.put(tx_id, tx)
+      val uow_id = uow.uow_id
+      delayedUOWs.put(uow_id, uow)
 
-      tx.actions.foreach { case (msg, action) =>
+      uow.actions.foreach { case (msg, action) =>
 
         // dequeues can cancel out previous enqueues
         action.dequeues.foreach { currentDequeue=>
           val currentKey = key(currentDequeue)
-          val prevAction:CassandraBatch#MessageAction = pendingEnqueues.remove(currentKey)
-          if( prevAction!=null && !prevAction.tx.flushing ) {
+          val prevAction:CassandraUOW#MessageAction = pendingEnqueues.remove(currentKey)
+          if( prevAction!=null && !prevAction.uow.flushing ) {
 
             // yay we can cancel out a previous enqueue
             prevAction.enqueues = prevAction.enqueues.filterNot( x=> key(x) == currentKey )
@@ -359,17 +373,17 @@ class CassandraStore extends Store with BaseService with Logging {
         }
       }
 
-      if( !tx.flushListeners.isEmpty || config.flushDelay <= 0 ) {
-        flush(tx_id)
+      if( !uow.completeListeners.isEmpty || config.flushDelay <= 0 ) {
+        flush(uow_id)
       } else {
-        dispatchQueue.dispatchAfter(config.flushDelay, TimeUnit.MILLISECONDS, ^{flush(tx_id)})
+        dispatchQueue.dispatchAfter(config.flushDelay, TimeUnit.MILLISECONDS, ^{flush(uow_id)})
       }
 
     }
   }
 
-  def flush(tx_id:Int) = {
-    flush_source.merge(tx_id)
+  def flush(uow_id:Int) = {
+    flush_source.merge(uow_id)
   }
 
   val flush_source = createSource(new ListEventAggregator[Int](), dispatchQueue)
@@ -382,27 +396,27 @@ class CassandraStore extends Store with BaseService with Logging {
       return
     }
     
-    val txs = flush_source.getData.flatMap{ tx_id =>
-      val tx = delayedTransactions.remove(tx_id)
+    val uows = flush_source.getData.flatMap{ uow_id =>
+      val uow = delayedUOWs.remove(uow_id)
       // Message may be flushed or canceled before the timeout flush event..
-      // tx may be null in those cases
-      if (tx!=null) {
-        tx.flushing = true
-        Some(tx)
+      // uow may be null in those cases
+      if (uow!=null) {
+        uow.flushing = true
+        Some(uow)
       } else {
         None
       }
     }
 
-    if( !txs.isEmpty ) {
+    if( !uows.isEmpty ) {
       storeLatency.start { end =>
         blocking {
-          client.store(txs)
+          client.store(uows)
           dispatchQueue {
             end()
-            txs.foreach { tx=>
+            uows.foreach { uow=>
 
-              tx.actions.foreach { case (msg, action) =>
+              uow.actions.foreach { case (msg, action) =>
                 if( action.store!=null ) {
                   pendingStores.remove(msg)
                 }
@@ -412,7 +426,7 @@ class CassandraStore extends Store with BaseService with Logging {
                 }
               }
 
-              tx.onPerformed
+              uow.onPerformed
             }
           }
         }

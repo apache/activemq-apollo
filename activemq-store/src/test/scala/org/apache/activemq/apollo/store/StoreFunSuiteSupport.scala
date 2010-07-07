@@ -90,7 +90,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     rc.get
   }
 
-  def addMessage(batch:StoreBatch, content:String):Long = {
+  def addMessage(batch:StoreUOW, content:String):Long = {
     var message = new MessageRecord
     message.protocol = ascii("test-protocol")
     message.value = ascii(content).buffer
@@ -108,7 +108,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
   }
 
   def populate(queueKey:Long, messages:List[String], firstSeq:Long=1) = {
-    var batch = store.createStoreBatch
+    var batch = store.createStoreUOW
     var msgKeys = ListBuffer[Long]()
     var nextSeq = firstSeq
 
@@ -165,7 +165,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     val A = addQueue("A")
     val msgKeys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
 
-    val rc:Seq[QueueEntryRecord] = CB( cb=> store.listQueueEntries(A)(cb) )
+    val rc:Seq[QueueEntryRecord] = CB( cb=> store.listQueueEntries(A,msgKeys.head, msgKeys.last)(cb) )
     expect(msgKeys.toSeq) {
       rc.map( _.messageKey )
     }
@@ -174,7 +174,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
   test("batch completes after a delay") {x}
   def x = {
     val A = addQueue("A")
-    var batch = store.createStoreBatch
+    var batch = store.createStoreUOW
 
     val m1 = addMessage(batch, "message 1")
     batch.enqueue(entry(A, 1, m1))
@@ -191,7 +191,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
 
   test("flush cancels the delay") {
     val A = addQueue("A")
-    var batch = store.createStoreBatch
+    var batch = store.createStoreUOW
 
     val m1 = addMessage(batch, "message 1")
     batch.enqueue(entry(A, 1, m1))

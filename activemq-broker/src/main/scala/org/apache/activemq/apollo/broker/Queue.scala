@@ -22,11 +22,11 @@ import collection.{SortedMap}
 import org.fusesource.hawtdispatch.{ScalaDispatch, DispatchQueue, BaseRetained}
 import org.apache.activemq.util.TreeMap.TreeEntry
 import org.apache.activemq.util.list.{LinkedNodeList, LinkedNode}
-import org.apache.activemq.broker.store.{StoreBatch}
+import org.apache.activemq.broker.store.{StoreUOW}
 import protocol.ProtocolFactory
-import org.apache.activemq.apollo.store.{QueueEntryRecord, MessageRecord}
 import java.util.concurrent.TimeUnit
 import java.util.{HashSet, Collections, ArrayList, LinkedList}
+import org.apache.activemq.apollo.store.{QueueEntryGroup, QueueEntryRecord, MessageRecord}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -57,7 +57,7 @@ object Queue extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val host: VirtualHost, val destination: Destination) extends BaseRetained with Route with DeliveryConsumer with DispatchLogging {
+class Queue(val host: VirtualHost, val destination: Destination, val queueKey: Long = -1L) extends BaseRetained with Route with DeliveryConsumer with BaseService with DispatchLogging {
   override protected def log = Queue
 
   import Queue._
@@ -77,7 +77,7 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
   })
 
 
-  val ack_source = createSource(new ListEventAggregator[(Subscription#AcquiredQueueEntry, StoreBatch)](), dispatchQueue)
+  val ack_source = createSource(new ListEventAggregator[(Subscription#AcquiredQueueEntry, StoreUOW)](), dispatchQueue)
   ack_source.setEventHandler(^ {drain_acks});
   ack_source.resume
 
@@ -95,7 +95,7 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
 
   var loading_size = 0
   var flushing_size = 0
-  var store_id: Long = -1L
+
 
   //
   // Tuning options.
@@ -123,15 +123,23 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
   var tune_slow_check_interval = 200L
 
   /**
+   * Should this queue persistently store it's entries?
+   */
+  def tune_persistent = host.store !=null
+
+  /**
    * Should messages be flushed or swapped out of memory if
    * no consumers need the message?
    */
   def tune_flush_to_store = tune_persistent
 
   /**
-   * Should this queue persistently store it's entries?
+   * The number max number of flushed queue entries to load
+   * for the store at a time.  Not that Flushed entires are just
+   * reference pointers to the actual messages.  When not loaded,
+   * the batch is referenced as sequence range to conserve memory.
    */
-  def tune_persistent = host.store !=null
+  def tune_entry_group_size = 10000
 
   /**
    * The number of intervals that a consumer must not meeting the subscription rate before it is
@@ -146,31 +154,72 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
   var nack_item_counter = 0L
   var nack_size_counter = 0L
 
+  var flushed_items = 0L
+
   def queue_size = enqueue_size_counter - dequeue_size_counter
   def queue_items = enqueue_item_counter - dequeue_item_counter
 
   private var capacity = tune_producer_buffer
   var size = 0
 
-  schedual_slow_consumer_check
+  protected def _start(onCompleted: Runnable) = {
 
-  def restore(storeId: Long, records:Seq[QueueEntryRecord]) = ^{
-    this.store_id = storeId
-    if( !records.isEmpty ) {
-
-      // adjust the head tombstone.
-      head_entry.as_tombstone.count = records.head.queueSeq
-
-      records.foreach { qer =>
-        val entry = new QueueEntry(Queue.this,qer.queueSeq).init(qer)
-        entries.addLast(entry)
+    def completed: Unit = {
+      // by the time this is run, consumers and producers may have already joined.
+      onCompleted.run
+      display_stats
+      schedual_slow_consumer_check
+      // wake up the producers to fill us up...
+      if (messages.refiller != null) {
+        messages.refiller.run
       }
 
-      message_seq_counter = records.last.queueSeq+1
-      enqueue_item_counter += records.size
-      debug("restored: "+records.size )
+      // kick of dispatching to the consumers.
+      all_subscriptions.valuesIterator.foreach( _.refill_prefetch )
+      dispatchQueue << head_entry
     }
-  } >>: dispatchQueue
+
+    if( tune_persistent ) {
+      host.store.listQueueEntryGroups(queueKey, tune_entry_group_size) { groups=>
+        dispatchQueue {
+          if( !groups.isEmpty ) {
+
+            // adjust the head tombstone.
+            head_entry.as_tombstone.count = groups.head.firstSeq
+
+            var last:QueueEntryGroup = null
+            groups.foreach { group =>
+
+              // if groups were not adjacent.. create tombstone entry.
+              if( last!=null && (last.lastSeq+1 != group.firstSeq) ) {
+                val entry = new QueueEntry(Queue.this, last.lastSeq+1)
+                entry.tombstone.as_tombstone.count = group.firstSeq - (last.lastSeq+1)
+                entries.addLast(entry)
+              }
+
+              val entry = new QueueEntry(Queue.this, group.firstSeq).init(group)
+              entries.addLast(entry)
+
+              message_seq_counter = group.lastSeq
+              enqueue_item_counter += group.count
+              enqueue_size_counter += group.size
+
+              last = group
+            }
+
+            debug("restored: "+enqueue_item_counter)
+          }
+          completed
+        }
+      }
+    } else {
+      completed
+    }
+  }
+
+  protected def _stop(onCompleted: Runnable) = {
+    throw new AssertionError("Not implemented.");
+  }
 
   def addCapacity(amount:Int) = {
     capacity += amount
@@ -180,10 +229,7 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
 
     var refiller: Runnable = null
 
-    def full = if(size >= capacity)
-      true
-    else
-      false
+    def full = (size >= capacity) || !serviceState.isStarted
 
     def offer(delivery: Delivery): Boolean = {
       if (full) {
@@ -196,7 +242,7 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
         entry.init(queueDelivery)
         
         if( tune_persistent ) {
-          queueDelivery.storeBatch = delivery.storeBatch
+          queueDelivery.uow = delivery.uow
         }
 
         entries.addLast(entry)
@@ -204,10 +250,9 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
         enqueue_size_counter += entry.size
 
         // Do we need to do a persistent enqueue???
-        if (queueDelivery.storeBatch != null) {
-          queueDelivery.storeBatch.enqueue(entry.toQueueEntryRecord)
+        if (queueDelivery.uow != null) {
+          entry.as_loaded.store
         }
-
 
         def haveQuickConsumer = fast_subscriptions.find( sub=> sub.pos.seq <= entry.seq ).isDefined
 
@@ -222,9 +267,9 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
         }
 
         // release the store batch...
-        if (queueDelivery.storeBatch != null) {
-          queueDelivery.storeBatch.release
-          queueDelivery.storeBatch = null
+        if (queueDelivery.uow != null) {
+          queueDelivery.uow.release
+          queueDelivery.uow = null
         }
 
         true
@@ -244,20 +289,29 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
     var total_items = 0L
     var total_size = 0L
     while (cur != null) {
-      if (cur.is_loaded || cur.hasSubs || cur.is_prefetched) {
+      if (cur.is_loaded || cur.hasSubs || cur.is_prefetched || cur.is_flushed_group ) {
         info("  => " + cur)
       }
+
+      total_size += cur.size
       if (cur.is_flushed || cur.is_loaded) {
         total_items += 1
-        total_size += cur.size
+      } else if (cur.is_flushed_group ) {
+        total_items += cur.as_flushed_group.items
       }
+      
       cur = cur.getNext
     }
     info("tail: " + tail_entry)
 
     // sanitiy checks..
-    assert(total_items == queue_items)
-    assert(total_size == queue_size)
+    if(total_items != queue_items) {
+      warn("queue_items mismatch, found %d, expected %d", total_size, queue_items)
+    }
+    if(total_size != queue_size) {
+      warn("queue_size mismatch, found %d, expected %d", total_size, queue_size)
+
+    }
   }
 
   def schedual_slow_consumer_check:Unit = {
@@ -269,14 +323,14 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
         check_counter += 1
 
         if( (check_counter%10)==0  ) {
-//          display_stats
+          display_stats
         }
 
-//        if( (check_counter%100)==0 ) {
+        if( (check_counter%25)==0 ) {
 //          if (!all_subscriptions.isEmpty) {
 //            display_active_entries
 //          }
-//        }
+        }
 
         // target tune_min_subscription_rate / sec
         val slow_cursor_delta = (((tune_slow_subscription_rate) * tune_slow_check_interval) / 1000).toInt
@@ -413,8 +467,8 @@ class Queue(val host: VirtualHost, val destination: Destination) extends BaseRet
         false
       } else {
 
-        if( tune_persistent && delivery.storeBatch!=null ) {
-          delivery.storeBatch.retain
+        if( tune_persistent && delivery.uow!=null ) {
+          delivery.uow.retain
         }
         val rc = session.offer(delivery)
         assert(rc, "session should accept since it was not full")
@@ -567,13 +621,20 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   def is_prefetched = prefetched>0
 
   def init(delivery:Delivery):QueueEntry = {
-    this.state = new Loaded(delivery)
+    this.state = new Loaded(delivery, false)
     queue.size += size
     this
   }
 
   def init(qer:QueueEntryRecord):QueueEntry = {
     this.state = new Flushed(qer.messageKey, qer.size)
+    this
+  }
+
+  def init(group:QueueEntryGroup):QueueEntry = {
+    val count = (((group.lastSeq+1)-group.firstSeq)).toInt
+    val tombstones = count-group.count
+    this.state = new FlushedGroup(count, group.size, tombstones)
     this
   }
 
@@ -614,7 +675,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
   def toQueueEntryRecord = {
     val qer = new QueueEntryRecord
-    qer.queueKey = queue.store_id
+    qer.queueKey = queue.queueKey
     qer.queueSeq = seq
     qer.messageKey = state.messageKey
     qer.size = state.size
@@ -634,6 +695,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   // What state is it in?
   def as_tombstone = this.state.as_tombstone
   def as_flushed = this.state.as_flushed
+  def as_flushed_group = this.state.as_flushed_group
   def as_loaded = this.state.as_loaded
   def as_tail = this.state.as_tail
 
@@ -642,6 +704,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
   def is_loaded = as_loaded!=null
   def is_flushed = as_flushed!=null
+  def is_flushed_group = as_flushed_group!=null
   def is_tombstone = as_tombstone!=null
 
   // These should not change the current state.
@@ -662,6 +725,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     def as_tail:Tail = null
     def as_loaded:Loaded = null
     def as_flushed:Flushed = null
+    def as_flushed_group:FlushedGroup = null
     def as_tombstone:Tombstone = null
 
     def size:Int
@@ -673,9 +737,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     def flush = entry
 
-    def tombstone = {
-
-      var refill_preftch_list = List[Subscription]()
+    def prefetch_remove = {
+      var rc = List[Subscription]()
       if( queue.tune_flush_to_store ) {
         // Update the prefetch counter to reflect that this entry is no longer being prefetched.
         var cur = entry
@@ -684,7 +747,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
             (cur.subscriptions).foreach { sub =>
               if( sub.is_prefetched(entry) ) {
                 sub.remove_from_prefetch(entry)
-                refill_preftch_list ::= sub
+                rc ::= sub
               }
             }
           }
@@ -692,6 +755,12 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         }
         assert(!is_prefetched, "entry should not be prefetched.")
       }
+      rc
+    }
+
+    def tombstone = {
+
+      var refill_preftch_list = prefetch_remove
 
       // if rv and lv are both adjacent tombstones, then this merges the rv
       // tombstone into lv, unlinks rv, and returns lv, otherwise it returns
@@ -753,7 +822,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * This state is used while a message is loaded in memory.  A message must be in this state
    * before it can be dispatched to a consumer.  It can transition to Flushed or Tombstone.
    */
-  class Loaded(val delivery: Delivery) extends EntryState {
+  class Loaded(val delivery: Delivery, var store_completed:Boolean) extends EntryState {
 
     var acquired = false
     def messageKey = delivery.storeKey
@@ -768,34 +837,58 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     override  def as_loaded = this
 
-    def store() = {
-      if( delivery.storeKey == -1 ) {
-        val tx = queue.host.store.createStoreBatch
-        delivery.storeKey = tx.store(delivery.createMessageRecord)
-        tx.enqueue(toQueueEntryRecord)
-        tx.release
-      }
+    def store = {
+      delivery.uow.enqueue(toQueueEntryRecord)
+      delivery.uow.onComplete(^{
+        queue.store_flush_source.merge(this)
+      })
     }
 
     override def flush() = {
-      if( queue.tune_flush_to_store && !flushing ) {
-        flushing=true
-        queue.flushing_size+=size
-        if( delivery.storeBatch!=null ) {
-          delivery.storeBatch.eagerFlush(^{
-            queue.store_flush_source.merge(this)
-          })
+      if( queue.tune_flush_to_store ) {
+        if( store_completed ) {
+          flushing=true
+          flushed
         } else {
-          store
-          queue.host.store.flushMessage(messageKey) {
-            queue.store_flush_source.merge(this)
+          if( !flushing ) {
+            flushing=true
+            queue.flushing_size+=size
+
+            // The storeBatch is only set when called from the messages.offer method
+            if( delivery.uow!=null ) {
+              delivery.uow.completeASAP
+            } else {
+
+              // Are swapping out a non-persistent message?
+              if( delivery.storeKey == -1 ) {
+                
+                delivery.uow = queue.host.store.createStoreUOW
+                val uow = delivery.uow
+                delivery.storeKey = uow.store(delivery.createMessageRecord)
+                store
+                uow.completeASAP
+                uow.release
+                delivery.uow = null
+
+              } else {
+
+                queue.host.store.flushMessage(messageKey) {
+                  queue.store_flush_source.merge(this)
+                }
+
+              }
+
+            }
           }
         }
       }
+
       entry
     }
 
     def flushed() = {
+      store_completed = true
+      delivery.uow = null
       if( flushing ) {
         queue.flushing_size-=size
         queue.size -= size
@@ -955,13 +1048,101 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
   }
 
+
+  class FlushedGroup(
+   /** The number of adjacent entries this FlushedGroup represents. */
+   var count:Long,
+   /** size in bytes of the group */
+   var size:Int,
+   /** The number of tombstone entries in the groups */
+   var tombstones:Int ) extends EntryState {
+
+
+    def items = count - tombstones
+
+    def messageKey = -1
+
+    var loading = false
+
+    override def as_flushed_group = this
+
+    override def is_flushed_or_flushing = true
+
+    override def toString = { "flushed_group:{ loading: "+loading+", items: "+items+", size: "+size+"}" }
+
+    // Flushed entries can't be dispatched until
+    // they get loaded.
+    def dispatch():QueueEntry = {
+      null
+    }
+
+    override def load() = {
+      if( !loading ) {
+        loading = true
+        queue.host.store.listQueueEntries(queue.queueKey, seq, seq+count-1) { records =>
+          queue.dispatchQueue {
+
+            var item_count=0
+            var size_count=0
+            var last:QueueEntryRecord = null
+
+            val tmpList = new LinkedNodeList[QueueEntry]()
+            records.foreach { record =>
+
+              // if entries were not adjacent.. create tombstone entry.
+              if( last!=null && (last.queueSeq+1 != record.queueSeq) ) {
+                val entry = new QueueEntry(queue, last.queueSeq+1)
+                entry.tombstone.as_tombstone.count = record.queueSeq - (last.queueSeq+1)
+                tmpList.addLast(entry)
+              }
+
+              val entry = new QueueEntry(queue, record.queueSeq).init(record)
+              tmpList.addLast(entry)
+
+              item_count += 1
+              size_count += record.size
+              last = record
+            }
+
+            // we may need to adjust the enqueue count if entries
+            // were dropped at the store level
+            var item_delta = (items - item_count)
+            val size_delta: Int = size - size_count
+
+            if ( item_delta!=0 || size_delta!=0 ) {
+              assert(item_delta <= 0)
+              assert(size_delta <= 0)
+              info("Detected store dropped %d message(s) in seq range %d to %d using %d bytes", item_delta, seq, seq+count-1, size_delta)
+              queue.enqueue_item_counter += item_delta
+              queue.enqueue_size_counter += size_delta
+            }
+
+            var refill_preftch_list = prefetch_remove
+
+            linkAfter(tmpList)
+            val next = getNext
+
+            // move the subs to the first entry that we just loaded.
+            subscriptions.foreach(_.advance(next))
+            next.addSubscriptions(subscriptions)
+
+            unlink
+            refill_preftch_list.foreach( _.refill_prefetch )
+          }
+        }
+      }
+      entry
+    }
+
+    override def tombstone = {
+      throw new AssertionError("Flush group cannbot be tombstone.");
+    }
+  }
+
   /**
    * Entries in the Flushed state are not holding the referenced messages in memory anymore.
    * This state can transition to Loaded or Tombstone.
    *
-   * TODO: Add a new FlushedList state which can be used to merge multiple
-   * adjacent Flushed entries into a single FlushedList state.  This would allow us
-   * to support queues with millions of flushed entries without much memory impact.
    */
   class Flushed(val messageKey:Long, val size:Int) extends EntryState {
 
@@ -1021,7 +1202,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         delivery.storeKey = messageRecord.key
 
         queue.size += size
-        state = new Loaded(delivery)
+        state = new Loaded(delivery, true)
       } else {
 //        debug("Ignoring store load of: ", messageKey)
       }
@@ -1037,6 +1218,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       super.tombstone
     }
   }
+
+
+
 }
 
 
@@ -1073,12 +1257,13 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
     pos = queue.head_entry;
     session = consumer.connect(this)
     session.refiller = pos
-
     queue.head_entry.addSubscriptions(this :: Nil)
-    refill_prefetch
 
-    // kick off the initial dispatch.
-    queue.dispatchQueue << queue.head_entry
+    if( queue.serviceState.isStarted ) {
+      // kick off the initial dispatch.
+      refill_prefetch
+      queue.dispatchQueue << queue.head_entry
+    }
   }
 
   def close() = {
@@ -1223,11 +1408,11 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
     acquired.addLast(this)
     acquired_size += entry.size
 
-    def ack(sb:StoreBatch) = {
+    def ack(sb:StoreUOW) = {
 
       if (entry.messageKey != -1) {
         val storeBatch = if( sb == null ) {
-          queue.host.store.createStoreBatch
+          queue.host.store.createStoreUOW
         } else {
           sb
         }
