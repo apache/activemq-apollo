@@ -45,7 +45,7 @@
     </dependency>
     <dependency>
       <groupId>org.fusesource.hawtbuf</groupId>
-      <artifactId>hawtbuf-core</artifactId>
+      <artifactId>hawtbuf</artifactId>
       <version>${hawtbuf-version}</version>
     </dependency>
     <dependency>

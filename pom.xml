@@ -100,8 +100,8 @@
     <felix-version>1.0.0</felix-version>
 
     <hawtdispatch-version>1.0-SNAPSHOT</hawtdispatch-version>
-    <hawtdb-version>1.1-SNAPSHOT</hawtdb-version>
-    <hawtbuf-version>1.0-SNAPSHOT</hawtbuf-version>
+    <hawtdb-version>1.2-SNAPSHOT</hawtdb-version>
+    <hawtbuf-version>1.1-SNAPSHOT</hawtbuf-version>
     
     <jetty-version>6.1.22</jetty-version>
     <scalate-version>1.2-SNAPSHOT</scalate-version>
