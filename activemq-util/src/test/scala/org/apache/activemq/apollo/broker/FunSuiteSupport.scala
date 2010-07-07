@@ -30,6 +30,7 @@ abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfter
       case _ => System.getProperty("basedir", ".")
     }
     debug("using basedir: " + _basedir)
+    super.beforeAll(map)
   }
 
   //

@@ -30,8 +30,8 @@ import org.apache.activemq.apollo.dto.HawtDBStoreDTO
 import org.apache.activemq.apollo.broker._
 import ReporterLevel._
 import store.HawtDBManager
-import org.apache.activemq.broker.store.{Store, StoreTransaction}
-import org.apache.activemq.apollo.store.{QueueStatus, MessageRecord, QueueRecord}
+import org.apache.activemq.broker.store.{Store, StoreBatch}
+import org.apache.activemq.apollo.store.{QueueEntryRecord, QueueStatus, MessageRecord, QueueRecord}
 
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
@@ -75,6 +75,8 @@ class HawtDBStore extends BaseService with Logging with Store {
   /**
    * Validates and then applies the configuration.
    */
+  def getQueueEntries(id: Long)(cb: (Seq[QueueEntryRecord]) => Unit) = {}
+
   def configure(config: HawtDBStoreDTO, reporter:Reporter) = ^{
     if ( validate(config, reporter) < ERROR ) {
       this.config = config
@@ -117,7 +119,7 @@ class HawtDBStore extends BaseService with Logging with Store {
 
   def flushMessage(id: Long)(cb: => Unit) = {}
 
-  def createStoreTransaction() = new HawtDBStoreTransaction
+  def createStoreBatch() = new HawtDBStoreBatch
 
 
   /////////////////////////////////////////////////////////////////////
@@ -125,16 +127,15 @@ class HawtDBStore extends BaseService with Logging with Store {
   // Implementation of the StoreTransaction interface
   //
   /////////////////////////////////////////////////////////////////////
-  class HawtDBStoreTransaction extends BaseRetained with StoreTransaction {
+  class HawtDBStoreBatch extends BaseRetained with StoreBatch {
 
     def store(delivery: MessageRecord) = {
 
     }
 
-    def enqueue(queue: Long, seq: Long, msg: Long) = {}
+    def dequeue(entry: QueueEntryRecord) = {}
 
-    def dequeue(queue: Long, seq: Long, msg: Long) = {}
-
+    def enqueue(entry: QueueEntryRecord) = {}
   }
 
 

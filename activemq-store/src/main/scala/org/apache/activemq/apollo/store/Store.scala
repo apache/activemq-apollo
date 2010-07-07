@@ -32,7 +32,7 @@ import org.apache.activemq.apollo.store._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait StoreTransaction extends Retained {
+trait StoreBatch extends Retained {
 
   /**
    * Assigns the delivery a store id if it did not already
@@ -43,12 +43,12 @@ trait StoreTransaction extends Retained {
   /**
    * Adds a delivery to a specified queue at a the specified position in the queue.
    */
-  def enqueue(queue:Long, seq:Long, msg:Long)
+  def enqueue(entry:QueueEntryRecord)
 
   /**
    * Removes a delivery from a specified queue at a the specified position in the queue.
    */
-  def dequeue(queue:Long, seq:Long, msg:Long)
+  def dequeue(entry:QueueEntryRecord)
 
 }
 
@@ -74,6 +74,11 @@ trait Store extends Service {
   def listQueues(cb: (Seq[Long])=>Unit )
 
   /**
+   * Loads the queue information for a given queue id.
+   */
+  def getQueueEntries(id:Long)(cb:(Seq[QueueEntryRecord])=>Unit )
+
+  /**
    * Removes a the delivery associated with the provided from any
    * internal buffers/caches.  The callback is executed once, the message is
    * no longer buffered.
@@ -86,10 +91,10 @@ trait Store extends Service {
   def loadMessage(id:Long)(cb:(Option[MessageRecord])=>Unit )
 
   /**
-   * Creates a StoreTransaction which is used to perform persistent
+   * Creates a StoreBatch which is used to perform persistent
    * operations as unit of work.
    */
-  def createStoreTransaction():StoreTransaction
+  def createStoreBatch():StoreBatch
 
 }
 

@@ -137,6 +137,7 @@
     <module>activemq-util</module>
     <module>activemq-transport</module>
     <module>activemq-store</module>
+    <module>activemq-cassandra</module>
     <module>activemq-broker</module>
     <module>activemq-selector</module>
     <module>activemq-tcp</module>

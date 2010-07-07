@@ -1,0 +1,54 @@
+<Storage>
+  <ClusterName>Test</ClusterName>
+
+  <Keyspaces>
+    <Keyspace Name="ActiveMQ">
+
+      <!-- regular records with text keys -->
+      <ColumnFamily Name="messages" CompareWith="LongType"/>
+      <ColumnFamily Name="queues" CompareWith="LongType"/>
+      <ColumnFamily Name="entries" CompareWith="LongType" KeysCached="10000"/>
+      <!-- todo.. play with: RowsCached="100%" KeysCached="100%"-->
+
+      <ReplicaPlacementStrategy>org.apache.cassandra.locator.RackUnawareStrategy</ReplicaPlacementStrategy>
+      <ReplicationFactor>1</ReplicationFactor>
+      <EndPointSnitch>org.apache.cassandra.locator.EndPointSnitch</EndPointSnitch>
+    </Keyspace>
+  </Keyspaces>
+
+  <AutoBootstrap>false</AutoBootstrap>
+  <Authenticator>org.apache.cassandra.auth.AllowAllAuthenticator</Authenticator>
+  <Partitioner>org.apache.cassandra.dht.OrderPreservingPartitioner</Partitioner>
+  <InitialToken></InitialToken>
+  <CommitLogDirectory>%temp-dir%commitlog</CommitLogDirectory>
+
+  <DataFileDirectories>
+    <DataFileDirectory>%temp-dir%data</DataFileDirectory>
+  </DataFileDirectories>
+
+  <Seeds>
+    <Seed>127.0.0.1</Seed>
+  </Seeds>
+  <RpcTimeoutInMillis>10000</RpcTimeoutInMillis>
+  <CommitLogRotationThresholdInMB>128</CommitLogRotationThresholdInMB>
+  <ListenAddress>localhost</ListenAddress>
+  <StoragePort>7000</StoragePort>
+  <ThriftAddress>localhost</ThriftAddress>
+  <ThriftPort>9160</ThriftPort>
+  <ThriftFramedTransport>false</ThriftFramedTransport>
+  <DiskAccessMode>auto</DiskAccessMode>
+  <RowWarningThresholdInMB>512</RowWarningThresholdInMB>
+  <SlicedBufferSizeInKB>64</SlicedBufferSizeInKB>
+  <FlushDataBufferSizeInMB>32</FlushDataBufferSizeInMB>
+  <FlushIndexBufferSizeInMB>8</FlushIndexBufferSizeInMB>
+  <ColumnIndexSizeInKB>64</ColumnIndexSizeInKB>
+  <MemtableThroughputInMB>64</MemtableThroughputInMB>
+  <BinaryMemtableThroughputInMB>256</BinaryMemtableThroughputInMB>
+  <MemtableOperationsInMillions>0.3</MemtableOperationsInMillions>
+  <MemtableFlushAfterMinutes>60</MemtableFlushAfterMinutes>
+  <ConcurrentReads>8</ConcurrentReads>
+  <ConcurrentWrites>32</ConcurrentWrites>
+  <CommitLogSync>periodic</CommitLogSync>
+  <CommitLogSyncPeriodInMS>10000</CommitLogSyncPeriodInMS>
+  <GCGraceSeconds>864000</GCGraceSeconds>
+</Storage>

@@ -20,7 +20,7 @@ import _root_.org.apache.activemq.filter.{MessageEvaluationContext}
 import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
-import org.apache.activemq.broker.store.StoreTransaction
+import org.apache.activemq.broker.store.StoreBatch
 
 /**
  * A producer which sends Delivery objects to a delivery consumer.
@@ -151,13 +151,13 @@ class Delivery extends BaseRetained {
   /**
    * The transaction the delivery is participating in.
    */
-  var storeTx:StoreTransaction = null
+  var storeBatch:StoreBatch = null
 
   /**
    * Set if the producer requires an ack to be sent back.  Consumer
    * should execute once the message is processed.
    */
-  var ack:(StoreTransaction)=>Unit = null
+  var ack:(StoreBatch)=>Unit = null
 
   def copy() = (new Delivery).set(this)
 

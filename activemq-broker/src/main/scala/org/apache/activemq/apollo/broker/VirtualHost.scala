@@ -28,7 +28,6 @@ import org.apache.activemq.apollo.dto.VirtualHostDTO
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
 import ReporterLevel._
-import org.apache.activemq.apollo.store.memory.MemoryStore
 import org.apache.activemq.broker.store.{Store}
 import org.fusesource.hawtbuf.proto.WireFormat
 import org.apache.activemq.apollo.store.QueueRecord
@@ -88,7 +87,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
     this.names = names.toList
   }
 
-  var database:Store = new MemoryStore()
+  var store:Store = null
   var transactionManager:TransactionManagerX = new TransactionManagerX
 
   var protocols = Map[AsciiBuffer, WireFormat]()
@@ -112,28 +111,28 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 
 
   override protected def _start(onCompleted:Runnable):Unit = {
+    if( store!=null ) {
+      store.start();
+      store.listQueues { ids =>
+        for( id <- ids) {
+          store.getQueueStatus(id) { x =>
+            x match {
+              case Some(info)=>
+              dispatchQueue ^{
+                val dest = DestinationParser.parse(info.record.name , destination_parser_options)
+                if( dest.getDomain == Domain.QUEUE_DOMAIN ) {
 
-    database.start();
+                  val queue = new Queue(this, dest, id)
+                  queue.first_seq = info.first
+                  queue.last_seq = info.last
+                  queue.message_seq_counter = info.last+1
+                  queue.count = info.count
 
-    database.listQueues { ids =>
-      for( id <- ids) {
-        database.getQueueStatus(id) { x =>
-          x match {
-            case Some(info)=>
-            dispatchQueue ^{
-              val dest = DestinationParser.parse(info.record.name , destination_parser_options)
-              if( dest.getDomain == Domain.QUEUE_DOMAIN ) {
-
-                val queue = new Queue(this, dest, id)
-                queue.first_seq = info.first
-                queue.last_seq = info.last
-                queue.message_seq_counter = info.last+1
-                queue.count = info.count
-
-                queues.put(info.record.name, queue)
+                  queues.put(info.record.name, queue)
+                }
               }
+              case _ =>
             }
-            case _ =>
           }
         }
       }
@@ -163,7 +162,9 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 //        }
 //        done.await();
 
-    database.stop();
+    if( store!=null ) {
+      store.stop();
+    }
     onCompleted.run
   }
 
@@ -184,21 +185,27 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
 
   def addQueue(dest:Destination)(cb: (Queue)=>Unit ) = ^{
     val name = DestinationParser.toBuffer(dest, destination_parser_options)
-    val record = new QueueRecord
-    record.name = name
-    database.addQueue(record) { rc =>
-      rc match {
-        case Some(id) =>
-          dispatchQueue ^ {
-            val queue = new Queue(this, dest, id)
-            queues.put(name, queue)
-            cb(queue)
-          }
-        case None => // store could not create
-          cb(null)
+    if( store!=null ) {
+      val record = new QueueRecord
+      record.name = name
+      store.addQueue(record) { rc =>
+        rc match {
+          case Some(id) =>
+            dispatchQueue ^ {
+              val queue = new Queue(this, dest, id)
+              queues.put(name, queue)
+              cb(queue)
+            }
+          case None => // store could not create
+            cb(null)
+        }
       }
+    } else {
+      val queue = new Queue(this, dest, -1)
+      queues.put(name, queue)
+      cb(queue)
     }
-    null
+
   } |>>: dispatchQueue
 
   def createSubscription(consumer:ConsumerContext):BrokerSubscription = {

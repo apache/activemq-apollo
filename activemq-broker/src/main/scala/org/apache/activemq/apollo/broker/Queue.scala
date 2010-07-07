@@ -23,9 +23,9 @@ import org.fusesource.hawtdispatch.{ScalaDispatch, DispatchQueue, BaseRetained}
 import org.apache.activemq.util.TreeMap.TreeEntry
 import java.util.{Collections, ArrayList, LinkedList}
 import org.apache.activemq.util.list.{LinkedNodeList, LinkedNode}
-import org.apache.activemq.broker.store.{StoreTransaction}
+import org.apache.activemq.broker.store.{StoreBatch}
 import protocol.ProtocolFactory
-import org.apache.activemq.apollo.store.MessageRecord
+import org.apache.activemq.apollo.store.{QueueEntryRecord, MessageRecord}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -75,7 +75,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
   })
 
 
-  val ack_source = createSource(new ListEventAggregator[(LinkedQueueEntry, StoreTransaction)](), dispatchQueue)
+  val ack_source = createSource(new ListEventAggregator[(LinkedQueueEntry, StoreBatch)](), dispatchQueue)
   ack_source.setEventHandler(^ {drain_acks});
   ack_source.resume
 
@@ -133,18 +133,18 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
         entry.created(next_message_seq, delivery)
 
         if( delivery.ack!=null ) {
-          delivery.ack(delivery.storeTx)
+          delivery.ack(delivery.storeBatch)
         }
         if (delivery.storeId != -1) {
-          delivery.storeTx.enqueue(storeId, entry.seq, delivery.storeId)
-          delivery.storeTx.release
+          delivery.storeBatch.enqueue(entry.createQueueEntryRecord)
+          delivery.storeBatch.release
         }
 
         size += entry.value.size
         entries.addLast(entry)
         counter += 1;
 
-        if( full ) {
+        if( full && host.store!=null ) {
 //          swap
         }
 
@@ -156,21 +156,20 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
     }
   }
 
-  def ack(entry: QueueEntry, tx:StoreTransaction) = {
-
+  def ack(entry: QueueEntry, sb:StoreBatch) = {
     if (entry.value.ref != -1) {
-      val transaction = if( tx == null ) {
-        host.database.createStoreTransaction
+      val storeBatch = if( sb == null ) {
+        host.store.createStoreBatch
       } else {
-        tx
+        sb
       }
-      transaction.dequeue(storeId, entry.seq, entry.value.ref)
-      if( tx == null ) {
-        transaction.release
+      storeBatch.dequeue(entry.createQueueEntryRecord)
+      if( sb == null ) {
+        storeBatch.release
       }
     }
-    if( tx != null ) {
-      tx.release
+    if( sb != null ) {
+      sb.release
     }
 
     counter -= 1
@@ -178,7 +177,6 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
     entry.tombstone
 
     if (counter == 0) {
-//      trace("empty.. triggering refill")
       messages.refiller.run
     }
   }
@@ -234,10 +232,10 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
         if (delivery.storeId != -1) {
           // If the message has a store id, then this delivery will
           // need a tx to track the store changes.
-          if( delivery.storeTx == null ) {
-            delivery.storeTx = host.database.createStoreTransaction
+          if( delivery.storeBatch == null ) {
+            delivery.storeBatch = host.store.createStoreBatch
           } else {
-            delivery.storeTx.retain
+            delivery.storeBatch.retain
           }
         }
 
@@ -295,7 +293,6 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
   }
 
   def swap() = {
-
     class Prio(val entry:QueueEntry) extends Comparable[Prio] {
       var value = 0
       def compareTo(o: Prio) = o.value - value
@@ -362,7 +359,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
         if( stored!=null && !stored.loading) {
           // start loading it back...
           stored.loading = true
-          host.database.loadMessage(stored.ref) { delivery =>
+          host.store.loadMessage(stored.ref) { delivery =>
             // pass off to a source so it can aggregate multiple
             // loads to reduce cross thread synchronization
             if( delivery.isDefined ) {
@@ -376,7 +373,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
         if( loaded!=null ) {
           var ref = loaded.delivery.storeId
           if( ref == -1 ) {
-            val tx = host.database.createStoreTransaction
+            val tx = host.store.createStoreBatch
 
             val message = loaded.delivery.message
             val sm = new MessageRecord
@@ -386,11 +383,12 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
 
             tx.store(sm)
             loaded.delivery.storeId = sm.id
-            tx.enqueue(storeId, entry.seq, sm.id)
+
+            tx.enqueue(entry.createQueueEntryRecord)
             tx.release
           }
           flushingSize += entry.value.size
-          host.database.flushMessage(ref) {
+          host.store.flushMessage(ref) {
             store_flush_source.merge(entry)
           }
         }
@@ -453,6 +451,15 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
   var competing:List[Subscription] = Nil
   var browsing:List[Subscription] = Nil
   var value:EntryType = null
+
+  def createQueueEntryRecord = {
+    val qer = new QueueEntryRecord
+    qer.queueKey = queue.storeId
+    qer.queueSeq = seq
+    qer.messageKey = value.ref
+    qer.size = value.size
+    qer
+  }
 
   def compareTo(o: QueueEntry) = {
     (seq - o.seq).toInt

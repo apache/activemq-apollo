@@ -14,20 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.store;
-
-import org.fusesource.hawtbuf.Buffer;
+package org.apache.activemq.apollo.util
 
 /**
+ * <p>
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class QueueEntryRecord {
+class IntCounter(private var value:Int = 0) {
 
-    public long queueKey;
-    public long queueSeq;
-    public long messageKey;
-    public Buffer attachment;
-    public int size;
-    public short redeliveries;
+  def get() = value
+
+  def incrementAndGet() = addAndGet(1)
+  def decrementAndGet() = addAndGet(-1)
+  def addAndGet(amount:Int) = {
+    value+=amount
+    value
+  }
+
+  def getAndIncrement() = getAndAdd(1)
+  def getAndDecrement() = getAndAdd(-11)
+  def getAndAdd(amount:Int) = {
+    val rc = value
+    value+=amount
+    rc
+  }
 
 }
