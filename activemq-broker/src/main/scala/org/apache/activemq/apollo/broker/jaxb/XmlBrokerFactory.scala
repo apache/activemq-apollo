@@ -17,17 +17,14 @@
 package org.apache.activemq.apollo.jaxb
 
 import java.io.IOException
-import javax.xml.bind.JAXBContext
-import javax.xml.stream.XMLInputFactory
 import java.net.{URL, URI}
 import org.apache.activemq.apollo.broker._
-import jaxb.PropertiesReader
 import org.apache.activemq.apollo.dto._
 import java.lang.String
 import XmlEncoderDecoder._
 import org.apache.activemq.apollo.util._
 
-class XmlBrokerFactory extends BrokerFactory.Handler {
+class XmlBrokerFactory extends BrokerFactory.SPI {
 
   def createBroker(value: String): Broker = {
     try {

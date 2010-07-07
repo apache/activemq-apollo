@@ -30,7 +30,6 @@ import java.util.concurrent.ConcurrentHashMap
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
 
-
 /**
  * <p>
  * The BrokerFactory creates Broker objects from a URI.
@@ -40,39 +39,36 @@ import ReporterLevel._
  */
 object BrokerFactory {
 
-    val BROKER_FACTORY_HANDLER_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/apollo/broker/");
+  val finder = ClassFinder[SPI]("META-INF/services/org.apache.activemq.apollo/brokers")
+  var spis = List[SPI]()
 
-    trait Handler {
-        def createBroker(brokerURI:String):Broker
+  trait SPI {
+    def createBroker(brokerURI:String):Broker
+  }
+
+  finder.find.foreach{ clazz =>
+    try {
+      spis ::= clazz.newInstance.asInstanceOf[SPI]
+    } catch {
+      case e:Throwable => e.printStackTrace
     }
+  }
 
-
-    def createHandler(name:String):Handler = {
-      BROKER_FACTORY_HANDLER_FINDER.newInstance(name).asInstanceOf[Handler]
+  def createBroker(uri:String, start:Boolean=false):Broker = {
+    if( uri == null ) {
+      return null
     }
-
-    /**
-     * Creates a broker from a URI configuration
-     *
-     * @param brokerURI the URI scheme to configure the broker
-     * @param startBroker whether or not the broker should have its
-     *                {@link Broker#start()} method called after
-     *                construction
-     * @throws Exception
-     */
-    def createBroker(brokerURI:String, startBroker:Boolean=false):Broker = {
-      var scheme = FactoryFinder.getScheme(brokerURI)
-      if (scheme==null ) {
-          throw new IllegalArgumentException("Invalid broker URI, no scheme specified: " + brokerURI)
-      }
-      var handler = createHandler(scheme)
-      var broker = handler.createBroker(brokerURI)
-      if (startBroker) {
+    spis.foreach { spi=>
+      val broker = spi.createBroker(uri)
+      if( broker!=null ) {
+        if (start) {
           broker.start();
+        }
+        return broker
       }
-      return broker;
     }
-
+    throw new IllegalArgumentException("Uknonwn broker uri: "+uri)
+  }
 }
 
 
