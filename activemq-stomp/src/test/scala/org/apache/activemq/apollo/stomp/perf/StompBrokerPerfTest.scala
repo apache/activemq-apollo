@@ -34,6 +34,8 @@ import org.apache.activemq.apollo.dto.{BrokerDTO, HawtDBStoreDTO}
 
 class StompBrokerPerfTest extends BaseBrokerPerfSupport {
 
+  override def description = "Using the STOMP protocol over TCP"
+
   override def createProducer() = new StompRemoteProducer()
 
   override def createConsumer() = new StompRemoteConsumer()
@@ -43,7 +45,9 @@ class StompBrokerPerfTest extends BaseBrokerPerfSupport {
 }
 
 class StompPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
-  
+
+  override def description = "Using the STOMP protocol over TCP with no store."
+
   override def createProducer() = new StompRemoteProducer()
 
   override def createConsumer() = new StompRemoteConsumer()
@@ -53,6 +57,8 @@ class StompPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
 }
 
 class StompHawtDBPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
+
+  override def description = "Using the STOMP protocol over TCP persisting to the HawtDB store."
 
   println(getClass.getClassLoader.getResource("log4j.properties"))
 

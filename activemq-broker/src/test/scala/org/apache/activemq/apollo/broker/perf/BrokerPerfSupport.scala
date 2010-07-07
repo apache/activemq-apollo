@@ -120,13 +120,15 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     val basedir = new File(System.getProperty("user.home", "."))
     val htmlFile = new File(basedir, reportTargetName)
 
-    val report_parser = """(?s)(.*// DATA-START\r?\n)(.*)(// DATA-END.*)""".r
+    val report_parser = """(?s)(.*// DATA-START\r?\n)(.*)(// DATA-END.*<!-- DESCRIPTION-START -->)(.*)(<!-- DESCRIPTION-END -->.*)""".r
+
+
 
     // Load the previous dataset if the file exists
     var report_data = ""
     if( htmlFile.exists ) {
       IOHelper.readText(htmlFile) match {
-        case report_parser(_, data, _) =>
+        case report_parser(_, data, _, _, _) =>
           report_data = data.stripLineEnd
         case _ =>
           println("could not parse existing report file: "+htmlFile)
@@ -136,7 +138,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     // Load the report template and parse it..
     val template = IOHelper.readText(reportResourceTemplate.openStream)
     template match {
-      case report_parser(report_header, _, report_footer) =>
+      case report_parser(report_header, _, report_mid, _, report_footer) =>
         var notes = System.getProperty("notes")
         if( notes==null ) {
           val version = new String(ProcessSupport.system("git", "rev-list", "--max-count=1", "HEAD").toByteArray).trim
@@ -147,7 +149,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
           report_data += ",\n"
         }
         report_data += "            ['"+jsescape(notes)+"', "+samples.map(x=>String.format("%.2f",x._2)).mkString(", ")+"]\n"
-        IOHelper.writeText(htmlFile, report_header+report_data+report_footer)
+        IOHelper.writeText(htmlFile, report_header+report_data+report_mid+description+report_footer)
       case _ =>
         println("could not parse template report file")
     }
@@ -160,6 +162,8 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
       }
     }
   }
+
+  def description = ""
 
   def jsescape(value:String) = {
     var rc = ""
