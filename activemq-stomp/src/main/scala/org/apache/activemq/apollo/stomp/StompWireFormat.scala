@@ -229,7 +229,7 @@ class StompWireFormat extends WireFormat with DispatchLogging {
   }
 
 
-  def flush():BufferState = {
+  def flush():WireFormat.BufferState = {
 
     // if we have a pending write that is being sent over the socket...
     if ( write_buffer.remaining() != 0 ) {

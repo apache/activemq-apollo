@@ -38,7 +38,7 @@ class HawtDBMemoryPoolSPI extends MemoryPoolFactory.SPI {
   def create(config: String) = {
     if( config.startsWith(prefix) ) {
       val file = new File(config.substring(prefix.length))
-      // new HawtDBMemoryPool(file)
+      new HawtDBMemoryPool(file)
       null
     } else {
       null
