@@ -32,6 +32,9 @@ public class HawtDBStoreDTO extends StoreDTO {
     @XmlAttribute(name="directory", required=false)
     public File directory;
 
+    @XmlAttribute(name="archive-directory", required=false)
+    public File archiveDirectory;
+
 	@XmlAttribute(name="index-flush-interval", required=false)
 	public long indexFlushInterval = 5 * 1000L;
 
@@ -39,7 +42,16 @@ public class HawtDBStoreDTO extends StoreDTO {
 	public long cleanupInterval = 30 * 1000L;
 
 	@XmlAttribute(name="journal-log-size", required=false)
-	public int journalLogSize = 1024*1024*20;
+	public int journalLogSize = 1024*1024*64;
+
+    @XmlAttribute(name="journal-batch-size", required=false)
+    public int journalBatchSize = 1024*256;
+
+    @XmlAttribute(name="index-cache-size", required=false)
+    public int indexCacheSize = 5000;
+
+    @XmlAttribute(name="index-page-size", required=false)
+    public short indexPageSize = 512;
 
     @XmlAttribute(name="fail-if-locked", required=false)
     public boolean failIfLocked = false;
