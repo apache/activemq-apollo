@@ -81,10 +81,10 @@ public class HawtDBStore implements Store {
     private static final Log LOG = LogFactory.getLog(HawtDBStore.class);
     private static final int DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
 
-    private static final org.fusesource.hawtdb.util.buffer.Buffer BEGIN_UNIT_OF_WORK_DATA = new org.fusesource.hawtdb.util.buffer.Buffer(new byte[] { BEGIN_UNIT_OF_WORK });
-    private static final org.fusesource.hawtdb.util.buffer.Buffer END_UNIT_OF_WORK_DATA = new org.fusesource.hawtdb.util.buffer.Buffer(new byte[] { END_UNIT_OF_WORK });
-    private static final org.fusesource.hawtdb.util.buffer.Buffer CANCEL_UNIT_OF_WORK_DATA = new org.fusesource.hawtdb.util.buffer.Buffer(new byte[] { CANCEL_UNIT_OF_WORK });
-    private static final org.fusesource.hawtdb.util.buffer.Buffer FLUSH_DATA = new org.fusesource.hawtdb.util.buffer.Buffer(new byte[] { FLUSH });
+    private static final Buffer BEGIN_UNIT_OF_WORK_DATA = new Buffer(new byte[] { BEGIN_UNIT_OF_WORK });
+    private static final Buffer END_UNIT_OF_WORK_DATA = new Buffer(new byte[] { END_UNIT_OF_WORK });
+    private static final Buffer CANCEL_UNIT_OF_WORK_DATA = new Buffer(new byte[] { CANCEL_UNIT_OF_WORK });
+    private static final Buffer FLUSH_DATA = new Buffer(new byte[] { FLUSH });
 
     public static final int CLOSED_STATE = 1;
     public static final int OPEN_STATE = 2;
@@ -357,7 +357,7 @@ public class HawtDBStore implements Store {
                 int uowCounter = 0;
                 while (recoveryPosition != null) {
 
-                    Buffer data = convert(journal.read(recoveryPosition));
+                    Buffer data = journal.read(recoveryPosition);
                     if (data.length == 1 && data.data[0] == BEGIN_UNIT_OF_WORK) {
                         uow = pageFile.tx();
                     } else if (data.length == 1 && data.data[0] == END_UNIT_OF_WORK) {
@@ -405,10 +405,6 @@ public class HawtDBStore implements Store {
             recovering = false;
             indexLock.writeLock().unlock();
         }
-    }
-
-    private Buffer convert(org.fusesource.hawtdb.util.buffer.Buffer buffer) {
-        return new Buffer(buffer.data, buffer.offset, buffer.length);
     }
 
     public void incrementalRecover() throws IOException {
@@ -596,7 +592,7 @@ public class HawtDBStore implements Store {
             long start = System.currentTimeMillis();
             final Location location;
             synchronized (journal) {
-                location = journal.write(convert(os.toBuffer()), onFlush);
+                location = journal.write(os.toBuffer(), onFlush);
             }
             long start2 = System.currentTimeMillis();
 
@@ -623,10 +619,6 @@ public class HawtDBStore implements Store {
 
     }
 
-    private org.fusesource.hawtdb.util.buffer.Buffer convert(Buffer buffer) {
-        return new org.fusesource.hawtdb.util.buffer.Buffer(buffer.data, buffer.offset, buffer.length);
-    }
-
     /**
      * Loads a previously stored PBMessage
      * 
@@ -635,7 +627,7 @@ public class HawtDBStore implements Store {
      * @throws IOException
      */
     private TypeCreatable load(Location location) throws IOException {
-        Buffer data = convert(journal.read(location));
+        Buffer data = journal.read(location);
         return load(location, data);
     }
 
