@@ -239,7 +239,7 @@ class DeliveryProducerRoute(val destination:Destination, val producer:DeliveryPr
     dispatchQueue.release
   })
 
-  var targets = List[Session]()
+  var targets = List[DeliverySession]()
 
   def connected(targets:List[DeliveryConsumer]) = retaining(targets) {
     internal_bind(targets)
@@ -289,7 +289,7 @@ class DeliveryProducerRoute(val destination:Destination, val producer:DeliveryPr
   //
 
   var overflow:Delivery=null
-  var overflowSessions = List[Session]()
+  var overflowSessions = List[DeliverySession]()
   var refiller:Runnable=null
 
   def full = overflow!=null

@@ -37,6 +37,8 @@ import StompConstants._;
 import BufferConversions._
 
 case class StompFrameMessage(frame:StompFrame) extends Message {
+  
+  def protocol = "stomp"
 
   /**
    * the globally unique id of the message

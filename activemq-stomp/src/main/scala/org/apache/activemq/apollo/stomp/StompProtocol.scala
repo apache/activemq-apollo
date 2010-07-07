@@ -73,7 +73,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       delivery.message.isInstanceOf[StompFrameMessage]
     }
 
-    def connect(p:DeliveryProducer) = new Session {
+    def connect(p:DeliveryProducer) = new DeliverySession {
       retain
 
       def producer = p
@@ -93,7 +93,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
           false
         } else {
           if( delivery.ack!=null ) {
-            producer.ack(delivery.ack)
+            delivery.ack(null)
           }
           val frame = delivery.message.asInstanceOf[StompFrameMessage].frame
           val rc = session.offer(frame)

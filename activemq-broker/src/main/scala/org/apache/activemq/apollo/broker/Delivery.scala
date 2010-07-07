@@ -28,7 +28,6 @@ import org.fusesource.hawtbuf._
 trait DeliveryProducer {
 
   def dispatchQueue:DispatchQueue
-  def ack(value:Any) = {}
 
   def collocate(value:DispatchQueue):Unit = {
     if( value.getTargetQueue ne dispatchQueue.getTargetQueue ) {
@@ -47,17 +46,17 @@ trait DeliveryProducer {
 trait DeliveryConsumer extends Retained {
   def dispatchQueue:DispatchQueue;
   def matches(message:Delivery):Boolean
-  def connect(producer:DeliveryProducer):Session
+  def connect(producer:DeliveryProducer):DeliverySession
 }
 
 /**
- * Before a derlivery producer can send Delivery objects to a delivery
+ * Before a delivery producer can send Delivery objects to a delivery
  * consumer, it creates a Delivery session which it uses to send
  * the deliveries over.
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait Session extends Sink[Delivery] {
+trait DeliverySession extends Sink[Delivery] {
   def producer:DeliveryProducer
   def consumer:DeliveryConsumer
   def close:Unit
@@ -108,6 +107,11 @@ trait Message {
    */
   def messageEvaluationContext:MessageEvaluationContext
 
+  /**
+   * The protocol encoding of the message.
+   */
+  def protocol:String
+
 }
 
 /**
@@ -133,35 +137,32 @@ class Delivery extends BaseRetained {
   var size:Int = 0
 
   /**
-   * the encoding format of the message
-   */
-  var encoding: String = null
-
-  /**
    *  the message being delivered
    */
   var message: Message = null
 
   /**
-   * the encoded form of the message being delivered.
+   * A reference to the stored version of the message.
    */
-  var encoded: Buffer = null
+  var storeId:Long = -1
 
-  var ref:StoredMessageRef = null
+  /**
+   * The transaction the delivery is participating in.
+   */
+  var storeTx:StoreTransaction = null
+
+  /**
+   * Set if the producer requires an ack to be sent back.  Consumer
+   * should execute once the message is processed.
+   */
+  var ack:(StoreTransaction)=>Unit = null
 
   def copy() = (new Delivery).set(this)
 
-  /**
-   * Set if the producer requires an ack to be sent back
-   */
-  var ack:Any = null
-
   def set(other:Delivery) = {
     size = other.size
-    encoding = other.encoding
     message = other.message
-    encoded = other.encoded
-    ref = other.ref
+    storeId = other.storeId
     this
   }
 

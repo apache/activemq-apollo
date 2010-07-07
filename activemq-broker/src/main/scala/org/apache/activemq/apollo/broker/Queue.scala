@@ -22,8 +22,7 @@ import collection.{SortedMap}
 import org.fusesource.hawtdispatch.{ScalaDispatch, DispatchQueue, BaseRetained}
 import org.apache.activemq.util.TreeMap.TreeEntry
 import java.util.{Collections, ArrayList, LinkedList}
-import org.apache.activemq.util.list.LinkedNode
-import org.apache.activemq.util.list.LinkedNodeList
+import org.apache.activemq.util.list.{LinkedNodeList, LinkedNode}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -67,9 +66,25 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
     debug("created queue for: " + destination)
   }
   setDisposer(^ {
+    ack_source.release
     dispatchQueue.release
     session_manager.release
   })
+
+
+  val ack_source = createSource(new ListEventAggregator[(LinkedQueueEntry, StoreTransaction)](), dispatchQueue)
+  ack_source.setEventHandler(^ {drain_acks});
+  ack_source.resume
+
+  val store_load_source = createSource(new ListEventAggregator[(QueueEntry, Delivery)](), dispatchQueue)
+  store_load_source.setEventHandler(^ {drain_store_loads});
+  store_load_source.resume
+
+  val store_flush_source = createSource(new ListEventAggregator[QueueEntry](), dispatchQueue)
+  store_flush_source.setEventHandler(^ {drain_store_flushes});
+  store_flush_source.resume
+
+  val session_manager = new SinkMux[Delivery](messages, dispatchQueue, Delivery)
 
   // sequence numbers.. used to track what's in the store.
   var first_seq = -1L
@@ -85,6 +100,8 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
   val entries = new LinkedNodeList[QueueEntry]()
   entries.addFirst(headEntry)
 
+  var flushingSize = 0
+
   /**
    * Tunning options.
    */
@@ -93,6 +110,186 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
   var tune_max_outbound_size = 1024 * 1204 * 5
 
   private var size = 0
+
+  object messages extends Sink[Delivery] {
+
+    var refiller: Runnable = null
+
+    def full = if(size >= tune_max_size)
+      true
+    else
+      false
+
+    def offer(delivery: Delivery): Boolean = {
+      if (full) {
+        false
+      } else {
+
+        val entry = tailEntry
+        tailEntry = new QueueEntry(Queue.this)
+        entry.created(next_message_seq, delivery)
+
+        if( delivery.ack!=null ) {
+          delivery.ack(delivery.storeTx)
+        }
+        if (delivery.storeId != -1) {
+          delivery.storeTx.enqueue(storeId, entry.seq, delivery.storeId)
+          delivery.storeTx.release
+        }
+
+        size += entry.value.size
+        entries.addLast(entry)
+        counter += 1;
+
+        if( full ) {
+//          swap
+        }
+
+        if( entry.hasSubs ) {
+          entry.dispatch
+        }
+        true
+      }
+    }
+  }
+
+  def ack(entry: QueueEntry, tx:StoreTransaction) = {
+
+    if (entry.value.ref != -1) {
+      val transaction = if( tx == null ) {
+        host.database.createStoreTransaction
+      } else {
+        tx
+      }
+      transaction.dequeue(storeId, entry.seq, entry.value.ref)
+      if( tx == null ) {
+        transaction.release
+      }
+    }
+    if( tx != null ) {
+      tx.release
+    }
+
+    counter -= 1
+    size -= entry.value.size
+    entry.tombstone
+
+    if (counter == 0) {
+//      trace("empty.. triggering refill")
+      messages.refiller.run
+    }
+  }
+
+
+  def nack(values: LinkedNodeList[LinkedQueueEntry]) = {
+    // TODO:
+  }
+
+
+  def drain_acks = {
+    ack_source.getData.foreach {
+      case (entry, tx) =>
+        entry.unlink
+        ack(entry.value, tx)
+    }
+  }
+  
+  /////////////////////////////////////////////////////////////////////
+  //
+  // Implementation of the DeliveryConsumer trait.  Allows this queue
+  // to receive messages from producers.
+  //
+  /////////////////////////////////////////////////////////////////////
+
+  def matches(message: Delivery) = {true}
+
+  def connect(p: DeliveryProducer) = new DeliverySession {
+    retain
+
+    override def consumer = Queue.this
+
+    override def producer = p
+
+    val session = session_manager.open(producer.dispatchQueue)
+
+    def close = {
+      session_manager.close(session)
+      release
+    }
+
+    // Delegate all the flow control stuff to the session
+    def full = session.full
+
+    def offer(delivery: Delivery) = {
+      if (session.full) {
+        false
+      } else {
+
+        // Called from the producer thread before the delivery is
+        // processed by the queue's thread.. We don't
+        // yet know the order of the delivery in the queue.
+        if (delivery.storeId != -1) {
+          // If the message has a store id, then this delivery will
+          // need a tx to track the store changes.
+          if( delivery.storeTx == null ) {
+            delivery.storeTx = host.database.createStoreTransaction
+          } else {
+            delivery.storeTx.retain
+          }
+        }
+
+        val rc = session.offer(delivery)
+        assert(rc, "session should accept since it was not full")
+        true
+      }
+    }
+
+    def refiller = session.refiller
+
+    def refiller_=(value: Runnable) = {session.refiller = value}
+  }
+
+  /////////////////////////////////////////////////////////////////////
+  //
+  // Implementation of the Route trait.  Allows consumers to bind/unbind
+  // from this queue so that it can send messages to them.
+  //
+  /////////////////////////////////////////////////////////////////////
+
+  def connected(consumers: List[DeliveryConsumer]) = bind(consumers)
+
+  def bind(consumers: List[DeliveryConsumer]) = retaining(consumers) {
+    for (consumer <- consumers) {
+      val subscription = new Subscription(this)
+      subscription.connect(consumer)
+      consumerSubs += consumer -> subscription
+    }
+  } >>: dispatchQueue
+
+  def unbind(consumers: List[DeliveryConsumer]) = releasing(consumers) {
+    for (consumer <- consumers) {
+      consumerSubs.get(consumer) match {
+        case Some(cs) =>
+          cs.close
+          consumerSubs -= consumer
+        case None =>
+      }
+    }
+  } >>: dispatchQueue
+
+  def disconnected() = throw new RuntimeException("unsupported")
+
+  /////////////////////////////////////////////////////////////////////
+  //
+  // Implementation methods.
+  //
+  /////////////////////////////////////////////////////////////////////
+
+  private def next_message_seq = {
+    val rc = message_seq_counter
+    message_seq_counter += 1
+    rc
+  }
 
   def swap() = {
 
@@ -158,192 +355,70 @@ class Queue(val host: VirtualHost, val destination: Destination, val storeId: Lo
       val entry = prio.entry
       if( remaining > 0 ) {
         remaining -= entry.value.size
+        val stored = entry.value.asStored
+        if( stored!=null && !stored.loading) {
+          // start loading it back...
+          stored.loading = true
+          host.database.loadDelivery(stored.ref) { delivery =>
+            // pass off to a source so it can aggregate multiple
+            // loads to reduce cross thread synchronization
+            if( delivery.isDefined ) {
+              store_load_source.merge((entry, delivery.get))
+            }
+          }
+        }
+      } else {
+        // Chuck the reset out...
+        val loaded = entry.value.asLoaded
+        if( loaded!=null ) {
+          var ref = loaded.delivery.storeId
+          if( ref == -1 ) {
+            val tx = host.database.createStoreTransaction
+            tx.store(loaded.delivery)
+            tx.enqueue(storeId, entry.seq, loaded.delivery.storeId)
+            tx.release
+          }
+          flushingSize += entry.value.size
+          host.database.flushDelivery(ref) {
+            store_flush_source.merge(entry)
+          }
+        }
       }
-
       i += 1
     }
-
   }
 
-  object messages extends Sink[QueueEntry] {
-    var refiller: Runnable = null
+  def drain_store_loads() = {
+    val data = store_load_source.getData
+    var ready = List[QueueEntry]()
 
-    def full = size >= tune_max_size
+    data.foreach { event =>
+      val entry = event._1
+      entry.loaded(event._2)
+      size += entry.value.size
 
-    def offer(value: QueueEntry): Boolean = {
-
-      if (full) {
-        false
-      } else {
-
-        val ref = value.value.ref
-        if (ref != null) {
-          host.database.addMessageToQueue(storeId, value.seq, ref)
-          ref.release
-        }
-
-        size += value.value.size
-        entries.addLast(value)
-        counter += 1;
-
-//        if( full ) {
-//          swap
-//        }
-
-        if( value.hasSubs ) {
-          value.dispatch
-        }
-        true
-      }
-    }
-  }
-
-  def ack(entry: QueueEntry) = {
-
-    if (entry.value.ref != null) {
-      host.database.removeMessageFromQueue(storeId, entry.seq, null)
-    }
-
-    counter -= 1
-    size -= entry.value.size
-
-    entry.tombstone
-
-    if (counter == 0) {
-      messages.refiller.run
-    }
-  }
-
-
-  def nack(values: List[QueueEntry]) = {
-    // TODO:
-    for (v <- values) {
-    }
-  }
-  
-
-  val session_manager = new SinkMux[Delivery](MapSink(messages) {x => accept(x)}, dispatchQueue, Delivery)
-
-  val ack_source = createSource(new ListEventAggregator[(Subscription, QueueEntry)](), dispatchQueue)
-  ack_source.setEventHandler(^ {drain_acks});
-  ack_source.resume
-
-  def drain_acks = {
-    ack_source.getData.foreach {
-      event =>
-        event._1._ack(event._2)
-    }
-  }
-
-
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Implementation of the DeliveryConsumer trait.  Allows this queue
-  // to receive messages from producers.
-  //
-  /////////////////////////////////////////////////////////////////////
-
-  def matches(message: Delivery) = {true}
-
-  def connect(p: DeliveryProducer) = new Session {
-    retain
-
-    override def consumer = Queue.this
-
-    override def producer = p
-
-    val session = session_manager.open(producer.dispatchQueue)
-
-    def close = {
-      session_manager.close(session)
-      release
-    }
-
-    // Delegate all the flow control stuff to the session
-    def full = session.full
-
-    def offer(value: Delivery) = {
-      if (session.full) {
-        false
-      } else {
-        val rc = session.offer(sent(value))
-        assert(rc, "session should accept since it was not full")
-        true
+      if( entry.hasSubs ) {
+        ready ::= entry
       }
     }
 
-    def refiller = session.refiller
-
-    def refiller_=(value: Runnable) = {session.refiller = value}
+    ready.foreach { entry =>
+      entry.dispatch
+    }
   }
 
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Implementation of the Route trait.  Allows consumers to bind/unbind
-  // from this queue so that it can send messages to them.
-  //
-  /////////////////////////////////////////////////////////////////////
+  def drain_store_flushes() = {
+    store_flush_source.getData.foreach { entry =>
+      flushingSize -= entry.value.size
 
-  def connected(consumers: List[DeliveryConsumer]) = bind(consumers)
-
-  def bind(consumers: List[DeliveryConsumer]) = retaining(consumers) {
-    for (consumer <- consumers) {
-      val subscription = new Subscription(this)
-      subscription.connect(consumer)
-      consumerSubs += consumer -> subscription
-    }
-  } >>: dispatchQueue
-
-  def unbind(consumers: List[DeliveryConsumer]) = releasing(consumers) {
-    for (consumer <- consumers) {
-      consumerSubs.get(consumer) match {
-        case Some(cs) =>
-          cs.close
-          consumerSubs -= consumer
-        case None =>
+      // by the time we get called back, subs my be interested in the entry
+      // or it may have been acked.
+      if( !entry.hasSubs && entry.value.asLoaded!=null ) {
+        size += entry.value.size
+        entry.stored
       }
     }
-  } >>: dispatchQueue
-
-  def disconnected() = throw new RuntimeException("unsupported")
-
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Implementation methods.
-  //
-  /////////////////////////////////////////////////////////////////////
-
-  /**
-   * Called from the producer thread before the delivery is
-   * processed by the queues' thread.. therefore we don't
-   * yet know the order of the delivery in the queue.
-   */
-  private def sent(delivery: Delivery) = {
-    if (delivery.ref != null) {
-      // retain the persistent ref so that the delivery is not
-      // considered completed until this queue stores it
-      delivery.ref.retain
-    }
-    delivery
   }
-
-  /**
-   * Called from the queue thread.  At this point we
-   * know the order.  Converts the delivery to a QueueEntry
-   */
-  private def accept(delivery: Delivery) = {
-    val rc = tailEntry
-    tailEntry = new QueueEntry(this)
-    rc.loaded(next_message_seq, delivery)
-  }
-
-
-  private def next_message_seq = {
-    val rc = message_seq_counter
-    message_seq_counter += 1
-    rc
-  }
-
 
 }
 
@@ -364,9 +439,20 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
     (seq - o.seq).toInt
   }
 
-  def loaded(seq:Long, delivery:Delivery) = {
+  def created(seq:Long, delivery:Delivery) = {
     this.seq = seq
     this.value = new Loaded(delivery)
+    this
+  }
+
+  def loaded(delivery:Delivery) = {
+    this.value = new Loaded(delivery)
+    this
+  }
+
+  def stored() = {
+    val loaded = value.asLoaded
+    this.value = new Stored(loaded.delivery.storeId, loaded.size)
     this
   }
 
@@ -465,7 +551,7 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
   trait EntryType {
     def size:Int
     def dispatch():QueueEntry
-    def ref:StoredMessageRef
+    def ref:Long
 
     def asTombstone:Tombstone = null
     def asStored:Stored = null
@@ -477,7 +563,7 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
     var count = 1L
 
     def size = 0
-    def ref = null
+    def ref = -1
 
     override def asTombstone = this
 
@@ -492,12 +578,9 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
     
   }
 
-  class Stored extends EntryType {
+  class Stored(val ref:Long, val size:Int) extends EntryType {
 
-    private var loading = false
-
-    var ref:StoredMessageRef = null
-    var size = 0
+    var loading = false
 
     override def asStored = this
 
@@ -511,8 +594,9 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
   class Loaded(val delivery: Delivery) extends EntryType {
 
     var aquired = false
-    def ref = delivery.ref
+    def ref = delivery.storeId
     def size = delivery.size
+    def flushing = false
     
     override  def asLoaded = this
 
@@ -529,8 +613,6 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
 
         if( browsing!=Nil ) {
           val offering = delivery.copy
-          offering.ack = null
-
           browsing.foreach { sub =>
             if (sub.matches(offering)) {
               if (sub.offer(offering)) {
@@ -545,10 +627,6 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
         }
 
         if( competing!=Nil ) {
-
-          val offering = delivery.copy
-          offering.ack = QueueEntry.this
-
           if (!this.aquired) {
             aquired = true
 
@@ -557,12 +635,20 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
             while( remaining!=Nil && picked == null ) {
               val sub = remaining.head
               remaining = remaining.drop(1)
-
-              if (sub.matches(offering)) {
+              if (sub.matches(delivery)) {
                 competingSlowSubs = competingSlowSubs ::: sub :: Nil
-                if (sub.offer(offering)) {
-                  picked = sub
+
+                if( !sub.full ) {
+                  val node = sub.add(QueueEntry.this)
+                  val offering = delivery.copy
+                  offering.ack = (tx)=> {
+                    queue.ack_source.merge((node, tx))
+                  }
+                  if (sub.offer(offering)) {
+                    picked = sub
+                  }
                 }
+
               } else {
                 competingFastSubs = competingFastSubs ::: sub :: Nil
               }
@@ -598,12 +684,15 @@ class QueueEntry(val queue:Queue) extends LinkedNode[QueueEntry] with Comparable
 
 }
 
+
+class LinkedQueueEntry(val value:QueueEntry) extends LinkedNode[LinkedQueueEntry]
+
 class Subscription(queue:Queue) extends DeliveryProducer {
 
   def dispatchQueue = queue.dispatchQueue
 
-  var dispatched = List[QueueEntry]()
-  var session: Session = null
+  var dispatched = new LinkedNodeList[LinkedQueueEntry]
+  var session: DeliverySession = null
   var pos:QueueEntry = null
 
   def position(value:QueueEntry):Unit = {
@@ -625,38 +714,12 @@ class Subscription(queue:Queue) extends DeliveryProducer {
   }
 
   def matches(entry:Delivery) = session.consumer.matches(entry)
+  def full = session.full
+  def offer(delivery:Delivery) = session.offer(delivery)
 
-  def offer(delivery:Delivery) = {
-    if (session.offer(delivery)) {
-      if( delivery.ack!=null ) {
-        val entry = delivery.ack.asInstanceOf[QueueEntry]
-        dispatched = dispatched ::: entry :: Nil
-      }
-      true
-    } else {
-      false
-    }
+  def add(entry:QueueEntry) = {
+    val rc = new LinkedQueueEntry(entry)
+    dispatched.addLast(rc)
+    rc
   }
-
-  // called from the consumer thread.. send it to the ack_source
-  // do that it calls _ack from the queue thread.
-  override def ack(value: Any) = {
-    val entry = value.asInstanceOf[QueueEntry]
-    queue.ack_source.merge((this, entry))
-  }
-
-  def _ack(entry: QueueEntry): Unit = {
-    assert(!dispatched.isEmpty)
-    if (dispatched.head == entry) {
-      // this should be the common case...
-      dispatched = dispatched.drop(1)
-    } else {
-      // but lets also handle the case where we get an ack out of order.
-      val rc = dispatched.partition(_ == entry)
-      assert(rc._1.size == 1)
-      dispatched = rc._2
-    }
-    queue.ack(entry)
-  }
-
 }

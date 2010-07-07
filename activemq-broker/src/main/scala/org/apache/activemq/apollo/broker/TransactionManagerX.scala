@@ -18,7 +18,10 @@ package org.apache.activemq.apollo.broker
 
 import _root_.java.util.{LinkedHashMap, HashMap}
 
-class TransactionManager() {
+
+
+
+class TransactionManagerX() {
 
   var virtualHost:VirtualHost = null
 
@@ -390,7 +393,7 @@ class TransactionManager() {
  * Keeps track of all the actions the need to be done when a transaction does a
  * commit or rollback.
  */
-abstract class Transaction {
+abstract class TransactionX {
 
 // TODO:
 //    private static final Log LOG = LogFactory.getLog(Transaction.class);
@@ -927,7 +930,7 @@ abstract class Transaction {
  * @author cmacnaug
  * @version 1.0
  */
-class LocalTransaction extends Transaction {
+class LocalTransactionX extends TransactionX {
 
 //    TODO:
 //    LocalTransaction(TransactionManager manager, long tid, IQueue<Long, TxOp> opQueue) {
@@ -1028,7 +1031,7 @@ class LocalTransaction extends Transaction {
  * @author cmacnaug
  * @version 1.0
  */
-class XATransaction extends Transaction {
+class XATransactionX extends TransactionX {
 // TODO:
 //    private final Buffer xid;
 //
