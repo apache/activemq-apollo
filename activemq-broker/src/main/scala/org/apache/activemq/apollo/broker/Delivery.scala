@@ -46,7 +46,7 @@ trait DeliveryProducer {
  */
 trait DeliveryConsumer extends Retained {
   def dispatchQueue:DispatchQueue;
-  def matches(message:Delivery)
+  def matches(message:Delivery):Boolean
   def connect(producer:DeliveryProducer):Session
 }
 
@@ -109,8 +109,6 @@ trait Message {
   def messageEvaluationContext:MessageEvaluationContext
 
 }
-
-case class StoredMessageRef(id:Long) extends BaseRetained
 
 /**
  * <p>

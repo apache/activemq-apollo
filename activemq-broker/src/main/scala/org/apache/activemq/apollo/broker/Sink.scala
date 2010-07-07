@@ -124,7 +124,11 @@ object MapSink {
 
       def full = downstream.full
       def offer(value:Y) = {
-        downstream.offer(func(value))
+        if( full ) {
+          false
+        } else {
+          downstream.offer(func(value))
+        }
       }
     }
   }

@@ -23,6 +23,9 @@ import org.apache.activemq.util.TreeMap
 import java.util.concurrent.atomic.{AtomicLong}
 import java.util.{HashSet}
 import collection.JavaConversions
+import org.fusesource.hawtdispatch.{BaseRetained, Retained}
+
+case class StoredMessageRef(id:Long) extends BaseRetained
 
 class Record
 case class QueueRecord(val id:Long, val name:AsciiBuffer, val parent:AsciiBuffer, val config:String) extends Record
@@ -78,15 +81,15 @@ class BrokerDatabase(host:VirtualHost) {
   }
 
   private val msg_id_generator = new AtomicLong
+
   def createMessageRecord(msgId:AsciiBuffer, encoding:AsciiBuffer, message:Buffer) = {
     val record = new MessageRecord(msg_id_generator.incrementAndGet, msgId, encoding, message)
     messages.add(record)
+    StoredMessageRef(record.id)
   }
 
-
-
   case class QueueData(val record:QueueRecord) {
-    var messges:List[Long] = Nil
+    var messges = new TreeMap[Long, Long]()
   }
 
   private object queues {
@@ -116,7 +119,7 @@ class BrokerDatabase(host:VirtualHost) {
         if( qd.messges.isEmpty ) {
           QueueInfo(qd.record, -1, -1, 0)
         } else {
-          QueueInfo(qd.record, qd.messges.head, qd.messges.last, qd.messges.size)
+          QueueInfo(qd.record, qd.messges.firstKey, qd.messges.lastKey, qd.messges.size)
         }
       )
     }
@@ -131,6 +134,16 @@ class BrokerDatabase(host:VirtualHost) {
       queues.records.put(id, QueueData(record))
       Some(id)
     }
+  } >>: queues.dispatchQueue
+
+  def addMessageToQueue(queue:Long, seq:Long, msg:StoredMessageRef) = using(msg) {
+    val qd = queues.records.get(queue);
+    qd.messges.put(seq, msg.id)
+  } >>: queues.dispatchQueue
+
+  def removeMessageFromQueue(queue:Long, seq:Long, retained:Retained) = using(retained) {
+    val qd = queues.records.get(queue);
+    qd.messges.remove(seq)
   } >>: queues.dispatchQueue
 
 }

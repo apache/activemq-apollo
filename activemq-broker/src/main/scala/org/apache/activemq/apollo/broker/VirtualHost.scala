@@ -120,7 +120,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
               val dest = DestinationParser.parse(info.record.name, destination_parser_options)
               if( dest.getDomain == Domain.QUEUE_DOMAIN ) {
 
-                val queue = new Queue(dest, id)
+                val queue = new Queue(this, dest, id)
                 queue.first_seq = info.first
                 queue.last_seq = info.last
                 queue.message_seq_counter = info.last+1
@@ -185,7 +185,7 @@ class VirtualHost(val broker: Broker) extends BaseService with DispatchLogging {
       rc match {
         case Some(id) =>
           dispatchQueue ^ {
-            val queue = new Queue(dest, id)
+            val queue = new Queue(this, dest, id)
             queues.put(name, queue)
             cb(queue)
           }
