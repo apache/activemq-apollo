@@ -209,16 +209,6 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
           val producer = new DeliveryProducer() {
             override def dispatchQueue = queue
-            override def collocate(value:DispatchQueue):Unit = ^{
-//              TODO:
-//              if( value.getTargetQueue ne queue.getTargetQueue ) {
-//                println("sender on "+queue.getLabel+" co-locating with: "+value.getLabel);
-//                queue.setTargetQueue(value.getTargetQueue)
-//                write_source.setTargetQueue(queue);
-//                read_source.setTargetQueue(queue)
-//              }
-
-            } >>: queue
           }
 
           // don't process frames until we are connected..

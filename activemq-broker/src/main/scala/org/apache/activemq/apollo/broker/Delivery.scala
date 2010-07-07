@@ -26,9 +26,17 @@ import org.fusesource.hawtbuf._
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait DeliveryProducer {
+
   def dispatchQueue:DispatchQueue
-  def collocate(queue:DispatchQueue):Unit
   def ack(message:Delivery) = {}
+
+  def collocate(value:DispatchQueue):Unit = {
+    if( value.getTargetQueue ne dispatchQueue.getTargetQueue ) {
+      println(dispatchQueue.getLabel+" co-locating with: "+value.getLabel);
+      this.dispatchQueue.setTargetQueue(value.getTargetQueue)
+    }
+  }
+
 }
 
 /**

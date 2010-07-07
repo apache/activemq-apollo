@@ -329,12 +329,12 @@ class QueueSink[T](val sizer:Sizer[T], var maxSize:Int=1024*32) extends Sink[T] 
     }
   }
 
-  def ack(delivery:T) = {
+  def ack(amount:Int) = {
     // When a message is delivered to the consumer, we release
     // used capacity in the outbound queue, and can drain the inbound
     // queue
     val wasBlocking = full
-    size -= sizer.size(delivery)
+    size -= amount
     if( !isEmpty ) {
       drain
     } else {
