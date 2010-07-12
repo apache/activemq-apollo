@@ -1056,11 +1056,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
     def queueTrackingIndex(root: QueueRootRecord.Getter) = QUEUE_TRACKING_INDEX_FACTORY.open(_tx, root.getTrackingIndexPage)
 
-    def alloc(factory: IndexFactory[_, _]) = {
-      val rc = _tx.alloc
-      factory.create(_tx, rc)
-      rc
-    }
+    def alloc(factory: IndexFactory[_, _]) = factory.create(_tx).getIndexLocation
 
     val rootBean = rootBuffer.copy
 
