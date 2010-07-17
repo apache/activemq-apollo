@@ -224,7 +224,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     var dests = new Array[Destination](destCount)
 
     for (i <- 0 until destCount) {
-      val domain = if (PTP) {Domain.QUEUE_DOMAIN} else {Domain.TOPIC_DOMAIN}
+      val domain = if (PTP) {Router.QUEUE_DOMAIN} else {Router.TOPIC_DOMAIN}
       val name = new AsciiBuffer("dest" + (i + 1))
       var bean = new SingleDestination(domain, name)
       dests(i) = bean

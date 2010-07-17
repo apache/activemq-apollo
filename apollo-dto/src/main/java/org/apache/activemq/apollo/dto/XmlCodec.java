@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class XmlEncoderDecoder {
+public class XmlCodec {
 
     /**
      * Changes ${property} with values from a properties object

@@ -69,9 +69,10 @@ message AddMessage {
 
 message AddQueue {
   required int64 key=1;
-  optional bytes name = 2 [java_override_type = "AsciiBuffer"];
-  optional bytes queueType = 3 [java_override_type = "AsciiBuffer"];
+  optional bytes binding_kind = 2 [java_override_type = "AsciiBuffer"];
+  optional bytes binding_data = 3;
 }
+
 message RemoveQueue {
   required int64 key=1;
 }
@@ -149,9 +150,7 @@ message DatabaseRootRecord {
 
 message QueueRootRecord {
   optional AddQueue info=1;
-  optional int64 size=2;
-  optional int64 count=3;
-  optional fixed32 entryIndexPage=4;
-  optional fixed32 trackingIndexPage=5;
+  optional fixed32 entryIndexPage=2;
+  optional fixed32 trackingIndexPage=3;
 }
 

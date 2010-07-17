@@ -17,13 +17,13 @@
 - val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
 - import helper._
 
-%h1 Queue: #{id}
+%h1 Queue: #{label}
 
 %h2 Current Size
 
 %p queue size: #{queue_items} messages
 %p queue size: #{memory(queue_size)}
-%p memory used: #{ "%,.2f".format(capacity_used.toFloat*100.0/capacity) } (#{memory(capacity_used)}/#{memory(capacity)})
+%p memory used: #{ "%,.2f".format(capacity_used.toFloat*100.0/capacity) }% (#{memory(capacity_used)}/#{memory(capacity)})
 
 %h2 Enqueue/Deqeueue Counters
 

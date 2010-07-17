@@ -224,8 +224,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   def addQueue(record: QueueRecord, callback:Runnable) = {
     val update = new AddQueue.Bean()
     update.setKey(record.key)
-    update.setName(record.name)
-    update.setQueueType(record.queueType)
+    update.setBindingKind(record.binding_kind)
+    update.setBindingData(record.binding_data)
     _store(update, callback)
   }
 
@@ -280,26 +280,18 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     rc
   }
 
-  def getQueueStatus(queueKey: Long): Option[QueueStatus] = {
+  def getQueue(queueKey: Long): Option[QueueRecord] = {
     withTx { tx =>
         val helper = new TxHelper(tx)
         import helper._
 
         val queueRecord = queueIndex.get(queueKey)
         if (queueRecord != null) {
-          val rc = new QueueStatus
-          rc.record = new QueueRecord
-          rc.record.key = queueKey
-          rc.record.name = queueRecord.getInfo.getName
-          rc.record.queueType = queueRecord.getInfo.getQueueType
-          rc.count = queueRecord.getCount.toInt
-          rc.size = queueRecord.getSize
-
-          // TODO
-          // rc.first =
-          // rc.last =
-
-          Some(rc)
+          val record = new QueueRecord
+          record.key = queueKey
+          record.binding_kind = queueRecord.getInfo.getBindingKind
+          record.binding_data = queueRecord.getInfo.getBindingData
+          Some(record)
         } else {
           None
         }
@@ -815,12 +807,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
           if (existing == null) {
             val previous = entryIndex.put(queueSeq, x.freeze)
             if (previous == null) {
-
-              val queueRecordUpdate = queueRecord.copy
-              queueRecordUpdate.setCount(queueRecord.getCount + 1)
-              queueRecordUpdate.setSize(queueRecord.getSize + x.getSize)
-              queueIndex.put(queueKey, queueRecordUpdate.freeze)
-
               addAndGet(messageRefsIndex, new jl.Long(messageKey), 1)
             } else {
               // TODO perhaps treat this like an update?

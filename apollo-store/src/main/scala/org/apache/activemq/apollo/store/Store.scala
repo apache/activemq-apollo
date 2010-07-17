@@ -77,7 +77,7 @@ trait Store extends ServiceTrait {
   /**
    * Loads the queue information for a given queue key.
    */
-  def getQueueStatus(queueKey:Long)(callback:(Option[QueueStatus])=>Unit )
+  def getQueue(queueKey:Long)(callback:(Option[QueueRecord])=>Unit )
 
   /**
    * Gets a listing of all queue entry sequences previously added

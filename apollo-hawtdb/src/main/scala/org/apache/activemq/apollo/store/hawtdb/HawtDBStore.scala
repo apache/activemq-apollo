@@ -160,9 +160,9 @@ class HawtDBStore extends Store with BaseService with DispatchLogging {
     }
   }
 
-  def getQueueStatus(queueKey: Long)(callback: (Option[QueueStatus]) => Unit) = {
+  def getQueue(queueKey: Long)(callback: (Option[QueueRecord]) => Unit) = {
     executor_pool {
-      callback( client.getQueueStatus(queueKey) )
+      callback( client.getQueue(queueKey) )
     }
   }
 

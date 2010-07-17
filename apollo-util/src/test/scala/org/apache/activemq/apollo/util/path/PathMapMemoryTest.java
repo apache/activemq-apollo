@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.path;
+package org.apache.activemq.apollo.util.path;
 
 import java.util.Set;
 

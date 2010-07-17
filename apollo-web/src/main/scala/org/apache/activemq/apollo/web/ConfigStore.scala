@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.web
 
 import org.apache.activemq.apollo.broker._
 import org.apache.activemq.apollo.broker.jaxb.PropertiesReader
-import org.apache.activemq.apollo.dto.{XmlEncoderDecoder, ConnectorDTO, VirtualHostDTO, BrokerDTO}
+import org.apache.activemq.apollo.dto.{XmlCodec, ConnectorDTO, VirtualHostDTO, BrokerDTO}
 import java.util.regex.Pattern
 import javax.xml.stream.{XMLOutputFactory, XMLInputFactory}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
@@ -26,7 +26,7 @@ import java.util.concurrent.{TimeUnit, ExecutorService, Executors}
 import org.fusesource.hawtbuf.{ByteArrayInputStream, ByteArrayOutputStream}
 import javax.xml.bind.{Marshaller, JAXBContext}
 import java.io.{OutputStreamWriter, File}
-import XmlEncoderDecoder._
+import XmlCodec._
 import org.apache.activemq.apollo.util._
 
 object ConfigStore {

@@ -14,17 +14,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.store;
+package org.apache.activemq.apollo.dto;
 
-import org.fusesource.hawtbuf.AsciiBuffer;
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.ByteArrayOutputStream;
 
+import javax.xml.bind.JAXBException;
+import javax.xml.stream.XMLStreamException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.Properties;
 
 /**
+ *
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class QueueRecord {
-    public long key = -1;
-    public AsciiBuffer binding_kind;
-    public Buffer binding_data;
+public class JsonCodec {
+    private static ObjectMapper mapper = new ObjectMapper();
+
+    static public <T> T decode(Buffer buffer, Class<T> type) throws IOException {
+        return mapper.readValue(buffer.in(), type);
+    }
+
+    static public Buffer encode(Object value) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        mapper.writeValue(baos, value);
+        return baos.toBuffer();
+    }
+
 }

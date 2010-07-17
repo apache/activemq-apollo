@@ -14,29 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.activemq.apollo.dto;
 
-package org.apache.activemq.apollo.broker.path;
-
-import org.fusesource.hawtbuf.AsciiBuffer;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- * Matches messages sent to an exact path
- * 
- * @version $Revision: 1.3 $
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class SimplePathFilter extends PathFilter {
+@XmlRootElement(name = "durable-subscription-binding")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class DurableSubscriptionBindingDTO extends BindingDTO {
 
-	private AsciiBuffer path;
+    public String destination;
 
-	public SimplePathFilter(AsciiBuffer path) {
-		this.path = path;
-	}
+    public String filter;
 
-	public boolean matches(AsciiBuffer path) {
-		return this.path.equals(path);
-	}
+    @XmlAttribute(name="client-id")
+    public String client_id;
 
-	public boolean isWildcard() {
-		return false;
-	}
+    @XmlAttribute(name="subscription-id")
+    public String subscription_id;
 }

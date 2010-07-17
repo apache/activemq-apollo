@@ -32,3 +32,9 @@ message PBQueueEntryRecord {
   optional int32 size = 3;
   optional int32 redeliveries = 4;
 }
+
+message PBQueueRecord {
+  required int64 key=1;
+  optional bytes binding_kind = 2 [java_override_type = "AsciiBuffer"];
+  optional bytes binding_data = 3;
+}

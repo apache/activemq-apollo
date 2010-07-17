@@ -38,6 +38,18 @@
       <artifactId>jackson-core-asl</artifactId>
       <version>${jackson-version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-mapper-asl</artifactId>
+      <version>${jackson-version}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.fusesource.hawtbuf</groupId>
+      <artifactId>hawtbuf</artifactId>
+      <version>${hawtbuf-version}</version>
+      <optional>true</optional>
+    </dependency>
 
     <!-- Testing Dependencies -->    
     <dependency>

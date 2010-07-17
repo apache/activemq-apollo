@@ -94,6 +94,24 @@ class CassandraClient() {
     pb.freeze.toUnframedByteArray
   }
 
+  implicit def decodeQueueRecord(v: Array[Byte]): QueueRecord = {
+    import PBQueueRecord._
+    val pb = PBQueueRecord.FACTORY.parseUnframed(v)
+    val rc = new QueueRecord
+    rc.key = pb.getKey
+    rc.binding_kind = pb.getBindingKind
+    rc.binding_data = pb.getBindingData
+    rc
+  }
+
+  implicit def encodeQueueRecord(v: QueueRecord): Array[Byte] = {
+    val pb = new PBQueueRecord.Bean
+    pb.setKey(v.key)
+    pb.setBindingKind(v.binding_kind)
+    pb.setBindingData(v.binding_data)
+    pb.freeze.toUnframedByteArray
+  }
+
   def purge() = {
     withSession {
       session =>
@@ -109,7 +127,7 @@ class CassandraClient() {
   def addQueue(record: QueueRecord) = {
     withSession {
       session =>
-        session.insert(schema.queue_name \ (record.key, record.name))
+        session.insert(schema.queue_name \ (record.key, record))
     }
   }
 
@@ -133,25 +151,14 @@ class CassandraClient() {
     }
   }
 
-  def getQueueStatus(id: Long): Option[QueueStatus] = {
+  def getQueue(id: Long): Option[QueueRecord] = {
     withSession {
       session =>
         session.get(schema.queue_name \ id) match {
           case Some(x) =>
+            val record:QueueRecord = x.value
+            Some(record)
 
-            val rc = new QueueStatus
-            rc.record = new QueueRecord
-            rc.record.key = id
-            rc.record.name = new AsciiBuffer(x.value)
-
-            rc.count = session.count( schema.entries \ id )
-            
-            // TODO
-            //          rc.count =
-            //          rc.first =
-            //          rc.last =
-
-            Some(rc)
           case None =>
             None
         }

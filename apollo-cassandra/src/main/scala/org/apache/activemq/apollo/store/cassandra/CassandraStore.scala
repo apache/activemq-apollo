@@ -185,9 +185,9 @@ class CassandraStore extends Store with BaseService with Logging {
     }
   }
 
-  def getQueueStatus(id: Long)(callback: (Option[QueueStatus]) => Unit) = {
+  def getQueue(id: Long)(callback: (Option[QueueRecord]) => Unit) = {
     blocking {
-      callback( client.getQueueStatus(id) )
+      callback( client.getQueue(id) )
     }
   }
 

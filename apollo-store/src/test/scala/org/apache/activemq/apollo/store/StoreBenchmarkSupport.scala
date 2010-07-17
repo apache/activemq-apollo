@@ -23,7 +23,7 @@ import java.util.concurrent.{TimeUnit, CountDownLatch}
 import org.scalatest.{BeforeAndAfterEach, BeforeAndAfterAll}
 import collection.mutable.ListBuffer
 import java.util.concurrent.atomic.{AtomicLong, AtomicInteger, AtomicBoolean}
-import org.apache.activemq.apollo.store.{Store, QueueEntryRecord, QueueStatus, QueueRecord, MessageRecord}
+import org.apache.activemq.apollo.store.{Store, QueueEntryRecord, QueueRecord, MessageRecord}
 import org.apache.activemq.apollo.util.{LoggingTracker, FunSuiteSupport, LongCounter}
 
 /**
@@ -88,7 +88,8 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
   def addQueue(name:String):Long = {
     var queueA = new QueueRecord
     queueA.key = queue_key_counter.incrementAndGet
-    queueA.name = ascii(name)
+    queueA.binding_kind = ascii("test")
+    queueA.binding_data = ascii(name)
     val rc:Boolean = CB( cb=> store.addQueue(queueA)(cb) )
     expect(true)(rc)
     queueA.key

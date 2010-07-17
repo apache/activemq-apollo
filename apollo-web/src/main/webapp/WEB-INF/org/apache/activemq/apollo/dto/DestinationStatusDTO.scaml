@@ -19,13 +19,11 @@
 
 %h1 Destination: #{name}
 
-%p domain: #{domain}
-
 %h2 Queues
 %ul
   - for( x <- queues )
     %li
-      %a(href={ path("../../queues/"+x.id) }) #{x.label}
+      %a(href={ path("queues/"+x.id) }) #{x.label}
 
 %h2 Producers
 %ul

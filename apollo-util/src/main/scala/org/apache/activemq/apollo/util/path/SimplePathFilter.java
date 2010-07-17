@@ -14,17 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.store;
+
+package org.apache.activemq.apollo.util.path;
 
 import org.fusesource.hawtbuf.AsciiBuffer;
-import org.fusesource.hawtbuf.Buffer;
-
 
 /**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ * Matches messages sent to an exact path
+ * 
+ * @version $Revision: 1.3 $
  */
-public class QueueRecord {
-    public long key = -1;
-    public AsciiBuffer binding_kind;
-    public Buffer binding_data;
+public class SimplePathFilter extends PathFilter {
+
+	private AsciiBuffer path;
+
+	public SimplePathFilter(AsciiBuffer path) {
+		this.path = path;
+	}
+
+	public boolean matches(AsciiBuffer path) {
+		return this.path.equals(path);
+	}
+
+	public boolean isWildcard() {
+		return false;
+	}
 }

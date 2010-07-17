@@ -21,49 +21,25 @@ import _root_.org.fusesource.hawtbuf._
 import _root_.org.fusesource.hawtdispatch._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
-import path.PathMap
 import collection.JavaConversions
-import org.apache.activemq.apollo.util.LongCounter
-import collection.mutable.HashMap
 import org.apache.activemq.apollo.util._
-
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-object Domain {
-  val TOPIC_DOMAIN = new AsciiBuffer("topic");
-  val QUEUE_DOMAIN = new AsciiBuffer("queue");
-  val TEMP_TOPIC_DOMAIN = new AsciiBuffer("temp-topic");
-  val TEMP_QUEUE_DOMAIN = new AsciiBuffer("temp-queue");
-}
-
-import Domain._
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-class Domain {
-
-  val targets = new PathMap[DeliveryConsumer]();
-
-  def bind(name:AsciiBuffer, queue:DeliveryConsumer) = {
-    targets.put(name, queue);
-  }
-
-  def unbind(name:AsciiBuffer, queue:DeliveryConsumer) = {
-    targets.remove(name, queue);
-  }
-
-//
-//  synchronized public Collection<DeliveryTarget> route(AsciiBuffer name, MessageDelivery delivery) {
-//    return targets.get(name);
-//  }
-
-}
+import collection.mutable.{ListBuffer, HashMap}
+import org.apache.activemq.apollo.store.QueueRecord
+import org.apache.activemq.apollo.dto.{PointToPointBindingDTO, BindingDTO}
+import path.{PathFilter, PathMap}
+import scala.collection.immutable.List
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object Router extends Log {
+  val TOPIC_DOMAIN = new AsciiBuffer("topic");
+  val QUEUE_DOMAIN = new AsciiBuffer("queue");
+  val TEMP_TOPIC_DOMAIN = new AsciiBuffer("temp-topic");
+  val TEMP_QUEUE_DOMAIN = new AsciiBuffer("temp-queue");
+
+  val QUEUE_KIND = new AsciiBuffer("queue");
+  val DEFAULT_QUEUE_PATH = new AsciiBuffer("default");
 }
 
 /**
@@ -81,133 +57,263 @@ object Router extends Log {
  */
 class Router(val host:VirtualHost) extends DispatchLogging {
 
+  override protected def log = Router
+
+  import Router._
+
   val destination_id_counter = new LongCounter
 
-  override protected def log = Router
   protected def dispatchQueue:DispatchQueue = host.dispatchQueue
 
-  trait DestinationNode {
-    val destination:Destination
-    val id = destination_id_counter.incrementAndGet
-    var targets = List[DeliveryConsumer]()
-    var routes = List[DeliveryProducerRoute]()
+  var queues = HashMap[Binding, Queue]()
 
-    def on_bind(x:List[DeliveryConsumer]):Unit
-    def on_unbind(x:List[DeliveryConsumer]):Boolean
-    def on_connect(route:DeliveryProducerRoute):Unit
-    def on_disconnect(route:DeliveryProducerRoute):Boolean = {
-      routes = routes.filterNot({r=> route==r})
-      route.disconnected()
-      routes == Nil && targets == Nil
+  // Only stores simple paths, used for wild card lookups.
+  var destinations = new PathMap[RoutingNode]()
+  // Can store consumers on wild cards paths
+  val broadcast_consumers = new PathMap[DeliveryConsumer]()
+  // Can store bindings on wild cards paths
+  val bindings = new PathMap[Queue]()
+
+  private def is_topic(destination:Destination) = {
+    destination.getDomain match {
+      case TOPIC_DOMAIN => true
+      case TEMP_TOPIC_DOMAIN => true
+      case _ => false
     }
   }
 
-  class TopicDestinationNode(val destination:Destination) extends DestinationNode {
-    def on_bind(x:List[DeliveryConsumer]) =  {
-      targets = x ::: targets
-      routes.foreach({r=>
-        r.bind(x)
-      })
-    }
+  def routing_nodes:Iterable[RoutingNode] = JavaConversions.asIterable(destinations.get(PathFilter.ANY_DESCENDENT))
+  
+  def create_destination_or(destination:AsciiBuffer)(func:(RoutingNode)=>Unit):RoutingNode = {
 
-    def on_unbind(x:List[DeliveryConsumer]):Boolean = {
-      targets = targets.filterNot({t=>x.contains(t)})
-      routes.foreach({r=>
-        r.unbind(x)
-      })
-      routes == Nil && targets == Nil
-    }
+    // We can't create a wild card destination.. only wild card subscriptions.
+    assert( !PathFilter.containsWildCards(destination) )
 
-    def on_connect(route:DeliveryProducerRoute) = {
-      routes = route :: routes
-      route.connected(targets)
+    var rc = destinations.chooseValue( destination )
+    if( rc == null ) {
+
+      // A new destination is being created...
+      rc = new RoutingNode(this, destination )
+      destinations.put(destination, rc)
+
+      // bind any matching wild card subs
+      import JavaConversions._
+      broadcast_consumers.get( destination ).foreach { c=>
+        rc.add_broadcast_consumer(c)
+      }
+      bindings.get( destination ).foreach { queue=>
+        rc.add_queue(queue)
+      }
+
+    } else {
+      func(rc)
     }
+    rc
   }
 
-  class QueueDestinationNode(val destination:Destination) extends DestinationNode {
-    var queue:Queue = null
-
-    // once the queue is created.. connect it up with the producers and targets.
-    host.getQueue(destination) { q =>
-      dispatchQueue {
-        queue = q;
-        queue.bind(targets)
-        routes.foreach({route=>
-          route.connected(queue :: Nil)
-        })
-      }
-    }
-
-    def on_bind(x:List[DeliveryConsumer]) =  {
-      targets = x ::: targets
-      if( queue!=null ) {
-        queue.bind(x)
-      }
-    }
-
-    def on_unbind(x:List[DeliveryConsumer]):Boolean = {
-      targets = targets.filterNot({t=>x.contains(t)})
-      if( queue!=null ) {
-        queue.unbind(x)
-      }
-      routes == Nil && targets == Nil
-    }
-
-    def on_connect(route:DeliveryProducerRoute) = {
-      routes = route :: routes
-      if( queue!=null ) {
-        route.connected(queue :: Nil)
-      }
-    }
+  def get_destination_matches(destination:AsciiBuffer) = {
+    import JavaConversions._
+    asIterable(destinations.get( destination ))
   }
 
-  var destinations = new HashMap[Destination, DestinationNode]()
+  def _create_queue(id:Long, binding:Binding):Queue = {
+    val queue = new Queue(host, id, binding)
+    queue.start
+    queues.put(binding, queue)
 
-  private def get(destination:Destination):DestinationNode = {
-    destinations.getOrElseUpdate(destination,
-      if( isTopic(destination) ) {
-        new TopicDestinationNode(destination)
+    // Not all queues are bound to destinations.
+    val name = binding.destination
+    if( name!=null ) {
+      bindings.put(name, queue)
+      // make sure the destination is created if this is not a wild card sub
+      if( !PathFilter.containsWildCards(name) ) {
+        create_destination_or(name) { node=>
+          node.add_queue(queue)
+        }
       } else {
-        new QueueDestinationNode(destination)
+        get_destination_matches(name).foreach( node=>
+          node.add_queue(queue)
+        )
       }
-    )
+
+    }
+    queue
   }
 
-  def bind(destination:Destination, targets:List[DeliveryConsumer]) = retaining(targets) {
-      get(destination).on_bind(targets)
-    } >>: dispatchQueue
+  def create_queue(record:QueueRecord) = {
+    _create_queue(record.key, BindingFactory.create(record.binding_kind, record.binding_data))
+  }
 
-  def unbind(destination:Destination, targets:List[DeliveryConsumer]) = releasing(targets) {
-      if( get(destination).on_unbind(targets) ) {
-        destinations.remove(destination)
-      }
-    } >>: dispatchQueue
+  /**
+   * Returns the previously created queue if it already existed.
+   */
+  def _create_queue(dto: BindingDTO): Some[Queue] = {
+    val binding = BindingFactory.create(dto)
+    val queue = queues.get(binding) match {
+      case Some(queue) => Some(queue)
+      case None => Some(_create_queue(-1, binding))
+    }
+    queue
+  }
+
+  def create_queue(dto:BindingDTO)(cb: (Option[Queue])=>Unit) = ^{
+    cb(_create_queue(dto))
+  } >>: dispatchQueue
+
+  /**
+   * Returns true if the queue no longer exists.
+   */
+  def destroy_queue(dto:BindingDTO)(cb: (Boolean)=>Unit) = ^{
+    val binding = BindingFactory.create(dto)
+    val queue = queues.get(binding) match {
+      case Some(queue) =>
+        val name = binding.destination
+        if( name!=null ) {
+          get_destination_matches(name).foreach( node=>
+            node.remove_queue(queue)
+          )
+        }
+        queue.stop
+        true
+      case None =>
+        true
+    }
+    cb(queue)
+  } >>: dispatchQueue
+
+  /**
+   * Gets an existing queue.
+   */
+  def get_queue(dto:BindingDTO)(cb: (Option[Queue])=>Unit) = ^{
+    val binding = BindingFactory.create(dto)
+    cb(queues.get(binding))
+  } >>: dispatchQueue
+
+  def bind(destination:Destination, consumer:DeliveryConsumer) = retaining(consumer) {
+
+    assert( is_topic(destination) )
+
+    val name = destination.getName
+
+    // make sure the destination is created if this is not a wild card sub
+    if( !PathFilter.containsWildCards(name) ) {
+      val node = create_destination_or(name) { node=> }
+    }
+
+    get_destination_matches(name).foreach( node=>
+      node.add_broadcast_consumer(consumer)
+    )
+    broadcast_consumers.put(name, consumer)
+
+  } >>: dispatchQueue
+
+  def unbind(destination:Destination, consumer:DeliveryConsumer) = releasing(consumer) {
+    assert( is_topic(destination) )
+    val name = destination.getName
+    broadcast_consumers.remove(name, consumer)
+    get_destination_matches(name).foreach{ node=>
+      node.remove_broadcast_consumer(consumer)
+    }
+  } >>: dispatchQueue
+
 
   def connect(destination:Destination, producer:DeliveryProducer)(completed: (DeliveryProducerRoute)=>Unit) = {
+
     val route = new DeliveryProducerRoute(this, destination, producer) {
       override def on_connected = {
         completed(this);
       }
     }
-    ^ {
-      get(destination).on_connect(route)
-    } >>: dispatchQueue
+
+    dispatchQueue {
+
+      val topic = is_topic(destination)
+
+      // Looking up the queue will cause it to get created if it does not exist.
+      val queue = if( !topic ) {
+        val dto = new PointToPointBindingDTO
+        dto.destination = destination.getName.toString
+        _create_queue(dto)
+      } else {
+        None
+      }
+
+      val node = create_destination_or(destination.getName) { node=> }
+      if( node.unified || topic ) {
+        node.add_broadcast_producer( route )
+      } else {
+        route.bind( queue.toList )
+      }
+
+      route.connected()
+    }
   }
 
-  def isTopic(destination:Destination) = destination.getDomain == TOPIC_DOMAIN
-  def isQueue(destination:Destination) = !isTopic(destination)
-
   def disconnect(route:DeliveryProducerRoute) = releasing(route) {
-      get(route.destination).on_disconnect(route)
-    } >>: dispatchQueue
+
+    val topic = is_topic(route.destination)
+    val node = create_destination_or(route.destination.getName) { node=> }
+    if( node.unified || topic ) {
+      node.remove_broadcast_producer(route)
+    }
+    route.disconnected()
+
+  } >>: dispatchQueue
+
+}
 
 
-   def each(proc:(Destination, DestinationNode)=>Unit) = dispatchQueue {
-     import JavaConversions._
-     for( (destination, node) <- destinations ) {
-        proc(destination, node)
-     }
-   } 
+/**
+ * Tracks state associated with a destination name.
+ */
+class RoutingNode(val router:Router, val name:AsciiBuffer) {
+
+  val id = router.destination_id_counter.incrementAndGet
+
+  var broadcast_producers = ListBuffer[DeliveryProducerRoute]()
+  var broadcast_consumers = ListBuffer[DeliveryConsumer]()
+  var queues = ListBuffer[Queue]()
+
+  // TODO: extract the node's config from the host config object
+  def unified = false
+
+  def add_broadcast_consumer (consumer:DeliveryConsumer) = {
+    broadcast_consumers += consumer
+
+    val list = consumer :: Nil
+    broadcast_producers.foreach({ r=>
+      r.bind(list)
+    })
+  }
+
+  def remove_broadcast_consumer (consumer:DeliveryConsumer) = {
+    broadcast_consumers = broadcast_consumers.filterNot( _ == consumer )
+
+    val list = consumer :: Nil
+    broadcast_producers.foreach({ r=>
+      r.unbind(list)
+    })
+  }
+
+  def add_broadcast_producer (producer:DeliveryProducerRoute) = {
+    broadcast_producers += producer
+    producer.bind(broadcast_consumers.toList)
+  }
+
+  def remove_broadcast_producer (producer:DeliveryProducerRoute) = {
+    broadcast_producers = broadcast_producers.filterNot( _ == producer )
+    producer.unbind(broadcast_consumers.toList)
+  }
+
+  def add_queue (queue:Queue) = {
+    queue.binding.bind(this, queue)
+    queues += queue
+  }
+
+  def remove_queue (queue:Queue) = {
+    queues = queues.filterNot( _ == queue )
+    queue.binding.unbind(this, queue)
+  }
 
 }
 
@@ -216,13 +322,13 @@ class Router(val host:VirtualHost) extends DispatchLogging {
  */
 trait Route extends Retained {
 
-  def destination:Destination
   def dispatchQueue:DispatchQueue
   val metric = new AtomicLong();
 
-  def connected(targets:List[DeliveryConsumer]):Unit
   def bind(targets:List[DeliveryConsumer]):Unit
   def unbind(targets:List[DeliveryConsumer]):Unit
+  
+  def connected():Unit
   def disconnected():Unit
 
 }
@@ -230,7 +336,7 @@ trait Route extends Retained {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class DeliveryProducerRoute(val router:Router, val destination:Destination, val producer:DeliveryProducer) extends BaseRetained with Route with Sink[Delivery] with DispatchLogging {
+case class DeliveryProducerRoute(val router:Router, val destination:Destination, val producer:DeliveryProducer) extends BaseRetained with Route with Sink[Delivery] with DispatchLogging {
 
   override protected def log = Router
   override def dispatchQueue = producer.dispatchQueue
@@ -243,8 +349,7 @@ class DeliveryProducerRoute(val router:Router, val destination:Destination, val 
 
   var targets = List[DeliverySession]()
 
-  def connected(targets:List[DeliveryConsumer]) = retaining(targets) {
-    internal_bind(targets)
+  def connected() = ^{
     on_connected
   } >>: dispatchQueue
 

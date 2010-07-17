@@ -113,8 +113,8 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       result.state_since = virtualHost.serviceState.since
       result.config = virtualHost.config
 
-      virtualHost.router.destinations.valuesIterator.foreach { node=>
-        result.destinations.add(new LongIdLabeledDTO(node.id, node.destination.getName.toString))
+      virtualHost.router.routing_nodes.foreach { node=>
+        result.destinations.add(new LongIdLabeledDTO(node.id, node.name.toString))
       }
 
       if( virtualHost.store != null ) {
@@ -140,77 +140,70 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
   @GET @Path("virtual-hosts/{id}/destinations/{dest}")
   def destination(@PathParam("id") id : Long, @PathParam("dest") dest : Long):DestinationStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
-      cb(virtualHost.router.destinations.valuesIterator.find { _.id == dest } map { node=>
+      cb(virtualHost.router.routing_nodes.find { _.id == dest } map { node=>
         val result = new DestinationStatusDTO
         result.id = node.id
-        result.name = node.destination.getName.toString
-        result.domain = node.destination.getDomain.toString
-
-        node match {
-          case qdn:virtualHost.router.QueueDestinationNode =>
-            // todo give queues some descriptive name of what they are being used for.
-            result.queues.add(new LongIdLabeledDTO(qdn.queue.id, qdn.queue.id.toString))
-          case _ =>
+        result.name = node.name.toString
+        node.queues.foreach { q=>
+          result.queues.add(new LongIdLabeledDTO(q.id, q.binding.label))
         }
         result
       })
     }
   }
 
-  @GET @Path("virtual-hosts/{id}/queues/{queue}")
-  def queue(@PathParam("id") id : Long, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean ):QueueStatusDTO = {
+  @GET @Path("virtual-hosts/{id}/destinations/{dest}/queues/{queue}")
+  def queue(@PathParam("id") id : Long, @PathParam("dest") dest : Long, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean ):QueueStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
       import JavaConversions._
-      virtualHost.queues.valuesIterator.find { _.id == qid } match {
-        case Some(q:Queue)=>
-          q.dispatchQueue {
+      val rc = virtualHost.router.routing_nodes.find { _.id == dest } flatMap { node=>
+        node.queues.find  { _.id == qid } map { q=>
 
-            val result = new QueueStatusDTO
-            result.id = q.id
-            result.capacity_used = q.capacity_used
-            result.capacity = q.capacity
+          val result = new QueueStatusDTO
+          result.id = q.id
+          result.label = q.binding.label
+          result.capacity_used = q.capacity_used
+          result.capacity = q.capacity
 
-            result.enqueue_item_counter = q.enqueue_item_counter
-            result.dequeue_item_counter = q.dequeue_item_counter
-            result.enqueue_size_counter = q.enqueue_size_counter
-            result.dequeue_size_counter = q.dequeue_size_counter
-            result.nack_item_counter = q.nack_item_counter
-            result.nack_size_counter = q.nack_size_counter
+          result.enqueue_item_counter = q.enqueue_item_counter
+          result.dequeue_item_counter = q.dequeue_item_counter
+          result.enqueue_size_counter = q.enqueue_size_counter
+          result.dequeue_size_counter = q.dequeue_size_counter
+          result.nack_item_counter = q.nack_item_counter
+          result.nack_size_counter = q.nack_size_counter
 
-            result.queue_size = q.queue_size
-            result.queue_items = q.queue_items
+          result.queue_size = q.queue_size
+          result.queue_items = q.queue_items
 
-            result.loading_size = q.loading_size
-            result.flushing_size = q.flushing_size
-            result.flushed_items = q.flushed_items
+          result.loading_size = q.loading_size
+          result.flushing_size = q.flushing_size
+          result.flushed_items = q.flushed_items
 
-            if( entries ) {
-              var cur = q.head_entry
-              while( cur!=null ) {
+          if( entries ) {
+            var cur = q.head_entry
+            while( cur!=null ) {
 
-                val e = new EntryStatusDTO
-                e.seq = cur.seq
-                e.count = cur.count
-                e.size = cur.size
-                e.consumer_count = cur.parked.size
-                e.prefetch_count = cur.prefetched
-                e.state = cur.label
+              val e = new EntryStatusDTO
+              e.seq = cur.seq
+              e.count = cur.count
+              e.size = cur.size
+              e.consumer_count = cur.parked.size
+              e.prefetch_count = cur.prefetched
+              e.state = cur.label
 
-                result.entries.add(e)
+              result.entries.add(e)
 
-                cur = if( cur == q.tail_entry ) {
-                  null
-                } else {
-                  cur.nextOrTail
-                }
+              cur = if( cur == q.tail_entry ) {
+                null
+              } else {
+                cur.nextOrTail
               }
             }
-
-            cb(Some(result))
           }
-        case None=>
-          cb(None)
+          result
+        }
       }
+      cb(rc)
     }
   }
 

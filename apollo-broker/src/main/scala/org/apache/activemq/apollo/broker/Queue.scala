@@ -30,28 +30,6 @@ import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.list._
 
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-trait QueueLifecyleListener {
-
-  /**
-   * A destination has bean created
-   *
-   * @param queue
-   */
-  def onCreate(queue: Queue);
-
-  /**
-   * A destination has bean destroyed
-   *
-   * @param queue
-   */
-  def onDestroy(queue: Queue);
-
-}
-
-
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
 }
@@ -60,16 +38,18 @@ object Queue extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val host: VirtualHost, val destination: Destination, val id: Long) extends BaseRetained with Route with DeliveryConsumer with BaseService with DispatchLogging {
+class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends BaseRetained with Route with DeliveryConsumer with BaseService with DispatchLogging {
   override protected def log = Queue
 
   var all_subscriptions = Map[DeliveryConsumer, Subscription]()
   var fast_subscriptions = List[Subscription]()
 
-  override val dispatchQueue: DispatchQueue = createQueue(destination.toString);
+  val filter = binding.message_filter
+
+  override val dispatchQueue: DispatchQueue = createQueue(binding.label);
   dispatchQueue.setTargetQueue(getRandomThreadQueue)
   dispatchQueue {
-    debug("created queue for: " + destination)
+    debug("created queue for: " + binding.label)
   }
   setDisposer(^ {
     ack_source.release
@@ -177,25 +157,46 @@ class Queue(val host: VirtualHost, val destination: Destination, val id: Long) e
     }
 
     if( tune_persistent ) {
-      host.store.listQueueEntryRanges(id, tune_flush_range_size) { ranges=>
-        dispatchQueue {
-          if( !ranges.isEmpty ) {
 
-            ranges.foreach { range =>
-              val entry = new QueueEntry(Queue.this, range.firstQueueSeq).init(range)
-              entries.addLast(entry)
+      if( id == -1 ) {
+        id = host.queue_id_counter.incrementAndGet
 
-              message_seq_counter = range.lastQueueSeq + 1
-              enqueue_item_counter += range.count
-              enqueue_size_counter += range.size
-            }
+        val record = new QueueRecord
+        record.key = id
+        record.binding_data = binding.binding_data
+        record.binding_kind = binding.binding_kind
 
-            debug("restored: "+enqueue_item_counter)
-          }
+        host.store.addQueue(record) { rc =>
           completed
         }
+
+      } else {
+
+        host.store.listQueueEntryRanges(id, tune_flush_range_size) { ranges=>
+          dispatchQueue {
+            if( !ranges.isEmpty ) {
+
+              ranges.foreach { range =>
+                val entry = new QueueEntry(Queue.this, range.firstQueueSeq).init(range)
+                entries.addLast(entry)
+
+                message_seq_counter = range.lastQueueSeq + 1
+                enqueue_item_counter += range.count
+                enqueue_size_counter += range.size
+              }
+
+              debug("restored: "+enqueue_item_counter)
+            }
+            completed
+          }
+        }
+        
       }
+
     } else {
+      if( id == -1 ) {
+        id = host.queue_id_counter.incrementAndGet
+      }
       completed
     }
   }
@@ -450,7 +451,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val id: Long) e
   //
   /////////////////////////////////////////////////////////////////////
 
-  def matches(message: Delivery) = {true}
+  def matches(delivery: Delivery) = filter.matches(delivery.message)
 
   def connect(p: DeliveryProducer) = new DeliverySession {
     retain
@@ -502,7 +503,7 @@ class Queue(val host: VirtualHost, val destination: Destination, val id: Long) e
   //
   /////////////////////////////////////////////////////////////////////
 
-  def connected(values: List[DeliveryConsumer]) = bind(values)
+  def connected() = {}
 
   def bind(values: List[DeliveryConsumer]) = retaining(values) {
     for (consumer <- values) {
@@ -583,7 +584,6 @@ class Queue(val host: VirtualHost, val destination: Destination, val id: Long) e
       this.dispatchQueue.setTargetQueue(value.getTargetQueue)
     }
   }
-  
 }
 
 object QueueEntry extends Sizer[QueueEntry] {
@@ -1284,7 +1284,6 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     }
 
   }
-
 
 }
 

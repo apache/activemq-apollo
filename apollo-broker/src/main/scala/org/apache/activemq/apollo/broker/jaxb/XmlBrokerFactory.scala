@@ -22,7 +22,7 @@ import java.net.{URL, URI}
 import org.apache.activemq.apollo.broker._
 import org.apache.activemq.apollo.dto._
 import java.lang.String
-import XmlEncoderDecoder._
+import XmlCodec._
 import org.apache.activemq.apollo.util._
 
 class XmlBrokerFactory extends BrokerFactory.Provider {

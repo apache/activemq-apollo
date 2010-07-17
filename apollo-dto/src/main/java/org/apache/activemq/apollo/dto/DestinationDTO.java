@@ -20,39 +20,32 @@ import org.codehaus.jackson.annotate.JsonProperty;
 
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
-import java.util.List;
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="destination-status")
+@XmlRootElement(name = "destination")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationStatusDTO extends LongIdDTO {
+public class DestinationDTO {
 
     /**
-     * The destination name
+     * The name or wild card name of the destination
      */
-    @XmlAttribute
     public String name;
 
     /**
-     * Ids of all connections that are producing to the destination
+     * The kind of destination, "queue" or "topic"
      */
-    @XmlElement(name="producer")
-    public List<LongIdLabeledDTO> producers = new ArrayList<LongIdLabeledDTO>();
+    public String kind;
 
     /**
-     * Ids of all connections that are consuming from the destination
+     * If set to true, then routing then there is no difference between
+     * sending to a queue or topic of the same name.  The first time
+     * a queue subscriptions is created, it will act like if a durable
+     * subscription was created on the topic. 
      */
-    @XmlElement(name="consumer")
-    public List<LongIdLabeledDTO> consumers = new ArrayList<LongIdLabeledDTO>();
+    public boolean unified = false;
 
-    /**
-     * Ids of all queues that are associated with the destination
-     */
-    @XmlElement(name="queue")
-    public List<LongIdLabeledDTO> queues = new ArrayList<LongIdLabeledDTO>();
+    
+
 }

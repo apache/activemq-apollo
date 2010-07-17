@@ -14,45 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.path;
+package org.apache.activemq.apollo.util.path;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Set;
 
 import org.fusesource.hawtbuf.AsciiBuffer;
 
 /**
- * A base class for entry objects used to construct a path based policy
- * map.
- * 
- * @version $Revision: 1.1 $
+ * Represents a node in the {@link PathMap} tree
+ *
  */
-public abstract class PathMapEntry implements Comparable<PathMapEntry> {
+public interface PathNode<Value> {
+    void appendMatchingValues(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex);
 
-    private AsciiBuffer key;
+    void appendMatchingWildcards(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex);
 
-    public int compareTo(PathMapEntry that) {
-    	if( that == null )
-    		return 1;
-        return compare(key, that.key);
-    }
-    
-    public static int compare(AsciiBuffer path, AsciiBuffer path2) {
-        if (path == path2) {
-            return 0;
-        }
-        if (path == null) {
-            return -1;
-        } else if (path2 == null) {
-            return 1;
-        } else {
-       		return path.compareTo(path2);
-        }
-    }
-    
-    public AsciiBuffer getKey() {
-        return key;
-    }
+    void appendDescendantValues(Set<Value> answer);
 
-    public void setKey(AsciiBuffer key) {
-        this.key = key;
-    }
+    Collection<Value> getDesendentValues();
 
+    PathNode<Value> getChild(AsciiBuffer path);
+
+    Collection<Value> getValues();
+
+    Collection<PathNode<Value>> getChildren();
+
+    Collection<Value> removeDesendentValues();
+
+    Collection<Value> removeValues();
 }

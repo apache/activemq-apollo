@@ -38,6 +38,9 @@ public class QueueStatusDTO extends LongIdDTO {
 	@XmlAttribute
 	public long id;
 
+    @XmlAttribute
+    public String label;
+
     @XmlAttribute(name="enqueue-item-counter")
     public long enqueue_item_counter;
 

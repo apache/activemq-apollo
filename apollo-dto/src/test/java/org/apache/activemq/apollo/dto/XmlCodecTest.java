@@ -27,7 +27,7 @@ import static junit.framework.Assert.*;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 
-public class XmlEncoderDecoderTest {
+public class XmlCodecTest {
 
     private InputStream resource(String path) {
         return getClass().getResourceAsStream(path);
@@ -35,7 +35,7 @@ public class XmlEncoderDecoderTest {
 
     @Test
     public void unmarshalling() throws Exception {
-        BrokerDTO dto = XmlEncoderDecoder.unmarshalBrokerDTO(resource("simple.xml"));
+        BrokerDTO dto = XmlCodec.unmarshalBrokerDTO(resource("simple.xml"));
         assertNotNull(dto);
         assertEquals("default", dto.id);
         assertEquals(true, dto.enabled);
@@ -66,7 +66,7 @@ public class XmlEncoderDecoderTest {
         broker.connectors.add(connector);
         broker.basedir = "./activemq-data/default";
 
-        XmlEncoderDecoder.marshalBrokerDTO(broker, System.out, true);
+        XmlCodec.marshalBrokerDTO(broker, System.out, true);
 
     }
 

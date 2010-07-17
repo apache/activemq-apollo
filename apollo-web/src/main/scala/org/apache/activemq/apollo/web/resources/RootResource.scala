@@ -20,7 +20,6 @@ import java.lang.String
 import com.sun.jersey.api.NotFoundException
 import javax.ws.rs._
 import core.{UriInfo, Response, Context}
-import org.fusesource.scalate.util.Logging
 import reflect.{BeanProperty}
 import com.sun.jersey.api.view.ImplicitProduces
 import org.fusesource.hawtdispatch.Future
@@ -34,6 +33,7 @@ import org.fusesource.scalate.RenderContext
 import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.dto._
 import java.util.{Arrays, Collections}
+import org.apache.activemq.apollo.util.Logging
 
 /**
  * Defines the default representations to be used on resources

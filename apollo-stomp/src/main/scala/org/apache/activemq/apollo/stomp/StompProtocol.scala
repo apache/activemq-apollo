@@ -34,6 +34,7 @@ import org.apache.activemq.apollo.filter.{BooleanExpression, FilterException}
 import org.apache.activemq.apollo.transport._
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
+import org.apache.activemq.apollo.dto.{BindingDTO, DurableSubscriptionBindingDTO, PointToPointBindingDTO}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -41,11 +42,14 @@ import org.apache.activemq.apollo.util._
 object StompConstants {
 
   val PROTOCOL = "stomp"
+  val DURABLE_PREFIX = ascii("durable:")
+  val DURABLE_QUEUE_KIND = ascii("stomp:sub")
 
   val options = new ParserOptions
-  options.queuePrefix = new AsciiBuffer("/queue/")
-  options.topicPrefix = new AsciiBuffer("/topic/")
-  options.defaultDomain = Domain.QUEUE_DOMAIN
+  options.queuePrefix = ascii("/queue/")
+  options.topicPrefix = ascii("/topic/")
+
+  options.defaultDomain = Router.QUEUE_DOMAIN
 
   implicit def toDestination(value:AsciiBuffer):Destination = {
     val d = DestinationParser.parse(value, options)
@@ -125,7 +129,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   
   protected def dispatchQueue:DispatchQueue = connection.dispatchQueue
 
-  class StompConsumer(val destination:Destination, val ackMode:AsciiBuffer, val selector:(AsciiBuffer, BooleanExpression)) extends BaseRetained with DeliveryConsumer {
+  class StompConsumer(val destination:Destination, val ackMode:AsciiBuffer, val selector:(AsciiBuffer, BooleanExpression), val binding:BindingDTO) extends BaseRetained with DeliveryConsumer {
     val dispatchQueue = StompProtocolHandler.this.dispatchQueue
 
     dispatchQueue.retain
@@ -230,7 +234,13 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       producerRoutes = Map()
       consumers.foreach {
         case (_,consumer)=>
-        host.router.unbind(consumer.destination, consumer::Nil)
+          if( consumer.binding==null ) {
+            host.router.unbind(consumer.destination, consumer)
+          } else {
+            host.router.get_queue(consumer.binding) { queue=>
+              queue.foreach( _.unbind(consumer::Nil) )
+            }
+          }
       }
       consumers = Map()
       trace("stomp protocol resources released")
@@ -377,11 +387,20 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   def on_stomp_subscribe(headers:HeaderMap) = {
     get(headers, Headers.Subscribe.DESTINATION) match {
       case Some(dest)=>
-        val destiantion:Destination = dest
+
+        val destination:Destination = dest
 
         var id:AsciiBuffer = get(headers, Headers.Subscribe.ID) match {
           case None => dest
-          case Some(x)=> x
+          case Some(x:AsciiBuffer)=> x
+        }
+
+        val topic = destination.getDomain == Router.TOPIC_DOMAIN
+
+        var durable_name = if( topic && id.startsWith(DURABLE_PREFIX) ) {
+          id
+        } else {
+          null
         }
 
         val ack:AsciiBuffer = get(headers, Headers.Subscribe.ACK_MODE) match {
@@ -407,11 +426,52 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
         consumers.get(id) match {
           case None=>
-            info("subscribing to: %s", destiantion)
-            val consumer = new StompConsumer(destiantion, ack, selector);
-            host.router.bind(destiantion, consumer :: Nil)
-            consumer.release
+            info("subscribing to: %s", destination)
+
+            val binding: BindingDTO = if( topic && durable_name==null ) {
+              null
+            } else {
+              // Controls how the created queue gets bound
+              // to the destination name space (this is used to
+              // recover the queue on restart and rebind it the
+              // way again)
+              if (topic) {
+                val rc = new DurableSubscriptionBindingDTO
+                rc.destination = destination.getName.toString
+                // TODO:
+                // rc.client_id =
+                rc.subscription_id = durable_name
+                rc.filter = if (selector == null) null else selector._1
+                rc
+              } else {
+                val rc = new PointToPointBindingDTO
+                rc.destination = destination.getName.toString
+                rc
+              }
+            }
+
+            val consumer = new StompConsumer(destination, ack, selector, binding);
             consumers += (id -> consumer)
+
+            if( binding==null ) {
+
+              // consumer is bind bound as a topic
+              host.router.bind(destination, consumer)
+              consumer.release
+
+            } else {
+
+              // create a queue and bind the consumer to it.
+              host.router.create_queue(binding) { x=>
+                x match {
+                  case Some(queue:Queue) =>
+                    queue.bind(consumer::Nil)
+                    consumer.release
+                }
+              }
+            }
+
+
 
           case Some(_)=>
             die("A subscription with identified with '"+id+"' allready exists")

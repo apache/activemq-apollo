@@ -17,11 +17,11 @@
 package org.apache.activemq.apollo.broker.protocol
 
 import java.io.{IOException}
-import org.apache.activemq.apollo.broker.{Message, BrokerConnection}
 import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
 import org.apache.activemq.apollo.util.ClassFinder
 import org.apache.activemq.apollo.store.MessageRecord
 import org.apache.activemq.apollo.transport._
+import org.apache.activemq.apollo.broker.{Delivery, Message, BrokerConnection}
 
 /**
  * <p>

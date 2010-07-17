@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.path;
+package org.apache.activemq.apollo.util.path;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -54,11 +54,11 @@ public class PathMap<Value> {
      * @return a List of matching values or an empty list if there are no
      *         matching values.
      */
-    public synchronized Set<Value> get(AsciiBuffer key) {
+    public Set<Value> get(AsciiBuffer key) {
         return findWildcardMatches(key);
     }
 
-    public synchronized void put(AsciiBuffer key, Value value) {
+    public void put(AsciiBuffer key, Value value) {
         ArrayList<AsciiBuffer> paths = PathSupport.parse(key);
         root.add(paths, 0, value);
     }
@@ -66,7 +66,7 @@ public class PathMap<Value> {
     /**
      * Removes the value from the associated path
      */
-    public synchronized void remove(AsciiBuffer key, Value value) {
+    public void remove(AsciiBuffer key, Value value) {
         ArrayList<AsciiBuffer> paths = PathSupport.parse(key);
         root.remove(paths, 0, value);
 

@@ -16,11 +16,9 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
+import org.codehaus.jackson.annotate.JsonTypeInfo;
 
 import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * <p>
@@ -28,31 +26,9 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="destination-status")
+@XmlType(name = "binding")
+@XmlSeeAlso({PointToPointBindingDTO.class, DurableSubscriptionBindingDTO.class})
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationStatusDTO extends LongIdDTO {
-
-    /**
-     * The destination name
-     */
-    @XmlAttribute
-    public String name;
-
-    /**
-     * Ids of all connections that are producing to the destination
-     */
-    @XmlElement(name="producer")
-    public List<LongIdLabeledDTO> producers = new ArrayList<LongIdLabeledDTO>();
-
-    /**
-     * Ids of all connections that are consuming from the destination
-     */
-    @XmlElement(name="consumer")
-    public List<LongIdLabeledDTO> consumers = new ArrayList<LongIdLabeledDTO>();
-
-    /**
-     * Ids of all queues that are associated with the destination
-     */
-    @XmlElement(name="queue")
-    public List<LongIdLabeledDTO> queues = new ArrayList<LongIdLabeledDTO>();
+public class BindingDTO {
 }

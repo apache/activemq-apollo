@@ -86,7 +86,8 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
   def addQueue(name:String):Long = {
     var queueA = new QueueRecord
     queueA.key = queue_key_counter.incrementAndGet
-    queueA.name = ascii(name)
+    queueA.binding_kind = ascii("test")
+    queueA.binding_data = ascii(name)
     val rc:Boolean = CB( cb=> store.addQueue(queueA)(cb) )
     expect(true)(rc)
     queueA.key
@@ -154,12 +155,9 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     val A = addQueue("my queue name")
     populate(A, "message 1"::"message 2"::"message 3"::Nil)
 
-    val rc:Option[QueueStatus] = CB( cb=> store.getQueueStatus(A)(cb) )
+    val rc:Option[QueueRecord] = CB( cb=> store.getQueue(A)(cb) )
     expect(ascii("my queue name")) {
-      rc.get.record.name
-    }
-    expect(3) {
-      rc.get.count
+      rc.get.binding_data.ascii
     }
   }
 

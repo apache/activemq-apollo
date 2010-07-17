@@ -53,13 +53,13 @@ object DestinationParser {
           }
         } else {
           value.getDomain match {
-            case Domain.QUEUE_DOMAIN =>
+            case Router.QUEUE_DOMAIN =>
               baos.write(options.queuePrefix)
-            case Domain.TOPIC_DOMAIN =>
+            case Router.TOPIC_DOMAIN =>
               baos.write(options.topicPrefix)
-            case Domain.TEMP_QUEUE_DOMAIN =>
+            case Router.TEMP_QUEUE_DOMAIN =>
               baos.write(options.tempQueuePrefix)
-            case Domain.TEMP_TOPIC_DOMAIN =>
+            case Router.TEMP_TOPIC_DOMAIN =>
               baos.write(options.tempTopicPrefix)
           }
           baos.write(value.getName)
@@ -97,16 +97,16 @@ object DestinationParser {
     } else {
       if (options.queuePrefix != null && value.startsWith(options.queuePrefix)) {
         var name = value.slice(options.queuePrefix.length, value.length).ascii();
-        return new SingleDestination(Domain.QUEUE_DOMAIN, name);
+        return new SingleDestination(Router.QUEUE_DOMAIN, name);
       } else if (options.topicPrefix != null && value.startsWith(options.topicPrefix)) {
         var name = value.slice(options.topicPrefix.length, value.length).ascii();
-        return new SingleDestination(Domain.TOPIC_DOMAIN, name);
+        return new SingleDestination(Router.TOPIC_DOMAIN, name);
       } else if (options.tempQueuePrefix != null && value.startsWith(options.tempQueuePrefix)) {
         var name = value.slice(options.tempQueuePrefix.length, value.length).ascii();
-        return new SingleDestination(Domain.TEMP_QUEUE_DOMAIN, name);
+        return new SingleDestination(Router.TEMP_QUEUE_DOMAIN, name);
       } else if (options.tempTopicPrefix != null && value.startsWith(options.tempTopicPrefix)) {
         var name = value.slice(options.tempTopicPrefix.length, value.length).ascii();
-        return new SingleDestination(Domain.TEMP_TOPIC_DOMAIN, name);
+        return new SingleDestination(Router.TEMP_TOPIC_DOMAIN, name);
       } else {
         if (options.defaultDomain == null) {
           return null;

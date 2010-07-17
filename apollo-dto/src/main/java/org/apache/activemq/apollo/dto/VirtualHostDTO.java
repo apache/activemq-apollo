@@ -48,4 +48,12 @@ public class VirtualHostDTO extends ServiceDTO<String> {
      */
     @XmlAttribute(name="purge-on-startup")
     public boolean purge_on_startup = false;
+
+    /**
+     * Holds the configuration for the destinations.
+     */
+    @XmlElement(name="destination")
+    public ArrayList<DestinationDTO> destinations = new ArrayList<DestinationDTO>();
+
+
 }

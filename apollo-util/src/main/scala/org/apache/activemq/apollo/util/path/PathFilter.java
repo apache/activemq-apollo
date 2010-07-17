@@ -15,12 +15,10 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.broker.path;
+package org.apache.activemq.apollo.util.path;
 
 import java.util.ArrayList;
 
-import org.apache.activemq.apollo.broker.Destination;
-import org.apache.activemq.apollo.filter.FilterException;
 import org.fusesource.hawtbuf.AsciiBuffer;
 
 
@@ -34,14 +32,6 @@ public abstract class PathFilter {
     public static final AsciiBuffer ANY_DESCENDENT = new AsciiBuffer(">");
     public static final AsciiBuffer ANY_CHILD = new AsciiBuffer("*");
     
-	public boolean matches(Destination destination) throws FilterException {
-		return matches(destination.getName());
-	}
-	
-	public Object evaluate(Destination destination) throws FilterException {
-		return matches(destination) ? Boolean.TRUE : Boolean.FALSE;
-	}
-	
     public abstract boolean matches(AsciiBuffer path);
 
     public static PathFilter parseFilter(AsciiBuffer path) {

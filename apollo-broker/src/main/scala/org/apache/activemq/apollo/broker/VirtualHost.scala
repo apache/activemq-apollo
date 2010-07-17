@@ -20,15 +20,14 @@ import _root_.java.util.{ArrayList, HashMap}
 import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch.{ScalaDispatch, DispatchQueue}
 import _root_.scala.collection.JavaConversions._
-import path.PathFilter
-import org.fusesource.hawtbuf.AsciiBuffer
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
 import org.apache.activemq.apollo.dto.{VirtualHostDTO}
 import java.util.concurrent.TimeUnit
-import org.apache.activemq.apollo.store.{Store, StoreFactory, QueueRecord}
+import org.apache.activemq.apollo.store.{Store, StoreFactory}
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
+import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -80,8 +79,6 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
   override val dispatchQueue:DispatchQueue = ScalaDispatch.createQueue("virtual-host");
 
   var config:VirtualHostDTO = _
-  val queues = new HashMap[AsciiBuffer, Queue]()
-  val durableSubs = new HashMap[String, DurableSubscription]()
   val router = new Router(this)
 
   var names:List[String] = Nil;
@@ -159,15 +156,11 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
               // Use a global queue to so we concurrently restore
               // the queues.
               globalQueue {
-                store.getQueueStatus(queueKey) { x =>
+                store.getQueue(queueKey) { x =>
                   x match {
-                    case Some(info)=>
-
+                    case Some(record)=>
                     dispatchQueue ^{
-                      val dest = DestinationParser.parse(info.record.name, destination_parser_options)
-                      val queue = new Queue(this, dest, queueKey)
-                      queue.start
-                      queues.put(dest.getName, queue)
+                      router.create_queue(record)
                       task.run
                     }
                     case _ =>
@@ -221,159 +214,53 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
     }
   }
 
-  def getQueue(destination:Destination)(cb: (Queue)=>Unit ) = ^{
-    if( !serviceState.isStarted ) {
-      error("getQueue can only be called while the service is running.")
-      cb(null)
-    } else {
-      var queue = queues.get(destination.getName);
-      if( queue==null && config.auto_create_queues ) {
-        addQueue(destination)(cb)
-      } else  {
-        cb(queue)
-      }
-    }
-  } |>>: dispatchQueue
-
-
 
   // Try to periodically re-balance connections so that consumers/producers
   // are grouped onto the same thread.
   def schedualConnectionRegroup:Unit = {
     def connectionRegroup = {
-      router.each { (destination, node)=>
-        node match {
-          case x:router.TopicDestinationNode=>
 
-            // 1->1 is the easy case...
-            if( node.targets.size==1 && node.routes.size==1 ) {
-              // move the producer to the consumer thread.
-              node.routes.head.producer.collocate( node.targets.head.dispatchQueue )
-            } else {
-              // we need to get fancy perhaps look at rates
-              // to figure out how to be group the connections.
-            }
-
-          case x:router.QueueDestinationNode=>
-
-            if( node.targets.size==1 ) {
-              // move the queue to the consumer
-              x.queue.collocate( node.targets.head.dispatchQueue )
-            } else {
-              // we need to get fancy perhaps look at rates
-              // to figure out how to be group the connections.
-            }
-
-            if( node.routes.size==1 ) {
-              // move the producer to the queue.
-              node.routes.head.producer.collocate( x.queue.dispatchQueue )
-            } else {
-              // we need to get fancy perhaps look at rates
-              // to figure out how to be group the connections.
-            }
-        }
-      }
+      // this should really be much more fancy.  It should look at the messaging
+      // rates between producers and consumers, look for natural data flow partitions
+      // and then try to equally divide the load over the available processing
+      // threads/cores.
+//      router.destinations.valuesIterator.foreach { node =>
+        // todo
+//        if( node.get_queue==null ) {
+//          // Looks like a topic destination...
+//
+//          // 1->1 is the easy case...
+//          if( node.direct_consumers.size==1 && node.producers.size==1 ) {
+//            // move the producer to the consumer thread.
+//            node.producers.head.producer.collocate( node.direct_consumers.head.dispatchQueue )
+//          } else {
+//            // we need to get fancy perhaps look at rates
+//            // to figure out how to be group the connections.
+//          }
+//        } else {
+//          // Looks like a queue destination...
+//
+//          if( node.direct_consumers.size==1 ) {
+//            // move the queue to the consumer
+//            node.get_queue.collocate( node.direct_consumers.head.dispatchQueue )
+//          } else {
+//            // we need to get fancy perhaps look at rates
+//            // to figure out how to be group the connections.
+//          }
+//
+//          if( node.producers.size==1 ) {
+//            // move the producer to the queue.
+//            node.producers.head.producer.collocate( node.get_queue.dispatchQueue )
+//          } else {
+//            // we need to get fancy perhaps look at rates
+//            // to figure out how to be group the connections.
+//          }
+//
+//        }
+//      }
       schedualConnectionRegroup
     }
     dispatchQueue.dispatchAfter(1, TimeUnit.SECONDS, ^{ if(serviceState.isStarted) { connectionRegroup } } )
   }
 
-
-  def addQueue(dest:Destination)(cb: (Queue)=>Unit ) = ^{
-    val name = DestinationParser.toBuffer(dest, destination_parser_options)
-    if( store!=null ) {
-      val record = new QueueRecord
-      record.name = name
-      record.key = queue_id_counter.incrementAndGet
-
-      store.addQueue(record) { rc =>
-        rc match {
-          case true =>
-            dispatchQueue {
-              val queue = new Queue(this, dest, record.key)
-              queue.start()
-              queues.put(dest.getName, queue)
-              cb(queue)
-            }
-          case false => // store could not create
-            cb(null)
-        }
-      }
-    } else {
-      val queue = new Queue(this, dest, queue_id_counter.incrementAndGet)
-      queue.start()
-      queues.put(dest.getName, queue)
-      cb(queue)
-    }
-
-  } |>>: dispatchQueue
-
-  def createSubscription(consumer:ConsumerContext):BrokerSubscription = {
-      createSubscription(consumer, consumer.getDestination());
-  }
-
-  def createSubscription(consumer:ConsumerContext, destination:Destination):BrokerSubscription = {
-
-      // First handle composite destinations..
-      var destinations = destination.getDestinations();
-      if (destinations != null) {
-          var subs :List[BrokerSubscription] = Nil
-          for (childDest <- destinations) {
-              subs ::= createSubscription(consumer, childDest);
-          }
-          return new CompositeSubscription(destination, subs);
-      }
-
-      // If it's a Topic...
-//      if ( destination.getDomain == TOPIC_DOMAIN || destination.getDomain == TEMP_TOPIC_DOMAIN ) {
-//
-//          // It might be a durable subscription on the topic
-//          if (consumer.isDurable()) {
-//              var dsub = durableSubs.get(consumer.getSubscriptionName());
-//              if (dsub == null) {
-////                    TODO:
-////                    IQueue<Long, MessageDelivery> queue = queueStore.createDurableQueue(consumer.getSubscriptionName());
-////                    queue.start();
-////                    dsub = new DurableSubscription(this, destination, consumer.getSelectorExpression(), queue);
-////                    durableSubs.put(consumer.getSubscriptionName(), dsub);
-//              }
-//              return dsub;
-//          }
-//
-//          // return a standard subscription
-////            TODO:
-////            return new TopicSubscription(this, destination, consumer.getSelectorExpression());
-//          return null;
-//      }
-
-      // It looks like a wild card subscription on a queue..
-      if (PathFilter.containsWildCards(destination.getName())) {
-          return new WildcardQueueSubscription(this, destination, consumer);
-      }
-
-      // It has to be a Queue subscription then..
-      var queue = queues.get(destination.getName());
-      if (queue == null) {
-          if (consumer.autoCreateDestination()) {
-//            TODO
-//              queue = createQueue(destination);
-          } else {
-              throw new IllegalStateException("The queue does not exist: " + destination.getName());
-          }
-      }
-//        TODO:
-//        return new Queue.QueueSubscription(queue);
-      return null;
-  }
-
-
-  val queueLifecyleListeners = new ArrayList[QueueLifecyleListener]();
-
-  def addDestinationLifecyleListener(listener:QueueLifecyleListener):Unit= {
-      queueLifecyleListeners.add(listener);
-  }
-
-  def removeDestinationLifecyleListener(listener:QueueLifecyleListener):Unit= {
-      queueLifecyleListeners.add(listener);
-  }
 }
