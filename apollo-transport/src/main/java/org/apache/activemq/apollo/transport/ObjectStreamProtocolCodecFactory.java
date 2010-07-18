@@ -19,9 +19,13 @@ package org.apache.activemq.apollo.transport;
 
 import org.fusesource.hawtbuf.Buffer;
 
-public class ObjectStreamProtocolCodecFactory implements ProtocolCodecFactory {
+public class ObjectStreamProtocolCodecFactory implements ProtocolCodecFactory.Provider {
 
-	public ProtocolCodec createProtocolCodec() {
+    public String protocol() {
+        return "object";
+    }
+
+    public ProtocolCodec createProtocolCodec() {
 		return new ObjectStreamProtocolCodec();
 	}	
 

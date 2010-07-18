@@ -38,7 +38,7 @@ public class PipeTransportServer implements TransportServer {
     protected URI connectURI;
     protected TransportAcceptListener listener;
     protected String name;
-    protected ProtocolCodecFactory protocolCodecFactory;
+    protected ProtocolCodecFactory.Provider protocolCodecFactory;
     protected boolean marshal;
     protected final AtomicInteger connectionCounter = new AtomicInteger();
     DispatchQueue dispatchQueue;
@@ -143,7 +143,7 @@ public class PipeTransportServer implements TransportServer {
         return new PipeTransport(this);
     }
 
-    public void setProtocolCodecFactory(ProtocolCodecFactory protocolCodecFactory) {
+    public void setProtocolCodecFactory(ProtocolCodecFactory.Provider protocolCodecFactory) {
         this.protocolCodecFactory = protocolCodecFactory;
     }
 

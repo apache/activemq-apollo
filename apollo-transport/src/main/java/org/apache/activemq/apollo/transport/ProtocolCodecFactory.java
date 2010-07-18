@@ -16,36 +16,64 @@
  */
 package org.apache.activemq.apollo.transport;
 
+import org.apache.activemq.apollo.util.JavaClassFinder;
 import org.fusesource.hawtbuf.Buffer;
 
-public interface ProtocolCodecFactory {
-    
-    /**
-     * @return an instance of the wire format. 
-     * 
-     */
-    ProtocolCodec createProtocolCodec();
-    
-    /**
-     * @return true if this wire format factory is identifiable. An identifiable
-     * protocol will first write a easy to identify header to the stream
-     */
-    boolean isIdentifiable();
-    
-    /**
-     * @return Returns the maximum length of the header used to discriminate the wire format if it
-     * {@link #isIdentifiable()}
-     * @throws UnsupportedOperationException If {@link #isIdentifiable()} is false
-     */
-    int maxIdentificaionLength();
+import java.util.HashMap;
+import java.util.List;
+
+public class ProtocolCodecFactory {
+
+    public static interface Provider {
+
+        String protocol();
+
+        /**
+         * @return an instance of the wire format.
+         *
+         */
+        ProtocolCodec createProtocolCodec();
+
+        /**
+         * @return true if this wire format factory is identifiable. An identifiable
+         * protocol will first write a easy to identify header to the stream
+         */
+        boolean isIdentifiable();
+
+        /**
+         * @return Returns the maximum length of the header used to discriminate the wire format if it
+         * {@link #isIdentifiable()}
+         * @throws UnsupportedOperationException If {@link #isIdentifiable()} is false
+         */
+        int maxIdentificaionLength();
+
+        /**
+         * Called to test if this protocol matches the identification header.
+         *
+         * @param buffer The byte buffer representing the header data read so far.
+         * @return true if the Buffer matches the protocol format header.
+         */
+        boolean matchesIdentification(Buffer buffer);
+
+    }
+
+    static public HashMap<String, Provider> providers = new HashMap<String, Provider>();
+
+    static {
+        JavaClassFinder<Provider> finder = new JavaClassFinder<Provider>("META-INF/services/org.apache.activemq.apollo/protocol-codec-factory.index");
+        for( Provider provider: finder.new_instances() ) {
+            providers.put(provider.protocol(), provider);
+        }
+    }
 
     /**
-     * Called to test if this protocol matches the identification header.
-     * 
-     * @param buffer The byte buffer representing the header data read so far.
-     * @return true if the Buffer matches the protocol format header.
+     * Gets the provider.
      */
-    boolean matchesIdentification(Buffer buffer);
+    public static ProtocolCodecFactory.Provider get(String name) {
+        return providers.get(name);
+    }
 
-    
+
 }
+
+

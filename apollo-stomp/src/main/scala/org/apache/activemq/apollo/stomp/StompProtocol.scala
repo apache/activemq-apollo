@@ -66,9 +66,11 @@ object StompConstants {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class StompProtocolCodecFactory extends ProtocolCodecFactory {
+class StompProtocolCodecFactory extends ProtocolCodecFactory.Provider {
   import Stomp.Commands.CONNECT
   import Stomp.Commands.STOMP
+
+  def protocol = StompConstants.PROTOCOL
 
   def createProtocolCodec() = new StompCodec();
 

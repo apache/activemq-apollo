@@ -65,6 +65,8 @@ class MultiProtocol(val func: ()=>Array[Protocol]) extends Protocol {
 
   lazy val protocols: Array[Protocol] = func()
 
+  def protocol = "multi"
+
   def createProtocolCodec = new MultiProtocolCodec(protocols)
 
   def createProtocolHandler = new MultiProtocolHandler

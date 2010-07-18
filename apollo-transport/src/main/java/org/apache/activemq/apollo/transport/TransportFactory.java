@@ -16,9 +16,9 @@
  */
 package org.apache.activemq.apollo.transport;
 
-import org.apache.activemq.apollo.util.ClassFinder;
+import org.apache.activemq.apollo.util.JavaClassFinder;
 
-import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -31,19 +31,11 @@ public class TransportFactory {
         public Transport connect(String location) throws Exception;
     }
 
-    static public ArrayList<Provider> providers;
+    static public List<Provider> providers;
 
     static {
-        ClassFinder<Provider> finder = new ClassFinder<Provider>("META-INF/services/org.apache.activemq.apollo/transport-factory.index");
-        ArrayList<Provider> t = new ArrayList<Provider>();
-        for( Class<Provider> clazz: finder.findArray() ) {
-            try {
-              t.add( clazz.newInstance() );
-            } catch(Throwable e) {
-              e.printStackTrace();
-            }
-        }
-        providers = t;
+        JavaClassFinder<Provider> finder = new JavaClassFinder<Provider>("META-INF/services/org.apache.activemq.apollo/transport-factory.index");
+        providers = finder.new_instances();
     }
 
     /**

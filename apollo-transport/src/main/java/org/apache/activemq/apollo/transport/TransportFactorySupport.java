@@ -32,7 +32,6 @@ import java.util.Map;
  */
 public class  TransportFactorySupport {
 
-    private static final FactoryFinder PROTOCOL_CODEC_FACTORY_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/wireformat/");
 
     static public Transport configure(Transport transport, Map<String, String> options) throws IOException {
         ProtocolCodec wf = createProtocolCodec(options);
@@ -54,7 +53,7 @@ public class  TransportFactorySupport {
     }
 
     static public ProtocolCodec createProtocolCodec(Map<String, String> options) throws IOException {
-        ProtocolCodecFactory factory = createProtocolCodecFactory(options);
+        ProtocolCodecFactory.Provider factory = createProtocolCodecFactory(options);
         if( factory == null ) {
             return null;
         }
@@ -62,7 +61,7 @@ public class  TransportFactorySupport {
         return protocolCodec;
     }
 
-    static public ProtocolCodecFactory createProtocolCodecFactory(Map<String, String> options) throws IOException {
+    static public ProtocolCodecFactory.Provider createProtocolCodecFactory(Map<String, String> options) throws IOException {
         String protocolName = (String)options.remove("protocol");
         if (protocolName == null) {
             protocolName = getDefaultProtocolName();
@@ -70,16 +69,15 @@ public class  TransportFactorySupport {
         if( "null".equals(protocolName) ) {
             return null;
         }
-
-        try {
-            ProtocolCodecFactory wff = (ProtocolCodecFactory) PROTOCOL_CODEC_FACTORY_FINDER.newInstance(protocolName);
-            IntrospectionSupport.setProperties(wff, options, "protocol.");
-            return wff;
-        } catch (Throwable e) {
-            throw IOExceptionSupport.create("Could not create protocol codec for: " + protocolName + ", reason: " + e, e);
+        ProtocolCodecFactory.Provider provider = ProtocolCodecFactory.get(protocolName);
+        if( provider==null ) {
+            throw new IOException("Could not create protocol codec for: " + protocolName );
         }
+        
+        return provider;
     }
-    static public ProtocolCodecFactory createProtocolCodecFactory(String location) throws IOException, URISyntaxException {
+
+    static public ProtocolCodecFactory.Provider createProtocolCodecFactory(String location) throws IOException, URISyntaxException {
         URI uri = new URI(location);
         Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
 
@@ -88,13 +86,11 @@ public class  TransportFactorySupport {
             return null;
         }
 
-        try {
-            ProtocolCodecFactory wff = (ProtocolCodecFactory) PROTOCOL_CODEC_FACTORY_FINDER.newInstance(protocolName);
-            IntrospectionSupport.setProperties(wff, options);
-            return wff;
-        } catch (Throwable e) {
-            throw IOExceptionSupport.create("Could not protocol codec for: " + protocolName + ", reason: " + e, e);
+        ProtocolCodecFactory.Provider provider = ProtocolCodecFactory.get(protocolName);
+        if( provider==null ) {
+            throw new IOException("Could not create protocol codec for: " + protocolName);
         }
+        return provider;
     }
 
     static protected String getDefaultProtocolName() {
