@@ -16,64 +16,34 @@
  */
 package org.apache.activemq.apollo.transport;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.concurrent.ConcurrentHashMap;
+import org.apache.activemq.apollo.util.JavaClassFinder;
 
-import org.apache.activemq.apollo.util.FactoryFinder;
-import org.apache.activemq.apollo.util.IOExceptionSupport;
+import java.util.List;
 
-public abstract class DiscoveryAgentFactory {
+public class DiscoveryAgentFactory {
 
-    private static final FactoryFinder DISCOVERY_AGENT_FINDER = new FactoryFinder("META-INF/services/org/apache/activemq/transport/discoveryagent/");
-    private static final ConcurrentHashMap<String, DiscoveryAgentFactory> DISCOVERY_AGENT_FACTORYS = new ConcurrentHashMap<String, DiscoveryAgentFactory>();
+    public interface Provider {
+        public DiscoveryAgent create(String uri) throws Exception;
+    }
+
+    static public List<Provider> providers;
+
+    static {
+        JavaClassFinder<Provider> finder = new JavaClassFinder<Provider>("META-INF/services/org.apache.activemq.apollo/discovery-agent-factory.index");
+        providers = finder.new_instances();
+    }
 
     /**
-     * @param uri
-     * @return
-     * @throws IOException
+     * Creates a DiscoveryAgent
      */
-    private static DiscoveryAgentFactory findDiscoveryAgentFactory(URI uri) throws IOException {
-        String scheme = uri.getScheme();
-        if (scheme == null) {
-            throw new IOException("DiscoveryAgent scheme not specified: [" + uri + "]");
+    public static DiscoveryAgent create(String uri) throws Exception {
+        for( Provider provider : providers) {
+          DiscoveryAgent rc = provider.create(uri);
+          if( rc!=null ) {
+            return rc;
+          }
         }
-        DiscoveryAgentFactory daf = DISCOVERY_AGENT_FACTORYS.get(scheme);
-        if (daf == null) {
-            // Try to load if from a META-INF property.
-            try {
-                daf = (DiscoveryAgentFactory)DISCOVERY_AGENT_FINDER.newInstance(scheme);
-                DISCOVERY_AGENT_FACTORYS.put(scheme, daf);
-            } catch (Throwable e) {
-                throw IOExceptionSupport.create("DiscoveryAgent scheme NOT recognized: [" + scheme + "]", e);
-            }
-        }
-        return daf;
+        throw new IllegalArgumentException("Unknown discovery agent uri: "+uri);
     }
 
-    public static DiscoveryAgent createDiscoveryAgent(URI uri) throws IOException {
-        DiscoveryAgentFactory tf = findDiscoveryAgentFactory(uri);
-        return tf.doCreateDiscoveryAgent(uri);
-
-    }
-
-    protected abstract DiscoveryAgent doCreateDiscoveryAgent(URI uri) throws IOException;
-    // {
-    // try {
-    // String type = ( uri.getScheme() == null ) ? uri.getPath() :
-    // uri.getScheme();
-    // DiscoveryAgent rc = (DiscoveryAgent)
-    // discoveryAgentFinder.newInstance(type);
-    // Map options = URISupport.parseParamters(uri);
-    // IntrospectionSupport.setProperties(rc, options);
-    // if( rc.getClass() == SimpleDiscoveryAgent.class ) {
-    // CompositeData data = URISupport.parseComposite(uri);
-    // ((SimpleDiscoveryAgent)rc).setServices(data.getComponents());
-    // }
-    // return rc;
-    // } catch (Throwable e) {
-    // throw IOExceptionSupport.create("Could not create discovery agent: "+uri,
-    // e);
-    // }
-    // }
 }

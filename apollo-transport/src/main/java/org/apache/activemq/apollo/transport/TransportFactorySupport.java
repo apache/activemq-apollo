@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.transport;
 
-import org.apache.activemq.apollo.util.FactoryFinder;
 import org.apache.activemq.apollo.util.IOExceptionSupport;
 import org.apache.activemq.apollo.util.IntrospectionSupport;
 import org.apache.activemq.apollo.util.URISupport;
@@ -97,4 +96,8 @@ public class  TransportFactorySupport {
         return "stomp";
     }
 
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone();    //To change body of overridden methods use File | Settings | File Templates.
+    }
 }
