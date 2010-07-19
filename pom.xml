@@ -120,7 +120,7 @@
     <maven>2.0.10</maven>
   </prerequisites>
 
-  <url>http://activemq.apache.org</url>
+  <url>http://activemq.apache.org/</url>
 
   <mailingLists>
     <mailingList>
@@ -163,52 +163,6 @@
     <url>http://svn.apache.org/viewvc/activemq/sandbox/apollo-flow/</url>
   </scm>
 
-  <!-- For the dependencies that have not yet made it to central -->
-  <repositories>
-    <repository>
-      <id>fusesource.snapshots</id>
-      <name>FuseSource Snapshot Repository</name>
-      <url>http://repo.fusesource.com/nexus/content/repositories/snapshots</url>
-      <snapshots><enabled>true</enabled></snapshots>
-      <releases><enabled>true</enabled></releases>
-    </repository>
-    <repository>
-      <id>java.net</id>
-      <url>http://download.java.net/maven/2</url>
-    </repository>
-    <repository>
-      <id>shorrockin</id>
-      <url>http://maven.shorrockin.com</url>
-    </repository>
-    <repository>
-      <id>snapshots.scala-tools.org</id>
-      <url>http://scala-tools.org/repo-snapshots</url>
-      <snapshots><enabled>true</enabled></snapshots>
-      <releases><enabled>true</enabled></releases>
-    </repository>
-    <repository>
-      <id>apache.snapshots</id>
-      <url>https://repository.apache.org/content/repositories/snapshots</url>
-      <snapshots><enabled>true</enabled></snapshots>
-      <releases><enabled>false</enabled></releases>
-    </repository>
-  </repositories>
-  <pluginRepositories>
-    <pluginRepository>
-      <id>fusesource.snapshots</id>
-      <name>FuseSource Snapshot Repository</name>
-      <url>http://repo.fusesource.com/nexus/content/repositories/snapshots</url>
-      <snapshots><enabled>true</enabled></snapshots>
-      <releases><enabled>true</enabled></releases>
-    </pluginRepository>
-    <pluginRepository>
-      <id>apache.snapshots</id>
-      <url>https://repository.apache.org/content/repositories/snapshots</url>
-      <snapshots><enabled>true</enabled></snapshots>
-      <releases><enabled>false</enabled></releases>
-    </pluginRepository>
-  </pluginRepositories>
-  
   <dependencyManagement>
     <dependencies>
 
@@ -385,6 +339,12 @@
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
         </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>2.1.1</version>
       </plugin>
 
       <plugin>
@@ -791,6 +751,44 @@
             <enabled>true</enabled>
           </snapshots>
         </repository>
+        
+        <repository>
+          <id>fluido-skin</id>
+          <url>http://fluido-skin.googlecode.com/svn/repo/</url>
+        </repository>
+        
+        <repository>
+          <id>fusesource.snapshots</id>
+          <name>FuseSource Snapshot Repository</name>
+          <url>http://repo.fusesource.com/nexus/content/repositories/snapshots</url>
+          <snapshots><enabled>true</enabled></snapshots>
+          <releases><enabled>true</enabled></releases>
+        </repository>
+        
+        <repository>
+          <id>java.net</id>
+          <url>http://download.java.net/maven/2</url>
+        </repository>
+        
+        <repository>
+          <id>shorrockin</id>
+          <url>http://maven.shorrockin.com</url>
+        </repository>
+        
+        <repository>
+          <id>snapshots.scala-tools.org</id>
+          <url>http://scala-tools.org/repo-snapshots</url>
+          <snapshots><enabled>true</enabled></snapshots>
+          <releases><enabled>true</enabled></releases>
+        </repository>
+        
+        <repository>
+          <id>apache.snapshots</id>
+          <url>https://repository.apache.org/content/repositories/snapshots</url>
+          <snapshots><enabled>true</enabled></snapshots>
+          <releases><enabled>false</enabled></releases>
+        </repository>
+        
       </repositories>
       
       <pluginRepositories>
@@ -836,6 +834,22 @@
             <checksumPolicy>fail</checksumPolicy>
           </releases>
         </pluginRepository>
+        
+        <pluginRepository>
+          <id>fusesource.snapshots</id>
+          <name>FuseSource Snapshot Repository</name>
+          <url>http://repo.fusesource.com/nexus/content/repositories/snapshots</url>
+          <snapshots><enabled>true</enabled></snapshots>
+          <releases><enabled>true</enabled></releases>
+        </pluginRepository>
+        
+        <pluginRepository>
+          <id>apache.snapshots</id>
+          <url>https://repository.apache.org/content/repositories/snapshots</url>
+          <snapshots><enabled>true</enabled></snapshots>
+          <releases><enabled>false</enabled></releases>
+        </pluginRepository>
+        
       </pluginRepositories>
     </profile>
   </profiles>
