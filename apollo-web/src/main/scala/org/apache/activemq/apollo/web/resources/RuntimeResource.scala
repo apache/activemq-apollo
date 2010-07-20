@@ -147,6 +147,13 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
         node.queues.foreach { q=>
           result.queues.add(new LongIdLabeledDTO(q.id, q.binding.label))
         }
+        node.broadcast_consumers.flatMap( _.connection ).foreach { connection=>
+          result.consumers.add(new LongIdLabeledDTO(connection.id, connection.transport.getRemoteAddress))
+        }
+        node.broadcast_producers.flatMap( _.producer.connection ).foreach { connection=>
+          result.producers.add(new LongIdLabeledDTO(connection.id, connection.transport.getRemoteAddress))
+        }
+
         result
       })
     }
@@ -200,6 +207,14 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
               }
             }
           }
+
+          q.inbound_sessions.flatMap( _.producer.connection ).foreach { connection=>
+            result.producers.add(new LongIdLabeledDTO(connection.id, connection.transport.getRemoteAddress))
+          }
+          q.all_subscriptions.keysIterator.toSeq.flatMap( _.connection ).foreach { connection=>
+            result.consumers.add(new LongIdLabeledDTO(connection.id, connection.transport.getRemoteAddress))
+          }
+
           result
         }
       }

@@ -42,6 +42,19 @@
 %p flushing out of memory: #{memory(flushing_size)}
 %p holding : #{flushed_items} flushed message references
 
+%h3 Producers
+%ul
+  - for( x <- producers )
+    %li
+      %a(href={ path("../../../../../../connections/"+x.id) }) #{x.label}
+
+%h3 Consumers
+%ul
+  - for( x <- consumers )
+    %li
+      %a(href={ path("../../../../../../connections/"+x.id) }) #{x.label}
+
+
 - if ( entries.isEmpty )
   %h2
     Entries Dump

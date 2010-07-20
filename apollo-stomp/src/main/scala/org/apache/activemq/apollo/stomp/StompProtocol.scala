@@ -140,6 +140,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       dispatchQueue.release
     })
 
+    override def connection = Some(StompProtocolHandler.this.connection) 
+
     def matches(delivery:Delivery) = {
       if( delivery.message.protocol eq StompProtocol ) {
         if( selector!=null ) {
@@ -306,6 +308,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
             // create the producer route...
 
             val producer = new DeliveryProducer() {
+
+              override def connection = Some( StompProtocolHandler.this.connection )
+
               override def dispatchQueue = queue
             }
 

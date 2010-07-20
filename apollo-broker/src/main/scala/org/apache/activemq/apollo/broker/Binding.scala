@@ -195,11 +195,11 @@ class DurableSubBinding(val binding_data:Buffer, val binding_dto:DurableSubscrip
 
 
   def unbind(node: RoutingNode, queue: Queue) = {
-    node.add_broadcast_consumer(queue)
+    node.remove_broadcast_consumer(queue)
   }
 
   def bind(node: RoutingNode, queue: Queue) = {
-    node.remove_broadcast_consumer(queue)
+    node.add_broadcast_consumer(queue)
   }
 
   def label = {

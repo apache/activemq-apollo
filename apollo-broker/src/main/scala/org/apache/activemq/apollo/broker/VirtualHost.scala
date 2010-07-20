@@ -188,30 +188,19 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
 
   override protected def _stop(onCompleted:Runnable):Unit = {
 
-//    TODO:
-//      val tmp = new ArrayList[Queue](queues.values())
-//      for (queue <-  tmp) {
-//        queue.shutdown
-//      }
-
-// TODO:
-//        ArrayList<IQueue<Long, MessageDelivery>> durableQueues = new ArrayList<IQueue<Long,MessageDelivery>>(queueStore.getDurableQueues());
-//        done = new RunnableCountDownLatch(durableQueues.size());
-//        for (IQueue<Long, MessageDelivery> queue : durableQueues) {
-//            queue.shutdown(done);
-//        }
-//        done.await();
-
+    val tracker = new LoggingTracker("virtual host shutdown", dispatchQueue)
+    router.queues.valuesIterator.foreach { queue=>
+      tracker.stop(queue)
+    }
     if( direct_buffer_pool!=null ) {
       direct_buffer_pool.stop
       direct_buffer_pool = null
     }
 
     if( store!=null ) {
-      store.stop(onCompleted);
-    } else {
-      onCompleted.run
+      tracker.stop(store);
     }
+    tracker.callback(onCompleted)
   }
 
 

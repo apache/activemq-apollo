@@ -25,13 +25,13 @@
     %li
       %a(href={ path("queues/"+x.id) }) #{x.label}
 
-%h2 Producers
+%h3 Broadcast Producers
 %ul
   - for( x <- producers )
     %li
       %a(href={ path("../../../../connections/"+x.id) }) #{x.label}
 
-%h2 Consumers
+%h3 Broadcast Consumers
 %ul
   - for( x <- consumers )
     %li

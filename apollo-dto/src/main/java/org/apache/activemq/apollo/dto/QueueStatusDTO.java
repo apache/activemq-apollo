@@ -87,4 +87,16 @@ public class QueueStatusDTO extends LongIdDTO {
     public List<EntryStatusDTO> entries = new ArrayList<EntryStatusDTO>();
 
 
+    /**
+     * Ids of all connections that are producing to the destination
+     */
+    @XmlElement(name="producer")
+    public List<LongIdLabeledDTO> producers = new ArrayList<LongIdLabeledDTO>();
+
+    /**
+     * Ids of all connections that are consuming from the destination
+     */
+    @XmlElement(name="consumer")
+    public List<LongIdLabeledDTO> consumers = new ArrayList<LongIdLabeledDTO>();
+
 }

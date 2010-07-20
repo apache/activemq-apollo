@@ -41,6 +41,7 @@ object Queue extends Log {
 class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends BaseRetained with Route with DeliveryConsumer with BaseService with DispatchLogging {
   override protected def log = Queue
 
+  var inbound_sessions = Set[DeliverySession]()
   var all_subscriptions = Map[DeliveryConsumer, Subscription]()
   var fast_subscriptions = List[Subscription]()
 
@@ -202,7 +203,8 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
   }
 
   protected def _stop(onCompleted: Runnable) = {
-    throw new AssertionError("Not implemented.");
+    // TODO: perhaps we should remove all the entries
+    onCompleted.run
   }
 
   def addCapacity(amount:Int) = {
@@ -443,7 +445,10 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
     }
     messages.refiller.run
   }
+
+
   
+
   /////////////////////////////////////////////////////////////////////
   //
   // Implementation of the DeliveryConsumer trait.  Allows this queue
@@ -456,20 +461,23 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
   def connect(p: DeliveryProducer) = new DeliverySession {
     retain
 
-    dispatchQueue {
-      addCapacity( tune_producer_buffer )
-    }
-
     override def consumer = Queue.this
 
     override def producer = p
 
     val session = session_manager.open(producer.dispatchQueue)
 
+    dispatchQueue {
+      inbound_sessions += this
+      addCapacity( tune_producer_buffer )
+    }
+
+
     def close = {
       session_manager.close(session)
       dispatchQueue {
         addCapacity( -tune_producer_buffer )
+        inbound_sessions -= this
       }
       release
     }
@@ -1358,7 +1366,9 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
   def advance(value:QueueEntry):Unit = {
 
     assert(value!=null)
-    assert(pos!=null)
+    if( pos == null ) {
+      assert(pos!=null)
+    }
 
     advanced_size += pos.size
 
@@ -1397,8 +1407,11 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
     acquired.addLast(this)
     acquired_size += entry.size
 
-    def ack(sb:StoreUOW) = {
-
+    def ack(sb:StoreUOW):Unit = {
+      // The session may have already been closed..
+      if( session == null ) {
+        return;
+      }
       if (entry.messageKey != -1) {
         val storeBatch = if( sb == null ) {
           queue.host.store.createStoreUOW
@@ -1430,7 +1443,11 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
       next.run
     }
 
-    def nack = {
+    def nack:Unit = {
+      // The session may have already been closed..
+      if( session == null ) {
+        return;
+      }
 
       entry.as_loaded.acquired = false
       acquired_size -= entry.size

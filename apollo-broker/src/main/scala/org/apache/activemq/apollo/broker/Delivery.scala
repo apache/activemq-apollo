@@ -32,6 +32,8 @@ trait DeliveryProducer {
 
   def dispatchQueue:DispatchQueue
 
+  def connection:Option[BrokerConnection] = None
+
   def collocate(value:DispatchQueue):Unit = {
     if( value.getTargetQueue ne dispatchQueue.getTargetQueue ) {
       println(dispatchQueue.getLabel+" co-locating with: "+value.getLabel);
@@ -47,6 +49,9 @@ trait DeliveryProducer {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait DeliveryConsumer extends Retained {
+
+  def connection:Option[BrokerConnection] = None
+
   def browser = false
   def dispatchQueue:DispatchQueue;
   def matches(message:Delivery):Boolean

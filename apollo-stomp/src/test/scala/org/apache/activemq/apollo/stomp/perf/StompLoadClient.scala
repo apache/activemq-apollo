@@ -54,6 +54,7 @@ object StompLoadClient {
   var headers = List[String]()
   var ack = "auto"
   var selector:String = null
+  var durable = false
 
   var destinationType = "queue"
   var destinationCount = 1
@@ -161,6 +162,7 @@ object StompLoadClient {
     "consumerSleep    = "+consumerSleep+"\n"+
     "ack              = "+ack+"\n"+
     "selector         = "+selector+"\n"+
+    "durable          = "+durable+"\n"+
     ""
 
   }
@@ -352,15 +354,14 @@ object StompLoadClient {
       while (!done.get) {
         connect {
           val headers = Map[AsciiBuffer, AsciiBuffer]()
-          client.send("""
-SUBSCRIBE""" + (if(selector==null) {""} else {
-"""
-selector: """+selector
-}) + """
-ack:"""+ack+"""
-destination:"""+destination(id)+"""
+          client.send(
+            "SUBSCRIBE\n" +
+             (if(!durable) {""} else {"id:durable:mysub-"+id+"\n"}) + 
+             (if(selector==null) {""} else {"selector: "+selector+"\n"}) +
+             "ack:"+ack+"\n"+
+             "destination:"+destination(id)+"\n"+
+             "\n")
 
-""")
           client.flush
           receiveLoop
         }
