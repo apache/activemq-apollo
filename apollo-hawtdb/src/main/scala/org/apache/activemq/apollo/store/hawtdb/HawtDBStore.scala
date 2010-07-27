@@ -22,6 +22,7 @@ import collection.mutable.ListBuffer
 import java.util.HashMap
 import collection.{Seq}
 import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch.ListEventAggregator
 import java.io.File
 import java.util.concurrent._
 import org.apache.activemq.apollo.dto._
