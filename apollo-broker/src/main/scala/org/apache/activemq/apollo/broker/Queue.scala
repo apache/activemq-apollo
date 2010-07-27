@@ -19,16 +19,17 @@ package org.apache.activemq.apollo.broker
 import java.util.concurrent.TimeUnit
 
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
 import java.util.concurrent.atomic.AtomicInteger
 
 import collection.{SortedMap}
-import org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained}
 import org.apache.activemq.apollo.store.{StoreUOW}
 import protocol.ProtocolFactory
 import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.list._
+import org.fusesource.hawtdispatch.{ListEventAggregator, DispatchQueue, BaseRetained}
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)

@@ -19,6 +19,7 @@ package org.apache.activemq.apollo.broker
 import _root_.java.io.{File}
 import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
 import org.fusesource.hawtdispatch.{Dispatch}
 import org.fusesource.hawtbuf._
 import AsciiBuffer._

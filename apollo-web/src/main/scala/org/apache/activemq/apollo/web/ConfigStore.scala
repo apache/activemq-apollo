@@ -22,6 +22,7 @@ import org.apache.activemq.apollo.dto.{XmlCodec, ConnectorDTO, VirtualHostDTO, B
 import java.util.regex.Pattern
 import javax.xml.stream.{XMLOutputFactory, XMLInputFactory}
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
 import java.util.concurrent.{TimeUnit, ExecutorService, Executors}
 import org.fusesource.hawtbuf.{ByteArrayInputStream, ByteArrayOutputStream}
 import javax.xml.bind.{Marshaller, JAXBContext}

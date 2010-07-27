@@ -26,8 +26,10 @@ import org.apache.activemq.apollo.dto.{VirtualHostDTO}
 import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.store.{Store, StoreFactory}
 import org.apache.activemq.apollo.util._
+import path.PathFilter
 import ReporterLevel._
 import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
+import collection.JavaConversions
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -213,40 +215,38 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
       // rates between producers and consumers, look for natural data flow partitions
       // and then try to equally divide the load over the available processing
       // threads/cores.
-//      router.destinations.valuesIterator.foreach { node =>
-        // todo
-//        if( node.get_queue==null ) {
-//          // Looks like a topic destination...
-//
-//          // 1->1 is the easy case...
-//          if( node.direct_consumers.size==1 && node.producers.size==1 ) {
-//            // move the producer to the consumer thread.
-//            node.producers.head.producer.collocate( node.direct_consumers.head.dispatchQueue )
-//          } else {
-//            // we need to get fancy perhaps look at rates
-//            // to figure out how to be group the connections.
-//          }
-//        } else {
-//          // Looks like a queue destination...
-//
-//          if( node.direct_consumers.size==1 ) {
-//            // move the queue to the consumer
-//            node.get_queue.collocate( node.direct_consumers.head.dispatchQueue )
-//          } else {
-//            // we need to get fancy perhaps look at rates
-//            // to figure out how to be group the connections.
-//          }
-//
-//          if( node.producers.size==1 ) {
-//            // move the producer to the queue.
-//            node.producers.head.producer.collocate( node.get_queue.dispatchQueue )
-//          } else {
-//            // we need to get fancy perhaps look at rates
-//            // to figure out how to be group the connections.
-//          }
-//
-//        }
-//      }
+      val nodes = router.destinations.get(PathFilter.ANY_DESCENDENT)
+
+      JavaConversions.asIterable(nodes).foreach { node =>
+
+        // For the topics, just collocate the producers onto the first consumer's
+        // thread.
+        node.broadcast_consumers.firstOption.foreach{ consumer =>
+          node.broadcast_producers.foreach { r=>
+            r.producer.collocate(consumer.dispatchQueue)
+          }
+        }
+
+        node.queues.foreach { queue=>
+
+          queue.dispatchQueue {
+
+            // Collocate the queue's with the first consumer
+            // TODO: change this so it collocates with the fastest consumer.
+
+            queue.all_subscriptions.firstOption.map( _._1 ).foreach { consumer=>
+              queue.collocate( consumer.dispatchQueue )
+            }
+
+            // Collocate all the producers with the queue..
+
+            queue.inbound_sessions.foreach { session =>
+              session.producer.collocate( queue.dispatchQueue )
+            }
+          }
+
+        }
+      }
       schedualConnectionRegroup
     }
     dispatchQueue.dispatchAfter(1, TimeUnit.SECONDS, ^{ if(serviceState.isStarted) { connectionRegroup } } )

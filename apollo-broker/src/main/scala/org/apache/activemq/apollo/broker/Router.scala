@@ -20,6 +20,7 @@ import _root_.java.util.concurrent.atomic.AtomicLong
 import _root_.org.fusesource.hawtbuf._
 import _root_.org.fusesource.hawtdispatch._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
 
 import collection.JavaConversions
 import org.apache.activemq.apollo.util._

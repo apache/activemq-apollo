@@ -57,6 +57,7 @@ object StompLoadClient {
   var durable = false
 
   var destinationType = "queue"
+  var destinationName = "load"
   var destinationCount = 1
 
   val producerCounter = new AtomicLong()
@@ -146,6 +147,7 @@ object StompLoadClient {
     "uri              = "+uri+"\n"+
     "destinationType  = "+destinationType+"\n"+
     "destinationCount = "+destinationCount+"\n" +
+    "destinationName  = "+destinationName+"\n" +
     "sampleInterval   = "+sampleInterval+"\n" +
     "\n"+
     "--- Producer Properties ---\n"+
@@ -172,7 +174,7 @@ object StompLoadClient {
     println("%s rate: %,.3f per second, total: %,d".format(name, rate_per_second, totalCount))
   }
 
-  def destination(i:Int) = "/"+destinationType+"/load-"+(i%destinationCount)
+  def destination(i:Int) = "/"+destinationType+"/"+destinationName+"-"+(i%destinationCount)
 
 
   class StompClient {

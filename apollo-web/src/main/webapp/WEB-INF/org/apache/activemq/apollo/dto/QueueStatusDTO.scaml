@@ -23,7 +23,10 @@
 
 %p queue size: #{queue_items} messages
 %p queue size: #{memory(queue_size)}
-%p memory used: #{ "%,.2f".format(capacity_used.toFloat*100.0/capacity) }% (#{memory(capacity_used)}/#{memory(capacity)})
+- if( capacity > 0 )
+  %p memory used: #{ "%,.2f".format(capacity_used.toFloat*100.0/capacity) }% (#{memory(capacity_used)}/#{memory(capacity)})
+- else
+  %p memory used: #{ "%,.2f".format(0f) }% (#{memory(capacity_used)}/#{memory(capacity)})
 
 %h2 Enqueue/Deqeueue Counters
 
