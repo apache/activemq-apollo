@@ -110,7 +110,7 @@
     <logback-version>0.9.18</logback-version>
     
     <!-- maven plugin versions -->
-    <maven-scala-plugin-version>2.13.1</maven-scala-plugin-version>
+    <maven-scala-plugin-version>2.14</maven-scala-plugin-version>
     <maven-surefire-plugin-version>2.4.3</maven-surefire-plugin-version>
     <jetty-plugin-version>7.0.1.v20091125</jetty-plugin-version>
     

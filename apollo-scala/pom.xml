@@ -90,6 +90,7 @@
         <configuration>
           <jvmArgs>
             <jvmArg>-Xmx1024m</jvmArg>
+            <jvmArg>-Xss8m</jvmArg>
           </jvmArgs>
           <args>
             <arg>-deprecation</arg>
