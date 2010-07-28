@@ -221,7 +221,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
 
         // For the topics, just collocate the producers onto the first consumer's
         // thread.
-        node.broadcast_consumers.firstOption.foreach{ consumer =>
+        node.broadcast_consumers.headOption.foreach{ consumer =>
           node.broadcast_producers.foreach { r=>
             r.producer.collocate(consumer.dispatchQueue)
           }
@@ -234,7 +234,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
             // Collocate the queue's with the first consumer
             // TODO: change this so it collocates with the fastest consumer.
 
-            queue.all_subscriptions.firstOption.map( _._1 ).foreach { consumer=>
+            queue.all_subscriptions.headOption.map( _._1 ).foreach { consumer=>
               queue.collocate( consumer.dispatchQueue )
             }
 

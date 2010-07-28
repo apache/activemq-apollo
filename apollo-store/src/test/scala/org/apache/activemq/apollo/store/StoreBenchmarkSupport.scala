@@ -23,7 +23,6 @@ import java.util.concurrent.{TimeUnit, CountDownLatch}
 import org.scalatest.{BeforeAndAfterEach, BeforeAndAfterAll}
 import collection.mutable.ListBuffer
 import java.util.concurrent.atomic.{AtomicLong, AtomicInteger, AtomicBoolean}
-import org.apache.activemq.apollo.store.{Store, QueueEntryRecord, QueueRecord, MessageRecord}
 import org.apache.activemq.apollo.util.{LoggingTracker, FunSuiteSupport, LongCounter}
 
 /**

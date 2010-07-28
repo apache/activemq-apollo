@@ -32,6 +32,25 @@
   <name>${artifactId}</name>
   <description>Holds the common Maven settings for Scala based modules.</description>
   
+ <dependencies>
+
+    <!-- Scala Support: this needs to be copied into every scala project -->
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <scope>compile</scope>
+      <version>${scala-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-compiler</artifactId>
+      <version>${scala-version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+
+  </dependencies>
+  
   <build>
   
     <defaultGoal>install</defaultGoal>

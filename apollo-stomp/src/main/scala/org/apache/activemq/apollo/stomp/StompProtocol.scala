@@ -474,6 +474,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
                   case Some(queue:Queue) =>
                     queue.bind(consumer::Nil)
                     consumer.release
+                  case None => throw new RuntimeException("case not yet implemented.")
                 }
               }
             }
