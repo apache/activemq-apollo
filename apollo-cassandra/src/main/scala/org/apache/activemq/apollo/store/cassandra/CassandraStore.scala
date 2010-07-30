@@ -57,23 +57,31 @@ object CassandraStore extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class CassandraStore extends Store with BaseService with Logging {
+class CassandraStore extends DelayingStoreSupport with Logging {
 
   import CassandraStore._
   override protected def log = CassandraStore
-
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Implementation of the BaseService interface
-  //
-  /////////////////////////////////////////////////////////////////////
-  val dispatchQueue = createQueue("cassandra store")
-
+                                
   var next_msg_key = new AtomicLong(1)
 
   val client = new CassandraClient()
   var config:CassandraStoreDTO = defaultConfig
   var blocking:ExecutorService = null
+
+  def flush_delay = config.flush_delay
+
+  override def toString = "cassandra store"
+
+  protected def get_next_msg_key = next_msg_key.getAndIncrement
+
+  protected def store(uows: Seq[DelayableUOW])(callback: =>Unit) = {
+    blocking {
+      client.store(uows)
+      dispatchQueue {
+        callback
+      }
+    }
+  }
 
   def configure(config: StoreDTO, reporter: Reporter):Unit = configure(config.asInstanceOf[CassandraStoreDTO], reporter)
 
@@ -218,230 +226,5 @@ class CassandraStore extends Store with BaseService with Logging {
     }
   }
 
-  def flushMessage(id: Long)(callback: => Unit) = ^{
-    val action: CassandraUOW#MessageAction = pendingStores.get(id)
-    if( action == null ) {
-      callback
-    } else {
-      action.uow.onComplete(callback _)
-      flush(action.uow.uow_id)
-    }
-
-  } >>: dispatchQueue
-
-  def createStoreUOW() = new CassandraUOW
-
-
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Implementation of the StoreBatch interface
-  //
-  /////////////////////////////////////////////////////////////////////
-  class CassandraUOW extends BaseRetained with StoreUOW {
-
-    class MessageAction {
-
-      var msg= 0L
-      var store: MessageRecord = null
-      var enqueues = ListBuffer[QueueEntryRecord]()
-      var dequeues = ListBuffer[QueueEntryRecord]()
-
-      def uow = CassandraUOW.this
-      def isEmpty() = store==null && enqueues==Nil && dequeues==Nil
-      def cancel() = {
-        uow.rm(msg)
-        if( uow.isEmpty ) {
-          uow.cancel
-        }
-      }
-    }
-
-    val uow_id:Int = next_uow_id.getAndIncrement
-    var actions = Map[Long, MessageAction]()
-    var flushing= false
-
-    var completeListeners = ListBuffer[Runnable]()
-
-    def onComplete(callback: Runnable) = if( callback!=null ) { this.synchronized { completeListeners += callback } }
-
-    var disableDelay = false
-    def completeASAP() = this.synchronized { disableDelay=true }
-
-    def delayable = !disableDelay
-
-
-    def rm(msg:Long) = {
-      actions -= msg
-    }
-
-    def isEmpty = actions.isEmpty
-    def cancel = {
-      delayedUOWs.remove(uow_id)
-      onPerformed
-    }
-
-    def store(record: MessageRecord):Long = {
-      record.key = next_msg_key.getAndIncrement
-      val action = new MessageAction
-      action.msg = record.key
-      action.store = record
-      this.synchronized {
-        actions += record.key -> action
-      }
-      dispatchQueue {
-        pendingStores.put(record.key, action)
-      }
-      record.key
-    }
-
-    def action(msg:Long) = {
-      actions.get(msg) match {
-        case Some(x) => x
-        case None =>
-          val x = new MessageAction
-          x.msg = msg
-          actions += msg->x
-          x
-      }
-    }
-
-    def enqueue(entry: QueueEntryRecord) = {
-      this.synchronized {
-        val a = action(entry.messageKey)
-        a.enqueues += entry
-        dispatchQueue {
-          pendingEnqueues.put(key(entry), a)
-        }
-      }
-    }
-
-    def dequeue(entry: QueueEntryRecord) = {
-      this.synchronized {
-        action(entry.messageKey).dequeues += entry
-      }
-    }
-
-    override def dispose = {
-      uow_source.merge(this)
-    }
-
-
-    def onPerformed() {
-      completeListeners.foreach { x=>
-        x.run()
-      }
-      super.dispose
-    }
-  }
-
-  def key(x:QueueEntryRecord) = (x.queueKey, x.queueSeq)
-
-  val uow_source = createSource(new ListEventAggregator[CassandraUOW](), dispatchQueue)
-  uow_source.setEventHandler(^{drain_uows});
-  uow_source.resume
-
-  var pendingStores = new HashMap[Long, CassandraUOW#MessageAction]()
-  var pendingEnqueues = new HashMap[(Long,Long), CassandraUOW#MessageAction]()
-  var delayedUOWs = new HashMap[Int, CassandraUOW]()
-
-  var next_uow_id = new IntCounter(1)
-  
-  def drain_uows = {
-    uow_source.getData.foreach { uow =>
-
-      val uow_id = uow.uow_id
-      delayedUOWs.put(uow_id, uow)
-
-      uow.actions.foreach { case (msg, action) =>
-
-        // dequeues can cancel out previous enqueues
-        action.dequeues.foreach { currentDequeue=>
-          val currentKey = key(currentDequeue)
-          val prevAction:CassandraUOW#MessageAction = pendingEnqueues.remove(currentKey)
-          if( prevAction!=null && !prevAction.uow.flushing ) {
-
-            // yay we can cancel out a previous enqueue
-            prevAction.enqueues = prevAction.enqueues.filterNot( x=> key(x) == currentKey )
-
-            // if the message is not in any queues.. we can gc it..
-            if( prevAction.enqueues == Nil && prevAction.store !=null ) {
-              pendingStores.remove(msg)
-              prevAction.store = null
-            }
-
-            // Cancel the action if it's now empty
-            if( prevAction.isEmpty ) {
-              prevAction.cancel()
-            }
-
-            // since we canceled out the previous enqueue.. now cancel out the action
-            action.dequeues = action.dequeues.filterNot( _ == currentDequeue)
-            if( action.isEmpty ) {
-              action.cancel()
-            }
-          }
-        }
-      }
-
-      if( !uow.completeListeners.isEmpty || config.flush_delay <= 0 ) {
-        flush(uow_id)
-      } else {
-        dispatchQueue.dispatchAfter(config.flush_delay, TimeUnit.MILLISECONDS, ^{flush(uow_id)})
-      }
-
-    }
-  }
-
-  def flush(uow_id:Int) = {
-    flush_source.merge(uow_id)
-  }
-
-  val flush_source = createSource(new ListEventAggregator[Int](), dispatchQueue)
-  flush_source.setEventHandler(^{drain_flushes});
-  flush_source.resume
-
-  def drain_flushes:Unit = {
-
-    if( !serviceState.isStarted ) {
-      return
-    }
-    
-    val uows = flush_source.getData.flatMap{ uow_id =>
-      val uow = delayedUOWs.remove(uow_id)
-      // Message may be flushed or canceled before the timeout flush event..
-      // uow may be null in those cases
-      if (uow!=null) {
-        uow.flushing = true
-        Some(uow)
-      } else {
-        None
-      }
-    }
-
-    if( !uows.isEmpty ) {
-      storeLatency.start { end =>
-        blocking {
-          client.store(uows)
-          dispatchQueue {
-            end()
-            uows.foreach { uow=>
-
-              uow.actions.foreach { case (msg, action) =>
-                if( action.store!=null ) {
-                  pendingStores.remove(msg)
-                }
-                action.enqueues.foreach { queueEntry=>
-                  val k = key(queueEntry)
-                  pendingEnqueues.remove(k)
-                }
-              }
-
-              uow.onPerformed
-            }
-          }
-        }
-      }
-    }
-  }
 
 }

@@ -166,7 +166,7 @@ class CassandraClient() {
   }
 
 
-  def store(txs:Seq[CassandraStore#CassandraUOW]) {
+  def store(txs:Seq[DelayingStoreSupport#DelayableUOW]) {
     withSession {
       session =>
         var operations = List[Operation]()
@@ -175,8 +175,8 @@ class CassandraClient() {
             tx.actions.foreach {
               case (msg, action) =>
                 var rc =
-                if (action.store != null) {
-                  operations ::= Insert( schema.message_data \ (msg, encodeMessageRecord(action.store) ) ) 
+                if (action.messageRecord != null) {
+                  operations ::= Insert( schema.message_data \ (msg, encodeMessageRecord(action.messageRecord) ) ) 
                 }
                 action.enqueues.foreach {
                   queueEntry =>

@@ -235,7 +235,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     _store(update, callback)
   }
 
-  def store(txs: Seq[HawtDBStore#HawtDBUOW], callback:Runnable) {
+  def store(txs: Seq[HawtDBStore#DelayableUOW], callback:Runnable) {
     var batch = ListBuffer[TypeCreatable]()
     txs.foreach {
       tx =>
