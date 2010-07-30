@@ -22,7 +22,6 @@ import org.apache.activemq.apollo.util.ClassFinder
 import org.apache.activemq.apollo.store.MessageRecord
 import org.apache.activemq.apollo.transport._
 import org.apache.activemq.apollo.broker.{Delivery, Message, BrokerConnection}
-import com.sun.corba.se.pept.protocol.ProtocolHandler
 
 /**
  * <p>
