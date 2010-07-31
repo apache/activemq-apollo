@@ -26,6 +26,8 @@ import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.util.StreamReaderDelegate;
 import java.io.*;
 import java.net.URL;
+import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -76,11 +78,60 @@ public class XmlCodec {
 
     static {
         try {
-            context = JAXBContext.newInstance("org.apache.activemq.apollo.dto");
+            String path = "META-INF/services/org.apache.activemq.apollo/xml-packages.index";
+            ClassLoader[] loaders = new ClassLoader[]{Thread.currentThread().getContextClassLoader()};
+
+            HashSet<String> names = new HashSet<String>();
+            for (ClassLoader loader : loaders) {
+                try {
+                    Enumeration<URL> resources = loader.getResources(path);
+
+                    while (resources.hasMoreElements()) {
+                        URL url = resources.nextElement();
+                        Properties p = loadProperties(url.openStream());
+                        Enumeration<Object> keys = p.keys();
+                        while (keys.hasMoreElements()) {
+                            names.add((String) keys.nextElement());
+                        }
+                    }
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            String packages = "";
+            for ( String p : names) {
+                if( p.length() !=0 ) {
+                    p += ":";
+                }
+                packages += p;
+            }
+            context = JAXBContext.newInstance(packages);
+
         } catch (JAXBException e) {
             throw new RuntimeException(e);
         }
     }
+
+    static private Properties loadProperties(InputStream is) {
+        if (is == null) {
+            return null;
+        }
+        try {
+            Properties p = new Properties();
+            p.load(is);
+            return p;
+        } catch (Exception e) {
+            return null;
+        } finally {
+            try {
+                is.close();
+            } catch (Throwable e) {
+            }
+        }
+    }
+
 
     static public BrokerDTO unmarshalBrokerDTO(URL url) throws IOException, XMLStreamException, JAXBException {
         return unmarshalBrokerDTO(url, null);
