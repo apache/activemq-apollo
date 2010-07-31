@@ -103,6 +103,8 @@
     <hawtdb-version>1.2</hawtdb-version>
     <hawtbuf-version>1.1</hawtbuf-version>
     
+    <bdb-version>4.0.103</bdb-version>
+    
     <jetty-version>6.1.22</jetty-version>
     <scalate-version>1.2</scalate-version>
     <servlet-api-version>2.5</servlet-api-version>
@@ -151,6 +153,7 @@
     <module>apollo-selector</module>
     <module>apollo-tcp</module>
     <module>apollo-hawtdb</module>
+    <module>apollo-bdb</module>
     <module>apollo-dto</module>
     <module>apollo-stomp</module>
     <module>apollo-web</module>
@@ -787,6 +790,12 @@
           <url>https://repository.apache.org/content/repositories/snapshots</url>
           <snapshots><enabled>true</enabled></snapshots>
           <releases><enabled>false</enabled></releases>
+        </repository>
+        
+        <repository>
+          <id>oracleReleases</id>
+          <url>http://download.oracle.com/maven</url>
+          <layout>default</layout>
         </repository>
         
       </repositories>

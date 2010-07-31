@@ -20,6 +20,7 @@ import org.apache.activemq.apollo.broker.Broker
 import java.io.File
 import org.apache.activemq.apollo.dto.{CassandraStoreDTO, HawtDBStoreDTO}
 import org.apache.activemq.apollo.util._
+import org.apache.activemq.apollo.store.bdb.dto.BDBStoreDTO
 
 /**
  */
@@ -53,6 +54,11 @@ object StompBroker {
 
       case "hawtdb" =>
         val rc = new HawtDBStoreDTO
+        rc.directory = new File("activemq-data")
+        rc
+
+      case "bdb" =>
+        val rc = new BDBStoreDTO
         rc.directory = new File("activemq-data")
         rc
 
