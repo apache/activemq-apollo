@@ -104,7 +104,7 @@
     <hawtbuf-version>1.1</hawtbuf-version>
     
     <jetty-version>6.1.22</jetty-version>
-    <scalate-version>1.2-SNAPSHOT</scalate-version>
+    <scalate-version>1.2</scalate-version>
     <servlet-api-version>2.5</servlet-api-version>
     <jackson-version>1.5.2</jackson-version>
     <logback-version>0.9.18</logback-version>
