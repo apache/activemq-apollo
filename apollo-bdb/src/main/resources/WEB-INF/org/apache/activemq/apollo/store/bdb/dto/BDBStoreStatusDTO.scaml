@@ -1,0 +1,38 @@
+-# Licensed to the Apache Software Foundation (ASF) under one or more
+-# contributor license agreements.  See the NOTICE file distributed with
+-# this work for additional information regarding copyright ownership.
+-# The ASF licenses this file to You under the Apache License, Version 2.0
+-# (the "License"); you may not use this file except in compliance with
+-# the License.  You may obtain a copy of the License at
+-#
+-# http://www.apache.org/licenses/LICENSE-2.0
+-#
+-# Unless required by applicable law or agreed to in writing, software
+-# distributed under the License is distributed on an "AS IS" BASIS,
+-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-# See the License for the specific language governing permissions and
+-# limitations under the License.
+
+- import it._
+- import org.apache.activemq.apollo.dto._
+- val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
+- import helper._
+- import java.util.concurrent.TimeUnit._
+
+%p state: #{state} for #{ uptime(state_since) }
+
+%h2 Cancel Stats
+%p canceled message stores: #{canceled_message_counter}
+%p canceled message enqueues: #{canceled_enqueue_counter}
+
+%h2 Flush Stats
+%p flushed message stores: #{flushed_message_counter}
+%p flushed message enqueues: #{flushed_enqueue_counter}
+
+%h2 Store Latency Stats
+
+- def show(name:String, value:TimeMetricDTO)
+  %p #{name} : average #{value.avg(MILLISECONDS)} ms,  min #{value.min(MILLISECONDS)} ms, max #{value.max(MILLISECONDS)} ms, #{value.count} events
+
+- show("Message load latency", message_load_latency)
+- show("UOW flush latency", flush_latency)
