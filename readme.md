@@ -34,7 +34,13 @@ Prerequisites:
 
 Then run:
 
+    mvn install -Pdownload
+
+if you're building it for the first time, or just
+
     mvn install
+
+if you already initialized the repo
 
 ## Quick Start 
 
