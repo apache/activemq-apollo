@@ -186,10 +186,12 @@
         <dependency>
           <groupId>javax.xml.bind</groupId>
           <artifactId>jaxb-api</artifactId>
+          <version>${jaxb-api-version}</version>
         </dependency>
         <dependency>
           <groupId>com.sun.xml.bind</groupId>
           <artifactId>jaxb-impl</artifactId>
+          <version>${jaxb-version}</version>
         </dependency>
       </dependencies>
     </profile>

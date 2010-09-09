@@ -119,7 +119,7 @@
   </properties>
 
   <prerequisites>
-    <maven>2.0.10</maven>
+    <maven>2.2.1</maven>
   </prerequisites>
 
   <url>http://activemq.apache.org/</url>

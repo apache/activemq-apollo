@@ -69,9 +69,9 @@ object ViewHelper {
   val TB: Long = GB * 1024
 
   val SECONDS: Long = TimeUnit.SECONDS.toMillis(1)
-  val MINUTES: Long = TimeUnit.MINUTES.toMillis(1)
-  val HOURS: Long = TimeUnit.HOURS.toMillis(1)
-  val DAYS: Long = TimeUnit.DAYS.toMillis(1)
+  val MINUTES: Long = TimeUnit.SECONDS.toMillis(60)
+  val HOURS: Long = TimeUnit.SECONDS.toMillis(3600)
+  val DAYS: Long = TimeUnit.SECONDS.toMillis(216000)
   val YEARS: Long = DAYS * 365
 
 

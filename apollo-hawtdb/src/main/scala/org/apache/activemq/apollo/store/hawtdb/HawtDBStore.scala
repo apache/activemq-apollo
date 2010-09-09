@@ -120,7 +120,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
     new Thread() {
       override def run = {
         executor_pool.shutdown
-        executor_pool.awaitTermination(1, TimeUnit.DAYS)
+        executor_pool.awaitTermination(86400, TimeUnit.SECONDS)
         executor_pool = null
         client.stop
         onCompleted.run
