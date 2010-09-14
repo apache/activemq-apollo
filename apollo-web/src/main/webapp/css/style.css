@@ -104,34 +104,21 @@ img {
   text-align:left;
 }
 
-#blog { width: 100%; float: left; }
-#blog .wrapper { min-width: 600px; width: 600px; margin: 0 auto; }
-#blog h1 {
-  font-family: HelveticaNeue,"Helvetica Neue",Helvetica,Arial,Verdana,sans-serif;
-  font-size: 18pt; color: #993333;
+/* ================================================== */
+/* Queue Entries */
+/* ================================================== */
+table.queue-entries {
+    width:100%;
 }
-#blog h2 {
-  border-bottom: thin dashed #DDD;
-  font-size: 16pt;
-  margin-bottom: 5px;
+table.queue-entries tr th {
+    text-align: center;
+    background-color: #993333;
+    color: white;
+    padding: 2px;
 }
-#blog div.post p {
-  padding-left: 10px;
+table.queue-entries tr td {
+    text-align: left;
+    background-color: #ddd;
+    padding: 2px;
+    font-size: 90%
 }
-#blog div.post .details {
-  padding-top: 5px;
-  color: #ccc;
-  font-size: 10pt;
-  font-family: HelveticaNeue,"Helvetica Neue",Helvetica,Arial,Verdana,sans-serif;
-}
-
-#content .post h2 {
-  margin-bottom:5px;
-}
-#content .post .details {
-  color: #ccc;
-  font-size: 10pt;
-  font-family: HelveticaNeue,"Helvetica Neue",Helvetica,Arial,Verdana,sans-serif;
-  margin-top:0px;
-}
-

@@ -922,7 +922,17 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     var acquired = false
     var flushing = false
 
-    def label = "loaded"
+    def label = {
+      var rc = "loaded"
+      if( acquired ) {
+        rc += "|aquired"
+      }
+      if( flushing ) {
+        rc += "|flushing"
+      }
+      rc
+    }
+
     override def toString = { "loaded:{ stored: "+stored+", flushing: "+flushing+", acquired: "+acquired+", size:"+size+"}" }
 
     override def count = 1
@@ -1124,7 +1134,13 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     override def is_flushed_or_flushing = true
 
-    def label = "flushed"
+    def label = {
+      var rc = "flushed"
+      if( loading ) {
+        rc += "|loading"
+      }
+      rc
+    }
     override def toString = { "flushed:{ loading: "+loading+", size:"+size+"}" }
 
     override def load() = {
@@ -1220,7 +1236,13 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     override def is_flushed_or_flushing = true
 
-    def label = "flushed_range"
+    def label = {
+      var rc = "flushed_range"
+      if( loading ) {
+        rc = "flushed_range|loading"
+      }
+      rc
+    }
     override def toString = { "flushed_range:{ loading: "+loading+", count: "+count+", size: "+size+"}" }
 
     override def load() = {

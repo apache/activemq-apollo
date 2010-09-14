@@ -66,21 +66,17 @@
   %h2
     Entries Dump
     %a(href={ id })  (Hide)
-  %table
+  %table.queue-entries
     %tr
-      %th type
-      %th seq
-      %th count
-      %th size
-      %th consumers
-      %th prefetched
+      %th State
+      %th Size
+      %th consumers, prefetched
+      %th position:count
 
     - for( x <- entries )
       %tr
         %td #{x.state}
-        %td #{x.seq}
-        %td #{x.count}
-        %td #{x.size}
-        %td #{x.consumer_count}
-        %td #{x.prefetch_count}
+        %td #{memory(x.size)}
+        %td #{x.consumer_count}, #{x.prefetch_count}
+        %td #{x.seq}:#{x.count}
 
