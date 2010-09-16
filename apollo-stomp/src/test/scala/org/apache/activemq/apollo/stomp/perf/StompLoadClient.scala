@@ -27,7 +27,7 @@ import java.net.{ProtocolException, InetSocketAddress, URI, Socket}
 import java.lang.String._
 import java.util.concurrent.TimeUnit._
 import collection.mutable.Map
-import org.apache.activemq.apollo.stomp.Stomp
+import org.apache.activemq.apollo.stomp.{StompClient, Stomp}
 
 /**
  *
@@ -176,88 +176,6 @@ object StompLoadClient {
 
   def destination(i:Int) = "/"+destinationType+"/"+destinationName+"-"+(i%destinationCount)
 
-
-  class StompClient {
-
-    var socket:Socket = new Socket
-    var out:OutputStream = null
-    var in:InputStream = null
-
-    def open(host: String, port: Int) = {
-      socket = new Socket
-      socket.connect(new InetSocketAddress(host, port))
-      socket.setSoLinger(true, 0)
-      out = new BufferedOutputStream(socket.getOutputStream, bufferSize)
-      in = new BufferedInputStream(socket.getInputStream, bufferSize)
-    }
-
-    def close() = {
-      socket.close
-    }
-
-    def flush() = {
-      out.flush
-    }
-
-    def send(frame:String) = {
-      out.write(frame.getBytes("UTF-8"))
-      out.write(0)
-      out.write('\n')
-    }
-
-    def send(frame:Array[Byte]) = {
-      out.write(frame)
-      out.write(0)
-      out.write('\n')
-    }
-
-    def skip():Unit = {
-      var c = in.read
-      while( c >= 0 ) {
-        if( c==0 ) {
-          return
-        }
-        c = in.read()
-      }
-      throw new EOFException()
-    }
-
-    def receive():String = {
-      val buffer = new ByteArrayOutputStream(messageSize+200)
-      var c = in.read
-      while( c >= 0 ) {
-        if( c==0 ) {
-          return new String(buffer.toByteArray, "UTF-8")
-        }
-        buffer.write(c)
-        c = in.read()
-      }
-      throw new EOFException()
-    }
-
-    def receiveAscii():AsciiBuffer = {
-      val buffer = new BAOS(messageSize+200)
-      var c = in.read
-      while( c >= 0 ) {
-        if( c==0 ) {
-          return buffer.toBuffer.ascii
-        }
-        buffer.write(c)
-        c = in.read()
-      }
-      throw new EOFException()
-    }
-
-    def receive(expect:String):String = {
-      val rc = receive()
-      if( !rc.trimFront.startsWith(expect) ) {
-        throw new ProtocolException("Expected "+expect)
-      }
-      rc
-    }
-
-  }
-
   
   class ClientSupport extends Thread {
 
@@ -270,7 +188,6 @@ object StompLoadClient {
         client.send("""CONNECT
 
 """)
-        client.flush
         client.receive("CONNECTED")
         proc
       } catch {
@@ -320,12 +237,10 @@ object StompLoadClient {
             client.send(content)
             if( syncSend ) {
               // waits for the reply..
-              client.flush
               client.skip
             }
             producerCounter.incrementAndGet()
             if(producerSleep > 0) {
-              client.flush
               Thread.sleep(producerSleep)
             }
             i += 1
@@ -364,7 +279,6 @@ object StompLoadClient {
              "destination:"+destination(id)+"\n"+
              "\n")
 
-          client.flush
           receiveLoop
         }
       }
@@ -384,7 +298,6 @@ ACK
 message-id:"""+msgId+"""
 
 """)
-          client.flush
 
         } else {
           client.skip
