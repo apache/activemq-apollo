@@ -255,10 +255,18 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   override def onTransportCommand(command:Any) = {
     try {
       command match {
-        case StompFrame(Commands.SEND, headers, content, _) =>
+        case StompFrame(Commands.SEND, _, _, _) =>
           on_stomp_send(command.asInstanceOf[StompFrame])
         case StompFrame(Commands.ACK, headers, content, _) =>
-          on_stomp_ack(headers)
+          on_stomp_ack(command.asInstanceOf[StompFrame])
+
+        case StompFrame(Commands.BEGIN, headers, content, _) =>
+          on_stomp_begin(headers)
+        case StompFrame(Commands.COMMIT, headers, content, _) =>
+          on_stomp_commit(headers)
+        case StompFrame(Commands.ABORT, headers, content, _) =>
+          on_stomp_abort(headers)
+
         case StompFrame(Commands.SUBSCRIBE, headers, content, _) =>
           info("got command: %s", command)
           on_stomp_subscribe(headers)
@@ -299,45 +307,60 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   }
 
   def on_stomp_send(frame:StompFrame) = {
+
     get(frame.headers, Headers.Send.DESTINATION) match {
-      case Some(dest)=>
-        val destiantion:Destination = dest
-
-        producerRoutes.get(destiantion) match {
-          case None=>
-            // create the producer route...
-
-            val producer = new DeliveryProducer() {
-
-              override def connection = Some( StompProtocolHandler.this.connection )
-
-              override def dispatchQueue = queue
-            }
-
-            // don't process frames until producer is connected...
-            connection.transport.suspendRead
-            host.router.connect(destiantion, producer) { route =>
-                if( !connection.stopped ) {
-                  connection.transport.resumeRead
-                  route.refiller = ^{
-                    connection.transport.resumeRead
-                  }
-                  producerRoutes += destiantion->route
-                  send_via_route(route, frame)
-                }
-            }
-
-          case Some(route)=>
-            // we can re-use the existing producer route
-            send_via_route(route, frame)
-
-        }
-
       case None=>
         frame.release
         die("destination not set.")
+
+      case Some(dest)=>
+
+        get(frame.headers, Headers.TRANSACTION) match {
+          case None=>
+            perform_send(frame)
+          case Some(txid)=>
+            get_or_create_tx_queue(txid){ txqueue=>
+              txqueue.add(frame)
+            }
+        }
+
     }
   }
+
+  def perform_send(frame:StompFrame, uow:StoreUOW=null): Unit = {
+
+    val destiantion: Destination = get(frame.headers, Headers.Send.DESTINATION).get
+    producerRoutes.get(destiantion) match {
+      case None =>
+        // create the producer route...
+
+        val producer = new DeliveryProducer() {
+          override def connection = Some(StompProtocolHandler.this.connection)
+
+          override def dispatchQueue = queue
+        }
+
+        // don't process frames until producer is connected...
+        connection.transport.suspendRead
+        host.router.connect(destiantion, producer) {
+          route =>
+            if (!connection.stopped) {
+              connection.transport.resumeRead
+              route.refiller = ^ {
+                connection.transport.resumeRead
+              }
+              producerRoutes += destiantion -> route
+              send_via_route(route, frame, uow)
+            }
+        }
+
+      case Some(route) =>
+        // we can re-use the existing producer route
+        send_via_route(route, frame, uow)
+
+    }
+  }
+
 
   var message_id_counter = 0;
   def next_message_id = {
@@ -346,9 +369,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     new AsciiBuffer("msg:"+message_id_counter);
   }
 
-  def send_via_route(route:DeliveryProducerRoute, frame:StompFrame) = {
+  def send_via_route(route:DeliveryProducerRoute, frame:StompFrame, uow:StoreUOW) = {
     var storeBatch:StoreUOW=null
-    // User might be asking for ack that we have prcoessed the message..
+    // User might be asking for ack that we have processed the message..
     val receipt = frame.header(Stomp.Headers.RECEIPT_REQUESTED)
 
     if( !route.targets.isEmpty ) {
@@ -366,6 +389,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       val delivery = new Delivery
       delivery.message = message
       delivery.size = message.frame.size
+      delivery.uow = uow
 
       if( receipt!=null ) {
         delivery.ack = { storeTx =>
@@ -490,12 +514,22 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   }
 
-  def on_stomp_ack(headers:HeaderMap) = {
+  def on_stomp_ack(frame:StompFrame) = {
+    val headers = frame.headers
     get(headers, Headers.Ack.MESSAGE_ID) match {
       case Some(messageId)=>
-        pendingAcks.remove(messageId) match {
+        pendingAcks.get(messageId) match {
           case Some(ack) =>
-            ack(null)
+            get(headers, Headers.TRANSACTION) match {
+              case None=>
+                perform_ack(frame)
+              case Some(txid)=>
+                get_or_create_tx_queue(txid){ txqueue=>
+                  txqueue.add(frame)
+                }
+            }
+
+
           case None =>
             // This can easily happen if the consumer is doing client acks on something like
             // a non-durable topic.
@@ -505,6 +539,13 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     }
   }
 
+  def perform_ack(frame: StompFrame, uow:StoreUOW=null) = {
+    val msgid = get(frame.headers, Headers.Ack.MESSAGE_ID).get
+    pendingAcks.remove(msgid) match {
+      case Some(ack) => ack(uow)
+      case None => die("message allready acked: %s".format(msgid))
+    }
+  }
 
   private def die(msg:String) = {
     if( !connection.stopped ) {
@@ -524,5 +565,102 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       super.onTransportFailure(error);
     }
   }
+
+
+  def require_transaction_header[T](headers:HeaderMap)(proc:(AsciiBuffer)=>T):Option[T] = {
+    get(headers, Headers.TRANSACTION) match {
+      case None=> die("transaction header not set")
+      None
+      case Some(txid)=> Some(proc(txid))
+    }
+  }
+
+  def on_stomp_begin(headers:HeaderMap) = {
+    require_transaction_header(headers){ txid=>create_tx_queue(txid){ _ => send_receipt(headers) }  }
+  }
+
+  def on_stomp_commit(headers:HeaderMap) = {
+    require_transaction_header(headers){ txid=>remove_tx_queue(txid){ _.commit { send_receipt(headers) } } }
+  }
+
+  def on_stomp_abort(headers:HeaderMap) = {
+    require_transaction_header(headers){ txid=>remove_tx_queue(txid){ _.rollback { send_receipt(headers) } } }
+  }
+
+
+  def send_receipt(headers:HeaderMap) = {
+    get(headers, Stomp.Headers.RECEIPT_REQUESTED) match {
+      case Some(receipt)=>
+        connection_sink.offer(StompFrame(Responses.RECEIPT, List((Stomp.Headers.Response.RECEIPT_ID, receipt))))
+      case None=>
+    }
+  }
+
+  class TransactionQueue {
+    // TODO: eventually we want to back this /w a broker Queue which
+    // can provides persistence and memory swapping.
+
+    val queue = ListBuffer[StompFrame]()
+
+    def add(frame:StompFrame) = {
+      queue += frame
+    }
+
+    def commit(onComplete: => Unit) = {
+
+      val uow = if( host.store!=null ) {
+        host.store.createStoreUOW
+      } else {
+        null
+      }
+
+      queue.foreach { frame=>
+        frame.action match {
+          case Commands.SEND =>
+            perform_send(frame, uow)
+          case Commands.ACK =>
+            perform_ack(frame, uow)
+          case _ => throw new java.lang.AssertionError("assertion failed: only send or ack frames are transactional")
+        }
+      }
+      if( uow!=null ) {
+        uow.onComplete(^{
+          onComplete
+        })
+        uow.release
+      } else {
+        onComplete
+      }
+
+    }
+
+    def rollback(onComplete: => Unit) = {
+      queue.clear
+      onComplete
+    }
+
+  }
+
+  val transactions = HashMap[AsciiBuffer, TransactionQueue]()
+
+  def create_tx_queue(txid:AsciiBuffer)(proc:(TransactionQueue)=>Unit) = {
+    if ( transactions.contains(txid) ) {
+      die("transaction allready started")
+    } else {
+      proc( transactions.put(txid, new TransactionQueue).get )
+    }
+  }
+
+  def get_or_create_tx_queue(txid:AsciiBuffer)(proc:(TransactionQueue)=>Unit) = {
+    proc(transactions.getOrElseUpdate(txid, new TransactionQueue))
+  }
+
+  def remove_tx_queue(txid:AsciiBuffer)(proc:(TransactionQueue)=>Unit) = {
+    transactions.remove(txid) match {
+      case None=> die("transaction not active: %d".format(txid))
+      case Some(txqueue)=> proc(txqueue)
+    }
+  }
+
 }
 

@@ -413,11 +413,15 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
 
       targets.foreach { target=>
 
-        // only delivery to matching consumers
+        // only deliver to matching consumers
         if( target.consumer.matches(delivery) ) {
 
           if( storeOnMatch ) {
-            delivery.uow = router.host.store.createStoreUOW
+            if( delivery.uow==null ) {
+              delivery.uow = router.host.store.createStoreUOW
+            } else {
+              delivery.uow.retain
+            }
             delivery.storeKey = delivery.uow.store(delivery.createMessageRecord)
             storeOnMatch = false
           }
