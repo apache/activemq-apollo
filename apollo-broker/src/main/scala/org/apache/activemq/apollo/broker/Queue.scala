@@ -71,7 +71,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
 
   val entries = new LinkedNodeList[QueueEntry]()
   val head_entry = new QueueEntry(this, 0L).head
-  var tail_entry = new QueueEntry(this, next_message_seq).tail
+  var tail_entry = new QueueEntry(this, next_message_seq)
   entries.addFirst(head_entry)
 
   //
@@ -185,6 +185,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
                 message_seq_counter = range.lastQueueSeq + 1
                 enqueue_item_counter += range.count
                 enqueue_size_counter += range.size
+                tail_entry = new QueueEntry(Queue.this, next_message_seq)
               }
 
               debug("restored: "+enqueue_item_counter)
