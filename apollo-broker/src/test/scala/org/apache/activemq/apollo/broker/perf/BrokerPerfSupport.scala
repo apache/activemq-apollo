@@ -484,9 +484,9 @@ abstract class RemoteConnection extends Connection {
 
   protected def incrementMessageCount() = {
     messageCount = messageCount + 1
-    //if ( messageCount % (maxMessages / 1000) == 0 ) {
+    if ( messageCount % (maxMessages / 10) == 0 ) {
       trace(name + " message count : " + messageCount)
-    //}
+    }
     if (maxMessages > 0 && messageCount  == maxMessages) {
       trace(name + " message count (" + messageCount + ") max (" + maxMessages + ") reached, stopping connection")
       doStop
