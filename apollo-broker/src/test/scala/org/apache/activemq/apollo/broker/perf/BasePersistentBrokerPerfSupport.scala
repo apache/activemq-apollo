@@ -30,11 +30,13 @@ abstract class BasePersistentBrokerPerfSupport extends BaseBrokerPerfSupport {
 
   override def reportResourceTemplate():URL = { classOf[BasePersistentBrokerPerfSupport].getResource("persistent-report.html") }
 
+  //override def partitionedLoad = List(1, 2, 4, 8, 10)
   override def highContention = 100
+  //override def messageSizes = List(20, 1024, 1024*256)
 
   for ( load <- partitionedLoad ; messageSize <- messageSizes ) {
 
-    val numMessages = 1000000 / load
+    val numMessages = 100000 / load
 
     def benchmark(name: String)(func: => Unit) {
       test(name) {

@@ -465,7 +465,7 @@ abstract class RemoteConnection extends Connection {
       } else {
         onFailure(error)
         if( callbackWhenConnected!=null ) {
-          warn("connect attempt failed. wil retry connection..")
+          warn("connect attempt failed. will retry connection..")
           dispatchQueue.dispatchAfter(50, TimeUnit.MILLISECONDS, ^{
             if(stopping.get()) {
               callbackWhenConnected.run
@@ -477,6 +477,19 @@ abstract class RemoteConnection extends Connection {
           })
         }
       }
+    }
+  }
+
+  protected def doStop()
+
+  protected def incrementMessageCount() = {
+    messageCount = messageCount + 1
+    //if ( messageCount % (maxMessages / 1000) == 0 ) {
+      trace(name + " message count : " + messageCount)
+    //}
+    if (maxMessages > 0 && messageCount  == maxMessages) {
+      trace(name + " message count (" + messageCount + ") max (" + maxMessages + ") reached, stopping connection")
+      doStop
     }
   }
 

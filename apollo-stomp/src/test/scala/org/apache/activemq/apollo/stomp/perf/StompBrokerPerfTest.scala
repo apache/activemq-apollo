@@ -147,13 +147,6 @@ class StompRemoteConsumer extends RemoteConsumer with Logging {
             var rc = List((Stomp.Headers.Ack.MESSAGE_ID, frame.header(Stomp.Headers.Message.MESSAGE_ID)))
             outboundSink.offer(StompFrame(Stomp.Commands.ACK, rc));
           }
-          messageCount = messageCount + 1
-          if ( messageCount % 10000 == 0 ) {
-            trace("Received message count : " + messageCount)
-          }
-          if (maxMessages > 0 && messageCount >= maxMessages - 1) {
-            stop()
-          }
 
       case StompFrame(Responses.ERROR, headers, content, _) =>
         onFailure(new Exception("Server reported an error: " + frame.content));
@@ -166,16 +159,25 @@ class StompRemoteConsumer extends RemoteConsumer with Logging {
       if (thinkTime > 0) {
         transport.suspendRead
         dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, ^ {
+          incrementMessageCount          
           rate.increment();
           if (!stopped) {
             transport.resumeRead
           }
         })
       } else {
-        rate.increment();
+        incrementMessageCount
+        rate.increment
       }
   }
 
+  override def doStop() = {
+    outboundSink.offer(StompFrame(Stomp.Commands.DISCONNECT));
+    dispatchQueue.dispatchAfter(5, TimeUnit.SECONDS, ^ {
+        transport.stop
+        stop
+      })
+  }
 }
 
 class StompRemoteProducer extends RemoteProducer with Logging {
@@ -199,13 +201,6 @@ class StompRemoteProducer extends RemoteProducer with Logging {
 
       var content = ascii(createPayload());
       frame = StompFrame(Stomp.Commands.SEND, headers, BufferContent(content))
-      messageCount = messageCount + 1
-      if ( messageCount % 10000 == 0 ) {
-        trace("Sent message count : " + messageCount)
-      }
-      if (maxMessages > 0 && messageCount >= maxMessages) {
-        stop()
-      }    
       drain()
   }
 
@@ -214,9 +209,10 @@ class StompRemoteProducer extends RemoteProducer with Logging {
       if( !outboundSink.full ) {
         outboundSink.offer(frame)
         frame = null
-        rate.increment();
+        rate.increment
         val task = ^ {
           if (!stopped) {
+            incrementMessageCount
             send_next
           }
         }
@@ -253,6 +249,7 @@ class StompRemoteProducer extends RemoteProducer with Logging {
       case StompFrame(Responses.RECEIPT, headers, _, _) =>
         assert( persistent )
         // we got the ack for the previous message we sent.. now send the next one.
+        incrementMessageCount
         send_next
 
       case StompFrame(Responses.CONNECTED, headers, _, _) =>
@@ -262,6 +259,14 @@ class StompRemoteProducer extends RemoteProducer with Logging {
         onFailure(new Exception("Unexpected stomp command: " + frame.action));
     }
   }
+
+  override def doStop() = {
+    outboundSink.offer(StompFrame(Stomp.Commands.DISCONNECT));
+    dispatchQueue.dispatchAfter(5, TimeUnit.SECONDS, ^ {
+        transport.stop
+        stop
+      })
+  }  
 
 }
 
