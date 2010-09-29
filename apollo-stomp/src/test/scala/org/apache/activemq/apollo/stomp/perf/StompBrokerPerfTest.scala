@@ -151,7 +151,7 @@ class StompRemoteConsumer extends RemoteConsumer with Logging {
           if ( messageCount % 10000 == 0 ) {
             trace("Received message count : " + messageCount)
           }
-          if (maxMessages > 0 && messageCount >= maxMessages) {
+          if (maxMessages > 0 && messageCount >= maxMessages - 1) {
             stop()
           }
 
