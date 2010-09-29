@@ -32,7 +32,7 @@ abstract class BaseBrokerPerfSupport extends BrokerPerfSupport {
   def messageSizes = List(20,1024,1024*256)
 
   // benchmark all the combinations
-  for( ptp <- List(true,false) ; durable <- List(false,true) ; messageSize <- messageSizes ) {
+  for( ptp <- List(true,false) ; durable <- List(false) ; messageSize <- messageSizes ) {
 
     def benchmark(name:String)(func: =>Unit) {
       test(name) {
