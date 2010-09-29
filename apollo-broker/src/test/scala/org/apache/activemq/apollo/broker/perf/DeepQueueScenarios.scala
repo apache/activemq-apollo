@@ -24,17 +24,17 @@ import java.net.URL
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract class BasePersistentBrokerPerfSupport extends BaseBrokerPerfSupport {
+trait DeepQueueScenarios extends PersistentScenario {
 
   PERSISTENT = true
 
-  override def reportResourceTemplate():URL = { classOf[BasePersistentBrokerPerfSupport].getResource("persistent-report.html") }
+  override def reportResourceTemplate():URL = { classOf[DeepQueueScenarios].getResource("persistent-report.html") }
 
   //override def partitionedLoad = List(1, 2, 4, 8, 10)
   override def highContention = 100
   //override def messageSizes = List(20, 1024, 1024*256)
 
-  for ( load <- partitionedLoad ; messageSize <- messageSizes ) {
+  for ( load <- partitionedLoad ; messageSize <- List(20,1024)  ) {
 
     val totalMessages = 100000
     val numMessages = totalMessages / load

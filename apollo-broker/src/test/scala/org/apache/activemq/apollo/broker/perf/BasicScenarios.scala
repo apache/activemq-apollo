@@ -22,12 +22,9 @@ import java.net.URL
 /**
  * 
  */
-abstract class BaseBrokerPerfSupport extends BrokerPerfSupport {
+trait BasicScenarios extends BrokerPerfSupport {
 
-  def reportResourceTemplate():URL = { classOf[BaseBrokerPerfSupport].getResource("report.html") }
-  def partitionedLoad = List(1, 2, 4, 8, 10)
-  def highContention = 10
-  def messageSizes = List(20,1024,1024*256)
+  def reportResourceTemplate():URL = { classOf[BasicScenarios].getResource("report.html") }
 
   // benchmark all the combinations
   for( ptp <- List(true,false) ; durable <- List(false) ; messageSize <- messageSizes ) {

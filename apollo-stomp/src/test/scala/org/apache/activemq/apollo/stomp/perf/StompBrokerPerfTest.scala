@@ -34,66 +34,38 @@ import org.apache.activemq.apollo.dto.{BrokerDTO, HawtDBStoreDTO}
 import org.apache.activemq.apollo.store.bdb.dto.BDBStoreDTO
 
 
-class StompBrokerPerfTest extends BaseBrokerPerfSupport {
-
+class BasicNonPersistentTest extends BasicScenarios with StompScenario {
   override def description = "Using the STOMP protocol over TCP"
-
-  override def createProducer() = new StompRemoteProducer()
-
-  override def createConsumer() = new StompRemoteConsumer()
-
-  override def getRemoteProtocolName() = "stomp"
-
 }
 
-class StompPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
-
-  override def description = "Using the STOMP protocol over TCP with no store."
-
-  override def createProducer() = new StompRemoteProducer()
-
-  override def createConsumer() = new StompRemoteConsumer()
-
-  override def getRemoteProtocolName() = "stomp"
-
+class BasicHawtDBTest extends BasicScenarios with PersistentScenario with HawtDBScenario with StompScenario {
+  override def description = "Using the STOMP protocol over TCP"
 }
 
-class StompHawtDBPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
-  
+class DeepQueueHawtDBTest extends DeepQueueScenarios with HawtDBScenario with StompScenario {
   override def description = "Using the STOMP protocol over TCP persisting to the HawtDB store."
+}
 
-  println(getClass.getClassLoader.getResource("log4j.properties"))
+class DeepQueueBDBTest extends DeepQueueScenarios with BDBScenario with StompScenario {
+  override def description = "Using the STOMP protocol over TCP persisting to the BerkleyDB store."
+}
 
+trait StompScenario extends BrokerPerfSupport {
   override def createProducer() = new StompRemoteProducer()
-
   override def createConsumer() = new StompRemoteConsumer()
- 
   override def getRemoteProtocolName() = "stomp"
+}
 
+trait HawtDBScenario extends BrokerPerfSupport {
   override def createBrokerConfig(name: String, bindURI: String, connectUri: String): BrokerDTO = {
     val rc = super.createBrokerConfig(name, bindURI, connectUri)
-
     val store = new HawtDBStoreDTO
     store.directory = new File(new File(testDataDir, getClass.getName), name)
-
     rc.virtual_hosts.get(0).store = store
     rc
   }
-
 }
-
-class StompBDBPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
-
-  override def description = "Using the STOMP protocol over TCP persisting to the BerkleyDB store."
-
-  println(getClass.getClassLoader.getResource("log4j.properties"))
-
-  override def createProducer() = new StompRemoteProducer()
-
-  override def createConsumer() = new StompRemoteConsumer()
-
-  override def getRemoteProtocolName() = "stomp"
-
+trait BDBScenario extends BrokerPerfSupport {
   override def createBrokerConfig(name: String, bindURI: String, connectUri: String): BrokerDTO = {
     val rc = super.createBrokerConfig(name, bindURI, connectUri)
 
@@ -103,9 +75,7 @@ class StompBDBPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
     rc.virtual_hosts.get(0).store = store
     rc
   }
-
 }
-
 
 class StompRemoteConsumer extends RemoteConsumer with Logging {
   var outboundSink: OverflowSink[StompFrame] = null

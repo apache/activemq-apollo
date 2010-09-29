@@ -82,6 +82,10 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
 
   var samples:List[(String, AnyRef)] = Nil
 
+  def partitionedLoad = List(1, 2, 4, 8, 10)
+  def highContention = 10
+  def messageSizes = List(20,1024,1024*256)
+
   override protected def beforeEach() = {
     totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items")
     totalConsumerRate = new MetricAggregator().name("Aggregate Consumer Rate").unit("items")
@@ -496,12 +500,15 @@ abstract class RemoteConnection extends Connection {
 
   protected def incrementMessageCount() = {
     messageCount = messageCount + 1
-    if ( messageCount % (maxMessages / 10) == 0 ) {
-      trace(name + " message count : " + messageCount)
-    }
-    if (maxMessages > 0 && messageCount  == maxMessages) {
-      trace(name + " message count (" + messageCount + ") max (" + maxMessages + ") reached, stopping connection")
-      doStop
+    if( maxMessages > 0 ) {
+      if ( messageCount % (maxMessages / 10) == 0 ) {
+        trace(name + " message count : " + messageCount)
+      }
+      if (messageCount == maxMessages) {
+        trace(name + " message count (" + messageCount + ") max (" + maxMessages + ") reached, stopping connection")
+        doStop
+      }
+
     }
   }
 
