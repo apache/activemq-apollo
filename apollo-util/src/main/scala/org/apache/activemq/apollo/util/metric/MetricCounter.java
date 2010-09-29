@@ -40,8 +40,8 @@ public class MetricCounter extends Metric {
     }
 
     @Override
-    public void reset() {
-        counter.set(0);
+    public long reset() {
+        return counter.getAndSet(0);
     }
 
 }

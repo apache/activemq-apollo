@@ -27,6 +27,21 @@ import java.net.URL
 trait DeepQueueScenarios extends PersistentScenario {
 
   PERSISTENT = true
+  val MIN_MESSAGES = 100000
+
+  override def fixed_sampling = false
+
+  override def keep_sampling:Boolean = {
+    if( producerCount > 0 && totalMessageSent < MIN_MESSAGES ) {
+      println("Waiting for producers: %s/%s".format(totalMessageSent, MIN_MESSAGES));
+      return true
+    }
+    if ( consumerCount > 0 && totalMessageReceived < MIN_MESSAGES ) {
+      println("Waiting for consumers: %s/%s".format(totalMessageReceived, MIN_MESSAGES));
+      return true
+    }
+    return false
+  }
 
   override def reportResourceTemplate():URL = { classOf[DeepQueueScenarios].getResource("persistent-report.html") }
 
@@ -36,12 +51,8 @@ trait DeepQueueScenarios extends PersistentScenario {
 
   for ( load <- partitionedLoad ; messageSize <- List(20,1024)  ) {
 
-    val totalMessages = 100000
-    val numMessages = totalMessages / load
-
     def benchmark(name: String)(func: => Unit) {
       test(name) {
-        MAX_MESSAGES = numMessages
         PTP = true
         MESSAGE_SIZE = messageSize
         destCount = 1;
@@ -49,7 +60,7 @@ trait DeepQueueScenarios extends PersistentScenario {
       }
     }
 
-    val info = "queue " + numMessages + " " + (if((messageSize%1024)==0) (messageSize/1024)+"k" else messageSize+"b" ) + " with " + load + " "
+    val info = "queue " + MIN_MESSAGES + " " + (if((messageSize%1024)==0) (messageSize/1024)+"k" else messageSize+"b" ) + " with " + load + " "
 
     benchmark("En" + info + "producer(s)") {
       PURGE_STORE = true
@@ -63,7 +74,7 @@ trait DeepQueueScenarios extends PersistentScenario {
       } finally {
         stopServices();
       }
-      this.assert(messagesSent == totalMessages, "Unexpected number of messages sent!")
+      this.assert(totalMessageSent > MIN_MESSAGES, "Unexpected number of messages sent!")
     }
 
     benchmark("De" + info + "consumer(s)") {
@@ -78,7 +89,7 @@ trait DeepQueueScenarios extends PersistentScenario {
       } finally {
         stopServices();
       }
-      this.assert(messagesReceived == totalMessages, "Unexpected number of messages received!")
+      this.assert(totalMessageReceived > MIN_MESSAGES, "Unexpected number of messages received!")
     }
   }
 

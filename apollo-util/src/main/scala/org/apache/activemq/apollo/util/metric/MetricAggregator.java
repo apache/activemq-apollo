@@ -142,10 +142,12 @@ public class MetricAggregator extends Metric {
     }
 
     @Override
-    public void reset() {
+    public long reset() {
+        long rc = 0;
         for (Metric metric : metrics) {
-            metric.reset();
+            rc += metric.reset();
         }
+        return rc;
     }
 
 }

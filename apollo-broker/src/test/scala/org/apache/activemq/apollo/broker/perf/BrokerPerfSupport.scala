@@ -40,8 +40,6 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
   var PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "6"))
   var SAMPLE_PERIOD = java.lang.Long.parseLong(System.getProperty("SAMPLE_PERIOD", "1000"))
 
-  var MAX_MESSAGES = 0
-
   protected var TCP = true // Set to use tcp IO
 
   var USE_KAHA_DB = true
@@ -69,7 +67,9 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
   protected var destCount = 0
 
   protected var totalProducerRate:MetricAggregator = null
-  protected var totalConsumerRate:MetricAggregator = null 
+  protected var totalConsumerRate:MetricAggregator = null
+  var totalMessageSent = 0L
+  var totalMessageReceived = 0L
 
   protected var sendBroker: Broker = null
   protected var rcvBroker: Broker = null
@@ -97,7 +97,9 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     sendBroker=null
     producerCount = 0
     consumerCount = 0
-    destCount =0
+    destCount = 0
+    totalMessageSent = 0
+    totalMessageReceived = 0
   }
 
   override protected def beforeAll(configMap: Map[String, Any]) = {
@@ -274,7 +276,6 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     consumer.destination = destination
     consumer.name = "Consumer:" + (i + 1)
     consumer.rateAggregator = totalConsumerRate
-    consumer.maxMessages = MAX_MESSAGES    
     consumer.init
     
     return consumer
@@ -296,7 +297,6 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     producer.messageIdGenerator = msgIdGenerator
     producer.rateAggregator = totalProducerRate
     producer.payloadSize = MESSAGE_SIZE
-    producer.maxMessages = MAX_MESSAGES
     producer.init
     producer
   }
@@ -345,33 +345,14 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     tracker.await
   }
 
-  def messagesSent() : Long = {
-    var sum = 0
-    producers.foreach((producer:RemoteConnection) => sum += producer.messageCount)
-    sum
-  }
+  def fixed_sampling = true
+  def keep_sampling = false
 
-  def messagesReceived() : Long = {
-    var sum = 0
-    consumers.foreach((consumer:RemoteConnection) => sum += consumer.messageCount)
-    sum
-  }
-  
   def reportRates() = {
 
-    println("Warming up...")
-    Thread.sleep(SAMPLE_PERIOD)
-    totalProducerRate.reset()
-    totalConsumerRate.reset()
-
-    println("Sampling rates")
-
     case class Summary(producer:java.lang.Float, pdev:java.lang.Float, consumer:java.lang.Float, cdev:java.lang.Float)
-
     var best = 0
-
     import scala.collection.mutable.ArrayBuffer
-
     val sample_rates = new ArrayBuffer[Summary]()
 
     def fillRateSummary(i: Int): Unit = {
@@ -392,32 +373,29 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
         best = i
       }
 
-      totalProducerRate.reset()
-      totalConsumerRate.reset()
+      totalMessageSent += totalProducerRate.reset()
+      totalMessageReceived += totalConsumerRate.reset()
     }
 
-    // either we want to do x number of samples or sample over the course of x number of messages
-    if ( MAX_MESSAGES == 0 ) {
+    // either we want to do x number of samples or we want to keep sampling while some condition is true.
+    if ( fixed_sampling ) {
+
+      // Do 1 period of warm up that's not counted...
+      println("Warming up...")
+      Thread.sleep(SAMPLE_PERIOD)
+      totalMessageSent +=  totalProducerRate.reset()
+      totalMessageSent +=  totalConsumerRate.reset()
+
+      println("Sampling rates")
       for (i <- 0 until PERFORMANCE_SAMPLES) {
         fillRateSummary(i)
       }
     } else {
-      var clientsRunning = true
+      println("Sampling rates")
       var i = 0
-      
-      while (clientsRunning) {
+      while( keep_sampling ) {
         fillRateSummary(i)
-        i = i + 1
-        clientsRunning = false
-
-        def checkForRunningClients(connection: Connection) = {
-          if (connection.stopped == false) {
-            clientsRunning = true
-          }
-        }
-
-        producers.foreach(checkForRunningClients)
-        consumers.foreach(checkForRunningClients)
+        i += 1
       }
     }
 
@@ -448,7 +426,6 @@ abstract class RemoteConnection extends Connection {
   var destination: Destination = null
 
   var messageCount = 0
-  var maxMessages = 0
 
   def init = {
     if( rate.getName == null ) {
@@ -500,16 +477,6 @@ abstract class RemoteConnection extends Connection {
 
   protected def incrementMessageCount() = {
     messageCount = messageCount + 1
-    if( maxMessages > 0 ) {
-      if ( messageCount % (maxMessages / 10) == 0 ) {
-        trace(name + " message count : " + messageCount)
-      }
-      if (messageCount == maxMessages) {
-        trace(name + " message count (" + messageCount + ") max (" + maxMessages + ") reached, stopping connection")
-        doStop
-      }
-
-    }
   }
 
 }

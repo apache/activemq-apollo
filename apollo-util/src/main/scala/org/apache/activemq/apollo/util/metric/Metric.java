@@ -53,6 +53,6 @@ abstract public class Metric {
         return String.format("%s: %(,.2f %s/s", name, period.rate(counter()), unit);
     }
 
-    abstract public void reset();
+    abstract public long reset();
 
 }
