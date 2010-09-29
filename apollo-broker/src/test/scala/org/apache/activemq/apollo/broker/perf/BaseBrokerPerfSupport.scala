@@ -17,8 +17,6 @@
 package org.apache.activemq.apollo.broker.perf
 
 import _root_.org.apache.activemq.apollo.util.metric.{Period}
-import org.apache.activemq.apollo.broker._
-import _root_.org.fusesource.hawtbuf._
 import java.net.URL
 
 /**

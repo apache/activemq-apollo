@@ -33,17 +33,24 @@ abstract class BasePersistentBrokerPerfSupport extends BaseBrokerPerfSupport {
   override def highContention = 100
 
   for ( load <- partitionedLoad ; messageSize <- messageSizes ) {
+
     val numMessages = 1000000 / load
 
-    val info = "queue " + numMessages + " " + (if((messageSize%1024)==0) (messageSize/1024)+"k" else messageSize+"b" ) + " with " + load + " "    
+    def benchmark(name: String)(func: => Unit) {
+      test(name) {
+        MAX_MESSAGES = numMessages
+        PTP = true
+        MESSAGE_SIZE = messageSize
+        destCount = 1;
+        func
+      }
+    }
 
-    test("En" + info + "producer(s)") {
-      MAX_MESSAGES = numMessages
-      PTP = true
-      PURGE_STORE = true      
-      MESSAGE_SIZE = messageSize
+    val info = "queue " + numMessages + " " + (if((messageSize%1024)==0) (messageSize/1024)+"k" else messageSize+"b" ) + " with " + load + " "
+
+    benchmark("En" + info + "producer(s)") {
+      PURGE_STORE = true
       producerCount = load;
-      destCount = 1;
       createConnections();
 
       // Start 'em up.
@@ -55,13 +62,9 @@ abstract class BasePersistentBrokerPerfSupport extends BaseBrokerPerfSupport {
       }
     }
 
-    test("De" + info + "consumer(s)") {
-      MAX_MESSAGES = numMessages
-      PTP = true
+    benchmark("De" + info + "consumer(s)") {
       PURGE_STORE = false
-      MESSAGE_SIZE = messageSize
       consumerCount = load;
-      destCount = 1;
       createConnections();
 
       // Start 'em up.

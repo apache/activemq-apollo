@@ -140,7 +140,6 @@ class StompRemoteConsumer extends RemoteConsumer with Logging {
     frame match {
       case StompFrame(Responses.CONNECTED, headers, _, _) =>
       case StompFrame(Responses.MESSAGE, headers, content, _) =>
-        if (maxMessages > 0 && messageCount < maxMessages - 1) {
           messageReceived();
 
           // we client ack if persistent messages are being used.
@@ -152,9 +151,9 @@ class StompRemoteConsumer extends RemoteConsumer with Logging {
           if ( messageCount % 10000 == 0 ) {
             trace("Received message count : " + messageCount)
           }
-        } else {
-          stop()
-        }
+          if (maxMessages > 0 && messageCount >= maxMessages) {
+            stop()
+          }
 
       case StompFrame(Responses.ERROR, headers, content, _) =>
         onFailure(new Exception("Server reported an error: " + frame.content));
@@ -185,7 +184,6 @@ class StompRemoteProducer extends RemoteProducer with Logging {
   var frame:StompFrame = null
 
   def send_next: Unit = {
-    if (maxMessages > 0 && messageCount < maxMessages) {
       var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
       headers ::= (Stomp.Headers.Send.DESTINATION, stompDestination);
       if (property != null) {
@@ -205,10 +203,10 @@ class StompRemoteProducer extends RemoteProducer with Logging {
       if ( messageCount % 10000 == 0 ) {
         trace("Sent message count : " + messageCount)
       }
+      if (maxMessages > 0 && messageCount >= maxMessages) {
+        stop()
+      }    
       drain()
-    } else {
-      stop()
-    }
   }
 
   def drain() = {

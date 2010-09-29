@@ -362,10 +362,10 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
       val p = new Period()
       Thread.sleep(SAMPLE_PERIOD)
       if (producerCount > 0) {
-        println(totalProducerRate.getRateSummary(p))
+        trace(totalProducerRate.getRateSummary(p))
       }
       if (consumerCount > 0) {
-        println(totalConsumerRate.getRateSummary(p))
+        trace(totalConsumerRate.getRateSummary(p))
       }
 
       sample_rates += Summary(totalProducerRate.total(p), totalProducerRate.deviation, totalConsumerRate.total(p), totalConsumerRate.deviation)
