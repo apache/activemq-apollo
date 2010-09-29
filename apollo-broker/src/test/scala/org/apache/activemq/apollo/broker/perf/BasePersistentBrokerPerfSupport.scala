@@ -36,7 +36,8 @@ abstract class BasePersistentBrokerPerfSupport extends BaseBrokerPerfSupport {
 
   for ( load <- partitionedLoad ; messageSize <- messageSizes ) {
 
-    val numMessages = 100000 / load
+    val totalMessages = 100000
+    val numMessages = totalMessages / load
 
     def benchmark(name: String)(func: => Unit) {
       test(name) {
@@ -62,6 +63,7 @@ abstract class BasePersistentBrokerPerfSupport extends BaseBrokerPerfSupport {
       } finally {
         stopServices();
       }
+      this.assert(messagesSent == totalMessages, "Unexpected number of messages sent!")
     }
 
     benchmark("De" + info + "consumer(s)") {
@@ -76,6 +78,7 @@ abstract class BasePersistentBrokerPerfSupport extends BaseBrokerPerfSupport {
       } finally {
         stopServices();
       }
+      this.assert(messagesReceived == totalMessages, "Unexpected number of messages received!")
     }
   }
 

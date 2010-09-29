@@ -33,14 +33,12 @@ abstract class BaseBrokerPerfSupport extends BrokerPerfSupport {
   for( ptp <- List(true,false) ; durable <- List(false) ; messageSize <- messageSizes ) {
 
     def benchmark(name:String)(func: =>Unit) {
-      /*
       test(name) {
         this.PTP = ptp
         this.DURABLE = durable
         this.MESSAGE_SIZE = messageSize
         func
       }
-      */
     }
 
     val prefix = (if( ptp ) "queue " else "topic ") + (if((messageSize%1024)==0) (messageSize/1024)+"k" else messageSize+"b" ) + " "

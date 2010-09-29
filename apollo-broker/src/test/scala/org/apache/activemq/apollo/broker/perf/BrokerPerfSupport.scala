@@ -340,6 +340,18 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     }
     tracker.await
   }
+
+  def messagesSent() : Long = {
+    var sum = 0
+    producers.foreach((producer:RemoteConnection) => sum += producer.messageCount)
+    sum
+  }
+
+  def messagesReceived() : Long = {
+    var sum = 0
+    consumers.foreach((consumer:RemoteConnection) => sum += consumer.messageCount)
+    sum
+  }
   
   def reportRates() = {
 
