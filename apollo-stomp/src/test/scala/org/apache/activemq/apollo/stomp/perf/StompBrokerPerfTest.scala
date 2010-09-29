@@ -20,6 +20,7 @@ import _root_.java.util.concurrent.TimeUnit
 import _root_.org.apache.activemq.apollo.broker._
 import _root_.org.apache.activemq.apollo.broker.perf._
 import _root_.org.apache.activemq.apollo.stomp._
+import _root_.org.apache.activemq.apollo.util._
 
 import _root_.org.fusesource.hawtbuf._
 import collection.mutable.{ListBuffer, HashMap}
@@ -30,6 +31,7 @@ import _root_.org.apache.activemq.apollo.stomp.StompFrame
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 import java.io.File
 import org.apache.activemq.apollo.dto.{BrokerDTO, HawtDBStoreDTO}
+import org.apache.activemq.apollo.store.bdb.dto.BDBStoreDTO
 
 
 class StompBrokerPerfTest extends BaseBrokerPerfSupport {
@@ -57,7 +59,7 @@ class StompPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
 }
 
 class StompHawtDBPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
-
+  
   override def description = "Using the STOMP protocol over TCP persisting to the HawtDB store."
 
   println(getClass.getClassLoader.getResource("log4j.properties"))
@@ -65,7 +67,7 @@ class StompHawtDBPersistentBrokerPerfTest extends BasePersistentBrokerPerfSuppor
   override def createProducer() = new StompRemoteProducer()
 
   override def createConsumer() = new StompRemoteConsumer()
-
+ 
   override def getRemoteProtocolName() = "stomp"
 
   override def createBrokerConfig(name: String, bindURI: String, connectUri: String): BrokerDTO = {
@@ -78,11 +80,34 @@ class StompHawtDBPersistentBrokerPerfTest extends BasePersistentBrokerPerfSuppor
     rc
   }
 
+}
+
+class StompBDBPersistentBrokerPerfTest extends BasePersistentBrokerPerfSupport {
+
+  override def description = "Using the STOMP protocol over TCP persisting to the BerkleyDB store."
+
+  println(getClass.getClassLoader.getResource("log4j.properties"))
+
+  override def createProducer() = new StompRemoteProducer()
+
+  override def createConsumer() = new StompRemoteConsumer()
+
+  override def getRemoteProtocolName() = "stomp"
+
+  override def createBrokerConfig(name: String, bindURI: String, connectUri: String): BrokerDTO = {
+    val rc = super.createBrokerConfig(name, bindURI, connectUri)
+
+    val store = new BDBStoreDTO
+    store.directory = new File(new File(testDataDir, getClass.getName), name)
+
+    rc.virtual_hosts.get(0).store = store
+    rc
+  }
 
 }
 
 
-class StompRemoteConsumer extends RemoteConsumer {
+class StompRemoteConsumer extends RemoteConsumer with Logging {
   var outboundSink: OverflowSink[StompFrame] = null
 
   def onConnected() = {
@@ -115,12 +140,20 @@ class StompRemoteConsumer extends RemoteConsumer {
     frame match {
       case StompFrame(Responses.CONNECTED, headers, _, _) =>
       case StompFrame(Responses.MESSAGE, headers, content, _) =>
-        messageReceived();
+        if (maxMessages > 0 && messageCount < maxMessages - 1) {
+          messageReceived();
 
-        // we client ack if persistent messages are being used.
-        if( persistent ) {
-          var rc = List((Stomp.Headers.Ack.MESSAGE_ID, frame.header(Stomp.Headers.Message.MESSAGE_ID)))
-          outboundSink.offer(StompFrame(Stomp.Commands.ACK, rc));
+          // we client ack if persistent messages are being used.
+          if( persistent ) {
+            var rc = List((Stomp.Headers.Ack.MESSAGE_ID, frame.header(Stomp.Headers.Message.MESSAGE_ID)))
+            outboundSink.offer(StompFrame(Stomp.Commands.ACK, rc));
+          }
+          messageCount = messageCount + 1
+          if ( messageCount % 10000 == 0 ) {
+            trace("Received message count : " + messageCount)
+          }
+        } else {
+          stop()
         }
 
       case StompFrame(Responses.ERROR, headers, content, _) =>
@@ -131,43 +164,51 @@ class StompRemoteConsumer extends RemoteConsumer {
   }
 
   protected def messageReceived() {
-    if (thinkTime > 0) {
-      transport.suspendRead
-      dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, ^ {
+      if (thinkTime > 0) {
+        transport.suspendRead
+        dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, ^ {
+          rate.increment();
+          if (!stopped) {
+            transport.resumeRead
+          }
+        })
+      } else {
         rate.increment();
-        if (!stopped) {
-          transport.resumeRead
-        }
-      })
-    } else {
-      rate.increment();
-    }
+      }
   }
 
 }
 
-class StompRemoteProducer extends RemoteProducer {
+class StompRemoteProducer extends RemoteProducer with Logging {
   var outboundSink: OverflowSink[StompFrame] = null
   var stompDestination: AsciiBuffer = null
   var frame:StompFrame = null
 
   def send_next: Unit = {
-    var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
-    headers ::= (Stomp.Headers.Send.DESTINATION, stompDestination);
-    if (property != null) {
-      headers ::= (ascii(property), ascii(property));
-    }
-    if( persistent ) {
-      headers ::= ((Stomp.Headers.RECEIPT_REQUESTED, ascii("x")));
-    }
-    //    var p = this.priority;
-    //    if (priorityMod > 0) {
-    //        p = if ((counter % priorityMod) == 0) { 0 } else { priority }
-    //    }
+    if (maxMessages > 0 && messageCount < maxMessages) {
+      var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
+      headers ::= (Stomp.Headers.Send.DESTINATION, stompDestination);
+      if (property != null) {
+        headers ::= (ascii(property), ascii(property));
+      }
+      if( persistent ) {
+        headers ::= ((Stomp.Headers.RECEIPT_REQUESTED, ascii("x")));
+      }
+      //    var p = this.priority;
+      //    if (priorityMod > 0) {
+      //        p = if ((counter % priorityMod) == 0) { 0 } else { priority }
+      //    }
 
-    var content = ascii(createPayload());
-    frame = StompFrame(Stomp.Commands.SEND, headers, BufferContent(content))
-    drain()
+      var content = ascii(createPayload());
+      frame = StompFrame(Stomp.Commands.SEND, headers, BufferContent(content))
+      messageCount = messageCount + 1
+      if ( messageCount % 10000 == 0 ) {
+        trace("Sent message count : " + messageCount)
+      }
+      drain()
+    } else {
+      stop()
+    }
   }
 
   def drain() = {

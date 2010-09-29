@@ -40,6 +40,8 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
   var PERFORMANCE_SAMPLES = Integer.parseInt(System.getProperty("PERFORMANCE_SAMPLES", "6"))
   var SAMPLE_PERIOD = java.lang.Long.parseLong(System.getProperty("SAMPLE_PERIOD", "1000"))
 
+  var MAX_MESSAGES = 0
+
   protected var TCP = true // Set to use tcp IO
 
   var USE_KAHA_DB = true
@@ -199,7 +201,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     connector.protocol = getBrokerProtocolName
 
     val host = config.virtual_hosts.get(0)
-    host.purge_on_startup = true
+    host.purge_on_startup = PURGE_STORE
     config
   }
 
@@ -268,6 +270,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     consumer.destination = destination
     consumer.name = "Consumer:" + (i + 1)
     consumer.rateAggregator = totalConsumerRate
+    consumer.maxMessages = MAX_MESSAGES    
     consumer.init
     
     return consumer
@@ -289,6 +292,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     producer.messageIdGenerator = msgIdGenerator
     producer.rateAggregator = totalProducerRate
     producer.payloadSize = MESSAGE_SIZE
+    producer.maxMessages = MAX_MESSAGES
     producer.init
     producer
   }
@@ -336,7 +340,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     }
     tracker.await
   }
-
+  
   def reportRates() = {
 
     println("Warming up...")
@@ -348,24 +352,27 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
 
     case class Summary(producer:java.lang.Float, pdev:java.lang.Float, consumer:java.lang.Float, cdev:java.lang.Float)
 
-    val sample_rates = new Array[Summary](PERFORMANCE_SAMPLES)
     var best = 0
 
-    for (i <- 0 until PERFORMANCE_SAMPLES) {
-      var p = new Period()
+    import scala.collection.mutable.ArrayBuffer
+
+    val sample_rates = new ArrayBuffer[Summary]()
+
+    def fillRateSummary(i: Int): Unit = {
+      val p = new Period()
       Thread.sleep(SAMPLE_PERIOD)
-      if( producerCount > 0 ) {
+      if (producerCount > 0) {
         println(totalProducerRate.getRateSummary(p))
       }
-      if( consumerCount > 0 ) {
+      if (consumerCount > 0) {
         println(totalConsumerRate.getRateSummary(p))
       }
 
-      sample_rates(i) = Summary(totalProducerRate.total(p), totalProducerRate.deviation, totalConsumerRate.total(p), totalConsumerRate.deviation)
+      sample_rates += Summary(totalProducerRate.total(p), totalProducerRate.deviation, totalConsumerRate.total(p), totalConsumerRate.deviation)
 
       val current_sum = sample_rates(i).producer.longValue + sample_rates(i).consumer.longValue
       val best_sum = sample_rates(best).producer.longValue + sample_rates(best).consumer.longValue
-      if( current_sum > best_sum ) {
+      if (current_sum > best_sum) {
         best = i
       }
 
@@ -373,6 +380,30 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
       totalConsumerRate.reset()
     }
 
+    // either we want to do x number of samples or sample over the course of x number of messages
+    if ( MAX_MESSAGES == 0 ) {
+      for (i <- 0 until PERFORMANCE_SAMPLES) {
+        fillRateSummary(i)
+      }
+    } else {
+      var clientsRunning = true
+      var i = 0
+      
+      while (clientsRunning) {
+        fillRateSummary(i)
+        i = i + 1
+        clientsRunning = false
+
+        def checkForRunningClients(connection: Connection) = {
+          if (connection.stopped == false) {
+            clientsRunning = true
+          }
+        }
+
+        producers.foreach(checkForRunningClients)
+        consumers.foreach(checkForRunningClients)
+      }
+    }
 
     if( producerCount > 0 ) {
       samples = samples ::: ( testName+" producer", sample_rates(best).producer ) :: Nil
@@ -386,8 +417,6 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
         samples = samples ::: ( testName+" consumer sd", sample_rates(best).cdev ) :: Nil
       }
     }
-
-
   }
 
 
@@ -401,6 +430,9 @@ abstract class RemoteConnection extends Connection {
 
   var stopping:AtomicBoolean = null
   var destination: Destination = null
+
+  var messageCount = 0
+  var maxMessages = 0
 
   def init = {
     if( rate.getName == null ) {

@@ -26,15 +26,13 @@ import java.net.URL
  */
 abstract class BaseBrokerPerfSupport extends BrokerPerfSupport {
 
-  PERSISTENT = false
-
   def reportResourceTemplate():URL = { classOf[BaseBrokerPerfSupport].getResource("report.html") }
   def partitionedLoad = List(1, 2, 4, 8, 10)
   def highContention = 10
   def messageSizes = List(20,1024,1024*256)
 
-  // benchmark( all the combinations
-  for( ptp<- List(true,false) ; durable <- List(false) ; messageSize <- messageSizes ) {
+  // benchmark all the combinations
+  for( ptp <- List(true,false) ; durable <- List(false,true) ; messageSize <- messageSizes ) {
 
     def benchmark(name:String)(func: =>Unit) {
       test(name) {
@@ -45,7 +43,7 @@ abstract class BaseBrokerPerfSupport extends BrokerPerfSupport {
       }
     }
 
-    val prefix = (if( ptp ) "queue " else "topic ") +(if((messageSize%1024)==0) (messageSize/1024)+"k" else messageSize+"b" )+" "
+    val prefix = (if( ptp ) "queue " else "topic ") + (if((messageSize%1024)==0) (messageSize/1024)+"k" else messageSize+"b" ) + " "
     val suffix = (if( durable ) " durable" else "")
 
     if( ptp && durable ) {
@@ -119,7 +117,7 @@ abstract class BaseBrokerPerfSupport extends BrokerPerfSupport {
 
 //    /**
 //     *  benchmark(s 1 producers sending to 1 destination with 1 slow and 1 fast consumer.
-//     *
+      //     *
 //     * queue case: the producer should not slow down since it can dispatch to the
 //     *             fast consumer
 //     *

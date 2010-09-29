@@ -24,15 +24,54 @@ import java.net.URL
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract class BasePersistentBrokerPerfSupport  extends BaseBrokerPerfSupport {
+abstract class BasePersistentBrokerPerfSupport extends BaseBrokerPerfSupport {
 
   PERSISTENT = true
-  
-  override def reportResourceTemplate():URL = { classOf[BasePersistentBrokerPerfSupport].getResource("persistent-report.html") }
 
-  override def partitionedLoad = List(1, 10, 50, 100)
+  override def reportResourceTemplate():URL = { classOf[BasePersistentBrokerPerfSupport].getResource("persistent-report.html") }
 
   override def highContention = 100
 
+  for ( load <- partitionedLoad ; messageSize <- messageSizes ) {
+    val numMessages = 1000000 / load
+
+    val info = "queue " + numMessages + " " + (if((messageSize%1024)==0) (messageSize/1024)+"k" else messageSize+"b" ) + " with " + load + " "    
+
+    test("En" + info + "producer(s)") {
+      MAX_MESSAGES = numMessages
+      PTP = true
+      PURGE_STORE = true      
+      MESSAGE_SIZE = messageSize
+      producerCount = load;
+      destCount = 1;
+      createConnections();
+
+      // Start 'em up.
+      startClients();
+      try {
+        reportRates();
+      } finally {
+        stopServices();
+      }
+    }
+
+    test("De" + info + "consumer(s)") {
+      MAX_MESSAGES = numMessages
+      PTP = true
+      PURGE_STORE = false
+      MESSAGE_SIZE = messageSize
+      consumerCount = load;
+      destCount = 1;
+      createConnections();
+
+      // Start 'em up.
+      startClients();
+      try {
+        reportRates();
+      } finally {
+        stopServices();
+      }
+    }
+  }
 
 }
