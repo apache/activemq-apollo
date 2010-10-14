@@ -715,46 +715,7 @@
             <enabled>false</enabled>
           </snapshots>
         </repository>
-        <repository>
-          <id>snapshots.scala-tools.org</id>
-          <name>Scala-Tools Maven2 Snapshot Repository</name>
-          <url>http://scala-tools.org/repo-snapshots</url>
-          <snapshots>
-            <enabled>true</enabled>
-            <checksumPolicy>fail</checksumPolicy>
-          </snapshots>
-          <releases>
-            <enabled>true</enabled>
-            <checksumPolicy>fail</checksumPolicy>
-          </releases>
-        </repository>
-<!--
-        <repository>
-          <id>nexus.snapshots.scala-tools.org</id>
-          <name>Scala-Tools Maven2 Snapshot Repository</name>
-          <url>http://nexus.scala-tools.org/content/repositories/snapshots</url>
-          <snapshots>
-            <enabled>true</enabled>
-            <checksumPolicy>fail</checksumPolicy>
-          </snapshots>
-          <releases>
-            <enabled>true</enabled>
-            <checksumPolicy>fail</checksumPolicy>
-          </releases>
-        </repository>
--->
-        <repository>
-          <id>apache.snapshots</id>
-          <name>Apache Development Snapshot Repository</name>
-          <url>https://repository.apache.org/content/repositories/snapshots</url>
-          <releases>
-            <enabled>false</enabled>
-          </releases>
-          <snapshots>
-            <enabled>true</enabled>
-          </snapshots>
-        </repository>
-        
+
         <repository>
           <id>fluido-skin</id>
           <url>http://fluido-skin.googlecode.com/svn/repo/</url>
