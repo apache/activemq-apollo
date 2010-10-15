@@ -21,11 +21,9 @@ import _root_.org.apache.activemq.apollo.broker._
 import java.nio.ByteBuffer
 import collection.mutable.{ListBuffer, HashMap}
 import Stomp._
-import Stomp.Headers._
 
 import BufferConversions._
 import _root_.scala.collection.JavaConversions._
-import StompFrameConstants._
 import java.io.{EOFException, DataOutput, DataInput, IOException}
 import java.nio.channels.{SocketChannel, WritableByteChannel, ReadableByteChannel}
 import org.apache.activemq.apollo.transport._
@@ -48,7 +46,7 @@ object StompCodec extends Log {
     val frame = message.frame
 
     val rc = new MessageRecord
-    rc.protocol = StompConstants.PROTOCOL
+    rc.protocol = PROTOCOL
     rc.size = frame.size
     rc.expiration = message.expiration
 
@@ -465,7 +463,7 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
 
           // lets try to keep the content of big message outside of the JVM's garbage collection
           // to keep the number of GCs down when moving big messages.
-          def is_message = action == Commands.SEND || action == Responses.MESSAGE
+          def is_message = action == SEND || action == MESSAGE
           if( length > 1024 && memory_pool!=null && is_message) {
 
             val ma = memory_pool.alloc(length+1)

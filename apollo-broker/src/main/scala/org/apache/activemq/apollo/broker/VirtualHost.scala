@@ -30,6 +30,7 @@ import path.PathFilter
 import ReporterLevel._
 import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
 import collection.JavaConversions
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -92,6 +93,8 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
   var direct_buffer_pool:DirectBufferPool = null
   var transactionManager:TransactionManagerX = new TransactionManagerX
   val queue_id_counter = new LongCounter
+
+  val session_counter = new AtomicLong(0)
 
   override def toString = if (config==null) "virtual-host" else "virtual-host: "+config.id
 

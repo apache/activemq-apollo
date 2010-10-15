@@ -22,19 +22,82 @@ import org.apache.activemq.apollo.util.FunSuiteSupport
 import org.apache.activemq.apollo.broker.{Broker, BrokerFactory}
 
 class StompTest extends FunSuiteSupport with ShouldMatchers {
+  var broker: Broker = null
 
-  var broker:Broker = null
 
-
-  test("Stomp Connect") {
+  test("Stomp 1.0 CONNECT") {
     val client = new StompClient
     client.open("localhost", 61613)
-    client.send("""CONNECT
 
-""")
-   val frame = client.receive()
-   frame should startWith ("CONNECTED")
+    client.send(
+      "CONNECT\n" +
+      "\n")
+    val frame = client.receive()
+    frame should startWith("CONNECTED\n")
+    frame should include regex("""session:.+?\n""")
+    frame should include("version:1.0\n")
   }
+
+
+  test("Stomp 1.1 CONNECT") {
+    val client = new StompClient
+    client.open("localhost", 61613)
+
+    client.send(
+      "CONNECT\n" +
+      "accept-version:1.0,1.1\n" +
+      "host:default\n" +
+      "\n")
+    val frame = client.receive()
+    frame should startWith("CONNECTED\n")
+    frame should include regex("""session:.+?\n""")
+    frame should include("version:1.1\n")
+  }
+
+  test("Stomp 1.1 CONNECT /w STOMP Action") {
+    val client = new StompClient
+    client.open("localhost", 61613)
+
+    client.send(
+      "STOMP\n" +
+      "accept-version:1.0,1.1\n" +
+      "host:default\n" +
+      "\n")
+    val frame = client.receive()
+    frame should startWith("CONNECTED\n")
+    frame should include regex("""session:.+?\n""")
+    frame should include("version:1.1\n")
+  }
+
+  test("Stomp 1.1 CONNECT /w Version Fallback") {
+    val client = new StompClient
+    client.open("localhost", 61613)
+
+    client.send(
+      "CONNECT\n" +
+      "accept-version:1.0,10.0\n" +
+      "host:default\n" +
+      "\n")
+    val frame = client.receive()
+    frame should startWith("CONNECTED\n")
+    frame should include regex("""session:.+?\n""")
+    frame should include("version:1.0\n")
+  }
+
+  test("Stomp CONNECT /w invalid virtual host") {
+    val client = new StompClient
+    client.open("localhost", 61613)
+
+    client.send(
+      "CONNECT\n" +
+      "accept-version:1.0,1.1\n" +
+      "host:invalid\n" +
+      "\n")
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include regex("""message:.+?\n""")
+  }
+
 
   override protected def beforeAll() = {
     val uri = "xml:classpath:activemq-stomp.xml"

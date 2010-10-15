@@ -27,7 +27,8 @@ import java.net.{ProtocolException, InetSocketAddress, URI, Socket}
 import java.lang.String._
 import java.util.concurrent.TimeUnit._
 import collection.mutable.Map
-import org.apache.activemq.apollo.stomp.{StompClient, Stomp}
+import org.apache.activemq.apollo.stomp.StompClient
+import org.apache.activemq.apollo.stomp.Stomp._
 
 /**
  *
@@ -289,10 +290,10 @@ object StompLoadClient {
       while (!done.get) {
         if( clientAck ) {
           val msg = client.receiveAscii()
-          val start = msg.indexOf(Stomp.Headers.Message.MESSAGE_ID)
+          val start = msg.indexOf(MESSAGE_ID)
           assert( start >= 0 )
           val end = msg.indexOf("\n", start)
-          val msgId = msg.slice(start+Stomp.Headers.Message.MESSAGE_ID.length+1, end).ascii
+          val msgId = msg.slice(start+MESSAGE_ID.length+1, end).ascii
           client.send("""
 ACK
 message-id:"""+msgId+"""

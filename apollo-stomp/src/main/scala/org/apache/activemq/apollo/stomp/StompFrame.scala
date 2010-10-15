@@ -30,17 +30,9 @@ import java.io.{OutputStream, DataOutput}
  *
  * @author <a href="http://hiramchirino.com">chirino</a>
  */
-object StompFrameConstants {
-  type HeaderMap = List[(AsciiBuffer, AsciiBuffer)]
-  type HeaderMapBuffer = ListBuffer[(AsciiBuffer, AsciiBuffer)]
-  val NO_DATA = new Buffer(0);
-
-}
-
-import StompFrameConstants._
-import StompConstants._;
 import BufferConversions._
 import Buffer._
+import Stomp._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -82,15 +74,15 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
 
   for( header <- (frame.updated_headers ::: frame.headers).reverse ) {
     header match {
-      case (Stomp.Headers.Message.MESSAGE_ID, value) =>
+      case (MESSAGE_ID, value) =>
         id = value
-      case (Stomp.Headers.Send.PRIORITY, value) =>
+      case (PRIORITY, value) =>
         priority = java.lang.Integer.parseInt(value).toByte
-      case (Stomp.Headers.Send.DESTINATION, value) =>
+      case (DESTINATION, value) =>
         destination = value
-      case (Stomp.Headers.Send.EXPIRATION_TIME, value) =>
+      case (EXPIRATION_TIME, value) =>
         expiration = java.lang.Long.parseLong(value)
-      case (Stomp.Headers.Send.PERSISTENT, value) =>
+      case (PERSISTENT, value) =>
         persistent = java.lang.Boolean.parseBoolean(value)
       case _ =>
     }
@@ -301,6 +293,139 @@ case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:StompCo
     ).map(_._2).getOrElse(null)
   }
 
+  def append_headers(value:HeaderMap) = StompFrame(action, headers, content, value ::: updated_headers)
+
   def retain = content.retain
   def release = content.release
+}
+
+object Stomp {
+
+  val PROTOCOL = "stomp"
+  val DURABLE_PREFIX = ascii("durable:")
+  val DURABLE_QUEUE_KIND = ascii("stomp:sub")
+
+  val options = new ParserOptions
+  options.queuePrefix = ascii("/queue/")
+  options.topicPrefix = ascii("/topic/")
+
+  options.defaultDomain = Router.QUEUE_DOMAIN
+
+  implicit def toDestination(value:AsciiBuffer):Destination = {
+    val d = DestinationParser.parse(value, options)
+    if( d==null ) {
+      throw new ProtocolException("Invalid stomp destiantion name: "+value);
+    }
+    d
+  }
+
+  type HeaderMap = List[(AsciiBuffer, AsciiBuffer)]
+  type HeaderMapBuffer = ListBuffer[(AsciiBuffer, AsciiBuffer)]
+  val NO_DATA = new Buffer(0);
+
+  ///////////////////////////////////////////////////////////////////
+  // Framing
+  ///////////////////////////////////////////////////////////////////
+
+  val EMPTY_BUFFER = new Buffer(0)
+  val NULL: Byte = 0
+  val NULL_BUFFER = new Buffer(Array(NULL))
+  val NEWLINE: Byte = '\n'
+  val COMMA: Byte = ','
+  val NEWLINE_BUFFER = new Buffer(Array(NEWLINE))
+  val END_OF_FRAME_BUFFER = new Buffer(Array(NULL, NEWLINE))
+  val SEPERATOR: Byte = ':'
+  val SEPERATOR_BUFFER = new Buffer(Array(SEPERATOR))
+
+  ///////////////////////////////////////////////////////////////////
+  // Frame Commands
+  ///////////////////////////////////////////////////////////////////
+  val STOMP = ascii("STOMP")
+  val CONNECT = ascii("CONNECT")
+  val SEND = ascii("SEND")
+  val DISCONNECT = ascii("DISCONNECT")
+  val SUBSCRIBE = ascii("SUBSCRIBE")
+  val UNSUBSCRIBE = ascii("UNSUBSCRIBE")
+
+  val BEGIN_TRANSACTION = ascii("BEGIN")
+  val COMMIT_TRANSACTION = ascii("COMMIT")
+  val ABORT_TRANSACTION = ascii("ABORT")
+  val BEGIN = ascii("BEGIN")
+  val COMMIT = ascii("COMMIT")
+  val ABORT = ascii("ABORT")
+  val ACK = ascii("ACK")
+
+  ///////////////////////////////////////////////////////////////////
+  // Frame Responses
+  ///////////////////////////////////////////////////////////////////
+  val CONNECTED = ascii("CONNECTED")
+  val ERROR = ascii("ERROR")
+  val MESSAGE = ascii("MESSAGE")
+  val RECEIPT = ascii("RECEIPT")
+
+  ///////////////////////////////////////////////////////////////////
+  // Frame Headers
+  ///////////////////////////////////////////////////////////////////
+  val RECEIPT_REQUESTED = ascii("receipt")
+  val TRANSACTION = ascii("transaction")
+  val CONTENT_LENGTH = ascii("content-length")
+  val TRANSFORMATION = ascii("transformation")
+  val TRANSFORMATION_ERROR = ascii("transformation-error")
+
+  val RECEIPT_ID = ascii("receipt-id")
+
+  val DESTINATION = ascii("destination")
+  val CORRELATION_ID = ascii("correlation-id")
+  val REPLY_TO = ascii("reply-to")
+  val EXPIRATION_TIME = ascii("expires")
+  val PRIORITY = ascii("priority")
+  val TYPE = ascii("type")
+  val PERSISTENT = ascii("persistent")
+
+  val MESSAGE_ID = ascii("message-id")
+  val PRORITY = ascii("priority")
+  val REDELIVERED = ascii("redelivered")
+  val TIMESTAMP = ascii("timestamp")
+  val SUBSCRIPTION = ascii("subscription")
+
+  val ACK_MODE = ascii("ack")
+  val ID = ascii("id")
+  val SELECTOR = ascii("selector")
+
+  val LOGIN = ascii("login")
+  val PASSCODE = ascii("passcode")
+  val CLIENT_ID = ascii("client-id")
+  val REQUEST_ID = ascii("request-id")
+  val ACCEPT_VERSION = ascii("accept-version")
+  val HOST = ascii("host")
+
+  val MESSAGE_HEADER = ascii("message")
+  val VERSION = ascii("version")
+  val SESSION = ascii("session")
+  val RESPONSE_ID = ascii("response-id")
+
+  ///////////////////////////////////////////////////////////////////
+  // Common Values
+  ///////////////////////////////////////////////////////////////////
+  val TRUE = ascii("true")
+  val FALSE = ascii("false")
+  val AUTO = ascii("auto")
+  val CLIENT = ascii("client")
+  val INDIVIDUAL = ascii("client-individual")
+  val V1_0 = ascii("1.0")
+  val V1_1 = ascii("1.1")
+
+  val SUPPORTED_PROTOCOL_VERSIONS = Set(V1_0,V1_1)
+
+  //	public enum Transformations {
+  //		JMS_BYTE, JMS_OBJECT_XML, JMS_OBJECT_JSON, JMS_MAP_XML, JMS_MAP_JSON
+  //
+  //		public String toString() {
+  //			return name().replaceAll("_", "-").toLowerCase()
+  //		}
+  //
+  //		public static Transformations getValue(String value) {
+  //			return valueOf(value.replaceAll("-", "_").toUpperCase())
+  //		}
+  //	}
 }

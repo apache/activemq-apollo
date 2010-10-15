@@ -102,18 +102,18 @@ class StompRemoteConsumer extends RemoteConsumer with Logging {
       ascii("/topic/" + destination.getName().toString());
     }
 
-    var frame = StompFrame(Stomp.Commands.CONNECT);
+    var frame = StompFrame(CONNECT);
     outboundSink.offer(frame);
 
     var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
-    headers ::= (Stomp.Headers.Subscribe.DESTINATION, stompDestination)
-    headers ::= (Stomp.Headers.Subscribe.ID, ascii("stomp-sub-" + name))
+    headers ::= (DESTINATION, stompDestination)
+    headers ::= (ID, ascii("stomp-sub-" + name))
 
     if( persistent ) {
-      headers ::= (Stomp.Headers.Subscribe.ACK_MODE, Stomp.Headers.Subscribe.AckModeValues.CLIENT)
+      headers ::= (ACK_MODE, CLIENT)
     }
 
-    frame = StompFrame(Stomp.Commands.SUBSCRIBE, headers);
+    frame = StompFrame(SUBSCRIBE, headers);
     outboundSink.offer(frame);
     watchdog(messageCount)
   }
@@ -121,17 +121,17 @@ class StompRemoteConsumer extends RemoteConsumer with Logging {
   override def onTransportCommand(command: Object) = {
     var frame = command.asInstanceOf[StompFrame]
     frame match {
-      case StompFrame(Responses.CONNECTED, headers, _, _) =>
-      case StompFrame(Responses.MESSAGE, headers, content, _) =>
+      case StompFrame(CONNECTED, headers, _, _) =>
+      case StompFrame(MESSAGE, headers, content, _) =>
           messageReceived();
 
           // we client ack if persistent messages are being used.
           if( persistent ) {
-            var rc = List((Stomp.Headers.Ack.MESSAGE_ID, frame.header(Stomp.Headers.Message.MESSAGE_ID)))
-            outboundSink.offer(StompFrame(Stomp.Commands.ACK, rc));
+            var rc = List((MESSAGE_ID, frame.header(MESSAGE_ID)))
+            outboundSink.offer(StompFrame(ACK, rc));
           }
 
-      case StompFrame(Responses.ERROR, headers, content, _) =>
+      case StompFrame(ERROR, headers, content, _) =>
         onFailure(new Exception("Server reported an error: " + frame.content));
       case _ =>
         onFailure(new Exception("Unexpected stomp command: " + frame.action));
@@ -155,7 +155,7 @@ class StompRemoteConsumer extends RemoteConsumer with Logging {
   }
 
   override def doStop() = {
-    outboundSink.offer(StompFrame(Stomp.Commands.DISCONNECT));
+    outboundSink.offer(StompFrame(DISCONNECT));
     dispatchQueue.dispatchAfter(5, TimeUnit.SECONDS, ^ {
         transport.stop
         stop
@@ -170,12 +170,12 @@ class StompRemoteProducer extends RemoteProducer with Logging {
 
   def send_next: Unit = {
       var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
-      headers ::= (Stomp.Headers.Send.DESTINATION, stompDestination);
+      headers ::= (DESTINATION, stompDestination);
       if (property != null) {
         headers ::= (ascii(property), ascii(property));
       }
       if( persistent ) {
-        headers ::= ((Stomp.Headers.RECEIPT_REQUESTED, ascii("x")));
+        headers ::= ((RECEIPT_REQUESTED, ascii("x")));
       }
       //    var p = this.priority;
       //    if (priorityMod > 0) {
@@ -183,7 +183,7 @@ class StompRemoteProducer extends RemoteProducer with Logging {
       //    }
 
       var content = ascii(createPayload());
-      frame = StompFrame(Stomp.Commands.SEND, headers, BufferContent(content))
+      frame = StompFrame(SEND, headers, BufferContent(content))
       drain()
   }
 
@@ -222,21 +222,21 @@ class StompRemoteProducer extends RemoteProducer with Logging {
     } else {
       stompDestination = ascii("/topic/" + destination.getName().toString());
     }
-    outboundSink.offer(StompFrame(Stomp.Commands.CONNECT));
+    outboundSink.offer(StompFrame(CONNECT));
     send_next
   }
 
   override def onTransportCommand(command: Object) = {
     var frame = command.asInstanceOf[StompFrame]
     frame match {
-      case StompFrame(Responses.RECEIPT, headers, _, _) =>
+      case StompFrame(RECEIPT, headers, _, _) =>
         assert( persistent )
         // we got the ack for the previous message we sent.. now send the next one.
         incrementMessageCount
         send_next
 
-      case StompFrame(Responses.CONNECTED, headers, _, _) =>
-      case StompFrame(Responses.ERROR, headers, content, _) =>
+      case StompFrame(CONNECTED, headers, _, _) =>
+      case StompFrame(ERROR, headers, content, _) =>
         onFailure(new Exception("Server reported an error: " + frame.content.utf8));
       case _ =>
         onFailure(new Exception("Unexpected stomp command: " + frame.action));
@@ -244,7 +244,7 @@ class StompRemoteProducer extends RemoteProducer with Logging {
   }
 
   override def doStop() = {
-    outboundSink.offer(StompFrame(Stomp.Commands.DISCONNECT));
+    outboundSink.offer(StompFrame(DISCONNECT));
     dispatchQueue.dispatchAfter(5, TimeUnit.SECONDS, ^ {
         transport.stop
         stop
