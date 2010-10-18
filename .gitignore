@@ -17,3 +17,4 @@ apollo-web/activemq.xml
 apollo-web/activemq.xml.*
 apollo-web/overlays/
 apollo-web/src/main/webapp/WEB-INF/_scalate/
+activemq-data/
