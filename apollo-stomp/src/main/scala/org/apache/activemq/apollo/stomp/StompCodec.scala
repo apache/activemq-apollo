@@ -203,7 +203,12 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
       ProtocolCodec.BufferState.FULL
     } else {
       val was_empty = is_empty
-      encode(command.asInstanceOf[StompFrame], next_write_buffer);
+      command match {
+        case buffer:Buffer=>
+          buffer.writeTo(next_write_buffer.asInstanceOf[DataOutput])        
+        case frame:StompFrame=>
+          encode(frame, next_write_buffer);
+      }
       if( was_empty ) {
         ProtocolCodec.BufferState.WAS_EMPTY
       } else {

@@ -37,7 +37,7 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers {
 
 }
 
-class Stomp10Test extends StompTestSupport {
+class Stomp10ConnectTest extends StompTestSupport {
 
   test("Stomp 1.0 CONNECT") {
     val client = new StompClient
@@ -54,7 +54,7 @@ class Stomp10Test extends StompTestSupport {
 
 }
 
-class Stomp11Test extends StompTestSupport {
+class Stomp11ConnectTest extends StompTestSupport {
 
   test("Stomp 1.1 CONNECT") {
     val client = new StompClient
@@ -128,6 +128,68 @@ class Stomp11Test extends StompTestSupport {
     val frame = client.receive()
     frame should startWith("ERROR\n")
     frame should include regex("""message:.+?\n""")
+  }
+
+}
+
+class Stomp11HeartBeatTest extends StompTestSupport {
+
+  test("Stomp 1.1 Broker sends heart-beat") {
+    val client = new StompClient
+    client.open("localhost", 61613)
+
+    client.send(
+      "CONNECT\n" +
+      "accept-version:1.1\n" +
+      "host:default\n" +
+      "heart-beat:0,1000\n" +
+      "\n")
+    val frame = client.receive()
+    frame should startWith("CONNECTED\n")
+    frame should include regex("""heart-beat:.+?\n""")
+
+    def heart_beat_after(time:Long) {
+      var start = System.currentTimeMillis
+      val c = client.in.read()
+      c should be === (Stomp.NEWLINE)
+      var end = System.currentTimeMillis
+      (end - start) should be >= time
+    }
+    client.in.read()
+    heart_beat_after(900)
+    heart_beat_after(900)
+  }
+
+
+  test("Stomp 1.1 Broker times out idle connection") {
+    StompProtocolHandler.inbound_heartbeat = 1000L
+    try {
+      val client = new StompClient
+      client.open("localhost", 61613)
+
+      client.send(
+        "CONNECT\n" +
+        "accept-version:1.1\n" +
+        "host:default\n" +
+        "heart-beat:1000,0\n" +
+        "\n")
+
+      var frame = client.receive()
+      frame should startWith("CONNECTED\n")
+      frame should include regex("""heart-beat:.+?\n""")
+
+      var start = System.currentTimeMillis
+
+      frame = client.receive()
+      frame should startWith("ERROR\n")
+      frame should include regex("""message:.+?\n""")
+      
+      var end = System.currentTimeMillis
+      (end - start) should be >= 1000L
+
+    } finally {
+      StompProtocolHandler.inbound_heartbeat = StompProtocolHandler.DEFAULT_INBOUND_HEARTBEAT
+    }
   }
 
 }

@@ -398,6 +398,7 @@ object Stomp {
   val REQUEST_ID = ascii("request-id")
   val ACCEPT_VERSION = ascii("accept-version")
   val HOST = ascii("host")
+  val HEART_BEAT = ascii("heart-beat")
 
   val MESSAGE_HEADER = ascii("message")
   val VERSION = ascii("version")
@@ -414,6 +415,7 @@ object Stomp {
   val INDIVIDUAL = ascii("client-individual")
   val V1_0 = ascii("1.0")
   val V1_1 = ascii("1.1")
+  val DEFAULT_HEAT_BEAT = ascii("0,0")
 
   val SUPPORTED_PROTOCOL_VERSIONS = Set(V1_0,V1_1)
 

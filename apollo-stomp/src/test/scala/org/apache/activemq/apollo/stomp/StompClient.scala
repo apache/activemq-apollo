@@ -71,13 +71,17 @@ import java.io._
     }
 
     def receive():String = {
+      var start = true;
       val buffer = new BAOS()
       var c = in.read
       while( c >= 0 ) {
         if( c==0 ) {
           return new String(buffer.toByteArray, "UTF-8")
         }
-        buffer.write(c)
+        if( !start || c!= Stomp.NEWLINE) {
+          start = false
+          buffer.write(c)
+        }
         c = in.read()
       }
       throw new EOFException()
