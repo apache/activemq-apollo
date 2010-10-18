@@ -24,10 +24,10 @@ import org.scalatest._
 import java.io.File
 import org.apache.activemq.apollo.util.metric.{Period, MetricAggregator}
 import org.fusesource.hawtbuf.AsciiBuffer
-import collection.mutable.ListBuffer
 import java.net.URL
 import org.apache.activemq.apollo.dto.BrokerDTO
 import org.apache.activemq.apollo.util._
+import collection.mutable.{ArrayBuffer, ListBuffer}
 
 /**
  *
@@ -51,7 +51,6 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
   var PERSISTENT = false
   var DURABLE = false
   var MESSAGE_SIZE = 20
-
 
   protected var sendBrokerBindURI: String = null
   protected var receiveBrokerBindURI: String = null
@@ -398,8 +397,6 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
       }
     }
   }
-
-
 }
 
 trait FixedSampling extends BrokerPerfSupport {

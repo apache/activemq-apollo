@@ -56,153 +56,177 @@
       google.setOnLoadCallback(function() {
         data = new google.visualization.DataTable();
         data.addColumn('string', 'version');
-          data.addColumn('number', 'queue 20b 1->1->1 producer')
-          data.addColumn('number', 'queue 20b 1->1->1 consumer')
-          data.addColumn('number', 'queue 20b 10->10->10 producer')
-          data.addColumn('number', 'queue 20b 10->10->10 producer sd')
-          data.addColumn('number', 'queue 20b 10->10->10 consumer')
-          data.addColumn('number', 'queue 20b 10->10->10 consumer sd')
-          data.addColumn('number', 'queue 20b 50->50->50 producer')
-          data.addColumn('number', 'queue 20b 50->50->50 producer sd')
-          data.addColumn('number', 'queue 20b 50->50->50 consumer')
-          data.addColumn('number', 'queue 20b 50->50->50 consumer sd')
-          data.addColumn('number', 'queue 20b 100->100->100 producer')
-          data.addColumn('number', 'queue 20b 100->100->100 producer sd')
-          data.addColumn('number', 'queue 20b 100->100->100 consumer')
-          data.addColumn('number', 'queue 20b 100->100->100 consumer sd')
-          data.addColumn('number', 'queue 20b 100->1->1 producer')
-          data.addColumn('number', 'queue 20b 100->1->1 producer sd')
-          data.addColumn('number', 'queue 20b 100->1->1 consumer')
-          data.addColumn('number', 'queue 20b 1->1->100 producer')
-          data.addColumn('number', 'queue 20b 1->1->100 consumer')
-          data.addColumn('number', 'queue 20b 1->1->100 consumer sd')
-          data.addColumn('number', 'queue 20b 100->1->100 producer')
-          data.addColumn('number', 'queue 20b 100->1->100 producer sd')
-          data.addColumn('number', 'queue 20b 100->1->100 consumer')
-          data.addColumn('number', 'queue 20b 100->1->100 consumer sd')
-          data.addColumn('number', 'queue 1k 1->1->1 producer')
-          data.addColumn('number', 'queue 1k 1->1->1 consumer')
-          data.addColumn('number', 'queue 1k 10->10->10 producer')
-          data.addColumn('number', 'queue 1k 10->10->10 producer sd')
-          data.addColumn('number', 'queue 1k 10->10->10 consumer')
-          data.addColumn('number', 'queue 1k 10->10->10 consumer sd')
-          data.addColumn('number', 'queue 1k 50->50->50 producer')
-          data.addColumn('number', 'queue 1k 50->50->50 producer sd')
-          data.addColumn('number', 'queue 1k 50->50->50 consumer')
-          data.addColumn('number', 'queue 1k 50->50->50 consumer sd')
-          data.addColumn('number', 'queue 1k 100->100->100 producer')
-          data.addColumn('number', 'queue 1k 100->100->100 producer sd')
-          data.addColumn('number', 'queue 1k 100->100->100 consumer')
-          data.addColumn('number', 'queue 1k 100->100->100 consumer sd')
-          data.addColumn('number', 'queue 1k 100->1->1 producer')
-          data.addColumn('number', 'queue 1k 100->1->1 producer sd')
-          data.addColumn('number', 'queue 1k 100->1->1 consumer')
-          data.addColumn('number', 'queue 1k 1->1->100 producer')
-          data.addColumn('number', 'queue 1k 1->1->100 consumer')
-          data.addColumn('number', 'queue 1k 1->1->100 consumer sd')
-          data.addColumn('number', 'queue 1k 100->1->100 producer')
-          data.addColumn('number', 'queue 1k 100->1->100 producer sd')
-          data.addColumn('number', 'queue 1k 100->1->100 consumer')
-          data.addColumn('number', 'queue 1k 100->1->100 consumer sd')
-          data.addColumn('number', 'queue 256k 1->1->1 producer')
-          data.addColumn('number', 'queue 256k 1->1->1 consumer')
-          data.addColumn('number', 'queue 256k 10->10->10 producer')
-          data.addColumn('number', 'queue 256k 10->10->10 producer sd')
-          data.addColumn('number', 'queue 256k 10->10->10 consumer')
-          data.addColumn('number', 'queue 256k 10->10->10 consumer sd')
-          data.addColumn('number', 'queue 256k 50->50->50 producer')
-          data.addColumn('number', 'queue 256k 50->50->50 producer sd')
-          data.addColumn('number', 'queue 256k 50->50->50 consumer')
-          data.addColumn('number', 'queue 256k 50->50->50 consumer sd')
-          data.addColumn('number', 'queue 256k 100->100->100 producer')
-          data.addColumn('number', 'queue 256k 100->100->100 producer sd')
-          data.addColumn('number', 'queue 256k 100->100->100 consumer')
-          data.addColumn('number', 'queue 256k 100->100->100 consumer sd')
-          data.addColumn('number', 'queue 256k 100->1->1 producer')
-          data.addColumn('number', 'queue 256k 100->1->1 producer sd')
-          data.addColumn('number', 'queue 256k 100->1->1 consumer')
-          data.addColumn('number', 'queue 256k 1->1->100 producer')
-          data.addColumn('number', 'queue 256k 1->1->100 consumer')
-          data.addColumn('number', 'queue 256k 1->1->100 consumer sd')
-          data.addColumn('number', 'queue 256k 100->1->100 producer')
-          data.addColumn('number', 'queue 256k 100->1->100 producer sd')
-          data.addColumn('number', 'queue 256k 100->1->100 consumer')
-          data.addColumn('number', 'queue 256k 100->1->100 consumer sd')
-          data.addColumn('number', 'topic 20b 1->1->0 producer')
-          data.addColumn('number', 'topic 20b 1->1->1 producer')
-          data.addColumn('number', 'topic 20b 1->1->1 consumer')
-          data.addColumn('number', 'topic 20b 10->10->10 producer')
-          data.addColumn('number', 'topic 20b 10->10->10 producer sd')
-          data.addColumn('number', 'topic 20b 10->10->10 consumer')
-          data.addColumn('number', 'topic 20b 10->10->10 consumer sd')
-          data.addColumn('number', 'topic 20b 50->50->50 producer')
-          data.addColumn('number', 'topic 20b 50->50->50 producer sd')
-          data.addColumn('number', 'topic 20b 50->50->50 consumer')
-          data.addColumn('number', 'topic 20b 50->50->50 consumer sd')
-          data.addColumn('number', 'topic 20b 100->100->100 producer')
-          data.addColumn('number', 'topic 20b 100->100->100 producer sd')
-          data.addColumn('number', 'topic 20b 100->100->100 consumer')
-          data.addColumn('number', 'topic 20b 100->100->100 consumer sd')
-          data.addColumn('number', 'topic 20b 100->1->1 producer')
-          data.addColumn('number', 'topic 20b 100->1->1 producer sd')
-          data.addColumn('number', 'topic 20b 100->1->1 consumer')
-          data.addColumn('number', 'topic 20b 1->1->100 producer')
-          data.addColumn('number', 'topic 20b 1->1->100 consumer')
-          data.addColumn('number', 'topic 20b 1->1->100 consumer sd')
-          data.addColumn('number', 'topic 20b 100->1->100 producer')
-          data.addColumn('number', 'topic 20b 100->1->100 producer sd')
-          data.addColumn('number', 'topic 20b 100->1->100 consumer')
-          data.addColumn('number', 'topic 20b 100->1->100 consumer sd')
-          data.addColumn('number', 'topic 1k 1->1->0 producer')
-          data.addColumn('number', 'topic 1k 1->1->1 producer')
-          data.addColumn('number', 'topic 1k 1->1->1 consumer')
-          data.addColumn('number', 'topic 1k 10->10->10 producer')
-          data.addColumn('number', 'topic 1k 10->10->10 producer sd')
-          data.addColumn('number', 'topic 1k 10->10->10 consumer')
-          data.addColumn('number', 'topic 1k 10->10->10 consumer sd')
-          data.addColumn('number', 'topic 1k 50->50->50 producer')
-          data.addColumn('number', 'topic 1k 50->50->50 producer sd')
-          data.addColumn('number', 'topic 1k 50->50->50 consumer')
-          data.addColumn('number', 'topic 1k 50->50->50 consumer sd')
-          data.addColumn('number', 'topic 1k 100->100->100 producer')
-          data.addColumn('number', 'topic 1k 100->100->100 producer sd')
-          data.addColumn('number', 'topic 1k 100->100->100 consumer')
-          data.addColumn('number', 'topic 1k 100->100->100 consumer sd')
-          data.addColumn('number', 'topic 1k 100->1->1 producer')
-          data.addColumn('number', 'topic 1k 100->1->1 producer sd')
-          data.addColumn('number', 'topic 1k 100->1->1 consumer')
-          data.addColumn('number', 'topic 1k 1->1->100 producer')
-          data.addColumn('number', 'topic 1k 1->1->100 consumer')
-          data.addColumn('number', 'topic 1k 1->1->100 consumer sd')
-          data.addColumn('number', 'topic 1k 100->1->100 producer')
-          data.addColumn('number', 'topic 1k 100->1->100 producer sd')
-          data.addColumn('number', 'topic 1k 100->1->100 consumer')
-          data.addColumn('number', 'topic 1k 100->1->100 consumer sd')
-          data.addColumn('number', 'topic 256k 1->1->0 producer')
-          data.addColumn('number', 'topic 256k 1->1->1 producer')
-          data.addColumn('number', 'topic 256k 1->1->1 consumer')
-          data.addColumn('number', 'topic 256k 10->10->10 producer')
-          data.addColumn('number', 'topic 256k 10->10->10 producer sd')
-          data.addColumn('number', 'topic 256k 10->10->10 consumer')
-          data.addColumn('number', 'topic 256k 10->10->10 consumer sd')
-          data.addColumn('number', 'topic 256k 50->50->50 producer')
-          data.addColumn('number', 'topic 256k 50->50->50 producer sd')
-          data.addColumn('number', 'topic 256k 50->50->50 consumer')
-          data.addColumn('number', 'topic 256k 50->50->50 consumer sd')
-          data.addColumn('number', 'topic 256k 100->100->100 producer')
-          data.addColumn('number', 'topic 256k 100->100->100 producer sd')
-          data.addColumn('number', 'topic 256k 100->100->100 consumer')
-          data.addColumn('number', 'topic 256k 100->100->100 consumer sd')
-          data.addColumn('number', 'topic 256k 100->1->1 producer')
-          data.addColumn('number', 'topic 256k 100->1->1 producer sd')
-          data.addColumn('number', 'topic 256k 100->1->1 consumer')
-          data.addColumn('number', 'topic 256k 1->1->100 producer')
-          data.addColumn('number', 'topic 256k 1->1->100 consumer')
-          data.addColumn('number', 'topic 256k 1->1->100 consumer sd')
-          data.addColumn('number', 'topic 256k 100->1->100 producer')
-          data.addColumn('number', 'topic 256k 100->1->100 producer sd')
-          data.addColumn('number', 'topic 256k 100->1->100 consumer')
-          data.addColumn('number', 'topic 256k 100->1->100 consumer sd')
+        data.addColumn('number', 'queue 20b 1->1->1 producer');
+        data.addColumn('number', 'queue 20b 1->1->1 consumer');
+        data.addColumn('number', 'queue 20b 2->2->2 producer');
+        data.addColumn('number', 'queue 20b 2->2->2 producer sd');
+        data.addColumn('number', 'queue 20b 2->2->2 consumer');
+        data.addColumn('number', 'queue 20b 2->2->2 consumer sd');
+        data.addColumn('number', 'queue 20b 4->4->4 producer');
+        data.addColumn('number', 'queue 20b 4->4->4 producer sd');
+        data.addColumn('number', 'queue 20b 4->4->4 consumer');
+        data.addColumn('number', 'queue 20b 4->4->4 consumer sd');
+        data.addColumn('number', 'queue 20b 8->8->8 producer');
+        data.addColumn('number', 'queue 20b 8->8->8 producer sd');
+        data.addColumn('number', 'queue 20b 8->8->8 consumer');
+        data.addColumn('number', 'queue 20b 8->8->8 consumer sd');
+        data.addColumn('number', 'queue 20b 10->10->10 producer');
+        data.addColumn('number', 'queue 20b 10->10->10 producer sd');
+        data.addColumn('number', 'queue 20b 10->10->10 consumer');
+        data.addColumn('number', 'queue 20b 10->10->10 consumer sd');
+        data.addColumn('number', 'queue 20b 10->1->1 producer');
+        data.addColumn('number', 'queue 20b 10->1->1 producer sd');
+        data.addColumn('number', 'queue 20b 10->1->1 consumer');
+        data.addColumn('number', 'queue 20b 1->1->10 producer');
+        data.addColumn('number', 'queue 20b 1->1->10 consumer');
+        data.addColumn('number', 'queue 20b 1->1->10 consumer sd');
+        data.addColumn('number', 'queue 20b 10->1->10 producer');
+        data.addColumn('number', 'queue 20b 10->1->10 producer sd');
+        data.addColumn('number', 'queue 20b 10->1->10 consumer');
+        data.addColumn('number', 'queue 20b 10->1->10 consumer sd');
+        data.addColumn('number', 'queue 1k 1->1->1 producer');
+        data.addColumn('number', 'queue 1k 1->1->1 consumer');
+        data.addColumn('number', 'queue 1k 2->2->2 producer');
+        data.addColumn('number', 'queue 1k 2->2->2 producer sd');
+        data.addColumn('number', 'queue 1k 2->2->2 consumer');
+        data.addColumn('number', 'queue 1k 2->2->2 consumer sd');
+        data.addColumn('number', 'queue 1k 4->4->4 producer');
+        data.addColumn('number', 'queue 1k 4->4->4 producer sd');
+        data.addColumn('number', 'queue 1k 4->4->4 consumer');
+        data.addColumn('number', 'queue 1k 4->4->4 consumer sd');
+        data.addColumn('number', 'queue 1k 8->8->8 producer');
+        data.addColumn('number', 'queue 1k 8->8->8 producer sd');
+        data.addColumn('number', 'queue 1k 8->8->8 consumer');
+        data.addColumn('number', 'queue 1k 8->8->8 consumer sd');
+        data.addColumn('number', 'queue 1k 10->10->10 producer');
+        data.addColumn('number', 'queue 1k 10->10->10 producer sd');
+        data.addColumn('number', 'queue 1k 10->10->10 consumer');
+        data.addColumn('number', 'queue 1k 10->10->10 consumer sd');
+        data.addColumn('number', 'queue 1k 10->1->1 producer');
+        data.addColumn('number', 'queue 1k 10->1->1 producer sd');
+        data.addColumn('number', 'queue 1k 10->1->1 consumer');
+        data.addColumn('number', 'queue 1k 1->1->10 producer');
+        data.addColumn('number', 'queue 1k 1->1->10 consumer');
+        data.addColumn('number', 'queue 1k 1->1->10 consumer sd');
+        data.addColumn('number', 'queue 1k 10->1->10 producer');
+        data.addColumn('number', 'queue 1k 10->1->10 producer sd');
+        data.addColumn('number', 'queue 1k 10->1->10 consumer');
+        data.addColumn('number', 'queue 1k 10->1->10 consumer sd');
+        data.addColumn('number', 'queue 256k 1->1->1 producer');
+        data.addColumn('number', 'queue 256k 1->1->1 consumer');
+        data.addColumn('number', 'queue 256k 2->2->2 producer');
+        data.addColumn('number', 'queue 256k 2->2->2 producer sd');
+        data.addColumn('number', 'queue 256k 2->2->2 consumer');
+        data.addColumn('number', 'queue 256k 2->2->2 consumer sd');
+        data.addColumn('number', 'queue 256k 4->4->4 producer');
+        data.addColumn('number', 'queue 256k 4->4->4 producer sd');
+        data.addColumn('number', 'queue 256k 4->4->4 consumer');
+        data.addColumn('number', 'queue 256k 4->4->4 consumer sd');
+        data.addColumn('number', 'queue 256k 8->8->8 producer');
+        data.addColumn('number', 'queue 256k 8->8->8 producer sd');
+        data.addColumn('number', 'queue 256k 8->8->8 consumer');
+        data.addColumn('number', 'queue 256k 8->8->8 consumer sd');
+        data.addColumn('number', 'queue 256k 10->10->10 producer');
+        data.addColumn('number', 'queue 256k 10->10->10 producer sd');
+        data.addColumn('number', 'queue 256k 10->10->10 consumer');
+        data.addColumn('number', 'queue 256k 10->10->10 consumer sd');
+        data.addColumn('number', 'queue 256k 10->1->1 producer');
+        data.addColumn('number', 'queue 256k 10->1->1 producer sd');
+        data.addColumn('number', 'queue 256k 10->1->1 consumer');
+        data.addColumn('number', 'queue 256k 1->1->10 producer');
+        data.addColumn('number', 'queue 256k 1->1->10 consumer');
+        data.addColumn('number', 'queue 256k 1->1->10 consumer sd');
+        data.addColumn('number', 'queue 256k 10->1->10 producer');
+        data.addColumn('number', 'queue 256k 10->1->10 producer sd');
+        data.addColumn('number', 'queue 256k 10->1->10 consumer');
+        data.addColumn('number', 'queue 256k 10->1->10 consumer sd');
+        data.addColumn('number', 'topic 20b 1->1->0 producer');
+        data.addColumn('number', 'topic 20b 1->1->1 producer');
+        data.addColumn('number', 'topic 20b 1->1->1 consumer');
+        data.addColumn('number', 'topic 20b 2->2->2 producer');
+        data.addColumn('number', 'topic 20b 2->2->2 producer sd');
+        data.addColumn('number', 'topic 20b 2->2->2 consumer');
+        data.addColumn('number', 'topic 20b 2->2->2 consumer sd');
+        data.addColumn('number', 'topic 20b 4->4->4 producer');
+        data.addColumn('number', 'topic 20b 4->4->4 producer sd');
+        data.addColumn('number', 'topic 20b 4->4->4 consumer');
+        data.addColumn('number', 'topic 20b 4->4->4 consumer sd');
+        data.addColumn('number', 'topic 20b 8->8->8 producer');
+        data.addColumn('number', 'topic 20b 8->8->8 producer sd');
+        data.addColumn('number', 'topic 20b 8->8->8 consumer');
+        data.addColumn('number', 'topic 20b 8->8->8 consumer sd');
+        data.addColumn('number', 'topic 20b 10->10->10 producer');
+        data.addColumn('number', 'topic 20b 10->10->10 producer sd');
+        data.addColumn('number', 'topic 20b 10->10->10 consumer');
+        data.addColumn('number', 'topic 20b 10->10->10 consumer sd');
+        data.addColumn('number', 'topic 20b 10->1->1 producer');
+        data.addColumn('number', 'topic 20b 10->1->1 producer sd');
+        data.addColumn('number', 'topic 20b 10->1->1 consumer');
+        data.addColumn('number', 'topic 20b 1->1->10 producer');
+        data.addColumn('number', 'topic 20b 1->1->10 consumer');
+        data.addColumn('number', 'topic 20b 1->1->10 consumer sd');
+        data.addColumn('number', 'topic 20b 10->1->10 producer');
+        data.addColumn('number', 'topic 20b 10->1->10 producer sd');
+        data.addColumn('number', 'topic 20b 10->1->10 consumer');
+        data.addColumn('number', 'topic 20b 10->1->10 consumer sd');
+        data.addColumn('number', 'topic 1k 1->1->0 producer');
+        data.addColumn('number', 'topic 1k 1->1->1 producer');
+        data.addColumn('number', 'topic 1k 1->1->1 consumer');
+        data.addColumn('number', 'topic 1k 2->2->2 producer');
+        data.addColumn('number', 'topic 1k 2->2->2 producer sd');
+        data.addColumn('number', 'topic 1k 2->2->2 consumer');
+        data.addColumn('number', 'topic 1k 2->2->2 consumer sd');
+        data.addColumn('number', 'topic 1k 4->4->4 producer');
+        data.addColumn('number', 'topic 1k 4->4->4 producer sd');
+        data.addColumn('number', 'topic 1k 4->4->4 consumer');
+        data.addColumn('number', 'topic 1k 4->4->4 consumer sd');
+        data.addColumn('number', 'topic 1k 8->8->8 producer');
+        data.addColumn('number', 'topic 1k 8->8->8 producer sd');
+        data.addColumn('number', 'topic 1k 8->8->8 consumer');
+        data.addColumn('number', 'topic 1k 8->8->8 consumer sd');
+        data.addColumn('number', 'topic 1k 10->10->10 producer');
+        data.addColumn('number', 'topic 1k 10->10->10 producer sd');
+        data.addColumn('number', 'topic 1k 10->10->10 consumer');
+        data.addColumn('number', 'topic 1k 10->10->10 consumer sd');
+        data.addColumn('number', 'topic 1k 10->1->1 producer');
+        data.addColumn('number', 'topic 1k 10->1->1 producer sd');
+        data.addColumn('number', 'topic 1k 10->1->1 consumer');
+        data.addColumn('number', 'topic 1k 1->1->10 producer');
+        data.addColumn('number', 'topic 1k 1->1->10 consumer');
+        data.addColumn('number', 'topic 1k 1->1->10 consumer sd');
+        data.addColumn('number', 'topic 1k 10->1->10 producer');
+        data.addColumn('number', 'topic 1k 10->1->10 producer sd');
+        data.addColumn('number', 'topic 1k 10->1->10 consumer');
+        data.addColumn('number', 'topic 1k 10->1->10 consumer sd');
+        data.addColumn('number', 'topic 256k 1->1->0 producer');
+        data.addColumn('number', 'topic 256k 1->1->1 producer');
+        data.addColumn('number', 'topic 256k 1->1->1 consumer');
+        data.addColumn('number', 'topic 256k 2->2->2 producer');
+        data.addColumn('number', 'topic 256k 2->2->2 producer sd');
+        data.addColumn('number', 'topic 256k 2->2->2 consumer');
+        data.addColumn('number', 'topic 256k 2->2->2 consumer sd');
+        data.addColumn('number', 'topic 256k 4->4->4 producer');
+        data.addColumn('number', 'topic 256k 4->4->4 producer sd');
+        data.addColumn('number', 'topic 256k 4->4->4 consumer');
+        data.addColumn('number', 'topic 256k 4->4->4 consumer sd');
+        data.addColumn('number', 'topic 256k 8->8->8 producer');
+        data.addColumn('number', 'topic 256k 8->8->8 producer sd');
+        data.addColumn('number', 'topic 256k 8->8->8 consumer');
+        data.addColumn('number', 'topic 256k 8->8->8 consumer sd');
+        data.addColumn('number', 'topic 256k 10->10->10 producer');
+        data.addColumn('number', 'topic 256k 10->10->10 producer sd');
+        data.addColumn('number', 'topic 256k 10->10->10 consumer');
+        data.addColumn('number', 'topic 256k 10->10->10 consumer sd');
+        data.addColumn('number', 'topic 256k 10->1->1 producer');
+        data.addColumn('number', 'topic 256k 10->1->1 producer sd');
+        data.addColumn('number', 'topic 256k 10->1->1 consumer');
+        data.addColumn('number', 'topic 256k 1->1->10 producer');
+        data.addColumn('number', 'topic 256k 1->1->10 consumer');
+        data.addColumn('number', 'topic 256k 1->1->10 consumer sd');
+        data.addColumn('number', 'topic 256k 10->1->10 producer');
+        data.addColumn('number', 'topic 256k 10->1->10 producer sd');
+        data.addColumn('number', 'topic 256k 10->1->10 consumer');
+        data.addColumn('number', 'topic 256k 10->1->10 consumer sd');
         
         data_funcs = new Array(data.getNumberOfColumns());
         for( var i=0; i <  data.getNumberOfColumns(); i ++) {
@@ -304,9 +328,10 @@
               chart('queue_partioned_scaling',
                 ['version',
                   ['queue 20b 1->1->1 consumer','1->1->1'],
-                  ['queue 20b 10->10->10 consumer', '10->10->10'],
-                  ['queue 20b 50->50->50 consumer', '50->50->50'],
-                  ['queue 20b 100->100->100 consumer', '100->100->100']
+                  ['queue 20b 2->2->2 consumer', '2->2->2'],
+                  ['queue 20b 4->4->4 consumer', '4->4->4'],
+                  ['queue 20b 8->8->8 consumer', '8->8->8'],
+                  ['queue 20b 10->10->10 consumer', '10->10->10']
                 ],
                 chart_opts()
               );
@@ -326,15 +351,15 @@
             google.setOnLoadCallback(function() {
               chart('queue_contention',
                 ['version',
-                  ['queue 20b 100->1->1 consumer',  '20 byte 100->1->1'],
-                  ['queue 20b 1->1->100 consumer',  '20 byte 1->1->100'],
-                  ['queue 20b 100->1->100 consumer', '20 byte 100->1->100'],
-                  ['queue 1k 100->1->1 consumer',   '1k byte 100->1->1'],
-                  ['queue 1k 1->1->100 consumer',   '1k byte 1->1->100'],
-                  ['queue 1k 100->1->100 consumer',  '1k byte 100->1->100'],
-                  ['queue 256k 100->1->1 consumer',   '256k byte 100->1->1'],
-                  ['queue 256k 1->1->100 consumer',   '256k byte 1->1->100'],
-                  ['queue 256k 100->1->100 consumer',  '256k byte 100->1->100']
+                  ['queue 20b 10->1->1 consumer',  '20 byte 10->1->1'],
+                  ['queue 20b 1->1->10 consumer',  '20 byte 1->1->10'],
+                  ['queue 20b 10->1->10 consumer', '20 byte 10->1->10'],
+                  ['queue 1k 10->1->1 consumer',   '1k byte 10->1->1'],
+                  ['queue 1k 1->1->10 consumer',   '1k byte 1->1->10'],
+                  ['queue 1k 10->1->10 consumer',  '1k byte 10->1->10'],
+                  ['queue 256k 10->1->1 consumer',   '256k byte 10->1->1'],
+                  ['queue 256k 1->1->10 consumer',   '256k byte 1->1->10'],
+                  ['queue 256k 10->1->10 consumer',  '256k byte 10->1->10']
                 ],
                 chart_opts()
               );
@@ -352,18 +377,18 @@
             google.setOnLoadCallback(function() {
               chart('queue_contention_sd',
                 ['version',
-                  ['queue 20b 100->1->1 producer sd',  '20 byte 100->1->1'],
-                  ['queue 20b 1->1->100 consumer sd',  '20 byte 1->1->100'],
-                  ['queue 20b 100->1->100 producer sd', '20 byte 100->1->100 p'],
-                  ['queue 20b 100->1->100 consumer sd', '20 byte 100->1->100 c'],
-                  ['queue 1k 100->1->1 producer sd',   '1k byte 100->1->1'],
-                  ['queue 1k 1->1->100 consumer sd',   '1k byte 1->1->100'],
-                  ['queue 1k 100->1->100 producer sd',  '1k byte 100->1->100 p'],
-                  ['queue 1k 100->1->100 consumer sd',  '1k byte 100->1->100 c'],
-                  ['queue 256k 100->1->1 producer sd',   '256k byte 100->1->1'],
-                  ['queue 256k 1->1->100 consumer sd',   '256k byte 1->1->100'],
-                  ['queue 256k 100->1->100 producer sd',  '256k byte 100->1->100 p'],
-                  ['queue 256k 100->1->100 consumer sd',  '256k byte 100->1->100 c']
+                  ['queue 20b 10->1->1 producer sd',  '20 byte 10->1->1'],
+                  ['queue 20b 1->1->10 consumer sd',  '20 byte 1->1->10'],
+                  ['queue 20b 10->1->10 producer sd', '20 byte 10->1->10 p'],
+                  ['queue 20b 10->1->10 consumer sd', '20 byte 10->1->10 c'],
+                  ['queue 1k 10->1->1 producer sd',   '1k byte 10->1->1'],
+                  ['queue 1k 1->1->10 consumer sd',   '1k byte 1->1->10'],
+                  ['queue 1k 10->1->10 producer sd',  '1k byte 10->1->10 p'],
+                  ['queue 1k 10->1->10 consumer sd',  '1k byte 10->1->10 c'],
+                  ['queue 256k 10->1->1 producer sd',   '256k byte 10->1->1'],
+                  ['queue 256k 1->1->10 consumer sd',   '256k byte 1->1->10'],
+                  ['queue 256k 10->1->10 producer sd',  '256k byte 10->1->10 p'],
+                  ['queue 256k 10->1->10 consumer sd',  '256k byte 10->1->10 c']
                 ],
                 chart_opts()
               );
@@ -389,10 +414,10 @@
               chart('topic_partioned_scaling',
                 ['version',
                   ['topic 20b 1->1->1 consumer','1->1->1'],
-                  ['topic 20b 10->10->10 consumer', '10->10->10'],
-                  ['topic 20b 100->100->100 consumer', '100->100->100'],
-                  ['topic 20b 1000->1000->1000 consumer', '1000->1000->1000'],
-                  ['topic 20b 100->100->100 consumer', '100->100->100']
+                  ['topic 20b 2->2->2 consumer', '2->2->2'],
+                  ['topic 20b 4->4->4 consumer', '4->4->4'],
+                  ['topic 20b 8->8->8 consumer', '8->8->8'],
+                  ['topic 20b 10->10->10 consumer', '10->10->10']
                 ],
                 chart_opts()
               );
@@ -412,15 +437,15 @@
             google.setOnLoadCallback(function() {
               chart('topic_contention',
                 ['version',
-                  ['topic 20b 100->1->1 consumer',  '20 byte 100->1->1'],
-                  ['topic 20b 1->1->100 consumer',  '20 byte 1->1->100'],
-                  ['topic 20b 100->1->100 consumer', '20 byte 100->1->100'],
-                  ['topic 1k 100->1->1 consumer',   '1k byte 100->1->1'],
-                  ['topic 1k 1->1->100 consumer',   '1k byte 1->1->100'],
-                  ['topic 1k 100->1->100 consumer',  '1k byte 100->1->100'],
-                  ['topic 256k 100->1->1 consumer',   '256k byte 100->1->1'],
-                  ['topic 256k 1->1->100 consumer',   '256k byte 1->1->100'],
-                  ['topic 256k 100->1->100 consumer',  '256k byte 100->1->100']
+                  ['topic 20b 10->1->1 consumer',  '20 byte 10->1->1'],
+                  ['topic 20b 1->1->10 consumer',  '20 byte 1->1->10'],
+                  ['topic 20b 10->1->10 consumer', '20 byte 10->1->10'],
+                  ['topic 1k 10->1->1 consumer',   '1k byte 10->1->1'],
+                  ['topic 1k 1->1->10 consumer',   '1k byte 1->1->10'],
+                  ['topic 1k 10->1->10 consumer',  '1k byte 10->1->10'],
+                  ['topic 256k 10->1->1 consumer',   '256k byte 10->1->1'],
+                  ['topic 256k 1->1->10 consumer',   '256k byte 1->1->10'],
+                  ['topic 256k 10->1->10 consumer',  '256k byte 10->1->10']
                 ],
                 chart_opts()
               );
@@ -439,18 +464,18 @@
             google.setOnLoadCallback(function() {
               chart('topic_contention_sd',
                 ['version',
-                  ['topic 20b 100->1->1 producer sd',  '20 byte 100->1->1'],
-                  ['topic 20b 1->1->100 consumer sd',  '20 byte 1->1->100'],
-                  ['topic 20b 100->1->100 producer sd', '20 byte 100->1->100 p'],
-                  ['topic 20b 100->1->100 consumer sd', '20 byte 100->1->100 c'],
-                  ['topic 1k 100->1->1 producer sd',   '1k byte 100->1->1'],
-                  ['topic 1k 1->1->100 consumer sd',   '1k byte 1->1->100'],
-                  ['topic 1k 100->1->100 producer sd',  '1k byte 100->1->100 p'],
-                  ['topic 1k 100->1->100 consumer sd',  '1k byte 100->1->100 c'],
-                  ['topic 256k 100->1->1 producer sd',   '256k byte 100->1->1'],
-                  ['topic 256k 1->1->100 consumer sd',   '256k byte 1->1->100'],
-                  ['topic 256k 100->1->100 producer sd',  '256k byte 100->1->100 p'],
-                  ['topic 256k 100->1->100 consumer sd',  '256k byte 100->1->100 c']
+                  ['topic 20b 10->1->1 producer sd',  '20 byte 10->1->1'],
+                  ['topic 20b 1->1->10 consumer sd',  '20 byte 1->1->10'],
+                  ['topic 20b 10->1->10 producer sd', '20 byte 10->1->10 p'],
+                  ['topic 20b 10->1->10 consumer sd', '20 byte 10->1->10 c'],
+                  ['topic 1k 10->1->1 producer sd',   '1k byte 10->1->1'],
+                  ['topic 1k 1->1->10 consumer sd',   '1k byte 1->1->10'],
+                  ['topic 1k 10->1->10 producer sd',  '1k byte 10->1->10 p'],
+                  ['topic 1k 10->1->10 consumer sd',  '1k byte 10->1->10 c'],
+                  ['topic 256k 10->1->1 producer sd',   '256k byte 10->1->1'],
+                  ['topic 256k 1->1->10 consumer sd',   '256k byte 1->1->10'],
+                  ['topic 256k 10->1->10 producer sd',  '256k byte 10->1->10 p'],
+                  ['topic 256k 10->1->10 consumer sd',  '256k byte 10->1->10 c']
                 ],
                 chart_opts()
               );
