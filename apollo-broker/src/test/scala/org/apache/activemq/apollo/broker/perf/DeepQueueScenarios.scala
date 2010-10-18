@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.broker.perf
 
+import java.net.URL
+
 /**
  * <p>
  * </p>
@@ -23,10 +25,11 @@ package org.apache.activemq.apollo.broker.perf
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait DeepQueueScenarios extends PersistentScenario {
+  override def reportResourceTemplate(): URL = {classOf[PersistentScenario].getResource("persistent-report.html")}
 
   override def highContention = 100
 
-  for ( count <- partitionedLoad ; messageSize <- messageSizes  ) {
+  for (count <- partitionedLoad; messageSize <- messageSizes) {
 
     def benchmark(name: String)(func: => Unit) {
       test(name) {
@@ -36,8 +39,8 @@ trait DeepQueueScenarios extends PersistentScenario {
         func
       }
     }
-    
-    val prefix = "queue " + (if((messageSize%1024)==0) (messageSize/1024)+"k" else messageSize+"b" ) + " "
+
+    val prefix = "queue " + (if ((messageSize % 1024) == 0) (messageSize / 1024) + "k" else messageSize + "b") + " "
     val suffix = "" //(if( durable ) " durable" else "")
 
     benchmark(format("%s%d%s", prefix, count, suffix)) {

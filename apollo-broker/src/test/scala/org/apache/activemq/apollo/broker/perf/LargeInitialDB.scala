@@ -14,18 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 package org.apache.activemq.apollo.broker.perf
 
-import org.apache.activemq.apollo.broker.{Destination, Broker}
+import org.apache.activemq.apollo.broker.Destination
 import tools.nsc.io.Directory
 import org.apache.activemq.apollo.util.metric.MetricAggregator
-import org.apache.activemq.apollo.util.{FileSupport, LoggingTracker}
+import org.apache.activemq.apollo.util.FileSupport
 
 
 trait LargeInitialDB extends PersistentScenario {
-
   PURGE_STORE = false
+  MULTI_BROKER = false
 
   var original: Directory = null
   var backup: Directory = null;
@@ -42,34 +42,27 @@ trait LargeInitialDB extends PersistentScenario {
   override protected def beforeAll(configMap: Map[String, Any]) = {
     super.beforeAll(configMap)
 
-    sendBroker = new Broker()
-    sendBroker.config = createBrokerConfig("Broker", sendBrokerBindURI, sendBrokerConnectURI)
-    val store = sendBroker.config.virtual_hosts.get(0).store
+    initBrokers
 
     original = new Directory(storeDirectory)
-    if ( original.exists ) {
+    if (original.exists) {
       original.deleteRecursively
-      original.createDirectory(true)      
+      original.createDirectory(true)
     }
-    val backupLocation = FileSupport.toDirectory(storeDirectory.getParent)./(FileSupport.toDirectory("backup"))
-    backup = backupLocation
+    backup = FileSupport.toDirectory(storeDirectory.getParent)./(FileSupport.toDirectory("backup"))
     cleanBackup
 
     println("Using store at " + original + " and backup at " + backup)
 
-    var tracker = new LoggingTracker("initial db broker startup")
-    tracker.start(sendBroker)
-    tracker.await
+    controlService(true, sendBroker, "initial db broker startup")
 
     PTP = true
     val dests: Array[Destination] = createDestinations(1)
-    totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items")    
-    val producer: RemoteProducer = _createProducer(0, 1024, dests(0))
+    totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items")
+    val producer: RemoteProducer = _createProducer(0, 20, dests(0))
     producer.persistent = true
 
-    tracker = new LoggingTracker("initial db producer startup")
-    tracker.start(producer)
-    tracker.await
+    controlService(true, producer, "initial db producer startup")
 
     val messages = 1000000L
 
@@ -79,14 +72,8 @@ trait LargeInitialDB extends PersistentScenario {
       Thread.sleep(5000)
     }
 
-    tracker = new LoggingTracker("producer shutdown")
-    tracker.stop(producer)
-    tracker.await
-    tracker = new LoggingTracker("broker shutdown")
-    tracker.stop(sendBroker)
-    tracker.await
-
-    Thread.sleep(10000)
+    controlService(false, producer, "producer shutdown")
+    controlService(false, sendBroker, "broker shutdown")
 
     saveDB
   }

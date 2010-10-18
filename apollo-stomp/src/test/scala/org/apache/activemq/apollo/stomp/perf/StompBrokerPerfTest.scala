@@ -27,20 +27,22 @@ class BasicNonPersistentTest extends BasicScenarios with StompScenario {
 }
 
 class BasicHawtDBTest extends BasicScenarios with PersistentScenario with HawtDBScenario with StompScenario {
-  override def description = "Using the STOMP protocol over TCP"
+  override def description = "Using the STOMP protocol over TCP persistent to the HawtDB store"
 }
 
-class DeepQueueHawtDBTest extends DeepQueueScenarios with LargeInitialDB with HawtDBScenario with StompScenario {
-  override def description = "Using the STOMP protocol over TCP persisting to the HawtDB store."
+class DeepQueueHawtDBTest extends BasicScenarios with LargeInitialDB with HawtDBScenario with StompScenario {
+  override def description = "Using the STOMP protocol over TCP persisting to the HawtDB store that contains 1M messages in a queue."
 }
 
-class DeepQueueBDBTest extends DeepQueueScenarios with LargeInitialDB with BDBScenario with StompScenario {
-  override def description = "Using the STOMP protocol over TCP persisting to the BerkleyDB store."
+class DeepQueueBDBTest extends BasicScenarios with LargeInitialDB with BDBScenario with StompScenario {
+  override def description = "Using the STOMP protocol over TCP persisting to the BerkleyDB store that contains 1M messages in a queue."
 }
 
 trait StompScenario extends BrokerPerfSupport {
   override def createProducer() = new StompRemoteProducer()
+
   override def createConsumer() = new StompRemoteConsumer()
+
   override def getRemoteProtocolName() = "stomp"
 }
 
