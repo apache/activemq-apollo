@@ -24,6 +24,8 @@ import java.nio.channels.{WritableByteChannel, ReadableByteChannel}
 import java.nio.ByteBuffer
 import java.io.IOException
 import java.lang.String
+import java.util.concurrent.TimeUnit
+import org.fusesource.hawtdispatch.ScalaDispatch._
 
 /**
  * <p>
@@ -137,13 +139,15 @@ class MultiProtocolHandler extends ProtocolHandler {
 
   def protocol = "multi"
 
-  var connected = false
+  var discriminated = false
 
   override def onTransportCommand(command: Any) = {
 
     if (!command.isInstanceOf[ProtocolCodec]) {
       throw new ProtocolException("Expected a protocol codec");
     }
+
+    discriminated = true
 
     var codec: ProtocolCodec = command.asInstanceOf[ProtocolCodec];
     val protocol = codec.protocol()
@@ -165,6 +169,17 @@ class MultiProtocolHandler extends ProtocolHandler {
 
   override def onTransportConnected = {
     connection.transport.resumeRead
+    
+    // Make sure client connects eventually...
+    connection.dispatchQueue.after(5, TimeUnit.SECONDS) {
+      assert_discriminated
+    }
+  }
+
+  def assert_discriminated = {
+    if( connection.serviceState.isStarted && !discriminated ) {
+      connection.stop
+    }
   }
 
 }
