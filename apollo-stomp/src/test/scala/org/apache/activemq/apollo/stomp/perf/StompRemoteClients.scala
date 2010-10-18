@@ -33,18 +33,6 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 class StompRemoteConsumer extends RemoteConsumer with Logging {
   var outboundSink: OverflowSink[StompFrame] = null
 
-  def watchdog(lastMessageCount: Int) : Unit = {
-    val seconds = 10
-    dispatchQueue.dispatchAfter(seconds, TimeUnit.SECONDS, ^ {
-          if (messageCount == lastMessageCount) {
-            warn("Messages have stopped arriving after " + seconds + "s, stopping consumer")
-            stop
-          } else {
-            watchdog(messageCount)
-          }
-        })
-  }
-
   def onConnected() = {
     outboundSink = new OverflowSink[StompFrame](MapSink(transportSink){ x=>x })
     outboundSink.refiller = ^{}
@@ -68,7 +56,6 @@ class StompRemoteConsumer extends RemoteConsumer with Logging {
 
     frame = StompFrame(SUBSCRIBE, headers);
     outboundSink.offer(frame);
-    watchdog(messageCount)
   }
 
   override def onTransportCommand(command: Object) = {
@@ -183,32 +170,5 @@ class StompRemoteProducer extends RemoteProducer with Logging {
         onFailure(new Exception("Unexpected stomp command: " + frame.action));
     }
   }
-}
-
-trait Watchog extends RemoteConsumer {
-  var messageCount = 0
-
-  def watchdog(lastMessageCount: Int): Unit = {
-    val seconds = 10
-    dispatchQueue.dispatchAfter(seconds, TimeUnit.SECONDS, ^ {
-      if (messageCount == lastMessageCount) {
-        warn("Messages have stopped arriving after " + seconds + "s, stopping consumer")
-        stop
-      } else {
-        watchdog(messageCount)
-      }
-    })
-  }
-
-  abstract override protected def messageReceived() = {
-    super.messageReceived
-    messageCount += 1
-  }
-
-  abstract override protected def onConnected() = {
-    super.onConnected
-    watchdog(messageCount)
-  }
-
 }
 
