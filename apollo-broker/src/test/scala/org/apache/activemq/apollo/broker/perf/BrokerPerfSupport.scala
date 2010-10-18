@@ -211,6 +211,24 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     config
   }
 
+  def createDestinations(destCount: Int) : Array[Destination] = {
+    var dests = new Array[Destination](destCount)
+
+    for (i <- 0 until destCount) {
+      val domain = if (PTP) {Router.QUEUE_DOMAIN} else {Router.TOPIC_DOMAIN}
+      val name = new AsciiBuffer("dest" + (i + 1))
+      var bean = new SingleDestination(domain, name)
+      dests(i) = bean
+      //        if (PTP) {
+      //          sendBroker.defaultVirtualHost.createQueue(dests(i))
+      //          if (MULTI_BROKER) {
+      //            rcvBroker.defaultVirtualHost.createQueue(dests(i))
+      //          }
+      //        }
+    }
+    dests
+  }
+
   def createConnections() = {
 
     if (MULTI_BROKER) {
@@ -229,24 +247,11 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
 
     startBrokers()
 
-    var dests = new Array[Destination](destCount)
-
-    for (i <- 0 until destCount) {
-      val domain = if (PTP) {Router.QUEUE_DOMAIN} else {Router.TOPIC_DOMAIN}
-      val name = new AsciiBuffer("dest" + (i + 1))
-      var bean = new SingleDestination(domain, name)
-      dests(i) = bean
-//        if (PTP) {
-//          sendBroker.defaultVirtualHost.createQueue(dests(i))
-//          if (MULTI_BROKER) {
-//            rcvBroker.defaultVirtualHost.createQueue(dests(i))
-//          }
-//        }
-    }
+    val dests: Array[Destination] = createDestinations(destCount)
 
     for (i <- 0 until producerCount) {
       var destination = dests(i % destCount)
-      var producer = _createProducer(i, destination)
+      var producer = _createProducer(i, MESSAGE_SIZE,  destination)
       producer.persistent = PERSISTENT
       producers += (producer)
     }
@@ -286,7 +291,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
   }
 
 
-  def _createProducer(id: Int, destination: Destination): RemoteProducer = {
+  def _createProducer(id: Int, messageSize: Int, destination: Destination): RemoteProducer = {
     var producer = createProducer()
     producer.stopping = stopping
 
@@ -296,7 +301,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     producer.destination = destination
     producer.messageIdGenerator = msgIdGenerator
     producer.rateAggregator = totalProducerRate
-    producer.payloadSize = MESSAGE_SIZE
+    producer.payloadSize = messageSize
     producer.init
     producer
   }
@@ -328,7 +333,6 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     }
     tracker.await
   }
-
 
   def startClients() = {
     var tracker = new LoggingTracker("test consumer startup")
@@ -415,6 +419,25 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
 
 
 }
+
+trait FixedSampling extends BrokerPerfSupport {
+  val MIN_MESSAGES = 100000L
+
+  override def fixed_sampling = false
+
+  override def keep_sampling:Boolean = {
+    if( producerCount > 0 && totalMessageSent < MIN_MESSAGES ) {
+      println("Waiting for producers: %s/%s".format(totalMessageSent, MIN_MESSAGES));
+      return true
+    }
+    if ( consumerCount > 0 && totalMessageReceived < MIN_MESSAGES ) {
+      println("Waiting for consumers: %s/%s".format(totalMessageReceived, MIN_MESSAGES));
+      return true
+    }
+    return false
+  }
+}
+
 abstract class RemoteConnection extends Connection {
   var uri: String = null
   var name:String = null
@@ -424,8 +447,6 @@ abstract class RemoteConnection extends Connection {
 
   var stopping:AtomicBoolean = null
   var destination: Destination = null
-
-  var messageCount = 0
 
   def init = {
     if( rate.getName == null ) {
@@ -472,13 +493,6 @@ abstract class RemoteConnection extends Connection {
       }
     }
   }
-
-  protected def doStop()
-
-  protected def incrementMessageCount() = {
-    messageCount = messageCount + 1
-  }
-
 }
 
 abstract class RemoteConsumer extends RemoteConnection {

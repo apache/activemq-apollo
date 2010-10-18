@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.broker.perf
 
-import java.net.URL
-
 /**
  * <p>
  * </p>
@@ -26,30 +24,9 @@ import java.net.URL
  */
 trait DeepQueueScenarios extends PersistentScenario {
 
-  PERSISTENT = true
-  val MIN_MESSAGES = 100000
-
-  override def fixed_sampling = false
-
-  override def keep_sampling:Boolean = {
-    if( producerCount > 0 && totalMessageSent < MIN_MESSAGES ) {
-      println("Waiting for producers: %s/%s".format(totalMessageSent, MIN_MESSAGES));
-      return true
-    }
-    if ( consumerCount > 0 && totalMessageReceived < MIN_MESSAGES ) {
-      println("Waiting for consumers: %s/%s".format(totalMessageReceived, MIN_MESSAGES));
-      return true
-    }
-    return false
-  }
-
-  override def reportResourceTemplate():URL = { classOf[DeepQueueScenarios].getResource("persistent-report.html") }
-
-  //override def partitionedLoad = List(1, 2, 4, 8, 10)
   override def highContention = 100
-  //override def messageSizes = List(20, 1024, 1024*256)
 
-  for ( load <- partitionedLoad ; messageSize <- List(20,1024)  ) {
+  for ( count <- partitionedLoad ; messageSize <- messageSizes  ) {
 
     def benchmark(name: String)(func: => Unit) {
       test(name) {
@@ -59,12 +36,12 @@ trait DeepQueueScenarios extends PersistentScenario {
         func
       }
     }
+    
+    val prefix = "queue " + (if((messageSize%1024)==0) (messageSize/1024)+"k" else messageSize+"b" ) + " "
+    val suffix = "" //(if( durable ) " durable" else "")
 
-    val info = "queue " + MIN_MESSAGES + " " + (if((messageSize%1024)==0) (messageSize/1024)+"k" else messageSize+"b" ) + " with " + load + " "
-
-    benchmark("En" + info + "producer(s)") {
-      PURGE_STORE = true
-      producerCount = load;
+    benchmark(format("%s%d%s", prefix, count, suffix)) {
+      producerCount = count;
       createConnections();
 
       // Start 'em up.
@@ -74,23 +51,6 @@ trait DeepQueueScenarios extends PersistentScenario {
       } finally {
         stopServices();
       }
-      this.assert(totalMessageSent > MIN_MESSAGES, "Unexpected number of messages sent!")
-    }
-
-    benchmark("De" + info + "consumer(s)") {
-      PURGE_STORE = false
-      consumerCount = load;
-      createConnections();
-
-      // Start 'em up.
-      startClients();
-      try {
-        reportRates();
-      } finally {
-        stopServices();
-      }
-      this.assert(totalMessageReceived > MIN_MESSAGES, "Unexpected number of messages received!")
     }
   }
-
 }

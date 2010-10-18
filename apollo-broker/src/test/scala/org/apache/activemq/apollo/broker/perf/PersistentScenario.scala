@@ -16,6 +16,9 @@
  */
 package org.apache.activemq.apollo.broker.perf
 
+import java.net.URL
+import java.io.File
+
 /**
  * <p>
  * </p>
@@ -24,6 +27,9 @@ package org.apache.activemq.apollo.broker.perf
  */
 trait PersistentScenario extends BrokerPerfSupport {
 
+  var storeDirectory: File = null
+
+  override def reportResourceTemplate():URL = { classOf[PersistentScenario].getResource("persistent-report.html") }
   PERSISTENT = true
 
 }
