@@ -35,6 +35,7 @@ import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.dto.{BindingDTO, DurableSubscriptionBindingDTO, PointToPointBindingDTO}
 import java.util.concurrent.TimeUnit
+import java.util.Map.Entry
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -252,7 +253,12 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   var closed = false
   var consumers = Map[AsciiBuffer, StompConsumer]()
 
-  var producerRoutes = Map[Destination, DeliveryProducerRoute]()
+  var producerRoutes = new LRUCache[Destination, DeliveryProducerRoute](10) {
+    override def onCacheEviction(eldest: Entry[Destination, DeliveryProducerRoute]) = {
+      host.router.disconnect(eldest.getValue)
+    }
+  }
+
   var host:VirtualHost = null
 
   private def queue = connection.dispatchQueue
@@ -277,10 +283,12 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     if( !closed ) {
       heart_beat_monitor.stop
       closed=true;
+
+      import collection.JavaConversions._
       producerRoutes.foreach{
         case(_,route)=> host.router.disconnect(route)
       }
-      producerRoutes = Map()
+      producerRoutes.clear
       consumers.foreach {
         case (_,consumer)=>
           if( consumer.binding==null ) {
@@ -487,7 +495,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
     val destiantion: Destination = get(frame.headers, DESTINATION).get
     producerRoutes.get(destiantion) match {
-      case None =>
+      case null =>
         // create the producer route...
 
         val producer = new DeliveryProducer() {
@@ -505,12 +513,12 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
               route.refiller = ^ {
                 connection.transport.resumeRead
               }
-              producerRoutes += destiantion -> route
+              producerRoutes.put(destiantion, route)
               send_via_route(route, frame, uow)
             }
         }
 
-      case Some(route) =>
+      case route =>
         // we can re-use the existing producer route
         send_via_route(route, frame, uow)
 
