@@ -36,7 +36,7 @@ abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfter
    * Returns the base directory of the current project
    */
   def baseDir = {
-    new File(_basedir)
+    new File(_basedir).getCanonicalFile
   }
 
   /**

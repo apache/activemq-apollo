@@ -51,8 +51,14 @@ class FileSupportTest extends FunSuiteSupport with ShouldMatchers {
 
     targetDir.deepList().foreach(file => listing.append(file.toString))
 
-    listing should contain("./target/targetDir/subDir")
-    listing should contain("./target/targetDir/subDir/someFile")
+
+
+
+    
+    var expected = (new File(baseDir)/"target"/"targetDir"/"subDir").normalize.toString
+    listing should contain( expected )
+    expected = (new File(baseDir)/"target"/"targetDir"/"subDir"/"someFile").normalize.toString
+    listing should contain(expected)
 
   }
 
