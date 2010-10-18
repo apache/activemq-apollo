@@ -34,6 +34,7 @@ import org.apache.activemq.apollo.transport._
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.dto.{BindingDTO, DurableSubscriptionBindingDTO, PointToPointBindingDTO}
+import java.util.concurrent.TimeUnit
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -592,9 +593,11 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     if( !connection.stopped ) {
       connection.transport.suspendRead
       connection.transport.offer(StompFrame(ERROR, headers, BufferContent(ascii(explained))) )
-      ^ {
+      // TODO: if there are too many open connections we should just close the connection
+      // without waiting for the error to get sent to the client.
+      queue.after(5, TimeUnit.SECONDS) {
         connection.stop()
-      } >>: queue
+      }
     }
   }
 

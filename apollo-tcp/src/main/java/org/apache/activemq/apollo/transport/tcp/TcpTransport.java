@@ -201,6 +201,8 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
         this.channel.configureBlocking(false);
         this.remoteAddress = channel.socket().getRemoteSocketAddress().toString();
+        channel.socket().setSoLinger(true, 0);
+
         this.socketState = new CONNECTED();
     }
 

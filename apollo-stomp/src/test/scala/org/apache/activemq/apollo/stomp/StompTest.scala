@@ -17,13 +17,27 @@
 package org.apache.activemq.apollo.stomp
 
 import org.scalatest.matchers.ShouldMatchers
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.apache.activemq.apollo.util.FunSuiteSupport
 import org.apache.activemq.apollo.broker.{Broker, BrokerFactory}
 
-class StompTest extends FunSuiteSupport with ShouldMatchers {
+class StompTestSupport extends FunSuiteSupport with ShouldMatchers {
   var broker: Broker = null
 
+  override protected def beforeAll() = {
+    val uri = "xml:classpath:activemq-stomp.xml"
+    info("Loading broker configuration from the classpath with URI: " + uri)
+    broker = BrokerFactory.createBroker(uri, true)
+    Thread.sleep(1000); //TODO implement waitUntilStarted
+  }
+
+  override protected def afterAll() = {
+    broker.stop
+  }
+
+
+}
+
+class Stomp10Test extends StompTestSupport {
 
   test("Stomp 1.0 CONNECT") {
     val client = new StompClient
@@ -38,6 +52,9 @@ class StompTest extends FunSuiteSupport with ShouldMatchers {
     frame should include("version:1.0\n")
   }
 
+}
+
+class Stomp11Test extends StompTestSupport {
 
   test("Stomp 1.1 CONNECT") {
     val client = new StompClient
@@ -69,7 +86,7 @@ class StompTest extends FunSuiteSupport with ShouldMatchers {
     frame should include("version:1.1\n")
   }
 
-  test("Stomp 1.1 CONNECT /w Version Fallback") {
+  test("Stomp 1.1 CONNECT /w valid version fallback") {
     val client = new StompClient
     client.open("localhost", 61613)
 
@@ -84,6 +101,21 @@ class StompTest extends FunSuiteSupport with ShouldMatchers {
     frame should include("version:1.0\n")
   }
 
+  test("Stomp 1.1 CONNECT /w invalid version fallback") {
+    val client = new StompClient
+    client.open("localhost", 61613)
+
+    client.send(
+      "CONNECT\n" +
+      "accept-version:9.0,10.0\n" +
+      "host:default\n" +
+      "\n")
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include regex("""version:.+?\n""")
+    frame should include regex("""message:.+?\n""")
+  }
+
   test("Stomp CONNECT /w invalid virtual host") {
     val client = new StompClient
     client.open("localhost", 61613)
@@ -96,18 +128,6 @@ class StompTest extends FunSuiteSupport with ShouldMatchers {
     val frame = client.receive()
     frame should startWith("ERROR\n")
     frame should include regex("""message:.+?\n""")
-  }
-
-
-  override protected def beforeAll() = {
-    val uri = "xml:classpath:activemq-stomp.xml"
-    info("Loading broker configuration from the classpath with URI: " + uri)
-    broker = BrokerFactory.createBroker(uri, true)
-    Thread.sleep(1000); //TODO implement waitUntilStarted
-  }
-
-  override protected def afterAll() = {
-    broker.stop
   }
 
 }
