@@ -30,12 +30,13 @@ import Stomp._
 import _root_.org.apache.activemq.apollo.stomp.StompFrame
 import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
 
-class StompRemoteConsumer extends RemoteConsumer with Logging {
+
+class StompRemoteConsumer extends RemoteConsumer {
   var outboundSink: OverflowSink[StompFrame] = null
 
   def onConnected() = {
-    outboundSink = new OverflowSink[StompFrame](MapSink(transportSink){ x=>x })
-    outboundSink.refiller = ^{}
+    outboundSink = new OverflowSink[StompFrame](MapSink(transportSink) {x => x})
+    outboundSink.refiller = ^ {}
 
     val stompDestination = if (destination.getDomain() == Router.QUEUE_DOMAIN) {
       ascii("/queue/" + destination.getName().toString());
@@ -96,7 +97,7 @@ class StompRemoteConsumer extends RemoteConsumer with Logging {
 class StompRemoteProducer extends RemoteProducer with Logging {
   var outboundSink: OverflowSink[StompFrame] = null
   var stompDestination: AsciiBuffer = null
-  var frame:StompFrame = null
+  var frame: StompFrame = null
 
   def send_next: Unit = {
       var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
@@ -118,8 +119,8 @@ class StompRemoteProducer extends RemoteProducer with Logging {
   }
 
   def drain() = {
-    if( frame!=null ) {
-      if( !outboundSink.full ) {
+    if (frame != null) {
+      if (!outboundSink.full) {
         outboundSink.offer(frame)
         frame = null
         rate.increment
@@ -129,7 +130,7 @@ class StompRemoteProducer extends RemoteProducer with Logging {
           }
         }
 
-        if( !persistent ) {
+        if (!persistent) {
           // if we are not going to wait for an ack back from the server,
           // then jut send the next one...
           if (thinkTime > 0) {
@@ -143,8 +144,8 @@ class StompRemoteProducer extends RemoteProducer with Logging {
   }
 
   override def onConnected() = {
-    outboundSink = new OverflowSink[StompFrame](MapSink(transportSink){ x=>x })
-    outboundSink.refiller = ^ { drain }
+    outboundSink = new OverflowSink[StompFrame](MapSink(transportSink) {x => x})
+    outboundSink.refiller = ^ {drain}
 
     if (destination.getDomain() == Router.QUEUE_DOMAIN) {
       stompDestination = ascii("/queue/" + destination.getName().toString());
@@ -170,5 +171,32 @@ class StompRemoteProducer extends RemoteProducer with Logging {
         onFailure(new Exception("Unexpected stomp command: " + frame.action));
     }
   }
+}
+
+trait Watchog extends RemoteConsumer {
+  var messageCount = 0
+
+  def watchdog(lastMessageCount: Int): Unit = {
+    val seconds = 10
+    dispatchQueue.dispatchAfter(seconds, TimeUnit.SECONDS, ^ {
+      if (messageCount == lastMessageCount) {
+        warn("Messages have stopped arriving after " + seconds + "s, stopping consumer")
+        stop
+      } else {
+        watchdog(messageCount)
+      }
+    })
+  }
+
+  abstract override protected def messageReceived() = {
+    super.messageReceived
+    messageCount += 1
+  }
+
+  abstract override protected def onConnected() = {
+    super.onConnected
+    watchdog(messageCount)
+  }
+
 }
 

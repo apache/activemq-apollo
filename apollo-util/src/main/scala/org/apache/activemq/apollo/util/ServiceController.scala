@@ -23,20 +23,36 @@ import collection.mutable.ListBuffer
   Simple trait to cut down on the code necessary to manage BaseService instances
  */
 
-trait ServiceController {
+object ServiceControl {
 
   // start or stop a single service
-  def controlService(start: Boolean, service: Service, action: String) = {
+  private def controlService(start: Boolean, service: Service, action: String) = {
     val tracker = new LoggingTracker(action)
     if (start) tracker.start(service) else tracker.stop(service)
     tracker.await
   }
 
   // start or stop a bunch of services in one go
-  def controlServices(start: Boolean, services: ListBuffer[Service], action: String) = {
+  private def controlServices(start: Boolean, services: ListBuffer[Service], action: String) = {
     val tracker = new LoggingTracker(action)
-    services.foreach((service: Service) => {if (start) tracker.start(service) else tracker.stop(service)})
+    services.foreach(service => {if (start) tracker.start(service) else tracker.stop(service)})
     tracker.await
+  }
+
+  def start(services: ListBuffer[Service], action: String) = {
+    controlServices(true, services, action)
+  }
+
+  def stop(services: ListBuffer[Service], action: String) = {
+    controlServices(false, services, action)
+  }
+
+  def start(service: Service, action: String) = {
+    controlService(true, service, action)
+  }
+
+  def stop(service: Service, action: String) = {
+    controlService(false, service, action)
   }
 
 

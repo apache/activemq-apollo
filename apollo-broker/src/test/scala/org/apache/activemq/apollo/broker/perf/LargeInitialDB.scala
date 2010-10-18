@@ -20,8 +20,7 @@ package org.apache.activemq.apollo.broker.perf
 import org.apache.activemq.apollo.broker.Destination
 import tools.nsc.io.Directory
 import org.apache.activemq.apollo.util.metric.MetricAggregator
-import org.apache.activemq.apollo.util.FileSupport
-
+import org.apache.activemq.apollo.util.{ServiceControl, FileSupport}
 
 trait LargeInitialDB extends PersistentScenario {
   PURGE_STORE = false
@@ -54,7 +53,7 @@ trait LargeInitialDB extends PersistentScenario {
 
     println("Using store at " + original + " and backup at " + backup)
 
-    controlService(true, sendBroker, "initial db broker startup")
+    ServiceControl.start(sendBroker, "initial db broker startup")
 
     PTP = true
     val dests: Array[Destination] = createDestinations(1)
@@ -62,7 +61,7 @@ trait LargeInitialDB extends PersistentScenario {
     val producer: RemoteProducer = _createProducer(0, 20, dests(0))
     producer.persistent = true
 
-    controlService(true, producer, "initial db producer startup")
+    ServiceControl.start(producer, "initial db producer startup")
 
     val messages = 1000000L
 
@@ -72,8 +71,8 @@ trait LargeInitialDB extends PersistentScenario {
       Thread.sleep(5000)
     }
 
-    controlService(false, producer, "producer shutdown")
-    controlService(false, sendBroker, "broker shutdown")
+    ServiceControl.stop(producer, "producer shutdown")
+    ServiceControl.stop(sendBroker, "broker shutdown")
 
     saveDB
   }
