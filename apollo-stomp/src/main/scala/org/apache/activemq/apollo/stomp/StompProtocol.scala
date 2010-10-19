@@ -313,8 +313,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
           // so we know which wire format is being used.
         case frame:StompFrame=>
 
-          info("got command: %s", frame)
           if( protocol_version eq None ) {
+
+            info("got command: %s", frame)
             frame.action match {
               case STOMP =>
                 on_stomp_connect(frame.headers)
