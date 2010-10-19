@@ -99,13 +99,15 @@ class StompRemoteProducer extends RemoteProducer with Logging {
   var stompDestination: AsciiBuffer = null
   var frame: StompFrame = null
 
+  def use_send_receipt = persistent && sync_persistent_send
+
   def send_next: Unit = {
       var headers: List[(AsciiBuffer, AsciiBuffer)] = Nil
       headers ::= (DESTINATION, stompDestination);
       if (property != null) {
         headers ::= (ascii(property), ascii(property));
       }
-      if( persistent ) {
+      if( use_send_receipt ) {
         headers ::= ((RECEIPT_REQUESTED, ascii("x")));
       }
       //    var p = this.priority;
@@ -130,7 +132,7 @@ class StompRemoteProducer extends RemoteProducer with Logging {
           }
         }
 
-        if (!persistent) {
+        if (!use_send_receipt) {
           // if we are not going to wait for an ack back from the server,
           // then jut send the next one...
           if (thinkTime > 0) {
@@ -160,7 +162,7 @@ class StompRemoteProducer extends RemoteProducer with Logging {
     var frame = command.asInstanceOf[StompFrame]
     frame match {
       case StompFrame(RECEIPT, headers, _, _) =>
-        assert( persistent )
+        assert( use_send_receipt )
         // we got the ack for the previous message we sent.. now send the next one.
         send_next
 

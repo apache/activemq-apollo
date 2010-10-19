@@ -96,6 +96,7 @@ abstract class RemoteProducer extends RemoteConnection {
   var messageIdGenerator: AtomicLong = null
   var priority = 0
   var persistent = false
+  var sync_persistent_send = true
   var priorityMod = 0
   var counter = 0
   var producerId = 0

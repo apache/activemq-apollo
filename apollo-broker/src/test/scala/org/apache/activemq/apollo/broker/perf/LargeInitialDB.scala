@@ -29,6 +29,9 @@ trait LargeInitialDB extends PersistentScenario {
   var original: Directory = null
   var backup: Directory = null;
 
+  // Keep it simple.. we are only creating 1 queue with a large number of entries.
+  override def partitionedLoad = List(1)
+
   // delete existing data file and copy new data file over
   override protected def beforeEach() = {
     println("Restoring DB")
@@ -57,21 +60,26 @@ trait LargeInitialDB extends PersistentScenario {
 
     PTP = true
     val dests: Array[Destination] = createDestinations(1)
+
     totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items")
+
     val producer: RemoteProducer = _createProducer(0, 20, dests(0))
+
     producer.persistent = true
+    producer.sync_persistent_send = false // this should speed things up.
 
     ServiceControl.start(producer, "initial db producer startup")
 
     val messages = 1000000L
 
-    println("Filling broker with " + messages + " 1k messages")
+    println("Sending %d messages".format(messages))
     while (producer.rate.counter() < messages) {
       println("Waiting for producer " + producer.rate.counter() + "/" + messages)
       Thread.sleep(5000)
     }
 
     ServiceControl.stop(producer, "producer shutdown")
+
     ServiceControl.stop(sendBroker, "broker shutdown")
 
     saveDB
