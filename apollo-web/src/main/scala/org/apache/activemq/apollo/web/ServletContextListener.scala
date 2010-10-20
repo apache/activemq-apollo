@@ -16,27 +16,23 @@
  */
 package org.apache.activemq.apollo.web
 
-import com.google.inject.servlet.GuiceServletContextListener
-import org.fusesource.scalate.guice.ScalateModule
-import javax.servlet.ServletContextEvent
 import java.io.File
-import com.google.inject.{Provides, Guice, Singleton}
 import org.apache.activemq.apollo.broker.{BrokerRegistry, Broker}
 import org.apache.activemq.apollo.util._
+import javax.servlet.{ServletContextListener, ServletContextEvent}
 
 
 /**
- * A servlet context listener which registers
- * <a href="http://code.google.com/p/google-guice/wiki/Servlets">Guice Servlet</a>
+ * A servlet context listener which handles starting the
+ * broker instance.
  *
  * @version $Revision : 1.1 $
  */
-class ServletContextListener extends GuiceServletContextListener {
+class ApolloListener extends ServletContextListener {
 
   var configStore:ConfigStore = null
 
-  override def contextInitialized(servletContextEvent: ServletContextEvent) = {
-
+  def contextInitialized(sce: ServletContextEvent) = {
     try {
       configStore = createConfigStore
       ConfigStore() = configStore
@@ -64,13 +60,9 @@ class ServletContextListener extends GuiceServletContextListener {
       case e:Exception =>
         e.printStackTrace
     }
-
-    super.contextInitialized(servletContextEvent);
   }
 
-  override def contextDestroyed(servletContextEvent: ServletContextEvent) = {
-    super.contextDestroyed(servletContextEvent);
-    
+  def contextDestroyed(sce: ServletContextEvent) = {
     val tracker = new LoggingTracker("webapp shutdown")
     configStore.foreachBroker(false) { config=>
       // remove started brokers what we configured..
@@ -83,21 +75,6 @@ class ServletContextListener extends GuiceServletContextListener {
     tracker.await
     configStore = null
   }
-
-  def getInjector = Guice.createInjector(new ScalateModule() {
-
-    @Singleton
-    @Provides
-    def provideConfigStore:ConfigStore = configStore
-
-    // lets add any package names which contain JAXRS resources
-    // https://jersey.dev.java.net/issues/show_bug.cgi?id=485
-    override def resourcePackageNames =
-      "org.apache.activemq.apollo.web.resources" ::
-      "org.codehaus.jackson.jaxrs" ::
-      super.resourcePackageNames
-  })
-
 
   def createConfigStore():ConfigStore = {
     val store = new FileConfigStore

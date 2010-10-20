@@ -23,30 +23,67 @@
 	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 	version="2.5">
 
-  <display-name>Bookstore</display-name>
+  <display-name>Apollo</display-name>
 
   <description>
-    Bookstore Sample
+    The Apollo web application
   </description>
 
   <listener>
-    <listener-class>org.apache.activemq.apollo.web.ServletContextListener</listener-class>
+    <listener-class>org.apache.activemq.apollo.web.ApolloListener</listener-class>
   </listener>
 
   <filter>
-    <filter-name>guiceFilter</filter-name>
-    <filter-class>com.google.inject.servlet.GuiceFilter</filter-class>
+    <filter-name>Jersey Filter</filter-name>
+    <filter-class>com.sun.jersey.spi.container.servlet.ServletContainer</filter-class>
+    <init-param>
+      <param-name>com.sun.jersey.config.feature.Trace</param-name>
+      <param-value>false</param-value>
+    </init-param>
+    <init-param>
+      <param-name>com.sun.jersey.config.feature.Redirect</param-name>
+      <param-value>true</param-value>
+    </init-param>
+    <init-param>
+      <param-name>com.sun.jersey.config.feature.ImplicitViewables</param-name>
+      <param-value>true</param-value>
+    </init-param>
+    <init-param>
+      <param-name>com.sun.jersey.config.property.packages</param-name>
+      <param-value>
+        org.codehaus.jackson.jaxrs;
+        org.fusesource.scalate.console;
+        org.apache.activemq.apollo.web.resources
+      </param-value>
+    </init-param>
+    <init-param>
+      <param-name>com.sun.jersey.config.feature.FilterForwardOn404</param-name>
+      <param-value>true</param-value>
+    </init-param>
   </filter>
 
   <filter-mapping>
-    <filter-name>guiceFilter</filter-name>
+    <filter-name>Jersey Filter</filter-name>
     <url-pattern>/*</url-pattern>
   </filter-mapping>
+
+  <filter>
+    <filter-name>TemplateEngineFilter</filter-name>
+    <filter-class>org.fusesource.scalate.servlet.TemplateEngineFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>TemplateEngineFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
+  <welcome-file-list>
+    <welcome-file>index</welcome-file>
+  </welcome-file-list>
 
   <error-page>
     <error-code>500</error-code>
     <location>/WEB-INF/scalate/errors/500.scaml</location>
   </error-page>
-  
+
 
 </web-app>

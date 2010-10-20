@@ -84,7 +84,7 @@
     <regexp-version>1.3</regexp-version>
     <rome-version>0.8</rome-version>
 
-    <slf4j-version>1.5.0</slf4j-version>
+    <slf4j-version>1.6.0</slf4j-version>
 
     <jaxb-api-version>2.1</jaxb-api-version>
     <jaxb-version>2.1.6</jaxb-version>
@@ -106,10 +106,11 @@
     <bdb-version>4.0.103</bdb-version>
     
     <jetty-version>6.1.22</jetty-version>
-    <scalate-version>1.2</scalate-version>
+    <scalate-version>1.4-SNAPSHOT</scalate-version>
     <servlet-api-version>2.5</servlet-api-version>
     <jackson-version>1.5.2</jackson-version>
-    <logback-version>0.9.18</logback-version>
+    <logback-version>0.9.24</logback-version>
+    <jersey-version>1.5-ea01</jersey-version>
     
     <!-- maven plugin versions -->
     <maven-scala-plugin-version>2.14</maven-scala-plugin-version>
@@ -569,7 +570,7 @@
           <plugin>
             <groupId>org.fusesource.mvnplugins</groupId>
             <artifactId>maven-graph-plugin</artifactId>
-            <version>1.7</version>
+            <version>1.11</version>
           </plugin>
         </plugins>
       </build>

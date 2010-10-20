@@ -35,10 +35,10 @@
       .wrapper
         %ul
           %li
-            - if (requestURI.startsWith("/index."))
-              %span Home
-            - else
-              %a(href={uri("/index.scaml")}) Home
+            -# - if (requestURI.startsWith("/index."))
+            -#   %span Home
+            -# - else
+            %a(href={uri("/index.scaml")}) Home
 
     #content
       .wrapper
