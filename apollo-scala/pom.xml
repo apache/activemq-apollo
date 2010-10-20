@@ -29,7 +29,7 @@
   <packaging>pom</packaging>
   <version>6.0-SNAPSHOT</version>
 
-  <name>${artifactId}</name>
+  <name>${project.artifactId}</name>
   <description>Holds the common Maven settings for Scala based modules.</description>
   
  <dependencies>

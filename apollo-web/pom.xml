@@ -25,6 +25,7 @@
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-scala</artifactId>
     <version>6.0-SNAPSHOT</version>
+    <relativePath>../apollo-scala</relativePath>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
@@ -32,7 +33,7 @@
   <packaging>war</packaging>
   <version>6.0-SNAPSHOT</version>
 
-  <name>${artifactId}</name>
+  <name>${project.artifactId}</name>
 
   <properties>
     <jetty-port>8080</jetty-port>
