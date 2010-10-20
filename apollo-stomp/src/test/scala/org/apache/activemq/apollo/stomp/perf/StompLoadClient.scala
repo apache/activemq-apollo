@@ -186,7 +186,7 @@ object StompLoadClient {
       try {
         val connectUri = new URI(uri)
         client.open(connectUri.getHost(), connectUri.getPort())
-        client.send("""CONNECT
+        client.write("""CONNECT
 
 """)
         client.receive("CONNECTED")
@@ -235,7 +235,7 @@ object StompLoadClient {
           this.client=client
           var i =0
           while (!done.get) {
-            client.send(content)
+            client.write(content)
             if( syncSend ) {
               // waits for the reply..
               client.skip
@@ -272,7 +272,7 @@ object StompLoadClient {
       while (!done.get) {
         connect {
           val headers = Map[AsciiBuffer, AsciiBuffer]()
-          client.send(
+          client.write(
             "SUBSCRIBE\n" +
              (if(!durable) {""} else {"id:durable:mysub-"+id+"\n"}) + 
              (if(selector==null) {""} else {"selector: "+selector+"\n"}) +
@@ -294,7 +294,7 @@ object StompLoadClient {
           assert( start >= 0 )
           val end = msg.indexOf("\n", start)
           val msgId = msg.slice(start+MESSAGE_ID.length+1, end).ascii
-          client.send("""
+          client.write("""
 ACK
 message-id:"""+msgId+"""
 

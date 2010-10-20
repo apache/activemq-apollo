@@ -45,14 +45,14 @@ import java.io._
       socket.close
     }
 
-    def send(frame:String) = {
+    def write(frame:String) = {
       out.write(frame.getBytes("UTF-8"))
       out.write(0)
       out.write('\n')
       out.flush
     }
 
-    def send(frame:Array[Byte]) = {
+    def write(frame:Array[Byte]) = {
       out.write(frame)
       out.write(0)
       out.write('\n')

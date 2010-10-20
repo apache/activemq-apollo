@@ -190,7 +190,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     cb(queues.get(binding))
   } >>: dispatchQueue
 
-  def bind(destination:Destination, consumer:DeliveryConsumer) = retaining(consumer) {
+  def bind(destination:Destination, consumer:DeliveryConsumer, on_complete:Runnable = ^{} ) = retaining(consumer) {
 
     assert( is_topic(destination) )
 
@@ -206,6 +206,8 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     )
     broadcast_consumers.put(name, consumer)
 
+    on_complete.run
+    
   } >>: dispatchQueue
 
   def unbind(destination:Destination, consumer:DeliveryConsumer) = releasing(consumer) {

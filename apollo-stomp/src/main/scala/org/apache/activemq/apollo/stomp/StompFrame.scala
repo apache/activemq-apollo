@@ -410,14 +410,20 @@ object Stomp {
   ///////////////////////////////////////////////////////////////////
   val TRUE = ascii("true")
   val FALSE = ascii("false")
-  val AUTO = ascii("auto")
-  val CLIENT = ascii("client")
-  val INDIVIDUAL = ascii("client-individual")
+
+  val ACK_MODE_AUTO = ascii("auto")
+  val ACK_MODE_NONE = ascii("none")
+  
+  val ACK_MODE_CLIENT = ascii("client")
+  val ACK_MODE_SESSION = ascii("session")
+  
+  val ACK_MODE_MESSAGE = ascii("message")
+    
   val V1_0 = ascii("1.0")
   val V1_1 = ascii("1.1")
   val DEFAULT_HEAT_BEAT = ascii("0,0")
 
-  val SUPPORTED_PROTOCOL_VERSIONS = Set(V1_0,V1_1)
+  val SUPPORTED_PROTOCOL_VERSIONS = List(V1_1, V1_0)
 
   //	public enum Transformations {
   //		JMS_BYTE, JMS_OBJECT_XML, JMS_OBJECT_JSON, JMS_MAP_XML, JMS_MAP_JSON

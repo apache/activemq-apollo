@@ -176,8 +176,104 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   protected def dispatchQueue:DispatchQueue = connection.dispatchQueue
 
-  class StompConsumer(val subscription_id:Option[AsciiBuffer], val destination:Destination, val ackMode:AsciiBuffer, val selector:(AsciiBuffer, BooleanExpression), val binding:BindingDTO) extends BaseRetained with DeliveryConsumer {
+
+  trait AckHandler {
+    def track(delivery:Delivery):Unit
+    def perform_ack(msgid: AsciiBuffer, uow:StoreUOW=null):Unit
+  }
+
+  class AutoAckHandler extends AckHandler {
+    def track(delivery:Delivery) = {
+      if( delivery.ack!=null ) {
+        delivery.ack(null)
+      }
+    }
+    
+    def perform_ack(msgid: AsciiBuffer, uow:StoreUOW=null) = {
+      die("The subscription ack mode does not expect ACK frames")
+    }
+  }
+
+  class SessionAckHandler extends AckHandler{
+    var consumer_acks = ListBuffer[(AsciiBuffer, (StoreUOW)=>Unit)]()
+
+    def track(delivery:Delivery) = {
+      queue {
+        if( protocol_version eq V1_0 ) {
+          // register on the connection since 1.0 acks may not include the subscription id
+          connection_ack_handlers += ( delivery.message.id-> this )
+        }
+        consumer_acks += (( delivery.message.id, delivery.ack ))
+      }
+
+    }
+
+
+    def perform_ack(msgid: AsciiBuffer, uow:StoreUOW=null) = {
+
+      // session acks ack all previously recieved messages..
+      var found = false
+      val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
+        if( found ) {
+          false
+        } else {
+          if( id == msgid ) {
+            found = true
+          }
+          true
+        }
+      }
+
+      if( acked.isEmpty ) {
+        die("ACK failed, invalid message id: %s".format(msgid))
+      } else {
+        consumer_acks = not_acked
+        acked.foreach{case (id, ack)=>
+          if( ack!=null ) {
+            ack(uow)
+          }
+        }
+      }
+
+      if( protocol_version eq V1_0 ) {
+        connection_ack_handlers.remove(msgid)
+      }
+    }
+
+
+
+  }
+  class MessageAckHandler extends AckHandler {
+    var consumer_acks = HashMap[AsciiBuffer, (StoreUOW)=>Unit]()
+
+    def track(delivery:Delivery) = {
+      queue {
+        if( protocol_version eq V1_0 ) {
+          // register on the connection since 1.0 acks may not include the subscription id
+          connection_ack_handlers += ( delivery.message.id-> this )
+        }
+        consumer_acks += ( delivery.message.id -> delivery.ack )
+      }
+    }
+
+    def perform_ack(msgid: AsciiBuffer, uow:StoreUOW=null) = {
+      consumer_acks.remove(msgid) match {
+        case Some(ack) =>
+          if( ack!=null ) {
+            ack(uow)
+          }
+        case None => die("ACK failed, invalid message id: %s".format(msgid))
+      }
+
+      if( protocol_version eq V1_0 ) {
+        connection_ack_handlers.remove(msgid)
+      }
+    }
+  }
+
+  class StompConsumer(val subscription_id:Option[AsciiBuffer], val destination:Destination, val ack_handler:AckHandler, val selector:(AsciiBuffer, BooleanExpression), val binding:BindingDTO) extends BaseRetained with DeliveryConsumer {
     val dispatchQueue = StompProtocolHandler.this.dispatchQueue
+
 
     dispatchQueue.retain
     setDisposer(^{
@@ -218,18 +314,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         if( session.full ) {
           false
         } else {
-          if( delivery.ack!=null) {
-            if( ackMode eq AUTO ) {
-              delivery.ack(null)
-            } else {
-              // switch the the queue context.. this method is in the producer's context.
-              queue {
-                // we need to correlate acks from the client.. to invoke the
-                // delivery ack.
-                pendingAcks += ( delivery.message.id->delivery.ack )
-              }
-            }
-          }
+          ack_handler.track(delivery)
           var frame = delivery.message.asInstanceOf[StompFrameMessage].frame
           if( subscription_id != None ) {
             frame = frame.append_headers((SUBSCRIPTION, subscription_id.get)::Nil)
@@ -262,11 +347,12 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   var host:VirtualHost = null
 
   private def queue = connection.dispatchQueue
-  var pendingAcks = HashMap[AsciiBuffer, (StoreUOW)=>Unit]()
 
+  // uses by STOMP 1.0 clients
+  var connection_ack_handlers = HashMap[AsciiBuffer, AckHandler]()
 
-  var session_id:Option[AsciiBuffer] = None
-  var protocol_version:Option[AsciiBuffer] = None
+  var session_id:AsciiBuffer = _
+  var protocol_version:AsciiBuffer = _
 
   var heart_beat_monitor:HeartBeatMonitor = new HeartBeatMonitor
 
@@ -313,7 +399,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
           // so we know which wire format is being used.
         case frame:StompFrame=>
 
-          if( protocol_version eq None ) {
+          if( protocol_version == null ) {
 
             info("got command: %s", frame)
             frame.action match {
@@ -364,9 +450,15 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   def on_stomp_connect(headers:HeaderMap):Unit = {
 
-
-    protocol_version = get(headers, ACCEPT_VERSION).getOrElse(V1_0).split(COMMA).map(_.ascii).reverse.find{v=>
-      SUPPORTED_PROTOCOL_VERSIONS.contains(v)
+    val accept_versions = get(headers, ACCEPT_VERSION).getOrElse(V1_0).split(COMMA).map(_.ascii)
+    protocol_version = SUPPORTED_PROTOCOL_VERSIONS.find( v=> accept_versions.contains(v) ) match {
+      case Some(x) => x
+      case None=>
+        val supported_versions = SUPPORTED_PROTOCOL_VERSIONS.mkString(",")
+        _die((MESSAGE_HEADER, ascii("version not supported"))::
+            (VERSION, ascii(supported_versions))::Nil,
+            "Supported protocol versions are %s".format(supported_versions))
+        return
     }
 
     val heart_beat = get(headers, HEART_BEAT).getOrElse(DEFAULT_HEAT_BEAT)
@@ -406,52 +498,40 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         return
     }
 
-    protocol_version match {
-      case None =>
-        val supported_versions = SUPPORTED_PROTOCOL_VERSIONS.mkString(",")
+    connection.transport.suspendRead
 
-        _die((MESSAGE_HEADER, ascii("version not supported"))::
-            (VERSION, ascii(supported_versions))::Nil,
-            "Supported protocol versions are %s".format(supported_versions))
-        return
+    val host_header = get(headers, HOST)
+    val cb: (VirtualHost)=>Unit = (host)=>
+      queue {
+        if(host!=null) {
+          this.host=host
 
-      case Some(x) =>
-        connection.transport.suspendRead
+          val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
+          session_id = ascii(this.host.config.id + ":"+this.host.session_counter.incrementAndGet)
 
-        val host_header = get(headers, HOST)
-        val cb: (VirtualHost)=>Unit = (host)=>
-          queue {
-            if(host!=null) {
-              this.host=host
+          connection_sink.offer(
+            StompFrame(CONNECTED, List(
+              (VERSION, protocol_version),
+              (SESSION, session_id),
+              (HEART_BEAT, outbound_heart_beat_header)
+            )))
 
-              val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
-              session_id = Some(ascii(this.host.config.id + ":"+this.host.session_counter.incrementAndGet))
-
-              connection_sink.offer(
-                StompFrame(CONNECTED, List(
-                  (VERSION, protocol_version.get),
-                  (SESSION, session_id.get),
-                  (HEART_BEAT, outbound_heart_beat_header)
-                )))
-
-              if( this.host.direct_buffer_pool!=null ) {
-                val wf = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
-                wf.memory_pool = this.host.direct_buffer_pool
-              }
-              connection.transport.resumeRead
-
-            } else {
-              die("Invalid virtual host: "+host_header.get)
-            }
+          if( this.host.direct_buffer_pool!=null ) {
+            val wf = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
+            wf.memory_pool = this.host.direct_buffer_pool
           }
+          connection.transport.resumeRead
 
-        host_header match {
-          case None=>
-            connection.connector.broker.getDefaultVirtualHost(cb)
-          case Some(host)=>
-            connection.connector.broker.getVirtualHost(host, cb)
+        } else {
+          die("Invalid virtual host: "+host_header.get)
         }
+      }
 
+    host_header match {
+      case None=>
+        connection.connector.broker.getDefaultVirtualHost(cb)
+      case Some(host)=>
+        connection.connector.broker.getVirtualHost(host, cb)
     }
 
   }
@@ -485,7 +565,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
             perform_send(frame)
           case Some(txid)=>
             get_or_create_tx_queue(txid){ txqueue=>
-              txqueue.add(frame)
+              txqueue.add(frame, (uow)=>{perform_send(frame, uow)} )
             }
         }
 
@@ -580,7 +660,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     frame.release
   }
 
-  def on_stomp_subscribe(headers:HeaderMap) = {
+  def on_stomp_subscribe(headers:HeaderMap):Unit = {
+    val receipt = get(headers, RECEIPT_REQUESTED)
     get(headers, DESTINATION) match {
       case Some(dest)=>
 
@@ -588,13 +669,13 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         val subscription_id = get(headers, ID)
         var id:AsciiBuffer = subscription_id match {
           case None =>
-            if( protocol_version.get == V1_0 )
+            if( protocol_version eq V1_0 )
               // in 1.0 it's ok if the client does not send us the
               // the id header
               dest
             else
               die("The id header is missing from the SUBSCRIBE frame");
-              null
+              return
 
           case Some(x:AsciiBuffer)=> x
         }
@@ -607,11 +688,14 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
           null
         }
 
-        val ack:AsciiBuffer = get(headers, ACK_MODE) match {
-          case None=> AUTO
+        val ack = get(headers, ACK_MODE) match {
+          case None=> new AutoAckHandler
           case Some(x)=> x match {
-            case AUTO=>AUTO
-            case CLIENT=> CLIENT
+            case ACK_MODE_AUTO=>new AutoAckHandler
+            case ACK_MODE_NONE=>new AutoAckHandler
+            case ACK_MODE_CLIENT=> new SessionAckHandler
+            case ACK_MODE_SESSION=> new SessionAckHandler
+            case ACK_MODE_MESSAGE=> new MessageAckHandler
             case ack:AsciiBuffer => die("Unsuported ack mode: "+ack); null
           }
         }
@@ -660,7 +744,11 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
             if( binding==null ) {
 
               // consumer is bind bound as a topic
-              host.router.bind(destination, consumer)
+              host.router.bind(destination, consumer, ^{
+                receipt.foreach{ receipt =>
+                  connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+                }
+              })
               consumer.release
 
             } else {
@@ -670,6 +758,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
                 x match {
                   case Some(queue:Queue) =>
                     queue.bind(consumer::Nil)
+                    receipt.foreach{ receipt =>
+                      connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+                    }
                     consumer.release
                   case None => throw new RuntimeException("case not yet implemented.")
                 }
@@ -687,36 +778,55 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   }
 
-  def on_stomp_ack(frame:StompFrame) = {
+  def on_stomp_ack(frame:StompFrame):Unit = {
     val headers = frame.headers
     get(headers, MESSAGE_ID) match {
       case Some(messageId)=>
-        pendingAcks.get(messageId) match {
-          case Some(ack) =>
-            get(headers, TRANSACTION) match {
-              case None=>
-                perform_ack(frame)
-              case Some(txid)=>
-                get_or_create_tx_queue(txid){ txqueue=>
-                  txqueue.add(frame)
-                }
+
+        val subscription_id = get(headers, SUBSCRIPTION);
+        if( subscription_id == None && !(protocol_version eq V1_0) ) {
+          die("The subscription header is required")
+          return
+        }
+
+        val handler = subscription_id match {
+          case None=>
+
+            connection_ack_handlers.get(messageId) match {
+              case None =>
+                die("Not expecting ack for message id '%s'".format(messageId))
+                None
+              case Some(handler) =>
+                Some(handler)
             }
 
-
-          case None =>
-            // This can easily happen if the consumer is doing client acks on something like
-            // a non-durable topic.
-            // trace("The specified message id is not waiting for a client ack: %s", messageId)
+          case Some(id) =>
+            consumers.get(id) match {
+              case None=>
+                die("The subscription '%s' does not exist".format(id))
+                None
+              case Some(consumer)=>
+                Some(consumer.ack_handler)
+            }
         }
-      case None=> die("message id header not set")
-    }
-  }
 
-  def perform_ack(frame: StompFrame, uow:StoreUOW=null) = {
-    val msgid = get(frame.headers, MESSAGE_ID).get
-    pendingAcks.remove(msgid) match {
-      case Some(ack) => ack(uow)
-      case None => die("message allready acked: %s".format(msgid))
+        handler.foreach{ handler=>
+
+          get(headers, TRANSACTION) match {
+            case None=>
+              handler.perform_ack(messageId, null)
+            case Some(txid)=>
+              get_or_create_tx_queue(txid){ _.add(frame, (uow)=>{ handler.perform_ack(messageId, uow)} ) }
+          }
+
+          get(headers, RECEIPT_REQUESTED).foreach { receipt =>
+            connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+          }
+
+        }
+
+
+      case None=> die("message id header not set")
     }
   }
 
@@ -779,10 +889,10 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     // TODO: eventually we want to back this /w a broker Queue which
     // can provides persistence and memory swapping.
 
-    val queue = ListBuffer[StompFrame]()
+    val queue = ListBuffer[(StompFrame, (StoreUOW)=>Unit)]()
 
-    def add(frame:StompFrame) = {
-      queue += frame
+    def add(frame:StompFrame, proc:(StoreUOW)=>Unit) = {
+      queue += ( frame->proc )
     }
 
     def commit(onComplete: => Unit) = {
@@ -793,14 +903,15 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         null
       }
 
-      queue.foreach { frame=>
-        frame.action match {
-          case SEND =>
-            perform_send(frame, uow)
-          case ACK =>
-            perform_ack(frame, uow)
-          case _ => throw new java.lang.AssertionError("assertion failed: only send or ack frames are transactional")
-        }
+      queue.foreach { case (frame, proc) =>
+        proc(uow)
+//        frame.action match {
+//          case SEND =>
+//            perform_send(frame, uow)
+//          case ACK =>
+//            perform_ack(frame, uow)
+//          case _ => throw new java.lang.AssertionError("assertion failed: only send or ack frames are transactional")
+//        }
       }
       if( uow!=null ) {
         uow.onComplete(^{
@@ -826,7 +937,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     if ( transactions.contains(txid) ) {
       die("transaction allready started")
     } else {
-      proc( transactions.put(txid, new TransactionQueue).get )
+      val queue = new TransactionQueue
+      transactions.put(txid, queue)
+      proc( queue )
     }
   }
 
