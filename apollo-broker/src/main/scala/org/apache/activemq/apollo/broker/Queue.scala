@@ -29,7 +29,7 @@ import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.list._
-import org.fusesource.hawtdispatch.{ListEventAggregator, DispatchQueue, BaseRetained}
+import org.fusesource.hawtdispatch.{Dispatch, ListEventAggregator, DispatchQueue, BaseRetained}
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -377,7 +377,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
           // Combine flushed items into flushed ranges
           if( flushed_items > tune_flush_range_size*2 ) {
 
-            println("Looking for flushed entries to combine")
+            debug("Looking for flushed entries to combine")
 
             var distance_from_sub = tune_flush_range_size;
             var cur = entries.getHead
@@ -405,7 +405,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
               cur = next
             }
 
-            println("combined "+combine_counter+" entries")
+            debug("combined %d entries", combine_counter)
 
           }
 
@@ -880,7 +880,6 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
      */
     override def dispatch() = {
       if( parked != Nil ) {
-
         advance(parked)
         parked = Nil
         true
@@ -1370,10 +1369,6 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
     pos -= this
     pos = null
 
-    session.refiller = null
-    session.close
-    session = null
-
     // nack all the acquired entries.
     var next = acquired.getHead
     while( next !=null ) {
@@ -1381,6 +1376,10 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
       next = next.getNext
       cur.nack // this unlinks the entry.
     }
+
+    session.refiller = null
+    session.close
+    session = null
   }
 
   /**
@@ -1411,8 +1410,10 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
    */
   def rewind(value:QueueEntry):Unit = {
     assert(value!=null)
+    pos -= this
+    value ::= this
     pos = value
-    session.refiller = pos
+    session.refiller = value
     queue.dispatchQueue << value // queue up the entry to get dispatched..
   }
 
