@@ -14,9 +14,9 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ## ---------------------------------------------------------------------------
-org.apache.activemq.apollo.cli.Exit
-org.apache.activemq.apollo.cli.Help
-#org.apache.activemq.apollo.cli.Create
-#org.apache.activemq.apollo.cli.Start
-#org.apache.activemq.apollo.cli.Stop
-#org.apache.activemq.apollo.cli.Run
+org.apache.activemq.apollo.cli.commands.Exit
+org.apache.activemq.apollo.cli.commands.Help
+#org.apache.activemq.apollo.cli.commands.Create
+#org.apache.activemq.apollo.cli.commands.Start
+#org.apache.activemq.apollo.cli.commands.Stop
+#org.apache.activemq.apollo.cli.commands.Run

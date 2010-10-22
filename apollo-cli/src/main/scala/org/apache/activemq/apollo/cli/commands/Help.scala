@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.fusesource.scalate.tool.commands
+package org.apache.activemq.apollo.cli.commands
 
 import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
 import org.apache.karaf.shell.console.HelpAction

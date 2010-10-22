@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.fusesource.scalate.tool.commands
+package org.apache.activemq.apollo.cli.commands
 
 import java.{util => ju, lang => jl}
 import org.apache.felix.gogo.commands.{Action, Command => command}
