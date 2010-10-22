@@ -112,6 +112,8 @@
     <logback-version>0.9.24</logback-version>
     <jersey-version>1.5-ea01</jersey-version>
     
+    <karaf-version>2.1.0</karaf-version>
+    
     <!-- maven plugin versions -->
     <maven-scala-plugin-version>2.14</maven-scala-plugin-version>
     <maven-surefire-plugin-version>2.4.3</maven-surefire-plugin-version>
@@ -159,6 +161,7 @@
     <module>apollo-stomp</module>
     <module>apollo-web</module>
     <module>apache-activemq-apollo</module>
+    <module>apollo-cli</module>
   </modules>
 
   <scm>
