@@ -1,0 +1,156 @@
+#!/bin/sh
+# ------------------------------------------------------------------------
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+# 
+# http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------
+
+# load system-wide apollo configuration
+if [ -f "/etc/apollo.conf" ] ; then
+  . /etc/apollo.conf
+fi
+
+# provide default values for people who don't use RPMs
+if [ -z "$usejikes" ] ; then
+  usejikes=false;
+fi
+
+# load user apollo configuration
+if [ -f "$HOME/.apollorc" ] ; then
+  . "$HOME/.apollorc"
+fi
+
+# OS specific support.  $var _must_ be set to either true or false.
+cygwin=false;
+darwin=false;
+case "`uname`" in
+  CYGWIN*) cygwin=true ;;
+  Darwin*) darwin=true
+           if [ -z "$JAVA_HOME" ] ; then
+             JAVA_HOME=/System/Library/Frameworks/JavaVM.framework/Home
+           fi
+           ;;
+esac
+
+if [ -z "$APOLLO_HOME" ] ; then
+  # try to find APOLLO
+  if [ -d /opt/apollo ] ; then
+    APOLLO_HOME=/opt/apollo
+  fi
+
+  if [ -d "${HOME}/opt/apollo" ] ; then
+    APOLLO_HOME="${HOME}/opt/apollo"
+  fi
+
+  ## resolve links - $0 may be a link to apollo's home
+  PRG="$0"
+  progname=`basename "$0"`
+  saveddir=`pwd`
+
+  # need this for relative symlinks
+  dirname_prg=`dirname "$PRG"`
+  cd "$dirname_prg"
+
+  while [ -h "$PRG" ] ; do
+    ls=`ls -ld "$PRG"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '.*/.*' > /dev/null; then
+    PRG="$link"
+    else
+    PRG=`dirname "$PRG"`"/$link"
+    fi
+  done
+
+  APOLLO_HOME=`dirname "$PRG"`
+
+  cd "$saveddir"
+
+  # make it fully qualified
+  APOLLO_HOME=`cd "$APOLLO_HOME/.." && pwd`
+fi
+
+# For Cygwin, ensure paths are in UNIX format before anything is touched
+if $cygwin ; then
+  [ -n "$APOLLO_HOME" ] &&
+    APOLLO_HOME=`cygpath --unix "$APOLLO_HOME"`
+  [ -n "$JAVA_HOME" ] &&
+    JAVA_HOME=`cygpath --unix "$JAVA_HOME"`
+  [ -n "$CLASSPATH" ] &&
+    CLASSPATH=`cygpath --path --unix "$CLASSPATH"`
+fi
+
+if [ -z "$JAVACMD" ] ; then
+  if [ -n "$JAVA_HOME"  ] ; then
+    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
+      # IBM's JDK on AIX uses strange locations for the executables
+      JAVACMD="$JAVA_HOME/jre/sh/java"
+    else
+      JAVACMD="$JAVA_HOME/bin/java"
+    fi
+  else
+    JAVACMD=`which java 2> /dev/null `
+    if [ -z "$JAVACMD" ] ; then
+        JAVACMD=java
+    fi
+  fi
+fi
+
+if [ ! -x "$JAVACMD" ] ; then
+  echo "Error: JAVA_HOME is not defined correctly."
+  echo "  We cannot execute $JAVACMD"
+  exit 1
+fi
+
+if [ -z "$APOLLO_BASE" ] ; then
+  APOLLO_BASE="$APOLLO_HOME"
+fi
+
+CLASSPATH="${APOLLO_HOME}/lib/*:${APOLLO_HOME}/lib/tool/*:${APOLLO_HOME}/lib/optional/*"
+
+# For Cygwin, switch paths to Windows format before running java
+if $cygwin; then
+  APOLLO_HOME=`cygpath --windows "$APOLLO_HOME"`
+  APOLLO_BASE=`cygpath --windows "$APOLLO_BASE"`
+  APOLLO_CLASSPATH=`cygpath --path --windows "$APOLLO_CLASSPATH"`
+  JAVA_HOME=`cygpath --windows "$JAVA_HOME"`
+  CLASSPATH=`cygpath --path --windows "$CLASSPATH"`
+  CYGHOME=`cygpath --windows "$HOME"`
+fi
+
+if [ -z "$APOLLO_OPTS" ] ; then
+  APOLLO_OPTS="-server -Xmx1G"
+fi
+JVM_FLAGS="${APOLLO_OPTS}"
+
+# Optionally enable remote debugging
+if [ "x$APOLLO_DEBUG" != "x" ]; then
+    JVM_FLAGS="${JVM_FLAGS} Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"
+fi
+
+# Optionally enable YourKit debugging
+if [ "x$APOLLO_PROFILE" != "x" ]; then
+    JVM_FLAGS="-agentlib:yjpagent ${JVM_FLAGS}"
+fi
+
+if [ -z "$JMX_OPTS" ] ; then
+  #JMX_OPTS="-Dcom.sun.management.jmxremote.port=1099 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
+  JMX_OPTS="-Dcom.sun.management.jmxremote"
+fi
+JVM_FLAGS="${JVM_FLAGS} ${JMX_OPTS}"
+
+JVM_FLAGS="${JVM_FLAGS} -Dapollo.home=\"${APOLLO_HOME}\" -Dapollo.base=\"${APOLLO_BASE}\""
+JVM_FLAGS="${JVM_FLAGS} -classpath \"${CLASSPATH}\""
+
+exec "$JAVACMD" ${JVM_FLAGS} org.apache.activemq.apollo.cli.Apollo $@
+
