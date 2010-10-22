@@ -138,7 +138,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     }
   }
 
-  val schedule_version = new AtomicInteger()
 
   def start(onComplete:Runnable) = {
     lock {
@@ -207,15 +206,10 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       }
 
       recover(onComplete)
-
-      // Schedule periodic jobs.. they keep executing while schedule_version remains the same.
-      scheduleCleanup(schedule_version.get())
-      scheduleFlush(schedule_version.get())
     }
   }
 
   def stop() = {
-    schedule_version.incrementAndGet
     journal.close
     indexFileFactory.close
     lockFile.unlock
@@ -912,17 +906,6 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   //
   /////////////////////////////////////////////////////////////////////
 
-  def scheduleFlush(version:Int): Unit = {
-    def try_flush() = {
-      if (version == schedule_version.get) {
-        hawtDBStore.executor_pool {
-          flush
-          scheduleFlush(version)
-        }
-      }
-    }
-    dispatchQueue.dispatchAfter(config.index_flush_interval, TimeUnit.MILLISECONDS, ^ {try_flush})
-  }
 
   def flush() = {
     val start = System.currentTimeMillis()
@@ -933,25 +916,15 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
     }
   }
 
-  def scheduleCleanup(version:Int): Unit = {
-    def try_cleanup() = {
-      if (version == schedule_version.get) {
-        hawtDBStore.executor_pool {
-          withTx {tx =>
-            cleanup(tx)
-          }
-          scheduleCleanup(version)
-        }
-      }
-    }
-    dispatchQueue.dispatchAfter(config.cleanup_interval, TimeUnit.MILLISECONDS, ^ {try_cleanup})
+  def cleanup():Unit = withTx {tx =>
+    cleanup(tx)
   }
 
   /**
    * @param tx
    * @throws IOException
    */
-  def cleanup(tx:Transaction) = {
+  def cleanup(tx:Transaction):Unit = {
     val helper = new TxHelper(tx)
     import JavaConversions._
     import helper._

@@ -16,13 +16,13 @@
  */
 package org.apache.activemq.apollo.store.hawtdb
 
-import java.util.concurrent.atomic.AtomicLong
 import collection.mutable.ListBuffer
 import java.util.HashMap
 import collection.{Seq}
 import org.fusesource.hawtdispatch.ScalaDispatch._
 import java.io.File
 import java.util.concurrent._
+import atomic.{AtomicInteger, AtomicLong}
 import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
@@ -65,8 +65,12 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
   var next_msg_key = new AtomicLong(1)
 
   var executor_pool:ExecutorService = _
+  val schedule_version = new AtomicInteger()
   var config:HawtDBStoreDTO = defaultConfig
   val client = new HawtDBClient(this)
+
+  val load_source = createSource(new ListEventAggregator[(Long, (Option[MessageRecord])=>Unit)](), dispatchQueue)
+  load_source.setEventHandler(^{drain_loads});
 
   override def toString = "hawtdb store"
 
@@ -111,14 +115,44 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
       client.start(^{
         next_msg_key.set( client.rootBuffer.getLastMessageKey.longValue +1 )
         next_queue_key.set( client.rootBuffer.getLastQueueKey.longValue +1 )
+        val v = schedule_version.incrementAndGet
+        scheduleCleanup(v)
+        scheduleFlush(v)
+        load_source.resume
         onCompleted.run
       })
     }
   }
 
+  def scheduleFlush(version:Int): Unit = {
+    def try_flush() = {
+      if (version == schedule_version.get) {
+        executor_pool {
+          client.flush
+          scheduleFlush(version)
+        }
+      }
+    }
+    dispatchQueue.dispatchAfter(config.index_flush_interval, TimeUnit.MILLISECONDS, ^ {try_flush})
+  }
+
+  def scheduleCleanup(version:Int): Unit = {
+    def try_cleanup() = {
+      if (version == schedule_version.get) {
+        executor_pool {
+          client.cleanup()
+          scheduleCleanup(version)
+        }
+      }
+    }
+    dispatchQueue.dispatchAfter(config.cleanup_interval, TimeUnit.MILLISECONDS, ^ {try_cleanup})
+  }
+
   protected def _stop(onCompleted: Runnable) = {
+    schedule_version.incrementAndGet
     new Thread() {
       override def run = {
+        load_source.suspend
         executor_pool.shutdown
         executor_pool.awaitTermination(86400, TimeUnit.SECONDS)
         executor_pool = null
@@ -180,11 +214,6 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
       callback( client.listQueues )
     }
   }
-
-  val load_source = createSource(new ListEventAggregator[(Long, (Option[MessageRecord])=>Unit)](), dispatchQueue)
-  load_source.setEventHandler(^{drain_loads});
-  load_source.resume
-
 
   def loadMessage(messageKey: Long)(callback: (Option[MessageRecord]) => Unit) = {
     message_load_latency_counter.start { end=>
