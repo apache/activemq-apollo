@@ -233,7 +233,7 @@ trait DispatchLogging extends Logging {
 
   override protected def log_map(message:String) = {
     val d = getCurrentQueue
-    if( d!=null && d.getLabe!=null ) {
+    if( d!=null && d.getLabel!=null ) {
       d.getLabel+" | "+message
     } else {
       message
