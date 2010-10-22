@@ -34,6 +34,10 @@ class DeepQueueHawtDBTest extends BasicScenarios with LargeInitialDB with HawtDB
   override def description = "Using the STOMP protocol over TCP persisting to the HawtDB store that contains 1M messages in a queue."
 }
 
+class BasicBDBTest extends BasicScenarios with PersistentScenario with BDBScenario with StompScenario {
+  override def description = "Using the STOMP protocol over TCP persistent to the BerkleyDB store"
+}
+
 class DeepQueueBDBTest extends BasicScenarios with LargeInitialDB with BDBScenario with StompScenario {
   override def description = "Using the STOMP protocol over TCP persisting to the BerkleyDB store that contains 1M messages in a queue."
 }

@@ -32,6 +32,8 @@ trait LargeInitialDB extends PersistentScenario {
   // Keep it simple.. we are only creating 1 queue with a large number of entries.
   override def partitionedLoad = List(1)
 
+  override def reportResourceTemplate() = { classOf[PersistentScenario].getResource("largedb-persistent-report.html") }
+
   // delete existing data file and copy new data file over
   override protected def beforeEach() = {
     println("Restoring DB")
