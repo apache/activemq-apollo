@@ -1,4 +1,4 @@
-[1m  Apache Apollo[0m (${project.version})
+[1mApache Apollo[0m (${project.version})
 
 Hit '[1m<tab>[0m' for a list of available commands
    and '[1m[cmd] --help[0m' for help on a specific command.

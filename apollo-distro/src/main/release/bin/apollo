@@ -116,13 +116,20 @@ if [ -z "$APOLLO_BASE" ] ; then
   APOLLO_BASE="$APOLLO_HOME"
 fi
 
-CLASSPATH="${APOLLO_HOME}/lib/*:${APOLLO_HOME}/lib/tool/*:${APOLLO_HOME}/lib/optional/*"
-
+CLASSPATH=${APOLLO_BASE}/etc
+if [ -d "${APOLLO_HOME}/lib/patches" ] ; then
+  for f in "${APOLLO_HOME}/lib/patches"/*.jar; do
+    CLASSPATH="$CLASSPATH:$f"
+  done
+fi
+for f in "${APOLLO_HOME}/lib"/*.jar; do
+  CLASSPATH="$CLASSPATH:$f"
+done
+    
 # For Cygwin, switch paths to Windows format before running java
 if $cygwin; then
   APOLLO_HOME=`cygpath --windows "$APOLLO_HOME"`
   APOLLO_BASE=`cygpath --windows "$APOLLO_BASE"`
-  APOLLO_CLASSPATH=`cygpath --path --windows "$APOLLO_CLASSPATH"`
   JAVA_HOME=`cygpath --windows "$JAVA_HOME"`
   CLASSPATH=`cygpath --path --windows "$CLASSPATH"`
   CYGHOME=`cygpath --windows "$HOME"`
@@ -150,7 +157,7 @@ fi
 JVM_FLAGS="${JVM_FLAGS} ${JMX_OPTS}"
 
 JVM_FLAGS="${JVM_FLAGS} -Dapollo.home=\"${APOLLO_HOME}\" -Dapollo.base=\"${APOLLO_BASE}\""
-JVM_FLAGS="${JVM_FLAGS} -classpath \"${CLASSPATH}\""
+JVM_FLAGS="${JVM_FLAGS} -classpath ${CLASSPATH}"
 
 exec "$JAVACMD" ${JVM_FLAGS} org.apache.activemq.apollo.cli.Apollo $@
 

@@ -53,7 +53,7 @@ class Apollo extends Main with Action {
 
   protected override def createConsole(commandProcessor: CommandShellImpl, in: InputStream, out: PrintStream, err: PrintStream, terminal: Terminal)  = {
     new Console(commandProcessor, in, out, err, terminal, null) {
-      protected override def getPrompt = BOLD+"scalate> "+RESET
+      protected override def getPrompt = BOLD+"apollo> "+RESET
       protected override def isPrintStackTraces = debug
       protected override def welcome = {
         val source = getClass().getResourceAsStream("banner.txt")

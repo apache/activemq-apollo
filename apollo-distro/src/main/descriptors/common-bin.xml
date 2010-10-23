@@ -24,7 +24,7 @@
       <scope>compile</scope>
       <useTransitiveDependencies>true</useTransitiveDependencies>
       <includes>
-        <include>org.apache.activemq.apollo:apollo-cli</include>
+        <include>org.apache.activemq:apollo-cli</include>
       </includes>
     </dependencySet>
     <dependencySet>
