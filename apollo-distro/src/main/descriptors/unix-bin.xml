@@ -39,6 +39,7 @@
       <filtered>true</filtered>
       <excludes>
         <exclude>*.bat</exclude>
+        <exclude>*.cmd</exclude>
       </excludes>
     </fileSet>
 

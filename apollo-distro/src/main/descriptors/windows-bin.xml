@@ -38,6 +38,7 @@
       <filtered>true</filtered>
       <includes>
         <include>*.bat</include>
+        <include>*.cmd</include>
       </includes>
     </fileSet>
 
