@@ -125,6 +125,8 @@ fi
 for f in "${APOLLO_HOME}/lib"/*.jar; do
   CLASSPATH="$CLASSPATH:$f"
 done
+
+JUL_CONFIG_FILE="${APOLLO_BASE}/etc/jul.properties"
     
 # For Cygwin, switch paths to Windows format before running java
 if $cygwin; then
@@ -133,6 +135,7 @@ if $cygwin; then
   JAVA_HOME=`cygpath --windows "$JAVA_HOME"`
   CLASSPATH=`cygpath --path --windows "$CLASSPATH"`
   CYGHOME=`cygpath --windows "$HOME"`
+  JUL_CONFIG_FILE=`cygpath --windows "$JUL_CONFIG_FILE"`
 fi
 
 if [ -z "$APOLLO_OPTS" ] ; then
@@ -156,5 +159,5 @@ if [ -z "$JMX_OPTS" ] ; then
 fi
 JVM_FLAGS="${JVM_FLAGS} ${JMX_OPTS}"
 
-exec "$JAVACMD" ${JVM_FLAGS} -Dapollo.home="${APOLLO_HOME}" -Dapollo.base="${APOLLO_BASE}" -classpath "${CLASSPATH}" org.apache.activemq.apollo.cli.Apollo $@
+exec "$JAVACMD" ${JVM_FLAGS} -Djava.util.logging.config.file="${JUL_CONFIG_FILE}" -Dapollo.home="${APOLLO_HOME}" -Dapollo.base="${APOLLO_BASE}" -classpath "${CLASSPATH}" org.apache.activemq.apollo.cli.Apollo $@
 

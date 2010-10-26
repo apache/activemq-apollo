@@ -86,8 +86,7 @@ class Run extends Action {
 
       val lib = home / "lib"
       val webapp = lib / lib.list.find( _.matches("""apollo-web-.+-slim.war""")).getOrElse(throw new Failure("war file not found.") )
-//      val webapp = home / "webapp"
-//
+
       if( conf == null ) {
         val etc = base / "etc"
         etc.mkdirs
@@ -130,7 +129,7 @@ class Run extends Action {
 
 
       // Start up the admin interface...
-      println("Starting administration interface..."+webapp);
+      println("Starting administration interface...");
       var server = new Server
 
       var connector = new SelectChannelConnector

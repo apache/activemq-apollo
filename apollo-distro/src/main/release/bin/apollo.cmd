@@ -69,7 +69,11 @@ if "%JMX_OPTS%" == "" set JMX_OPTS=-Dcom.sun.management.jmxremote
 rem set JMX_OPTS=-Dcom.sun.management.jmxremote.port=1099 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false
 set JVM_FLAGS=%JVM_FLAGS% %JMX_OPTS%
 
-set JVM_FLAGS=%JVM_FLAGS% -Dapollo.home="%APOLLO_HOME%" -Dapollo.base="%APOLLO_BASE%"
+set JUL_CONFIG_FILE=%APOLLO_BASE%\etc\jul.properties
+
+set JVM_FLAGS=%JVM_FLAGS% -Dapollo.home="%APOLLO_HOME%" 
+set JVM_FLAGS=%JVM_FLAGS% -Dapollo.base="%APOLLO_BASE%"
+set JVM_FLAGS=%JVM_FLAGS% -Djava.util.logging.config.file="%JUL_CONFIG_FILE%"
 set JVM_FLAGS=%JVM_FLAGS% -classpath "%CLASSPATH%"
 
 rem echo "%_JAVACMD%" %JVM_FLAGS%  org.apache.activemq.apollo.cli.Apollo %*
