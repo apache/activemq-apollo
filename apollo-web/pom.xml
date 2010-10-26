@@ -239,6 +239,22 @@
       </plugin>
       
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.3.1</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <classifier>slim</classifier>
+        </configuration>
+      </plugin>
+            
+      <plugin>
         <groupId>org.fusesource.mvnplugins</groupId>
         <artifactId>maven-uberize-plugin</artifactId>
         <version>1.11</version>
@@ -259,7 +275,11 @@
                 <filter>
                   <artifact>org.apache.activemq:apollo-web</artifact>
                   <excludes>
+                    <exclude>WEB-INF/classes/**</exclude>
                     <exclude>WEB-INF/lib/**</exclude>
+                    <exclude>**/*.scaml</exclude>
+                    <exclude>**/*.jade</exclude>
+                    <exclude>**/*.ssp</exclude>
                   </excludes>
                 </filter>
               </filters>            

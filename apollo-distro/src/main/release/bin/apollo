@@ -142,7 +142,7 @@ JVM_FLAGS="${APOLLO_OPTS}"
 
 # Optionally enable remote debugging
 if [ "x$APOLLO_DEBUG" != "x" ]; then
-    JVM_FLAGS="${JVM_FLAGS} Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"
+    JVM_FLAGS="${JVM_FLAGS} -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"
 fi
 
 # Optionally enable YourKit debugging

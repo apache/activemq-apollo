@@ -40,7 +40,7 @@
         <include>asm:asm</include>
         <include>org.codehaus.jackson:jackson-jaxrs</include>
         <include>org.fusesource.scalate:scalate-core</include>
-        <include>org.scala-lang:scala-compiler</include>
+        <!-- <include>org.scala-lang:scala-compiler</include> -->
         
         <!-- the logging apis used -->
         <include>org.slf4j:slf4j-api</include>
@@ -52,6 +52,9 @@
         <include>org.apache.karaf.shell:org.apache.karaf.shell.console</include>
         
       </includes>
+      <excludes>
+        <exclude>org.apache.activemq:apollo-web:pom</exclude>
+      </excludes>
     </dependencySet>
   </dependencySets>
 
