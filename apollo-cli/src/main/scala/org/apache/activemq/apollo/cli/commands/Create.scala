@@ -18,10 +18,11 @@ package org.apache.activemq.apollo.cli.commands
 
 import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
 import org.osgi.service.command.CommandSession
-import java.io.File
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.Ansi.Color._
 import org.fusesource.jansi.Ansi.Attribute._
+import Helper._
+import java.io.{FileOutputStream, File}
 
 /**
  * The apollo create command
@@ -32,18 +33,55 @@ class Create extends Action {
   @argument(name = "directory", description = "The instance directory to hold the broker's configuration and data", index=0, required=true)
   var directory:File = _
 
+  @option(name = "--force", description = "Overwrite configuration at destination directory")
+  var force = false
+
   def execute(session: CommandSession) = {
 
     def println(value:Any) = session.getConsole.println(value)
-    def ansi= new Ansi()
-    def error(value:Any) = println(ansi.a(INTENSITY_BOLD).fg(RED).a("ERROR").reset.a(value.toString))
+    try {
 
+      val bin = directory / "bin"
+      bin.mkdirs
 
-    if( directory.exists ) {
-      error("The directory '%s' already exists.".format(directory))
+      var target = bin / "apollo-broker"
+      write("bin/apollo-broker", target)
+      target.setExecutable(true)
+
+      target = bin / "apollo-broker.cmd"
+      write("bin/apollo-broker.cmd", target)
+
+      val etc = directory / "etc"
+      etc.mkdirs
+
+      target = etc / "log4j.properties"
+      write("etc/log4j.properties", target)
+
+      target = etc / "apollo.xml"
+      write("etc/apollo.xml", target)
+
+      val data = directory / "data"
+      data.mkdirs
+      
+      val log = directory / "log"
+      log.mkdirs
+
+    } catch {
+      case x:Helper.Failure=>
+        println(ansi.a(INTENSITY_BOLD).fg(RED).a("ERROR: ").reset.a(x.getMessage))
     }
 
-    
+
     null
+  }
+
+  def write(source:String, target:File) = {
+    if( target.exists && !force ) {
+      error("The file '%s' already exists.  Use --force to overwrite.".format(target))
+    }
+    val out = new FileOutputStream(target)
+    val in = getClass.getResourceAsStream(source)
+    copy(in, out)
+    close(out)
   }
 }

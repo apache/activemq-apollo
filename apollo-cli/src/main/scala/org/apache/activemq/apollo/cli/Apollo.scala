@@ -57,20 +57,7 @@ class Apollo extends Main with Action {
       protected override def isPrintStackTraces = debug
       protected override def welcome = {
         val source = getClass().getResourceAsStream("banner.txt")
-        copy(source, session.getConsole())
-      }
-
-      def copy(in: InputStream, out: OutputStream): Long = {
-        var bytesCopied: Long = 0
-        val buffer = new Array[Byte](8192)
-        var bytes = in.read(buffer)
-        while (bytes >= 0) {
-          out.write(buffer, 0, bytes)
-          bytesCopied += bytes
-          bytes = in.read(buffer)
-        }
-
-        bytesCopied
+        commands.Helper.copy(source, session.getConsole())
       }
 
       protected override def setSessionProperties = {}
@@ -84,8 +71,6 @@ class Apollo extends Main with Action {
     run(session, args)
     null
   }
-
-
 
 
 }

@@ -126,7 +126,7 @@ for f in "${APOLLO_HOME}/lib"/*.jar; do
   CLASSPATH="$CLASSPATH:$f"
 done
 
-JUL_CONFIG_FILE="${APOLLO_BASE}/etc/jul.properties"
+JUL_CONFIG_FILE="${APOLLO_HOME}/etc/jul.properties"
     
 # For Cygwin, switch paths to Windows format before running java
 if $cygwin; then

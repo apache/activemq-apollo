@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory
 import org.apache.activemq.apollo.broker.{BrokerRegistry, Broker, ConfigStore, FileConfigStore}
 import org.apache.activemq.apollo.util.ServiceControl
 import org.fusesource.hawtdispatch.ScalaDispatch._
-
+import Helper._
 
 /**
  * The apollo create command
@@ -40,64 +40,44 @@ import org.fusesource.hawtdispatch.ScalaDispatch._
 @command(scope="apollo", name = "run", description = "runs the broker instance")
 class Run extends Action {
 
-  @option(name = "port", description = "The port of the http based administration service")
+  @option(name = "--port", description = "The port of the http based administration service")
   var port: Int = 8080
 
-  @option(name = "prefix", description = "The prefix path of the web application.")
+  @option(name = "--prefix", description = "The prefix path of the web application.")
   var prefix: String = "/"
 
-  @option(name = "conf", description = "The Apollo configuration file.")
+  @option(name = "--conf", description = "The Apollo configuration file.")
   var conf: File = _
 
-  @option(name = "tmp", description = "A temp directory.")
+  @option(name = "--tmp", description = "A temp directory.")
   var tmp: File = _
 
-
-  private def ansi= new Ansi()
-  private class Failure(msg:String) extends RuntimeException(msg)
-  private def error(value:Any) = throw new Failure(value.toString)
-  private def system_dir(name:String) = {
-    val base_value = System.getProperty(name)
-    if( base_value==null ) {
-      error("The the %s system property is not set.".format(name))
-    }
-    val file = new File(System.getProperty("apollo.base"))
-    if( !file.isDirectory  ) {
-      error("The the %s system property is not set to valid directory path %s".format(name, base_value))
-    }
-    file
-  }
-
-
-  class RichFile(file:File) {
-    def / (path:String) = new File(file, path)
-  }
-  implicit def toRichFile(file:File):RichFile = new RichFile(file)
-
-  def bold(v:String) = ansi.a(INTENSITY_BOLD).a(v).reset
 
   def execute(session: CommandSession):AnyRef = {
 
     def println(value:Any) = session.getConsole.println(value)
 
     try {
+
       val home = system_dir("apollo.home")
       val base = system_dir("apollo.base")
+
+      if( conf == null ) {
+        conf = base / "etc" / "apollo.xml"
+      }
+
+      if( !conf.exists ) {
+        error("Configuration file'%s' does not exist.\n\nTry creating a broker instance using the 'apollo create' command.".format(conf));
+      }
 
       val lib = home / "lib"
       val webapp = lib / lib.list.find( _.matches("""apollo-web-.+-slim.war""")).getOrElse(throw new Failure("war file not found.") )
 
-      if( conf == null ) {
-        val etc = base / "etc"
-        etc.mkdirs
-        conf = etc / "apollo.xml"
-      }
 
       if( tmp == null ) {
         tmp = base / "tmp"
         tmp.mkdirs
       }
-
 
       println("========================================================================")
       println("Apollo Broker Service Starting");
@@ -152,7 +132,7 @@ class Run extends Action {
       println("Administration interface available at: "+bold(url))
 
     } catch {
-      case x:Failure=>
+      case x:Helper.Failure=>
         println(ansi.a(INTENSITY_BOLD).fg(RED).a("ERROR: ").reset.a(x.getMessage))
     }
     null
