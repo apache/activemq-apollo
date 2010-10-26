@@ -21,10 +21,10 @@ import core.{UriInfo, Response, Context}
 import org.fusesource.hawtdispatch.Future
 import Response.Status._
 import Response._
-import org.apache.activemq.apollo.web.ConfigStore
 import java.net.URI
 import java.io.ByteArrayInputStream
 import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO}
+import org.apache.activemq.apollo.broker.ConfigStore
 
 /**
  * A broker resource is used to represent the configuration of a broker.

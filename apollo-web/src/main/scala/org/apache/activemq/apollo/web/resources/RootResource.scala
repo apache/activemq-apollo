@@ -25,7 +25,7 @@ import com.sun.jersey.api.view.ImplicitProduces
 import org.fusesource.hawtdispatch.Future
 import Response._
 import Response.Status._
-import org.apache.activemq.apollo.web.ConfigStore
+import org.apache.activemq.apollo.broker.ConfigStore
 import org.apache.activemq.apollo.broker.BrokerRegistry
 import collection.JavaConversions._
 import com.sun.jersey.api.core.ResourceContext

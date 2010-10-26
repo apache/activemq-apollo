@@ -33,9 +33,8 @@
 
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-web</artifactId>
+      <artifactId>apollo-broker</artifactId>
       <version>6.0-SNAPSHOT</version>
-      <type>war</type>
     </dependency>
 
     <dependency>

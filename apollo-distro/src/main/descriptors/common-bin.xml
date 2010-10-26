@@ -21,35 +21,38 @@
     <dependencySet>
       <outputDirectory>/lib</outputDirectory>
       <unpack>false</unpack>
-      <scope>compile</scope>
       <useTransitiveDependencies>true</useTransitiveDependencies>
       <includes>
-        <include>org.apache.activemq:apollo-cli</include>
-      </includes>
-    </dependencySet>
-    <dependencySet>
-      <outputDirectory>/lib</outputDirectory>
-      <unpack>false</unpack>
-      <scope>runtime</scope>
-      <includes>
+        <include>org.apache.activemq:apollo-*</include>
+        
+        <!-- main apollo dependencies -->
         <include>org.scala-lang:scala-library</include>
+        <include>org.fusesource.hawtbuf:*</include>
+        <include>org.fusesource.hawtdispatch:*</include>
+        <include>org.fusesource.hawtdb:*</include>
+        <include>org.codehaus.jackson:jackson-mapper-asl</include>
+        <include>org.codehaus.jackson:jackson-core-asl</include>
+
+        <!-- for the webapp -->
+        <include>org.mortbay.jetty:*</include>
+        <include>com.sun.jersey:jersey-server</include>
+        <include>com.sun.jersey:jersey-core</include>
+        <include>asm:asm</include>
+        <include>org.codehaus.jackson:jackson-jaxrs</include>
+        <include>org.fusesource.scalate:scalate-core</include>
         <include>org.scala-lang:scala-compiler</include>
+        
+        <!-- the logging apis used -->
         <include>org.slf4j:slf4j-api</include>
-        <include>org.slf4j:slf4j-nop</include>
+        <include>commons-logging:commons-logging</include>
+        <include>org.slf4j:slf4j-log4j12</include>
+        <include>log4j:log4j</include>
+        
+        <!-- Implements the cli shell -->
         <include>org.apache.karaf.shell:org.apache.karaf.shell.console</include>
+        
       </includes>
     </dependencySet>
-    <!-- 
-    <dependencySet>
-      <outputDirectory>/lib/optional</outputDirectory>
-      <unpack>false</unpack>
-      <scope>compile</scope>
-      <useTransitiveDependencies>true</useTransitiveDependencies>
-      <includes>
-        <include>org.apache.activemq.apollo:apollo-cli</include>
-      </includes>
-    </dependencySet>
-    -->
   </dependencySets>
 
   <fileSets>

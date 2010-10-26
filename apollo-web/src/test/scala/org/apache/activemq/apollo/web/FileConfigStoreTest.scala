@@ -20,6 +20,7 @@ import java.io.File
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import org.fusesource.hawtdispatch.Future
 import org.apache.activemq.apollo.util._
+import org.apache.activemq.apollo.broker.FileConfigStore
 
 /**
  * <p>

@@ -14,9 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.web
+package org.apache.activemq.apollo.broker
 
-import org.apache.activemq.apollo.broker._
 import org.apache.activemq.apollo.broker.jaxb.PropertiesReader
 import org.apache.activemq.apollo.dto.{XmlCodec, ConnectorDTO, VirtualHostDTO, BrokerDTO}
 import java.util.regex.Pattern

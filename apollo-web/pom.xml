@@ -203,7 +203,6 @@
         </configuration>
       </plugin>
 
-
       <plugin>
         <groupId>org.mortbay.jetty</groupId>
         <artifactId>jetty-maven-plugin</artifactId>
@@ -226,6 +225,49 @@
         </configuration>
       </plugin>
 
+      <plugin>
+        <groupId>org.fusesource.scalate</groupId>
+        <artifactId>maven-scalate-plugin</artifactId>
+        <version>${scalate-version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>precompile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      
+      <plugin>
+        <groupId>org.fusesource.mvnplugins</groupId>
+        <artifactId>maven-uberize-plugin</artifactId>
+        <version>1.11</version>
+        <executions>
+          <execution>
+            <id>slim</id>
+            <phase>package</phase>
+            <goals><goal>uberize</goal></goals>
+            <configuration>
+              <uberArtifactAttached>true</uberArtifactAttached>
+              <uberClassifierName>slim</uberClassifierName>
+              <artifactSet>
+                <includes>
+                  <include>org.apache.activemq:apollo-web</include>
+                </includes>
+              </artifactSet>            
+              <filters>
+                <filter>
+                  <artifact>org.apache.activemq:apollo-web</artifact>
+                  <excludes>
+                    <exclude>WEB-INF/lib/**</exclude>
+                  </excludes>
+                </filter>
+              </filters>            
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      
     </plugins>
   </build>
   
@@ -251,18 +293,6 @@
       <id>release</id>
       <build>
         <plugins>
-          <plugin>
-            <groupId>org.fusesource.scalate</groupId>
-            <artifactId>maven-scalate-plugin</artifactId>
-            <version>${scalate-version}</version>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>precompile</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
         </plugins>
       </build>
     </profile>
