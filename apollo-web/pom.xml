@@ -234,6 +234,12 @@
             <goals>
               <goal>precompile</goal>
             </goals>
+            <configuration>
+              <templates>
+                <!-- pre compile some templates that are in the classpath -->
+                <template>/WEB-INF/scalate/errors/500.scaml</template>
+              </templates>
+            </configuration>
           </execution>
         </executions>
       </plugin>
