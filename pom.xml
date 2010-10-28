@@ -106,11 +106,11 @@
     <bdb-version>4.0.103</bdb-version>
     
     <jetty-version>6.1.22</jetty-version>
-    <scalate-version>1.4-SNAPSHOT</scalate-version>
+    <scalate-version>1.3.1</scalate-version>
     <servlet-api-version>2.5</servlet-api-version>
     <jackson-version>1.5.2</jackson-version>
     <logback-version>0.9.24</logback-version>
-    <jersey-version>1.5-ea01</jersey-version>
+    <jersey-version>1.5-ea03</jersey-version>
     
     <karaf-version>2.1.0</karaf-version>
     
