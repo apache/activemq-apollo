@@ -21,7 +21,7 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-project</artifactId>
-    <version>6.0-SNAPSHOT</version>
+    <version>1.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>apollo-distro</artifactId>
@@ -33,44 +33,44 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-cli</artifactId>
-      <version>6.0-SNAPSHOT</version>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-hawtdb</artifactId>
-      <version>6.0-SNAPSHOT</version>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-bdb</artifactId>
-      <version>6.0-SNAPSHOT</version>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-cassandra</artifactId>
-      <version>6.0-SNAPSHOT</version>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-tcp</artifactId>
-      <version>6.0-SNAPSHOT</version>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-stomp</artifactId>
-      <version>6.0-SNAPSHOT</version>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-web</artifactId>
-      <version>6.0-SNAPSHOT</version>
+      <version>1.0-SNAPSHOT</version>
       <type>war</type>
       <classifier>slim</classifier>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-web</artifactId>
-      <version>6.0-SNAPSHOT</version>
+      <version>1.0-SNAPSHOT</version>
       <type>jar</type>
       <classifier>slim</classifier>
     </dependency>
@@ -78,7 +78,7 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-web</artifactId>
-      <version>6.0-SNAPSHOT</version>
+      <version>1.0-SNAPSHOT</version>
       <type>pom</type>
     </dependency>
 
