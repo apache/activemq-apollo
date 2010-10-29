@@ -62,27 +62,32 @@
   <fileSets>
 
     <!-- copy the website docs -->
-    <!-- 
     <fileSet>
       <directory>${basedir}/../apollo-website/target/sitegen/</directory>
-      <outputDirectory>/docs</outputDirectory>
+      <outputDirectory>/docs/site</outputDirectory>
     </fileSet>
-    <fileSet>
-      <directory>${basedir}/../apollo-website/target/</directory>
-      <outputDirectory>/</outputDirectory>
-      <includes>
-        <include>*.html</include>
-      </includes>
-    </fileSet> 
-    -->
 
     <!-- api doco -->
-    <!-- 
     <fileSet>
       <directory>${basedir}/../apollo-broker/target/apidocs</directory>
       <outputDirectory>/docs/apidocs/apollo-broker</outputDirectory>
     </fileSet> 
-    -->
+    <fileSet>
+      <directory>${basedir}/../apollo-store/target/apidocs</directory>
+      <outputDirectory>/docs/apidocs/apollo-store</outputDirectory>
+    </fileSet> 
+    <fileSet>
+      <directory>${basedir}/../apollo-transport/target/apidocs</directory>
+      <outputDirectory>/docs/apidocs/apollo-transport</outputDirectory>
+    </fileSet> 
+    <fileSet>
+      <directory>${basedir}/../apollo-util/target/apidocs</directory>
+      <outputDirectory>/docs/apidocs/apollo-util</outputDirectory>
+    </fileSet> 
+    <fileSet>
+      <directory>${basedir}/../apollo-dto/target/apidocs</directory>
+      <outputDirectory>/docs/apidocs/apollo-dto</outputDirectory>
+    </fileSet> 
 
   </fileSets>
 

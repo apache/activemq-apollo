@@ -159,6 +159,7 @@
     <module>apollo-stomp</module>
     <module>apollo-web</module>
     <module>apollo-cli</module>
+    <module>apollo-website</module>
     <module>apollo-distro</module>
   </modules>
 
