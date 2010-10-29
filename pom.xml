@@ -323,13 +323,15 @@
           <artifactId>build-helper-maven-plugin</artifactId>
           <version>1.2</version>
         </plugin>
+        <!-- 
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>cobertura-maven-plugin</artifactId>
           <version>2.0</version>
           <configuration>
           </configuration>
-        </plugin>
+        </plugin> 
+        -->
         
       </plugins>
     </pluginManagement>
@@ -407,10 +409,10 @@
   </build>
   <reporting>
     <plugins>
-      <plugin>
+      <!-- <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>2.5</version>
-      </plugin>
+      </plugin> -->
       <!--
             <plugin>
               <groupId>org.apache.maven.plugins</groupId>
@@ -441,6 +443,7 @@
         <artifactId>taglist-maven-plugin</artifactId>
         <version>2.3</version>
       </plugin>
+      <!--
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
@@ -457,8 +460,6 @@
             <link>http://junit.sourceforge.net/javadoc/</link>
             <link>http://logging.apache.org/log4j/docs/api/</link>
           </links>
-          <!-- the stylesheet is missing from activemq 6.  This kind of cross-project file reference is a bad idea -->
-          <!--<stylesheetfile>${basedir}/../etc/css/stylesheet.css</stylesheetfile>-->
           <linksource>true</linksource>
           <maxmemory>900m</maxmemory>
           <source>1.5</source>
@@ -475,6 +476,7 @@
           </formats>
         </configuration>
       </plugin>
+      -->
 
     </plugins>
   </reporting>
