@@ -116,7 +116,7 @@
         
         <configuration>
           <remoteServerId>apollo-website</remoteServerId>
-          <remoteServerUrl>${website-base-url}/version/${project.version}/website/</remoteServerUrl>
+          <remoteServerUrl>${website-base-url}/versions/${project.version}/website/</remoteServerUrl>
         </configuration>
         
         <executions>

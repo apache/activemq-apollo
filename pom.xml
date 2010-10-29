@@ -140,7 +140,7 @@
     <site>
       <!-- this needs to match a server in your settings.xml with upload settings -->
       <id>apollo-website</id>
-      <url>${website-base-url}/version/${project.version}/maven/</url>
+      <url>${website-base-url}/versions/${project.version}/maven/</url>
     </site>
   </distributionManagement>
 
