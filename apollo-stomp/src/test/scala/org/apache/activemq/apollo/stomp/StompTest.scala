@@ -17,11 +17,11 @@
 package org.apache.activemq.apollo.stomp
 
 import org.scalatest.matchers.ShouldMatchers
-import org.apache.activemq.apollo.util.FunSuiteSupport
 import org.apache.activemq.apollo.broker.{Broker, BrokerFactory}
 import org.scalatest.BeforeAndAfterEach
+import org.apache.activemq.apollo.util.{Logging, FunSuiteSupport}
 
-class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAndAfterEach {
+class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAndAfterEach with Logging {
   var broker: Broker = null
 
   override protected def beforeAll() = {
@@ -233,7 +233,7 @@ class StompDestinationTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      println(frame)
+      info(frame)
       frame should startWith("MESSAGE\n")
       frame should include ("subscription:0\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
@@ -268,7 +268,7 @@ class StompDestinationTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      println(frame)
+      info(frame)
       frame should startWith("MESSAGE\n")
       frame should include ("subscription:0\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
@@ -316,7 +316,7 @@ class StompDestinationTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      println(frame)
+      info(frame)
       frame should startWith("MESSAGE\n")
       frame should include ("subscription:durable:my-sub-name\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
@@ -351,7 +351,7 @@ class StompDestinationTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      println(frame)
+      info(frame)
       frame should startWith("MESSAGE\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
     }
@@ -386,7 +386,7 @@ class StompDestinationTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      println(frame)
+      info(frame)
       frame should startWith("MESSAGE\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
     }
@@ -426,7 +426,7 @@ class StompTransactionTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      println(frame)
+      info(frame)
       frame should startWith("MESSAGE\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
     }
@@ -472,7 +472,7 @@ class StompTransactionTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      println(frame)
+      info(frame)
       frame should startWith("MESSAGE\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
     }
@@ -517,7 +517,7 @@ class StompAckModeTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      println(frame)
+      info(frame)
       frame should startWith("MESSAGE\n")
       frame should include ("subscription:0\n")
       frame should include regex("message-id:.+?\n")
@@ -582,7 +582,7 @@ class StompAckModeTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      println(frame)
+      info(frame)
       frame should startWith("MESSAGE\n")
       frame should include ("subscription:0\n")
       frame should include regex("message-id:.+?\n")
