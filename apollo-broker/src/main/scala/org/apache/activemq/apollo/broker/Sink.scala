@@ -273,7 +273,10 @@ class SinkMux[T](val target:Sink[T], val queue:DispatchQueue, val sizer:Sizer[T]
   }
 
   def close(session:Sink[T]) = {
-    session.asInstanceOf[SinkMux[T]#Session].close
+    val s = session.asInstanceOf[SinkMux[T]#Session]
+    s.producer_queue {
+      s.close
+    }
   }
 
   protected def createSession(producer_queue:DispatchQueue) = new Session(producer_queue)

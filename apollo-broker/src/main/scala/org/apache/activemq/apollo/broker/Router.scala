@@ -374,6 +374,12 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
       val rc = targets.contains(x.consumer)
       if( rc ) {
         debug("producer route detaching from conusmer.")
+        if( !overflowSessions.isEmpty ) {
+          overflowSessions = overflowSessions.filterNot( _ == x )
+          if( overflowSessions.isEmpty ) {
+            drainer.run
+          }
+        }
         x.close
       }
       rc
