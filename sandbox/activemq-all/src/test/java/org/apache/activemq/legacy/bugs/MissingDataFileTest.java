@@ -29,8 +29,8 @@ import junit.framework.TestCase;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.legacy.usage.SystemUsage;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * Try and replicate:
@@ -42,7 +42,7 @@ import org.apache.commons.logging.LogFactory;
 
 public class MissingDataFileTest extends TestCase {
 
-    private static final Log LOG = LogFactory.getLog(MissingDataFileTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MissingDataFileTest.class);
     
     private static int counter = 300;
 

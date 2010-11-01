@@ -27,15 +27,15 @@ import javax.jms.TextMessage;
 import javax.jms.Topic;
 
 import org.apache.activemq.ActiveMQConnection;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @version $Revision: 1.4 $
  */
 public class JmsTopicRedeliverTest extends TestSupport {
 
-    private static final Log LOG = LogFactory.getLog(JmsTopicRedeliverTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JmsTopicRedeliverTest.class);
 
     protected Connection connection;
     protected Session session;

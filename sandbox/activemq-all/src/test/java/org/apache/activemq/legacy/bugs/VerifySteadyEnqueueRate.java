@@ -29,12 +29,12 @@ import junit.framework.TestCase;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class VerifySteadyEnqueueRate extends TestCase {
 
-    private static final Log LOG = LogFactory
+    private static final Logger LOG = LogFactory
             .getLog(VerifySteadyEnqueueRate.class);
 
     private static int max_messages = 1000000;

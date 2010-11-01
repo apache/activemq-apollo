@@ -26,8 +26,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.activemq.util.marshaller.Marshaller;
 import org.apache.activemq.util.marshaller.VariableMarshaller;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.kahadb.page.Page;
 import org.apache.kahadb.page.PageFile;
 import org.apache.kahadb.page.Transaction;
@@ -42,7 +42,7 @@ public class HashIndex<Key,Value> implements Index<Key,Value> {
     public static final int OPEN_STATE = 2;
 
 
-    private static final Log LOG = LogFactory.getLog(HashIndex.class);
+    private static final Logger LOG = LoggerFactory.getLogger(HashIndex.class);
 
     public static final int DEFAULT_BIN_CAPACITY;
     public static final int DEFAULT_MAXIMUM_BIN_CAPACITY;

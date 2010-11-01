@@ -23,8 +23,8 @@ import java.net.URI;
 
 import org.apache.activemq.legacy.broker.BrokerFactoryHandler;
 import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.xbean.spring.context.ResourceXmlApplicationContext;
 import org.apache.xbean.spring.context.impl.URIEditor;
 import org.springframework.beans.BeansException;
@@ -39,7 +39,7 @@ import org.springframework.util.ResourceUtils;
 /**
  */
 public class XBeanBrokerFactory implements BrokerFactoryHandler {
-    private static final transient Log LOG = LogFactory.getLog(XBeanBrokerFactory.class);
+    private static final transient Logger LOG = LoggerFactory.getLogger(XBeanBrokerFactory.class);
 
     static {
         PropertyEditorManager.registerEditor(URI.class, URIEditor.class);

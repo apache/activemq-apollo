@@ -74,8 +74,8 @@ import org.apache.activemq.util.LongSequenceGenerator;
 import org.apache.activemq.util.MarshallingSupport;
 import org.apache.activemq.util.ServiceStopper;
 import org.apache.activemq.util.ServiceSupport;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A useful base class for implementing demand forwarding bridges.
@@ -83,7 +83,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public abstract class DemandForwardingBridgeSupport implements NetworkBridge, BrokerServiceAware {
     
-    private static final Log LOG = LogFactory.getLog(DemandForwardingBridge.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DemandForwardingBridge.class);
     private static final ThreadPoolExecutor ASYNC_TASKS;
     protected final Transport localBroker;
     protected final ResponseCorrelator remoteBroker;

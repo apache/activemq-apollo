@@ -45,8 +45,8 @@ import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Benchmarks the broker by starting many consumer and producers against the
@@ -56,7 +56,7 @@ import org.apache.commons.logging.LogFactory;
  * 
  */
 public class JmsBenchmark extends JmsTestSupport {
-    private static final transient Log LOG = LogFactory.getLog(JmsBenchmark.class);
+    private static final transient Logger LOG = LoggerFactory.getLogger(JmsBenchmark.class);
 
     private static final long SAMPLE_DELAY = Integer.parseInt(System.getProperty("SAMPLE_DELAY", "" + 1000 * 5));
     private static final long SAMPLES = Integer.parseInt(System.getProperty("SAMPLES", "10"));

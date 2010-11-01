@@ -29,14 +29,14 @@ import javax.jms.Session;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.apollo.test3.JmsSendReceiveTestSupport;
 import org.apache.activemq.command.ActiveMQTopic;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @version $Revision: 1.1.1.1 $
  */
 public class CompositePublishTest extends JmsSendReceiveTestSupport {
-    private static final Log LOG = LogFactory.getLog(CompositePublishTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CompositePublishTest.class);
 
     protected Connection sendConnection;
     protected Connection receiveConnection;

@@ -38,15 +38,15 @@ import org.apache.activemq.ActiveMQPrefetchPolicy;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.transport.TransportFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @version $Revision: 1.9 $
  */
 public abstract class JmsTransactionTestSupport extends TestSupport implements MessageListener {
 
-    private static final Log LOG = LogFactory.getLog(JmsTransactionTestSupport.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JmsTransactionTestSupport.class);
     private static final int MESSAGE_COUNT = 5;
     private static final String MESSAGE_TEXT = "message";
 

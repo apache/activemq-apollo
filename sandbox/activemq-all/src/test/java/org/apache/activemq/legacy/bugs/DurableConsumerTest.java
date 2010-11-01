@@ -38,15 +38,15 @@ import junit.framework.TestCase;
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @version $Revision: 1.5 $
  * A Test case for AMQ-1479
  */
 public class DurableConsumerTest extends TestCase {
-    private static final Log LOG = LogFactory.getLog(DurableConsumerTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DurableConsumerTest.class);
     private static int COUNT = 1024*10;
     private static String CONSUMER_NAME = "DURABLE_TEST";
     protected BrokerService broker;

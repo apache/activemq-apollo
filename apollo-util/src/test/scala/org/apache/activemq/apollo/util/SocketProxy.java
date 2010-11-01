@@ -31,12 +31,12 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SocketProxy {
 
-    private static final transient Log LOG = LogFactory.getLog(SocketProxy.class);
+    private static final transient Logger LOG = LoggerFactory.getLogger(SocketProxy.class);
 
     public static final int ACCEPT_TIMEOUT_MILLIS = 1000;
 

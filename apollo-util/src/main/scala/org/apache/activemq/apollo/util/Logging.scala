@@ -18,15 +18,15 @@ package org.apache.activemq.apollo.util
 
 import _root_.java.util.{LinkedHashMap, HashMap}
 import _root_.java.lang.{Throwable, String}
-import _root_.org.apache.commons.logging.LogFactory
-import _root_.org.apache.commons.logging.{Log => Logger}
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.concurrent.atomic.AtomicLong
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait Log {
-  val log = LogFactory.getLog(getClass.getName.stripSuffix("$"))
+  val log = LoggerFactory.getLogger(getClass.getName.stripSuffix("$"))
 
 }
 
@@ -35,7 +35,7 @@ trait Log {
  */
 class NamedLog(name:String) extends Log {
   def this(clazz:Class[_]) = this(clazz.getName.stripSuffix("$"))
-  override val log = LogFactory.getLog(name)
+  override val log = LoggerFactory.getLogger(name)
 }
 
 /**

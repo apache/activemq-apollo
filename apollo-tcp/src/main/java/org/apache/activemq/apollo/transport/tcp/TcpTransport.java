@@ -20,8 +20,8 @@ import org.apache.activemq.apollo.transport.ProtocolCodec;
 import org.apache.activemq.apollo.transport.TransportListener;
 import org.apache.activemq.apollo.util.JavaBaseService;
 import org.apache.activemq.apollo.transport.Transport;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.DispatchSource;
@@ -41,7 +41,7 @@ import java.util.Map;
  */
 public class TcpTransport extends JavaBaseService implements Transport {
 
-    private static final Log LOG = LogFactory.getLog(TcpTransport.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TcpTransport.class);
 
     private Map<String, Object> socketOptions;
 

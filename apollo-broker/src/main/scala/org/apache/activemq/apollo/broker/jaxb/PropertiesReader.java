@@ -22,8 +22,8 @@ import java.util.regex.Pattern;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.util.StreamReaderDelegate;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 
@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class PropertiesReader extends StreamReaderDelegate {
 	
-	Log LOG = LogFactory.getLog(PropertiesReader.class);
+ Logger LOG = LoggerFactory.getLogger(PropertiesReader.class);
 	
 	Pattern pattern = Pattern.compile("\\$\\{([a-zA-Z0-9\\.]*)\\}");
 	

@@ -27,8 +27,8 @@ import org.apache.activemq.thread.Scheduler;
 import org.apache.activemq.transaction.Synchronization;
 import org.apache.activemq.util.Callback;
 import org.apache.activemq.util.LongSequenceGenerator;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jms.*;
 import javax.jms.IllegalStateException;
@@ -148,7 +148,7 @@ public class ActiveMQSession implements Session, QueueSession, TopicSession, Sta
         void afterDelivery(ActiveMQSession session, Message msg);
     }
 
-    private static final Log LOG = LogFactory.getLog(ActiveMQSession.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ActiveMQSession.class);
     protected static final Scheduler scheduler = Scheduler.getInstance();
 
     protected int acknowledgementMode;

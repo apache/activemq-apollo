@@ -21,12 +21,12 @@ import javax.jms.JMSException;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.apollo.CombinationTestSupport;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DiscoveryTransportNoBrokerTest extends CombinationTestSupport {
 
-    private static final Log LOG = LogFactory.getLog(DiscoveryTransportNoBrokerTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DiscoveryTransportNoBrokerTest.class);
     
     public void testMaxReconnectAttempts() throws JMSException {
         try {

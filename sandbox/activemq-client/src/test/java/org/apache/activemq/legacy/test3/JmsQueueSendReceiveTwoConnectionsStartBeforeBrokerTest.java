@@ -25,13 +25,13 @@ import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.apollo.test3.JmsQueueSendReceiveTwoConnectionsTest;
 import org.apache.activemq.transport.TransportFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  */
 public class JmsQueueSendReceiveTwoConnectionsStartBeforeBrokerTest extends JmsQueueSendReceiveTwoConnectionsTest {
-    private static final Log LOG = LogFactory.getLog(JmsQueueSendReceiveTwoConnectionsStartBeforeBrokerTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JmsQueueSendReceiveTwoConnectionsStartBeforeBrokerTest.class);
 
     private Queue<Exception> errors = new ConcurrentLinkedQueue<Exception>();
     private int delayBeforeStartingBroker = 1000;

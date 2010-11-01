@@ -24,14 +24,14 @@ import junit.framework.Test;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.legacy.test4.EmbeddedBrokerTestSupport;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  */
 public class TransportUriTest extends EmbeddedBrokerTestSupport {
 
-	private static final Log LOG = LogFactory.getLog(TransportUriTest.class);
+	private static final Logger LOG = LoggerFactory.getLogger(TransportUriTest.class);
 	
     protected Connection connection;
     

@@ -19,8 +19,8 @@ package org.apache.activemq.apollo.util;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A helper class used to stop a bunch of services, catching and logging any
@@ -91,7 +91,7 @@ public class ServiceStopper {
     }
 
     protected void logError(Object service, Throwable e) {
-        Log log = LogFactory.getLog(service.getClass());
+        Logger log = LoggerFactory.getLogger(service.getClass());
         log.error("Could not stop service: " + service + ". Reason: " + e, e);
     }
 

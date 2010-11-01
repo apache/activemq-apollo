@@ -33,8 +33,8 @@ import javax.jms.TextMessage;
 import junit.framework.TestCase;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test case for AMQ-268
@@ -43,7 +43,7 @@ import org.apache.commons.logging.LogFactory;
  * @version $Revision: 1.1 $
  */
 public final class TransactionRollbackOrderTest extends TestCase {
-    private static final Log LOG = LogFactory.getLog(TransactionRollbackOrderTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TransactionRollbackOrderTest.class);
 
     private volatile String receivedText;
 

@@ -17,8 +17,8 @@
 package org.apache.activemq;
 
 import java.io.Serializable;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines the prefetch message policies for different types of consumers
@@ -27,7 +27,7 @@ import org.apache.commons.logging.LogFactory;
  * @version $Revision: 1.3 $
  */
 public class ActiveMQPrefetchPolicy implements Serializable {
-    private static final Log LOG = LogFactory.getLog(ActiveMQPrefetchPolicy.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ActiveMQPrefetchPolicy.class);
     private static final int MAX_PREFETCH_SIZE = Short.MAX_VALUE - 1;
     private int queuePrefetch;
     private int queueBrowserPrefetch;

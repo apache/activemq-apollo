@@ -47,15 +47,15 @@ import junit.framework.TestCase;
 
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author rnewson
  */
 public final class LargeStreamletTest extends TestCase {
 
-    private static final Log LOG = LogFactory.getLog(LargeStreamletTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(LargeStreamletTest.class);
     private static final String BROKER_URL = "vm://localhost?broker.persistent=false";
     private static final int BUFFER_SIZE = 1 * 1024;
     private static final int MESSAGE_COUNT = 10 * 1024;

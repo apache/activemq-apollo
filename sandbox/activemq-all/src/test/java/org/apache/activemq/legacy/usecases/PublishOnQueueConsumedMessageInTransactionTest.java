@@ -35,12 +35,12 @@ import junit.framework.TestCase;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.util.IOHelper;
 import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class PublishOnQueueConsumedMessageInTransactionTest extends TestCase implements MessageListener {
 
-    private static final Log LOG = LogFactory.getLog(PublishOnQueueConsumedMessageInTransactionTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PublishOnQueueConsumedMessageInTransactionTest.class);
 
     private Session producerSession;
     private Session consumerSession;

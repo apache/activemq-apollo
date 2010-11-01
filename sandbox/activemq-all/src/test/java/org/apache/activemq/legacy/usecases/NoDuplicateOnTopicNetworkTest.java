@@ -21,13 +21,13 @@ import javax.jms.Topic;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.network.NetworkConnector;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import junit.framework.TestCase;
 
 public class NoDuplicateOnTopicNetworkTest extends TestCase {
-    private static final Log LOG = LogFactory
+    private static final Logger LOG = LogFactory
             .getLog(NoDuplicateOnTopicNetworkTest.class);
 
     private static final String MULTICAST_DEFAULT = "multicast://default";

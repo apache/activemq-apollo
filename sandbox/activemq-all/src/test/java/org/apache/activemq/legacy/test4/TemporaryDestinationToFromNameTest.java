@@ -20,15 +20,15 @@ import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.Topic;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @version $Revision: 1.1 $
  */
 public class TemporaryDestinationToFromNameTest extends EmbeddedBrokerAndConnectionTestSupport {
 
-    private static final Log LOG = LogFactory.getLog(TemporaryDestinationToFromNameTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TemporaryDestinationToFromNameTest.class);
 
     public void testCreateTemporaryQueueThenCreateAQueueFromItsName() throws Exception {
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);

@@ -21,14 +21,14 @@ import javax.jms.InvalidClientIDException;
 import javax.jms.JMSException;
 import javax.jms.Session;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 
  */
 public class ReconnectWithSameClientIDTest extends EmbeddedBrokerTestSupport {
-    private static final Log LOG = LogFactory.getLog(ReconnectWithSameClientIDTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ReconnectWithSameClientIDTest.class);
 
     protected Connection connection;
     protected boolean transacted;

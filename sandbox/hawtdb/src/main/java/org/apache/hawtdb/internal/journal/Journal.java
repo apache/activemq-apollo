@@ -39,8 +39,8 @@ import org.apache.activemq.util.Scheduler;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.DataByteArrayInputStream;
 import org.apache.activemq.util.list.LinkedNodeList;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hawtdb.internal.journal.DataFileAppender.WriteCommand;
 import org.apache.hawtdb.internal.journal.DataFileAppender.WriteKey;
 
@@ -70,7 +70,7 @@ public class Journal {
     public static final int DEFAULT_CLEANUP_INTERVAL = 1000 * 30;
     public static final int PREFERED_DIFF = 1024 * 512;
 
-    private static final Log LOG = LogFactory.getLog(Journal.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Journal.class);
 
     protected final Map<WriteKey, WriteCommand> inflightWrites = new ConcurrentHashMap<WriteKey, WriteCommand>();
 

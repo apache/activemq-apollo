@@ -28,8 +28,8 @@ import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.Topic;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.Ignore;
 
 /**
@@ -38,7 +38,7 @@ import org.junit.Ignore;
 @Ignore // Failing locking up with a java.lang.AssertionError
 public class JmsSendReceiveWithMessageExpirationTest extends TestSupport {
 
-    private static final Log LOG = LogFactory.getLog(JmsSendReceiveWithMessageExpirationTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JmsSendReceiveWithMessageExpirationTest.class);
 
     protected int messageCount = 100;
     protected String[] data;

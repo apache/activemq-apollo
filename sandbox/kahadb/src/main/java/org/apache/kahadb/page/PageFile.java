@@ -47,8 +47,8 @@ import org.apache.activemq.util.LRUCache;
 import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.apache.activemq.util.list.Sequence;
 import org.apache.activemq.util.list.SequenceSet;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A PageFile provides you random access to fixed sized disk pages. This object is not thread safe and therefore access to it should 
@@ -73,7 +73,7 @@ public class PageFile {
     private static final int PAGE_FILE_HEADER_SIZE=1024*4;
 
     // Recovery header is (long offset)
-    private static final Log LOG = LogFactory.getLog(PageFile.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PageFile.class);
 
     // A PageFile will use a couple of files in this directory
     private File directory;

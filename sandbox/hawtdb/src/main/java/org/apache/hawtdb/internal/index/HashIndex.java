@@ -27,8 +27,8 @@ import java.util.Map.Entry;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.DataByteArrayInputStream;
 import org.fusesource.hawtbuf.DataByteArrayOutputStream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hawtdb.api.BTreeIndexFactory;
 import org.apache.hawtdb.api.EncoderDecoder;
 import org.apache.hawtdb.api.HashIndexFactory;
@@ -46,7 +46,7 @@ import org.apache.hawtdb.api.Paged;
  */
 public class HashIndex<Key,Value> implements Index<Key,Value> {
     
-    private static final Log LOG = LogFactory.getLog(HashIndex.class);
+    private static final Logger LOG = LoggerFactory.getLogger(HashIndex.class);
     private final BTreeIndexFactory<Key, Value> BIN_FACTORY = new BTreeIndexFactory<Key, Value>();
     
     private final Paged paged;

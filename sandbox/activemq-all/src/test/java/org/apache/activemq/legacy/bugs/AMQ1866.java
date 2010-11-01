@@ -33,8 +33,8 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.legacy.broker.region.policy.PolicyEntry;
 import org.apache.activemq.legacy.broker.region.policy.PolicyMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is a test case for the issue reported at:
@@ -46,7 +46,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class AMQ1866 extends TestCase {
 
-    private static final Log log = LogFactory.getLog(ConsumerThread.class);
+    private static final Logger log = LoggerFactory.getLogger(ConsumerThread.class);
     private BrokerService brokerService;
     private ArrayList<Thread> threads = new ArrayList<Thread>();
     

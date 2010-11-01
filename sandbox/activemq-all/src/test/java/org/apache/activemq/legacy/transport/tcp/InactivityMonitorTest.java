@@ -33,11 +33,11 @@ import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportListener;
 import org.apache.activemq.transport.TransportServer;
 import org.apache.activemq.apollo.transport.tcp.TcpTransport;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class InactivityMonitorTest extends CombinationTestSupport implements TransportAcceptListener {
-    private static final Log LOG = LogFactory.getLog(InactivityMonitorTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(InactivityMonitorTest.class);
 
     public Runnable serverRunOnCommand;
     public Runnable clientRunOnCommand;

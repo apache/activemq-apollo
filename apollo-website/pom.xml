@@ -61,7 +61,6 @@
       <artifactId>scalamd</artifactId>
       <version>${scalamd-version}</version>
     </dependency>
-    
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
@@ -75,6 +74,7 @@
       <version>${scalate-version}</version>
       <scope>test</scope>
     </dependency>
+    
   </dependencies>
 
   <build>

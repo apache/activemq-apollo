@@ -24,15 +24,15 @@ import junit.framework.TestCase;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
 import org.apache.activemq.broker.store.kahadb.KahaDBStore;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 public class JAXBComplexConfigTest extends TestCase {
 
-    private static final Log LOG = LogFactory.getLog(JAXBComplexConfigTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JAXBComplexConfigTest.class);
 	
     Broker broker;
     

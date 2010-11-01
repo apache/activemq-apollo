@@ -22,14 +22,14 @@ import javax.jms.Message;
 import javax.jms.TextMessage;
 
 import org.apache.activemq.ActiveMQConnection;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @version $Revision: 1.1.1.1 $
  */
 public class ConsumeTopicPrefetchTest extends ProducerConsumerTestSupport {
-    private static final Log LOG = LogFactory.getLog(ConsumeTopicPrefetchTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ConsumeTopicPrefetchTest.class);
 
     protected int prefetchSize = 100;
     protected String[] messageTexts;

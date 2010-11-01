@@ -43,8 +43,8 @@ import org.apache.activemq.ActiveMQMessageConsumer;
 import org.apache.activemq.ActiveMQSession;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.Ignore;
 
 
@@ -55,7 +55,7 @@ import org.junit.Ignore;
 @Ignore // this test is now hanging.. this was passing at one point..
 public class JMSConsumerTest extends JmsTestSupport {
 
-    private static final Log LOG = LogFactory.getLog(JMSConsumerTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JMSConsumerTest.class);
 
     public ActiveMQDestination destination;
     public int deliveryMode;

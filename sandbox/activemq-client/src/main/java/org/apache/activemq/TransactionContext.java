@@ -38,8 +38,8 @@ import org.apache.activemq.command.XATransactionId;
 import org.apache.activemq.transaction.Synchronization;
 import org.apache.activemq.util.JMSExceptionSupport;
 import org.apache.activemq.util.LongSequenceGenerator;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A TransactionContext provides the means to control a JMS transaction. It
@@ -61,7 +61,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class TransactionContext implements XAResource {
 
-    private static final Log LOG = LogFactory.getLog(TransactionContext.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TransactionContext.class);
 
     // XATransactionId -> ArrayList of TransactionContext objects
     private final ConcurrentHashMap<TransactionId, List<TransactionContext>> ENDED_XA_TRANSACTION_CONTEXTS = new ConcurrentHashMap<TransactionId, List<TransactionContext>>();

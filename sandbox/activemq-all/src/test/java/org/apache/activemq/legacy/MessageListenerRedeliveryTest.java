@@ -33,12 +33,12 @@ import junit.framework.TestCase;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.ActiveMQMessageConsumer;
 import org.apache.activemq.RedeliveryPolicy;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MessageListenerRedeliveryTest extends TestCase {
 
-    private static final Log LOG = LogFactory.getLog(MessageListenerRedeliveryTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MessageListenerRedeliveryTest.class);
 
     private Connection connection;
 

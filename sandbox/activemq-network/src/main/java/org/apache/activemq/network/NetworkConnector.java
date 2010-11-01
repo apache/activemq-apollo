@@ -39,14 +39,14 @@ import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.util.JMXSupport;
 import org.apache.activemq.util.ServiceStopper;
 import org.apache.activemq.util.ServiceSupport;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  */
 public abstract class NetworkConnector extends NetworkBridgeConfiguration implements Service {
 
-    private static final Log LOG = LogFactory.getLog(NetworkConnector.class);
+    private static final Logger LOG = LoggerFactory.getLogger(NetworkConnector.class);
     protected URI localURI;
     protected ConnectionFilter connectionFilter;
     protected ServiceSupport serviceSupport = new ServiceSupport() {

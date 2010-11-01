@@ -36,11 +36,11 @@ import org.apache.activemq.apollo.transport.vm.VMTransportFactory;
 import org.apache.activemq.broker.store.memory.MemoryStore;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ActiveMQConnectionFactoryTest extends AutoFailTestSupport {
-    private static final Log LOG = LogFactory.getLog(ActiveMQConnectionFactoryTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ActiveMQConnectionFactoryTest.class);
 
     private ActiveMQConnection connection;
     private Broker broker;

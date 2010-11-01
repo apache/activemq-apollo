@@ -27,8 +27,8 @@ import javax.jms.Session;
 import junit.framework.TestCase;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * simulate message flow which cause the following exception in the broker
@@ -42,7 +42,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class TransactionNotStartedErrorTest extends TestCase {
 
-    private static final Log LOG = LogFactory.getLog(TransactionNotStartedErrorTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TransactionNotStartedErrorTest.class);
     
     private static int counter = 500;
 

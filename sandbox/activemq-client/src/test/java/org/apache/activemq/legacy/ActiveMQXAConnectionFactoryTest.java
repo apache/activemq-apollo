@@ -47,11 +47,11 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.command.ActiveMQTextMessage;
 import org.apache.activemq.transport.TransportFactory;
 import org.apache.activemq.transport.TransportServer;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ActiveMQXAConnectionFactoryTest extends CombinationTestSupport {
-    private static final Log LOG = LogFactory.getLog(ActiveMQXAConnectionFactoryTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ActiveMQXAConnectionFactoryTest.class);
     long txGenerator = System.currentTimeMillis();
 
     public void testCopy() throws URISyntaxException, JMSException {

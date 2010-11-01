@@ -28,8 +28,8 @@ import org.apache.activemq.apollo.transport.TransportFactory;
 import org.apache.activemq.apollo.transport.TransportServer;
 import org.apache.activemq.apollo.util.IntrospectionSupport;
 import org.apache.activemq.apollo.util.URISupport;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.activemq.apollo.transport.TransportFactorySupport.configure;
 import static org.apache.activemq.apollo.transport.TransportFactorySupport.verify;
@@ -39,7 +39,7 @@ import static org.apache.activemq.apollo.transport.TransportFactorySupport.verif
  * @author David Martin Clavo david(dot)martin(dot)clavo(at)gmail.com (logging improvement modifications)
  */
 public class TcpTransportFactory implements TransportFactory.Provider {
-    private static final Log LOG = LogFactory.getLog(TcpTransportFactory.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TcpTransportFactory.class);
 
     public TransportServer bind(String location) throws Exception {
         if( !location.startsWith("tcp:") ) {

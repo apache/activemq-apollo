@@ -21,8 +21,8 @@ import java.util.Arrays;
 import org.apache.activemq.broker.openwire.OpenwireMessageEvaluationContext;
 import org.apache.activemq.filter.BooleanExpression;
 import org.apache.activemq.filter.MessageEvaluationContext;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @openwire:marshaller code="91"
@@ -31,7 +31,7 @@ import org.apache.commons.logging.LogFactory;
 public class NetworkBridgeFilter implements DataStructure, BooleanExpression {
 
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.NETWORK_BRIDGE_FILTER;
-    static final Log LOG = LogFactory.getLog(NetworkBridgeFilter.class);
+    static final Logger LOG = LoggerFactory.getLogger(NetworkBridgeFilter.class);
 
     private BrokerId networkBrokerId;
     private int networkTTL;

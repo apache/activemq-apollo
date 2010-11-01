@@ -19,8 +19,8 @@ package org.apache.activemq.apollo.filter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -28,7 +28,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public final class XPathExpression implements BooleanExpression {
 
-    private static final Log LOG = LogFactory.getLog(XPathExpression.class);
+    private static final Logger LOG = LoggerFactory.getLogger(XPathExpression.class);
     private static final String EVALUATOR_SYSTEM_PROPERTY = "org.apache.activemq.XPathEvaluatorClassName";
     private static final String DEFAULT_EVALUATOR_CLASS_NAME = XalanXPathEvaluator.class.getName();
 

@@ -41,8 +41,8 @@ import org.apache.activemq.command.ActiveMQTopic;
 import org.apache.activemq.legacy.broker.BrokerService;
 import org.apache.activemq.legacy.broker.TransportConnector;
 import org.apache.activemq.util.ServiceStopper;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  */
@@ -50,7 +50,7 @@ public class TopicClusterTest extends TestCase implements MessageListener {
     
     protected static final int MESSAGE_COUNT = 50;
     protected static final int NUMBER_IN_CLUSTER = 3;
-    private static final Log LOG = LogFactory.getLog(TopicClusterTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TopicClusterTest.class);
     
     protected Destination destination;
     protected boolean topic = true;

@@ -43,8 +43,8 @@ import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.RedeliveryPolicy;
 import org.apache.activemq.legacy.broker.BrokerService;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AMQ2102Test extends TestCase implements UncaughtExceptionHandler {
        
@@ -53,7 +53,7 @@ public class AMQ2102Test extends TestCase implements UncaughtExceptionHandler {
     final static int CONSUME_ALL = -1;
     
     
-    private static final Log LOG = LogFactory.getLog(AMQ2102Test.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AMQ2102Test.class);
     
     private final static Map<Thread, Throwable> exceptions = new ConcurrentHashMap<Thread, Throwable>();
     

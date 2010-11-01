@@ -35,8 +35,8 @@ import javax.management.remote.JMXConnectorServerFactory;
 import javax.management.remote.JMXServiceURL;
 
 import org.apache.activemq.Service;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A Flow provides different dispatch policies within the NMR
@@ -48,7 +48,7 @@ public class ManagementContext implements Service {
      * Default activemq domain
      */
     public static final String DEFAULT_DOMAIN = "org.apache.activemq";
-    private static final Log LOG = LogFactory.getLog(ManagementContext.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ManagementContext.class);
     private MBeanServer beanServer;
     private String jmxDomainName = DEFAULT_DOMAIN;
     private boolean useMBeanServer = true;

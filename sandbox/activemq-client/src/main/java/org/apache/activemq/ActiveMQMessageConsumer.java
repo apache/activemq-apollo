@@ -56,8 +56,8 @@ import org.apache.activemq.transaction.Synchronization;
 import org.apache.activemq.util.Callback;
 import org.apache.activemq.util.IntrospectionSupport;
 import org.apache.activemq.util.JMSExceptionSupport;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A client uses a <CODE>MessageConsumer</CODE> object to receive messages
@@ -97,7 +97,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class ActiveMQMessageConsumer implements MessageAvailableConsumer, StatsCapable, ActiveMQDispatcher {
 
-    private static final Log LOG = LogFactory.getLog(ActiveMQMessageConsumer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ActiveMQMessageConsumer.class);
     protected static final Scheduler scheduler = Scheduler.getInstance();
     protected final ActiveMQSession session;
     protected final ConsumerInfo info;

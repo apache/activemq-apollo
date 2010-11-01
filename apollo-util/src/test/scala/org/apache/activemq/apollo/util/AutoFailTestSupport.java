@@ -19,8 +19,8 @@ package org.apache.activemq.apollo.util;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import junit.framework.TestCase;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Enforces a test case to run for only an allotted time to prevent them from
@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
 public abstract class AutoFailTestSupport extends TestCase {
     public static final int EXIT_SUCCESS = 0;
     public static final int EXIT_ERROR = 1;
-    private static final Log LOG = LogFactory.getLog(AutoFailTestSupport.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AutoFailTestSupport.class);
 
     private long maxTestTime = 5 * 60 * 1000; // 5 mins by default
     private Thread autoFailThread;
@@ -77,7 +77,6 @@ public abstract class AutoFailTestSupport extends TestCase {
                     // which usually means, it has finished its run.
                     if (!isTestSuccess.get()) {
                         LOG.error("Test case has exceeded the maximum allotted time to run of: " + getMaxTestTime() + " ms.");
-                        LOG.fatal("Test case has exceeded the maximum allotted time to run of: " + getMaxTestTime() + " ms.");
                         System.exit(EXIT_ERROR);
                     }
                 }

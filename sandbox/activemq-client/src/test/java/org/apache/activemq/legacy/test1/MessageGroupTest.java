@@ -11,12 +11,12 @@ import org.apache.activemq.apollo.CombinationTestSupport;
 import org.apache.activemq.apollo.test1.JmsTestSupport;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MessageGroupTest extends JmsTestSupport {
 	
-	 private static final Log LOG = LogFactory.getLog(CombinationTestSupport.class);
+	 private static final Logger LOG = LoggerFactory.getLogger(CombinationTestSupport.class);
 
     public void testGroupedMessagesDeliveredToOnlyOneConsumer() throws Exception {
 

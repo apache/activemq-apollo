@@ -29,14 +29,14 @@ import javax.jms.TextMessage;
 
 import org.apache.activemq.apollo.test3.JmsResourceProvider;
 import org.apache.activemq.apollo.test3.JmsTransactionTestSupport;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @version $Revision: 1.2 $
  */
 public class JmsQueueTransactionTest extends JmsTransactionTestSupport {
-    private static final Log LOG = LogFactory.getLog(JmsQueueTransactionTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JmsQueueTransactionTest.class);
 
     /**
      * @see org.apache.activemq.apollo.test3.JmsTransactionTestSupport#getJmsResourceProvider()

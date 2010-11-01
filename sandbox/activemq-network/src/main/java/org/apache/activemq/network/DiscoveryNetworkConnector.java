@@ -31,8 +31,8 @@ import org.apache.activemq.transport.discovery.DiscoveryListener;
 import org.apache.activemq.util.ServiceStopper;
 import org.apache.activemq.util.ServiceSupport;
 import org.apache.activemq.util.SslContext;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A network connector which uses a discovery agent to detect the remote brokers
@@ -41,7 +41,7 @@ import org.apache.commons.logging.LogFactory;
  * @org.apache.xbean.XBean element="networkConnector"
  */
 public class DiscoveryNetworkConnector extends NetworkConnector implements DiscoveryListener {
-    private static final Log LOG = LogFactory.getLog(DiscoveryNetworkConnector.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DiscoveryNetworkConnector.class);
 
     private DiscoveryAgent discoveryAgent;
     private ConcurrentHashMap<URI, NetworkBridge> bridges = new ConcurrentHashMap<URI, NetworkBridge>();

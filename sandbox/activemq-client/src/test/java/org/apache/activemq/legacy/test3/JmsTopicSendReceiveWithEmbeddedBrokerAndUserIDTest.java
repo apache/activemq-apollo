@@ -25,14 +25,14 @@ import javax.jms.Message;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.test3.JmsTopicSendReceiveWithTwoConnectionsAndEmbeddedBrokerTest;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @version $Revision: 1.1 $
  */
 public class JmsTopicSendReceiveWithEmbeddedBrokerAndUserIDTest extends JmsTopicSendReceiveWithTwoConnectionsAndEmbeddedBrokerTest {
-    private static final Log LOG = LogFactory.getLog(JmsTopicSendReceiveWithEmbeddedBrokerAndUserIDTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JmsTopicSendReceiveWithEmbeddedBrokerAndUserIDTest.class);
 
     protected String userName = "James";
 
