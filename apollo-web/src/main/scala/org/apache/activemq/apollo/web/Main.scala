@@ -22,6 +22,7 @@ import org.mortbay.jetty.Server
 import org.mortbay.jetty.nio.SelectChannelConnector
 import org.mortbay.jetty.webapp.WebAppContext
 import org.apache.commons.logging.LogFactory
+import java.io.File
 
 /**
  * <p>
@@ -47,7 +48,18 @@ object Main {
 
  def main(args:Array[String]) = run
 
-  def run = {
+  def run:Unit = {
+
+    var dir = new File(webAppDir);
+    if( !dir.exists ) {
+      webAppDir = "apollo-web/"+webAppDir
+      dir = new File(webAppDir);
+      if( !dir.exists ) {
+        println("The directory: "+webAppDir+" does not exist.")
+        return
+      }
+    }
+    
     println("===========================")
     println("Starting up ActiveMQ Apollo");
     println("===========================")
@@ -68,7 +80,6 @@ object Main {
     println("=======================")
     println("Shutdown");
     println("=======================")
-
   }
 
   def start: Unit = {
