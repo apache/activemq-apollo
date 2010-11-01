@@ -669,13 +669,14 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         val subscription_id = get(headers, ID)
         var id:AsciiBuffer = subscription_id match {
           case None =>
-            if( protocol_version eq V1_0 )
+            if( protocol_version eq V1_0 ) {
               // in 1.0 it's ok if the client does not send us the
               // the id header
               dest
-            else
+            } else {
               die("The id header is missing from the SUBSCRIBE frame");
               return
+            }
 
           case Some(x:AsciiBuffer)=> x
         }
