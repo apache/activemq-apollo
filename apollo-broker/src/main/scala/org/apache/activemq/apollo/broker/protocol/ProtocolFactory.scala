@@ -22,6 +22,7 @@ import org.apache.activemq.apollo.util.ClassFinder
 import org.apache.activemq.apollo.store.MessageRecord
 import org.apache.activemq.apollo.transport._
 import org.apache.activemq.apollo.broker.{Delivery, Message, BrokerConnection}
+import org.apache.activemq.apollo.dto.ConnectionStatusDTO
 
 /**
  * <p>
@@ -80,4 +81,5 @@ trait ProtocolHandler extends DefaultTransportListener {
     connection.stop()
   }
 
+  def create_connection_status = new ConnectionStatusDTO
 }

@@ -278,19 +278,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
         case None => cb(None)
         case Some(connection:BrokerConnection) =>
           connection.dispatchQueue {
-            val result = new ConnectionStatusDTO
-            result.id = connection.id
-            result.state = connection.serviceState.toString
-            result.state_since = connection.serviceState.since
-            result.protocol = connection.protocolHandler.protocol
-            result.transport = connection.transport.getTypeId
-            result.remote_address = connection.transport.getRemoteAddress
-            val wf = connection.transport.getProtocolCodec
-            if( wf!=null ) {
-              result.write_counter = wf.getWriteCounter
-              result.read_counter = wf.getReadCounter
-            }
-            cb(Some(result))
+            cb(Some(connection.get_connection_status))
           }
       }
     }

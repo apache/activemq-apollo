@@ -40,3 +40,4 @@ StringIdListDTO
 TimeMetricDTO
 VirtualHostDTO
 VirtualHostStatusDTO
+StompConnectionStatusDTO

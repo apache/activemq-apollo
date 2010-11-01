@@ -23,6 +23,7 @@ import protocol.{ProtocolHandler}
 import org.apache.activemq.apollo.transport.{DefaultTransportListener, Transport}
 import org.apache.activemq.apollo.util.{Log, BaseService}
 import org.apache.activemq.apollo.filter.BooleanExpression
+import org.apache.activemq.apollo.dto.ConnectionStatusDTO
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -114,6 +115,27 @@ class BrokerConnection(val connector: Connector, val id:Long) extends Connection
   override def onRefill = {
     super.onRefill
     protocolHandler.onRefill
+  }
+
+  def get_connection_status = {
+    val result = if( protocolHandler==null ) {
+      new ConnectionStatusDTO
+    } else {
+      protocolHandler.create_connection_status
+    }
+
+    result.id = id
+    result.state = serviceState.toString
+    result.state_since = serviceState.since
+    result.protocol = protocolHandler.protocol
+    result.transport = transport.getTypeId
+    result.remote_address = transport.getRemoteAddress
+    val wf = transport.getProtocolCodec
+    if( wf!=null ) {
+      result.write_counter = wf.getWriteCounter
+      result.read_counter = wf.getReadCounter
+    }
+    result
   }
 }
 

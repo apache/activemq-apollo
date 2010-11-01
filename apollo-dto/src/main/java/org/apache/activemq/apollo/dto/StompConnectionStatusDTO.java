@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
@@ -29,38 +27,33 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="connection-status")
+@XmlRootElement(name="stomp-connection-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ConnectionStatusDTO extends ServiceStatusDTO {
+public class StompConnectionStatusDTO extends ConnectionStatusDTO {
 
     /**
-     * The number of bytes that have been read from the connection.
+     * The version of the STOMP protocol being used.
      */
-	@XmlAttribute(name="read-counter")
-	public long read_counter;
+	@XmlAttribute(name="protocol-version")
+	public String protocol_version;
 
     /**
-     * The number of bytes that have been written to the connection.
-     */
-	@XmlAttribute(name="write-counter")
-	public long write_counter;
-
-    /**
-     * The transport the connection is using.
+     * The connected user
      */
 	@XmlAttribute
-	public String transport;
+	public String user;
 
     /**
-     * The protocol the connection is using.
+     * What the connection is currently waiting on
      */
-	@XmlAttribute
-	public String protocol;
+    @XmlAttribute(name="waiting-on")
+	public String waiting_on;
 
     /**
-     * The remote address of the connection
+     * Opens subscriptions that the connection has created.
      */
-	@XmlAttribute(name="remote-address")
-	public String remote_address;
+    @XmlAttribute(name="subscription-count")
+	public int subscription_count;
+
 
 }

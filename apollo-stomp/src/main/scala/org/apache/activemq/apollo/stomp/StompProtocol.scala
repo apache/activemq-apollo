@@ -33,9 +33,9 @@ import org.apache.activemq.apollo.filter.{BooleanExpression, FilterException}
 import org.apache.activemq.apollo.transport._
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
-import org.apache.activemq.apollo.dto.{BindingDTO, DurableSubscriptionBindingDTO, PointToPointBindingDTO}
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
+import org.apache.activemq.apollo.dto.{StompConnectionStatusDTO, BindingDTO, DurableSubscriptionBindingDTO, PointToPointBindingDTO}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -175,7 +175,6 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   override protected def log = StompProtocolHandler
 
   protected def dispatchQueue:DispatchQueue = connection.dispatchQueue
-
 
   trait AckHandler {
     def track(delivery:Delivery):Unit
@@ -353,15 +352,29 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   var session_id:AsciiBuffer = _
   var protocol_version:AsciiBuffer = _
+  var login:Option[AsciiBuffer] = None
+  var passcode:Option[AsciiBuffer] = None
 
   var heart_beat_monitor:HeartBeatMonitor = new HeartBeatMonitor
+
+  var waiting_on:String = "client request"
+
+
+  override def create_connection_status = {
+    var rc = new StompConnectionStatusDTO
+    rc.protocol_version = if( protocol_version == null ) null else protocol_version.toString
+    rc.user = login.map(_.toString).getOrElse(null)
+    rc.subscription_count = consumers.size
+    rc.waiting_on = waiting_on
+    rc
+  }
 
   override def onTransportConnected() = {
 
     session_manager = new SinkMux[StompFrame]( MapSink(connection.transportSink){x=>x}, dispatchQueue, StompFrame)
     connection_sink = new OverflowSink(session_manager.open(dispatchQueue));
     connection_sink.refiller = ^{}
-    connection.transport.resumeRead
+    resumeRead
 
   }
 
@@ -448,7 +461,20 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     }
   }
 
+
+  def suspendRead(reason:String) = {
+    waiting_on = reason
+    connection.transport.suspendRead
+  }
+  def resumeRead() = {
+    waiting_on = "client request"
+    connection.transport.resumeRead
+  }
+
   def on_stomp_connect(headers:HeaderMap):Unit = {
+
+    login = get(headers, LOGIN)
+    passcode = get(headers, PASSCODE)
 
     val accept_versions = get(headers, ACCEPT_VERSION).getOrElse(V1_0).split(COMMA).map(_.ascii)
     protocol_version = SUPPORTED_PROTOCOL_VERSIONS.find( v=> accept_versions.contains(v) ) match {
@@ -498,8 +524,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         return
     }
 
-    connection.transport.suspendRead
-
+    suspendRead("virtual host lookup")
     val host_header = get(headers, HOST)
     val cb: (VirtualHost)=>Unit = (host)=>
       queue {
@@ -520,7 +545,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
             val wf = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
             wf.memory_pool = this.host.direct_buffer_pool
           }
-          connection.transport.resumeRead
+          resumeRead
 
         } else {
           die("Invalid virtual host: "+host_header.get)
@@ -590,9 +615,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         host.router.connect(destiantion, producer) {
           route =>
             if (!connection.stopped) {
-              connection.transport.resumeRead
+              resumeRead
               route.refiller = ^ {
-                connection.transport.resumeRead
+                resumeRead
               }
               producerRoutes.put(destiantion, route)
               send_via_route(route, frame, uow)
@@ -648,7 +673,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       if( route.full ) {
         // but once it gets full.. suspend, so that we get more stomp messages
         // until it's not full anymore.
-        connection.transport.suspendRead
+        suspendRead("blocked destination: "+route.destination)
       }
 
     } else {
@@ -838,7 +863,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   private def _die(headers:HeaderMap, explained:String="") = {
     if( !connection.stopped ) {
-      connection.transport.suspendRead
+      suspendRead("shutdown")
       connection.transport.offer(StompFrame(ERROR, headers, BufferContent(ascii(explained))) )
       // TODO: if there are too many open connections we should just close the connection
       // without waiting for the error to get sent to the client.
@@ -850,7 +875,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   override def onTransportFailure(error: IOException) = {
     if( !connection.stopped ) {
-      connection.transport.suspendRead
+      suspendRead("shutdown")
       info(error, "Shutting connection down due to: %s", error)
       super.onTransportFailure(error);
     }
