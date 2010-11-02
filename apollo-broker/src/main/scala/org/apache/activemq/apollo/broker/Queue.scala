@@ -90,9 +90,9 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
 
   /**
    * Subscribers that consume slower than this rate per seconds will be considered
-   * slow.
+   * slow.  Once a consumer is considered slow, we may switch to disk spooling.
    */
-  var tune_slow_subscription_rate = 500*1024
+  var tune_slow_subscription_rate = 2*1024*1024
 
   /**
    * The number of milliseconds between slow consumer checks.
@@ -322,19 +322,20 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
             val cursor_delta = sub.advanced_size - sub.last_advanced_size
             sub.last_advanced_size = sub.advanced_size
 
-            // If the subscription is NOT slow if it's been tail parked or
-            // it's been parking and cursoring through the data at the tune_slow_subscription_rate 
-            if( (sub.tail_parked && sub.tail_parkings==0) || ( sub.tail_parkings > 0 && cursor_delta >= slow_cursor_delta ) ) {
+            // If the subscription is NOT slow if it's it is tail parked or
+            // it's been parking or at least advancing through the data at
+            // the tune_slow_subscription_rate
+            if( sub.tail_parked || sub.tail_parkings>0 || cursor_delta >= slow_cursor_delta ) {
               if( sub.slow ) {
                 debug("subscription is now fast: %s", sub)
                 sub.slow_intervals = 0
               }
             } else {
               if( !sub.slow ) {
-                trace("slow interval: %d, %d, %d", sub.slow_intervals, sub.tail_parkings, cursor_delta)
+                debug("slow interval: %d, %d, %d < %d", sub.slow_intervals, sub.tail_parkings, cursor_delta, slow_cursor_delta)
                 sub.slow_intervals += 1
                 if( sub.slow ) {
-                  debug("subscription is now slow: %s", sub)
+                  debug("subscription is slow: %s", sub)
                 }
               }
             }
