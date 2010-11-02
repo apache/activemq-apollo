@@ -293,13 +293,14 @@ class StompDestinationTest extends StompTestSupport {
     client.write(
       "SUBSCRIBE\n" +
       "destination:/topic/updates\n" +
-      "id:durable:my-sub-name\n" +
+      "id:my-sub-name\n" +
+      "persistent:true\n" +
       "receipt:0\n" +
       "\n")
     wait_for_receipt("0")
     client.close
 
-    // Close him out.. since his id started /w durable: then
+    // Close him out.. since persistent:true then
     // the topic subscription will be persistent accross client
     // connections.
 
@@ -311,14 +312,15 @@ class StompDestinationTest extends StompTestSupport {
     client.write(
       "SUBSCRIBE\n" +
       "destination:/topic/updates\n" +
-      "id:durable:my-sub-name\n" +
+      "id:my-sub-name\n" +
+      "persistent:true\n" +
       "\n")
 
     def get(id:Int) = {
       val frame = client.receive()
       info(frame)
       frame should startWith("MESSAGE\n")
-      frame should include ("subscription:durable:my-sub-name\n")
+      frame should include ("subscription:my-sub-name\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
     }
 

@@ -441,6 +441,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
                 on_stomp_abort(frame.headers)
               case SUBSCRIBE =>
                 on_stomp_subscribe(frame.headers)
+              case UNSUBSCRIBE =>
+                on_stomp_unsubscribe(frame.headers)
 
               case DISCONNECT =>
                 connection.stop
@@ -687,121 +689,168 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   def on_stomp_subscribe(headers:HeaderMap):Unit = {
     val receipt = get(headers, RECEIPT_REQUESTED)
-    get(headers, DESTINATION) match {
-      case Some(dest)=>
 
-        val destination:Destination = dest
-        val subscription_id = get(headers, ID)
-        var id:AsciiBuffer = subscription_id match {
-          case None =>
-            if( protocol_version eq V1_0 ) {
-              // in 1.0 it's ok if the client does not send us the
-              // the id header
-              dest
-            } else {
-              die("The id header is missing from the SUBSCRIBE frame");
-              return
-            }
-
-          case Some(x:AsciiBuffer)=> x
-        }
-
-        val topic = destination.getDomain == Router.TOPIC_DOMAIN
-
-        var durable_name = if( topic && id.startsWith(DURABLE_PREFIX) ) {
-          id
-        } else {
-          null
-        }
-
-        val ack = get(headers, ACK_MODE) match {
-          case None=> new AutoAckHandler
-          case Some(x)=> x match {
-            case ACK_MODE_AUTO=>new AutoAckHandler
-            case ACK_MODE_NONE=>new AutoAckHandler
-            case ACK_MODE_CLIENT=> new SessionAckHandler
-            case ACK_MODE_SESSION=> new SessionAckHandler
-            case ACK_MODE_MESSAGE=> new MessageAckHandler
-            case ack:AsciiBuffer => die("Unsuported ack mode: "+ack); null
-          }
-        }
-
-        val selector = get(headers, SELECTOR) match {
-          case None=> null
-          case Some(x)=> x
-            try {
-              (x, SelectorParser.parse(x.utf8.toString))
-            } catch {
-              case e:FilterException =>
-                die("Invalid selector expression: "+e.getMessage)
-              null
-            }
-        }
-
-        consumers.get(id) match {
-          case None=>
-            info("subscribing to: %s", destination)
-
-            val binding: BindingDTO = if( topic && durable_name==null ) {
-              null
-            } else {
-              // Controls how the created queue gets bound
-              // to the destination name space (this is used to
-              // recover the queue on restart and rebind it the
-              // way again)
-              if (topic) {
-                val rc = new DurableSubscriptionBindingDTO
-                rc.destination = destination.getName.toString
-                // TODO:
-                // rc.client_id =
-                rc.subscription_id = durable_name
-                rc.filter = if (selector == null) null else selector._1
-                rc
-              } else {
-                val rc = new PointToPointBindingDTO
-                rc.destination = destination.getName.toString
-                rc
-              }
-            }
-
-            val consumer = new StompConsumer(subscription_id, destination, ack, selector, binding);
-            consumers += (id -> consumer)
-
-            if( binding==null ) {
-
-              // consumer is bind bound as a topic
-              host.router.bind(destination, consumer, ^{
-                receipt.foreach{ receipt =>
-                  connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
-                }
-              })
-              consumer.release
-
-            } else {
-
-              // create a queue and bind the consumer to it.
-              host.router.create_queue(binding) { x=>
-                x match {
-                  case Some(queue:Queue) =>
-                    queue.bind(consumer::Nil)
-                    receipt.foreach{ receipt =>
-                      connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
-                    }
-                    consumer.release
-                  case None => throw new RuntimeException("case not yet implemented.")
-                }
-              }
-            }
-
-
-
-          case Some(_)=>
-            die("A subscription with identified with '"+id+"' allready exists")
-        }
+    val dest = get(headers, DESTINATION) match {
+      case Some(dest)=> dest
       case None=>
         die("destination not set.")
+        return
+    }
+    val destination:Destination = dest
+
+    val subscription_id = get(headers, ID)
+    var id:AsciiBuffer = subscription_id match {
+      case None =>
+        if( protocol_version eq V1_0 ) {
+          // in 1.0 it's ok if the client does not send us the
+          // the id header
+          dest
+        } else {
+          die("The id header is missing from the SUBSCRIBE frame");
+          return
+        }
+      case Some(x:AsciiBuffer)=> x
     }
 
+    val topic = destination.getDomain == Router.TOPIC_DOMAIN
+    var persistent = get(headers, PERSISTENT).map( _ == TRUE ).getOrElse(false)
+
+    val ack = get(headers, ACK_MODE) match {
+      case None=> new AutoAckHandler
+      case Some(x)=> x match {
+        case ACK_MODE_AUTO=>new AutoAckHandler
+        case ACK_MODE_NONE=>new AutoAckHandler
+        case ACK_MODE_CLIENT=> new SessionAckHandler
+        case ACK_MODE_SESSION=> new SessionAckHandler
+        case ACK_MODE_MESSAGE=> new MessageAckHandler
+        case ack:AsciiBuffer =>
+          die("Unsuported ack mode: "+ack);
+          return;
+      }
+    }
+
+    val selector = get(headers, SELECTOR) match {
+      case None=> null
+      case Some(x)=> x
+        try {
+          (x, SelectorParser.parse(x.utf8.toString))
+        } catch {
+          case e:FilterException =>
+            die("Invalid selector expression: "+e.getMessage)
+            return;
+        }
+    }
+
+    if ( consumers.contains(id) ) {
+      die("A subscription with identified with '"+id+"' allready exists")
+      return;
+    }
+
+    info("subscribing to: %s", destination)
+    val binding: BindingDTO = if( topic && !persistent ) {
+      null
+    } else {
+      // Controls how the created queue gets bound
+      // to the destination name space (this is used to
+      // recover the queue on restart and rebind it the
+      // way again)
+      if (topic) {
+        val rc = new DurableSubscriptionBindingDTO
+        rc.destination = destination.getName.toString
+        // TODO:
+        // rc.client_id =
+        rc.subscription_id = if( persistent ) id else null
+        rc.filter = if (selector == null) null else selector._1
+        rc
+      } else {
+        val rc = new PointToPointBindingDTO
+        rc.destination = destination.getName.toString
+        rc
+      }
+    }
+
+    val consumer = new StompConsumer(subscription_id, destination, ack, selector, binding);
+    consumers += (id -> consumer)
+
+    if( binding==null ) {
+
+      // consumer is bind bound as a topic
+      host.router.bind(destination, consumer, ^{
+        receipt.foreach{ receipt =>
+          connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+        }
+      })
+      consumer.release
+
+    } else {
+
+      // create a queue and bind the consumer to it.
+      host.router.create_queue(binding) { x=>
+        x match {
+          case Some(queue:Queue) =>
+            queue.bind(consumer::Nil)
+            receipt.foreach{ receipt =>
+              connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+            }
+            consumer.release
+          case None => throw new RuntimeException("case not yet implemented.")
+        }
+      }
+    }
+  }
+
+  def on_stomp_unsubscribe(headers:HeaderMap):Unit = {
+
+    val receipt = get(headers, RECEIPT_REQUESTED)
+    var persistent = get(headers, PERSISTENT).map( _ == TRUE ).getOrElse(false)
+
+    val id = get(headers, ID).getOrElse {
+      if( protocol_version eq V1_0 ) {
+        // in 1.0 it's ok if the client does not send us the
+        // the id header, the destination header must be set
+        get(headers, DESTINATION) match {
+          case Some(dest)=> dest
+          case None=>
+            die("destination not set.")
+            return
+        }
+      } else {
+        die("The id header is missing from the UNSUBSCRIBE frame");
+        return
+      }
+    }
+
+    consumers.get(id) match {
+      case None=>
+        die("The subscription '%s' not found.".format(id))
+        return;
+      case Some(consumer)=>
+        // consumer.close
+        if( consumer.binding==null ) {
+          host.router.unbind(consumer.destination, consumer)
+          receipt.foreach{ receipt =>
+            connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+          }
+        } else {
+          host.router.get_queue(consumer.binding) { queue=>
+            queue.foreach( _.unbind(consumer::Nil) )
+          }
+
+          if( persistent && consumer.binding!=null ) {
+            host.router.destroy_queue(consumer.binding){sucess=>
+              receipt.foreach{ receipt =>
+                connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+              }
+            }
+          } else {
+            receipt.foreach{ receipt =>
+              connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+            }
+          }
+
+        }
+
+    }
   }
 
   def on_stomp_ack(frame:StompFrame):Unit = {
