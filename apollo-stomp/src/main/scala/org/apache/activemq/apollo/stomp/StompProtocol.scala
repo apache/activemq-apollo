@@ -282,6 +282,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
     override def connection = Some(StompProtocolHandler.this.connection)
 
+    def is_persistent = false
+
     def matches(delivery:Delivery) = {
       if( delivery.message.protocol eq StompProtocol ) {
         if( selector!=null ) {

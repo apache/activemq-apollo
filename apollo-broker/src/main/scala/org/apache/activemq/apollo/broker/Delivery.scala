@@ -56,6 +56,7 @@ trait DeliveryConsumer extends Retained {
   def dispatchQueue:DispatchQueue;
   def matches(message:Delivery):Boolean
   def connect(producer:DeliveryProducer):DeliverySession
+  def is_persistent:Boolean
 }
 
 /**

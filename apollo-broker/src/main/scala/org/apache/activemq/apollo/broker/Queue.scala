@@ -460,6 +460,8 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
 
   def matches(delivery: Delivery) = filter.matches(delivery.message)
 
+  def is_persistent = tune_persistent
+
   def connect(p: DeliveryProducer) = new DeliverySession {
     retain
 
