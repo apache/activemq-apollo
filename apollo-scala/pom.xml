@@ -96,6 +96,13 @@
             <arg>-deprecation</arg>
           </args>
           <scalaVersion>${scala-version}</scalaVersion>
+          <compilerPlugins>
+            <compilerPlugin>
+              <groupId>org.scala-lang.plugins</groupId>
+              <artifactId>continuations</artifactId>
+              <version>${scala-version}</version>
+            </compilerPlugin>
+          </compilerPlugins>
         </configuration>
       </plugin>
       
