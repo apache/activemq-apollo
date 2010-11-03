@@ -20,6 +20,7 @@ import java.io.File
 import org.apache.activemq.apollo.util._
 import javax.servlet.{ServletContextListener, ServletContextEvent}
 import org.apache.activemq.apollo.broker.{FileConfigStore, ConfigStore, BrokerRegistry, Broker}
+import org.fusesource.hawtdispatch._
 
 /**
  * A servlet context listener which handles starting the
@@ -36,20 +37,21 @@ class ApolloListener extends ServletContextListener {
       if( ConfigStore() == null ) {
         configStore = createConfigStore
         ConfigStore() = configStore
+        configStore.dispatchQueue {
+          configStore.listBrokers.foreach { id=>
+            configStore.getBroker(id, true).foreach{ config=>
 
-        // Brokers startup async.
-        configStore.foreachBroker(true) { config=>
-          println("Config store contained broker: "+config.id);
+              println("Config store contained broker: "+config.id);
+              // Only start the broker up if it's enabled..
+              if( config.enabled ) {
 
-          // Only start the broker up if it's enabled..
-          if( config.enabled ) {
-
-            println("starting broker: "+config.id);
-            val broker = new Broker()
-            broker.config = config
-            BrokerRegistry.add(config.id, broker)
-            broker.start()
-
+                println("starting broker: "+config.id);
+                val broker = new Broker()
+                broker.config = config
+                BrokerRegistry.add(config.id, broker)
+                broker.start()
+              }
+            }
           }
         }
       }
@@ -62,11 +64,12 @@ class ApolloListener extends ServletContextListener {
   def contextDestroyed(sce: ServletContextEvent) = {
     val tracker = new LoggingTracker("webapp shutdown")
     if( configStore!=null ) {
-      configStore.foreachBroker(false) { config=>
-        // remove started brokers what we configured..
-        val broker = BrokerRegistry.remove(config.id);
-        if( broker!=null ) {
-          tracker.stop(broker)
+      configStore.dispatchQueue {
+        configStore.listBrokers.foreach { id=>
+          val broker = BrokerRegistry.remove(id);
+          if( broker!=null ) {
+            tracker.stop(broker)
+          }
         }
       }
       tracker.stop(configStore)

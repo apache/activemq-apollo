@@ -93,7 +93,9 @@
             <jvmArg>-Xss8m</jvmArg>
           </jvmArgs>
           <args>
+            <arg>-optimise</arg>
             <arg>-deprecation</arg>
+            <arg>-P:continuations:enable</arg>
           </args>
           <scalaVersion>${scala-version}</scalaVersion>
           <compilerPlugins>
@@ -135,7 +137,7 @@
           <plugin>
             <groupId>org.scala-tools</groupId>
             <artifactId>maven-scala-plugin</artifactId>
-            <version>${scala-plugin-version}</version>
+            <version>${maven-scala-plugin-version}</version>
             <executions>
               <execution>
                 <id>doc</id>

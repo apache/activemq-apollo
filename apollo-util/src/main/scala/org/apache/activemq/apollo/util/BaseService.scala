@@ -17,7 +17,7 @@
 package org.apache.activemq.apollo.util
 
 import org.fusesource.hawtdispatch.DispatchQueue
-import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 
 object BaseService extends Log
 

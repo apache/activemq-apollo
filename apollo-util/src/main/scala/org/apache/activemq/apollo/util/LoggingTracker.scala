@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.util
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.HashSet
-import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch.{TaskTracker, DispatchQueue}
 
 /**

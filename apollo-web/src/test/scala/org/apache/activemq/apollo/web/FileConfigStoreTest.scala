@@ -17,10 +17,9 @@
 package org.apache.activemq.apollo.web
 
 import java.io.File
-import java.util.concurrent.{TimeUnit, CountDownLatch}
-import org.fusesource.hawtdispatch.Future
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.broker.FileConfigStore
+import org.fusesource.hawtdispatch._
 
 /**
  * <p>
@@ -40,8 +39,8 @@ class FileConfigStoreTest extends FunSuiteSupport {
     }
 
     expect(List("default")) {
-      Future[List[String]]{ x=>
-        store.listBrokers(x)
+      store.dispatchQueue.sync {
+        store.listBrokers
       }
     }
 

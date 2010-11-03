@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch.{Dispatch}
 import org.apache.activemq.apollo.dto.{ConnectorDTO}
 import protocol.{ProtocolFactory, Protocol}

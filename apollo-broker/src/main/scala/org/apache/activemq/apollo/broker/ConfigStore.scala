@@ -20,7 +20,7 @@ import org.apache.activemq.apollo.broker.jaxb.PropertiesReader
 import org.apache.activemq.apollo.dto.{XmlCodec, ConnectorDTO, VirtualHostDTO, BrokerDTO}
 import java.util.regex.Pattern
 import javax.xml.stream.{XMLOutputFactory, XMLInputFactory}
-import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
 import java.util.concurrent.{TimeUnit, ExecutorService, Executors}
 import org.fusesource.hawtbuf.{ByteArrayInputStream, ByteArrayOutputStream}
@@ -28,12 +28,19 @@ import javax.xml.bind.{Marshaller, JAXBContext}
 import java.io.{OutputStreamWriter, File}
 import XmlCodec._
 import org.apache.activemq.apollo.util._
+import scala.util.continuations._
+import org.fusesource.hawtdispatch.DispatchQueue
 
 object ConfigStore {
 
   var store:ConfigStore = null
 
-  def apply() = store
+  def apply():ConfigStore = store
+
+  def sync[T] (func: ConfigStore=>T):T = store.dispatchQueue.sync {
+    func(store)
+  }
+
   def update(value:ConfigStore) = store=value
 
 }
@@ -47,15 +54,15 @@ object ConfigStore {
  */
 trait ConfigStore extends Service {
 
-  def listBrokers(cb: (List[String]) => Unit):Unit
+  def listBrokers: List[String]
 
-  def getBroker(id:String, eval:Boolean)(cb: (Option[BrokerDTO]) => Unit):Unit
+  def getBroker(id:String, eval:Boolean): Option[BrokerDTO]
 
-  def putBroker(config:BrokerDTO)(cb: (Boolean) => Unit):Unit
+  def putBroker(config:BrokerDTO): Boolean
 
-  def removeBroker(id:String, rev:Int)(cb: (Boolean) => Unit):Unit
+  def removeBroker(id:String, rev:Int): Boolean
 
-  def foreachBroker(eval:Boolean)(cb: (BrokerDTO)=> Unit):Unit
+  def dispatchQueue:DispatchQueue
 
 }
 
@@ -96,6 +103,12 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     })
   }
 
+  protected def _stop(onCompleted:Runnable) = {
+    ioWorker.submit(^{
+      onCompleted.run
+      ioWorker.shutdown
+    })
+  }
 
   def startup(onCompleted:Runnable) = {
 
@@ -142,32 +155,22 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
         onCompleted.run
       }
   }
-  protected def _stop(onCompleted:Runnable) = {
-    ioWorker.submit(^{
-      onCompleted.run
-    })
-    ioWorker.shutdown
+
+                  
+  def listBrokers = {
+    List(latest.id)
   }
 
-  def listBrokers(cb: (List[String]) => Unit) = reply(cb) {
-    List(latest.id)
-  } >>: dispatchQueue
 
-
-  def foreachBroker(eval:Boolean)(cb: (BrokerDTO)=> Unit) = reply(cb) {
-    unmarshall(latest.data, eval)
-  } >>: dispatchQueue
-
-
-  def getBroker(id:String, eval:Boolean)(cb: (Option[BrokerDTO]) => Unit) = reply(cb) {
+  def getBroker(id:String, eval:Boolean) = {
     if( latest.id == id ) {
       Some(unmarshall(latest.data, eval))
     } else {
       None
     }
-  } >>: dispatchQueue
+  }
 
-  def putBroker(config:BrokerDTO)(cb: (Boolean) => Unit) = reply(cb) {
+  def putBroker(config:BrokerDTO) = {
     debug("storing broker model: %s ver %d", config.id, config.rev)
     if( latest.id != config.id ) {
       debug("this store can only update broker: "+latest.id)
@@ -179,26 +182,30 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
       latest = write(StoredBrokerModel(config))
       true
     }
-  } >>: dispatchQueue
+  }
 
-  def removeBroker(id:String, rev:Int)(cb: (Boolean) => Unit) = reply(cb) {
+  def removeBroker(id:String, rev:Int) = {
     // not supported.
     false
-  } >>: dispatchQueue
+  }
 
   private def fileRev(rev:Int) = new File(file.getParent, file.getName+"."+rev)
 
   private def schedualNextUpdateCheck:Unit = dispatchQueue.after(1, TimeUnit.SECONDS) {
     if( serviceState.isStarted ) {
+      val latestHash = latest.hash+1
+      val nextRev = latest.rev+1
       ioWorker {
         try {
-          val config = read(latest.rev+1, file)
-          if (latest.hash != config.hash) {
+          val config = read(nextRev, file)
+          if (latestHash != config.hash) {
             // TODO: do this in the controller so that it
             // has a chance to update the runtime too.
             val c = unmarshall(config.data)
             c.rev = config.rev
-            putBroker(c) { x=> }
+            dispatchQueue {
+              putBroker(c)
+            }
           }
           schedualNextUpdateCheck
         }

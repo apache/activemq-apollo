@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.broker
 
 import java.util.concurrent.TimeUnit
 
-import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
 import java.util.concurrent.atomic.AtomicInteger
 

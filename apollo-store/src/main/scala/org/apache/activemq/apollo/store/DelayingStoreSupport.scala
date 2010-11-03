@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.store
 import collection.mutable.ListBuffer
 import java.util.HashMap
 import collection.Seq
-import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import java.util.concurrent._
 import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch.{BaseRetained, ListEventAggregator}

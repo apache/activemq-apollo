@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.stomp
 import _root_.org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained}
 import _root_.org.fusesource.hawtbuf._
 import collection.mutable.{ListBuffer, HashMap}
-import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 
 import AsciiBuffer._
 import org.apache.activemq.apollo.broker._
@@ -36,6 +36,7 @@ import org.apache.activemq.apollo.util._
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
 import org.apache.activemq.apollo.dto.{StompConnectionStatusDTO, BindingDTO, DurableSubscriptionBindingDTO, PointToPointBindingDTO}
+import scala.util.continuations._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -477,6 +478,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   def on_stomp_connect(headers:HeaderMap):Unit = {
 
+
+
     login = get(headers, LOGIN)
     passcode = get(headers, PASSCODE)
 
@@ -528,39 +531,36 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         return
     }
 
-    suspendRead("virtual host lookup")
-    val host_header = get(headers, HOST)
-    val cb: (VirtualHost)=>Unit = (host)=>
-      queue {
-        if(host!=null) {
-          this.host=host
-
-          val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
-          session_id = ascii(this.host.config.id + ":"+this.host.session_counter.incrementAndGet)
-
-          connection_sink.offer(
-            StompFrame(CONNECTED, List(
-              (VERSION, protocol_version),
-              (SESSION, session_id),
-              (HEART_BEAT, outbound_heart_beat_header)
-            )))
-
-          if( this.host.direct_buffer_pool!=null ) {
-            val wf = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
-            wf.memory_pool = this.host.direct_buffer_pool
-          }
-          resumeRead
-
-        } else {
-          die("Invalid virtual host: "+host_header.get)
-        }
+    reset {
+      suspendRead("virtual host lookup")
+      val host_header = get(headers, HOST)
+      val host = host_header match {
+        case None=>
+          connection.connector.broker.getDefaultVirtualHost
+        case Some(host)=>
+          connection.connector.broker.getVirtualHost(host)
       }
+      resumeRead
+      if(host!=null) {
+        this.host=host
 
-    host_header match {
-      case None=>
-        connection.connector.broker.getDefaultVirtualHost(cb)
-      case Some(host)=>
-        connection.connector.broker.getVirtualHost(host, cb)
+        val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
+        session_id = ascii(this.host.config.id + ":"+this.host.session_counter.incrementAndGet)
+
+        connection_sink.offer(
+          StompFrame(CONNECTED, List(
+            (VERSION, protocol_version),
+            (SESSION, session_id),
+            (HEART_BEAT, outbound_heart_beat_header)
+          )))
+
+        if( this.host.direct_buffer_pool!=null ) {
+          val wf = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
+          wf.memory_pool = this.host.direct_buffer_pool
+        }
+      } else {
+        die("Invalid virtual host: "+host_header.get)
+      }
     }
 
   }

@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.web.resources
 
 import javax.ws.rs._
 import core.{UriInfo, Response, Context}
-import org.fusesource.hawtdispatch.Future
+import org.fusesource.hawtdispatch._
 import Response.Status._
 import Response._
 import java.net.URI
@@ -32,13 +32,10 @@ import org.apache.activemq.apollo.broker.ConfigStore
 @Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
 case class ConfigurationResource(parent:BrokerResource) extends Resource(parent) {
 
-
-  def store = ConfigStore()
-
   lazy val config = {
-    Future[Option[BrokerDTO]] { cb=>
-      store.getBroker(parent.id, false)(cb)
-    }.getOrElse(result(NOT_FOUND))
+    ConfigStore.sync{ store=>
+      store.getBroker(parent.id, false).getOrElse(result(NOT_FOUND))
+    }
   }
 
 
@@ -66,16 +63,16 @@ case class ConfigurationResource(parent:BrokerResource) extends Resource(parent)
   def put(@PathParam("rev") rev:Int, config:BrokerDTO) = {
     config.id = parent.id;
     config.rev = rev
-    Future[Boolean] { cb=>
-      store.putBroker(config)(cb)
-    } || result(NOT_FOUND)
+    ConfigStore.sync { store=>
+      store.putBroker(config) || result(NOT_FOUND)
+    }
   }
 
   @DELETE @Path("{rev}")
   def delete(@PathParam("rev") rev:Int) = {
-    Future[Boolean] { cb=>
-      store.removeBroker(parent.id, rev)(cb)
-    } || result(NOT_FOUND)
+    ConfigStore.sync { store=>
+      store.removeBroker(parent.id, rev) || result(NOT_FOUND)
+    }
   }
 
 }

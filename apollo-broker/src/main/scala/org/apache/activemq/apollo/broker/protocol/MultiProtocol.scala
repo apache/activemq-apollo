@@ -25,7 +25,7 @@ import java.nio.ByteBuffer
 import java.io.IOException
 import java.lang.String
 import java.util.concurrent.TimeUnit
-import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 
 /**
  * <p>

@@ -28,7 +28,7 @@ import org.fusesource.hawtdb.internal.journal.{JournalListener, Journal, Locatio
 import org.apache.activemq.apollo.store.hawtdb.model.Type._
 import org.apache.activemq.apollo.store.hawtdb.model._
 import org.fusesource.hawtbuf._
-import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import collection.mutable.{LinkedHashMap, HashMap, ListBuffer}
 import collection.JavaConversions
 import ju.{TreeSet, HashSet}

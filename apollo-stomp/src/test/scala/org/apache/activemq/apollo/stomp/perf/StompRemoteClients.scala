@@ -28,7 +28,7 @@ import _root_.org.fusesource.hawtbuf._
 import AsciiBuffer._
 import Stomp._
 import _root_.org.apache.activemq.apollo.stomp.StompFrame
-import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 
 
 class StompRemoteConsumer extends RemoteConsumer {

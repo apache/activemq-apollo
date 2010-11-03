@@ -17,7 +17,7 @@
 package org.apache.activemq.apollo.broker
 
 import _root_.org.fusesource.hawtdispatch._
-import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import java.util.{LinkedList}
 import org.apache.activemq.apollo.transport.Transport
 

@@ -22,7 +22,6 @@ import javax.ws.rs._
 import core.{UriInfo, Response, Context}
 import reflect.{BeanProperty}
 import com.sun.jersey.api.view.ImplicitProduces
-import org.fusesource.hawtdispatch.Future
 import Response._
 import Response.Status._
 import org.apache.activemq.apollo.broker.ConfigStore
@@ -34,6 +33,7 @@ import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.dto._
 import java.util.{Arrays, Collections}
 import org.apache.activemq.apollo.util.Logging
+import org.fusesource.hawtdispatch._
 
 /**
  * Defines the default representations to be used on resources
@@ -136,10 +136,11 @@ class RootResource() extends Resource {
   @GET
   def brokers = {
     val rc = new StringIdListDTO
-    Future[List[String]] { cb=>
-      ConfigStore().listBrokers(cb)
-    }.foreach { x=> 
-      rc.items.add( new StringIdLabeledDTO(x,x) )
+    val cs = ConfigStore()
+    cs.dispatchQueue.sync {
+      cs.listBrokers.foreach { x=>
+        rc.items.add( new StringIdLabeledDTO(x,x) )
+      }
     }
     rc
   }
@@ -157,12 +158,13 @@ case class BrokerResource(parent:RootResource, @BeanProperty id: String) extends
 
   @GET
   def get = {
+    val cs = ConfigStore()
     val rc = new BrokerSummaryDTO
     rc.id = id
     rc.manageable = BrokerRegistry.get(id)!=null
-    rc.configurable = Future[Option[BrokerDTO]] { cb=>
-        ConfigStore().getBroker(id, false)(cb)
-      }.isDefined
+    rc.configurable = cs.dispatchQueue.sync{
+      cs.getBroker(id,false).isDefined
+    }
     rc
   }
 

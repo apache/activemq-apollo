@@ -229,7 +229,7 @@ trait Logging {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait DispatchLogging extends Logging {
-  import org.fusesource.hawtdispatch.ScalaDispatch._
+  import org.fusesource.hawtdispatch._
 
   override protected def log_map(message:String) = {
     val d = getCurrentQueue

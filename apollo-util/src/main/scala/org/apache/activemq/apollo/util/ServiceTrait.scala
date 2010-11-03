@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.util
 
-import org.fusesource.hawtdispatch.ScalaDispatch
+import org.fusesource.hawtdispatch._
 
 /**
  * <p>
@@ -27,11 +27,11 @@ import org.fusesource.hawtdispatch.ScalaDispatch
 trait ServiceTrait extends Service {
 
   def start(func: =>Unit ):Unit = {
-    start( ScalaDispatch.runnable( func _ ) )
+    start( runnable( func _ ) )
   }
 
   def stop(func: =>Unit ):Unit = {
-    stop( ScalaDispatch.runnable( func _ ) )
+    stop( runnable( func _ ) )
   }
 
 }

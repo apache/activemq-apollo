@@ -23,8 +23,7 @@ import java.util.List
 import org.apache.activemq.apollo.dto._
 import java.{lang => jl}
 import collection.JavaConversions
-import org.fusesource.hawtdispatch.{ScalaDispatch, Future}
-import ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker._
 import collection.mutable.ListBuffer
 

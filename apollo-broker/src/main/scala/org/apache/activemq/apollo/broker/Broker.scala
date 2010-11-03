@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.broker
 
 import _root_.java.io.{File}
 import _root_.java.lang.{String}
-import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
 import org.fusesource.hawtdispatch.{Dispatch}
 import org.fusesource.hawtbuf._
@@ -255,12 +255,12 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
     tracker.callback(onCompleted)
   }
 
-  def getVirtualHost(name: AsciiBuffer, cb: (VirtualHost) => Unit) = reply(cb) {
+  def getVirtualHost(name: AsciiBuffer) = dispatchQueue ! {
     virtualHosts.getOrElse(name, null)
-  } >>: dispatchQueue
+  }
 
-  def getDefaultVirtualHost(cb: (VirtualHost) => Unit) = reply(cb) {
+  def getDefaultVirtualHost = dispatchQueue ! {
     defaultVirtualHost
-  } >>: dispatchQueue
+  }
 
 }

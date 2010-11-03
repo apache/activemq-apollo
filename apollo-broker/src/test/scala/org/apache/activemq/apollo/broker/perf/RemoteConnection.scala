@@ -21,7 +21,7 @@ import org.apache.activemq.apollo.util.metric._
 import org.apache.activemq.apollo.broker.{Destination, Delivery, Connection}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.TimeUnit
-import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import java.io.IOException
 import org.apache.activemq.apollo.transport.TransportFactory
 

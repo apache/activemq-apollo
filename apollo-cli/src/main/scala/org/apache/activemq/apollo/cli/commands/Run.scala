@@ -31,7 +31,7 @@ import org.mortbay.jetty.webapp.WebAppContext
 import org.apache.commons.logging.LogFactory
 import org.apache.activemq.apollo.broker.{BrokerRegistry, Broker, ConfigStore, FileConfigStore}
 import org.apache.activemq.apollo.util.ServiceControl
-import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import Helper._
 
 /**
@@ -90,21 +90,22 @@ class Run extends Action {
       store.file = conf
       ConfigStore() = store
       store.start(^{
-
-        // Brokers startup async.
-        store.foreachBroker(true) { config=>
-          // Only start the broker up if it's enabled..
-          if( config.enabled ) {
-            println("Starting broker '%s'...".format(config.id));
-            val broker = new Broker()
-            broker.config = config
-            BrokerRegistry.add(config.id, broker)
-            broker.start(^{
-              println("Broker '%s' started.".format(config.id));
-            })
+        store.dispatchQueue {
+          store.listBrokers.foreach { id=>
+            store.getBroker(id, true).foreach{ config=>
+              // Only start the broker up if it's enabled..
+              if( config.enabled ) {
+                println("Starting broker '%s'...".format(config.id));
+                val broker = new Broker()
+                broker.config = config
+                BrokerRegistry.add(config.id, broker)
+                broker.start(^{
+                  println("Broker '%s' started.".format(config.id));
+                })
+              }
+            }
           }
         }
-
       })
 
 

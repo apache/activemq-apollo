@@ -17,7 +17,7 @@
 package org.apache.activemq.apollo.store
 
 import org.fusesource.hawtbuf.AsciiBuffer._
-import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch.TaskTracker
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import org.scalatest.{BeforeAndAfterEach, BeforeAndAfterAll}

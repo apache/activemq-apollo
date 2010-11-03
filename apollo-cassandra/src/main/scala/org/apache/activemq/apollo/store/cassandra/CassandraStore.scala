@@ -23,7 +23,7 @@ import collection.mutable.ListBuffer
 import java.util.HashMap
 import collection.{JavaConversions, Seq}
 import com.shorrockin.cascal.utils.Conversions._
-import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch.ListEventAggregator
 import java.util.concurrent._
 import org.apache.activemq.apollo.dto._

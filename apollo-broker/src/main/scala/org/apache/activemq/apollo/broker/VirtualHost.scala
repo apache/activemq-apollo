@@ -18,9 +18,8 @@ package org.apache.activemq.apollo.broker;
 
 import _root_.java.util.{ArrayList, HashMap}
 import _root_.java.lang.{String}
-import _root_.org.fusesource.hawtdispatch.{ScalaDispatch, DispatchQueue}
 import _root_.scala.collection.JavaConversions._
-import _root_.org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 
 import org.apache.activemq.apollo.dto.{VirtualHostDTO}
 import java.util.concurrent.TimeUnit
@@ -79,7 +78,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
   import VirtualHost._
   
   override protected def log = VirtualHost
-  override val dispatchQueue:DispatchQueue = ScalaDispatch.createQueue("virtual-host");
+  override val dispatchQueue:DispatchQueue = org.fusesource.hawtdispatch.createQueue("virtual-host");
 
   var config:VirtualHostDTO = _
   val router = new Router(this)

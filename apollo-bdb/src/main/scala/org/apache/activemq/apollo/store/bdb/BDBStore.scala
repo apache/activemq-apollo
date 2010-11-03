@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.store.bdb
 import dto.{BDBStoreDTO, BDBStoreStatusDTO}
 import java.util.concurrent.atomic.AtomicLong
 import collection.Seq
-import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import java.io.File
 import java.util.concurrent._
 import org.apache.activemq.apollo.store._
