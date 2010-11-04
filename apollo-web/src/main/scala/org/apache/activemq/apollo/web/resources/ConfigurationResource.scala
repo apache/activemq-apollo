@@ -56,7 +56,7 @@ case class ConfigurationResource(parent:BrokerResource) extends Resource(parent)
   def post(@PathParam("rev") rev:Int, @FormParam("config") config:String) = {
     val dto = XmlCodec.unmarshalBrokerDTO(new ByteArrayInputStream(config.getBytes("UTF-8")))
     put(rev, dto)
-    seeOther(path("../"+dto.rev)).build
+    result(path("../"+dto.rev))
   }
 
   @PUT @Path("{rev}")

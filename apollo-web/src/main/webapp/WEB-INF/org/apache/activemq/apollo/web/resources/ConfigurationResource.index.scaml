@@ -14,7 +14,10 @@
 -# limitations under the License.
 
 -@ import val it: org.apache.activemq.apollo.web.resources.ConfigurationResource
+- val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
+- import helper._
 
-%html
-  %body
-    %h1 Broker: #{parent.id}
+.breadcumbs
+  %a(href={strip_resolve(".")}) Back
+
+%h1 Broker: #{parent.id}

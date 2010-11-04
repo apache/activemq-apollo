@@ -17,6 +17,10 @@
 - val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
 - import helper._
 
+.breadcumbs
+  %a(href={strip_resolve(".")}) Back
+
+
 %p state: #{state} for #{ uptime(state_since) }
 
 %h2 Virtual Hosts

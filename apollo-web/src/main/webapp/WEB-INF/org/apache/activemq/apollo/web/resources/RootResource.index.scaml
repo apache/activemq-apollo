@@ -14,11 +14,9 @@
 -# limitations under the License.
 
 -@ import val it: org.apache.activemq.apollo.web.resources.RootResource
-%html
-  %body
-    %h1 Brokers
+%h1 Brokers
 
-    %ul
-      - for( x <- brokers.items )
-        %li
-          %a(href="brokers/#{x.id}") #{x.label}
+%ul
+  - for( x <- brokers.items )
+    %li
+      %a(href="brokers/#{x.id}") #{x.label}

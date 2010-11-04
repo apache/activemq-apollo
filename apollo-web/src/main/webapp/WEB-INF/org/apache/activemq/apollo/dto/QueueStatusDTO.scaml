@@ -17,6 +17,9 @@
 - val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
 - import helper._
 
+.breadcumbs
+  %a(href={strip_resolve(".")}) Back
+
 %h1 Queue: #{label}
 
 %h2 Current Size

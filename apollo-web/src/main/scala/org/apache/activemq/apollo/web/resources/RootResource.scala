@@ -28,12 +28,13 @@ import org.apache.activemq.apollo.broker.ConfigStore
 import org.apache.activemq.apollo.broker.BrokerRegistry
 import collection.JavaConversions._
 import com.sun.jersey.api.core.ResourceContext
-import org.fusesource.scalate.RenderContext
 import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.dto._
 import java.util.{Arrays, Collections}
 import org.apache.activemq.apollo.util.Logging
 import org.fusesource.hawtdispatch._
+import java.net.URI
+import org.fusesource.scalate.{NoValueSetException, RenderContext}
 
 /**
  * Defines the default representations to be used on resources
@@ -55,6 +56,10 @@ abstract class Resource(private val parent:Resource=null) extends Logging {
       response.entity(message)
     }
     throw new WebApplicationException(response.build)
+  }
+
+  def result[T](uri:URI):T = {
+    throw new WebApplicationException(seeOther(uri).build)
   }
 
   def path(value:Any) = uri_info.getAbsolutePathBuilder().path(value.toString).build()
@@ -79,11 +84,23 @@ object ViewHelper {
 class ViewHelper {
   import ViewHelper._
 
-  lazy val uri_info = RenderContext().attribute[UriInfo]("uri_info")
+  lazy val uri_info = {
+    try {
+      RenderContext().attribute[UriInfo]("uri_info")
+    } catch {
+      case x:NoValueSetException =>
+        RenderContext().attribute[Resource]("it").uri_info
+    }
+  }
 
   def path(value:Any) = {
     uri_info.getAbsolutePathBuilder().path(value.toString).build()
   }
+
+  def strip_resolve(value:String) = {
+    uri_info.getAbsolutePath.resolve(value).toString.stripSuffix("/")
+  }
+
 
   def memory(value:Int):String = memory(value.toLong)
   def memory(value:Long):String = {
@@ -123,15 +140,32 @@ class ViewHelper {
  * Index resource
  */
 @Path("/")
+@Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
 class IndexResource() extends Resource {
+
+  @GET
+  def get = {
+    val cs = ConfigStore()
+    val brokers = cs.dispatchQueue.sync {
+      cs.listBrokers
+    }
+    if( brokers.size==1 ) {
+      result(path("brokers/"+brokers.head+"/runtime"))
+    } else {
+      result(path("brokers"))
+    }
+  }
+
+  @Path("brokers{x:/?}")
+  def brokers = new RootResource(this)
+
 }
 
 
 /**
  * Manages a collection of broker resources.
  */
-@Path("/brokers")
-class RootResource() extends Resource {
+class RootResource(parent:Resource) extends Resource(parent) {
 
   @GET
   def brokers = {
@@ -154,7 +188,7 @@ class RootResource() extends Resource {
 /**
  * Resource that identifies a managed broker.
  */
-case class BrokerResource(parent:RootResource, @BeanProperty id: String) extends Resource(parent) {
+case class BrokerResource(parent:Resource, @BeanProperty id: String) extends Resource(parent) {
 
   @GET
   def get = {

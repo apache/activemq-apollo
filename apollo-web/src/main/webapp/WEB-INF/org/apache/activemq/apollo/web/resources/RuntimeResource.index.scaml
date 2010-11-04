@@ -15,8 +15,11 @@
 
 -@ import val it: org.apache.activemq.apollo.web.resources.RuntimeResource
 - val broker = it.get
+- val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
+- import helper._
 
-%html
-  %body
-    %h1 Broker: #{broker.config.id}
-    %p state: #{broker.state}
+.breadcumbs
+  %a(href={strip_resolve(".")}) Back
+
+%h1 Broker: #{broker.config.id}
+%p state: #{broker.state}
