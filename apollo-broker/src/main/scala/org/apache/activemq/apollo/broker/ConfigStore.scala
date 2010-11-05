@@ -89,7 +89,6 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
   var file:File = new File("activemq.xml")
   @volatile
   var latest:StoredBrokerModel = null
-  var readOnly = false
 
   val dispatchQueue = createQueue("config store")
 
@@ -131,23 +130,23 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     revs = revs.sortWith((x,y)=> x < y)
 
     val last = revs.lastOption.map{ rev=>
-      read(rev, fileRev(rev))
-    } match {
-      case None =>
-        if( !file.exists ) {
-          if( readOnly ) {
-            throw new Exception("file does not exsit: "+file)
-          } else {
-            write(StoredBrokerModel(defaultConfig(1)))
-          }
+      val r = read(rev, fileRev(rev))
+      if( !file.exists ) {
+        write(r)
+      } else {
+        val x = read(rev, file)
+        if ( !Arrays.equals(r.data, x.data) ) {
+          write(StoredBrokerModel(x.id, x.rev+1, x.data, x.lastModified))
         } else {
-          if( readOnly ) {
-            read(1, file)
-          } else {
-            write(read(1, file))
-          }
+          x
         }
-      case Some(x)=> x
+      }
+    } getOrElse {
+      if( file.exists ) {
+        write(read(1, file))
+      } else {
+        write(StoredBrokerModel(defaultConfig(1)))
+      }
     }
 
     dispatchQueue {
