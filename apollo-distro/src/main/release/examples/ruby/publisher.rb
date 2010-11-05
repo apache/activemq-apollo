@@ -41,10 +41,10 @@ for i in 1..(@batches)
  	@start = Time.now	
 
 	for j in 1..@messages
-		@conn.send '/topic/event', @body, {'persistent'=>'false'}
+		@conn.publish '/topic/event', @body, {'persistent'=>'false'}
 		$stdout.print "Sent #{j} messages\n" if j%1000==0
 	end
-	@conn.send '/topic/event', "REPORT", {'persistent'=>'false'}
+	@conn.publish '/topic/event', "REPORT", {'persistent'=>'false'}
 
 	@remaining = @subscribers
 	while @remaining > 0
@@ -62,6 +62,6 @@ for i in 1..(@batches)
 	@times[i] = @diff
 end
 
-@conn.send '/topic/event', "SHUTDOWN", {'persistent'=>'false'}
+@conn.publish '/topic/event', "SHUTDOWN", {'persistent'=>'false'}
 
 @conn.disconnect
