@@ -19,7 +19,7 @@ in_menu: false
 --- name:overview
 
 # Developers
-Various links for developers 
+Ready to start hacking on ${project_name}?
 
 --- name:content
 
@@ -30,10 +30,10 @@ Various links for developers
 * [Release Guide](release-guide.html)
 * [Maven Site Reports](${website_base_url}/versions/${project_version}/maven/)
 
-# Architecture Nodes
+# Architecture Notes
 
-* [Performance and Scaling](documentation/performance-scaling.html)
-* [Architecture](documentation/architecture.html)
-* [Module Organization](documentation/module-organization.html)
+* [Performance and Scaling](../documentation/performance-scaling.html)
+* [Architecture](../documentation/architecture.html)
+* [Module Organization](../documentation/module-organization.html)
 
 Looking for the website documentation of a different ${project_name} [version](${website_base_url}/versions/index.html)?

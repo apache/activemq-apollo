@@ -32,15 +32,24 @@ Download it today!
 
     Want to help stablize the latest and greatest nightly development build?  **Warnning**: These builds are extreamly bleeding edge!
 
-    ### For Windows
+    ### Binary Distributions
+    
+    For **Windows**
     
     * [apache-apollo-#{project_snapshot_version}-windows-distro.zip](https://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=zip&c=windows-distro) 
-    * [apollo-project-#{project_snapshot_version}-source-release.zip](http://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=zip&c=source-release)
+        
     
-    ### For Unix/Linux/OS X
+    For **Unix/Linux/OS X**
     
     * [apache-apollo-#{project_snapshot_version}-unix-distro.tar.gz](http://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=tar.gz&c=unix-distro)
-    * [apollo-project-#{project_snapshot_version}-source-release.tar.gz](http://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=tar.gz&c=source-release)
 
-    If you find any problems with them, please contact the [community](community/index.html).
+    
+    ### Source Code Distributions
+
+    Some hard core folks prefer to [build it](community/building.html) themselves from a source code distribution:
+    
+    * [apollo-project-#{project_snapshot_version}-source-release.zip](http://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apollo-project&v=#{project_snapshot_version}&e=zip&c=source-release)
+    * [apollo-project-#{project_snapshot_version}-source-release.tar.gz](http://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apollo-project&v=#{project_snapshot_version}&e=tar.gz&c=source-release)
+    
+    You could have also checked out the source code directly from our [source code repository](community/source.html)
 

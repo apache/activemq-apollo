@@ -46,9 +46,13 @@ To build ${project_name} maven has to be configured to use more memory
 
     mvn install -P download
 
-The last argument, **-Pdownload**, is optional and typically only used on
+The last argument, **-P download**, is optional and typically only used on
 the first build as it adds some extra repos to the project just in case
 our dependencies have not quite reached the central Maven repository yet.
+
+Once the build completes, you will find the binary distribution of 
+${project_name} located in the `apollo-distro/target` directory.
+
 
 ### Doing a Quick Build
 

@@ -40,53 +40,40 @@ The ${project_name} community is here to help you
     [contributions](contributing.html). One of the easiest ways to get
     involved is to join the community discussions.
     
-  table
-    tr
-      th List Name
-      th Subscribe
-      th Unsubscribe
-      th Archive
-      th Nabble (Online Forums)
-    tr
-      td #{project_name} User List
-      td
-        a(href="mailto:users-subscribe@activemq.apache.org") Subscribe
-      td
-        a(href="mailto:users-unsubscribe@activemq.apache.org") Unsubscribe
-      td
-        a(href="http://mail-archives.apache.org/mod_mbox/activemq-users/") Archive
-      td
-        ="nbsp;"
-        -# a(title="User Forum" href="user-forum.html") Nabble
-    tr
-      td #{project_name} Developer List
-      td
-        a(href="mailto:dev-subscribe@activemq.apache.org") Subscribe
-      td
-        a(href="mailto:dev-unsubscribe@activemq.apache.org") Unsubscribe
-      td
-        a(href="http://mail-archives.apache.org/mod_mbox/activemq-dev/") Archive
-      td
-        ="nbsp;"
-        -# a(title="Developer Forum" href="developer-forum.html") Nabble
-    tr
-      td #{project_name} Commits List
-      td
-        a(href="mailto:commits-subscribe@activemq.apache.org") Subscribe
-      td
-        a(href="mailto:commits-unsubscribe@activemq.apache.org") Unsubscribe
-      td
-        a(href="http://mail-archives.apache.org/mod_mbox/activemq-commits/") Archive
-      td
-        ="nbsp;"
+    ### ${project_name} User List
+    
+    This mailing list is end users to ask general questions about
+    ${project_name}
+    
+    * [Subscribe](mailto:user-subscribe@activemq.apache.org)
+    * [Unsubscribe](mailto:user-unsubscribe@activemq.apache.org)
+    * [Archive](http://mail-archives.apache.org/mod_mbox/activemq-user/) 
+    
+    ### ${project_name} Developer List
+    
+    This mailing list is for contributor to discuss the bug fixes and 
+    and new features being developed for ${project_name}
+    
+    * [Subscribe](mailto:dev-subscribe@activemq.apache.org)
+    * [Unsubscribe](mailto:dev-unsubscribe@activemq.apache.org) 
+    * [Archive](http://mail-archives.apache.org/mod_mbox/activemq-dev/) 
+
+    ### ${project_name} Commits List
+    
+    This mailing list get automatically notified when when the 
+    project source code gets updated.
+    
+    * [Subscribe](mailto:commits-subscribe@activemq.apache.org)
+    * [Unsubscribe](mailto:commits-unsubscribe@activemq.apache.org)
+    * [Archive](http://mail-archives.apache.org/mod_mbox/activemq-commits/) 
     
 .left
   h1 IRC
 .right
   :markdown
   
-    You can also catch us on IRC to chat via **#activemq** on
-    **irc.codehaus.org**.
+    You can also catch us on IRC to chat via the **#activemq** channel on
+    the **irc.codehaus.org** server.
 
 .left
   h1 Support
