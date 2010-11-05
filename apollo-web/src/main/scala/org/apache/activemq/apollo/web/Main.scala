@@ -23,6 +23,7 @@ import org.mortbay.jetty.nio.SelectChannelConnector
 import org.mortbay.jetty.webapp.WebAppContext
 import org.apache.commons.logging.LogFactory
 import java.io.File
+import org.fusesource.hawtdispatch.DispatchProfiler
 
 /**
  * <p>
@@ -59,7 +60,35 @@ object Main {
         return
       }
     }
-    
+
+    if(java.lang.Boolean.getBoolean("hawtdispatch.profile")) {
+      new Thread("HawtDispatch Monitor") {
+        setDaemon(true);
+        override def run = {
+          while(true) {
+            Thread.sleep(1000);
+            import collection.JavaConversions._
+
+            // Only display is we see some long wait or run times..
+            val m = DispatchProfiler.metrics.toList.flatMap{x=>
+              if( x.total_wait_time_ns > 1000000 ||  x.total_run_time_ns > 1000000 ) {
+                Some(x)
+              } else {
+                None
+              }
+            }
+
+            if( !m.isEmpty ) {
+              println("-- hawtdispatch metrics -----------------------")
+              m.foreach{ metric=>
+                println(metric)
+              }
+            }
+          }
+        }
+      }.start();
+    }
+
     println("===========================")
     println("Starting up ActiveMQ Apollo");
     println("===========================")
