@@ -99,6 +99,7 @@ class Connector(val broker:Broker, val id:Long) extends BaseService with Dispatc
 
       accept_counter.incrementAndGet
       var connection = new BrokerConnection(Connector.this, broker.connection_id_counter.incrementAndGet)
+      connection.dispatchQueue.setLabel("connection %d to %s".format(connection.id, transport.getRemoteAddress))
       connection.protocolHandler = protocol.createProtocolHandler
       connection.transport = transport
 
