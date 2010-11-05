@@ -45,10 +45,8 @@ to extend.
 * REST based management
 * [Stomp 1.1](http://stomp.github.com/stomp-specification-1-1.html) Protocol Support
 
-## Project Notes:
+## Guides
 
- * [Performance and Scaling](documentation/performance-scaling.html)
- * [Architecture](documentation/architecture.html)
- * [Module Organization](documentation/module-organization.html)
+ * [Getting Started Guide](documentation/getting-started.html)
  
 

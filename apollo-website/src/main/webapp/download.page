@@ -26,32 +26,21 @@ Download it today!
 
 .left
   :markdown
-    # Download
+    # Nightly Snapshots
 .right
-  :markdown
+  :&markdown
+
+    Want to help stablize the latest and greatest nightly development build?  **Warnning**: These builds are extreamly bleeding edge!
+
+    ### For Windows
     
-    No downloads available right now.
-    <!-- 
-    You can download **${project_name}** from the [Maven
-    Repository](https://repository.apache.org/content/groups/public/)
-    in the [${project_name}
-    area](https://repository.apache.org/content/groups/public/org/apache/activemq/).
-    -->
-    <!-- 
-    ## Releases
+    * [apache-apollo-#{project_snapshot_version}-windows-distro.zip](https://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=zip&c=windows-distro) 
+    * [apollo-project-#{project_snapshot_version}-source-release.zip](http://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=zip&c=source-release)
+    
+    ### For Unix/Linux/OS X
+    
+    * [apache-apollo-#{project_snapshot_version}-unix-distro.tar.gz](http://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=tar.gz&c=unix-distro)
+    * [apollo-project-#{project_snapshot_version}-source-release.tar.gz](http://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=tar.gz&c=source-release)
 
-    ...
-
-    ## Snapshots
-
-    ...
-    -->
-
-
-.left
-  :markdown
-    # Source Distribution
-.right
-  :markdown
-    If you prefer you can try building from [the source code](community/source.html) and [building it](community/building.html)
+    If you find any problems with them, please contact the [community](community/index.html).
 
