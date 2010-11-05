@@ -39,6 +39,7 @@ You can regenerate the above graph by running the following commands at the
 project root:
 
     mvn -P graph graph:reactor -Dhide-transitive=true -Dhide-external=true -Dgraph.label= -Dhide-version=true -Dhide-group-id=true -Dhide-type=true
-    cp target/reactor-graph.png apollo-website/src/images/module-deps-graph.png
+    cp target/reactor-graph.png apollo-website/src/main/webapp/images/module-deps-graph.png 
+
 
 
