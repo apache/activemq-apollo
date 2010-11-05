@@ -85,27 +85,27 @@
               <goal>compile</goal>
               <goal>testCompile</goal>
             </goals>
+            <configuration>
+              <jvmArgs>
+                <jvmArg>-Xmx1024m</jvmArg>
+                <jvmArg>-Xss8m</jvmArg>
+              </jvmArgs>
+              <args>
+                <!-- <arg>-optimise</arg> -->
+                <arg>-deprecation</arg>
+                <arg>-P:continuations:enable</arg>
+              </args>
+              <scalaVersion>${scala-version}</scalaVersion>
+              <compilerPlugins>
+                <compilerPlugin>
+                  <groupId>org.scala-lang.plugins</groupId>
+                  <artifactId>continuations</artifactId>
+                  <version>${scala-version}</version>
+                </compilerPlugin>
+              </compilerPlugins>
+            </configuration>
           </execution>
         </executions>
-        <configuration>
-          <jvmArgs>
-            <jvmArg>-Xmx1024m</jvmArg>
-            <jvmArg>-Xss8m</jvmArg>
-          </jvmArgs>
-          <args>
-            <!-- <arg>-optimise</arg> -->
-            <arg>-deprecation</arg>
-            <arg>-P:continuations:enable</arg>
-          </args>
-          <scalaVersion>${scala-version}</scalaVersion>
-          <compilerPlugins>
-            <compilerPlugin>
-              <groupId>org.scala-lang.plugins</groupId>
-              <artifactId>continuations</artifactId>
-              <version>${scala-version}</version>
-            </compilerPlugin>
-          </compilerPlugins>
-        </configuration>
       </plugin>
       
       <plugin>
@@ -146,6 +146,11 @@
                   <goal>doc</goal>
                 </goals>
                 <configuration>
+                  <jvmArgs>
+                    <jvmArg>-Xmx1024m</jvmArg>
+                    <jvmArg>-Xss8m</jvmArg>
+                  </jvmArgs>
+                  <scalaVersion>${scala-version}</scalaVersion>
                   <reportOutputDirectory>${project.build.directory}</reportOutputDirectory>
                   <outputDirectory>apidocs</outputDirectory>
                 </configuration>                

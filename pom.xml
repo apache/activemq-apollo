@@ -119,6 +119,8 @@
     <maven-surefire-plugin-version>2.4.3</maven-surefire-plugin-version>
     <jetty-plugin-version>7.0.1.v20091125</jetty-plugin-version>
     
+    <!-- disable unique version timestamps in snapshots -->
+    <uniqueVersion>false</uniqueVersion>
   </properties>
 
   <prerequisites>
