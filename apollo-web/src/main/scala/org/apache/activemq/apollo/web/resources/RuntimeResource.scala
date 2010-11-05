@@ -53,7 +53,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
   private def with_virtual_host[T](id:Long)(func: (VirtualHost, Option[T]=>Unit)=>Unit):T = {
     with_broker { case (broker, cb) =>
-      broker.virtualHosts.valuesIterator.find( _.id == id) match {
+      broker.virtual_hosts.valuesIterator.find( _.id == id) match {
         case Some(virtualHost)=>
           virtualHost.dispatchQueue {
             func(virtualHost, cb)
@@ -75,7 +75,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       result.state_since = broker.serviceState.since
       result.config = broker.config
 
-      broker.virtualHosts.values.foreach{ host=>
+      broker.virtual_hosts.values.foreach{ host=>
         // TODO: may need to sync /w virtual host's dispatch queue
         result.virtual_hosts.add( new LongIdLabeledDTO(host.id, host.config.id) )
       }

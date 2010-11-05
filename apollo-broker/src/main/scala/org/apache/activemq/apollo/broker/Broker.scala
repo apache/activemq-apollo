@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.ConcurrentHashMap
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
+import collection.mutable.LinkedHashMap
 
 /**
  * <p>
@@ -167,9 +168,11 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
 
   var config: BrokerDTO = defaultConfig
 
-  var dataDirectory: File = null
-  var defaultVirtualHost: VirtualHost = null
-  var virtualHosts: Map[AsciiBuffer, VirtualHost] = Map()
+  var data_directory: File = null
+  var default_virtual_host: VirtualHost = null
+  val virtual_hosts = LinkedHashMap[AsciiBuffer, VirtualHost]()
+  val virtual_hosts_by_hostname = new LinkedHashMap[AsciiBuffer, VirtualHost]()
+
   var connectors: List[Connector] = Nil
 
   val dispatchQueue = createQueue("broker");
@@ -206,15 +209,20 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
 
     // create the runtime objects from the config
     {
-      dataDirectory = new File(config.basedir)
-      defaultVirtualHost = null
+      data_directory = new File(config.basedir)
+      default_virtual_host = null
       for (c <- config.virtual_hosts) {
         val host = new VirtualHost(this, virtual_host_id_counter.incrementAndGet)
         host.configure(c, this)
-        virtualHosts += ascii(c.id)-> host
+        virtual_hosts += ascii(c.id)-> host
         // first defined host is the default virtual host
-        if( defaultVirtualHost == null ) {
-          defaultVirtualHost = host
+        if( default_virtual_host == null ) {
+          default_virtual_host = host
+        }
+
+        // add all the host names of the virtual host to the virtual_hosts_by_hostname map..
+        c.host_names.foreach { name=>
+          virtual_hosts_by_hostname += ascii(name)->host
         }
       }
       for (c <- config.connectors) {
@@ -226,7 +234,7 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
 
     // Start up the virtual hosts
     val tracker = new LoggingTracker("broker startup", dispatchQueue)
-    virtualHosts.valuesIterator.foreach( x=>
+    virtual_hosts.valuesIterator.foreach( x=>
       tracker.start(x)
     )
 
@@ -249,18 +257,18 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
       tracker.stop(x)
     )
     // Shutdown the virtual host services
-    virtualHosts.valuesIterator.foreach( x=>
+    virtual_hosts.valuesIterator.foreach( x=>
       tracker.stop(x)
     )
     tracker.callback(onCompleted)
   }
 
   def getVirtualHost(name: AsciiBuffer) = dispatchQueue ! {
-    virtualHosts.getOrElse(name, null)
+    virtual_hosts_by_hostname.getOrElse(name, null)
   }
 
   def getDefaultVirtualHost = dispatchQueue ! {
-    defaultVirtualHost
+    default_virtual_host
   }
 
 }
