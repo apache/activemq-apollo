@@ -53,7 +53,7 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
         c.write(
           "CONNECT\n" +
           "accept-version:1.1\n" +
-          "host:default\n" +
+          "host:localhost\n" +
           "\n")
       case x=> throw new RuntimeException("invalid version: %f".format(x))
     }
@@ -93,7 +93,7 @@ class Stomp11ConnectTest extends StompTestSupport {
     client.write(
       "STOMP\n" +
       "accept-version:1.0,1.1\n" +
-      "host:default\n" +
+      "host:localhost\n" +
       "\n")
     val frame = client.receive()
     frame should startWith("CONNECTED\n")
@@ -108,7 +108,7 @@ class Stomp11ConnectTest extends StompTestSupport {
     client.write(
       "CONNECT\n" +
       "accept-version:1.0,10.0\n" +
-      "host:default\n" +
+      "host:localhost\n" +
       "\n")
     val frame = client.receive()
     frame should startWith("CONNECTED\n")
@@ -123,7 +123,7 @@ class Stomp11ConnectTest extends StompTestSupport {
     client.write(
       "CONNECT\n" +
       "accept-version:9.0,10.0\n" +
-      "host:default\n" +
+      "host:localhost\n" +
       "\n")
     val frame = client.receive()
     frame should startWith("ERROR\n")
@@ -156,7 +156,7 @@ class Stomp11HeartBeatTest extends StompTestSupport {
     client.write(
       "CONNECT\n" +
       "accept-version:1.1\n" +
-      "host:default\n" +
+      "host:localhost\n" +
       "heart-beat:0,1000\n" +
       "\n")
     val frame = client.receive()
@@ -185,7 +185,7 @@ class Stomp11HeartBeatTest extends StompTestSupport {
       client.write(
         "CONNECT\n" +
         "accept-version:1.1\n" +
-        "host:default\n" +
+        "host:localhost\n" +
         "heart-beat:1000,0\n" +
         "\n")
 
