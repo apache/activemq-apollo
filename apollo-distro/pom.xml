@@ -24,7 +24,7 @@
     <version>1.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>apollo-distro</artifactId>
+  <artifactId>apache-apollo</artifactId>
   <packaging>pom</packaging>
 
   <name>${project.artifactId}</name>
@@ -154,7 +154,6 @@
               </descriptors>
               <!-- Avoid gnu mode if we can, AIX systems can't cope /w it -->
               <!-- <tarLongFileMode>gnu</tarLongFileMode> -->
-              <finalName>apache-apollo-${project.version}</finalName>
             </configuration>
           </execution>
           <execution>
@@ -167,7 +166,6 @@
               <descriptors>
                 <descriptor>${basedir}/src/main/descriptors/windows-bin.xml</descriptor>
               </descriptors>
-              <finalName>apache-apollo-${project.version}</finalName>
               <appendAssemblyId>true</appendAssemblyId>
               <assemblyId />
             </configuration>
