@@ -18,7 +18,7 @@
 - import helper._
 
 .breadcumbs
-  %a(href={strip_resolve(".")}) Back
+  %a(href={strip_resolve("..")}) Back
 
 %h1 Queue: #{label}
 
@@ -42,7 +42,7 @@
 %p nacked: #{nack_item_counter} messages
 %p nacked: #{memory(nack_size_counter)}
 
-%h2 Memory Mangement
+%h2 Swap Status
 
 %p loading from the store: #{memory(loading_size)}
 %p flushing out of memory: #{memory(flushing_size)}
