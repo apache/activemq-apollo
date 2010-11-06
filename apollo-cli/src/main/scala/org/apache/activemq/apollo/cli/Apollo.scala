@@ -25,6 +25,12 @@ import jline.Terminal
 import org.fusesource.jansi.Ansi
 import java.io.{OutputStream, PrintStream, InputStream}
 
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object Apollo {
   def main(args: Array[String]) = {
     Ansi.ansi()

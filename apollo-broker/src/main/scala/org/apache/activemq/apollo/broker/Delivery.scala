@@ -22,13 +22,17 @@ import org.fusesource.hawtbuf._
 import protocol.Protocol
 import org.apache.activemq.apollo.filter.Filterable
 import org.apache.activemq.apollo.store.{StoreUOW, MessageRecord}
+import org.apache.activemq.apollo.util.{Log, Logging}
+
+object DeliveryProducer extends Log
 
 /**
  * A producer which sends Delivery objects to a delivery consumer.
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait DeliveryProducer {
+trait DeliveryProducer extends Logging {
+  override protected def log:Log = DeliveryProducer
 
   def dispatchQueue:DispatchQueue
 
@@ -36,7 +40,7 @@ trait DeliveryProducer {
 
   def collocate(value:DispatchQueue):Unit = {
     if( value.getTargetQueue ne dispatchQueue.getTargetQueue ) {
-      println(dispatchQueue.getLabel+" co-locating with: "+value.getLabel);
+      info(dispatchQueue.getLabel+" co-locating with "+value.getLabel);
       this.dispatchQueue.setTargetQueue(value.getTargetQueue)
     }
   }

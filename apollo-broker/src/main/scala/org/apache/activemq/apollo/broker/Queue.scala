@@ -92,7 +92,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
    * Subscribers that consume slower than this rate per seconds will be considered
    * slow.  Once a consumer is considered slow, we may switch to disk spooling.
    */
-  var tune_slow_subscription_rate = 2*1024*1024
+  var tune_slow_subscription_rate = 500*1024
 
   /**
    * The number of milliseconds between slow consumer checks.
@@ -593,7 +593,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
 
   def collocate(value:DispatchQueue):Unit = {
     if( value.getTargetQueue ne dispatchQueue.getTargetQueue ) {
-      debug(dispatchQueue.getLabel+" co-locating with: "+value.getLabel);
+      info(dispatchQueue.getLabel+" co-locating with "+value.getLabel);
       this.dispatchQueue.setTargetQueue(value.getTargetQueue)
     }
   }

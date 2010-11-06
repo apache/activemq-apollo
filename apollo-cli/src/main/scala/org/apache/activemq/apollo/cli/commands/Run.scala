@@ -30,15 +30,15 @@ import org.mortbay.jetty.nio.SelectChannelConnector
 import org.mortbay.jetty.webapp.WebAppContext
 import org.apache.commons.logging.LogFactory
 import org.apache.activemq.apollo.broker.{BrokerRegistry, Broker, ConfigStore, FileConfigStore}
-import org.apache.activemq.apollo.util.ServiceControl
 import org.fusesource.hawtdispatch._
 import Helper._
+import org.apache.activemq.apollo.util.{Logging, ServiceControl}
 
 /**
  * The apollo create command
  */
 @command(scope="apollo", name = "run", description = "runs the broker instance")
-class Run extends Action {
+class Run extends Action with Logging {
 
   @option(name = "--port", description = "The port of the http based administration service")
   var port: Int = 8080
@@ -52,10 +52,7 @@ class Run extends Action {
   @option(name = "--tmp", description = "A temp directory.")
   var tmp: File = _
 
-
   def execute(session: CommandSession):AnyRef = {
-
-    def println(value:Any) = session.getConsole.println(value)
 
     try {
 
@@ -85,13 +82,11 @@ class Run extends Action {
         tmp.mkdirs
       }
 
-      println("========================================================================")
-      println("Apollo Broker Service Starting");
-      println("========================================================================")
-      println("")
+      info("Apollo Broker Service Starting");
 
       // Load the configs and start the brokers up.
-      println("Loading configurations from '%s'.".format(conf));
+      info("log4j configured using '%s'.", getClass.getClassLoader.getResource("log4j.properties") );
+      info("Loading configurations from '%s'.", conf);
       val store = new FileConfigStore
       store.file = conf
       ConfigStore() = store
@@ -101,12 +96,12 @@ class Run extends Action {
             store.getBroker(id, true).foreach{ config=>
               // Only start the broker up if it's enabled..
               if( config.enabled ) {
-                println("Starting broker '%s'...".format(config.id));
+                info("Starting broker '%s'...".format(config.id));
                 val broker = new Broker()
                 broker.config = config
                 BrokerRegistry.add(config.id, broker)
                 broker.start(^{
-                  println("Broker '%s' started.".format(config.id));
+                  info("Broker '%s' started.".format(config.id));
                 })
               }
             }
@@ -116,7 +111,7 @@ class Run extends Action {
 
 
       // Start up the admin interface...
-      println("Starting administration interface...");
+      info("Starting administration interface...");
       var server = new Server
 
       var connector = new SelectChannelConnector
@@ -138,7 +133,7 @@ class Run extends Action {
 
       val localPort = connector.getLocalPort
       def url = "http://localhost:" + localPort + prefix
-      println("Administration interface available at: "+bold(url))
+      info("Administration interface available at: "+bold(url))
 
       if(java.lang.Boolean.getBoolean("hawtdispatch.profile")) {
         monitor_hawtdispatch
@@ -146,7 +141,7 @@ class Run extends Action {
 
     } catch {
       case x:Helper.Failure=>
-        println(ansi.a(INTENSITY_BOLD).fg(RED).a("ERROR: ").reset.a(x.getMessage))
+        error(x.getMessage)
     }
     null
   }
@@ -170,10 +165,7 @@ class Run extends Action {
           }
 
           if( !m.isEmpty ) {
-            println("-- hawtdispatch metrics -----------------------")
-            m.foreach{ metric=>
-              println(metric)
-            }
+            info("-- hawtdispatch metrics -----------------------\n"+m.mkString("\n"))
           }
         }
       }
