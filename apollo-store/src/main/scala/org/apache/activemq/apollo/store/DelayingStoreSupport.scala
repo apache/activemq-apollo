@@ -46,7 +46,8 @@ trait DelayingStoreSupport extends Store with BaseService {
   // Implementation of the BaseService interface
   //
   /////////////////////////////////////////////////////////////////////
-  val dispatchQueue = createQueue(toString)
+  val dispatchQueue:DispatchQueue = createQueue(toString)
+  val aggregator = new AggregatingExecutor(dispatchQueue)
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -109,7 +110,7 @@ trait DelayingStoreSupport extends Store with BaseService {
       this.synchronized {
         actions += record.key -> action
       }
-      dispatchQueue {
+      aggregator {
         pendingStores.put(record.key, action)
       }
       delayable_actions += 1
@@ -134,7 +135,7 @@ trait DelayingStoreSupport extends Store with BaseService {
         delayable_actions += 1
         a
       }
-      dispatchQueue {
+      aggregator {
         pending_enqueues.put(key(entry), a)
       }
 
