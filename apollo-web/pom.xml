@@ -301,9 +301,9 @@
 
     <profile>
       <id>dev</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
+      <!--<activation>-->
+        <!--<activeByDefault>true</activeByDefault>-->
+      <!--</activation>-->
       <dependencies>
         <!-- include the scalate overlay during development =-->
         <dependency>
