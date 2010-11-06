@@ -422,7 +422,7 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
         // only deliver to matching consumers
         if( target.consumer.matches(delivery) ) {
 
-          if( delivery.storeKey == -1L && target.consumer.is_persistent ) {
+          if( delivery.storeKey == -1L && target.consumer.is_persistent && delivery.message.persistent ) {
             if( delivery.uow==null ) {
               delivery.uow = router.host.store.createStoreUOW
             } else {
