@@ -84,6 +84,8 @@
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-web</artifactId>
       <version>1.0-SNAPSHOT</version>
+      <type>jar</type>
+      <classifier>slim</classifier>
       <scope>test</scope>
     </dependency>
     <dependency>
