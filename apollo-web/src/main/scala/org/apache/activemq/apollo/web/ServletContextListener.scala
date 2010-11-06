@@ -80,7 +80,7 @@ class ApolloListener extends ServletContextListener {
 
   def createConfigStore():ConfigStore = {
     val store = new FileConfigStore
-    store.file = new File("activemq.xml")
+    store.file = new File("apollo.xml")
     LoggingTracker("config store startup") { tracker=>
       store.start(tracker.task())
     }
