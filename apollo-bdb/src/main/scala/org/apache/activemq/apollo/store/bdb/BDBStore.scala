@@ -28,6 +28,9 @@ import ReporterLevel._
 import org.fusesource.hawtdispatch.ListEventAggregator
 import org.apache.activemq.apollo.dto.{StoreStatusDTO, IntMetricDTO, TimeMetricDTO, StoreDTO}
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object BDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
 
@@ -68,7 +71,7 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
   var config:BDBStoreDTO = defaultConfig
   val client = new BDBClient(this)
 
-  override def toString = "hawtdb store"
+  override def toString = "bdb store"
 
   def flush_delay = config.flush_delay
   
@@ -100,7 +103,7 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
   protected def _start(onCompleted: Runnable) = {
     executor_pool = Executors.newFixedThreadPool(1, new ThreadFactory(){
       def newThread(r: Runnable) = {
-        val rc = new Thread(r, "hawtdb store client")
+        val rc = new Thread(r, toString+" io")
         rc.setDaemon(true)
         rc
       }
