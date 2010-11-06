@@ -34,8 +34,8 @@ case class ConfigurationResource(parent:BrokerResource) extends Resource(parent)
 
   lazy val config = {
     ConfigStore.sync{ store=>
-      store.getBroker(parent.id, false).getOrElse(result(NOT_FOUND))
-    }
+      store.getBroker(parent.id, false)
+    } .getOrElse(result(NOT_FOUND))
   }
 
 
@@ -64,15 +64,15 @@ case class ConfigurationResource(parent:BrokerResource) extends Resource(parent)
     config.id = parent.id;
     config.rev = rev
     ConfigStore.sync { store=>
-      store.putBroker(config) || result(NOT_FOUND)
-    }
+      store.putBroker(config)
+    } || result(NOT_FOUND)
   }
 
   @DELETE @Path("{rev}")
   def delete(@PathParam("rev") rev:Int) = {
     ConfigStore.sync { store=>
-      store.removeBroker(parent.id, rev) || result(NOT_FOUND)
-    }
+      store.removeBroker(parent.id, rev)
+    } || result(NOT_FOUND)
   }
 
 }
