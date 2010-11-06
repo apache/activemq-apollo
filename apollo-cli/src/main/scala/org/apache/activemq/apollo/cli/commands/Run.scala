@@ -59,7 +59,6 @@ class Run extends Action {
 
     try {
 
-      val home = system_dir("apollo.home")
       val base = system_dir("apollo.base")
 
       if( conf == null ) {
@@ -70,9 +69,16 @@ class Run extends Action {
         error("Configuration file'%s' does not exist.\n\nTry creating a broker instance using the 'apollo create' command.".format(conf));
       }
 
-      val lib = home / "lib"
-      val webapp = lib / lib.list.find( _.matches("""apollo-web-.+-slim.war""")).getOrElse(throw new Failure("war file not found.") )
-
+      val webapp = {
+        val x = System.getProperty("apollo.webapp")
+        if( x != null ) {
+          new File(x)
+        } else {
+          val home = system_dir("apollo.home")
+          val lib = home / "lib"
+          lib / lib.list.find( _.matches("""apollo-web-.+-slim.war""")).getOrElse(throw new Failure("war file not found.") )
+        }
+      }
 
       if( tmp == null ) {
         tmp = base / "tmp"
@@ -122,7 +128,9 @@ class Run extends Action {
       app_context.setWar(webapp.getCanonicalPath)
       app_context.setServer(server)
       app_context.setLogUrlOnStart(true)
+
       app_context.setTempDirectory(tmp)
+      System.setProperty("scalate.workdir", (tmp / "scalate").getCanonicalPath )
 
       server.setHandlers(Array[Handler](app_context))
       server.setConnectors(Array[Connector](connector))
@@ -132,6 +140,10 @@ class Run extends Action {
       def url = "http://localhost:" + localPort + prefix
       println("Administration interface available at: "+bold(url))
 
+      if(java.lang.Boolean.getBoolean("hawtdispatch.profile")) {
+        monitor_hawtdispatch
+      }
+
     } catch {
       case x:Helper.Failure=>
         println(ansi.a(INTENSITY_BOLD).fg(RED).a("ERROR: ").reset.a(x.getMessage))
@@ -139,8 +151,33 @@ class Run extends Action {
     null
   }
 
-//  def stop: Unit = {
-//    server.stop
-//  }
+
+  def monitor_hawtdispatch = {
+    new Thread("HawtDispatch Monitor") {
+      setDaemon(true);
+      override def run = {
+        while(true) {
+          Thread.sleep(1000);
+          import collection.JavaConversions._
+
+          // Only display is we see some long wait or run times..
+          val m = Dispatch.metrics.toList.flatMap{x=>
+            if( x.totalWaitTimeNS > 1000000 ||  x.totalRunTimeNS > 1000000 ) {
+              Some(x)
+            } else {
+              None
+            }
+          }
+
+          if( !m.isEmpty ) {
+            println("-- hawtdispatch metrics -----------------------")
+            m.foreach{ metric=>
+              println(metric)
+            }
+          }
+        }
+      }
+    }.start();
+  }
 
 }

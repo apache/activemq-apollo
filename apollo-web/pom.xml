@@ -50,32 +50,6 @@
       <artifactId>apollo-broker</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
-    
-    <!-- Optional Modules -->
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-stomp</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-hawtdb</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-cassandra</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-bdb</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <scope>runtime</scope>
-    </dependency>
 
     <!-- Web Framework APIs -->
     <dependency>
@@ -109,11 +83,6 @@
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-xc</artifactId>
       <version>${jackson-version}</version>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <version>${logback-version}</version>
     </dependency>
 
     <dependency>
