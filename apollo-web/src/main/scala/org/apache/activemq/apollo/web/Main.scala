@@ -23,7 +23,7 @@ import org.mortbay.jetty.nio.SelectChannelConnector
 import org.mortbay.jetty.webapp.WebAppContext
 import org.apache.commons.logging.LogFactory
 import java.io.File
-import org.fusesource.hawtdispatch.DispatchProfiler
+import org.fusesource.hawtdispatch.Dispatch
 
 /**
  * <p>
@@ -70,8 +70,8 @@ object Main {
             import collection.JavaConversions._
 
             // Only display is we see some long wait or run times..
-            val m = DispatchProfiler.metrics.toList.flatMap{x=>
-              if( x.total_wait_time_ns > 1000000 ||  x.total_run_time_ns > 1000000 ) {
+            val m = Dispatch.metrics.toList.flatMap{x=>
+              if( x.totalWaitTimeNS > 1000000 ||  x.totalRunTimeNS > 1000000 ) {
                 Some(x)
               } else {
                 None
