@@ -667,7 +667,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
       if( receipt!=null ) {
         delivery.ack = { storeTx =>
-          connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+          dispatchQueue {
+            connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+          }
         }
       }
 
