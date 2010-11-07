@@ -18,15 +18,151 @@ package org.apache.activemq.apollo.util
 
 import _root_.java.util.{LinkedHashMap, HashMap}
 import _root_.java.lang.{Throwable, String}
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.{MDC, Logger, LoggerFactory}
+
+
 import java.util.concurrent.atomic.AtomicLong
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
+object Log {
+  val exception_id_generator = new AtomicLong(System.currentTimeMillis)
+  def next_exception_id = exception_id_generator.incrementAndGet.toHexString
+}
+
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait Log {
+  import Log._
   val log = LoggerFactory.getLogger(getClass.getName.stripSuffix("$"))
+
+  private def with_throwable(e:Throwable)(func: =>Unit) = {
+    val stack_ref = if( log.isDebugEnabled ) {
+      val id = next_exception_id
+      MDC.put("stack reference", id.toString);
+      Some(id)
+    } else {
+      None
+    }
+    func
+    stack_ref.foreach { id=>
+      log.debug("stack trace: "+id, e)
+      MDC.remove("stack reference")
+    }
+  }
+
+  private def format(message:String, args:Seq[Any]) = {
+    if( args.isEmpty ) {
+      message
+    } else {
+      message.format(args.map(_.asInstanceOf[AnyRef]) : _*)
+    }
+  }
+
+  def error(m: => String, args:Any*): Unit = {
+    if( log.isErrorEnabled ) {
+      log.error(format(m, args.toSeq))
+    }
+  }
+
+  def error(e: Throwable, m: => String, args:Any*): Unit = {
+    with_throwable(e) {
+      if( log.isErrorEnabled ) {
+        log.error(format(m, args.toSeq))
+      }
+    }
+  }
+
+  def error(e: Throwable): Unit = {
+    with_throwable(e) {
+      if( log.isErrorEnabled ) {
+        log.error(e.getMessage)
+      }
+    }
+  }
+
+  def warn(m: => String, args:Any*): Unit = {
+    if( log.isWarnEnabled ) {
+      log.warn(format(m, args.toSeq))
+    }
+  }
+
+  def warn(e: Throwable, m: => String, args:Any*): Unit = {
+    with_throwable(e) {
+      if( log.isWarnEnabled ) {
+        log.warn(format(m, args.toSeq))
+      }
+    }
+  }
+
+  def warn(e: Throwable): Unit = {
+    with_throwable(e) {
+      if( log.isWarnEnabled ) {
+        log.warn(e.getMessage)
+      }
+    }
+  }
+
+  def info(m: => String, args:Any*): Unit = {
+    if( log.isInfoEnabled ) {
+      log.info(format(m, args.toSeq))
+    }
+  }
+
+  def info(e: Throwable, m: => String, args:Any*): Unit = {
+    with_throwable(e) {
+      if( log.isInfoEnabled ) {
+        log.info(format(m, args.toSeq))
+      }
+    }
+  }
+
+  def info(e: Throwable): Unit = {
+    with_throwable(e) {
+      if( log.isInfoEnabled ) {
+        log.info(e.getMessage)
+      }
+    }
+  }
+
+
+  def debug(m: => String, args:Any*): Unit = {
+    if( log.isDebugEnabled ) {
+      log.debug(format(m, args.toSeq))
+    }
+  }
+
+  def debug(e: Throwable, m: => String, args:Any*): Unit = {
+    if( log.isDebugEnabled ) {
+      log.debug(format(m, args.toSeq), e)
+    }
+  }
+
+  def debug(e: Throwable): Unit = {
+    if( log.isDebugEnabled ) {
+      log.debug(e.getMessage, e)
+    }
+  }
+
+  def trace(m: => String, args:Any*): Unit = {
+    if( log.isTraceEnabled ) {
+      log.trace(format(m, args.toSeq))
+    }
+  }
+
+  def trace(e: Throwable, m: => String, args:Any*): Unit = {
+    if( log.isTraceEnabled ) {
+      log.trace(format(m, args.toSeq), e)
+    }
+  }
+
+  def trace(e: Throwable): Unit = {
+    if( log.isTraceEnabled ) {
+      log.trace(e.getMessage, e)
+    }
+  }
 
 }
 
@@ -39,189 +175,31 @@ class NamedLog(name:String) extends Log {
 }
 
 /**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-object Logging {
-  val exception_id_generator = new AtomicLong(System.currentTimeMillis)
-  def next_exception_id = exception_id_generator.incrementAndGet.toHexString
-}
-
-/**
  * A Logging trait you can mix into an implementation class without affecting its public API
  */
 trait Logging {
 
-  import Logging._
   protected def log: Log = new NamedLog(getClass)
-  protected def log_map(message:String) = message
 
-  protected def error(message: => String, args:Any*): Unit = {
-    val l = log.log
-    if( l.isErrorEnabled ) {
-      val m = if( args.isEmpty ) {
-        message
-      } else {
-        format(message, args.map(_.asInstanceOf[AnyRef]) : _*)
-      }
-      l.error(log_map(m))
-    }
-  }
+  protected def error(message: => String, args:Any*)= log.error(message, args : _*)
+  protected def error(e: Throwable, message: => String, args:Any*)= log.error(e, message, args: _*)
+  protected def error(e: Throwable)= log.error(e)
 
-  protected def error(e: Throwable, message: => String, args:Any*): Unit = {
-    val l = log.log
-    if( l.isErrorEnabled ) {
-      val m = if( args.isEmpty ) {
-        message
-      } else {
-        format(message, args.map(_.asInstanceOf[AnyRef]) : _*)
-      }
-      val exception_id = next_exception_id
-      log.log.error(log_map(m)+" (ref:"+exception_id+")")
-      log.log.debug("(ref:"+exception_id+")", e)
-    }
-  }
+  protected def warn(message: => String, args:Any*)= log.warn(message, args: _*)
+  protected def warn(e: Throwable, message: => String, args:Any*)= log.warn(e, message, args: _*)
+  protected def warn(e: Throwable)= log.warn(e)
 
-  protected def error(e: Throwable): Unit = {
-    val l = log.log
-    if( l.isErrorEnabled ) {
-      val exception_id = next_exception_id
-      log.log.error(log_map(e.getMessage)+" (ref:"+exception_id+")")
-      log.log.debug("(ref:"+exception_id+")", e)
-    }
-  }
+  protected def info(message: => String, args:Any*)= log.info(message, args: _*)
+  protected def info(e: Throwable, message: => String, args:Any*)= log.info(e, message, args: _*)
+  protected def info(e: Throwable)= log.info(e)
 
-  protected def warn(message: => String, args:Any*): Unit = {
-    val l = log.log
-    if( l.isWarnEnabled ) {
-      val m = if( args.isEmpty ) {
-        message
-      } else {
-        format(message, args.map(_.asInstanceOf[AnyRef]) : _*)
-      }
-      l.warn(log_map(m))
-    }
-  }
+  protected def debug(message: => String, args:Any*)= log.debug(message, args: _*)
+  protected def debug(e: Throwable, message: => String, args:Any*)= log.debug(e, message, args: _*)
+  protected def debug(e: Throwable)= log.debug(e)
 
-  protected def warn(e: Throwable, message: => String, args:Any*): Unit = {
-    val l = log.log
-    if( l.isWarnEnabled ) {
-      val m = if( args.isEmpty ) {
-        message
-      } else {
-        format(message, args.map(_.asInstanceOf[AnyRef]) : _*)
-      }
-      val exception_id = next_exception_id
-      log.log.warn(log_map(m)+" (ref:"+exception_id+")")
-      log.log.debug("(ref:"+exception_id+")", e)
-    }
-  }
-
-  protected def warn(e: Throwable): Unit = {
-    val l = log.log
-    if( l.isWarnEnabled ) {
-      val exception_id = next_exception_id
-      log.log.warn(log_map(e.getMessage)+" (ref:"+exception_id+")")
-      log.log.debug("(ref:"+exception_id+")", e)
-    }
-  }
-
-  protected def info(message: => String, args:Any*): Unit = {
-    val l = log.log
-    if( l.isInfoEnabled ) {
-      val m = if( args.isEmpty ) {
-        message
-      } else {
-        format(message, args.map(_.asInstanceOf[AnyRef]) : _*)
-      }
-      l.info(log_map(m))
-    }
-  }
-
-  protected def info(e: Throwable, message: => String, args:Any*): Unit = {
-    val l = log.log
-    if( l.isInfoEnabled ) {
-      val m = if( args.isEmpty ) {
-        message
-      } else {
-        format(message, args.map(_.asInstanceOf[AnyRef]) : _*)
-      }
-      val exception_id = next_exception_id
-      log.log.info(log_map(m)+" (ref:"+exception_id+")")
-      log.log.debug("(ref:"+exception_id+")", e)
-    }
-  }
-
-  protected def info(e: Throwable): Unit = {
-    val l = log.log
-    if( l.isInfoEnabled ) {
-      val exception_id = next_exception_id
-      log.log.info(log_map(e.getMessage)+" (ref:"+exception_id+")")
-      log.log.debug("(ref:"+exception_id+")", e)
-    }
-  }
-
-
-  protected def debug(message: => String, args:Any*): Unit = {
-    val l = log.log
-    if( l.isDebugEnabled ) {
-      val m = if( args.isEmpty ) {
-        message
-      } else {
-        format(message, args.map(_.asInstanceOf[AnyRef]) : _*)
-      }
-      l.debug(log_map(m))
-    }
-  }
-
-  protected def debug(e: Throwable, message: => String, args:Any*): Unit = {
-    val l = log.log
-    if( l.isDebugEnabled ) {
-      val m = if( args.isEmpty ) {
-        message
-      } else {
-        format(message, args.map(_.asInstanceOf[AnyRef]) : _*)
-      }
-      log.log.debug(log_map(m), e)
-    }
-  }
-
-  protected def debug(e: Throwable): Unit = {
-    val l = log.log
-    if( l.isDebugEnabled ) {
-      log.log.debug(log_map(e.getMessage), e)
-    }
-  }
-
-  protected def trace(message: => String, args:Any*): Unit = {
-    val l = log.log
-    if( l.isTraceEnabled ) {
-      val m = if( args.isEmpty ) {
-        message
-      } else {
-        format(message, args.map(_.asInstanceOf[AnyRef]) : _*)
-      }
-      l.trace(log_map(m))
-    }
-  }
-
-  protected def trace(e: Throwable, message: => String, args:Any*): Unit = {
-    val l = log.log
-    if( l.isTraceEnabled ) {
-      val m = if( args.isEmpty ) {
-        message
-      } else {
-        format(message, args.map(_.asInstanceOf[AnyRef]) : _*)
-      }
-      log.log.trace(log_map(m), e)
-    }
-  }
-
-  protected def trace(e: Throwable): Unit = {
-    val l = log.log
-    if( l.isTraceEnabled ) {
-      log.log.trace(log_map(e.getMessage), e)
-    }
-  }
+  protected def trace(message: => String, args:Any*)= log.trace(message, args: _*)
+  protected def trace(e: Throwable, message: => String, args:Any*)= log.trace(e, message, args: _*)
+  protected def trace(e: Throwable)= log.trace(e)
 
 }
 
@@ -229,15 +207,4 @@ trait Logging {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait DispatchLogging extends Logging {
-  import org.fusesource.hawtdispatch._
-
-  override protected def log_map(message:String) = {
-    val d = getCurrentQueue
-    if( d!=null && d.getLabel!=null ) {
-      d.getLabel+" | "+message
-    } else {
-      message
-    }
-  }
-
 }
