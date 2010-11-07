@@ -84,6 +84,11 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
   var tune_producer_buffer = 1024*32
 
   /**
+   *  The amount of memory buffer space for the queue..
+   */
+  var tune_queue_buffer = 1024*32
+
+  /**
    *  The amount of memory buffer space to use per subscription.
    */
   var tune_consumer_buffer = 1024*64
@@ -142,6 +147,8 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
   var capacity_used = 0
 
   protected def _start(onCompleted: Runnable) = {
+
+    capacity = tune_queue_buffer;
 
     def completed: Unit = {
       // by the time this is run, consumers and producers may have already joined.
@@ -210,7 +217,11 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
   }
 
   def addCapacity(amount:Int) = {
+    val was_full = messages.full
     capacity += amount
+    if( was_full && !messages.full ) {
+      messages.refiller.run
+    }
   }
 
   object messages extends Sink[Delivery] {
