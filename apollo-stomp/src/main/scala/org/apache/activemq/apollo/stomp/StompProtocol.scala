@@ -667,7 +667,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
       if( receipt!=null ) {
         delivery.ack = { storeTx =>
-          dispatchQueue {
+          dispatchQueue <<| ^{
             connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
           }
         }
@@ -692,8 +692,6 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   }
 
   def on_stomp_subscribe(headers:HeaderMap):Unit = {
-    val receipt = get(headers, RECEIPT_REQUESTED)
-
     val dest = get(headers, DESTINATION) match {
       case Some(dest)=> dest
       case None=>
@@ -780,9 +778,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
       // consumer is bind bound as a topic
       host.router.bind(destination, consumer, ^{
-        receipt.foreach{ receipt =>
-          connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
-        }
+        send_receipt(headers)
       })
       consumer.release
 
@@ -793,9 +789,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         x match {
           case Some(queue:Queue) =>
             queue.bind(consumer::Nil)
-            receipt.foreach{ receipt =>
-              connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
-            }
+            send_receipt(headers)
             consumer.release
           case None => throw new RuntimeException("case not yet implemented.")
         }
@@ -805,7 +799,6 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   def on_stomp_unsubscribe(headers:HeaderMap):Unit = {
 
-    val receipt = get(headers, RECEIPT_REQUESTED)
     var persistent = get(headers, PERSISTENT).map( _ == TRUE ).getOrElse(false)
 
     val id = get(headers, ID).getOrElse {
@@ -832,9 +825,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         // consumer.close
         if( consumer.binding==null ) {
           host.router.unbind(consumer.destination, consumer)
-          receipt.foreach{ receipt =>
-            connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
-          }
+          send_receipt(headers)
         } else {
           host.router.get_queue(consumer.binding) { queue=>
             queue.foreach( _.unbind(consumer::Nil) )
@@ -842,14 +833,10 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
           if( persistent && consumer.binding!=null ) {
             host.router.destroy_queue(consumer.binding){sucess=>
-              receipt.foreach{ receipt =>
-                connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
-              }
+              send_receipt(headers)
             }
           } else {
-            receipt.foreach{ receipt =>
-              connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
-            }
+            send_receipt(headers)
           }
 
         }
@@ -898,10 +885,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
               get_or_create_tx_queue(txid){ _.add(frame, (uow)=>{ handler.perform_ack(messageId, uow)} ) }
           }
 
-          get(headers, RECEIPT_REQUESTED).foreach { receipt =>
-            connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
-          }
-
+          send_receipt(headers)
         }
 
 
@@ -959,7 +943,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   def send_receipt(headers:HeaderMap) = {
     get(headers, RECEIPT_REQUESTED) match {
       case Some(receipt)=>
-        connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+        dispatchQueue <<| ^{
+          connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+        }
       case None=>
     }
   }
