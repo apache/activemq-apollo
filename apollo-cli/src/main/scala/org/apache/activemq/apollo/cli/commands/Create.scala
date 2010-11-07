@@ -22,13 +22,19 @@ import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.Ansi.Color._
 import org.fusesource.jansi.Ansi.Attribute._
 import Helper._
-import java.io.{FileOutputStream, File}
+import java.io._
+
+object Create {
+  val IS_WINDOWS = System.getProperty("os.name").toLowerCase().trim().startsWith("win");
+}
 
 /**
  * The apollo create command
  */
 @command(scope="apollo", name = "create", description = "creates a new broker instance")
 class Create extends Action {
+
+  import Create._
 
   @argument(name = "directory", description = "The instance directory to hold the broker's configuration and data", index=0, required=true)
   var directory:File = _
@@ -44,26 +50,31 @@ class Create extends Action {
       val bin = directory / "bin"
       bin.mkdirs
 
-      var target = bin / "apollo-broker"
-      write("bin/apollo-broker", target)
-      target.setExecutable(true)
-
-      target = bin / "apollo-broker.cmd"
-      write("bin/apollo-broker.cmd", target)
-
       val etc = directory / "etc"
       etc.mkdirs
 
-      target = etc / "log4j.properties"
+      var target = etc / "log4j.properties"
       write("etc/log4j.properties", target)
 
       target = etc / "apollo.xml"
       write("etc/apollo.xml", target)
 
+      if( IS_WINDOWS ) {
+        target = bin / "apollo-broker.cmd"
+        write("bin/apollo-broker.cmd", target)
+      } else {
+        target = bin / "apollo-broker"
+        write("bin/apollo-broker", target)
+        setExecutable(target)
+      }
+
       val data = directory / "data"
       data.mkdirs
       
       val log = directory / "log"
+      log.mkdirs
+
+      val tmp = directory / "tmp"
       log.mkdirs
 
     } catch {
@@ -84,4 +95,40 @@ class Create extends Action {
     copy(in, out)
     close(out)
   }
+
+
+  def setExecutable(path:File) = if( !IS_WINDOWS ) {
+    try {
+        system(path.getParentFile(), Array("chmod", "a+x", path.getName))
+    } catch {
+      case x =>
+    }
+  }
+
+  def system(wd:File, command:Array[String]) = {
+    val process = Runtime.getRuntime.exec(command, null, wd);
+    def drain(is:InputStream, os:OutputStream) = {
+      new Thread(command.mkString(" ")) {
+        setDaemon(true)
+        override def run: Unit = {
+          try {
+            val buffer = new Array[Byte](1024 * 4)
+            var c = is.read(buffer)
+            while (c >= 0) {
+              os.write(buffer, 0, c);
+              c = is.read(buffer)
+            }
+          } catch {
+            case x =>
+          }
+        }
+      }.start
+    }
+
+    drain(process.getInputStream, System.out)
+    drain(process.getErrorStream, System.err)
+    process.waitFor
+    process.exitValue
+  }
+
 }
