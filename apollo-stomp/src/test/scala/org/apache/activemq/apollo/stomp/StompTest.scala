@@ -19,16 +19,18 @@ package org.apache.activemq.apollo.stomp
 import org.scalatest.matchers.ShouldMatchers
 import org.apache.activemq.apollo.broker.{Broker, BrokerFactory}
 import org.scalatest.BeforeAndAfterEach
-import org.apache.activemq.apollo.util.{Logging, FunSuiteSupport}
+import org.apache.activemq.apollo.util.{Logging, FunSuiteSupport, ServiceControl}
 
 class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAndAfterEach with Logging {
   var broker: Broker = null
-
+  var port = 0
+  
   override protected def beforeAll() = {
     val uri = "xml:classpath:activemq-stomp.xml"
     info("Loading broker configuration from the classpath with URI: " + uri)
-    broker = BrokerFactory.createBroker(uri, true)
-    Thread.sleep(1000); //TODO implement waitUntilStarted
+    broker = BrokerFactory.createBroker(uri)
+    ServiceControl.start(broker, "Starting broker")
+    port = broker.connectors.head.transportServer.getSocketAddress.getPort
   }
 
   var client = new StompClient
@@ -43,7 +45,7 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
   }
 
   def connect(version:String, c: StompClient = client) = {
-    c.open("localhost", 61613)
+    c.open("localhost", port)
     version match {
       case "1.0"=>
         c.write(
@@ -88,7 +90,7 @@ class Stomp11ConnectTest extends StompTestSupport {
 
   test("Stomp 1.1 CONNECT /w STOMP Action") {
 
-    client.open("localhost", 61613)
+    client.open("localhost", port)
 
     client.write(
       "STOMP\n" +
@@ -103,7 +105,7 @@ class Stomp11ConnectTest extends StompTestSupport {
 
   test("Stomp 1.1 CONNECT /w valid version fallback") {
 
-    client.open("localhost", 61613)
+    client.open("localhost", port)
 
     client.write(
       "CONNECT\n" +
@@ -118,7 +120,7 @@ class Stomp11ConnectTest extends StompTestSupport {
 
   test("Stomp 1.1 CONNECT /w invalid version fallback") {
 
-    client.open("localhost", 61613)
+    client.open("localhost", port)
 
     client.write(
       "CONNECT\n" +
@@ -133,7 +135,7 @@ class Stomp11ConnectTest extends StompTestSupport {
 
   test("Stomp CONNECT /w invalid virtual host") {
 
-    client.open("localhost", 61613)
+    client.open("localhost", port)
 
     client.write(
       "CONNECT\n" +
@@ -151,7 +153,7 @@ class Stomp11HeartBeatTest extends StompTestSupport {
 
   test("Stomp 1.1 Broker sends heart-beat") {
 
-    client.open("localhost", 61613)
+    client.open("localhost", port)
 
     client.write(
       "CONNECT\n" +
@@ -180,7 +182,7 @@ class Stomp11HeartBeatTest extends StompTestSupport {
     StompProtocolHandler.inbound_heartbeat = 1000L
     try {
   
-      client.open("localhost", 61613)
+      client.open("localhost", port)
 
       client.write(
         "CONNECT\n" +

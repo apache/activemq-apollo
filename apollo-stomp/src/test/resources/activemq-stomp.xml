@@ -16,9 +16,9 @@
     limitations under the License.
 -->
 <broker basedir="./activemq-data/default" rev="1" enabled="true" id="default" xmlns="http://activemq.apache.org/schema/activemq/apollo">
-    <notes>A default configuration</notes>
+    <notes>This broker configuration is what the unit tests in this module load up.</notes>
     <virtual-host purge-on-startup="false" auto-create-queues="true" enabled="true" id="default">
         <host-name>localhost</host-name>
     </virtual-host>
-    <connectors advertise="tcp://localhost:61613" protocol="stomp" bind="tcp://0.0.0.0:61613" enabled="true" id="default"/>
+    <connectors advertise="tcp://localhost:61613" protocol="stomp" bind="tcp://0.0.0.0:0" enabled="true" id="default"/>
 </broker>

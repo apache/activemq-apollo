@@ -53,17 +53,14 @@ object BrokerFactory {
   var providers = discover
 
 
-  def createBroker(uri:String, start:Boolean=false):Broker = {
+  def createBroker(uri:String):Broker = {
     if( uri == null ) {
       return null
     }
     providers.foreach { provider=>
       val broker = provider.createBroker(uri)
       if( broker!=null ) {
-        if (start) {
-          broker.start();
-        }
-        return broker
+        return broker;
       }
     }
     throw new IllegalArgumentException("Uknonwn broker uri: "+uri)
