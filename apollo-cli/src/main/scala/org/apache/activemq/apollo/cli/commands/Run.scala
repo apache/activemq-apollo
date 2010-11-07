@@ -85,7 +85,6 @@ class Run extends Action with Logging {
       info("Apollo Broker Service Starting");
 
       // Load the configs and start the brokers up.
-      info("log4j configured using '%s'.", getClass.getClassLoader.getResource("log4j.properties") );
       info("Loading configurations from '%s'.", conf);
       val store = new FileConfigStore
       store.file = conf
