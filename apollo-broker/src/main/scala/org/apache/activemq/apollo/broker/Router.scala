@@ -25,10 +25,10 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
 import collection.JavaConversions
 import org.apache.activemq.apollo.util._
 import collection.mutable.{ListBuffer, HashMap}
-import org.apache.activemq.apollo.store.QueueRecord
 import org.apache.activemq.apollo.dto.{PointToPointBindingDTO, BindingDTO}
 import path.{PathFilter, PathMap}
 import scala.collection.immutable.List
+import org.apache.activemq.apollo.store.{StoreUOW, QueueRecord}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -404,6 +404,7 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
   // Dispatch.
   //
 
+  var pendingAck: (StoreUOW)=>Unit = null
   var overflow:Delivery=null
   var overflowSessions = List[DeliverySession]()
   var refiller:Runnable=null
@@ -416,42 +417,49 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
     } else {
 
       // Do we need to store the message if we have a matching consumer?
-      delivery.message.retain
+      pendingAck = delivery.ack
+      val copy = delivery.copy
+      copy.message.retain
+
       targets.foreach { target=>
 
         // only deliver to matching consumers
-        if( target.consumer.matches(delivery) ) {
+        if( target.consumer.matches(copy) ) {
 
-          if( delivery.storeKey == -1L && target.consumer.is_persistent && delivery.message.persistent ) {
-            if( delivery.uow==null ) {
-              delivery.uow = router.host.store.createStoreUOW
+          if( copy.storeKey == -1L && target.consumer.is_persistent && copy.message.persistent ) {
+            if( copy.uow==null ) {
+              copy.uow = router.host.store.createStoreUOW
             } else {
-              delivery.uow.retain
+              copy.uow.retain
             }
-            delivery.storeKey = delivery.uow.store(delivery.createMessageRecord)
+            copy.storeKey = copy.uow.store(copy.createMessageRecord)
           }
 
-          if( !target.offer(delivery) ) {
+          if( !target.offer(copy) ) {
             overflowSessions ::= target
           }
         }
       }
 
       if( overflowSessions!=Nil ) {
-        overflow = delivery
+        overflow = copy
       } else {
-        delivered(delivery)
+        delivered(copy)
       }
       true
     }
   }
 
   private def delivered(delivery: Delivery): Unit = {
-    if (delivery.ack != null) {
+    if (pendingAck != null) {
       if (delivery.uow != null) {
-        delivery.uow.setDisposer(^ {delivery.ack(null)})
+        delivery.uow.setDisposer(^ {
+          pendingAck(null)
+          pendingAck=null
+        })
       } else {
-        delivery.ack(null)
+        pendingAck(null)
+        pendingAck==null
       }
     }
     if (delivery.uow != null) {

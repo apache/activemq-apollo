@@ -34,6 +34,7 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
   }
 
   var client = new StompClient
+  var clients = List[StompClient]()
 
   override protected def afterAll() = {
     broker.stop
@@ -41,7 +42,8 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
 
   override protected def afterEach() = {
     super.afterEach
-    client.close
+    clients.foreach(_.close)
+    clients = Nil
   }
 
   def connect(version:String, c: StompClient = client) = {
@@ -63,6 +65,7 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
     frame should startWith("CONNECTED\n")
     frame should include regex("""session:.+?\n""")
     frame should include("version:"+version+"\n")
+    clients ::= c
     c
   }
 
@@ -399,6 +402,58 @@ class StompDestinationTest extends StompTestSupport {
   }
 }
 
+class StompReceiptTest extends StompTestSupport {
+
+  test("Receipts on SEND to unconsummed topic") {
+    connect("1.1")
+
+    def put(id:Int) = {
+      client.write(
+        "SEND\n" +
+        "destination:/topic/receipt-test\n" +
+        "receipt:"+id+"\n" +
+        "\n" +
+        "message:"+id+"\n")
+    }
+
+    put(1)
+    put(2)
+    wait_for_receipt("1")
+    wait_for_receipt("2")
+
+
+  }
+
+  test("Receipts on SEND to a consumed topic") {
+    connect("1.1")
+
+    def put(id:Int) = {
+      client.write(
+        "SEND\n" +
+        "destination:/topic/receipt-test\n" +
+        "receipt:"+id+"\n" +
+        "\n" +
+        "message:"+id+"\n")
+    }
+
+    // start a consumer on a different connection
+    var consumer = new StompClient
+    connect("1.1", consumer)
+    consumer.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/receipt-test\n" +
+      "id:0\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0", consumer)
+
+    put(1)
+    put(2)
+    wait_for_receipt("1")
+    wait_for_receipt("2")
+    
+  }
+}
 class StompTransactionTest extends StompTestSupport {
   
 
