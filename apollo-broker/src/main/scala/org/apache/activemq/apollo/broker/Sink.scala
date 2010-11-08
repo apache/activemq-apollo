@@ -20,7 +20,6 @@ import _root_.org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch._
 import java.util.{LinkedList}
 import org.apache.activemq.apollo.transport.Transport
-import com.sun.tools.javac.util.ListBuffer
 
 /**
  * <p>
