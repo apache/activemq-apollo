@@ -374,11 +374,13 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   override def onTransportConnected() = {
 
-    session_manager = new SinkMux[StompFrame]( MapSink(connection.transportSink){x=>x}, dispatchQueue, StompFrame)
+    session_manager = new SinkMux[StompFrame]( MapSink(connection.transportSink){x=>
+      trace("sending frame: %s", x)
+      x
+    }, dispatchQueue, StompFrame)
     connection_sink = new OverflowSink(session_manager.open(dispatchQueue));
     connection_sink.refiller = ^{}
     resumeRead
-
   }
 
   override def onTransportDisconnected() = {
@@ -415,9 +417,10 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
           // so we know which wire format is being used.
         case frame:StompFrame=>
 
+          trace("received frame: %s", frame)
+
           if( protocol_version == null ) {
 
-            info("got command: %s", frame)
             frame.action match {
               case STOMP =>
                 on_stomp_connect(frame.headers)
@@ -748,7 +751,6 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       return;
     }
 
-    info("subscribing to: %s", destination)
     val binding: BindingDTO = if( topic && !persistent ) {
       null
     } else {
@@ -894,7 +896,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   }
 
   private def die(msg:String, explained:String="") = {
-    info("Shutting connection down due to: "+msg)
+    debug("Shutting connection down due to: "+msg)
     _die((MESSAGE_HEADER, ascii(msg))::Nil, explained)
   }
 
@@ -913,7 +915,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   override def onTransportFailure(error: IOException) = {
     if( !connection.stopped ) {
       suspendRead("shutdown")
-      info(error, "Shutting connection down due to: %s", error)
+      debug(error, "Shutting connection down due to: %s", error)
       super.onTransportFailure(error);
     }
   }

@@ -40,7 +40,7 @@ trait DeliveryProducer extends Logging {
 
   def collocate(value:DispatchQueue):Unit = {
     if( value.getTargetQueue ne dispatchQueue.getTargetQueue ) {
-      info(dispatchQueue.getLabel+" co-locating with "+value.getLabel);
+      debug("co-locating %s with %s", dispatchQueue.getLabel, value.getLabel);
       this.dispatchQueue.setTargetQueue(value.getTargetQueue)
     }
   }

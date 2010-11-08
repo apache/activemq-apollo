@@ -69,10 +69,9 @@ object Connector extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Connector(val broker:Broker, val id:Long) extends BaseService with DispatchLogging {
+class Connector(val broker:Broker, val id:Long) extends BaseService {
   import Connector._
 
-  override protected def log = Connector
   override val dispatchQueue = broker.dispatchQueue
 
   var config:ConnectorDTO = defaultConfig
@@ -84,15 +83,11 @@ class Connector(val broker:Broker, val id:Long) extends BaseService with Dispatc
   val accept_counter = new LongCounter
 
   object BrokerAcceptListener extends TransportAcceptListener {
-    def onAcceptError(error: Exception): Unit = {
-      error.printStackTrace
-      warn("Accept error: " + error)
-      debug("Accept error details: ", error)
+    def onAcceptError(e: Exception): Unit = {
+      log.warn(e, "Error occured while accepting client connection.")
     }
 
     def onAccept(transport: Transport): Unit = {
-      debug("Accepted connection from: %s", transport.getRemoteAddress)
-
       if( protocol!=null ) {
         transport.setProtocolCodec(protocol.createProtocolCodec)
       }
@@ -110,6 +105,7 @@ class Connector(val broker:Broker, val id:Long) extends BaseService with Dispatc
       // We release when it gets removed form the connections list.
       connection.dispatchQueue.retain
       connections.put(connection.id, connection)
+      info("Client connected from: %s", connection.transport.getRemoteAddress)
 
       try {
         connection.start()
@@ -162,10 +158,11 @@ class Connector(val broker:Broker, val id:Long) extends BaseService with Dispatc
    * Connections callback into the connector when they are stopped so that we can
    * stop tracking them.
    */
-  def stopped(connection:BrokerConnection) = ^{
+  def stopped(connection:BrokerConnection) = dispatchQueue {
     if( connections.remove(connection.id).isDefined ) {
+      info("Client disconnected from: %s", connection.transport.getRemoteAddress)
       connection.dispatchQueue.release
     }
-  } |>>: dispatchQueue
+  }
 
 }
