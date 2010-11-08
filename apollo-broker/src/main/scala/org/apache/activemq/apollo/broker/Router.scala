@@ -453,14 +453,15 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
   private def delivered(delivery: Delivery): Unit = {
     if (pendingAck != null) {
       if (delivery.uow != null) {
+        val ack = pendingAck
         delivery.uow.setDisposer(^ {
-          pendingAck(null)
-          pendingAck=null
+          ack(null)
         })
+
       } else {
         pendingAck(null)
-        pendingAck==null
       }
+      pendingAck==null
     }
     if (delivery.uow != null) {
       delivery.uow.release
