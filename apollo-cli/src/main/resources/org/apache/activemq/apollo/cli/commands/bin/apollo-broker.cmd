@@ -20,7 +20,7 @@ rem ------------------------------------------------------------------------
 
 setlocal
 
-if "%APOLLO_BASE"=="" set APOLLO_BASE=%~dp0..
+if "%APOLLO_BASE%"=="" set APOLLO_BASE=%~dp0..
 
 apollo %*
 
