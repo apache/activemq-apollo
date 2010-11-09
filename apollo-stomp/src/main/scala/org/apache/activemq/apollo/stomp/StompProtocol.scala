@@ -23,8 +23,8 @@ import org.fusesource.hawtdispatch._
 
 import AsciiBuffer._
 import org.apache.activemq.apollo.broker._
-import protocol.{ProtocolFactory, Protocol, ProtocolHandler}
 import java.lang.String
+import protocol.{HeartBeatMonitor, ProtocolFactory, Protocol, ProtocolHandler}
 import Stomp._
 import BufferConversions._
 import java.io.IOException
@@ -95,56 +95,6 @@ object StompProtocol extends StompProtocolCodecFactory with Protocol {
 
 }
 
-
-class HeartBeatMonitor() {
-
-  var transport:Transport = _
-  var write_interval = 0L
-  var read_interval = 0L
-
-  var on_keep_alive = ()=>{}
-  var on_dead = ()=>{}
-
-  var session = 0
-
-  def schedual_check_writes(session:Int):Unit = {
-    val last_write_counter = transport.getProtocolCodec.getWriteCounter()
-    transport.getDispatchQueue.after(write_interval, TimeUnit.MILLISECONDS) {
-      if( this.session == session ) {
-        if( last_write_counter==transport.getProtocolCodec.getWriteCounter ) {
-          on_keep_alive()
-        }
-        schedual_check_writes(session)
-      }
-    }
-  }
-
-  def schedual_check_reads(session:Int):Unit = {
-    val last_read_counter = transport.getProtocolCodec.getReadCounter()
-    transport.getDispatchQueue.after(read_interval, TimeUnit.MILLISECONDS) {
-      if( this.session == session ) {
-        if( last_read_counter==transport.getProtocolCodec.getReadCounter ) {
-          on_dead()
-        }
-        schedual_check_reads(session)
-      }
-    }
-  }
-
-  def start = {
-    session += 1
-    if( write_interval!=0 ) {
-      schedual_check_writes(session)
-    }
-    if( read_interval!=0 ) {
-      schedual_check_reads(session)
-    }
-  }
-
-  def stop = {
-    session += 1
-  }
-}
 
 object StompProtocolHandler extends Log {
 
