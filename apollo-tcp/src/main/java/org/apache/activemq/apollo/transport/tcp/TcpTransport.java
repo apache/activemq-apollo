@@ -29,6 +29,7 @@ import org.fusesource.hawtdispatch.Retained;
 
 import java.io.IOException;
 import java.net.*;
+import java.nio.channels.Channel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
@@ -529,6 +530,10 @@ public class TcpTransport extends JavaBaseService implements Transport {
                 LOG.trace(message);
             }
         }
+    }
+
+    public SocketChannel getSocketChannel() {
+        return channel;
     }
 
 }
