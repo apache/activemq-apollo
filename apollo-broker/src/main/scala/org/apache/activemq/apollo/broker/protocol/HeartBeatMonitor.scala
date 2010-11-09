@@ -39,7 +39,7 @@ class HeartBeatMonitor() {
 
   def schedual_check_writes(session:Int):Unit = {
     val last_write_counter = transport.getProtocolCodec.getWriteCounter()
-    transport.getDispatchQueue.after(write_interval, TimeUnit.MILLISECONDS) {
+    transport.getDispatchQueue.after(write_interval/2, TimeUnit.MILLISECONDS) {
       if( this.session == session ) {
         if( last_write_counter==transport.getProtocolCodec.getWriteCounter ) {
           on_keep_alive()
