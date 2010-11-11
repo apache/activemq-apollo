@@ -32,7 +32,8 @@ import org.apache.commons.logging.LogFactory
 import org.apache.activemq.apollo.broker.{BrokerRegistry, Broker, ConfigStore, FileConfigStore}
 import org.fusesource.hawtdispatch._
 import Helper._
-import org.apache.activemq.apollo.util.{Logging, ServiceControl}
+import org.apache.activemq.apollo.util.{FileSupport, Logging, ServiceControl}
+import FileSupport._
 
 /**
  * The apollo create command

@@ -40,7 +40,7 @@ object ApolloIDERunner  {
  */
 class ApolloIDERunner  {
 
-  import commands.Helper._
+  import org.apache.activemq.apollo.util.FileSupport._
 
   @Test
   def run:Unit = {

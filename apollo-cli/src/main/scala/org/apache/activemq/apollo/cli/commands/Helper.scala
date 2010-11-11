@@ -34,46 +34,7 @@ object Helper {
 
   def error(value:Any) = throw new Failure(value.toString)
 
-  def system_dir(name:String) = {
-    val base_value = System.getProperty(name)
-    if( base_value==null ) {
-      error("The the %s system property is not set.".format(name))
-    }
-    val file = new File(base_value)
-    if( !file.isDirectory  ) {
-      error("The the %s system property is not set to valid directory path %s".format(name, base_value))
-    }
-    file
-  }
-
-
-  class RichFile(file:File) {
-    def / (path:String) = new File(file, path)
-  }
-  implicit def toRichFile(file:File):RichFile = new RichFile(file)
-
   def bold(v:String) = ansi.a(INTENSITY_BOLD).a(v).reset
-
-
-  def copy(in: InputStream, out: OutputStream): Long = {
-    try {
-      var bytesCopied: Long = 0
-      val buffer = new Array[Byte](8192)
-      var bytes = in.read(buffer)
-      while (bytes >= 0) {
-        out.write(buffer, 0, bytes)
-        bytesCopied += bytes
-        bytes = in.read(buffer)
-      }
-      bytesCopied
-    } finally {
-      try { in.close  }  catch { case ignore =>  }
-    }
-  }
-
-  def close(out: OutputStream) = {
-    try { out.close  }  catch { case ignore =>  }
-  }
 
 }
 

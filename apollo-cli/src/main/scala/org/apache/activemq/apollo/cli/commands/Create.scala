@@ -23,6 +23,7 @@ import org.fusesource.jansi.Ansi.Color._
 import org.fusesource.jansi.Ansi.Attribute._
 import Helper._
 import java.io._
+import org.apache.activemq.apollo.util.FileSupport._
 
 object Create {
   val IS_WINDOWS = System.getProperty("os.name").toLowerCase().trim().startsWith("win");

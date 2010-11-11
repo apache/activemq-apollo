@@ -24,6 +24,7 @@ import org.apache.karaf.shell.console.jline.Console
 import jline.Terminal
 import org.fusesource.jansi.Ansi
 import java.io.{OutputStream, PrintStream, InputStream}
+import org.apache.activemq.apollo.util.FileSupport._
 
 /**
  * <p>
@@ -63,7 +64,7 @@ class Apollo extends Main with Action {
       protected override def isPrintStackTraces = debug
       protected override def welcome = {
         val source = getClass().getResourceAsStream("banner.txt")
-        commands.Helper.copy(source, session.getConsole())
+        copy(source, session.getConsole())
       }
 
       protected override def setSessionProperties = {}
