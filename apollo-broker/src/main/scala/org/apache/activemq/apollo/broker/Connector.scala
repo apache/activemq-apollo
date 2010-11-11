@@ -140,6 +140,10 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
     transportServer = TransportFactory.bind( config.bind )
     transportServer.setDispatchQueue(dispatchQueue)
     transportServer.setAcceptListener(BrokerAcceptListener)
+
+    if( transportServer.isInstanceOf[KeyManagerAware] && broker.key_storage!=null ) {
+      transportServer.asInstanceOf[KeyManagerAware].setKeyManagers(broker.key_storage.create_key_managers)
+    }
     transportServer.start(onCompleted)
   }
 

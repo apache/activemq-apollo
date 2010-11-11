@@ -183,6 +183,8 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
   val connector_id_counter = new LongCounter
   val connection_id_counter = new LongCounter
 
+  var key_storage:KeyStorage = _
+
   override def toString() = "broker: "+id
 
 
@@ -207,6 +209,12 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
     // create the runtime objects from the config
     {
       data_directory = new File(config.basedir)
+
+      if( config.key_storage!=null ) {
+        key_storage = new KeyStorage
+        key_storage.config = config.key_storage
+      }
+
       default_virtual_host = null
       for (c <- config.virtual_hosts) {
         val host = new VirtualHost(this, virtual_host_id_counter.incrementAndGet)
