@@ -41,3 +41,4 @@ TimeMetricDTO
 VirtualHostDTO
 VirtualHostStatusDTO
 StompConnectionStatusDTO
+KeyStorageDTO
