@@ -19,6 +19,7 @@ package org.apache.activemq.apollo.transport.tcp;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,38 +43,27 @@ public class TcpTransportFactory implements TransportFactory.Provider {
     private static final Logger LOG = LoggerFactory.getLogger(TcpTransportFactory.class);
 
     public TransportServer bind(String location) throws Exception {
-        if( !location.startsWith("tcp:") ) {
-            return null;
-        }
 
         URI uri = new URI(location);
-        Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
         TcpTransportServer server = createTcpTransportServer(uri);
+        if (server == null) return null;
+
+        Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
         IntrospectionSupport.setProperties(server, options);
         Map<String, Object> transportOptions = IntrospectionSupport.extractProperties(options, "transport.");
         server.setTransportOption(transportOptions);
         return server;
     }
 
-    /**
-     * Allows subclasses of TcpTransportFactory to create custom instances of
-     * TcpTransportServer.
-     */
-    protected TcpTransportServer createTcpTransportServer(final URI location) throws IOException, URISyntaxException {
-        return new TcpTransportServer(location);
-    }
-
 
     public Transport connect(String location) throws Exception {
-        if( !location.startsWith("tcp:") ) {
-            return null;
-        }
-
         URI uri = new URI(location);
+        TcpTransport transport = createTransport(uri);
+        if (transport == null) return null;
+
         Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
         URI localLocation = getLocalLocation(uri);
 
-        TcpTransport transport = new TcpTransport();
         transport.connecting(uri, localLocation);
 
         Map<String, Object> socketOptions = IntrospectionSupport.extractProperties(options, "socket.");
@@ -83,7 +73,30 @@ public class TcpTransportFactory implements TransportFactory.Provider {
         return verify(transport, options);
     }
 
-    private URI getLocalLocation(URI location) {
+    /**
+     * Allows subclasses of TcpTransportFactory to create custom instances of
+     * TcpTransportServer.
+     */
+    protected TcpTransportServer createTcpTransportServer(final URI location) throws IOException, URISyntaxException, Exception {
+        if( !location.getScheme().equals("tcp") ) {
+            return null;
+        }
+        return new TcpTransportServer(location);
+    }
+
+    /**
+     * Allows subclasses of TcpTransportFactory to create custom instances of
+     * TcpTransport.
+     */
+    protected TcpTransport createTransport(URI uri) throws NoSuchAlgorithmException, Exception {
+        if( !uri.getScheme().equals("tcp") ) {
+            return null;
+        }
+        TcpTransport transport = new TcpTransport();
+        return transport;
+    }
+
+    protected URI getLocalLocation(URI location) {
         URI localLocation = null;
         String path = location.getPath();
         // see if the path is a local URI location

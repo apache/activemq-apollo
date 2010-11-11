@@ -16,9 +16,9 @@
  */
 package org.apache.activemq.apollo.transport.tcp;
 
-import org.apache.activemq.apollo.transport.TransportServer;
 import org.apache.activemq.apollo.transport.Transport;
 import org.apache.activemq.apollo.transport.TransportAcceptListener;
+import org.apache.activemq.apollo.transport.TransportServer;
 import org.apache.activemq.apollo.util.IOExceptionSupport;
 import org.apache.activemq.apollo.util.IntrospectionSupport;
 import org.fusesource.hawtdispatch.Dispatch;
@@ -85,7 +85,7 @@ public class TcpTransportServer implements TransportServer {
     public void start() throws Exception {
         start(null);
     }
-    public void start(Runnable onCompleted) throws IOException {
+    public void start(Runnable onCompleted) throws Exception {
         URI bind = bindURI;
 
         String host = bind.getHost();
@@ -125,7 +125,7 @@ public class TcpTransportServer implements TransportServer {
                         handleSocket(client);
                         client = channel.accept();
                     }
-                } catch (IOException e) {
+                } catch (Exception e) {
                     listener.onAcceptError(e);
                 }
             }
@@ -187,7 +187,7 @@ public class TcpTransportServer implements TransportServer {
         this.backlog = backlog;
     }
 
-    protected final void handleSocket(SocketChannel socket) throws IOException {
+    protected final void handleSocket(SocketChannel socket) throws Exception {
         HashMap<String, Object> options = new HashMap<String, Object>();
 //      options.put("maxInactivityDuration", Long.valueOf(maxInactivityDuration));
 //      options.put("maxInactivityDurationInitalDelay", Long.valueOf(maxInactivityDurationInitalDelay));
@@ -202,8 +202,8 @@ public class TcpTransportServer implements TransportServer {
         listener.onAccept(transport);
     }
 
-    private Transport createTransport(SocketChannel socketChannel, HashMap<String, Object> options) throws IOException {
-        TcpTransport transport = new TcpTransport();
+    protected Transport createTransport(SocketChannel socketChannel, HashMap<String, Object> options) throws Exception {
+        TcpTransport transport = createTransport();
         transport.connected(socketChannel);
         if( options!=null ) {
             IntrospectionSupport.setProperties(transport, options);
@@ -212,6 +212,10 @@ public class TcpTransportServer implements TransportServer {
             IntrospectionSupport.setProperties(transport, transportOptions);
         }
         return transport;
+    }
+
+    protected TcpTransport createTransport() {
+        return new TcpTransport();
     }
 
     public void setTransportOption(Map<String, Object> transportOptions) {

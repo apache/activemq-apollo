@@ -27,9 +27,9 @@ import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.DispatchSource;
 import org.fusesource.hawtdispatch.Retained;
 
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.*;
-import java.nio.channels.Channel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
@@ -44,7 +44,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
     private static final Logger LOG = LoggerFactory.getLogger(TcpTransport.class);
 
-    private Map<String, Object> socketOptions;
+    protected Map<String, Object> socketOptions;
 
     abstract static class SocketState {
         void onStop(Runnable onCompleted) {
@@ -161,20 +161,20 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
     protected URI remoteLocation;
     protected URI localLocation;
-    private TransportListener listener;
-    private String remoteAddress;
-    private ProtocolCodec wireformat;
+    protected TransportListener listener;
+    protected String remoteAddress;
+    protected ProtocolCodec codec;
 
-    private SocketChannel channel;
+    protected SocketChannel channel;
 
-    private SocketState socketState = new DISCONNECTED();
+    protected SocketState socketState = new DISCONNECTED();
 
-    private DispatchQueue dispatchQueue;
-    private DispatchSource readSource;
-    private DispatchSource writeSource;
+    protected DispatchQueue dispatchQueue;
+    protected DispatchSource readSource;
+    protected DispatchSource writeSource;
 
     protected boolean useLocalHost = true;
-    boolean full = false;
+    protected boolean full = false;
 
     private final Runnable CANCEL_HANDLER = new Runnable() {
         public void run() {
@@ -192,31 +192,31 @@ public class TcpTransport extends JavaBaseService implements Transport {
         }
     }
 
-    public void connected(SocketChannel channel) throws IOException {
+    public void connected(SocketChannel channel) throws IOException, Exception {
         this.channel = channel;
 
-        if( wireformat!=null ) {
-            wireformat.setReadableByteChannel(this.channel);
-            wireformat.setWritableByteChannel(this.channel);
+        if( codec !=null ) {
+            initializeCodec();
         }
 
         this.channel.configureBlocking(false);
         this.remoteAddress = channel.socket().getRemoteSocketAddress().toString();
         channel.socket().setSoLinger(true, 0);
+        channel.socket().setTcpNoDelay(true);
 
         this.socketState = new CONNECTED();
     }
 
-    public void connecting(URI remoteLocation, URI localLocation) throws IOException {
+    protected void initializeCodec() {
+        codec.setReadableByteChannel(this.channel);
+        codec.setWritableByteChannel(this.channel);
+    }
+
+    public void connecting(URI remoteLocation, URI localLocation) throws IOException, Exception {
         this.channel = SocketChannel.open();
         this.channel.configureBlocking(false);
         this.remoteLocation = remoteLocation;
         this.localLocation = localLocation;
-
-        if( wireformat!=null ) {
-            wireformat.setReadableByteChannel(this.channel);
-            wireformat.setWritableByteChannel(this.channel);
-        }
 
         if (localLocation != null) {
             InetSocketAddress localAddress = new InetSocketAddress(InetAddress.getByName(localLocation.getHost()), localLocation.getPort());
@@ -300,7 +300,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
         return host;
     }
 
-    private void onConnected() throws SocketException {
+    protected void onConnected() throws IOException {
 
         readSource = Dispatch.createSource(channel, SelectionKey.OP_READ, dispatchQueue);
         writeSource = Dispatch.createSource(channel, SelectionKey.OP_WRITE, dispatchQueue);
@@ -338,7 +338,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
         }
         
         dispatchQueue.release();
-        this.wireformat = null;
+        this.codec = null;
     }
 
     public void onTransportFailure(IOException error) {
@@ -361,7 +361,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
                 throw new IOException("Not running.");
             }
 
-            ProtocolCodec.BufferState rc = wireformat.write(command);
+            ProtocolCodec.BufferState rc = codec.write(command);
             switch (rc ) {
                 case FULL:
                     return false;
@@ -378,15 +378,15 @@ public class TcpTransport extends JavaBaseService implements Transport {
     }
 
     /**
-     * @retruns true if there are no in progress writes.
+     *
      */
-    private void drainOutbound() {
+    protected void drainOutbound() {
         assert Dispatch.getCurrentQueue() == dispatchQueue;
         if (getServiceState() != STARTED || !socketState.is(CONNECTED.class)) {
             return;
         }
         try {
-            if( wireformat.flush() == ProtocolCodec.BufferState.EMPTY ) {
+            if( codec.flush() == ProtocolCodec.BufferState.EMPTY && flush() ) {
                 writeSource.suspend();
                 listener.onRefill();
             }
@@ -395,12 +395,16 @@ public class TcpTransport extends JavaBaseService implements Transport {
         }
     }
 
-    private void drainInbound() {
+    protected boolean flush() throws IOException {
+        return true;
+    }
+
+    protected void drainInbound() {
         if (!getServiceState().isStarted() || readSource.isSuspended()) {
             return;
         }
         try {
-            Object command = wireformat.read();
+            Object command = codec.read();
             while ( command!=null ) {
                 try {
                     listener.onTransportCommand(command);
@@ -414,7 +418,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
                     return;
                 }
 
-                command = wireformat.read();
+                command = codec.read();
             }
         } catch (IOException e) {
             onTransportFailure(e);
@@ -480,14 +484,13 @@ public class TcpTransport extends JavaBaseService implements Transport {
     }
 
     public ProtocolCodec getProtocolCodec() {
-        return wireformat;
+        return codec;
     }
 
     public void setProtocolCodec(ProtocolCodec protocolCodec) {
-        this.wireformat = protocolCodec;
-        if( channel!=null ) {
-            protocolCodec.setReadableByteChannel(this.channel);
-            protocolCodec.setWritableByteChannel(this.channel);
+        this.codec = protocolCodec;
+        if( channel!=null && codec!=null ) {
+            initializeCodec();
         }
     }
 

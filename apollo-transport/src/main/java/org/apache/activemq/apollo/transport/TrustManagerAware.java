@@ -16,16 +16,12 @@
  */
 package org.apache.activemq.apollo.transport;
 
+import javax.net.ssl.TrustManager;
 
 /**
- * Implemented by object that need to get injected by
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public interface TransportAcceptListener {
-    
-    void onAccept(Transport transport);
-    
-    void onAcceptError(Exception error);
+public interface TrustManagerAware {
 
+    void setKeyManagers(TrustManager[] manager);
 }
