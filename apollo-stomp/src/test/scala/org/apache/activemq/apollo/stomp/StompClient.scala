@@ -18,10 +18,11 @@
 package org.apache.activemq.apollo.stomp
 
 import java.net.{Socket, InetSocketAddress}
-import org.apache.activemq.apollo.broker.ProtocolException
 import org.fusesource.hawtbuf.AsciiBuffer
 import _root_.org.fusesource.hawtbuf.{ByteArrayOutputStream => BAOS}
 import java.io._
+import org.apache.activemq.apollo.broker.{KeyStorage, ProtocolException}
+import javax.net.ssl.{SSLSocket, SSLContext}
 
 /**
  * A simple Stomp client used for testing purposes
@@ -32,9 +33,19 @@ import java.io._
     var out:OutputStream = null
     var in:InputStream = null
     val bufferSize = 64*1204
+    var key_storeage:KeyStorage=null
 
     def open(host: String, port: Int) = {
-      socket = new Socket
+
+      socket = if( key_storeage!=null ) {
+        val context = SSLContext.getInstance("TLS")
+        context.init(null, key_storeage.create_trust_managers, null)
+        context.getSocketFactory().createSocket()
+        // socket.asInstanceOf[SSLSocket].setEnabledCipherSuites(Array("SSL_RSA_WITH_RC4_128_MD5"))
+        // socket
+      } else {
+        new Socket
+      }
       socket.connect(new InetSocketAddress(host, port))
       socket.setSoLinger(true, 0)
       out = new BufferedOutputStream(socket.getOutputStream, bufferSize)

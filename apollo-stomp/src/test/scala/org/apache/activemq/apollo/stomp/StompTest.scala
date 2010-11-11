@@ -17,18 +17,21 @@
 package org.apache.activemq.apollo.stomp
 
 import org.scalatest.matchers.ShouldMatchers
-import org.apache.activemq.apollo.broker.{Broker, BrokerFactory}
 import org.scalatest.BeforeAndAfterEach
-import org.apache.activemq.apollo.util.{Logging, FunSuiteSupport, ServiceControl}
+import java.lang.String
+import org.apache.activemq.apollo.broker.{KeyStorage, Broker, BrokerFactory}
+import org.apache.activemq.apollo.util.{FileSupport, Logging, FunSuiteSupport, ServiceControl}
+import FileSupport._
 
 class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAndAfterEach with Logging {
   var broker: Broker = null
   var port = 0
-  
+
+  val broker_config_uri = "xml:classpath:activemq-stomp.xml"
+
   override protected def beforeAll() = {
-    val uri = "xml:classpath:activemq-stomp.xml"
-    info("Loading broker configuration from the classpath with URI: " + uri)
-    broker = BrokerFactory.createBroker(uri)
+    info("Loading broker configuration from the classpath with URI: " + broker_config_uri)
+    broker = BrokerFactory.createBroker(broker_config_uri)
     ServiceControl.start(broker, "Starting broker")
     port = broker.connectors.head.transportServer.getSocketAddress.getPort
   }
@@ -400,6 +403,15 @@ class StompDestinationTest extends StompTestSupport {
     get(1)
     get(3)
   }
+}
+
+class StompSslDestinationTest extends StompDestinationTest {
+  override val broker_config_uri: String = "xml:classpath:apollo-stomp-ssl.xml"
+
+  client.key_storeage = new KeyStorage
+  client.key_storeage.config.file = baseDir/"src"/"test"/"resources"/"client.ks"
+  client.key_storeage.config.password = "password"
+
 }
 
 class StompReceiptTest extends StompTestSupport {
