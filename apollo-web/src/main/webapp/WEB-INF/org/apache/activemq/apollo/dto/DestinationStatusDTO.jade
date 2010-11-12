@@ -18,19 +18,26 @@
 - import helper._
 
 .breadcumbs
-  %a(href={strip_resolve("..")}) Back
+  a(href={strip_resolve(".")}) Back
 
-%h1 Virtual Host: #{config.id}
+h1 Destination: #{name}
 
-%p state: #{state} for #{ uptime(state_since) }
+h2 Queues
+ul
+  - for( x <- queues )
+    li
+      a(href={ path("queues/"+x.id) }) #{x.label}
 
-- if ( store !=null )
-  %p
-    %a(href={ path("store") }) store
+h3 Broadcast Producers
+ul
+  - for( x <- producers )
+    li
+      a(href={ path("../../../../connections/"+x.id) }) #{x.label}
 
-%h2 Destinations
-%ul
-  - for( x <- destinations )
-    %li
-      %a(href={ path("destinations/"+x.id) }) #{x.label}
+h3 Broadcast Consumers
+ul
+  - for( x <- consumers )
+    li
+      a(href={ path("../../../../connections/"+x.id) }) #{x.label}
+
 

@@ -13,10 +13,16 @@
 -# See the License for the specific language governing permissions and
 -# limitations under the License.
 
+- import it._
 - val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
 - import helper._
 
 .breadcumbs
-  %a(href={strip_resolve(".")}) Back
+  a(href={strip_resolve(".")}) Back
 
-.clear
+p state: #{state} for #{ uptime(state_since) }
+p remote address: #{remote_address}
+p protocol: #{protocol}
+p transport: #{transport}
+p read counter: #{memory(read_counter)}
+p write counter: #{memory(write_counter)}

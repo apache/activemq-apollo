@@ -18,25 +18,25 @@
 - import helper._
 
 .breadcumbs
-  %a(href={strip_resolve(".")}) Back
+  a(href={strip_resolve(".")}) Back
 
 
-%p state: #{state} for #{ uptime(state_since) }
+p state: #{state} for #{ uptime(state_since) }
 
-%h2 Virtual Hosts
-%ul
+h2 Virtual Hosts
+ul
   - for( x <- virtual_hosts )
-    %li
-      %a(href={ path("virtual-hosts/"+ x.id) }) #{x.label}
+    li
+      a(href={ path("virtual-hosts/"+ x.id) }) #{x.label}
 
-%h2 Connectors
-%ul
+h2 Connectors
+ul
   - for( x <- connectors )
-    %li
-      %a(href={ path("connectors/"+x.id) }) #{x.label}
+    li
+      a(href={ path("connectors/"+x.id) }) #{x.label}
 
-%h2 Connections
-%ul
+h2 Connections
+ul
   - for( x <- connections )
-    %li
-      %a(href={ path("connections/"+x.id) }) #{x.label}
+    li
+      a(href={ path("connections/"+x.id) }) #{x.label}

@@ -4,9 +4,9 @@
 -# The ASF licenses this file to You under the Apache License, Version 2.0
 -# (the "License"); you may not use this file except in compliance with
 -# the License.  You may obtain a copy of the License at
--# 
+-#
 -# http://www.apache.org/licenses/LICENSE-2.0
--# 
+-#
 -# Unless required by applicable law or agreed to in writing, software
 -# distributed under the License is distributed on an "AS IS" BASIS,
 -# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,27 +16,18 @@
 - import it._
 - val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
 - import helper._
-- import java.util.concurrent.TimeUnit._
 
 .breadcumbs
-  %a(href={strip_resolve(".")}) Back
+  a(href={strip_resolve(".")}) Back
 
-%p state: #{state} for #{ uptime(state_since) }
+p state: #{state} for #{ uptime(state_since) }
+p remote address: #{remote_address}
+p protocol: #{protocol}
+p transport: #{transport}
+p read counter: #{memory(read_counter)}
+p write counter: #{memory(write_counter)}
 
-%h2 Cancel Stats
-%p canceled message stores: #{canceled_message_counter}
-%p canceled message enqueues: #{canceled_enqueue_counter}
-
-%h2 Flush Stats
-%p flushed message stores: #{flushed_message_counter}
-%p flushed message enqueues: #{flushed_enqueue_counter}
-
-%h2 Store Latency Stats
-
-- def show(name:String, value:TimeMetricDTO)
-  %p #{name} : average #{value.avg(MILLISECONDS)} ms,  min #{value.min(MILLISECONDS)} ms, max #{value.max(MILLISECONDS)} ms, #{value.count} events
-
-- show("Message load latency", message_load_latency)
-- show("UOW flush latency", flush_latency)
-- show("Journal append latency", journal_append_latency)
-- show("Index update latency", index_update_latency)
+p protocol version: #{protocol_version}
+p user: #{user}
+p waiting on: #{waiting_on}
+p subscription count: #{subscription_count}
