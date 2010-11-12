@@ -18,47 +18,26 @@
 package org.apache.activemq.apollo.util
 
 import org.scalatest.matchers.ShouldMatchers
-import tools.nsc.io.{Path, File, Directory}
 import collection.mutable.ArrayBuffer
+import java.io.File
+import FileSupport._
 
 class FileSupportTest extends FunSuiteSupport with ShouldMatchers {
 
   test("recursive file copy test") {
 
-    val base = new Directory(basedir)
-    var target = base / FileSupport.toDirectory("target")
+    val source_dir = basedir / "target" / "source-dir"
+    val target_dir = basedir / "target" / "target-dir"
+    List(source_dir, target_dir).foreach(_.recursive_delete)
 
-    val sourceDir: Directory = target / FileSupport.toDirectory("sourceDir")
-    if ( sourceDir.exists ) {
-      sourceDir.deleteRecursively
-    }
-    sourceDir.createDirectory(false)
+    (source_dir / "sub-dir" / "some-file").mkdirs
 
-    val subDir: Directory = sourceDir / FileSupport.toDirectory("subDir")
-    subDir.createDirectory(false)
+    source_dir.recursive_copy_to(target_dir)
 
-    val someFile: File = subDir / FileSupport.toFile("someFile")
-    someFile.createFile(false)
+    val listing = target_dir.recursive_list.map(file => file.getCanonicalPath)
 
-    val targetDir: Directory = target / FileSupport.toDirectory("targetDir")
-    if ( targetDir.exists ) {
-      targetDir.deleteRecursively
-    }
-
-    FileSupport.recursiveCopy(sourceDir, targetDir)
-
-    val listing = new ArrayBuffer[String]
-
-    targetDir.deepList().foreach(file => listing.append(file.toString))
-
-
-
-
-    
-    var expected = (new File(basedir)/"target"/"targetDir"/"subDir").normalize.toString
-    listing should contain( expected )
-    expected = (new File(basedir)/"target"/"targetDir"/"subDir"/"someFile").normalize.toString
-    listing should contain(expected)
+    listing should contain( (basedir/"target"/"target-dir"/"sub-dir").getCanonicalPath  )
+    listing should contain( (basedir/"target"/"target-dir"/"sub-dir"/"some-file").getCanonicalPath )
 
   }
 

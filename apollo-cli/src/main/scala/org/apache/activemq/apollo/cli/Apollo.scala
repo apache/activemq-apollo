@@ -63,8 +63,9 @@ class Apollo extends Main with Action {
       protected override def getPrompt = BOLD+"apollo> "+RESET
       protected override def isPrintStackTraces = debug
       protected override def welcome = {
-        val source = getClass().getResourceAsStream("banner.txt")
-        copy(source, session.getConsole())
+        using(getClass().getResourceAsStream("banner.txt")) {source=>
+          copy(source, session.getConsole())
+        }
       }
 
       protected override def setSessionProperties = {}

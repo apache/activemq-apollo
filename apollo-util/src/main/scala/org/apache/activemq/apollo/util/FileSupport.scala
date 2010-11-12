@@ -16,35 +16,11 @@
  */
 package org.apache.activemq.apollo.util
 
-import tools.nsc.io.Path
-import java.io.{OutputStream, InputStream, File}
+import java.io._
 
 object FileSupport {
 
-  def recursiveCopy(source: Path, target: Path) : Unit = {
-    require(source.isDirectory, source.path + " must be a directory.")
-    if ( !target.exists ) {
-      target.toDirectory.createDirectory()
-    }
-
-    def createOrCopy(file: Path) : Unit = {
-      val newTarget = target / FileSupport.toDirectory(file.name)
-      if (file.isDirectory) {
-        recursiveCopy(file.toDirectory, newTarget)
-      } else {
-        file.toFile.copyTo(newTarget)
-      }
-    }
-    source.toDirectory.list.foreach(createOrCopy)
-  }
-
-  def toDirectory(name: String) = {
-    new tools.nsc.io.Directory(new File(name))
-  }
-
-  def toFile(name: String) = {
-    new tools.nsc.io.File(new File(name))
-  }
+  implicit def to_rich_file(file:File):RichFile = new RichFile(file)
 
 
   def system_dir(name:String) = {
@@ -59,31 +35,68 @@ object FileSupport {
     file
   }
 
+  case class RichFile(self:File) {
 
-  class RichFile(file:File) {
-    def / (path:String) = new File(file, path)
-  }
-  implicit def toRichFile(file:File):RichFile = new RichFile(file)
+    def / (path:String) = new File(self, path)
 
-
-  def copy(in: InputStream, out: OutputStream): Long = {
-    try {
-      var bytesCopied: Long = 0
-      val buffer = new Array[Byte](8192)
-      var bytes = in.read(buffer)
-      while (bytes >= 0) {
-        out.write(buffer, 0, bytes)
-        bytesCopied += bytes
-        bytes = in.read(buffer)
+    def copy_to(target:File) = {
+      using(new FileOutputStream(target)){ os=>
+        using(new FileInputStream(self)){ is=>
+          FileSupport.copy(is, os)
+        }
       }
-      bytesCopied
+    }
+
+    def recursive_list:List[File] = {
+      if( self.isDirectory ) {
+        self :: self.listFiles.toList.flatten( _.recursive_list )
+      } else {
+        self :: Nil
+      }
+    }
+
+    def recursive_delete: Unit = {
+      if( self.exists ) {
+        if( self.isDirectory ) {
+          self.listFiles.foreach(_.recursive_delete)
+        }
+        self.delete
+      }
+    }
+
+    def recursive_copy_to(target: File) : Unit = {
+      if (self.isDirectory) {
+        target.mkdirs
+        self.listFiles.foreach( file=> file.recursive_copy_to( target / file.getName) )
+      } else {
+        self.copy_to(target)
+      }
+    }
+
+  }
+
+  /**
+   * Returns the number of bytes copied.
+   */
+  def copy(in: InputStream, out: OutputStream): Long = {
+    var bytesCopied: Long = 0
+    val buffer = new Array[Byte](8192)
+    var bytes = in.read(buffer)
+    while (bytes >= 0) {
+      out.write(buffer, 0, bytes)
+      bytesCopied += bytes
+      bytes = in.read(buffer)
+    }
+    bytesCopied
+  }
+
+  def using[R,C <: Closeable](closable: C)(proc: C=>R) = {
+    try {
+      proc(closable)
     } finally {
-      try { in.close  }  catch { case ignore =>  }
+      try { closable.close  }  catch { case ignore =>  }
     }
   }
 
-  def close(out: OutputStream) = {
-    try { out.close  }  catch { case ignore =>  }
-  }
 
 }

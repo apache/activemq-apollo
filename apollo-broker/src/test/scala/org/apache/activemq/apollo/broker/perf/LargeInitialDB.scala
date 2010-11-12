@@ -18,16 +18,17 @@
 package org.apache.activemq.apollo.broker.perf
 
 import org.apache.activemq.apollo.broker.Destination
-import tools.nsc.io.Directory
 import org.apache.activemq.apollo.util.metric.MetricAggregator
 import org.apache.activemq.apollo.util.{ServiceControl, FileSupport}
+import FileSupport._
+import java.io.File
 
 trait LargeInitialDB extends PersistentScenario {
   PURGE_STORE = false
   MULTI_BROKER = false
 
-  var original: Directory = null
-  var backup: Directory = null;
+  var original: File = null
+  var backup: File = null;
 
   // Keep it simple.. we are only creating 1 queue with a large number of entries.
   override def partitionedLoad = List(1)
@@ -48,12 +49,12 @@ trait LargeInitialDB extends PersistentScenario {
 
     initBrokers
 
-    original = new Directory(storeDirectory)
+    original = storeDirectory
     if (original.exists) {
-      original.deleteRecursively
-      original.createDirectory(true)
+      original.recursive_delete
+      original.mkdirs
     }
-    backup = FileSupport.toDirectory(storeDirectory.getParent)./(FileSupport.toDirectory("backup"))
+    backup = storeDirectory.getParentFile / "backup"
     cleanBackup
 
     println("Using store at " + original + " and backup at " + backup)
@@ -90,29 +91,29 @@ trait LargeInitialDB extends PersistentScenario {
   def saveDB {
     println("Copying contents of " + original + " to " + backup)
     cleanBackup
-    FileSupport.recursiveCopy(original, backup)
+    original.recursive_copy_to(backup)
     printStores
   }
 
   def printStores {
     println("\nOriginal store")
-    original.deepList().foreach(println)
+    original.recursive_list.foreach(println)
     println("\n\nBackup store")
-    backup.deepList().foreach(println)
+    backup.recursive_list.foreach(println)
   }
 
   def restoreDB {
-    original.deleteRecursively
+    original.recursive_delete
     println("Copying contents of " + backup + " to " + original)
-    FileSupport.recursiveCopy(backup, original)
+    backup.recursive_copy_to(original)
     printStores
   }
 
   def cleanBackup {
     if (backup.exists) {
-      backup.deleteRecursively
+      backup.recursive_delete
     }
-    backup.createDirectory(true)
+    backup.mkdirs
     printStores
   }
 

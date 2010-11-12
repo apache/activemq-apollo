@@ -91,10 +91,11 @@ class Create extends Action {
     if( target.exists && !force ) {
       error("The file '%s' already exists.  Use --force to overwrite.".format(target))
     }
-    val out = new FileOutputStream(target)
-    val in = getClass.getResourceAsStream(source)
-    copy(in, out)
-    close(out)
+    using(new FileOutputStream(target)) { out=>
+      using(getClass.getResourceAsStream(source)) { in=>
+        copy(in, out)
+      }
+    }
   }
 
 
