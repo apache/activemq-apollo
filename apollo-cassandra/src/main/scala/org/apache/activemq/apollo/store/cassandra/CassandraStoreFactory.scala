@@ -16,10 +16,11 @@
  */
 package org.apache.activemq.apollo.store.cassandra
 
+import dto.CassandraStoreDTO
 import org.apache.activemq.apollo.store.StoreFactory
-import org.apache.activemq.apollo.dto.{CassandraStoreDTO, StoreDTO}
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
+import org.apache.activemq.apollo.dto.StoreDTO
 
 /**
  * <p>

@@ -14,30 +14,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------
-BrokerDTO
-BrokerStatusDTO
-BrokerSummaryDTO
-ConnectionStatusDTO
-ConnectorDTO
-ConnectorStatusDTO
-DestinationStatusDTO
-EntryStatusDTO
-IntMetricDTO
-LongIdDTO
-LongIdLabeledDTO
-LongIdListDTO
-QueueStatusDTO
-ServiceDTO
-ServiceStatusDTO
-StoreDTO
-StoreStatusDTO
-StringIdDTO
-StringIdLabeledDTO
-StringIdListDTO
-TimeMetricDTO
-VirtualHostDTO
-VirtualHostStatusDTO
-StompConnectionStatusDTO
-KeyStorageDTO
-SimpleStoreStatusDTO
-NullStoreDTO
+CassandraStoreDTO

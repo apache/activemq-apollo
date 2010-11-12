@@ -16,27 +16,18 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlSeeAlso;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
+ * Placeholder implementation fo a StoreStatusDTO since JAXB
+ * seems to fail with:
+ * "Type <...> or any of its subclasses are not known to this context."
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlType (name = "store-type")
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
-public abstract class StoreDTO {
-
-    /**
-     * The flush delay is the amount of time in milliseconds that a store
-     * will delay persisting a messaging unit of work in hopes that it will
-     * be invalidated shortly thereafter by another unit of work which
-     * would negate the operation.
-     */
-    @XmlAttribute(name="flush-delay", required=false)
-    public Long flush_delay;
-
-
+@XmlRootElement(name="simple-store-status")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class SimpleStoreStatusDTO extends StoreStatusDTO {
 }

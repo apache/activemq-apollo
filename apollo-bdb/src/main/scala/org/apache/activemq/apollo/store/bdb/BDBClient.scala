@@ -20,7 +20,6 @@ import dto.BDBStoreDTO
 import java.{lang=>jl}
 import java.{util=>ju}
 
-import org.apache.activemq.apollo.dto.HawtDBStoreDTO
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.store._

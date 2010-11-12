@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.store.cassandra
 
+import dto.CassandraStoreDTO
+import org.apache.activemq.apollo.dto._
 import org.fusesource.hawtdispatch.BaseRetained
 import com.shorrockin.cascal.session._
 import java.util.concurrent.atomic.AtomicLong
@@ -26,7 +28,6 @@ import com.shorrockin.cascal.utils.Conversions._
 import org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch.ListEventAggregator
 import java.util.concurrent._
-import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
@@ -88,7 +89,7 @@ class CassandraStore extends DelayingStoreSupport with Logging {
 
 
   def storeStatusDTO(callback:(StoreStatusDTO)=>Unit) = dispatchQueue {
-    val rc = new StoreStatusDTO
+    val rc = new SimpleStoreStatusDTO
     rc.state = serviceState.toString
     rc.state_since = serviceState.since
     callback(rc)

@@ -27,9 +27,8 @@ import javax.xml.bind.annotation.XmlType;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @XmlType(name = "store-status-type")
-// @XmlSeeAlso({HawtDBStoreStatusDTO.class})
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
-public class StoreStatusDTO {
+public abstract class StoreStatusDTO {
 
     /**
      * The state of the service.

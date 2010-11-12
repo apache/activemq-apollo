@@ -16,24 +16,18 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
-import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
+ * Placeholder implementation fo a StoreDTO since JAXB
+ * seems to fail with:
+ * "Type <...> or any of its subclasses are not known to this context."
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="cassandra-store")
+@XmlRootElement(name="null-store")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class CassandraStoreDTO extends StoreDTO {
-
-    @JsonProperty
-    @XmlAttribute
-    public String keyspace;
-
-    @JsonProperty
-    @XmlElement(required=true)
-    public ArrayList<String> hosts = new ArrayList<String>();    
-
+public class NullStoreDTO extends StoreDTO {
 }

@@ -14,29 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.dto;
+package org.apache.activemq.apollo.store.cassandra.dto;
 
-import org.codehaus.jackson.annotate.JsonTypeInfo;
+import org.apache.activemq.apollo.dto.StoreDTO;
+import org.codehaus.jackson.annotate.JsonProperty;
 
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlSeeAlso;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlType (name = "store-type")
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
-public abstract class StoreDTO {
+@XmlRootElement(name="cassandra-store")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class CassandraStoreDTO extends StoreDTO {
 
-    /**
-     * The flush delay is the amount of time in milliseconds that a store
-     * will delay persisting a messaging unit of work in hopes that it will
-     * be invalidated shortly thereafter by another unit of work which
-     * would negate the operation.
-     */
-    @XmlAttribute(name="flush-delay", required=false)
-    public Long flush_delay;
+    @JsonProperty
+    @XmlAttribute
+    public String keyspace;
 
+    @JsonProperty
+    @XmlElement(required=true)
+    public ArrayList<String> hosts = new ArrayList<String>();    
 
 }
