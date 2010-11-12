@@ -16,11 +16,10 @@
  */
 package org.apache.activemq.apollo.store.hawtdb
 
+import dto.HawtDBStoreDTO
 import java.{lang=>jl}
 import java.{util=>ju}
 
-import model.{AddQueue, AddQueueEntry, AddMessage}
-import org.apache.activemq.apollo.dto.HawtDBStoreDTO
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
@@ -29,7 +28,7 @@ import org.apache.activemq.apollo.store.hawtdb.model.Type._
 import org.apache.activemq.apollo.store.hawtdb.model._
 import org.fusesource.hawtbuf._
 import org.fusesource.hawtdispatch._
-import collection.mutable.{LinkedHashMap, HashMap, ListBuffer}
+import collection.mutable.{LinkedHashMap, ListBuffer}
 import collection.JavaConversions
 import ju.{TreeSet, HashSet}
 

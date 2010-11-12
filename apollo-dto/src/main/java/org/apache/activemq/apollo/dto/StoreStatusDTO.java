@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 
 import javax.xml.bind.annotation.XmlAttribute;
@@ -28,7 +27,7 @@ import javax.xml.bind.annotation.XmlType;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @XmlType(name = "store-status-type")
-@XmlSeeAlso({HawtDBStoreStatusDTO.class})
+// @XmlSeeAlso({HawtDBStoreStatusDTO.class})
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 public class StoreStatusDTO {
 

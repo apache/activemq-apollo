@@ -52,6 +52,22 @@
       <version>${hawtbuf-version}</version>
     </dependency>
 
+    <!-- Since we implement a jade template to display the BDB status -->
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-web</artifactId>
+      <version>1.0-SNAPSHOT</version>
+      <type>jar</type>
+      <classifier>slim</classifier>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>servlet-api</artifactId>
+      <version>${servlet-api-version}</version>
+      <scope>provided</scope>
+    </dependency>
+
     <!-- Scala Support -->
     <dependency>
       <groupId>org.scala-lang</groupId>
@@ -118,6 +134,19 @@
           <execution>
             <goals>
               <goal>compile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.fusesource.scalate</groupId>
+        <artifactId>maven-scalate-plugin</artifactId>
+        <version>${scalate-version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>precompile</goal>
             </goals>
           </execution>
         </executions>

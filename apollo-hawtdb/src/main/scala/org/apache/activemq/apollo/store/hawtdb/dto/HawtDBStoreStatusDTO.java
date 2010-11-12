@@ -14,7 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.dto;
+package org.apache.activemq.apollo.store.hawtdb.dto;
+
+import org.apache.activemq.apollo.dto.IntMetricDTO;
+import org.apache.activemq.apollo.dto.StoreStatusDTO;
+import org.apache.activemq.apollo.dto.TimeMetricDTO;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;

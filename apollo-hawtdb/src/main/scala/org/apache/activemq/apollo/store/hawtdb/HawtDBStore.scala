@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.store.hawtdb
 
 import collection.mutable.ListBuffer
+import dto.{HawtDBStoreStatusDTO, HawtDBStoreDTO}
 import java.util.HashMap
 import collection.{Seq}
 import org.fusesource.hawtdispatch._
