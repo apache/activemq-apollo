@@ -116,7 +116,6 @@ object Broker extends Log {
   def defaultConfig() = {
     val rc = new BrokerDTO
     rc.id = "default"
-    rc.enabled = true
     rc.notes = "A default configuration"
     rc.virtual_hosts.add(VirtualHost.defaultConfig)
     rc.connectors.add(Connector.defaultConfig)

@@ -43,7 +43,6 @@ public class XmlCodecTest {
         assertNotNull(dto);
         VirtualHostDTO host = dto.virtual_hosts.get(0);
         assertEquals("vh-local", host.id);
-        assertEquals(true, host.enabled);
         assertEquals("localhost", host.host_names.get(0));
 
         assertNotNull( host.store );

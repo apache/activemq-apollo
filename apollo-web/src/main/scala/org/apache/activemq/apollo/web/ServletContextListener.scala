@@ -21,6 +21,7 @@ import org.apache.activemq.apollo.util._
 import javax.servlet.{ServletContextListener, ServletContextEvent}
 import org.apache.activemq.apollo.broker.{FileConfigStore, ConfigStore, BrokerRegistry, Broker}
 import org.fusesource.hawtdispatch._
+import org.apache.activemq.apollo.util.OptionSupport._
 
 /**
  * A servlet context listener which handles starting the
@@ -43,7 +44,7 @@ class ApolloListener extends ServletContextListener {
 
               println("Config store contained broker: "+config.id);
               // Only start the broker up if it's enabled..
-              if( config.enabled ) {
+              if( config.enabled.getOrElse(true) ) {
 
                 println("starting broker: "+config.id);
                 val broker = new Broker()

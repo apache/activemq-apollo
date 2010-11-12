@@ -30,7 +30,7 @@ public class CassandraStoreDTO extends StoreDTO {
 
     @JsonProperty
     @XmlAttribute
-    public String keyspace="ActiveMQ";
+    public String keyspace;
 
     @JsonProperty
     @XmlElement(required=true)

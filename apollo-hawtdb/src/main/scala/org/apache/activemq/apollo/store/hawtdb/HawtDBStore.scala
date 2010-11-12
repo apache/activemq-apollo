@@ -28,6 +28,7 @@ import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
 import org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained, ListEventAggregator}
+import org.apache.activemq.apollo.util.OptionSupport._
 
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
@@ -74,7 +75,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
 
   override def toString = "hawtdb store"
 
-  def flush_delay = config.flush_delay
+  def flush_delay = config.flush_delay.getOrElse(100)
   
   protected def get_next_msg_key = next_msg_key.getAndIncrement
 
@@ -133,7 +134,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
         }
       }
     }
-    dispatchQueue.dispatchAfter(config.index_flush_interval, TimeUnit.MILLISECONDS, ^ {try_flush})
+    dispatchQueue.dispatchAfter(client.index_flush_interval, TimeUnit.MILLISECONDS, ^ {try_flush})
   }
 
   def scheduleCleanup(version:Int): Unit = {
@@ -145,7 +146,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
         }
       }
     }
-    dispatchQueue.dispatchAfter(config.cleanup_interval, TimeUnit.MILLISECONDS, ^ {try_cleanup})
+    dispatchQueue.dispatchAfter(client.cleanup_interval, TimeUnit.MILLISECONDS, ^ {try_cleanup})
   }
 
   protected def _stop(onCompleted: Runnable) = {

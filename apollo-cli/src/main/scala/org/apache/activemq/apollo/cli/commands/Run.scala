@@ -32,8 +32,9 @@ import org.apache.commons.logging.LogFactory
 import org.apache.activemq.apollo.broker.{BrokerRegistry, Broker, ConfigStore, FileConfigStore}
 import org.fusesource.hawtdispatch._
 import Helper._
-import org.apache.activemq.apollo.util.{FileSupport, Logging, ServiceControl}
-import FileSupport._
+import org.apache.activemq.apollo.util.{Logging, ServiceControl}
+import org.apache.activemq.apollo.util.FileSupport._
+import org.apache.activemq.apollo.util.OptionSupport._
 
 /**
  * The apollo create command
@@ -95,7 +96,7 @@ class Run extends Action with Logging {
           store.listBrokers.foreach { id=>
             store.getBroker(id, true).foreach{ config=>
               // Only start the broker up if it's enabled..
-              if( config.enabled ) {
+              if( config.enabled.getOrElse(true) ) {
                 info("Starting broker '%s'...".format(config.id));
                 val broker = new Broker()
                 broker.config = config

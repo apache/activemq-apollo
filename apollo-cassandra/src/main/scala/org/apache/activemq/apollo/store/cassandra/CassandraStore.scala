@@ -30,6 +30,7 @@ import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
+import org.apache.activemq.apollo.util.OptionSupport._
 
 object CassandraStore extends Log {
 
@@ -68,7 +69,7 @@ class CassandraStore extends DelayingStoreSupport with Logging {
   var config:CassandraStoreDTO = defaultConfig
   var blocking:ExecutorService = null
 
-  def flush_delay = config.flush_delay
+  def flush_delay = config.flush_delay.getOrElse(100)
 
   override def toString = "cassandra store"
 
@@ -104,7 +105,6 @@ class CassandraStore extends DelayingStoreSupport with Logging {
     }
   }
 
-
   protected def _start(onCompleted: Runnable) = {
     blocking = Executors.newFixedThreadPool(20, new ThreadFactory(){
       def newThread(r: Runnable) = {
@@ -113,7 +113,7 @@ class CassandraStore extends DelayingStoreSupport with Logging {
         rc
       }
     })
-    client.schema = Schema(config.keyspace)
+    client.schema = Schema(config.keyspace.getOrElse("ActiveMQ"))
 
     // TODO: move some of this parsing code into validation too.
     val HostPort = """([^:]+)(:(\d+))?""".r

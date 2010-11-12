@@ -30,6 +30,7 @@ import ReporterLevel._
 import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
 import collection.JavaConversions
 import java.util.concurrent.atomic.AtomicLong
+import org.apache.activemq.apollo.util.OptionSupport._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -48,7 +49,6 @@ object VirtualHost extends Log {
   def defaultConfig() = {
     val rc = new VirtualHostDTO
     rc.id = "default"
-    rc.enabled = true
     rc.host_names.add("localhost")
     rc.store = null
     rc
@@ -147,7 +147,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
           getKeyDone.run
         }
 
-        if( config.purge_on_startup ) {
+        if( config.purge_on_startup.getOrElse(false) ) {
           storeStartupDone.name = "store purge"
           store.purge {
             storeStartupDone.run

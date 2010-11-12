@@ -37,6 +37,8 @@ import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdb.api._
 import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
+import OptionSupport._
+
 
 object HawtDBClient extends Log {
   val BEGIN = -1
@@ -90,17 +92,17 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   //
   /////////////////////////////////////////////////////////////////////
 
-  private def directory = config.directory
 
-  private def journalMaxFileLength = config.journal_log_size
+  def directory = config.directory
+  def journal_log_size = config.journal_log_size.getOrElse(1024*1024*64)
+  def journal_batch_size = config.journal_batch_size.getOrElse(1024*256)
+  def index_flush_interval = config.index_flush_interval.getOrElse(5L * 1000L)
+  def cleanup_interval = config.cleanup_interval.getOrElse(30 * 1000L)
+  def fail_if_locked = config.fail_if_locked.getOrElse(false)
+  def index_page_size = config.index_page_size.getOrElse(512.toShort)
+  def index_cache_size = config.index_cache_size.getOrElse(5000)
 
-  private def checkpointInterval = config.index_flush_interval
-
-  private def cleanupInterval = config.cleanup_interval
-
-  private def failIfDatabaseIsLocked = config.fail_if_locked
-
-  private def indexFile = indexFileFactory.getTxPageFile()
+  private def index_file = indexFileFactory.getTxPageFile()
 
 
   /////////////////////////////////////////////////////////////////////
@@ -114,7 +116,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   def lock(func: => Unit) {
     val lockFileName = new File(directory, "lock")
     lockFile = new LockFile(lockFileName, true)
-    if (failIfDatabaseIsLocked) {
+    if (fail_if_locked) {
       lockFile.lock()
       func
     } else {
@@ -144,8 +146,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
       journal = new Journal()
       journal.setDirectory(directory)
-      journal.setMaxFileLength(config.journal_log_size)
-      journal.setMaxWriteBatchSize(config.journal_batch_size);
+      journal.setMaxFileLength(journal_log_size)
+      journal.setMaxWriteBatchSize(journal_batch_size);
       journal.setChecksum(true);
       journal.setListener( new JournalListener{
         def synced(writes: Array[JournalListener.Write]) = {
@@ -172,8 +174,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       indexFileFactory.setDrainOnClose(false)
       indexFileFactory.setSync(true)
       indexFileFactory.setUseWorkerThread(true)
-      indexFileFactory.setPageSize(config.index_page_size)
-      indexFileFactory.setCacheSize(config.index_cache_size);
+      indexFileFactory.setPageSize(index_page_size)
+      indexFileFactory.setCacheSize(index_cache_size);
 
       indexFileFactory.open
 
@@ -202,7 +204,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
       }
 
       if( initialized ) {
-        indexFile.flush()
+        index_file.flush()
       }
 
       recover(onComplete)
@@ -909,7 +911,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
   def flush() = {
     val start = System.currentTimeMillis()
-    indexFile.flush
+    index_file.flush
     val end = System.currentTimeMillis()
     if (end - start > 1000) {
       warn("Index flush latency: %,.3f seconds", ((end - start) / 1000.0f))
@@ -1049,7 +1051,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
   }
 
   private def withTx[T](func: (Transaction) => T): T = {
-    val tx = indexFile.tx
+    val tx = index_file.tx
     var ok = false
     try {
       val rc = func(tx)

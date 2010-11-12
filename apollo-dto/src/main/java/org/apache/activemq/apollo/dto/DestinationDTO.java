@@ -44,7 +44,7 @@ public class DestinationDTO {
      * a queue subscriptions is created, it will act like if a durable
      * subscription was created on the topic. 
      */
-    public boolean unified = false;
+    public Boolean unified;
 
     
 

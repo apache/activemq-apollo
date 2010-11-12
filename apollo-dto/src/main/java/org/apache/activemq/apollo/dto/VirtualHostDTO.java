@@ -41,13 +41,13 @@ public class VirtualHostDTO extends ServiceDTO<String> {
      */
     @JsonProperty("auto_create_queues")
     @XmlAttribute(name="auto-create-queues")
-    public boolean auto_create_queues = true;
+    public Boolean auto_create_queues;
 
     /**
      * Should queues be purged on startup?
      */
     @XmlAttribute(name="purge-on-startup")
-    public boolean purge_on_startup = false;
+    public Boolean purge_on_startup;
 
     /**
      * Holds the configuration for the destinations.

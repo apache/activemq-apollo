@@ -39,7 +39,7 @@ public abstract class StoreDTO {
      * would negate the operation.
      */
     @XmlAttribute(name="flush-delay", required=false)
-    public long flush_delay = 100;
+    public Long flush_delay;
 
 
 }

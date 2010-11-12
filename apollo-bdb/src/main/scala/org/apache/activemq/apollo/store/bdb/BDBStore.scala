@@ -27,6 +27,7 @@ import org.apache.activemq.apollo.util._
 import ReporterLevel._
 import org.fusesource.hawtdispatch.ListEventAggregator
 import org.apache.activemq.apollo.dto.{StoreStatusDTO, IntMetricDTO, TimeMetricDTO, StoreDTO}
+import org.apache.activemq.apollo.util.OptionSupport._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -73,7 +74,7 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
 
   override def toString = "bdb store"
 
-  def flush_delay = config.flush_delay
+  def flush_delay = config.flush_delay.getOrElse(100)
   
   protected def get_next_msg_key = next_msg_key.getAndIncrement
 
