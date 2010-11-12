@@ -42,17 +42,20 @@ public class DestinationStatusDTO extends LongIdDTO {
      * Ids of all connections that are producing to the destination
      */
     @XmlElement(name="producer")
+    @JsonProperty("producers")
     public List<LongIdLabeledDTO> producers = new ArrayList<LongIdLabeledDTO>();
 
     /**
      * Ids of all connections that are consuming from the destination
      */
     @XmlElement(name="consumer")
+    @JsonProperty("consumers")
     public List<LongIdLabeledDTO> consumers = new ArrayList<LongIdLabeledDTO>();
 
     /**
      * Ids of all queues that are associated with the destination
      */
     @XmlElement(name="queue")
+    @JsonProperty("queues")
     public List<LongIdLabeledDTO> queues = new ArrayList<LongIdLabeledDTO>();
 }
