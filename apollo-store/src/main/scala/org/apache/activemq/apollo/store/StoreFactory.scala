@@ -26,14 +26,6 @@ import ReporterLevel._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class StoreFactory
-
-/**
- * <p>
- * </p>
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
 object StoreFactory {
 
   trait Provider {
