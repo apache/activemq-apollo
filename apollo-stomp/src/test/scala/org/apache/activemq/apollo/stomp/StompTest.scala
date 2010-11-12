@@ -409,7 +409,7 @@ class StompSslDestinationTest extends StompDestinationTest {
   override val broker_config_uri: String = "xml:classpath:apollo-stomp-ssl.xml"
 
   client.key_storeage = new KeyStorage
-  client.key_storeage.config.file = baseDir/"src"/"test"/"resources"/"client.ks"
+  client.key_storeage.config.file = basedir/"src"/"test"/"resources"/"client.ks"
   client.key_storeage.config.password = "password"
 
 }

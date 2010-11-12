@@ -25,7 +25,7 @@ class FileSupportTest extends FunSuiteSupport with ShouldMatchers {
 
   test("recursive file copy test") {
 
-    val base = new Directory(baseDir)
+    val base = new Directory(basedir)
     var target = base / FileSupport.toDirectory("target")
 
     val sourceDir: Directory = target / FileSupport.toDirectory("sourceDir")
@@ -55,9 +55,9 @@ class FileSupportTest extends FunSuiteSupport with ShouldMatchers {
 
 
     
-    var expected = (new File(baseDir)/"target"/"targetDir"/"subDir").normalize.toString
+    var expected = (new File(basedir)/"target"/"targetDir"/"subDir").normalize.toString
     listing should contain( expected )
-    expected = (new File(baseDir)/"target"/"targetDir"/"subDir"/"someFile").normalize.toString
+    expected = (new File(basedir)/"target"/"targetDir"/"subDir"/"someFile").normalize.toString
     listing should contain(expected)
 
   }

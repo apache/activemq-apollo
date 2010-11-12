@@ -54,7 +54,7 @@ trait HawtDBScenario extends PersistentScenario {
   override def createBrokerConfig(name: String, bindURI: String, connectUri: String): BrokerDTO = {
     val rc = super.createBrokerConfig(name, bindURI, connectUri)
     val store = new HawtDBStoreDTO
-    storeDirectory = new File(new File(testDataDir, getClass.getName), name)
+    storeDirectory = new File(new File(test_data_dir, getClass.getName), name)
     store.directory = storeDirectory
     rc.virtual_hosts.get(0).store = store
     rc
@@ -65,7 +65,7 @@ trait BDBScenario extends PersistentScenario {
   override def createBrokerConfig(name: String, bindURI: String, connectUri: String): BrokerDTO = {
     val rc = super.createBrokerConfig(name, bindURI, connectUri)
     val store = new BDBStoreDTO
-    storeDirectory = new File(new File(testDataDir, getClass.getName), name)
+    storeDirectory = new File(new File(test_data_dir, getClass.getName), name)
     store.directory = storeDirectory
     rc.virtual_hosts.get(0).store = store
     rc

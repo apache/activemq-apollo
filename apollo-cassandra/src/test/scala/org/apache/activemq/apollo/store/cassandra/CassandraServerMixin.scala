@@ -25,57 +25,53 @@ import org.apache.thrift.transport.{TTransportException, TSocket}
 import com.shorrockin.cascal.session._
 import com.shorrockin.cascal.utils.{Utils, Logging}
 import org.scalatest.{Suite, BeforeAndAfterAll}
+import org.apache.activemq.apollo.util.{FileSupport, FunSuiteSupport}
+import FileSupport._
 
 /**
  * trait which mixes in the functionality necessary to embed
  * cassandra into a unit test
  */
-trait CassandraServerMixin extends BeforeAndAfterAll {
+trait CassandraServerMixin extends FunSuiteSupport with BeforeAndAfterAll {
 this: Suite =>
 
-  private var basedir = "target"
-
   override protected def beforeAll(configMap: Map[String, Any]): Unit = {
-    configMap.get("basedir") match {
-      case Some(x) => basedir = x.toString
-      case _ =>
-    }
-    startCassandra
+    start_cassandra
     super.beforeAll(configMap)
   }
 
   override protected def afterAll(configMap: Map[String, Any]) = {
     super.afterAll(configMap)
-    stopCassandra
+    stop_cassandra
   }
 
 
   import Utils._
 
-  protected def cassandraHomeDirectory = new File(new File(basedir),"cassandra.home.unit-tests")
+  protected def cassandra_home = test_data_dir / "cassandra-data"
   protected def resource(str:String) = getClass.getResourceAsStream(str)
 
   private var daemon:CassandraDaemon = null
   var pool:SessionPool = null
-  var daemonThread:Thread = null
+  var daemon_thread:Thread = null
 
-  private def startCassandra = synchronized {
+  private def start_cassandra = synchronized {
     val hosts  = Host("localhost", 9160, 250) :: Nil
     val params = new PoolParams(10, ExhaustionPolicy.Fail, 500L, 6, 2)
     pool = new SessionPool(hosts, params, Consistency.One)
 
-    val home = cassandraHomeDirectory
+    val home = cassandra_home
     delete(home)
     home.mkdirs
 
-    val fileSep     = System.getProperty("file.separator")
-    val storageFile = new File(cassandraHomeDirectory, "storage-conf.xml")
-    val logFile     = new File(cassandraHomeDirectory, "log4j.properties")
+    val file_sep     = System.getProperty("file.separator")
+    val storage_file = new File(cassandra_home, "storage-conf.xml")
+    val log_file     = new File(cassandra_home, "log4j.properties")
 
-    replace(copy(resource("storage-conf.xml"), storageFile), ("%temp-dir%" -> (cassandraHomeDirectory.getCanonicalPath + fileSep)))
-    copy(resource("log4j.properties"), logFile)
+    replace(copy(resource("storage-conf.xml"), storage_file), ("%temp-dir%" -> (cassandra_home.getCanonicalPath + file_sep)))
+    copy(resource("log4j.properties"), log_file)
 
-    System.setProperty("storage-config", cassandraHomeDirectory.getCanonicalPath)
+    System.setProperty("storage-config", cassandra_home.getCanonicalPath)
 
     try {
       DatabaseDescriptor.getAllDataFileLocations.foreach {
@@ -86,12 +82,12 @@ this: Suite =>
       daemon = new CassandraDaemon
       daemon.init(new Array[String](0))
 
-      daemonThread = new Thread("Cassandra Daemon") {
+      daemon_thread = new Thread("Cassandra Daemon") {
         override def run = {
           daemon.start
         }
       }
-      daemonThread.start
+      daemon_thread.start
       
     } catch {
       case e:Throwable =>
@@ -115,11 +111,11 @@ this: Suite =>
     }
   }
 
-  private def stopCassandra() = {
+  private def stop_cassandra() = {
     pool.close
     daemon.stop
-    daemonThread.join
-    daemonThread = null
+    daemon_thread.join
+    daemon_thread = null
 
     daemon.destroy
     daemon = null

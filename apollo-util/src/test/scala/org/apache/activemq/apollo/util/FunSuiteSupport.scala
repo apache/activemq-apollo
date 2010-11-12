@@ -23,36 +23,48 @@ import java.io.File
 import java.lang.String
 import collection.immutable.Map
 import org.scalatest._
+import FileSupport._
 
 /**
  * @version $Revision : 1.1 $
  */
 @RunWith(classOf[JUnitRunner])
 abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfterAll {
-  protected var _basedir = "."
-
+  protected var _basedir = try {
+    var file = new File(getClass.getProtectionDomain.getCodeSource.getLocation.getFile)
+    file = (file / ".." / "..").getCanonicalFile
+    if( file.isDirectory ) {
+      file.getPath
+    } else {
+      "."
+    }
+  } catch {
+    case x=>
+      "."
+  }
 
   /**
    * Returns the base directory of the current project
    */
-  def baseDir = {
+  def basedir = {
     new File(_basedir).getCanonicalFile
   }
 
   /**
    * Returns ${basedir}/target/test-data
    */
-  def testDataDir = {
+  def test_data_dir = {
     new File(new File(_basedir, "target"), "test-data")
   }
 
   override protected def beforeAll(map: Map[String, Any]): Unit = {
     _basedir = map.get("basedir") match {
-      case Some(basedir) => basedir.toString
-      case _ => System.getProperty("basedir", ".")
+      case Some(basedir) =>
+        basedir.toString
+      case _ =>
+        System.getProperty("basedir", _basedir)
     }
     System.setProperty("basedir", _basedir)
-    debug("using basedir: " + _basedir)
     super.beforeAll(map)
   }
 
