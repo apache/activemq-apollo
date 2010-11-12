@@ -27,10 +27,10 @@ import collection.{JavaConversions, SortedMap}
 import JavaConversions._
 import org.apache.activemq.apollo.dto.{VirtualHostStatusDTO, ConnectorStatusDTO, BrokerStatusDTO, BrokerDTO}
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.ConcurrentHashMap
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
 import collection.mutable.LinkedHashMap
+import java.util.concurrent.{ThreadFactory, Executors, ConcurrentHashMap}
 
 /**
  * <p>
@@ -104,6 +104,12 @@ object BrokerRegistry {
 }
 
 object Broker extends Log {
+
+  val BLOCKABLE_THREAD_POOL = Executors.newCachedThreadPool(new ThreadFactory(){
+    def newThread(r: Runnable) = new Thread(r, "Apollo Worker") {
+      setDaemon(true)
+    }
+  })
 
   val broker_id_counter = new AtomicLong()
 

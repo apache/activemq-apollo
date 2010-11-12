@@ -31,6 +31,7 @@ import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
 import collection.JavaConversions
 import java.util.concurrent.atomic.AtomicLong
 import org.apache.activemq.apollo.util.OptionSupport._
+import security.{Authenticator, Authorizer}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -94,6 +95,9 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
   val queue_id_counter = new LongCounter
 
   val session_counter = new AtomicLong(0)
+
+  var authenticator:Authenticator = _
+  var authorizer:Authorizer = _
 
   override def toString = if (config==null) "virtual-host" else "virtual-host: "+config.id
 
