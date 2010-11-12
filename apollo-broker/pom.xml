@@ -56,6 +56,12 @@
       <version>${hawtdispatch-version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-jaas</artifactId>
+      <version>${activemq-version}</version>
+    </dependency>
+
     <!-- Scala Support -->
     <dependency>
       <groupId>org.scala-lang</groupId>
