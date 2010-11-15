@@ -55,5 +55,10 @@ public class VirtualHostDTO extends ServiceDTO<String> {
     @XmlElement(name="destination")
     public ArrayList<DestinationDTO> destinations = new ArrayList<DestinationDTO>();
 
+    /**
+     * Should connections get regroups so they get serviced by the same thread?
+     */
+    @XmlAttribute(name="regroup_connections")
+    public Boolean regroup_connections;
 
 }

@@ -190,7 +190,9 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
 
     tracker.callback(onCompleted)
 
-    schedualConnectionRegroup
+    if(config.regroup_connections.getOrElse(false)) {
+      schedual_connection_regroup
+    }
   }
 
 
@@ -214,7 +216,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
 
   // Try to periodically re-balance connections so that consumers/producers
   // are grouped onto the same thread.
-  def schedualConnectionRegroup:Unit = {
+  def schedual_connection_regroup:Unit = {
     def connectionRegroup = {
 
       // this should really be much more fancy.  It should look at the messaging
@@ -253,7 +255,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
 
         }
       }
-      schedualConnectionRegroup
+      schedual_connection_regroup
     }
     dispatchQueue.dispatchAfter(1, TimeUnit.SECONDS, ^{ if(serviceState.isStarted) { connectionRegroup } } )
   }
