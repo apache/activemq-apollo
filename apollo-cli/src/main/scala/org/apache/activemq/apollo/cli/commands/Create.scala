@@ -40,6 +40,9 @@ class Create extends Action {
   @argument(name = "directory", description = "The instance directory to hold the broker's configuration and data", index=0, required=true)
   var directory:File = _
 
+  @option(name = "--host", description = "The host name of the broker")
+  var host:String = "localhost"
+
   @option(name = "--force", description = "Overwrite configuration at destination directory")
   var force = false
 
@@ -57,8 +60,26 @@ class Create extends Action {
       var target = etc / "log4j.properties"
       write("etc/log4j.properties", target)
 
+      // Generate a keystore with a new key
+      val ssl = system(etc, Array(
+        "keytool", "-genkey",
+        "-storetype", "JKS",
+        "-storepass", "password",
+        "-keystore", "keystore",
+        "-keypass", "password",
+        "-alias", host,
+        "-keyalg", "RSA",
+        "-keysize", "4096",
+        "-dname", "cn=%s".format(host),
+        "-validity", "3650"))==0
+
       target = etc / "apollo.xml"
-      write("etc/apollo.xml", target)
+      if( ssl ) {
+        write("etc/apollo-ssl.xml", target)
+      } else {
+        write("etc/apollo.xml", target)
+      }
+
 
       if( IS_WINDOWS ) {
         target = bin / "apollo-broker.cmd"
@@ -87,13 +108,30 @@ class Create extends Action {
     null
   }
 
-  def write(source:String, target:File) = {
+  def write(source:String, target:File, filter:Boolean=false) = {
     if( target.exists && !force ) {
       error("The file '%s' already exists.  Use --force to overwrite.".format(target))
     }
-    using(new FileOutputStream(target)) { out=>
+    if( filter ) {
+
+      val out = new ByteArrayOutputStream()
       using(getClass.getResourceAsStream(source)) { in=>
         copy(in, out)
+      }
+
+      var content = new String(out.toByteArray, "UTF-8")
+      content = content.replaceAll("${host}", host)
+      val in = new ByteArrayInputStream(content.getBytes("UTF-8"))
+
+      using(new FileOutputStream(target)) { out=>
+        copy(in, out)
+      }
+
+    } else {
+      using(new FileOutputStream(target)) { out=>
+        using(getClass.getResourceAsStream(source)) { in=>
+          copy(in, out)
+        }
       }
     }
   }
@@ -126,7 +164,7 @@ class Create extends Action {
         }
       }.start
     }
-
+    process.getOutputStream.close;
     drain(process.getInputStream, System.out)
     drain(process.getErrorStream, System.err)
     process.waitFor

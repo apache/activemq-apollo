@@ -23,6 +23,9 @@
     <hawtdb-store directory="${apollo.base}/data"/>
   </virtual-host>
 
+  <key-storage file="${apollo.base}/etc/keystore" password="password" key-password="password"/>
+
   <connector id="tcp" bind="tcp://0.0.0.0:61613" connection-limit="2000" protocol="multi"/>
+  <connector id="tls" bind="tls://0.0.0.0:61614" connection-limit="2000" protocol="multi"/>
 
 </broker>
