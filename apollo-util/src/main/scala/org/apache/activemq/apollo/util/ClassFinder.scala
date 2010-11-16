@@ -64,7 +64,16 @@ class ClassFinder[T](val path:String, val loaders:Array[ClassLoader]) {
       try {
         t += clazz.newInstance.asInstanceOf[T]
       } catch {
-        case e: Throwable => e.printStackTrace
+        case e: Throwable =>
+          // It may be a scala object.. check for a module class
+          try {
+            val moduleField = clazz.getClassLoader.loadClass(clazz.getName + "$").getDeclaredField("MODULE$")
+            val instance = moduleField.get(null).asInstanceOf[T]
+            t += instance
+          } catch {
+            case e2: Throwable =>
+              e.printStackTrace
+          }
       }
     }
     t.toList
