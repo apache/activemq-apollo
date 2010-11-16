@@ -47,7 +47,7 @@ public class TcpTransportServer implements TransportServer {
     private URI connectURI;
     private DispatchQueue dispatchQueue;
     private DispatchSource acceptSource;
-    private int backlog = 500;
+    private int backlog = 100;
     private Map<String, Object> transportOptions;
 
     public TcpTransportServer(URI location) {
