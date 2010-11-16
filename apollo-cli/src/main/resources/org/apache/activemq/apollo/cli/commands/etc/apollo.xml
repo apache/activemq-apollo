@@ -15,14 +15,15 @@
 -->
 <broker basedir="./activemq-data/default" rev="1" enabled="true" id="default" xmlns="http://activemq.apache.org/schema/activemq/apollo">
     <notes>
-      A default configuration
+      The default configuration.
     </notes>
 
-    <virtual-host purge-on-startup="false" auto-create-queues="true" enabled="true" id="default">
+    <virtual-host id="default" auto-create-queues="true" >
         <host-name>localhost</host-name>
+        <host-name>127.0.0.1</host-name>
         <hawtdb-store directory="${apollo.base}/data"/>
     </virtual-host>
 
-    <connectors advertise="tcp://localhost:61613" protocol="multi" bind="tcp://0.0.0.0:61613" enabled="true" id="default"/>
+    <connector id="port-61613" bind="tcp://0.0.0.0:61613" connection-limit="2000" protocol="multi"/>
 
 </broker>

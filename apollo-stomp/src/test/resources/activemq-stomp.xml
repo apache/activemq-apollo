@@ -20,5 +20,5 @@
     <virtual-host purge-on-startup="false" auto-create-queues="true" enabled="true" id="default">
         <host-name>localhost</host-name>
     </virtual-host>
-    <connectors advertise="tcp://localhost:61613" protocol="stomp" bind="tcp://0.0.0.0:0" enabled="true" id="default"/>
+    <connector advertise="tcp://localhost:61613" protocol="stomp" bind="tcp://0.0.0.0:0" enabled="true" id="default"/>
 </broker>

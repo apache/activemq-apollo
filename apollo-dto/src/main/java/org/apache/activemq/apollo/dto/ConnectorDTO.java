@@ -50,5 +50,10 @@ public class ConnectorDTO extends ServiceDTO<String> {
     @JsonProperty
     @XmlAttribute
     public String advertise;
+
+    @JsonProperty
+    @XmlAttribute(name="connection-limit")
+    public Integer connection_limit;
+
     
 }

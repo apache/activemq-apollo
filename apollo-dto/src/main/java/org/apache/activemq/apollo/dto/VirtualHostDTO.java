@@ -58,7 +58,7 @@ public class VirtualHostDTO extends ServiceDTO<String> {
     /**
      * Should connections get regroups so they get serviced by the same thread?
      */
-    @XmlAttribute(name="regroup_connections")
+    @XmlAttribute(name="regroup-connections")
     public Boolean regroup_connections;
 
 }

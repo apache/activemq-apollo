@@ -75,7 +75,7 @@ public class TcpTransportServer implements TransportServer {
     }
 
     public void suspend() {
-        acceptSource.resume();
+        acceptSource.suspend();
     }
 
     public void resume() {

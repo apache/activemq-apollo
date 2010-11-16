@@ -53,14 +53,15 @@ public class BrokerDTO extends ServiceDTO<String> {
     /**
      * A broker can service many virtual hosts.
      */
+    @JsonProperty("virtual_hosts")
     @XmlElement(name="virtual-host")
     public List<VirtualHostDTO> virtual_hosts = new ArrayList<VirtualHostDTO>();
 
     /**
      * A broker accepts connections via it's configured connectors.
      */
-    @JsonProperty
-    @XmlElement
+    @JsonProperty("connectors")
+    @XmlElement(name="connector")
     public List<ConnectorDTO> connectors = new ArrayList<ConnectorDTO>();
 
     /**

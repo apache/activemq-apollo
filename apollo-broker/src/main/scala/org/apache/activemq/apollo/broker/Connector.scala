@@ -24,6 +24,7 @@ import collection.mutable.HashMap
 import org.apache.activemq.apollo.transport._
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
+import org.apache.activemq.apollo.util.OptionSupport._
 
 
 /**
@@ -45,6 +46,7 @@ object Connector extends Log {
     rc.advertise = "tcp://localhost:61613"
     rc.bind = "tcp://0.0.0.0:61613"
     rc.protocol = "multi"
+    rc.connection_limit = 1000
     rc
   }
 
@@ -113,9 +115,17 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
           onAcceptError(e1)
         }
       }
+
+      // We may need to stop acepting connections..
+      if(at_connection_limit) {
+        transportServer.suspend
+      }
     }
   }
 
+  def at_connection_limit = {
+    connections.size >= config.connection_limit.getOrElse(Integer.MAX_VALUE)
+  }
 
   /**
    * Validates and then applies the configuration.
@@ -162,9 +172,13 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
    * stop tracking them.
    */
   def stopped(connection:BrokerConnection) = dispatchQueue {
+    val at_limit = at_connection_limit
     if( connections.remove(connection.id).isDefined ) {
       info("Client disconnected from: %s", connection.transport.getRemoteAddress)
       connection.dispatchQueue.release
+      if( at_limit ) {
+        transportServer.resume
+      }
     }
   }
 

@@ -7,5 +7,5 @@
         <host-name>localhost</host-name>
         <bdb-store directory="${apollo.base}/data" flush-delay="100"/>
     </virtual-host>
-    <connectors advertise="tcp://localhost:61613" protocol="multi" bind="tcp://0.0.0.0:61613" enabled="true" id="default"/>
+    <connector advertise="tcp://localhost:61613" protocol="multi" bind="tcp://0.0.0.0:61613" enabled="true" id="default"/>
 </broker>
