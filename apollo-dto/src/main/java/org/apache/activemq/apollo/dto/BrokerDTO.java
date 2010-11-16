@@ -64,14 +64,6 @@ public class BrokerDTO extends ServiceDTO<String> {
     @XmlElement(name="connector")
     public List<ConnectorDTO> connectors = new ArrayList<ConnectorDTO>();
 
-    /**
-     * The base data directory of the broker.  It will store
-     * persistent data under it. 
-     */
-    @JsonProperty
-    @XmlAttribute
-    public String basedir;
-
     
     /**
      * The base data directory of the broker.  It will store

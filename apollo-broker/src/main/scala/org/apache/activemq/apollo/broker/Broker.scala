@@ -125,7 +125,6 @@ object Broker extends Log {
     rc.notes = "A default configuration"
     rc.virtual_hosts.add(VirtualHost.defaultConfig)
     rc.connectors.add(Connector.defaultConfig)
-    rc.basedir = "./activemq-data/default"
     rc
   }
 
@@ -139,9 +138,6 @@ object Broker extends Log {
       }
       if( config.virtual_hosts.isEmpty ) {
         error("Broker must define at least one virtual host.")
-      }
-      if( empty(config.basedir) ) {
-        error("Broker basedir must be defined.")
       }
 
       for (host <- config.virtual_hosts ) {
@@ -170,7 +166,6 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
 
   var config: BrokerDTO = defaultConfig
 
-  var data_directory: File = null
   var default_virtual_host: VirtualHost = null
   val virtual_hosts = LinkedHashMap[AsciiBuffer, VirtualHost]()
   val virtual_hosts_by_hostname = new LinkedHashMap[AsciiBuffer, VirtualHost]()
@@ -213,8 +208,6 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
 
     // create the runtime objects from the config
     {
-      data_directory = new File(config.basedir)
-
       if( config.key_storage!=null ) {
         key_storage = new KeyStorage
         key_storage.config = config.key_storage

@@ -59,7 +59,6 @@ public class XmlCodecTest {
         connector.id = "port-61616";
         connector.bind = "tcp://0.0.0.0:61616";
         broker.connectors.add(connector);
-        broker.basedir = "./activemq-data/default";
 
         XmlCodec.marshalBrokerDTO(broker, System.out, true);
 

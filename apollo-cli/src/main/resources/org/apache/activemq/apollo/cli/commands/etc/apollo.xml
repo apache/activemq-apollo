@@ -13,7 +13,7 @@
   License for the specific language governing permissions and
   limitations under the License.
 -->
-<broker basedir="./activemq-data/default" rev="1" enabled="true" id="default" xmlns="http://activemq.apache.org/schema/activemq/apollo">
+<broker id="default" rev="1" xmlns="http://activemq.apache.org/schema/activemq/apollo">
     <notes>
       The default configuration.
     </notes>
