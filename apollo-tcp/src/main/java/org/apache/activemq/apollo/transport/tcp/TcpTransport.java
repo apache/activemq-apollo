@@ -271,13 +271,19 @@ public class TcpTransport extends JavaBaseService implements Transport {
                 readSource.setCancelHandler(CANCEL_HANDLER);
                 readSource.resume();
             } else if (socketState.is(CONNECTED.class) ) {
-                trace("was connected.");
-                onConnected();
+                dispatchQueue.dispatchAsync(new Runnable() {
+                    public void run() {
+                        try {
+                            trace("was connected.");
+                            onConnected();
+                        } catch (IOException e) {
+                             onTransportFailure(e);
+                        }
+                    }
+                });
             } else {
                 System.err.println("cannot be started.  socket state is: "+socketState); 
             }
-        } catch (IOException e) {
-            onTransportFailure(e);
         } finally {
             if( onCompleted!=null ) {
                 onCompleted.run();
