@@ -378,7 +378,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
           if( consumer.binding==null ) {
             host.router.unbind(consumer.destination, consumer)
           } else {
-            host.router.get_queue(consumer.binding) { queue=>
+            reset {
+              val queue = host.router.get_queue(consumer.binding)
               queue.foreach( _.unbind(consumer::Nil) )
             }
           }
@@ -761,21 +762,22 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     if( binding==null ) {
 
       // consumer is bind bound as a topic
-      host.router.bind(destination, consumer, ^{
+      reset {
+        host.router.bind(destination, consumer)
         send_receipt(headers)
-      })
-      consumer.release
+        consumer.release
+      }
 
     } else {
-
-      // create a queue and bind the consumer to it.
-      host.router.create_queue(binding) { x=>
+      reset {
+        // create a queue and bind the consumer to it.
+        val x= host.router.create_queue(binding)
         x match {
           case Some(queue:Queue) =>
             queue.bind(consumer::Nil)
             send_receipt(headers)
             consumer.release
-          case None => throw new RuntimeException("case not yet implemented.")
+          case None => async_die("case not yet implemented.")
         }
       }
     }
@@ -808,12 +810,15 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
           host.router.unbind(consumer.destination, consumer)
           send_receipt(headers)
         } else {
-          host.router.get_queue(consumer.binding) { queue=>
+
+          reset {
+            val queue = host.router.get_queue(consumer.binding)
             queue.foreach( _.unbind(consumer::Nil) )
           }
 
           if( persistent && consumer.binding!=null ) {
-            host.router.destroy_queue(consumer.binding){sucess=>
+            reset {
+              val sucess = host.router.destroy_queue(consumer.binding)
               send_receipt(headers)
             }
           } else {
@@ -883,7 +888,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   }
 
 
-  def send_receipt(headers:HeaderMap) = {
+  def send_receipt(headers:HeaderMap):Unit = {
     get(headers, RECEIPT_REQUESTED) match {
       case Some(receipt)=>
         dispatchQueue <<| ^{

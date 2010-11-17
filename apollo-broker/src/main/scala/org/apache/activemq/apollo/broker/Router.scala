@@ -148,7 +148,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
   /**
    * Returns the previously created queue if it already existed.
    */
-  def _create_queue(dto: BindingDTO): Some[Queue] = {
+  def _create_queue(dto: BindingDTO): Option[Queue] = {
     val binding = BindingFactory.create(dto)
     val queue = queues.get(binding) match {
       case Some(queue) => Some(queue)
@@ -157,16 +157,16 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     queue
   }
 
-  def create_queue(dto:BindingDTO)(cb: (Option[Queue])=>Unit) = ^{
-    cb(_create_queue(dto))
-  } >>: dispatchQueue
+  def create_queue(dto:BindingDTO) = dispatchQueue ! {
+    _create_queue(dto)
+  }
 
   /**
    * Returns true if the queue no longer exists.
    */
-  def destroy_queue(dto:BindingDTO)(cb: (Boolean)=>Unit) = ^{
+  def destroy_queue(dto:BindingDTO) = dispatchQueue ! {
     val binding = BindingFactory.create(dto)
-    val queue = queues.get(binding) match {
+    queues.get(binding) match {
       case Some(queue) =>
         val name = binding.destination
         if( name!=null ) {
@@ -179,36 +179,35 @@ class Router(val host:VirtualHost) extends DispatchLogging {
       case None =>
         true
     }
-    cb(queue)
-  } >>: dispatchQueue
+  }
 
   /**
    * Gets an existing queue.
    */
-  def get_queue(dto:BindingDTO)(cb: (Option[Queue])=>Unit) = ^{
+  def get_queue(dto:BindingDTO) = dispatchQueue ! {
     val binding = BindingFactory.create(dto)
-    cb(queues.get(binding))
-  } >>: dispatchQueue
+    queues.get(binding)
+  }
 
-  def bind(destination:Destination, consumer:DeliveryConsumer, on_complete:Runnable = ^{} ) = retaining(consumer) {
+  def bind(destination:Destination, consumer:DeliveryConsumer) = {
+    consumer.retain
+    dispatchQueue ! {
 
-    assert( is_topic(destination) )
+      assert( is_topic(destination) )
 
-    val name = destination.getName
+      val name = destination.getName
 
-    // make sure the destination is created if this is not a wild card sub
-    if( !PathFilter.containsWildCards(name) ) {
-      val node = create_destination_or(name) { node=> }
+      // make sure the destination is created if this is not a wild card sub
+      if( !PathFilter.containsWildCards(name) ) {
+        val node = create_destination_or(name) { node=> }
+      }
+
+      get_destination_matches(name).foreach( node=>
+        node.add_broadcast_consumer(consumer)
+      )
+      broadcast_consumers.put(name, consumer)
     }
-
-    get_destination_matches(name).foreach( node=>
-      node.add_broadcast_consumer(consumer)
-    )
-    broadcast_consumers.put(name, consumer)
-
-    on_complete.run
-    
-  } >>: dispatchQueue
+  }
 
   def unbind(destination:Destination, consumer:DeliveryConsumer) = releasing(consumer) {
     assert( is_topic(destination) )
@@ -352,9 +351,9 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
 
   var targets = List[DeliverySession]()
 
-  def connected() = ^{
+  def connected() = dispatchQueue {
     on_connected
-  } >>: dispatchQueue
+  }
 
   def bind(targets:List[DeliveryConsumer]) = retaining(targets) {
     internal_bind(targets)
@@ -386,13 +385,13 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
     }
   } >>: dispatchQueue
 
-  def disconnected() = ^ {
+  def disconnected() = dispatchQueue {
     this.targets.foreach { x=>
       debug("producer route detaching from conusmer.")
       x.close
       x.consumer.release
     }    
-  } >>: dispatchQueue
+  }
 
   protected def on_connected = {}
   protected def on_disconnected = {}
