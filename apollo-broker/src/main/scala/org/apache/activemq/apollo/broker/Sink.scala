@@ -247,7 +247,7 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[
   // producer serial dispatch queue
   ///////////////////////////////////////////////////
 
-  var refiller:Runnable = null
+  var refiller:Runnable = ^{}
 
   override def full = {
     assert(getCurrentQueue eq producer_queue)
