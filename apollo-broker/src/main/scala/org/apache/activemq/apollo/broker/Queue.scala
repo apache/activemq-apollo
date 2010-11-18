@@ -176,7 +176,9 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
         record.binding_kind = binding.binding_kind
 
         host.store.addQueue(record) { rc =>
-          completed
+          dispatchQueue {
+            completed
+          }
         }
 
       } else {
