@@ -1393,7 +1393,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
       cur.nack // this unlinks the entry.
     }
 
-    session.refiller = null
+    session.refiller = NOOP
     session.close
     session = null
   }

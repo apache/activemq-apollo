@@ -359,7 +359,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       x
     }, dispatchQueue, StompFrame)
     connection_sink = new OverflowSink(session_manager.open(dispatchQueue));
-    connection_sink.refiller = ^{}
+    connection_sink.refiller = NOOP
     resumeRead
   }
 
