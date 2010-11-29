@@ -703,7 +703,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
     }
 
-    val topic = destination.getDomain == Router.TOPIC_DOMAIN
+    val topic = destination.domain == Router.TOPIC_DOMAIN
     var persistent = get(headers, PERSISTENT).map( _ == TRUE ).getOrElse(false)
 
     val ack = get(headers, ACK_MODE) match {
@@ -743,7 +743,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       // way again)
       if (topic) {
         val rc = new DurableSubscriptionBindingDTO
-        rc.destination = Binding.encode(destination.path)
+        rc.destination = Binding.encode(destination.name)
         // TODO:
         // rc.client_id =
         rc.subscription_id = if( persistent ) id else null
@@ -751,7 +751,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         rc
       } else {
         val rc = new PointToPointBindingDTO
-        rc.destination = Binding.encode(destination.path)
+        rc.destination = Binding.encode(destination.name)
         rc
       }
     }

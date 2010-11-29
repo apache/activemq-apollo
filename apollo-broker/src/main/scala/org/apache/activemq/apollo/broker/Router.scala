@@ -77,7 +77,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
   val bindings = new PathMap[Queue]()
 
   private def is_topic(destination:Destination) = {
-    destination.getDomain match {
+    destination.domain match {
       case TOPIC_DOMAIN => true
       case TEMP_TOPIC_DOMAIN => true
       case _ => false
@@ -204,7 +204,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
       assert( is_topic(destination) )
 
-      val name = destination.path
+      val name = destination.name
 
       // make sure the destination is created if this is not a wild card sub
       if( !PathParser.containsWildCards(name) ) {
@@ -220,7 +220,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
   def unbind(destination:Destination, consumer:DeliveryConsumer) = releasing(consumer) {
     assert( is_topic(destination) )
-    val name = destination.path
+    val name = destination.name
     broadcast_consumers.remove(name, consumer)
     get_destination_matches(name).foreach{ node=>
       node.remove_broadcast_consumer(consumer)
@@ -243,13 +243,13 @@ class Router(val host:VirtualHost) extends DispatchLogging {
       // Looking up the queue will cause it to get created if it does not exist.
       val queue = if( !topic ) {
         val dto = new PointToPointBindingDTO
-        dto.destination = Binding.encode(destination.path)
+        dto.destination = Binding.encode(destination.name)
         _create_queue(dto)
       } else {
         None
       }
 
-      val node = create_destination_or(destination.path) { node=> Unit }
+      val node = create_destination_or(destination.name) { node=> Unit }
       if( node.unified || topic ) {
         node.add_broadcast_producer( route )
       } else {
@@ -263,7 +263,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
   def disconnect(route:DeliveryProducerRoute) = releasing(route) {
 
     val topic = is_topic(route.destination)
-    val node = create_destination_or(route.destination.path) { node=> Unit }
+    val node = create_destination_or(route.destination.name) { node=> Unit }
     if( node.unified || topic ) {
       node.remove_broadcast_producer(route)
     }

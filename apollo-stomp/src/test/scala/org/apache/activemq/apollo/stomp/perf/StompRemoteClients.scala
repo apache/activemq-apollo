@@ -38,10 +38,10 @@ class StompRemoteConsumer extends RemoteConsumer {
     outboundSink = new OverflowSink[StompFrame](MapSink(transportSink) {x => x})
     outboundSink.refiller = ^ {}
 
-    val stompDestination = if (destination.getDomain() == Router.QUEUE_DOMAIN) {
-      ascii("/queue/" + destination.path().toString());
+    val stompDestination = if (destination.domain == Router.QUEUE_DOMAIN) {
+      ascii("/queue/" + destination.name.toString());
     } else {
-      ascii("/topic/" + destination.path().toString());
+      ascii("/topic/" + destination.name.toString());
     }
 
     var frame = StompFrame(CONNECT);
@@ -149,10 +149,10 @@ class StompRemoteProducer extends RemoteProducer with Logging {
     outboundSink = new OverflowSink[StompFrame](MapSink(transportSink) {x => x})
     outboundSink.refiller = ^ {drain}
 
-    if (destination.getDomain() == Router.QUEUE_DOMAIN) {
-      stompDestination = ascii("/queue/" + destination.path().toString());
+    if (destination.domain == Router.QUEUE_DOMAIN) {
+      stompDestination = ascii("/queue/" + destination.name.toString());
     } else {
-      stompDestination = ascii("/topic/" + destination.path().toString());
+      stompDestination = ascii("/topic/" + destination.name.toString());
     }
     outboundSink.offer(StompFrame(CONNECT));
     send_next

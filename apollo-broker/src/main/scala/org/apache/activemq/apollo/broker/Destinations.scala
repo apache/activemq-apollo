@@ -22,6 +22,14 @@ import org.apache.activemq.apollo.util.path.{Path, PathParser}
 import Buffer._
 
 /**
+ */
+trait Destination {
+  def domain:AsciiBuffer = null
+  def name:Array[Path] = null
+  def destinations:List[Destination] = null
+}
+
+/**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class DestinationParser extends PathParser {
@@ -39,17 +47,17 @@ class DestinationParser extends PathParser {
     } else {
       val baos = new ByteArrayOutputStream
       def write(value: Destination):Unit = {
-        if (value.getDestinations != null) {
+        if (value.destinations != null) {
           assert( destination_separator.isDefined )
           val first = true
-          for (d <- value.getDestinations) {
+          for (d <- value.destinations) {
             if (!first) {
               baos.write(destination_separator.get)
             }
             write(d)
           }
         } else {
-          value.getDomain match {
+          value.domain match {
             case Router.QUEUE_DOMAIN =>
               baos.write(queue_prefix)
             case Router.TOPIC_DOMAIN =>
@@ -59,7 +67,7 @@ class DestinationParser extends PathParser {
             case Router.TEMP_TOPIC_DOMAIN =>
               baos.write(temp_topic_prefix)
           }
-          this.write(value.path, baos)
+          this.write(value.name.toArray, baos)
         }
       }
       write(value)
@@ -89,25 +97,25 @@ class DestinationParser extends PathParser {
         }
         dl = dl ::: d :: Nil
       }
-      return new MultiDestination(dl.toArray[Destination]);
+      return new MultiDestination(dl);
     } else {
       if (queue_prefix != null && value.startsWith(queue_prefix)) {
         var name = value.slice(queue_prefix.length, value.length).ascii();
-        return new SingleDestination(Router.QUEUE_DOMAIN, parsePath(name));
+        return new SingleDestination(Router.QUEUE_DOMAIN, parsePath(name).toList);
       } else if (topic_prefix != null && value.startsWith(topic_prefix)) {
         var name = value.slice(topic_prefix.length, value.length).ascii();
-        return new SingleDestination(Router.TOPIC_DOMAIN, parsePath(name));
+        return new SingleDestination(Router.TOPIC_DOMAIN, parsePath(name).toList);
       } else if (temp_queue_prefix != null && value.startsWith(temp_queue_prefix)) {
         var name = value.slice(temp_queue_prefix.length, value.length).ascii();
-        return new SingleDestination(Router.TEMP_QUEUE_DOMAIN, parsePath(name));
+        return new SingleDestination(Router.TEMP_QUEUE_DOMAIN, parsePath(name).toList);
       } else if (temp_topic_prefix != null && value.startsWith(temp_topic_prefix)) {
         var name = value.slice(temp_topic_prefix.length, value.length).ascii();
-        return new SingleDestination(Router.TEMP_TOPIC_DOMAIN, parsePath(name));
+        return new SingleDestination(Router.TEMP_TOPIC_DOMAIN, parsePath(name).toList);
       } else {
         if (default_domain == null) {
           return null;
         }
-        return new SingleDestination(default_domain, parsePath(value));
+        return new SingleDestination(default_domain, parsePath(value).toList);
       }
     }
   }
@@ -116,23 +124,14 @@ class DestinationParser extends PathParser {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class SingleDestination(var domain: AsciiBuffer = null, var name: Array[Path] = null) extends Destination {
-  def getDestinations(): Array[Destination] = null;
-  def getDomain(): AsciiBuffer = domain
-
-  def path() = name
-
-  override def toString() = "" + domain + ":" + name
+case class SingleDestination(override val domain: AsciiBuffer, val path: List[Path]) extends Destination {
+  override def toString() = "" + domain + ":" + name.mkString(".")
+  override val name = path.toArray[Path]
 }
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class MultiDestination(var destinations: Array[Destination]) extends Destination {
-  def getDestinations(): Array[Destination] = destinations;
-  def getDomain(): AsciiBuffer = null
-
-  def path() = null
-
+case class MultiDestination(override val destinations: List[Destination]) extends Destination {
   override def toString() = destinations.mkString(",")
 }
