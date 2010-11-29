@@ -42,6 +42,14 @@ object Apollo {
   def ANSI(value:Any) =  "\u001B["+value+"m"
   val BOLD =  ANSI(1)
   val RESET = ANSI(0)
+  
+  def print_banner(out: PrintStream) = using(getClass().getResourceAsStream("banner.txt")) { source=>
+    copy(source, out)
+  }
+  def print_tips(out: PrintStream) = using(getClass().getResourceAsStream("tips.txt")) { source=>
+    copy(source, out)
+  }
+
 }
 
 @command(scope="apollo", name = "apollo", description = "The Apollo Command line tool")
@@ -63,14 +71,15 @@ class Apollo extends Main with Action {
       protected override def getPrompt = BOLD+"apollo> "+RESET
       protected override def isPrintStackTraces = debug
       protected override def welcome = {
-        using(getClass().getResourceAsStream("banner.txt")) {source=>
-          copy(source, session.getConsole())
-        }
+        print_banner(session.getConsole)
+        print_tips(session.getConsole)
       }
 
       protected override def setSessionProperties = {}
     }
   }
+  
+  
 
   @argument(name = "args", description = "apollo sub command arguments", multiValued=true)
   var args = Array[String]()

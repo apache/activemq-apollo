@@ -153,12 +153,16 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
     if( transportServer.isInstanceOf[KeyManagerAware] && broker.key_storage!=null ) {
       transportServer.asInstanceOf[KeyManagerAware].setKeyManagers(broker.key_storage.create_key_managers)
     }
-    transportServer.start(onCompleted)
+    transportServer.start(^{
+      info("Accepting connections at: "+config.bind)
+      onCompleted.run
+    })
   }
 
 
   override def _stop(onCompleted:Runnable): Unit = {
     transportServer.stop(^{
+      info("Stopped connector at: "+config.bind)
       val tracker = new LoggingTracker(toString, dispatchQueue)
       connections.valuesIterator.foreach { connection=>
         tracker.stop(connection)

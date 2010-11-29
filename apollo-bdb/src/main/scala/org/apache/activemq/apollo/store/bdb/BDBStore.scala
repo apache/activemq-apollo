@@ -102,6 +102,7 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
   }
 
   protected def _start(onCompleted: Runnable) = {
+    info("Starting bdb store at: '%s'", config.directory)
     executor_pool = Executors.newFixedThreadPool(1, new ThreadFactory(){
       def newThread(r: Runnable) = {
         val rc = new Thread(r, toString+" io")
@@ -122,6 +123,7 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
   protected def _stop(onCompleted: Runnable) = {
     new Thread() {
       override def run = {
+        info("Stopping BDB store at: '%s'", config.directory)
         executor_pool.shutdown
         executor_pool.awaitTermination(86400, TimeUnit.SECONDS)
         executor_pool = null

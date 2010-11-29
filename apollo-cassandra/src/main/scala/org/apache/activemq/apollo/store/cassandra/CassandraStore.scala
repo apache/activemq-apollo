@@ -107,6 +107,7 @@ class CassandraStore extends DelayingStoreSupport with Logging {
   }
 
   protected def _start(onCompleted: Runnable) = {
+    info("Starting cassandra store at: '%s'", config.hosts.toList.mkString(", "))
     blocking = Executors.newFixedThreadPool(20, new ThreadFactory(){
       def newThread(r: Runnable) = {
         val rc = new Thread(r, "cassandra client")
@@ -133,6 +134,7 @@ class CassandraStore extends DelayingStoreSupport with Logging {
   }
 
   protected def _stop(onCompleted: Runnable) = {
+    info("Stopping cassandra store at: '%s'", config.hosts.toList.mkString(", "))
     blocking.shutdown
     new Thread("casandra client shutdown") {
       override def run = {

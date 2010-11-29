@@ -104,6 +104,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
   }
 
   protected def _start(onCompleted: Runnable) = {
+    info("Starting hawtdb store at: '%s'", config.directory)
     executor_pool = Executors.newFixedThreadPool(1, new ThreadFactory(){
       def newThread(r: Runnable) = {
         val rc = new Thread(r, "hawtdb store client")
@@ -151,6 +152,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
   }
 
   protected def _stop(onCompleted: Runnable) = {
+    info("Stopping hawtdb store at: '%s'", config.directory)
     schedule_version.incrementAndGet
     new Thread() {
       override def run = {

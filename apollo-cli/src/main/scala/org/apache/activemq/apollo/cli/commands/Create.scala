@@ -51,6 +51,7 @@ class Create extends Action {
 
     def println(value:Any) = session.getConsole.println(value)
     try {
+      println("Creating apollo instance at: %s".format(directory))
 
       val bin = directory / "bin"
       bin.mkdirs
@@ -62,6 +63,7 @@ class Create extends Action {
       write("etc/log4j.properties", target)
 
       // Generate a keystore with a new key
+      println("Generating ssl keystore...")
       val ssl = system(etc, Array(
         "keytool", "-genkey",
         "-storetype", "JKS",
@@ -78,6 +80,7 @@ class Create extends Action {
       if( ssl ) {
         write("etc/apollo-ssl.xml", target)
       } else {
+        println("WARNNIG: Could not generate the keystore, make sure the keytool command is in your PATH")
         write("etc/apollo.xml", target)
       }
 

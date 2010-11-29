@@ -35,6 +35,7 @@ import Helper._
 import org.apache.activemq.apollo.util.{Logging, ServiceControl}
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.util.OptionSupport._
+import org.apache.activemq.apollo.cli.Apollo
 
 /**
  * The apollo create command
@@ -84,10 +85,10 @@ class Run extends Action with Logging {
         tmp.mkdirs
       }
 
-      info("Apollo Broker Service Starting");
+      Apollo.print_banner(session.getConsole)
 
       // Load the configs and start the brokers up.
-      info("Loading configurations from '%s'.", conf);
+      info("Loading configuration file '%s'.", conf);
       val store = new FileConfigStore
       store.file = conf
       ConfigStore() = store
@@ -97,12 +98,12 @@ class Run extends Action with Logging {
             store.getBroker(id, true).foreach{ config=>
               // Only start the broker up if it's enabled..
               if( config.enabled.getOrElse(true) ) {
-                info("Starting broker '%s'...".format(config.id));
+                debug("Starting broker '%s'", config.id);
                 val broker = new Broker()
                 broker.config = config
                 BrokerRegistry.add(config.id, broker)
                 broker.start(^{
-                  info("Broker '%s' started.".format(config.id));
+                  info("Broker '%s' started", config.id);
                 })
               }
             }
@@ -112,7 +113,7 @@ class Run extends Action with Logging {
 
 
       // Start up the admin interface...
-      info("Starting administration interface...");
+      debug("Starting administration interface");
       var server = new Server
 
       var connector = new SelectChannelConnector

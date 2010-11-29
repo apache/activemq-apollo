@@ -1,6 +1,9 @@
-[1mApache Apollo[0m (${project.version})
 
-Hit '[1m<tab>[0m' for a list of available commands
-   and '[1m[cmd] --help[0m' for help on a specific command.
-Run '[1mexit[0m' to exit the shell.
+[4C[0;1m_____[16C.__  .__
+   /  [32m_  \ [37m______   ____ |  [32m| [37m|  [32m|   [37m____
+  /  [32m/[37m_\  [32m\[37m\[32m____ \ [37m/  [32m_ \[37m|  [32m| [37m|  [32m|  [37m/  [32m_ \
+ [37m/    |    [32m\  |[37m_> [32m>  <[37m_> [32m)  |[37m_|  [32m|[37m_(  [32m<[37m_> [32m)
+ \____[37m|[32m__  /   __/ \____/[37m|[32m____/____/[37m\[32m____/
+[9C\/[37m|[32m__|  [37mApache Apollo[0m (${project.version})
+
 
