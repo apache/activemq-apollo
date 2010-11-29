@@ -63,7 +63,7 @@ public class XmlCodec {
                 }
                 String property = System.getProperty(matcher.group(1));
                 if (property != null) {
-                    str = matcher.replaceFirst(property);
+                    str = matcher.replaceFirst(Matcher.quoteReplacement(property));
                 } else {
                     start = matcher.end();
                 }

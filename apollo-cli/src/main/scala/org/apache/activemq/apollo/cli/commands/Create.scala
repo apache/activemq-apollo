@@ -24,6 +24,7 @@ import org.fusesource.jansi.Ansi.Attribute._
 import Helper._
 import java.io._
 import org.apache.activemq.apollo.util.FileSupport._
+import java.util.regex.Matcher
 
 object Create {
   val IS_WINDOWS = System.getProperty("os.name").toLowerCase().trim().startsWith("win");
@@ -120,7 +121,7 @@ class Create extends Action {
       }
 
       var content = new String(out.toByteArray, "UTF-8")
-      content = content.replaceAll("${host}", host)
+      content = content.replaceAll("${host}", Matcher.quoteReplacement(host))
       val in = new ByteArrayInputStream(content.getBytes("UTF-8"))
 
       using(new FileOutputStream(target)) { out=>
