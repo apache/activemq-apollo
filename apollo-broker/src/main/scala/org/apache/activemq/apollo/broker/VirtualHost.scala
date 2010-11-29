@@ -32,17 +32,12 @@ import collection.JavaConversions
 import java.util.concurrent.atomic.AtomicLong
 import org.apache.activemq.apollo.util.OptionSupport._
 import security.{Authenticator, Authorizer}
+import org.apache.activemq.apollo.util.path.PathParser
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object VirtualHost extends Log {
-
-  val destination_parser_options = new ParserOptions
-  destination_parser_options.queuePrefix = new AsciiBuffer("queue:")
-  destination_parser_options.topicPrefix = new AsciiBuffer("topic:")
-  destination_parser_options.tempQueuePrefix = new AsciiBuffer("temp-queue:")
-  destination_parser_options.tempTopicPrefix = new AsciiBuffer("temp-topic:")
 
   /**
    * Creates a default a configuration object.
@@ -223,9 +218,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
       // rates between producers and consumers, look for natural data flow partitions
       // and then try to equally divide the load over the available processing
       // threads/cores.
-      val nodes = router.destinations.get(PathFilter.ANY_DESCENDENT)
-
-      JavaConversions.asIterable(nodes).foreach { node =>
+      router.routing_nodes.foreach { node =>
 
         // For the topics, just collocate the producers onto the first consumer's
         // thread.

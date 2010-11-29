@@ -39,8 +39,6 @@ import org.fusesource.hawtbuf.AsciiBuffer;
  * @version $Revision: 1.3 $
  */
 public class PathMap<Value> {
-    protected static final AsciiBuffer ANY_DESCENDENT = PathFilter.ANY_DESCENDENT;
-    protected static final AsciiBuffer ANY_CHILD = PathFilter.ANY_CHILD;
 
     private final PathMapNode<Value> root = new PathMapNode<Value>(null);
 
@@ -54,20 +52,18 @@ public class PathMap<Value> {
      * @return a List of matching values or an empty list if there are no
      *         matching values.
      */
-    public Set<Value> get(AsciiBuffer key) {
+    public Set<Value> get(Path[] key) {
         return findWildcardMatches(key);
     }
 
-    public void put(AsciiBuffer key, Value value) {
-        ArrayList<AsciiBuffer> paths = PathSupport.parse(key);
-        root.add(paths, 0, value);
+    public void put(Path[] key, Value value) {
+        root.add(key, 0, value);
     }
 
     /**
      * Removes the value from the associated path
      */
-    public void remove(AsciiBuffer key, Value value) {
-        ArrayList<AsciiBuffer> paths = PathSupport.parse(key);
+    public void remove(Path[] paths, Value value) {
         root.remove(paths, 0, value);
 
     }
@@ -78,20 +74,7 @@ public class PathMap<Value> {
 
     // Implementation methods
     // -------------------------------------------------------------------------
-
-    /**
-     * A helper method to allow the path map to be populated from a
-     * dependency injection framework such as Spring
-     */
-    @SuppressWarnings("unchecked")
-	protected void setEntries(List<PathMapEntry> entries) {
-    	for (PathMapEntry entry : entries) {
-            put(entry.getKey(), (Value) entry);
-        }
-    }
-
-    protected Set<Value> findWildcardMatches(AsciiBuffer key) {
-    	ArrayList<AsciiBuffer> paths = PathSupport.parse(key);
+    protected Set<Value> findWildcardMatches(Path[] paths) {
         HashSet<Value> answer = new HashSet<Value>();
         root.appendMatchingValues(answer, paths, 0);
         return answer;
@@ -101,10 +84,9 @@ public class PathMap<Value> {
      * @param key
      * @return
      */
-    public Set<Value> removeAll(AsciiBuffer key) {
+    public Set<Value> removeAll(Path[] key) {
     	HashSet<Value> rc = new HashSet<Value>();
-        ArrayList<AsciiBuffer> paths = PathSupport.parse(key);
-        root.removeAll(rc, paths, 0);
+        root.removeAll(rc, key, 0);
         return rc;
     }
 
@@ -112,11 +94,11 @@ public class PathMap<Value> {
      * Returns the value which matches the given path or null if there is
      * no matching value. If there are multiple values, the results are sorted
      * and the last item (the biggest) is returned.
-     * 
+     *
      * @param path the path to find the value for
      * @return the largest matching value or null if no value matches
      */
-    public Value chooseValue(AsciiBuffer path) {
+    public Value chooseValue(Path[] path) {
         Set<Value> set = get(path);
         if (set == null || set.isEmpty()) {
             return null;

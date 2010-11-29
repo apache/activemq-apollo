@@ -18,6 +18,5 @@
 <broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
   <virtual-host>
     <host-name>default</host-name>
-    <memory-store/>    
   </virtual-host>
 </broker>

@@ -208,13 +208,15 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     config
   }
 
+  val parser = new DestinationParser
+
   def createDestinations(destCount: Int): Array[Destination] = {
     var dests = new Array[Destination](destCount)
 
     for (i <- 0 until destCount) {
       val domain = if (PTP) {Router.QUEUE_DOMAIN} else {Router.TOPIC_DOMAIN}
       val name = new AsciiBuffer("dest" + (i + 1))
-      var bean = new SingleDestination(domain, name)
+      var bean = new SingleDestination(domain, parser.parsePath(name))
       dests(i) = bean
       //        if (PTP) {
       //          sendBroker.defaultVirtualHost.createQueue(dests(i))

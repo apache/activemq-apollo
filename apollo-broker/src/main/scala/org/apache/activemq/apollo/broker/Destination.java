@@ -16,12 +16,13 @@
  */
 package org.apache.activemq.apollo.broker;
 
+import org.apache.activemq.apollo.util.path.Path;
 import org.fusesource.hawtbuf.AsciiBuffer;
 
 /**
  */
 public interface Destination {
   AsciiBuffer getDomain();
-  AsciiBuffer getName();
+  Path[] path();
   Destination[] getDestinations();
 }

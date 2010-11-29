@@ -31,9 +31,6 @@ class XMLBrokerFactoryTest extends FunSuiteSupport {
     info("Loading broker configuration from the classpath with URI: " + uri)
     val broker = BrokerFactory.createBroker(uri)
 
-    //		assertEquals(4, p.getSize())
-    //		assertEquals("test dispatcher", p.getName())
-
     expect(1) {
       broker.config.connectors.size()
     }
@@ -49,10 +46,6 @@ class XMLBrokerFactoryTest extends FunSuiteSupport {
     expect(2) {
       broker.config.virtual_hosts.size()
     }
-
-    //		Assert.assertNotNull(broker.defaultVirtualHost().getDatabase())
-    //		Assert.assertNotNull(broker.defaultVirtualHost().getDatabase().getStore())
-    //		Assert.assertTrue((broker.defaultVirtualHost().getDatabase().getStore() instanceof MemoryStore))
 
   }
 

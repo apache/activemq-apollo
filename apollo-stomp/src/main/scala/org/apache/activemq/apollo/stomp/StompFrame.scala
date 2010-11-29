@@ -305,14 +305,17 @@ object Stomp {
   val DURABLE_PREFIX = ascii("durable:")
   val DURABLE_QUEUE_KIND = ascii("stomp:sub")
 
-  val options = new ParserOptions
-  options.queuePrefix = ascii("/queue/")
-  options.topicPrefix = ascii("/topic/")
+  val destination_parser = new DestinationParser
+  destination_parser.queue_prefix = ascii("/queue/")
+  destination_parser.topic_prefix = ascii("/topic/")
+  destination_parser.path_seperator = ascii("/")
+  destination_parser.any_child_wildcard = ascii("*")
+  destination_parser.any_descendant_wildcard = ascii("**")
 
-  options.defaultDomain = Router.QUEUE_DOMAIN
+  destination_parser.default_domain = Router.QUEUE_DOMAIN
 
   implicit def toDestination(value:AsciiBuffer):Destination = {
-    val d = DestinationParser.parse(value, options)
+    val d = destination_parser.parse(value)
     if( d==null ) {
       throw new ProtocolException("Invalid stomp destiantion name: "+value);
     }

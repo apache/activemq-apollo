@@ -33,9 +33,11 @@ import static org.junit.Assert.*;
  */
 public class PathMapTest {
 
-    protected AsciiBuffer d1 = createDestination("TEST.D1");
-    protected AsciiBuffer d2 = createDestination("TEST.BAR.D2");
-    protected AsciiBuffer d3 = createDestination("TEST.BAR.D3");
+    PathParser parser = new PathParser();
+
+    protected Path[] d1 = createDestination("TEST.D1");
+    protected Path[] d2 = createDestination("TEST.BAR.D2");
+    protected Path[] d3 = createDestination("TEST.BAR.D3");
 
     protected String v1 = "value1";
     protected String v2 = "value2";
@@ -46,8 +48,8 @@ public class PathMapTest {
 
     @Test()
 	public void testCompositePaths() throws Exception {
-        AsciiBuffer d1 = createDestination("TEST.BAR.D2");
-        AsciiBuffer d2 = createDestination("TEST.BAR.D3");
+        Path[] d1 = createDestination("TEST.BAR.D2");
+        Path[] d2 = createDestination("TEST.BAR.D3");
         PathMap<String> map = new PathMap<String>();
         map.put(d1, v1);
         map.put(d2, v2);
@@ -113,11 +115,11 @@ public class PathMapTest {
         map.put(d2, v2);
         map.put(d3, v3);
 
-        assertMapValue(map, ">", v1, v2, v3);
-        assertMapValue(map, "TEST.>", v1, v2, v3);
-        assertMapValue(map, "*.>", v1, v2, v3);
+        assertMapValue(map, "**", v1, v2, v3);
+        assertMapValue(map, "TEST.**", v1, v2, v3);
+        assertMapValue(map, "*.**", v1, v2, v3);
 
-        assertMapValue(map, "FOO.>");
+        assertMapValue(map, "FOO.**");
     }
 
     @Test()
@@ -163,9 +165,9 @@ public class PathMapTest {
 
         assertMapValue(map, "TEST.*", v1, v2);
         assertMapValue(map, "TEST.*.*", v2, v3, v4, v5, v6);
-        assertMapValue(map, "TEST.*.>", v1, v2, v3, v4, v5, v6);
-        assertMapValue(map, "TEST.>", v1, v2, v3, v4, v5, v6);
-        assertMapValue(map, "TEST.>.>", v1, v2, v3, v4, v5, v6);
+        assertMapValue(map, "TEST.*.**", v1, v2, v3, v4, v5, v6);
+        assertMapValue(map, "TEST.**", v1, v2, v3, v4, v5, v6);
+        assertMapValue(map, "TEST.**.**", v1, v2, v3, v4, v5, v6);
         assertMapValue(map, "*.*.D3", v2, v3, v5);
         assertMapValue(map, "TEST.BAR.*", v2, v5, v6);
 
@@ -194,7 +196,7 @@ public class PathMapTest {
     @Test()
 	public void testAnyPathWildcardInMap() throws Exception {
         PathMap<String> map = new PathMap<String>();
-        put(map, "TEST.FOO.>", v1);
+        put(map, "TEST.FOO.**", v1);
 
         assertMapValue(map, "TEST.FOO.BAR.WHANOT.A.B.C", v1);
         assertMapValue(map, "TEST.FOO.BAR.WHANOT", v1);
@@ -245,12 +247,12 @@ public class PathMapTest {
         assertMapValue(map, "TEST.*", v3, v4);
         assertMapValue(map, "*.*", v3, v4);
 
-        remove(map, ">", v4);
+        remove(map, "**", v4);
 
         assertMapValue(map, "TEST.*", v3);
         assertMapValue(map, "*.*", v3);
 
-        remove(map, "TEST.>", v3);
+        remove(map, "TEST.**", v3);
         remove(map, "TEST.FOO.BAR", v5);
 
         assertMapValue(map, "FOO");
@@ -272,7 +274,7 @@ public class PathMapTest {
 
         assertSample2(map);
 
-        remove(map, ">", v4);
+        remove(map, "**", v4);
         remove(map, "TEST.*", v2);
 
         assertMapValue(map, "FOO");
@@ -296,22 +298,22 @@ public class PathMapTest {
         PathMap<String> map = new PathMap<String>();
 
         put(map, "FOO.A", v1);
-        assertMapValue(map, "FOO.>", v1);
+        assertMapValue(map, "FOO.**", v1);
 
         put(map, "FOO.B", v2);
-        assertMapValue(map, "FOO.>", v1, v2);
+        assertMapValue(map, "FOO.**", v1, v2);
 
         map.removeAll(createDestination("FOO.A"));
 
-        assertMapValue(map, "FOO.>", v2);
+        assertMapValue(map, "FOO.**", v2);
 
     }
 
     protected void loadSample2(PathMap<String> map) {
         put(map, "TEST.FOO", v1);
         put(map, "TEST.*", v2);
-        put(map, "TEST.>", v3);
-        put(map, ">", v4);
+        put(map, "TEST.**", v3);
+        put(map, "**", v4);
         put(map, "TEST.FOO.BAR", v5);
         put(map, "TEST.XYZ", v6);
     }
@@ -338,17 +340,17 @@ public class PathMapTest {
     }
 
     protected void remove(PathMap<String> map, String name, String value) {
-        AsciiBuffer destination = createDestination(name);
+        Path[] destination = createDestination(name);
         map.remove(destination, value);
     }
 
     protected void assertMapValue(PathMap<String> map, String destinationName, Object... expected) {
-        AsciiBuffer destination = createDestination(destinationName);
+        Path[] destination = createDestination(destinationName);
         assertMapValue(map, destination, expected);
     }
 
     @SuppressWarnings("unchecked")
-    protected void assertMapValue(PathMap<String> map, AsciiBuffer destination, Object... expected) {
+    protected void assertMapValue(PathMap<String> map, Path[] destination, Object... expected) {
         List expectedList = Arrays.asList(expected);
         Collections.sort(expectedList);
         Set actualSet = map.get(destination);
@@ -357,7 +359,7 @@ public class PathMapTest {
         assertEquals(("map value for destinationName:  " + destination), expectedList, actual);
     }
 
-    protected AsciiBuffer createDestination(String name) {
-   		return new AsciiBuffer(new AsciiBuffer(name));
+    protected Path[] createDestination(String name) {
+   		return parser.parsePath(new AsciiBuffer(name));
     }
 }

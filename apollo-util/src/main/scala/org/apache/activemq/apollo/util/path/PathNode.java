@@ -27,15 +27,15 @@ import org.fusesource.hawtbuf.AsciiBuffer;
  *
  */
 public interface PathNode<Value> {
-    void appendMatchingValues(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex);
+    void appendMatchingValues(Set<Value> answer, Path[] paths, int startIndex);
 
-    void appendMatchingWildcards(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex);
+    void appendMatchingWildcards(Set<Value> answer, Path[] paths, int startIndex);
 
     void appendDescendantValues(Set<Value> answer);
 
     Collection<Value> getDesendentValues();
 
-    PathNode<Value> getChild(AsciiBuffer path);
+    PathNode<Value> getChild(Path path);
 
     Collection<Value> getValues();
 

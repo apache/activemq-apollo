@@ -53,7 +53,15 @@ public class VirtualHostDTO extends ServiceDTO<String> {
      * Holds the configuration for the destinations.
      */
     @XmlElement(name="destination")
+    @JsonProperty("destinations")
     public ArrayList<DestinationDTO> destinations = new ArrayList<DestinationDTO>();
+
+    /**
+     * Holds the configuration for the queues.
+     */
+    @XmlElement(name="queue")
+    @JsonProperty("queues")
+    public ArrayList<QueueDTO> queues = new ArrayList<QueueDTO>();
 
     /**
      * Should connections get regroups so they get serviced by the same thread?

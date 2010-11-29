@@ -30,6 +30,8 @@ import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.list._
 import org.fusesource.hawtdispatch.{Dispatch, ListEventAggregator, DispatchQueue, BaseRetained}
+import org.apache.activemq.apollo.dto.QueueDTO
+import OptionSupport._
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -39,7 +41,7 @@ object Queue extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends BaseRetained with Route with DeliveryConsumer with BaseService with DispatchLogging {
+class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:QueueDTO) extends BaseRetained with Route with DeliveryConsumer with BaseService with DispatchLogging {
   override protected def log = Queue
 
   var inbound_sessions = Set[DeliverySession]()
@@ -75,45 +77,50 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
   entries.addFirst(head_entry)
 
   //
-  // Tuning options.
+  // In-frequently accessed tuning configuration.
   //
 
   /**
    *  The amount of memory buffer space for receiving messages.
    */
-  var tune_producer_buffer = 1024*32
+  def tune_producer_buffer = config.producer_buffer.getOrElse(1024*32)
 
   /**
    *  The amount of memory buffer space for the queue..
    */
-  var tune_queue_buffer = 1024*32
-
-  /**
-   *  The amount of memory buffer space to use per subscription.
-   */
-  var tune_consumer_buffer = 1024*64
+  def tune_queue_buffer = config.queue_buffer.getOrElse(1024*32)
 
   /**
    * Subscribers that consume slower than this rate per seconds will be considered
    * slow.  Once a consumer is considered slow, we may switch to disk spooling.
    */
-  var tune_slow_subscription_rate = 500*1024
+  def tune_slow_subscription_rate = config.slow_subscription_rate.getOrElse(500*1024)
 
   /**
    * The number of milliseconds between slow consumer checks.
    */
-  var tune_slow_check_interval = 500L
+  def tune_slow_check_interval = config.slow_check_interval.getOrElse(500L)
+
+  /**
+   * The number of intervals that a consumer must not meeting the subscription rate before it is
+   * flagged as a slow consumer.
+   */
+  def tune_max_slow_intervals = config.max_slow_intervals.getOrElse(10)
+
+  //
+  // Frequently accessed tuning configuration.
+  //
 
   /**
    * Should this queue persistently store it's entries?
    */
-  def tune_persistent = host.store !=null
+  var tune_persistent = true
 
   /**
    * Should messages be flushed or swapped out of memory if
    * no consumers need the message?
    */
-  def tune_flush_to_store = tune_persistent
+  var tune_flush_to_store = true
 
   /**
    * The number max number of flushed queue entries to load
@@ -121,13 +128,21 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding) extends Bas
    * reference pointers to the actual messages.  When not loaded,
    * the batch is referenced as sequence range to conserve memory.
    */
-  def tune_flush_range_size = 10000
+  var tune_flush_range_size = 0
 
   /**
-   * The number of intervals that a consumer must not meeting the subscription rate before it is
-   * flagged as a slow consumer. 
+   *  The amount of memory buffer space to use per subscription.
    */
-  var tune_max_slow_intervals = 10
+  var tune_consumer_buffer = 0
+
+  def configure(c:QueueDTO) = {
+    config = c
+    tune_persistent = host.store !=null && config.persistent.getOrElse(true)
+    tune_flush_to_store = tune_persistent && config.flush_to_store.getOrElse(true)
+    tune_flush_range_size = config.flush_range_size.getOrElse(10000)
+    tune_consumer_buffer = config.consumer_buffer.getOrElse(1024*64)
+  }
+  configure(config)
 
   var enqueue_item_counter = 0L
   var dequeue_item_counter = 0L

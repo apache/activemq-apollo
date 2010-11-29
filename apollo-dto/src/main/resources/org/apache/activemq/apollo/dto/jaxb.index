@@ -41,3 +41,5 @@ StompConnectionStatusDTO
 KeyStorageDTO
 SimpleStoreStatusDTO
 NullStoreDTO
+QueueDTO
+DestinationDTO

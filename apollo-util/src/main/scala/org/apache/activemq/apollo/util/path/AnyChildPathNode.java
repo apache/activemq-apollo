@@ -34,14 +34,14 @@ public class AnyChildPathNode<Value> implements PathNode<Value> {
         this.node = node;
     }
 
-    public void appendMatchingValues(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex) {
+    public void appendMatchingValues(Set<Value> answer, Path[] paths, int startIndex) {
     	for (PathNode<Value> child : getChildNodes()) {
             child.appendMatchingValues(answer, paths, startIndex);
         }
     }
 
 
-    public void appendMatchingWildcards(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex) {
+    public void appendMatchingWildcards(Set<Value> answer, Path[] paths, int startIndex) {
     	for (PathNode<Value> child : getChildNodes()) {
             child.appendMatchingWildcards(answer, paths, startIndex);
         }
@@ -54,7 +54,7 @@ public class AnyChildPathNode<Value> implements PathNode<Value> {
         }
     }
 
-    public PathNode<Value> getChild(AsciiBuffer path) {
+    public PathNode<Value> getChild(Path path) {
         final Collection<PathNode<Value>> list = new ArrayList<PathNode<Value>>();
     	for (PathNode<Value> child : getChildNodes()) {
             PathNode<Value> answer = child.getChild(path);

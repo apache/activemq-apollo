@@ -24,22 +24,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.fusesource.hawtbuf.AsciiBuffer;
-
 /**
  * An implementation class used to implement {@link PathMap}
  * 
  * @version $Revision: 1.2 $
  */
 public class PathMapNode<Value> implements PathNode<Value> {
-    protected static final AsciiBuffer ANY_CHILD = PathMap.ANY_CHILD;
-    protected static final AsciiBuffer ANY_DESCENDENT = PathMap.ANY_DESCENDENT;
 
     // we synchronize at the PathMap level
     private PathMapNode<Value> parent;
     private List<Value> values = new ArrayList<Value>();
-    private Map<AsciiBuffer, PathNode<Value>> childNodes = new HashMap<AsciiBuffer, PathNode<Value>>();
-    private AsciiBuffer path = new AsciiBuffer("Root");
+    private Map<Path, PathNode<Value>> childNodes = new HashMap<Path, PathNode<Value>>();
+    private Path path = PathParser.ROOT;
     private int pathLength;
 
     public PathMapNode(PathMapNode<Value> parent) {
@@ -55,7 +51,7 @@ public class PathMapNode<Value> implements PathNode<Value> {
      * Returns the child node for the given named path or null if it does not
      * exist
      */
-    public PathMapNode<Value> getChild(AsciiBuffer path) {
+    public PathMapNode<Value> getChild(Path path) {
         return (PathMapNode<Value>)childNodes.get(path);
     }
 
@@ -74,12 +70,12 @@ public class PathMapNode<Value> implements PathNode<Value> {
      * Returns the child node for the given named path, lazily creating one if
      * it does not yet exist
      */
-    public PathMapNode<Value> getChildOrCreate(AsciiBuffer asciiBuffer) {
-        PathMapNode<Value> answer = (PathMapNode<Value>)childNodes.get(asciiBuffer);
+    public PathMapNode<Value> getChildOrCreate(Path path) {
+        PathMapNode<Value> answer = (PathMapNode<Value>)childNodes.get(path);
         if (answer == null) {
             answer = createChildNode();
-            answer.path = asciiBuffer;
-            childNodes.put(asciiBuffer, answer);
+            answer.path = path;
+            childNodes.put(path, answer);
         }
         return answer;
     }
@@ -124,8 +120,8 @@ public class PathMapNode<Value> implements PathNode<Value> {
         return answer;
     }
 
-    public void add(ArrayList<AsciiBuffer> paths, int idx, Value value) {
-        if (idx >= paths.size()) {
+    public void add(Path[] paths, int idx, Value value) {
+        if (idx >= paths.length) {
             values.add(value);
         } else {
             // if (idx == paths.size() - 1) {
@@ -134,12 +130,12 @@ public class PathMapNode<Value> implements PathNode<Value> {
             // else {
             // getAnyChildNode().add(paths, idx + 1, value);
             // }
-            getChildOrCreate(paths.get(idx)).add(paths, idx + 1, value);
+            getChildOrCreate(paths[idx]).add(paths, idx + 1, value);
         }
     }
 
-    public void remove(ArrayList<AsciiBuffer> paths, int idx, Value value) {
-        if (idx >= paths.size()) {
+    public void remove(Path[] paths, int idx, Value value) {
+        if (idx >= paths.length) {
             values.remove(value);
             pruneIfEmpty();
         } else {
@@ -149,23 +145,23 @@ public class PathMapNode<Value> implements PathNode<Value> {
             // else {
             // getAnyChildNode().remove(paths, idx + 1, value);
             // }
-            getChildOrCreate(paths.get(idx)).remove(paths, ++idx, value);
+            getChildOrCreate(paths[idx]).remove(paths, ++idx, value);
         }
     }
 
-    public void removeAll(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex) {
+    public void removeAll(Set<Value> answer, Path[] paths, int startIndex) {
         PathNode<Value> node = this;
-        int size = paths.size();
+        int size = paths.length;
         for (int i = startIndex; i < size && node != null; i++) {
 
-            AsciiBuffer path = paths.get(i);
-            if (path.equals(ANY_DESCENDENT)) {
+            Path path = paths[i];
+            if (path == PathParser.ANY_DESCENDANT) {
                 answer.addAll(node.removeDesendentValues());
                 break;
             }
 
             node.appendMatchingWildcards(answer, paths, i);
-            if (path.equals(ANY_CHILD)) {
+            if (path == PathParser.ANY_CHILD ) {
                 // node = node.getAnyChildNode();
                 node = new AnyChildPathNode<Value>(node);
             } else {
@@ -203,27 +199,27 @@ public class PathMapNode<Value> implements PathNode<Value> {
     /**
      * Matches any entries in the map containing wildcards
      */
-    public void appendMatchingWildcards(Set<Value> answer, ArrayList<AsciiBuffer> paths, int idx) {
+    public void appendMatchingWildcards(Set<Value> answer, Path[] paths, int idx) {
         if (idx - 1 > pathLength) {
             return;
         }
-        PathMapNode<Value> wildCardNode = getChild(ANY_CHILD);
+        PathMapNode<Value> wildCardNode = getChild(PathParser.ANY_CHILD);
         if (wildCardNode != null) {
             wildCardNode.appendMatchingValues(answer, paths, idx + 1);
         }
-        wildCardNode = getChild(ANY_DESCENDENT);
+        wildCardNode = getChild(PathParser.ANY_DESCENDANT);
         if (wildCardNode != null) {
             answer.addAll(wildCardNode.getDesendentValues());
         }
     }
 
-    public void appendMatchingValues(Set<Value> answer, ArrayList<AsciiBuffer> paths, int startIndex) {
+    public void appendMatchingValues(Set<Value> answer, Path[] paths, int startIndex) {
         PathNode<Value> node = this;
         boolean couldMatchAny = true;
-        int size = paths.size();
+        int size = paths.length;
         for (int i = startIndex; i < size && node != null; i++) {
-            AsciiBuffer path = paths.get(i);
-            if (path.equals(ANY_DESCENDENT)) {
+            Path path = paths[i];
+            if (path.equals(PathParser.ANY_DESCENDANT)) {
                 answer.addAll(node.getDesendentValues());
                 couldMatchAny = false;
                 break;
@@ -231,7 +227,7 @@ public class PathMapNode<Value> implements PathNode<Value> {
 
             node.appendMatchingWildcards(answer, paths, i);
 
-            if (path.equals(ANY_CHILD)) {
+            if (path.equals(PathParser.ANY_CHILD)) {
                 node = new AnyChildPathNode<Value>(node);
             } else {
                 node = node.getChild(path);
@@ -241,7 +237,7 @@ public class PathMapNode<Value> implements PathNode<Value> {
             answer.addAll(node.getValues());
             if (couldMatchAny) {
                 // lets allow FOO.BAR to match the FOO.BAR.> entry in the map
-                PathNode<Value> child = node.getChild(ANY_DESCENDENT);
+                PathNode<Value> child = node.getChild(PathParser.ANY_DESCENDANT);
                 if (child != null) {
                     answer.addAll(child.getValues());
                 }
@@ -249,7 +245,7 @@ public class PathMapNode<Value> implements PathNode<Value> {
         }
     }
 
-    public AsciiBuffer getPath() {
+    public Path getPath() {
         return path;
     }
 

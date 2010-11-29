@@ -18,51 +18,48 @@ package org.apache.activemq.apollo.broker
 
 import _root_.org.fusesource.hawtbuf._
 import BufferConversions._
+import org.apache.activemq.apollo.util.path.{Path, PathParser}
+import Buffer._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class ParserOptions {
-  var defaultDomain: AsciiBuffer = null
-  var queuePrefix: AsciiBuffer = null
-  var topicPrefix: AsciiBuffer = null
-  var tempQueuePrefix: AsciiBuffer = null
-  var tempTopicPrefix: AsciiBuffer = null
-  var separator: Option[Byte] = None
-}
+class DestinationParser extends PathParser {
 
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-object DestinationParser {
+  var default_domain: AsciiBuffer = null
+  var queue_prefix: AsciiBuffer = ascii("queue:")
+  var topic_prefix: AsciiBuffer = ascii("topic:")
+  var temp_queue_prefix: AsciiBuffer = ascii("temp-queue:")
+  var temp_topic_prefix: AsciiBuffer = ascii("temp-topic:")
+  var destination_separator: Option[Byte] = Some(','.toByte)
 
-  def toBuffer(value: Destination, options: ParserOptions): AsciiBuffer = {
+  def toBuffer(value: Destination): AsciiBuffer = {
     if (value == null) {
       null
     } else {
       val baos = new ByteArrayOutputStream
       def write(value: Destination):Unit = {
         if (value.getDestinations != null) {
-          assert( options.separator.isDefined )
+          assert( destination_separator.isDefined )
           val first = true
           for (d <- value.getDestinations) {
             if (!first) {
-              baos.write(options.separator.get)
+              baos.write(destination_separator.get)
             }
             write(d)
           }
         } else {
           value.getDomain match {
             case Router.QUEUE_DOMAIN =>
-              baos.write(options.queuePrefix)
+              baos.write(queue_prefix)
             case Router.TOPIC_DOMAIN =>
-              baos.write(options.topicPrefix)
+              baos.write(topic_prefix)
             case Router.TEMP_QUEUE_DOMAIN =>
-              baos.write(options.tempQueuePrefix)
+              baos.write(temp_queue_prefix)
             case Router.TEMP_TOPIC_DOMAIN =>
-              baos.write(options.tempTopicPrefix)
+              baos.write(temp_topic_prefix)
           }
-          baos.write(value.getName)
+          this.write(value.path, baos)
         }
       }
       write(value)
@@ -74,20 +71,19 @@ object DestinationParser {
    * Parses a destination which may or may not be a composite.
    *
    * @param value
-   * @param options
    * @param compositeSeparator
    * @return
    */
-  def parse(value: AsciiBuffer, options: ParserOptions): Destination = {
+  def parse(value: AsciiBuffer): Destination = {
     if (value == null) {
       return null;
     }
 
-    if (options.separator.isDefined && value.contains(options.separator.get)) {
-      var rc = value.split(options.separator.get);
+    if (destination_separator.isDefined && value.contains(destination_separator.get)) {
+      var rc = value.split(destination_separator.get);
       var dl: List[Destination] = Nil
       for (buffer <- rc) {
-        val d = parse(buffer, options)
+        val d = parse(buffer)
         if (d == null) {
           return null;
         }
@@ -95,23 +91,23 @@ object DestinationParser {
       }
       return new MultiDestination(dl.toArray[Destination]);
     } else {
-      if (options.queuePrefix != null && value.startsWith(options.queuePrefix)) {
-        var name = value.slice(options.queuePrefix.length, value.length).ascii();
-        return new SingleDestination(Router.QUEUE_DOMAIN, name);
-      } else if (options.topicPrefix != null && value.startsWith(options.topicPrefix)) {
-        var name = value.slice(options.topicPrefix.length, value.length).ascii();
-        return new SingleDestination(Router.TOPIC_DOMAIN, name);
-      } else if (options.tempQueuePrefix != null && value.startsWith(options.tempQueuePrefix)) {
-        var name = value.slice(options.tempQueuePrefix.length, value.length).ascii();
-        return new SingleDestination(Router.TEMP_QUEUE_DOMAIN, name);
-      } else if (options.tempTopicPrefix != null && value.startsWith(options.tempTopicPrefix)) {
-        var name = value.slice(options.tempTopicPrefix.length, value.length).ascii();
-        return new SingleDestination(Router.TEMP_TOPIC_DOMAIN, name);
+      if (queue_prefix != null && value.startsWith(queue_prefix)) {
+        var name = value.slice(queue_prefix.length, value.length).ascii();
+        return new SingleDestination(Router.QUEUE_DOMAIN, parsePath(name));
+      } else if (topic_prefix != null && value.startsWith(topic_prefix)) {
+        var name = value.slice(topic_prefix.length, value.length).ascii();
+        return new SingleDestination(Router.TOPIC_DOMAIN, parsePath(name));
+      } else if (temp_queue_prefix != null && value.startsWith(temp_queue_prefix)) {
+        var name = value.slice(temp_queue_prefix.length, value.length).ascii();
+        return new SingleDestination(Router.TEMP_QUEUE_DOMAIN, parsePath(name));
+      } else if (temp_topic_prefix != null && value.startsWith(temp_topic_prefix)) {
+        var name = value.slice(temp_topic_prefix.length, value.length).ascii();
+        return new SingleDestination(Router.TEMP_TOPIC_DOMAIN, parsePath(name));
       } else {
-        if (options.defaultDomain == null) {
+        if (default_domain == null) {
           return null;
         }
-        return new SingleDestination(options.defaultDomain, value);
+        return new SingleDestination(default_domain, parsePath(value));
       }
     }
   }
@@ -120,11 +116,11 @@ object DestinationParser {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class SingleDestination(var domain: AsciiBuffer = null, var name: AsciiBuffer = null) extends Destination {
+case class SingleDestination(var domain: AsciiBuffer = null, var name: Array[Path] = null) extends Destination {
   def getDestinations(): Array[Destination] = null;
   def getDomain(): AsciiBuffer = domain
 
-  def getName(): AsciiBuffer = name
+  def path() = name
 
   override def toString() = "" + domain + ":" + name
 }
@@ -136,7 +132,7 @@ case class MultiDestination(var destinations: Array[Destination]) extends Destin
   def getDestinations(): Array[Destination] = destinations;
   def getDomain(): AsciiBuffer = null
 
-  def getName(): AsciiBuffer = null
+  def path() = null
 
   override def toString() = destinations.mkString(",")
 }

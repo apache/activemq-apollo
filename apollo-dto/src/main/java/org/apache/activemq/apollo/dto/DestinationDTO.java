@@ -26,17 +26,13 @@ import java.util.ArrayList;
  */
 @XmlRootElement(name = "destination")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationDTO {
+public class DestinationDTO extends StringIdDTO {
 
     /**
-     * The name or wild card name of the destination
+     * The path to the destination.  You can use wild cards.
      */
-    public String name;
-
-    /**
-     * The kind of destination, "queue" or "topic"
-     */
-    public String kind;
+	@XmlAttribute
+	public String path;
 
     /**
      * If set to true, then routing then there is no difference between
@@ -44,8 +40,7 @@ public class DestinationDTO {
      * a queue subscriptions is created, it will act like if a durable
      * subscription was created on the topic. 
      */
+    @XmlAttribute
     public Boolean unified;
-
-    
 
 }

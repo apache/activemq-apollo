@@ -191,7 +191,7 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
   /**
    * Validates and then applies the configuration.
    */
-  def configure(config: BrokerDTO, reporter:Reporter) = ^{
+  def configure(config: BrokerDTO, reporter:Reporter) = dispatchQueue {
     if ( validate(config, reporter) < ERROR ) {
       this.config = config
 
@@ -201,7 +201,7 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
 
       }
     }
-  } >>: dispatchQueue
+  }
 
 
   override def _start(onCompleted:Runnable) = {

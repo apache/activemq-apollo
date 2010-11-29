@@ -16,11 +16,13 @@
  */
 package org.apache.activemq.apollo.broker
 
-import org.apache.activemq.apollo.util.ClassFinder
 import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
-import org.apache.activemq.apollo.dto.{JsonCodec, DurableSubscriptionBindingDTO, PointToPointBindingDTO, BindingDTO}
 import org.apache.activemq.apollo.selector.SelectorParser
 import org.apache.activemq.apollo.filter.{ConstantExpression, BooleanExpression}
+import org.apache.activemq.apollo.util.path.Path
+import Buffer._
+import org.apache.activemq.apollo.dto._
+import org.apache.activemq.apollo.util.{OptionSupport, ClassFinder}
 
 /**
  * <p>
@@ -60,7 +62,17 @@ object BindingFactory {
     }
     throw new IllegalArgumentException("Invalid binding type: "+binding_dto);
   }
+
 }
+
+object Binding {
+  val destination_parser = new DestinationParser
+
+  def encode(value:Array[Path]):String = destination_parser.toString(value)
+  def decode(value:String):Array[Path] = destination_parser.parsePath(ascii(value))
+}
+
+import Binding._
 
 /**
  * <p>
@@ -91,11 +103,19 @@ trait Binding {
 
   def message_filter:BooleanExpression = ConstantExpression.TRUE
 
-  def destination:AsciiBuffer
+  def matches(config:QueueDTO):Boolean = {
+    import Binding.destination_parser._
+    import OptionSupport._
+    var rc = (o(config.destination).map{ x=> parseFilter(ascii(x)).matches(destination) }.getOrElse(true))
+    rc = rc && (o(config.kind).map{ x=> x == binding_kind.toString }.getOrElse(true))
+    rc
+  }
+
+  def destination:Array[Path]
 }
 
 object PointToPointBinding {
-  val POINT_TO_POINT_KIND = new AsciiBuffer("p2p")
+  val POINT_TO_POINT_KIND = new AsciiBuffer("ptp")
   val DESTINATION_PATH = new AsciiBuffer("default");
 }
 
@@ -115,9 +135,9 @@ class PointToPointBindingFactory extends BindingFactory.Provider {
 
   def create(binding_dto:BindingDTO) = {
     if( binding_dto.isInstanceOf[PointToPointBindingDTO] ) {
-      val p2p_dto = binding_dto.asInstanceOf[PointToPointBindingDTO]
-      val data = new AsciiBuffer(p2p_dto.destination).buffer
-      new PointToPointBinding(data, p2p_dto)
+      val ptp_dto = binding_dto.asInstanceOf[PointToPointBindingDTO]
+      val data = new AsciiBuffer(ptp_dto.destination).buffer
+      new PointToPointBinding(data, ptp_dto)
     } else {
       null
     }
@@ -132,6 +152,7 @@ class PointToPointBindingFactory extends BindingFactory.Provider {
  */
 class PointToPointBinding(val binding_data:Buffer, val binding_dto:PointToPointBindingDTO) extends Binding {
 
+  val destination = Binding.decode(binding_dto.destination)
   def binding_kind = POINT_TO_POINT_KIND
 
   def unbind(node: RoutingNode, queue: Queue) = {
@@ -155,7 +176,6 @@ class PointToPointBinding(val binding_data:Buffer, val binding_dto:PointToPointB
     case _ => false
   }
 
-  def destination = new AsciiBuffer(binding_dto.destination)
 }
 
 
@@ -190,6 +210,8 @@ class DurableSubBindingFactory extends BindingFactory.Provider {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class DurableSubBinding(val binding_data:Buffer, val binding_dto:DurableSubscriptionBindingDTO) extends Binding {
+
+  val destination = Binding.decode(binding_dto.destination)
 
   def binding_kind = DURABLE_SUB_KIND
 
@@ -228,6 +250,11 @@ class DurableSubBinding(val binding_data:Buffer, val binding_dto:DurableSubscrip
     }
   }
 
-  def destination = new AsciiBuffer(binding_dto.destination)
-
+  override def matches(config: QueueDTO): Boolean = {
+    import OptionSupport._
+    var rc = super.matches(config)
+    rc = rc && (o(config.client_id).map{ x=> x == binding_dto.client_id }.getOrElse(true))
+    rc = rc && (o(config.subscription_id).map{ x=> x == binding_dto.subscription_id }.getOrElse(true))
+    rc
+  }
 }

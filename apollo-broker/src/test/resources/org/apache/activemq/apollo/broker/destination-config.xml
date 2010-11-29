@@ -15,14 +15,18 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
+<broker xmlns="http://activemq.apache.org/schema/activemq/apollo" id="default">
 
-  <connector>pipe://test1</connector>
+  <virtual-host id="default">
+    <host-name>test</host-name>
 
-  <virtual-host>
-    <host-name>localhost</host-name>
-    <host-name>test.localhost</host-name>
-    <memory-store/>
+    <destination path="unified.*" unified="true"/>
+    <destination path="notunified.*" unified="false"/>
+
+    <queue destination="unified.a" kind="ptp" queue-buffer="333"/>
+    <queue destination="unified.*" kind="ds" queue-buffer="444"/>
+    <queue queue-buffer="111"/>
+
   </virtual-host>
   
 </broker>

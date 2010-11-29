@@ -25,22 +25,23 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
 import collection.JavaConversions
 import org.apache.activemq.apollo.util._
 import collection.mutable.{ListBuffer, HashMap}
-import org.apache.activemq.apollo.dto.{PointToPointBindingDTO, BindingDTO}
-import path.{PathFilter, PathMap}
 import scala.collection.immutable.List
 import org.apache.activemq.apollo.store.{StoreUOW, QueueRecord}
+import org.apache.activemq.apollo.util.path.{Path, PathMap, PathParser}
+import Buffer._
+import org.apache.activemq.apollo.dto.{QueueDTO, PointToPointBindingDTO, BindingDTO}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object Router extends Log {
-  val TOPIC_DOMAIN = new AsciiBuffer("topic");
-  val QUEUE_DOMAIN = new AsciiBuffer("queue");
-  val TEMP_TOPIC_DOMAIN = new AsciiBuffer("temp-topic");
-  val TEMP_QUEUE_DOMAIN = new AsciiBuffer("temp-queue");
+  val TOPIC_DOMAIN = ascii("topic");
+  val QUEUE_DOMAIN = ascii("queue");
+  val TEMP_TOPIC_DOMAIN = ascii("temp-topic");
+  val TEMP_QUEUE_DOMAIN = ascii("temp-queue");
 
-  val QUEUE_KIND = new AsciiBuffer("queue");
-  val DEFAULT_QUEUE_PATH = new AsciiBuffer("default");
+  val QUEUE_KIND = ascii("queue");
+  val DEFAULT_QUEUE_PATH = ascii("default");
 }
 
 /**
@@ -83,12 +84,12 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     }
   }
 
-  def routing_nodes:Iterable[RoutingNode] = JavaConversions.asIterable(destinations.get(PathFilter.ANY_DESCENDENT))
+  def routing_nodes:Iterable[RoutingNode] = JavaConversions.asIterable(destinations.get(Array(PathParser.ANY_DESCENDANT)))
   
-  def create_destination_or(destination:AsciiBuffer)(func:(RoutingNode)=>Unit):RoutingNode = {
+  def create_destination_or(destination:Array[Path])(func:(RoutingNode)=>Unit):RoutingNode = {
 
     // We can't create a wild card destination.. only wild card subscriptions.
-    assert( !PathFilter.containsWildCards(destination) )
+    assert( !PathParser.containsWildCards(destination) )
 
     var rc = destinations.chooseValue( destination )
     if( rc == null ) {
@@ -112,13 +113,21 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     rc
   }
 
-  def get_destination_matches(destination:AsciiBuffer) = {
+  def get_destination_matches(destination:Array[Path]) = {
     import JavaConversions._
     asIterable(destinations.get( destination ))
   }
 
   def _create_queue(id:Long, binding:Binding):Queue = {
-    val queue = new Queue(host, id, binding)
+
+    val config = {
+      import collection.JavaConversions._
+      host.config.queues.find{ config=>
+        binding.matches(config)
+      }
+    }.getOrElse(new QueueDTO)
+
+    val queue = new Queue(host, id, binding, config)
     queue.start
     queues.put(binding, queue)
 
@@ -127,7 +136,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     if( name!=null ) {
       bindings.put(name, queue)
       // make sure the destination is created if this is not a wild card sub
-      if( !PathFilter.containsWildCards(name) ) {
+      if( !PathParser.containsWildCards(name) ) {
         create_destination_or(name) { node=>
           node.add_queue(queue)
         }
@@ -195,11 +204,11 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
       assert( is_topic(destination) )
 
-      val name = destination.getName
+      val name = destination.path
 
       // make sure the destination is created if this is not a wild card sub
-      if( !PathFilter.containsWildCards(name) ) {
-        val node = create_destination_or(name) { node=> }
+      if( !PathParser.containsWildCards(name) ) {
+        val node = create_destination_or(name) { node=> Unit }
       }
 
       get_destination_matches(name).foreach( node=>
@@ -211,7 +220,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
   def unbind(destination:Destination, consumer:DeliveryConsumer) = releasing(consumer) {
     assert( is_topic(destination) )
-    val name = destination.getName
+    val name = destination.path
     broadcast_consumers.remove(name, consumer)
     get_destination_matches(name).foreach{ node=>
       node.remove_broadcast_consumer(consumer)
@@ -234,13 +243,13 @@ class Router(val host:VirtualHost) extends DispatchLogging {
       // Looking up the queue will cause it to get created if it does not exist.
       val queue = if( !topic ) {
         val dto = new PointToPointBindingDTO
-        dto.destination = destination.getName.toString
+        dto.destination = Binding.encode(destination.path)
         _create_queue(dto)
       } else {
         None
       }
 
-      val node = create_destination_or(destination.getName) { node=> }
+      val node = create_destination_or(destination.path) { node=> Unit }
       if( node.unified || topic ) {
         node.add_broadcast_producer( route )
       } else {
@@ -254,7 +263,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
   def disconnect(route:DeliveryProducerRoute) = releasing(route) {
 
     val topic = is_topic(route.destination)
-    val node = create_destination_or(route.destination.getName) { node=> }
+    val node = create_destination_or(route.destination.path) { node=> Unit }
     if( node.unified || topic ) {
       node.remove_broadcast_producer(route)
     }
@@ -268,7 +277,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 /**
  * Tracks state associated with a destination name.
  */
-class RoutingNode(val router:Router, val name:AsciiBuffer) {
+class RoutingNode(val router:Router, val name:Array[Path]) {
 
   val id = router.destination_id_counter.incrementAndGet
 
@@ -276,8 +285,14 @@ class RoutingNode(val router:Router, val name:AsciiBuffer) {
   var broadcast_consumers = ListBuffer[DeliveryConsumer]()
   var queues = ListBuffer[Queue]()
 
-  // TODO: extract the node's config from the host config object
-  def unified = false
+  val unified = {
+    import collection.JavaConversions._
+    import OptionSupport._
+    import Binding.destination_parser._
+
+    val t= router.host.config.destinations.find( x=> parseFilter(ascii(x.path)).matches(name) )
+    t.flatMap(x=> o(x.unified)).getOrElse(false)
+  }
 
   def add_broadcast_consumer (consumer:DeliveryConsumer) = {
     broadcast_consumers += consumer
