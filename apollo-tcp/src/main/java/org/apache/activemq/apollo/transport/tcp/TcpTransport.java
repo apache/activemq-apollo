@@ -410,21 +410,26 @@ public class TcpTransport extends JavaBaseService implements Transport {
             return;
         }
         try {
-            Object command = codec.read();
-            while ( command!=null ) {
-                try {
-                    listener.onTransportCommand(command);
-                } catch (Throwable e) {
-                    e.printStackTrace();
-                    onTransportFailure(new IOException("Transport listener failure."));
-                }
+            long initial = codec.getReadCounter();
+            // Only process upto 64k worth of data at a time so we can give
+            // other connections a chance to process their requests.
+            while( codec.getReadCounter()-initial < 1024*64 ) {
+                Object command = codec.read();
+                if ( command!=null ) {
+                    try {
+                        listener.onTransportCommand(command);
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                        onTransportFailure(new IOException("Transport listener failure."));
+                    }
 
-                // the transport may be suspended after processing a command.
-                if (getServiceState() == STOPPED || readSource.isSuspended()) {
+                    // the transport may be suspended after processing a command.
+                    if (getServiceState() == STOPPED || readSource.isSuspended()) {
+                        return;
+                    }
+                } else {
                     return;
                 }
-
-                command = codec.read();
             }
         } catch (IOException e) {
             onTransportFailure(e);

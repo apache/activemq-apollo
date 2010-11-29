@@ -172,7 +172,7 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
 
   var connectors: List[Connector] = Nil
 
-  val dispatchQueue = getGlobalQueue(DispatchPriority.HIGH).createQueue("broker");
+  val dispatchQueue = createQueue("broker") // getGlobalQueue(DispatchPriority.HIGH).createQueue("broker")
   if( STICK_ON_THREAD_QUEUES ) {
     dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
   }

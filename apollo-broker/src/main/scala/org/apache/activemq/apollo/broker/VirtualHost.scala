@@ -74,7 +74,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
   import VirtualHost._
   
   override protected def log = VirtualHost
-  override val dispatchQueue:DispatchQueue = getGlobalQueue(DispatchPriority.HIGH).createQueue("virtual-host");
+  override val dispatchQueue:DispatchQueue = createQueue("virtual-host") // getGlobalQueue(DispatchPriority.HIGH).createQueue("virtual-host")
 
   var config:VirtualHostDTO = _
   val router = new Router(this)
