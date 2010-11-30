@@ -3,10 +3,12 @@ package org.apache.activemq.apollo.util.path;
 import org.fusesource.hawtbuf.AsciiBuffer;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
+import static org.apache.activemq.apollo.util.path.Part.*;
 
 /**
  * Holds the delimiters used to parse paths.
@@ -15,75 +17,16 @@ import java.util.LinkedList;
  */
 public class PathParser {
 
-    public static final RootPath ROOT = new RootPath();
-    public static final AnyDescendantPath ANY_DESCENDANT = new AnyDescendantPath();
-    public static final AnyChildPath ANY_CHILD = new AnyChildPath();
+    public static final PathParser DEFAULT = new PathParser();
 
     public AsciiBuffer any_descendant_wildcard = new AsciiBuffer("**");
     public AsciiBuffer any_child_wildcard = new AsciiBuffer("*");
     public AsciiBuffer path_seperator = new AsciiBuffer(".");
 
-    private static class RootPath extends Path {
-        public String toString(PathParser parser) {
-            return "";
-        }
-        public boolean matches(Path p) {
-            return p == ROOT;
-        }
-    }
 
-    private static class AnyChildPath extends Path {
-        public String toString(PathParser parser) {
-            return parser.any_child_wildcard.toString();
-        }
-    }
 
-    private static class AnyDescendantPath extends Path {
-        public String toString(PathParser parser) {
-            return parser.any_descendant_wildcard.toString();
-        }
-    }
-
-    class LiteralPath extends Path {
-
-        private final AsciiBuffer value;
-
-        public LiteralPath(AsciiBuffer value) {
-            this.value = value;
-        }
-        public boolean isLiteral() {
-            return true;
-        }
-
-        public String toString(PathParser parser) {
-            return value.toString();
-        }
-
-        public boolean matches(Path p) {
-            if( p.isLiteral() ) {
-                return ((LiteralPath)p).value.equals(value);
-            }
-            // we match any type of wildcard..
-            return true;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            LiteralPath that = (LiteralPath) o;
-            return value.equals(that.value);
-        }
-
-        @Override
-        public int hashCode() {
-            return value.hashCode();
-        }
-    }
-
-    public Path[] parsePath(AsciiBuffer subject) {
-    	ArrayList<Path> list = new ArrayList<Path>(10);
+    public Path parsePath(AsciiBuffer subject) {
+    	ArrayList<Part> list = new ArrayList<Part>(10);
         int previous = 0;
         int lastIndex = subject.getLength() - 1;
         while (true) {
@@ -97,63 +40,65 @@ public class PathParser {
             list.add(parsePart(buffer));
             previous = idx + 1;
         }
-        return list.toArray(new Path[list.size()]);
+        return new Path(new ArrayList(list));
     }
 
-    private Path parsePart(AsciiBuffer value) {
+    private Part parsePart(AsciiBuffer value) {
         if( value.equals(any_child_wildcard) ) {
             return ANY_CHILD;
         } else if( value.equals(any_descendant_wildcard) ) {
             return ANY_DESCENDANT;
         } else {
-            return new LiteralPath(value);
+            return new LiteralPart(value);
         }
     }
 
     /**
-     * Converts the paths back to the string representation.
-     *
-     * @param paths
+     * Converts the path back to the string representation.
      * @return
      */
-    public String toString(Path[] paths) {
+    public String toString(Path path) {
         StringBuffer buffer = new StringBuffer();
-        for (int i = 0; i < paths.length; i++) {
-            if (i > 0) {
+        boolean first=true;
+        for(Part p : path.parts) {
+            if( !first ) {
                 buffer.append(path_seperator);
             }
-            buffer.append(paths[i].toString(this));
+            buffer.append(p.toString(this));
+            first = false;
         }
         return buffer.toString();
     }
 
-    public void write(Path[] paths, ByteArrayOutputStream os) {
-        StringBuffer buffer = new StringBuffer();
-        for (int i = 0; i < paths.length; i++) {
-            if (i > 0) {
-                buffer.append(path_seperator);
+
+    public void write(Path path, ByteArrayOutputStream os) throws IOException {
+        boolean first=true;
+        for(Part p : path.parts) {
+            if( !first ) {
+                path_seperator.writeTo(os);
             }
-            buffer.append(paths[i].toString(this));
+            new AsciiBuffer(p.toString(this)).writeTo(os);
+            first = false;
         }
     }
 
     static interface PartFilter {
-        public boolean matches(LinkedList<Path> remaining);
+        public boolean matches(LinkedList<Part> remaining);
     }
 
     class LitteralPathFilter implements PartFilter {
 
         private final PartFilter next;
-        private final LiteralPath path;
+        private final LiteralPart path;
 
-        public LitteralPathFilter(PartFilter next, LiteralPath path) {
+        public LitteralPathFilter(PartFilter next, LiteralPart path) {
             this.next = next;
 
             this.path = path;
         }
-        public boolean matches(LinkedList<Path> remaining) {
+        public boolean matches(LinkedList<Part> remaining) {
             if( !remaining.isEmpty() ) {
-                Path p = remaining.removeFirst();
+                Part p = remaining.removeFirst();
                 if( !path.matches(p) ) {
                     return false;
                 }
@@ -174,9 +119,9 @@ public class PathParser {
         public AnyChildPathFilter(PartFilter next) {
             this.next = next;
         }
-        public boolean matches(LinkedList<Path> remaining) {
+        public boolean matches(LinkedList<Part> remaining) {
             if( !remaining.isEmpty() ) {
-                Path p = remaining.removeFirst();
+                Part p = remaining.removeFirst();
                 if( next!=null ) {
                     return next.matches(remaining);
                 } else {
@@ -194,7 +139,7 @@ public class PathParser {
         public AnyDecendentPathFilter(PartFilter next) {
             this.next = next;
         }
-        public boolean matches(LinkedList<Path> remaining) {
+        public boolean matches(LinkedList<Part> remaining) {
             if( !remaining.isEmpty() ) {
                 remaining.clear();
                 return true;
@@ -205,12 +150,12 @@ public class PathParser {
     }
 
     public PathFilter parseFilter(AsciiBuffer path) {
-        Path[] paths = parsePath(path);
-        Collections.reverse(Arrays.asList(paths));
+        ArrayList<Part> parts = new ArrayList<Part>(parsePath(path).parts);
+        Collections.reverse(parts);
         PartFilter last = null;
-        for( Path p: paths ) {
+        for( Part p: parts) {
             if( p.isLiteral() ) {
-                last = new LitteralPathFilter(last, (LiteralPath)p);
+                last = new LitteralPathFilter(last, (LiteralPart)p);
             } else if( p == ANY_CHILD ) {
                 last = new AnyChildPathFilter(last);
             } else if( p == ANY_DESCENDANT ) {
@@ -219,14 +164,14 @@ public class PathParser {
         }
         final PartFilter filter = last;
         return new PathFilter() {
-            public boolean matches(Path[] path) {
-                return filter.matches(new LinkedList(Arrays.asList(path)));
+            public boolean matches(Path path) {
+                return filter.matches(new LinkedList(path.parts));
             }
         };
     }
 
-    static public boolean containsWildCards(Path[] paths) {
-        for(Path p:paths) {
+    static public boolean containsWildCards(Path path) {
+        for(Part p: path.parts) {
             if( p==ANY_DESCENDANT || p==ANY_CHILD) {
                 return true;
             }

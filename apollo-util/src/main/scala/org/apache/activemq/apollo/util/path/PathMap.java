@@ -16,9 +16,7 @@
  */
 package org.apache.activemq.apollo.util.path;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -52,19 +50,19 @@ public class PathMap<Value> {
      * @return a List of matching values or an empty list if there are no
      *         matching values.
      */
-    public Set<Value> get(Path[] key) {
+    public Set<Value> get(Path key) {
         return findWildcardMatches(key);
     }
 
-    public void put(Path[] key, Value value) {
+    public void put(Path key, Value value) {
         root.add(key, 0, value);
     }
 
     /**
      * Removes the value from the associated path
      */
-    public void remove(Path[] paths, Value value) {
-        root.remove(paths, 0, value);
+    public void remove(Path path, Value value) {
+        root.remove(path, 0, value);
 
     }
 
@@ -74,9 +72,9 @@ public class PathMap<Value> {
 
     // Implementation methods
     // -------------------------------------------------------------------------
-    protected Set<Value> findWildcardMatches(Path[] paths) {
+    protected Set<Value> findWildcardMatches(Path path) {
         HashSet<Value> answer = new HashSet<Value>();
-        root.appendMatchingValues(answer, paths, 0);
+        root.appendMatchingValues(answer, path, 0);
         return answer;
     }
 
@@ -84,7 +82,7 @@ public class PathMap<Value> {
      * @param key
      * @return
      */
-    public Set<Value> removeAll(Path[] key) {
+    public Set<Value> removeAll(Path key) {
     	HashSet<Value> rc = new HashSet<Value>();
         root.removeAll(rc, key, 0);
         return rc;
@@ -98,7 +96,7 @@ public class PathMap<Value> {
      * @param path the path to find the value for
      * @return the largest matching value or null if no value matches
      */
-    public Value chooseValue(Path[] path) {
+    public Value chooseValue(Path path) {
         Set<Value> set = get(path);
         if (set == null || set.isEmpty()) {
             return null;

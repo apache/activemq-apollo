@@ -17,10 +17,6 @@
 
 package org.apache.activemq.apollo.util.path;
 
-import java.util.ArrayList;
-
-import org.fusesource.hawtbuf.AsciiBuffer;
-
 
 /**
  * Represents a filter which only operates on a path
@@ -29,6 +25,6 @@ import org.fusesource.hawtbuf.AsciiBuffer;
  */
 public interface PathFilter {
 
-    public boolean matches(Path[] path);
+    public boolean matches(Path path);
 
 }

@@ -27,9 +27,10 @@ import org.apache.activemq.apollo.util._
 import collection.mutable.{ListBuffer, HashMap}
 import scala.collection.immutable.List
 import org.apache.activemq.apollo.store.{StoreUOW, QueueRecord}
-import org.apache.activemq.apollo.util.path.{Path, PathMap, PathParser}
 import Buffer._
 import org.apache.activemq.apollo.dto.{QueueDTO, PointToPointBindingDTO, BindingDTO}
+import org.apache.activemq.apollo.util.path.{Path, Part, PathMap, PathParser}
+import java.util.ArrayList
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -84,9 +85,15 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     }
   }
 
-  def routing_nodes:Iterable[RoutingNode] = JavaConversions.asIterable(destinations.get(Array(PathParser.ANY_DESCENDANT)))
+  private val ALL = new Path({
+    val rc = new ArrayList[Part](1)
+    rc.add(Part.ANY_DESCENDANT)
+    rc
+  })
+
+  def routing_nodes:Iterable[RoutingNode] = JavaConversions.asIterable(destinations.get(ALL))
   
-  def create_destination_or(destination:Array[Path])(func:(RoutingNode)=>Unit):RoutingNode = {
+  def create_destination_or(destination:Path)(func:(RoutingNode)=>Unit):RoutingNode = {
 
     // We can't create a wild card destination.. only wild card subscriptions.
     assert( !PathParser.containsWildCards(destination) )
@@ -113,7 +120,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     rc
   }
 
-  def get_destination_matches(destination:Array[Path]) = {
+  def get_destination_matches(destination:Path) = {
     import JavaConversions._
     asIterable(destinations.get( destination ))
   }
@@ -243,7 +250,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
       // Looking up the queue will cause it to get created if it does not exist.
       val queue = if( !topic ) {
         val dto = new PointToPointBindingDTO
-        dto.destination = Binding.encode(destination.name)
+        dto.destination = DestinationParser.encode_path(destination.name)
         _create_queue(dto)
       } else {
         None
@@ -277,7 +284,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 /**
  * Tracks state associated with a destination name.
  */
-class RoutingNode(val router:Router, val name:Array[Path]) {
+class RoutingNode(val router:Router, val name:Path) {
 
   val id = router.destination_id_counter.incrementAndGet
 
@@ -288,7 +295,7 @@ class RoutingNode(val router:Router, val name:Array[Path]) {
   val unified = {
     import collection.JavaConversions._
     import OptionSupport._
-    import Binding.destination_parser._
+    import DestinationParser.default._
 
     val t= router.host.config.destinations.find( x=> parseFilter(ascii(x.path)).matches(name) )
     t.flatMap(x=> o(x.unified)).getOrElse(false)

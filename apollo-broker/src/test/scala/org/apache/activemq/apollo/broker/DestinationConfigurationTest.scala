@@ -79,7 +79,7 @@ class DestinationConfigurationTest extends FunSuiteSupport {
       p
     }
 
-    def dest(v:String) = Binding.destination_parser.parsePath(ascii(v))
+    def dest(v:String) = DestinationParser.decode_path(v)
     expect(true) {
       router.destinations.chooseValue(dest("unified.a")).unified
     }

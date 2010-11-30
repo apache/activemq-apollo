@@ -30,13 +30,13 @@ public class PathMapMemoryTest {
 
     PathParser parser = new PathParser();
 
-    protected Path[] createDestination(String name) {
+    protected Path createDestination(String name) {
    		return parser.parsePath(new AsciiBuffer(name));
     }
 
     @Test()
 	public void testLongPath() throws Exception {
-    	Path[] d1 = createDestination("1.2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17.18");
+    	Path d1 = createDestination("1.2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17.18");
         PathMap<String> map = new PathMap<String>();
         map.put(d1, "test");
     }
@@ -51,7 +51,7 @@ public class PathMapMemoryTest {
             }
             // System.out.println("Checking: " + name);
             try {
-            	Path[] d1 = createDestination(name);
+            	Path d1 = createDestination(name);
                 PathMap<String> map = new PathMap<String>();
                 map.put(d1, "test");
             } catch (Throwable e) {
@@ -66,11 +66,11 @@ public class PathMapMemoryTest {
         Object value = new Object();
         int count = 1000;
         for (int i = 0; i < count; i++) {
-            Path[] queue = createDestination("connection:"+i);
+            Path queue = createDestination("connection:"+i);
             map.put(queue, value);
         }
         for (int i = 0; i < count; i++) {
-            Path[] queue = createDestination("connection:"+i);
+            Path queue = createDestination("connection:"+i);
             map.remove(queue, value);
             Set<Object> set = map.get(queue);
             assertTrue(set.isEmpty());

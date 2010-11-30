@@ -34,8 +34,8 @@ public class PathMapNode<Value> implements PathNode<Value> {
     // we synchronize at the PathMap level
     private PathMapNode<Value> parent;
     private List<Value> values = new ArrayList<Value>();
-    private Map<Path, PathNode<Value>> childNodes = new HashMap<Path, PathNode<Value>>();
-    private Path path = PathParser.ROOT;
+    private Map<Part, PathNode<Value>> childNodes = new HashMap<Part, PathNode<Value>>();
+    private Part part = Part.ROOT;
     private int pathLength;
 
     public PathMapNode(PathMapNode<Value> parent) {
@@ -51,8 +51,8 @@ public class PathMapNode<Value> implements PathNode<Value> {
      * Returns the child node for the given named path or null if it does not
      * exist
      */
-    public PathMapNode<Value> getChild(Path path) {
-        return (PathMapNode<Value>)childNodes.get(path);
+    public PathMapNode<Value> getChild(Part part) {
+        return (PathMapNode<Value>)childNodes.get(part);
     }
 
     /**
@@ -70,12 +70,12 @@ public class PathMapNode<Value> implements PathNode<Value> {
      * Returns the child node for the given named path, lazily creating one if
      * it does not yet exist
      */
-    public PathMapNode<Value> getChildOrCreate(Path path) {
-        PathMapNode<Value> answer = (PathMapNode<Value>)childNodes.get(path);
+    public PathMapNode<Value> getChildOrCreate(Part part) {
+        PathMapNode<Value> answer = (PathMapNode<Value>)childNodes.get(part);
         if (answer == null) {
             answer = createChildNode();
-            answer.path = path;
-            childNodes.put(path, answer);
+            answer.part = part;
+            childNodes.put(part, answer);
         }
         return answer;
     }
@@ -120,8 +120,8 @@ public class PathMapNode<Value> implements PathNode<Value> {
         return answer;
     }
 
-    public void add(Path[] paths, int idx, Value value) {
-        if (idx >= paths.length) {
+    public void add(Path path, int idx, Value value) {
+        if (idx >= path.parts.size()) {
             values.add(value);
         } else {
             // if (idx == paths.size() - 1) {
@@ -130,12 +130,12 @@ public class PathMapNode<Value> implements PathNode<Value> {
             // else {
             // getAnyChildNode().add(paths, idx + 1, value);
             // }
-            getChildOrCreate(paths[idx]).add(paths, idx + 1, value);
+            getChildOrCreate(path.parts.get(idx)).add(path, idx + 1, value);
         }
     }
 
-    public void remove(Path[] paths, int idx, Value value) {
-        if (idx >= paths.length) {
+    public void remove(Path path, int idx, Value value) {
+        if (idx >= path.parts.size()) {
             values.remove(value);
             pruneIfEmpty();
         } else {
@@ -145,27 +145,27 @@ public class PathMapNode<Value> implements PathNode<Value> {
             // else {
             // getAnyChildNode().remove(paths, idx + 1, value);
             // }
-            getChildOrCreate(paths[idx]).remove(paths, ++idx, value);
+            getChildOrCreate(path.parts.get(idx)).remove(path, ++idx, value);
         }
     }
 
-    public void removeAll(Set<Value> answer, Path[] paths, int startIndex) {
+    public void removeAll(Set<Value> answer, Path path, int startIndex) {
         PathNode<Value> node = this;
-        int size = paths.length;
+        int size = path.parts.size();
         for (int i = startIndex; i < size && node != null; i++) {
 
-            Path path = paths[i];
-            if (path == PathParser.ANY_DESCENDANT) {
+            Part part = path.parts.get(i);
+            if (part == Part.ANY_DESCENDANT) {
                 answer.addAll(node.removeDesendentValues());
                 break;
             }
 
-            node.appendMatchingWildcards(answer, paths, i);
-            if (path == PathParser.ANY_CHILD ) {
+            node.appendMatchingWildcards(answer, path, i);
+            if (part == Part.ANY_CHILD ) {
                 // node = node.getAnyChildNode();
                 node = new AnyChildPathNode<Value>(node);
             } else {
-                node = node.getChild(path);
+                node = node.getChild(part);
             }
         }
 
@@ -199,45 +199,45 @@ public class PathMapNode<Value> implements PathNode<Value> {
     /**
      * Matches any entries in the map containing wildcards
      */
-    public void appendMatchingWildcards(Set<Value> answer, Path[] paths, int idx) {
+    public void appendMatchingWildcards(Set<Value> answer, Path parts, int idx) {
         if (idx - 1 > pathLength) {
             return;
         }
-        PathMapNode<Value> wildCardNode = getChild(PathParser.ANY_CHILD);
+        PathMapNode<Value> wildCardNode = getChild(Part.ANY_CHILD);
         if (wildCardNode != null) {
-            wildCardNode.appendMatchingValues(answer, paths, idx + 1);
+            wildCardNode.appendMatchingValues(answer, parts, idx + 1);
         }
-        wildCardNode = getChild(PathParser.ANY_DESCENDANT);
+        wildCardNode = getChild(Part.ANY_DESCENDANT);
         if (wildCardNode != null) {
             answer.addAll(wildCardNode.getDesendentValues());
         }
     }
 
-    public void appendMatchingValues(Set<Value> answer, Path[] paths, int startIndex) {
+    public void appendMatchingValues(Set<Value> answer, Path path, int startIndex) {
         PathNode<Value> node = this;
         boolean couldMatchAny = true;
-        int size = paths.length;
+        int size = path.parts.size();
         for (int i = startIndex; i < size && node != null; i++) {
-            Path path = paths[i];
-            if (path.equals(PathParser.ANY_DESCENDANT)) {
+            Part part = path.parts.get(i);
+            if (part.equals(Part.ANY_DESCENDANT)) {
                 answer.addAll(node.getDesendentValues());
                 couldMatchAny = false;
                 break;
             }
 
-            node.appendMatchingWildcards(answer, paths, i);
+            node.appendMatchingWildcards(answer, path, i);
 
-            if (path.equals(PathParser.ANY_CHILD)) {
+            if (part.equals(Part.ANY_CHILD)) {
                 node = new AnyChildPathNode<Value>(node);
             } else {
-                node = node.getChild(path);
+                node = node.getChild(part);
             }
         }
         if (node != null) {
             answer.addAll(node.getValues());
             if (couldMatchAny) {
                 // lets allow FOO.BAR to match the FOO.BAR.> entry in the map
-                PathNode<Value> child = node.getChild(PathParser.ANY_DESCENDANT);
+                PathNode<Value> child = node.getChild(Part.ANY_DESCENDANT);
                 if (child != null) {
                     answer.addAll(child.getValues());
                 }
@@ -245,8 +245,8 @@ public class PathMapNode<Value> implements PathNode<Value> {
         }
     }
 
-    public Path getPath() {
-        return path;
+    public Part getPart() {
+        return part;
     }
 
     protected void pruneIfEmpty() {
@@ -256,7 +256,7 @@ public class PathMapNode<Value> implements PathNode<Value> {
     }
 
     protected void removeChild(PathMapNode<Value> node) {
-        childNodes.remove(node.getPath());
+        childNodes.remove(node.getPart());
         pruneIfEmpty();
     }
 }

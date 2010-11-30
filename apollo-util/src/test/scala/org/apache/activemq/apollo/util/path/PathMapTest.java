@@ -35,9 +35,9 @@ public class PathMapTest {
 
     PathParser parser = new PathParser();
 
-    protected Path[] d1 = createDestination("TEST.D1");
-    protected Path[] d2 = createDestination("TEST.BAR.D2");
-    protected Path[] d3 = createDestination("TEST.BAR.D3");
+    protected Path d1 = createDestination("TEST.D1");
+    protected Path d2 = createDestination("TEST.BAR.D2");
+    protected Path d3 = createDestination("TEST.BAR.D3");
 
     protected String v1 = "value1";
     protected String v2 = "value2";
@@ -48,8 +48,8 @@ public class PathMapTest {
 
     @Test()
 	public void testCompositePaths() throws Exception {
-        Path[] d1 = createDestination("TEST.BAR.D2");
-        Path[] d2 = createDestination("TEST.BAR.D3");
+        Path d1 = createDestination("TEST.BAR.D2");
+        Path d2 = createDestination("TEST.BAR.D3");
         PathMap<String> map = new PathMap<String>();
         map.put(d1, v1);
         map.put(d2, v2);
@@ -340,17 +340,17 @@ public class PathMapTest {
     }
 
     protected void remove(PathMap<String> map, String name, String value) {
-        Path[] destination = createDestination(name);
+        Path destination = createDestination(name);
         map.remove(destination, value);
     }
 
     protected void assertMapValue(PathMap<String> map, String destinationName, Object... expected) {
-        Path[] destination = createDestination(destinationName);
+        Path destination = createDestination(destinationName);
         assertMapValue(map, destination, expected);
     }
 
     @SuppressWarnings("unchecked")
-    protected void assertMapValue(PathMap<String> map, Path[] destination, Object... expected) {
+    protected void assertMapValue(PathMap<String> map, Path destination, Object... expected) {
         List expectedList = Arrays.asList(expected);
         Collections.sort(expectedList);
         Set actualSet = map.get(destination);
@@ -359,7 +359,7 @@ public class PathMapTest {
         assertEquals(("map value for destinationName:  " + destination), expectedList, actual);
     }
 
-    protected Path[] createDestination(String name) {
+    protected Path createDestination(String name) {
    		return parser.parsePath(new AsciiBuffer(name));
     }
 }

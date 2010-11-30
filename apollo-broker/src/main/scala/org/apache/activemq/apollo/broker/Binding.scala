@@ -19,10 +19,10 @@ package org.apache.activemq.apollo.broker
 import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
 import org.apache.activemq.apollo.selector.SelectorParser
 import org.apache.activemq.apollo.filter.{ConstantExpression, BooleanExpression}
-import org.apache.activemq.apollo.util.path.Path
 import Buffer._
 import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.util.{OptionSupport, ClassFinder}
+import org.apache.activemq.apollo.util.path.{Path, Part}
 
 /**
  * <p>
@@ -65,15 +65,6 @@ object BindingFactory {
 
 }
 
-object Binding {
-  val destination_parser = new DestinationParser
-
-  def encode(value:Array[Path]):String = destination_parser.toString(value)
-  def decode(value:String):Array[Path] = destination_parser.parsePath(ascii(value))
-}
-
-import Binding._
-
 /**
  * <p>
  * </p>
@@ -104,14 +95,14 @@ trait Binding {
   def message_filter:BooleanExpression = ConstantExpression.TRUE
 
   def matches(config:QueueDTO):Boolean = {
-    import Binding.destination_parser._
+    import DestinationParser.default._
     import OptionSupport._
     var rc = (o(config.destination).map{ x=> parseFilter(ascii(x)).matches(destination) }.getOrElse(true))
     rc = rc && (o(config.kind).map{ x=> x == binding_kind.toString }.getOrElse(true))
     rc
   }
 
-  def destination:Array[Path]
+  def destination:Path
 }
 
 object PointToPointBinding {
@@ -152,7 +143,7 @@ class PointToPointBindingFactory extends BindingFactory.Provider {
  */
 class PointToPointBinding(val binding_data:Buffer, val binding_dto:PointToPointBindingDTO) extends Binding {
 
-  val destination = Binding.decode(binding_dto.destination)
+  val destination = DestinationParser.decode_path(binding_dto.destination)
   def binding_kind = POINT_TO_POINT_KIND
 
   def unbind(node: RoutingNode, queue: Queue) = {
@@ -211,7 +202,7 @@ class DurableSubBindingFactory extends BindingFactory.Provider {
  */
 class DurableSubBinding(val binding_data:Buffer, val binding_dto:DurableSubscriptionBindingDTO) extends Binding {
 
-  val destination = Binding.decode(binding_dto.destination)
+  val destination = DestinationParser.decode_path(binding_dto.destination)
 
   def binding_kind = DURABLE_SUB_KIND
 

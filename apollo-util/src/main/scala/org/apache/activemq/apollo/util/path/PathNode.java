@@ -16,26 +16,23 @@
  */
 package org.apache.activemq.apollo.util.path;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
-
-import org.fusesource.hawtbuf.AsciiBuffer;
 
 /**
  * Represents a node in the {@link PathMap} tree
  *
  */
 public interface PathNode<Value> {
-    void appendMatchingValues(Set<Value> answer, Path[] paths, int startIndex);
+    void appendMatchingValues(Set<Value> answer, Path path, int startIndex);
 
-    void appendMatchingWildcards(Set<Value> answer, Path[] paths, int startIndex);
+    void appendMatchingWildcards(Set<Value> answer, Path path, int startIndex);
 
     void appendDescendantValues(Set<Value> answer);
 
     Collection<Value> getDesendentValues();
 
-    PathNode<Value> getChild(Path path);
+    PathNode<Value> getChild(Part part);
 
     Collection<Value> getValues();
 

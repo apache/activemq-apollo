@@ -20,8 +20,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
 
-import org.fusesource.hawtbuf.AsciiBuffer;
-
 /**
  * An implementation of {@link PathNode} which navigates all the children of the given node
  * ignoring the name of the current path (so for navigating using * in a wildcard).
@@ -34,16 +32,16 @@ public class AnyChildPathNode<Value> implements PathNode<Value> {
         this.node = node;
     }
 
-    public void appendMatchingValues(Set<Value> answer, Path[] paths, int startIndex) {
+    public void appendMatchingValues(Set<Value> answer, Path path, int startIndex) {
     	for (PathNode<Value> child : getChildNodes()) {
-            child.appendMatchingValues(answer, paths, startIndex);
+            child.appendMatchingValues(answer, path, startIndex);
         }
     }
 
 
-    public void appendMatchingWildcards(Set<Value> answer, Path[] paths, int startIndex) {
+    public void appendMatchingWildcards(Set<Value> answer, Path path, int startIndex) {
     	for (PathNode<Value> child : getChildNodes()) {
-            child.appendMatchingWildcards(answer, paths, startIndex);
+            child.appendMatchingWildcards(answer, path, startIndex);
         }
     }
 
@@ -54,10 +52,10 @@ public class AnyChildPathNode<Value> implements PathNode<Value> {
         }
     }
 
-    public PathNode<Value> getChild(Path path) {
+    public PathNode<Value> getChild(Part part) {
         final Collection<PathNode<Value>> list = new ArrayList<PathNode<Value>>();
     	for (PathNode<Value> child : getChildNodes()) {
-            PathNode<Value> answer = child.getChild(path);
+            PathNode<Value> answer = child.getChild(part);
             if (answer != null) {
                 list.add(answer);
             }
