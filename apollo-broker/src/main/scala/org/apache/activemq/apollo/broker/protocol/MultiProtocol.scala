@@ -124,7 +124,7 @@ class MultiProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec {
 
   def write(value: Any) = throw new UnsupportedOperationException()
 
-  def flush = throw new UnsupportedOperationException()
+  def flush = ProtocolCodec.BufferState.EMPTY
 
   def getWriteCounter = 0L
 
