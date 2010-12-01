@@ -16,22 +16,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------
 
-# load system-wide apollo configuration
-if [ -f "/etc/apollo.conf" ] ; then
-  . /etc/apollo.conf
-fi
-
-# provide default values for people who don't use RPMs
-if [ -z "$usejikes" ] ; then
-  usejikes=false;
-fi
-
-# load user apollo configuration
-if [ -f "$HOME/.apollorc" ] ; then
-  . "$HOME/.apollorc"
-fi
-
-# OS specific support.  $var _must_ be set to either true or false.
+# OS specific support.
 cygwin=false;
 darwin=false;
 case "`uname`" in
@@ -44,14 +29,6 @@ case "`uname`" in
 esac
 
 if [ -z "$APOLLO_HOME" ] ; then
-  # try to find APOLLO
-  if [ -d /opt/apollo ] ; then
-    APOLLO_HOME=/opt/apollo
-  fi
-
-  if [ -d "${HOME}/opt/apollo" ] ; then
-    APOLLO_HOME="${HOME}/opt/apollo"
-  fi
 
   ## resolve links - $0 may be a link to apollo's home
   PRG="$0"
@@ -73,7 +50,6 @@ if [ -z "$APOLLO_HOME" ] ; then
   done
 
   APOLLO_HOME=`dirname "$PRG"`
-
   cd "$saveddir"
 
   # make it fully qualified
@@ -138,10 +114,13 @@ if $cygwin; then
   JUL_CONFIG_FILE=`cygpath --windows "$JUL_CONFIG_FILE"`
 fi
 
-if [ -z "$APOLLO_OPTS" ] ; then
-  APOLLO_OPTS="-server -Xmx1G"
+if [ -z "$JVM_FLAGS" ] ; then
+  JVM_FLAGS="-server -Xmx1G"
 fi
-JVM_FLAGS="${APOLLO_OPTS}"
+
+if [ "x$APOLLO_OPTS" != "x" ] ; then
+  JVM_FLAGS="${JVM_FLAGS} ${APOLLO_OPTS}"
+fi
 
 # Optionally enable remote debugging
 if [ "x$APOLLO_DEBUG" != "x" ]; then

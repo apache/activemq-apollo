@@ -53,9 +53,11 @@ rem :NO_LIB_PATCHES
 
 for %%i in ("%APOLLO_HOME%\lib\*.jar") do call :ADD_CLASSPATH %%i
 
-if "%APOLLO_OPTS%" == "" set APOLLO_OPTS=-server -Xmx1G
+if "%JVM_FLAGS%" == "" set JVM_FLAGS=-server -Xmx1G
 
-set JVM_FLAGS=%APOLLO_OPTS%
+if "x%APOLLO_OPTS%" == "x" goto noAPOLLO_OPTS
+  set JVM_FLAGS=%JVM_FLAGS% %APOLLO_OPTS%
+:noAPOLLO_OPTS
 
 if "x%APOLLO_DEBUG%" == "x" goto noDEBUG
   set JVM_FLAGS=%JVM_FLAGS% -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspEND=n,address=5005
