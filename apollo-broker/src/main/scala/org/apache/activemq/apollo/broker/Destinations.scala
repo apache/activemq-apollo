@@ -144,4 +144,6 @@ case class SingleDestination(override val domain: AsciiBuffer, override val name
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class MultiDestination(override val destinations: List[Destination]) extends Destination
+case class MultiDestination(override val destinations: List[Destination]) extends Destination {
+  def this(d: Array[Destination]) = this(d.toList)
+}
