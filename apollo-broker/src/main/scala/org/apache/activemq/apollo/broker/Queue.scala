@@ -1368,9 +1368,9 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
     }
 
     remaining = if(tail_parkings > 0) {
-      queue.tune_consumer_buffer
+      queue.tune_consumer_buffer * 100
     } else {
-      best_advanced_size
+      best_advanced_size * 10
     }
 
     while( remaining>0 && next!=null ) {
