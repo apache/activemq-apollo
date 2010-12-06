@@ -68,7 +68,8 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
   var next_queue_key = new AtomicLong(1)
   var next_msg_key = new AtomicLong(1)
 
-  var executor_pool:ExecutorService = _
+  var write_executor:ExecutorService = _
+  var read_executor:ExecutorService = _
   var config:BDBStoreDTO = defaultConfig
   val client = new BDBClient(this)
 
@@ -79,7 +80,7 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
   protected def get_next_msg_key = next_msg_key.getAndIncrement
 
   protected def store(uows: Seq[DelayableUOW])(callback: =>Unit) = {
-    executor_pool {
+    write_executor {
       client.store(uows, ^{
         dispatchQueue {
           callback
@@ -103,16 +104,23 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
 
   protected def _start(onCompleted: Runnable) = {
     info("Starting bdb store at: '%s'", config.directory)
-    executor_pool = Executors.newFixedThreadPool(1, new ThreadFactory(){
+    write_executor = Executors.newFixedThreadPool(1, new ThreadFactory(){
       def newThread(r: Runnable) = {
-        val rc = new Thread(r, toString+" io")
+        val rc = new Thread(r, "bdb store io write")
+        rc.setDaemon(true)
+        rc
+      }
+    })
+    read_executor = Executors.newFixedThreadPool(config.read_threads.getOrElse(10), new ThreadFactory(){
+      def newThread(r: Runnable) = {
+        val rc = new Thread(r, "bdb store io read")
         rc.setDaemon(true)
         rc
       }
     })
     client.config = config
     poll_stats
-    executor_pool {
+    write_executor {
       client.start()
       next_msg_key.set( client.getLastMessageKey +1 )
       next_queue_key.set( client.getLastQueueKey +1 )
@@ -124,9 +132,12 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
     new Thread() {
       override def run = {
         info("Stopping BDB store at: '%s'", config.directory)
-        executor_pool.shutdown
-        executor_pool.awaitTermination(86400, TimeUnit.SECONDS)
-        executor_pool = null
+        write_executor.shutdown
+        write_executor.awaitTermination(86400, TimeUnit.SECONDS)
+        write_executor = null
+        read_executor.shutdown
+        read_executor.awaitTermination(86400, TimeUnit.SECONDS)
+        read_executor = null
         client.stop
         onCompleted.run
       }
@@ -143,7 +154,7 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
    * Deletes all stored data from the store.
    */
   def purge(callback: =>Unit) = {
-    executor_pool {
+    write_executor {
       client.purge()
       next_queue_key.set(1)
       next_msg_key.set(1)
@@ -156,31 +167,31 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
    * Ges the last queue key identifier stored.
    */
   def getLastQueueKey(callback:(Option[Long])=>Unit):Unit = {
-    executor_pool {
+    write_executor {
       callback(Some(client.getLastQueueKey))
     }
   }
 
   def addQueue(record: QueueRecord)(callback: (Boolean) => Unit) = {
-    executor_pool {
+    write_executor {
      client.addQueue(record, ^{ callback(true) })
     }
   }
 
   def removeQueue(queueKey: Long)(callback: (Boolean) => Unit) = {
-    executor_pool {
+    write_executor {
       client.removeQueue(queueKey,^{ callback(true) })
     }
   }
 
   def getQueue(queueKey: Long)(callback: (Option[QueueRecord]) => Unit) = {
-    executor_pool {
+    write_executor {
       callback( client.getQueue(queueKey) )
     }
   }
 
   def listQueues(callback: (Seq[Long]) => Unit) = {
-    executor_pool {
+    write_executor {
       callback( client.listQueues )
     }
   }
@@ -202,19 +213,19 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
   def drain_loads = {
     var data = load_source.getData
     message_load_batch_size_counter += data.size
-    executor_pool ^{
+    read_executor ^{
       client.loadMessages(data)
     }
   }
 
   def listQueueEntryRanges(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryRange]) => Unit) = {
-    executor_pool ^{
+    write_executor ^{
       callback( client.listQueueEntryGroups(queueKey, limit) )
     }
   }
 
   def listQueueEntries(queueKey: Long, firstSeq: Long, lastSeq: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
-    executor_pool ^{
+    write_executor ^{
       callback( client.getQueueEntries(queueKey, firstSeq, lastSeq) )
     }
   }

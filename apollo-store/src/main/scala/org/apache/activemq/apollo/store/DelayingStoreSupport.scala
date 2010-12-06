@@ -293,7 +293,9 @@ trait DelayingStoreSupport extends Store with BaseService {
 
     if( !uows.isEmpty ) {
       flush_latency_counter.start { end=>
+        flush_source.suspend
         store(uows) {
+          flush_source.resume
           end()
           uows.foreach { uow=>
 

@@ -154,7 +154,6 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
     def completed: Unit = {
       // by the time this is run, consumers and producers may have already joined.
       onCompleted.run
-      display_stats
       schedual_consumer_sample
       // wake up the producers to fill us up...
       if (messages.refiller != null) {
@@ -261,7 +260,14 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
           // try to dispatch it directly...
           entry.dispatch
         }
-        trigger_swap
+
+        val prev = entry.getPrevious
+
+        if( (prev.as_loaded!=null && prev.as_loaded.flushing) || (prev.as_flushed!=null && !prev.as_flushed.loading) ) {
+          entry.flush(!entry.as_loaded.acquired)
+        } else {
+          trigger_swap
+        }
 
         // release the store batch...
         if (queueDelivery.uow != null) {
@@ -331,10 +337,14 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
     // swap out messages.
     cur = entries.getHead
     while( cur!=null ) {
-      if( cur.is_loaded && cur.prefetch_flags==0 && !cur.as_loaded.acquired ) {
-        val flush_asap = !cur.as_loaded.acquired
-//        display_active_entries
-        cur.flush(flush_asap)
+      val loaded = cur.as_loaded
+      if( loaded!=null ) {
+        if( cur.prefetch_flags==0 && !loaded.acquired  ) {
+          val flush_asap = !cur.as_loaded.acquired
+          cur.flush(flush_asap)
+        } else {
+          cur.load // just in case it's getting flushed.
+        }
       }
       cur = cur.getNext
     }
@@ -382,19 +392,26 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
         // target tune_min_subscription_rate / sec
         all_subscriptions.foreach{ case (consumer, sub)=>
-          sub.advanced_sizes += {
-            if( sub.tail_parkings > 0  ) {
-              sub.advanced_size.max(1024*1024*20)
-            } else {
-              sub.advanced_size
-            }
+          
+          val advanced = if ( sub.tail_parkings > 0 ) {
+            // guesstimate what full speed would have been.
+            sub.advanced_size.max(sub.best_advanced_size)
+          } else {
+            sub.advanced_size
           }
-          sub.tail_parkings = 0
+          
+          // keep track of the last few advance sizes..
+          sub.advanced_sizes += advanced
           while( sub.advanced_sizes.size > 10 ) {
             sub.advanced_sizes = sub.advanced_sizes.drop(1)
           }
+
+          sub.best_advanced_size = sub.advanced_sizes.foldLeft(0)(_ max _)
+          
           sub.total_advanced_size += sub.advanced_size
           sub.advanced_size = 0
+          sub.tail_parkings = 0
+          
 
         }
 
@@ -1189,9 +1206,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
             val size_delta: Int = size - size_count
 
             if ( item_delta!=0 || size_delta!=0 ) {
-              assert(item_delta <= 0)
-              assert(size_delta <= 0)
-              info("Detected store dropped %d message(s) in seq range %d to %d using %d bytes", item_delta, seq, last, size_delta)
+              info("Detected store change in range %d to %d. %d message(s) and %d bytes", seq, last, item_delta, size_delta)
               queue.enqueue_item_counter += item_delta
               queue.enqueue_size_counter += size_delta
             }
@@ -1258,15 +1273,10 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
 
   var total_advanced_size = 0L
   var advanced_size = 0
-  var advanced_sizes = ListBuffer[Int](1024*1024*20) // use circular buffer instead.
+  var advanced_sizes = ListBuffer[Int]() // use circular buffer instead.
 
+  var best_advanced_size = queue.tune_consumer_buffer * 100
   var tail_parkings = 1
-
-  var best_advanced_size = if(advanced_sizes.isEmpty) {
-    0
-  } else {
-    advanced_sizes.foldLeft(0)(_ max _)
-  }
 
   override def toString = {
     def seq(entry:QueueEntry) = if(entry==null) null else entry.seq
@@ -1367,12 +1377,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
       next = next.getNext
     }
 
-    remaining = if(tail_parkings > 0) {
-      queue.tune_consumer_buffer * 100
-    } else {
-      best_advanced_size * 10
-    }
-
+    remaining = best_advanced_size 
     while( remaining>0 && next!=null ) {
       remaining -= next.size
       next.prefetch_flags |= 2

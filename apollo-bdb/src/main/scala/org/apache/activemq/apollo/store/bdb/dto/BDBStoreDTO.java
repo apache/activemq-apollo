@@ -34,8 +34,7 @@ public class BDBStoreDTO extends StoreDTO {
     @XmlAttribute
     public File directory;
 
-//    @XmlAttribute(name="archive-directory")
-//    public File archive_directory;
-//
+    @XmlAttribute(name = "read-threads")
+    public Integer read_threads;
 
 }
