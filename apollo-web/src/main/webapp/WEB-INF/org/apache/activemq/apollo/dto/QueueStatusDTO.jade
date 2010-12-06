@@ -33,14 +33,11 @@ p queue size: #{memory(queue_size)}
 
 h2 Enqueue/Deqeueue Counters
 
-p enqueued: #{enqueue_item_counter} messages
-p enqueued: #{memory(enqueue_size_counter)}
+p enqueued: #{enqueue_item_counter} messages (#{memory(enqueue_size_counter)})
 
-p dequeued: #{dequeue_item_counter} messages
-p dequeued: #{memory(dequeue_size_counter)}
+p dequeued: #{dequeue_item_counter} messages (#{memory(dequeue_size_counter)})
 
-p nacked: #{nack_item_counter} messages
-p nacked: #{memory(nack_size_counter)}
+p nacked: #{nack_item_counter} messages (#{memory(nack_size_counter)})
 
 h2 Swap Status
 
@@ -80,6 +77,6 @@ ul
       tr
         td #{x.state}
         td #{memory(x.size)}
-        td #{x.consumer_count}, #{x.prefetch_count}
+        td #{x.consumer_count}, #{x.is_prefetched}
         td #{x.seq}:#{x.count}
 

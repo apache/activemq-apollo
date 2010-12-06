@@ -78,21 +78,6 @@ public class QueueDTO {
     public Integer consumer_buffer;
 
     /**
-     * Subscribers that consume slower than this rate per seconds will be considered
-     * slow.  Once a consumer is considered slow, we may switch to disk spooling.
-     */
-    @XmlAttribute(name="slow-subscription-rate")
-    @JsonProperty("slow_subscription_rate")
-    public Integer slow_subscription_rate;
-
-    /**
-     * The number of milliseconds between slow consumer checks.
-     */
-    @XmlAttribute(name="slow-check-interval")
-    @JsonProperty("slow_check_interval")
-    public Long slow_check_interval;
-
-    /**
      * Should this queue persistently store it's entries?
      */
     @XmlAttribute(name="persistent")

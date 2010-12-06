@@ -51,7 +51,7 @@ public class EntryStatusDTO {
     @XmlAttribute(name = "consumer-count")
     public int consumer_count;
 
-    @XmlAttribute(name = "prefetch-count")
-    public int prefetch_count;
+    @XmlAttribute(name = "is-prefetched")
+    public boolean is_prefetched;
 
 }

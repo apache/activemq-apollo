@@ -194,7 +194,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
               e.count = cur.count
               e.size = cur.size
               e.consumer_count = cur.parked.size
-              e.prefetch_count = cur.prefetched
+              e.is_prefetched = cur.is_prefetched
               e.state = cur.label
 
               result.entries.add(e)
