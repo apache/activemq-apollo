@@ -337,6 +337,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
     // swap out messages.
     cur = entries.getHead
     while( cur!=null ) {
+      val next = cur.getNext
       val loaded = cur.as_loaded
       if( loaded!=null ) {
         if( cur.prefetch_flags==0 && !loaded.acquired  ) {
@@ -346,7 +347,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
           cur.load // just in case it's getting flushed.
         }
       }
-      cur = cur.getNext
+      cur = next
     }
 
 
