@@ -122,7 +122,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
     tune_persistent = host.store !=null && config.persistent.getOrElse(true)
     tune_flush_to_store = tune_persistent && config.flush_to_store.getOrElse(true)
     tune_flush_range_size = config.flush_range_size.getOrElse(10000)
-    tune_consumer_buffer = config.consumer_buffer.getOrElse(1024*128)
+    tune_consumer_buffer = config.consumer_buffer.getOrElse(32*1024)
   }
   configure(config)
 
@@ -365,15 +365,17 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
         // from the entry list.
         val next = cur.getNext
 
-        if( cur.hasSubs || cur.is_prefetched ) {
+        if( cur.prefetch_flags!=0 ) {
           distance_from_sub = 0
         } else {
           distance_from_sub += 1
           if( cur.can_combine_with_prev ) {
             cur.getPrevious.as_flushed_range.combineNext
+            combine_counter += 1
           } else {
             if( cur.is_flushed && distance_from_sub > tune_flush_range_size ) {
               cur.flush_range
+              combine_counter += 1
             }
           }
 

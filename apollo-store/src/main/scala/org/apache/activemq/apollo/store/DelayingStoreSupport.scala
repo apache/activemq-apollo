@@ -167,6 +167,8 @@ trait DelayingStoreSupport extends Store with BaseService {
     if( action == null ) {
       cb
     } else {
+      // TODO: protect against this causing a 2nd flush.
+      delayedUOWs.put(action.uow.uow_id, action.uow)
       action.uow.onComplete(^{ cb })
       flush(action.uow.uow_id)
     }
