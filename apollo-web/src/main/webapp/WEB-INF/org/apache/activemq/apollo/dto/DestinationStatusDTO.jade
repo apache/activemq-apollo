@@ -31,13 +31,19 @@ ul
 h3 Broadcast Producers
 ul
   - for( x <- producers )
-    li
-      a(href={ path("../../../../connections/"+x.id) }) #{x.label}
+    - x.kind match
+      - case "connection" =>
+        li
+          a(href={ path("../../../../connections/"+x.ref) }) #{x.label}
+      - case _ =>
 
 h3 Broadcast Consumers
 ul
   - for( x <- consumers )
-    li
-      a(href={ path("../../../../connections/"+x.id) }) #{x.label}
+    - x.kind match
+      - case "connection" =>
+        li
+          a(href={ path("../../../../connections/"+x.ref) }) #{x.label}
+      - case _ =>
 
 

@@ -32,12 +32,6 @@ import java.util.List;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class QueueStatusDTO extends LongIdDTO {
 
-    /**
-     * A unique id of the object within it's container
-     */
-	@XmlAttribute
-	public long id;
-
     @XmlAttribute
     public String label;
 
@@ -91,12 +85,12 @@ public class QueueStatusDTO extends LongIdDTO {
      * Ids of all connections that are producing to the destination
      */
     @XmlElement(name="producer")
-    public List<LongIdLabeledDTO> producers = new ArrayList<LongIdLabeledDTO>();
+    public List<LinkDTO> producers = new ArrayList<LinkDTO>();
 
     /**
      * Ids of all connections that are consuming from the destination
      */
     @XmlElement(name="consumer")
-    public List<LongIdLabeledDTO> consumers = new ArrayList<LongIdLabeledDTO>();
+    public List<QueueConsumerStatusDTO> consumers = new ArrayList<QueueConsumerStatusDTO>();
 
 }

@@ -16,46 +16,34 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="destination-status")
+@XmlRootElement(name="queue-consumer-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationStatusDTO extends LongIdDTO {
+public class QueueConsumerStatusDTO {
 
     /**
-     * The destination name
+     * link to who is consuming from the queue.
      */
-    @XmlAttribute
-    public String name;
+    public LinkDTO link;
+
+    public long position = 0;
+
+    public int acquired_count;
+    public long acquired_size;
+
+    public long total_dispatched_count;
+    public long total_dispatched_size;
+
+    public long total_ack_count;
+    public long total_nack_count;
 
     /**
-     * Ids of all connections that are producing to the destination
+     * What the consumer is currently waiting on
      */
-    @XmlElement(name="producer")
-    @JsonProperty("producers")
-    public List<LinkDTO> producers = new ArrayList<LinkDTO>();
-
-    /**
-     * Ids of all connections that are consuming from the destination
-     */
-    @XmlElement(name="consumer")
-    @JsonProperty("consumers")
-    public List<LinkDTO> consumers = new ArrayList<LinkDTO>();
-
-    /**
-     * Ids of all queues that are associated with the destination
-     */
-    @XmlElement(name="queue")
-    @JsonProperty("queues")
-    public List<LongIdLabeledDTO> queues = new ArrayList<LongIdLabeledDTO>();
+    @XmlAttribute(name="waiting-on")
+	public String waiting_on;
 }

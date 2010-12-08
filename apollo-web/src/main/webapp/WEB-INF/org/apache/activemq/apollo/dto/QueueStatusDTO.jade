@@ -48,15 +48,27 @@ p holding : #{flushed_items} flushed message references
 h3 Producers
 ul
   - for( x <- producers )
-    li
-      a(href={ path("../../../../../../connections/"+x.id) }) #{x.label}
+    - x.kind match
+      - case "connection" =>
+        li.producer
+          a(href={ path("../../../../../../connections/"+x.ref) }) #{x.label}
+      - case _ =>
+
 
 h3 Consumers
 ul
-  - for( x <- consumers )
-    li
-      a(href={ path("../../../../../../connections/"+x.id) }) #{x.label}
+  - for( consumer <- consumers )
+    - import consumer._
+    li.consumer
+      - if( link !=null )
+        a(href={ path("../../../../../../connections/"+link.ref ) }) #{link.label}
 
+      p next message seq: #{position}
+      p acquired: #{acquired_count} messages (#{memory(acquired_size)})
+      p dispatched: #{total_dispatched_count} messages (#{memory(total_dispatched_size)})
+      p acks: #{total_ack_count} messages
+      p naks: #{total_nack_count} messages
+      p waiting on: #{waiting_on}
 
 - if ( entries.isEmpty )
   h2

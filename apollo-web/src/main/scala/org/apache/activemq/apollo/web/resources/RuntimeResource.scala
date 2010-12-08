@@ -136,6 +136,14 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
     rc
   }
 
+  def link(connection:BrokerConnection) = {
+    val link = new LinkDTO()
+    link.kind = "connection"
+    link.ref = connection.id.toString
+    link.label = connection.transport.getRemoteAddress
+    link
+  }
+
   @GET @Path("virtual-hosts/{id}/destinations/{dest}")
   def destination(@PathParam("id") id : Long, @PathParam("dest") dest : Long):DestinationStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
@@ -147,10 +155,10 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
           result.queues.add(new LongIdLabeledDTO(q.id, q.binding.label))
         }
         node.broadcast_consumers.flatMap( _.connection ).foreach { connection=>
-          result.consumers.add(new LongIdLabeledDTO(connection.id, connection.transport.getRemoteAddress))
+          result.consumers.add(link(connection))
         }
         node.broadcast_producers.flatMap( _.producer.connection ).foreach { connection=>
-          result.producers.add(new LongIdLabeledDTO(connection.id, connection.transport.getRemoteAddress))
+          result.producers.add(link(connection))
         }
 
         result
@@ -162,9 +170,9 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
   def queue(@PathParam("id") id : Long, @PathParam("dest") dest : Long, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean ):QueueStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
       import JavaConversions._
-      val rc = virtualHost.router.routing_nodes.find { _.id == dest } flatMap { node=>
-        node.queues.find  { _.id == qid } map { q=>
-
+      (virtualHost.router.routing_nodes.find { _.id == dest } flatMap { node=> node.queues.find  { _.id == qid } }) match {
+        case None=> cb(None)
+        case Some(q) => q.dispatchQueue {
           val result = new QueueStatusDTO
           result.id = q.id
           result.label = q.binding.label
@@ -208,16 +216,31 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
           }
 
           q.inbound_sessions.flatMap( _.producer.connection ).foreach { connection=>
-            result.producers.add(new LongIdLabeledDTO(connection.id, connection.transport.getRemoteAddress))
+            result.producers.add(link(connection))
           }
-          q.all_subscriptions.keysIterator.toSeq.flatMap( _.connection ).foreach { connection=>
-            result.consumers.add(new LongIdLabeledDTO(connection.id, connection.transport.getRemoteAddress))
+          q.all_subscriptions.valuesIterator.toSeq.foreach{ sub =>
+            val status = new QueueConsumerStatusDTO
+            sub.consumer.connection.foreach(x=> status.link = link(x))
+            status.total_dispatched_count = sub.total_dispatched_count
+            status.total_dispatched_size = sub.total_dispatched_size
+            status.total_ack_count = sub.total_ack_count
+            status.total_nack_count = sub.total_nack_count
+            status.acquired_size = sub.acquired_size
+            status.acquired_count = sub.acquired_count
+            status.waiting_on = if( sub.full ) {
+              "ack"
+            } else if( !sub.pos.is_loaded ) {
+              "load"
+            } else if( !sub.pos.is_tail ) {
+              "producer"
+            } else {
+              "dispatch"
+            }
+            result.consumers.add(status)
           }
-
-          result
+          cb(Some(result))
         }
       }
-      cb(rc)
     }
   }
 

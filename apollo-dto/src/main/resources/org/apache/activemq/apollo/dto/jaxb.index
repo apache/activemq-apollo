@@ -43,3 +43,5 @@ SimpleStoreStatusDTO
 NullStoreDTO
 QueueDTO
 DestinationDTO
+LinkDTO
+QueueConsumerStatusDTO

@@ -508,8 +508,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
   def bind(values: List[DeliveryConsumer]) = retaining(values) {
     for (consumer <- values) {
-      val subscription = new Subscription(this)
-      subscription.open(consumer)
+      val subscription = new Subscription(this, consumer)
       all_subscriptions += consumer -> subscription
       addCapacity( tune_consumer_buffer )
     }
@@ -1262,7 +1261,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
  * tracks the entries which the consumer has acquired.
  *
  */
-class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
+class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends DeliveryProducer with DispatchLogging {
   override protected def log = Queue
 
   def dispatchQueue = queue.dispatchQueue
@@ -1273,6 +1272,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
   var pos:QueueEntry = null
 
   var acquired_size = 0L
+  def acquired_count = acquired.size()
 
   var total_advanced_size = 0L
   var advanced_size = 0
@@ -1281,6 +1281,12 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
   var best_advanced_size = queue.tune_consumer_buffer * 100
   var tail_parkings = 1
 
+  var total_dispatched_count = 0L
+  var total_dispatched_size = 0L
+
+  var total_ack_count = 0L
+  var total_nack_count = 0L
+
   override def toString = {
     def seq(entry:QueueEntry) = if(entry==null) null else entry.seq
     "{ id: "+id+", acquired_size: "+acquired_size+", pos: "+seq(pos)+"}"
@@ -1288,17 +1294,16 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
 
   def browser = session.consumer.browser
 
-  def open(consumer: DeliveryConsumer) = {
-    pos = queue.head_entry;
-    session = consumer.connect(this)
-    session.refiller = pos
-    queue.head_entry ::= this
+  // This opens up the consumer
+  pos = queue.head_entry;
+  session = consumer.connect(this)
+  session.refiller = pos
+  queue.head_entry ::= this
 
-    if( queue.serviceState.isStarted ) {
-      // kick off the initial dispatch.
-      refill_prefetch
-      queue.dispatchQueue << queue.head_entry
-    }
+  if( queue.serviceState.isStarted ) {
+    // kick off the initial dispatch.
+    refill_prefetch
+    queue.dispatchQueue << queue.head_entry
   }
 
   def close() = {
@@ -1358,7 +1363,15 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
 
   def matches(entry:Delivery) = session.consumer.matches(entry)
   def full = session.full
-  def offer(delivery:Delivery) = session.offer(delivery)
+  def offer(delivery:Delivery) = {
+    if( session.offer(delivery) ) {
+      total_dispatched_count += 1
+      total_dispatched_size += delivery.size
+      true
+    } else {
+      false
+    }
+  }
 
   def acquire(entry:QueueEntry) = new AcquiredQueueEntry(entry)
 
@@ -1399,6 +1412,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
       if( session == null ) {
         return;
       }
+      total_ack_count += 1
       if (entry.messageKey != -1) {
         val storeBatch = if( sb == null ) {
           queue.host.store.createStoreUOW
@@ -1436,6 +1450,7 @@ class Subscription(queue:Queue) extends DeliveryProducer with DispatchLogging {
         return;
       }
 
+      total_nack_count += 1
       entry.as_loaded.acquired = false
       acquired_size -= entry.size
 
