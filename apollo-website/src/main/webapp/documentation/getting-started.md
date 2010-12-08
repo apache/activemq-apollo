@@ -44,6 +44,18 @@ jar -xvf apache-apollo-${project_version}-windows-distro.zip
 4. Add the extracted `apache-apollo-${project_version}/bin` directory
    to your shell's `PATH` environment variable.
 
+## Install the BDB library
+
+Apollo's most stable message store implementation is the BDB based message store.  
+Unfortunately, BDB cannot be redistributed by Apache.  It is highly recommended
+that you add it to your apollo installation. You can download it from Oracle at
+[je-4.1.6.jar](http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar) and
+then copy it into the `${APOLLO_HOME}/lib` directory.
+
+For those of you with curl installed, you can just run:
+
+    curl http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar > ${APOLLO_HOME}/lib/je-4.1.6.jar
+
 ## Creating a Broker Instance
 
 A broker instance is the directory containing all the configuration and runtime
@@ -67,6 +79,14 @@ A broker instance directory will contain the following sub directories:
 
 At this point you may want to adjust the default configuration located in
 etc directory.
+
+## Updating the Configuration to use BDB
+
+The default configuration used a hawtdb based store.  It still has known
+bugs and not yet stable.  Unless you want to help find and squash those bugs,
+it is recommend you change the configuration to use the BDB store instead.  To do that,
+just update the generated configuration by editing the `etc/apollo.xml` file and then
+replace `hawtdb-store` with `bdb-store`
 
 ## Running a Broker Instance
 
