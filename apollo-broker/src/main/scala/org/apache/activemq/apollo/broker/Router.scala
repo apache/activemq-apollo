@@ -356,7 +356,7 @@ class RoutingNode(val router:Router, val name:Path) {
   }
 
   def unified = config.unified.getOrElse(false)
-  def slow_consumer_policy = config.slow_consumer_policy.getOrElse("queue")
+  def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")
 
   var consumer_proxies = Map[DeliveryConsumer, DeliveryConsumer]()
 
