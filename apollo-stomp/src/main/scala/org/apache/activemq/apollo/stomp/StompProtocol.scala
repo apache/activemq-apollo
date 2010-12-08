@@ -36,7 +36,7 @@ import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
-import org.apache.activemq.apollo.dto.{StompConnectionStatusDTO, BindingDTO, DurableSubscriptionBindingDTO, PointToPointBindingDTO}
+import org.apache.activemq.apollo.dto.{StompConnectionStatusDTO, BindingDTO, SubscriptionBindingDTO, QueueBindingDTO}
 import scala.util.continuations._
 
 /**
@@ -460,6 +460,10 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     connection.transport.resumeRead
   }
 
+  def weird(headers:HeaderMap) = {
+    println("weird: "+headers)
+  }
+
   def on_stomp_connect(headers:HeaderMap):Unit = {
 
     security_context.user = get(headers, LOGIN).toString
@@ -542,7 +546,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         } else {
           val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
           session_id = ascii(this.host.config.id + ":"+this.host.session_counter.incrementAndGet)
-
+          if( connection_sink==null ) {
+            weird(headers)
+          }
           connection_sink.offer(
             StompFrame(CONNECTED, List(
               (VERSION, protocol_version),
@@ -742,7 +748,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       // recover the queue on restart and rebind it the
       // way again)
       if (topic) {
-        val rc = new DurableSubscriptionBindingDTO
+        val rc = new SubscriptionBindingDTO
         rc.destination = DestinationParser.encode_path(destination.name)
         // TODO:
         // rc.client_id =
@@ -750,7 +756,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         rc.filter = if (selector == null) null else selector._1
         rc
       } else {
-        val rc = new PointToPointBindingDTO
+        val rc = new QueueBindingDTO
         rc.destination = DestinationParser.encode_path(destination.name)
         rc
       }

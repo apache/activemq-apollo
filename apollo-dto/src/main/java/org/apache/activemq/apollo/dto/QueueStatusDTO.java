@@ -32,8 +32,8 @@ import java.util.List;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class QueueStatusDTO extends LongIdDTO {
 
-    @XmlAttribute
-    public String label;
+    @XmlElement
+    public BindingDTO binding;
 
     @XmlAttribute(name="enqueue-item-counter")
     public long enqueue_item_counter;

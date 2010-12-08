@@ -28,9 +28,9 @@ import collection.mutable.{ListBuffer, HashMap}
 import scala.collection.immutable.List
 import org.apache.activemq.apollo.store.{StoreUOW, QueueRecord}
 import Buffer._
-import org.apache.activemq.apollo.dto.{QueueDTO, PointToPointBindingDTO, BindingDTO}
 import org.apache.activemq.apollo.util.path.{Path, Part, PathMap, PathParser}
 import java.util.ArrayList
+import org.apache.activemq.apollo.dto._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -68,7 +68,8 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
   protected def dispatchQueue:DispatchQueue = host.dispatchQueue
 
-  var queues = HashMap[Binding, Queue]()
+  var queue_bindings = HashMap[Binding, Queue]()
+  var queues = HashMap[Long, Queue]()
 
   // Only stores simple paths, used for wild card lookups.
   var destinations = new PathMap[RoutingNode]()
@@ -134,9 +135,26 @@ class Router(val host:VirtualHost) extends DispatchLogging {
       }
     }.getOrElse(new QueueDTO)
 
-    val queue = new Queue(host, id, binding, config)
+
+    var qid = id
+    if( qid == -1 ) {
+      qid = host.queue_id_counter.incrementAndGet
+    }
+
+    val queue = new Queue(host, qid, binding, config)
+    if( queue.tune_persistent && id == -1 ) {
+
+      val record = new QueueRecord
+      record.key = qid
+      record.binding_data = binding.binding_data
+      record.binding_kind = binding.binding_kind
+
+      host.store.addQueue(record) { rc =>  }
+
+    }
     queue.start
-    queues.put(binding, queue)
+    queue_bindings.put(binding, queue)
+    queues.put(queue.id, queue)
 
     // Not all queues are bound to destinations.
     val name = binding.destination
@@ -166,31 +184,26 @@ class Router(val host:VirtualHost) extends DispatchLogging {
    */
   def _create_queue(dto: BindingDTO): Option[Queue] = {
     val binding = BindingFactory.create(dto)
-    val queue = queues.get(binding) match {
+    val queue = queue_bindings.get(binding) match {
       case Some(queue) => Some(queue)
       case None => Some(_create_queue(-1, binding))
     }
     queue
   }
 
-  def create_queue(dto:BindingDTO) = dispatchQueue ! {
-    _create_queue(dto)
+  def create_queue(id:BindingDTO) = dispatchQueue ! {
+    _create_queue(id)
   }
 
   /**
    * Returns true if the queue no longer exists.
    */
-  def destroy_queue(dto:BindingDTO) = dispatchQueue ! {
-    val binding = BindingFactory.create(dto)
-    queues.get(binding) match {
+  def destroy_queue(dto:BindingDTO) = dispatchQueue ! { _destroy_queue(dto) }
+
+  def _destroy_queue(dto:BindingDTO):Boolean = {
+    queue_bindings.get(BindingFactory.create(dto)) match {
       case Some(queue) =>
-        val name = binding.destination
-        if( name!=null ) {
-          get_destination_matches(name).foreach( node=>
-            node.remove_queue(queue)
-          )
-        }
-        queue.stop
+        _destroy_queue(queue)
         true
       case None =>
         true
@@ -198,11 +211,50 @@ class Router(val host:VirtualHost) extends DispatchLogging {
   }
 
   /**
+   * Returns true if the queue no longer exists.
+   */
+  def destroy_queue(id:Long) = dispatchQueue ! { _destroy_queue(id) }
+
+  def _destroy_queue(id:Long):Boolean = {
+    queues.get(id) match {
+      case Some(queue) =>
+        _destroy_queue(queue)
+        true
+      case None =>
+        true
+    }
+  }
+
+  def _destroy_queue(queue:Queue):Unit = {
+    queue_bindings.remove(queue.binding)
+    queues.remove(queue.id)
+
+    val name = queue.binding.destination
+    if( name!=null ) {
+      get_destination_matches(name).foreach( node=>
+        node.remove_queue(queue)
+      )
+    }
+    queue.stop
+    if( queue.tune_persistent ) {
+      queue.dispatchQueue ^ {
+        host.store.removeQueue(queue.id){x=>}
+      }
+    }
+  }
+
+  /**
    * Gets an existing queue.
    */
   def get_queue(dto:BindingDTO) = dispatchQueue ! {
-    val binding = BindingFactory.create(dto)
-    queues.get(binding)
+    queue_bindings.get(BindingFactory.create(dto))
+  }
+
+  /**
+   * Gets an existing queue.
+   */
+  def get_queue(id:Long) = dispatchQueue ! {
+    queues.get(id)
   }
 
   def bind(destination:Destination, consumer:DeliveryConsumer) = {
@@ -218,9 +270,9 @@ class Router(val host:VirtualHost) extends DispatchLogging {
         val node = create_destination_or(name) { node=> Unit }
       }
 
-      get_destination_matches(name).foreach( node=>
+      get_destination_matches(name).foreach{ node=>
         node.add_broadcast_consumer(consumer)
-      )
+      }
       broadcast_consumers.put(name, consumer)
     }
   }
@@ -249,7 +301,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
       // Looking up the queue will cause it to get created if it does not exist.
       val queue = if( !topic ) {
-        val dto = new PointToPointBindingDTO
+        val dto = new QueueBindingDTO
         dto.destination = DestinationParser.encode_path(destination.name)
         _create_queue(dto)
       } else {
@@ -280,11 +332,14 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
 }
 
-
+object RoutingNode {
+  val DEFAULT_CONFIG = new DestinationDTO
+}
 /**
  * Tracks state associated with a destination name.
  */
 class RoutingNode(val router:Router, val name:Path) {
+  import RoutingNode._
 
   val id = router.destination_id_counter.incrementAndGet
 
@@ -292,31 +347,64 @@ class RoutingNode(val router:Router, val name:Path) {
   var broadcast_consumers = ListBuffer[DeliveryConsumer]()
   var queues = ListBuffer[Queue]()
 
-  val unified = {
-    import collection.JavaConversions._
-    import OptionSupport._
-    import DestinationParser.default._
+  import OptionSupport._
 
-    val t= router.host.config.destinations.find( x=> parseFilter(ascii(x.path)).matches(name) )
-    t.flatMap(x=> o(x.unified)).getOrElse(false)
+  val config = {
+    import collection.JavaConversions._
+    import DestinationParser.default._
+    router.host.config.destinations.find( x=> parseFilter(ascii(x.path)).matches(name) ).getOrElse(DEFAULT_CONFIG)
   }
 
-  def add_broadcast_consumer (consumer:DeliveryConsumer) = {
-    broadcast_consumers += consumer
+  def unified = config.unified.getOrElse(false)
+  def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")
 
-    val list = consumer :: Nil
+  var consumer_proxies = Map[DeliveryConsumer, DeliveryConsumer]()
+
+  def add_broadcast_consumer (consumer:DeliveryConsumer) = {
+
+    var target = consumer
+    slow_consumer_policy match {
+      case "queue" =>
+
+        // create a temp queue so that it can spool
+        val queue = router._create_queue(-1, new TempBinding(consumer))
+        queue.dispatchQueue.setTargetQueue(consumer.dispatchQueue)
+        queue.bind(List(consumer))
+
+        consumer_proxies += consumer->queue
+        target = queue
+
+      case "block" =>
+        // just have dispatcher dispatch directly to them..
+    }
+
+    broadcast_consumers += target
+    val list = target :: Nil
     broadcast_producers.foreach({ r=>
       r.bind(list)
     })
   }
 
   def remove_broadcast_consumer (consumer:DeliveryConsumer) = {
-    broadcast_consumers = broadcast_consumers.filterNot( _ == consumer )
 
-    val list = consumer :: Nil
+    var target = consumer_proxies.get(consumer).getOrElse(consumer)
+
+    broadcast_consumers = broadcast_consumers.filterNot( _ == target )
+
+    val list = target :: Nil
     broadcast_producers.foreach({ r=>
       r.unbind(list)
     })
+
+    target match {
+      case queue:Queue=>
+        val binding = new TempBinding(consumer)
+        if( queue.binding == binding ) {
+          queue.unbind(List(consumer))
+          router._destroy_queue(queue.id)
+        }
+      case _ =>
+    }
   }
 
   def add_broadcast_producer (producer:DeliveryProducerRoute) = {

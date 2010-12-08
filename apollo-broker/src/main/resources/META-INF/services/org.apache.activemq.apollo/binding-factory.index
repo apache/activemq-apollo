@@ -14,5 +14,6 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ## ---------------------------------------------------------------------------
-org.apache.activemq.apollo.broker.PointToPointBindingFactory
-org.apache.activemq.apollo.broker.DurableSubBindingFactory
+org.apache.activemq.apollo.broker.QueueBindingFactory
+org.apache.activemq.apollo.broker.SubscriptionBindingFactory
+org.apache.activemq.apollo.broker.TempBindingFactory

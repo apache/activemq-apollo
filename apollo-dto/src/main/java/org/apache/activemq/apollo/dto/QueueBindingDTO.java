@@ -26,9 +26,14 @@ import javax.xml.bind.annotation.*;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlType(name = "binding")
-@XmlSeeAlso({QueueBindingDTO.class, SubscriptionBindingDTO.class})
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
+@XmlRootElement(name = "queue-binding")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BindingDTO {
+public class QueueBindingDTO extends BindingDTO {
+
+    /**
+     * A label that describes the binding
+     */
+    @XmlAttribute
+    public String destination;
+
 }

@@ -16,9 +16,10 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-
-import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * <p>
@@ -26,9 +27,7 @@ import javax.xml.bind.annotation.*;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlType(name = "binding")
-@XmlSeeAlso({QueueBindingDTO.class, SubscriptionBindingDTO.class})
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
+@XmlRootElement(name = "temp-binding")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BindingDTO {
+public class TempBindingDTO extends BindingDTO {
 }

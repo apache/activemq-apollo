@@ -22,13 +22,15 @@
 
 h1 Destination: #{name}
 
-h2 Queues
+h3 Queue Domain
 ul
   - for( x <- queues )
     li
-      a(href={ path("queues/"+x.id) }) #{x.label}
+      a(href={ path("../../queues/"+x.id) }) #{x.label}
 
-h3 Broadcast Producers
+h3 Topic Domain
+
+h4 Publishers
 ul
   - for( x <- producers )
     - x.kind match
@@ -37,10 +39,13 @@ ul
           a(href={ path("../../../../connections/"+x.ref) }) #{x.label}
       - case _ =>
 
-h3 Broadcast Consumers
+h4 Subscribers
 ul
   - for( x <- consumers )
     - x.kind match
+      - case "queue" =>
+        li
+          a(href={ path("../../queues/"+x.ref) }) #{x.label}
       - case "connection" =>
         li
           a(href={ path("../../../../connections/"+x.ref) }) #{x.label}

@@ -43,4 +43,6 @@ public class DestinationDTO extends StringIdDTO {
     @XmlAttribute
     public Boolean unified;
 
+    public String slow_consumer_policy;
+
 }

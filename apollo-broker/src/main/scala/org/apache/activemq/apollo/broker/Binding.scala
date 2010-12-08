@@ -105,30 +105,30 @@ trait Binding {
   def destination:Path
 }
 
-object PointToPointBinding {
+object QueueBinding {
   val POINT_TO_POINT_KIND = new AsciiBuffer("ptp")
   val DESTINATION_PATH = new AsciiBuffer("default");
 }
 
-import PointToPointBinding._
+import QueueBinding._
 
-class PointToPointBindingFactory extends BindingFactory.Provider {
+class QueueBindingFactory extends BindingFactory.Provider {
 
   def create(binding_kind:AsciiBuffer, binding_data:Buffer) = {
     if( binding_kind == POINT_TO_POINT_KIND ) {
-      val dto = new PointToPointBindingDTO
+      val dto = new QueueBindingDTO
       dto.destination = binding_data.ascii.toString
-      new PointToPointBinding(binding_data, dto)
+      new QueueBinding(binding_data, dto)
     } else {
       null
     }
   }
 
   def create(binding_dto:BindingDTO) = {
-    if( binding_dto.isInstanceOf[PointToPointBindingDTO] ) {
-      val ptp_dto = binding_dto.asInstanceOf[PointToPointBindingDTO]
+    if( binding_dto.isInstanceOf[QueueBindingDTO] ) {
+      val ptp_dto = binding_dto.asInstanceOf[QueueBindingDTO]
       val data = new AsciiBuffer(ptp_dto.destination).buffer
-      new PointToPointBinding(data, ptp_dto)
+      new QueueBinding(data, ptp_dto)
     } else {
       null
     }
@@ -141,7 +141,7 @@ class PointToPointBindingFactory extends BindingFactory.Provider {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class PointToPointBinding(val binding_data:Buffer, val binding_dto:PointToPointBindingDTO) extends Binding {
+class QueueBinding(val binding_data:Buffer, val binding_dto:QueueBindingDTO) extends Binding {
 
   val destination = DestinationParser.decode_path(binding_dto.destination)
   def binding_kind = POINT_TO_POINT_KIND
@@ -163,30 +163,30 @@ class PointToPointBinding(val binding_data:Buffer, val binding_dto:PointToPointB
   override def hashCode = binding_kind.hashCode ^ binding_data.hashCode
 
   override def equals(o:Any):Boolean = o match {
-    case x: PointToPointBinding => x.binding_data == binding_data
+    case x: QueueBinding => x.binding_data == binding_data
     case _ => false
   }
 
 }
 
 
-object DurableSubBinding {
+object SubscriptionBinding {
   val DURABLE_SUB_KIND = new AsciiBuffer("ds")
 }
 
-import DurableSubBinding._
+import SubscriptionBinding._
 
-class DurableSubBindingFactory extends BindingFactory.Provider {
+class SubscriptionBindingFactory extends BindingFactory.Provider {
   def create(binding_kind:AsciiBuffer, binding_data:Buffer) = {
     if( binding_kind == DURABLE_SUB_KIND ) {
-      new DurableSubBinding(binding_data, JsonCodec.decode(binding_data, classOf[DurableSubscriptionBindingDTO]))
+      new SubscriptionBinding(binding_data, JsonCodec.decode(binding_data, classOf[SubscriptionBindingDTO]))
     } else {
       null
     }
   }
   def create(binding_dto:BindingDTO) = {
-    if( binding_dto.isInstanceOf[DurableSubscriptionBindingDTO] ) {
-      new DurableSubBinding(JsonCodec.encode(binding_dto), binding_dto.asInstanceOf[DurableSubscriptionBindingDTO])
+    if( binding_dto.isInstanceOf[SubscriptionBindingDTO] ) {
+      new SubscriptionBinding(JsonCodec.encode(binding_dto), binding_dto.asInstanceOf[SubscriptionBindingDTO])
     } else {
       null
     }
@@ -200,7 +200,7 @@ class DurableSubBindingFactory extends BindingFactory.Provider {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class DurableSubBinding(val binding_data:Buffer, val binding_dto:DurableSubscriptionBindingDTO) extends Binding {
+class SubscriptionBinding(val binding_data:Buffer, val binding_dto:SubscriptionBindingDTO) extends Binding {
 
   val destination = DestinationParser.decode_path(binding_dto.destination)
 
@@ -229,7 +229,7 @@ class DurableSubBinding(val binding_data:Buffer, val binding_dto:DurableSubscrip
   override def hashCode = binding_kind.hashCode ^ binding_data.hashCode
 
   override def equals(o:Any):Boolean = o match {
-    case x: DurableSubBinding => x.binding_data == binding_data
+    case x: SubscriptionBinding => x.binding_data == binding_data
     case _ => false
   }
 
@@ -248,4 +248,67 @@ class DurableSubBinding(val binding_data:Buffer, val binding_dto:DurableSubscrip
     rc = rc && (o(config.subscription_id).map{ x=> x == binding_dto.subscription_id }.getOrElse(true))
     rc
   }
+}
+
+
+object TempBinding {
+  val TEMP_DATA = new AsciiBuffer("")
+  val TEMP_KIND = new AsciiBuffer("tmp")
+  val TEMP_DTO = new TempBindingDTO
+}
+
+import TempBinding._
+
+class TempBindingFactory extends BindingFactory.Provider {
+
+  def create(binding_kind:AsciiBuffer, binding_data:Buffer) = {
+    if( binding_kind == TEMP_KIND ) {
+      new TempBinding("", "")
+    } else {
+      null
+    }
+  }
+
+  def create(binding_dto:BindingDTO) = {
+    if( binding_dto.isInstanceOf[TempBindingDTO] ) {
+      new TempBinding("", "")
+    } else {
+      null
+    }
+  }
+}
+
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+class TempBinding(val key:AnyRef, val label:String) extends Binding {
+  def this(c:DeliveryConsumer) = this(c, c.connection.map(_.transport.getRemoteAddress).getOrElse("known") )
+
+  val destination = null
+  def binding_kind = TEMP_KIND
+  def binding_dto = TEMP_DTO
+  def binding_data = TEMP_DATA
+
+  def unbind(node: RoutingNode, queue: Queue) = {
+    if( node.unified ) {
+      node.remove_broadcast_consumer(queue)
+    }
+  }
+
+  def bind(node: RoutingNode, queue: Queue) = {
+    if( node.unified ) {
+      node.add_broadcast_consumer(queue)
+    }
+  }
+
+  override def hashCode = if(key==null) 0 else key.hashCode
+
+  override def equals(o:Any):Boolean = o match {
+    case x: TempBinding => x.key == key
+    case _ => false
+  }
+
 }
