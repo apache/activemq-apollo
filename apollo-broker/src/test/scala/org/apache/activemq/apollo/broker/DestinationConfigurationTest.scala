@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.broker
 import org.fusesource.hawtbuf.Buffer._
 import scala.util.continuations._
 import org.apache.activemq.apollo.util.{ServiceControl, FunSuiteSupport}
-import org.apache.activemq.apollo.dto.{BindingDTO, DurableSubscriptionBindingDTO, PointToPointBindingDTO}
+import org.apache.activemq.apollo.dto._
 
 /**
  * <p>
@@ -61,12 +61,12 @@ class DestinationConfigurationTest extends FunSuiteSupport {
     }
 
     check_tune_queue_buffer(333) {
-      var p = new PointToPointBindingDTO()
+      var p = new QueueBindingDTO()
       p.destination = "unified.a"
       p
     }
     check_tune_queue_buffer(444) {
-      val p = new DurableSubscriptionBindingDTO()
+      val p = new SubscriptionBindingDTO()
       p.destination = "unified.b"
       p.client_id = "a"
       p.subscription_id = "b"
@@ -74,7 +74,7 @@ class DestinationConfigurationTest extends FunSuiteSupport {
     }
 
     check_tune_queue_buffer(111) {
-      var p = new PointToPointBindingDTO()
+      var p = new QueueBindingDTO()
       p.destination = "notunified.other"
       p
     }
