@@ -14,36 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.dto;
-
-import org.codehaus.jackson.annotate.JsonProperty;
-
-import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
+package org.apache.activemq.apollo.web.resources;
 
 /**
+ * <p>
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "destination")
-@XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationDTO extends StringIdDTO {
-
-    /**
-     * The path to the destination.  You can use wild cards.
-     */
-	@XmlAttribute
-	public String path;
-
-    /**
-     * If set to true, then routing then there is no difference between
-     * sending to a queue or topic of the same name.  The first time
-     * a queue subscriptions is created, it will act like if a durable
-     * subscription was created on the topic. 
-     */
-    @XmlAttribute
-    public Boolean unified;
-
-    @XmlElement(name="slow-consumer-policy")
-    public String slow_consumer_policy;
+@javax.ws.rs.ext.Provider
+@javax.ws.rs.Consumes({"application/json", "text/json"})
+@javax.ws.rs.Produces({"application/json", "text/json"})
+public class JacksonJsonProvider extends org.codehaus.jackson.jaxrs.JacksonJsonProvider {
 
 }

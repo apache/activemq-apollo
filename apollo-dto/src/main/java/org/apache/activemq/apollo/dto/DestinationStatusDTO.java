@@ -38,6 +38,9 @@ public class DestinationStatusDTO extends LongIdDTO {
     @XmlAttribute
     public String name;
 
+    @XmlElement
+    public DestinationDTO config;
+
     /**
      * Ids of all connections that are producing to the destination
      */

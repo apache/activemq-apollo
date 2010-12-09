@@ -106,7 +106,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
    * Should messages be flushed or swapped out of memory if
    * no consumers need the message?
    */
-  var tune_flush_to_store = true
+  var tune_swap = true
 
   /**
    * The number max number of flushed queue entries to load
@@ -124,7 +124,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
   def configure(c:QueueDTO) = {
     config = c
     tune_persistent = host.store !=null && config.persistent.getOrElse(true)
-    tune_flush_to_store = tune_persistent && config.flush_to_store.getOrElse(true)
+    tune_swap = tune_persistent && config.swap.getOrElse(true)
     tune_flush_range_size = config.flush_range_size.getOrElse(10000)
     tune_consumer_buffer = config.consumer_buffer.getOrElse(32*1024)
   }
@@ -321,7 +321,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
   }
 
   def trigger_swap = {
-    if( tune_flush_to_store ) {
+    if( tune_swap ) {
       swap_source.merge(1)
     }
   }
@@ -891,7 +891,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     }
 
     override def flush(asap:Boolean) = {
-      if( queue.tune_flush_to_store ) {
+      if( queue.tune_swap ) {
         if( stored ) {
           flushing=true
           queue.flushing_size+=size

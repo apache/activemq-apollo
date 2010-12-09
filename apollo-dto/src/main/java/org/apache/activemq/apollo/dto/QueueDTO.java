@@ -60,37 +60,32 @@ public class QueueDTO {
      *  The amount of memory buffer space for receiving messages.
      */
     @XmlAttribute(name="producer-buffer")
-    @JsonProperty("producer_buffer")
     public Integer producer_buffer;
 
     /**
      *  The amount of memory buffer space for the queue..
      */
     @XmlAttribute(name="queue-buffer")
-    @JsonProperty("queue_buffer")
     public Integer queue_buffer;
 
     /**
      *  The amount of memory buffer space to use per subscription.
      */
     @XmlAttribute(name="consumer-buffer")
-    @JsonProperty("consumer_buffer")
     public Integer consumer_buffer;
 
     /**
      * Should this queue persistently store it's entries?
      */
     @XmlAttribute(name="persistent")
-    @JsonProperty("persistent")
     public Boolean persistent;
 
     /**
-     * Should messages be flushed or swapped out of memory if
+     * Should messages be swapped out of memory if
      * no consumers need the message?
      */
-    @XmlAttribute(name="flush-to-store")
-    @JsonProperty("flush_to_store")
-    public Boolean flush_to_store;
+    @XmlAttribute(name="swap")
+    public Boolean swap;
 
     /**
      * The number max number of flushed queue entries to load
@@ -99,15 +94,6 @@ public class QueueDTO {
      * the batch is referenced as sequence range to conserve memory.
      */
     @XmlAttribute(name="flush-range-size")
-    @JsonProperty("flush_range_size")
     public Integer flush_range_size;
-
-    /**
-     * The number of intervals that a consumer must not meeting the subscription rate before it is
-     * flagged as a slow consumer.
-     */
-    @XmlAttribute(name="max-slow-intervals")
-    @JsonProperty("max_slow_intervals")
-    public Integer max_slow_intervals;
 
 }

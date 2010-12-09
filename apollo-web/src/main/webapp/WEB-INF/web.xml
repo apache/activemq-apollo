@@ -51,7 +51,6 @@
     <init-param>
       <param-name>com.sun.jersey.config.property.packages</param-name>
       <param-value>
-        org.codehaus.jackson.jaxrs;
         org.fusesource.scalate.console;
         org.apache.activemq.apollo.web.resources
       </param-value>

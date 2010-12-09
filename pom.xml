@@ -108,7 +108,7 @@
     <scalamd-version>1.2</scalamd-version>
 
     <servlet-api-version>2.5</servlet-api-version>
-    <jackson-version>1.5.2</jackson-version>
+    <jackson-version>1.6.1</jackson-version>
     <logback-version>0.9.24</logback-version>
     <jersey-version>1.5-ea03</jersey-version>
     

@@ -33,6 +33,9 @@ import java.util.List;
 public class QueueStatusDTO extends LongIdDTO {
 
     @XmlElement
+    public QueueDTO config;
+
+    @XmlElement
     public BindingDTO binding;
 
     @XmlAttribute(name="enqueue-item-counter")

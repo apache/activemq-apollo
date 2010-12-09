@@ -19,8 +19,36 @@
   </notes>
 
   <virtual-host id="default" auto-create-queues="true" >
+
+    <!--
+      You should add all the host names that this virtual host is known as
+      to properly support the STOMP 1.1 virtual host feature.
+      -->
     <host-name>localhost</host-name>
+
+    <!--
+      Examples of how to configure destinations and queues. Note
+      they you can use wildcard patterns when specifying destinations,
+      only the first element that matches will be used to configure the
+      destination or queue.
+      -->
+
+    <!-- Use this if you expect to have slow consumers on a topic -->
+    <destination path="slow.**" slow_consumer_policy="queue"/>
+
+    <!-- Use this if you want the queue and topic with of the same name
+         to be the same logical entity -->
+    <destination path="unified.**" unified="true"/>
+
+    <!-- disable message swapping for some queues -->
+    <queue destination="noswap.**" kind="ptp" swap="false"/>
+
+    <!-- disable message swapping for durable subscriptions -->
+    <queue destination="noswap.**" kind="ds" swap="false"/>
+
+    <!-- You can delete this element if you want to disable persistent for this virtual host -->
     <hawtdb-store directory="${apollo.base}/data"/>
+
   </virtual-host>
 
   <connector id="tcp" bind="tcp://0.0.0.0:61613" connection-limit="2000" protocol="multi"/>

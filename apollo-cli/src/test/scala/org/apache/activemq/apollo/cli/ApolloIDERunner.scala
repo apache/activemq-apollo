@@ -63,6 +63,9 @@ class ApolloIDERunner  {
       System.setProperty("apollo.webapp", apollo_webapp.getCanonicalPath)
     }
 
+    System.setProperty("scalate.mode", "development")
+
+
     // Configure jul logging..
     val apollo_base = new File(System.getProperty("apollo.base"))
     val jul_properties = apollo_base / "etc" / "jul.properties"

@@ -160,6 +160,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
         val result = new DestinationStatusDTO
         result.id = node.id
         result.name = node.name.toString
+        result.config = node.config
         node.queues.foreach { q=>
           result.queues.add(new LongIdLabeledDTO(q.id, q.binding.label))
         }
@@ -211,6 +212,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       rc.binding = q.binding.binding_dto
       rc.capacity_used = q.capacity_used
       rc.capacity = q.capacity
+      rc.config = q.config
 
       rc.enqueue_item_counter = q.enqueue_item_counter
       rc.dequeue_item_counter = q.dequeue_item_counter
@@ -246,6 +248,8 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
             cur.nextOrTail
           }
         }
+      } else {
+//        rc.entries = null
       }
 
       q.inbound_sessions.flatMap( _.producer.connection ).foreach { connection=>
