@@ -197,7 +197,7 @@ case class BrokerResource(parent:Resource, @BeanProperty id: String) extends Res
     rc.id = id
     rc.manageable = BrokerRegistry.get(id)!=null
     rc.configurable = cs.dispatchQueue.sync{
-      cs.getBroker(id,false).isDefined
+      cs.can_write && cs.getBroker(id,false).isDefined
     }
     rc
   }

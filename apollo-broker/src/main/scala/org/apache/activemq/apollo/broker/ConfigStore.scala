@@ -65,6 +65,8 @@ trait ConfigStore extends Service {
 
   def dispatchQueue:DispatchQueue
 
+  def can_write:Boolean
+
 }
 
 /**
@@ -110,6 +112,8 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     })
   }
 
+  def can_write:Boolean = file.canWrite
+
   def startup(onCompleted:Runnable) = {
 
     file = file.getCanonicalFile;
@@ -135,7 +139,7 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
         write(r)
       } else {
         val x = read(rev, file)
-        if ( !Arrays.equals(r.data, x.data) ) {
+        if ( can_write && !Arrays.equals(r.data, x.data) ) {
           write(StoredBrokerModel(x.id, x.rev+1, x.data, x.lastModified))
         } else {
           x
@@ -143,7 +147,7 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
       }
     } getOrElse {
       if( file.exists ) {
-        write(read(1, file))
+        read(1, file)
       } else {
         write(StoredBrokerModel(defaultConfig(1)))
       }
