@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 # ------------------------------------------------------------------------
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -19,49 +19,27 @@
 require 'rubygems'
 require 'stomp'
 
-@conn = Stomp::Connection.open '', '', 'localhost', 61613, false 
-@messages = 10000
-@batches = 40
-@subscribers = 10
-@size = 256
+messages = 10000
+size = 256
 
-@DATA = "abcdefghijklmnopqrstuvwxyz";
-@body = "";
-for i in 0..(@size-1)
-	@body += @DATA[ i % @DATA.length,1]
+user = ENV["STOMP_USER"] || "admin"
+password = ENV["STOMP_PASSWORD"] || "password"
+host = ENV["STOMP_HOST"] || "localhost"
+port = ENV["STOMP_PORT"] || 61613
+destination = $*[0] || "/topic/event"
+
+conn = Stomp::Connection.open user, password, host, port, false 
+
+DATA = "abcdefghijklmnopqrstuvwxyz";
+body = "";
+for i in 0..(size-1)
+  body += DATA[ i % DATA.length,1]
 end
 
-@times = []
-@conn.subscribe '/queue/response', { :ack =>"auto" }
-
-for i in 1..(@batches)
-	@body += @DATA[ i % @DATA.length,1]
-	sleep 1 if i == 1
-
- 	@start = Time.now	
-
-	for j in 1..@messages
-		@conn.publish '/topic/event', @body, {'persistent'=>'false'}
-		$stdout.print "Sent #{j} messages\n" if j%1000==0
-	end
-	@conn.publish '/topic/event', "REPORT", {'persistent'=>'false'}
-
-	@remaining = @subscribers
-	while @remaining > 0
-		@msg = @conn.receive
-		if @msg.command == "MESSAGE" 
-			@remaining -= 1
-			$stdout.print "Received report: #{@msg.body}, remaining: #{@remaining}\n"
-		else
- 			$stdout.print "#{@msg.command}: #{@msg.body}\n"
-		end
-	end
- 	@diff = Time.now-@start
-
-	$stdout.print "Batch #{i} of #{@batches} completed in #{@diff} seconds.\n"
-	@times[i] = @diff
+for i in 1..messages
+  conn.publish destination, body, {'persistent'=>'false'}
+  $stdout.print "Sent #{i} messages\n" if i%1000==0
 end
 
-@conn.publish '/topic/event', "SHUTDOWN", {'persistent'=>'false'}
-
-@conn.disconnect
+conn.publish destination, "SHUTDOWN", {'persistent'=>'false'}
+conn.disconnect

@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 # ------------------------------------------------------------------------
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -15,34 +15,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------
-
 require 'rubygems'
 require 'stomp'
 
+user = ENV["STOMP_USER"] || "admin"
+password = ENV["STOMP_PASSWORD"] || "password"
+host = ENV["STOMP_HOST"] || "localhost"
+port = ENV["STOMP_PORT"] || 61613
+destination = $*[0] || "/topic/event"
+
 begin
   
-    @port = 61613
-    @host = "localhost"
-    @user = ENV["STOMP_USER"];
-    @password = ENV["STOMP_PASSWORD"]
-    
-    @host = ENV["STOMP_HOST"] if ENV["STOMP_HOST"] != NIL
-    @port = ENV["STOMP_PORT"] if ENV["STOMP_PORT"] != NIL
-    
-    @destination = "/topic/stompcat"
-    @destination = $*[0] if $*[0] != NIL
-    
-    $stderr.print "Connecting to stomp://#{@host}:#{@port} as #{@user}\n"
-    @conn = Stomp::Connection.open @user, @password, @host, @port, true
-    $stderr.print "Sending input to #{@destination}\n"
+  $stderr.print "Connecting to stomp://#{host}:#{port} as #{user}\n"
+  conn = Stomp::Connection.open user, password, host, port, true
+  $stderr.print "Sending input to #{destination}\n"
 
-    @headers = {'persistent'=>'false'} 
-    @headers['reply-to'] = $*[1] if $*[1] != NIL
+  headers = {'persistent'=>'false'} 
+  headers['reply-to'] = $*[1] if $*[1] != NIL
 
-    STDIN.each_line { |line| 
-        @conn.send @destination, line, @headers
-    }
-    @conn.disconnect
+  STDIN.each_line { |line| 
+      conn.publish destination, line, headers
+  }
+  conn.disconnect
 
 rescue 
 end

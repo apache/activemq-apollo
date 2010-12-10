@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 # ------------------------------------------------------------------------
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -19,33 +19,35 @@
 require 'rubygems'
 require 'stomp'
 
-@conn = Stomp::Connection.open '', '', 'localhost', 61613, false 
-@count = 0
+user = ENV["STOMP_USER"] || "admin"
+password = ENV["STOMP_PASSWORD"] || "password"
+host = ENV["STOMP_HOST"] || "localhost"
+port = ENV["STOMP_PORT"] || 61613
+destination = $*[0] || "/topic/event"
 
-@conn.subscribe '/topic/event', { :ack =>"auto" }
+conn = Stomp::Connection.open user, password, host, port, false 
+count = 0
+
+conn.subscribe destination, { :ack =>"auto" }
+start = Time.now
 while true 
-	@msg = @conn.receive
-	if @msg.command == "MESSAGE" 
-		if @msg.body == "SHUTDOWN"
+	msg = conn.receive
+	if msg.command == "MESSAGE" 
+		if msg.body == "SHUTDOWN"
+			diff = Time.now - start
+			$stdout.print "Received #{count} in #{diff} seconds\n";
 			exit 0
 	
-		elsif @msg.body == "REPORT"
-			@diff = Time.now - @start
-			@body = "Received #{@count} in #{@diff} seconds";
-			@conn.send '/queue/response', @body, {'persistent'=>'false'}
-			@count = 0;
 		else
-			if @count == 0 
-				@start = Time.now
-			end
-
-			@count += 1;
-			if @count % 1000 == 0
- 				$stdout.print "Received #{@count} messages.\n"
+		  start = Time.now if count==0 
+			count += 1;
+			if count % 1000 == 0
+ 				$stdout.print "Received #{count} messages.\n"
 			end
 		end
 	else
- 		$stdout.print "#{@msg.command}: #{@msg.body}\n"
+ 		$stdout.print "#{msg.command}: #{msg.body}\n"
 	end
 end
-@conn.disconnect
+
+conn.disconnect
