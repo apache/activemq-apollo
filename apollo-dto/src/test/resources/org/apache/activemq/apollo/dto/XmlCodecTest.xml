@@ -24,6 +24,7 @@
   </acl>
 
   <virtual-host enabled="true" id="vh-local">
+    <acl/>
     <host-name>localhost</host-name>
     <host-name>example.com</host-name>
   </virtual-host>

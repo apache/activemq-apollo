@@ -23,6 +23,7 @@ import java.security.cert.X509Certificate
 import org.apache.activemq.apollo.util.OptionSupport._
 import org.apache.activemq.jaas.{GroupPrincipal, UserPrincipal}
 import org.apache.activemq.apollo.dto.PrincipalDTO
+import javax.security.auth.login.LoginContext
 
 /**
  * <p>
@@ -35,6 +36,8 @@ class SecurityContext {
   var user:String = _
   var password:String = _
   var certificates = Array[X509Certificate]()
+
+  var login_context:LoginContext = _
 
   private val principles = new HashSet[PrincipalDTO]()
 
@@ -55,11 +58,12 @@ class SecurityContext {
 
   def intersects(values:Set[PrincipalDTO], default_kinds:List[String]):Boolean = {
     val (v1, v2) = values.partition(_.kind == null)
-    if( principles.intersect(v2).isEmpty ) {
+    if( !principles.intersect(v2).isEmpty ) {
       return true
     }
     default_kinds.foreach { x=>
-      if( ! (v1.map(y=> new PrincipalDTO(y.name, x) ).intersect(v1).isEmpty) ) {
+      val kinda_added = v1.map(y=> new PrincipalDTO(y.name, x))
+      if( ! principles.intersect(kinda_added).isEmpty ) {
         return true
       }
     }

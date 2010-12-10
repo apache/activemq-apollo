@@ -117,9 +117,17 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
     val tracker = new LoggingTracker("virtual host startup", dispatchQueue)
 
     if( config.authentication != null ) {
-      authenticator = new JaasAuthenticator(config.authentication.domain)
-      authorizer = new AclAuthorizer(config.authentication.kinds().toList)
+      if( config.authentication.enabled.getOrElse(true) ) {
+        // Virtual host has it's own settings.
+        authenticator = new JaasAuthenticator(config.authentication.domain)
+        authorizer = new AclAuthorizer(config.authentication.kinds().toList)
+      } else {
+        // Don't use security on this host.
+        authenticator = null
+        authorizer = null
+      }
     } else {
+      // use the broker's settings..
       authenticator = broker.authenticator
       authorizer = broker.authorizer
     }
@@ -172,7 +180,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
                   x match {
                     case Some(record)=>
                     dispatchQueue ^{
-                      router.create_queue(record)
+                      router.create_queue(record, null)
                       task.run
                     }
                     case _ =>

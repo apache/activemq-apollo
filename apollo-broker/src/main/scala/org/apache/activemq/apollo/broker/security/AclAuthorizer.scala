@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.broker.security
 import org.apache.activemq.apollo.broker.{Destination, VirtualHost, Broker}
 import scala.util.continuations._
 import org.apache.activemq.apollo.util.path.Path
-import org.apache.activemq.apollo.dto.{PrincipalDTO, QueueAclDTO, DestinationAclDTO, BindingDTO}
+import org.apache.activemq.apollo.dto._
 
 /**
  * <p>
@@ -34,15 +34,11 @@ class AclAuthorizer(val default_kinds:List[String]) extends Authorizer {
 
   var allow_deafult = true
 
-  private def sync[T](func: =>T): T @suspendable = shift { k: (T=>Unit) =>
-    k(func)
-  }
-
   def is_in(ctx: SecurityContext, allowed:java.util.Set[PrincipalDTO]):Boolean = {
     ctx.intersects(allowed.toSet, default_kinds)
   }
 
-  def can_admin(ctx: SecurityContext, broker: Broker) = sync {
+  def can_admin(ctx: SecurityContext, broker: Broker) = {
     if( broker.config.acl!=null ) {
       is_in(ctx, broker.config.acl.admins)
     } else {
@@ -50,7 +46,7 @@ class AclAuthorizer(val default_kinds:List[String]) extends Authorizer {
     }
   }
 
-  def can_connect_to(ctx: SecurityContext, host: VirtualHost) = sync {
+  def can_connect_to(ctx: SecurityContext, host: VirtualHost) = {
     if( host.config.acl!=null ) {
       is_in(ctx, host.config.acl.connects)
     } else {
@@ -58,58 +54,53 @@ class AclAuthorizer(val default_kinds:List[String]) extends Authorizer {
     }
   }
 
-
-  private def for_dest(ctx: SecurityContext, host: VirtualHost, dest: Path)(func: DestinationAclDTO=>java.util.Set[PrincipalDTO]) = {
-    host.destination_config(dest).map { config=>
-      if( config.acl!=null ) {
-        is_in(ctx, func(config.acl))
-      } else {
-        allow_deafult
-      }
-    }.getOrElse(allow_deafult)
+  private def can_dest(ctx: SecurityContext, host: VirtualHost, dest: DestinationDTO)(func: DestinationAclDTO=>java.util.Set[PrincipalDTO]) = {
+    if( dest.acl!=null ) {
+      is_in(ctx, func(dest.acl))
+    } else {
+      allow_deafult
+    }
   }
 
-  def can_send_to(ctx: SecurityContext, host: VirtualHost, dest: Path) = sync {
-    for_dest(ctx, host, dest)(_.sends)
+  def can_send_to(ctx: SecurityContext, host: VirtualHost, dest: DestinationDTO) = {
+    can_dest(ctx, host, dest)(_.sends)
   }
-  def can_receive_from(ctx: SecurityContext, host: VirtualHost, dest: Path) = sync {
-    for_dest(ctx, host, dest)(_.receives)
+  def can_receive_from(ctx: SecurityContext, host: VirtualHost, dest: DestinationDTO) = {
+    can_dest(ctx, host, dest)(_.receives)
   }
-  def can_destroy(ctx: SecurityContext, host: VirtualHost, dest: Path) = sync  {
-    for_dest(ctx, host, dest)(_.destroys)
+  def can_destroy(ctx: SecurityContext, host: VirtualHost, dest: DestinationDTO) = {
+    can_dest(ctx, host, dest)(_.destroys)
   }
-  def can_create(ctx: SecurityContext, host: VirtualHost, dest: Path) = sync  {
-    for_dest(ctx, host, dest)(_.creates)
-  }
-
-  private def for_queue(ctx: SecurityContext, host: VirtualHost, dto: BindingDTO)(func: QueueAclDTO=>java.util.Set[PrincipalDTO]) = {
-    host.queue_config(dto).map { config=>
-      if( config.acl!=null ) {
-        is_in(ctx, func(config.acl))
-      } else {
-        allow_deafult
-      }
-    }.getOrElse(allow_deafult)
+  def can_create(ctx: SecurityContext, host: VirtualHost, dest: DestinationDTO) = {
+    can_dest(ctx, host, dest)(_.creates)
   }
 
-  def can_send_to(ctx: SecurityContext, host: VirtualHost, dest: BindingDTO) = sync  {
-    for_queue(ctx, host, dest)(_.sends)
+  private def can_queue(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO)(func: QueueAclDTO=>java.util.Set[PrincipalDTO]) = {
+    if( queue.acl!=null ) {
+      is_in(ctx, func(queue.acl))
+    } else {
+      allow_deafult
+    }
   }
 
-  def can_receive_from(ctx: SecurityContext, host: VirtualHost, dest: BindingDTO) = sync  {
-    for_queue(ctx, host, dest)(_.receives)
+  def can_send_to(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = {
+    can_queue(ctx, host, queue)(_.sends)
   }
 
-  def can_destroy(ctx: SecurityContext, host: VirtualHost, dest: BindingDTO) = sync  {
-    for_queue(ctx, host, dest)(_.destroys)
+  def can_receive_from(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = {
+    can_queue(ctx, host, queue)(_.receives)
   }
 
-  def can_create(ctx: SecurityContext, host: VirtualHost, dest: BindingDTO) = sync  {
-    for_queue(ctx, host, dest)(_.creates)
+  def can_destroy(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = {
+    can_queue(ctx, host, queue)(_.destroys)
   }
 
-  def can_consume_from(ctx: SecurityContext, host: VirtualHost, dest: BindingDTO) = sync  {
-    for_queue(ctx, host, dest)(_.consumes)
+  def can_create(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = {
+    can_queue(ctx, host, queue)(_.creates)
+  }
+
+  def can_consume_from(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = {
+    can_queue(ctx, host, queue)(_.consumes)
   }
 
 }

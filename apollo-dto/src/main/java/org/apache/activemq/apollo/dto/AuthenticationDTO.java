@@ -35,6 +35,9 @@ import java.util.Set;
 public class AuthenticationDTO {
 
     @XmlAttribute
+    public Boolean enabled;
+
+    @XmlAttribute
     public String domain;
 
     @XmlElement(name="kind")

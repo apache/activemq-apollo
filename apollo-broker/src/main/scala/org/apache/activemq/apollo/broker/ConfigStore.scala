@@ -122,24 +122,10 @@ class FileConfigStore extends ConfigStore {
     }
     revs = revs.sortWith((x,y)=> x < y)
 
-    val last = revs.lastOption.map{ rev=>
-      val r = read(rev, fileRev(rev))
-      if( !file.exists ) {
-        write(r)
-      } else {
-        val x = read(rev, file)
-        if ( can_write && !Arrays.equals(r.data, x.data) ) {
-          write(x.copy(rev=x.rev+1))
-        } else {
-          x
-        }
-      }
-    } getOrElse {
-      if( file.exists ) {
-        read(1, file)
-      } else {
-        write(StoredBrokerModel(defaultConfig(1)))
-      }
+    val last = if( file.exists ) {
+      read(1, file)
+    } else {
+      write(StoredBrokerModel(defaultConfig(1)))
     }
 
     latest = last

@@ -216,7 +216,8 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
         key_storage.config = config.key_storage
       }
 
-      if( config.authentication != null ) {
+      import OptionSupport._
+      if( config.authentication != null && config.authentication.enabled.getOrElse(true) ) {
         authenticator = new JaasAuthenticator(config.authentication.domain)
         authorizer = new AclAuthorizer(config.authentication.kinds().toList)
       }

@@ -30,7 +30,7 @@ import java.util.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class DestinationAclDTO {
 
-    @XmlElement(name="creates")
+    @XmlElement(name="create")
     public Set<PrincipalDTO> creates = new HashSet<PrincipalDTO>();
 
     @XmlElement(name="destroy")

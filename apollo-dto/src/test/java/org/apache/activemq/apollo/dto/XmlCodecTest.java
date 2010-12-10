@@ -35,12 +35,14 @@ public class XmlCodecTest {
 
     @Test
     public void unmarshalling() throws Exception {
-        BrokerDTO dto = XmlCodec.unmarshalBrokerDTO(resource("simple.xml"));
+        BrokerDTO dto = XmlCodec.unmarshalBrokerDTO(resource("XmlCodecTest.xml"));
         assertNotNull(dto);
         assertEquals("default", dto.id);
-        assertEquals("vh-local", dto.virtual_hosts.get(0).id);
-        assertEquals("localhost", dto.virtual_hosts.get(0).host_names.get(0));
-        assertEquals("example.com", dto.virtual_hosts.get(0).host_names.get(1));
+        VirtualHostDTO host = dto.virtual_hosts.get(0);
+        assertNotNull(host.acl);
+        assertEquals("vh-local", host.id);
+        assertEquals("localhost", host.host_names.get(0));
+        assertEquals("example.com", host.host_names.get(1));
 
         assertNotNull(dto.acl);
         assertTrue(dto.acl.admins.contains(new PrincipalDTO("hiram")));

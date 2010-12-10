@@ -19,6 +19,7 @@
     The default configuration with tls/ssl enabled.
   </notes>
 
+  <!-- used to secure the web admin interface -->
   <authentication domain="apollo"/>
   <acl>
     <admin name="admins"/>
@@ -32,6 +33,37 @@
       to properly support the STOMP 1.1 virtual host feature.
       -->
     <host-name>localhost</host-name>
+
+    <!-- Uncomment to disable security for the virtual host
+    <authentication enabled="false"/>
+    -->
+
+    <!--
+      You can add an 'acl' element to the virtual host,
+      destination, or queue elements to restrict the operations
+      that a user can take.  If the acl element is not set on
+      an object, then access is not restricted at all.
+      -->
+    <acl>
+      <connect name="admins"/>
+    </acl>
+    <destination path="secure.**">
+      <acl>
+        <create  name="admins"/>
+        <destroy name="admins"/>
+        <send    name="admins"/>
+        <receive name="admins"/>
+      </acl>
+    </destination>
+    <queue path="secure.**">
+      <acl>
+        <create  name="admins"/>
+        <destroy name="admins"/>
+        <send    name="admins"/>
+        <receive name="admins"/> <!-- queue browsers -->
+        <consume name="admins"/> <!-- regular consumers -->
+      </acl>
+    </queue>
 
     <!--
       Examples of how to configure destinations and queues. Note

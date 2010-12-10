@@ -31,6 +31,7 @@ import Buffer._
 import org.apache.activemq.apollo.util.path.{Path, Part, PathMap, PathParser}
 import java.util.ArrayList
 import org.apache.activemq.apollo.dto._
+import security.SecurityContext
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -94,41 +95,58 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
   def routing_nodes:Iterable[RoutingNode] = JavaConversions.asIterable(destinations.get(ALL))
   
-  def create_destination_or(destination:Path)(func:(RoutingNode)=>Unit):RoutingNode = {
+  def _get_or_create_destination(path:Path, security:SecurityContext) = {
+    // We can't create a wild card destination.. only wild card subscriptions.
+    assert( !PathParser.containsWildCards(path) )
+    var rc = destinations.chooseValue( path )
+    if( rc == null ) {
+      _create_destination(path, security)
+    } else {
+      Success(rc)
+    }
+  }
+
+  def _get_destination(path:Path) = {
+    Option(destinations.chooseValue( path ))
+  }
+
+  def _create_destination(path:Path, security:SecurityContext):Result[RoutingNode,String] = {
 
     // We can't create a wild card destination.. only wild card subscriptions.
-    assert( !PathParser.containsWildCards(destination) )
+    assert( !PathParser.containsWildCards(path) )
 
-    var rc = destinations.chooseValue( destination )
-    if( rc == null ) {
+    // A new destination is being created...
+    val config = host.destination_config(path).getOrElse(new DestinationDTO)
 
-      // A new destination is being created...
-      rc = new RoutingNode(this, destination )
-      destinations.put(destination, rc)
-
-      // bind any matching wild card subs
-      import JavaConversions._
-      broadcast_consumers.get( destination ).foreach { c=>
-        rc.add_broadcast_consumer(c)
-      }
-      bindings.get( destination ).foreach { queue=>
-        rc.add_queue(queue)
-      }
-
-    } else {
-      func(rc)
+    if(  host.authorizer!=null && security!=null && !host.authorizer.can_create(security, host, config)) {
+      return new Failure("Not authorized to create the destination")
     }
-    rc
-  }
 
-  def get_destination_matches(destination:Path) = {
+    val rc = new RoutingNode(this, path, config)
+    destinations.put(path, rc)
+
+    // bind any matching wild card subs
     import JavaConversions._
-    asIterable(destinations.get( destination ))
+    broadcast_consumers.get( path ).foreach { c=>
+      rc.add_broadcast_consumer(c)
+    }
+    bindings.get( path ).foreach { queue=>
+      rc.add_queue(queue)
+    }
+    Success(rc)
   }
 
-  def _create_queue(id:Long, binding:Binding):Queue = {
+  def get_destination_matches(path:Path) = {
+    import JavaConversions._
+    asIterable(destinations.get( path ))
+  }
+
+  def _create_queue(id:Long, binding:Binding, security:SecurityContext):Result[Queue,String] = {
 
     val config = host.queue_config(binding).getOrElse(new QueueDTO)
+    if( host.authorizer!=null && security!=null && !host.authorizer.can_create(security, host, config) ) {
+      return Failure("Not authorized to create the queue")
+    }
 
     var qid = id
     if( qid == -1 ) {
@@ -143,7 +161,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
       record.binding_data = binding.binding_data
       record.binding_kind = binding.binding_kind
 
-      host.store.addQueue(record) { rc =>  }
+      host.store.addQueue(record) { rc => Unit }
 
     }
     queue.start
@@ -156,8 +174,11 @@ class Router(val host:VirtualHost) extends DispatchLogging {
       bindings.put(name, queue)
       // make sure the destination is created if this is not a wild card sub
       if( !PathParser.containsWildCards(name) ) {
-        create_destination_or(name) { node=>
-          node.add_queue(queue)
+        _get_destination(name) match {
+          case Some(node)=>
+            node.add_queue(queue)
+          case None=>
+            _create_destination(name, null)
         }
       } else {
         get_destination_matches(name).foreach( node=>
@@ -166,60 +187,66 @@ class Router(val host:VirtualHost) extends DispatchLogging {
       }
 
     }
-    queue
+    Success(queue)
+
   }
 
-  def create_queue(record:QueueRecord) = {
-    _create_queue(record.key, BindingFactory.create(record.binding_kind, record.binding_data))
+  def create_queue(record:QueueRecord, security:SecurityContext) = {
+    _create_queue(record.key, BindingFactory.create(record.binding_kind, record.binding_data), security)
   }
 
   /**
    * Returns the previously created queue if it already existed.
    */
-  def _create_queue(dto: BindingDTO): Option[Queue] = {
+  def _get_or_create_queue(dto: BindingDTO, security:SecurityContext): Result[Queue, String] = {
     val binding = BindingFactory.create(dto)
     val queue = queue_bindings.get(binding) match {
-      case Some(queue) => Some(queue)
-      case None => Some(_create_queue(-1, binding))
+      case Some(queue) => Success(queue)
+      case None => _create_queue(-1, binding, security)
     }
     queue
   }
 
-  def create_queue(id:BindingDTO) = dispatchQueue ! {
-    _create_queue(id)
+  def get_or_create_queue(id:BindingDTO, security:SecurityContext) = dispatchQueue ! {
+    _get_or_create_queue(id, security)
   }
 
   /**
    * Returns true if the queue no longer exists.
    */
-  def destroy_queue(dto:BindingDTO) = dispatchQueue ! { _destroy_queue(dto) }
+  def destroy_queue(dto:BindingDTO, security:SecurityContext) = dispatchQueue ! { _destroy_queue(dto, security) }
 
-  def _destroy_queue(dto:BindingDTO):Boolean = {
+  def _destroy_queue(dto:BindingDTO, security:SecurityContext):Result[Zilch, String] = {
     queue_bindings.get(BindingFactory.create(dto)) match {
       case Some(queue) =>
-        _destroy_queue(queue)
-        true
+        _destroy_queue(queue, security)
       case None =>
-        true
+        Failure("Does not exist")
     }
   }
 
   /**
    * Returns true if the queue no longer exists.
    */
-  def destroy_queue(id:Long) = dispatchQueue ! { _destroy_queue(id) }
+  def destroy_queue(id:Long, security:SecurityContext) = dispatchQueue ! { _destroy_queue(id,security) }
 
-  def _destroy_queue(id:Long):Boolean = {
+  def _destroy_queue(id:Long, security:SecurityContext):Result[Zilch, String] = {
     queues.get(id) match {
       case Some(queue) =>
-        _destroy_queue(queue)
-        true
+        _destroy_queue(queue,security)
       case None =>
-        true
+        Failure("Does not exist")
     }
   }
 
-  def _destroy_queue(queue:Queue):Unit = {
+  def _destroy_queue(queue:Queue, security:SecurityContext):Result[Zilch, String] = {
+
+    if( security!=null && queue.config.acl!=null ) {
+      if( !host.authorizer.can_destroy(security, host, queue.config) ) {
+        return Failure("Not authorized to destroy")
+      }
+    }
+
     queue_bindings.remove(queue.binding)
     queues.remove(queue.id)
 
@@ -232,9 +259,10 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     queue.stop
     if( queue.tune_persistent ) {
       queue.dispatchQueue ^ {
-        host.store.removeQueue(queue.id){x=>}
+        host.store.removeQueue(queue.id){x=> Unit}
       }
     }
+    Success(Zilch)
   }
 
   /**
@@ -251,23 +279,38 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     queues.get(id)
   }
 
-  def bind(destination:Destination, consumer:DeliveryConsumer) = {
+  def bind(destination:Destination, consumer:DeliveryConsumer, security:SecurityContext) = {
     consumer.retain
     dispatchQueue ! {
 
-      assert( is_topic(destination) )
+      def do_bind:Result[Zilch, String] = {
+        assert( is_topic(destination) )
+        val name = destination.name
 
-      val name = destination.name
+        // A new destination is being created...
+        def config = host.destination_config(name).getOrElse(new DestinationDTO)
 
-      // make sure the destination is created if this is not a wild card sub
-      if( !PathParser.containsWildCards(name) ) {
-        val node = create_destination_or(name) { node=> Unit }
+        if( host.authorizer!=null && security!=null && !host.authorizer.can_receive_from(security, host, config) ) {
+          return new Failure("Not authorized to receive from the destination")
+        }
+
+        // make sure the destination is created if this is not a wild card sub
+        if( !PathParser.containsWildCards(name) ) {
+          val rc = _get_or_create_destination(name, security)
+          if( rc.failed ) {
+            return rc.map_success(_=> Zilch);
+          }
+        }
+
+        get_destination_matches(name).foreach{ node=>
+          node.add_broadcast_consumer(consumer)
+        }
+        broadcast_consumers.put(name, consumer)
+        Success(Zilch)
       }
 
-      get_destination_matches(name).foreach{ node=>
-        node.add_broadcast_consumer(consumer)
-      }
-      broadcast_consumers.put(name, consumer)
+      do_bind
+
     }
   }
 
@@ -281,44 +324,74 @@ class Router(val host:VirtualHost) extends DispatchLogging {
   } >>: dispatchQueue
 
 
-  def connect(destination:Destination, producer:DeliveryProducer)(completed: (DeliveryProducerRoute)=>Unit) = {
+  def connect(destination:Destination, producer:DeliveryProducer, security:SecurityContext)(completed: (Result[DeliveryProducerRoute,String])=>Unit) = {
 
     val route = new DeliveryProducerRoute(this, destination, producer) {
       override def on_connected = {
-        completed(this);
+        completed(Success(this));
+      }
+    }
+
+    def do_connect:Result[Zilch, String] = {
+      val topic = is_topic(destination)
+
+
+      var destination_security = security
+      // Looking up the queue will cause it to get created if it does not exist.
+      val queue = if( topic ) {
+
+        def config = host.destination_config(destination.name).getOrElse(new DestinationDTO)
+        if( host.authorizer!=null && security!=null && !host.authorizer.can_send_to(security, host, config)) {
+          return new Failure("Not authorized to send to the destination")
+        }
+        None
+
+      } else {
+
+        val dto = new QueueBindingDTO
+        dto.destination = DestinationParser.encode_path(destination.name)
+
+        // Can we send to the queue?
+        def config = host.queue_config(dto).getOrElse(new QueueDTO)
+        if( host.authorizer!=null && security!=null && !host.authorizer.can_send_to(security, host, config) ) {
+          return Failure("Not authorized to send to the queue")
+        }
+
+        destination_security = null
+        val rc = _get_or_create_queue(dto, security)
+        if( rc.failed ) {
+          return rc.map_success(_=>Zilch)
+        }
+        Some(rc.success)
+      }
+
+      _get_or_create_destination(destination.name, security) match {
+        case Success(node)=>
+          if( node.unified || topic ) {
+            node.add_broadcast_producer( route )
+          } else {
+            route.bind( queue.toList )
+          }
+          route.connected()
+          Success(Zilch)
+
+        case Failure(reason)=>
+          Failure(reason)
       }
     }
 
     dispatchQueue {
-
-      val topic = is_topic(destination)
-
-      // Looking up the queue will cause it to get created if it does not exist.
-      val queue = if( !topic ) {
-        val dto = new QueueBindingDTO
-        dto.destination = DestinationParser.encode_path(destination.name)
-        _create_queue(dto)
-      } else {
-        None
-      }
-
-      val node = create_destination_or(destination.name) { node=> Unit }
-      if( node.unified || topic ) {
-        node.add_broadcast_producer( route )
-      } else {
-        route.bind( queue.toList )
-      }
-
-      route.connected()
+      do_connect.failure_option.foreach(x=> producer.dispatchQueue { completed(Failure(x)) } )
     }
+
   }
 
   def disconnect(route:DeliveryProducerRoute) = releasing(route) {
-
-    val topic = is_topic(route.destination)
-    val node = create_destination_or(route.destination.name) { node=> Unit }
-    if( node.unified || topic ) {
-      node.remove_broadcast_producer(route)
+    _get_destination(route.destination.name).foreach { node=>
+      val topic = is_topic(route.destination)
+      if( node.unified || topic ) {
+        node.remove_broadcast_producer(route)
+      }
     }
     route.disconnected()
 
@@ -326,14 +399,10 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
 }
 
-object RoutingNode {
-  val DEFAULT_CONFIG = new DestinationDTO
-}
 /**
  * Tracks state associated with a destination name.
  */
-class RoutingNode(val router:Router, val name:Path) {
-  import RoutingNode._
+class RoutingNode(val router:Router, val name:Path, val config:DestinationDTO) {
 
   val id = router.destination_id_counter.incrementAndGet
 
@@ -342,8 +411,6 @@ class RoutingNode(val router:Router, val name:Path) {
   var queues = ListBuffer[Queue]()
 
   import OptionSupport._
-
-  val config = router.host.destination_config(name).getOrElse(DEFAULT_CONFIG)
 
   def unified = config.unified.getOrElse(false)
   def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")
@@ -357,7 +424,7 @@ class RoutingNode(val router:Router, val name:Path) {
       case "queue" =>
 
         // create a temp queue so that it can spool
-        val queue = router._create_queue(-1, new TempBinding(consumer))
+        val queue = router._create_queue(-1, new TempBinding(consumer), null).success
         queue.dispatchQueue.setTargetQueue(consumer.dispatchQueue)
         queue.bind(List(consumer))
 
@@ -391,7 +458,7 @@ class RoutingNode(val router:Router, val name:Path) {
         val binding = new TempBinding(consumer)
         if( queue.binding == binding ) {
           queue.unbind(List(consumer))
-          router._destroy_queue(queue.id)
+          router._destroy_queue(queue.id, null)
         }
       case _ =>
     }

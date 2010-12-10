@@ -227,6 +227,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   var session_manager:SinkMux[StompFrame] = null
   var connection_sink:Sink[StompFrame] = null
 
+  var dead = false
   var closed = false
   var consumers = Map[AsciiBuffer, StompConsumer]()
 
@@ -279,9 +280,11 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   }
 
   private def die[T](headers:HeaderMap, body:String):T = {
-    if( !connection.stopped ) {
-      suspendRead("shutdown")
-      connection.transport.offer(StompFrame(ERROR, headers, BufferContent(ascii(body))) )
+    if( !dead ) {
+      dead = true
+      waiting_on = "shutdown"
+      connection.transport.resumeRead
+      connection_sink.offer(StompFrame(ERROR, headers, BufferContent(ascii(body))) )
       // TODO: if there are too many open connections we should just close the connection
       // without waiting for the error to get sent to the client.
       queue.after(die_delay, TimeUnit.MILLISECONDS) {
@@ -306,6 +309,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     if( !closed ) {
       heart_beat_monitor.stop
       closed=true;
+      dead = true;
 
       import collection.JavaConversions._
       producerRoutes.foreach{
@@ -329,7 +333,11 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   }
 
 
-  override def onTransportCommand(command:Any) = {
+  override def onTransportCommand(command:Any):Unit = {
+    if( dead ) {
+      // We stop processing client commands once we are dead
+      return;
+    }
     try {
       command match {
         case s:StompCodec =>
@@ -405,8 +413,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   def on_stomp_connect(headers:HeaderMap):Unit = {
 
-    security_context.user = get(headers, LOGIN).toString
-    security_context.password = get(headers, PASSCODE).toString
+    security_context.user = get(headers, LOGIN).map(_.toString).getOrElse(null)
+    security_context.password = get(headers, PASSCODE).map(_.toString).getOrElse(null)
 
     val accept_versions = get(headers, ACCEPT_VERSION).getOrElse(V1_0).split(COMMA).map(_.ascii)
     protocol_version = SUPPORTED_PROTOCOL_VERSIONS.find( v=> accept_versions.contains(v) ) match {
@@ -454,6 +462,26 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     }
 
     def noop = shift {  k: (Unit=>Unit) => k() }
+
+    def send_connected = {
+      val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
+      session_id = ascii(this.host.config.id + ":"+this.host.session_counter.incrementAndGet)
+      if( connection_sink==null ) {
+        weird(headers)
+      }
+      connection_sink.offer(
+        StompFrame(CONNECTED, List(
+          (VERSION, protocol_version),
+          (SESSION, session_id),
+          (HEART_BEAT, outbound_heart_beat_header)
+        )))
+
+      if( this.host.direct_buffer_pool!=null ) {
+        val wf = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
+        wf.memory_pool = this.host.direct_buffer_pool
+      }
+    }
+
     reset {
       suspendRead("virtual host lookup")
       val host_header = get(headers, HOST)
@@ -464,43 +492,29 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
           connection.connector.broker.getVirtualHost(host)
       }
       resumeRead
+
       if(host==null) {
         async_die("Invalid virtual host: "+host_header.get)
-        noop // to make the cps compiler plugin happy.
+        noop
       } else {
         this.host=host
-
-        var authenticated = true;
-
-        if( host.authenticator!=null ) {
-          suspendRead("authenticating")
-          authenticated = host.authenticator.authenticate(security_context)
-          resumeRead
+        if( host.authenticator!=null &&  host.authorizer!=null ) {
+          suspendRead("authenticating and authorizing connect")
+          if( !host.authenticator.authenticate(security_context) ) {
+            async_die("Authentication failed.")
+            noop // to make the cps compiler plugin happy.
+          } else if( !host.authorizer.can_connect_to(security_context, host) ) {
+            async_die("Connect not authorized.")
+            noop // to make the cps compiler plugin happy.
+          } else {
+            resumeRead
+            send_connected
+            noop // to make the cps compiler plugin happy.
+          }
         } else {
+          send_connected
           noop // to make the cps compiler plugin happy.
         }
-
-        if( !authenticated ) {
-            async_die("Authentication failed.")
-        } else {
-          val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
-          session_id = ascii(this.host.config.id + ":"+this.host.session_counter.incrementAndGet)
-          if( connection_sink==null ) {
-            weird(headers)
-          }
-          connection_sink.offer(
-            StompFrame(CONNECTED, List(
-              (VERSION, protocol_version),
-              (SESSION, session_id),
-              (HEART_BEAT, outbound_heart_beat_header)
-            )))
-
-          if( this.host.direct_buffer_pool!=null ) {
-            val wf = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
-            wf.memory_pool = this.host.direct_buffer_pool
-          }
-        }
-
       }
     }
 
@@ -557,8 +571,11 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
         // don't process frames until producer is connected...
         connection.transport.suspendRead
-        host.router.connect(destiantion, producer) {
-          route =>
+        host.router.connect(destiantion, producer, security_context) {
+          case Failure(reason) =>
+            async_die(reason)
+
+          case Success(route) =>
             if (!connection.stopped) {
               resumeRead
               route.refiller = ^ {
@@ -708,21 +725,32 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
       // consumer is bind bound as a topic
       reset {
-        host.router.bind(destination, consumer)
-        send_receipt(headers)
+        val rc = host.router.bind(destination, consumer, security_context)
         consumer.release
+        rc match {
+          case Failure(reason)=>
+            async_die(reason)
+          case _=>
+            send_receipt(headers)
+        }
       }
 
     } else {
       reset {
         // create a queue and bind the consumer to it.
-        val x= host.router.create_queue(binding)
+        val x= host.router.get_or_create_queue(binding, security_context)
         x match {
-          case Some(queue:Queue) =>
-            queue.bind(consumer::Nil)
-            send_receipt(headers)
+          case Success(queue) =>
+            val rc = queue.bind(consumer, security_context)
             consumer.release
-          case None => async_die("case not yet implemented.")
+            rc match {
+              case Failure(reason)=>
+                async_die(reason)
+              case _ =>
+                send_receipt(headers)
+            }
+          case Failure(reason) =>
+            async_die(reason)
         }
       }
     }
@@ -763,8 +791,13 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
           if( persistent && consumer.binding!=null ) {
             reset {
-              val sucess = host.router.destroy_queue(consumer.binding)
-              send_receipt(headers)
+              val rc = host.router.destroy_queue(consumer.binding, security_context)
+              rc match {
+                case Failure(reason) =>
+                  async_die(reason)
+                case Success(_) =>
+                  send_receipt(headers)
+              }
             }
           } else {
             send_receipt(headers)

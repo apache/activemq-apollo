@@ -32,6 +32,7 @@ import org.apache.activemq.apollo.util.list._
 import org.fusesource.hawtdispatch.{Dispatch, ListEventAggregator, DispatchQueue, BaseRetained}
 import org.apache.activemq.apollo.dto.QueueDTO
 import OptionSupport._
+import security.SecurityContext
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -504,6 +505,22 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
   /////////////////////////////////////////////////////////////////////
 
   def connected() = {}
+
+  def bind(value: DeliveryConsumer, security:SecurityContext): Result[Zilch, String] = {
+    if(  host.authorizer!=null && security!=null ) {
+      if( value.browser ) {
+        if( !host.authorizer.can_receive_from(security, host, config) ) {
+          return new Failure("Not authorized to browse the queue")
+        }
+      } else {
+        if( !host.authorizer.can_consume_from(security, host, config) ) {
+          return new Failure("Not authorized to consume from the queue")
+        }
+      }
+    }
+    bind(value::Nil)
+    Success(Zilch)
+  }
 
   def bind(values: List[DeliveryConsumer]) = retaining(values) {
     for (consumer <- values) {

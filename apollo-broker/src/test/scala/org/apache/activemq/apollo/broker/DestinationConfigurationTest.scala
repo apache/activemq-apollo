@@ -54,7 +54,7 @@ class DestinationConfigurationTest extends FunSuiteSupport {
     def check_tune_queue_buffer(expected:Int)(dto:BindingDTO) = {
       var actual=0
       reset {
-        var q = router.create_queue(dto).get
+        var q = router.get_or_create_queue(dto, null).success
         actual = q.tune_queue_buffer
       }
       expect(expected) {actual}

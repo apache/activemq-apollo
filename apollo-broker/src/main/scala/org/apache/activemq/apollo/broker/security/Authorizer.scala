@@ -16,9 +16,9 @@
  */
 package org.apache.activemq.apollo.broker.security
 import scala.util.continuations._
-import org.apache.activemq.apollo.dto.BindingDTO
 import org.apache.activemq.apollo.broker.{VirtualHost, Broker, Destination}
 import org.apache.activemq.apollo.util.path.Path
+import org.apache.activemq.apollo.dto.{DestinationDTO, QueueDTO, BindingDTO}
 
 /**
  * <p>
@@ -31,56 +31,57 @@ trait Authorizer {
   /**
    * @returns true if the user is an admin.
    */
-  def can_admin(ctx:SecurityContext, broker:Broker):Boolean @suspendable
+  def can_admin(ctx:SecurityContext, broker:Broker):Boolean
 
   /**
    * @returns true if the user is allowed to connect to the virtual host
    */
-  def can_connect_to(ctx:SecurityContext, host:VirtualHost):Boolean @suspendable
+  def can_connect_to(ctx:SecurityContext, host:VirtualHost):Boolean
 
   /**
    * @returns true if the user is allowed to send to the destination
    */
-  def can_send_to(ctx:SecurityContext, host:VirtualHost, dest:Path):Boolean @suspendable
+  def can_send_to(ctx:SecurityContext, host:VirtualHost, dest:DestinationDTO):Boolean
 
   /**
    * @returns true if the user is allowed to receive from the destination
    */
-  def can_receive_from(ctx:SecurityContext, host:VirtualHost, dest:Path):Boolean @suspendable
+  def can_receive_from(ctx:SecurityContext, host:VirtualHost, dest:DestinationDTO):Boolean
 
   /**
    * @returns true if the user is allowed to create the destination
    */
-  def can_create(ctx:SecurityContext, host:VirtualHost, dest:Path):Boolean @suspendable
+  def can_create(ctx:SecurityContext, host:VirtualHost, dest:DestinationDTO):Boolean
 
   /**
    * @returns true if the user is allowed to destroy the destination
    */
-  def can_destroy(ctx:SecurityContext, host:VirtualHost, dest:Path):Boolean @suspendable
+  def can_destroy(ctx:SecurityContext, host:VirtualHost, dest:DestinationDTO):Boolean
+
 
   /**
    * @returns true if the user is allowed to send to the queue
    */
-  def can_send_to(ctx:SecurityContext, host:VirtualHost, dest:BindingDTO):Boolean @suspendable
+  def can_send_to(ctx:SecurityContext, host:VirtualHost, queue:QueueDTO):Boolean
 
   /**
    * @returns true if the user is allowed to receive from the queue
    */
-  def can_receive_from(ctx:SecurityContext, host:VirtualHost, dest:BindingDTO):Boolean @suspendable
+  def can_receive_from(ctx:SecurityContext, host:VirtualHost, queue:QueueDTO):Boolean
 
   /**
    * @returns true if the user is allowed to consume from the queue
    */
-  def can_consume_from(ctx:SecurityContext, host:VirtualHost, dest:BindingDTO):Boolean @suspendable
+  def can_consume_from(ctx:SecurityContext, host:VirtualHost, queue:QueueDTO):Boolean
 
   /**
    * @returns true if the user is allowed to create the queue
    */
-  def can_create(ctx:SecurityContext, host:VirtualHost, dest:BindingDTO):Boolean @suspendable
+  def can_create(ctx:SecurityContext, host:VirtualHost, queue:QueueDTO):Boolean
 
   /**
    * @returns true if the user is allowed to destroy the queue
    */
-  def can_destroy(ctx:SecurityContext, host:VirtualHost, dest:BindingDTO):Boolean @suspendable
+  def can_destroy(ctx:SecurityContext, host:VirtualHost, queue:QueueDTO):Boolean
 
 }
