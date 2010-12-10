@@ -16,9 +16,14 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * <p>
@@ -26,34 +31,23 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="destination-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationStatusDTO extends LongIdDTO {
+public class AuthenticationDTO {
 
-    /**
-     * The destination name
-     */
     @XmlAttribute
-    public String name;
+    public String domain;
 
-    @XmlElement
-    public DestinationDTO config;
+    @XmlElement(name="kind")
+    public List<String> kinds = new ArrayList<String>();
 
-    /**
-     * Ids of all connections that are producing to the destination
-     */
-    @XmlElement(name="producer")
-    public List<LinkDTO> producers = new ArrayList<LinkDTO>();
 
-    /**
-     * Ids of all connections that are consuming from the destination
-     */
-    @XmlElement(name="consumer")
-    public List<LinkDTO> consumers = new ArrayList<LinkDTO>();
+    public List<String> kinds() {
+        if( kinds.isEmpty() ) {
+            ArrayList<String> rc = new ArrayList<String>();
+            rc.add("org.apache.activemq.jaas.GroupPrincipal");
+            return rc;
+        }
+        return kinds;
+    }
 
-    /**
-     * Ids of all queues that are associated with the destination
-     */
-    @XmlElement(name="queue")
-    public List<LongIdLabeledDTO> queues = new ArrayList<LongIdLabeledDTO>();
 }

@@ -31,6 +31,7 @@ import org.apache.activemq.apollo.util._
 import ReporterLevel._
 import collection.mutable.LinkedHashMap
 import java.util.concurrent.{ThreadFactory, Executors, ConcurrentHashMap}
+import security.{AclAuthorizer, Authorizer, JaasAuthenticator, Authenticator}
 
 /**
  * <p>
@@ -203,6 +204,8 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
     }
   }
 
+  var authenticator:Authenticator = _
+  var authorizer:Authorizer = _
 
   override def _start(onCompleted:Runnable) = {
 
@@ -211,6 +214,11 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
       if( config.key_storage!=null ) {
         key_storage = new KeyStorage
         key_storage.config = config.key_storage
+      }
+
+      if( config.authentication != null ) {
+        authenticator = new JaasAuthenticator(config.authentication.domain)
+        authorizer = new AclAuthorizer(config.authentication.kinds().toList)
       }
 
       default_virtual_host = null

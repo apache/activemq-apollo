@@ -16,12 +16,9 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
+import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.xml.bind.annotation.*;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -33,7 +30,6 @@ public class BrokerDTO extends ServiceDTO<String> {
     /**
      * Used to track config revisions.
      */
-    @JsonProperty
     @XmlAttribute
     public int rev;
 
@@ -46,7 +42,6 @@ public class BrokerDTO extends ServiceDTO<String> {
     /**
      * Used to store any configuration notes.
      */
-    @JsonProperty
     @XmlElement
     public String notes;
 
@@ -70,4 +65,12 @@ public class BrokerDTO extends ServiceDTO<String> {
     @XmlElementRef
     public KeyStorageDTO key_storage;
 
+    @XmlElement(name="acl")
+    public BrokerAclDTO acl;
+
+    @XmlElement(name="web-admin")
+    public WebAdminDTO web_admin;
+
+    @XmlElement(name="authentication")
+    public AuthenticationDTO authentication;
 }

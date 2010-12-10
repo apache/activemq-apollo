@@ -46,4 +46,7 @@ public class DestinationDTO extends StringIdDTO {
     @XmlElement(name="slow-consumer-policy")
     public String slow_consumer_policy;
 
+    @XmlElement(name="acl")
+    public DestinationAclDTO acl;
+
 }

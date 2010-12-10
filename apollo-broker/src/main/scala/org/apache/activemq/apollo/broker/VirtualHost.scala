@@ -21,7 +21,6 @@ import _root_.java.lang.{String}
 import _root_.scala.collection.JavaConversions._
 import org.fusesource.hawtdispatch._
 
-import org.apache.activemq.apollo.dto.{VirtualHostDTO}
 import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.store.{Store, StoreFactory}
 import org.apache.activemq.apollo.util._
@@ -31,8 +30,9 @@ import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
 import collection.JavaConversions
 import java.util.concurrent.atomic.AtomicLong
 import org.apache.activemq.apollo.util.OptionSupport._
-import security.{Authenticator, Authorizer}
-import org.apache.activemq.apollo.util.path.PathParser
+import org.apache.activemq.apollo.util.path.{Path, PathParser}
+import org.apache.activemq.apollo.dto.{DestinationDTO, QueueDTO, BindingDTO, VirtualHostDTO}
+import security.{AclAuthorizer, JaasAuthenticator, Authenticator, Authorizer}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -115,6 +115,15 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
   override protected def _start(onCompleted:Runnable):Unit = {
 
     val tracker = new LoggingTracker("virtual host startup", dispatchQueue)
+
+    if( config.authentication != null ) {
+      authenticator = new JaasAuthenticator(config.authentication.domain)
+      authorizer = new AclAuthorizer(config.authentication.kinds().toList)
+    } else {
+      authenticator = broker.authenticator
+      authorizer = broker.authorizer
+    }
+
     store = StoreFactory.create(config.store)
 
     //    val memory_pool_config: String = null
@@ -251,6 +260,24 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
       schedual_connection_regroup
     }
     dispatchQueue.dispatchAfter(1, TimeUnit.SECONDS, ^{ if(serviceState.isStarted) { connectionRegroup } } )
+  }
+
+  def destination_config(name:Path):Option[DestinationDTO] = {
+    import collection.JavaConversions._
+    import DestinationParser.default._
+    import AsciiBuffer._
+    config.destinations.find( x=> parseFilter(ascii(x.path)).matches(name) )
+  }
+
+  def queue_config(binding:Binding):Option[QueueDTO] = {
+    import collection.JavaConversions._
+    config.queues.find{ config=>
+      binding.matches(config)
+    }
+  }
+
+  def queue_config(dto:BindingDTO):Option[QueueDTO] = {
+    queue_config(BindingFactory.create(dto))
   }
 
 }

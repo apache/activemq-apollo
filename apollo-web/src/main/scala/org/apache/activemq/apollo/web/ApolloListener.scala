@@ -38,22 +38,16 @@ class ApolloListener extends ServletContextListener {
       if( ConfigStore() == null ) {
         configStore = createConfigStore
         ConfigStore() = configStore
-        configStore.dispatchQueue {
-          configStore.listBrokers.foreach { id=>
-            configStore.getBroker(id, true).foreach{ config=>
+        val config = configStore.load(true)
 
-              println("Config store contained broker: "+config.id);
-              // Only start the broker up if it's enabled..
-              if( config.enabled.getOrElse(true) ) {
-
-                println("starting broker: "+config.id);
-                val broker = new Broker()
-                broker.config = config
-                BrokerRegistry.add(config.id, broker)
-                broker.start()
-              }
-            }
-          }
+        println("Config store contained broker: "+config.id);
+        // Only start the broker up if it's enabled..
+        if( config.enabled.getOrElse(true) ) {
+          println("starting broker: "+config.id);
+          val broker = new Broker()
+          broker.config = config
+          BrokerRegistry.add(config.id, broker)
+          broker.start()
         }
       }
     } catch {
@@ -63,18 +57,13 @@ class ApolloListener extends ServletContextListener {
   }
 
   def contextDestroyed(sce: ServletContextEvent) = {
-    val tracker = new LoggingTracker("webapp shutdown")
     if( configStore!=null ) {
-      configStore.dispatchQueue {
-        configStore.listBrokers.foreach { id=>
-          val broker = BrokerRegistry.remove(id);
-          if( broker!=null ) {
-            tracker.stop(broker)
-          }
-        }
+      val id = configStore.load(false).id
+      val broker = BrokerRegistry.remove(id);
+      if( broker!=null ) {
+        ServiceControl.stop(broker, "broker")
       }
-      tracker.stop(configStore)
-      tracker.await
+      configStore.stop
       configStore = null
     }
   }
@@ -82,9 +71,7 @@ class ApolloListener extends ServletContextListener {
   def createConfigStore():ConfigStore = {
     val store = new FileConfigStore
     store.file = new File("apollo.xml")
-    LoggingTracker("config store startup") { tracker=>
-      store.start(tracker.task())
-    }
+    store.start
     store
   }
 

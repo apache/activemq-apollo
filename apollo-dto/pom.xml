@@ -72,6 +72,7 @@
       <scope>test</scope>
       <version>${log4j-version}</version>
     </dependency>
+
   </dependencies>
 
   <build>

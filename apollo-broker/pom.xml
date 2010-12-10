@@ -61,6 +61,12 @@
       <artifactId>activemq-jaas</artifactId>
       <version>${activemq-version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.jasypt</groupId>
+      <artifactId>jasypt</artifactId>
+      <version>${jasypt-version}</version>
+    </dependency>
+
 
     <!-- Scala Support -->
     <dependency>

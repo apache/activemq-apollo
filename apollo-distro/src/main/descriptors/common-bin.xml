@@ -32,15 +32,21 @@
         <include>org.fusesource.hawtdb:*</include>
         <include>org.codehaus.jackson:jackson-mapper-asl</include>
         <include>org.codehaus.jackson:jackson-core-asl</include>
+        
+        <!-- security stuff -->
+        <include>org.jasypt:jasypt</include>
+        <include>commons-lang:commons-lang</include>
+        <include>commons-codec:commons-codec</include>
+        <include>org.apache.activemq:activemq-jaas</include>
 
         <!-- for the webapp -->
-        <include>org.mortbay.jetty:*</include>
+        <include>org.eclipse.jetty.aggregate:jetty-all-server</include>
+        <include>javax.servlet:servlet-api</include>
         <include>com.sun.jersey:jersey-server</include>
         <include>com.sun.jersey:jersey-core</include>
         <include>asm:asm</include>
         <include>org.codehaus.jackson:jackson-jaxrs</include>
         <include>org.fusesource.scalate:scalate-core</include>
-        <!-- <include>org.scala-lang:scala-compiler</include> -->
         
         <!-- the logging apis used -->
         <include>org.slf4j:slf4j-api</include>

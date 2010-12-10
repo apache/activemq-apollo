@@ -32,21 +32,14 @@ class FileConfigStoreTest extends FunSuiteSupport {
 
     val store = new FileConfigStore
     store.file = new File("activemq.xml")
-    store
 
-    LoggingTracker("config store startup") { tracker=>
-      store.start(tracker.task())
+    store.start
+
+    expect("default") {
+      store.load(false).id
     }
 
-    expect(List("default")) {
-      store.dispatchQueue.sync {
-        store.listBrokers
-      }
-    }
-
-    LoggingTracker("config store stop") { tracker=>
-      store.stop(tracker.task())
-    }
+    store.stop
   }
 }
 

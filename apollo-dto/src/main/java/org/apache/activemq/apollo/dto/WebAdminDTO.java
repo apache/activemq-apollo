@@ -16,9 +16,12 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.List;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * <p>
@@ -26,34 +29,19 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="destination-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationStatusDTO extends LongIdDTO {
+public class WebAdminDTO {
 
-    /**
-     * The destination name
-     */
     @XmlAttribute
-    public String name;
+    public Boolean enabled;
 
-    @XmlElement
-    public DestinationDTO config;
+    @XmlAttribute
+    public String host;
 
-    /**
-     * Ids of all connections that are producing to the destination
-     */
-    @XmlElement(name="producer")
-    public List<LinkDTO> producers = new ArrayList<LinkDTO>();
+    @XmlAttribute
+    public Integer port;
 
-    /**
-     * Ids of all connections that are consuming from the destination
-     */
-    @XmlElement(name="consumer")
-    public List<LinkDTO> consumers = new ArrayList<LinkDTO>();
+    @XmlAttribute
+    public String prefix;
 
-    /**
-     * Ids of all queues that are associated with the destination
-     */
-    @XmlElement(name="queue")
-    public List<LongIdLabeledDTO> queues = new ArrayList<LongIdLabeledDTO>();
 }

@@ -25,22 +25,21 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
 import java.util.concurrent.{TimeUnit, ExecutorService, Executors}
 import org.fusesource.hawtbuf.{ByteArrayInputStream, ByteArrayOutputStream}
 import javax.xml.bind.{Marshaller, JAXBContext}
-import java.io.{OutputStreamWriter, File}
+import security.EncryptionSupport
 import XmlCodec._
 import org.apache.activemq.apollo.util._
 import scala.util.continuations._
 import org.fusesource.hawtdispatch.DispatchQueue
 import java.util.Arrays
+import FileSupport._
+import java.util.Properties
+import java.io.{FileInputStream, OutputStreamWriter, File}
 
 object ConfigStore {
 
   var store:ConfigStore = null
 
   def apply():ConfigStore = store
-
-  def sync[T] (func: ConfigStore=>T):T = store.dispatchQueue.sync {
-    func(store)
-  }
 
   def update(value:ConfigStore) = store=value
 
@@ -53,21 +52,21 @@ object ConfigStore {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait ConfigStore extends Service {
+trait ConfigStore {
 
-  def listBrokers: List[String]
+  def load(eval:Boolean): BrokerDTO
 
-  def getBroker(id:String, eval:Boolean): Option[BrokerDTO]
-
-  def putBroker(config:BrokerDTO): Boolean
-
-  def removeBroker(id:String, rev:Int): Boolean
-
-  def dispatchQueue:DispatchQueue
+  def store(config:BrokerDTO): Boolean
 
   def can_write:Boolean
 
+  def start:Unit
+
+  def stop:Unit
+
 }
+
+object FileConfigStore extends Log
 
 /**
  * <p>
@@ -77,20 +76,23 @@ trait ConfigStore extends Service {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class FileConfigStore extends ConfigStore with BaseService with Logging {
-  override protected def log: Log = FileConfigStore
+class FileConfigStore extends ConfigStore {
+  import FileConfigStore._
 
   object StoredBrokerModel {
     def apply(config:BrokerDTO) = {
       val data = marshall(config)
-      new StoredBrokerModel(config.id, config.rev, data, 0)
+      new StoredBrokerModel(config.rev, data, 0)
     }
   }
-  case class StoredBrokerModel(id:String, rev:Int, data:Array[Byte], lastModified:Long)
+  case class StoredBrokerModel(rev:Int, data:Array[Byte], lastModified:Long)
 
   var file:File = new File("activemq.xml")
+
   @volatile
   var latest:StoredBrokerModel = null
+  @volatile
+  var running = false
 
   val dispatchQueue = createQueue("config store")
 
@@ -98,23 +100,10 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
   // so... use an executor
   var ioWorker:ExecutorService = null
 
-  protected def _start(onCompleted:Runnable) = {
+
+  def start = {
     ioWorker = Executors.newSingleThreadExecutor
-    ioWorker.execute(^{
-      startup(onCompleted)
-    })
-  }
-
-  protected def _stop(onCompleted:Runnable) = {
-    ioWorker.submit(^{
-      onCompleted.run
-      ioWorker.shutdown
-    })
-  }
-
-  def can_write:Boolean = file.canWrite
-
-  def startup(onCompleted:Runnable) = {
+    running = true
 
     file = file.getCanonicalFile;
     file.getParentFile.mkdir
@@ -140,7 +129,7 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
       } else {
         val x = read(rev, file)
         if ( can_write && !Arrays.equals(r.data, x.data) ) {
-          write(StoredBrokerModel(x.id, x.rev+1, x.data, x.lastModified))
+          write(x.copy(rev=x.rev+1))
         } else {
           x
         }
@@ -153,33 +142,24 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
       }
     }
 
-    dispatchQueue {
-      latest = last
-      schedualNextUpdateCheck
-      onCompleted.run
-    }
+    latest = last
+    schedualNextUpdateCheck
   }
 
-                  
-  def listBrokers = {
-    List(latest.id)
+  def stop = {
+    running = false
+    ioWorker.shutdown
   }
 
-
-  def getBroker(id:String, eval:Boolean) = {
-    if( latest.id == id ) {
-      Some(unmarshall(latest.data, eval))
-    } else {
-      None
-    }
+  def load(eval:Boolean) = {
+    unmarshall(latest.data, eval)
   }
 
-  def putBroker(config:BrokerDTO) = {
+  def can_write:Boolean = file.canWrite
+
+  def store(config:BrokerDTO) = {
     debug("storing broker model: %s ver %d", config.id, config.rev)
-    if( latest.id != config.id ) {
-      debug("this store can only update broker: "+latest.id)
-      false
-    } else if( latest.rev+1 != config.rev ) {
+    if( latest.rev+1 != config.rev ) {
       debug("update request does not match next revision: %d", latest.rev+1)
       false
     } else {
@@ -188,15 +168,10 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     }
   }
 
-  def removeBroker(id:String, rev:Int) = {
-    // not supported.
-    false
-  }
-
   private def fileRev(rev:Int) = new File(file.getParent, file.getName+"."+rev)
 
   private def schedualNextUpdateCheck:Unit = dispatchQueue.after(1, TimeUnit.SECONDS) {
-    if( serviceState.isStarted ) {
+    if( running ) {
       val lastModified = latest.lastModified
       val latestData = latest.data
       val nextRev = latest.rev+1
@@ -208,13 +183,9 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
             if ( !Arrays.equals(latestData, config.data) ) {
               val c = unmarshall(config.data)
               c.rev = config.rev
-              dispatchQueue {
-                putBroker(c)
-              }
+              store(c)
             } else {
-              dispatchQueue {
-                latest =   StoredBrokerModel(latest.id, latest.rev, latest.data, l)
-              }
+              latest = latest.copy(lastModified = l)
             }
           }
           schedualNextUpdateCheck
@@ -239,19 +210,31 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
   private def read(rev:Int, file: File) ={
     val data = IOHelper.readBytes(file)
     val config = unmarshall(data) // validates the xml
-    StoredBrokerModel(config.id, rev, data, file.lastModified)
+    StoredBrokerModel(rev, data, file.lastModified)
   }
 
   private  def write(config:StoredBrokerModel) = {
     // write to the files..
     IOHelper.writeBinaryFile(file, config.data)
     IOHelper.writeBinaryFile(fileRev(config.rev), config.data)
-    StoredBrokerModel(config.id, config.rev, config.data, file.lastModified)
+    config.copy(lastModified = file.lastModified)
   }
+
 
   def unmarshall(in:Array[Byte], evalProps:Boolean=false) = {
     if (evalProps) {
-      unmarshalBrokerDTO(new ByteArrayInputStream(in), System.getProperties)
+
+      val props = new Properties(System.getProperties)
+      val prop_file = file.getParentFile / (file.getName + ".properties")
+      if( prop_file.exists() ) {
+        FileSupport.using(new FileInputStream(prop_file)) { is=>
+          val p = new Properties
+          p.load(new FileInputStream(prop_file))
+          props.putAll( EncryptionSupport.decrypt( p ))
+        }
+      }
+
+      unmarshalBrokerDTO(new ByteArrayInputStream(in), props)
     } else {
       unmarshalBrokerDTO(new ByteArrayInputStream(in))
     }
@@ -263,5 +246,3 @@ class FileConfigStore extends ConfigStore with BaseService with Logging {
     baos.toByteArray
   }
 }
-
-object FileConfigStore extends Log

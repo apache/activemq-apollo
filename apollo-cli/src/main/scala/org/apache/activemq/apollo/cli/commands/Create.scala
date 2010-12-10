@@ -62,6 +62,15 @@ class Create extends Action {
       var target = etc / "log4j.properties"
       write("etc/log4j.properties", target)
 
+      target = etc / "users.properties"
+      write("etc/users.properties", target)
+
+      target = etc / "groups.properties"
+      write("etc/groups.properties", target)
+
+      target = etc / "login.config"
+      write("etc/login.config", target)
+
       // Generate a keystore with a new key
       println("Generating ssl keystore...")
       val ssl = system(etc, Array(

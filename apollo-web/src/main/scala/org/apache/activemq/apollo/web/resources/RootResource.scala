@@ -137,76 +137,31 @@ class ViewHelper {
 }
 
 /**
- * Index resource
+ * Manages a collection of broker resources.
  */
 @Path("/")
 @Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
-class IndexResource() extends Resource {
+class BrokerResource extends Resource {
+
+  val cs = ConfigStore()
+  val config = cs.load(false)
+  def id = config.id
 
   @GET
   def get = {
-    val cs = ConfigStore()
-    val brokers = cs.dispatchQueue.sync {
-      cs.listBrokers
-    }
-    if( brokers.size==1 ) {
-      result(path("brokers/"+brokers.head+"/runtime"))
-    } else {
-      result(path("brokers"))
-    }
-  }
-
-  @Path("brokers{x:/?}")
-  def brokers = new RootResource(this)
-
-}
-
-
-/**
- * Manages a collection of broker resources.
- */
-class RootResource(parent:Resource) extends Resource(parent) {
-
-  @GET
-  def brokers = {
-    val rc = new StringIdListDTO
-    val cs = ConfigStore()
-    cs.dispatchQueue.sync {
-      cs.listBrokers.foreach { x=>
-        rc.items.add( new StringIdLabeledDTO(x,x) )
-      }
-    }
-    rc
-  }
-
-  @Path("{id}")
-  def broker(@PathParam("id") id : String): BrokerResource = {
-    new BrokerResource(this, id)
-  }
-}
-
-/**
- * Resource that identifies a managed broker.
- */
-case class BrokerResource(parent:Resource, @BeanProperty id: String) extends Resource(parent) {
-
-  @GET
-  def get = {
-    val cs = ConfigStore()
     val rc = new BrokerSummaryDTO
     rc.id = id
     rc.manageable = BrokerRegistry.get(id)!=null
-    rc.configurable = cs.dispatchQueue.sync{
-      cs.can_write && cs.getBroker(id,false).isDefined
-    }
+    rc.configurable = cs.can_write
     rc
   }
 
   @Path("config")
-  def config = ConfigurationResource(this)
+  def config_resource = ConfigurationResource(this)
 
   @Path("runtime")
   def runtime = RuntimeResource(this)
-
 }
+
+
 

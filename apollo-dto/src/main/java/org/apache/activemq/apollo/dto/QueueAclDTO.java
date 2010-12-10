@@ -16,17 +16,23 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import java.util.*;
 
 /**
+ * <p>
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlType(name = "authenticator-type")
-//@XmlSeeAlso({xxx.class})
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
-public abstract class AuthenticatorDTO {
+@XmlAccessorType(XmlAccessType.FIELD)
+public class QueueAclDTO extends DestinationAclDTO {
+
+    @XmlElement(name="consume")
+    public Set<PrincipalDTO> consumes = new HashSet<PrincipalDTO>();
 
 
 }

@@ -96,4 +96,7 @@ public class QueueDTO {
     @XmlAttribute(name="flush-range-size")
     public Integer flush_range_size;
 
+    @XmlElement(name="acl")
+    public QueueAclDTO acl;
+
 }

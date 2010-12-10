@@ -71,7 +71,7 @@
     <howl-version>0.1.8</howl-version>
     <hsqldb-version>1.7.2.2</hsqldb-version>
     <jdom-version>1.0</jdom-version>
-    <jetty-version>6.1.9</jetty-version>
+    <jetty-version>7.1.6.v20100715</jetty-version>
     <jmock-version>1.0.1</jmock-version>
     <junit-version>4.7</junit-version>
     <jxta-version>2.0</jxta-version>
@@ -102,8 +102,8 @@
     <hawtbuf-version>1.3-SNAPSHOT</hawtbuf-version>
     
     <bdb-version>4.1.6</bdb-version>
-    
-    <jetty-version>6.1.22</jetty-version>
+    <jasypt-version>1.6</jasypt-version>
+
     <scalate-version>1.3.2</scalate-version>
     <scalamd-version>1.2</scalamd-version>
 

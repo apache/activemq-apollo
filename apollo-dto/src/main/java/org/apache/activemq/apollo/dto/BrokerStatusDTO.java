@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,7 +57,6 @@ public class BrokerStatusDTO extends ServiceStatusDTO {
     /**
      * The current running configuration of the object
      */
-    @JsonProperty
     @XmlElement
     public BrokerDTO config = null;
 

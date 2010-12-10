@@ -21,7 +21,8 @@ import collection.mutable.HashSet
 import javax.security.auth.Subject
 import java.security.cert.X509Certificate
 import org.apache.activemq.apollo.util.OptionSupport._
-import org.apache.activemq.jaas.UserPrincipal
+import org.apache.activemq.jaas.{GroupPrincipal, UserPrincipal}
+import org.apache.activemq.apollo.dto.PrincipalDTO
 
 /**
  * <p>
@@ -35,24 +36,35 @@ class SecurityContext {
   var password:String = _
   var certificates = Array[X509Certificate]()
 
-  /**
-   * A place for the authorization layer attach
-   * some authorization data (i.e. an authorization
-   * cache)
-   */
-  var authorization_data:AnyRef = _
+  private val principles = new HashSet[PrincipalDTO]()
 
-  var subject:Subject = _
+  private var _subject:Subject = _
 
-  def principles = subject.map(x=>collection.JavaConversions.asSet(x.getPrincipals).toSet).getOrElse(Set())
+  def subject = _subject
 
-  def intersects(other_priciples:Set[Principal] ) = {
-    !principles.intersect(other_priciples).isEmpty
+  def subject_= (value:Subject) {
+    _subject = value
+    principles.clear
+    if( value!=null ) {
+      import collection.JavaConversions._
+      value.getPrincipals.foreach { x=>
+        principles.add(new PrincipalDTO(x.getName, x.getClass.getName))
+      }
+    }
   }
 
-  def principle[T](kind:Class[T]):Option[T] ={
-    principles.find( x=> kind.isAssignableFrom(x.getClass) ).map(kind.cast(_))
+  def intersects(values:Set[PrincipalDTO], default_kinds:List[String]):Boolean = {
+    val (v1, v2) = values.partition(_.kind == null)
+    if( principles.intersect(v2).isEmpty ) {
+      return true
+    }
+    default_kinds.foreach { x=>
+      if( ! (v1.map(y=> new PrincipalDTO(y.name, x) ).intersect(v1).isEmpty) ) {
+        return true
+      }
+    }
+    false
   }
 
-  def user_principle = principle(classOf[UserPrincipal])
+
 }

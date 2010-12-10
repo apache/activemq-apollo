@@ -145,3 +145,12 @@ The consumer's output should look like:
     Received 1000 messages.
     Received 2000 messages.
     ...
+
+## Web Administration
+
+Apollo provides a simple web interface to monitor the status of the broker.  Once
+the admin interface will be accessible at:
+
+* [http://127.0.0.1:8080/](http://127.0.0.1:8080/)
+
+The default login id and password is `admin` and `password`.

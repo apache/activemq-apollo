@@ -17,8 +17,6 @@
 package org.apache.activemq.apollo.dto;
 
 import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * <p>
@@ -26,34 +24,47 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="destination-status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationStatusDTO extends LongIdDTO {
+public class PrincipalDTO {
 
-    /**
-     * The destination name
-     */
-    @XmlAttribute
+    @XmlAttribute(required = true)
     public String name;
 
-    @XmlElement
-    public DestinationDTO config;
+    @XmlAttribute
+    public String kind;
 
-    /**
-     * Ids of all connections that are producing to the destination
-     */
-    @XmlElement(name="producer")
-    public List<LinkDTO> producers = new ArrayList<LinkDTO>();
 
-    /**
-     * Ids of all connections that are consuming from the destination
-     */
-    @XmlElement(name="consumer")
-    public List<LinkDTO> consumers = new ArrayList<LinkDTO>();
+    public PrincipalDTO() {
+    }
 
-    /**
-     * Ids of all queues that are associated with the destination
-     */
-    @XmlElement(name="queue")
-    public List<LongIdLabeledDTO> queues = new ArrayList<LongIdLabeledDTO>();
+    public PrincipalDTO(String name) {
+        this.name = name;
+    }
+
+    public PrincipalDTO(String name, String kind) {
+        this.name = name;
+        this.kind = kind;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        PrincipalDTO that = (PrincipalDTO) o;
+
+        if (kind != null ? !kind.equals(that.kind) : that.kind != null) return false;
+        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = name != null ? name.hashCode() : 0;
+        result = 31 * result + (kind != null ? kind.hashCode() : 0);
+        return result;
+    }
+
+
 }

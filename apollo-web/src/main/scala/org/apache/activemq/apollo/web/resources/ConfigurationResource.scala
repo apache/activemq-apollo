@@ -33,13 +33,12 @@ import org.apache.activemq.apollo.broker.ConfigStore
 case class ConfigurationResource(parent:BrokerResource) extends Resource(parent) {
 
   lazy val config = {
-    ConfigStore.sync{ store=>
-      if( store.can_write ) {
-        store.getBroker(parent.id, false)
-      } else {
-        None
-      }
-    } .getOrElse(result(NOT_FOUND))
+    val store = ConfigStore()
+    if( store.can_write ) {
+      store.load(false)
+    } else {
+      None
+    }.getOrElse(result(NOT_FOUND))
   }
 
 
@@ -65,25 +64,12 @@ case class ConfigurationResource(parent:BrokerResource) extends Resource(parent)
 
   @PUT @Path("{rev}")
   def put(@PathParam("rev") rev:Int, config:BrokerDTO) = {
-    config.id = parent.id;
     config.rev = rev
-    ConfigStore.sync { store=>
-      if( store.can_write ) {
-        store.putBroker(config)
-      } else {
-        false
-      }
-    } || result(NOT_FOUND)
-  }
-
-  @DELETE @Path("{rev}")
-  def delete(@PathParam("rev") rev:Int) = {
-    ConfigStore.sync { store=>
-      if( store.can_write ) {
-        store.removeBroker(parent.id, rev)
-      } else {
-        false
-      }
+    val store = ConfigStore()
+    if( store.can_write ) {
+      store.store(config)
+    } else {
+      false
     } || result(NOT_FOUND)
   }
 

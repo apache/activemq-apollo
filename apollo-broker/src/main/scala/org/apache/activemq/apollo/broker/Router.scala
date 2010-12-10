@@ -128,13 +128,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
   def _create_queue(id:Long, binding:Binding):Queue = {
 
-    val config = {
-      import collection.JavaConversions._
-      host.config.queues.find{ config=>
-        binding.matches(config)
-      }
-    }.getOrElse(new QueueDTO)
-
+    val config = host.queue_config(binding).getOrElse(new QueueDTO)
 
     var qid = id
     if( qid == -1 ) {
@@ -349,11 +343,7 @@ class RoutingNode(val router:Router, val name:Path) {
 
   import OptionSupport._
 
-  val config = {
-    import collection.JavaConversions._
-    import DestinationParser.default._
-    router.host.config.destinations.find( x=> parseFilter(ascii(x.path)).matches(name) ).getOrElse(DEFAULT_CONFIG)
-  }
+  val config = router.host.destination_config(name).getOrElse(DEFAULT_CONFIG)
 
   def unified = config.unified.getOrElse(false)
   def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")

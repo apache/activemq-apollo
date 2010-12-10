@@ -66,4 +66,10 @@ public class VirtualHostDTO extends ServiceDTO<String> {
     @XmlAttribute(name="regroup-connections")
     public Boolean regroup_connections;
 
+    @XmlElement(name="acl")
+    public VirtualHostAclDTO acl;
+
+    @XmlElement(name="authentication")
+    public AuthenticationDTO authentication;
+
 }

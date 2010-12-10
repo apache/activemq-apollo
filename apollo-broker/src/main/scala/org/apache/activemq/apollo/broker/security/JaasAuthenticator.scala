@@ -36,9 +36,7 @@ import org.fusesource.hawtdispatch._
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 
-class JaasAuthenticator extends Authenticator {
-
-  var jass_realm: String = _
+class JaasAuthenticator(val jass_realm: String) extends Authenticator {
 
   /*
    * The 'BLOCKABLE_THREAD_POOL ! { ... }' magic makes the code block

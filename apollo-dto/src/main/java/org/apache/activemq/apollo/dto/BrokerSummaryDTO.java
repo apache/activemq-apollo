@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
@@ -36,14 +34,12 @@ public class BrokerSummaryDTO extends StringIdDTO {
     /**
      * Is a running broker accessible via management API calls?
      */
-    @JsonProperty
 	@XmlAttribute
 	public boolean manageable;
 
     /**
      * Is the broker configuration accessible via API calls? 
      */
-    @JsonProperty
 	@XmlAttribute
 	public boolean configurable;
 
