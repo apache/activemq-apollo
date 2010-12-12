@@ -745,11 +745,13 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
             consumer.release
             rc match {
               case Failure(reason)=>
+                consumers -= id
                 async_die(reason)
               case _ =>
                 send_receipt(headers)
             }
           case Failure(reason) =>
+            consumers -= id
             async_die(reason)
         }
       }
