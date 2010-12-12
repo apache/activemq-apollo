@@ -52,8 +52,6 @@ class Run extends Action with Logging {
   @option(name = "--tmp", description = "A temp directory.")
   var tmp: File = _
 
-  def x(value:AnyRef) = println(value)
-
   def execute(session: CommandSession):AnyRef = {
 
     try {
@@ -137,7 +135,6 @@ class Run extends Action with Logging {
         }
 
         def secured(handler:Handler) = {
-          x(config)
           if( config.authentication!=null && config.acl!=null ) {
             import collection.JavaConversions._
 
