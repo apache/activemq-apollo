@@ -145,7 +145,7 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
 
   override def _start(onCompleted:Runnable) = {
     assert(config!=null, "Connector must be configured before it is started.")
-    protocol = ProtocolFactory.get(config.protocol).get
+    protocol = ProtocolFactory.get(config.protocol.getOrElse("multi")).get
     transportServer = TransportFactory.bind( config.bind )
     transportServer.setDispatchQueue(dispatchQueue)
     transportServer.setAcceptListener(BrokerAcceptListener)

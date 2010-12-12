@@ -49,26 +49,32 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
     clients = Nil
   }
 
-  def connect(version:String, c: StompClient = client) = {
+  def connect_request(version:String, c: StompClient, headers:String="") = {
     c.open("localhost", port)
     version match {
       case "1.0"=>
         c.write(
           "CONNECT\n" +
+          headers +
           "\n")
       case "1.1"=>
         c.write(
           "CONNECT\n" +
           "accept-version:1.1\n" +
           "host:localhost\n" +
+          headers +
           "\n")
       case x=> throw new RuntimeException("invalid version: %f".format(x))
     }
-    val frame = c.receive()
+    clients ::= c
+    c.receive()
+  }
+
+  def connect(version:String, c: StompClient = client, headers:String="") = {
+    val frame = connect_request(version, c, headers)
     frame should startWith("CONNECTED\n")
     frame should include regex("""session:.+?\n""")
     frame should include("version:"+version+"\n")
-    clients ::= c
     c
   }
 
@@ -695,4 +701,172 @@ class StompAckModeTest extends StompTestSupport {
 
   }
 
+}
+
+class StompSecurityTest extends StompTestSupport {
+
+  override val broker_config_uri: String = "xml:classpath:apollo-stomp-secure.xml"
+
+  override protected def beforeAll = {
+    try {
+      val login_file = new java.io.File(getClass.getClassLoader.getResource("login.config").getFile())
+      System.setProperty("java.security.auth.login.config", login_file.getCanonicalPath)
+    } catch {
+      case x:Throwable => x.printStackTrace
+    }
+    super.beforeAll
+  }
+
+  test("Connect with no id password") {
+    val frame = connect_request("1.1", client)
+    frame should startWith("ERROR\n")
+    frame should include("message:Authentication failed.\n")
+  }
+
+  test("Connect with invalid id password") {
+    val frame = connect_request("1.1", client,
+      "login:foo\n" +
+      "passcode:bar\n")
+    frame should startWith("ERROR\n")
+    frame should include("message:Authentication failed.\n")
+
+  }
+
+  test("Connect with valid id password but can't connect") {
+
+    val frame = connect_request("1.1", client,
+      "login:can_not_connect\n" +
+      "passcode:can_not_connect\n")
+    frame should startWith("ERROR\n")
+    frame should include("message:Connect not authorized.\n")
+
+  }
+
+  test("Connect with valid id password that can connect") {
+    connect("1.1", client,
+      "login:can_only_connect\n" +
+      "passcode:can_only_connect\n")
+
+  }
+
+  test("Send not authorized") {
+    connect("1.1", client,
+      "login:can_only_connect\n" +
+      "passcode:can_only_connect\n")
+
+    client.write(
+      "SEND\n" +
+      "destination:/queue/secure\n" +
+      "receipt:0\n" +
+      "\n" +
+      "Hello Wolrd\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Not authorized to send to the queue\n")
+  }
+
+  test("Send authorized but not create") {
+    connect("1.1", client,
+      "login:can_send_queue\n" +
+      "passcode:can_send_queue\n")
+
+    client.write(
+      "SEND\n" +
+      "destination:/queue/secure\n" +
+      "receipt:0\n" +
+      "\n" +
+      "Hello Wolrd\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Not authorized to create the queue\n")
+
+  }
+
+//
+//  test("Consume authorized but not create") {
+//    connect("1.1", client,
+//      "login:can_consume_queue\n" +
+//      "passcode:can_consume_queue\n")
+//
+//    client.write(
+//      "SUBSCRIBE\n" +
+//      "destination:/queue/secure\n" +
+//      "id:0\n" +
+//      "receipt:0\n" +
+//      "\n")
+//    wait_for_receipt("0")
+//
+//    val frame = client.receive()
+//    frame should startWith("ERROR\n")
+//    frame should include("message:Not authorized to create the queue\n")
+//  }
+
+  test("Send and create authorized") {
+    connect("1.1", client,
+      "login:can_send_create_queue\n" +
+      "passcode:can_send_create_queue\n")
+
+    client.write(
+      "SEND\n" +
+      "destination:/queue/secure\n" +
+      "receipt:0\n" +
+      "\n" +
+      "Hello Wolrd\n")
+
+    wait_for_receipt("0")
+
+  }
+
+  test("Can send and once created") {
+
+    // Now try sending with the lower access id.
+    connect("1.1", client,
+      "login:can_send_queue\n" +
+      "passcode:can_send_queue\n")
+
+    client.write(
+      "SEND\n" +
+      "destination:/queue/secure\n" +
+      "receipt:0\n" +
+      "\n" +
+      "Hello Wolrd\n")
+
+    wait_for_receipt("0")
+
+  }
+
+  test("Consume not authorized") {
+    connect("1.1", client,
+      "login:can_only_connect\n" +
+      "passcode:can_only_connect\n")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/secure\n" +
+      "id:0\n" +
+      "receipt:0\n" +
+      "\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Not authorized to consume from the queue\n")
+  }
+
+//  test("Consume authorized and JMSXUserID is set on message") {
+//    connect("1.1", client,
+//      "login:can_consume_queue\n" +
+//      "passcode:can_consume_queue\n")
+//
+//    client.write(
+//      "SUBSCRIBE\n" +
+//      "destination:/queue/secure\n" +
+//      "id:0\n" +
+//      "\n")
+//
+//    val frame = client.receive()
+//    frame should startWith("MESSAGE\n")
+//    frame should include("JMSXUserID:can_send_create_queue\n")
+//  }
 }

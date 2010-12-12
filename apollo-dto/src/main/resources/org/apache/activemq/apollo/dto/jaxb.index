@@ -45,3 +45,4 @@ QueueDTO
 DestinationDTO
 LinkDTO
 QueueConsumerStatusDTO
+StompDTO

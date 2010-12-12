@@ -16,46 +16,15 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.List;
+import org.codehaus.jackson.annotate.JsonTypeInfo;
+
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlType;
 
 /**
- *
- * 
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "connector")
-@XmlAccessorType(XmlAccessType.FIELD)
-public class ConnectorDTO extends ServiceDTO<String> {
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
+public abstract class ProtocolDTO {
 
-    /**
-     * The transport uri which it will accept connections on.
-     */
-    @XmlAttribute
-    public String bind;
-
-    /**
-     * The protocol that the transport will use.
-     */
-    @XmlAttribute
-    public String protocol;
-
-    /**
-     * The uri which will be advertised for remote endpoints to connect to.
-     */
-    @XmlAttribute
-    public String advertise;
-
-    @XmlAttribute(name="connection-limit")
-    public Integer connection_limit;
-
-    /**
-     * A broker accepts connections via it's configured connectors.
-     */
-    @XmlElementRef
-    public List<ProtocolDTO> protocols = new ArrayList<ProtocolDTO>();
-
-    
 }

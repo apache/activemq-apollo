@@ -33,4 +33,9 @@ trait Authenticator {
    */
   def authenticate(ctx:SecurityContext):Boolean @suspendable
 
+  /**
+   * Extracts the user name of the logged in user.
+   */
+  def user_name(ctx:SecurityContext):Option[String]
+
 }

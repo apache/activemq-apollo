@@ -33,8 +33,8 @@ import org.apache.activemq.apollo.store._
 import org.apache.activemq.apollo.util._
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
-import org.apache.activemq.apollo.dto.{StompConnectionStatusDTO, BindingDTO, SubscriptionBindingDTO, QueueBindingDTO}
 import scala.util.continuations._
+import org.apache.activemq.apollo.dto._
 
 object StompProtocolHandler extends Log {
 
@@ -165,6 +165,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     val dispatchQueue = StompProtocolHandler.this.dispatchQueue
 
 
+
     dispatchQueue.retain
     setDisposer(^{
       session_manager.release
@@ -250,7 +251,13 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   var heart_beat_monitor:HeartBeatMonitor = new HeartBeatMonitor
   val security_context = new SecurityContext
   var waiting_on:String = "client request"
+  var config:StompDTO = _
 
+  override def setConnection(connection: BrokerConnection) = {
+    super.setConnection(connection)
+    import collection.JavaConversions._
+    config = connection.connector.config.protocols.find( _.isInstanceOf[StompDTO]).map(_.asInstanceOf[StompDTO]).getOrElse(new StompDTO)
+  }
 
   override def create_connection_status = {
     var rc = new StompConnectionStatusDTO
@@ -595,10 +602,25 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
 
   var message_id_counter = 0;
-  def next_message_id = {
-    message_id_counter += 1
-    // TODO: properly generate mesage ids
-    new AsciiBuffer("msg:"+message_id_counter);
+
+  def updated_headers(headers:HeaderMap) = {
+    var rc:HeaderMap=Nil
+
+    // Do we need to add the message id?
+    if( get( headers, MESSAGE_ID) == None ) {
+      // TODO: properly generate mesage ids
+      message_id_counter += 1
+      rc ::= (MESSAGE_ID, ascii("msg:"+message_id_counter))
+    }
+
+    // Do we need to add the user id?
+    if( host.authenticator!=null && config.add_user_header!=null ) {
+      host.authenticator.user_name(security_context).foreach{ name=>
+        rc ::= (ascii(config.add_user_header), ascii(name))
+      }
+    }
+
+    rc
   }
 
   def send_via_route(route:DeliveryProducerRoute, frame:StompFrame, uow:StoreUOW) = {
@@ -609,13 +631,11 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     if( !route.targets.isEmpty ) {
 
       // We may need to add some headers..
-      var message = get( frame.headers, MESSAGE_ID) match {
-        case None=>
-          var updated_headers:HeaderMap=Nil;
-          updated_headers ::= (MESSAGE_ID, next_message_id)
-          StompFrameMessage(StompFrame(MESSAGE, frame.headers, frame.content, updated_headers))
-        case Some(id)=>
+      var message = updated_headers(frame.headers) match {
+        case Nil=>
           StompFrameMessage(StompFrame(MESSAGE, frame.headers, frame.content))
+        case updated_headers =>
+          StompFrameMessage(StompFrame(MESSAGE, frame.headers, frame.content, updated_headers))
       }
 
       val delivery = new Delivery

@@ -140,7 +140,7 @@ class Run extends Action with Logging {
 
             val security_handler = new ConstraintSecurityHandler
             val login_service = new JAASLoginService(config.authentication.domain)
-            val role_class_names:List[String] = config.authentication.kinds().toList
+            val role_class_names:List[String] = config.authentication.acl_principal_kinds().toList
 
             login_service.setRoleClassNames(role_class_names.toArray)
             security_handler.setLoginService(login_service)

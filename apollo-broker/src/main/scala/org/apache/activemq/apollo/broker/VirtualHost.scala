@@ -119,8 +119,8 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
     if( config.authentication != null ) {
       if( config.authentication.enabled.getOrElse(true) ) {
         // Virtual host has it's own settings.
-        authenticator = new JaasAuthenticator(config.authentication.domain)
-        authorizer = new AclAuthorizer(config.authentication.kinds().toList)
+        authenticator = new JaasAuthenticator(config.authentication)
+        authorizer = new AclAuthorizer(config.authentication.acl_principal_kinds().toList)
       } else {
         // Don't use security on this host.
         authenticator = null

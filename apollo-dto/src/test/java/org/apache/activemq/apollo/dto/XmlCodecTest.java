@@ -38,6 +38,14 @@ public class XmlCodecTest {
         BrokerDTO dto = XmlCodec.unmarshalBrokerDTO(resource("XmlCodecTest.xml"));
         assertNotNull(dto);
         assertEquals("default", dto.id);
+        assertEquals(1, dto.connectors.size());
+        ConnectorDTO connector = dto.connectors.get(0);
+        assertEquals(1, connector.protocols.size());
+        ProtocolDTO stomp = connector.protocols.get(0);
+        assertTrue(stomp instanceof StompDTO);
+        assertEquals("JMSXUserID", ((StompDTO) stomp).add_user_header);
+
+
         VirtualHostDTO host = dto.virtual_hosts.get(0);
         assertNotNull(host.acl);
         assertEquals("vh-local", host.id);

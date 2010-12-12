@@ -132,13 +132,12 @@ class FileLoginModule extends LoginModule {
     principals.add(new UserPrincipal(user))
     val en = groups.keys()
     while (en.hasMoreElements()) {
-      val name = en.nextElement().asInstanceOf[String]
-      val userList = (groups.getProperty(name) + "").split(",")
-      userList.foreach{
-        x =>
-          if (user == x) {
-            principals.add(new GroupPrincipal(name))
-          }
+      val group_name = en.nextElement().asInstanceOf[String]
+      val users = groups.getProperty(group_name).split(",").map(_.trim)
+      users.foreach { x =>
+        if (user == x) {
+          principals.add(new GroupPrincipal(group_name))
+        }
       }
     }
 

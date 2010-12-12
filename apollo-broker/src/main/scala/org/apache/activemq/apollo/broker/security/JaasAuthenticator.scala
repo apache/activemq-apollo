@@ -28,6 +28,7 @@ import org.apache.activemq.jaas._
 import org.apache.activemq.apollo.util.OptionSupport._
 import org.apache.activemq.apollo.broker.Broker.BLOCKABLE_THREAD_POOL
 import org.fusesource.hawtdispatch._
+import org.apache.activemq.apollo.dto.{PrincipalDTO, AuthenticationDTO}
 
 /**
  * <p>
@@ -36,7 +37,10 @@ import org.fusesource.hawtdispatch._
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 
-class JaasAuthenticator(val jass_realm: String) extends Authenticator {
+class JaasAuthenticator(val config: AuthenticationDTO) extends Authenticator {
+
+  val jass_realm = config.domain.getOrElse("apollo")
+  val user_principal_kinds = config.user_principal_kinds()
 
   /*
    * The 'BLOCKABLE_THREAD_POOL ! { ... }' magic makes the code block
@@ -45,6 +49,18 @@ class JaasAuthenticator(val jass_realm: String) extends Authenticator {
    */
   def authenticate(security_ctx: SecurityContext) = BLOCKABLE_THREAD_POOL ! {
     _authenticate(security_ctx)
+  }
+
+  /**
+   * Extracts the user name of the logged in user.
+   */
+  def user_name(ctx:SecurityContext):Option[String] = {
+    if( ctx.subject!=null ) {
+      import collection.JavaConversions._
+      ctx.subject.getPrincipals.find( x=> user_principal_kinds.contains( x.getClass.getName ) ).map(_.getName)
+    } else {
+      None
+    }
   }
 
   def _authenticate(security_ctx: SecurityContext): Boolean = {

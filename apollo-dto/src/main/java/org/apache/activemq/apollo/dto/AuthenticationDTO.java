@@ -21,9 +21,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * <p>
@@ -40,17 +38,35 @@ public class AuthenticationDTO {
     @XmlAttribute
     public String domain;
 
-    @XmlElement(name="kind")
-    public List<String> kinds = new ArrayList<String>();
+    /**
+     * The class names for the types of principles that
+     * the acl lists check against.
+     */
+    @XmlElement(name="acl-principal-kinds")
+    public List<String> acl_principal_kinds = new ArrayList<String>();
 
-
-    public List<String> kinds() {
-        if( kinds.isEmpty() ) {
+    public List<String> acl_principal_kinds() {
+        if( acl_principal_kinds.isEmpty() ) {
             ArrayList<String> rc = new ArrayList<String>();
             rc.add("org.apache.activemq.jaas.GroupPrincipal");
             return rc;
         }
-        return kinds;
+        return acl_principal_kinds;
     }
 
+    /**
+     * The class names for the types of principles that
+     * the user name is extracted from.
+     */
+    @XmlElement(name="user-principal-kinds")
+    public List<String> user_principal_kinds = new ArrayList<String>();
+
+    public List<String> user_principal_kinds() {
+        if( user_principal_kinds.isEmpty() ) {
+            ArrayList<String> rc = new ArrayList<String>();
+            rc.add("org.apache.activemq.jaas.UserPrincipal");
+            return rc;
+        }
+        return user_principal_kinds;
+    }
 }
