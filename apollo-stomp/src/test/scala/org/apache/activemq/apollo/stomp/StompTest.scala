@@ -27,7 +27,7 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
   var broker: Broker = null
   var port = 0
 
-  val broker_config_uri = "xml:classpath:activemq-stomp.xml"
+  val broker_config_uri = "xml:classpath:apollo-stomp.xml"
 
   override protected def beforeAll() = {
     info("Loading broker configuration from the classpath with URI: " + broker_config_uri)
