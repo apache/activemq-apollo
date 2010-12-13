@@ -106,11 +106,7 @@ object BrokerRegistry {
 
 object Broker extends Log {
 
-  val BLOCKABLE_THREAD_POOL = Executors.newCachedThreadPool(new ThreadFactory(){
-    def newThread(r: Runnable) = new Thread(r, "Apollo Worker") {
-      setDaemon(true)
-    }
-  })
+  val BLOCKABLE_THREAD_POOL = ApolloThreadPool.INSTANCE
 
   val broker_id_counter = new AtomicLong()
 

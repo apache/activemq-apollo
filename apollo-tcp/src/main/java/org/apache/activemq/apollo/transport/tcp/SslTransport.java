@@ -1,5 +1,6 @@
 package org.apache.activemq.apollo.transport.tcp;
 
+import org.apache.activemq.apollo.util.ApolloThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,8 +39,6 @@ public class SslTransport extends TcpTransport {
     private boolean writeFlushing;
 
     private ByteBuffer readOverflowBuffer;
-
-    private ExecutorService blockingExecutor;
 
     public void setSSLContext(SSLContext ctx) {
         this.sslContext = ctx;
@@ -248,15 +247,12 @@ public class SslTransport extends TcpTransport {
                 case NEED_TASK:
                     final Runnable task = engine.getDelegatedTask();
                     if( task!=null ) {
-                        if( blockingExecutor==null ) {
-                             blockingExecutor = Executors.newSingleThreadExecutor();
-                        }
-                        blockingExecutor.execute(new Runnable(){
+                        ApolloThreadPool.INSTANCE.execute(new Runnable() {
                             public void run() {
                                 task.run();
-                                dispatchQueue.execute(new Runnable(){
+                                dispatchQueue.execute(new Runnable() {
                                     public void run() {
-                                        if( isConnected() ) {
+                                        if (isConnected()) {
                                             handshake_done();
                                         }
                                     }
@@ -293,10 +289,6 @@ public class SslTransport extends TcpTransport {
                     break;
 
                 case FINISHED:
-                    if( blockingExecutor!=null ) {
-                        blockingExecutor.shutdown();
-                        blockingExecutor = null;
-                    }
 
                 case NOT_HANDSHAKING:
                     return true;
