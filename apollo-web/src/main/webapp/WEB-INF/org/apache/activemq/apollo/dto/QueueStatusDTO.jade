@@ -22,10 +22,10 @@
 
 - binding match
   - case x:QueueBindingDTO =>
-    h1 Queue #{x.destination}
+    h1 Queue #{x.name}
 
   - case x:SubscriptionBindingDTO =>
-    h1 Durable Subscription on #{x.destination}
+    h1 Durable Subscription on #{x.name}
     p client id: ${x.client_id}
     p subscription id: ${x.subscription_id}
     p filter: ${x.filter}

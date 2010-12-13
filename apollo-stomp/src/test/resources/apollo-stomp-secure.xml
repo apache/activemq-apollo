@@ -27,7 +27,7 @@
     </acl>
 
     <!-- queue security -->
-    <queue path="**" kind="ptp">
+    <queue name="**" kind="ptp">
       <acl>
         <create  name="can_send_create_queue"/>
         <send    name="can_send_create_queue"/>
@@ -38,7 +38,7 @@
     </queue>
 
     <!-- topic security -->
-    <destination path="**">
+    <destination name="**">
       <acl>
         <create  name="can_send_create_topic"/>
         <send    name="can_send_create_topic"/>
@@ -48,7 +48,7 @@
     </destination>
 
     <!-- durable sub security -->
-    <queue path="**" kind="ds">
+    <queue name="**" kind="ds">
       <acl>
         <create  name="can_consume_create_ds"/>
         <consume name="can_consume_create_ds"/>

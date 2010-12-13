@@ -274,7 +274,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
     import collection.JavaConversions._
     import DestinationParser.default._
     import AsciiBuffer._
-    config.destinations.find( x=> parseFilter(ascii(x.path)).matches(name) )
+    config.destinations.find( x=> parseFilter(ascii(x.name)).matches(name) )
   }
 
   def queue_config(binding:Binding):Option[QueueDTO] = {

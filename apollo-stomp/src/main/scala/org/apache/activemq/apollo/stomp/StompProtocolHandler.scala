@@ -732,7 +732,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       // way again)
       if (topic) {
         val rc = new SubscriptionBindingDTO
-        rc.destination = DestinationParser.encode_path(destination.name)
+        rc.name = DestinationParser.encode_path(destination.name)
         // TODO:
         // rc.client_id =
         rc.subscription_id = if( persistent ) id.toString else null
@@ -740,7 +740,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         rc
       } else {
         val rc = new QueueBindingDTO
-        rc.destination = DestinationParser.encode_path(destination.name)
+        rc.name = DestinationParser.encode_path(destination.name)
         rc
       }
     }

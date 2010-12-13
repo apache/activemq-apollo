@@ -28,10 +28,10 @@ import javax.xml.bind.annotation.*;
 public class QueueDTO {
 
     /*
-     * The destination this queue is associated with.  You can use wild cards.
+     * The destination name this queue is associated with.  You can use wild cards.
      */
     @XmlAttribute
-    public String destination;
+    public String name;
 
     /*
      * The kind of queue.  It may be "ptp" for standard

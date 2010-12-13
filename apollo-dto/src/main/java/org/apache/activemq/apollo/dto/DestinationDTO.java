@@ -29,10 +29,10 @@ import java.util.ArrayList;
 public class DestinationDTO extends StringIdDTO {
 
     /**
-     * The path to the destination.  You can use wild cards.
+     * The name of the destination.  You can use wild cards.
      */
 	@XmlAttribute
-	public String path;
+	public String name;
 
     /**
      * If set to true, then routing then there is no difference between

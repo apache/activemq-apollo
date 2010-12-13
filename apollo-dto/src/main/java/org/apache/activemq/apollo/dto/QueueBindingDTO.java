@@ -34,6 +34,6 @@ public class QueueBindingDTO extends BindingDTO {
      * A label that describes the binding
      */
     @XmlAttribute
-    public String destination;
+    public String name;
 
 }

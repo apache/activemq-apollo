@@ -62,12 +62,12 @@ class DestinationConfigurationTest extends FunSuiteSupport {
 
     check_tune_queue_buffer(333) {
       var p = new QueueBindingDTO()
-      p.destination = "unified.a"
+      p.name = "unified.a"
       p
     }
     check_tune_queue_buffer(444) {
       val p = new SubscriptionBindingDTO()
-      p.destination = "unified.b"
+      p.name = "unified.b"
       p.client_id = "a"
       p.subscription_id = "b"
       p
@@ -75,7 +75,7 @@ class DestinationConfigurationTest extends FunSuiteSupport {
 
     check_tune_queue_buffer(111) {
       var p = new QueueBindingDTO()
-      p.destination = "notunified.other"
+      p.name = "notunified.other"
       p
     }
 

@@ -31,7 +31,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class SubscriptionBindingDTO extends BindingDTO {
 
-    public String destination;
+    public String name;
 
     public String filter;
 

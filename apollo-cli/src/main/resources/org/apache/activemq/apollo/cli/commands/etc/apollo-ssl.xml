@@ -47,7 +47,7 @@
     <acl>
       <connect name="admins"/>
     </acl>
-    <destination path="secure.**">
+    <destination name="secure.**">
       <acl>
         <create  name="admins"/>
         <destroy name="admins"/>
@@ -55,7 +55,7 @@
         <receive name="admins"/>
       </acl>
     </destination>
-    <queue path="secure.**">
+    <queue name="secure.**">
       <acl>
         <create  name="admins"/>
         <destroy name="admins"/>
@@ -74,17 +74,17 @@
 
     <!-- Use this if you expect to have slow consumers on a topic
          allows slow consumers to swap messages to a disk queue -->
-    <destination path="slow.**" slow_consumer_policy="queue"/>
+    <destination name="slow.**" slow_consumer_policy="queue"/>
 
     <!-- Use this if you want the queue and topic with of the same name
          to be the same logical entity -->
-    <destination path="unified.**" unified="true"/>
+    <destination name="unified.**" unified="true"/>
 
     <!-- disable message swapping for some queues -->
-    <queue destination="noswap.**" kind="ptp" swap="false"/>
+    <queue name="noswap.**" kind="ptp" swap="false"/>
 
     <!-- disable message swapping for durable subscriptions -->
-    <queue destination="noswap.**" kind="ds" swap="false"/>
+    <queue name="noswap.**" kind="ds" swap="false"/>
 
     <!-- You can delete this element if you want to disable persistent for this virtual host -->
     <hawtdb-store directory="${apollo.base}/data"/>

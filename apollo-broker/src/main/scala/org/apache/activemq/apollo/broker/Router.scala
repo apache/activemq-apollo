@@ -349,7 +349,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
       } else {
 
         val dto = new QueueBindingDTO
-        dto.destination = DestinationParser.encode_path(destination.name)
+        dto.name = DestinationParser.encode_path(destination.name)
 
         // Can we send to the queue?
         def config = host.queue_config(dto).getOrElse(new QueueDTO)

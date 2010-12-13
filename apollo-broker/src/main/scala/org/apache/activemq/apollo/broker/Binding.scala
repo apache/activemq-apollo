@@ -97,7 +97,7 @@ trait Binding {
   def matches(config:QueueDTO):Boolean = {
     import DestinationParser.default._
     import OptionSupport._
-    var rc = (o(config.destination).map{ x=> parseFilter(ascii(x)).matches(destination) }.getOrElse(true))
+    var rc = (o(config.name).map{ x=> parseFilter(ascii(x)).matches(destination) }.getOrElse(true))
     rc = rc && (o(config.kind).map{ x=> x == binding_kind.toString }.getOrElse(true))
     rc
   }
@@ -117,7 +117,7 @@ class QueueBindingFactory extends BindingFactory.Provider {
   def create(binding_kind:AsciiBuffer, binding_data:Buffer) = {
     if( binding_kind == POINT_TO_POINT_KIND ) {
       val dto = new QueueBindingDTO
-      dto.destination = binding_data.ascii.toString
+      dto.name = binding_data.ascii.toString
       new QueueBinding(binding_data, dto)
     } else {
       null
@@ -127,7 +127,7 @@ class QueueBindingFactory extends BindingFactory.Provider {
   def create(binding_dto:BindingDTO) = {
     if( binding_dto.isInstanceOf[QueueBindingDTO] ) {
       val ptp_dto = binding_dto.asInstanceOf[QueueBindingDTO]
-      val data = new AsciiBuffer(ptp_dto.destination).buffer
+      val data = new AsciiBuffer(ptp_dto.name).buffer
       new QueueBinding(data, ptp_dto)
     } else {
       null
@@ -143,7 +143,7 @@ class QueueBindingFactory extends BindingFactory.Provider {
  */
 class QueueBinding(val binding_data:Buffer, val binding_dto:QueueBindingDTO) extends Binding {
 
-  val destination = DestinationParser.decode_path(binding_dto.destination)
+  val destination = DestinationParser.decode_path(binding_dto.name)
   def binding_kind = POINT_TO_POINT_KIND
 
   def unbind(node: RoutingNode, queue: Queue) = {
@@ -158,7 +158,7 @@ class QueueBinding(val binding_data:Buffer, val binding_dto:QueueBindingDTO) ext
     }
   }
 
-  def label = binding_dto.destination
+  def label = binding_dto.name
 
   override def hashCode = binding_kind.hashCode ^ binding_data.hashCode
 
@@ -202,7 +202,7 @@ class SubscriptionBindingFactory extends BindingFactory.Provider {
  */
 class SubscriptionBinding(val binding_data:Buffer, val binding_dto:SubscriptionBindingDTO) extends Binding {
 
-  val destination = DestinationParser.decode_path(binding_dto.destination)
+  val destination = DestinationParser.decode_path(binding_dto.name)
 
   def binding_kind = DURABLE_SUB_KIND
 
