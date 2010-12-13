@@ -39,7 +39,7 @@ import javax.net.ssl.{SSLSocket, SSLContext}
 
       socket = if( key_storeage!=null ) {
         val context = SSLContext.getInstance("TLS")
-        context.init(null, key_storeage.create_trust_managers, null)
+        context.init(key_storeage.create_key_managers, key_storeage.create_trust_managers, null)
         context.getSocketFactory().createSocket()
         // socket.asInstanceOf[SSLSocket].setEnabledCipherSuites(Array("SSL_RSA_WITH_RC4_128_MD5"))
         // socket

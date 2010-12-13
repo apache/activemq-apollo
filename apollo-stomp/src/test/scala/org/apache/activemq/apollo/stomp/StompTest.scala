@@ -417,6 +417,7 @@ class StompSslDestinationTest extends StompDestinationTest {
   client.key_storeage = new KeyStorage
   client.key_storeage.config.file = basedir/"src"/"test"/"resources"/"client.ks"
   client.key_storeage.config.password = "password"
+  client.key_storeage.config.key_password = "password"
 
 }
 
@@ -869,4 +870,30 @@ class StompSecurityTest extends StompTestSupport {
 //    frame should startWith("MESSAGE\n")
 //    frame should include("JMSXUserID:can_send_create_queue\n")
 //  }
+}
+
+class StompSslSecurityTest extends StompTestSupport {
+
+  override val broker_config_uri: String = "xml:classpath:apollo-stomp-ssl-secure.xml"
+
+  client.key_storeage = new KeyStorage
+  client.key_storeage.config.file = basedir/"src"/"test"/"resources"/"client.ks"
+  client.key_storeage.config.password = "password"
+  client.key_storeage.config.key_password = "password"
+
+  override protected def beforeAll = {
+    // System.setProperty("javax.net.debug", "all")
+    try {
+      val login_file = new java.io.File(getClass.getClassLoader.getResource("login.config").getFile())
+      System.setProperty("java.security.auth.login.config", login_file.getCanonicalPath)
+    } catch {
+      case x:Throwable => x.printStackTrace
+    }
+    super.beforeAll
+  }
+
+  test("Connect with no id password") {
+    connect("1.1", client)
+  }
+
 }
