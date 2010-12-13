@@ -1,6 +1,5 @@
 package org.apache.activemq.apollo.transport.tcp;
 
-import org.apache.activemq.apollo.transport.SSLContextAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,6 +10,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -23,7 +25,7 @@ import static javax.net.ssl.SSLEngineResult.Status.BUFFER_OVERFLOW;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class SslTransport extends TcpTransport implements SSLContextAware {
+public class SslTransport extends TcpTransport {
 
     private static final Logger LOG = LoggerFactory.getLogger(TcpTransport.class);
     private SSLContext sslContext;
@@ -62,6 +64,28 @@ public class SslTransport extends TcpTransport implements SSLContextAware {
         }
     }
 
+    public SSLSession getSSLSession() {
+        return engine==null ? null : engine.getSession();
+    }
+
+    public X509Certificate[] getPeerX509Certificates() {
+    	if( engine==null ) {
+            return null;
+        }
+        try {
+            ArrayList<X509Certificate> rc = new ArrayList<X509Certificate>();
+            for( Certificate c:engine.getSession().getPeerCertificates() ) {
+                if(c instanceof X509Certificate) {
+                    rc.add((X509Certificate) c);
+                }
+            }
+            return rc.toArray(new X509Certificate[rc.size()]);
+        } catch (SSLPeerUnverifiedException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     @Override
     protected void initializeCodec() {
         SSLChannel channel = new SSLChannel();
@@ -83,6 +107,7 @@ public class SslTransport extends TcpTransport implements SSLContextAware {
         if (engine == null) {
             engine = sslContext.createSSLEngine();
             engine.setUseClientMode(false);
+            engine.setWantClientAuth(true);
         }
         SSLSession session = engine.getSession();
         readBuffer = ByteBuffer.allocateDirect(session.getPacketBufferSize());

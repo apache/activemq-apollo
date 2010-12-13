@@ -16,11 +16,16 @@
  */
 package org.apache.activemq.apollo.transport;
 
-import javax.net.ssl.SSLContext;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.TrustManager;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public interface SSLContextAware {
-    void setSSLContext(SSLContext ctx);
+public interface KeyAndTrustAware {
+
+    void setKeyManagers(KeyManager[] manager);
+
+    void setTrustManagers(TrustManager[] trustManagers);
+
 }

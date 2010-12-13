@@ -16,23 +16,21 @@
  */
 package org.apache.activemq.apollo.transport.tcp;
 
-import org.apache.activemq.apollo.transport.KeyManagerAware;
+import org.apache.activemq.apollo.transport.KeyAndTrustAware;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import java.io.IOException;
+import javax.net.ssl.TrustManager;
 import java.net.URI;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 
-public class SslTransportServer extends TcpTransportServer implements KeyManagerAware {
+public class SslTransportServer extends TcpTransportServer implements KeyAndTrustAware {
 
     protected KeyManager[] keyManagers;
+    private TrustManager[] trustManagers;
     protected String protocol = "TLS";
     protected SSLContext sslContext;
 
@@ -43,11 +41,14 @@ public class SslTransportServer extends TcpTransportServer implements KeyManager
     public void setKeyManagers(KeyManager[] keyManagers) {
         this.keyManagers = keyManagers;
     }
+    public void setTrustManagers(TrustManager[] trustManagers) {
+        this.trustManagers = trustManagers;
+    }
 
     public void start(Runnable onCompleted) throws Exception {
         if( keyManagers!=null ) {
             sslContext = SSLContext.getInstance(protocol);
-            sslContext.init(keyManagers, null, null);
+            sslContext.init(keyManagers, trustManagers, null);
         } else {
             sslContext = SSLContext.getDefault();
         }

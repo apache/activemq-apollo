@@ -150,8 +150,13 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
     transportServer.setDispatchQueue(dispatchQueue)
     transportServer.setAcceptListener(BrokerAcceptListener)
 
-    if( transportServer.isInstanceOf[KeyManagerAware] && broker.key_storage!=null ) {
-      transportServer.asInstanceOf[KeyManagerAware].setKeyManagers(broker.key_storage.create_key_managers)
+    if( transportServer.isInstanceOf[KeyAndTrustAware] ) {
+      if( broker.key_storage!=null ) {
+        transportServer.asInstanceOf[KeyAndTrustAware].setTrustManagers(broker.key_storage.create_trust_managers)
+        transportServer.asInstanceOf[KeyAndTrustAware].setKeyManagers(broker.key_storage.create_key_managers)
+      } else {
+        warn("You are using a transport the expects the broker's key storage to be configured.")
+      }
     }
     transportServer.start(^{
       info("Accepting connections at: "+config.bind)
