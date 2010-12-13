@@ -35,6 +35,8 @@ import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
 import scala.util.continuations._
 import org.apache.activemq.apollo.dto._
+import org.apache.activemq.apollo.transport.tcp.SslTransport
+import java.security.cert.X509Certificate
 
 object StompProtocolHandler extends Log {
 
@@ -420,6 +422,11 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   def on_stomp_connect(headers:HeaderMap):Unit = {
 
+    connection.transport match {
+      case t:SslTransport=>
+        security_context.certificates = Option(t.getPeerX509Certificates).getOrElse(Array[X509Certificate]())
+      case _ => None
+    }
     security_context.user = get(headers, LOGIN).map(_.toString).getOrElse(null)
     security_context.password = get(headers, PASSCODE).map(_.toString).getOrElse(null)
 
