@@ -190,7 +190,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
         host.store.listQueueEntryRanges(id, tune_flush_range_size) { ranges=>
           dispatchQueue {
-            if( !ranges.isEmpty ) {
+            if( ranges!=null && !ranges.isEmpty ) {
 
               ranges.foreach { range =>
                 val entry = new QueueEntry(Queue.this, range.firstQueueSeq).init(range)
