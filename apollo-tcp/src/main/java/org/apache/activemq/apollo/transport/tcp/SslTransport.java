@@ -191,6 +191,7 @@ public class SslTransport extends TcpTransport {
                 // network bytes.
                 int size = Math.min(plain.remaining(), readOverflowBuffer.remaining());
                 plain.put(readOverflowBuffer.array(), 0, size);
+                readOverflowBuffer.position(readOverflowBuffer.position()+size);
                 if( !readOverflowBuffer.hasRemaining() ) {
                     readOverflowBuffer = null;
                 }
@@ -217,7 +218,11 @@ public class SslTransport extends TcpTransport {
                 if( result.getStatus() == BUFFER_OVERFLOW ) {
                     readOverflowBuffer = ByteBuffer.allocate(engine.getSession().getApplicationBufferSize());
                     result = engine.unwrap(readBuffer, readOverflowBuffer);
-                    readOverflowBuffer.flip();
+                    if( readOverflowBuffer.position()==0 ) {
+                        readOverflowBuffer = null;
+                    } else {
+                        readOverflowBuffer.flip();
+                    }
                 }
                 switch( result.getStatus() ) {
                     case CLOSED:
