@@ -23,8 +23,10 @@ import Response.Status._
 import Response._
 import java.net.URI
 import java.io.ByteArrayInputStream
-import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO}
 import org.apache.activemq.apollo.broker.ConfigStore
+import org.apache.activemq.apollo.dto.{ValueDTO, XmlCodec, BrokerDTO}
+
+case class EditConfig(config:String)
 
 /**
  * A broker resource is used to represent the configuration of a broker.
@@ -32,45 +34,47 @@ import org.apache.activemq.apollo.broker.ConfigStore
 @Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
 case class ConfigurationResource(parent:BrokerResource) extends Resource(parent) {
 
-  lazy val config = {
-    val store = ConfigStore()
-    if( store.can_write ) {
-      store.load(false)
+  lazy val store = {
+    val rc = ConfigStore()
+    if( rc.can_write ) {
+      rc
     } else {
       None
     }.getOrElse(result(NOT_FOUND))
   }
 
-
   @GET
-  def get(@Context uriInfo:UriInfo) = {
-    val ub = uriInfo.getAbsolutePathBuilder()
-    seeOther(path(config.rev)).build
+  def get() = store.load(false)
+
+  @Produces(Array("text/html"))
+  @GET
+  @Path("edit")
+  def edit_html() = {
+    EditConfig(store.read)
   }
 
-  @GET @Path("{rev}")
-  def getConfig(@PathParam("rev") rev:Int):BrokerDTO = {
-    // that rev may have gone away..
-    config.rev==rev || result(NOT_FOUND)
-    config
+  @POST
+  @Path("edit")
+  def edit_post(@FormParam("config") config:String) = {
+    val rc = new ValueDTO
+    rc.value = config
+    edit_put(rc)
+    result(path("../.."))
   }
 
-  @POST @Path("{rev}")
-  def post(@PathParam("rev") rev:Int, @FormParam("config") config:String) = {
-    val dto = XmlCodec.unmarshalBrokerDTO(new ByteArrayInputStream(config.getBytes("UTF-8")))
-    put(rev, dto)
-    result(path("../"+dto.rev))
+  @Produces(Array("application/json", "application/xml","text/xml"))
+  @GET
+  @Path("edit")
+  def edit() = {
+    val rc = new ValueDTO
+    rc.value = store.read
+    rc
   }
 
-  @PUT @Path("{rev}")
-  def put(@PathParam("rev") rev:Int, config:BrokerDTO) = {
-    config.rev = rev
-    val store = ConfigStore()
-    if( store.can_write ) {
-      store.store(config)
-    } else {
-      false
-    } || result(NOT_FOUND)
+  @PUT
+  @Path("edit")
+  def edit_put(config:ValueDTO) = {
+    store.write(config.value)
   }
 
 }

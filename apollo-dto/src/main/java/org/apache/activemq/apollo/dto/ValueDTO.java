@@ -14,32 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.web
+package org.apache.activemq.apollo.dto;
 
-import java.io.File
-import org.apache.activemq.apollo.util._
-import org.apache.activemq.apollo.broker.FileConfigStore
-import org.fusesource.hawtdispatch._
+import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * <p>
- * </p>
+ * This is the root container for a broker's configuration.
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class FileConfigStoreTest extends FunSuiteSupport {
-  test("file config store") {
+@XmlRootElement(name="value")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class ValueDTO {
 
-    val store = new FileConfigStore
-    store.file = new File("activemq.xml")
-
-    store.start
-
-    expect("default") {
-      store.load(false).id
-    }
-
-    store.stop
-  }
+    /**
+     * Holds a value
+     */
+    @XmlValue
+    public String value;
 }
-

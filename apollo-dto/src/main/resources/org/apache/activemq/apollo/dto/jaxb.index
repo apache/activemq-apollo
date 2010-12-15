@@ -46,3 +46,4 @@ DestinationDTO
 LinkDTO
 QueueConsumerStatusDTO
 StompDTO
+ValueDTO

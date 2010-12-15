@@ -4,9 +4,9 @@
 -# The ASF licenses this file to You under the Apache License, Version 2.0
 -# (the "License"); you may not use this file except in compliance with
 -# the License.  You may obtain a copy of the License at
--# 
+-#
 -# http://www.apache.org/licenses/LICENSE-2.0
--# 
+-#
 -# Unless required by applicable law or agreed to in writing, software
 -# distributed under the License is distributed on an "AS IS" BASIS,
 -# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,13 +17,14 @@
 - val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
 - import helper._
 
-h1 Broker: #{id}
+.breadcumbs
+  a(href={strip_resolve("../..")}) Back
 
-- if (manageable)
-  p
-    a(href={path("runtime")}) manage
-
-- if (configurable)
-  p
-    a(href={path("config/edit")}) configuration
-
+form(method="post" action="edit")
+  div
+    input(type="submit" value="Update")
+  div
+    textarea(rows="40" cols="80" name="config")<
+      ~~ config
+  div
+    input(type="submit" value="Update")

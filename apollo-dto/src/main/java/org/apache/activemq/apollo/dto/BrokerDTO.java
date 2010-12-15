@@ -21,23 +21,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * This is the root container for a broker's configuration.
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @XmlRootElement(name="broker")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class BrokerDTO extends ServiceDTO<String> {
-
-    /**
-     * Used to track config revisions.
-     */
-    @XmlAttribute
-    public int rev;
-
-    /**
-     * Used to track who last modified the configuration.
-     */
-    @XmlAttribute(name="modified-by")
-    public String modified_by;
 
     /**
      * Used to store any configuration notes.

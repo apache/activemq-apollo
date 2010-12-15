@@ -16,24 +16,17 @@
  */
 package org.apache.activemq.apollo.broker
 
-import org.apache.activemq.apollo.broker.jaxb.PropertiesReader
-import org.apache.activemq.apollo.dto.{XmlCodec, ConnectorDTO, VirtualHostDTO, BrokerDTO}
-import java.util.regex.Pattern
-import javax.xml.stream.{XMLOutputFactory, XMLInputFactory}
+import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO}
 import org.fusesource.hawtdispatch._
-import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
 import java.util.concurrent.{TimeUnit, ExecutorService, Executors}
 import org.fusesource.hawtbuf.{ByteArrayInputStream, ByteArrayOutputStream}
-import javax.xml.bind.{Marshaller, JAXBContext}
 import security.EncryptionSupport
 import XmlCodec._
 import org.apache.activemq.apollo.util._
-import scala.util.continuations._
-import org.fusesource.hawtdispatch.DispatchQueue
 import java.util.Arrays
 import FileSupport._
 import java.util.Properties
-import java.io.{FileInputStream, OutputStreamWriter, File}
+import java.io.{FileOutputStream, FileInputStream, File}
 
 object ConfigStore {
 
@@ -54,9 +47,12 @@ object ConfigStore {
  */
 trait ConfigStore {
 
+  def read(): String
+  def write(value:String): Unit
+
   def load(eval:Boolean): BrokerDTO
 
-  def store(config:BrokerDTO): Boolean
+  def store(config:BrokerDTO): Unit
 
   def can_write:Boolean
 
@@ -79,13 +75,7 @@ object FileConfigStore extends Log
 class FileConfigStore extends ConfigStore {
   import FileConfigStore._
 
-  object StoredBrokerModel {
-    def apply(config:BrokerDTO) = {
-      val data = marshall(config)
-      new StoredBrokerModel(config.rev, data, 0)
-    }
-  }
-  case class StoredBrokerModel(rev:Int, data:Array[Byte], lastModified:Long)
+  case class StoredBrokerModel(data:Array[Byte], lastModified:Long)
 
   var file:File = new File("activemq.xml")
 
@@ -106,29 +96,20 @@ class FileConfigStore extends ConfigStore {
     running = true
 
     file = file.getCanonicalFile;
-    file.getParentFile.mkdir
-    // Find the latest rev
-    val files = file.getParentFile.listFiles
-    val regex = (Pattern.quote(file.getName+".")+"""(\d)$""").r
-    var revs:List[Int] = Nil
-    if( files!=null ) {
-      for( file <- files) {
-        file.getName match {
-          case regex(ver)=>
-            revs ::= Integer.parseInt(ver)
-          case _ =>
-        }
+
+    if( !file.exists ) {
+      try {
+        // try to create a default version of the file.
+        store(Broker.defaultConfig)
+      } catch {
+        case e:Throwable =>
+      }
+      if( !file.exists ) {
+        throw new Exception("The '%s' configuration file does not exist.".format(file.getPath))
       }
     }
-    revs = revs.sortWith((x,y)=> x < y)
 
-    val last = if( file.exists ) {
-      read(1, file)
-    } else {
-      write(StoredBrokerModel(defaultConfig(1)))
-    }
-
-    latest = last
+    latest = read(file)
     schedualNextUpdateCheck
   }
 
@@ -141,38 +122,36 @@ class FileConfigStore extends ConfigStore {
     unmarshall(latest.data, eval)
   }
 
-  def can_write:Boolean = file.canWrite
-
-  def store(config:BrokerDTO) = {
-    debug("storing broker model: %s ver %d", config.id, config.rev)
-    if( latest.rev+1 != config.rev ) {
-      debug("update request does not match next revision: %d", latest.rev+1)
-      false
-    } else {
-      latest = write(StoredBrokerModel(config))
-      true
-    }
+  def read() = {
+    new String(latest.data)
   }
 
-  private def fileRev(rev:Int) = new File(file.getParent, file.getName+"."+rev)
+  def can_write:Boolean = file.canWrite
+
+  def store(config:BrokerDTO):Unit = {
+    val data = marshall(config)
+    latest = write(StoredBrokerModel(data, 0))
+  }
+
+  def write(value:String) = {
+    val m = StoredBrokerModel(value.getBytes, 0)
+    unmarshall(m.data)
+    latest = write(m)
+  }
 
   private def schedualNextUpdateCheck:Unit = dispatchQueue.after(1, TimeUnit.SECONDS) {
     if( running ) {
       val lastModified = latest.lastModified
       val latestData = latest.data
-      val nextRev = latest.rev+1
       ioWorker {
         try {
           val l = file.lastModified
           if( l != lastModified ) {
-            val config = read(nextRev, file)
+            val config = read(file)
             if ( !Arrays.equals(latestData, config.data) ) {
-              val c = unmarshall(config.data)
-              c.rev = config.rev
-              store(c)
-            } else {
-              latest = latest.copy(lastModified = l)
+              // TODO: trigger reloading the config file.
             }
+            latest = config
           }
           schedualNextUpdateCheck
         }
@@ -185,24 +164,24 @@ class FileConfigStore extends ConfigStore {
     }
   }
 
-
-
-  private def defaultConfig(rev:Int) = {
-    val config = Broker.defaultConfig
-    config.rev = rev
-    config
-  }
-
-  private def read(rev:Int, file: File) ={
+  private def read(file: File) ={
     val data = IOHelper.readBytes(file)
     val config = unmarshall(data) // validates the xml
-    StoredBrokerModel(rev, data, file.lastModified)
+    StoredBrokerModel(data, file.lastModified)
   }
 
   private  def write(config:StoredBrokerModel) = {
-    // write to the files..
+
+    // backup the config file...
+    if(file.exists()) {
+      using(new FileInputStream(file)) { in =>
+        using(new FileOutputStream(file.getParentFile / ("~"+file.getName))) { out =>
+          copy(in, out)
+        }
+      }
+    }
+
     IOHelper.writeBinaryFile(file, config.data)
-    IOHelper.writeBinaryFile(fileRev(config.rev), config.data)
     config.copy(lastModified = file.lastModified)
   }
 
