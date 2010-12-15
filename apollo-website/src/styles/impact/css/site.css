@@ -1,5 +1,5 @@
 body, html {
-    font-family:Arial,Verdana,Helvetica,sans-serif;
+    font-family:Georgia, Arial, sans-serif; 
     color: #666666;
 }
 body, html, table, tr, td, tbody {
@@ -12,6 +12,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
+    font-family: 'Graublau Web', Helvetica, sans-serif;
     overflow: visible;
     color: #993333;
 }

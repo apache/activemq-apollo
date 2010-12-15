@@ -13,40 +13,41 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+title: Apollo
+--- name:overview
 
-title: Apollo ${project_version}
-in_menu: true
-sort_info: 1
---- name:overview pipeline:scaml
-
-%h1 Apollo #{project_version}
+# Apollo ${project_version}
 
 #{project_slogan}
 
 --- name:content pipeline:markdown 
 
-[Apollo][] is a [Scala 2.8](http://www.scala-lang.org) based messaging broker.
-It can be thought of as a forked and stripped down version of [Apache ActiveMQ][] . 
-It is focused on providing a simple, stable, scalable messaging core which is easy
-to extend.
-
-[Apollo]:http://github.com/chirino/activemq-apollo
-[Apache ActiveMQ]:http://activemq.apache.org/
+[Apollo](http://activemq.apache.org/apollo/) is a 
+[Scala 2.8](http://www.scala-lang.org) based messaging broker. 
+It can be thought of as a forked and stripped down version of 
+[Apache ActiveMQ](http://activemq.apache.org/) . It is focused on 
+providing a simple, stable, scalable messaging core which is easy to extend.
 
 ## Implemented Features
 
-* Topic style message routing
-* Queue style message routing
-* Persistent Messages
-* Message paging/swapping
-  queue sizes
-* Message Selectors
+* [Topics and Queues](documentation/user-manual.html#Destination_Types)
 * Queue Browsers
+* [Durable Subscriptions on Topics](documentation/user-manual.html#Topic_Durable_Subscriptions)
+* [Persistence](documentation/user-manual.html#Reliable_Messaging)
+* Message swapping
+* [Message Selectors](documentation/user-manual.html#Message_Selectors)
+* ACL based security
+* JAAS Authorization
+* SSL/TLS Support
 * REST based management
-* [Stomp 1.1](http://stomp.github.com/stomp-specification-1-1.html) Protocol Support
+* [Stomp 1.0](http://stomp.github.com/stomp-specification-1.0.html) Protocol
+  Support
+* [Stomp 1.1](http://stomp.github.com/stomp-specification-1.1.html) Protocol
+  Support
 
-## Guides
+## Documentation
 
  * [Getting Started Guide](documentation/getting-started.html)
+ * [User Manual](documentation/user-manual.html)
  
 
