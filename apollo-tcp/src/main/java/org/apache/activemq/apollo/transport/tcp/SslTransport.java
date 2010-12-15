@@ -80,7 +80,6 @@ public class SslTransport extends TcpTransport {
             }
             return rc.toArray(new X509Certificate[rc.size()]);
         } catch (SSLPeerUnverifiedException e) {
-            e.printStackTrace();
             return null;
         }
     }
@@ -190,7 +189,7 @@ public class SslTransport extends TcpTransport {
                 // lets drain the overflow buffer before trying to suck down anymore
                 // network bytes.
                 int size = Math.min(plain.remaining(), readOverflowBuffer.remaining());
-                plain.put(readOverflowBuffer.array(), 0, size);
+                plain.put(readOverflowBuffer.array(), readOverflowBuffer.position(), size);
                 readOverflowBuffer.position(readOverflowBuffer.position()+size);
                 if( !readOverflowBuffer.hasRemaining() ) {
                     readOverflowBuffer = null;
