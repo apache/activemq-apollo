@@ -1,6 +1,6 @@
 # Apollo ${project_version} User Manual
 
-{:toc}
+{:toc:2-5}
 
 ## Creating a Broker
 
@@ -100,6 +100,8 @@ Brokers can be configured with multiple virtual hosts and connectors.
 A broker connector is used to accept new connections to the broker.
 A `connector` element can be configured with the following attributes
 
+* `enabled` : if set to false, then the connector host will be disabled.
+
 * `bind` : The transport that the connector will listen on, it includes the
   ip address and port that it will bind to.
 
@@ -137,6 +139,8 @@ virtual host defined in the configuration file.
   should be repeated multiple times if the host has many host names.
 
 A `virtual-host` element may be configured with the following attributes:
+
+* `enabled` : if set to false, then the virtual host will be disabled.
 
 * `purge_on_startup` : if set to true, the persistent state of the broker
    will be purged when the broker is started up.
@@ -217,6 +221,94 @@ memory.
   from the store at a time. Note that Flushed entires are just reference
   pointers to the actual messages. When not loaded, the batch is referenced
   as sequence range to conserve memory.
+
+##### Message Stores
+
+A message store is used to implement reliable messaging and message
+swapping which are both optional features that disabled if no message
+store is configured on the virtual host. If no message store is
+configured, then all message routing is performed in memory and queue will
+quickly "fill up" when you have slow or no consumers since the messages
+cannot get swapped to disk.
+
+${project_name} supports multiple message store implementations.  The 
+implementations currently supported are:
+
+* [BDB Store](#BDB_Store) : is a file based message store implemented using the 
+  [Sleepycat BDB](http://en.wikipedia.org/wiki/Berkeley_DB) library.
+  This is the most stable implementation.
+* [HawtDB Store](#HawtDB_Store) : is a file based message store implemented using the 
+  [HawtDB](http://hawtdb.fusesource.org/) library.  This implementation
+  has known bugs and not recommend to be used unless your good with a 
+  debugger.
+
+###### BDB Store
+
+Apache cannot redistribute the BDB library due to the terms of it's
+license, but you can easily get a free copy directly from Oracle. Before
+you can start using the BDB Store you must first download it from Oracle
+at [je-4.1.6.jar](http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar)
+and then copy it into the `${APOLLO_HOME}/lib` directory.
+
+For those of you with curl installed, you can just run:
+
+    curl http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar > ${APOLLO_HOME}/lib/je-4.1.6.jar
+
+Once that is done, you can enable the store by adding a `bdb-store` element
+inside your `virtual-host`.  Example:
+    
+{pygmentize:: xml}
+  ...
+  <virtual-host id="default">
+    ...
+    <bdb-store directory="${apollo.base}/data"/>
+    ..
+  </virtual-host>
+  ...
+{pygmentize}
+
+A `bdb-store` element may be configured with the following attributes:
+
+* `directory` : The directory which the store will use to hold it's data
+  files. The store will create the directory if it does not already
+  exist.
+* `flush_delay` : The flush delay is the amount of time in milliseconds
+  that a store will delay persisting a messaging unit of work in hopes
+  that it will be invalidated shortly thereafter by another unit of work
+  which would negate the operation.
+* `read_threads` : The number of concurrent read threads to use when
+  accessing the store. The value defaults to 10.
+
+###### HawtDB Store
+
+The HawtDB store implementation is redistributable by apache so it can 
+be used out of the box without having to install any additional software.
+The problem is that it is still unstable and you should only use it
+if your willing to dive in with a debugger to help solidify the 
+implementation.
+
+You can enable the store by adding a `hawtdb-store` element
+inside your `virtual-host`.  Example:
+    
+{pygmentize:: xml}
+  ...
+  <virtual-host id="default">
+    ...
+    <hawtdb-store directory="${apollo.base}/data"/>
+    ..
+  </virtual-host>
+  ...
+{pygmentize}
+
+A `hawtdb-store` element may be configured with the following attributes:
+
+* `directory` : The directory which the store will use to hold it's data
+  files. The store will create the directory if it does not already
+  exist.
+* `flush_delay` : The flush delay is the amount of time in milliseconds
+  that a store will delay persisting a messaging unit of work in hopes
+  that it will be invalidated shortly thereafter by another unit of work
+  which would negate the operation.
 
 ### Security
 
@@ -348,7 +440,7 @@ Bellow you will find an example which:
   only app1 users can subscribe to them.
 
 {pygmentize:: xml}
-<broker>
+<broker ...>
   ...
   <acl>
     <admin name="admins"/>
@@ -385,6 +477,63 @@ Bellow you will find an example which:
 </broker>
 {pygmentize}
 
+### Web Based Administration
+
+${project_name} start a web based administration interface on 
+[`http://127.0.0.1:8080`](http://127.0.0.1:8080) by default.  Note
+that it binds to the loopback interface so that only local web 
+browsers can access the interface.
+
+If the broker has authentication enabled and has defined an ACL
+configuring the admins of the broker, then the web interface will 
+perform basic authentication and will only grant access to those users
+which are in the admin ACL.
+
+If you want to change the port or the interface it binds on or perhaps
+even disable it altogether, then you should add a `web-admin`
+configuration element inside the `broker` element to change the
+default settings. For example:
+
+{pygmentize:: xml}
+<broker ...>
+  ...
+  <web-admin host="127.0.0.1" port="8001"/>
+  ...
+</broker>
+{pygmentize}
+
+A `web-admin` element may be configured with the following attributes:
+
+* `host` : The amount of memory buffer space allocated for each queue.
+* `port` : The amount of memory buffer space allocated to each
+* `prefix` : The prefix path to the web administration application
+* `enabled` : If set to false then web administration is disabled. 
+
+
+
+## Managing Brokers
+
+### Starting a Broker Instance
+
+Assuming you created the broker instance under `/var/lib/mybroker` all you need
+to do start running the broker instance in the foreground is execute:
+
+    /var/lib/mybroker/bin/apollo-broker run
+
+### Stopping a Broker Instance
+
+*TODO*
+
+### Viewing Broker State
+
+${project_name} provides a web based interface for administrators to inspect
+the runtime state of the Broker.  If your running the broker on your local
+machine, just open your web browser to [`http://localhost:8080`](http://localhost:8080).
+
+The web interface will display the status of the the connectors and show
+attached connections.  It will also allow you to drill into each configured
+virtual host and view the destinations and queues being used. 
+
 ## Using the STOMP Protocol
 
 Clients can connect to ${project_name} using the
@@ -406,7 +555,7 @@ to get familiar with it before using one of the many available client libraries.
 There are many open source STOMP clients for different platforms and
 languages.  You can find a full listing of available clients at:
 
-* http://stomp.github.com/implementations.html#Clients
+* [`http://stomp.github.com/implementations.html#Clients`](http://stomp.github.com/implementations.html#Clients)
 
 The ${project_name} distribution ships with an `examples` directory
 where you can find some simple examples of how to use some of those
