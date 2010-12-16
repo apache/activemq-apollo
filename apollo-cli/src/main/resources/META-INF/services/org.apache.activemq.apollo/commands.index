@@ -18,5 +18,5 @@ org.apache.activemq.apollo.cli.commands.Exit
 org.apache.activemq.apollo.cli.commands.Help
 org.apache.activemq.apollo.cli.commands.Create
 #org.apache.activemq.apollo.cli.commands.Start
-#org.apache.activemq.apollo.cli.commands.Stop
+org.apache.activemq.apollo.cli.commands.Stop
 org.apache.activemq.apollo.cli.commands.Run

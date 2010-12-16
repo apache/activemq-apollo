@@ -24,8 +24,6 @@ import reflect.{BeanProperty}
 import com.sun.jersey.api.view.ImplicitProduces
 import Response._
 import Response.Status._
-import org.apache.activemq.apollo.broker.ConfigStore
-import org.apache.activemq.apollo.broker.BrokerRegistry
 import collection.JavaConversions._
 import com.sun.jersey.api.core.ResourceContext
 import java.util.concurrent.TimeUnit
@@ -35,6 +33,7 @@ import org.apache.activemq.apollo.util.Logging
 import org.fusesource.hawtdispatch._
 import java.net.URI
 import org.fusesource.scalate.{NoValueSetException, RenderContext}
+import org.apache.activemq.apollo.broker.{Broker, ConfigStore, BrokerRegistry}
 
 /**
  * Defines the default representations to be used on resources
@@ -154,6 +153,19 @@ class BrokerResource extends Resource {
     rc.manageable = BrokerRegistry.get(id)!=null
     rc.configurable = cs.can_write
     rc
+  }
+
+  @POST
+  @Path("command/shutdown")
+  def command_shutdown:Unit = {
+    info("JVM shutdown requested via web interface")
+
+    // do the the exit async so that we don't
+    // kill the current request.
+    Broker.BLOCKABLE_THREAD_POOL {
+      Thread.sleep(200);
+      System.exit(0)
+    }
   }
 
   @Path("config")
