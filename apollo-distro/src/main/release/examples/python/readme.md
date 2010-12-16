@@ -1,9 +1,10 @@
-## Installing the stomppy Library
+Prereqs
+=======
 
-The [stomppy](http://code.google.com/p/stomppy) python client distribution is 
-included in this directory.  It must be installed before the examples are run.
+Install the [stomppy](http://code.google.com/p/stomppy) python client
+library.
 
-    tar -zxvf stomp.py-3.0.2a.tar.gz
-    cd stomp.py-3.0.2
-    python ./setup.py install 
+easy_install users can install it by running:
+
+     easy_install http://stomppy.googlecode.com/files/stomp.py-3.0.2a.tar.gz
 
