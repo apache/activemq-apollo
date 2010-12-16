@@ -82,12 +82,12 @@
       <scope>test</scope>
     </dependency>
 
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-cassandra</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <scope>test</scope>
-    </dependency>
+    <!--<dependency>-->
+      <!--<groupId>org.apache.activemq</groupId>-->
+      <!--<artifactId>apollo-cassandra</artifactId>-->
+      <!--<version>1.0-SNAPSHOT</version>-->
+      <!--<scope>test</scope>-->
+    <!--</dependency>-->
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-hawtdb</artifactId>
