@@ -477,6 +477,60 @@ Bellow you will find an example which:
 </broker>
 {pygmentize}
 
+#### Encrypting Passwords in the Configuration
+
+The `etc/apollo.xml` file supports using `${<property-name>}` style syntax.
+You can use any system properties and if the `etc/apollo.xml.properties` file
+exists, then any of the properties defined there. Any of the properties
+values in the `etc/apollo.xml.properties` can be replaced with encrypted
+versions by using the `apollo encrypt` command.
+
+Lets say you your current `key-storage` contains plain text passwords that
+need to be replaced with encrypted versions:
+{pygmentize:: xml}
+  ...
+  <key-storage 
+     file="${apollo.base}/etc/keystore" 
+     password="open" 
+     key-password="sesame"/>
+  ...
+{pygmentize}
+
+Lets first find out what the encrypted versions of the passwords would be.
+${project_name} encrypts and decrypts values using the password stored in
+the `APOLLO_ENCRYPTION_PASSWORD` environment variable.  
+
+The following is an example of how you can encrypt the previous
+passwords:
+
+    $ export APOLLO_ENCRYPTION_PASSWORD='keepmesafe'
+    $ apollo encrypt open
+    ENC(6r7HKCib0H8S+OuSfV+muQ==)
+    $ apollo encrypt sesame
+    ENC(FP+H2FIg++sSaOxg/ISknw==)
+
+Once you have the encrypted passwords, you can add them to the
+`etc/apollo.xml.properties` file. Example:
+
+    store.pass=ENC(6r7HKCib0H8S+OuSfV+muQ==)
+    key.pass=ENC(FP+H2FIg++sSaOxg/ISknw==)
+
+Finally the last step of securing the configuration is to replace the plain
+text passwords with variable references to the corresponding property names:
+
+{pygmentize:: xml}
+  ...
+  <key-storage 
+     file="${apollo.base}/etc/keystore" 
+     password="${store.pass}" 
+     key-password="${key.pass}"/>
+  ...
+{pygmentize}
+
+When you use encrypted passwords in your configuration, you MUST make
+sure that the `APOLLO_ENCRYPTION_PASSWORD` environment variable is set
+to the proper value before starting the broker.
+
 ### Web Based Administration
 
 ${project_name} start a web based administration interface on 
@@ -509,20 +563,25 @@ A `web-admin` element may be configured with the following attributes:
 * `prefix` : The prefix path to the web administration application
 * `enabled` : If set to false then web administration is disabled. 
 
-
-
 ## Managing Brokers
 
 ### Starting a Broker Instance
 
-Assuming you created the broker instance under `/var/lib/mybroker` all you need
-to do start running the broker instance in the foreground is execute:
+Assuming you created the broker instance under `/var/lib/mybroker` all you
+need to do start running the broker instance in the foreground is execute:
 
     /var/lib/mybroker/bin/apollo-broker run
 
 ### Stopping a Broker Instance
 
-*TODO*
+You can stop a running broker by executing: 
+
+    /var/lib/mybroker/bin/apollo-broker stop --user admin --password password
+
+This command uses the web administration interface to signal the broker
+to shutdown.  If the that interface has been disabled you should just kill
+the the broker process by killing it's process id using your operating
+system's tools.
 
 ### Viewing Broker State
 
