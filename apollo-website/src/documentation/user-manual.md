@@ -4,34 +4,6 @@
 
 ## Creating a Broker
 
-{pygmentize_and_compare::}
------------------------------
-haml: An example .scaml file
------------------------------
-%html
-  %body
-    The quick brown fox jumps 
-    over the lazy dog
------------------------------
-text: An equivalent .jade file
------------------------------
-html
-  body
-    | The quick brown fox jumps 
-    | over the lazy dog
-{pygmentize_and_compare}
-
-Both examples above will render to the following:
-
-{pygmentize:: xml}
-<html>
-  <body>
-    The quick brown fox jumps 
-    over the lazy dog
-  </body>
-</html>
-{pygmentize}
-
 A broker instance is the directory containing all the configuration and
 runtime data such as logs and data files associated with a broker process. It
 is recommended that you do *not* create the instance directory under the
