@@ -164,7 +164,7 @@ class Delivery extends BaseRetained {
    * Set if the producer requires an ack to be sent back.  Consumer
    * should execute once the message is processed.
    */
-  var ack:(StoreUOW)=>Unit = null
+  var ack:(Boolean, StoreUOW)=>Unit = null
 
   def copy() = (new Delivery).set(this)
 

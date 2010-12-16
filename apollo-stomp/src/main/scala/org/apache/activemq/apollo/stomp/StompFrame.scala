@@ -337,8 +337,14 @@ object Stomp {
   val COMMA: Byte = ','
   val NEWLINE_BUFFER = new Buffer(Array(NEWLINE))
   val END_OF_FRAME_BUFFER = new Buffer(Array(NULL, NEWLINE))
-  val SEPERATOR: Byte = ':'
-  val SEPERATOR_BUFFER = new Buffer(Array(SEPERATOR))
+  val COLON: Byte = ':'
+  val COLON_BUFFER = new Buffer(Array(COLON))
+  val ESCAPE:Byte = '\\'
+
+  val ESCAPE_ESCAPE_SEQ = ascii("""\\""")
+  val COLON_ESCAPE_SEQ = ascii("""\c""")
+  val NEWLINE_ESCAPE_SEQ = ascii("""\n""")
+
 
   ///////////////////////////////////////////////////////////////////
   // Frame Commands
@@ -357,6 +363,7 @@ object Stomp {
   val COMMIT = ascii("COMMIT")
   val ABORT = ascii("ABORT")
   val ACK = ascii("ACK")
+  val NACK = ascii("NACK")
 
   ///////////////////////////////////////////////////////////////////
   // Frame Responses
@@ -372,6 +379,7 @@ object Stomp {
   val RECEIPT_REQUESTED = ascii("receipt")
   val TRANSACTION = ascii("transaction")
   val CONTENT_LENGTH = ascii("content-length")
+  val CONTENT_TYPE = ascii("content-type")
   val TRANSFORMATION = ascii("transformation")
   val TRANSFORMATION_ERROR = ascii("transformation-error")
 
@@ -427,6 +435,9 @@ object Stomp {
   val DEFAULT_HEAT_BEAT = ascii("0,0")
 
   val SUPPORTED_PROTOCOL_VERSIONS = List(V1_1, V1_0)
+
+  val TEXT_PLAIN = ascii("text/plain")
+
 
   //	public enum Transformations {
   //		JMS_BYTE, JMS_OBJECT_XML, JMS_OBJECT_JSON, JMS_MAP_XML, JMS_MAP_JSON

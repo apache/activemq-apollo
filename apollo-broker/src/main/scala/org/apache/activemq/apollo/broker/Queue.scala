@@ -66,7 +66,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
   })
 
 
-  val ack_source = createSource(new ListEventAggregator[(Subscription#AcquiredQueueEntry, StoreUOW)](), dispatchQueue)
+  val ack_source = createSource(new ListEventAggregator[(Subscription#AcquiredQueueEntry, Boolean, StoreUOW)](), dispatchQueue)
   ack_source.setEventHandler(^ {drain_acks});
   ack_source.resume
 
@@ -431,8 +431,12 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
   def drain_acks = {
     ack_source.getData.foreach {
-      case (entry, tx) =>
-        entry.ack(tx)
+      case (entry, consumed, tx) =>
+        if( consumed ) {
+          entry.ack(tx)
+        } else {
+          entry.nack
+        }
     }
     messages.refiller.run
   }
@@ -1035,8 +1039,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
                 val acquiredQueueEntry = sub.acquire(entry)
                 val acquiredDelivery = delivery.copy
-                acquiredDelivery.ack = (tx)=> {
-                  queue.ack_source.merge((acquiredQueueEntry, tx))
+                acquiredDelivery.ack = (consumed, tx)=> {
+                  queue.ack_source.merge((acquiredQueueEntry, consumed, tx))
                 }
 
                 assert(sub.offer(acquiredDelivery), "sub should have accepted, it had reported not full earlier.")

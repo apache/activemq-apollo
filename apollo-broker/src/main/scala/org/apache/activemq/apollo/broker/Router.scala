@@ -570,7 +570,7 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
   // Dispatch.
   //
 
-  var pendingAck: (StoreUOW)=>Unit = null
+  var pendingAck: (Boolean, StoreUOW)=>Unit = null
   var overflow:Delivery=null
   var overflowSessions = List[DeliverySession]()
   var refiller:Runnable=null
@@ -621,11 +621,11 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
       if (delivery.uow != null) {
         val ack = pendingAck
         delivery.uow.setDisposer(^ {
-          ack(null)
+          ack(true, null)
         })
 
       } else {
-        pendingAck(null)
+        pendingAck(true, null)
       }
       pendingAck==null
     }

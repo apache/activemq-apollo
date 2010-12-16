@@ -64,7 +64,7 @@ object StompCodec extends Log {
     if( !frame.updated_headers.isEmpty ) {
       for( (key, value) <- frame.updated_headers ) {
         key.writeTo(os)
-        os.write(SEPERATOR)
+        os.write(COLON)
         value.writeTo(os)
         os.write(NEWLINE)
       }
@@ -82,7 +82,7 @@ object StompCodec extends Log {
     } else {
       for( (key, value) <- frame.headers ) {
         key.writeTo(os)
-        os.write(SEPERATOR)
+        os.write(COLON)
         value.writeTo(os)
         os.write(NEWLINE)
       }
@@ -122,7 +122,7 @@ object StompCodec extends Log {
     var line = read_line
     while( line.length() > 0 ) {
       try {
-          val seperatorIndex = line.indexOf(SEPERATOR)
+          val seperatorIndex = line.indexOf(COLON)
           if( seperatorIndex<0 ) {
               throw new IOException("Header line missing seperator.")
           }
@@ -225,7 +225,7 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
     if( !frame.updated_headers.isEmpty ) {
       for( (key, value) <- frame.updated_headers ) {
         key.writeTo(os)
-        os.write(SEPERATOR)
+        os.write(COLON)
         value.writeTo(os)
         os.write(NEWLINE)
       }
@@ -244,7 +244,7 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
     } else {
       for( (key, value) <- frame.headers ) {
         key.writeTo(os)
-        os.write(SEPERATOR)
+        os.write(COLON)
         value.writeTo(os)
         os.write(NEWLINE)
       }
@@ -431,7 +431,7 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
         }
 
         try {
-            val seperatorIndex = line.indexOf(SEPERATOR)
+            val seperatorIndex = line.indexOf(COLON)
             if( seperatorIndex<0 ) {
                 throw new IOException("Header line missing seperator [" + ascii(line) + "]")
             }
