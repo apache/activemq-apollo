@@ -66,9 +66,11 @@ class Run extends Action with Logging {
         error("Configuration file'%s' does not exist.\n\nTry creating a broker instance using the 'apollo create' command.".format(conf));
       }
 
-      val login_config = conf.getParentFile / "login.config"
-      if( login_config.exists ) {
-        System.setProperty("java.security.auth.login.config", login_config.getCanonicalPath)
+      if( System.getProperty("java.security.auth.login.config")==null ) {
+        val login_config = conf.getParentFile / "login.config"
+        if( login_config.exists ) {
+          System.setProperty("java.security.auth.login.config", login_config.getCanonicalPath)
+        }
       }
 
       val webapp = {
