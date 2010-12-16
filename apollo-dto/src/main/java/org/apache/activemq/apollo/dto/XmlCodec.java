@@ -61,7 +61,8 @@ public class XmlCodec {
                 if (!matcher.find(start)) {
                     break;
                 }
-                String property = System.getProperty(matcher.group(1));
+                String group = matcher.group(1);
+                String property = props.getProperty(group);
                 if (property != null) {
                     str = matcher.replaceFirst(Matcher.quoteReplacement(property));
                 } else {
