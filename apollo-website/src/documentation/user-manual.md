@@ -52,6 +52,339 @@ following files.
  
 [login.conf]: http://download.oracle.com/javase/1.5.0/docs/guide/security/jaas/tutorials/LoginConfigFile.html
 
+### Adjusting JVM Settings
+
+You can define the following environment variables in the `bin/apollo-broker`
+start script to customize the JVM settings:
+
+* `JAVACMD` : The path to the java executable to use
+* `JVM_FLAGS` : The first JVM flags passed. Defaults to `-server -Xmx1G`, you
+  may want to lower or raise the maximum memory based on your actual usage. 
+* `APOLLO_OPTS` : Additional JVM options you can add
+* `APOLLO_DEBUG` : Set to true to enabled debugging on port 5005
+* `APOLLO_PROFILE` : Set to true to YourKit based profiling
+* `JMX_OPTS` : The JMX JVM options used, defaults to 
+  -Dcom.sun.management.jmxremote
+
+Make sure you define the variables before the `apollo-broker` script
+executes `apollo` and that the variables get exported in the case of the
+unix script.
+
+### Understanding the `apollo.xml` File
+
+The simplest valid `apollo.xml` defines a single virtual host and a
+single connector.
+
+{pygmentize:: xml}
+<broker id="default" xmlns="http://activemq.apache.org/schema/activemq/apollo">
+
+  <virtual-host id="default">
+    <host-name>localhost</host-name>
+  </virtual-host>
+
+  <connector id="tcp" bind="tcp://0.0.0.0:61613"/>
+  
+</broker>
+{pygmentize}
+
+The broker, virtual host, and connector are assigned a id which which
+is used to by the REST based administration console to identify 
+the corresponding runtime resource.  The virtual host will not persist
+any messages sent to it since it does not have a configured messages 
+store.
+
+Brokers can be configured with multiple virtual hosts and connectors.
+
+#### Connectors
+
+A broker connector is used to accept new connections to the broker.
+A `connector` element can be configured with the following attributes
+
+* `bind` : The transport that the connector will listen on, it includes the
+  ip address and port that it will bind to.
+
+* `connection_limit` : The maximum number of concurrently open connections
+  this connector will accept before it stops accepting additional
+  connections.  If not set, then there is no limit.
+
+* `protocol` : Defaults to `multi` which means that any of the broker's 
+   supported protocols can connect via this transport.
+
+Furthermore, the connector element may contain protocol specific
+configuration elements. For example, to add have the broker set the `user-id`
+header of messages to the id of user that sent the message, you would
+use the following configuration:
+
+{pygmentize:: xml}
+<connector id="tcp" bind="tcp://0.0.0.0:61613">
+  <stomp add-user-header="user-id"/>
+</connector>
+{pygmentize}
+
+#### Virtual Hosts
+
+A virtual hosts allows ${project_name} to support multi tenant style
+configurations. Each virtual host is highly isolated each with it's own
+persistence, security, and runtime constraints configuration.
+
+Protocols like STOMP 1.1, inform the broker of which host the client is
+attempting to connect with. The broker will search it's list of virtual hosts
+to find the first host who has a configured `host-name` that matches.
+Protocols which do NOT support virtual hosts, will just connect to the first
+virtual host defined in the configuration file.
+
+* `host-name` : a host name that the virtual host is known as.  This element
+  should be repeated multiple times if the host has many host names.
+
+A `virtual-host` element may be configured with the following attributes:
+
+* `purge_on_startup` : if set to true, the persistent state of the broker
+   will be purged when the broker is started up.
+
+The `virtual-host` can also define multiple `destination` and `queue` 
+elements to secure or tune how message delivery works for different 
+destinations or queues.  If none are defined, then sensible 
+default settings are used which allow queue and destinations to be
+auto created as they get accessed by applications.
+
+Finally `virtual-host` configuration should also include a message store
+configuration element to enable message persistence on the virtual host.
+
+##### Destinations
+
+A destination is a named routing path on the broker. You only need to define
+a `destination` element if you want adjust the default configuration used for
+your destination. When a new destination is first created in the broker, it's
+configuration will be determined by the first `destination` which matches the
+destination being created. The attributes matched against are:
+
+* `name` : The name of the destination, you can use wild cards to match
+  multiple 
+
+A `destination` element may be configured with the following attributes:
+
+* `unified` : If set to true, then routing then there is no difference
+  between sending to a queue or topic of the same name. The first time a
+  queue subscriptions is created, it will act like if a durable subscription
+  was created on the topic.
+
+* `slow_consumer_policy` : Valid values are `block` and `queue`. Defaults to
+  `block`. This setting defines how topic subscriptions are handled which
+  affects slow consumer scenarios. If set to `queue` then each subscription
+  gets a temporary queue which can swap messages to disk when you have a slow
+  consumer so that produces do not slow down to the speed of the slowest
+  consumer. If set to `block`, the producers block on slow consumers which
+  makes producers only as fast as the slowest consumer on the topic.
+
+##### Queues
+
+A queue is used to hold messages as they are being routed between
+applications. You only need to define a `queue` element if you want adjust
+the default configuration used for your queue. When a new queue is first
+created in the broker, it's configuration will be determined by the first
+`queue` which matches the queue being created. The attributes matched against
+are:
+
+* `name` : The name of the destination, you can use wild cards to match
+  multiple.
+
+* `kind` : Valid valuest are `ptp` for standard
+  point to point queues or `ds` for durable subscriptions.
+
+* `client-id` : Valid only if the `kind` is `ds`. This specify which client
+  id this configuration should match.
+
+* `subscription-id` : Valid only if the `kind` is `ds`. This specify which subscription
+  id this configuration should match.
+
+A `queue` element may be configured with the following attributes:
+
+* `queue-buffer` : The amount of memory buffer space allocated for each queue.
+
+* `producer-buffer` : The amount of memory buffer space allocated to each
+producer for receiving messages.
+
+* `consumer-buffer` : The amount of memory buffer space allocated to each
+subscription for receiving messages.
+
+* `persistent` : If set to false, then the queue will not persistently
+store it's message.
+
+* `swap` : If set to false, then the queue will not swap messages out of 
+memory.
+
+* `flush-range-size` : The number max number of flushed queue entries to load
+  from the store at a time. Note that Flushed entires are just reference
+  pointers to the actual messages. When not loaded, the batch is referenced
+  as sequence range to conserve memory.
+
+### Security
+
+#### Using SSL/TLS
+
+${project_name} supports SSL/TLS for transport level security to avoid 3rd
+parties listening in on the communications between the broker and it's
+clients. To enable it, you just need to add a connector which uses the `ssl`
+or `tls` transport and add a `key-storage` configuration element under the
+`broker` to configure the where the encryption keys and certificates are
+stored.
+
+Example:
+{pygmentize:: xml}
+  ...
+  <key-storage 
+     file="${apollo.base}/etc/keystore" 
+     password="password" 
+     key-password="password"/>
+  <connector id="tls" bind="tls://0.0.0.0:61614"/>
+  ...
+{pygmentize}
+
+The attributes that you can configure on the `key-storage` element are:
+
+* `file` : Path to where the key store is located.
+* `password` : The key store password
+* `key-password` : The password to the keys in the key store.
+* `store-type` : The type of key store, defaults to `JKS`.
+* `trust-algorithm` : The trust management algorithm, defaults to `SunX509`.
+* `key-algorithm` : The key management algorithm, defaults to `SunX509`.
+
+#### Authentication
+
+The first step to securing the broker is authenticating users. The default
+${project_name} configurations use file based authentication. Authentication
+is performed using JAAS who's config file is located in the instance
+directory under `etc/login.conf`. JAAS configuration files can define
+multiple named authentication domains. The `broker` element and
+`virtual-host` elements can be configured to authenticate against these
+domains.
+
+The `authentication` element defined at the broker level will get used to 
+authenticate broker level administration functions and to authenticate 
+any virtual hosts which did not define an `authentication` element.  If you
+want to disable authentication in a virtual host, you set the `enable` attribute
+to `false`.
+
+{pygmentize:: xml}
+<broker id="default" xmlns="http://activemq.apache.org/schema/activemq/apollo">
+  <authentication domain="internal"/>
+  
+  <virtual-host id="wine.com">
+    <authentication domain="external"/>
+    <host-name>wine.com</host-name>
+  </virtual-host>
+
+  <virtual-host id="internal.wine.com">
+    <host-name>internal.wine.com</host-name>
+  </virtual-host>
+
+  <virtual-host id="test">
+    <authentication enabled="false"/>
+    <host-name>cheeze.com</host-name>
+  </virtual-host>
+
+  <connector id="tcp" bind="tcp://0.0.0.0:61613"/>
+</broker>
+{pygmentize}
+
+The above example uses 2 JAAS domains, `internal` and `external`.  Broker 
+The `wine.com` host will use the external domain, the `internal.wine.com`
+host will use the internal domain and the `test` host will not authenticate
+users.
+
+##### Changing the Login Modules
+
+${project_name} uses JAAS to control against which systems users
+authenticate. The default ${project_name} configurations use file based
+authentication but with a simple change of the JAAS configuration, you can be
+authenticating against local UNIX account or LDAP.  Please reference
+the [JAAS documentation](http://download.oracle.com/javase/1.5.0/docs/guide/security/jaas/JAASRefGuide.html#AppendixB)
+for more details on how to edit the `etc/login.conf` file.
+
+Since different JAAS login modules produce principals of different class
+types, you may need to configure which of those class types to recognize as
+the user principal and the principal used to match against the access control
+lists (ACLs). 
+
+The default user principal class recognized is
+`org.apache.activemq.jaas.UserPrincipal`. You can configure it by adding
+`user-principal-kind` elements under the `authentication` element. The first
+principal who's type matches this list will be selected as the user's
+identity for informational purposes.
+
+Similarly, default acl principal class recognized is
+`org.apache.activemq.jaas.GroupPrincipal`. You can configure it by adding
+`acl-principal-kinds elements under the `authentication` element. The ACL
+entries which do not have an explicit kind will default to using the the
+kinds listed here.
+
+Example of customizing the principal kinds used:
+
+{pygmentize:: xml}
+  ...
+  <authentication domain="apollo">
+    <user-principal-kind>com.sun.security.auth.UnixPrincipal</user-principal-kind>
+    <user-principal-kind>com.sun.security.auth.LdapPrincipal</user-principal-kind>
+    <acl-principal-kind>com.sun.security.auth.UnixPrincipal</acl-principal-kind>
+    <acl-principal-kind>com.sun.security.auth.LdapPrincipal</acl-principal-kind>
+  </authentication>
+  ...
+</broker>
+{pygmentize}
+
+#### Authorization
+
+User authorization to broker resources is accomplished by configuring access 
+control lists (ACLs) to the `broker`, `virtual-host`, `destination`, and 
+`queue` elements.  The ACL define which principals are allowed to perform
+actions against the resources.
+
+Bellow you will find an example which:
+
+* only allows `admins` to use the broker's management interface.
+* only `app1` and `app2` users are allowed to connect to the host.
+* All users are allowed to create and send messages to the app1.* 
+  queues and destination, but only admins can destroy them and
+  only app1 users can subscribe to them.
+
+{pygmentize:: xml}
+<broker>
+  ...
+  <acl>
+    <admin name="admins"/>
+  </acl>
+
+  <virtual-host id="default">
+    ...
+    <acl>
+      <connect name="app1"/>
+      <connect name="app2"/>
+    </acl>
+    
+    <destination path="app1.**">
+      <acl>
+        <create  name="all"/>
+        <destroy name="admins"/>
+        <send    name="all"/>
+        <receive name="app1"/>
+      </acl>
+    </destination>
+    
+    <queue path="app1.**">
+      <acl>
+        <create  name="all"/>
+        <destroy name="admins"/>
+        <send    name="all"/>
+        <receive name="app1"/> 
+        <consume name="app1"/>
+      </acl>
+    </queue>
+    ...
+  </virtual-host>
+  ...
+</broker>
+{pygmentize}
+
 ## Using the STOMP Protocol
 
 Clients can connect to ${project_name} using the
