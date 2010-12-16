@@ -41,7 +41,7 @@ import org.apache.activemq.apollo.util.{Logging, ServiceControl}
 import org.apache.activemq.apollo.dto.{WebAdminDTO, PrincipalDTO}
 
 /**
- * The apollo create command
+ * The apollo run command
  */
 @command(scope="apollo", name = "run", description = "runs the broker instance")
 class Run extends Action with Logging {

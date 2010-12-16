@@ -96,7 +96,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
     if ( HawtDBStore.validate(config, reporter) < ERROR ) {
       if( serviceState.isStarted ) {
         // TODO: apply changes while he broker is running.
-        reporter.report(WARN, "Updating cassandra store configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
+        reporter.report(WARN, "Updating hawtdb store configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
       } else {
         this.config = config
       }
