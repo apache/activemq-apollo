@@ -20,3 +20,5 @@ org.apache.activemq.apollo.cli.commands.Create
 #org.apache.activemq.apollo.cli.commands.Start
 org.apache.activemq.apollo.cli.commands.Stop
 org.apache.activemq.apollo.cli.commands.Run
+org.apache.activemq.apollo.cli.commands.Encrypt
+org.apache.activemq.apollo.cli.commands.Decrypt
