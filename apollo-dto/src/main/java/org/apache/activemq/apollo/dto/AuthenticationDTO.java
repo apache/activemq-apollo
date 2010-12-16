@@ -42,7 +42,7 @@ public class AuthenticationDTO {
      * The class names for the types of principles that
      * the acl lists check against.
      */
-    @XmlElement(name="acl-principal-kinds")
+    @XmlElement(name="acl-principal-kind")
     public List<String> acl_principal_kinds = new ArrayList<String>();
 
     public List<String> acl_principal_kinds() {
@@ -58,7 +58,7 @@ public class AuthenticationDTO {
      * The class names for the types of principles that
      * the user name is extracted from.
      */
-    @XmlElement(name="user-principal-kinds")
+    @XmlElement(name="user-principal-kind")
     public List<String> user_principal_kinds = new ArrayList<String>();
 
     public List<String> user_principal_kinds() {

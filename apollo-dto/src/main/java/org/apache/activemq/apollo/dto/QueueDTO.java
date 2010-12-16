@@ -34,8 +34,7 @@ public class QueueDTO {
     public String name;
 
     /*
-     * The kind of queue.  It may be "ptp" for standard
-     * point to point queues or "ds" for durable subscriptions.
+     * The kind of queue.  I
      * If not set, then this configuration applies to all queue types.
      */
     @XmlAttribute
