@@ -189,7 +189,8 @@ class FileConfigStore extends ConfigStore {
   def unmarshall(in:Array[Byte], evalProps:Boolean=false) = {
     if (evalProps) {
 
-      val props = new Properties(System.getProperties)
+      val props = new Properties()
+      props.putAll(System.getProperties)
       val prop_file = file.getParentFile / (file.getName + ".properties")
       if( prop_file.exists() ) {
         FileSupport.using(new FileInputStream(prop_file)) { is=>
