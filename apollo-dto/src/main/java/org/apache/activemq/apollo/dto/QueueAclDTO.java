@@ -32,7 +32,6 @@ import java.util.*;
 public class QueueAclDTO extends DestinationAclDTO {
 
     @XmlElement(name="consume")
-    public Set<PrincipalDTO> consumes = new HashSet<PrincipalDTO>();
-
+    public List<PrincipalDTO> consumes = new ArrayList<PrincipalDTO>();
 
 }

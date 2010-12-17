@@ -593,7 +593,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
           if( !host.authenticator.authenticate(security_context) ) {
             async_die("Authentication failed.")
             noop // to make the cps compiler plugin happy.
-          } else if( !host.authorizer.can_connect_to(security_context, host) ) {
+          } else if( !host.authorizer.can_connect_to(security_context, host, connection.connector) ) {
             async_die("Connect not authorized.")
             noop // to make the cps compiler plugin happy.
           } else {

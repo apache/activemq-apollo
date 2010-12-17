@@ -153,7 +153,7 @@ class Run extends Action with Logging {
             val c = new org.eclipse.jetty.http.security.Constraint()
             c.setName("BASIC")
             val admins:Set[PrincipalDTO] = config.acl.admins.toSet
-            c.setRoles(admins.map(_.name).toArray)
+            c.setRoles(admins.map(_.allow).toArray)
             c.setAuthenticate(true)
             cm.setConstraint(c)
             cm.setPathSpec("/*")

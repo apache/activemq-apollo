@@ -168,9 +168,7 @@ destination being created. The attributes matched against are:
 A `destination` element may be configured with the following attributes:
 
 * `unified` : If set to true, then routing then there is no difference
-  between sending to a queue or topic of the same name. The first time a
-  queue subscriptions is created, it will act like if a durable subscription
-  was created on the topic.
+  between sending to a queue or topic of the same name.
 
 * `slow_consumer_policy` : Valid values are `block` and `queue`. Defaults to
   `block`. This setting defines how topic subscriptions are handled which
@@ -221,6 +219,19 @@ memory.
   from the store at a time. Note that Flushed entires are just reference
   pointers to the actual messages. When not loaded, the batch is referenced
   as sequence range to conserve memory.
+  
+##### Unified Destinations
+
+Unified destinations can be used so that you can mix queue and topic 
+behavior on one logical destination.  For example, lets assumed `foo` 
+is configured as a unified destination and you have 2 subscribers
+on queue `foo` and 2 subscribers on topic `foo`, then when you publish to
+queue `foo` or topic `foo`, the 2 queue subscribers will load balance
+their messages and the 2 topic subscribers will each get a copy of the message.
+
+It is important to note that the unified subscription will not start 
+retaining it's messages in a queue until a queue subscriber subscribes from
+it.
 
 ##### Message Stores
 
@@ -384,7 +395,7 @@ The `wine.com` host will use the external domain, the `internal.wine.com`
 host will use the internal domain and the `test` host will not authenticate
 users.
 
-##### Changing the Login Modules
+##### Using Custom Login Modules
 
 ${project_name} uses JAAS to control against which systems users
 authenticate. The default ${project_name} configurations use file based
@@ -426,67 +437,98 @@ Example of customizing the principal kinds used:
 
 #### Authorization
 
-User authorization to broker resources is accomplished by configuring access 
-control lists (ACLs) to the `broker`, `virtual-host`, `destination`, and 
-`queue` elements.  The ACL define which principals are allowed to perform
-actions against the resources.
-
-Bellow you will find an example which:
-
-* only allows `admins` to use the broker's management interface.
-* only `app1` and `app2` users are allowed to connect to the host.
-* All users are allowed to create and send messages to the app1.* 
-  queues and destination, but only admins can destroy them and
-  only app1 users can subscribe to them.
+User authorization to broker resources is accomplished by configuring an
+access control list using an `acl` element on the `broker`, `connector`,
+`virtual-host`, `destination`, or `queue` resources. The acl defines which
+principals are allowed or denied access to perform actions against the
+resources.  An example of `acl` is shown below:
 
 {pygmentize:: xml}
-<broker ...>
-  ...
-  <acl>
-    <admin name="admins"/>
-  </acl>
-
-  <virtual-host id="default">
-    ...
-    <acl>
-      <connect name="app1"/>
-      <connect name="app2"/>
-    </acl>
-    
-    <destination path="app1.**">
-      <acl>
-        <create  name="all"/>
-        <destroy name="admins"/>
-        <send    name="all"/>
-        <receive name="app1"/>
-      </acl>
-    </destination>
-    
-    <queue path="app1.**">
-      <acl>
-        <create  name="all"/>
-        <destroy name="admins"/>
-        <send    name="all"/>
-        <receive name="app1"/> 
-        <consume name="app1"/>
-      </acl>
-    </queue>
-    ...
-  </virtual-host>
-  ...
-</broker>
+<acl>
+  <send allow="*"/>
+  <send deny="guest"/>
+  <receive allow="app1"/>
+</acl>
 {pygmentize}
+
+If a configuration resource does not have an `acl` element defined within
+it, then the resource allows anyone to access all it's actions. The `acl`
+is made up of a list of authorization rule entries. Each entry defines
+that action the rule applies to and if the rule is allowing or denying
+access to a user principal. The special `*` value matches all users.
+
+Users can have many principals of many different kinds associated with
+them. The rules will only match up against principals of type
+`org.apache.activemq.jaas.GroupPrincipal` since that is the default
+setting of the `acl-principal-kind` of the `authentication` domain.
+
+If you want the rule to match against more/different kinds of principals,
+you should update the `authentication` element's configuration or you
+explicitly state the kind you want to match against in your rule
+definition. Example:
+
+{pygmentize:: xml}
+<acl>
+  <send allow="*"/>
+  <send deny="chirino" kind="org.apache.activemq.jaas.UserPrincipal"/>
+</acl>
+{pygmentize}
+
+The order in which rule entries are defined are significant when the user
+matches multiple entries. The first entry the user matches determines if he
+will have access to the action. For example, lets say a user is groups
+'blue' and 'red', and you are matching against an ACL list defined as:
+
+{pygmentize:: xml}
+<acl>
+  <send deny="blue"/>
+  <send allow="red"/>
+</acl>
+{pygmentize}
+
+Then the user would not be allowed to send since `<send deny="blue"/>` was
+defined first. If the order in the ACL list were reversed, like
+so:
+
+{pygmentize:: xml}
+<acl>
+  <send allow="red"/>
+  <send deny="blue"/>
+</acl>
+{pygmentize}
+
+Then the user would be allowed access to the resource since the first rule
+which matches the user is `<send allow="red"/>`.
+
+The type of resource being secured determines the types of actions that
+can be secured by the acl rule entries. Here is listing of which actions
+can be secured on which resources:
+
+* `broker`
+  * `admin` : use of the administrative web interface
+* `connector` and `virtual-host`
+  * `connect` : allows connections to the connector or virtual host
+* `destination` and `queue`
+  * `create` : allows the destination or queue to be created.
+  * `destroy` : allows the destination or queue to be created.
+  * `send` : allows the user to send to the destination or queue
+  * `receive` : allows the user to send to do non-destructive read 
+    from the destination or queue
+* `queue`
+  * `consume` : allows the user to do destructive reads against the queue.
 
 #### Encrypting Passwords in the Configuration
 
-The `etc/apollo.xml` file supports using `${<property-name>}` style syntax.
-You can use any system properties and if the `etc/apollo.xml.properties` file
-exists, then any of the properties defined there. Any of the properties
-values in the `etc/apollo.xml.properties` can be replaced with encrypted
-versions by using the `apollo encrypt` command.
+The `etc/apollo.xml` file supports using `${<property-name>}` style
+syntax. You can use any system properties and if the
+`etc/apollo.xml.properties` file exists, then any of the properties
+defined there. Any of the properties values in the
+`etc/apollo.xml.properties` can be replaced with encrypted versions by
+using the `apollo encrypt` command.
 
 Lets say you your current `key-storage` contains plain text passwords that
 need to be replaced with encrypted versions:
+
 {pygmentize:: xml}
   ...
   <key-storage 
@@ -498,7 +540,7 @@ need to be replaced with encrypted versions:
 
 Lets first find out what the encrypted versions of the passwords would be.
 ${project_name} encrypts and decrypts values using the password stored in
-the `APOLLO_ENCRYPTION_PASSWORD` environment variable.  
+the `APOLLO_ENCRYPTION_PASSWORD` environment variable.
 
 The following is an example of how you can encrypt the previous
 passwords:

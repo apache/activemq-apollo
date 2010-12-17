@@ -22,7 +22,7 @@
   <!-- used to secure the web admin interface -->
   <authentication domain="apollo"/>
   <acl>
-    <admin name="admins"/>
+    <admin allow="admins"/>
   </acl>
 
   <web-admin host="127.0.0.1" port="8080"/>
@@ -45,23 +45,23 @@
       an object, then access is not restricted at all.
       -->
     <acl>
-      <connect name="admins"/>
+      <connect allow="admins"/>
     </acl>
     <destination name="secure.**">
       <acl>
-        <create  name="admins"/>
-        <destroy name="admins"/>
-        <send    name="admins"/>
-        <receive name="admins"/>
+        <create  allow="admins"/>
+        <destroy allow="admins"/>
+        <send    allow="admins"/>
+        <receive allow="admins"/>
       </acl>
     </destination>
     <queue name="secure.**">
       <acl>
-        <create  name="admins"/>
-        <destroy name="admins"/>
-        <send    name="admins"/>
-        <receive name="admins"/> <!-- queue browsers -->
-        <consume name="admins"/> <!-- regular consumers -->
+        <create  allow="admins"/>
+        <destroy allow="admins"/>
+        <send    allow="admins"/>
+        <receive allow="admins"/> <!-- queue browsers -->
+        <consume allow="admins"/> <!-- regular consumers -->
       </acl>
     </queue>
 

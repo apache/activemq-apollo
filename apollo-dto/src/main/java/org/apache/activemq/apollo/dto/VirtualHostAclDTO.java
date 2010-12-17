@@ -32,6 +32,6 @@ import java.util.*;
 public class VirtualHostAclDTO {
 
     @XmlElement(name="connect")
-    public Set<PrincipalDTO> connects = new HashSet<PrincipalDTO>();
+    public List<PrincipalDTO> connects = new ArrayList<PrincipalDTO>();
 
 }

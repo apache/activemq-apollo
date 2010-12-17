@@ -27,8 +27,11 @@ import javax.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PrincipalDTO {
 
-    @XmlAttribute(required = true)
-    public String name;
+    @XmlAttribute
+    public String allow;
+
+    @XmlAttribute
+    public String deny;
 
     @XmlAttribute
     public String kind;
@@ -37,12 +40,12 @@ public class PrincipalDTO {
     public PrincipalDTO() {
     }
 
-    public PrincipalDTO(String name) {
-        this.name = name;
+    public PrincipalDTO(String allow) {
+        this.allow = allow;
     }
 
-    public PrincipalDTO(String name, String kind) {
-        this.name = name;
+    public PrincipalDTO(String allow, String kind) {
+        this.allow = allow;
         this.kind = kind;
     }
 
@@ -53,18 +56,18 @@ public class PrincipalDTO {
 
         PrincipalDTO that = (PrincipalDTO) o;
 
+        if (allow != null ? !allow.equals(that.allow) : that.allow != null) return false;
+        if (deny != null ? !deny.equals(that.deny) : that.deny != null) return false;
         if (kind != null ? !kind.equals(that.kind) : that.kind != null) return false;
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = name != null ? name.hashCode() : 0;
+        int result = allow != null ? allow.hashCode() : 0;
+        result = 31 * result + (deny != null ? deny.hashCode() : 0);
         result = 31 * result + (kind != null ? kind.hashCode() : 0);
         return result;
     }
-
-
 }

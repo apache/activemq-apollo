@@ -774,6 +774,16 @@ class StompSecurityTest extends StompTestSupport {
     super.beforeAll
   }
 
+  test("Connect with valid id password but can't connect") {
+
+    val frame = connect_request("1.1", client,
+      "login:can_not_connect\n" +
+      "passcode:can_not_connect\n")
+    frame should startWith("ERROR\n")
+    frame should include("message:Connect not authorized.\n")
+
+  }
+
   test("Connect with no id password") {
     val frame = connect_request("1.1", client)
     frame should startWith("ERROR\n")
@@ -786,16 +796,6 @@ class StompSecurityTest extends StompTestSupport {
       "passcode:bar\n")
     frame should startWith("ERROR\n")
     frame should include("message:Authentication failed.\n")
-
-  }
-
-  test("Connect with valid id password but can't connect") {
-
-    val frame = connect_request("1.1", client,
-      "login:can_not_connect\n" +
-      "passcode:can_not_connect\n")
-    frame should startWith("ERROR\n")
-    frame should include("message:Connect not authorized.\n")
 
   }
 

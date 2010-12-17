@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.broker.security
 import scala.util.continuations._
-import org.apache.activemq.apollo.broker.{VirtualHost, Broker, Destination}
+import org.apache.activemq.apollo.broker._
 import org.apache.activemq.apollo.util.path.Path
 import org.apache.activemq.apollo.dto.{DestinationDTO, QueueDTO, BindingDTO}
 
@@ -36,7 +36,7 @@ trait Authorizer {
   /**
    * @returns true if the user is allowed to connect to the virtual host
    */
-  def can_connect_to(ctx:SecurityContext, host:VirtualHost):Boolean
+  def can_connect_to(ctx:SecurityContext, host:VirtualHost, connector:Connector):Boolean
 
   /**
    * @returns true if the user is allowed to send to the destination

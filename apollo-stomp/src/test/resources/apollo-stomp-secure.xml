@@ -23,36 +23,36 @@
     <host-name>localhost</host-name>
 
     <acl>
-      <connect name="connect_group"/>
+      <connect allow="connect_group"/>
     </acl>
 
     <!-- queue security -->
     <queue name="**" kind="ptp">
       <acl>
-        <create  name="can_send_create_queue"/>
-        <send    name="can_send_create_queue"/>
-        <send    name="can_send_queue"/>
-        <receive name="can_receive_queue"/>
-        <consume name="can_consume_queue"/>
+        <create  allow="can_send_create_queue"/>
+        <send    allow="can_send_create_queue"/>
+        <send    allow="can_send_queue"/>
+        <receive allow="can_receive_queue"/>
+        <consume allow="can_consume_queue"/>
       </acl>
     </queue>
 
     <!-- topic security -->
     <destination name="**">
       <acl>
-        <create  name="can_send_create_topic"/>
-        <send    name="can_send_create_topic"/>
-        <send    name="can_send_topic"/>
-        <receive name="can_recieve_topic"/>
+        <create  allow="can_send_create_topic"/>
+        <send    allow="can_send_create_topic"/>
+        <send    allow="can_send_topic"/>
+        <receive allow="can_recieve_topic"/>
       </acl>
     </destination>
 
     <!-- durable sub security -->
     <queue name="**" kind="ds">
       <acl>
-        <create  name="can_consume_create_ds"/>
-        <consume name="can_consume_create_ds"/>
-        <consume name="can_consume_ds"/>
+        <create  allow="can_consume_create_ds"/>
+        <consume allow="can_consume_create_ds"/>
+        <consume allow="can_consume_ds"/>
       </acl>
     </queue>
   </virtual-host>

@@ -18,9 +18,9 @@
 <broker basedir="./activemq-data/default" rev="0" enabled="true" id="default" xmlns="http://activemq.apache.org/schema/activemq/apollo">
 
   <acl>
-    <admin name="hiram"/>
-    <admin name="james"/>
-    <admin name="admins" kind="org.apache.activemq.jaas.GroupPrincipal"/>
+    <admin allow="hiram"/>
+    <admin allow="james"/>
+    <admin allow="admins" kind="org.apache.activemq.jaas.GroupPrincipal"/>
   </acl>
 
   <virtual-host enabled="true" id="vh-local">

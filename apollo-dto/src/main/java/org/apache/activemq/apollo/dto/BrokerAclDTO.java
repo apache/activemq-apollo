@@ -31,6 +31,7 @@ import java.util.*;
 public class BrokerAclDTO {
 
     @XmlElement(name="admin")
-    public Set<PrincipalDTO> admins = new HashSet<PrincipalDTO>();
+    public List<PrincipalDTO> admins = new ArrayList<PrincipalDTO>();
+
 
 }

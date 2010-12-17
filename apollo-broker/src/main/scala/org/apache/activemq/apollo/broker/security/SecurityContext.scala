@@ -39,7 +39,7 @@ class SecurityContext {
 
   var login_context:LoginContext = _
 
-  private val principles = new HashSet[PrincipalDTO]()
+  private var principles = Set[PrincipalDTO]()
 
   private var _subject:Subject = _
 
@@ -47,27 +47,51 @@ class SecurityContext {
 
   def subject_= (value:Subject) {
     _subject = value
-    principles.clear
+    principles = Set[PrincipalDTO]()
     if( value!=null ) {
       import collection.JavaConversions._
       value.getPrincipals.foreach { x=>
-        principles.add(new PrincipalDTO(x.getName, x.getClass.getName))
+        principles += new PrincipalDTO(x.getName, x.getClass.getName)
       }
     }
   }
 
-  def intersects(values:Set[PrincipalDTO], default_kinds:List[String]):Boolean = {
-    val (v1, v2) = values.partition(_.kind == null)
-    if( !principles.intersect(v2).isEmpty ) {
-      return true
-    }
-    default_kinds.foreach { x=>
-      val kinda_added = v1.map(y=> new PrincipalDTO(y.name, x))
-      if( ! principles.intersect(kinda_added).isEmpty ) {
-        return true
+  def is_allowed(acl:List[PrincipalDTO], default_kinds:List[String]):Boolean = {
+
+    def matches(p:PrincipalDTO):Boolean = {
+      if( p.kind==null ) {
+        default_kinds.foreach { kind=>
+          if( principles.contains(new PrincipalDTO(p.allow, kind)) ) {
+            return true;
+          }
+        }
+        return false;
+      } else {
+        return principles.contains(p)
       }
     }
-    false
+
+    acl.foreach { p =>
+      p.deny match {
+        case null =>
+        case "*"=>
+          return false;
+        case id =>
+          if( matches(new PrincipalDTO(id, p.kind)) ) {
+            return false;
+          }
+      }
+      p.allow match {
+        case null =>
+        case "*"=>
+          return true;
+        case id =>
+          if( matches(new PrincipalDTO(id, p.kind)) ) {
+            return true
+          }
+      }
+    }
+    return false
   }
 
 

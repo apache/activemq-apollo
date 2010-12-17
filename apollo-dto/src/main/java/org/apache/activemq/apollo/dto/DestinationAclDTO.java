@@ -31,15 +31,15 @@ import java.util.*;
 public class DestinationAclDTO {
 
     @XmlElement(name="create")
-    public Set<PrincipalDTO> creates = new HashSet<PrincipalDTO>();
+    public List<PrincipalDTO> creates = new ArrayList<PrincipalDTO>();
 
     @XmlElement(name="destroy")
-    public Set<PrincipalDTO> destroys = new HashSet<PrincipalDTO>();
+    public List<PrincipalDTO> destroys = new ArrayList<PrincipalDTO>();
 
     @XmlElement(name="send")
-    public Set<PrincipalDTO> sends = new HashSet<PrincipalDTO>();
+    public List<PrincipalDTO> sends = new ArrayList<PrincipalDTO>();
 
     @XmlElement(name="receive")
-    public Set<PrincipalDTO> receives = new HashSet<PrincipalDTO>();
+    public List<PrincipalDTO> receives = new ArrayList<PrincipalDTO>();
 
 }
