@@ -445,8 +445,8 @@ resources.  An example of `acl` is shown below:
 
 {pygmentize:: xml}
 <acl>
-  <send allow="*"/>
   <send deny="guest"/>
+  <send allow="*"/>
   <receive allow="app1"/>
 </acl>
 {pygmentize}
@@ -469,8 +469,8 @@ definition. Example:
 
 {pygmentize:: xml}
 <acl>
-  <send allow="*"/>
   <send deny="chirino" kind="org.apache.activemq.jaas.UserPrincipal"/>
+  <send allow="*"/>
 </acl>
 {pygmentize}
 
