@@ -17,8 +17,8 @@
 -->
 # Getting Started Guide
 
-This guide will help you install, setup and run an Apollo broker and validate it
-is operating correctly.
+This guide will help you install, setup and run an Apollo broker and validate
+that the broker is operating correctly.
 
 ## Installation
 
