@@ -416,11 +416,15 @@ object Stomp {
   val SESSION = ascii("session")
   val RESPONSE_ID = ascii("response-id")
 
+  val BROWSER = ascii("browser")
+  val EXCLUSIVE = ascii("exclusive")
+
   ///////////////////////////////////////////////////////////////////
   // Common Values
   ///////////////////////////////////////////////////////////////////
   val TRUE = ascii("true")
   val FALSE = ascii("false")
+  val END = ascii("end")
 
   val ACK_MODE_AUTO = ascii("auto")
   val ACK_MODE_NONE = ascii("none")

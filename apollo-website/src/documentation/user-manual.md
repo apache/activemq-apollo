@@ -718,6 +718,21 @@ ack mode to consume reliable messages. Any messages on a queue delivered to a
 client which have not been acked when the client disconnects will get
 redelivered to another subscribed client.
 
+### Browsing Subscriptions
+
+A normal subscription on a queue will consume messages so that no
+other subscription will get a copy of the message.  If you want to
+browse all the messages on a queue in a non-destructive fashion, you
+can create browsing subscription.  To make a subscription an browsing
+subscription, just add the `browser:true` header.  For example:
+
+    SUBSCRIBE
+    id:mysub
+    browser:true
+    destination:/queue/foo
+    
+    ^@
+
 ### Topic Durable Subscriptions
 
 A durable subscription is a queue which is subscribed to a topic so that
@@ -728,7 +743,8 @@ durable subscription and since it's backed by a queue, those subscribers
 will have the topic's messages load balanced across them.
 
 To create or reattach to a a durable subscription with STOMP, you uniquely name
-the durable subscription using the `id` header on the `SUBSCRIBE` frame and
+the durable subscription using the `id` header on the `
+SCRIBE` frame and
 also adding a `persistent:true` header. Example:
 
     SUBSCRIBE

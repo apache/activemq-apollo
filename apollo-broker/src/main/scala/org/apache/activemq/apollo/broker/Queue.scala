@@ -538,9 +538,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
     for (consumer <- values) {
       all_subscriptions.get(consumer) match {
         case Some(subscription) =>
-          all_subscriptions -= consumer
           subscription.close
-          addCapacity( -tune_consumer_buffer )
         case None =>
       }
 
@@ -1011,7 +1009,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           } else {
             if (sub.offer(delivery)) {
               // advance: accepted...
-              advancing == sub
+              advancing += sub
             } else {
               // hold back: flow controlled
               heldBack += sub
@@ -1316,6 +1314,8 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
   // This opens up the consumer
   pos = queue.head_entry;
+  assert(pos!=null)
+
   session = consumer.connect(this)
   session.refiller = pos
   queue.head_entry ::= this
@@ -1327,22 +1327,27 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   }
 
   def close() = {
-    pos -= this
-    pos = null
+    if(pos!=null) {
+      pos -= this
+      pos = null
 
-    // nack all the acquired entries.
-    var next = acquired.getHead
-    while( next !=null ) {
-      val cur = next;
-      next = next.getNext
-      cur.nack // this unlinks the entry.
-    }
+      queue.all_subscriptions -= consumer
+      queue.addCapacity( - queue.tune_consumer_buffer )
 
-    session.refiller = NOOP
-    session.close
-    session = null
+      // nack all the acquired entries.
+      var next = acquired.getHead
+      while( next !=null ) {
+        val cur = next;
+        next = next.getNext
+        cur.nack // this unlinks the entry.
+      }
 
-    queue.trigger_swap
+      session.refiller = NOOP
+      session.close
+      session = null
+
+      queue.trigger_swap
+    } else {}
   }
 
   /**
@@ -1352,9 +1357,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   def advance(value:QueueEntry):Unit = {
 
     assert(value!=null)
-    if( pos == null ) {
-      assert(pos!=null)
-    }
 
     advanced_size += pos.size
 
@@ -1363,6 +1365,9 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
     if( tail_parked ) {
       tail_parkings += 0
+      if( browser ) {
+        close
+      }
     }
   }
 

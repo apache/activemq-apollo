@@ -197,16 +197,18 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     }
   }
 
-  class StompConsumer(val subscription_id:Option[AsciiBuffer], val destination:Destination, val ack_handler:AckHandler, val selector:(String, BooleanExpression), val binding:BindingDTO) extends BaseRetained with DeliveryConsumer {
+  class StompConsumer(
+
+    val subscription_id:Option[AsciiBuffer],
+    val destination:Destination,
+    val ack_handler:AckHandler,
+    val selector:(String, BooleanExpression),
+    val binding:BindingDTO,
+    override val browser:Boolean
+
+  ) extends BaseRetained with DeliveryConsumer {
+
     val dispatchQueue = StompProtocolHandler.this.dispatchQueue
-
-
-
-    dispatchQueue.retain
-    setDisposer(^{
-      session_manager.release
-      dispatchQueue.release
-    })
 
     override def connection = Some(StompProtocolHandler.this.connection)
 
@@ -225,16 +227,48 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     }
 
     def connect(p:DeliveryProducer) = new DeliverySession {
+
+      // This session object should only be used from the dispatch queue context
+      // of the producer.
+
       retain
 
       def producer = p
       def consumer = StompConsumer.this
+      var closed = false
 
       val session = session_manager.open(producer.dispatchQueue)
 
       def close = {
-        session_manager.close(session)
-        release
+        assert(getCurrentQueue == producer.dispatchQueue)
+        if( !closed ) {
+          closed = true
+          if( browser ) {
+            // Then send the end of browse message.
+            var frame = StompFrame(MESSAGE, (BROWSER, END)::Nil, BufferContent(EMPTY_BUFFER))
+            if( subscription_id != None ) {
+              frame = frame.append_headers((SUBSCRIPTION, subscription_id.get)::Nil)
+            }
+
+            if( session.full ) {
+              // session is full so use an overflow sink so to hold the message,
+              // and then trigger closing the session once it empties out.
+              val sink = new OverflowSink(session)
+              sink.refiller = ^{
+                session_manager.close(session)
+                release
+              }
+              sink.offer(frame)
+            } else {
+              session.offer(frame)
+              session_manager.close(session)
+              release
+            }
+          } else {
+            session_manager.close(session)
+            release
+          }
+        }
       }
 
       // Delegate all the flow control stuff to the session
@@ -736,6 +770,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
     val topic = destination.domain == Router.TOPIC_DOMAIN
     var persistent = get(headers, PERSISTENT).map( _ == TRUE ).getOrElse(false)
+    var browser = get(headers, BROWSER).map( _ == TRUE ).getOrElse(false)
 
     val ack = get(headers, ACK_MODE) match {
       case None=> new AutoAckHandler
@@ -788,7 +823,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       }
     }
 
-    val consumer = new StompConsumer(subscription_id, destination, ack, selector, binding);
+    val consumer = new StompConsumer(subscription_id, destination, ack, selector, binding, browser);
     consumers += (id -> consumer)
 
     if( binding==null ) {

@@ -225,6 +225,61 @@ class Stomp11HeartBeatTest extends StompTestSupport {
 
 class StompDestinationTest extends StompTestSupport {
 
+  test("Queue browsers don't consume the messages") {
+    connect("1.1")
+
+    def put(id:Int) = {
+      client.write(
+        "SEND\n" +
+        "destination:/queue/browsing\n" +
+        "receipt:0\n" +
+        "\n" +
+        "message:"+id+"\n")
+      wait_for_receipt("0")
+    }
+
+    put(1)
+    put(2)
+    put(3)
+
+    // create a browser subscription.
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/browsing\n" +
+      "browser:true\n" +
+      "id:0\n" +
+      "\n")
+
+    def get(sub:Int, id:Int) = {
+      val frame = client.receive()
+      info(frame)
+      frame should startWith("MESSAGE\n")
+      frame should include ("subscription:%d\n".format(sub))
+      frame should endWith regex("\n\nmessage:%d\n".format(id))
+    }
+    get(0,1)
+    get(0,2)
+    get(0,3)
+
+    // Should get a browse end message
+    val frame = client.receive()
+    frame should startWith("MESSAGE\n")
+    frame should include ("subscription:0\n")
+    frame should include ("browser:end\n")
+
+    // create a regular subscription.
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/browsing\n" +
+      "id:1\n" +
+      "\n")
+
+    get(1,1)
+    get(1,2)
+    get(1,3)
+
+  }
+
   test("Queue order preserved") {
     connect("1.1")
 
@@ -409,6 +464,7 @@ class StompDestinationTest extends StompTestSupport {
     get(1)
     get(3)
   }
+
 }
 
 class StompSslDestinationTest extends StompDestinationTest {

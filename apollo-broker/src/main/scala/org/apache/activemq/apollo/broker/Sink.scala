@@ -187,17 +187,24 @@ class SinkMux[T](val downstream:Sink[T], val queue:DispatchQueue, val sizer:Size
     }
   }
 
-  def open(producer_queue:DispatchQueue):Sink[T] = {
+  def open(producer_queue:DispatchQueue,allow_overflow:Boolean=false):Sink[T] = {
     val session = createSession(producer_queue, session_max_credits)
     sessions ::= session
-    session
+    if( allow_overflow ) {
+      new OverflowSink(session)
+    } else {
+      session
+    }
   }
 
-  def close(session:Sink[T]) = {
-    val s = session.asInstanceOf[Session[T]]
-    sessions = sessions.filterNot( _ == s )
-    s.producer_queue {
-      s.close
+  def close(session:Sink[T]):Unit = {
+    session match {
+      case s:OverflowSink[T] => close(s.downstream)
+      case s:Session[T] =>
+        sessions = sessions.filterNot( _ == s )
+        s.producer_queue {
+          s.close
+        }
     }
   }
 
@@ -267,10 +274,12 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[
   }
 
   def close = {
-    assert(getCurrentQueue eq producer_queue)
-    credit_adder.release
-    downstream.release
-    closed=true
+    if( !closed ) {
+      closed=true
+      assert(getCurrentQueue eq producer_queue)
+      credit_adder.release
+      downstream.release
+    }
   }
 
 }
