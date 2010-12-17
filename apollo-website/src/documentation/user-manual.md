@@ -720,16 +720,28 @@ redelivered to another subscribed client.
 
 ### Browsing Subscriptions
 
-A normal subscription on a queue will consume messages so that no
-other subscription will get a copy of the message.  If you want to
-browse all the messages on a queue in a non-destructive fashion, you
-can create browsing subscription.  To make a subscription an browsing
-subscription, just add the `browser:true` header.  For example:
+A normal subscription on a queue will consume messages so that no other
+subscription will get a copy of the message. If you want to browse all the
+messages on a queue in a non-destructive fashion, you can create browsing
+subscription. To make a a browsing subscription, just add the `browser:true`
+header to the `SUBSCRIBE` frame. For example:
 
     SUBSCRIBE
     id:mysub
     browser:true
     destination:/queue/foo
+    
+    ^@
+
+Once the broker sends a browsing subscription the last message in the queue,
+it will send the subscription a special "end of browse" message to indicate
+browsing has completed and that the subscription should not expect any more
+messages. The "end of browse" message will have a `browser:end` header set.
+Example:
+
+    MESSAGE
+    subscription:mysub
+    browser:end
     
     ^@
 
