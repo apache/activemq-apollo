@@ -57,6 +57,7 @@ trait DeliveryConsumer extends Retained {
   def connection:Option[BrokerConnection] = None
 
   def browser = false
+  def exclusive = false
   def dispatchQueue:DispatchQueue;
   def matches(message:Delivery):Boolean
   def connect(producer:DeliveryProducer):DeliverySession

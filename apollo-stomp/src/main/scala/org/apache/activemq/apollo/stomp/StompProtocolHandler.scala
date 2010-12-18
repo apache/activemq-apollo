@@ -204,8 +204,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     val ack_handler:AckHandler,
     val selector:(String, BooleanExpression),
     val binding:BindingDTO,
-    override val browser:Boolean
-
+    override val browser:Boolean,
+    override val exclusive:Boolean
   ) extends BaseRetained with DeliveryConsumer {
 
     val dispatchQueue = StompProtocolHandler.this.dispatchQueue
@@ -771,6 +771,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     val topic = destination.domain == Router.TOPIC_DOMAIN
     var persistent = get(headers, PERSISTENT).map( _ == TRUE ).getOrElse(false)
     var browser = get(headers, BROWSER).map( _ == TRUE ).getOrElse(false)
+    var exclusive = get(headers, EXCLUSIVE).map( _ == TRUE ).getOrElse(false)
 
     val ack = get(headers, ACK_MODE) match {
       case None=> new AutoAckHandler
@@ -823,7 +824,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       }
     }
 
-    val consumer = new StompConsumer(subscription_id, destination, ack, selector, binding, browser);
+    val consumer = new StompConsumer(subscription_id, destination, ack, selector, binding, browser, exclusive);
     consumers += (id -> consumer)
 
     if( binding==null ) {

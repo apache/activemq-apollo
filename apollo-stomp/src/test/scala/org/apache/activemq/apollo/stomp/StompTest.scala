@@ -225,6 +225,128 @@ class Stomp11HeartBeatTest extends StompTestSupport {
 
 class StompDestinationTest extends StompTestSupport {
 
+  test("Queues load balance across subscribers") {
+    connect("1.1")
+
+    // Connect to subscribers
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/load-balanced\n" +
+      "id:1\n" +
+      "\n")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/load-balanced\n" +
+      "receipt:0\n"+
+      "id:2\n" +
+      "\n")
+
+    wait_for_receipt("0")
+
+    def put(id:Int) = {
+      client.write(
+        "SEND\n" +
+        "destination:/queue/load-balanced\n" +
+        "\n" +
+        "message:"+id+"\n")
+    }
+
+    for( i <- 0 until 4) {
+      put(i)
+    }
+
+    var sub1_counter=0
+    var sub2_counter=0
+
+    def get() = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+
+      if( frame.contains("subscription:1\n") ) {
+        sub1_counter += 1
+      } else if( frame.contains("subscription:2\n") ) {
+        sub2_counter += 1
+      }
+    }
+
+    for( i <- 0 until 4) {
+      get()
+    }
+
+    sub1_counter should be(2)
+    sub2_counter should be(2)
+
+  }
+
+  test("Queues do NOT load balance across exclusive subscribers") {
+    connect("1.1")
+
+    // Connect to subscribers
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/exclusive\n" +
+      "id:1\n" +
+      "\n")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/exclusive\n" +
+      "exclusive:true\n"+
+      "receipt:0\n"+
+      "ack:client\n"+
+      "id:2\n" +
+      "\n")
+
+    wait_for_receipt("0")
+
+    def put(id:Int) = {
+      client.write(
+        "SEND\n" +
+        "destination:/queue/exclusive\n" +
+        "\n" +
+        "message:"+id+"\n")
+    }
+
+    for( i <- 0 until 4) {
+      put(i)
+    }
+
+    var sub1_counter=0
+    var sub2_counter=0
+
+    def get() = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+
+      if( frame.contains("subscription:1\n") ) {
+        sub1_counter += 1
+      } else if( frame.contains("subscription:2\n") ) {
+        sub2_counter += 1
+      }
+    }
+
+    for( i <- 0 until 4) {
+      get()
+    }
+
+    sub1_counter should be(0)
+    sub2_counter should be(4)
+
+    // disconnect the exclusive subscriber.
+    client.write(
+      "UNSUBSCRIBE\n" +
+      "id:2\n" +
+      "\n")
+
+    // sub 1 should now get all the messages.
+    for( i <- 0 until 4) {
+      get()
+    }
+    sub1_counter should be(4)
+
+  }
+
   test("Queue browsers don't consume the messages") {
     connect("1.1")
 
@@ -252,7 +374,6 @@ class StompDestinationTest extends StompTestSupport {
 
     def get(sub:Int, id:Int) = {
       val frame = client.receive()
-      info(frame)
       frame should startWith("MESSAGE\n")
       frame should include ("subscription:%d\n".format(sub))
       frame should endWith regex("\n\nmessage:%d\n".format(id))
@@ -302,7 +423,6 @@ class StompDestinationTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      info(frame)
       frame should startWith("MESSAGE\n")
       frame should include ("subscription:0\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
@@ -337,7 +457,6 @@ class StompDestinationTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      info(frame)
       frame should startWith("MESSAGE\n")
       frame should include ("subscription:0\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
@@ -387,7 +506,6 @@ class StompDestinationTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      info(frame)
       frame should startWith("MESSAGE\n")
       frame should include ("subscription:my-sub-name\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
@@ -422,7 +540,6 @@ class StompDestinationTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      info(frame)
       frame should startWith("MESSAGE\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
     }
@@ -457,7 +574,6 @@ class StompDestinationTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      info(frame)
       frame should startWith("MESSAGE\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
     }
@@ -560,7 +676,6 @@ class StompTransactionTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      info(frame)
       frame should startWith("MESSAGE\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
     }
@@ -606,7 +721,6 @@ class StompTransactionTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      info(frame)
       frame should startWith("MESSAGE\n")
       frame should endWith regex("\n\nmessage:"+id+"\n")
     }
@@ -651,7 +765,6 @@ class StompAckModeTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      info(frame)
       frame should startWith("MESSAGE\n")
       frame should include ("subscription:0\n")
       frame should include regex("message-id:.+?\n")
@@ -716,7 +829,6 @@ class StompAckModeTest extends StompTestSupport {
 
     def get(id:Int) = {
       val frame = client.receive()
-      info(frame)
       frame should startWith("MESSAGE\n")
       frame should include ("subscription:0\n")
       frame should include regex("message-id:.+?\n")

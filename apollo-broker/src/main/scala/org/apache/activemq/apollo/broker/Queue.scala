@@ -51,6 +51,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
   var inbound_sessions = Set[DeliverySession]()
   var all_subscriptions = Map[DeliveryConsumer, Subscription]()
+  var exclusive_subscriptions = ListBuffer[Subscription]()
 
   val filter = binding.message_filter
 
@@ -528,22 +529,20 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
   def bind(values: List[DeliveryConsumer]) = retaining(values) {
     for (consumer <- values) {
-      val subscription = new Subscription(this, consumer)
-      all_subscriptions += consumer -> subscription
-      addCapacity( tune_consumer_buffer )
+      val sub = new Subscription(this, consumer)
+      sub.open
     }
   } >>: dispatchQueue
 
-  def unbind(values: List[DeliveryConsumer]) = releasing(values) {
+  def unbind(values: List[DeliveryConsumer]) = dispatchQueue {
     for (consumer <- values) {
       all_subscriptions.get(consumer) match {
         case Some(subscription) =>
           subscription.close
         case None =>
       }
-
     }
-  } >>: dispatchQueue
+  }
 
   def disconnected() = throw new RuntimeException("unsupported")
 
@@ -1026,22 +1025,31 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
               advancing += sub
             } else {
 
-              // Is the sub flow controlled?
-              if( sub.full ) {
-                // hold back: flow controlled
-                heldBack += sub
+              // Find the the first exclusive target of the message
+              val exclusive_target = queue.exclusive_subscriptions.find( _.matches(delivery) )
+
+              // Is the current sub not the exclusive target?
+              if( exclusive_target.isDefined && (exclusive_target.get != sub) ) {
+                // advance: not interested.
+                advancing += sub
               } else {
-                // advance: accepted...
-                acquiringSub = sub
-                acquired = true
+                // Is the sub flow controlled?
+                if( sub.full ) {
+                  // hold back: flow controlled
+                  heldBack += sub
+                } else {
+                  // advance: accepted...
+                  acquiringSub = sub
+                  acquired = true
 
-                val acquiredQueueEntry = sub.acquire(entry)
-                val acquiredDelivery = delivery.copy
-                acquiredDelivery.ack = (consumed, tx)=> {
-                  queue.ack_source.merge((acquiredQueueEntry, consumed, tx))
+                  val acquiredQueueEntry = sub.acquire(entry)
+                  val acquiredDelivery = delivery.copy
+                  acquiredDelivery.ack = (consumed, tx)=> {
+                    queue.ack_source.merge((acquiredQueueEntry, consumed, tx))
+                  }
+
+                  assert(sub.offer(acquiredDelivery), "sub should have accepted, it had reported not full earlier.")
                 }
-
-                assert(sub.offer(acquiredDelivery), "sub should have accepted, it had reported not full earlier.")
               }
             }
           }
@@ -1311,19 +1319,30 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   }
 
   def browser = session.consumer.browser
+  def exclusive = session.consumer.exclusive
 
   // This opens up the consumer
-  pos = queue.head_entry;
-  assert(pos!=null)
+  def open() = {
+    consumer.retain
+    pos = queue.head_entry;
+    assert(pos!=null)
 
-  session = consumer.connect(this)
-  session.refiller = pos
-  queue.head_entry ::= this
+    session = consumer.connect(this)
+    session.refiller = pos
+    queue.head_entry ::= this
 
-  if( queue.serviceState.isStarted ) {
-    // kick off the initial dispatch.
-    refill_prefetch
-    queue.dispatchQueue << queue.head_entry
+    queue.all_subscriptions += consumer -> this
+    queue.addCapacity( queue.tune_consumer_buffer )
+
+    if( exclusive ) {
+      queue.exclusive_subscriptions.append(this)
+    }
+
+    if( queue.serviceState.isStarted ) {
+      // kick off the initial dispatch.
+      refill_prefetch
+      queue.dispatchQueue << queue.head_entry
+    }
   }
 
   def close() = {
@@ -1331,8 +1350,10 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       pos -= this
       pos = null
 
+      queue.exclusive_subscriptions = queue.exclusive_subscriptions.filterNot( _ == this )
       queue.all_subscriptions -= consumer
       queue.addCapacity( - queue.tune_consumer_buffer )
+
 
       // nack all the acquired entries.
       var next = acquired.getHead
@@ -1342,9 +1363,15 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
         cur.nack // this unlinks the entry.
       }
 
+      if( exclusive ) {
+        // rewind all the subs to the start of the queue.
+        queue.all_subscriptions.values.foreach(_.rewind(queue.head_entry))
+      }
+
       session.refiller = NOOP
       session.close
       session = null
+      consumer.release
 
       queue.trigger_swap
     } else {}
@@ -1483,11 +1510,17 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       queue.nack_item_counter += 1
       queue.nack_size_counter += entry.size
 
-      // rewind all the matching competing subs past the entry.. back to the entry
-      queue.all_subscriptions.valuesIterator.foreach{ sub=>
-        if( !sub.browser && entry.seq < sub.pos.seq && sub.matches(entry.as_loaded.delivery)) {
-          sub.rewind(entry)
+      // The following does not need to get done for exclusive subs because
+      // they end up rewinding all the sub of the head of the queue.
+      if( !exclusive ) {
+
+        // rewind all the matching competing subs past the entry.. back to the entry
+        queue.all_subscriptions.valuesIterator.foreach{ sub=>
+          if( !sub.browser && entry.seq < sub.pos.seq && sub.matches(entry.as_loaded.delivery)) {
+            sub.rewind(entry)
+          }
         }
+
       }
       unlink()
     }

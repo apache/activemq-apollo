@@ -760,33 +760,6 @@ ack mode to consume reliable messages. Any messages on a queue delivered to a
 client which have not been acked when the client disconnects will get
 redelivered to another subscribed client.
 
-### Browsing Subscriptions
-
-A normal subscription on a queue will consume messages so that no other
-subscription will get a copy of the message. If you want to browse all the
-messages on a queue in a non-destructive fashion, you can create browsing
-subscription. To make a a browsing subscription, just add the `browser:true`
-header to the `SUBSCRIBE` frame. For example:
-
-    SUBSCRIBE
-    id:mysub
-    browser:true
-    destination:/queue/foo
-    
-    ^@
-
-Once the broker sends a browsing subscription the last message in the queue,
-it will send the subscription a special "end of browse" message to indicate
-browsing has completed and that the subscription should not expect any more
-messages. The "end of browse" message will have a `browser:end` header set.
-Example:
-
-    MESSAGE
-    subscription:mysub
-    browser:end
-    
-    ^@
-
 ### Topic Durable Subscriptions
 
 A durable subscription is a queue which is subscribed to a topic so that
@@ -816,6 +789,68 @@ to the `UNSUBSCRIBE` frame.  Example:
     UNSUBSCRIBE
     id:mysub
     persistent:true
+    
+    ^@
+
+### Browsing Subscriptions
+
+A normal subscription on a queue will consume messages so that no other
+subscription will get a copy of the message. If you want to browse all the
+messages on a queue in a non-destructive fashion, you can create browsing
+subscription. Browsing subscriptions also works with durable subscriptions
+since they are backed by a queue. To make a a browsing subscription, just add the
+`browser:true` header to the `SUBSCRIBE` frame. For example:
+
+    SUBSCRIBE
+    id:mysub
+    browser:true
+    destination:/queue/foo
+    
+    ^@
+
+Once the broker sends a browsing subscription the last message in the queue,
+it will send the subscription a special "end of browse" message to indicate
+browsing has completed and that the subscription should not expect any more
+messages. The "end of browse" message will have a `browser:end` header set.
+Example:
+
+    MESSAGE
+    subscription:mysub
+    browser:end
+    
+    ^@
+
+### Exclusive Subscriptions
+
+We maintain the order of messages in queues and dispatch them to
+subscriptions in order. However if you have multiple subscriptions consuming
+from the same queue, you will loose the guarantee of processing the messages
+in order; since the messages may be processed concurrently on different
+subscribers.
+
+Sometimes it is important to guarantee the order in which messages are
+processed. e.g. you don't want to process the update to an order until an
+insert has been done; or to go backwards in time, overwriting an newer update
+of an order with an older one etc.
+
+So what folks have to do in clusters is often to only run one consumer
+process in a cluster to avoid loosing the ordering. The problem with this is
+that if that process goes down, no one is processing the queue any more,
+which can be problem.
+
+${project_name} supports exclusive subscriptions which avoids the end user
+having to restrict himself to only running one process. The broker will pick
+a single subscription to get all the messages for a queue to ensure ordering.
+If that subscription fails, the broker will auto failover and choose another
+subscription.
+
+An exclusive subscription is created by adding a `exclusive:true` header
+to the `SUBSCRIBE` frame.  Example:
+
+    SUBSCRIBE
+    id:mysub
+    exclusive:true
+    destination:/queue/foo
     
     ^@
 
