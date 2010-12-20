@@ -103,8 +103,8 @@ public class XmlCodec {
 
             String packages = "";
             for ( String p : names) {
-                if( p.length() !=0 ) {
-                    p += ":";
+                if( packages.length() !=0 ) {
+                    packages += ":";
                 }
                 packages += p;
             }
