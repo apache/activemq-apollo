@@ -111,9 +111,3 @@ trait Store extends ServiceTrait {
   def loadMessage(messageKey:Long)(callback:(Option[MessageRecord])=>Unit )
 
 }
-
-/**
- * Optional interface that stores can implement to give protocols direct access to the file system
- * for them to be able to do
- */
-
