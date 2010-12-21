@@ -32,36 +32,36 @@ public class LinkedNodeList<T extends LinkedNode<T>> implements Iterable<T> {
     public LinkedNodeList() {
     }
 
-    public boolean isEmpty() {
+    final public boolean isEmpty() {
         return head == null;
     }
 
-    public void addLast(T node) {
+    final public void addLast(T node) {
         node.linkToTail(this);
     }
 
-    public void addFirst(T node) {
+    final public void addFirst(T node) {
         node.linkToHead(this);
     }
 
-    public T getHead() {
+    final public T getHead() {
         return head;
     }
 
-    public T getTail() {
+    final public T getTail() {
         if( head==null ) {
             return null;
         }
         return head.prev;
     }
     
-    public void clear() {
+    final public void clear() {
         while (head != null) {
             head.unlink();
         }
     }
 
-    public void addLast(LinkedNodeList<T> list) {
+    final public void addLast(LinkedNodeList<T> list) {
         if (list.isEmpty()) {
             return;
         }
@@ -73,7 +73,7 @@ public class LinkedNodeList<T extends LinkedNode<T>> implements Iterable<T> {
         }
     }
 
-    public void addFirst(LinkedNodeList<T> list) {
+    final public void addFirst(LinkedNodeList<T> list) {
         if (list.isEmpty()) {
             return;
         }
@@ -86,7 +86,7 @@ public class LinkedNodeList<T extends LinkedNode<T>> implements Iterable<T> {
         }
     }
 
-    public T reparent(LinkedNodeList<T> list) {
+    final public T reparent(LinkedNodeList<T> list) {
         size += list.size;
         T n = list.head;
         do {
@@ -103,7 +103,7 @@ public class LinkedNodeList<T extends LinkedNode<T>> implements Iterable<T> {
      * 
      * @return
      */
-    public T rotate() {
+    final public T rotate() {
     	if( head ==null )
     		return null;
         return head = head.getNextCircular();
@@ -114,7 +114,7 @@ public class LinkedNodeList<T extends LinkedNode<T>> implements Iterable<T> {
      * 
      * @return
      */
-    public void rotateTo(T head) {
+    final public void rotateTo(T head) {
     	assert head!=null: "Cannot rotate to a null head";
     	assert head.list == this : "Cannot rotate to a node not linked to this list";
         this.head = head;
@@ -125,7 +125,7 @@ public class LinkedNodeList<T extends LinkedNode<T>> implements Iterable<T> {
     }
 
     @Override
-    public String toString() {
+    final public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("[");
         boolean first=true;
@@ -146,7 +146,7 @@ public class LinkedNodeList<T extends LinkedNode<T>> implements Iterable<T> {
      * Copies the nodes of the LinkedNodeList to an ArrayList.
      * @return
      */
-    public ArrayList<T> toArrayList() {
+    final public ArrayList<T> toArrayList() {
     	ArrayList<T> rc = new ArrayList<T>(size);
     	T cur = head;
     	while( cur!=null ) {
@@ -160,7 +160,7 @@ public class LinkedNodeList<T extends LinkedNode<T>> implements Iterable<T> {
      * Copies the nodes of the LinkedNodeList to an ArrayList in reverse order.
      * @return
      */
-    public ArrayList<T> toArrayListReversed() {
+    final public ArrayList<T> toArrayListReversed() {
         ArrayList<T> rc = new ArrayList<T>(size);
         if( head != null ) {
             T cur = getTail();;
@@ -177,7 +177,7 @@ public class LinkedNodeList<T extends LinkedNode<T>> implements Iterable<T> {
      * Copies the nodes of the LinkedNodeList to the specified array.
      * @return the passed array.
      */
-    public T[] toArray(T[] array) {
+    final public T[] toArray(T[] array) {
         int pos = 0;
     	ArrayList<T> rc = new ArrayList<T>(size);
     	T cur = head;
@@ -189,7 +189,7 @@ public class LinkedNodeList<T extends LinkedNode<T>> implements Iterable<T> {
         return array;
     }
     
-    public Iterator<T> iterator() {
+    final public Iterator<T> iterator() {
         return new Iterator<T>() {
             T next = getHead();
             private T last;

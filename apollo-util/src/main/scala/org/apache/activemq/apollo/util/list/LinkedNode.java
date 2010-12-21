@@ -32,39 +32,39 @@ public class LinkedNode<T extends LinkedNode<T>> {
     }
 
     @SuppressWarnings("unchecked")
-    private T getThis() {
+    final private T getThis() {
         return (T) this;
     }
 
-    public T getHeadNode() {
+    final  public T getHeadNode() {
         return list.head;
     }
 
-    public T getTailNode() {
+    final public T getTailNode() {
         return list.head.prev;
     }
 
-    public T getNext() {
+    final public T getNext() {
         return isTailNode() ? null : next;
     }
 
-    public T getPrevious() {
+    final public T getPrevious() {
         return isHeadNode() ? null : prev;
     }
 
-    public T getNextCircular() {
+    final public T getNextCircular() {
         return next;
     }
 
-    public T getPreviousCircular() {
+    final public T getPreviousCircular() {
         return prev;
     }
 
-    public boolean isHeadNode() {
+    final public boolean isHeadNode() {
         return list.head == this;
     }
 
-    public boolean isTailNode() {
+    final public boolean isTailNode() {
         return list.head.prev == this;
     }
 
@@ -73,7 +73,7 @@ public class LinkedNode<T extends LinkedNode<T>> {
      *            the node to link after this node.
      * @return this
      */
-    public void linkAfter(T node) {
+    final public void linkAfter(T node) {
         if (node == this) {
             throw new IllegalArgumentException("You cannot link to yourself");
         }
@@ -99,7 +99,7 @@ public class LinkedNode<T extends LinkedNode<T>> {
      *            the node to link after this node.
      * @return this
      */
-    public void linkAfter(LinkedNodeList<T> rightList) {
+    final public void linkAfter(LinkedNodeList<T> rightList) {
 
         if (rightList == list) {
             throw new IllegalArgumentException("You cannot link to yourself");
@@ -125,7 +125,7 @@ public class LinkedNode<T extends LinkedNode<T>> {
      * @return
      * @return this
      */
-    public void linkBefore(T node) {
+    final public void linkBefore(T node) {
 
         if (node == this) {
             throw new IllegalArgumentException("You cannot link to yourself");
@@ -157,7 +157,7 @@ public class LinkedNode<T extends LinkedNode<T>> {
      * @return
      * @return this
      */
-    public void linkBefore(LinkedNodeList<T> leftList) {
+    final public void linkBefore(LinkedNodeList<T> leftList) {
 
         if (leftList == list) {
             throw new IllegalArgumentException("You cannot link to yourself");
@@ -181,7 +181,7 @@ public class LinkedNode<T extends LinkedNode<T>> {
         }
     }
 
-    public void linkToTail(LinkedNodeList<T> target) {
+    final public void linkToTail(LinkedNodeList<T> target) {
         if (list != null) {
             throw new IllegalArgumentException("This node is already linked to a node");
         }
@@ -195,7 +195,7 @@ public class LinkedNode<T extends LinkedNode<T>> {
         }
     }
 
-    public void linkToHead(LinkedNodeList<T> target) {
+    final public void linkToHead(LinkedNodeList<T> target) {
         if (list != null) {
             throw new IllegalArgumentException("This node is already linked to a node");
         }
@@ -212,7 +212,7 @@ public class LinkedNode<T extends LinkedNode<T>> {
     /**
      * Removes this node out of the linked list it is chained in.
      */
-    public boolean unlink() {
+    final public boolean unlink() {
 
         // If we are allready unlinked...
         if (list == null) {
@@ -242,7 +242,7 @@ public class LinkedNode<T extends LinkedNode<T>> {
      * 
      * @return An empty list if this is a tail node.
      */
-    public LinkedNodeList<T> splitAfter() {
+    final public LinkedNodeList<T> splitAfter() {
 
         if (isTailNode()) {
             return new LinkedNodeList<T>();
@@ -280,7 +280,7 @@ public class LinkedNode<T extends LinkedNode<T>> {
      * 
      * @return An empty list if this is a head node.
      */
-    public LinkedNodeList<T> splitBefore() {
+    final public LinkedNodeList<T> splitBefore() {
 
         if (isHeadNode()) {
             return new LinkedNodeList<T>();
@@ -313,11 +313,11 @@ public class LinkedNode<T extends LinkedNode<T>> {
         return newList;
     }
 
-    public boolean isLinked() {
+    final public boolean isLinked() {
         return list != null;
     }
 
-	public LinkedNodeList<T> getList() {
+	final public LinkedNodeList<T> getList() {
 		return list;
 	}
 
