@@ -1215,41 +1215,45 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       if( !loading ) {
         loading = true
         queue.host.store.listQueueEntries(queue.id, seq, last) { records =>
-          queue.dispatchQueue {
+          if( !records.isEmpty ) {
+            queue.dispatchQueue {
 
-            var item_count=0
-            var size_count=0
+              var item_count=0
+              var size_count=0
 
-            val tmpList = new LinkedNodeList[QueueEntry]()
-            records.foreach { record =>
-              val entry = new QueueEntry(queue, record.queueSeq).init(record)
-              tmpList.addLast(entry)
-              item_count += 1
-              size_count += record.size
+              val tmpList = new LinkedNodeList[QueueEntry]()
+              records.foreach { record =>
+                val entry = new QueueEntry(queue, record.queueSeq).init(record)
+                tmpList.addLast(entry)
+                item_count += 1
+                size_count += record.size
+              }
+
+              // we may need to adjust the enqueue count if entries
+              // were dropped at the store level
+              var item_delta = (count - item_count)
+              val size_delta: Int = size - size_count
+
+              if ( item_delta!=0 || size_delta!=0 ) {
+                info("Detected store change in range %d to %d. %d message(s) and %d bytes", seq, last, item_delta, size_delta)
+                queue.enqueue_item_counter += item_delta
+                queue.enqueue_size_counter += size_delta
+              }
+
+              linkAfter(tmpList)
+              val next = getNext
+
+              // move the subs to the first entry that we just loaded.
+              parked.foreach(_.advance(next))
+              next :::= parked
+              queue.trigger_swap
+
+              unlink
+
+              // TODO: refill prefetches
             }
-
-            // we may need to adjust the enqueue count if entries
-            // were dropped at the store level
-            var item_delta = (count - item_count)
-            val size_delta: Int = size - size_count
-
-            if ( item_delta!=0 || size_delta!=0 ) {
-              info("Detected store change in range %d to %d. %d message(s) and %d bytes", seq, last, item_delta, size_delta)
-              queue.enqueue_item_counter += item_delta
-              queue.enqueue_size_counter += size_delta
-            }
-
-            linkAfter(tmpList)
-            val next = getNext
-
-            // move the subs to the first entry that we just loaded.
-            parked.foreach(_.advance(next))
-            next :::= parked
-            queue.trigger_swap
-
-            unlink
-
-            // TODO: refill prefetches
+          } else {
+            warn("range load failed")
           }
         }
       }
