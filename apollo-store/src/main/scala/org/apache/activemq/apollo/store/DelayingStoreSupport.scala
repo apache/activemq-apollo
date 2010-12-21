@@ -23,6 +23,7 @@ import org.fusesource.hawtdispatch._
 import java.util.concurrent._
 import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch.{BaseRetained, ListEventAggregator}
+import org.apache.activemq.apollo.dto.{TimeMetricDTO, IntMetricDTO}
 
 /**
  * <p>
@@ -175,6 +176,24 @@ trait DelayingStoreSupport extends Store with BaseService {
   }
 
 
+  implicit def toTimeMetricDTO( m: TimeMetric) = {
+    val rc = new TimeMetricDTO()
+    rc.count = m.count
+    rc.max = m.max
+    rc.min = m.min
+    rc.total = m.total
+    rc
+  }
+
+  implicit def toIntMetricDTO( m: IntMetric) = {
+    val rc = new IntMetricDTO()
+    rc.count = m.count
+    rc.max = m.max
+    rc.min = m.min
+    rc.total = m.total
+    rc
+  }
+
   var metric_canceled_message_counter:Long = 0
   var metric_canceled_enqueue_counter:Long = 0
   var metric_flushed_message_counter:Long = 0
@@ -185,6 +204,9 @@ trait DelayingStoreSupport extends Store with BaseService {
 
   val message_load_latency_counter = new TimeCounter
   var message_load_latency = message_load_latency_counter(false)
+
+  val range_load_latency_counter = new TimeCounter
+  var range_load_latency = message_load_latency_counter(false)
 
   val message_load_batch_size_counter = new IntMetricCounter
   var message_load_batch_size = message_load_batch_size_counter(false)

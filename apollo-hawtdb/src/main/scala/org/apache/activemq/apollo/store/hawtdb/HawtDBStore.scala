@@ -248,25 +248,6 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
     }
   }
 
-
-  implicit def toTimeMetricDTO( m: TimeMetric) = {
-    val rc = new TimeMetricDTO()
-    rc.count = m.count
-    rc.max = m.max
-    rc.min = m.min
-    rc.total = m.total
-    rc
-  }
-
-  implicit def toIntMetricDTO( m: IntMetric) = {
-    val rc = new IntMetricDTO()
-    rc.count = m.count
-    rc.max = m.max
-    rc.min = m.min
-    rc.total = m.total
-    rc
-  }
-
   def poll_stats:Unit = {
     def displayStats = {
       if( serviceState.isStarted ) {

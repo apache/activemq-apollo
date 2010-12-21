@@ -133,10 +133,10 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
       override def run = {
         info("Stopping BDB store at: '%s'", config.directory)
         write_executor.shutdown
-        write_executor.awaitTermination(86400, TimeUnit.SECONDS)
+        write_executor.awaitTermination(60, TimeUnit.SECONDS)
         write_executor = null
         read_executor.shutdown
-        read_executor.awaitTermination(86400, TimeUnit.SECONDS)
+        read_executor.awaitTermination(60, TimeUnit.SECONDS)
         read_executor = null
         client.stop
         onCompleted.run
@@ -228,25 +228,6 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
     write_executor ^{
       callback( client.getQueueEntries(queueKey, firstSeq, lastSeq) )
     }
-  }
-
-
-  implicit def toTimeMetricDTO( m: TimeMetric) = {
-    val rc = new TimeMetricDTO()
-    rc.count = m.count
-    rc.max = m.max
-    rc.min = m.min
-    rc.total = m.total
-    rc
-  }
-
-  implicit def toIntMetricDTO( m: IntMetric) = {
-    val rc = new IntMetricDTO()
-    rc.count = m.count
-    rc.max = m.max
-    rc.min = m.min
-    rc.total = m.total
-    rc
   }
 
   def poll_stats:Unit = {
