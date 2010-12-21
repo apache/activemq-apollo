@@ -93,7 +93,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     rc
   })
 
-  def routing_nodes:Iterable[RoutingNode] = JavaConversions.asIterable(destinations.get(ALL))
+  def routing_nodes:Iterable[RoutingNode] = JavaConversions.asScalaIterable(destinations.get(ALL))
   
   def _get_or_create_destination(path:Path, security:SecurityContext) = {
     // We can't create a wild card destination.. only wild card subscriptions.
@@ -138,7 +138,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
   def get_destination_matches(path:Path) = {
     import JavaConversions._
-    asIterable(destinations.get( path ))
+    asScalaIterable(destinations.get( path ))
   }
 
   def _create_queue(id:Long, binding:Binding, security:SecurityContext):Result[Queue,String] = {

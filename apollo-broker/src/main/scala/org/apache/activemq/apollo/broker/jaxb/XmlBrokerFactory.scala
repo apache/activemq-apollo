@@ -58,16 +58,18 @@ class XmlBrokerFactory extends BrokerFactory.Provider {
     import ReporterLevel._
     val broker = new Broker()
 
-    var errorMessage = "";
-    if( broker.configure(config, new Reporter(){
+    var error_message = "";
+    broker.configure(config, new Reporter(){
       override def report(level: ReporterLevel, message: String) = {
         level match {
-          case ERROR=> errorMessage+=message+"\n"
+          case ERROR=> error_message+=message+"\n"
           case _=>
         }
       }
-    }) == ERROR ) {
-      throw new Exception("Invalid Broker Configuration:\n"+ERROR)
+    })
+
+    if( !error_message.isEmpty ) {
+      throw new Exception("Invalid Broker Configuration:\n"+error_message)
     }
     
     broker
