@@ -16,7 +16,7 @@
     limitations under the License.
 -->
 <broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
-  <virtual-host>
-    <host-name>default</host-name>
-  </virtual-host>
+  <virtual_host>
+    <host_name>default</host_name>
+  </virtual_host>
 </broker>

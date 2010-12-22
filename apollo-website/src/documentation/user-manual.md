@@ -78,9 +78,9 @@ single connector.
 {pygmentize:: xml}
 <broker id="default" xmlns="http://activemq.apache.org/schema/activemq/apollo">
 
-  <virtual-host id="default">
-    <host-name>localhost</host-name>
-  </virtual-host>
+  <virtual_host id="default">
+    <host_name>localhost</host_name>
+  </virtual_host>
 
   <connector id="tcp" bind="tcp://0.0.0.0:61613"/>
   
@@ -113,13 +113,13 @@ A `connector` element can be configured with the following attributes
    supported protocols can connect via this transport.
 
 Furthermore, the connector element may contain protocol specific
-configuration elements. For example, to add have the broker set the `user-id`
+configuration elements. For example, to add have the broker set the `user_id`
 header of messages to the id of user that sent the message, you would
 use the following configuration:
 
 {pygmentize:: xml}
 <connector id="tcp" bind="tcp://0.0.0.0:61613">
-  <stomp add-user-header="user-id"/>
+  <stomp add_user_header="user_id"/>
 </connector>
 {pygmentize}
 
@@ -131,27 +131,27 @@ persistence, security, and runtime constraints configuration.
 
 Protocols like STOMP 1.1, inform the broker of which host the client is
 attempting to connect with. The broker will search it's list of virtual hosts
-to find the first host who has a configured `host-name` that matches.
+to find the first host who has a configured `host_name` that matches.
 Protocols which do NOT support virtual hosts, will just connect to the first
 virtual host defined in the configuration file.
 
-* `host-name` : a host name that the virtual host is known as.  This element
+* `host_name` : a host name that the virtual host is known as.  This element
   should be repeated multiple times if the host has many host names.
 
-A `virtual-host` element may be configured with the following attributes:
+A `virtual_host` element may be configured with the following attributes:
 
 * `enabled` : if set to false, then the virtual host will be disabled.
 
 * `purge_on_startup` : if set to true, the persistent state of the broker
    will be purged when the broker is started up.
 
-The `virtual-host` can also define multiple `destination` and `queue` 
+The `virtual_host` can also define multiple `destination` and `queue` 
 elements to secure or tune how message delivery works for different 
 destinations or queues.  If none are defined, then sensible 
 default settings are used which allow queue and destinations to be
 auto created as they get accessed by applications.
 
-Finally `virtual-host` configuration should also include a message store
+Finally `virtual_host` configuration should also include a message store
 configuration element to enable message persistence on the virtual host.
 
 ##### Destinations
@@ -193,20 +193,20 @@ are:
 * `kind` : Valid valuest are `ptp` for standard
   point to point queues or `ds` for durable subscriptions.
 
-* `client-id` : Valid only if the `kind` is `ds`. This specify which client
+* `client_id` : Valid only if the `kind` is `ds`. This specify which client
   id this configuration should match.
 
-* `subscription-id` : Valid only if the `kind` is `ds`. This specify which subscription
+* `subscription_id` : Valid only if the `kind` is `ds`. This specify which subscription
   id this configuration should match.
 
 A `queue` element may be configured with the following attributes:
 
-* `queue-buffer` : The amount of memory buffer space allocated for each queue.
+* `queue_buffer` : The amount of memory buffer space allocated for each queue.
 
-* `producer-buffer` : The amount of memory buffer space allocated to each
+* `producer_buffer` : The amount of memory buffer space allocated to each
 producer for receiving messages.
 
-* `consumer-buffer` : The amount of memory buffer space allocated to each
+* `consumer_buffer` : The amount of memory buffer space allocated to each
 subscription for receiving messages.
 
 * `persistent` : If set to false, then the queue will not persistently
@@ -215,7 +215,7 @@ store it's message.
 * `swap` : If set to false, then the queue will not swap messages out of 
 memory.
 
-* `flush-range-size` : The number max number of flushed queue entries to load
+* `flush_range_size` : The number max number of flushed queue entries to load
   from the store at a time. Note that Flushed entires are just reference
   pointers to the actual messages. When not loaded, the batch is referenced
   as sequence range to conserve memory.
@@ -265,20 +265,20 @@ For those of you with curl installed, you can just run:
 
     curl http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar > ${APOLLO_HOME}/lib/je-4.1.6.jar
 
-Once that is done, you can enable the store by adding a `bdb-store` element
-inside your `virtual-host`.  Example:
+Once that is done, you can enable the store by adding a `bdb_store` element
+inside your `virtual_host`.  Example:
     
 {pygmentize:: xml}
   ...
-  <virtual-host id="default">
+  <virtual_host id="default">
     ...
-    <bdb-store directory="${apollo.base}/data"/>
+    <bdb_store directory="${apollo.base}/data"/>
     ..
-  </virtual-host>
+  </virtual_host>
   ...
 {pygmentize}
 
-A `bdb-store` element may be configured with the following attributes:
+A `bdb_store` element may be configured with the following attributes:
 
 * `directory` : The directory which the store will use to hold it's data
   files. The store will create the directory if it does not already
@@ -298,20 +298,20 @@ The problem is that it is still unstable and you should only use it
 if your willing to dive in with a debugger to help solidify the 
 implementation.
 
-You can enable the store by adding a `hawtdb-store` element
-inside your `virtual-host`.  Example:
+You can enable the store by adding a `hawtdb_store` element
+inside your `virtual_host`.  Example:
     
 {pygmentize:: xml}
   ...
-  <virtual-host id="default">
+  <virtual_host id="default">
     ...
-    <hawtdb-store directory="${apollo.base}/data"/>
+    <hawtdb_store directory="${apollo.base}/data"/>
     ..
-  </virtual-host>
+  </virtual_host>
   ...
 {pygmentize}
 
-A `hawtdb-store` element may be configured with the following attributes:
+A `hawtdb_store` element may be configured with the following attributes:
 
 * `directory` : The directory which the store will use to hold it's data
   files. The store will create the directory if it does not already
@@ -328,29 +328,29 @@ A `hawtdb-store` element may be configured with the following attributes:
 ${project_name} supports SSL/TLS for transport level security to avoid 3rd
 parties listening in on the communications between the broker and it's
 clients. To enable it, you just need to add a connector which uses the `ssl`
-or `tls` transport and add a `key-storage` configuration element under the
+or `tls` transport and add a `key_storage` configuration element under the
 `broker` to configure the where the encryption keys and certificates are
 stored.
 
 Example:
 {pygmentize:: xml}
   ...
-  <key-storage 
+  <key_storage 
      file="${apollo.base}/etc/keystore" 
      password="password" 
-     key-password="password"/>
+     key_password="password"/>
   <connector id="tls" bind="tls://0.0.0.0:61614"/>
   ...
 {pygmentize}
 
-The attributes that you can configure on the `key-storage` element are:
+The attributes that you can configure on the `key_storage` element are:
 
 * `file` : Path to where the key store is located.
 * `password` : The key store password
-* `key-password` : The password to the keys in the key store.
-* `store-type` : The type of key store, defaults to `JKS`.
-* `trust-algorithm` : The trust management algorithm, defaults to `SunX509`.
-* `key-algorithm` : The key management algorithm, defaults to `SunX509`.
+* `key_password` : The password to the keys in the key store.
+* `store_type` : The type of key store, defaults to `JKS`.
+* `trust_algorithm` : The trust management algorithm, defaults to `SunX509`.
+* `key_algorithm` : The key management algorithm, defaults to `SunX509`.
 
 #### Authentication
 
@@ -359,7 +359,7 @@ ${project_name} configurations use file based authentication. Authentication
 is performed using JAAS who's config file is located in the instance
 directory under `etc/login.conf`. JAAS configuration files can define
 multiple named authentication domains. The `broker` element and
-`virtual-host` elements can be configured to authenticate against these
+`virtual_host` elements can be configured to authenticate against these
 domains.
 
 The `authentication` element defined at the broker level will get used to 
@@ -372,19 +372,19 @@ to `false`.
 <broker id="default" xmlns="http://activemq.apache.org/schema/activemq/apollo">
   <authentication domain="internal"/>
   
-  <virtual-host id="wine.com">
+  <virtual_host id="wine.com">
     <authentication domain="external"/>
-    <host-name>wine.com</host-name>
-  </virtual-host>
+    <host_name>wine.com</host_name>
+  </virtual_host>
 
-  <virtual-host id="internal.wine.com">
-    <host-name>internal.wine.com</host-name>
-  </virtual-host>
+  <virtual_host id="internal.wine.com">
+    <host_name>internal.wine.com</host_name>
+  </virtual_host>
 
-  <virtual-host id="test">
+  <virtual_host id="test">
     <authentication enabled="false"/>
-    <host-name>cheeze.com</host-name>
-  </virtual-host>
+    <host_name>cheeze.com</host_name>
+  </virtual_host>
 
   <connector id="tcp" bind="tcp://0.0.0.0:61613"/>
 </broker>
@@ -411,13 +411,13 @@ lists (ACLs).
 
 The default user principal class recognized is
 `org.apache.activemq.jaas.UserPrincipal`. You can configure it by adding
-`user-principal-kind` elements under the `authentication` element. The first
+`user_principal_kind` elements under the `authentication` element. The first
 principal who's type matches this list will be selected as the user's
 identity for informational purposes.
 
 Similarly, default acl principal class recognized is
 `org.apache.activemq.jaas.GroupPrincipal`. You can configure it by adding
-`acl-principal-kinds elements under the `authentication` element. The ACL
+`acl_principal_kinds elements under the `authentication` element. The ACL
 entries which do not have an explicit kind will default to using the the
 kinds listed here.
 
@@ -426,10 +426,10 @@ Example of customizing the principal kinds used:
 {pygmentize:: xml}
   ...
   <authentication domain="apollo">
-    <user-principal-kind>com.sun.security.auth.UnixPrincipal</user-principal-kind>
-    <user-principal-kind>com.sun.security.auth.LdapPrincipal</user-principal-kind>
-    <acl-principal-kind>com.sun.security.auth.UnixPrincipal</acl-principal-kind>
-    <acl-principal-kind>com.sun.security.auth.LdapPrincipal</acl-principal-kind>
+    <user_principal_kind>com.sun.security.auth.UnixPrincipal</user_principal_kind>
+    <user_principal_kind>com.sun.security.auth.LdapPrincipal</user_principal_kind>
+    <acl_principal_kind>com.sun.security.auth.UnixPrincipal</acl_principal_kind>
+    <acl_principal_kind>com.sun.security.auth.LdapPrincipal</acl_principal_kind>
   </authentication>
   ...
 </broker>
@@ -439,7 +439,7 @@ Example of customizing the principal kinds used:
 
 User authorization to broker resources is accomplished by configuring an
 access control list using an `acl` element on the `broker`, `connector`,
-`virtual-host`, `destination`, or `queue` resources. The acl defines which
+`virtual_host`, `destination`, or `queue` resources. The acl defines which
 principals are allowed or denied access to perform actions against the
 resources.  An example of `acl` is shown below:
 
@@ -460,7 +460,7 @@ access to a user principal. The special `*` value matches all users.
 Users can have many principals of many different kinds associated with
 them. The rules will only match up against principals of type
 `org.apache.activemq.jaas.GroupPrincipal` since that is the default
-setting of the `acl-principal-kind` of the `authentication` domain.
+setting of the `acl_principal_kind` of the `authentication` domain.
 
 If you want the rule to match against more/different kinds of principals,
 you should update the `authentication` element's configuration or you
@@ -506,13 +506,13 @@ can be secured on which resources:
 
 * `broker`
   * `admin` : use of the administrative web interface
-* `connector` and `virtual-host`
+* `connector` and `virtual_host`
   * `connect` : allows connections to the connector or virtual host
 * `destination` and `queue`
   * `create` : allows the destination or queue to be created.
   * `destroy` : allows the destination or queue to be created.
   * `send` : allows the user to send to the destination or queue
-  * `receive` : allows the user to send to do non-destructive read 
+  * `receive` : allows the user to send to do non_destructive read 
     from the destination or queue
 * `queue`
   * `consume` : allows the user to do destructive reads against the queue.
@@ -526,15 +526,15 @@ defined there. Any of the properties values in the
 `etc/apollo.xml.properties` can be replaced with encrypted versions by
 using the `apollo encrypt` command.
 
-Lets say you your current `key-storage` contains plain text passwords that
+Lets say you your current `key_storage` contains plain text passwords that
 need to be replaced with encrypted versions:
 
 {pygmentize:: xml}
   ...
-  <key-storage 
+  <key_storage 
      file="${apollo.base}/etc/keystore" 
      password="open" 
-     key-password="sesame"/>
+     key_password="sesame"/>
   ...
 {pygmentize}
 
@@ -562,10 +562,10 @@ text passwords with variable references to the corresponding property names:
 
 {pygmentize:: xml}
   ...
-  <key-storage 
+  <key_storage 
      file="${apollo.base}/etc/keystore" 
      password="${store.pass}" 
-     key-password="${key.pass}"/>
+     key_password="${key.pass}"/>
   ...
 {pygmentize}
 
@@ -586,19 +586,19 @@ perform basic authentication and will only grant access to those users
 which are in the admin ACL.
 
 If you want to change the port or the interface it binds on or perhaps
-even disable it altogether, then you should add a `web-admin`
+even disable it altogether, then you should add a `web_admin`
 configuration element inside the `broker` element to change the
 default settings. For example:
 
 {pygmentize:: xml}
 <broker ...>
   ...
-  <web-admin host="127.0.0.1" port="8001"/>
+  <web_admin host="127.0.0.1" port="8001"/>
   ...
 </broker>
 {pygmentize}
 
-A `web-admin` element may be configured with the following attributes:
+A `web_admin` element may be configured with the following attributes:
 
 * `host` : The amount of memory buffer space allocated for each queue.
 * `port` : The amount of memory buffer space allocated to each
@@ -684,7 +684,7 @@ Example STOMP frame to connect to the broker:
 STOMP 1.0 clients do specify which virtual host they are connecting to so
 the broker connects those clients to the first virtual host defined in
 it's configuration.  STOMP 1.1 clients do specify a virtual host when they 
-connect.  If no configured virtual host `host-name` matches the client's 
+connect.  If no configured virtual host `host_name` matches the client's 
 requested host, the connection is terminated with an ERROR.  Therefore,
 it is critical that the virtual hosts configuration define all the 
 possible host names that clients may connect to host with.

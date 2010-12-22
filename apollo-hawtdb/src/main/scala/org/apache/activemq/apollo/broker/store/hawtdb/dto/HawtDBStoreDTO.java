@@ -27,35 +27,35 @@ import java.io.File;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="hawtdb-store")
+@XmlRootElement(name="hawtdb_store")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class HawtDBStoreDTO extends StoreDTO {
 
     @XmlAttribute
     public File directory;
 
-    @XmlAttribute(name="archive-directory")
+    @XmlAttribute(name="archive_directory")
     public File archive_directory;
 
-	@XmlAttribute(name="index-flush-interval")
+	@XmlAttribute(name="index_flush_interval")
 	public Long index_flush_interval;
 
-	@XmlAttribute(name="cleanup-interval")
+	@XmlAttribute(name="cleanup_interval")
 	public Long cleanup_interval;
 
-	@XmlAttribute(name="journal-log-size")
+	@XmlAttribute(name="journal_log_size")
 	public Integer journal_log_size;
 
-    @XmlAttribute(name="journal-batch-size")
+    @XmlAttribute(name="journal_batch_size")
     public Integer journal_batch_size;
 
-    @XmlAttribute(name="index-cache-size")
+    @XmlAttribute(name="index_cache_size")
     public Integer index_cache_size;
 
-    @XmlAttribute(name="index-page-size")
+    @XmlAttribute(name="index_page_size")
     public Short index_page_size;
 
-    @XmlAttribute(name="fail-if-locked")
+    @XmlAttribute(name="fail_if_locked")
     public Boolean fail_if_locked;
 
 

@@ -26,7 +26,7 @@ import javax.xml.bind.annotation.XmlType;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlType(name = "store-status-type")
+@XmlType(name = "store_status_type")
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 public abstract class StoreStatusDTO {
 
@@ -39,43 +39,43 @@ public abstract class StoreStatusDTO {
     /**
      * Since when has the service been in in this state?  In milliseconds since the epoch. 
      */
-	@XmlAttribute(name="state-since")
+	@XmlAttribute(name="state_since")
 	public long state_since;
 
     /**
      * The number of message stores that were canceled before they were flushed.
      */
-    @XmlAttribute(name="canceled-message-counter")
+    @XmlAttribute(name="canceled_message_counter")
     public long canceled_message_counter;
 
     /**
      * The number of message stores that were flushed.
      */
-    @XmlAttribute(name="flushed-message-counter")
+    @XmlAttribute(name="flushed_message_counter")
     public long flushed_message_counter;
 
     /**
      * The number of enqueues that were canceled before they were flushed.
      */
-    @XmlAttribute(name="canceled-enqueue-counter")
+    @XmlAttribute(name="canceled_enqueue_counter")
     public long canceled_enqueue_counter;
 
     /**
      * The number of enqueues that were flushed.
      */
-    @XmlAttribute(name="flushed-enqueue-counter")
+    @XmlAttribute(name="flushed_enqueue_counter")
     public long flushed_enqueue_counter;
 
     /**
      * The amount of time it takes to load a message from the store.
      */
-    @XmlElement(name="message-load-latency")
+    @XmlElement(name="message_load_latency")
     public TimeMetricDTO message_load_latency;
 
     /**
      * The amount of time it takes to flush a unit of work to the store
      */
-    @XmlElement(name="flush-latency")
+    @XmlElement(name="flush_latency")
     public TimeMetricDTO flush_latency;
 
 }

@@ -86,7 +86,7 @@ The default configuration used a hawtdb based store.  It still has known
 bugs and not yet stable.  Unless you want to help find and squash those bugs,
 it is recommend you change the configuration to use the BDB store instead.  To do that,
 just update the generated configuration by editing the `etc/apollo.xml` file and then
-replace `hawtdb-store` with `bdb-store`
+replace `hawtdb_store` with `bdb_store`
 
 ## Running a Broker Instance
 

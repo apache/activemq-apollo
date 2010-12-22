@@ -23,12 +23,12 @@
     <admin allow="admins" kind="org.apache.activemq.jaas.GroupPrincipal"/>
   </acl>
 
-  <virtual-host enabled="true" id="vh-local">
+  <virtual_host enabled="true" id="vh-local">
     <acl/>
-    <host-name>localhost</host-name>
-    <host-name>example.com</host-name>
-  </virtual-host>
+    <host_name>localhost</host_name>
+    <host_name>example.com</host_name>
+  </virtual_host>
   <connector bind="tcp://0.0.0.0:61616" enabled="true" id="port-61616">
-    <stomp add-user-header="JMSXUserID"/>
+    <stomp add_user_header="JMSXUserID"/>
   </connector>
 </broker>

@@ -38,7 +38,7 @@ public class BrokerDTO extends ServiceDTO<String> {
     /**
      * A broker can service many virtual hosts.
      */
-    @XmlElement(name="virtual-host")
+    @XmlElement(name="virtual_host")
     public List<VirtualHostDTO> virtual_hosts = new ArrayList<VirtualHostDTO>();
 
     /**
@@ -58,7 +58,7 @@ public class BrokerDTO extends ServiceDTO<String> {
     @XmlElement(name="acl")
     public BrokerAclDTO acl;
 
-    @XmlElement(name="web-admin")
+    @XmlElement(name="web_admin")
     public WebAdminDTO web_admin;
 
     @XmlElement(name="authentication")

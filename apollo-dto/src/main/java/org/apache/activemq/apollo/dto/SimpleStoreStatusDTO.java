@@ -27,7 +27,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="simple-store-status")
+@XmlRootElement(name="simple_store_status")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class SimpleStoreStatusDTO extends StoreStatusDTO {
 }

@@ -19,8 +19,8 @@
 
   <authentication domain="StompSecurityTest"/>
 
-  <virtual-host id="default" purge-on-startup="true">
-    <host-name>localhost</host-name>
+  <virtual_host id="default" purge_on_startup="true">
+    <host_name>localhost</host_name>
 
     <acl>
       <connect allow="connect_group"/>
@@ -55,10 +55,10 @@
         <consume allow="can_consume_ds"/>
       </acl>
     </queue>
-  </virtual-host>
+  </virtual_host>
 
   <connector id="tcp" protocol="stomp" bind="tcp://0.0.0.0:0">
-    <stomp add-user-header="JMSXUserID"/>
+    <stomp add_user_header="JMSXUserID"/>
   </connector>
 
 </broker>

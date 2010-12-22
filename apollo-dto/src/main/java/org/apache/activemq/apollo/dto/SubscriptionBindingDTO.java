@@ -27,7 +27,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "subscription-binding")
+@XmlRootElement(name = "subscription_binding")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class SubscriptionBindingDTO extends BindingDTO {
 
@@ -35,9 +35,9 @@ public class SubscriptionBindingDTO extends BindingDTO {
 
     public String filter;
 
-    @XmlAttribute(name="client-id")
+    @XmlAttribute(name="client_id")
     public String client_id;
 
-    @XmlAttribute(name="subscription-id")
+    @XmlAttribute(name="subscription_id")
     public String subscription_id;
 }

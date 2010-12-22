@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "time-metric")
+@XmlRootElement(name = "time_metric")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class TimeMetricDTO {
 

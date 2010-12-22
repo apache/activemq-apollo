@@ -27,7 +27,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="broker-summary")
+@XmlRootElement(name="broker_summary")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class BrokerSummaryDTO extends StringIdDTO {
 

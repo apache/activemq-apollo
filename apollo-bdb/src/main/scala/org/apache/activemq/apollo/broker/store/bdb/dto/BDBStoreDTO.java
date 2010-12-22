@@ -27,14 +27,14 @@ import java.io.File;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="bdb-store")
+@XmlRootElement(name="bdb_store")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class BDBStoreDTO extends StoreDTO {
 
     @XmlAttribute
     public File directory;
 
-    @XmlAttribute(name = "read-threads")
+    @XmlAttribute(name="read_threads")
     public Integer read_threads;
 
 }

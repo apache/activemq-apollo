@@ -21,7 +21,7 @@ import javax.xml.bind.annotation.*;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="queue-consumer-status")
+@XmlRootElement(name="queue_consumer_status")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class QueueConsumerStatusDTO {
 
@@ -44,6 +44,6 @@ public class QueueConsumerStatusDTO {
     /**
      * What the consumer is currently waiting on
      */
-    @XmlAttribute(name="waiting-on")
+    @XmlAttribute(name="waiting_on")
 	public String waiting_on;
 }

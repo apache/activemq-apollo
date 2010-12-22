@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
+
 
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
@@ -28,7 +28,7 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="connector-status")
+@XmlRootElement(name="connector_status")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ConnectorStatusDTO extends ServiceStatusDTO {
 

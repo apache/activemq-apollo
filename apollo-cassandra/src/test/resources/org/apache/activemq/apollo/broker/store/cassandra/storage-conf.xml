@@ -39,10 +39,10 @@
   <Authenticator>org.apache.cassandra.auth.AllowAllAuthenticator</Authenticator>
   <Partitioner>org.apache.cassandra.dht.OrderPreservingPartitioner</Partitioner>
   <InitialToken></InitialToken>
-  <CommitLogDirectory>%temp-dir%commitlog</CommitLogDirectory>
+  <CommitLogDirectory>%temp_dir%commitlog</CommitLogDirectory>
 
   <DataFileDirectories>
-    <DataFileDirectory>%temp-dir%data</DataFileDirectory>
+    <DataFileDirectory>%temp_dir%data</DataFileDirectory>
   </DataFileDirectories>
 
   <Seeds>

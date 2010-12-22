@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
+
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -29,20 +29,20 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="connection-status")
+@XmlRootElement(name="connection_status")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ConnectionStatusDTO extends ServiceStatusDTO {
 
     /**
      * The number of bytes that have been read from the connection.
      */
-	@XmlAttribute(name="read-counter")
+	@XmlAttribute(name="read_counter")
 	public long read_counter;
 
     /**
      * The number of bytes that have been written to the connection.
      */
-	@XmlAttribute(name="write-counter")
+	@XmlAttribute(name="write_counter")
 	public long write_counter;
 
     /**
@@ -60,7 +60,7 @@ public class ConnectionStatusDTO extends ServiceStatusDTO {
     /**
      * The remote address of the connection
      */
-	@XmlAttribute(name="remote-address")
+	@XmlAttribute(name="remote_address")
 	public String remote_address;
 
 }

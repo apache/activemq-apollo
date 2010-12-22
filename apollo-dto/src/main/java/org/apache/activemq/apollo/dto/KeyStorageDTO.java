@@ -27,7 +27,7 @@ import java.io.File;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="key-storage")
+@XmlRootElement(name="key_storage")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class KeyStorageDTO {
 
@@ -46,25 +46,25 @@ public class KeyStorageDTO {
     /**
      * The password to the keys in the key store.
      */
-    @XmlAttribute(name="key-password")
+    @XmlAttribute(name="key_password")
     public String key_password;
 
     /**
      * The type of key store.  If not set, defaults to JKS
      */
-    @XmlAttribute(name="store-type")
+    @XmlAttribute(name="store_type")
     public String store_type;
 
     /**
      * The trust management algorithm.  If not set, defaults to SunX509
      */
-    @XmlAttribute(name="trust-algorithm")
+    @XmlAttribute(name="trust_algorithm")
     public String trust_algorithm;
 
     /**
      * The key management algorithm.  If not set, defaults to SunX509
      */
-    @XmlAttribute(name="key-algorithm")
+    @XmlAttribute(name="key_algorithm")
     public String key_algorithm;
 
 

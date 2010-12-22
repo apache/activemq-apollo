@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollobroker.transport
+package org.apache.activemq.apollo.broker.transport
 
 import _root_.java.io.IOException
 import _root_.java.net.URI

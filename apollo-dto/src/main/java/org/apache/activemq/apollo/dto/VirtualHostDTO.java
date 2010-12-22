@@ -25,11 +25,11 @@ import javax.xml.bind.annotation.*;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "virtual-host")
+@XmlRootElement(name = "virtual_host")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class VirtualHostDTO extends ServiceDTO<String> {
 
-    @XmlElement(name="host-name", required=true)
+    @XmlElement(name="host_name", required=true)
     public ArrayList<String> host_names = new ArrayList<String>();
 
     @XmlElementRef
@@ -39,13 +39,13 @@ public class VirtualHostDTO extends ServiceDTO<String> {
      * Should queues be auto created when they are first accessed
      * by clients?
      */
-    @XmlAttribute(name="auto-create-queues")
+    @XmlAttribute(name="auto_create_queues")
     public Boolean auto_create_queues;
 
     /**
      * Should queues be purged on startup?
      */
-    @XmlAttribute(name="purge-on-startup")
+    @XmlAttribute(name="purge_on_startup")
     public Boolean purge_on_startup;
 
     /**
@@ -63,7 +63,7 @@ public class VirtualHostDTO extends ServiceDTO<String> {
     /**
      * Should connections get regroups so they get serviced by the same thread?
      */
-    @XmlAttribute(name="regroup-connections")
+    @XmlAttribute(name="regroup_connections")
     public Boolean regroup_connections;
 
     @XmlElement(name="acl")

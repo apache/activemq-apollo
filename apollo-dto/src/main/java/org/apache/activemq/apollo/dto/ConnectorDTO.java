@@ -48,7 +48,7 @@ public class ConnectorDTO extends ServiceDTO<String> {
     @XmlAttribute
     public String advertise;
 
-    @XmlAttribute(name="connection-limit")
+    @XmlAttribute(name="connection_limit")
     public Integer connection_limit;
 
     /**

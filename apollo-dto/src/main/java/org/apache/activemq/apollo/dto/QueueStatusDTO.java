@@ -28,7 +28,7 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="queue-status")
+@XmlRootElement(name="queue_status")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class QueueStatusDTO extends LongIdDTO {
 
@@ -38,40 +38,40 @@ public class QueueStatusDTO extends LongIdDTO {
     @XmlElement
     public BindingDTO binding;
 
-    @XmlAttribute(name="enqueue-item-counter")
+    @XmlAttribute(name="enqueue_item_counter")
     public long enqueue_item_counter;
 
-    @XmlAttribute(name="dequeue-item-counter")
+    @XmlAttribute(name="dequeue_item_counter")
     public long dequeue_item_counter;
 
-    @XmlAttribute(name="enqueue-size-counter")
+    @XmlAttribute(name="enqueue_size_counter")
     public long enqueue_size_counter;
 
-    @XmlAttribute(name="dequeue-size-counter")
+    @XmlAttribute(name="dequeue_size_counter")
     public long dequeue_size_counter;
 
-    @XmlAttribute(name="nack-item-counter")
+    @XmlAttribute(name="nack_item_counter")
     public long nack_item_counter;
 
-    @XmlAttribute(name="nack-size-counter")
+    @XmlAttribute(name="nack_size_counter")
     public long nack_size_counter;
 
-    @XmlAttribute(name="queue-size")
+    @XmlAttribute(name="queue_size")
     public long queue_size;
 
-    @XmlAttribute(name="queue-items")
+    @XmlAttribute(name="queue_items")
     public long queue_items;
 
-    @XmlAttribute(name="loading-size")
+    @XmlAttribute(name="loading_size")
     public int loading_size;
 
-    @XmlAttribute(name="flushing-size")
+    @XmlAttribute(name="flushing_size")
     public int flushing_size;
 
-    @XmlAttribute(name="flushed-items")
+    @XmlAttribute(name="flushed_items")
     public int flushed_items;
 
-    @XmlAttribute(name="capacity-used")
+    @XmlAttribute(name="capacity_used")
     public int capacity_used;
 
     @XmlAttribute

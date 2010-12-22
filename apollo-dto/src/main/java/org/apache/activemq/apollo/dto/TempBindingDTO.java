@@ -27,7 +27,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "temp-binding")
+@XmlRootElement(name = "temp_binding")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class TempBindingDTO extends BindingDTO {
 }

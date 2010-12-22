@@ -17,16 +17,16 @@
 -->
 <broker xmlns="http://activemq.apache.org/schema/activemq/apollo" id="default">
 
-  <virtual-host id="default">
-    <host-name>test</host-name>
+  <virtual_host id="default">
+    <host_name>test</host_name>
 
     <destination name="unified.*" unified="true"/>
     <destination name="notunified.*" unified="false"/>
 
-    <queue name="unified.a" kind="ptp" queue-buffer="333"/>
-    <queue name="unified.*" kind="ds" queue-buffer="444"/>
-    <queue queue-buffer="111"/>
+    <queue name="unified.a" kind="ptp" queue_buffer="333"/>
+    <queue name="unified.*" kind="ds" queue_buffer="444"/>
+    <queue queue_buffer="111"/>
 
-  </virtual-host>
+  </virtual_host>
   
 </broker>

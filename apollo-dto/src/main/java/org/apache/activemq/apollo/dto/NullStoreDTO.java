@@ -27,7 +27,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="null-store")
+@XmlRootElement(name="null_store")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class NullStoreDTO extends StoreDTO {
 }

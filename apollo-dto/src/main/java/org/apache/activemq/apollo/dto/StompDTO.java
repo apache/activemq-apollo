@@ -30,7 +30,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class StompDTO extends ProtocolDTO {
 
-    @XmlAttribute(name = "add-user-header")
+    @XmlAttribute(name="add_user_header")
     public String add_user_header;
 
 }

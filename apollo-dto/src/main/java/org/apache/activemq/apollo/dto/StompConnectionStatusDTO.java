@@ -27,14 +27,14 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="stomp-connection-status")
+@XmlRootElement(name="stomp_connection_status")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class StompConnectionStatusDTO extends ConnectionStatusDTO {
 
     /**
      * The version of the STOMP protocol being used.
      */
-	@XmlAttribute(name="protocol-version")
+	@XmlAttribute
 	public String protocol_version;
 
     /**
@@ -46,13 +46,13 @@ public class StompConnectionStatusDTO extends ConnectionStatusDTO {
     /**
      * What the connection is currently waiting on
      */
-    @XmlAttribute(name="waiting-on")
+    @XmlAttribute(name="waiting_on")
 	public String waiting_on;
 
     /**
      * Opens subscriptions that the connection has created.
      */
-    @XmlAttribute(name="subscription-count")
+    @XmlAttribute(name="subscription_count")
 	public int subscription_count;
 
 

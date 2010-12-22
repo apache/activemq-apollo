@@ -19,10 +19,10 @@
 
   <connector>pipe://test1</connector>
 
-  <virtual-host>
-    <host-name>localhost</host-name>
-    <host-name>test.localhost</host-name>
-    <memory-store/>
-  </virtual-host>
+  <virtual_host>
+    <host_name>localhost</host_name>
+    <host_name>test.localhost</host_name>
+    <memory_store/>
+  </virtual_host>
   
 </broker>

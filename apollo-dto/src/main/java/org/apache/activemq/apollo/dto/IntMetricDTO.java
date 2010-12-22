@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
+
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "int-metric")
+@XmlRootElement(name = "int_metric")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class IntMetricDTO {
 

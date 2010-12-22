@@ -26,7 +26,7 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="destination-status")
+@XmlRootElement(name="destination_status")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class DestinationStatusDTO extends LongIdDTO {
 

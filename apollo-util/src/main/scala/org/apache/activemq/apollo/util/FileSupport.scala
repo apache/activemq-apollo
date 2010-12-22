@@ -98,5 +98,10 @@ object FileSupport {
     }
   }
 
+  def read_text(in: InputStream, charset:String="UTF-8"): String = {
+    val out = new ByteArrayOutputStream()
+    copy(in, out)
+    new String(out.toByteArray, charset)
+  }
 
 }

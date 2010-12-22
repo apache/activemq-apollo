@@ -25,6 +25,7 @@ import Helper._
 import java.io._
 import org.apache.activemq.apollo.util.FileSupport._
 import java.util.regex.Matcher
+import java.nio.charset.Charset
 
 object Create {
   val IS_WINDOWS = System.getProperty("os.name").toLowerCase().trim().startsWith("win");
@@ -47,7 +48,13 @@ class Create extends Action {
   @option(name = "--force", description = "Overwrite configuration at destination directory")
   var force = false
 
+  var version:String = "${version}"
+
   def execute(session: CommandSession) = {
+
+    val version = using(getClass().getResourceAsStream("version.txt")) { source=>
+      read_text(source)
+    }
 
     def println(value:Any) = session.getConsole.println(value)
     try {
@@ -87,10 +94,10 @@ class Create extends Action {
 
       target = etc / "apollo.xml"
       if( ssl ) {
-        write("etc/apollo-ssl.xml", target)
+        write("etc/apollo-ssl.xml", target, true)
       } else {
         println("WARNNIG: Could not generate the keystore, make sure the keytool command is in your PATH")
-        write("etc/apollo.xml", target)
+        write("etc/apollo.xml", target, true)
       }
 
 
@@ -121,20 +128,33 @@ class Create extends Action {
     null
   }
 
-  def write(source:String, target:File, filter:Boolean=false) = {
+  def write(source:String, target:File, filter:Boolean=false, target_encoding:String=null) = {
     if( target.exists && !force ) {
       error("The file '%s' already exists.  Use --force to overwrite.".format(target))
     }
-    if( filter ) {
+    if( filter || target_encoding!=null ) {
+
+      val encoding = if( target_encoding!=null ) {
+        target_encoding
+      } else {
+        "UTF-8"
+      }
 
       val out = new ByteArrayOutputStream()
       using(getClass.getResourceAsStream(source)) { in=>
         copy(in, out)
       }
 
+      // Yes this is reading in UTF-8 from the jar file..
       var content = new String(out.toByteArray, "UTF-8")
-      content = content.replaceAll("${host}", Matcher.quoteReplacement(host))
-      val in = new ByteArrayInputStream(content.getBytes("UTF-8"))
+
+      if( filter ) {
+        content = content.replaceAll("${host}", Matcher.quoteReplacement(host))
+        content = content.replaceAll("${version}", Matcher.quoteReplacement(version))
+      }
+
+      // and then writing out in the new target encoding.
+      val in = new ByteArrayInputStream(content.getBytes(encoding))
 
       using(new FileOutputStream(target)) { out=>
         copy(in, out)

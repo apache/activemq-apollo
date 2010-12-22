@@ -28,17 +28,17 @@ import javax.xml.bind.annotation.XmlRootElement;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="hawtdb-store-status")
+@XmlRootElement(name="hawtdb_store_status")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class HawtDBStoreStatusDTO extends StoreStatusDTO {
 
-    @XmlElement(name="journal-append-latency")
+    @XmlElement(name="journal_append_latency")
     public TimeMetricDTO journal_append_latency;
 
-    @XmlElement(name="index-update-latency")
+    @XmlElement(name="index_update_latency")
     public TimeMetricDTO index_update_latency;
 
-    @XmlElement(name="message-load-batch-size")
+    @XmlElement(name="message_load_batch_size")
     public IntMetricDTO message_load_batch_size;
 
 }

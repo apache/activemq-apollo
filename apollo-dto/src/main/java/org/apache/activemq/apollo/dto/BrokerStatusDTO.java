@@ -26,20 +26,20 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="broker-status")
+@XmlRootElement(name="broker_status")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class BrokerStatusDTO extends ServiceStatusDTO {
 
     /**
      * The current time on the broker machine.  In milliseconds since the epoch.
      */
-	@XmlAttribute(name="current-time")
+	@XmlAttribute(name="current_time")
 	public long current_time;
 
     /**
      * Ids of all the virtual hosts running on the broker
      */
-    @XmlElement(name="virtual-host")
+    @XmlElement(name="virtual_host")
     public List<LongIdLabeledDTO> virtual_hosts = new ArrayList<LongIdLabeledDTO>();
 
     /**

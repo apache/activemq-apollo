@@ -3,9 +3,9 @@
     <notes>
       A default configuration
     </notes>
-    <virtual-host id="default"  auto-create-queues="true">
-        <host-name>localhost</host-name>
-        <bdb-store directory="${apollo.base}/data" flush-delay="100"/>
-    </virtual-host>
+    <virtual_host id="default"  auto_create_queues="true">
+        <host_name>localhost</host_name>
+        <bdb_store directory="${apollo.base}/data" flush_delay="100"/>
+    </virtual_host>
     <connector protocol="multi" bind="tcp://0.0.0.0:61613" id="default"/>
 </broker>

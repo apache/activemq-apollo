@@ -25,7 +25,7 @@ import javax.xml.bind.annotation.XmlType;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlType (name = "store-type")
+@XmlType (name = "store_type")
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 public abstract class StoreDTO {
 
@@ -35,7 +35,7 @@ public abstract class StoreDTO {
      * be invalidated shortly thereafter by another unit of work which
      * would negate the operation.
      */
-    @XmlAttribute(name="flush-delay", required=false)
+    @XmlAttribute(name="flush_delay", required=false)
     public Long flush_delay;
 
 

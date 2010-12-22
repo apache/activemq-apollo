@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
+
 
 import javax.xml.bind.annotation.*;
 
@@ -44,33 +44,33 @@ public class QueueDTO {
      * If the kind is "ds" then you can specify which client
      * id this configuration should match.
      */
-    @XmlAttribute(name="client-id")
+    @XmlAttribute(name="client_id")
     public String client_id;
 
     /**
      * If the kind is "ds" then you can specify which subscription
      * id this configuration should match.
      */
-    @XmlAttribute(name="subscription-id")
+    @XmlAttribute(name="subscription_id")
     public String subscription_id;
 
 
     /**
      *  The amount of memory buffer space for receiving messages.
      */
-    @XmlAttribute(name="producer-buffer")
+    @XmlAttribute(name="producer_buffer")
     public Integer producer_buffer;
 
     /**
      *  The amount of memory buffer space for the queue..
      */
-    @XmlAttribute(name="queue-buffer")
+    @XmlAttribute(name="queue_buffer")
     public Integer queue_buffer;
 
     /**
      *  The amount of memory buffer space to use per subscription.
      */
-    @XmlAttribute(name="consumer-buffer")
+    @XmlAttribute(name="consumer_buffer")
     public Integer consumer_buffer;
 
     /**
@@ -92,7 +92,7 @@ public class QueueDTO {
      * reference pointers to the actual messages.  When not loaded,
      * the batch is referenced as sequence range to conserve memory.
      */
-    @XmlAttribute(name="flush-range-size")
+    @XmlAttribute(name="flush_range_size")
     public Integer flush_range_size;
 
     @XmlElement(name="acl")

@@ -24,7 +24,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="service-status")
+@XmlRootElement(name="service_status")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ServiceStatusDTO extends LongIdDTO {
 
@@ -38,7 +38,7 @@ public class ServiceStatusDTO extends LongIdDTO {
     /**
      * Since when has the broker in in this state?  In milliseconds since the epoch. 
      */
-	@XmlAttribute(name="state-since")
+	@XmlAttribute(name="state_since")
 	public long state_since;
 
 }

@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo.broker.store.cassandra.dto;
 
 import org.apache.activemq.apollo.dto.StoreDTO;
-import org.codehaus.jackson.annotate.JsonProperty;
 
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
@@ -25,15 +24,13 @@ import java.util.ArrayList;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="cassandra-store")
+@XmlRootElement(name="cassandra_store")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class CassandraStoreDTO extends StoreDTO {
 
-    @JsonProperty
     @XmlAttribute
     public String keyspace;
 
-    @JsonProperty
     @XmlElement(required=true)
     public ArrayList<String> hosts = new ArrayList<String>();    
 

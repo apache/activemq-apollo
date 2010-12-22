@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
+
 
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
@@ -43,7 +43,7 @@ public class DestinationDTO extends StringIdDTO {
     @XmlAttribute
     public Boolean unified;
 
-    @XmlElement(name="slow-consumer-policy")
+    @XmlElement(name="slow_consumer_policy")
     public String slow_consumer_policy;
 
     @XmlElement(name="acl")

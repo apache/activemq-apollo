@@ -28,7 +28,7 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="virtual-host-status")
+@XmlRootElement(name="virtual_host_status")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class VirtualHostStatusDTO extends ServiceStatusDTO {
 

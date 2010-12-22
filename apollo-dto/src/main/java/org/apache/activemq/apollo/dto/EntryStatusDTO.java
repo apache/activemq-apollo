@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
+
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -29,7 +29,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="entry-status")
+@XmlRootElement(name="entry_status")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class EntryStatusDTO {
 
@@ -48,10 +48,10 @@ public class EntryStatusDTO {
     @XmlAttribute
     public String state;
 
-    @XmlAttribute(name = "consumer-count")
+    @XmlAttribute(name="consumer_count")
     public int consumer_count;
 
-    @XmlAttribute(name = "is-prefetched")
+    @XmlAttribute(name="is_prefetched")
     public boolean is_prefetched;
 
 }
