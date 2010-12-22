@@ -34,7 +34,7 @@
 
   <web_admin host="127.0.0.1" port="8080"/>
 
-  <virtual_host id="${host}" auto_create_queues="true" >
+  <virtual_host id="${host}">
     <!--
       You should add all the host names that this virtual host is known as
       to properly support the STOMP 1.1 virtual host feature.
@@ -58,7 +58,7 @@
 
   <key_storage file="${apollo.base}/etc/keystore" password="password" key_password="password"/>
 
-  <connector id="tcp" bind="tcp://0.0.0.0:61613" connection_limit="2000" protocol="multi"/>
-  <connector id="tls" bind="tls://0.0.0.0:61614" connection_limit="2000" protocol="multi"/>
+  <connector id="tcp" bind="tcp://0.0.0.0:61613" connection_limit="2000"/>
+  <connector id="tls" bind="tls://0.0.0.0:61614" connection_limit="2000"/>
 
 </broker>

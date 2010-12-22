@@ -34,7 +34,7 @@
 
   <web_admin host="127.0.0.1" port="8080"/>
 
-  <virtual_host id="default" auto_create_queues="true" >
+  <virtual_host id="${host}">
     <!--
       You should add all the host names that this virtual host is known as
       to properly support the STOMP 1.1 virtual host feature.
@@ -56,6 +56,6 @@
 
   </virtual_host>
 
-  <connector id="tcp" bind="tcp://0.0.0.0:61613" connection_limit="2000" protocol="multi"/>
+  <connector id="tcp" bind="tcp://0.0.0.0:61613" connection_limit="2000"/>
 
 </broker>
