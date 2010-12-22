@@ -150,8 +150,7 @@
     <module>apollo-scala</module>
     <module>apollo-util</module>
     <module>apollo-transport</module>
-    <module>apollo-store</module>
-    <!-- <module>apollo-cassandra</module> -->
+    <module>apollo-cassandra</module>
     <module>apollo-broker</module>
     <module>apollo-selector</module>
     <module>apollo-tcp</module>

@@ -1,3 +1,5 @@
+package org.apache.activemq.apollo.store
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,8 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.store
-
 import org.apache.activemq.apollo.dto.{StoreStatusDTO, StoreDTO}
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
@@ -46,7 +46,7 @@ trait Store extends ServiceTrait {
 
   /**
    * Supplies configuration data to the Store.  This will be called
-   * before the store is started, but may also occur after the the Store 
+   * before the store is started, but may also occur after the the Store
    * is started.
    */
   def configure(config: StoreDTO, reporter:Reporter):Unit
@@ -63,7 +63,7 @@ trait Store extends ServiceTrait {
 
   /**
    * Adds a queue.
-   * 
+   *
    * This method auto generates and assigns the key field of the queue record and
    * returns true if it succeeded.
    */

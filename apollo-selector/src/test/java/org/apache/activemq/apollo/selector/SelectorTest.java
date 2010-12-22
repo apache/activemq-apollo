@@ -27,6 +27,7 @@ import org.apache.activemq.apollo.filter.Filterable;
 /**
  * @version $Revision: 1.7 $
  */
+@SuppressWarnings("unchecked")
 public class SelectorTest extends TestCase {
 		
     class MockMessage implements Filterable {

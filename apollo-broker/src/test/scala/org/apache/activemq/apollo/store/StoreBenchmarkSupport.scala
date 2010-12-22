@@ -1,3 +1,5 @@
+package org.apache.activemq.apollo.store
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,8 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.store
-
 import org.fusesource.hawtbuf.AsciiBuffer._
 import org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch.TaskTracker
@@ -182,7 +182,7 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
   }
 
   def loadMessages(queue:Long, messageKeys: List[Long]) = {
-    
+
     var keys = messageKeys.toList
     val metric = benchmarkCount(keys.size) {
       val latch = new CountDownLatch(1)

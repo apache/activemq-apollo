@@ -43,7 +43,7 @@
 
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-store</artifactId>
+      <artifactId>apollo-broker</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
     
@@ -89,7 +89,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-store</artifactId>
+      <artifactId>apollo-broker</artifactId>
       <version>1.0-SNAPSHOT</version>
       <type>test-jar</type>
       <scope>test</scope>
