@@ -24,8 +24,8 @@ import org.fusesource.jansi.Ansi.Attribute._
 import Helper._
 import java.io._
 import org.apache.activemq.apollo.util.FileSupport._
-import java.util.regex.Matcher
 import java.nio.charset.Charset
+import java.util.regex.{Pattern, Matcher}
 
 object Create {
   val IS_WINDOWS = System.getProperty("os.name").toLowerCase().trim().startsWith("win");
@@ -43,7 +43,7 @@ class Create extends Action {
   var directory:File = _
 
   @option(name = "--host", description = "The host name of the broker")
-  var host:String = "localhost"
+  var host:String = _
 
   @option(name = "--force", description = "Overwrite configuration at destination directory")
   var force = false
@@ -59,6 +59,10 @@ class Create extends Action {
     def println(value:Any) = session.getConsole.println(value)
     try {
       println("Creating apollo instance at: %s".format(directory))
+
+      if( host == null ) {
+        host = directory.getName
+      }
 
       val bin = directory / "bin"
       bin.mkdirs
@@ -149,8 +153,8 @@ class Create extends Action {
       var content = new String(out.toByteArray, "UTF-8")
 
       if( filter ) {
-        content = content.replaceAll("${host}", Matcher.quoteReplacement(host))
-        content = content.replaceAll("${version}", Matcher.quoteReplacement(version))
+        content = content.replaceAll(Pattern.quote("${host}"), Matcher.quoteReplacement(host))
+        content = content.replaceAll(Pattern.quote("${version}"), Matcher.quoteReplacement(version))
       }
 
       // and then writing out in the new target encoding.
