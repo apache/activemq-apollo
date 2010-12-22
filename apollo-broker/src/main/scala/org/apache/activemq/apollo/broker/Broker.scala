@@ -120,7 +120,7 @@ object Broker extends Log {
     val rc = new BrokerDTO
     rc.id = "default"
     rc.notes = "A default configuration"
-    rc.virtual_hosts.add(VirtualHost.defaultConfig)
+    rc.virtual_hosts.add(VirtualHost.default_config)
     rc.connectors.add(Connector.defaultConfig)
     rc
   }
@@ -156,10 +156,9 @@ object Broker extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Broker() extends BaseService with DispatchLogging with LoggingReporter {
+class Broker() extends BaseService {
   
   import Broker._
-  override protected def log = Broker
 
   var config: BrokerDTO = defaultConfig
 
@@ -169,9 +168,9 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
 
   var connectors: List[Connector] = Nil
 
-  val dispatchQueue = createQueue("broker") // getGlobalQueue(DispatchPriority.HIGH).createQueue("broker")
+  val dispatch_queue = createQueue("broker") // getGlobalQueue(DispatchPriority.HIGH).createQueue("broker")
   if( STICK_ON_THREAD_QUEUES ) {
-    dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
+    dispatch_queue.setTargetQueue(Dispatch.getRandomThreadQueue)
   }
 
   val id = broker_id_counter.incrementAndGet
@@ -188,11 +187,11 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
   /**
    * Validates and then applies the configuration.
    */
-  def configure(config: BrokerDTO, reporter:Reporter) = dispatchQueue {
+  def configure(config: BrokerDTO, reporter:Reporter) = dispatch_queue {
     if ( validate(config, reporter) < ERROR ) {
       this.config = config
 
-      if( serviceState.isStarted ) {
+      if( service_state.is_started ) {
         // TODO: apply changes while he broker is running.
         reporter.report(WARN, "Updating broker configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
 
@@ -203,7 +202,7 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
   var authenticator:Authenticator = _
   var authorizer:Authorizer = _
 
-  override def _start(onCompleted:Runnable) = {
+  override def _start(on_completed:Runnable) = {
 
     // create the runtime objects from the config
     {
@@ -221,7 +220,7 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
       default_virtual_host = null
       for (c <- config.virtual_hosts) {
         val host = new VirtualHost(this, virtual_host_id_counter.incrementAndGet)
-        host.configure(c, this)
+        host.configure(c, LoggingReporter(VirtualHost))
         virtual_hosts += ascii(c.id)-> host
         // first defined host is the default virtual host
         if( default_virtual_host == null ) {
@@ -235,31 +234,31 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
       }
       for (c <- config.connectors) {
         val connector = new Connector(this, connector_id_counter.incrementAndGet)
-        connector.configure(c, this)
+        connector.configure(c, LoggingReporter(VirtualHost))
         connectors ::= connector
       }
     }
 
     // Start up the virtual hosts
-    val tracker = new LoggingTracker("broker startup", dispatchQueue)
+    val tracker = new LoggingTracker("broker startup", dispatch_queue)
     virtual_hosts.valuesIterator.foreach( x=>
       tracker.start(x)
     )
 
     // Once virtual hosts are up.. start up the connectors.
     tracker.callback(^{
-      val tracker = new LoggingTracker("broker startup", dispatchQueue)
+      val tracker = new LoggingTracker("broker startup", dispatch_queue)
       connectors.foreach( x=>
         tracker.start(x)
       )
-      tracker.callback(onCompleted)
+      tracker.callback(on_completed)
     })
 
   }
 
 
-  def _stop(onCompleted:Runnable): Unit = {
-    val tracker = new LoggingTracker("broker shutdown", dispatchQueue)
+  def _stop(on_completed:Runnable): Unit = {
+    val tracker = new LoggingTracker("broker shutdown", dispatch_queue)
     // Stop accepting connections..
     connectors.foreach( x=>
       tracker.stop(x)
@@ -268,14 +267,14 @@ class Broker() extends BaseService with DispatchLogging with LoggingReporter {
     virtual_hosts.valuesIterator.foreach( x=>
       tracker.stop(x)
     )
-    tracker.callback(onCompleted)
+    tracker.callback(on_completed)
   }
 
-  def getVirtualHost(name: AsciiBuffer) = dispatchQueue ! {
+  def getVirtualHost(name: AsciiBuffer) = dispatch_queue ! {
     virtual_hosts_by_hostname.getOrElse(name, null)
   }
 
-  def getDefaultVirtualHost = dispatchQueue ! {
+  def getDefaultVirtualHost = dispatch_queue ! {
     default_virtual_host
   }
 

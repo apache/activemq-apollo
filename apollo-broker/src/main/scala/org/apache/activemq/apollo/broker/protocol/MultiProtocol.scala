@@ -141,7 +141,7 @@ class MultiProtocolHandler extends ProtocolHandler {
 
   var discriminated = false
 
-  override def onTransportCommand(command: Any) = {
+  override def on_transport_command(command: AnyRef) = {
 
     if (!command.isInstanceOf[ProtocolCodec]) {
       throw new ProtocolException("Expected a protocol codec");
@@ -151,33 +151,33 @@ class MultiProtocolHandler extends ProtocolHandler {
 
     var codec: ProtocolCodec = command.asInstanceOf[ProtocolCodec];
     val protocol = codec.protocol()
-    val protocolHandler = ProtocolFactory.get(protocol) match {
+    val protocol_handler = ProtocolFactory.get(protocol) match {
       case Some(x) => x.createProtocolHandler
       case None =>
         throw new ProtocolException("No protocol handler available for protocol: " + protocol);
     }
 
-    protocolHandler.setConnection(connection);
+    protocol_handler.set_connection(connection);
 
     // replace the current handler with the new one.
-    connection.protocolHandler = protocolHandler
+    connection.protocol_handler = protocol_handler
     connection.transport.setProtocolCodec(codec)
 
     connection.transport.suspendRead
-    protocolHandler.onTransportConnected
+    protocol_handler.on_transport_connected
   }
 
-  override def onTransportConnected = {
+  override def on_transport_connected = {
     connection.transport.resumeRead
     
     // Make sure client connects eventually...
-    connection.dispatchQueue.after(5, TimeUnit.SECONDS) {
+    connection.dispatch_queue.after(5, TimeUnit.SECONDS) {
       assert_discriminated
     }
   }
 
   def assert_discriminated = {
-    if( connection.serviceState.isStarted && !discriminated ) {
+    if( connection.service_state.is_started && !discriminated ) {
       connection.stop
     }
   }

@@ -60,7 +60,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
 
   override def log: Log = HawtDBClient
 
-  def dispatchQueue = hawtDBStore.dispatchQueue
+  def dispatchQueue = hawtDBStore.dispatch_queue
 
 
   private val indexFileFactory = new TxPageFileFactory()
@@ -247,8 +247,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
             }
             action.dequeues.foreach {
               queueEntry =>
-                val queueKey = queueEntry.queueKey
-                val queueSeq = queueEntry.queueSeq
+                val queueKey = queueEntry.queue_key
+                val queueSeq = queueEntry.entry_seq
                 batch += new RemoveQueueEntry.Bean().setQueueKey(queueKey).setQueueSeq(queueSeq)
             }
         }
@@ -308,9 +308,9 @@ class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
           entryIndex.iterator.foreach { entry =>
             if( group == null ) {
               group = new QueueEntryRange
-              group.firstQueueSeq = entry.getKey.longValue
+              group.first_entry_seq = entry.getKey.longValue
             }
-            group.lastQueueSeq = entry.getKey.longValue
+            group.last_entry_seq = entry.getKey.longValue
             group.count += 1
             group.size += entry.getValue.getSize
             if( group.count == limit) {

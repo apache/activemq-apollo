@@ -20,8 +20,8 @@ package org.apache.activemq.apollo.broker.store;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class QueueEntryRange {
-    public long firstQueueSeq;
-    public long lastQueueSeq;
+    public long first_entry_seq;
+    public long last_entry_seq;
     public int count;
     public int size;
 }

@@ -102,7 +102,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   override protected def log = StompProtocolHandler
 
-  protected def dispatchQueue:DispatchQueue = connection.dispatchQueue
+  protected def dispatchQueue:DispatchQueue = connection.dispatch_queue
 
   trait AckHandler {
     def track(delivery:Delivery):Unit
@@ -208,7 +208,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     override val exclusive:Boolean
   ) extends BaseRetained with DeliveryConsumer {
 
-    val dispatchQueue = StompProtocolHandler.this.dispatchQueue
+    val dispatch_queue = StompProtocolHandler.this.dispatchQueue
 
     override def connection = Some(StompProtocolHandler.this.connection)
 
@@ -237,10 +237,10 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       def consumer = StompConsumer.this
       var closed = false
 
-      val session = session_manager.open(producer.dispatchQueue)
+      val session = session_manager.open(producer.dispatch_queue)
 
       def close = {
-        assert(getCurrentQueue == producer.dispatchQueue)
+        assert(getCurrentQueue == producer.dispatch_queue)
         if( !closed ) {
           closed = true
           if( browser ) {
@@ -310,7 +310,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   var host:VirtualHost = null
 
-  private def queue = connection.dispatchQueue
+  private def queue = connection.dispatch_queue
 
   // uses by STOMP 1.0 clients
   var connection_ack_handlers = HashMap[AsciiBuffer, AckHandler]()
@@ -323,8 +323,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   var waiting_on:String = "client request"
   var config:StompDTO = _
 
-  override def setConnection(connection: BrokerConnection) = {
-    super.setConnection(connection)
+  override def set_connection(connection: BrokerConnection) = {
+    super.set_connection(connection)
     import collection.JavaConversions._
     config = connection.connector.config.protocols.find( _.isInstanceOf[StompDTO]).map(_.asInstanceOf[StompDTO]).getOrElse(new StompDTO)
   }
@@ -377,9 +377,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     throw new Break()
   }
 
-  override def onTransportConnected() = {
+  override def on_transport_connected() = {
 
-    session_manager = new SinkMux[StompFrame]( MapSink(connection.transportSink){x=>
+    session_manager = new SinkMux[StompFrame]( MapSink(connection.transport_sink){x=>
       trace("sending frame: %s", x)
       x
     }, dispatchQueue, StompFrame)
@@ -388,7 +388,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     resumeRead
   }
 
-  override def onTransportDisconnected() = {
+  override def on_transport_disconnected() = {
     if( !closed ) {
       heart_beat_monitor.stop
       closed=true;
@@ -416,7 +416,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   }
 
 
-  override def onTransportCommand(command:Any):Unit = {
+  override def on_transport_command(command:AnyRef):Unit = {
     if( dead ) {
       // We stop processing client commands once we are dead
       return;
@@ -656,7 +656,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         val producer = new DeliveryProducer() {
           override def connection = Some(StompProtocolHandler.this.connection)
 
-          override def dispatchQueue = queue
+          override def dispatch_queue = queue
         }
 
         // don't process frames until producer is connected...
@@ -952,11 +952,11 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   }
 
 
-  override def onTransportFailure(error: IOException) = {
+  override def on_transport_failure(error: IOException) = {
     if( !connection.stopped ) {
       suspendRead("shutdown")
       debug(error, "Shutting connection down due to: %s", error)
-      super.onTransportFailure(error);
+      super.on_transport_failure(error);
     }
   }
 
@@ -1002,22 +1002,22 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       queue += proc
     }
 
-    def commit(onComplete: => Unit) = {
+    def commit(on_complete: => Unit) = {
 
       val uow = if( host.store!=null ) {
-        host.store.createStoreUOW
+        host.store.create_uow
       } else {
         null
       }
 
       queue.foreach{ _(uow) }
       if( uow!=null ) {
-        uow.onComplete(^{
-          onComplete
+        uow.on_complete(^{
+          on_complete
         })
         uow.release
       } else {
-        onComplete
+        on_complete
       }
 
     }

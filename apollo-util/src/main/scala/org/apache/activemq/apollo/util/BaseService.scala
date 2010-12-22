@@ -28,21 +28,21 @@ object BaseService extends Log
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait BaseService extends Service with Logging {
+trait BaseService extends Service {
 
-  override protected def log:Log = BaseService
+  import BaseService._
 
   sealed class State {
 
     val since = System.currentTimeMillis
 
     override def toString = getClass.getSimpleName
-    def isCreated = false
-    def isStarting = false
-    def isStarted = false
-    def isStopping = false
-    def isStopped= false
-    def isFailed= false
+    def is_created = false
+    def is_starting = false
+    def is_started = false
+    def is_stopping = false
+    def is_stopped= false
+    def is_failed= false
   }
 
   trait CallbackSupport {
@@ -51,35 +51,35 @@ trait BaseService extends Service with Logging {
     def done = { callbacks.foreach(_.run); callbacks=Nil }
   }
 
-  protected class CREATED extends State { override def isCreated = true  }
-  protected class STARTING extends State with CallbackSupport { override def isStarting = true  }
-  protected class FAILED extends State { override def isFailed = true  }
-  protected class STARTED extends State { override def isStarted = true  }
-  protected class STOPPING extends State with CallbackSupport { override def isStopping = true  }
-  protected class STOPPED extends State { override def isStopped = true  }
+  protected class CREATED extends State { override def is_created = true  }
+  protected class STARTING extends State with CallbackSupport { override def is_starting = true  }
+  protected class FAILED extends State { override def is_failed = true  }
+  protected class STARTED extends State { override def is_started = true  }
+  protected class STOPPING extends State with CallbackSupport { override def is_stopping = true  }
+  protected class STOPPED extends State { override def is_stopped = true  }
 
-  protected val dispatchQueue:DispatchQueue
+  protected val dispatch_queue:DispatchQueue
 
   final def start() = start(null)
   final def stop() = stop(null)
 
   @volatile
-  protected var _serviceState:State = new CREATED
+  protected var _service_state:State = new CREATED
 
-  def serviceState = _serviceState
+  def service_state = _service_state
 
   @volatile
   protected var _serviceFailure:Exception = null
   def serviceFailure = _serviceFailure
 
-  final def start(onCompleted:Runnable) = ^{
+  final def start(on_completed:Runnable) = ^{
     def do_start = {
       val state = new STARTING()
-      state << onCompleted
-      _serviceState = state
+      state << on_completed
+      _service_state = state
       try {
         _start(^ {
-          _serviceState = new STARTED
+          _service_state = new STARTED
           state.done
         })
       }
@@ -87,45 +87,45 @@ trait BaseService extends Service with Logging {
         case e:Exception =>
           error(e, "Start failed due to %s", e)
           _serviceFailure = e
-          _serviceState = new FAILED
+          _service_state = new FAILED
           state.done
       }
     }
     def done = {
-      if( onCompleted!=null ) {
-        onCompleted.run
+      if( on_completed!=null ) {
+        on_completed.run
       }
     }
-    _serviceState match {
+    _service_state match {
       case state:CREATED =>
         do_start
       case state:STOPPED =>
         do_start
       case state:STARTING =>
-        state << onCompleted
+        state << on_completed
       case state:STARTED =>
         done
       case state =>
         done
         error("Start should not be called from state: %s", state);
     }
-  } |>>: dispatchQueue
+  } |>>: dispatch_queue
 
-  final def stop(onCompleted:Runnable) = {
+  final def stop(on_completed:Runnable) = {
     def stop_task = {
       def done = {
-        if( onCompleted!=null ) {
-          onCompleted.run
+        if( on_completed!=null ) {
+          on_completed.run
         }
       }
-      _serviceState match {
+      _service_state match {
         case state:STARTED =>
           val state = new STOPPING
-          state << onCompleted
-          _serviceState = state
+          state << on_completed
+          _service_state = state
           try {
             _stop(^ {
-              _serviceState = new STOPPED
+              _service_state = new STOPPED
               state.done
             })
           }
@@ -133,11 +133,11 @@ trait BaseService extends Service with Logging {
             case e:Exception =>
               error(e, "Stop failed due to: %s", e)
               _serviceFailure = e
-              _serviceState = new FAILED
+              _service_state = new FAILED
               state.done
           }
         case state:STOPPING =>
-          state << onCompleted
+          state << on_completed
         case state:STOPPED =>
           done
         case state =>
@@ -145,10 +145,10 @@ trait BaseService extends Service with Logging {
           error("Stop should not be called from state: %s", state);
       }
     }
-    ^{ stop_task } |>>: dispatchQueue
+    ^{ stop_task } |>>: dispatch_queue
   }
 
-  protected def _start(onCompleted:Runnable)
-  protected def _stop(onCompleted:Runnable)
+  protected def _start(on_completed:Runnable)
+  protected def _stop(on_completed:Runnable)
 
 }

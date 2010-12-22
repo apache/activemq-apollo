@@ -27,7 +27,7 @@ public class SubscriptionRecord {
     public AsciiBuffer name;
     public AsciiBuffer selector;
     public AsciiBuffer destination;
-    public boolean isDurable;
+    public boolean durable;
     public long expiration = -1;
     public Buffer attachment;
 

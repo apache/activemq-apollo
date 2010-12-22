@@ -34,7 +34,7 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
 
   var store:Store = null
 
-  def createStore(flushDelay:Long):Store
+  def create_store(flushDelay:Long):Store
 
   /**
    * Handy helper to call an async method on the store and wait for
@@ -57,7 +57,7 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
 
 
   override protected def beforeAll() = {
-    store = createStore(5*1000)
+    store = create_store(5*1000)
     val tracker = new LoggingTracker("store startup")
     tracker.start(store)
     tracker.await
@@ -84,12 +84,12 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
 
   val queue_key_counter = new LongCounter
 
-  def addQueue(name:String):Long = {
+  def add_queue(name:String):Long = {
     var queueA = new QueueRecord
     queueA.key = queue_key_counter.incrementAndGet
     queueA.binding_kind = ascii("test")
     queueA.binding_data = ascii(name)
-    val rc:Boolean = CB( cb=> store.addQueue(queueA)(cb) )
+    val rc:Boolean = CB( cb=> store.add_queue(queueA)(cb) )
     expect(true)(rc)
     queueA.key
   }
@@ -103,11 +103,11 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
   }
 
 
-  def entry(queueKey:Long, queueSeq:Long, messageKey:Long=0) = {
+  def entry(queue_key:Long, entry_seq:Long, message_key:Long=0) = {
     var queueEntry = new QueueEntryRecord
-    queueEntry.queueKey = queueKey
-    queueEntry.queueSeq = queueSeq
-    queueEntry.messageKey = messageKey
+    queueEntry.queue_key = queue_key
+    queueEntry.entry_seq = entry_seq
+    queueEntry.message_key = message_key
     queueEntry
   }
 
@@ -126,51 +126,51 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
     }
   }
 
-  def populate(queueKey:Long, messages:List[String], firstSeq:Long=1) = {
-    var batch = store.createStoreUOW
+  def populate(queue_key:Long, messages:List[String], firstSeq:Long=1) = {
+    var batch = store.create_uow
     var msgKeys = ListBuffer[Long]()
     var nextSeq = firstSeq
 
     messages.foreach { message=>
       val msgKey = addMessage(batch, message)
       msgKeys += msgKey
-      batch.enqueue(entry(queueKey, nextSeq, msgKey))
+      batch.enqueue(entry(queue_key, nextSeq, msgKey))
       nextSeq += 1
     }
 
     val tracker = new TaskTracker()
     tracker.release(batch)
-    msgKeys.foreach { msgKey =>
-      store.flushMessage(msgKey) {}
+    msgKeys.foreach { msg_key =>
+      store.flush_message(msg_key) {}
     }
     tracker.await
     msgKeys
   }
 
   test("store enqueue and load latencey") {
-    val A = addQueue("A")
-    var messageKeys = storeMessages(A)
-    loadMessages(A, messageKeys)
+    val A = add_queue("A")
+    var message_keys = storeMessages(A)
+    loadMessages(A, message_keys)
   }
 
   def storeMessages(queue:Long) = {
 
     var seq = 0L
-    var messageKeys = ListBuffer[Long]()
+    var message_keys = ListBuffer[Long]()
 
     val content = payload("message\n", 1024)
     var metric = benchmarkCount(100000) {
       seq += 1
 
-      var batch = store.createStoreUOW
+      var batch = store.create_uow
       val message = addMessage(batch, content)
-      messageKeys += message
+      message_keys += message
       batch.enqueue(entry(queue, seq, message))
 
       val latch = new CountDownLatch(1)
       batch.setDisposer(^{latch.countDown} )
       batch.release
-      store.flushMessage(message) {}
+      store.flush_message(message) {}
 
       latch.await
 
@@ -178,15 +178,15 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
     println("enqueue metrics: "+metric)
     println("enqueue latency is: "+metric.latency(TimeUnit.MILLISECONDS)+" ms")
     println("enqueue rate is: "+metric.rate(TimeUnit.SECONDS)+" enqueues/s")
-    messageKeys.toList
+    message_keys.toList
   }
 
-  def loadMessages(queue:Long, messageKeys: List[Long]) = {
+  def loadMessages(queue:Long, message_keys: List[Long]) = {
 
-    var keys = messageKeys.toList
+    var keys = message_keys.toList
     val metric = benchmarkCount(keys.size) {
       val latch = new CountDownLatch(1)
-      store.loadMessage(keys.head) { msg=>
+      store.load_message(keys.head) { msg=>
         assert(msg.isDefined, "message key not found: "+keys.head)
         latch.countDown
       }

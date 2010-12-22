@@ -35,7 +35,7 @@ class StompRemoteConsumer extends RemoteConsumer {
   var outboundSink: OverflowSink[StompFrame] = null
 
   def onConnected() = {
-    outboundSink = new OverflowSink[StompFrame](MapSink(transportSink) {x => x})
+    outboundSink = new OverflowSink[StompFrame](MapSink(transport_sink) {x => x})
     outboundSink.refiller = ^ {}
 
     val stompDestination = if (destination.domain == Router.QUEUE_DOMAIN) {
@@ -59,7 +59,7 @@ class StompRemoteConsumer extends RemoteConsumer {
     outboundSink.offer(frame);
   }
 
-  override def onTransportCommand(command: Object) = {
+  override def on_transport_command(command: Object) = {
     var frame = command.asInstanceOf[StompFrame]
     frame match {
       case StompFrame(CONNECTED, headers, _, _) =>
@@ -73,16 +73,16 @@ class StompRemoteConsumer extends RemoteConsumer {
           }
 
       case StompFrame(ERROR, headers, content, _) =>
-        onFailure(new Exception("Server reported an error: " + frame.content));
+        on_failure(new Exception("Server reported an error: " + frame.content));
       case _ =>
-        onFailure(new Exception("Unexpected stomp command: " + frame.action));
+        on_failure(new Exception("Unexpected stomp command: " + frame.action));
     }
   }
 
   protected def messageReceived() {
       if (thinkTime > 0) {
         transport.suspendRead
-        dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, ^ {
+        dispatch_queue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, ^ {
           rate.increment();
           if (!stopped) {
             transport.resumeRead
@@ -136,9 +136,9 @@ class StompRemoteProducer extends RemoteProducer with Logging {
           // if we are not going to wait for an ack back from the server,
           // then jut send the next one...
           if (thinkTime > 0) {
-            dispatchQueue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, task)
+            dispatch_queue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, task)
           } else {
-            dispatchQueue << task
+            dispatch_queue << task
           }
         }
       }
@@ -146,7 +146,7 @@ class StompRemoteProducer extends RemoteProducer with Logging {
   }
 
   override def onConnected() = {
-    outboundSink = new OverflowSink[StompFrame](MapSink(transportSink) {x => x})
+    outboundSink = new OverflowSink[StompFrame](MapSink(transport_sink) {x => x})
     outboundSink.refiller = ^ {drain}
 
     if (destination.domain == Router.QUEUE_DOMAIN) {
@@ -158,7 +158,7 @@ class StompRemoteProducer extends RemoteProducer with Logging {
     send_next
   }
 
-  override def onTransportCommand(command: Object) = {
+  override def on_transport_command(command: Object) = {
     var frame = command.asInstanceOf[StompFrame]
     frame match {
       case StompFrame(RECEIPT, headers, _, _) =>
@@ -168,19 +168,24 @@ class StompRemoteProducer extends RemoteProducer with Logging {
 
       case StompFrame(CONNECTED, headers, _, _) =>
       case StompFrame(ERROR, headers, content, _) =>
-        onFailure(new Exception("Server reported an error: " + frame.content.utf8));
+        on_failure(new Exception("Server reported an error: " + frame.content.utf8));
       case _ =>
-        onFailure(new Exception("Unexpected stomp command: " + frame.action));
+        on_failure(new Exception("Unexpected stomp command: " + frame.action));
     }
   }
 }
 
+object Watchog extends Log
+
 trait Watchog extends RemoteConsumer {
+
+  import Watchog._
+
   var messageCount = 0
 
   def watchdog(lastMessageCount: Int): Unit = {
     val seconds = 10
-    dispatchQueue.dispatchAfter(seconds, TimeUnit.SECONDS, ^ {
+    dispatch_queue.dispatchAfter(seconds, TimeUnit.SECONDS, ^ {
       if (messageCount == lastMessageCount) {
         warn("Messages have stopped arriving after " + seconds + "s, stopping consumer")
         stop

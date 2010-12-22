@@ -45,7 +45,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       result(NOT_FOUND)
     } else {
       Future[Option[T]] { cb=>
-        broker.dispatchQueue {
+        broker.dispatch_queue {
           func(broker, cb)
         }
       }.getOrElse(result(NOT_FOUND))
@@ -56,7 +56,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
     with_broker { case (broker, cb) =>
       broker.virtual_hosts.valuesIterator.find( _.id == id) match {
         case Some(virtualHost)=>
-          virtualHost.dispatchQueue {
+          virtualHost.dispatch_queue {
             func(virtualHost, cb)
           }
         case None=> cb(None)
@@ -72,8 +72,8 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
       result.id = broker.id
       result.current_time = System.currentTimeMillis
-      result.state = broker.serviceState.toString
-      result.state_since = broker.serviceState.since
+      result.state = broker.service_state.toString
+      result.state_since = broker.service_state.since
       result.config = broker.config
 
       broker.virtual_hosts.values.foreach{ host=>
@@ -109,8 +109,8 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
     with_virtual_host(id) { case (virtualHost,cb) =>
       val result = new VirtualHostStatusDTO
       result.id = virtualHost.id
-      result.state = virtualHost.serviceState.toString
-      result.state_since = virtualHost.serviceState.since
+      result.state = virtualHost.service_state.toString
+      result.state_since = virtualHost.service_state.since
       result.config = virtualHost.config
 
       virtualHost.router.routing_nodes.foreach { node=>
@@ -118,7 +118,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       }
 
       if( virtualHost.store != null ) {
-        virtualHost.store.storeStatusDTO { x=>
+        virtualHost.store.get_store_status { x=>
           result.store = x
           cb(Some(result))
         }
@@ -206,7 +206,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
     cb(None)
   } else {
     val q = qo.get
-    q.dispatchQueue {
+    q.dispatch_queue {
       val rc = new QueueStatusDTO
       rc.id = q.id
       rc.binding = q.binding.binding_dto
@@ -296,8 +296,8 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
           val result = new ConnectorStatusDTO
           result.id = connector.id
-          result.state = connector.serviceState.toString
-          result.state_since = connector.serviceState.since
+          result.state = connector.service_state.toString
+          result.state_since = connector.service_state.since
           result.config = connector.config
 
           result.accepted = connector.accept_counter.get
@@ -334,7 +334,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       broker.connectors.flatMap{ _.connections.get(id) }.headOption match {
         case None => cb(None)
         case Some(connection:BrokerConnection) =>
-          connection.dispatchQueue {
+          connection.dispatch_queue {
             cb(Some(connection.get_connection_status))
           }
       }

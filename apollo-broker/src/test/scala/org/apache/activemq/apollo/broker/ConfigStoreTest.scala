@@ -1,4 +1,4 @@
-package org.apache.activemq.apollo.web
+package org.apache.activemq.apollo.broker
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -18,7 +18,6 @@ package org.apache.activemq.apollo.web
  */
 import java.io.File
 import org.apache.activemq.apollo.util._
-import org.apache.activemq.apollo.broker.FileConfigStore
 import org.fusesource.hawtdispatch._
 
 /**
@@ -27,7 +26,7 @@ import org.fusesource.hawtdispatch._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class FileConfigStoreTest extends FunSuiteSupport {
+class ConfigStoreTest extends FunSuiteSupport {
   test("file config store") {
 
     val store = new FileConfigStore

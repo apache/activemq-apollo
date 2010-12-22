@@ -23,7 +23,7 @@ import org.apache.activemq.apollo.broker.store._
  */
 class CassandraStoreTest extends StoreFunSuiteSupport with CassandraServerMixin {
 
-  def createStore(flushDelay:Long):Store = {
+  def create_store(flushDelay:Long):Store = {
     val rc = new CassandraStore
     rc.config.flush_delay = flushDelay
     rc

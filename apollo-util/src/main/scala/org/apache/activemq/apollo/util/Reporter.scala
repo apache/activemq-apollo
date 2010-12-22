@@ -59,7 +59,9 @@ trait Reporter {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait LoggingReporter extends Logging with Reporter {
+case class LoggingReporter(log:Log) extends Reporter {
+  import log._
+
   override def report(level:ReporterLevel, message:String) = {
     level match {
       case INFO=>

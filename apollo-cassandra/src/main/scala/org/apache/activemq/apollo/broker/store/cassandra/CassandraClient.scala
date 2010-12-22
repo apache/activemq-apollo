@@ -78,7 +78,7 @@ class CassandraClient() {
     import PBQueueEntryRecord._
     val pb = PBQueueEntryRecord.FACTORY.parseUnframed(v)
     val rc = new QueueEntryRecord
-    rc.messageKey = pb.getMessageKey
+    rc.message_key = pb.getMessageKey
     rc.attachment = pb.getAttachment
     rc.size = pb.getSize
     rc.redeliveries = pb.getRedeliveries.toShort
@@ -87,7 +87,7 @@ class CassandraClient() {
 
   implicit def encodeQueueEntryRecord(v: QueueEntryRecord): Array[Byte] = {
     val pb = new PBQueueEntryRecord.Bean
-    pb.setMessageKey(v.messageKey)
+    pb.setMessageKey(v.message_key)
     pb.setAttachment(v.attachment)
     pb.setSize(v.size)
     pb.setRedeliveries(v.redeliveries)
@@ -131,11 +131,11 @@ class CassandraClient() {
     }
   }
 
-  def removeQueue(queueKey: Long):Boolean = {
+  def removeQueue(queue_key: Long):Boolean = {
     withSession {
       session =>
-        session.remove(schema.entries \ queueKey)
-        session.remove(schema.queue_name \ queueKey)
+        session.remove(schema.entries \ queue_key)
+        session.remove(schema.queue_name \ queue_key)
     }
     true
   }
@@ -180,14 +180,14 @@ class CassandraClient() {
                 }
                 action.enqueues.foreach {
                   queueEntry =>
-                    val qid = queueEntry.queueKey
-                    val seq = queueEntry.queueSeq
+                    val qid = queueEntry.queue_key
+                    val seq = queueEntry.entry_seq
                     operations ::= Insert( schema.entries \ qid \ (seq, queueEntry) )
                 }
                 action.dequeues.foreach {
                   queueEntry =>
-                    val qid = queueEntry.queueKey
-                    val seq = queueEntry.queueSeq
+                    val qid = queueEntry.queue_key
+                    val seq = queueEntry.entry_seq
                     operations ::= Delete( schema.entries \ qid, ColumnPredicate(seq :: Nil) )
                 }
             }
@@ -210,22 +210,22 @@ class CassandraClient() {
     }
   }
 
-  def listQueueEntryGroups(queueKey: Long, limit: Int): Seq[QueueEntryRange] = {
+  def listQueueEntryGroups(queue_key: Long, limit: Int): Seq[QueueEntryRange] = {
     withSession {
       session =>
         var rc = ListBuffer[QueueEntryRange]()
         var group:QueueEntryRange = null
 
         // TODO: this is going to bring back lots of entries.. not good.
-        session.list(schema.entries \ queueKey).foreach { x=>
+        session.list(schema.entries \ queue_key).foreach { x=>
 
           val record:QueueEntryRecord = x.value
 
           if( group == null ) {
             group = new QueueEntryRange
-            group.firstQueueSeq = record.queueSeq
+            group.first_entry_seq = record.entry_seq
           }
-          group.lastQueueSeq = record.queueSeq
+          group.last_entry_seq = record.entry_seq
           group.count += 1
           group.size += record.size
           if( group.count == limit) {
@@ -241,13 +241,13 @@ class CassandraClient() {
     }
   }
 
-  def getQueueEntries(queueKey: Long, firstSeq:Long, lastSeq:Long): Seq[QueueEntryRecord] = {
+  def getQueueEntries(queue_key: Long, firstSeq:Long, lastSeq:Long): Seq[QueueEntryRecord] = {
     withSession {
       session =>
-        session.list(schema.entries \ queueKey, RangePredicate(firstSeq, lastSeq)).map { x=>
+        session.list(schema.entries \ queue_key, RangePredicate(firstSeq, lastSeq)).map { x=>
           val rc:QueueEntryRecord = x.value
-          rc.queueKey = queueKey
-          rc.queueSeq = x.name
+          rc.queue_key = queue_key
+          rc.entry_seq = x.name
           rc
         }
     }

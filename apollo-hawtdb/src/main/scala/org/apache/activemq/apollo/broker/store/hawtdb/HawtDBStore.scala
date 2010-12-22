@@ -71,7 +71,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
   var config:HawtDBStoreDTO = defaultConfig
   val client = new HawtDBClient(this)
 
-  val load_source = createSource(new ListEventAggregator[(Long, (Option[MessageRecord])=>Unit)](), dispatchQueue)
+  val load_source = createSource(new ListEventAggregator[(Long, (Option[MessageRecord])=>Unit)](), dispatch_queue)
   load_source.setEventHandler(^{drain_loads});
 
   override def toString = "hawtdb store"
@@ -83,7 +83,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
   protected def store(uows: Seq[DelayableUOW])(callback: =>Unit) = {
     executor_pool {
       client.store(uows, ^{
-        dispatchQueue {
+        dispatch_queue {
           callback
         }
       })
@@ -94,7 +94,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
 
   def configure(config: HawtDBStoreDTO, reporter: Reporter) = {
     if ( HawtDBStore.validate(config, reporter) < ERROR ) {
-      if( serviceState.isStarted ) {
+      if( service_state.is_started ) {
         // TODO: apply changes while he broker is running.
         reporter.report(WARN, "Updating hawtdb store configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
       } else {
@@ -103,7 +103,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
     }
   }
 
-  protected def _start(onCompleted: Runnable) = {
+  protected def _start(on_completed: Runnable) = {
     info("Starting hawtdb store at: '%s'", config.directory)
     executor_pool = Executors.newFixedThreadPool(1, new ThreadFactory(){
       def newThread(r: Runnable) = {
@@ -122,7 +122,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
         scheduleCleanup(v)
         scheduleFlush(v)
         load_source.resume
-        onCompleted.run
+        on_completed.run
       })
     }
   }
@@ -136,7 +136,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
         }
       }
     }
-    dispatchQueue.dispatchAfter(client.index_flush_interval, TimeUnit.MILLISECONDS, ^ {try_flush})
+    dispatch_queue.dispatchAfter(client.index_flush_interval, TimeUnit.MILLISECONDS, ^ {try_flush})
   }
 
   def scheduleCleanup(version:Int): Unit = {
@@ -148,10 +148,10 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
         }
       }
     }
-    dispatchQueue.dispatchAfter(client.cleanup_interval, TimeUnit.MILLISECONDS, ^ {try_cleanup})
+    dispatch_queue.dispatchAfter(client.cleanup_interval, TimeUnit.MILLISECONDS, ^ {try_cleanup})
   }
 
-  protected def _stop(onCompleted: Runnable) = {
+  protected def _stop(on_completed: Runnable) = {
     info("Stopping hawtdb store at: '%s'", config.directory)
     schedule_version.incrementAndGet
     new Thread() {
@@ -161,7 +161,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
         executor_pool.awaitTermination(86400, TimeUnit.SECONDS)
         executor_pool = null
         client.stop
-        onCompleted.run
+        on_completed.run
       }
     }.start
   }
@@ -189,37 +189,37 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
   /**
    * Ges the last queue key identifier stored.
    */
-  def getLastQueueKey(callback:(Option[Long])=>Unit):Unit = {
+  def get_last_queue_key(callback:(Option[Long])=>Unit):Unit = {
     executor_pool {
       callback(Some(client.rootBuffer.getLastQueueKey.longValue))
     }
   }
 
-  def addQueue(record: QueueRecord)(callback: (Boolean) => Unit) = {
+  def add_queue(record: QueueRecord)(callback: (Boolean) => Unit) = {
     executor_pool {
      client.addQueue(record, ^{ callback(true) })
     }
   }
 
-  def removeQueue(queueKey: Long)(callback: (Boolean) => Unit) = {
+  def remove_queue(queueKey: Long)(callback: (Boolean) => Unit) = {
     executor_pool {
       client.removeQueue(queueKey,^{ callback(true) })
     }
   }
 
-  def getQueue(queueKey: Long)(callback: (Option[QueueRecord]) => Unit) = {
+  def get_queue(queueKey: Long)(callback: (Option[QueueRecord]) => Unit) = {
     executor_pool {
       callback( client.getQueue(queueKey) )
     }
   }
 
-  def listQueues(callback: (Seq[Long]) => Unit) = {
+  def list_queues(callback: (Seq[Long]) => Unit) = {
     executor_pool {
       callback( client.listQueues )
     }
   }
 
-  def loadMessage(messageKey: Long)(callback: (Option[MessageRecord]) => Unit) = {
+  def load_message(messageKey: Long)(callback: (Option[MessageRecord]) => Unit) = {
     message_load_latency_counter.start { end=>
       load_source.merge((messageKey, { (result)=>
         end()
@@ -236,13 +236,13 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
     }
   }
 
-  def listQueueEntryRanges(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryRange]) => Unit) = {
+  def list_queue_entry_ranges(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryRange]) => Unit) = {
     executor_pool ^{
       callback( client.listQueueEntryGroups(queueKey, limit) )
     }
   }
 
-  def listQueueEntries(queueKey: Long, firstSeq: Long, lastSeq: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
+  def list_queue_entries(queueKey: Long, firstSeq: Long, lastSeq: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
     executor_pool ^{
       callback( client.getQueueEntries(queueKey, firstSeq, lastSeq) )
     }
@@ -250,7 +250,7 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
 
   def poll_stats:Unit = {
     def displayStats = {
-      if( serviceState.isStarted ) {
+      if( service_state.is_started ) {
 
         flush_latency = flush_latency_counter(true)
         message_load_latency = message_load_latency_counter(true)
@@ -263,14 +263,14 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
       }
     }
 
-    dispatchQueue.dispatchAfter(1, TimeUnit.SECONDS, ^{ displayStats })
+    dispatch_queue.dispatchAfter(1, TimeUnit.SECONDS, ^{ displayStats })
   }
 
-  def storeStatusDTO(callback:(StoreStatusDTO)=>Unit) = dispatchQueue {
+  def get_store_status(callback:(StoreStatusDTO)=>Unit) = dispatch_queue {
     val rc = new HawtDBStoreStatusDTO
 
-    rc.state = serviceState.toString
-    rc.state_since = serviceState.since
+    rc.state = service_state.toString
+    rc.state_since = service_state.since
 
     rc.flush_latency = flush_latency
     rc.message_load_latency = message_load_latency

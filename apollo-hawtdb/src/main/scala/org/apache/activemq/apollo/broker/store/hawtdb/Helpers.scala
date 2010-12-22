@@ -56,9 +56,9 @@ object Helpers {
 
   implicit def toQueueEntryRecord(pb: AddQueueEntry.Getter): QueueEntryRecord = {
     val rc = new QueueEntryRecord
-    rc.queueKey = pb.getQueueKey
-    rc.queueSeq = pb.getQueueSeq
-    rc.messageKey = pb.getMessageKey
+    rc.queue_key = pb.getQueueKey
+    rc.entry_seq = pb.getQueueSeq
+    rc.message_key = pb.getMessageKey
     rc.attachment = pb.getAttachment
     rc.size = pb.getSize
     rc.redeliveries = pb.getRedeliveries.toShort
@@ -67,9 +67,9 @@ object Helpers {
 
   implicit def fromQueueEntryRecord(v: QueueEntryRecord): AddQueueEntry.Bean = {
     val pb = new AddQueueEntry.Bean
-    pb.setQueueKey(v.queueKey)
-    pb.setQueueSeq(v.queueSeq)
-    pb.setMessageKey(v.messageKey)
+    pb.setQueueKey(v.queue_key)
+    pb.setQueueSeq(v.entry_seq)
+    pb.setMessageKey(v.message_key)
     pb.setAttachment(v.attachment)
     pb.setSize(v.size)
     pb.setRedeliveries(v.redeliveries)

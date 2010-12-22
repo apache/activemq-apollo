@@ -63,12 +63,12 @@ trait StoreUOW extends Retained {
    * all it operations and thus avoid the cost of the
    * persistence operations.
    */
-  def completeASAP()
+  def complete_asap()
 
   /**
    * The specified callback is executed once the UOW
    * is completed.
    */
-  def onComplete(callback: Runnable)
+  def on_complete(callback: Runnable)
 
 }

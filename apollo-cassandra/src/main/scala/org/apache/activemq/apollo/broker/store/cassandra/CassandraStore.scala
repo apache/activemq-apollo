@@ -79,7 +79,7 @@ class CassandraStore extends DelayingStoreSupport with Logging {
   protected def store(uows: Seq[DelayableUOW])(callback: =>Unit) = {
     blocking {
       client.store(uows)
-      dispatchQueue {
+      dispatch_queue {
         callback
       }
     }
@@ -88,16 +88,16 @@ class CassandraStore extends DelayingStoreSupport with Logging {
   def configure(config: StoreDTO, reporter: Reporter):Unit = configure(config.asInstanceOf[CassandraStoreDTO], reporter)
 
 
-  def storeStatusDTO(callback:(StoreStatusDTO)=>Unit) = dispatchQueue {
+  def get_store_status(callback:(StoreStatusDTO)=>Unit) = dispatch_queue {
     val rc = new SimpleStoreStatusDTO
-    rc.state = serviceState.toString
-    rc.state_since = serviceState.since
+    rc.state = service_state.toString
+    rc.state_since = service_state.since
     callback(rc)
   }
 
   def configure(config: CassandraStoreDTO, reporter: Reporter):Unit = {
     if ( CassandraStore.validate(config, reporter) < ERROR ) {
-      if( serviceState.isStarted ) {
+      if( service_state.is_started ) {
         // TODO: apply changes while he broker is running.
         reporter.report(WARN, "Updating cassandra store configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
       } else {
@@ -106,7 +106,7 @@ class CassandraStore extends DelayingStoreSupport with Logging {
     }
   }
 
-  protected def _start(onCompleted: Runnable) = {
+  protected def _start(on_completed: Runnable) = {
     info("Starting cassandra store at: '%s'", config.hosts.toList.mkString(", "))
     blocking = Executors.newFixedThreadPool(20, new ThreadFactory(){
       def newThread(r: Runnable) = {
@@ -130,10 +130,10 @@ class CassandraStore extends DelayingStoreSupport with Logging {
 
     client.start
     schedualDisplayStats
-    onCompleted.run
+    on_completed.run
   }
 
-  protected def _stop(onCompleted: Runnable) = {
+  protected def _stop(on_completed: Runnable) = {
     info("Stopping cassandra store at: '%s'", config.hosts.toList.mkString(", "))
     blocking.shutdown
     new Thread("casandra client shutdown") {
@@ -142,7 +142,7 @@ class CassandraStore extends DelayingStoreSupport with Logging {
           warn("cassandra thread pool is taking a long time to shutdown.")
         }
         client.stop
-        onCompleted.run
+        on_completed.run
       }
     }.start
   }
@@ -156,13 +156,13 @@ class CassandraStore extends DelayingStoreSupport with Logging {
   val storeLatency = new TimeCounter
   def schedualDisplayStats:Unit = {
     def displayStats = {
-      if( serviceState.isStarted ) {
+      if( service_state.is_started ) {
         val cl = storeLatency.apply(true)
         info("metrics: store latency: %,.3f ms", cl.avgTime(TimeUnit.MILLISECONDS))
         schedualDisplayStats
       }
     }
-    dispatchQueue.dispatchAfter(5, TimeUnit.SECONDS, ^{ displayStats })
+    dispatch_queue.dispatchAfter(5, TimeUnit.SECONDS, ^{ displayStats })
   }
 
   /**
@@ -179,51 +179,51 @@ class CassandraStore extends DelayingStoreSupport with Logging {
   /**
    * Ges the next queue key identifier.
    */
-  def getLastQueueKey(callback:(Option[Long])=>Unit):Unit = {
+  def get_last_queue_key(callback:(Option[Long])=>Unit):Unit = {
     // TODO:
     callback( Some(1L) )
   }
 
-  def addQueue(record: QueueRecord)(callback: (Boolean) => Unit) = {
+  def add_queue(record: QueueRecord)(callback: (Boolean) => Unit) = {
     blocking {
       client.addQueue(record)
       callback(true)
     }
   }
 
-  def removeQueue(queueKey: Long)(callback: (Boolean) => Unit) = {
+  def remove_queue(queueKey: Long)(callback: (Boolean) => Unit) = {
     blocking {
       callback(client.removeQueue(queueKey))
     }
   }
 
-  def getQueue(id: Long)(callback: (Option[QueueRecord]) => Unit) = {
+  def get_queue(id: Long)(callback: (Option[QueueRecord]) => Unit) = {
     blocking {
       callback( client.getQueue(id) )
     }
   }
 
-  def listQueues(callback: (Seq[Long]) => Unit) = {
+  def list_queues(callback: (Seq[Long]) => Unit) = {
     blocking {
       callback( client.listQueues )
     }
   }
 
-  def loadMessage(id: Long)(callback: (Option[MessageRecord]) => Unit) = {
+  def load_message(id: Long)(callback: (Option[MessageRecord]) => Unit) = {
     blocking {
       callback( client.loadMessage(id) )
     }
   }
 
 
-  def listQueueEntryRanges(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryRange]) => Unit) = {
+  def list_queue_entry_ranges(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryRange]) => Unit) = {
     blocking {
       callback( client.listQueueEntryGroups(queueKey, limit) )
     }
   }
 
 
-  def listQueueEntries(queueKey: Long, firstSeq: Long, lastSeq: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
+  def list_queue_entries(queueKey: Long, firstSeq: Long, lastSeq: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
     blocking {
       callback( client.getQueueEntries(queueKey, firstSeq, lastSeq) )
     }

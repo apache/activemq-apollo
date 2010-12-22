@@ -55,23 +55,23 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
   val filter = binding.message_filter
 
-  override val dispatchQueue: DispatchQueue = createQueue(binding.label);
-  dispatchQueue.setTargetQueue(getRandomThreadQueue)
-  dispatchQueue {
+  override val dispatch_queue: DispatchQueue = createQueue(binding.label);
+  dispatch_queue.setTargetQueue(getRandomThreadQueue)
+  dispatch_queue {
     debug("created queue for: " + binding.label)
   }
   setDisposer(^ {
     ack_source.release
-    dispatchQueue.release
+    dispatch_queue.release
     session_manager.release
   })
 
 
-  val ack_source = createSource(new ListEventAggregator[(Subscription#AcquiredQueueEntry, Boolean, StoreUOW)](), dispatchQueue)
+  val ack_source = createSource(new ListEventAggregator[(Subscription#AcquiredQueueEntry, Boolean, StoreUOW)](), dispatch_queue)
   ack_source.setEventHandler(^ {drain_acks});
   ack_source.resume
 
-  val session_manager = new SinkMux[Delivery](messages, dispatchQueue, Delivery)
+  val session_manager = new SinkMux[Delivery](messages, dispatch_queue, Delivery)
 
   // sequence numbers.. used to track what's in the store.
   var message_seq_counter = 1L
@@ -149,17 +149,17 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
   var capacity = 0
   var capacity_used = 0
 
-  val swap_source = createSource(EventAggregators.INTEGER_ADD, dispatchQueue)
+  val swap_source = createSource(EventAggregators.INTEGER_ADD, dispatch_queue)
   swap_source.setEventHandler(^{ swap_messages });
   swap_source.resume
 
-  protected def _start(onCompleted: Runnable) = {
+  protected def _start(on_completed: Runnable) = {
 
     capacity = tune_queue_buffer;
 
     def completed: Unit = {
       // by the time this is run, consumers and producers may have already joined.
-      onCompleted.run
+      on_completed.run
       schedual_consumer_sample
       // wake up the producers to fill us up...
       if (messages.refiller != null) {
@@ -168,7 +168,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
       // kick off dispatching to the consumers.
       trigger_swap
-      dispatchQueue << head_entry
+      dispatch_queue << head_entry
     }
 
     if( tune_persistent ) {
@@ -181,23 +181,23 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
         record.binding_data = binding.binding_data
         record.binding_kind = binding.binding_kind
 
-        host.store.addQueue(record) { rc =>
-          dispatchQueue {
+        host.store.add_queue(record) { rc =>
+          dispatch_queue {
             completed
           }
         }
 
       } else {
 
-        host.store.listQueueEntryRanges(id, tune_flush_range_size) { ranges=>
-          dispatchQueue {
+        host.store.list_queue_entry_ranges(id, tune_flush_range_size) { ranges=>
+          dispatch_queue {
             if( ranges!=null && !ranges.isEmpty ) {
 
               ranges.foreach { range =>
-                val entry = new QueueEntry(Queue.this, range.firstQueueSeq).init(range)
+                val entry = new QueueEntry(Queue.this, range.first_entry_seq).init(range)
                 entries.addLast(entry)
 
-                message_seq_counter = range.lastQueueSeq + 1
+                message_seq_counter = range.last_entry_seq + 1
                 enqueue_item_counter += range.count
                 enqueue_size_counter += range.size
                 tail_entry = new QueueEntry(Queue.this, next_message_seq)
@@ -219,9 +219,9 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
     }
   }
 
-  protected def _stop(onCompleted: Runnable) = {
+  protected def _stop(on_completed: Runnable) = {
     // TODO: perhaps we should remove all the entries
-    onCompleted.run
+    on_completed.run
   }
 
   def addCapacity(amount:Int) = {
@@ -236,7 +236,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
     var refiller: Runnable = null
 
-    def full = (capacity_used >= capacity) || !serviceState.isStarted
+    def full = (capacity_used >= capacity) || !service_state.is_started
 
     def offer(delivery: Delivery): Boolean = {
       if (full) {
@@ -397,7 +397,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
   def schedual_consumer_sample:Unit = {
 
     def slowConsumerCheck = {
-      if( serviceState.isStarted ) {
+      if( service_state.is_started ) {
 
         // target tune_min_subscription_rate / sec
         all_subscriptions.foreach{ case (consumer, sub)=>
@@ -424,7 +424,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
       }
     }
 
-    dispatchQueue.dispatchAfter(1, TimeUnit.SECONDS, ^{
+    dispatch_queue.dispatchAfter(1, TimeUnit.SECONDS, ^{
       slowConsumerCheck
     })
   }
@@ -463,9 +463,9 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
     override def producer = p
 
-    val session = session_manager.open(producer.dispatchQueue)
+    val session = session_manager.open(producer.dispatch_queue)
 
-    dispatchQueue {
+    dispatch_queue {
       inbound_sessions += this
       addCapacity( tune_producer_buffer )
     }
@@ -473,7 +473,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
     def close = {
       session_manager.close(session)
-      dispatchQueue {
+      dispatch_queue {
         addCapacity( -tune_producer_buffer )
         inbound_sessions -= this
       }
@@ -532,9 +532,9 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
       val sub = new Subscription(this, consumer)
       sub.open
     }
-  } >>: dispatchQueue
+  } >>: dispatch_queue
 
-  def unbind(values: List[DeliveryConsumer]) = dispatchQueue {
+  def unbind(values: List[DeliveryConsumer]) = dispatch_queue {
     for (consumer <- values) {
       all_subscriptions.get(consumer) match {
         case Some(subscription) =>
@@ -558,7 +558,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
     rc
   }
 
-  val store_flush_source = createSource(new ListEventAggregator[QueueEntry#Loaded](), dispatchQueue)
+  val store_flush_source = createSource(new ListEventAggregator[QueueEntry#Loaded](), dispatch_queue)
   store_flush_source.setEventHandler(^ {drain_store_flushes});
   store_flush_source.resume
 
@@ -571,7 +571,7 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
   }
 
-  val store_load_source = createSource(new ListEventAggregator[(QueueEntry#Flushed, MessageRecord)](), dispatchQueue)
+  val store_load_source = createSource(new ListEventAggregator[(QueueEntry#Flushed, MessageRecord)](), dispatch_queue)
   store_load_source.setEventHandler(^ {drain_store_loads});
   store_load_source.resume
 
@@ -590,9 +590,9 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
   }
 
   def collocate(value:DispatchQueue):Unit = {
-    if( value.getTargetQueue ne dispatchQueue.getTargetQueue ) {
-      debug("co-locating %s with %s", dispatchQueue.getLabel, value.getLabel);
-      this.dispatchQueue.setTargetQueue(value.getTargetQueue)
+    if( value.getTargetQueue ne dispatch_queue.getTargetQueue ) {
+      debug("co-locating %s with %s", dispatch_queue.getLabel, value.getLabel);
+      this.dispatch_queue.setTargetQueue(value.getTargetQueue)
     }
   }
 }
@@ -635,12 +635,12 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   }
 
   def init(qer:QueueEntryRecord):QueueEntry = {
-    state = new Flushed(qer.messageKey, qer.size)
+    state = new Flushed(qer.message_key, qer.size)
     this
   }
 
   def init(range:QueueEntryRange):QueueEntry = {
-    state = new FlushedRange(range.lastQueueSeq, range.count, range.size)
+    state = new FlushedRange(range.last_entry_seq, range.count, range.size)
     this
   }
 
@@ -685,9 +685,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
   def toQueueEntryRecord = {
     val qer = new QueueEntryRecord
-    qer.queueKey = queue.id
-    qer.queueSeq = seq
-    qer.messageKey = state.messageKey
+    qer.queue_key = queue.id
+    qer.entry_seq = seq
+    qer.message_key = state.message_key
     qer.size = state.size
     qer
   }
@@ -722,7 +722,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   // These should not change the current state.
   def count = state.count
   def size = state.size
-  def messageKey = state.messageKey
+  def messageKey = state.message_key
   def is_flushed_or_flushing = state.is_flushed_or_flushing
   def dispatch() = state.dispatch
 
@@ -769,7 +769,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
      * Gets the message key for the entry.
      * @returns -1 if it is not known.
      */
-    def messageKey = -1L
+    def message_key = -1L
 
     /**
      * Attempts to dispatch the current entry to the subscriptions position at the entry.
@@ -893,7 +893,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     override def count = 1
     override def size = delivery.size
-    override def messageKey = delivery.storeKey
+    override def message_key = delivery.storeKey
 
     override def is_flushed_or_flushing = {
       flushing
@@ -903,7 +903,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     def store = {
       delivery.uow.enqueue(toQueueEntryRecord)
-      delivery.uow.onComplete(^{
+      delivery.uow.on_complete(^{
         queue.store_flush_source.merge(this)
       })
     }
@@ -922,19 +922,19 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
             // The storeBatch is only set when called from the messages.offer method
             if( delivery.uow!=null ) {
               if( asap ) {
-                delivery.uow.completeASAP
+                delivery.uow.complete_asap
               }
             } else {
 
               // Are swapping out a non-persistent message?
               if( delivery.storeKey == -1 ) {
                 
-                delivery.uow = queue.host.store.createStoreUOW
+                delivery.uow = queue.host.store.create_uow
                 val uow = delivery.uow
                 delivery.storeKey = uow.store(delivery.createMessageRecord)
                 store
                 if( asap ) {
-                  uow.completeASAP
+                  uow.complete_asap
                 }
                 uow.release
                 delivery.uow = null
@@ -942,7 +942,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
               } else {
                   
                 if( asap ) {
-                  queue.host.store.flushMessage(messageKey) {
+                  queue.host.store.flush_message(message_key) {
                     queue.store_flush_source.merge(this)
                   }
                 }
@@ -1089,7 +1089,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * entry is persisted, it can move into this state.  This state only holds onto the
    * the massage key so that it can reload the message from the store quickly when needed.
    */
-  class Flushed(override val messageKey:Long, override val size:Int) extends EntryState {
+  class Flushed(override val message_key:Long, override val size:Int) extends EntryState {
 
     queue.flushed_items += 1
 
@@ -1117,7 +1117,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         // start loading it back...
         loading = true
         queue.loading_size += size
-        queue.host.store.loadMessage(messageKey) { delivery =>
+        queue.host.store.load_message(message_key) { delivery =>
           // pass off to a source so it can aggregate multiple
           // loads to reduce cross thread synchronization
           if( delivery.isDefined ) {
@@ -1128,7 +1128,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
             // Looks like someone else removed the message from the store.. lets just
             // tombstone this entry now.
-            queue.dispatchQueue {
+            queue.dispatch_queue {
               remove
             }
           }
@@ -1214,16 +1214,16 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     override def load() = {
       if( !loading ) {
         loading = true
-        queue.host.store.listQueueEntries(queue.id, seq, last) { records =>
+        queue.host.store.list_queue_entries(queue.id, seq, last) { records =>
           if( !records.isEmpty ) {
-            queue.dispatchQueue {
+            queue.dispatch_queue {
 
               var item_count=0
               var size_count=0
 
               val tmpList = new LinkedNodeList[QueueEntry]()
               records.foreach { record =>
-                val entry = new QueueEntry(queue, record.queueSeq).init(record)
+                val entry = new QueueEntry(queue, record.entry_seq).init(record)
                 tmpList.addLast(entry)
                 item_count += 1
                 size_count += record.size
@@ -1294,7 +1294,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends DeliveryProducer with DispatchLogging {
   override protected def log = Queue
 
-  def dispatchQueue = queue.dispatchQueue
+  def dispatch_queue = queue.dispatch_queue
 
   val id = Queue.subcsription_counter.incrementAndGet
   var acquired = new LinkedNodeList[AcquiredQueueEntry]
@@ -1342,10 +1342,10 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       queue.exclusive_subscriptions.append(this)
     }
 
-    if( queue.serviceState.isStarted ) {
+    if( queue.service_state.is_started ) {
       // kick off the initial dispatch.
       refill_prefetch
-      queue.dispatchQueue << queue.head_entry
+      queue.dispatch_queue << queue.head_entry
     }
   }
 
@@ -1412,7 +1412,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     value ::= this
     pos = value
     session.refiller = value
-    queue.dispatchQueue << value // queue up the entry to get dispatched..
+    queue.dispatch_queue << value // queue up the entry to get dispatched..
   }
 
   def tail_parked = pos eq queue.tail_entry
@@ -1471,7 +1471,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       total_ack_count += 1
       if (entry.messageKey != -1) {
         val storeBatch = if( sb == null ) {
-          queue.host.store.createStoreUOW
+          queue.host.store.create_uow
         } else {
           sb
         }

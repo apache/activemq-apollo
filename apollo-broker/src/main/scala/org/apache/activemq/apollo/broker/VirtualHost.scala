@@ -42,7 +42,7 @@ object VirtualHost extends Log {
   /**
    * Creates a default a configuration object.
    */
-  def defaultConfig() = {
+  def default_config() = {
     val rc = new VirtualHostDTO
     rc.id = "default"
     rc.host_names.add("localhost")
@@ -70,23 +70,18 @@ object VirtualHost extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class VirtualHost(val broker: Broker, val id:Long) extends BaseService with DispatchLogging with LoggingReporter {
+class VirtualHost(val broker: Broker, val id:Long) extends BaseService {
   import VirtualHost._
   
-  override protected def log = VirtualHost
-  override val dispatchQueue:DispatchQueue = createQueue("virtual-host") // getGlobalQueue(DispatchPriority.HIGH).createQueue("virtual-host")
+  override val dispatch_queue:DispatchQueue = createQueue("virtual-host") // getGlobalQueue(DispatchPriority.HIGH).createQueue("virtual-host")
 
   var config:VirtualHostDTO = _
   val router = new Router(this)
 
   var names:List[String] = Nil;
-  def setNamesArray( names:ArrayList[String]) = {
-    this.names = names.toList
-  }
 
   var store:Store = null
   var direct_buffer_pool:DirectBufferPool = null
-  var transactionManager:TransactionManagerX = new TransactionManagerX
   val queue_id_counter = new LongCounter
 
   val session_counter = new AtomicLong(0)
@@ -103,18 +98,18 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
     if ( validate(config, reporter) < ERROR ) {
       this.config = config
 
-      if( serviceState.isStarted ) {
+      if( service_state.is_started ) {
         // TODO: apply changes while he broker is running.
         reporter.report(WARN, "Updating virtual host configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
 
       }
     }
-  } |>>: dispatchQueue
+  } |>>: dispatch_queue
 
 
-  override protected def _start(onCompleted:Runnable):Unit = {
+  override protected def _start(on_completed:Runnable):Unit = {
 
-    val tracker = new LoggingTracker("virtual host startup", dispatchQueue)
+    val tracker = new LoggingTracker("virtual host startup", dispatch_queue)
 
     if( config.authentication != null ) {
       if( config.authentication.enabled.getOrElse(true) ) {
@@ -137,7 +132,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
     //    val memory_pool_config: String = null
     var direct_buffer_pool_config: String = "hawtdb:activemq.tmp"
 
-    if( direct_buffer_pool_config!=null &&  (store!=null && !store.supportsDirectBuffers) ) {
+    if( direct_buffer_pool_config!=null &&  (store!=null && !store.supports_direct_buffers) ) {
       warn("The direct buffer pool will not be used because the configured store does not support them.")
       direct_buffer_pool_config = null
     }
@@ -148,38 +143,38 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
     }
 
     if( store!=null ) {
-      store.configure(config.store, this)
-      val storeStartupDone = tracker.task("store startup")
+      store.configure(config.store, LoggingReporter(VirtualHost))
+      val store_startup_done = tracker.task("store startup")
       store.start {
 
-        val getKeyDone = tracker.task("store get last queue key")
-        store.getLastQueueKey{ key=>
+        val get_key_done = tracker.task("store get last queue key")
+        store.get_last_queue_key{ key=>
           key match {
             case Some(x)=>
               queue_id_counter.set(key.get)
             case None =>
               warn("Could not get last queue key")
           }
-          getKeyDone.run
+          get_key_done.run
         }
 
         if( config.purge_on_startup.getOrElse(false) ) {
-          storeStartupDone.name = "store purge"
+          store_startup_done.name = "store purge"
           store.purge {
-            storeStartupDone.run
+            store_startup_done.run
           }
         } else {
-          storeStartupDone.name = "store recover queues"
-          store.listQueues { queueKeys =>
-            for( queueKey <- queueKeys) {
-              val task = tracker.task("store load queue key: "+queueKey)
+          store_startup_done.name = "store recover queues"
+          store.list_queues { queue_keys =>
+            for( queue_key <- queue_keys) {
+              val task = tracker.task("store load queue key: "+queue_key)
               // Use a global queue to so we concurrently restore
               // the queues.
               globalQueue {
-                store.getQueue(queueKey) { x =>
+                store.get_queue(queue_key) { x =>
                   x match {
                     case Some(record)=>
-                    dispatchQueue ^{
+                    dispatch_queue ^{
                       router.create_queue(record, null)
                       task.run
                     }
@@ -189,18 +184,13 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
                 }
               }
             }
-            storeStartupDone.run
+            store_startup_done.run
           }
         }
       }
     }
 
-
-    //Recover transactions:
-    transactionManager.virtualHost = this
-    transactionManager.loadTransactions();
-
-    tracker.callback(onCompleted)
+    tracker.callback(on_completed)
 
     if(config.regroup_connections.getOrElse(false)) {
       schedual_connection_regroup
@@ -208,9 +198,9 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
   }
 
 
-  override protected def _stop(onCompleted:Runnable):Unit = {
+  override protected def _stop(on_completed:Runnable):Unit = {
 
-    val tracker = new LoggingTracker("virtual host shutdown", dispatchQueue)
+    val tracker = new LoggingTracker("virtual host shutdown", dispatch_queue)
     router.queues.valuesIterator.foreach { queue=>
       tracker.stop(queue)
     }
@@ -222,7 +212,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
     if( store!=null ) {
       tracker.stop(store);
     }
-    tracker.callback(onCompleted)
+    tracker.callback(on_completed)
   }
 
 
@@ -241,25 +231,25 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
         // thread.
         node.broadcast_consumers.headOption.foreach{ consumer =>
           node.broadcast_producers.foreach { r=>
-            r.producer.collocate(consumer.dispatchQueue)
+            r.producer.collocate(consumer.dispatch_queue)
           }
         }
 
         node.queues.foreach { queue=>
 
-          queue.dispatchQueue {
+          queue.dispatch_queue {
 
             // Collocate the queue's with the first consumer
             // TODO: change this so it collocates with the fastest consumer.
 
             queue.all_subscriptions.headOption.map( _._1 ).foreach { consumer=>
-              queue.collocate( consumer.dispatchQueue )
+              queue.collocate( consumer.dispatch_queue )
             }
 
             // Collocate all the producers with the queue..
 
             queue.inbound_sessions.foreach { session =>
-              session.producer.collocate( queue.dispatchQueue )
+              session.producer.collocate( queue.dispatch_queue )
             }
           }
 
@@ -267,7 +257,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService with Disp
       }
       schedual_connection_regroup
     }
-    dispatchQueue.dispatchAfter(1, TimeUnit.SECONDS, ^{ if(serviceState.isStarted) { connectionRegroup } } )
+    dispatch_queue.dispatchAfter(1, TimeUnit.SECONDS, ^{ if(service_state.is_started) { connectionRegroup } } )
   }
 
   def destination_config(name:Path):Option[DestinationDTO] = {

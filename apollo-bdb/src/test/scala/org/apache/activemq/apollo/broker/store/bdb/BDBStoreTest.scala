@@ -23,7 +23,7 @@ import org.apache.activemq.apollo.broker.store.{Store, StoreFunSuiteSupport}
  */
 class BDBStoreTest extends StoreFunSuiteSupport {
 
-  def createStore(flushDelay:Long):Store = {
+  def create_store(flushDelay:Long):Store = {
     val rc = new BDBStore
     rc.config.flush_delay = flushDelay
     rc

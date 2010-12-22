@@ -37,7 +37,7 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
 
   override def log: Log = BDBClient
 
-  def dispatchQueue = store.dispatchQueue
+  def dispatchQueue = store.dispatch_queue
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -80,8 +80,8 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
 
   case class TxContext(tx:Transaction) {
 
-    def with_entries_db[T](queueKey:Long)(func: (Database) => T): T = {
-      val db = environment.openDatabase(tx, entries_db_name(queueKey), long_key_conf)
+    def with_entries_db[T](queue_key:Long)(func: (Database) => T): T = {
+      val db = environment.openDatabase(tx, entries_db_name(queue_key), long_key_conf)
       try {
         func(db)
       } finally {
@@ -163,8 +163,8 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
         }
       }
 
-      listQueues.foreach{ queueKey=>
-        val name = entries_db_name(queueKey)
+      listQueues.foreach{ queue_key=>
+        val name = entries_db_name(queue_key)
         remove_db(name)
       }
       remove_db("messages")
@@ -208,24 +208,24 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
     callback.run
   }
 
-  def removeQueue(queueKey: Long, callback:Runnable) = {
+  def removeQueue(queue_key: Long, callback:Runnable) = {
     with_ctx { ctx=>
       import ctx._
 
-      queues_db.delete(tx, queueKey)
-      with_entries_db(queueKey) { entries_db=>
+      queues_db.delete(tx, queue_key)
+      with_entries_db(queue_key) { entries_db=>
 
         entries_db.cursor(tx) { (key,value)=>
           val queueEntry:QueueEntryRecord = value
-          if( add_and_get(message_refs_db, queueEntry.messageKey, -1, tx)==0 ) {
-            messages_db.delete(tx, queueEntry.messageKey)
+          if( add_and_get(message_refs_db, queueEntry.message_key, -1, tx)==0 ) {
+            messages_db.delete(tx, queueEntry.message_key)
           }
           true // keep cursoring..
         }
 
       }
 
-      environment.removeDatabase(tx, entries_db_name(queueKey))
+      environment.removeDatabase(tx, entries_db_name(queue_key))
     }
     callback.run
   }
@@ -243,17 +243,17 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
               }
 
               action.enqueues.foreach { queueEntry =>
-                with_entries_db(queueEntry.queueKey) { entries_db=>
-                  entries_db.put(tx, queueEntry.queueSeq, queueEntry)
-                  add_and_get(message_refs_db, queueEntry.messageKey, 1, tx)
+                with_entries_db(queueEntry.queue_key) { entries_db=>
+                  entries_db.put(tx, queueEntry.entry_seq, queueEntry)
+                  add_and_get(message_refs_db, queueEntry.message_key, 1, tx)
                 }
               }
 
               action.dequeues.foreach { queueEntry =>
-                with_entries_db(queueEntry.queueKey) { entries_db=>
-                  entries_db.delete(tx, queueEntry.queueSeq)
-                  if( add_and_get(message_refs_db, queueEntry.messageKey, -1, tx)==0 ) {
-                    messages_db.delete(tx, queueEntry.messageKey)
+                with_entries_db(queueEntry.queue_key) { entries_db=>
+                  entries_db.delete(tx, queueEntry.entry_seq)
+                  if( add_and_get(message_refs_db, queueEntry.message_key, -1, tx)==0 ) {
+                    messages_db.delete(tx, queueEntry.message_key)
                   }
                 }
               }
@@ -277,19 +277,19 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
     rc
   }
 
-  def getQueue(queueKey: Long): Option[QueueRecord] = {
+  def getQueue(queue_key: Long): Option[QueueRecord] = {
     with_ctx { ctx=>
       import ctx._
-      queues_db.get(tx, to_DatabaseEntry(queueKey)).map( x=> to_QueueRecord(x)  )
+      queues_db.get(tx, to_DatabaseEntry(queue_key)).map( x=> to_QueueRecord(x)  )
     }
   }
 
-  def listQueueEntryGroups(queueKey: Long, limit: Int) : Seq[QueueEntryRange] = {
+  def listQueueEntryGroups(queue_key: Long, limit: Int) : Seq[QueueEntryRange] = {
     var rc = ListBuffer[QueueEntryRange]()
     with_ctx { ctx=>
       import ctx._
 
-      with_entries_db(queueKey) { entries_db=>
+      with_entries_db(queue_key) { entries_db=>
 
         var group:QueueEntryRange = null
 
@@ -297,12 +297,12 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
 
           if( group == null ) {
             group = new QueueEntryRange
-            group.firstQueueSeq = key
+            group.first_entry_seq = key
           }
 
           val entry:QueueEntryRecord = value
 
-          group.lastQueueSeq = key
+          group.last_entry_seq = key
           group.count += 1
           group.size += entry.size
 
@@ -323,17 +323,17 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
     rc
   }
 
-  def getQueueEntries(queueKey: Long, firstSeq:Long, lastSeq:Long): Seq[QueueEntryRecord] = {
+  def getQueueEntries(queue_key: Long, firstSeq:Long, lastSeq:Long): Seq[QueueEntryRecord] = {
     var rc = ListBuffer[QueueEntryRecord]()
     with_ctx { ctx=>
       import ctx._
 
-      with_entries_db(queueKey) { entries_db=>
+      with_entries_db(queue_key) { entries_db=>
         entries_db.cursor_from(tx, to_DatabaseEntry(firstSeq)) { (key, value) =>
-          val queueSeq:Long = key
+          val entry_seq:Long = key
           val entry:QueueEntryRecord = value
           rc += entry
-          queueSeq < lastSeq
+          entry_seq < lastSeq
         }
       }
     }
@@ -347,13 +347,13 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
     val records = with_ctx { ctx=>
       import ctx._
 
-      requests.flatMap { case (messageKey, callback)=>
+      requests.flatMap { case (message_key, callback)=>
         val record = metric_load_from_index_counter.time {
-          messages_db.get(tx, to_DatabaseEntry(messageKey)).map ( to_MessageRecord _ )
+          messages_db.get(tx, to_DatabaseEntry(message_key)).map ( to_MessageRecord _ )
         }
         record match {
           case None =>
-          debug("Message not indexed: %s", messageKey)
+          debug("Message not indexed: %s", message_key)
           callback(None)
           None
           case Some(x) => Some((record, callback))

@@ -18,7 +18,6 @@ package org.apache.activemq.apollo.broker.store
  */
 import org.apache.activemq.apollo.dto.{StoreStatusDTO, StoreDTO}
 import org.apache.activemq.apollo.util._
-import ReporterLevel._
 
 /**
  * <p>
@@ -30,19 +29,19 @@ import ReporterLevel._
  */
 trait Store extends ServiceTrait {
 
-  def storeStatusDTO(callback:(StoreStatusDTO)=>Unit)
+  def get_store_status(callback:(StoreStatusDTO)=>Unit)
 
   /**
    * @returns true if the store implementation can handle accepting
    *          MessageRecords with DirectBuffers in them.
    */
-  def supportsDirectBuffers() = false
+  def supports_direct_buffers() = false
 
   /**
    * Creates a store uow which is used to perform persistent
    * operations as unit of work.
    */
-  def createStoreUOW():StoreUOW
+  def create_uow():StoreUOW
 
   /**
    * Supplies configuration data to the Store.  This will be called
@@ -59,7 +58,7 @@ trait Store extends ServiceTrait {
   /**
    * Ges the last queue key identifier stored.
    */
-  def getLastQueueKey(callback:(Option[Long])=>Unit):Unit
+  def get_last_queue_key(callback:(Option[Long])=>Unit):Unit
 
   /**
    * Adds a queue.
@@ -67,47 +66,47 @@ trait Store extends ServiceTrait {
    * This method auto generates and assigns the key field of the queue record and
    * returns true if it succeeded.
    */
-  def addQueue(record:QueueRecord)(callback:(Boolean)=>Unit):Unit
+  def add_queue(record:QueueRecord)(callback:(Boolean)=>Unit):Unit
 
   /**
    * Removes a queue. Success is reported via the callback.
    */
-  def removeQueue(queueKey:Long)(callback:(Boolean)=>Unit):Unit
+  def remove_queue(queueKey:Long)(callback:(Boolean)=>Unit):Unit
 
   /**
    * Loads the queue information for a given queue key.
    */
-  def getQueue(queueKey:Long)(callback:(Option[QueueRecord])=>Unit )
+  def get_queue(queueKey:Long)(callback:(Option[QueueRecord])=>Unit )
 
   /**
    * Gets a listing of all queue entry sequences previously added
    * and reports them to the callback.
    */
-  def listQueues(callback: (Seq[Long])=>Unit )
+  def list_queues(callback: (Seq[Long])=>Unit )
 
   /**
    * Groups all the entries in the specified queue into ranges containing up limit entries
    * big and returns those ranges.  Allows you to incrementally, load all the entries in
    * a queue.
    */
-  def listQueueEntryRanges(queueKey:Long, limit:Int)(callback:(Seq[QueueEntryRange])=>Unit )
+  def list_queue_entry_ranges(queueKey:Long, limit:Int)(callback:(Seq[QueueEntryRange])=>Unit )
 
   /**
    * Loads all the queue entry records for the given queue id between the first and last provided
    * queue sequences (inclusive).
    */
-  def listQueueEntries(queueKey:Long, firstSeq:Long, lastSeq:Long)(callback:(Seq[QueueEntryRecord])=>Unit )
+  def list_queue_entries(queueKey:Long, firstSeq:Long, lastSeq:Long)(callback:(Seq[QueueEntryRecord])=>Unit )
 
   /**
    * Removes a the delivery associated with the provided from any
    * internal buffers/caches.  The callback is executed once, the message is
    * no longer buffered.
    */
-  def flushMessage(messageKey:Long)(callback: =>Unit)
+  def flush_message(messageKey:Long)(callback: =>Unit)
 
   /**
    * Loads a delivery with the associated id from persistent storage.
    */
-  def loadMessage(messageKey:Long)(callback:(Option[MessageRecord])=>Unit )
+  def load_message(messageKey:Long)(callback:(Option[MessageRecord])=>Unit )
 
 }

@@ -322,7 +322,7 @@ class QueueSink[T](val sizer:Sizer[T], var maxSize:Int=1024*32) extends Sink[T] 
   def full = size >= maxSize
   def poll = buffer.poll
   def unpoll(value:T) = buffer.addFirst(value)
-  def isEmpty = buffer.isEmpty
+  def is_empty = buffer.isEmpty
 
   private def drain = drainer.run
 
@@ -345,7 +345,7 @@ class QueueSink[T](val sizer:Sizer[T], var maxSize:Int=1024*32) extends Sink[T] 
     // queue
     val wasBlocking = full
     size -= amount
-    if( !isEmpty ) {
+    if( !is_empty ) {
       drain
     } else {
       refiller.run

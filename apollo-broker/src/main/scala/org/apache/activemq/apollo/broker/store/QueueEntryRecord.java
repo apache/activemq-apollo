@@ -23,9 +23,9 @@ import org.fusesource.hawtbuf.Buffer;
  */
 public class QueueEntryRecord {
 
-    public long queueKey;
-    public long queueSeq;
-    public long messageKey;
+    public long queue_key;
+    public long entry_seq;
+    public long message_key;
     public Buffer attachment;
     public int size;
     public short redeliveries;

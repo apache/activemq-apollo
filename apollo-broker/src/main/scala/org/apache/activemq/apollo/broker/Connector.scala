@@ -73,7 +73,7 @@ object Connector extends Log {
 class Connector(val broker:Broker, val id:Long) extends BaseService {
   import Connector._
 
-  override val dispatchQueue = broker.dispatchQueue
+  override val dispatch_queue = broker.dispatch_queue
 
   var config:ConnectorDTO = defaultConfig
   var transportServer:TransportServer = _
@@ -85,7 +85,7 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
 
   object BrokerAcceptListener extends TransportAcceptListener {
     def onAcceptError(e: Exception): Unit = {
-      log.warn(e, "Error occured while accepting client connection.")
+      warn(e, "Error occured while accepting client connection.")
     }
 
     def onAccept(transport: Transport): Unit = {
@@ -95,16 +95,16 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
 
       accept_counter.incrementAndGet
       var connection = new BrokerConnection(Connector.this, broker.connection_id_counter.incrementAndGet)
-      connection.dispatchQueue.setLabel("connection %d to %s".format(connection.id, transport.getRemoteAddress))
-      connection.protocolHandler = protocol.createProtocolHandler
+      connection.dispatch_queue.setLabel("connection %d to %s".format(connection.id, transport.getRemoteAddress))
+      connection.protocol_handler = protocol.createProtocolHandler
       connection.transport = transport
 
       if( STICK_ON_THREAD_QUEUES ) {
-        connection.dispatchQueue.setTargetQueue(Dispatch.getRandomThreadQueue)
+        connection.dispatch_queue.setTargetQueue(Dispatch.getRandomThreadQueue)
       }
 
       // We release when it gets removed form the connections list.
-      connection.dispatchQueue.retain
+      connection.dispatch_queue.retain
       connections.put(connection.id, connection)
       info("Client connected from: %s", connection.transport.getRemoteAddress)
 
@@ -134,20 +134,20 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
     if ( validate(config, reporter) < ERROR ) {
       this.config = config
 
-      if( serviceState.isStarted ) {
+      if( service_state.is_started ) {
         // TODO: apply changes while running
         reporter.report(WARN, "Updating connector configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
 
       }
     }
-  } |>>: dispatchQueue
+  } |>>: dispatch_queue
 
 
-  override def _start(onCompleted:Runnable) = {
+  override def _start(on_completed:Runnable) = {
     assert(config!=null, "Connector must be configured before it is started.")
     protocol = ProtocolFactory.get(config.protocol.getOrElse("multi")).get
     transportServer = TransportFactory.bind( config.bind )
-    transportServer.setDispatchQueue(dispatchQueue)
+    transportServer.setDispatchQueue(dispatch_queue)
     transportServer.setAcceptListener(BrokerAcceptListener)
 
     if( transportServer.isInstanceOf[KeyAndTrustAware] ) {
@@ -160,19 +160,19 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
     }
     transportServer.start(^{
       info("Accepting connections at: "+config.bind)
-      onCompleted.run
+      on_completed.run
     })
   }
 
 
-  override def _stop(onCompleted:Runnable): Unit = {
+  override def _stop(on_completed:Runnable): Unit = {
     transportServer.stop(^{
       info("Stopped connector at: "+config.bind)
-      val tracker = new LoggingTracker(toString, dispatchQueue)
+      val tracker = new LoggingTracker(toString, dispatch_queue)
       connections.valuesIterator.foreach { connection=>
         tracker.stop(connection)
       }
-      tracker.callback(onCompleted)
+      tracker.callback(on_completed)
     })
   }
 
@@ -180,11 +180,11 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
    * Connections callback into the connector when they are stopped so that we can
    * stop tracking them.
    */
-  def stopped(connection:BrokerConnection) = dispatchQueue {
+  def stopped(connection:BrokerConnection) = dispatch_queue {
     val at_limit = at_connection_limit
     if( connections.remove(connection.id).isDefined ) {
       info("Client disconnected from: %s", connection.transport.getRemoteAddress)
-      connection.dispatchQueue.release
+      connection.dispatch_queue.release
       if( at_limit ) {
         transportServer.resume
       }

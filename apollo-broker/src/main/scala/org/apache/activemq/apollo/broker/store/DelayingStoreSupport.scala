@@ -47,15 +47,15 @@ trait DelayingStoreSupport extends Store with BaseService {
   // Implementation of the BaseService interface
   //
   /////////////////////////////////////////////////////////////////////
-  val dispatchQueue:DispatchQueue = createQueue(toString)
-  val aggregator = new AggregatingExecutor(dispatchQueue)
+  val dispatch_queue:DispatchQueue = createQueue(toString)
+  val aggregator = new AggregatingExecutor(dispatch_queue)
 
   /////////////////////////////////////////////////////////////////////
   //
   // Implementation of the StoreBatch interface
   //
   /////////////////////////////////////////////////////////////////////
-  def createStoreUOW() = new DelayableUOW
+  def create_uow() = new DelayableUOW
 
   class DelayableUOW extends BaseRetained with StoreUOW {
 
@@ -83,9 +83,9 @@ trait DelayingStoreSupport extends Store with BaseService {
     var completeListeners = ListBuffer[Runnable]()
     var disableDelay = false
 
-    def onComplete(callback: Runnable) = if( callback!=null ) { this.synchronized { completeListeners += callback } }
+    def on_complete(callback: Runnable) = if( callback!=null ) { this.synchronized { completeListeners += callback } }
 
-    def completeASAP() = this.synchronized { disableDelay=true }
+    def complete_asap() = this.synchronized { disableDelay=true }
 
     var delayable_actions = 0
 
@@ -131,7 +131,7 @@ trait DelayingStoreSupport extends Store with BaseService {
 
     def enqueue(entry: QueueEntryRecord) = {
       val a = this.synchronized {
-        val a = action(entry.messageKey)
+        val a = action(entry.message_key)
         a.enqueues += entry
         delayable_actions += 1
         a
@@ -144,7 +144,7 @@ trait DelayingStoreSupport extends Store with BaseService {
 
     def dequeue(entry: QueueEntryRecord) = {
       this.synchronized {
-        action(entry.messageKey).dequeues += entry
+        action(entry.message_key).dequeues += entry
       }
     }
 
@@ -163,14 +163,14 @@ trait DelayingStoreSupport extends Store with BaseService {
   }
 
 
-  def flushMessage(messageKey: Long)(cb: => Unit) = dispatchQueue {
+  def flush_message(messageKey: Long)(cb: => Unit) = dispatch_queue {
     val action: DelayableUOW#MessageAction = pendingStores.get(messageKey)
     if( action == null ) {
       cb
     } else {
       // TODO: protect against this causing a 2nd flush.
       delayedUOWs.put(action.uow.uow_id, action.uow)
-      action.uow.onComplete(^{ cb })
+      action.uow.on_complete(^{ cb })
       flush(action.uow.uow_id)
     }
   }
@@ -215,9 +215,9 @@ trait DelayingStoreSupport extends Store with BaseService {
   var canceled_enqueue:Long = 0
 
 
-  def key(x:QueueEntryRecord) = (x.queueKey, x.queueSeq)
+  def key(x:QueueEntryRecord) = (x.queue_key, x.entry_seq)
 
-  val uow_source = createSource(new ListEventAggregator[DelayableUOW](), dispatchQueue)
+  val uow_source = createSource(new ListEventAggregator[DelayableUOW](), dispatch_queue)
   uow_source.setEventHandler(^{drain_uows});
   uow_source.resume
 
@@ -277,7 +277,7 @@ trait DelayingStoreSupport extends Store with BaseService {
 
       val batch_id = uow.uow_id
       if( uow.delayable ) {
-        dispatchQueue.dispatchAfter(flush_delay, TimeUnit.MILLISECONDS, ^{flush(batch_id)})
+        dispatch_queue.dispatchAfter(flush_delay, TimeUnit.MILLISECONDS, ^{flush(batch_id)})
       } else {
         flush(batch_id)
       }
@@ -289,7 +289,7 @@ trait DelayingStoreSupport extends Store with BaseService {
     flush_source.merge(batch_id)
   }
 
-  val flush_source = createSource(new ListEventAggregator[Int](), dispatchQueue)
+  val flush_source = createSource(new ListEventAggregator[Int](), dispatch_queue)
   flush_source.setEventHandler(^{drain_flushes});
   flush_source.resume
 
@@ -298,7 +298,7 @@ trait DelayingStoreSupport extends Store with BaseService {
 
   def drain_flushes:Unit = {
 
-    if( !serviceState.isStarted ) {
+    if( !service_state.is_started ) {
       return
     }
 

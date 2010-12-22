@@ -82,7 +82,7 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
   protected def store(uows: Seq[DelayableUOW])(callback: =>Unit) = {
     write_executor {
       client.store(uows, ^{
-        dispatchQueue {
+        dispatch_queue {
           callback
         }
       })
@@ -93,7 +93,7 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
 
   def configure(config: BDBStoreDTO, reporter: Reporter) = {
     if ( BDBStore.validate(config, reporter) < ERROR ) {
-      if( serviceState.isStarted ) {
+      if( service_state.is_started ) {
         // TODO: apply changes while he broker is running.
         reporter.report(WARN, "Updating bdb store configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
       } else {
@@ -102,7 +102,7 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
     }
   }
 
-  protected def _start(onCompleted: Runnable) = {
+  protected def _start(on_completed: Runnable) = {
     info("Starting bdb store at: '%s'", config.directory)
     write_executor = Executors.newFixedThreadPool(1, new ThreadFactory(){
       def newThread(r: Runnable) = {
@@ -124,11 +124,11 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
       client.start()
       next_msg_key.set( client.getLastMessageKey +1 )
       next_queue_key.set( client.getLastQueueKey +1 )
-      onCompleted.run
+      on_completed.run
     }
   }
 
-  protected def _stop(onCompleted: Runnable) = {
+  protected def _stop(on_completed: Runnable) = {
     new Thread() {
       override def run = {
         info("Stopping BDB store at: '%s'", config.directory)
@@ -139,7 +139,7 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
         read_executor.awaitTermination(60, TimeUnit.SECONDS)
         read_executor = null
         client.stop
-        onCompleted.run
+        on_completed.run
       }
     }.start
   }
@@ -166,42 +166,42 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
   /**
    * Ges the last queue key identifier stored.
    */
-  def getLastQueueKey(callback:(Option[Long])=>Unit):Unit = {
+  def get_last_queue_key(callback:(Option[Long])=>Unit):Unit = {
     write_executor {
       callback(Some(client.getLastQueueKey))
     }
   }
 
-  def addQueue(record: QueueRecord)(callback: (Boolean) => Unit) = {
+  def add_queue(record: QueueRecord)(callback: (Boolean) => Unit) = {
     write_executor {
      client.addQueue(record, ^{ callback(true) })
     }
   }
 
-  def removeQueue(queueKey: Long)(callback: (Boolean) => Unit) = {
+  def remove_queue(queueKey: Long)(callback: (Boolean) => Unit) = {
     write_executor {
       client.removeQueue(queueKey,^{ callback(true) })
     }
   }
 
-  def getQueue(queueKey: Long)(callback: (Option[QueueRecord]) => Unit) = {
+  def get_queue(queueKey: Long)(callback: (Option[QueueRecord]) => Unit) = {
     write_executor {
       callback( client.getQueue(queueKey) )
     }
   }
 
-  def listQueues(callback: (Seq[Long]) => Unit) = {
+  def list_queues(callback: (Seq[Long]) => Unit) = {
     write_executor {
       callback( client.listQueues )
     }
   }
 
-  val load_source = createSource(new ListEventAggregator[(Long, (Option[MessageRecord])=>Unit)](), dispatchQueue)
+  val load_source = createSource(new ListEventAggregator[(Long, (Option[MessageRecord])=>Unit)](), dispatch_queue)
   load_source.setEventHandler(^{drain_loads});
   load_source.resume
 
 
-  def loadMessage(messageKey: Long)(callback: (Option[MessageRecord]) => Unit) = {
+  def load_message(messageKey: Long)(callback: (Option[MessageRecord]) => Unit) = {
     message_load_latency_counter.start { end=>
       load_source.merge((messageKey, { (result)=>
         end()
@@ -218,13 +218,13 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
     }
   }
 
-  def listQueueEntryRanges(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryRange]) => Unit) = {
+  def list_queue_entry_ranges(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryRange]) => Unit) = {
     write_executor ^{
       callback( client.listQueueEntryGroups(queueKey, limit) )
     }
   }
 
-  def listQueueEntries(queueKey: Long, firstSeq: Long, lastSeq: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
+  def list_queue_entries(queueKey: Long, firstSeq: Long, lastSeq: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
     write_executor ^{
       callback( client.getQueueEntries(queueKey, firstSeq, lastSeq) )
     }
@@ -232,7 +232,7 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
 
   def poll_stats:Unit = {
     def displayStats = {
-      if( serviceState.isStarted ) {
+      if( service_state.is_started ) {
 
         flush_latency = flush_latency_counter(true)
         message_load_latency = message_load_latency_counter(true)
@@ -245,14 +245,14 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
       }
     }
 
-    dispatchQueue.dispatchAfter(1, TimeUnit.SECONDS, ^{ displayStats })
+    dispatch_queue.dispatchAfter(1, TimeUnit.SECONDS, ^{ displayStats })
   }
 
-  def storeStatusDTO(callback:(StoreStatusDTO)=>Unit) = dispatchQueue {
+  def get_store_status(callback:(StoreStatusDTO)=>Unit) = dispatch_queue {
     val rc = new BDBStoreStatusDTO
 
-    rc.state = serviceState.toString
-    rc.state_since = serviceState.since
+    rc.state = service_state.toString
+    rc.state_since = service_state.since
 
     rc.flush_latency = flush_latency
     rc.message_load_latency = message_load_latency

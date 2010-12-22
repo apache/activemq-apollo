@@ -67,7 +67,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
   val destination_id_counter = new LongCounter
 
-  protected def dispatchQueue:DispatchQueue = host.dispatchQueue
+  protected def dispatchQueue:DispatchQueue = host.dispatch_queue
 
   var queue_bindings = HashMap[Binding, Queue]()
   var queues = HashMap[Long, Queue]()
@@ -161,7 +161,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
       record.binding_data = binding.binding_data
       record.binding_kind = binding.binding_kind
 
-      host.store.addQueue(record) { rc => Unit }
+      host.store.add_queue(record) { rc => Unit }
 
     }
     queue.start
@@ -258,8 +258,8 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     }
     queue.stop
     if( queue.tune_persistent ) {
-      queue.dispatchQueue ^ {
-        host.store.removeQueue(queue.id){x=> Unit}
+      queue.dispatch_queue ^ {
+        host.store.remove_queue(queue.id){x=> Unit}
       }
     }
     Success(Zilch)
@@ -381,7 +381,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     }
 
     dispatchQueue {
-      do_connect.failure_option.foreach(x=> producer.dispatchQueue { completed(Failure(x)) } )
+      do_connect.failure_option.foreach(x=> producer.dispatch_queue { completed(Failure(x)) } )
     }
 
   }
@@ -425,7 +425,7 @@ class RoutingNode(val router:Router, val name:Path, val config:DestinationDTO) {
 
         // create a temp queue so that it can spool
         val queue = router._create_queue(-1, new TempBinding(consumer), null).success
-        queue.dispatchQueue.setTargetQueue(consumer.dispatchQueue)
+        queue.dispatch_queue.setTargetQueue(consumer.dispatch_queue)
         queue.bind(List(consumer))
 
         consumer_proxies += consumer->queue
@@ -491,7 +491,7 @@ class RoutingNode(val router:Router, val name:Path, val config:DestinationDTO) {
  */
 trait Route extends Retained {
 
-  def dispatchQueue:DispatchQueue
+  def dispatch_queue:DispatchQueue
   val metric = new AtomicLong();
 
   def bind(targets:List[DeliveryConsumer]):Unit
@@ -508,23 +508,23 @@ trait Route extends Retained {
 case class DeliveryProducerRoute(val router:Router, val destination:Destination, val producer:DeliveryProducer) extends BaseRetained with Route with Sink[Delivery] with DispatchLogging {
 
   override protected def log = Router
-  override def dispatchQueue = producer.dispatchQueue
+  override def dispatch_queue = producer.dispatch_queue
 
   // Retain the queue while we are retained.
-  dispatchQueue.retain
+  dispatch_queue.retain
   setDisposer(^{
-    dispatchQueue.release
+    dispatch_queue.release
   })
 
   var targets = List[DeliverySession]()
 
-  def connected() = dispatchQueue {
+  def connected() = dispatch_queue {
     on_connected
   }
 
   def bind(targets:List[DeliveryConsumer]) = retaining(targets) {
     internal_bind(targets)
-  } >>: dispatchQueue
+  } >>: dispatch_queue
 
   private def internal_bind(values:List[DeliveryConsumer]) = {
     values.foreach{ x=>
@@ -550,9 +550,9 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
       }
       rc
     }
-  } >>: dispatchQueue
+  } >>: dispatch_queue
 
-  def disconnected() = dispatchQueue {
+  def disconnected() = dispatch_queue {
     this.targets.foreach { x=>
       debug("producer route detaching from conusmer.")
       x.close
@@ -594,7 +594,7 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
 
           if( copy.storeKey == -1L && target.consumer.is_persistent && copy.message.persistent ) {
             if( copy.uow==null ) {
-              copy.uow = router.host.store.createStoreUOW
+              copy.uow = router.host.store.create_uow
             } else {
               copy.uow.retain
             }

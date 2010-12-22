@@ -33,7 +33,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
 
   var store:Store = null
 
-  def createStore(flushDelay:Long):Store
+  def create_store(flushDelay:Long):Store
 
   /**
    * Handy helper to call an async method on the store and wait for
@@ -56,7 +56,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
 
 
   override protected def beforeAll() = {
-    store = createStore(5*1000)
+    store = create_store(5*1000)
     val tracker = new LoggingTracker("store startup")
     tracker.start(store)
     tracker.await
@@ -83,17 +83,17 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
 
   val queue_key_counter = new LongCounter
 
-  def addQueue(name:String):Long = {
-    var queueA = new QueueRecord
-    queueA.key = queue_key_counter.incrementAndGet
-    queueA.binding_kind = ascii("test")
-    queueA.binding_data = ascii(name)
-    val rc:Boolean = CB( cb=> store.addQueue(queueA)(cb) )
+  def add_queue(name:String):Long = {
+    var queue_a = new QueueRecord
+    queue_a.key = queue_key_counter.incrementAndGet
+    queue_a.binding_kind = ascii("test")
+    queue_a.binding_data = ascii(name)
+    val rc:Boolean = CB( cb=> store.add_queue(queue_a)(cb) )
     expect(true)(rc)
-    queueA.key
+    queue_a.key
   }
 
-  def addMessage(batch:StoreUOW, content:String):Long = {
+  def add_message(batch:StoreUOW, content:String):Long = {
     var message = new MessageRecord
     message.protocol = ascii("test-protocol")
     message.buffer = ascii(content).buffer
@@ -102,81 +102,81 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
   }
 
 
-  def entry(queueKey:Long, queueSeq:Long, messageKey:Long=0) = {
+  def entry(queue_key:Long, entry_seq:Long, message_key:Long=0) = {
     var queueEntry = new QueueEntryRecord
-    queueEntry.queueKey = queueKey
-    queueEntry.queueSeq = queueSeq
-    queueEntry.messageKey = messageKey
+    queueEntry.queue_key = queue_key
+    queueEntry.entry_seq = entry_seq
+    queueEntry.message_key = message_key
     queueEntry
   }
 
-  def populate(queueKey:Long, messages:List[String], firstSeq:Long=1) = {
-    var batch = store.createStoreUOW
-    var msgKeys = ListBuffer[Long]()
-    var nextSeq = firstSeq
+  def populate(queue_key:Long, messages:List[String], first_seq:Long=1) = {
+    var batch = store.create_uow
+    var msg_keys = ListBuffer[Long]()
+    var next_seq = first_seq
 
     messages.foreach { message=>
-      val msgKey = addMessage(batch, message)
-      msgKeys += msgKey
-      batch.enqueue(entry(queueKey, nextSeq, msgKey))
-      nextSeq += 1
+      val msgKey = add_message(batch, message)
+      msg_keys += msgKey
+      batch.enqueue(entry(queue_key, next_seq, msgKey))
+      next_seq += 1
     }
 
     val tracker = new TaskTracker()
     tracker.release(batch)
-    msgKeys.foreach { msgKey =>
-      store.flushMessage(msgKey) {}
+    msg_keys.foreach { msgKey =>
+      store.flush_message(msgKey) {}
     }
     tracker.await
-    msgKeys
+    msg_keys
   }
 
   test("load stored message") {
-    val A = addQueue("A")
-    val msgKeys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
+    val A = add_queue("A")
+    val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
 
-    val rc:Option[MessageRecord] = CB( cb=> store.loadMessage(msgKeys.head)(cb) )
+    val rc:Option[MessageRecord] = CB( cb=> store.load_message(msg_keys.head)(cb) )
     expect(ascii("message 1").buffer) {
       rc.get.buffer
     }
   }
 
   test("add and list queues") {
-    val A = addQueue("A")
-    val B = addQueue("B")
-    val C = addQueue("C")
+    val A = add_queue("A")
+    val B = add_queue("B")
+    val C = add_queue("C")
 
     expectCB(List(A,B,C).toSeq) { cb=>
-      store.listQueues(cb)
+      store.list_queues(cb)
     }
   }
 
   test("get queue status") {
-    val A = addQueue("my queue name")
+    val A = add_queue("my queue name")
     populate(A, "message 1"::"message 2"::"message 3"::Nil)
 
-    val rc:Option[QueueRecord] = CB( cb=> store.getQueue(A)(cb) )
+    val rc:Option[QueueRecord] = CB( cb=> store.get_queue(A)(cb) )
     expect(ascii("my queue name")) {
       rc.get.binding_data.ascii
     }
   }
 
   test("list queue entries") {
-    val A = addQueue("A")
-    val msgKeys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
+    val A = add_queue("A")
+    val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
 
-    val rc:Seq[QueueEntryRecord] = CB( cb=> store.listQueueEntries(A,msgKeys.head, msgKeys.last)(cb) )
-    expect(msgKeys.toSeq) {
-      rc.map( _.messageKey )
+    val rc:Seq[QueueEntryRecord] = CB( cb=> store.list_queue_entries(A,msg_keys.head, msg_keys.last)(cb) )
+    expect(msg_keys.toSeq) {
+      rc.map( _.message_key )
     }
   }
 
   test("batch completes after a delay") {x}
   def x = {
-    val A = addQueue("A")
-    var batch = store.createStoreUOW
+    val A = add_queue("A")
+    var batch = store.create_uow
 
-    val m1 = addMessage(batch, "message 1")
+    val m1 = add_message(batch, "message 1")
     batch.enqueue(entry(A, 1, m1))
 
     val tracker = new TaskTracker()
@@ -190,16 +190,16 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
   }
 
   test("flush cancels the delay") {
-    val A = addQueue("A")
-    var batch = store.createStoreUOW
+    val A = add_queue("A")
+    var batch = store.create_uow
 
-    val m1 = addMessage(batch, "message 1")
+    val m1 = add_message(batch, "message 1")
     batch.enqueue(entry(A, 1, m1))
 
     val tracker = new TaskTracker()
     tracker.release(batch)
 
-    store.flushMessage(m1) {}
+    store.flush_message(m1) {}
 
     expect(true) {
       tracker.await(1, TimeUnit.SECONDS)

@@ -75,7 +75,7 @@ object FileConfigStore extends Log
 class FileConfigStore extends ConfigStore {
   import FileConfigStore._
 
-  case class StoredBrokerModel(data:Array[Byte], lastModified:Long)
+  case class StoredBrokerModel(data:Array[Byte], last_modified:Long)
 
   var file:File = new File("activemq.xml")
 
@@ -84,15 +84,15 @@ class FileConfigStore extends ConfigStore {
   @volatile
   var running = false
 
-  val dispatchQueue = createQueue("config store")
+  val dispatch_queue = createQueue("config store")
 
   // can't do blocking IO work on the dispatchQueue :(
   // so... use an executor
-  var ioWorker:ExecutorService = null
+  var io_worker:ExecutorService = null
 
 
   def start = {
-    ioWorker = Executors.newSingleThreadExecutor
+    io_worker = Executors.newSingleThreadExecutor
     running = true
 
     file = file.getCanonicalFile;
@@ -110,12 +110,12 @@ class FileConfigStore extends ConfigStore {
     }
 
     latest = read(file)
-    schedualNextUpdateCheck
+    schedual_next_update_check
   }
 
   def stop = {
     running = false
-    ioWorker.shutdown
+    io_worker.shutdown
   }
 
   def load(eval:Boolean) = {
@@ -139,21 +139,21 @@ class FileConfigStore extends ConfigStore {
     latest = write(m)
   }
 
-  private def schedualNextUpdateCheck:Unit = dispatchQueue.after(1, TimeUnit.SECONDS) {
+  private def schedual_next_update_check:Unit = dispatch_queue.after(1, TimeUnit.SECONDS) {
     if( running ) {
-      val lastModified = latest.lastModified
+      val last_modified = latest.last_modified
       val latestData = latest.data
-      ioWorker {
+      io_worker {
         try {
           val l = file.lastModified
-          if( l != lastModified ) {
+          if( l != last_modified ) {
             val config = read(file)
             if ( !Arrays.equals(latestData, config.data) ) {
               // TODO: trigger reloading the config file.
             }
             latest = config
           }
-          schedualNextUpdateCheck
+          schedual_next_update_check
         }
         catch {
           case e:Exception =>
@@ -182,7 +182,7 @@ class FileConfigStore extends ConfigStore {
     }
 
     IOHelper.writeBinaryFile(file, config.data)
-    config.copy(lastModified = file.lastModified)
+    config.copy(last_modified = file.lastModified)
   }
 
 

@@ -26,6 +26,9 @@ import java.io.IOException
 import org.apache.activemq.apollo.transport.TransportFactory
 
 abstract class RemoteConnection extends Connection {
+
+  import Connection._
+
   var uri: String = null
   var name: String = null
 
@@ -50,7 +53,7 @@ abstract class RemoteConnection extends Connection {
     super._start(^ {})
   }
 
-  override def onTransportConnected() = {
+  override def on_transport_connected() = {
     onConnected()
     transport.resumeRead
     callbackWhenConnected.run
@@ -59,15 +62,15 @@ abstract class RemoteConnection extends Connection {
 
   protected def onConnected()
 
-  override def onTransportFailure(error: IOException) = {
+  override def on_transport_failure(error: IOException) = {
     if (!stopped) {
       if (stopping.get()) {
         transport.stop
       } else {
-        onFailure(error)
+        on_failure(error)
         if (callbackWhenConnected != null) {
           warn("connect attempt failed. will retry connection..")
-          dispatchQueue.dispatchAfter(50, TimeUnit.MILLISECONDS, ^ {
+          dispatch_queue.dispatchAfter(50, TimeUnit.MILLISECONDS, ^ {
             if (stopping.get()) {
               callbackWhenConnected.run
             } else {

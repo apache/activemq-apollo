@@ -67,19 +67,26 @@ trait Protocol extends ProtocolCodecFactory.Provider {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait ProtocolHandler extends DefaultTransportListener {
+trait ProtocolHandler {
 
   def protocol:String
 
   var connection:BrokerConnection = null;
 
-  def setConnection(brokerConnection:BrokerConnection) = {
+  def set_connection(brokerConnection:BrokerConnection) = {
     this.connection = brokerConnection
   }
 
-  override def onTransportFailure(error:IOException) = {
+  def create_connection_status = new ConnectionStatusDTO
+
+  def on_transport_failure(error:IOException) = {
     connection.stop()
   }
 
-  def create_connection_status = new ConnectionStatusDTO
+  def on_transport_disconnected = {}
+
+  def on_transport_connected = {}
+
+  def on_transport_command(command: AnyRef) = {}
+
 }

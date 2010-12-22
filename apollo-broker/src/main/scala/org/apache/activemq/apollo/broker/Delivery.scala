@@ -34,14 +34,14 @@ object DeliveryProducer extends Log
 trait DeliveryProducer extends Logging {
   override protected def log:Log = DeliveryProducer
 
-  def dispatchQueue:DispatchQueue
+  def dispatch_queue:DispatchQueue
 
   def connection:Option[BrokerConnection] = None
 
   def collocate(value:DispatchQueue):Unit = {
-    if( value.getTargetQueue ne dispatchQueue.getTargetQueue ) {
-      debug("co-locating %s with %s", dispatchQueue.getLabel, value.getLabel);
-      this.dispatchQueue.setTargetQueue(value.getTargetQueue)
+    if( value.getTargetQueue ne dispatch_queue.getTargetQueue ) {
+      debug("co-locating %s with %s", dispatch_queue.getLabel, value.getLabel);
+      this.dispatch_queue.setTargetQueue(value.getTargetQueue)
     }
   }
 
@@ -58,7 +58,7 @@ trait DeliveryConsumer extends Retained {
 
   def browser = false
   def exclusive = false
-  def dispatchQueue:DispatchQueue;
+  def dispatch_queue:DispatchQueue;
   def matches(message:Delivery):Boolean
   def connect(producer:DeliveryProducer):DeliverySession
   def is_persistent:Boolean

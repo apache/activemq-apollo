@@ -49,9 +49,9 @@ object HelperTrait {
   implicit def to_QueueEntryRecord(entry: DatabaseEntry): QueueEntryRecord = {
     val pb =  QueueEntryPB.FACTORY.parseUnframed(entry.getData)
     val rc = new QueueEntryRecord
-    rc.queueKey = pb.getQueueKey
-    rc.queueSeq = pb.getQueueSeq
-    rc.messageKey = pb.getMessageKey
+    rc.queue_key = pb.getQueueKey
+    rc.entry_seq = pb.getQueueSeq
+    rc.message_key = pb.getMessageKey
     rc.attachment = pb.getAttachment
     rc.size = pb.getSize
     rc.redeliveries = pb.getRedeliveries.toShort
@@ -60,9 +60,9 @@ object HelperTrait {
 
   implicit def to_DatabaseEntry(v: QueueEntryRecord): DatabaseEntry = {
     val pb = new QueueEntryPB.Bean
-    pb.setQueueKey(v.queueKey)
-    pb.setQueueSeq(v.queueSeq)
-    pb.setMessageKey(v.messageKey)
+    pb.setQueueKey(v.queue_key)
+    pb.setQueueSeq(v.entry_seq)
+    pb.setMessageKey(v.message_key)
     pb.setAttachment(v.attachment)
     pb.setSize(v.size)
     pb.setRedeliveries(v.redeliveries)
@@ -171,6 +171,6 @@ object HelperTrait {
   implicit def DatabaseWrapper(x: Database) = new RichDatabase(x)
 
 
-  def entries_db_name(queueKey: Long): String =  "entries-" + queueKey
+  def entries_db_name(queue_key: Long): String =  "entries-" + queue_key
 
 }
