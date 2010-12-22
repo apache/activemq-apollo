@@ -37,7 +37,6 @@ public class XmlCodecTest {
     public void unmarshalling() throws Exception {
         BrokerDTO dto = XmlCodec.unmarshalBrokerDTO(resource("XmlCodecTest.xml"));
         assertNotNull(dto);
-        assertEquals("default", dto.id);
         assertEquals(1, dto.connectors.size());
         ConnectorDTO connector = dto.connectors.get(0);
         assertEquals(1, connector.protocols.size());
@@ -62,7 +61,6 @@ public class XmlCodecTest {
     @Test
     public void marshalling() throws Exception {
         BrokerDTO broker = new BrokerDTO();
-        broker.id = "default";
 
         VirtualHostDTO host = new VirtualHostDTO();
         host.id = "vh-local";

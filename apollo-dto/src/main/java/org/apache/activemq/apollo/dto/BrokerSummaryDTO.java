@@ -29,7 +29,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="broker_summary")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BrokerSummaryDTO extends StringIdDTO {
+public class BrokerSummaryDTO {
 
     /**
      * Is a running broker accessible via management API calls?

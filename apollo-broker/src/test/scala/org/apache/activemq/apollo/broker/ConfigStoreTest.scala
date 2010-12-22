@@ -34,8 +34,8 @@ class ConfigStoreTest extends FunSuiteSupport {
 
     store.start
 
-    expect("default") {
-      store.load(false).id
+    expect(1) {
+      store.load(false).virtual_hosts.size
     }
 
     store.stop

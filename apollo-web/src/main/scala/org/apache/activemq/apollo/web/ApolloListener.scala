@@ -20,8 +20,8 @@ import java.io.File
 import org.apache.activemq.apollo.util._
 import javax.servlet.{ServletContextListener, ServletContextEvent}
 import org.apache.activemq.apollo.broker.{FileConfigStore, ConfigStore, BrokerRegistry, Broker}
-import org.fusesource.hawtdispatch._
-import org.apache.activemq.apollo.util.OptionSupport._
+
+object ApolloListener extends Log
 
 /**
  * A servlet context listener which handles starting the
@@ -30,8 +30,10 @@ import org.apache.activemq.apollo.util.OptionSupport._
  * @version $Revision : 1.1 $
  */
 class ApolloListener extends ServletContextListener {
+  import ApolloListener._
 
   var configStore:ConfigStore = null
+  var broker:Broker = _
 
   def contextInitialized(sce: ServletContextEvent) = {
     try {
@@ -40,27 +42,23 @@ class ApolloListener extends ServletContextListener {
         ConfigStore() = configStore
         val config = configStore.load(true)
 
-        println("Config store contained broker: "+config.id);
         // Only start the broker up if it's enabled..
-        if( config.enabled.getOrElse(true) ) {
-          println("starting broker: "+config.id);
-          val broker = new Broker()
-          broker.config = config
-          BrokerRegistry.add(config.id, broker)
-          broker.start()
-        }
+        info("starting broker");
+        broker = new Broker()
+        broker.config = config
+        BrokerRegistry.add(broker)
+        broker.start()
       }
     } catch {
       case e:Exception =>
-        e.printStackTrace
+        error(e, "failed to start broker")
     }
   }
 
   def contextDestroyed(sce: ServletContextEvent) = {
     if( configStore!=null ) {
-      val id = configStore.load(false).id
-      val broker = BrokerRegistry.remove(id);
       if( broker!=null ) {
+        BrokerRegistry.remove(broker);
         ServiceControl.stop(broker, "broker")
       }
       configStore.stop

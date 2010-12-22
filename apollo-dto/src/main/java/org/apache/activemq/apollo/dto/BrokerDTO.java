@@ -27,7 +27,7 @@ import java.util.List;
  */
 @XmlRootElement(name="broker")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BrokerDTO extends ServiceDTO<String> {
+public class BrokerDTO {
 
     /**
      * Used to store any configuration notes.

@@ -20,7 +20,7 @@
 
   http://activemq.apache.org/apollo/versions/${version}/website/documentation/user-manual.html
   -->
-<broker id="default" xmlns="http://activemq.apache.org/schema/activemq/apollo">
+<broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
 
   <notes>
     The default configuration with tls/ssl enabled.
@@ -34,7 +34,7 @@
 
   <web_admin host="127.0.0.1" port="8080"/>
 
-  <virtual_host id="default" auto_create_queues="true" >
+  <virtual_host id="${host}" auto_create_queues="true" >
     <!--
       You should add all the host names that this virtual host is known as
       to properly support the STOMP 1.1 virtual host feature.
@@ -49,7 +49,7 @@
 
     <acl>
       <connect allow="admins"/>
-    </acl>
+    DTO</acl>
 
     <!-- You can delete this element if you want to disable persistent for this virtual host -->
     <hawtdb_store directory="${apollo.base}/data"/>

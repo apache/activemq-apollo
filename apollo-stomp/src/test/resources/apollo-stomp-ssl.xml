@@ -15,7 +15,7 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<broker id="default" rev="1" xmlns="http://activemq.apache.org/schema/activemq/apollo">
+<broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
 
     <notes>The config for the ssl stomp tests.</notes>
     <virtual_host id="default" purge_on_startup="true" auto_create_queues="true">

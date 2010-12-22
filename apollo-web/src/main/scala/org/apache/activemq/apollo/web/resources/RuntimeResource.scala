@@ -40,15 +40,16 @@ import scala.util.continuations._
 case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
   private def with_broker[T](func: (org.apache.activemq.apollo.broker.Broker, Option[T]=>Unit)=>Unit):T = {
-    val broker:org.apache.activemq.apollo.broker.Broker = BrokerRegistry.get(parent.id)
-    if( broker == null ) {
-      result(NOT_FOUND)
-    } else {
-      Future[Option[T]] { cb=>
-        broker.dispatch_queue {
-          func(broker, cb)
-        }
-      }.getOrElse(result(NOT_FOUND))
+    BrokerRegistry.list.headOption match {
+      case None=> result(NOT_FOUND)
+      case Some(broker)=>
+
+        Future[Option[T]] { cb=>
+          broker.dispatch_queue {
+            func(broker, cb)
+          }
+        }.getOrElse(result(NOT_FOUND))
+
     }
   }
 

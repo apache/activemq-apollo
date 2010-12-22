@@ -20,7 +20,7 @@
 
   http://activemq.apache.org/apollo/versions/${version}/website/documentation/user-manual.html
   -->
-<broker id="default" xmlns="http://activemq.apache.org/schema/activemq/apollo">
+<broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
 
   <notes>
     The default configuration.

@@ -76,7 +76,7 @@ The simplest valid `apollo.xml` defines a single virtual host and a
 single connector.
 
 {pygmentize:: xml}
-<broker id="default" xmlns="http://activemq.apache.org/schema/activemq/apollo">
+<broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
 
   <virtual_host id="default">
     <host_name>localhost</host_name>
@@ -369,7 +369,7 @@ want to disable authentication in a virtual host, you set the `enable` attribute
 to `false`.
 
 {pygmentize:: xml}
-<broker id="default" xmlns="http://activemq.apache.org/schema/activemq/apollo">
+<broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
   <authentication domain="internal"/>
   
   <virtual_host id="wine.com">
@@ -591,7 +591,7 @@ configuration element inside the `broker` element to change the
 default settings. For example:
 
 {pygmentize:: xml}
-<broker ...>
+<broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
   ...
   <web_admin host="127.0.0.1" port="8001"/>
   ...

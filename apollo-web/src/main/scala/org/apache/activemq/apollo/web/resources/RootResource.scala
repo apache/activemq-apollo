@@ -144,13 +144,11 @@ class BrokerResource extends Resource {
 
   val cs = ConfigStore()
   val config = cs.load(false)
-  def id = config.id
 
   @GET
   def get = {
     val rc = new BrokerSummaryDTO
-    rc.id = id
-    rc.manageable = BrokerRegistry.get(id)!=null
+    rc.manageable = BrokerRegistry.list.size > 0
     rc.configurable = cs.can_write
     rc
   }

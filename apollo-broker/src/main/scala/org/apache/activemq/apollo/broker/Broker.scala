@@ -89,18 +89,16 @@ object BufferConversions {
  */
 object BrokerRegistry {
 
-  val brokers = new ConcurrentHashMap[String, Broker]()
+  val brokers = new ConcurrentHashMap[Broker, Broker]()
 
-  def list():Seq[String] = {
+  def list():Array[Broker] = {
     import JavaConversions._
-    brokers.keys.toSeq
+    brokers.keySet.toSeq.toArray
   }
 
-  def get(id:String) = brokers.get(id)
+  def add(broker:Broker) = brokers.put(broker, broker)
 
-  def add(id:String, broker:Broker) = brokers.put(id, broker)
-
-  def remove(id:String) = brokers.remove(id)
+  def remove(broker:Broker) = brokers.remove(broker)
 
 }
 
@@ -118,7 +116,6 @@ object Broker extends Log {
    */
   def defaultConfig() = {
     val rc = new BrokerDTO
-    rc.id = "default"
     rc.notes = "A default configuration"
     rc.virtual_hosts.add(VirtualHost.default_config)
     rc.connectors.add(Connector.defaultConfig)
@@ -130,9 +127,6 @@ object Broker extends Log {
    */
   def validate(config: BrokerDTO, reporter:Reporter):ReporterLevel = {
     new Reporting(reporter) {
-      if( empty(config.id) ) {
-        error("Broker id must be specified.")
-      }
       if( config.virtual_hosts.isEmpty ) {
         error("Broker must define at least one virtual host.")
       }

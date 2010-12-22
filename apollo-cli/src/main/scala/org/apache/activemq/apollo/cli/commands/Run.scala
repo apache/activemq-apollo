@@ -99,17 +99,13 @@ class Run extends Action with Logging {
       store.start
       val config = store.load(true)
 
-      // Only start the broker up if it's enabled..
-      if( config.enabled.getOrElse(true) ) {
-        debug("Starting broker '%s'", config.id);
-        val broker = new Broker()
-        broker.config = config
-        BrokerRegistry.add(config.id, broker)
-        broker.start(^{
-          info("Broker '%s' started", config.id);
-        })
-      }
-
+      debug("Starting broker");
+      val broker = new Broker()
+      broker.config = config
+      BrokerRegistry.add(broker)
+      broker.start(^{
+        info("Broker started");
+      })
 
       val web_admin = config.web_admin.getOrElse(new WebAdminDTO)
       if( web_admin.enabled.getOrElse(true) ) {
