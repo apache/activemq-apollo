@@ -23,10 +23,10 @@ import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
 import java.util.concurrent.atomic.AtomicInteger
 
 import collection.{SortedMap}
-import org.apache.activemq.apollo.store.{StoreUOW}
+import org.apache.activemq.apollo.broker.store.{StoreUOW}
 import protocol.ProtocolFactory
 import collection.mutable.ListBuffer
-import org.apache.activemq.apollo.store._
+import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.list._
 import org.fusesource.hawtdispatch.{Dispatch, ListEventAggregator, DispatchQueue, BaseRetained}

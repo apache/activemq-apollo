@@ -27,7 +27,7 @@ import _root_.scala.collection.JavaConversions._
 import java.io.{EOFException, DataOutput, DataInput, IOException}
 import java.nio.channels.{SocketChannel, WritableByteChannel, ReadableByteChannel}
 import org.apache.activemq.apollo.transport._
-import org.apache.activemq.apollo.store.MessageRecord
+import org.apache.activemq.apollo.broker.store.MessageRecord
 import _root_.org.fusesource.hawtbuf._
 import Buffer._
 import org.apache.activemq.apollo.util._

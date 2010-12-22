@@ -19,8 +19,8 @@ package org.apache.activemq.apollo.stomp.perf
 import _root_.org.apache.activemq.apollo.broker.perf._
 import java.io.File
 import org.apache.activemq.apollo.dto.BrokerDTO
-import org.apache.activemq.apollo.store.bdb.dto.BDBStoreDTO
-import org.apache.activemq.apollo.store.hawtdb.dto.HawtDBStoreDTO
+import org.apache.activemq.apollo.broker.store.bdb.dto.BDBStoreDTO
+import org.apache.activemq.apollo.broker.store.hawtdb.dto.HawtDBStoreDTO
 
 class BasicNonPersistentTest extends BasicScenarios with StompScenario {
   override def description = "Using the STOMP protocol over TCP"

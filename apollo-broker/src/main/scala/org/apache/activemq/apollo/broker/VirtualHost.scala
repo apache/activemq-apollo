@@ -22,7 +22,7 @@ import _root_.scala.collection.JavaConversions._
 import org.fusesource.hawtdispatch._
 
 import java.util.concurrent.TimeUnit
-import org.apache.activemq.apollo.store.{Store, StoreFactory}
+import org.apache.activemq.apollo.broker.store.{Store, StoreFactory}
 import org.apache.activemq.apollo.util._
 import path.PathFilter
 import ReporterLevel._

@@ -26,7 +26,7 @@ import collection.JavaConversions
 import org.apache.activemq.apollo.util._
 import collection.mutable.{ListBuffer, HashMap}
 import scala.collection.immutable.List
-import org.apache.activemq.apollo.store.{StoreUOW, QueueRecord}
+import org.apache.activemq.apollo.broker.store.{StoreUOW, QueueRecord}
 import Buffer._
 import org.apache.activemq.apollo.util.path.{Path, Part, PathMap, PathParser}
 import java.util.ArrayList

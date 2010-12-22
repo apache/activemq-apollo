@@ -21,7 +21,7 @@ import _root_.org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
 import protocol.Protocol
 import org.apache.activemq.apollo.filter.Filterable
-import org.apache.activemq.apollo.store.{StoreUOW, MessageRecord}
+import org.apache.activemq.apollo.broker.store.{StoreUOW, MessageRecord}
 import org.apache.activemq.apollo.util.{Log, Logging}
 
 object DeliveryProducer extends Log

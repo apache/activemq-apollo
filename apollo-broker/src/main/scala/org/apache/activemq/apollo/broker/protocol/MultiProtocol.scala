@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.broker.protocol
 
 import org.apache.activemq.apollo.broker.{Message, ProtocolException}
 import org.fusesource.hawtbuf.{AsciiBuffer, Buffer}
-import org.apache.activemq.apollo.store.MessageRecord
+import org.apache.activemq.apollo.broker.store.MessageRecord
 import org.apache.activemq.apollo.transport.{ProtocolCodec}
 import java.nio.channels.{WritableByteChannel, ReadableByteChannel}
 import java.nio.ByteBuffer

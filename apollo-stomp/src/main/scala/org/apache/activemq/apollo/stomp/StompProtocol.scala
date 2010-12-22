@@ -22,7 +22,7 @@ import java.lang.String
 import protocol.{ProtocolFactory, Protocol}
 import Stomp._
 import org.apache.activemq.apollo.transport._
-import org.apache.activemq.apollo.store._
+import org.apache.activemq.apollo.broker.store._
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
