@@ -18,11 +18,10 @@ package org.apache.activemq.apollo.broker.store.cassandra
 
 import com.shorrockin.cascal.session._
 import com.shorrockin.cascal.utils.Conversions._
-import java.util.{HashMap}
-import org.fusesource.hawtbuf.AsciiBuffer._
-import org.fusesource.hawtbuf.{AsciiBuffer, DataByteArrayInputStream, DataByteArrayOutputStream, Buffer}
+import org.fusesource.hawtbuf.Buffer
 import org.apache.activemq.apollo.broker.store._
 import collection.mutable.ListBuffer
+import org.apache.activemq.apollo.broker.store.PBSupport._
 
 /**
  *
@@ -52,64 +51,6 @@ class CassandraClient() {
     } finally {
       pool.checkin(session)
     }
-  }
-
-  def decodeMessageRecord(v: Array[Byte]): MessageRecord = {
-    import PBMessageRecord._
-    val pb = PBMessageRecord.FACTORY.parseUnframed(v)
-    val rc = new MessageRecord
-    rc.protocol = pb.getProtocol
-    rc.size = pb.getSize
-    rc.buffer = pb.getValue
-    rc.expiration = pb.getExpiration
-    rc
-  }
-
-  def encodeMessageRecord(v: MessageRecord): Array[Byte] = {
-    val pb = new PBMessageRecord.Bean
-    pb.setProtocol(v.protocol)
-    pb.setSize(v.size)
-    pb.setValue(v.buffer)
-    pb.setExpiration(v.expiration)
-    pb.freeze.toUnframedByteArray
-  }
-  
-  implicit def decodeQueueEntryRecord(v: Array[Byte]): QueueEntryRecord = {
-    import PBQueueEntryRecord._
-    val pb = PBQueueEntryRecord.FACTORY.parseUnframed(v)
-    val rc = new QueueEntryRecord
-    rc.message_key = pb.getMessageKey
-    rc.attachment = pb.getAttachment
-    rc.size = pb.getSize
-    rc.redeliveries = pb.getRedeliveries.toShort
-    rc
-  }
-
-  implicit def encodeQueueEntryRecord(v: QueueEntryRecord): Array[Byte] = {
-    val pb = new PBQueueEntryRecord.Bean
-    pb.setMessageKey(v.message_key)
-    pb.setAttachment(v.attachment)
-    pb.setSize(v.size)
-    pb.setRedeliveries(v.redeliveries)
-    pb.freeze.toUnframedByteArray
-  }
-
-  implicit def decodeQueueRecord(v: Array[Byte]): QueueRecord = {
-    import PBQueueRecord._
-    val pb = PBQueueRecord.FACTORY.parseUnframed(v)
-    val rc = new QueueRecord
-    rc.key = pb.getKey
-    rc.binding_kind = pb.getBindingKind
-    rc.binding_data = pb.getBindingData
-    rc
-  }
-
-  implicit def encodeQueueRecord(v: QueueRecord): Array[Byte] = {
-    val pb = new PBQueueRecord.Bean
-    pb.setKey(v.key)
-    pb.setBindingKind(v.binding_kind)
-    pb.setBindingData(v.binding_data)
-    pb.freeze.toUnframedByteArray
   }
 
   def purge() = {
@@ -176,7 +117,7 @@ class CassandraClient() {
               case (msg, action) =>
                 var rc =
                 if (action.messageRecord != null) {
-                  operations ::= Insert( schema.message_data \ (msg, encodeMessageRecord(action.messageRecord) ) ) 
+                  operations ::= Insert( schema.message_data \ (msg, action.messageRecord ) )
                 }
                 action.enqueues.foreach {
                   queueEntry =>
@@ -201,8 +142,7 @@ class CassandraClient() {
       session =>
         session.get(schema.message_data \ id) match {
           case Some(x) =>
-            val rc: MessageRecord = decodeMessageRecord(x.value)
-            rc.key = id
+            val rc: MessageRecord = x.value
             Some(rc)
           case None =>
             None
@@ -246,8 +186,6 @@ class CassandraClient() {
       session =>
         session.list(schema.entries \ queue_key, RangePredicate(firstSeq, lastSeq)).map { x=>
           val rc:QueueEntryRecord = x.value
-          rc.queue_key = queue_key
-          rc.entry_seq = x.name
           rc
         }
     }

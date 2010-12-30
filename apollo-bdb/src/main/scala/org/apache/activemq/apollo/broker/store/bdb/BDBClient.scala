@@ -280,7 +280,7 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
   def getQueue(queue_key: Long): Option[QueueRecord] = {
     with_ctx { ctx=>
       import ctx._
-      queues_db.get(tx, to_DatabaseEntry(queue_key)).map( x=> to_QueueRecord(x)  )
+      queues_db.get(tx, to_database_entry(queue_key)).map( x=> to_queue_record(x)  )
     }
   }
 
@@ -329,7 +329,7 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
       import ctx._
 
       with_entries_db(queue_key) { entries_db=>
-        entries_db.cursor_from(tx, to_DatabaseEntry(firstSeq)) { (key, value) =>
+        entries_db.cursor_from(tx, to_database_entry(firstSeq)) { (key, value) =>
           val entry_seq:Long = key
           val entry:QueueEntryRecord = value
           rc += entry
@@ -349,7 +349,7 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
 
       requests.flatMap { case (message_key, callback)=>
         val record = metric_load_from_index_counter.time {
-          messages_db.get(tx, to_DatabaseEntry(message_key)).map ( to_MessageRecord _ )
+          messages_db.get(tx, to_database_entry(message_key)).map ( to_message_record _ )
         }
         record match {
           case None =>

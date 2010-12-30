@@ -45,18 +45,7 @@
       <artifactId>je</artifactId>
       <version>${bdb-version}</version>
     </dependency>
-    
-    <dependency>
-      <groupId>org.fusesource.hawtbuf</groupId>
-      <artifactId>hawtbuf-proto</artifactId>
-      <version>${hawtbuf-version}</version>
-    </dependency>
 
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>${slf4j-version}</version>
-    </dependency>
 
     <!-- Since we implement a jade template to display the BDB status -->
     <dependency>
@@ -129,22 +118,6 @@
   <build>
     <plugins>
 
-      <plugin>
-        <groupId>org.fusesource.hawtbuf</groupId>
-        <artifactId>hawtbuf-proto</artifactId>
-        <version>${hawtbuf-version}</version>
-        <configuration>
-          <type>alt</type>
-        </configuration>
-         <executions>
-          <execution>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      
       <plugin>
         <groupId>org.fusesource.scalate</groupId>
         <artifactId>maven-scalate-plugin</artifactId>

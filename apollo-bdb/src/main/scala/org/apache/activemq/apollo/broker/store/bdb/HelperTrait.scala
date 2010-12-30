@@ -16,85 +16,33 @@
  */
 package org.apache.activemq.apollo.broker.store.bdb
 
-import model._
-import org.apache.activemq.apollo.broker.store.{MessageRecord, QueueRecord, QueueEntryRecord}
 import java.util.Comparator
 import java.nio.ByteBuffer
 import com.sleepycat.je._
 import java.io.Serializable
+import org.apache.activemq.apollo.broker.store.{PBSupport, MessageRecord, QueueRecord, QueueEntryRecord}
+import PBSupport._
 
 object HelperTrait {
 
-  implicit def to_MessageRecord(entry: DatabaseEntry): MessageRecord = {
-    val pb =  MessagePB.FACTORY.parseUnframed(entry.getData)
-    val rc = new MessageRecord
-    rc.key = pb.getMessageKey
-    rc.protocol = pb.getProtocol
-    rc.size = pb.getSize
-    rc.buffer = pb.getValue
-    rc.expiration = pb.getExpiration
-    rc
-  }
+  implicit def to_message_record(entry: DatabaseEntry): MessageRecord = entry.getData
+  implicit def to_database_entry(v: MessageRecord): DatabaseEntry = new DatabaseEntry(v)
 
-  implicit def to_DatabaseEntry(v: MessageRecord): DatabaseEntry = {
-    val pb = new MessagePB.Bean
-    pb.setMessageKey(v.key)
-    pb.setProtocol(v.protocol)
-    pb.setSize(v.size)
-    pb.setValue(v.buffer)
-    pb.setExpiration(v.expiration)
-    new DatabaseEntry(pb.freeze.toUnframedByteArray)
-  }
+  implicit def to_queue_entry_record(entry: DatabaseEntry): QueueEntryRecord = entry.getData
+  implicit def to_database_entry(v: QueueEntryRecord): DatabaseEntry = new DatabaseEntry(v)
 
-  implicit def to_QueueEntryRecord(entry: DatabaseEntry): QueueEntryRecord = {
-    val pb =  QueueEntryPB.FACTORY.parseUnframed(entry.getData)
-    val rc = new QueueEntryRecord
-    rc.queue_key = pb.getQueueKey
-    rc.entry_seq = pb.getQueueSeq
-    rc.message_key = pb.getMessageKey
-    rc.attachment = pb.getAttachment
-    rc.size = pb.getSize
-    rc.redeliveries = pb.getRedeliveries.toShort
-    rc
-  }
-
-  implicit def to_DatabaseEntry(v: QueueEntryRecord): DatabaseEntry = {
-    val pb = new QueueEntryPB.Bean
-    pb.setQueueKey(v.queue_key)
-    pb.setQueueSeq(v.entry_seq)
-    pb.setMessageKey(v.message_key)
-    pb.setAttachment(v.attachment)
-    pb.setSize(v.size)
-    pb.setRedeliveries(v.redeliveries)
-    new DatabaseEntry(pb.freeze.toUnframedByteArray)
-  }
-
-  implicit def to_QueueRecord(entry: DatabaseEntry): QueueRecord = {
-    val pb = QueuePB.FACTORY.parseUnframed(entry.getData)
-    val rc = new QueueRecord
-    rc.key = pb.getKey
-    rc.binding_data = pb.getBindingData
-    rc.binding_kind = pb.getBindingKind
-    rc
-  }
-
-  implicit def to_DatabaseEntry(v: QueueRecord): DatabaseEntry = {
-    val pb = new QueuePB.Bean
-    pb.setKey(v.key)
-    pb.setBindingData(v.binding_data)
-    pb.setBindingKind(v.binding_kind)
-    new DatabaseEntry(pb.freeze.toUnframedByteArray)
-  }
+  implicit def to_queue_record(entry: DatabaseEntry): QueueRecord = entry.getData
+  implicit def to_database_entry(v: QueueRecord): DatabaseEntry = new DatabaseEntry(v)
 
 
   implicit def to_bytes(l:Long):Array[Byte] = ByteBuffer.wrap(new Array[Byte](8)).putLong(l).array()
   implicit def to_long(bytes:Array[Byte]):Long = ByteBuffer.wrap(bytes).getLong()
-  implicit def to_DatabaseEntry(l:Long):DatabaseEntry = new DatabaseEntry(to_bytes(l))
+  implicit def to_database_entry(l:Long):DatabaseEntry = new DatabaseEntry(to_bytes(l))
   implicit def to_long(value:DatabaseEntry):Long = to_long(value.getData)
 
   implicit def to_bytes(l:Int):Array[Byte] = ByteBuffer.wrap(new Array[Byte](4)).putInt(l).array()
   implicit def to_int(bytes:Array[Byte]):Int = ByteBuffer.wrap(bytes).getInt()
-  implicit def to_DatabaseEntry(l:Int):DatabaseEntry = new DatabaseEntry(to_bytes(l))
+  implicit def to_database_entry(l:Int):DatabaseEntry = new DatabaseEntry(to_bytes(l))
   implicit def to_int(value:DatabaseEntry):Int = to_int(value.getData)
 
 
@@ -168,7 +116,8 @@ object HelperTrait {
       }
     }
   }
-  implicit def DatabaseWrapper(x: Database) = new RichDatabase(x)
+
+  implicit def to_rich_database(x: Database) = new RichDatabase(x)
 
 
   def entries_db_name(queue_key: Long): String =  "entries-" + queue_key

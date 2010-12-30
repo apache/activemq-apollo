@@ -53,18 +53,6 @@
       <version>${cascal-version}</version>
     </dependency>
 
-    <dependency>
-      <groupId>org.fusesource.hawtbuf</groupId>
-      <artifactId>hawtbuf-proto</artifactId>
-      <version>${hawtbuf-version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>${slf4j-version}</version>
-    </dependency>
-    
-
     <!-- Scala Support -->
     <dependency>
       <groupId>org.scala-lang</groupId>
@@ -169,22 +157,6 @@
 
   <build>
     <plugins>
-
-      <plugin>
-        <groupId>org.fusesource.hawtbuf</groupId>
-        <artifactId>hawtbuf-proto</artifactId>
-        <version>${hawtbuf-version}</version>
-        <configuration>
-          <type>alt</type>
-        </configuration>
-         <executions>
-          <execution>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
 
       <!-- Tests are failing on windows, need to investigate -->
       <plugin>

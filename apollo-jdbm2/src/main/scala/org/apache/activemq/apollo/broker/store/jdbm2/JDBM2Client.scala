@@ -20,7 +20,6 @@ import dto.JDBM2StoreDTO
 import java.{lang=>jl}
 import java.{util=>ju}
 
-import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
@@ -28,80 +27,25 @@ import jdbm._
 import btree.BTree
 import htree.HTree
 import java.util.Comparator
-import model._
 import java.io.Serializable
 import jdbm.helper._
+import PBSupport._
 
 object JDBM2Client extends Log {
 
   object MessageRecordSerializer extends Serializer[MessageRecord] {
-
-    def serialize(out: SerializerOutput, v: MessageRecord) = {
-      val pb = new MessagePB.Bean
-      pb.setMessageKey(v.key)
-      pb.setProtocol(v.protocol)
-      pb.setSize(v.size)
-      pb.setValue(v.buffer)
-      pb.setExpiration(v.expiration)
-      pb.freeze.writeUnframed(out)
-    }
-
-    def deserialize(in: SerializerInput) = {
-      val pb =  MessagePB.FACTORY.parseUnframed(in)
-      val rc = new MessageRecord
-      rc.key = pb.getMessageKey
-      rc.protocol = pb.getProtocol
-      rc.size = pb.getSize
-      rc.buffer = pb.getValue
-      rc.expiration = pb.getExpiration
-      rc
-    }
+    def serialize(out: SerializerOutput, v: MessageRecord) = encode_message_record(out, v)
+    def deserialize(in: SerializerInput) = decode_message_record(in)
   }
 
   object QueueRecordSerializer extends Serializer[QueueRecord] {
-
-    def serialize(out: SerializerOutput, v: QueueRecord) = {
-      val pb = new QueuePB.Bean
-      pb.setKey(v.key)
-      pb.setBindingData(v.binding_data)
-      pb.setBindingKind(v.binding_kind)
-      pb.freeze.writeUnframed(out)
-    }
-
-    def deserialize(in: SerializerInput) = {
-      val pb = QueuePB.FACTORY.parseUnframed(in)
-      val rc = new QueueRecord
-      rc.key = pb.getKey
-      rc.binding_data = pb.getBindingData
-      rc.binding_kind = pb.getBindingKind
-      rc
-    }
+    def serialize(out: SerializerOutput, v: QueueRecord) = encode_queue_record(out, v)
+    def deserialize(in: SerializerInput) = decode_queue_record(in)
   }
 
   object QueueEntryRecordSerializer extends Serializer[QueueEntryRecord] {
-
-    def serialize(out: SerializerOutput, v: QueueEntryRecord) = {
-      val pb = new QueueEntryPB.Bean
-      pb.setQueueKey(v.queue_key)
-      pb.setQueueSeq(v.entry_seq)
-      pb.setMessageKey(v.message_key)
-      pb.setAttachment(v.attachment)
-      pb.setSize(v.size)
-      pb.setRedeliveries(v.redeliveries)
-      pb.freeze.writeUnframed(out)
-    }
-
-    def deserialize(in: SerializerInput) = {
-      val pb =  QueueEntryPB.FACTORY.parseUnframed(in)
-      val rc = new QueueEntryRecord
-      rc.queue_key = pb.getQueueKey
-      rc.entry_seq = pb.getQueueSeq
-      rc.message_key = pb.getMessageKey
-      rc.attachment = pb.getAttachment
-      rc.size = pb.getSize
-      rc.redeliveries = pb.getRedeliveries.toShort
-      rc
-    }
+    def serialize(out: SerializerOutput, v: QueueEntryRecord) = encode_queue_entry_record(out, v)
+    def deserialize(in: SerializerInput) = decode_queue_entry_record(in)
   }
 
   object QueueEntryKeySerializer extends Serializer[(Long,Long)] {
