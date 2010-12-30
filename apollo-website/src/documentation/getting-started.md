@@ -46,7 +46,7 @@ jar -xvf apache-apollo-${project_version}-windows-distro.zip
 
 ## Install the BDB library
 
-Apollo's most stable message store implementation is the BDB based message store.  
+Apollo's most robust message store implementation is the BDB based message store.  
 Unfortunately, BDB cannot be redistributed by Apache.  It is highly recommended
 that you add it to your apollo installation. You can download it from Oracle at
 [je-4.1.6.jar](http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar) and
@@ -82,11 +82,10 @@ etc directory.
 
 ## Updating the Configuration to use BDB
 
-The default configuration used a hawtdb based store.  It still has known
-bugs and not yet stable.  Unless you want to help find and squash those bugs,
+The default configuration used a jdbm2 based store.  It has known performance issues so
 it is recommend you change the configuration to use the BDB store instead.  To do that,
 just update the generated configuration by editing the `etc/apollo.xml` file and then
-replace `hawtdb_store` with `bdb_store`
+replace `jdbm2_store` with `bdb_store`
 
 ## Running a Broker Instance
 

@@ -248,6 +248,9 @@ implementations currently supported are:
 * [BDB Store](#BDB_Store) : is a file based message store implemented using the 
   [Sleepycat BDB](http://en.wikipedia.org/wiki/Berkeley_DB) library.
   This is the most stable implementation.
+* [JDBM2 Store](#JDBM2_Store) : is a file based message store implemented using the 
+  [JDBM2](http://code.google.com/p/jdbm2/) library.
+  This is the most stable implementation.
 * [HawtDB Store](#HawtDB_Store) : is a file based message store implemented using the 
   [HawtDB](http://hawtdb.fusesource.org/) library.  This implementation
   has known bugs and not recommend to be used unless your good with a 
@@ -290,6 +293,42 @@ A `bdb_store` element may be configured with the following attributes:
 * `read_threads` : The number of concurrent read threads to use when
   accessing the store. The value defaults to 10.
 
+###### JDBM2 Store
+
+The JDBM2 store implementation is redistributable by apache so it can 
+be used out of the box without having to install any additional software.
+The problem with this store is that it's single threaded in nature and
+subsequently has several unwanted performance problems.  For example,
+the store periodically will compact itself to reclaim disk space but
+the compaction is a slow process which pauses access to the store while 
+the compaction is running. 
+
+You can enable the store by adding a `jdbm2_store` element
+inside your `virtual_host`.  Example:
+    
+{pygmentize:: xml}
+  ...
+  <virtual_host id="default">
+    ...
+    <jdbm2_store directory="${apollo.base}/data"/>
+    ..
+  </virtual_host>
+  ...
+{pygmentize}
+
+A `jdbm2_store` element may be configured with the following attributes:
+
+* `directory` : The directory which the store will use to hold it's data
+  files. The store will create the directory if it does not already
+  exist.
+* `flush_delay` : The flush delay is the amount of time in milliseconds
+  that a store will delay persisting a messaging unit of work in hopes
+  that it will be invalidated shortly thereafter by another unit of work
+  which would negate the operation.
+* `compact_interval` : how often the store is compacted in seconds.  If 
+  this attribute is not set, it will default to 60 seconds. Set to -1 
+  to disable compaction altogether.
+  
 ###### HawtDB Store
 
 The HawtDB store implementation is redistributable by apache so it can 

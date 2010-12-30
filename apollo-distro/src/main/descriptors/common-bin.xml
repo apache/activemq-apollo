@@ -30,6 +30,7 @@
         <include>org.fusesource.hawtbuf:*</include>
         <include>org.fusesource.hawtdispatch:*</include>
         <include>org.fusesource.hawtdb:*</include>
+        <include>org.fusesource.jdbm:*</include>
         <include>org.codehaus.jackson:jackson-mapper-asl</include>
         <include>org.codehaus.jackson:jackson-core-asl</include>
         

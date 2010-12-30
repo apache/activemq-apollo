@@ -32,7 +32,7 @@
     <admin allow="admins"/>
   </acl>
 
-  <web_admin host="127.0.0.1" port="8080"/>
+  <web_admin host="127.0.0.1" port="61680"/>
 
   <virtual_host id="${host}">
     <!--
@@ -49,10 +49,10 @@
 
     <acl>
       <connect allow="admins"/>
-    DTO</acl>
+    </acl>
 
-    <!-- You can delete this element if you want to disable persistent for this virtual host -->
-    <hawtdb_store directory="${apollo.base}/data"/>
+    <!-- You can delete this element if you want to disable persistence for this virtual host -->
+    <jdbm2_store directory="${apollo.base}/data"/>
 
   </virtual_host>
 
