@@ -101,6 +101,7 @@
     <hawtdb-version>1.6-SNAPSHOT</hawtdb-version>
     <hawtbuf-version>1.3-SNAPSHOT</hawtbuf-version>
     
+    <jdbm-version>2.0.0-SNAPSHOT</jdbm-version>
     <bdb-version>4.1.6</bdb-version>
     <jasypt-version>1.6</jasypt-version>
 
@@ -156,6 +157,7 @@
     <module>apollo-tcp</module>
     <module>apollo-hawtdb</module>
     <module>apollo-bdb</module>
+    <module>apollo-jdbm2</module>
     <module>apollo-dto</module>
     <module>apollo-stomp</module>
     <module>apollo-web</module>
