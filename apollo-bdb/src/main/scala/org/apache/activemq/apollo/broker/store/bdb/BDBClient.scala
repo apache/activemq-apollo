@@ -25,6 +25,8 @@ import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import com.sleepycat.je._
+import java.io.{EOFException, InputStream, OutputStream}
+import org.fusesource.hawtbuf.proto.{MessageBuffer, PBMessageFactory}
 
 object BDBClient extends Log
 /**
@@ -384,4 +386,102 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
     }
   }
 
+  def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] = {
+    try {
+      with_ctx { ctx=>
+        import ctx._
+        import PBSupport._
+
+        streams.using_queue_stream { queue_stream =>
+          queues_db.cursor(tx) { (_, value) =>
+            val record:QueueRecord = value
+            record.writeFramed(queue_stream)
+            true
+          }
+        }
+
+        streams.using_message_stream { message_stream=>
+          messages_db.cursor(tx) { (_, value) =>
+            val record:MessageRecord = value
+            record.writeFramed(message_stream)
+            true
+          }
+        }
+
+        streams.using_queue_entry_stream { queue_entry_stream=>
+          queues_db.cursor(tx) { (_, value) =>
+            val record:QueueRecord = value
+            with_entries_db(record.key) { entries_db=>
+              entries_db.cursor(tx) { (key, value) =>
+                val record:QueueEntryRecord = value
+                record.writeFramed(queue_entry_stream)
+                true
+              }
+            }
+            true
+          }
+        }
+
+      }
+      Success(Zilch)
+    } catch {
+      case x:Exception=>
+        Failure(x.getMessage)
+    }
+  }
+
+  def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] = {
+    try {
+      purge
+
+      def foreach[Buffer] (stream:InputStream, fact:PBMessageFactory[_,_])(func: (Buffer)=>Unit):Unit = {
+        var done = false
+        do {
+          try {
+            func(fact.parseFramed(stream).asInstanceOf[Buffer])
+          } catch {
+            case x:EOFException =>
+              done = true
+          }
+        } while( !done )
+      }
+
+      with_ctx { ctx=>
+        import ctx._
+        import PBSupport._
+
+        streams.using_queue_stream { queue_stream=>
+          foreach(queue_stream, QueuePB.FACTORY) { pb=>
+            val record:QueueRecord = pb
+            queues_db.put(tx, record.key, record)
+            with_entries_db(record.key) { entriesdb=>
+            }
+          }
+        }
+
+        streams.using_message_stream { message_stream=>
+          foreach(message_stream, MessagePB.FACTORY) { pb=>
+            val record:MessageRecord = pb
+            messages_db.put(tx, record.key, record)
+          }
+        }
+
+        streams.using_queue_entry_stream { queue_entry_stream=>
+          foreach(queue_entry_stream, QueueEntryPB.FACTORY) { pb=>
+            val record:QueueEntryRecord = pb
+
+            with_entries_db(record.queue_key) { entries_db=>
+              entries_db.put(tx, record.entry_seq, record)
+              add_and_get(message_refs_db, record.message_key, 1, tx)
+            }
+          }
+        }
+      }
+      Success(Zilch)
+
+    } catch {
+      case x:Exception=>
+        Failure(x.getMessage)
+    }
+  }
 }

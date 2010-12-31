@@ -30,6 +30,8 @@ import org.apache.activemq.apollo.util._
 import ReporterLevel._
 import org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained, ListEventAggregator}
 import org.apache.activemq.apollo.util.OptionSupport._
+import java.io.{InputStream, OutputStream}
+import scala.util.continuations._
 
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
@@ -285,5 +287,21 @@ class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
     rc.flushed_enqueue_counter = metric_flushed_enqueue_counter
 
     callback(rc)
+  }
+
+  /**
+   * Exports the contents of the store to the provided streams.  Each stream should contain
+   * a list of framed protobuf objects with the corresponding object types.
+   */
+  def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] @suspendable = executor_pool ! {
+    Failure("not supported")// client.export_pb(queue_stream, message_stream, queue_entry_stream)
+  }
+
+  /**
+   * Imports a previously exported set of streams.  This deletes any previous data
+   * in the store.
+   */
+  def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] @suspendable = executor_pool ! {
+    Failure("not supported")//client.import_pb(queue_stream, message_stream, queue_entry_stream)
   }
 }

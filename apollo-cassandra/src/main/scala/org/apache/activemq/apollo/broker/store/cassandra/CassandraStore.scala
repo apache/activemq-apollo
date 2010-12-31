@@ -32,6 +32,8 @@ import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
 import org.apache.activemq.apollo.util.OptionSupport._
+import java.io.{InputStream, OutputStream}
+import scala.util.continuations._
 
 object CassandraStore extends Log {
 
@@ -229,5 +231,19 @@ class CassandraStore extends DelayingStoreSupport with Logging {
     }
   }
 
+  /**
+   * Exports the contents of the store to the provided streams.  Each stream should contain
+   * a list of framed protobuf objects with the corresponding object types.
+   */
+  def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] @suspendable = blocking ! {
+    Failure("not supported")// client.export_pb(queue_stream, message_stream, queue_entry_stream)
+  }
 
+  /**
+   * Imports a previously exported set of streams.  This deletes any previous data
+   * in the store.
+   */
+  def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] @suspendable = blocking ! {
+    Failure("not supported")//client.import_pb(queue_stream, message_stream, queue_entry_stream)
+  }
 }

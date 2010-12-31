@@ -18,6 +18,14 @@ package org.apache.activemq.apollo.broker.store
  */
 import org.apache.activemq.apollo.dto.{StoreStatusDTO, StoreDTO}
 import org.apache.activemq.apollo.util._
+import java.io.{InputStream, OutputStream}
+import scala.util.continuations._
+
+trait StreamManager[A] {
+  def using_queue_stream(func: (A)=>Unit)
+  def using_message_stream(func: (A)=>Unit)
+  def using_queue_entry_stream(func: (A)=>Unit)
+}
 
 /**
  * <p>
@@ -109,4 +117,15 @@ trait Store extends ServiceTrait {
    */
   def load_message(messageKey:Long)(callback:(Option[MessageRecord])=>Unit )
 
+  /**
+   * Exports the contents of the store to the provided streams.  Each stream should contain
+   * a list of framed protobuf objects with the corresponding object types.
+   */
+  def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] @suspendable
+
+  /**
+   * Imports a previously exported set of streams.  This deletes any previous data
+   * in the store.
+   */
+  def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] @suspendable
 }

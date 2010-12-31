@@ -20,7 +20,6 @@ import dto.{BDBStoreDTO, BDBStoreStatusDTO}
 import java.util.concurrent.atomic.AtomicLong
 import collection.Seq
 import org.fusesource.hawtdispatch._
-import java.io.File
 import java.util.concurrent._
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
@@ -28,6 +27,8 @@ import ReporterLevel._
 import org.fusesource.hawtdispatch.ListEventAggregator
 import org.apache.activemq.apollo.dto.{StoreStatusDTO, IntMetricDTO, TimeMetricDTO, StoreDTO}
 import org.apache.activemq.apollo.util.OptionSupport._
+import java.io.{InputStream, OutputStream, File}
+import scala.util.continuations._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -268,4 +269,21 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
 
     callback(rc)
   }
+
+  /**
+   * Exports the contents of the store to the provided streams.  Each stream should contain
+   * a list of framed protobuf objects with the corresponding object types.
+   */
+  def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] @suspendable = write_executor ! {
+    client.export_pb(streams)
+  }
+
+  /**
+   * Imports a previously exported set of streams.  This deletes any previous data
+   * in the store.
+   */
+  def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] @suspendable = write_executor ! {
+    client.import_pb(streams)
+  }
+
 }

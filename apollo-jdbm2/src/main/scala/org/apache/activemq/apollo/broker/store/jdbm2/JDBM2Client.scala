@@ -27,9 +27,10 @@ import jdbm._
 import btree.BTree
 import htree.HTree
 import java.util.Comparator
-import java.io.Serializable
 import jdbm.helper._
 import PBSupport._
+import org.fusesource.hawtbuf.proto.PBMessageFactory
+import java.io.{EOFException, InputStream, OutputStream, Serializable}
 
 object JDBM2Client extends Log {
 
@@ -408,4 +409,106 @@ class JDBM2Client(store: JDBM2Store) {
 
   def getLastQueueKey:Long = last_queue_key
 
+
+  def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] = {
+    try {
+      import PBSupport._
+
+      streams.using_queue_stream { queue_stream=>
+        queues_db.cursor { (_, value) =>
+          val record:QueueRecord = value
+          record.writeFramed(queue_stream)
+          true
+        }
+      }
+      streams.using_message_stream { message_stream=>
+        messages_db.cursor { (_, value) =>
+          val record:MessageRecord = value
+          record.writeFramed(message_stream)
+          true
+        }
+      }
+
+      streams.using_queue_entry_stream { queue_entry_stream=>
+        entries_db.cursor { (_, value) =>
+          val record:QueueEntryRecord = value
+          record.writeFramed(queue_entry_stream)
+          true
+        }
+      }
+      Success(Zilch)
+
+    } catch {
+      case x:Exception=>
+        Failure(x.getMessage)
+    }
+  }
+
+  def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] = {
+    try {
+      purge
+
+      var size =0
+      def check_flush(incr:Int, max:Int) = {
+        size += incr
+        if( size > max ) {
+          recman.commit
+          size = 0
+        }
+      }
+
+      transaction {
+
+        def foreach[Buffer] (stream:InputStream, fact:PBMessageFactory[_,_])(func: (Buffer)=>Unit):Unit = {
+          var done = false
+          do {
+            try {
+              func(fact.parseFramed(stream).asInstanceOf[Buffer])
+            } catch {
+              case x:EOFException =>
+                done = true
+            }
+          } while( !done )
+        }
+
+
+        import PBSupport._
+
+        streams.using_queue_stream { queue_stream=>
+          foreach(queue_stream, QueuePB.FACTORY) { pb=>
+            val record:QueueRecord = pb
+            queues_db.put(record.key, record)
+            check_flush(1, 10000)
+          }
+        }
+
+        recman.commit
+
+        streams.using_message_stream { message_stream=>
+          foreach(message_stream, MessagePB.FACTORY) { pb=>
+            val record:MessageRecord = pb
+            messages_db.put(record.key, record)
+            check_flush(record.size, 1024*124*10)
+          }
+        }
+
+        recman.commit
+
+        streams.using_queue_entry_stream { queue_entry_stream=>
+          foreach(queue_entry_stream, QueueEntryPB.FACTORY) { pb=>
+            val record:QueueEntryRecord = pb
+            entries_db.insert((record.queue_key, record.entry_seq), record, true)
+            add_message_reference(record.message_key)
+            check_flush(1, 10000)
+          }
+        }
+
+      }
+      Success(Zilch)
+
+    } catch {
+      case x:Exception=>
+        Failure(x.getMessage)
+    }
+  }
 }
