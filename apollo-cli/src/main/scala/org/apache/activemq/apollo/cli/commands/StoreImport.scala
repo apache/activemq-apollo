@@ -22,18 +22,19 @@ import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.broker.FileConfigStore
 import org.apache.activemq.apollo.dto.VirtualHostDTO
 import org.apache.activemq.apollo.util._
-import java.util.zip.{ZipEntry, ZipOutputStream}
 import org.apache.activemq.apollo.broker.store.{StreamManager, StoreFactory}
-import java.io.{OutputStream, FileOutputStream, File}
 import scala.util.continuations._
+import java.util.zip.{ZipFile, ZipEntry, ZipOutputStream}
+import java.io.{InputStream, OutputStream, FileOutputStream, File}
+
 
 /**
  * The apollo stop command
  */
-@command(scope="apollo", name = "store-export", description = "exports the contents of a broker message store")
-class StoreExport extends Action {
+@command(scope="apollo", name = "store-import", description = "imports a previously exported message store")
+class StoreImport extends Action {
 
-  object StoreExport extends Log
+  object StoreImport extends Log
 
   @option(name = "--conf", description = "The Apollo configuration file.")
   var conf: File = _
@@ -78,27 +79,31 @@ class StoreExport extends Action {
         error("Could not create the store.")
       }
 
-      store.configure(vh.store, LoggingReporter(StoreExport))
+      store.configure(vh.store, LoggingReporter(StoreImport))
       ServiceControl.start(store, "store startup")
 
-
-      using( new ZipOutputStream(new FileOutputStream(dest))) { out=>
-        out.setMethod(ZipEntry.DEFLATED)
-        out.setLevel(9)
-        val manager = new StreamManager[OutputStream]() {
-          def entry(name:String, func: (OutputStream) => Unit) = {
-            out.putNextEntry(new ZipEntry(name));
-            func(out)
-            out.closeEntry();
+      val zip = new ZipFile(dest)
+      try {
+        val manager = new StreamManager[InputStream]() {
+          def entry(name:String, func: (InputStream) => Unit) = {
+            val entry = zip.getEntry(name)
+            if(entry == null) {
+              error("Invalid data file, zip entry not found: "+name);
+            }
+            using(zip.getInputStream(entry)) { is=>
+              func(is)
+            }
           }
-          def using_queue_stream(func: (OutputStream) => Unit) = entry("queues.dat", func)
-          def using_queue_entry_stream(func: (OutputStream) => Unit) = entry("queue_entries.dat", func)
-          def using_message_stream(func: (OutputStream) => Unit) = entry("messages.dat", func)
+          def using_queue_stream(func: (InputStream) => Unit) = entry("queues.dat", func)
+          def using_queue_entry_stream(func: (InputStream) => Unit) = entry("queue_entries.dat", func)
+          def using_message_stream(func: (InputStream) => Unit) = entry("messages.dat", func)
         }
         reset {
-          val rc = store.export_pb(manager)
+          val rc = store.import_pb(manager)
           rc.failure_option.foreach(error _)
         }
+      } finally {
+        zip.close
       }
 
       ServiceControl.stop(store, "store stop");

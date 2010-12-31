@@ -459,11 +459,11 @@ class JDBM2Client(store: JDBM2Store) {
 
       transaction {
 
-        def foreach[Buffer] (stream:InputStream, fact:PBMessageFactory[_,_])(func: (Buffer)=>Unit):Unit = {
+        def foreach[B] (stream:InputStream, fact:PBMessageFactory[_,_])(func: (B)=>Unit):Unit = {
           var done = false
           do {
             try {
-              func(fact.parseFramed(stream).asInstanceOf[Buffer])
+              func(fact.parseFramed(stream).asInstanceOf[B])
             } catch {
               case x:EOFException =>
                 done = true
@@ -475,7 +475,7 @@ class JDBM2Client(store: JDBM2Store) {
         import PBSupport._
 
         streams.using_queue_stream { queue_stream=>
-          foreach(queue_stream, QueuePB.FACTORY) { pb=>
+          foreach[QueuePB.Buffer](queue_stream, QueuePB.FACTORY) { pb =>
             val record:QueueRecord = pb
             queues_db.put(record.key, record)
             check_flush(1, 10000)
@@ -485,7 +485,7 @@ class JDBM2Client(store: JDBM2Store) {
         recman.commit
 
         streams.using_message_stream { message_stream=>
-          foreach(message_stream, MessagePB.FACTORY) { pb=>
+          foreach[MessagePB.Buffer](message_stream, MessagePB.FACTORY) { pb=>
             val record:MessageRecord = pb
             messages_db.put(record.key, record)
             check_flush(record.size, 1024*124*10)
@@ -495,7 +495,7 @@ class JDBM2Client(store: JDBM2Store) {
         recman.commit
 
         streams.using_queue_entry_stream { queue_entry_stream=>
-          foreach(queue_entry_stream, QueueEntryPB.FACTORY) { pb=>
+          foreach[QueueEntryPB.Buffer](queue_entry_stream, QueueEntryPB.FACTORY) { pb=>
             val record:QueueEntryRecord = pb
             entries_db.insert((record.queue_key, record.entry_seq), record, true)
             add_message_reference(record.message_key)

@@ -71,7 +71,6 @@ class JDBM2Store extends DelayingStoreSupport with DispatchLogging {
   var next_msg_key = new AtomicLong(1)
 
   var executor:ExecutorService = _
-  var read_executor:ExecutorService = _
   var config:JDBM2StoreDTO = defaultConfig
   val client = new JDBM2Client(this)
 

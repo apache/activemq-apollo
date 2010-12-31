@@ -56,11 +56,7 @@ class Stop extends Action with Logging {
         error("Configuration file'%s' does not exist.\n\nTry creating a broker instance using the 'apollo create' command.".format(conf));
       }
 
-      val store = new FileConfigStore
-      store.file = conf
-      store.start
-      val config = store.load(true)
-
+      val config = new FileConfigStore(conf).load(true)
 
       val web_admin = config.web_admin.getOrElse(new WebAdminDTO)
       if( web_admin.enabled.getOrElse(true) ) {

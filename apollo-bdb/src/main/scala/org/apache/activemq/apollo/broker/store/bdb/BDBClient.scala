@@ -451,7 +451,7 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
         import PBSupport._
 
         streams.using_queue_stream { queue_stream=>
-          foreach(queue_stream, QueuePB.FACTORY) { pb=>
+          foreach[QueuePB.Buffer](queue_stream, QueuePB.FACTORY) { pb=>
             val record:QueueRecord = pb
             queues_db.put(tx, record.key, record)
             with_entries_db(record.key) { entriesdb=>
@@ -460,14 +460,14 @@ class BDBClient(store: BDBStore) extends DispatchLogging {
         }
 
         streams.using_message_stream { message_stream=>
-          foreach(message_stream, MessagePB.FACTORY) { pb=>
+          foreach[MessagePB.Buffer](message_stream, MessagePB.FACTORY) { pb=>
             val record:MessageRecord = pb
             messages_db.put(tx, record.key, record)
           }
         }
 
         streams.using_queue_entry_stream { queue_entry_stream=>
-          foreach(queue_entry_stream, QueueEntryPB.FACTORY) { pb=>
+          foreach[QueueEntryPB.Buffer](queue_entry_stream, QueueEntryPB.FACTORY) { pb=>
             val record:QueueEntryRecord = pb
 
             with_entries_db(record.queue_key) { entries_db=>
