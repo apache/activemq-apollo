@@ -18,7 +18,6 @@ package org.apache.activemq.apollo.broker
 
 import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO}
 import org.fusesource.hawtdispatch._
-import java.util.concurrent.{TimeUnit, ExecutorService, Executors}
 import org.fusesource.hawtbuf.{ByteArrayInputStream, ByteArrayOutputStream}
 import security.EncryptionSupport
 import XmlCodec._
@@ -27,6 +26,7 @@ import java.util.Arrays
 import FileSupport._
 import java.util.Properties
 import java.io.{FileOutputStream, FileInputStream, File}
+import java.util.concurrent.{ThreadFactory, TimeUnit, ExecutorService, Executors}
 
 object ConfigStore {
 
@@ -72,31 +72,23 @@ object FileConfigStore extends Log
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class FileConfigStore extends ConfigStore {
+class FileConfigStore(var file:File = new File("activemq.xml")) extends ConfigStore {
   import FileConfigStore._
 
   case class StoredBrokerModel(data:Array[Byte], last_modified:Long)
 
-  var file:File = new File("activemq.xml")
+  file = file.getCanonicalFile
 
   @volatile
   var latest:StoredBrokerModel = null
+
   @volatile
   var running = false
 
   val dispatch_queue = createQueue("config store")
 
-  // can't do blocking IO work on the dispatchQueue :(
-  // so... use an executor
-  var io_worker:ExecutorService = null
-
-
   def start = {
-    io_worker = Executors.newSingleThreadExecutor
     running = true
-
-    file = file.getCanonicalFile;
-
     if( !file.exists ) {
       try {
         // try to create a default version of the file.
@@ -108,22 +100,20 @@ class FileConfigStore extends ConfigStore {
         throw new Exception("The '%s' configuration file does not exist.".format(file.getPath))
       }
     }
-
     latest = read(file)
     schedual_next_update_check
   }
 
   def stop = {
     running = false
-    io_worker.shutdown
   }
 
   def load(eval:Boolean) = {
-    unmarshall(latest.data, eval)
+    unmarshall(read(file).data, eval)
   }
 
   def read() = {
-    new String(latest.data)
+    new String(read(file).data)
   }
 
   def can_write:Boolean = file.canWrite
@@ -143,7 +133,7 @@ class FileConfigStore extends ConfigStore {
     if( running ) {
       val last_modified = latest.last_modified
       val latestData = latest.data
-      io_worker {
+      Broker.BLOCKABLE_THREAD_POOL {
         try {
           val l = file.lastModified
           if( l != last_modified ) {
