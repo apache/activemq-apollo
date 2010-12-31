@@ -674,6 +674,42 @@ The web interface will display the status of the the connectors and show
 attached connections.  It will also allow you to drill into each configured
 virtual host and view the destinations and queues being used. 
 
+### Exporting/Importing Stores
+
+Exporting compresses all the data in a virtual host's message store in a zip
+archive. Importing reverses the export process and restore the exported data
+back to a virtual host's message store. Exporting/Importing is typically used
+to:
+
+* backup a message store
+* migrate between different message store implementations
+
+The stores which support exporting and importing are:
+
+* [BDB Store](#BDB_Store) 
+* [JDBM2 Store](#JDBM2_Store)
+
+The broker must be stopped before using the import or export commands. Be
+careful when importing an archive, since it will first purge the message
+store of any data! 
+
+Use the `apollo-broker store-export` command to export the data. For example:
+
+    /var/lib/mybroker/bin/apollo-broker store-export myarchive.zip
+
+The above command will load the `mybroker`'s configuration and export the
+first virtual host's messages store to the `myarchive.zip`. You can use the
+`--virtual-host` command line option to be more specific of which virtual
+host you wish to export.
+
+Use the `apollo-broker store-import` command to import the data.  For example:
+
+    /var/lib/mybroker/bin/apollo-broker store-import myarchive.zip
+
+Just like in the case of the `store-export` command, it will load the
+`mybroker`'s configuration and import the archive into the first virtual
+host's message store.
+
 ## Using the STOMP Protocol
 
 Clients can connect to ${project_name} using the
