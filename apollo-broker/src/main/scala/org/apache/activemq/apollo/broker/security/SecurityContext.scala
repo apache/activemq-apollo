@@ -58,16 +58,30 @@ class SecurityContext {
 
   def is_allowed(acl:List[PrincipalDTO], default_kinds:List[String]):Boolean = {
 
-    def matches(p:PrincipalDTO):Boolean = {
-      if( p.kind==null ) {
-        default_kinds.foreach { kind=>
-          if( principles.contains(new PrincipalDTO(p.allow, kind)) ) {
-            return true;
+    def kind_matches(kind:String):Boolean = {
+      kind match {
+        case null=>
+          return !principles.map(_.kind).intersect(default_kinds.toSet).isEmpty
+        case "*"=>
+          return true;
+        case kind=>
+          return principles.map(_.kind).contains(kind)
+      }
+    }
+
+    def principal_matches(p:PrincipalDTO):Boolean = {
+      p.kind match {
+        case null=>
+          default_kinds.foreach { kind=>
+            if( principles.contains(new PrincipalDTO(p.allow, kind)) ) {
+              return true;
+            }
           }
-        }
-        return false;
-      } else {
-        return principles.contains(p)
+          return false;
+        case "*"=>
+          return principles.map(_.allow).contains(p.allow)
+        case kind=>
+          return principles.contains(p)
       }
     }
 
@@ -75,18 +89,18 @@ class SecurityContext {
       p.deny match {
         case null =>
         case "*"=>
-          return false;
+          return !kind_matches(p.kind)
         case id =>
-          if( matches(new PrincipalDTO(id, p.kind)) ) {
+          if( principal_matches(new PrincipalDTO(id, p.kind)) ) {
             return false;
           }
       }
       p.allow match {
         case null =>
         case "*"=>
-          return true;
+          return kind_matches(p.kind)
         case id =>
-          if( matches(new PrincipalDTO(id, p.kind)) ) {
+          if( principal_matches(new PrincipalDTO(id, p.kind)) ) {
             return true
           }
       }

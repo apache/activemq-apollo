@@ -22,6 +22,11 @@
 
   <virtual_host id="default" purge_on_startup="true">
     <host_name>localhost</host_name>
+
+    <acl>
+      <connect allow="connect_group"/>
+    </acl>
+
   </virtual_host>
 
   <key_storage file="${basedir}/src/test/resources/apollo.ks" password="password" key_password="password"/>

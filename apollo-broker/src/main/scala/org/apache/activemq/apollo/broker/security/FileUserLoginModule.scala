@@ -31,37 +31,33 @@ import javax.security.auth.login.FailedLoginException
 import javax.security.auth.login.LoginException
 import javax.security.auth.spi.LoginModule
 
-import org.apache.activemq.jaas.GroupPrincipal
 import org.apache.activemq.jaas.UserPrincipal
 import java.{util => ju}
 import org.apache.activemq.apollo.util.{FileSupport, Log}
 import FileSupport._
 
-object FileLoginModule extends Log {
+object FileUserLoginModule extends Log {
   val LOGIN_CONFIG = "java.security.auth.login.config"
-  val USERS_FILE = "users_file"
-  val GROUPS_FILE = "groups_file"
+  val FILE_OPTION = "file"
 }
 
 /**
  * <p>
+ * Uses a userid=password property file to control who can
+ * login.
  * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class FileLoginModule extends LoginModule {
+class FileUserLoginModule extends LoginModule {
 
-  import FileLoginModule._
+  import FileUserLoginModule._
 
   private var subject: Subject = _
   private var callback_handler: CallbackHandler = _
 
-  private var user_file: File = _
-  private var group_file: File = _
-
+  private var file: File = _
   private val users = new Properties()
-  private val groups = new Properties()
-
   private var user: String = _
   private val principals = new ju.HashSet[Principal]()
 
@@ -76,30 +72,20 @@ class FileLoginModule extends LoginModule {
       new File(".")
     }
 
-    user_file = new File(base_dir, options.get(USERS_FILE).asInstanceOf[String])
-    group_file = new File(base_dir, options.get(GROUPS_FILE).asInstanceOf[String])
+    file = new File(base_dir, options.get(FILE_OPTION).asInstanceOf[String])
 
-    debug("Initialized user_file=%s group_file=%s", user_file, group_file)
+    debug("Initialized file=%s", file)
   }
 
   def login: Boolean = {
     try {
       users.clear()
-      using( new FileInputStream(user_file) ) { in=>
+      using( new FileInputStream(file) ) { in=>
         users.load(in)
       }
       EncryptionSupport.decrypt(users)
     } catch {
-      case ioe: IOException => throw new LoginException("Unable to load user properties file " + user_file)
-    }
-
-    try {
-      groups.clear
-      using( new FileInputStream(group_file) ) { in=>
-        groups.load(in)
-      }
-    } catch {
-      case ioe: IOException => throw new LoginException("Unable to load group properties file " + group_file)
+      case ioe: IOException => throw new LoginException("Unable to load user properties file " + file)
     }
 
     val callbacks = new Array[Callback](2)
@@ -130,17 +116,6 @@ class FileLoginModule extends LoginModule {
 
   def commit: Boolean = {
     principals.add(new UserPrincipal(user))
-    val en = groups.keys()
-    while (en.hasMoreElements()) {
-      val group_name = en.nextElement().asInstanceOf[String]
-      val users = groups.getProperty(group_name).split(",").map(_.trim)
-      users.foreach { x =>
-        if (user == x) {
-          principals.add(new GroupPrincipal(group_name))
-        }
-      }
-    }
-
     subject.getPrincipals().addAll(principals)
 
     user = null

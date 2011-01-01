@@ -494,7 +494,7 @@ If a configuration resource does not have an `acl` element defined within
 it, then the resource allows anyone to access all it's actions. The `acl`
 is made up of a list of authorization rule entries. Each entry defines
 that action the rule applies to and if the rule is allowing or denying
-access to a user principal. The special `*` value matches all users.
+access to a user principal. 
 
 Users can have many principals of many different kinds associated with
 them. The rules will only match up against principals of type
@@ -509,9 +509,12 @@ definition. Example:
 {pygmentize:: xml}
 <acl>
   <send deny="chirino" kind="org.apache.activemq.jaas.UserPrincipal"/>
-  <send allow="*"/>
+  <send allow="*" kind="*"/>
 </acl>
 {pygmentize}
+
+The special `*` value acts like a wild card and can be used in the `deny`,
+`allow`, and `kind` attributes.
 
 The order in which rule entries are defined are significant when the user
 matches multiple entries. The first entry the user matches determines if he

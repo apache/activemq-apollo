@@ -1044,11 +1044,6 @@ class StompSslSecurityTest extends StompTestSupport {
 
   override val broker_config_uri: String = "xml:classpath:apollo-stomp-ssl-secure.xml"
 
-  client.key_storeage = new KeyStorage
-  client.key_storeage.config.file = basedir/"src"/"test"/"resources"/"client.ks"
-  client.key_storeage.config.password = "password"
-  client.key_storeage.config.key_password = "password"
-
   override protected def beforeAll = {
     // System.setProperty("javax.net.debug", "all")
     try {
@@ -1060,7 +1055,15 @@ class StompSslSecurityTest extends StompTestSupport {
     super.beforeAll
   }
 
-  test("Connect with no id password") {
+  def use_client_cert = {
+    client.key_storeage = new KeyStorage
+    client.key_storeage.config.file = basedir/"src"/"test"/"resources"/"client.ks"
+    client.key_storeage.config.password = "password"
+    client.key_storeage.config.key_password = "password"
+  }
+
+  test("Connect with cert and no id password") {
+    use_client_cert
     connect("1.1", client)
   }
 
