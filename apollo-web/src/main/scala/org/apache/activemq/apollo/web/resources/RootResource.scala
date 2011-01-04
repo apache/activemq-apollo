@@ -73,9 +73,9 @@ object ViewHelper {
   val TB: Long = GB * 1024
 
   val SECONDS: Long = TimeUnit.SECONDS.toMillis(1)
-  val MINUTES: Long = TimeUnit.SECONDS.toMillis(60)
-  val HOURS: Long = TimeUnit.SECONDS.toMillis(3600)
-  val DAYS: Long = TimeUnit.SECONDS.toMillis(216000)
+  val MINUTES: Long = TimeUnit.MINUTES.toMillis(1)
+  val HOURS: Long = TimeUnit.HOURS.toMillis(1)
+  val DAYS: Long = TimeUnit.DAYS.toMillis(1)
   val YEARS: Long = DAYS * 365
 
 
@@ -118,20 +118,23 @@ class ViewHelper {
   }
 
   def uptime(value:Long):String = {
-    val duration = System.currentTimeMillis - value
-    if( duration < SECONDS ) {
-      "%d ms".format(duration)
-    } else if (duration < MINUTES) {
-      "%,.2f seconds".format(duration.toFloat / SECONDS)
-    } else if (duration < HOURS) {
-      "%,.2f minutes".format(duration.toFloat / MINUTES)
-    } else if (duration < DAYS) {
-      "%,.2f hours".format(duration.toFloat / HOURS)
-    } else if (duration < YEARS) {
-      "%,.2f days".format(duration.toDouble / DAYS)
-    } else {
-      "%,.2f years".format(duration.toDouble / YEARS)
+    def friendly(duration:Long):String = {
+      if( duration < SECONDS ) {
+        "%d ms".format(duration)
+      } else if (duration < MINUTES) {
+        "%d seconds".format(duration / SECONDS)
+      } else if (duration < HOURS) {
+        "%d minutes".format(duration / MINUTES)
+      } else if (duration < DAYS) {
+        println("<")
+        "%d hours %s".format(duration / HOURS, friendly(duration%HOURS))
+      } else if (duration < YEARS) {
+        "%d days %s".format(duration / DAYS, friendly(duration%DAYS))
+      } else {
+        "%,d years %s".format(duration / YEARS, friendly(duration%YEARS))
+      }
     }
+    friendly(System.currentTimeMillis - value)
   }
 }
 
