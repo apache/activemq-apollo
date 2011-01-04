@@ -51,4 +51,7 @@ public class VirtualHostStatusDTO extends ServiceStatusDTO {
     @XmlElement
     public VirtualHostDTO config = null;
 
+    @XmlElement
+    public AggregateQueueMetricsDTO aggregate_queue_metrics = new AggregateQueueMetricsDTO();
+
 }

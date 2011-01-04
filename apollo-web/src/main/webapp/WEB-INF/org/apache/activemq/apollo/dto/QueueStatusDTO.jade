@@ -16,6 +16,11 @@
 - import it._
 - val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
 - import helper._
+- def percent(n:Long, d:Long) =
+  - if( d==0 )
+    - "0.00 %"
+  - else
+    - "%,.2f %%".format(n.toFloat*100.0/d)
 
 .breadcumbs
   a(href={strip_resolve("..")}) Back
@@ -38,26 +43,30 @@
 
 h2 Current Size
 
-p queue size: #{queue_items} messages
-p queue size: #{memory(queue_size)}
-- if( capacity > 0 )
-  p memory used: #{ "%,.2f".format(capacity_used.toFloat*100.0/capacity) }% (#{memory(capacity_used)}/#{memory(capacity)})
-- else
-  p memory used: #{ "%,.2f".format(0f) }% (#{memory(capacity_used)}/#{memory(capacity)})
+p queue size: #{metrics.queue_items} messages #{memory(metrics.queue_size)}
+p memory used: #{percent(metrics.swapped_in_size, metrics.swapped_in_size_max)} (#{memory(metrics.swapped_in_size)}/#{memory(metrics.swapped_in_size_max)})
 
-h2 Enqueue/Deqeueue Counters
+h3 Enqueue/Deqeueue Counters
 
-p enqueued: #{enqueue_item_counter} messages (#{memory(enqueue_size_counter)})
+p enqueued: #{metrics.enqueue_item_counter} messages (#{memory(metrics.enqueue_size_counter)}), #{uptime(metrics.enqueue_ts)} ago
 
-p dequeued: #{dequeue_item_counter} messages (#{memory(dequeue_size_counter)})
+p dequeued: #{metrics.dequeue_item_counter} messages (#{memory(metrics.dequeue_size_counter)}), #{uptime(metrics.dequeue_ts)} ago
 
-p nacked: #{nack_item_counter} messages (#{memory(nack_size_counter)})
+p nacked: #{metrics.nack_item_counter} messages (#{memory(metrics.nack_size_counter)}), #{uptime(metrics.nack_ts)} ago
 
-h2 Swap Status
+h2 Swap Metrics
 
-p loading from the store: #{memory(loading_size)}
-p flushing out of memory: #{memory(flushing_size)}
-p holding : #{flushed_items} flushed message references
+p swapped in: #{metrics.swapped_in_items} messages #{memory(metrics.swapped_in_size)}
+- val swapped_out_items = metrics.queue_items - metrics.swapped_in_items
+- val swapped_out_size = metrics.queue_size - metrics.swapped_in_size
+p swapped out: #{swapped_out_items} messages #{memory(swapped_out_size)}
+p percent swapped out: #{percent(swapped_out_items, metrics.queue_items)} of the messages
+
+p swapping out: #{memory(metrics.swapping_out_size)}
+p swapping in: #{memory(metrics.swapping_in_size)}
+
+p total swap outs : #{metrics.swap_out_item_counter} messages (#{memory(metrics.swap_out_size_counter)})
+p total swap ins : #{metrics.swap_in_item_counter} messages (#{memory(metrics.swap_in_size_counter)})
 
 h3 Producers
 ul

@@ -16,11 +16,9 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
+import org.codehaus.jackson.annotate.JsonTypeInfo;
 
 import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * <p>
@@ -28,36 +26,11 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="queue_status")
+@XmlRootElement(name="aggregate_queue_metrics")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class QueueStatusDTO extends LongIdDTO {
+public class AggregateQueueMetricsDTO extends QueueMetricsDTO {
 
-    @XmlElement
-    public QueueDTO config;
-
-    @XmlElement
-    public BindingDTO binding;
-
-    @XmlElement
-    public QueueMetricsDTO metrics = new QueueMetricsDTO();
-
-    /**
-     * Status of the entries in the queue
-     */
-    @XmlElement(name="entry")
-    public List<EntryStatusDTO> entries = new ArrayList<EntryStatusDTO>();
-
-
-    /**
-     * Ids of all connections that are producing to the destination
-     */
-    @XmlElement(name="producer")
-    public List<LinkDTO> producers = new ArrayList<LinkDTO>();
-
-    /**
-     * Ids of all connections that are consuming from the destination
-     */
-    @XmlElement(name="consumer")
-    public List<QueueConsumerStatusDTO> consumers = new ArrayList<QueueConsumerStatusDTO>();
+    @XmlAttribute(name="queues")
+    public int queues;
 
 }

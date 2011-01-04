@@ -16,17 +16,19 @@
  */
 package org.apache.activemq.apollo.web.resources;
 
+import javax.ws.rs.Path
 import javax.ws.rs._
 import core.Response
 import Response.Status._
 import java.util.List
 import org.apache.activemq.apollo.dto._
 import java.{lang => jl}
-import collection.JavaConversions
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker._
 import collection.mutable.ListBuffer
 import scala.util.continuations._
+import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
+import scala.collection.{Iterable, JavaConversions}
 
 /**
  * <p>
@@ -51,17 +53,22 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       System.exit(0)
     }
   }
+
+  def concurrent_map[T,R](values:Iterable[T])(dqf:(T)=>DispatchQueue)(func:T=>R) = {
+    Future.all( values.map { t=>
+      dqf(t).future { func(t) }
+    })
+  }
+
   private def with_broker[T](func: (org.apache.activemq.apollo.broker.Broker, Option[T]=>Unit)=>Unit):T = {
     BrokerRegistry.list.headOption match {
       case None=> result(NOT_FOUND)
       case Some(broker)=>
-
-        Future[Option[T]] { cb=>
-          broker.dispatch_queue {
-            func(broker, cb)
-          }
-        }.getOrElse(result(NOT_FOUND))
-
+        val f = Future[Option[T]]()
+        broker.dispatch_queue {
+          func(broker, f)
+        }
+        f().getOrElse(result(NOT_FOUND))
     }
   }
 
@@ -79,8 +86,8 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
 
   @GET
-  def get() = {
-    with_broker[BrokerStatusDTO] { case (broker, cb) =>
+  def get_broker():BrokerStatusDTO = {
+    with_broker { case (broker, cb) =>
       val result = new BrokerStatusDTO
 
       result.id = broker.id
@@ -105,7 +112,10 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
         }
       }
 
-      cb(Some(result))
+      get_queue_metrics(broker).onComplete{ metrics=>
+        result.aggregate_queue_metrics = metrics
+        cb(Some(result))
+      }
     }
   }
 
@@ -113,9 +123,67 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
   @GET @Path("virtual-hosts")
   def virtualHosts = {
     val rc = new LongIdListDTO
-    rc.items.addAll(get.virtual_hosts)
+    rc.items.addAll(get_broker.virtual_hosts)
     rc
   }
+
+  def aggregate_queue_metrics(queue_metrics:Iterable[QueueMetricsDTO]):AggregateQueueMetricsDTO = {
+    queue_metrics.foldLeft(new AggregateQueueMetricsDTO){ (rc, q)=>
+      rc.enqueue_item_counter += q.enqueue_item_counter
+      rc.enqueue_size_counter += q.enqueue_size_counter
+      rc.enqueue_ts = rc.enqueue_ts max q.enqueue_ts
+
+      rc.dequeue_item_counter += q.dequeue_item_counter
+      rc.dequeue_size_counter += q.dequeue_size_counter
+      rc.dequeue_ts += rc.dequeue_ts max q.dequeue_ts
+
+      rc.nack_item_counter += q.nack_item_counter
+      rc.nack_size_counter += q.nack_size_counter
+      rc.nack_ts = rc.nack_ts max q.nack_ts
+
+      rc.queue_size += q.queue_size
+      rc.queue_items += q.queue_items
+
+      rc.swap_out_item_counter += q.swap_out_item_counter
+      rc.swap_out_size_counter += q.swap_out_size_counter
+      rc.swap_in_item_counter += q.swap_in_item_counter
+      rc.swap_in_size_counter += q.swap_in_size_counter
+
+      rc.swapping_in_size += q.swapping_in_size
+      rc.swapping_out_size += q.swapping_out_size
+
+      rc.swapped_in_items += q.swapped_in_items
+      rc.swapped_in_size += q.swapped_in_size
+
+      rc.swapped_in_size_max += q.swapped_in_size_max
+
+      if( q.isInstanceOf[AggregateQueueMetricsDTO] ) {
+        rc.queues += q.asInstanceOf[AggregateQueueMetricsDTO].queues
+      } else {
+        rc.queues += 1
+      }
+      rc
+    }
+  }
+
+  def get_queue_metrics(broker:Broker):Future[AggregateQueueMetricsDTO] = {
+    val metrics = Future.all {
+      broker.virtual_hosts.values.map { host=>
+        host.dispatch_queue.flatFuture{ get_queue_metrics(host) }
+      }
+    }
+    metrics.map( x=> aggregate_queue_metrics(x) )
+  }
+
+  def get_queue_metrics(virtualHost:VirtualHost):Future[AggregateQueueMetricsDTO] = {
+    val metrics = Future.all{
+      virtualHost.router.queues.values.map { queue=>
+        queue.dispatch_queue.future { get_queue_metrics(queue) }
+      }
+    }
+    metrics.map( x=> aggregate_queue_metrics(x) )
+  }
+
 
   @GET @Path("virtual-hosts/{id}")
   def virtualHost(@PathParam("id") id : Long):VirtualHostStatusDTO = {
@@ -130,14 +198,20 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
         result.destinations.add(new LongIdLabeledDTO(node.id, node.name.toString))
       }
 
-      if( virtualHost.store != null ) {
-        virtualHost.store.get_store_status { x=>
-          result.store = x
+      get_queue_metrics(virtualHost).onComplete { metrics=>
+
+        result.aggregate_queue_metrics = metrics
+
+        if( virtualHost.store != null ) {
+          virtualHost.store.get_store_status { x=>
+            result.store = x
+            cb(Some(result))
+          }
+        } else {
           cb(Some(result))
         }
-      } else {
-        cb(Some(result))
       }
+
     }
   }
 
@@ -215,6 +289,40 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
     }
   }
 
+  def get_queue_metrics(q:Queue):QueueMetricsDTO = {
+    val rc = new QueueMetricsDTO
+
+    rc.enqueue_item_counter = q.enqueue_item_counter
+    rc.enqueue_size_counter = q.enqueue_size_counter
+    rc.enqueue_ts = q.enqueue_ts
+
+    rc.dequeue_item_counter = q.dequeue_item_counter
+    rc.dequeue_size_counter = q.dequeue_size_counter
+    rc.dequeue_ts = q.dequeue_ts
+
+    rc.nack_item_counter = q.nack_item_counter
+    rc.nack_size_counter = q.nack_size_counter
+    rc.nack_ts = q.nack_ts
+
+    rc.queue_size = q.queue_size
+    rc.queue_items = q.queue_items
+
+    rc.swap_out_item_counter = q.swap_out_item_counter
+    rc.swap_out_size_counter = q.swap_out_size_counter
+    rc.swap_in_item_counter = q.swap_in_item_counter
+    rc.swap_in_size_counter = q.swap_in_size_counter
+
+    rc.swapping_in_size = q.swapping_in_size
+    rc.swapping_out_size = q.swapping_out_size
+
+    rc.swapped_in_items = q.swapped_in_items
+    rc.swapped_in_size = q.swapped_in_size
+
+    rc.swapped_in_size_max = q.swapped_in_size_max
+
+    rc
+  }
+
   def status(qo:Option[Queue], entries:Boolean=false, cb:Option[QueueStatusDTO]=>Unit):Unit = if(qo==None) {
     cb(None)
   } else {
@@ -223,23 +331,8 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       val rc = new QueueStatusDTO
       rc.id = q.id
       rc.binding = q.binding.binding_dto
-      rc.capacity_used = q.capacity_used
-      rc.capacity = q.capacity
       rc.config = q.config
-
-      rc.enqueue_item_counter = q.enqueue_item_counter
-      rc.dequeue_item_counter = q.dequeue_item_counter
-      rc.enqueue_size_counter = q.enqueue_size_counter
-      rc.dequeue_size_counter = q.dequeue_size_counter
-      rc.nack_item_counter = q.nack_item_counter
-      rc.nack_size_counter = q.nack_size_counter
-
-      rc.queue_size = q.queue_size
-      rc.queue_items = q.queue_items
-
-      rc.loading_size = q.loading_size
-      rc.flushing_size = q.flushing_size
-      rc.flushed_items = q.flushed_items
+      rc.metrics = get_queue_metrics(q)
 
       if( entries ) {
         var cur = q.head_entry
@@ -296,7 +389,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
   @GET @Path("connectors")
   def connectors = {
     val rc = new LongIdListDTO
-    rc.items.addAll(get.connectors)
+    rc.items.addAll(get_broker.connectors)
     rc
   }
 

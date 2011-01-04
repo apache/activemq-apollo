@@ -60,4 +60,6 @@ public class BrokerStatusDTO extends ServiceStatusDTO {
     @XmlElement
     public BrokerDTO config = null;
 
+    @XmlElement
+    public AggregateQueueMetricsDTO aggregate_queue_metrics = new AggregateQueueMetricsDTO();
 }

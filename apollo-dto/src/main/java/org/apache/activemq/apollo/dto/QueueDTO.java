@@ -87,13 +87,13 @@ public class QueueDTO {
     public Boolean swap;
 
     /**
-     * The number max number of flushed queue entries to load
-     * for the store at a time.  Not that Flushed entires are just
+     * The number max number of swapped queue entries to load
+     * from the store at a time.  Not that swapped entries are just
      * reference pointers to the actual messages.  When not loaded,
      * the batch is referenced as sequence range to conserve memory.
      */
-    @XmlAttribute(name="flush_range_size")
-    public Integer flush_range_size;
+    @XmlAttribute(name="swap_range_size")
+    public Integer swap_range_size;
 
     @XmlElement(name="acl")
     public QueueAclDTO acl;
