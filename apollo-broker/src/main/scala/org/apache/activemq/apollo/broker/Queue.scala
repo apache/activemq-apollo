@@ -1187,6 +1187,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         queue.swapping_in_size -= size
       }
       queue.individual_swapped_items -= 1
+      queue.swap_out_item_counter -= 1
+      queue.swap_out_size_counter -= size
       super.remove
     }
 

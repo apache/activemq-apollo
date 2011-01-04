@@ -364,6 +364,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       q.all_subscriptions.valuesIterator.toSeq.foreach{ sub =>
         val status = new QueueConsumerStatusDTO
         sub.consumer.connection.foreach(x=> status.link = link(x))
+        status.position = sub.pos.seq
         status.total_dispatched_count = sub.total_dispatched_count
         status.total_dispatched_size = sub.total_dispatched_size
         status.total_ack_count = sub.total_ack_count
