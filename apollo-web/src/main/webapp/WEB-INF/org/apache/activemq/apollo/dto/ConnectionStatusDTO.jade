@@ -18,7 +18,8 @@
 - import helper._
 
 .breadcumbs
-  a(href={strip_resolve(".")}) Back
+  a(href={strip_resolve("..")}) Back
+
 p state: #{state} #{ uptime(state_since) } ago
 - if( state == "STARTED" )
   form(method="post" action={path("action/shutdown")})
