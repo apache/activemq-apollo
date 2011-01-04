@@ -20,6 +20,9 @@
 .breadcumbs
   a(href={strip_resolve(".")}) Back
 p state: #{state} #{ uptime(state_since) } ago
+- if( state == "STARTED" )
+  form(method="post" action={path("action/shutdown")})
+    input(type="submit" value="shutdown")
 
 p remote address: #{remote_address}
 p protocol: #{protocol}

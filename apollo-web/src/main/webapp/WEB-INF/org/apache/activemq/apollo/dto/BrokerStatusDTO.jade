@@ -23,6 +23,10 @@
 
 p state: #{state} #{ uptime(state_since) } ago
 
+- if( state == "STARTED" )
+  form(method="post" action={path("action/shutdown")})
+    input(type="submit" value="shutdown")
+
 h2 Virtual Hosts
 ul
   - for( x <- virtual_hosts )

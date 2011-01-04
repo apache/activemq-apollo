@@ -63,6 +63,10 @@ abstract class Resource(private val parent:Resource=null) extends Logging {
 
   def path(value:Any) = uri_info.getAbsolutePathBuilder().path(value.toString).build()
 
+  def strip_resolve(value:String) = {
+    new URI(uri_info.getAbsolutePath.resolve(value).toString.stripSuffix("/"))
+  }
+
 }
 
 object ViewHelper {
@@ -154,19 +158,6 @@ class BrokerResource extends Resource {
     rc.manageable = BrokerRegistry.list.size > 0
     rc.configurable = cs.can_write
     rc
-  }
-
-  @POST
-  @Path("command/shutdown")
-  def command_shutdown:Unit = {
-    info("JVM shutdown requested via web interface")
-
-    // do the the exit async so that we don't
-    // kill the current request.
-    Broker.BLOCKABLE_THREAD_POOL {
-      Thread.sleep(200);
-      System.exit(0)
-    }
   }
 
   @Path("config")

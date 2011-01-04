@@ -39,6 +39,18 @@ import scala.util.continuations._
 @Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
 case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
+  @POST
+  @Path("action/shutdown")
+  def command_shutdown:Unit = {
+    info("JVM shutdown requested via web interface")
+
+    // do the the exit async so that we don't
+    // kill the current request.
+    Broker.BLOCKABLE_THREAD_POOL {
+      Thread.sleep(200);
+      System.exit(0)
+    }
+  }
   private def with_broker[T](func: (org.apache.activemq.apollo.broker.Broker, Option[T]=>Unit)=>Unit):T = {
     BrokerRegistry.list.headOption match {
       case None=> result(NOT_FOUND)
@@ -329,17 +341,39 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
     }
   }
 
-  @GET @Path("connections/{id}")
-  def connections(@PathParam("id") id : Long):ConnectionStatusDTO = {
+  def with_connection[T](id:Long)(func: BrokerConnection=>T):T = {
     with_broker { case (broker, cb) =>
       broker.connectors.flatMap{ _.connections.get(id) }.headOption match {
         case None => cb(None)
         case Some(connection:BrokerConnection) =>
           connection.dispatch_queue {
-            cb(Some(connection.get_connection_status))
+            cb(Some(func(connection)))
           }
       }
     }
+  }
+
+  @GET @Path("connections/{id}")
+  def connections(@PathParam("id") id : Long):ConnectionStatusDTO = {
+    with_connection(id){ connection=>
+      connection.get_connection_status
+    }
+  }
+
+  @POST @Path("connections/{id}/action/shutdown")
+  @Produces(Array("application/json", "application/xml","text/xml"))
+  def post_connection_shutdown(@PathParam("id") id : Long):Unit = {
+    with_connection(id){ connection=>
+      connection.stop
+    }
+  }
+
+
+  @POST @Path("connections/{id}/action/shutdown")
+  @Produces(Array("text/html;qs=5"))
+  def post_connection_shutdown_and_redirect(@PathParam("id") id : Long):Unit = {
+    post_connection_shutdown(id)
+    result(strip_resolve("../../.."))
   }
 
 }
