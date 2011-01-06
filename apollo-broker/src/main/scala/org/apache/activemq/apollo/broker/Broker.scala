@@ -32,6 +32,7 @@ import ReporterLevel._
 import collection.mutable.LinkedHashMap
 import java.util.concurrent.{ThreadFactory, Executors, ConcurrentHashMap}
 import security.{AclAuthorizer, Authorizer, JaasAuthenticator, Authenticator}
+import java.net.InetSocketAddress
 
 /**
  * <p>
@@ -271,5 +272,9 @@ class Broker() extends BaseService {
   def getDefaultVirtualHost = dispatch_queue ! {
     default_virtual_host
   }
+
+  //useful for testing
+  def getFirstConnectorAddress() : InetSocketAddress = connectors.head.transportServer.getSocketAddress
+
 
 }
