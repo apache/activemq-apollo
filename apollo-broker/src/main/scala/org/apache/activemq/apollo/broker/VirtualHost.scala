@@ -22,7 +22,6 @@ import _root_.scala.collection.JavaConversions._
 import org.fusesource.hawtdispatch._
 
 import java.util.concurrent.TimeUnit
-import org.apache.activemq.apollo.broker.store.{Store, StoreFactory}
 import org.apache.activemq.apollo.util._
 import path.PathFilter
 import ReporterLevel._
@@ -33,6 +32,7 @@ import org.apache.activemq.apollo.util.OptionSupport._
 import org.apache.activemq.apollo.util.path.{Path, PathParser}
 import org.apache.activemq.apollo.dto.{DestinationDTO, QueueDTO, BindingDTO, VirtualHostDTO}
 import security.{AclAuthorizer, JaasAuthenticator, Authenticator, Authorizer}
+import org.apache.activemq.apollo.broker.store.{DirectBufferAllocator, Store, StoreFactory}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -81,7 +81,6 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService {
   var names:List[String] = Nil;
 
   var store:Store = null
-  var direct_buffer_pool:DirectBufferPool = null
   val queue_id_counter = new LongCounter
 
   val session_counter = new AtomicLong(0)
@@ -106,7 +105,6 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService {
     }
   } |>>: dispatch_queue
 
-
   override protected def _start(on_completed:Runnable):Unit = {
 
     val tracker = new LoggingTracker("virtual host startup", dispatch_queue)
@@ -128,19 +126,6 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService {
     }
 
     store = StoreFactory.create(config.store)
-
-    //    val memory_pool_config: String = null
-    var direct_buffer_pool_config: String = "hawtdb:activemq.tmp"
-
-    if( direct_buffer_pool_config!=null &&  (store!=null && !store.supports_direct_buffers) ) {
-      warn("The direct buffer pool will not be used because the configured store does not support them.")
-      direct_buffer_pool_config = null
-    }
-
-    if( direct_buffer_pool_config!=null ) {
-      direct_buffer_pool = DirectBufferPoolFactory.create(direct_buffer_pool_config)
-      direct_buffer_pool.start
-    }
 
     if( store!=null ) {
       store.configure(config.store, LoggingReporter(VirtualHost))
@@ -204,11 +189,6 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService {
     router.queues.valuesIterator.foreach { queue=>
       tracker.stop(queue)
     }
-    if( direct_buffer_pool!=null ) {
-      direct_buffer_pool.stop
-      direct_buffer_pool = null
-    }
-
     if( store!=null ) {
       tracker.stop(store);
     }

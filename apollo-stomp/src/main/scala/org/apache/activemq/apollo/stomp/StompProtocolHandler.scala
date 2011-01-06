@@ -571,9 +571,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
       connection_sink.offer(StompFrame(CONNECTED,connected_headers.toList))
 
-      if( this.host.direct_buffer_pool!=null ) {
+      if( this.host.store!=null && this.host.store.direct_buffer_allocator!=null ) {
         val wf = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
-        wf.memory_pool = this.host.direct_buffer_pool
+        wf.direct_buffer_allocator = this.host.store.direct_buffer_allocator
       }
     }
 

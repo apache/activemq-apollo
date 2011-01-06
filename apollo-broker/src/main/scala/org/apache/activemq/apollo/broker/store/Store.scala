@@ -43,7 +43,7 @@ trait Store extends ServiceTrait {
    * @returns true if the store implementation can handle accepting
    *          MessageRecords with DirectBuffers in them.
    */
-  def supports_direct_buffers() = false
+  def direct_buffer_allocator():DirectBufferAllocator = null
 
   /**
    * Creates a store uow which is used to perform persistent

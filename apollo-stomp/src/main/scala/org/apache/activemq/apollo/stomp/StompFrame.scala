@@ -25,6 +25,7 @@ import org.apache.activemq.apollo.broker._
 import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch.BaseRetained
 import java.io.{OutputStream, DataOutput}
+import org.apache.activemq.apollo.broker.store.DirectBuffer
 
 /**
  *
@@ -207,11 +208,10 @@ case class DirectContent(direct_buffer:DirectBuffer) extends StompContent {
 
   def writeTo(os:OutputStream) = {
     val buff = new Array[Byte](1024*4)
-    val source = direct_buffer.buffer.duplicate
     var remaining = direct_buffer.size-1
     while( remaining> 0 ) {
       val c = remaining.min(buff.length)
-      source.get(buff, 0, c)
+      direct_buffer.read(os)
       os.write(buff, 0, c)
       remaining -= c
     }

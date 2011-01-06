@@ -14,37 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.store.hawtdb
+package org.apache.activemq.apollo.broker.store
 
-import java.io.File
-import java.lang.String
-import org.apache.activemq.apollo.util.DirectBufferPoolFactory
+;
+
+import org.fusesource.hawtbuf.AsciiBuffer;
+import org.fusesource.hawtbuf.Buffer;
+
 
 /**
- * <p>
- * Hook to use a HawtDBDirectBufferPool for the memory pool implementation.
- * </p>
- * <p>
- * This class is discovered using the following resource file:
- * <code>META-INF/services/org.apache.activemq.apollo/direct-buffer-pools</code>
- * </p>
- * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBDirectBufferPoolFactory extends DirectBufferPoolFactory.Provider {
-
-  val prefix: String = "hawtdb:"
-
-  def create(config: String) = {
-    if( config.startsWith(prefix) ) {
-      val file = new File(config.substring(prefix.length))
-      new HawtDBDirectBufferPool(file)
-    } else {
-      null
-    }
-  }
-
-   def validate(config: String):Boolean = {
-     config.startsWith(prefix) && !config.substring(prefix.length).isEmpty
-   }
+class QueueRecord {
+  var key = -1L
+  var binding_kind: AsciiBuffer = _
+  var binding_data: Buffer = _
 }

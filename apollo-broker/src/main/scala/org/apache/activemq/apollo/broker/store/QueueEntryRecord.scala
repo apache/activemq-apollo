@@ -3,7 +3,7 @@
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
+ * (the "License") you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
@@ -14,22 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.store;
+package org.apache.activemq.apollo.broker.store
 
-import org.apache.activemq.apollo.util.DirectBuffer;
-import org.fusesource.hawtbuf.AsciiBuffer;
-import org.fusesource.hawtbuf.Buffer;
+
+
+import org.fusesource.hawtbuf.Buffer
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class MessageRecord {
+class QueueEntryRecord {
 
-    public long key = -1;
-    public AsciiBuffer protocol;
-    public int size;
-    public Buffer buffer;
-    public DirectBuffer direct_buffer = null;
-    public long expiration = 0;
+  var queue_key = 0L
+  var entry_seq = 0L
+  var message_key = 0L
+  var attachment:Buffer = _
+  var size = 0
+  var redeliveries:Short = 0
 
 }

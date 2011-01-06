@@ -27,10 +27,10 @@ import _root_.scala.collection.JavaConversions._
 import java.io.{EOFException, DataOutput, DataInput, IOException}
 import java.nio.channels.{SocketChannel, WritableByteChannel, ReadableByteChannel}
 import org.apache.activemq.apollo.transport._
-import org.apache.activemq.apollo.broker.store.MessageRecord
 import _root_.org.fusesource.hawtbuf._
 import Buffer._
 import org.apache.activemq.apollo.util._
+import org.apache.activemq.apollo.broker.store.{DirectBuffer, DirectBufferAllocator, MessageRecord}
 
 object StompCodec extends Log {
     val READ_BUFFFER_SIZE = 1024*64;
@@ -157,7 +157,7 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
   import StompCodec._
   override protected def log: Log = StompCodec
 
-  var memory_pool:DirectBufferPool = null
+  var direct_buffer_allocator:DirectBufferAllocator = null
 
   implicit def wrap(x: Buffer) = ByteBuffer.wrap(x.data, x.offset, x.length);
   implicit def wrap(x: Byte) = {
@@ -178,12 +178,11 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
   var write_channel:WritableByteChannel = null
 
   var next_write_buffer = new DataByteArrayOutputStream(write_buffer_size)
-  var next_write_direct:ByteBuffer = null
-  var next_write_direct_frame:StompFrame = null
+  var next_write_direct:DirectBuffer = null
 
   var write_buffer = ByteBuffer.allocate(0)
-  var write_direct:ByteBuffer = null
-  var write_direct_frame:StompFrame = null
+  var write_direct:DirectBuffer = null
+  var write_direct_pos = 0
 
   def is_full = next_write_direct!=null || next_write_buffer.size() >= (write_buffer_size >> 2)
   def is_empty = write_buffer.remaining() == 0 && write_direct==null
@@ -252,9 +251,8 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
 
       frame.content match {
         case x:DirectContent=>
-          next_write_direct = x.direct_buffer.buffer.duplicate
-          next_write_direct.clear
-          next_write_direct_frame = frame
+          assert(next_write_direct==null)
+          next_write_direct = x.direct_buffer
         case x:BufferContent=>
           x.content.writeTo(os)
           END_OF_FRAME_BUFFER.writeTo(os)
@@ -272,25 +270,28 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
       write_counter += write_channel.write(write_buffer)
     }
     if ( write_buffer.remaining() == 0 && write_direct!=null ) {
-      write_counter += write_channel.write(write_direct)
-      if( write_direct.remaining() == 0 ) {
+      val count = write_direct.read(write_direct_pos, write_channel)
+      write_direct_pos += count
+      write_counter += count
+
+      if( write_direct.remaining(write_direct_pos) == 0 ) {
+        write_direct.release
         write_direct = null
-        write_direct_frame.release
-        write_direct_frame = null
+        write_direct_pos = 0
+
+        write_buffer = ByteBuffer.wrap(END_OF_FRAME_BUFFER.data)
       }
     }
 
     // if it is now empty try to refill...
-    if ( is_empty && next_write_buffer.size()!=0 ) {
+    if ( is_empty && write_direct==null ) {
         // size of next buffer is based on how much was used in the previous buffer.
         val prev_size = (write_buffer.position()+512).max(512).min(write_buffer_size)
         write_buffer = next_write_buffer.toBuffer().toByteBuffer()
         write_direct = next_write_direct
-        write_direct_frame = next_write_direct_frame
 
         next_write_buffer = new DataByteArrayOutputStream(prev_size)
         next_write_direct = null
-        next_write_direct_frame = null
     }
 
     if ( is_empty ) {
@@ -317,6 +318,10 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
   var read_buffer = ByteBuffer.allocate(read_buffer_size)
   var read_end = 0
   var read_start = 0
+
+  var read_direct:DirectBuffer = null
+  var read_direct_pos = 0
+
   var next_action:FrameReader = read_action
 
   def setReadableByteChannel(channel: ReadableByteChannel) = {
@@ -339,7 +344,13 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
     var command:Object = null
     while( command==null ) {
       // do we need to read in more data???
-      if (read_end == read_buffer.position()) {
+      if( read_direct!=null && read_direct.remaining(read_direct_pos) > 0) {
+        val count = read_direct.write(read_channel, read_direct_pos)
+        if (count == -1) {
+            throw new EOFException("Peer disconnected")
+        }
+        read_direct_pos += count
+      } else if (read_end == read_buffer.position() ) {
 
           // do we need a new data buffer to read data into??
           if (read_buffer.remaining() == 0) {
@@ -469,40 +480,23 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
           // lets try to keep the content of big message outside of the JVM's garbage collection
           // to keep the number of GCs down when moving big messages.
           def is_message = action == SEND || action == MESSAGE
-          if( length > 1024 && memory_pool!=null && is_message) {
+          if( length > 1024 && direct_buffer_allocator!=null && is_message) {
 
-            val ma = memory_pool.alloc(length+1)
+            read_direct = direct_buffer_allocator.alloc(length)
 
-            val read_limit = buffer.position
-            if( (read_limit-read_start) < length+1 ) {
-              // buffer did not contain the fully stomp body
+            val dup = buffer.duplicate
+            dup.position(read_start)
+            dup.limit(buffer.position)
 
-              ma.buffer.put( buffer.array, read_start, read_limit-read_start )
+            // copy in the body the was read so far...
+            read_direct_pos = read_direct.write(dup, 0)
 
-              read_buffer = ma.buffer
-              read_end = read_limit-read_start
-              read_start = 0
+            // since it was copied.. reposition to re-use the copied area..
+            dup.compact
+            buffer.position(buffer.position - read_direct_pos)
+            read_end = read_start
 
-              next_action = read_binary_body_direct(action, headers, ma)
-
-            } else {
-              // The current buffer already read in all the data...
-
-              if( buffer.array()(read_start+length)!= 0 ) {
-                 throw new IOException("Expected null termintor after "+length+" content bytes")
-              }
-
-              // copy the body out to the direct buffer
-              ma.buffer.put( buffer.array, read_start, read_limit-read_start )
-
-              // and reposition to reuse non-direct space.
-              buffer.position(read_start)
-              read_end = read_start
-
-              next_action = read_action
-              rc = new StompFrame(ascii(action), headers.toList, DirectContent(ma))
-            }
-
+            next_action = read_binary_body_direct(action, headers, length)
           } else {
             next_action = read_binary_body(action, headers, length)
           }
@@ -526,9 +520,17 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
     None
   }
 
+  def read_binary_body_direct(action:AsciiBuffer, headers:HeaderMapBuffer, contentLength:Int):FrameReader = (buffer)=> {
+    if( read_direct.remaining(read_direct_pos)==0 ) {
+      next_action = read_direct_terminator(action, headers, contentLength, read_direct)
+      read_direct = null
+      read_direct_pos = 0
+    }
+    null
+  }
 
-  def read_binary_body_direct(action:AsciiBuffer, headers:HeaderMapBuffer, ma:DirectBuffer):FrameReader = (buffer)=> {
-    if( read_content_direct(ma) ) {
+  def read_direct_terminator(action:AsciiBuffer, headers:HeaderMapBuffer, contentLength:Int, ma:DirectBuffer):FrameReader = (buffer)=> {
+    if( read_frame_terminator(buffer, contentLength) ) {
       next_action = read_action
       new StompFrame(ascii(action), headers.toList, DirectContent(ma))
     } else {
@@ -536,22 +538,17 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
     }
   }
 
-  def read_content_direct(ma:DirectBuffer) = {
-      val read_limit = ma.buffer.position
-      if( read_limit < ma.size ) {
+  def read_frame_terminator(buffer:ByteBuffer, contentLength:Int):Boolean = {
+      val read_limit = buffer.position
+      if( (read_limit-read_start) < 1 ) {
         read_end = read_limit
         false
       } else {
-        ma.buffer.position(ma.size-1)
-        if( ma.buffer.get != 0 ) {
-           throw new IOException("Expected null termintor after "+(ma.size-1)+" content bytes")
+        if( buffer.array()(read_start)!= 0 ) {
+           throw new IOException("Expected null termintor after "+contentLength+" content bytes")
         }
-        ma.buffer.rewind
-        ma.buffer.limit(ma.size-1)
-
-        read_buffer = ByteBuffer.allocate(read_buffer_size)
-        read_end = 0
-        read_start = 0
+        read_end = read_start+1
+        read_start = read_end
         true
       }
   }

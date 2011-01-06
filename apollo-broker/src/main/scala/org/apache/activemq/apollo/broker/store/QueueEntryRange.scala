@@ -3,7 +3,7 @@
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
+ * (the "License") you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
@@ -14,14 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.store;
+package org.apache.activemq.apollo.broker.store
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class QueueEntryRange {
-    public long first_entry_seq;
-    public long last_entry_seq;
-    public int count;
-    public int size;
+class QueueEntryRange {
+  var first_entry_seq = 0L
+  var last_entry_seq = 0L
+  var count = 0
+  var size = 0
 }
