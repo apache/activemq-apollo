@@ -18,12 +18,9 @@ package org.apache.activemq.apollo.broker.security
  */
 import java.io.File
 import java.io.FileInputStream
-import java.io.IOException
 import java.security.Principal
-import java.util.Properties
 import javax.security.auth.Subject
 import javax.security.auth.callback.CallbackHandler
-import javax.security.auth.login.LoginException
 import javax.security.auth.spi.LoginModule
 
 import org.apache.activemq.jaas.GroupPrincipal
@@ -32,6 +29,7 @@ import java.{util => ju}
 import org.apache.activemq.apollo.util.{FileSupport, Log}
 import FileSupport._
 import java.util.regex.Pattern
+import java.util.{LinkedList, Properties}
 
 object FileGroupLoginModule extends Log {
   val LOGIN_CONFIG = "java.security.auth.login.config"
@@ -58,8 +56,7 @@ class FileGroupLoginModule extends LoginModule {
   private var subject: Subject = _
   private var file: File = _
 
-  private val groups = new Properties()
-  private val principals = new ju.HashSet[Principal]()
+  private val principals = new LinkedList[Principal]()
 
   def initialize(subject: Subject, callback_handler: CallbackHandler, shared_state: ju.Map[String, _], options: ju.Map[String, _]): Unit = {
     this.subject = subject
@@ -82,18 +79,22 @@ class FileGroupLoginModule extends LoginModule {
   }
 
   def login: Boolean = {
-    try {
-      groups.clear
-      using( new FileInputStream(file) ) { in=>
-        groups.load(in)
-      }
-    } catch {
-      case ioe: IOException => throw new LoginException("Unable to load group properties file " + file)
-    }
     false
   }
 
   def commit: Boolean = {
+
+    val groups = try {
+      using( new FileInputStream(file) ) { in=>
+        val groups = new Properties()
+        groups.load(in)
+        groups
+      }
+    } catch {
+      case e: Throwable =>
+        warn(e, "Unable to load group properties file " + file)
+        return false;
+    }
 
     import collection.JavaConversions._
     val principles = subject.getPrincipals.filter(_.getClass.getName == match_kind).map(_.getName)
@@ -110,7 +111,6 @@ class FileGroupLoginModule extends LoginModule {
     }
 
     subject.getPrincipals().addAll(principals)
-
     debug("commit")
     return true
   }

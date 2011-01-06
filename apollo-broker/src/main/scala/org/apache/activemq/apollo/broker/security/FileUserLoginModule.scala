@@ -57,8 +57,6 @@ class FileUserLoginModule extends LoginModule {
   private var callback_handler: CallbackHandler = _
 
   private var file: File = _
-  private val users = new Properties()
-  private var user: String = _
   private val principals = new ju.HashSet[Principal]()
 
   def initialize(subject: Subject, callback_handler: CallbackHandler, shared_state: ju.Map[String, _], options: ju.Map[String, _]): Unit = {
@@ -78,14 +76,16 @@ class FileUserLoginModule extends LoginModule {
   }
 
   def login: Boolean = {
+    val users = new Properties()
     try {
-      users.clear()
       using( new FileInputStream(file) ) { in=>
         users.load(in)
       }
       EncryptionSupport.decrypt(users)
     } catch {
-      case ioe: IOException => throw new LoginException("Unable to load user properties file " + file)
+      case e: Throwable =>
+        warn(e, "Unable to load user properties file: " + file)
+        return false
     }
 
     val callbacks = new Array[Callback](2)
@@ -100,7 +100,7 @@ class FileUserLoginModule extends LoginModule {
         throw new LoginException(uce.getMessage() + " not available to obtain information from user")
     }
 
-    user = callbacks(0).asInstanceOf[NameCallback].getName()
+    val user = callbacks(0).asInstanceOf[NameCallback].getName()
     var tmpPassword = callbacks(1).asInstanceOf[PasswordCallback].getPassword()
     if (tmpPassword == null) {
       tmpPassword = new Array[Char](0)
@@ -110,21 +110,20 @@ class FileUserLoginModule extends LoginModule {
     if (password == null || !password.equals(new String(tmpPassword))) {
       throw new FailedLoginException("Invalid user id or password")
     }
+
+    principals.add(new UserPrincipal(user))
     debug("login %s", user)
     true
   }
 
   def commit: Boolean = {
-    principals.add(new UserPrincipal(user))
     subject.getPrincipals().addAll(principals)
-
-    user = null
     debug("commit")
     return true
   }
 
   def abort: Boolean = {
-    user = null
+    principals.clear
     debug("abort")
     return true
   }
@@ -132,7 +131,6 @@ class FileUserLoginModule extends LoginModule {
   def logout: Boolean = {
     subject.getPrincipals().removeAll(principals)
     principals.clear
-    user = null
     debug("logout")
     return true
   }
