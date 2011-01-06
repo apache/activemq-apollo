@@ -58,27 +58,28 @@ class Stop extends Action with Logging {
 
       val config = new FileConfigStore(conf).load(true)
 
-      val web_admin = config.web_admin.getOrElse(new WebAdminDTO)
-      if( web_admin.enabled.getOrElse(true) ) {
+      Option(config.web_admin) match {
+        case None=>
+          error("Web admin not enabled for that configuration, sorry can't shut the broker down");
 
-        val prefix = web_admin.prefix.getOrElse("/").stripSuffix("/")
-        val port = web_admin.port.getOrElse(8080)
-        val host = web_admin.host.getOrElse("127.0.0.1")
+        case Some(web_admin)=>
+          val prefix = web_admin.prefix.getOrElse("/").stripSuffix("/")
+          val port = web_admin.port.getOrElse(8080)
+          val host = web_admin.host.getOrElse("127.0.0.1")
 
-        val auth = (user, password) match {
-          case (null,null)=> None
-          case (null,p)=> Some(":"+p)
-          case (u,null)=> Some(u+":")
-          case (u,p)=> Some(u+":"+p)
-        }
+          val auth = (user, password) match {
+            case (null,null)=> None
+            case (null,p)=> Some(":"+p)
+            case (u,null)=> Some(u+":")
+            case (u,p)=> Some(u+":"+p)
+          }
 
-        val connection = new URL(
-          "http://%s:%s%s/runtime/action/shutdown".format(host, port, prefix)
-        ).openConnection.asInstanceOf[HttpURLConnection]
-        connection.setRequestMethod("POST");
-        auth.foreach{x=> connection.setRequestProperty("Authorization", "Basic "+new String(Base64.encodeBase64(x.getBytes("UTF-8")), "UTF-8")) }
-        connection.getContent
-
+          val connection = new URL(
+            "http://%s:%s%s/runtime/action/shutdown".format(host, port, prefix)
+          ).openConnection.asInstanceOf[HttpURLConnection]
+          connection.setRequestMethod("POST");
+          auth.foreach{x=> connection.setRequestProperty("Authorization", "Basic "+new String(Base64.encodeBase64(x.getBytes("UTF-8")), "UTF-8")) }
+          connection.getContent
       }
 
     } catch {

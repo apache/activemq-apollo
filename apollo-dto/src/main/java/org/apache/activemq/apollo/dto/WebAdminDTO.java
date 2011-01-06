@@ -33,9 +33,6 @@ import java.util.Set;
 public class WebAdminDTO {
 
     @XmlAttribute
-    public Boolean enabled;
-
-    @XmlAttribute
     public String host;
 
     @XmlAttribute

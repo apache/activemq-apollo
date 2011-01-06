@@ -107,11 +107,10 @@ class Run extends Action with Logging {
         info("Broker started");
       })
 
-      val web_admin = config.web_admin.getOrElse(new WebAdminDTO)
-      if( web_admin.enabled.getOrElse(true) ) {
+      config.web_admin.foreach { web_admin=>
 
         val prefix = web_admin.prefix.getOrElse("/")
-        val port = web_admin.port.getOrElse(8080)
+        val port = web_admin.port.getOrElse(61680)
         val host = web_admin.host.getOrElse("127.0.0.1")
 
         // Start up the admin interface...

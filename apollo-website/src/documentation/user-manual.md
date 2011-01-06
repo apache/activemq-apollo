@@ -619,7 +619,7 @@ to the proper value before starting the broker.
 ### Web Based Administration
 
 ${project_name} start a web based administration interface on 
-[`http://127.0.0.1:8080`](http://127.0.0.1:8080) by default.  Note
+[`http://127.0.0.1:61680`](http://127.0.0.1:61680) by default.  Note
 that it binds to the loopback interface so that only local web 
 browsers can access the interface.
 
@@ -628,10 +628,10 @@ configuring the admins of the broker, then the web interface will
 perform basic authentication and will only grant access to those users
 which are in the admin ACL.
 
-If you want to change the port or the interface it binds on or perhaps
-even disable it altogether, then you should add a `web_admin`
-configuration element inside the `broker` element to change the
-default settings. For example:
+If you want to disable the web the interface then you should remove
+the `web_admin` configuration element. 
+
+For example:
 
 {pygmentize:: xml}
 <broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
@@ -672,7 +672,7 @@ system's tools.
 
 ${project_name} provides a web based interface for administrators to inspect
 the runtime state of the Broker.  If your running the broker on your local
-machine, just open your web browser to [`http://localhost:8080`](http://localhost:8080).
+machine, just open your web browser to [`http://localhost:61680`](http://localhost:61680).
 
 The web interface will display the status of the the connectors and show
 attached connections.  It will also allow you to drill into each configured

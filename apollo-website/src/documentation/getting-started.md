@@ -150,6 +150,6 @@ The consumer's output should look like:
 Apollo provides a simple web interface to monitor the status of the broker.  Once
 the admin interface will be accessible at:
 
-* [http://127.0.0.1:8080/](http://127.0.0.1:8080/)
+* [http://127.0.0.1:61680/](http://127.0.0.1:61680/)
 
 The default login id and password is `admin` and `password`.
