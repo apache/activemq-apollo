@@ -438,7 +438,11 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
               case CONNECT =>
                 on_stomp_connect(frame.headers)
               case DISCONNECT =>
-                connection.stop
+                send_receipt(frame.headers)
+                on_transport_disconnected
+                queue.after(die_delay, TimeUnit.MILLISECONDS) {
+                  connection.stop()
+                }
               case _ =>
                 die("Client must first send a connect frame");
             }
@@ -490,10 +494,6 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   def resumeRead() = {
     waiting_on = "client request"
     connection.transport.resumeRead
-  }
-
-  def weird(headers:HeaderMap) = {
-    println("weird: "+headers)
   }
 
   def on_stomp_connect(headers:HeaderMap):Unit = {
@@ -554,17 +554,20 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     def noop = shift {  k: (Unit=>Unit) => k() }
 
     def send_connected = {
+
+      var connected_headers = ListBuffer((VERSION, protocol_version))
+
+      session_id = encode_header(this.host.config.id + "-"+this.host.session_counter.incrementAndGet)
+      connected_headers += SESSION->session_id
+
       val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
-      session_id = encode_header(this.host.config.id + ":"+this.host.session_counter.incrementAndGet)
-      if( connection_sink==null ) {
-        weird(headers)
+      connected_headers += HEART_BEAT->outbound_heart_beat_header
+
+      host.authenticator.user_name(security_context).foreach{ name=>
+        connected_headers += USER_ID->encode_header(name)
       }
-      connection_sink.offer(
-        StompFrame(CONNECTED, List(
-          (VERSION, protocol_version),
-          (SESSION, session_id),
-          (HEART_BEAT, outbound_heart_beat_header)
-        )))
+
+      connection_sink.offer(StompFrame(CONNECTED,connected_headers.toList))
 
       if( this.host.direct_buffer_pool!=null ) {
         val wf = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
