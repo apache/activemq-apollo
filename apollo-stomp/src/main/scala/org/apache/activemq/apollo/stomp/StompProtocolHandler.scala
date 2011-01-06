@@ -563,8 +563,10 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
       connected_headers += HEART_BEAT->outbound_heart_beat_header
 
-      host.authenticator.user_name(security_context).foreach{ name=>
-        connected_headers += USER_ID->encode_header(name)
+      if( host.authenticator!=null ) {
+        host.authenticator.user_name(security_context).foreach{ name=>
+          connected_headers += USER_ID->encode_header(name)
+        }
       }
 
       connection_sink.offer(StompFrame(CONNECTED,connected_headers.toList))
