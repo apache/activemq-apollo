@@ -73,6 +73,12 @@
       <version>${hawtbuf-version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>1.7</version>
+    </dependency>
+
 
     <!-- Scala Support -->
     <dependency>
