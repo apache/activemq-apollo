@@ -21,6 +21,7 @@ import java.lang.reflect.Field;
 
 import org.apache.activemq.apollo.util.os.CLibrary;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
+import org.fusesource.hawtbuf.HexSupport;
 
 /**
  */
