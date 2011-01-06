@@ -659,6 +659,12 @@
           <id>repo1.maven</id>
           <name>Maven Central Repo</name>
           <url>http://repo1.maven.org/maven2</url>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
         </repository>
         <repository>
           <id>fusesource.m2</id>
@@ -765,7 +771,19 @@
       </repositories>
       
       <pluginRepositories>
-        <!-- For the schemagen plugin -->
+
+        <pluginRepository>
+          <id>repo1.maven</id>
+          <name>Maven Central Repo</name>
+          <url>http://repo1.maven.org/maven2</url>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+        </pluginRepository>
+
         <pluginRepository>
           <id>open.iona.m2</id>
           <name>IONA Open Source Community Release Repository</name>
