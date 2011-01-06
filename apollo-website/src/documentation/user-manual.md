@@ -448,8 +448,9 @@ types, you may need to configure which of those class types to recognize as
 the user principal and the principal used to match against the access control
 lists (ACLs). 
 
-The default user principal class recognized is
-`org.apache.activemq.jaas.UserPrincipal`. You can configure it by adding
+The default user principal classes recognized are
+`org.apache.activemq.jaas.UserPrincipal` and 
+`javax.security.auth.x500.X500Principal`. You can change the default by adding
 `user_principal_kind` elements under the `authentication` element. The first
 principal who's type matches this list will be selected as the user's
 identity for informational purposes.

@@ -65,6 +65,7 @@ public class AuthenticationDTO {
         if( user_principal_kinds.isEmpty() ) {
             ArrayList<String> rc = new ArrayList<String>();
             rc.add("org.apache.activemq.jaas.UserPrincipal");
+            rc.add("javax.security.auth.x500.X500Principal");
             return rc;
         }
         return user_principal_kinds;
