@@ -80,7 +80,7 @@ class JDBM2Store extends DelayingStoreSupport with DispatchLogging {
   
   protected def get_next_msg_key = next_msg_key.getAndIncrement
 
-  override def direct_buffer_allocator():DirectBufferAllocator = client.direct_buffer_allocator
+  override def zero_copy_buffer_allocator():ZeroCopyBufferAllocator = client.zero_copy_buffer_allocator
 
   protected def store(uows: Seq[DelayableUOW])(callback: =>Unit) = {
     executor {

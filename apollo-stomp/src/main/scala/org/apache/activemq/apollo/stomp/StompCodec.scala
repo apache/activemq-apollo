@@ -30,7 +30,7 @@ import org.apache.activemq.apollo.transport._
 import _root_.org.fusesource.hawtbuf._
 import Buffer._
 import org.apache.activemq.apollo.util._
-import org.apache.activemq.apollo.broker.store.{DirectBuffer, DirectBufferAllocator, MessageRecord}
+import org.apache.activemq.apollo.broker.store.{ZeroCopyBuffer, ZeroCopyBufferAllocator, MessageRecord}
 
 object StompCodec extends Log {
     val READ_BUFFFER_SIZE = 1024*64;
@@ -50,11 +50,11 @@ object StompCodec extends Log {
     rc.size = frame.size
     rc.expiration = message.expiration
 
-    if( frame.content.isInstanceOf[DirectContent] ) {
-      rc.direct_buffer = frame.content.asInstanceOf[DirectContent].direct_buffer
+    if( frame.content.isInstanceOf[ZeroCopyContent] ) {
+      rc.zero_copy_buffer = frame.content.asInstanceOf[ZeroCopyContent].zero_copy_buffer
     }
 
-    def buffer_size = if (rc.direct_buffer!=null) { frame.size - (rc.direct_buffer.size - 1) } else { frame.size }
+    def buffer_size = if (rc.zero_copy_buffer!=null) { frame.size - (rc.zero_copy_buffer.size - 1) } else { frame.size }
     val os = new ByteArrayOutputStream(buffer_size)
 
     frame.action.writeTo(os)
@@ -87,7 +87,7 @@ object StompCodec extends Log {
         os.write(NEWLINE)
       }
       os.write(NEWLINE)
-      if ( rc.direct_buffer==null ) {
+      if ( rc.zero_copy_buffer==null ) {
         frame.content.writeTo(os)
       }
     }
@@ -143,10 +143,10 @@ object StompCodec extends Log {
       line = read_line
     }
 
-    if( message.direct_buffer==null ) {
+    if( message.zero_copy_buffer==null ) {
       new StompFrameMessage(new StompFrame(action, headers.toList, BufferContent(buffer)))
     } else {
-      new StompFrameMessage(new StompFrame(action, headers.toList, DirectContent(message.direct_buffer)))
+      new StompFrameMessage(new StompFrame(action, headers.toList, ZeroCopyContent(message.zero_copy_buffer)))
     }
   }
 
@@ -157,7 +157,7 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
   import StompCodec._
   override protected def log: Log = StompCodec
 
-  var direct_buffer_allocator:DirectBufferAllocator = null
+  var zero_copy_buffer_allocator:ZeroCopyBufferAllocator = null
 
   implicit def wrap(x: Buffer) = ByteBuffer.wrap(x.data, x.offset, x.length);
   implicit def wrap(x: Byte) = {
@@ -178,10 +178,10 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
   var write_channel:WritableByteChannel = null
 
   var next_write_buffer = new DataByteArrayOutputStream(write_buffer_size)
-  var next_write_direct:DirectBuffer = null
+  var next_write_direct:ZeroCopyBuffer = null
 
   var write_buffer = ByteBuffer.allocate(0)
-  var write_direct:DirectBuffer = null
+  var write_direct:ZeroCopyBuffer = null
   var write_direct_pos = 0
 
   def is_full = next_write_direct!=null || next_write_buffer.size() >= (write_buffer_size >> 2)
@@ -250,9 +250,9 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
       os.write(NEWLINE)
 
       frame.content match {
-        case x:DirectContent=>
+        case x:ZeroCopyContent=>
           assert(next_write_direct==null)
-          next_write_direct = x.direct_buffer
+          next_write_direct = x.zero_copy_buffer
         case x:BufferContent=>
           x.content.writeTo(os)
           END_OF_FRAME_BUFFER.writeTo(os)
@@ -319,7 +319,7 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
   var read_end = 0
   var read_start = 0
 
-  var read_direct:DirectBuffer = null
+  var read_direct:ZeroCopyBuffer = null
   var read_direct_pos = 0
 
   var next_action:FrameReader = read_action
@@ -482,9 +482,9 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
           // lets try to keep the content of big message outside of the JVM's garbage collection
           // to keep the number of GCs down when moving big messages.
           def is_message = action == SEND || action == MESSAGE
-          if( length > 1024 && direct_buffer_allocator!=null && is_message) {
+          if( length > 1024 && zero_copy_buffer_allocator!=null && is_message) {
 
-            read_direct = direct_buffer_allocator.alloc(length)
+            read_direct = zero_copy_buffer_allocator.alloc(length)
 
             val dup = buffer.duplicate
             dup.position(read_start)
@@ -531,10 +531,10 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
     null
   }
 
-  def read_direct_terminator(action:AsciiBuffer, headers:HeaderMapBuffer, contentLength:Int, ma:DirectBuffer):FrameReader = (buffer)=> {
+  def read_direct_terminator(action:AsciiBuffer, headers:HeaderMapBuffer, contentLength:Int, ma:ZeroCopyBuffer):FrameReader = (buffer)=> {
     if( read_frame_terminator(buffer, contentLength) ) {
       next_action = read_action
-      new StompFrame(ascii(action), headers.toList, DirectContent(ma))
+      new StompFrame(ascii(action), headers.toList, ZeroCopyContent(ma))
     } else {
       null
     }

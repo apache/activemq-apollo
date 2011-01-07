@@ -17,111 +17,19 @@
 package org.apache.activemq.apollo.broker.store
 
 import org.fusesource.hawtdispatch._
+import org.fusesource.hawtdispatch.internal.DispatcherConfig
+import org.fusesource.hawtdispatch.BaseRetained
 import java.nio.channels.{FileChannel, WritableByteChannel, ReadableByteChannel}
 import java.nio.ByteBuffer
 import java.io._
 import org.apache.activemq.apollo.util._
-import org.fusesource.hawtdispatch.internal.DispatcherConfig
+
 
 /**
- * <p>
- * </p>
+ * <p>Tracks allocated space</p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait DirectBufferAllocator {
-  def alloc(size:Int):DirectBuffer
-}
-
-/**
- * <p>
- * A DirectBuffer is a reference counted buffer on
- * temp storage designed to be accessed with direct io.
- * </p>
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-trait DirectBuffer extends Retained {
-
-  def size:Int
-
-  def remaining(from_position: Int): Int
-
-  def read(target: OutputStream):Unit
-
-  def read(src: Int, target: WritableByteChannel): Int
-
-  def write(src:ReadableByteChannel, target:Int): Int
-
-  def write(src:ByteBuffer, target:Int):Int
-
-  def link(target:File):Long
-}
-
-trait FileDirectBufferTrait extends DirectBuffer {
-
-  def offset:Long
-  def channel:FileChannel
-
-  def remaining(pos: Int): Int = size-pos
-
-  def read(src: Int, target: WritableByteChannel): Int = {
-    assert(retained > 0)
-    val count: Int = remaining(src)
-    assert(count>=0)
-    channel.transferTo(offset+src, count, target).toInt
-  }
-
-  def read(target: OutputStream): Unit = {
-    assert(retained > 0)
-    val b = ByteBuffer.allocate(size.min(1024*4))
-    var pos = 0
-    while( remaining(pos)> 0 ) {
-      val count = channel.read(b, offset+pos)
-      if( count == -1 ) {
-        throw new EOFException()
-      }
-      target.write(b.array, 0, count)
-      pos += count
-      b.clear
-    }
-  }
-
-  def write(src: ReadableByteChannel, target:Int): Int = {
-    assert(retained > 0)
-    val count: Int = remaining(target)
-    assert(count>=0)
-    channel.transferFrom(src, offset+target, count).toInt
-  }
-
-  def write(src: ByteBuffer, target: Int): Int = {
-    assert(retained > 0)
-    val diff = src.remaining - remaining(target)
-    if( diff > 0 ) {
-      src.limit(src.limit-diff)
-    }
-    try {
-      channel.write(src, offset+target).toInt
-    } finally {
-      if( diff > 0 ) {
-        src.limit(src.limit+diff)
-      }
-    }
-  }
-
-  def link(target: File): Long = {
-    assert(retained > 0)
-    // TODO: implement with a real file system hard link
-    // to get copy on write goodness.
-    import FileSupport._
-    using(new FileOutputStream(target).getChannel) { target=>
-      val count = channel.transferTo(offset, size, target)
-      assert( count == size )
-    }
-    return 0;
-  }
-}
-
 case class Allocation(offset:Long, size:Long) extends Ordered[Allocation] {
 
   var _free_func: (Allocation)=>Unit = _
@@ -170,6 +78,11 @@ trait Allocator {
   }
 }
 
+/**
+ * <p>Manges allocation space using a couple trees to track the free areas.</p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 class TreeAllocator(range:Allocation) extends Allocator {
 
   // list of the free allocation areas.  Sorted by size then offset
@@ -292,7 +205,8 @@ class TreeAllocator(range:Allocation) extends Allocator {
 }
 
 /**
- * Helps minimize the active page set.
+ * Helps minimize the active page set by allocating in areas
+ * which had previously been allocated.
  */
 class ActiveAllocator(val range:Allocation) extends Allocator {
 
@@ -325,12 +239,69 @@ class ActiveAllocator(val range:Allocation) extends Allocator {
 }
 
 /**
- * <p>
- * </p>
+ * <p>A ZeroCopyBuffer which was allocated on a file.</p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class FileDirectBufferAllocator(val directory:File) extends DirectBufferAllocator {
+trait FileZeroCopyBufferTrait extends ZeroCopyBuffer {
+
+  def offset:Long
+  def channel:FileChannel
+
+  def remaining(pos: Int): Int = size-pos
+
+  def read(src: Int, target: WritableByteChannel): Int = {
+    assert(retained > 0)
+    val count: Int = remaining(src)
+    assert(count>=0)
+    channel.transferTo(offset+src, count, target).toInt
+  }
+
+  def read(target: OutputStream): Unit = {
+    assert(retained > 0)
+    val b = ByteBuffer.allocate(size.min(1024*4))
+    var pos = 0
+    while( remaining(pos)> 0 ) {
+      val count = channel.read(b, offset+pos)
+      if( count == -1 ) {
+        throw new EOFException()
+      }
+      target.write(b.array, 0, count)
+      pos += count
+      b.clear
+    }
+  }
+
+  def write(src: ReadableByteChannel, target:Int): Int = {
+    assert(retained > 0)
+    val count: Int = remaining(target)
+    assert(count>=0)
+    channel.transferFrom(src, offset+target, count).toInt
+  }
+
+  def write(src: ByteBuffer, target: Int): Int = {
+    assert(retained > 0)
+    val diff = src.remaining - remaining(target)
+    if( diff > 0 ) {
+      src.limit(src.limit-diff)
+    }
+    try {
+      channel.write(src, offset+target).toInt
+    } finally {
+      if( diff > 0 ) {
+        src.limit(src.limit+diff)
+      }
+    }
+  }
+
+}
+
+/**
+ * <p>A ZeroCopyBufferAllocator which allocates on files.</p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+class FileZeroCopyBufferAllocator(val directory:File) extends ZeroCopyBufferAllocator {
 
   // we use thread local allocators to
   class AllocatorContext(val id:Int) {
@@ -357,7 +328,7 @@ class FileDirectBufferAllocator(val directory:File) extends DirectBufferAllocato
       channel.force(size_changed)
     }
 
-    class AllocationBuffer(val allocation:Allocation) extends BaseRetained with FileDirectBufferTrait {
+    class AllocationBuffer(val allocation:Allocation) extends BaseRetained with FileZeroCopyBufferTrait {
       def channel: FileChannel = AllocatorContext.this.channel
 
       def file = id
@@ -374,7 +345,7 @@ class FileDirectBufferAllocator(val directory:File) extends DirectBufferAllocato
       }
     }
 
-    def alloc(size: Int): DirectBuffer = current_context { ctx=>
+    def alloc(size: Int): ZeroCopyBuffer = current_context { ctx=>
       val allocation = allocator.alloc(size)
       assert(allocation!=null)
       current_size = current_size.max(allocation.offset + allocation.size)
@@ -382,7 +353,7 @@ class FileDirectBufferAllocator(val directory:File) extends DirectBufferAllocato
     }
   }
 
-  def to_alloc_buffer(buffer:DirectBuffer) = buffer.asInstanceOf[AllocatorContext#AllocationBuffer]
+  def to_alloc_buffer(buffer:ZeroCopyBuffer) = buffer.asInstanceOf[AllocatorContext#AllocationBuffer]
 
   val _current_allocator_context = new ThreadLocal[AllocatorContext]()
   var contexts = Map[Int, AllocatorContext]()
@@ -414,7 +385,7 @@ class FileDirectBufferAllocator(val directory:File) extends DirectBufferAllocato
     contexts.get(file).get.sync
   }
 
-  def alloc(size: Int): DirectBuffer = current_context { ctx=>
+  def alloc(size: Int): ZeroCopyBuffer = current_context { ctx=>
     ctx.alloc(size)
   }
 
@@ -426,9 +397,9 @@ class FileDirectBufferAllocator(val directory:File) extends DirectBufferAllocato
     ctx.allocator.free(Allocation(offset, size))
   }
 
-  def view_buffer(file:Int, the_offset:Long, the_size:Int):DirectBuffer = {
+  def view_buffer(file:Int, the_offset:Long, the_size:Int):ZeroCopyBuffer = {
     val the_channel = contexts.get(file).get.channel
-    new BaseRetained with FileDirectBufferTrait {
+    new BaseRetained with FileZeroCopyBufferTrait {
       def offset: Long = the_offset
       def size: Int = the_size
       val channel: FileChannel = the_channel

@@ -3,7 +3,7 @@
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License") you may not use this file except in compliance with
+ * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
@@ -16,19 +16,42 @@
  */
 package org.apache.activemq.apollo.broker.store
 
-import org.fusesource.hawtbuf.AsciiBuffer
-import org.fusesource.hawtbuf.Buffer
+import java.nio.channels.{WritableByteChannel, ReadableByteChannel}
+import java.nio.ByteBuffer
+import java.io._
+import org.fusesource.hawtdispatch.Retained
 
 /**
+ * <p>Allocates ZeroCopyBuffer objects</p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class MessageRecord {
+trait ZeroCopyBufferAllocator {
+  def alloc(size:Int):ZeroCopyBuffer
+}
 
-  var key = -1L
-  var protocol: AsciiBuffer = _
-  var size = 0
-  var buffer: Buffer = _
-  var zero_copy_buffer: ZeroCopyBuffer = _
-  var expiration = 0L
+/**
+ * <p>
+ * A ZeroCopyBuffer is a reference counted buffer on
+ * temp storage.
+ *
+ * ON the
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+trait ZeroCopyBuffer extends Retained {
+
+  def size:Int
+
+  def remaining(from_position: Int): Int
+
+  def read(target: OutputStream):Unit
+
+  def read(src: Int, target: WritableByteChannel): Int
+
+  def write(src:ReadableByteChannel, target:Int): Int
+
+  def write(src:ByteBuffer, target:Int):Int
 
 }

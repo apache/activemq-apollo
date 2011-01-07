@@ -16,16 +16,12 @@
  */
 package org.apache.activemq.apollo.stomp
 
-import _root_.java.util.LinkedList
-import _root_.org.apache.activemq.apollo.filter.{Expression, Filterable}
 import _root_.org.fusesource.hawtbuf._
 import collection.mutable.ListBuffer
 import java.lang.{String, Class}
 import org.apache.activemq.apollo.broker._
-import org.apache.activemq.apollo.util._
-import org.fusesource.hawtdispatch.BaseRetained
-import java.io.{OutputStream, DataOutput}
-import org.apache.activemq.apollo.broker.store.DirectBuffer
+import java.io.OutputStream
+import org.apache.activemq.apollo.broker.store.ZeroCopyBuffer
 
 /**
  *
@@ -103,7 +99,7 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
         } else {
           null
         }
-      case x:DirectContent =>
+      case x:ZeroCopyContent =>
         null
       case NilContent =>
         if( toType == classOf[String] ) {
@@ -203,22 +199,22 @@ case class BufferContent(content:Buffer) extends StompContent {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class DirectContent(direct_buffer:DirectBuffer) extends StompContent {
-  def length = direct_buffer.size-1
+case class ZeroCopyContent(zero_copy_buffer:ZeroCopyBuffer) extends StompContent {
+  def length = zero_copy_buffer.size-1
 
   def writeTo(os:OutputStream) = {
     val buff = new Array[Byte](1024*4)
-    var remaining = direct_buffer.size-1
+    var remaining = zero_copy_buffer.size-1
     while( remaining> 0 ) {
       val c = remaining.min(buff.length)
-      direct_buffer.read(os)
+      zero_copy_buffer.read(os)
       os.write(buff, 0, c)
       remaining -= c
     }
   }
 
   def buffer:Buffer = {
-    val rc = new DataByteArrayOutputStream(direct_buffer.size-1)
+    val rc = new DataByteArrayOutputStream(zero_copy_buffer.size-1)
     writeTo(rc)
     rc.toBuffer
   }
@@ -227,8 +223,8 @@ case class DirectContent(direct_buffer:DirectBuffer) extends StompContent {
     buffer.utf8
   }
 
-  override def retain = direct_buffer.retain
-  override def release = direct_buffer.release
+  override def retain = zero_copy_buffer.retain
+  override def release = zero_copy_buffer.release
 }
 
 /**

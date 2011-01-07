@@ -154,7 +154,7 @@ class JDBM2Client(store: JDBM2Store) {
   var last_message_key = 0L
   var last_queue_key = 0L
 
-  var direct_buffer_allocator: FileDirectBufferAllocator = _
+  var zero_copy_buffer_allocator: FileZeroCopyBufferAllocator = _
 
   def zero_copy_dir = {
     import FileSupport._
@@ -167,8 +167,8 @@ class JDBM2Client(store: JDBM2Store) {
     config.directory.mkdirs
 
     if( Option(config.zero_copy).map(_.booleanValue).getOrElse(false) ) {
-      direct_buffer_allocator = new FileDirectBufferAllocator(zero_copy_dir)
-      direct_buffer_allocator.start
+      zero_copy_buffer_allocator = new FileZeroCopyBufferAllocator(zero_copy_dir)
+      zero_copy_buffer_allocator.start
     }
 
     recman = RecordManagerFactory.createRecordManager((config.directory / "jdbm2").getCanonicalPath)
@@ -209,9 +209,9 @@ class JDBM2Client(store: JDBM2Store) {
       last_message_key = Option(recman.getNamedObject("last_message_key")).map(_.longValue).getOrElse(0L)
       last_queue_key = Option(recman.getNamedObject("last_queue_key")).map(_.longValue).getOrElse(0L)
 
-      if( direct_buffer_allocator!=null ) {
+      if( zero_copy_buffer_allocator!=null ) {
         lobs_db.cursor { (_,v)=>
-          direct_buffer_allocator.alloc_at(v._1, v._2, v._3)
+          zero_copy_buffer_allocator.alloc_at(v._1, v._2, v._3)
           true
         }
       }
@@ -222,9 +222,9 @@ class JDBM2Client(store: JDBM2Store) {
   def stop() = {
     recman.close
     recman = null;
-    if( direct_buffer_allocator!=null ) {
-      direct_buffer_allocator.stop
-      direct_buffer_allocator = null
+    if( zero_copy_buffer_allocator!=null ) {
+      zero_copy_buffer_allocator.stop
+      zero_copy_buffer_allocator = null
     }
   }
 
@@ -303,10 +303,10 @@ class JDBM2Client(store: JDBM2Store) {
       gc.foreach { key=>
         message_refs_db.remove(key)
         messages_db.remove(key)
-        if( direct_buffer_allocator!=null ){
+        if( zero_copy_buffer_allocator!=null ){
           val location = lobs_db.find(key)
           if( location!=null ) {
-            direct_buffer_allocator.free(location._1, location._2, location._3)
+            zero_copy_buffer_allocator.free(location._1, location._2, location._3)
           }
         }
       }
@@ -346,18 +346,18 @@ class JDBM2Client(store: JDBM2Store) {
 
   def store(uows: Seq[JDBM2Store#DelayableUOW], callback:Runnable) {
     transaction {
-      var needs_direct_buffer_sync = Set[Int]()
+      var zcp_files_to_sync = Set[Int]()
       uows.foreach { uow =>
         uow.actions.foreach { case (msg, action) =>
 
           val message_record = action.messageRecord
           if (message_record != null) {
 
-            val pb = if( message_record.direct_buffer != null ) {
+            val pb = if( message_record.zero_copy_buffer != null ) {
               val r = to_pb(action.messageRecord).copy
-              val buffer = direct_buffer_allocator.to_alloc_buffer(message_record.direct_buffer)
+              val buffer = zero_copy_buffer_allocator.to_alloc_buffer(message_record.zero_copy_buffer)
               lobs_db.put(message_record.key, (buffer.file, buffer.offset, buffer.size))
-              needs_direct_buffer_sync += buffer.file
+              zcp_files_to_sync += buffer.file
               r.setDirect(true)
               r.freeze
             } else {
@@ -383,8 +383,8 @@ class JDBM2Client(store: JDBM2Store) {
 
         }
       }
-      if( direct_buffer_allocator!=null ) {
-        needs_direct_buffer_sync.foreach(direct_buffer_allocator.sync(_))
+      if( zero_copy_buffer_allocator!=null ) {
+        zcp_files_to_sync.foreach(zero_copy_buffer_allocator.sync(_))
       }
     }
     callback.run
@@ -450,7 +450,7 @@ class JDBM2Client(store: JDBM2Store) {
           val rc = from_pb(pb)
           if( pb.getDirect ) {
             val location = lobs_db.find(message_key)
-            rc.direct_buffer = direct_buffer_allocator.view_buffer(location._1, location._2, location._3)
+            rc.zero_copy_buffer = zero_copy_buffer_allocator.view_buffer(location._1, location._2, location._3)
           }
           rc
         }

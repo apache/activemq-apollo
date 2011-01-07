@@ -40,10 +40,10 @@ trait Store extends ServiceTrait {
   def get_store_status(callback:(StoreStatusDTO)=>Unit)
 
   /**
-   * @returns true if the store implementation can handle accepting
-   *          MessageRecords with DirectBuffers in them.
+   * @returns a ZeroCopyBufferAllocator if the store supports protocols
+   *          using zero copy buffers when transfering messages.
    */
-  def direct_buffer_allocator():DirectBufferAllocator = null
+  def zero_copy_buffer_allocator():ZeroCopyBufferAllocator = null
 
   /**
    * Creates a store uow which is used to perform persistent
