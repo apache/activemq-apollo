@@ -20,13 +20,14 @@ import java.util.Comparator
 import java.nio.ByteBuffer
 import com.sleepycat.je._
 import java.io.Serializable
-import org.apache.activemq.apollo.broker.store.{PBSupport, MessageRecord, QueueRecord, QueueEntryRecord}
+import org.fusesource.hawtbuf.Buffer
+import org.apache.activemq.apollo.broker.store._
 import PBSupport._
 
 object HelperTrait {
 
-  implicit def to_message_record(entry: DatabaseEntry): MessageRecord = entry.getData
-  implicit def to_database_entry(v: MessageRecord): DatabaseEntry = new DatabaseEntry(v)
+  implicit def to_message_buffer(entry: DatabaseEntry): MessagePB.Buffer = MessagePB.FACTORY.parseUnframed(entry.getData)
+  implicit def to_database_entry(v: MessagePB.Buffer): DatabaseEntry = new DatabaseEntry(v.toUnframedByteArray)
 
   implicit def to_queue_entry_record(entry: DatabaseEntry): QueueEntryRecord = entry.getData
   implicit def to_database_entry(v: QueueEntryRecord): DatabaseEntry = new DatabaseEntry(v)
@@ -34,6 +35,18 @@ object HelperTrait {
   implicit def to_queue_record(entry: DatabaseEntry): QueueRecord = entry.getData
   implicit def to_database_entry(v: QueueRecord): DatabaseEntry = new DatabaseEntry(v)
 
+  implicit def encode_zcp_value(entry: DatabaseEntry): (Int,Long,Int) = {
+    val e = new Buffer(entry.getData).bigEndianEditor()
+    (e.readInt, e.readLong, e.readInt)
+  }
+  implicit def decode_zcp_value(v: (Int,Long,Int)): DatabaseEntry = {
+    val buf = new Buffer(16)
+    val e = buf.bigEndianEditor()
+    e.writeInt(v._1)
+    e.writeLong(v._2)
+    e.writeInt(v._1)
+    new DatabaseEntry(buf.data)
+  }
 
   implicit def to_bytes(l:Long):Array[Byte] = ByteBuffer.wrap(new Array[Byte](8)).putLong(l).array()
   implicit def to_long(bytes:Array[Byte]):Long = ByteBuffer.wrap(bytes).getLong()

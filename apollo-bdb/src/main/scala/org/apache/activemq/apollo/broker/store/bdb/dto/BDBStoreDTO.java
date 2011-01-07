@@ -37,4 +37,8 @@ public class BDBStoreDTO extends StoreDTO {
     @XmlAttribute(name="read_threads")
     public Integer read_threads;
 
+    @XmlAttribute(name="zero_copy")
+    public Boolean zero_copy;
+
+
 }

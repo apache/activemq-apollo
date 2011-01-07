@@ -80,6 +80,8 @@ class BDBStore extends DelayingStoreSupport with DispatchLogging {
   
   protected def get_next_msg_key = next_msg_key.getAndIncrement
 
+  override def zero_copy_buffer_allocator():ZeroCopyBufferAllocator = client.zero_copy_buffer_allocator
+
   protected def store(uows: Seq[DelayableUOW])(callback: =>Unit) = {
     write_executor {
       client.store(uows, ^{
