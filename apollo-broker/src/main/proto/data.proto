@@ -27,8 +27,12 @@ message MessagePB {
   required bytes protocol = 2 [java_override_type = "AsciiBuffer"];
   required int32 size = 3;
   optional bytes value = 4;
-  optional bool  direct = 5;
-  optional sint64 expiration = 6;
+  optional sint64 expiration = 5;
+  
+  optional bytes zcp_data = 10;
+  optional int32 zcp_file = 12;
+  optional int64 zcp_offset = 13;
+  optional int32 zcp_size = 14;
 }
 
 message QueuePB {

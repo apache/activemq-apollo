@@ -54,4 +54,5 @@ trait ZeroCopyBuffer extends Retained {
 
   def write(src:ByteBuffer, target:Int):Int
 
+  def write(target:InputStream):Unit
 }

@@ -294,6 +294,22 @@ trait FileZeroCopyBufferTrait extends ZeroCopyBuffer {
     }
   }
 
+  def write(target: InputStream): Unit = {
+    assert(retained > 0)
+    val b = ByteBuffer.allocate(size.min(1024*4))
+    var pos = 0
+    while( remaining(pos)> 0 ) {
+      val max = remaining(pos).min(b.capacity)
+      b.clear
+      val count = target.read(b.array, 0, max)
+      if( count == -1 ) {
+        throw new EOFException()
+      }
+      val x = channel.write(b)
+      assert(x == count)
+      pos += count
+    }
+  }
 }
 
 /**
@@ -345,7 +361,7 @@ class FileZeroCopyBufferAllocator(val directory:File) extends ZeroCopyBufferAllo
       }
     }
 
-    def alloc(size: Int): ZeroCopyBuffer = current_context { ctx=>
+    def alloc(size: Int) = current_context { ctx=>
       val allocation = allocator.alloc(size)
       assert(allocation!=null)
       current_size = current_size.max(allocation.offset + allocation.size)
