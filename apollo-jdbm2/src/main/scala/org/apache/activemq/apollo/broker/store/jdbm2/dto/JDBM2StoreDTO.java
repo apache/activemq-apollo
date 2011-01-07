@@ -34,7 +34,9 @@ public class JDBM2StoreDTO extends StoreDTO {
     @XmlAttribute
     public File directory;
 
-    @XmlAttribute
+    @XmlAttribute(name="compact_interval")
     public Integer compact_interval;
 
+    @XmlAttribute(name="zero_copy")
+    public Boolean zero_copy;
 }

@@ -27,8 +27,8 @@ message MessagePB {
   required bytes protocol = 2 [java_override_type = "AsciiBuffer"];
   required int32 size = 3;
   optional bytes value = 4;
-  optional int64 streamKey = 5;
-  optional int64 expiration = 6;
+  optional bool  direct = 5;
+  optional sint64 expiration = 6;
 }
 
 message QueuePB {

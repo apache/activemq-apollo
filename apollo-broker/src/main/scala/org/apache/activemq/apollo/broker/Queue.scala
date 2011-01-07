@@ -981,8 +981,6 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         queue.swap_out_size_counter += size
         queue.swap_out_item_counter += 1
 
-        delivery.message.release
-
         state = new Swapped(delivery.storeKey, size)
         if( can_combine_with_prev ) {
           getPrevious.as_swapped_range.combineNext

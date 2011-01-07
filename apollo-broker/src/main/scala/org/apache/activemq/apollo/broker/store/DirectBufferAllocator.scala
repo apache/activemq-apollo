@@ -21,6 +21,8 @@ import java.nio.channels.{FileChannel, WritableByteChannel, ReadableByteChannel}
 import java.nio.ByteBuffer
 import java.io._
 import org.apache.activemq.apollo.util._
+import org.fusesource.hawtdispatch.internal.DispatcherConfig
+
 /**
  * <p>
  * </p>
@@ -120,7 +122,7 @@ trait FileDirectBufferTrait extends DirectBuffer {
   }
 }
 
-case class Allocation(size:Long, offset:Long) extends Ordered[Allocation] {
+case class Allocation(offset:Long, size:Long) extends Ordered[Allocation] {
 
   var _free_func: (Allocation)=>Unit = _
 
@@ -188,29 +190,64 @@ class TreeAllocator(range:Allocation) extends Allocator {
     }
 
     val allocation = spot_entry.getKey
-    free_by_size.remove(allocation)
+    free_by_size.removeEntry(spot_entry)
+    free_by_offset.remove(allocation.offset)
 
     // might be the perfect size
-    if( allocation.size == request ) {
-      allocation._free_func = free
+    val rc = if( allocation.size == request ) {
       allocation
     } else {
       // split the allocation..
       var (first, second) = allocation.split(request)
 
-      free_by_offset.remove(first.offset)
-      free_by_offset.put(second.offset, second)
-
       // put the free part in the free map.
+      free_by_offset.put(second.offset, second)
       free_by_size.put(second, null)
 
-      first._free_func = free
       first
     }
+    rc._free_func = free
+    rc
+  }
+
+  def alloc_at(req:Allocation):Boolean = {
+    var spot_entry = free_by_offset.floorEntry(req.offset)
+    if( spot_entry== null ) {
+      return false
+    }
+
+    var spot = spot_entry.getValue
+    if( spot.offset+spot.size < req.offset+req.size ) {
+      return false
+    }
+
+    free_by_offset.removeEntry(spot_entry)
+    free_by_size.remove(spot)
+
+    // only need to put back if it was not exactly what we need.
+    if( spot != req ) {
+
+      // deal with excess at the front
+      if( spot.offset != req.offset ) {
+        val (prev, next) = spot.split(req.offset - spot.offset)
+        free_by_offset.put(prev.offset, prev)
+        free_by_size.put(prev, null)
+        spot = next
+      }
+
+      // deal with excess at the rear
+      if( spot.size != req.size ) {
+        val (prev, next) = spot.split(req.size)
+        free_by_offset.put(next.offset, next)
+        free_by_size.put(next, null)
+      }
+    }
+
+    req._free_func = free
+    true
   }
 
   def free(allocation:Allocation):Unit = {
-
 
     var prev_e = free_by_offset.floorEntry(allocation.offset)
     var next_e = if( prev_e!=null ) {
@@ -296,13 +333,34 @@ class ActiveAllocator(val range:Allocation) extends Allocator {
 class FileDirectBufferAllocator(val directory:File) extends DirectBufferAllocator {
 
   // we use thread local allocators to
-  class AllocatorContext(val queue:DispatchQueue) {
+  class AllocatorContext(val id:Int) {
 
     val allocator = new TreeAllocator(Allocation(0, Long.MaxValue))
-    var channel:FileChannel = new RandomAccessFile(queue.getLabel, "rw").getChannel
+    var channel:FileChannel = new RandomAccessFile(new File(directory, ""+id+".data"), "rw").getChannel
+    var queue:DispatchQueue = _
+
+    var last_sync_size = channel.size
+    @volatile
+    var current_size = last_sync_size
+
+    def size_changed = this.synchronized {
+      val t = current_size
+      if( t != last_sync_size ) {
+        last_sync_size = t
+        true
+      } else {
+        false
+      }
+    }
+
+    def sync = {
+      channel.force(size_changed)
+    }
 
     class AllocationBuffer(val allocation:Allocation) extends BaseRetained with FileDirectBufferTrait {
       def channel: FileChannel = AllocatorContext.this.channel
+
+      def file = id
       def offset: Long = allocation.offset
       def size: Int = allocation.size.toInt
 
@@ -316,24 +374,74 @@ class FileDirectBufferAllocator(val directory:File) extends DirectBufferAllocato
       }
     }
 
-    def alloc(size: Int): DirectBuffer = with_allocator_context { ctx=>
+    def alloc(size: Int): DirectBuffer = current_context { ctx=>
       val allocation = allocator.alloc(size)
       assert(allocation!=null)
+      current_size = current_size.max(allocation.offset + allocation.size)
       new AllocationBuffer(allocation)
     }
   }
 
-  val _current_allocator_context = new ThreadLocal[AllocatorContext]()
+  def to_alloc_buffer(buffer:DirectBuffer) = buffer.asInstanceOf[AllocatorContext#AllocationBuffer]
 
-  protected def start() = {
+  val _current_allocator_context = new ThreadLocal[AllocatorContext]()
+  var contexts = Map[Int, AllocatorContext]()
+
+  def start() = {
     directory.mkdirs
+    val config = new DispatcherConfig()
+    for( i <- 0 until config.getThreads ) {
+      val ctx = new AllocatorContext(i)
+      contexts += i->ctx
+      getThreadQueue(i) {
+        ctx.queue = getCurrentThreadQueue
+        _current_allocator_context.set(ctx)
+      }
+    }
   }
 
-  def alloc(size: Int): DirectBuffer = with_allocator_context { ctx=>
+  def stop() = {
+    val config = new DispatcherConfig()
+    for( i <- 0 until config.getThreads ) {
+      contexts = Map()
+      getThreadQueue(i) {
+        _current_allocator_context.remove
+      }
+    }
+  }
+
+  def sync(file: Int) = {
+    contexts.get(file).get.sync
+  }
+
+  def alloc(size: Int): DirectBuffer = current_context { ctx=>
     ctx.alloc(size)
   }
 
-  def with_allocator_context[T](func: (AllocatorContext)=>T):T = {
+  def alloc_at(file:Int, offset:Long, size:Int):Unit = context(file) { ctx=>
+    ctx.allocator.alloc_at(Allocation(offset, size))
+  }
+
+  def free(file:Int, offset:Long, size:Int):Unit = context(file) { ctx=>
+    ctx.allocator.free(Allocation(offset, size))
+  }
+
+  def view_buffer(file:Int, the_offset:Long, the_size:Int):DirectBuffer = {
+    val the_channel = contexts.get(file).get.channel
+    new BaseRetained with FileDirectBufferTrait {
+      def offset: Long = the_offset
+      def size: Int = the_size
+      val channel: FileChannel = the_channel
+    }
+  }
+
+  def context(i:Int)(func: (AllocatorContext)=>Unit):Unit= {
+    getThreadQueue(i) {
+      func(current_allocator_context)
+    }
+  }
+
+  def current_context[T](func: (AllocatorContext)=>T):T = {
     if( getCurrentThreadQueue == null ) {
       getGlobalQueue().future(func(current_allocator_context))()
     } else {
@@ -341,14 +449,6 @@ class FileDirectBufferAllocator(val directory:File) extends DirectBufferAllocato
     }
   }
 
-  def current_allocator_context:AllocatorContext = {
-    val thread_queue = getCurrentThreadQueue
-    assert(thread_queue != null)
-    var rc = _current_allocator_context.get
-    if( rc==null ) {
-      rc = new AllocatorContext(thread_queue)
-      _current_allocator_context.set(rc)
-    }
-    rc
-  }
+  def current_allocator_context:AllocatorContext = _current_allocator_context.get
+
 }

@@ -348,6 +348,8 @@ class StompCodec extends ProtocolCodec with DispatchLogging {
         val count = read_direct.write(read_channel, read_direct_pos)
         if (count == -1) {
             throw new EOFException("Peer disconnected")
+        } else if (count == 0) {
+            return null
         }
         read_direct_pos += count
       } else if (read_end == read_buffer.position() ) {

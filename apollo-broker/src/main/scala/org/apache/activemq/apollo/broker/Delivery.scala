@@ -139,7 +139,7 @@ object Delivery extends Sizer[Delivery] {
   def size(value:Delivery):Int = value.size
 }
 
-class Delivery extends BaseRetained {
+class Delivery {
 
   /**
    * Total size of the delivery.  Used for resource allocation tracking

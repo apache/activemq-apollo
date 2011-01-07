@@ -30,13 +30,12 @@ import java.util.Comparator
 import jdbm.helper._
 import PBSupport._
 import org.fusesource.hawtbuf.proto.PBMessageFactory
-import java.io.{EOFException, InputStream, OutputStream, Serializable}
-
+import java.io._
 object JDBM2Client extends Log {
 
-  object MessageRecordSerializer extends Serializer[MessageRecord] {
-    def serialize(out: SerializerOutput, v: MessageRecord) = encode_message_record(out, v)
-    def deserialize(in: SerializerInput) = decode_message_record(in)
+  object MessageRecordSerializer extends Serializer[MessagePB.Buffer] {
+    def serialize(out: SerializerOutput, v: MessagePB.Buffer) = v.writeUnframed(out)
+    def deserialize(in: SerializerInput) = MessagePB.FACTORY.parseUnframed(in).freeze
   }
 
   object QueueRecordSerializer extends Serializer[QueueRecord] {
@@ -47,6 +46,18 @@ object JDBM2Client extends Log {
   object QueueEntryRecordSerializer extends Serializer[QueueEntryRecord] {
     def serialize(out: SerializerOutput, v: QueueEntryRecord) = encode_queue_entry_record(out, v)
     def deserialize(in: SerializerInput) = decode_queue_entry_record(in)
+  }
+
+  object LobValueSerializer extends Serializer[(Int, Long, Int)] {
+    def serialize(out: SerializerOutput, v: (Int,Long, Int)) = {
+      out.writePackedInt(v._1)
+      out.writePackedLong(v._2)
+      out.writePackedInt(v._3)
+    }
+
+    def deserialize(in: SerializerInput) = {
+      (in.readPackedInt, in.readPackedLong, in.readPackedInt)
+    }
   }
 
   object QueueEntryKeySerializer extends Serializer[(Long,Long)] {
@@ -136,17 +147,30 @@ class JDBM2Client(store: JDBM2Store) {
 
   var queues_db:HTree[Long, QueueRecord] = _
   var entries_db:BTree[(Long,Long), QueueEntryRecord] = _
-  var messages_db:HTree[Long, MessageRecord] = _
+  var messages_db:HTree[Long, MessagePB.Buffer] = _
+  var lobs_db:HTree[Long, (Int, Long, Int)] = _
   var message_refs_db:HTree[Long, java.lang.Integer] = _
 
   var last_message_key = 0L
   var last_queue_key = 0L
 
+  var direct_buffer_allocator: FileDirectBufferAllocator = _
+
+  def zero_copy_dir = {
+    import FileSupport._
+    config.directory / "zerocp"
+  }
+
   def start() = {
+    import FileSupport._
 
     config.directory.mkdirs
 
-    import FileSupport._
+    if( Option(config.zero_copy).map(_.booleanValue).getOrElse(false) ) {
+      direct_buffer_allocator = new FileDirectBufferAllocator(zero_copy_dir)
+      direct_buffer_allocator.start
+    }
+
     recman = RecordManagerFactory.createRecordManager((config.directory / "jdbm2").getCanonicalPath)
 
     def init_btree[K, V](name: String, key_comparator:Comparator[K]=ComparableComparator.INSTANCE.asInstanceOf[Comparator[K]], key_serializer:Serializer[K]=null, value_serializer:Serializer[V]=null) = {
@@ -175,15 +199,22 @@ class JDBM2Client(store: JDBM2Store) {
       rc
     }
 
-
     transaction {
       messages_db = init_htree("messages", value_serializer = MessageRecordSerializer)
+      lobs_db = init_htree("lobs", value_serializer = LobValueSerializer)
       message_refs_db = init_htree("message_refs")
       queues_db = init_htree("queues", value_serializer = QueueRecordSerializer)
       entries_db = init_btree("enttries", new QueueEntryKeyComparator, QueueEntryKeySerializer, QueueEntryRecordSerializer)
 
       last_message_key = Option(recman.getNamedObject("last_message_key")).map(_.longValue).getOrElse(0L)
       last_queue_key = Option(recman.getNamedObject("last_queue_key")).map(_.longValue).getOrElse(0L)
+
+      if( direct_buffer_allocator!=null ) {
+        lobs_db.cursor { (_,v)=>
+          direct_buffer_allocator.alloc_at(v._1, v._2, v._3)
+          true
+        }
+      }
     }
 
   }
@@ -191,6 +222,10 @@ class JDBM2Client(store: JDBM2Store) {
   def stop() = {
     recman.close
     recman = null;
+    if( direct_buffer_allocator!=null ) {
+      direct_buffer_allocator.stop
+      direct_buffer_allocator = null
+    }
   }
 
   def transaction[T](func: => T): T = {
@@ -214,6 +249,7 @@ class JDBM2Client(store: JDBM2Store) {
       if( config.directory.isDirectory ) {
         config.directory.listFiles.filter(_.getName.startsWith("jdbm2.")).foreach(_.delete)
       }
+      zero_copy_dir.delete
     }
     if( recman!=null ) {
       stop
@@ -267,6 +303,12 @@ class JDBM2Client(store: JDBM2Store) {
       gc.foreach { key=>
         message_refs_db.remove(key)
         messages_db.remove(key)
+        if( direct_buffer_allocator!=null ){
+          val location = lobs_db.find(key)
+          if( location!=null ) {
+            direct_buffer_allocator.free(location._1, location._2, location._3)
+          }
+        }
       }
     }
     recman.defrag
@@ -304,11 +346,25 @@ class JDBM2Client(store: JDBM2Store) {
 
   def store(uows: Seq[JDBM2Store#DelayableUOW], callback:Runnable) {
     transaction {
+      var needs_direct_buffer_sync = Set[Int]()
       uows.foreach { uow =>
         uow.actions.foreach { case (msg, action) =>
 
-          if (action.messageRecord != null) {
-            messages_db.put(action.messageRecord.key, action.messageRecord)
+          val message_record = action.messageRecord
+          if (message_record != null) {
+
+            val pb = if( message_record.direct_buffer != null ) {
+              val r = to_pb(action.messageRecord).copy
+              val buffer = direct_buffer_allocator.to_alloc_buffer(message_record.direct_buffer)
+              lobs_db.put(message_record.key, (buffer.file, buffer.offset, buffer.size))
+              needs_direct_buffer_sync += buffer.file
+              r.setDirect(true)
+              r.freeze
+            } else {
+              to_pb(action.messageRecord)
+            }
+
+            messages_db.put(action.messageRecord.key, pb)
             if( action.messageRecord.key > last_message_key ) {
               last_message_key = action.messageRecord.key
               recman.setNamedObject("last_message_key", last_message_key)
@@ -326,6 +382,9 @@ class JDBM2Client(store: JDBM2Store) {
           }
 
         }
+      }
+      if( direct_buffer_allocator!=null ) {
+        needs_direct_buffer_sync.foreach(direct_buffer_allocator.sync(_))
       }
     }
     callback.run
@@ -385,23 +444,19 @@ class JDBM2Client(store: JDBM2Store) {
   var metric_load_from_index = metric_load_from_index_counter(false)
 
   def loadMessages(requests: ListBuffer[(Long, (Option[MessageRecord])=>Unit)]) = {
-    val records =  requests.flatMap { case (message_key, callback)=>
+    requests.foreach { case (message_key, callback)=>
       val record = metric_load_from_index_counter.time {
-        Option(messages_db.find(message_key))
+        Option(messages_db.find(message_key)).map{ pb=>
+          val rc = from_pb(pb)
+          if( pb.getDirect ) {
+            val location = lobs_db.find(message_key)
+            rc.direct_buffer = direct_buffer_allocator.view_buffer(location._1, location._2, location._3)
+          }
+          rc
+        }
       }
-      record match {
-        case None =>
-        debug("Message not indexed: %s", message_key)
-        callback(None)
-        None
-        case Some(x) => Some((record, callback))
-      }
+      callback(record)
     }
-
-    records.foreach { case (record, callback)=>
-      callback( record )
-    }
-
   }
 
 
