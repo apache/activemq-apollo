@@ -25,6 +25,7 @@ Ready to start hacking on ${project_name}?
 
 # Developer Links
 
+* [Source Code](source.html)
 * [Building](building.html)
 * [Contributing](contributing.html)
 * [Release Guide](release-guide.html)

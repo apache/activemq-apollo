@@ -101,4 +101,25 @@ Get the latest source code
     * read the [documentation](../documentation/index.html)
     * browse the [developer links and maven reports](developers.html)
     
+.left
+  :markdown
+    # Git Clone
+    
+.right
+  :&markdown
+    You can get a git clone of the svn repository using the following script:
+    
+          mkdir activemq-apollo
+        cd activemq-apollo
+        git init
+        echo "Updating .git/authors.txt"
+        cd ".git"
+        curl "http://git.apache.org/authors.txt" > authors.txt
+        cd ".."
+        git config svn.authorsfile ".git/authors.txt"
+        git svn init --prefix=asf/ --tags=tags --trunk=trunk --branches=branches https://svn.apache.org/repos/asf/activemq/activemq-apollo
+        git svn fetch --log-window-size 10000
+        git svn rebase
+  
+
 
