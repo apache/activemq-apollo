@@ -186,15 +186,19 @@ public class SslTransport extends TcpTransport {
         int rc=0;
         while ( plain.hasRemaining() || engine.getHandshakeStatus() == NEED_UNWRAP ) {
             if( readOverflowBuffer !=null ) {
-                // lets drain the overflow buffer before trying to suck down anymore
-                // network bytes.
-                int size = Math.min(plain.remaining(), readOverflowBuffer.remaining());
-                plain.put(readOverflowBuffer.array(), readOverflowBuffer.position(), size);
-                readOverflowBuffer.position(readOverflowBuffer.position()+size);
-                if( !readOverflowBuffer.hasRemaining() ) {
-                    readOverflowBuffer = null;
+                if(  plain.hasRemaining() ) {
+                    // lets drain the overflow buffer before trying to suck down anymore
+                    // network bytes.
+                    int size = Math.min(plain.remaining(), readOverflowBuffer.remaining());
+                    plain.put(readOverflowBuffer.array(), readOverflowBuffer.position(), size);
+                    readOverflowBuffer.position(readOverflowBuffer.position()+size);
+                    if( !readOverflowBuffer.hasRemaining() ) {
+                        readOverflowBuffer = null;
+                    }
+                    rc += size;
+                } else {
+                    return rc;
                 }
-                rc += size;
             } else if( readUnderflow ) {
                 int count = channel.read(readBuffer);
                 if( count == -1 ) {  // peer closed socket.
