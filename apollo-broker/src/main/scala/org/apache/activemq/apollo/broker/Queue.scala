@@ -540,12 +540,15 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
     Success(Zilch)
   }
 
-  def bind(values: List[DeliveryConsumer]) = retaining(values) {
-    for (consumer <- values) {
-      val sub = new Subscription(this, consumer)
-      sub.open
+  def bind(values: List[DeliveryConsumer]) = {
+    values.foreach(_.retain)
+    dispatch_queue {
+      for (consumer <- values) {
+        val sub = new Subscription(this, consumer)
+        sub.open
+      }
     }
-  } >>: dispatch_queue
+  }
 
   def unbind(values: List[DeliveryConsumer]) = dispatch_queue {
     for (consumer <- values) {

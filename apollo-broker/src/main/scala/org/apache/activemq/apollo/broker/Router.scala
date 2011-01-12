@@ -314,14 +314,15 @@ class Router(val host:VirtualHost) extends DispatchLogging {
     }
   }
 
-  def unbind(destination:Destination, consumer:DeliveryConsumer) = releasing(consumer) {
+  def unbind(destination:Destination, consumer:DeliveryConsumer) = dispatchQueue {
     assert( is_topic(destination) )
     val name = destination.name
     broadcast_consumers.remove(name, consumer)
     get_destination_matches(name).foreach{ node=>
       node.remove_broadcast_consumer(consumer)
     }
-  } >>: dispatchQueue
+    consumer.release
+  }
 
 
   def connect(destination:Destination, producer:DeliveryProducer, security:SecurityContext)(completed: (Result[DeliveryProducerRoute,String])=>Unit) = {
@@ -386,7 +387,7 @@ class Router(val host:VirtualHost) extends DispatchLogging {
 
   }
 
-  def disconnect(route:DeliveryProducerRoute) = releasing(route) {
+  def disconnect(route:DeliveryProducerRoute) = dispatchQueue {
     _get_destination(route.destination.name).foreach { node=>
       val topic = is_topic(route.destination)
       if( node.unified || topic ) {
@@ -394,8 +395,8 @@ class Router(val host:VirtualHost) extends DispatchLogging {
       }
     }
     route.disconnected()
-
-  } >>: dispatchQueue
+    route.release
+  }
 
 }
 
@@ -522,9 +523,12 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
     on_connected
   }
 
-  def bind(targets:List[DeliveryConsumer]) = retaining(targets) {
-    internal_bind(targets)
-  } >>: dispatch_queue
+  def bind(targets:List[DeliveryConsumer]) = {
+    targets.foreach(_.retain)
+    dispatch_queue {
+      internal_bind(targets)
+    }
+  }
 
   private def internal_bind(values:List[DeliveryConsumer]) = {
     values.foreach{ x=>
@@ -535,7 +539,7 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
     }
   }
 
-  def unbind(targets:List[DeliveryConsumer]) = releasing(targets) {
+  def unbind(targets:List[DeliveryConsumer]) = dispatch_queue {
     this.targets = this.targets.filterNot { x=>
       val rc = targets.contains(x.consumer)
       if( rc ) {
@@ -550,7 +554,8 @@ case class DeliveryProducerRoute(val router:Router, val destination:Destination,
       }
       rc
     }
-  } >>: dispatch_queue
+    targets.foreach(_.release)
+  }
 
   def disconnected() = dispatch_queue {
     this.targets.foreach { x=>
