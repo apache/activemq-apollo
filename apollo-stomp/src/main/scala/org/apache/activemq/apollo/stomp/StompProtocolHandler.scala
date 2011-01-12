@@ -891,7 +891,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       case None=>
         die("The subscription '%s' not found.".format(id))
       case Some(consumer)=>
-        // consumer.close
+
+        consumers -= id
         if( consumer.binding==null ) {
           host.router.unbind(consumer.destination, consumer)
           send_receipt(headers)
