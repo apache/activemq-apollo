@@ -33,6 +33,7 @@ import collection.mutable.LinkedHashMap
 import java.util.concurrent.{ThreadFactory, Executors, ConcurrentHashMap}
 import security.{AclAuthorizer, Authorizer, JaasAuthenticator, Authenticator}
 import java.net.InetSocketAddress
+import org.apache.activemq.apollo.broker.web._
 
 /**
  * <p>
@@ -155,6 +156,7 @@ class Broker() extends BaseService {
   
   import Broker._
 
+  var tmp: File = _
   var config: BrokerDTO = defaultConfig
 
   var default_virtual_host: VirtualHost = null
@@ -175,6 +177,8 @@ class Broker() extends BaseService {
   val connection_id_counter = new LongCounter
 
   var key_storage:KeyStorage = _
+
+  var web_server:WebServer = _
 
   override def toString() = "broker: "+id
 
@@ -235,25 +239,34 @@ class Broker() extends BaseService {
     }
 
     // Start up the virtual hosts
-    val tracker = new LoggingTracker("broker startup", dispatch_queue)
+    val first_tracker = new LoggingTracker("broker startup", dispatch_queue)
+    val second_tracker = new LoggingTracker("broker startup", dispatch_queue)
+
+    Option(config.web_admin).foreach{ web_admin=>
+      web_server = WebServerFactory.create(this)
+      second_tracker.start(web_server)
+    }
+
     virtual_hosts.valuesIterator.foreach( x=>
-      tracker.start(x)
+      first_tracker.start(x)
     )
 
     // Once virtual hosts are up.. start up the connectors.
-    tracker.callback(^{
-      val tracker = new LoggingTracker("broker startup", dispatch_queue)
+    first_tracker.callback(^{
       connectors.foreach( x=>
-        tracker.start(x)
+        second_tracker.start(x)
       )
-      tracker.callback(on_completed)
+      second_tracker.callback(on_completed)
     })
+
+
 
   }
 
 
   def _stop(on_completed:Runnable): Unit = {
     val tracker = new LoggingTracker("broker shutdown", dispatch_queue)
+
     // Stop accepting connections..
     connectors.foreach( x=>
       tracker.stop(x)
@@ -262,6 +275,10 @@ class Broker() extends BaseService {
     virtual_hosts.valuesIterator.foreach( x=>
       tracker.stop(x)
     )
+
+    if( web_server!=null ) {
+      tracker.stop(web_server)
+    }
     tracker.callback(on_completed)
   }
 

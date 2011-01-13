@@ -52,6 +52,18 @@ class Run extends Action with Logging {
   @option(name = "--tmp", description = "A temp directory.")
   var tmp: File = _
 
+  def system_dir(name:String) = {
+    val base_value = System.getProperty(name)
+    if( base_value==null ) {
+      error("The the %s system property is not set.".format(name))
+    }
+    val file = new File(base_value)
+    if( !file.isDirectory  ) {
+      error("The the %s system property is not set to valid directory path %s".format(name, base_value))
+    }
+    file
+  }
+
   def execute(session: CommandSession):AnyRef = {
 
     try {
@@ -72,6 +84,7 @@ class Run extends Action with Logging {
           System.setProperty("java.security.auth.login.config", login_config.getCanonicalPath)
         }
       }
+
 
       val webapp = {
         val x = System.getProperty("apollo.webapp")
@@ -106,76 +119,15 @@ class Run extends Action with Logging {
       broker.start(^{
         info("Broker started");
       })
-
-      config.web_admin.foreach { web_admin=>
-
-        val prefix = web_admin.prefix.getOrElse("/")
-        val port = web_admin.port.getOrElse(61680)
-        val host = web_admin.host.getOrElse("127.0.0.1")
-
-        // Start up the admin interface...
-        debug("Starting administration interface");
-
-        System.setProperty("scalate.workdir", (tmp / "scalate").getCanonicalPath )
-
-        var connector = new SelectChannelConnector
-        connector.setHost(host)
-        connector.setPort(port)
-
-
-        def admin_app = {
-          var app_context = new WebAppContext
-          app_context.setContextPath(prefix)
-          app_context.setWar(webapp.getCanonicalPath)
-          app_context.setTempDirectory(tmp)
-          app_context
-        }
-
-        def secured(handler:Handler) = {
-          if( config.authentication!=null && config.acl!=null ) {
-            import collection.JavaConversions._
-
-            val security_handler = new ConstraintSecurityHandler
-            val login_service = new JAASLoginService(config.authentication.domain)
-            val role_class_names:List[String] = config.authentication.acl_principal_kinds().toList
-
-            login_service.setRoleClassNames(role_class_names.toArray)
-            security_handler.setLoginService(login_service)
-            security_handler.setIdentityService(new DefaultIdentityService)
-            security_handler.setAuthenticator(new BasicAuthenticator)
-
-            val cm = new ConstraintMapping
-            val c = new org.eclipse.jetty.http.security.Constraint()
-            c.setName("BASIC")
-            val admins:Set[PrincipalDTO] = config.acl.admins.toSet
-            c.setRoles(admins.map(_.allow).toArray)
-            c.setAuthenticate(true)
-            cm.setConstraint(c)
-            cm.setPathSpec("/*")
-            cm.setMethod("GET")
-            security_handler.addConstraintMapping(cm)
-
-            security_handler.setHandler(handler)
-            security_handler
-          } else {
-            handler
-          }
-        }
-
-        var server = new Server
-        server.setHandler(secured(admin_app))
-        server.setConnectors(Array[Connector](connector))
-        server.start
-
-        val localPort = connector.getLocalPort
-        def url = "http://"+host+":" + localPort + prefix
-        info("Administration interface available at: "+bold(url))
-
-      }
-
+      broker.tmp = tmp
 
       if(java.lang.Boolean.getBoolean("hawtdispatch.profile")) {
         monitor_hawtdispatch
+      }
+
+      // wait forever...  broker will system exit.
+      this.synchronized {
+        this.wait
       }
 
     } catch {
