@@ -43,11 +43,34 @@ object JettyWebServerFactory extends WebServerFactory.Provider {
   def create(broker:Broker): WebServer = new JettyWebServer(broker)
 
   def validate(config: WebAdminDTO, reporter: Reporter): ReporterLevel.ReporterLevel = {
-    ReporterLevel.INFO
+    import ReporterLevel._
+    if( JettyWebServer.webapp==null ) {
+      reporter.report(ERROR, "The apollo.home or apollo.webapp system property must be set so that the webconsole can be started.")
+      return ERROR
+    }
+    return INFO
   }
 }
 
-object JettyWebServer extends Log
+object JettyWebServer extends Log {
+
+  val LOAD_JETTY = classOf[LoginService]
+
+  val webapp = {
+    import FileSupport._
+
+    val x = System.getProperty("apollo.webapp")
+    if( x != null ) {
+      new File(x)
+    } else {
+      (Option(System.getProperty("apollo.home")).flatMap { home=>
+        val lib = new File(home) / "lib"
+        lib.list.find( _.matches("""apollo-web-.+-slim.war""")).map(lib / _)
+      }).getOrElse(null)
+    }
+  }
+
+}
 
 class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
   import JettyWebServer._
@@ -83,17 +106,6 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
       connector.setHost(host)
       connector.setPort(port)
 
-
-      val webapp = {
-        val x = System.getProperty("apollo.webapp")
-        if( x != null ) {
-          new File(x)
-        } else {
-          val home = system_dir("apollo.home")
-          val lib = home / "lib"
-          lib / lib.list.find( _.matches("""apollo-web-.+-slim.war""")).get
-        }
-      }
 
       def admin_app = {
         var app_context = new WebAppContext
@@ -150,6 +162,7 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
     this.synchronized {
       server.stop
       server = null
+      on_completed.run
     }
   }
 
