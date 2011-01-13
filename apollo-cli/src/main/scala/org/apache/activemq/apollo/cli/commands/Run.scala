@@ -114,8 +114,7 @@ class Run extends Action with Logging {
 
       debug("Starting broker");
       val broker = new Broker()
-      broker.config = config
-      BrokerRegistry.add(broker)
+      broker.configure(config, LoggingReporter(log))
       broker.start(^{
         info("Broker started");
       })

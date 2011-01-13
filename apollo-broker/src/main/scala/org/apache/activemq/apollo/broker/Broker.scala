@@ -243,6 +243,8 @@ class Broker() extends BaseService {
       }
     }
 
+    BrokerRegistry.add(this)
+
     // Start up the virtual hosts
     val first_tracker = new LoggingTracker("broker startup", dispatch_queue)
     val second_tracker = new LoggingTracker("broker startup", dispatch_queue)
@@ -284,6 +286,8 @@ class Broker() extends BaseService {
     if( web_server!=null ) {
       tracker.stop(web_server)
     }
+
+    BrokerRegistry.remove(this)
     tracker.callback(on_completed)
   }
 

@@ -45,8 +45,7 @@ class ApolloListener extends ServletContextListener {
         // Only start the broker up if it's enabled..
         info("starting broker");
         broker = new Broker()
-        broker.config = config
-        BrokerRegistry.add(broker)
+        broker.configure(config, LoggingReporter(ApolloListener))
         broker.start()
       }
     } catch {
@@ -58,7 +57,6 @@ class ApolloListener extends ServletContextListener {
   def contextDestroyed(sce: ServletContextEvent) = {
     if( configStore!=null ) {
       if( broker!=null ) {
-        BrokerRegistry.remove(broker);
         ServiceControl.stop(broker, "broker")
       }
       configStore.stop
