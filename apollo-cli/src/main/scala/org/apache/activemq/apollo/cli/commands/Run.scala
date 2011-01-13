@@ -37,7 +37,7 @@ import org.eclipse.jetty.webapp.WebAppContext
 import org.eclipse.jetty.server.nio.SelectChannelConnector
 import org.eclipse.jetty.plus.jaas.JAASLoginService
 import org.eclipse.jetty.server.handler.HandlerCollection
-import org.apache.activemq.apollo.util.{Logging, ServiceControl}
+import org.apache.activemq.apollo.util.{Logging, ServiceControl, LoggingReporter}
 import org.apache.activemq.apollo.dto.{WebAdminDTO, PrincipalDTO}
 
 /**
