@@ -139,6 +139,10 @@ object Broker extends Log {
       for (connector <- config.connectors ) {
         result |= Connector.validate(connector, reporter)
       }
+      if( config.web_admin != null ) {
+        WebServerFactory.validate(config.web_admin, reporter)
+      }
+
     }.result
   }
 }
@@ -186,10 +190,11 @@ class Broker() extends BaseService {
   /**
    * Validates and then applies the configuration.
    */
-  def configure(config: BrokerDTO, reporter:Reporter) = dispatch_queue {
+  def configure(config: BrokerDTO, reporter:Reporter) = {
     if ( validate(config, reporter) < ERROR ) {
-      this.config = config
-
+      dispatch_queue {
+        this.config = config
+      }
       if( service_state.is_started ) {
         // TODO: apply changes while he broker is running.
         reporter.report(WARN, "Updating broker configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
