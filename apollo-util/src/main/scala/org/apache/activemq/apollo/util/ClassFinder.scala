@@ -20,6 +20,9 @@ import java.io.InputStream
 import java.util.Properties
 import scala.collection.mutable.ListBuffer
 
+
+object ClassFinder extends Log
+
 /**
  * <p>
  * Used to discover classes using the META-INF discovery trick.
@@ -28,6 +31,7 @@ import scala.collection.mutable.ListBuffer
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class ClassFinder[T](val path:String, val loaders:Array[ClassLoader]) {
+  import ClassFinder._
 
   def this(path:String) = this(path, Array(Thread.currentThread.getContextClassLoader))
 
@@ -72,7 +76,7 @@ class ClassFinder[T](val path:String, val loaders:Array[ClassLoader]) {
             t += instance
           } catch {
             case e2: Throwable =>
-              e.printStackTrace
+              debug(e, "Could not load the class")
           }
       }
     }
