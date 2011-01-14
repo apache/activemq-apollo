@@ -27,13 +27,16 @@ import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.DispatchSource;
 import org.fusesource.hawtdispatch.Retained;
 
-import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * An implementation of the {@link org.apache.activemq.apollo.transport.Transport} interface using raw tcp/ip
@@ -176,6 +179,78 @@ public class TcpTransport extends JavaBaseService implements Transport {
     protected boolean useLocalHost = true;
     protected boolean full = false;
 
+    int max_read_rate;
+    int max_write_rate;
+    protected RateLimitingChannel rateLimitingChannel;
+
+    class RateLimitingChannel implements ReadableByteChannel, WritableByteChannel {
+
+        int read_allowance = max_read_rate;
+        int write_allowance = max_write_rate;
+
+        public void resetAllowance() {
+            read_allowance = max_read_rate;
+            write_allowance = max_write_rate;
+        }
+
+        public int read(ByteBuffer dst) throws IOException {
+            if( max_read_rate==0 ) {
+                return channel.read(dst);
+            } else {
+                int remaining = dst.remaining();
+                if( read_allowance ==0 || remaining ==0 ) {
+                    return 0;
+                }
+
+                int reduction = 0;
+                if( remaining > read_allowance) {
+                    reduction = remaining - read_allowance;
+                    dst.limit(dst.limit() - reduction);
+                }
+                try {
+                    return channel.read(dst);
+                } finally {
+                    if( reduction!=0 ) {
+                        dst.limit(dst.limit() + reduction);
+                    }
+                }
+            }
+        }
+
+        public int write(ByteBuffer src) throws IOException {
+            if( max_write_rate==0 ) {
+                return channel.write(src);
+            } else {
+                int remaining = src.remaining();
+                if( write_allowance ==0 || remaining ==0 ) {
+                    return 0;
+                }
+
+                int reduction = 0;
+                if( remaining > write_allowance) {
+                    reduction = remaining - write_allowance;
+                    src.limit(src.limit() - reduction);
+                }
+                try {
+                    return channel.write(src);
+                } finally {
+                    if( reduction!=0 ) {
+                        src.limit(src.limit() + reduction);
+                    }
+                }
+            }
+        }
+
+        public boolean isOpen() {
+            return channel.isOpen();
+        }
+
+        public void close() throws IOException {
+            channel.close();
+        }
+
+    }
+
     private final Runnable CANCEL_HANDLER = new Runnable() {
         public void run() {
             socketState.onCanceled();
@@ -208,8 +283,8 @@ public class TcpTransport extends JavaBaseService implements Transport {
     }
 
     protected void initializeCodec() {
-        codec.setReadableByteChannel(this.channel);
-        codec.setWritableByteChannel(this.channel);
+        codec.setReadableByteChannel(readChannel());
+        codec.setWritableByteChannel(writeChannel());
     }
 
     public void connecting(URI remoteLocation, URI localLocation) throws IOException, Exception {
@@ -325,11 +400,26 @@ public class TcpTransport extends JavaBaseService implements Transport {
             }
         });
 
+        if( max_read_rate!=0 || max_write_rate!=0 ) {
+            rateLimitingChannel = new RateLimitingChannel();
+            schedualRateAllowanceReset();
+        }
+
         remoteAddress = channel.socket().getRemoteSocketAddress().toString();
         listener.onTransportConnected();
     }
 
-
+    private void schedualRateAllowanceReset() {
+        dispatchQueue.dispatchAfter(1, TimeUnit.SECONDS, new Runnable(){
+            public void run() {
+                if( !socketState.is(CONNECTED.class) ) {
+                    return;
+                }
+                rateLimitingChannel.resetAllowance();
+                schedualRateAllowanceReset();
+            }
+        });
+    }
 
     private void dispose() {
 
@@ -548,6 +638,38 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
     public SocketChannel getSocketChannel() {
         return channel;
+    }
+
+    public ReadableByteChannel readChannel() {
+        if(rateLimitingChannel!=null) {
+            return rateLimitingChannel;
+        } else {
+            return channel;
+        }
+    }
+
+    public WritableByteChannel writeChannel() {
+        if(rateLimitingChannel!=null) {
+            return rateLimitingChannel;
+        } else {
+            return channel;
+        }
+    }
+
+    public int getMax_read_rate() {
+        return max_read_rate;
+    }
+
+    public void setMax_read_rate(int max_read_rate) {
+        this.max_read_rate = max_read_rate;
+    }
+
+    public int getMax_write_rate() {
+        return max_write_rate;
+    }
+
+    public void setMax_write_rate(int max_write_rate) {
+        this.max_write_rate = max_write_rate;
     }
 
 }

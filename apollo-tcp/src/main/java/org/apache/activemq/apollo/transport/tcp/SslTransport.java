@@ -39,6 +39,7 @@ public class SslTransport extends TcpTransport {
     private boolean writeFlushing;
 
     private ByteBuffer readOverflowBuffer;
+    private SSLChannel ssl_channel = new SSLChannel();
 
     public void setSSLContext(SSLContext ctx) {
         this.sslContext = ctx;
@@ -55,11 +56,11 @@ public class SslTransport extends TcpTransport {
         }
 
         public boolean isOpen() {
-            return channel.isOpen();
+            return getSocketChannel().isOpen();
         }
 
         public void close() throws IOException {
-            channel.close();
+            getSocketChannel().close();
         }
     }
 
@@ -85,14 +86,6 @@ public class SslTransport extends TcpTransport {
     }
 
     @Override
-    protected void initializeCodec() {
-        SSLChannel channel = new SSLChannel();
-        codec.setReadableByteChannel(channel);
-        codec.setWritableByteChannel(channel);
-    }
-
-
-    @Override
     public void connecting(URI remoteLocation, URI localLocation) throws Exception {
         assert engine == null;
         engine = sslContext.createSSLEngine();
@@ -113,8 +106,6 @@ public class SslTransport extends TcpTransport {
         writeBuffer = ByteBuffer.allocateDirect(session.getPacketBufferSize());
 
         super.connected(channel);
-
-
     }
 
     @Override
@@ -146,7 +137,7 @@ public class SslTransport extends TcpTransport {
     protected boolean flush() throws IOException {
         while (true) {
             if(writeFlushing) {
-                channel.write(writeBuffer);
+                super.writeChannel().write(writeBuffer);
                 if( !writeBuffer.hasRemaining() ) {
                     writeBuffer.clear();
                     writeFlushing = false;
@@ -200,7 +191,7 @@ public class SslTransport extends TcpTransport {
                     return rc;
                 }
             } else if( readUnderflow ) {
-                int count = channel.read(readBuffer);
+                int count = super.readChannel().read(readBuffer);
                 if( count == -1 ) {  // peer closed socket.
                     if (rc==0) {
                         engine.closeInbound();
@@ -306,6 +297,15 @@ public class SslTransport extends TcpTransport {
                     System.out.println("Unexpected ssl engine handshake status: "+ status);
             }
         }
+    }
+
+
+    public ReadableByteChannel readChannel() {
+        return ssl_channel;
+    }
+
+    public WritableByteChannel writeChannel() {
+        return ssl_channel;
     }
 
 }
