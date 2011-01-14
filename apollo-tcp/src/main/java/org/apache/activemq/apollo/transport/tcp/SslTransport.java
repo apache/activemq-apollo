@@ -14,11 +14,10 @@ import java.nio.channels.WritableByteChannel;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_UNWRAP;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_WRAP;
+import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING;
 import static javax.net.ssl.SSLEngineResult.Status.BUFFER_OVERFLOW;
 
 /**
@@ -113,19 +112,23 @@ public class SslTransport extends TcpTransport {
         super.onConnected();
         engine.setWantClientAuth(true);
         engine.beginHandshake();
-        handshake_done();
+        handshake();
     }
 
     @Override
     protected void drainOutbound() {
-        if ( handshake_done() ) {
+        if ( engine.getHandshakeStatus()!=NOT_HANDSHAKING ) {
+            handshake();
+        } else {
             super.drainOutbound();
         }
     }
 
     @Override
     protected void drainInbound() {
-        if ( handshake_done() ) {
+        if ( engine.getHandshakeStatus()!=NOT_HANDSHAKING ) {
+            handshake();
+        } else {
             super.drainInbound();
         }
     }
@@ -137,10 +140,11 @@ public class SslTransport extends TcpTransport {
     protected boolean flush() throws IOException {
         while (true) {
             if(writeFlushing) {
-                super.writeChannel().write(writeBuffer);
+                int count = super.writeChannel().write(writeBuffer);
                 if( !writeBuffer.hasRemaining() ) {
                     writeBuffer.clear();
                     writeFlushing = false;
+                    suspendWrite();
                     return true;
                 } else {
                     return false;
@@ -149,6 +153,7 @@ public class SslTransport extends TcpTransport {
                 if( writeBuffer.position()!=0 ) {
                     writeBuffer.flip();
                     writeFlushing = true;
+                    resumeWrite();
                 } else {
                     return true;
                 }
@@ -169,6 +174,13 @@ public class SslTransport extends TcpTransport {
             if( !flush() ) {
                 break;
             }
+        }
+        if( plain.remaining()==0 && engine.getHandshakeStatus()!=NOT_HANDSHAKING ) {
+            dispatchQueue.execute(new Runnable() {
+                public void run() {
+                    handshake();
+                }
+            });
         }
         return rc;
     }
@@ -227,6 +239,13 @@ public class SslTransport extends TcpTransport {
                             return rc;
                         }
                     case OK:
+                        if ( engine.getHandshakeStatus()!=NOT_HANDSHAKING ) {
+                            dispatchQueue.execute(new Runnable() {
+                                public void run() {
+                                    handshake();
+                                }
+                            });
+                        }
                         break;
                     case BUFFER_UNDERFLOW:
                         readBuffer.compact();
@@ -240,8 +259,11 @@ public class SslTransport extends TcpTransport {
         return rc;
     }
 
-    public boolean handshake_done() {
-        while (true) {
+    public void handshake() {
+        try {
+            if( !flush() ) {
+                return;
+            }
             switch (engine.getHandshakeStatus()) {
                 case NEED_TASK:
                     final Runnable task = engine.getDelegatedTask();
@@ -252,50 +274,33 @@ public class SslTransport extends TcpTransport {
                                 dispatchQueue.execute(new Runnable() {
                                     public void run() {
                                         if (isConnected()) {
-                                            handshake_done();
+                                            handshake();
                                         }
                                     }
                                 });
                             }
                         });
-                        return false;
                     }
                     break;
 
                 case NEED_WRAP:
-                    try {
-                        secure_write(ByteBuffer.allocate(0));
-                        if( writeFlushing && writeSource.isSuspended() ) {
-                            writeSource.resume();
-                            return false;
-                        }
-                    } catch(IOException e) {
-                        onTransportFailure(e);
-                    }
+                    secure_write(ByteBuffer.allocate(0));
                     break;
 
                 case NEED_UNWRAP:
-                    try {
-                        secure_read(ByteBuffer.allocate(0));
-                        if( readUnderflow && readSource.isSuspended() ) {
-                            readSource.resume();
-                            return false;
-                        }
-                    } catch(IOException e) {
-                        onTransportFailure(e);
-                        return true;
-                    }
+                    secure_read(ByteBuffer.allocate(0));
                     break;
 
                 case FINISHED:
-
                 case NOT_HANDSHAKING:
-                    return true;
+                    break;
 
                 default:
-                    SSLEngineResult.HandshakeStatus status = engine.getHandshakeStatus();
-                    System.out.println("Unexpected ssl engine handshake status: "+ status);
+                    System.err.println("Unexpected ssl engine handshake status: "+ engine.getHandshakeStatus());
+                    break;
             }
+        } catch (IOException e ) {
+            onTransportFailure(e);
         }
     }
 

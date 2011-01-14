@@ -173,8 +173,8 @@ public class TcpTransport extends JavaBaseService implements Transport {
     protected SocketState socketState = new DISCONNECTED();
 
     protected DispatchQueue dispatchQueue;
-    protected DispatchSource readSource;
-    protected DispatchSource writeSource;
+    private DispatchSource readSource;
+    private DispatchSource writeSource;
 
     protected boolean useLocalHost = true;
     protected boolean full = false;
@@ -186,11 +186,27 @@ public class TcpTransport extends JavaBaseService implements Transport {
     class RateLimitingChannel implements ReadableByteChannel, WritableByteChannel {
 
         int read_allowance = max_read_rate;
+        boolean read_suspended = false;
+        int read_resume_counter = 0;
         int write_allowance = max_write_rate;
+        boolean write_suspended = false;
 
         public void resetAllowance() {
-            read_allowance = max_read_rate;
-            write_allowance = max_write_rate;
+            if( read_allowance != max_read_rate || write_allowance != max_write_rate) {
+                read_allowance = max_read_rate;
+                write_allowance = max_write_rate;
+                if( write_suspended ) {
+                    write_suspended = false;
+                    resumeWrite();
+                }
+                if( read_suspended ) {
+                    read_suspended = false;
+                    resumeRead();
+                    for( int i=0; i < read_resume_counter ; i++ ) {
+                        resumeRead();
+                    }
+                }
+            }
         }
 
         public int read(ByteBuffer dst) throws IOException {
@@ -207,13 +223,22 @@ public class TcpTransport extends JavaBaseService implements Transport {
                     reduction = remaining - read_allowance;
                     dst.limit(dst.limit() - reduction);
                 }
+                int rc=0;
                 try {
-                    return channel.read(dst);
+                    rc = channel.read(dst);
+                    read_allowance -= rc;
                 } finally {
                     if( reduction!=0 ) {
+                        if( dst.remaining() == 0 ) {
+                            // we need to suspend the read now until we get
+                            // a new allowance..
+                            readSource.suspend();
+                            read_suspended = true;
+                        }
                         dst.limit(dst.limit() + reduction);
                     }
                 }
+                return rc;
             }
         }
 
@@ -231,13 +256,22 @@ public class TcpTransport extends JavaBaseService implements Transport {
                     reduction = remaining - write_allowance;
                     src.limit(src.limit() - reduction);
                 }
+                int rc = 0;
                 try {
-                    return channel.write(src);
+                    rc = channel.write(src);
+                    write_allowance -= rc;
                 } finally {
                     if( reduction!=0 ) {
+                        if( src.remaining() == 0 ) {
+                            // we need to suspend the read now until we get
+                            // a new allowance..
+                            write_suspended = true;
+                            suspendWrite();
+                        }
                         src.limit(src.limit() + reduction);
                     }
                 }
+                return rc;
             }
         }
 
@@ -247,6 +281,14 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
         public void close() throws IOException {
             channel.close();
+        }
+
+        public void resumeRead() {
+            if( read_suspended ) {
+                read_resume_counter += 1;
+            } else {
+                _resumeRead();
+            }
         }
 
     }
@@ -345,6 +387,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
                 });
                 readSource.setCancelHandler(CANCEL_HANDLER);
                 readSource.resume();
+
             } else if (socketState.is(CONNECTED.class) ) {
                 dispatchQueue.dispatchAsync(new Runnable() {
                     public void run() {
@@ -357,7 +400,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
                     }
                 });
             } else {
-                System.err.println("cannot be started.  socket state is: "+socketState); 
+                System.err.println("cannot be started.  socket state is: "+socketState);
             }
         } finally {
             if( onCompleted!=null ) {
@@ -461,9 +504,11 @@ public class TcpTransport extends JavaBaseService implements Transport {
             switch (rc ) {
                 case FULL:
                     return false;
-                case WAS_EMPTY:
-                    writeSource.resume();
                 default:
+                    if( drained ) {
+                        drained = false;
+                        resumeWrite();
+                    }
                     return true;
             }
         } catch (IOException e) {
@@ -473,6 +518,8 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
     }
 
+
+    boolean drained = true;
     /**
      *
      */
@@ -483,8 +530,11 @@ public class TcpTransport extends JavaBaseService implements Transport {
         }
         try {
             if( codec.flush() == ProtocolCodec.BufferState.EMPTY && flush() ) {
-                writeSource.suspend();
-                listener.onRefill();
+                if( !drained ) {
+                    drained = true;
+                    suspendWrite();
+                    listener.onRefill();
+                }
             }
         } catch (IOException e) {
             onTransportFailure(e);
@@ -559,10 +609,33 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
     public void resumeRead() {
         if( isConnected() && readSource!=null ) {
-            readSource.resume();
+            if( rateLimitingChannel!=null ) {
+                rateLimitingChannel.resumeRead();
+            } else {
+                _resumeRead();
+            }
+        }
+    }
+    private void _resumeRead() {
+        readSource.resume();
+        dispatchQueue.execute(new Runnable(){
+            public void run() {
+                drainInbound();
+            }
+        });
+    }
+
+    protected void suspendWrite() {
+        if( isConnected() && writeSource!=null ) {
+            writeSource.suspend();
+        }
+    }
+    protected void resumeWrite() {
+        if( isConnected() && writeSource!=null ) {
+            writeSource.resume();
             dispatchQueue.execute(new Runnable(){
                 public void run() {
-                    drainInbound();
+                    drainOutbound();
                 }
             });
         }
