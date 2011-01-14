@@ -74,34 +74,37 @@ object JettyWebServer extends Log {
 
     // the war might be on the classpath..
     if( rc==null ) {
-      val url = JettyWebServer.getClass.getClassLoader.getResource("WEB-INF/apollo-web.txt")
-      rc = if(url== null) {
-        null
-      } else {
-        val rc = new File( url.getFile.stripSuffix("!/WEB-INF/apollo-web.txt") )
-        if( rc.isFile ) {
-          rc
-        } else {
-          null
-        }
-      }
-    }
+      var url = JettyWebServer.getClass.getClassLoader.getResource("META-INF/apollo-web.txt")
 
-    // the war project source module might be on the classpath (being run from an IDE)
-    if( rc==null ) {
-      val url = JettyWebServer.getClass.getClassLoader.getResource("META-INF/apollo-web.txt")
       rc = if(url==null) {
         null
       } else {
-        val rc = new File( url.getFile.stripSuffix("/META-INF/apollo-web.txt") )
-        if( rc.isDirectory ) {
-          rc/".."/".."/"src"/"main"/"webapp"
+        if( url.getProtocol == "jar") {
+          
+          // we are probably being run from a maven build..
+          url = new java.net.URL( url.getFile.stripSuffix("!/META-INF/apollo-web.txt") )
+          val jar = new File( url.getFile )
+          if( jar.isFile ) {
+            jar.getParentFile / (jar.getName.stripSuffix(".jar")+".war")
+          } else {
+            null
+          }
+          
+        } else if( url.getProtocol == "file") {
+          
+          // we are probably being run from an IDE...
+          val rc = new File( url.getFile.stripSuffix("/META-INF/apollo-web.txt") )
+          if( rc.isDirectory ) {
+            rc/".."/".."/"src"/"main"/"webapp"
+          } else {
+            null
+          }
         } else {
           null
         }
+        
       }
     }
-
     rc
   }
 
