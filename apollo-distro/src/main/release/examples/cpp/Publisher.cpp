@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
 
     {
         ActiveMQConnectionFactory factory;
-        factory.setBrokerURI(std::string("tcp://") + host + ":" + Integer::toString(port) + "?wireFormat=stomp");
+        factory.setBrokerURL(std::string("tcp://") + host + ":" + Integer::toString(port) + "?wireFormat=stomp");
 
         std::auto_ptr<TextMessage> message;
         std::auto_ptr<Connection> connection(factory.createConnection(user, password));

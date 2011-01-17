@@ -19,6 +19,7 @@
 #include <activemq/core/ActiveMQConnection.h>
 #include <activemq/library/ActiveMQCPP.h>
 #include <decaf/lang/Integer.h>
+#include <decaf/lang/System.h>
 #include <activemq/util/Config.h>
 #include <cms/Connection.h>
 #include <cms/Session.h>
@@ -73,7 +74,7 @@ int main(int argc AMQCPP_UNUSED, char* argv[] AMQCPP_UNUSED) {
 
     {
         ActiveMQConnectionFactory factory;
-        factory.setBrokerURI(std::string("tcp://") + host + ":" + Integer::toString(port) + "?wireFormat=stomp");
+        factory.setBrokerURL(std::string("tcp://") + host + ":" + Integer::toString(port) + "?wireFormat=stomp");
 
         std::auto_ptr<Connection> connection(factory.createConnection(user, password));
 
