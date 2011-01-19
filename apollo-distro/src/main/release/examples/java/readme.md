@@ -16,11 +16,11 @@ Running the Examples
 
 In one terminal window run:
 
-    java -cp target/example-1.0-SNAPSHOT.jar example.Publisher
+    java -cp target/example-1.0-SNAPSHOT.jar example.Listener
 
 In another terminal window run:
 
-    java -cp target/example-1.0-SNAPSHOT.jar example.Listener
+    java -cp target/example-1.0-SNAPSHOT.jar example.Publisher
 
 You can control to which stomp server the examples try to connect to by
 setting the following environment variables: 
