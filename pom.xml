@@ -531,6 +531,12 @@
                 <exclude>**/*.gif</exclude>
                 <exclude>**/*.ico</exclude>
                 <exclude>**/*.keystore</exclude>
+                
+                <exclude>**/*.keystore</exclude>
+                <exclude>src/main/filtered-resources/org/apache/activemq/apollo/cli/banner.txt</exclude>
+                <exclude>src/main/filtered-resources/org/apache/activemq/apollo/cli/commands/version.txt</exclude>
+                <exclude>src/main/filtered-resources/org/apache/activemq/apollo/cli/tips.txt</exclude>
+
               </excludes>
               <useDefaultExcludes>false</useDefaultExcludes>
               <mapping>
