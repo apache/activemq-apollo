@@ -225,6 +225,55 @@ class Stomp11HeartBeatTest extends StompTestSupport {
 
 class StompDestinationTest extends StompTestSupport {
 
+  test("Selector Syntax") {
+    connect("1.1")
+
+    var sub_id=0;
+    def test_selector(selector:String, headers: List[String], expected_matches: List[Int]) = {
+
+      client.write(
+        "SUBSCRIBE\n" +
+        "destination:/topic/selected\n" +
+        "selector:"+selector+"\n" +
+        "receipt:0\n"+
+        "id:"+sub_id+"\n" +
+        "\n")
+      wait_for_receipt("0")
+
+      var id=1;
+
+      headers.foreach { header=>
+        client.write(
+          "SEND\n" +
+          "destination:/topic/selected\n" +
+          header+"\n" +
+          "\n" +
+          "message:"+id+"\n")
+        id += 1;
+      }
+
+      expected_matches.foreach{id=>
+        val frame = client.receive()
+        frame should startWith("MESSAGE\n")
+        frame should endWith regex("\n\nmessage:"+id+"\n")
+      }
+
+      client.write(
+        "UNSUBSCRIBE\n" +
+        "id:"+sub_id+"\n" +
+        "receipt:0\n"+
+        "\n")
+
+      wait_for_receipt("0")
+
+      sub_id+=1
+    }
+
+    test_selector("color = 'red'", List("color:blue", "not:set", "color:red"), List(3))
+    test_selector("age >= 21", List("age:3", "not:set", "age:21", "age:30"), List(3,4))
+
+  }
+
   test("Queues load balance across subscribers") {
     connect("1.1")
 
@@ -580,6 +629,7 @@ class StompDestinationTest extends StompTestSupport {
     get(1)
     get(3)
   }
+
 
 }
 

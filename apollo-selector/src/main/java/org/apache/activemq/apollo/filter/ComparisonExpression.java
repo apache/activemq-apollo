@@ -350,73 +350,115 @@ public abstract class ComparisonExpression extends BinaryExpression implements B
         // If the the objects are not of the same type,
         // try to convert up to allow the comparison.
         if (lc != rc) {
-            if (lc == Byte.class) {
-                if (rc == Short.class) {
-                    lv = Short.valueOf(((Number)lv).shortValue());
-                } else if (rc == Integer.class) {
-                    lv = Integer.valueOf(((Number)lv).intValue());
-                } else if (rc == Long.class) {
-                    lv = Long.valueOf(((Number)lv).longValue());
-                } else if (rc == Float.class) {
-                    lv = new Float(((Number)lv).floatValue());
-                } else if (rc == Double.class) {
-                    lv = new Double(((Number)lv).doubleValue());
+            try {
+                if (lc == Boolean.class) {
+                    if (rc == String.class) {
+                        rv = Boolean.valueOf((String)rv);
+                    } else {
+                        return Boolean.FALSE;
+                    }
+                } else if (lc == Byte.class) {
+                    if (rc == Short.class) {
+                        lv = Short.valueOf(((Number)lv).shortValue());
+                    } else if (rc == Integer.class) {
+                        lv = Integer.valueOf(((Number)lv).intValue());
+                    } else if (rc == Long.class) {
+                        lv = Long.valueOf(((Number)lv).longValue());
+                    } else if (rc == Float.class) {
+                        lv = new Float(((Number)lv).floatValue());
+                    } else if (rc == Double.class) {
+                        lv = new Double(((Number)lv).doubleValue());
+                    } else if (rc == String.class) {
+                        rv = Byte.valueOf((String)rv);
+                    } else {
+                        return Boolean.FALSE;
+                    }
+                } else if (lc == Short.class) {
+                    if (rc == Integer.class) {
+                        lv = Integer.valueOf(((Number)lv).intValue());
+                    } else if (rc == Long.class) {
+                        lv = Long.valueOf(((Number)lv).longValue());
+                    } else if (rc == Float.class) {
+                        lv = new Float(((Number)lv).floatValue());
+                    } else if (rc == Double.class) {
+                        lv = new Double(((Number)lv).doubleValue());
+                    } else if (rc == String.class) {
+                        rv = Short.valueOf((String)rv);
+                    } else {
+                        return Boolean.FALSE;
+                    }
+                } else if (lc == Integer.class) {
+                    if (rc == Long.class) {
+                        lv = Long.valueOf(((Number)lv).longValue());
+                    } else if (rc == Float.class) {
+                        lv = new Float(((Number)lv).floatValue());
+                    } else if (rc == Double.class) {
+                        lv = new Double(((Number)lv).doubleValue());
+                    } else if (rc == String.class) {
+                        rv = Integer.valueOf((String)rv);
+                    } else {
+                        return Boolean.FALSE;
+                    }
+                } else if (lc == Long.class) {
+                    if (rc == Integer.class) {
+                        rv = Long.valueOf(((Number)rv).longValue());
+                    } else if (rc == Float.class) {
+                        lv = new Float(((Number)lv).floatValue());
+                    } else if (rc == Double.class) {
+                        lv = new Double(((Number)lv).doubleValue());
+                    } else if (rc == String.class) {
+                        rv = Long.valueOf((String)rv);
+                    } else {
+                        return Boolean.FALSE;
+                    }
+                } else if (lc == Float.class) {
+                    if (rc == Integer.class) {
+                        rv = new Float(((Number)rv).floatValue());
+                    } else if (rc == Long.class) {
+                        rv = new Float(((Number)rv).floatValue());
+                    } else if (rc == Double.class) {
+                        lv = new Double(((Number)lv).doubleValue());
+                    } else if (rc == String.class) {
+                        rv = Float.valueOf((String)rv);
+                    } else {
+                        return Boolean.FALSE;
+                    }
+                } else if (lc == Double.class) {
+                    if (rc == Integer.class) {
+                        rv = new Double(((Number)rv).doubleValue());
+                    } else if (rc == Long.class) {
+                        rv = new Double(((Number)rv).doubleValue());
+                    } else if (rc == Float.class) {
+                        rv = new Double(((Number)rv).doubleValue());
+                    } else if (rc == String.class) {
+                        rv = Double.valueOf((String)rv);
+                    } else {
+                        return Boolean.FALSE;
+                    }
+                } else if (lc == String.class) {
+
+                    if (rc == Boolean.class) {
+                        lv = Boolean.valueOf((String)lv);
+                    } else if (rc == Byte.class) {
+                        lv = Byte.valueOf((String)lv);
+                    } else if (rc == Short.class) {
+                        lv = Short.valueOf((String)lv);
+                    } else if (rc == Integer.class) {
+                        lv = Integer.valueOf((String)lv);
+                    } else if (rc == Long.class) {
+                        lv = Long.valueOf((String)lv);
+                    } else if (rc == Float.class) {
+                        lv = Float.valueOf((String)lv);
+                    } else if (rc == Double.class) {
+                        lv = Double.valueOf((String)lv);
+                    } else {
+                        return Boolean.FALSE;
+                    }
+
                 } else {
                     return Boolean.FALSE;
                 }
-            } else if (lc == Short.class) {
-                if (rc == Integer.class) {
-                    lv = Integer.valueOf(((Number)lv).intValue());
-                } else if (rc == Long.class) {
-                    lv = Long.valueOf(((Number)lv).longValue());
-                } else if (rc == Float.class) {
-                    lv = new Float(((Number)lv).floatValue());
-                } else if (rc == Double.class) {
-                    lv = new Double(((Number)lv).doubleValue());
-                } else {
-                    return Boolean.FALSE;
-                }
-            } else if (lc == Integer.class) {
-                if (rc == Long.class) {
-                    lv = Long.valueOf(((Number)lv).longValue());
-                } else if (rc == Float.class) {
-                    lv = new Float(((Number)lv).floatValue());
-                } else if (rc == Double.class) {
-                    lv = new Double(((Number)lv).doubleValue());
-                } else {
-                    return Boolean.FALSE;
-                }
-            } else if (lc == Long.class) {
-                if (rc == Integer.class) {
-                    rv = Long.valueOf(((Number)rv).longValue());
-                } else if (rc == Float.class) {
-                    lv = new Float(((Number)lv).floatValue());
-                } else if (rc == Double.class) {
-                    lv = new Double(((Number)lv).doubleValue());
-                } else {
-                    return Boolean.FALSE;
-                }
-            } else if (lc == Float.class) {
-                if (rc == Integer.class) {
-                    rv = new Float(((Number)rv).floatValue());
-                } else if (rc == Long.class) {
-                    rv = new Float(((Number)rv).floatValue());
-                } else if (rc == Double.class) {
-                    lv = new Double(((Number)lv).doubleValue());
-                } else {
-                    return Boolean.FALSE;
-                }
-            } else if (lc == Double.class) {
-                if (rc == Integer.class) {
-                    rv = new Double(((Number)rv).doubleValue());
-                } else if (rc == Long.class) {
-                    rv = new Double(((Number)rv).doubleValue());
-                } else if (rc == Float.class) {
-                    rv = new Float(((Number)rv).doubleValue());
-                } else {
-                    return Boolean.FALSE;
-                }
-            } else {
+            } catch (NumberFormatException e) {
                 return Boolean.FALSE;
             }
         }

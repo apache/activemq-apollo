@@ -892,10 +892,12 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
         die("The subscription '%s' not found.".format(id))
       case Some(consumer)=>
 
+        // consumer gets disposed after all producer stop sending to it...
+        consumer.setDisposer(^{ send_receipt(headers) })
+
         consumers -= id
         if( consumer.binding==null ) {
           host.router.unbind(consumer.destination, consumer)
-          send_receipt(headers)
         } else {
 
           reset {
@@ -905,20 +907,12 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
           if( persistent && consumer.binding!=null ) {
             reset {
-              val rc = host.router.destroy_queue(consumer.binding, security_context)
-              rc match {
-                case Failure(reason) =>
-                  async_die(reason)
-                case Success(_) =>
-                  send_receipt(headers)
+              host.router.destroy_queue(consumer.binding, security_context).failure_option.foreach{ reason=>
+                async_die(reason)
               }
             }
-          } else {
-            send_receipt(headers)
           }
-
         }
-
     }
   }
 
