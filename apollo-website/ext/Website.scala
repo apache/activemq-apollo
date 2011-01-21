@@ -27,7 +27,7 @@ package
 object Website {
 
   val project_name= "Apollo"
-  val project_slogan= "The scalable messaging broker"
+  val project_slogan= "AcitveMQ's next generation of messaging"
   val project_id= "apollo"
   val project_jira_key= "APOLLO"
   val project_issue_url= "https://issues.apache.org/activemq/browse/AMQ"

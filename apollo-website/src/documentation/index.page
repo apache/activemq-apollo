@@ -25,7 +25,5 @@ ${project_slogan}
 
 * [Getting Started Guide](getting-started.html)
 * [User Manual](user-manual.html)
-* [Performance and Scaling](performance-scaling.html)
-* [Architecture](architecture.html)
-* [Module Organization](module-organization.html)
+* [Contributor Documentation](../community/developers.html)
  

@@ -17,21 +17,20 @@
 title: Website Versions
 in_menu: false
 sort_info: 5
---- name:overview
-
-# Documentation Versions
-Website Versions
 
 --- name:content
 
 # Released Websites
 
-Apollo has not been released yet.
+We version our website content along with the project so that you
+can easily get to the documentation that's most appropriate for the 
+version of the project your using.
 
-<!--
+### 1.0 Release
+
 * [1.0 Website](${website_base_url}/versions/1.0/website/index.html)
 * [1.0 Maven Report](${website_base_url}/versions/1.0/maven/index.html)
- -->
+
 # Nightly Development Snapshots
 
 * [${project_snapshot_version} Website](${website_base_url}/versions/${project_snapshot_version}/website/index.html)

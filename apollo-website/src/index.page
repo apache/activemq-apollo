@@ -14,36 +14,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 title: Apollo
---- name:overview
+--- name:overview pipeline:jade
 
-# Apollo ${project_version}
+h1 Apollo #{project_version}
 
-#{project_slogan}
+| #{project_slogan}
 
 --- name:content pipeline:markdown 
 
-[Apollo](http://activemq.apache.org/apollo/) is a 
-[Scala 2.8](http://www.scala-lang.org) based messaging broker. 
-It can be thought of as a forked and stripped down version of 
-[Apache ActiveMQ](http://activemq.apache.org/) . It is focused on 
-providing a simple, stable, scalable messaging core which is easy to extend.
+[ActiveMQ Apollo](http://activemq.apache.org/apollo/) is a faster, more
+reliable, easier to maintain messaging broker built from the foundations of
+the original [ActiveMQ]((http://activemq.apache.org). It accomplishes this
+using a radically different threading and message dispatching 
+[architecture](documentation/architecture.html). 
 
-## Implemented Features
+In it’s current incarnation, Apollo only supports the STOMP protocol but just
+like the original ActiveMQ, it’s been designed to be a multi protocol broker.
+In future versions it should get OpenWire support so it can be compatible with
+ActiveMQ 5.x JMS clients.
 
-* [Topics and Queues](documentation/user-manual.html#Destination_Types)
-* Queue Browsers
-* [Durable Subscriptions on Topics](documentation/user-manual.html#Topic_Durable_Subscriptions)
-* [Persistence](documentation/user-manual.html#Reliable_Messaging)
-* Message swapping
-* [Message Selectors](documentation/user-manual.html#Message_Selectors)
-* ACL based security
-* JAAS Authorization
-* SSL/TLS Support
-* REST based management
+## Features
+
 * [Stomp 1.0](http://stomp.github.com/stomp-specification-1.0.html) Protocol
   Support
 * [Stomp 1.1](http://stomp.github.com/stomp-specification-1.1.html) Protocol
   Support
+* [Topics and Queues](documentation/user-manual.html#Destination_Types)
+* [Queue Browsers](documentation/user-manual.html#Browsing_Subscriptions)
+* [Durable Subscriptions on Topics](documentation/user-manual.html#Topic_Durable_Subscriptions)
+* [Reliable Messaging](documentation/user-manual.html#Reliable_Messaging)
+* Message swapping
+* [Message Selectors](documentation/user-manual.html#Message_Selectors)
+* [JAAS Authentication](documentation/user-manual.html#Authentication)
+* [ACL Authorization](documentation/user-manual.html#Authorization)
+* [SSL/TLS Support](documentation/user-manual.html#Using_SSL_TLS)
+* REST based management
 
 ## Documentation
 

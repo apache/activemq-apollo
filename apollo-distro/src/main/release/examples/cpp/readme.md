@@ -1,7 +1,13 @@
 Prereqs
 =======
 
-- Install [ActiveMQ-CPP](http://activemq.apache.org/cms/download.html) 
+These examples use the [ActiveMQ-CPP](http://activemq.apache.org/cms) C++ library,
+but unfortunately they don't work with the latest 3.2.4 release, you have to either
+wait for a subsequent release of do a source build of the project trunk.  Until then,
+you will need to 
+
+1. [Checkout the ActiveMQ-CPP trunk source code](http://activemq.apache.org/cms/source.html)
+2. [Build and Install](http://activemq.apache.org/cms/building.html)
 
 Building
 ========
