@@ -42,7 +42,6 @@
     <!-- dependencies that track scala version changes -->
     <scala-version>2.8.1</scala-version>
     <scalatest-version>1.2</scalatest-version>
-    <cascal-version>1.3-SNAPSHOT</cascal-version>
     
     <activemq-version>5.4.1</activemq-version>
     <servicemix.kernel.version>1.1.0</servicemix.kernel.version>
@@ -97,11 +96,10 @@
     <xbean-version>3.4</xbean-version>
     <felix-version>1.0.0</felix-version>
 
-    <hawtdispatch-version>1.1-SNAPSHOT</hawtdispatch-version>
-    <hawtdb-version>1.6-SNAPSHOT</hawtdb-version>
-    <hawtbuf-version>1.3-SNAPSHOT</hawtbuf-version>
+    <hawtdispatch-version>1.1</hawtdispatch-version>
+    <hawtbuf-version>1.3</hawtbuf-version>
     
-    <jdbm-version>2.0.0-SNAPSHOT</jdbm-version>
+    <jdbm-version>2.0.0</jdbm-version>
     <bdb-version>4.1.6</bdb-version>
     <jasypt-version>1.6</jasypt-version>
 
@@ -122,6 +120,10 @@
     
     <!-- disable unique version timestamps in snapshots -->
     <uniqueVersion>false</uniqueVersion>
+    
+    <cascal-version>1.3-SNAPSHOT</cascal-version>
+    <hawtdb-version>1.6-SNAPSHOT</hawtdb-version>
+
   </properties>
 
   <prerequisites>
@@ -151,11 +153,9 @@
     <module>apollo-scala</module>
     <module>apollo-util</module>
     <module>apollo-transport</module>
-    <module>apollo-cassandra</module>
     <module>apollo-broker</module>
     <module>apollo-selector</module>
     <module>apollo-tcp</module>
-    <module>apollo-hawtdb</module>
     <module>apollo-bdb</module>
     <module>apollo-jdbm2</module>
     <module>apollo-dto</module>
@@ -485,6 +485,16 @@
   </reporting>
 
   <profiles>
+    
+    <!-- to build the unstable modules -->
+    <profile>
+      <id>unstable</id>
+      <modules>
+        <module>apollo-cassandra</module>
+        <module>apollo-hawtdb</module>
+      </modules>
+    </profile>
+    
     <!-- 
         Do a license check by running       : mvn -P license license:check  
         UPdate the license check by running : mvn -P license license:format  

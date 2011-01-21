@@ -251,10 +251,13 @@ implementations currently supported are:
 * [JDBM2 Store](#JDBM2_Store) : is a file based message store implemented using the 
   [JDBM2](http://code.google.com/p/jdbm2/) library.
   This is the most stable implementation.
+
+<!-- 
 * [HawtDB Store](#HawtDB_Store) : is a file based message store implemented using the 
   [HawtDB](http://hawtdb.fusesource.org/) library.  This implementation
   has known bugs and not recommend to be used unless your good with a 
-  debugger.
+  debugger. 
+-->
 
 ###### BDB Store
 
@@ -328,7 +331,8 @@ A `jdbm2_store` element may be configured with the following attributes:
 * `compact_interval` : how often the store is compacted in seconds.  If 
   this attribute is not set, it will default to 60 seconds. Set to -1 
   to disable compaction altogether.
-  
+
+<!--  
 ###### HawtDB Store
 
 The HawtDB store implementation is redistributable by apache so it can 
@@ -359,6 +363,8 @@ A `hawtdb_store` element may be configured with the following attributes:
   that a store will delay persisting a messaging unit of work in hopes
   that it will be invalidated shortly thereafter by another unit of work
   which would negate the operation.
+
+-->
 
 ### Security
 
