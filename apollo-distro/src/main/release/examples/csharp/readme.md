@@ -7,7 +7,7 @@ Building
 ========
 
 This will vary depending on where you installed your libraries.  Open the 
-ApolloExamples solution in Visual Studio and upadte the references for the
+ApolloExamples solution in Visual Studio and update the references for the
 Listener and Publisher project to point to where you Apache.NMS.dll and 
 Apache.NMS.Stomp.dll are located.  Build both projects in the solution.
 
