@@ -21,9 +21,10 @@ import org.fusesource.hawtbuf.ByteArrayOutputStream;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.regex.*;
+
 import static org.apache.activemq.apollo.util.path.Part.*;
 
 /**
@@ -33,13 +34,18 @@ import static org.apache.activemq.apollo.util.path.Part.*;
  */
 public class PathParser {
 
+    public static class PathException extends RuntimeException {
+        public PathException(String message) {
+            super(message);
+        }
+    }
+
     public static final PathParser DEFAULT = new PathParser();
 
     public AsciiBuffer any_descendant_wildcard = new AsciiBuffer("**");
     public AsciiBuffer any_child_wildcard = new AsciiBuffer("*");
     public AsciiBuffer path_seperator = new AsciiBuffer(".");
-
-
+    public Pattern part_pattern = Pattern.compile("[a-zA-Z0-9\\_\\-\\%\\~]+");
 
     public Path parsePath(AsciiBuffer subject) {
     	ArrayList<Part> list = new ArrayList<Part>(10);
@@ -65,7 +71,11 @@ public class PathParser {
         } else if( value.equals(any_descendant_wildcard) ) {
             return ANY_DESCENDANT;
         } else {
-            return new LiteralPart(value);
+            if( part_pattern==null || part_pattern.matcher(value.toString()).matches() ) {
+                return new LiteralPart(value);
+            } else {
+                throw new PathException(String.format("Invalid destination path part: '%s', it does not match regex: %s", value, part_pattern));
+            }
         }
     }
 

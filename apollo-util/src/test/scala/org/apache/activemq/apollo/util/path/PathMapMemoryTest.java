@@ -66,11 +66,11 @@ public class PathMapMemoryTest {
         Object value = new Object();
         int count = 1000;
         for (int i = 0; i < count; i++) {
-            Path queue = createDestination("connection:"+i);
+            Path queue = createDestination("connection-"+i);
             map.put(queue, value);
         }
         for (int i = 0; i < count; i++) {
-            Path queue = createDestination("connection:"+i);
+            Path queue = createDestination("connection-"+i);
             map.remove(queue, value);
             Set<Object> set = map.get(queue);
             assertTrue(set.isEmpty());

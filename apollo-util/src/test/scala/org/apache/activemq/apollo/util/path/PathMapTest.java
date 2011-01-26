@@ -47,16 +47,6 @@ public class PathMapTest {
     protected String v6 = "value6";
 
     @Test()
-	public void testCompositePaths() throws Exception {
-        Path d1 = createDestination("TEST.BAR.D2");
-        Path d2 = createDestination("TEST.BAR.D3");
-        PathMap<String> map = new PathMap<String>();
-        map.put(d1, v1);
-        map.put(d2, v2);
-        map.get(createDestination("TEST.BAR.D2,TEST.BAR.D3"));
-    }
-
-    @Test()
 	public void testSimplePaths() throws Exception {
         PathMap<String> map = new PathMap<String>();
         map.put(d1, v1);
