@@ -20,11 +20,11 @@
   <virtual_host id="default">
     <host_name>test</host_name>
 
-    <destination name="unified.*" unified="true"/>
-    <destination name="notunified.*" unified="false"/>
+    <topic name="unified.*"/>
+    <topic name="notunified.*"/>
 
-    <queue name="unified.a" kind="ptp" queue_buffer="333"/>
-    <queue name="unified.*" kind="ds" queue_buffer="444"/>
+    <queue name="unified.a" kind="ptp" queue_buffer="333" unified="true"/>
+    <queue name="unified.*" kind="ds" queue_buffer="444" unified="true"/>
     <queue queue_buffer="111"/>
 
   </virtual_host>

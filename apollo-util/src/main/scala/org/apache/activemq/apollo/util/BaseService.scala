@@ -58,7 +58,7 @@ trait BaseService extends Service {
   protected class STOPPING extends State with CallbackSupport { override def is_stopping = true  }
   protected class STOPPED extends State { override def is_stopped = true  }
 
-  protected val dispatch_queue:DispatchQueue
+  protected def dispatch_queue:DispatchQueue
 
   final def start() = start(null)
   final def stop() = stop(null)

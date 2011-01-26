@@ -22,8 +22,8 @@ import org.fusesource.hawtdispatch._
 import protocol.{ProtocolHandler}
 import org.apache.activemq.apollo.util.{Log, BaseService}
 import org.apache.activemq.apollo.filter.BooleanExpression
-import org.apache.activemq.apollo.dto.ConnectionStatusDTO
 import org.apache.activemq.apollo.transport.{TransportListener, DefaultTransportListener, Transport}
+import org.apache.activemq.apollo.dto.{DestinationDTO, ConnectionStatusDTO}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -159,7 +159,7 @@ trait ConsumerContext { // extends ClientContext, Subscription<MessageDelivery>,
 
     def getConsumerId() : String
 
-    def getDestination(): Destination
+    def getDestination(): DestinationDTO
 
     def getSelector() : String
 

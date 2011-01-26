@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +34,7 @@ public class QueueStatusDTO extends LongIdDTO {
     public QueueDTO config;
 
     @XmlElement
-    public BindingDTO binding;
+    public DestinationDTO destination;
 
     @XmlElement
     public QueueMetricsDTO metrics = new QueueMetricsDTO();

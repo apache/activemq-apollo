@@ -61,9 +61,8 @@ public class PathMap<Value> {
     /**
      * Removes the value from the associated path
      */
-    public void remove(Path path, Value value) {
-        root.remove(path, 0, value);
-
+    public boolean remove(Path path, Value value) {
+        return root.remove(path, 0, value);
     }
 
     public PathMapNode<Value> getRootNode() {

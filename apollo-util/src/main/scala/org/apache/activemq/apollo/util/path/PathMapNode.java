@@ -134,10 +134,11 @@ public class PathMapNode<Value> implements PathNode<Value> {
         }
     }
 
-    public void remove(Path path, int idx, Value value) {
+    public boolean remove(Path path, int idx, Value value) {
         if (idx >= path.parts.size()) {
-            values.remove(value);
+            boolean rc = values.remove(value);
             pruneIfEmpty();
+            return rc;
         } else {
             // if (idx == paths.size() - 1) {
             // getAnyChildNode().getValues().remove(value);
@@ -145,7 +146,7 @@ public class PathMapNode<Value> implements PathNode<Value> {
             // else {
             // getAnyChildNode().remove(paths, idx + 1, value);
             // }
-            getChildOrCreate(path.parts.get(idx)).remove(path, ++idx, value);
+            return getChildOrCreate(path.parts.get(idx)).remove(path, ++idx, value);
         }
     }
 

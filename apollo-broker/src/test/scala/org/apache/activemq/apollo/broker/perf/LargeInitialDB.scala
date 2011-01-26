@@ -17,11 +17,11 @@
 
 package org.apache.activemq.apollo.broker.perf
 
-import org.apache.activemq.apollo.broker.Destination
 import org.apache.activemq.apollo.util.metric.MetricAggregator
 import org.apache.activemq.apollo.util.{ServiceControl, FileSupport}
 import FileSupport._
 import java.io.File
+import org.apache.activemq.apollo.dto.DestinationDTO
 
 trait LargeInitialDB extends PersistentScenario {
   PURGE_STORE = false
@@ -62,7 +62,7 @@ trait LargeInitialDB extends PersistentScenario {
     ServiceControl.start(sendBroker, "initial db broker startup")
 
     PTP = true
-    val dests: Array[Destination] = createDestinations(1)
+    val dests: Array[DestinationDTO] = createDestinations(1)
 
     totalProducerRate = new MetricAggregator().name("Aggregate Producer Rate").unit("items")
 

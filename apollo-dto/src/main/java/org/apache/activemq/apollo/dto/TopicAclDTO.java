@@ -16,10 +16,10 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
+
+
+import javax.xml.bind.annotation.*;
+import java.util.*;
 
 /**
  * <p>
@@ -27,17 +27,19 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "subscription_binding")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class SubscriptionBindingDTO extends BindingDTO {
+public class TopicAclDTO {
 
-    public String name;
+    @XmlElement(name="create")
+    public List<PrincipalDTO> creates = new ArrayList<PrincipalDTO>();
 
-    public String filter;
+    @XmlElement(name="destroy")
+    public List<PrincipalDTO> destroys = new ArrayList<PrincipalDTO>();
 
-    @XmlAttribute(name="client_id")
-    public String client_id;
+    @XmlElement(name="send")
+    public List<PrincipalDTO> sends = new ArrayList<PrincipalDTO>();
 
-    @XmlAttribute(name="subscription_id")
-    public String subscription_id;
+    @XmlElement(name="receive")
+    public List<PrincipalDTO> receives = new ArrayList<PrincipalDTO>();
+
 }

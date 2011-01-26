@@ -200,13 +200,35 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   class StompConsumer(
 
     val subscription_id:Option[AsciiBuffer],
-    val destination:Destination,
+    val destination:Array[DestinationDTO],
     val ack_handler:AckHandler,
     val selector:(String, BooleanExpression),
-    val binding:BindingDTO,
     override val browser:Boolean,
     override val exclusive:Boolean
   ) extends BaseRetained with DeliveryConsumer {
+
+////  The following comes in handy if we need to debug the
+////  reference counts of the consumers.
+//
+//    val r = new BaseRetained
+//
+//    def setDisposer(p1: Runnable): Unit = r.setDisposer(p1)
+//    def retained: Int =r.retained
+//
+//    def printST(name:String) = {
+//      val e = new Exception
+//      println(name+": ")
+//      println("  "+e.getStackTrace.drop(1).take(4).mkString("\n  "))
+//    }
+//
+//    def retain: Unit = {
+//      printST("retain")
+//      r.retain
+//    }
+//    def release: Unit = {
+//      printST("release")
+//      r.release
+//    }
 
     val dispatch_queue = StompProtocolHandler.this.dispatchQueue
 
@@ -302,9 +324,9 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
   var closed = false
   var consumers = Map[AsciiBuffer, StompConsumer]()
 
-  var producerRoutes = new LRUCache[Destination, DeliveryProducerRoute](10) {
-    override def onCacheEviction(eldest: Entry[Destination, DeliveryProducerRoute]) = {
-      host.router.disconnect(eldest.getValue)
+  var producerRoutes = new LRUCache[List[DestinationDTO], DeliveryProducerRoute](10) {
+    override def onCacheEviction(eldest: Entry[List[DestinationDTO], DeliveryProducerRoute]) = {
+      host.router.disconnect(eldest.getKey.toArray, eldest.getValue)
     }
   }
 
@@ -396,19 +418,12 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
       import collection.JavaConversions._
       producerRoutes.foreach{
-        case(_,route)=> host.router.disconnect(route)
+        case(dests,route)=> host.router.disconnect(dests.toArray, route)
       }
       producerRoutes.clear
       consumers.foreach {
         case (_,consumer)=>
-          if( consumer.binding==null ) {
-            host.router.unbind(consumer.destination, consumer)
-          } else {
-            reset {
-              val queue = host.router.get_queue(consumer.binding)
-              queue.foreach( _.unbind(consumer::Nil) )
-            }
-          }
+          host.router.unbind(consumer.destination, consumer)
       }
       consumers = Map()
       trace("stomp protocol resources released")
@@ -653,32 +668,35 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   def perform_send(frame:StompFrame, uow:StoreUOW=null): Unit = {
 
-    val destiantion: Destination = get(frame.headers, DESTINATION).get
-    producerRoutes.get(destiantion) match {
+    val destiantion: Array[DestinationDTO] = get(frame.headers, DESTINATION).get
+    val key = destiantion.toList
+    producerRoutes.get(key) match {
       case null =>
         // create the producer route...
 
-        val producer = new DeliveryProducer() {
+        val route = new DeliveryProducerRoute(host.router) {
           override def connection = Some(StompProtocolHandler.this.connection)
-
           override def dispatch_queue = queue
+
+          refiller = ^{
+            resumeRead
+          }
         }
 
         // don't process frames until producer is connected...
         connection.transport.suspendRead
-        host.router.connect(destiantion, producer, security_context) {
-          case Failure(reason) =>
-            async_die(reason)
-
-          case Success(route) =>
+        reset {
+          val rc = host.router.connect(destiantion, route, security_context)
+          if( rc.failed ) {
+            async_die(rc.failure)
+          } else {
             if (!connection.stopped) {
               resumeRead
-              route.refiller = ^ {
-                resumeRead
-              }
-              producerRoutes.put(destiantion, route)
+              producerRoutes.put(key, route)
               send_via_route(route, frame, uow)
             }
+          }
+
         }
 
       case route =>
@@ -745,7 +763,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       if( route.full ) {
         // but once it gets full.. suspend, so that we get more stomp messages
         // until it's not full anymore.
-        suspendRead("blocked destination: "+route.destination)
+        suspendRead("blocked sending to: "+route.overflowSessions.mkString(", "))
       }
 
     } else {
@@ -759,7 +777,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
   def on_stomp_subscribe(headers:HeaderMap):Unit = {
     val dest = get(headers, DESTINATION).getOrElse(die("destination not set."))
-    val destination:Destination = dest
+    var destination:Array[DestinationDTO] = dest
 
     val subscription_id = get(headers, ID)
     var id:AsciiBuffer = subscription_id.getOrElse {
@@ -773,7 +791,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
     }
 
-    val topic = destination.domain == Router.TOPIC_DOMAIN
+//    val topic = destination.isInstanceOf[TopicDestinationDTO]
     var persistent = get(headers, PERSISTENT).map( _ == TRUE ).getOrElse(false)
     var browser = get(headers, BROWSER).map( _ == TRUE ).getOrElse(false)
     var exclusive = get(headers, EXCLUSIVE).map( _ == TRUE ).getOrElse(false)
@@ -807,66 +825,52 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
       die("A subscription with identified with '"+id+"' allready exists")
     }
 
-    val binding: BindingDTO = if( topic && !persistent ) {
-      null
-    } else {
-      // Controls how the created queue gets bound
-      // to the destination name space (this is used to
-      // recover the queue on restart and rebind it the
-      // way again)
-      if (topic) {
-        val rc = new SubscriptionBindingDTO
-        rc.name = DestinationParser.encode_path(destination.name)
-        // TODO:
-        // rc.client_id =
-        rc.subscription_id = if( persistent ) decode_header(id) else null
-        rc.filter = if (selector == null) null else selector._1
-        rc
-      } else {
-        val rc = new QueueBindingDTO
-        rc.name = DestinationParser.encode_path(destination.name)
-        rc
+    if( persistent ) {
+      destination = destination.map { _ match {
+        case x:TopicDestinationDTO=>
+          val rc = new DurableSubscriptionDestinationDTO(x.name)
+          rc.subscription_id = decode_header(id)
+          rc.filter = if (selector == null) null else selector._1
+          rc
+        case _ => die("A persistent subscription can only be used on a topic destination")
+        }
       }
     }
 
-    val consumer = new StompConsumer(subscription_id, destination, ack, selector, binding, browser, exclusive);
+    val consumer = new StompConsumer(subscription_id, destination, ack, selector, browser, exclusive);
     consumers += (id -> consumer)
 
-    if( binding==null ) {
-
-      // consumer is bind bound as a topic
-      reset {
-        val rc = host.router.bind(destination, consumer, security_context)
-        consumer.release
-        rc match {
-          case Failure(reason)=>
-            async_die(reason)
-          case _=>
-            send_receipt(headers)
-        }
-      }
-
-    } else {
-      reset {
-        // create a queue and bind the consumer to it.
-        val x= host.router.get_or_create_queue(binding, security_context)
-        x match {
-          case Success(queue) =>
-            val rc = queue.bind(consumer, security_context)
-            consumer.release
-            rc match {
-              case Failure(reason)=>
-                consumers -= id
-                async_die(reason)
-              case _ =>
-                send_receipt(headers)
-            }
-          case Failure(reason) =>
-            consumers -= id
-            async_die(reason)
-        }
+    reset {
+      val rc = host.router.bind(destination, consumer, security_context)
+      consumer.release
+      rc match {
+        case Failure(reason)=>
+          consumers -= id
+          async_die(reason)
+        case _=>
+          send_receipt(headers)
       }
     }
+
+//      reset {
+//        // create a queue and bind the consumer to it.
+//        val x= host.router.get_or_create_queue(binding, security_context)
+//        x match {
+//          case Success(queue) =>
+//            val rc = queue.bind(consumer, security_context)
+//            consumer.release
+//            rc match {
+//              case Failure(reason)=>
+//                consumers -= id
+//                async_die(reason)
+//              case _ =>
+//                send_receipt(headers)
+//            }
+//          case Failure(reason) =>
+//            consumers -= id
+//            async_die(reason)
+//        }
+//      }
   }
 
   def on_stomp_unsubscribe(headers:HeaderMap):Unit = {
@@ -894,25 +898,8 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
 
         // consumer gets disposed after all producer stop sending to it...
         consumer.setDisposer(^{ send_receipt(headers) })
-
         consumers -= id
-        if( consumer.binding==null ) {
-          host.router.unbind(consumer.destination, consumer)
-        } else {
-
-          reset {
-            val queue = host.router.get_queue(consumer.binding)
-            queue.foreach( _.unbind(consumer::Nil) )
-          }
-
-          if( persistent && consumer.binding!=null ) {
-            reset {
-              host.router.destroy_queue(consumer.binding, security_context).failure_option.foreach{ reason=>
-                async_die(reason)
-              }
-            }
-          }
-        }
+        host.router.unbind(consumer.destination, consumer, persistent)
     }
   }
 

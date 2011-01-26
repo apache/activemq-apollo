@@ -33,27 +33,14 @@ public class QueueDTO {
     @XmlAttribute
     public String name;
 
-    /*
-     * The kind of queue.  I
-     * If not set, then this configuration applies to all queue types.
+    /**
+     * If set to true, then routing then there is no difference between
+     * sending to a queue or topic of the same name.  The first time
+     * a queue is created, it will act like if a durable
+     * subscription was created on the topic.
      */
     @XmlAttribute
-    public String kind;
-
-    /**
-     * If the kind is "ds" then you can specify which client
-     * id this configuration should match.
-     */
-    @XmlAttribute(name="client_id")
-    public String client_id;
-
-    /**
-     * If the kind is "ds" then you can specify which subscription
-     * id this configuration should match.
-     */
-    @XmlAttribute(name="subscription_id")
-    public String subscription_id;
-
+    public Boolean unified;
 
     /**
      *  The amount of memory buffer space for receiving messages.

@@ -16,37 +16,28 @@
  */
 package org.apache.activemq.apollo.dto;
 
-
+import org.codehaus.jackson.annotate.JsonTypeInfo;
 
 import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
 
 /**
+ * <p>
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "destination")
+@XmlType(name = "queue_binding")
+@XmlSeeAlso({QueueDestinationDTO.class, DurableSubscriptionDestinationDTO.class})
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationDTO extends StringIdDTO {
+abstract public class DestinationDTO {
 
-    /**
-     * The name of the destination.  You can use wild cards.
-     */
-	@XmlAttribute
-	public String name;
-
-    /**
-     * If set to true, then routing then there is no difference between
-     * sending to a queue or topic of the same name.  The first time
-     * a queue subscriptions is created, it will act like if a durable
-     * subscription was created on the topic. 
-     */
     @XmlAttribute
-    public Boolean unified;
+    public String name;
 
-    @XmlElement(name="slow_consumer_policy")
-    public String slow_consumer_policy;
-
-    @XmlElement(name="acl")
-    public DestinationAclDTO acl;
-
+    public DestinationDTO() {
+    }
+    public DestinationDTO(String name) {
+        this.name = name;
+    }
 }

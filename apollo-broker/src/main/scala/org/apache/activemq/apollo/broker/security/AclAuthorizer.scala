@@ -18,8 +18,8 @@ package org.apache.activemq.apollo.broker.security
 
 import scala.util.continuations._
 import org.apache.activemq.apollo.util.path.Path
+import org.apache.activemq.apollo.broker.{Connector, VirtualHost, Broker}
 import org.apache.activemq.apollo.dto._
-import org.apache.activemq.apollo.broker.{Connector, Destination, VirtualHost, Broker}
 
 /**
  * <p>
@@ -54,7 +54,7 @@ class AclAuthorizer(val default_kinds:List[String]) extends Authorizer {
     true
   }
 
-  private def can_dest(ctx: SecurityContext, host: VirtualHost, dest: DestinationDTO)(func: DestinationAclDTO=>java.util.List[PrincipalDTO]) = {
+  private def can_dest(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO)(func: TopicAclDTO=>java.util.List[PrincipalDTO]) = {
     if( dest.acl!=null ) {
       is_in(ctx, func(dest.acl))
     } else {
@@ -62,16 +62,16 @@ class AclAuthorizer(val default_kinds:List[String]) extends Authorizer {
     }
   }
 
-  def can_send_to(ctx: SecurityContext, host: VirtualHost, dest: DestinationDTO) = {
+  def can_send_to(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = {
     can_dest(ctx, host, dest)(_.sends)
   }
-  def can_receive_from(ctx: SecurityContext, host: VirtualHost, dest: DestinationDTO) = {
+  def can_receive_from(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = {
     can_dest(ctx, host, dest)(_.receives)
   }
-  def can_destroy(ctx: SecurityContext, host: VirtualHost, dest: DestinationDTO) = {
+  def can_destroy(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = {
     can_dest(ctx, host, dest)(_.destroys)
   }
-  def can_create(ctx: SecurityContext, host: VirtualHost, dest: DestinationDTO) = {
+  def can_create(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = {
     can_dest(ctx, host, dest)(_.creates)
   }
 

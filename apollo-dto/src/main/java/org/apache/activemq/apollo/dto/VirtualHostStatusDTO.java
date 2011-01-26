@@ -39,10 +39,16 @@ public class VirtualHostStatusDTO extends ServiceStatusDTO {
     public StoreStatusDTO store;
 
     /**
-     * Ids of all the destinations running on the broker
+     * Ids of all the topics running on the broker
      */
-    @XmlElement(name="destination")
-    public List<LongIdLabeledDTO> destinations = new ArrayList<LongIdLabeledDTO>();
+    @XmlElement(name="topics")
+    public List<LongIdLabeledDTO> topics = new ArrayList<LongIdLabeledDTO>();
+
+    /**
+     * Ids of all the queues running on the broker
+     */
+    @XmlElement(name="queues")
+    public List<LongIdLabeledDTO> queues = new ArrayList<LongIdLabeledDTO>();
 
 
     /**

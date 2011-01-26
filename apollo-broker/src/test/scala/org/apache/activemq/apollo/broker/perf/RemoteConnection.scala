@@ -18,12 +18,13 @@
 package org.apache.activemq.apollo.broker.perf
 
 import org.apache.activemq.apollo.util.metric._
-import org.apache.activemq.apollo.broker.{Destination, Delivery, Connection}
+import org.apache.activemq.apollo.broker.{Delivery, Connection}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch._
 import java.io.IOException
 import org.apache.activemq.apollo.transport.TransportFactory
+import org.apache.activemq.apollo.dto.DestinationDTO
 
 abstract class RemoteConnection extends Connection {
 
@@ -36,7 +37,7 @@ abstract class RemoteConnection extends Connection {
   var rateAggregator: MetricAggregator = null
 
   var stopping: AtomicBoolean = null
-  var destination: Destination = null
+  var destination: DestinationDTO = null
 
   def init = {
     if (rate.getName == null) {

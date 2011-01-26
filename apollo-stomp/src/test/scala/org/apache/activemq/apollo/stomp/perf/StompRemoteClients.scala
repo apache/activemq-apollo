@@ -29,7 +29,7 @@ import AsciiBuffer._
 import Stomp._
 import _root_.org.apache.activemq.apollo.stomp.StompFrame
 import org.fusesource.hawtdispatch._
-
+import org.apache.activemq.apollo.dto.{TopicDestinationDTO, QueueDestinationDTO}
 
 class StompRemoteConsumer extends RemoteConsumer {
   var outboundSink: OverflowSink[StompFrame] = null
@@ -38,10 +38,9 @@ class StompRemoteConsumer extends RemoteConsumer {
     outboundSink = new OverflowSink[StompFrame](MapSink(transport_sink) {x => x})
     outboundSink.refiller = ^ {}
 
-    val stompDestination = if (destination.domain == Router.QUEUE_DOMAIN) {
-      ascii("/queue/" + destination.name.toString());
-    } else {
-      ascii("/topic/" + destination.name.toString());
+    val stompDestination = destination match {
+      case x:QueueDestinationDTO => ascii("/queue/" + x.name);
+      case x:TopicDestinationDTO => ascii("/topic/" + x.name);
     }
 
     var frame = StompFrame(CONNECT);
@@ -149,11 +148,11 @@ class StompRemoteProducer extends RemoteProducer with Logging {
     outboundSink = new OverflowSink[StompFrame](MapSink(transport_sink) {x => x})
     outboundSink.refiller = ^ {drain}
 
-    if (destination.domain == Router.QUEUE_DOMAIN) {
-      stompDestination = ascii("/queue/" + destination.name.toString());
-    } else {
-      stompDestination = ascii("/topic/" + destination.name.toString());
+    stompDestination = destination match {
+      case x:QueueDestinationDTO => ascii("/queue/" + x.name);
+      case x:TopicDestinationDTO => ascii("/topic/" + x.name);
     }
+
     outboundSink.offer(StompFrame(CONNECT));
     send_next
   }

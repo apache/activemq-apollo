@@ -22,12 +22,6 @@
 
 h1 Destination: #{name}
 
-h3 Queue Domain
-ul
-  - for( x <- queues )
-    li
-      a(href={ path("../../queues/"+x.id) }) #{x.label}
-
 h3 Topic Domain
 
 h4 Publishers
@@ -51,4 +45,8 @@ ul
           a(href={ path("../../../../connections/"+x.ref) }) #{x.label}
       - case _ =>
 
-
+h4 Durable Subscribers
+ul
+  - for( x <- durable_subscriptions )
+    li
+      a(href={ path("../../all-queues/"+x.id) }) #{x.label}

@@ -22,6 +22,7 @@ import java.lang.{String, Class}
 import org.apache.activemq.apollo.broker._
 import java.io.OutputStream
 import org.apache.activemq.apollo.broker.store.ZeroCopyBuffer
+import org.apache.activemq.apollo.dto.DestinationDTO
 
 /**
  *
@@ -67,7 +68,7 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
   /**
    * where the message was sent to.
    */
-  var destination: Destination = null
+  var destination: Array[DestinationDTO] = null
 
   for( header <- (frame.updated_headers ::: frame.headers).reverse ) {
     header match {
@@ -308,9 +309,9 @@ object Stomp {
   destination_parser.any_child_wildcard = ascii("*")
   destination_parser.any_descendant_wildcard = ascii("**")
 
-  destination_parser.default_domain = Router.QUEUE_DOMAIN
+  destination_parser.default_domain = LocalRouter.QUEUE_DOMAIN
 
-  implicit def toDestination(value:AsciiBuffer):Destination = {
+  implicit def toDestinationDTO(value:AsciiBuffer):Array[DestinationDTO] = {
     val d = destination_parser.parse(value)
     if( d==null ) {
       throw new ProtocolException("Invalid stomp destiantion name: "+value);

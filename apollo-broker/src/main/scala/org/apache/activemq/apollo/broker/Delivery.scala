@@ -23,6 +23,7 @@ import protocol.Protocol
 import org.apache.activemq.apollo.filter.Filterable
 import org.apache.activemq.apollo.broker.store.{StoreUOW, MessageRecord}
 import org.apache.activemq.apollo.util.{Log, Logging}
+import org.apache.activemq.apollo.dto.DestinationDTO
 
 object DeliveryProducer extends Log
 
@@ -31,8 +32,8 @@ object DeliveryProducer extends Log
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait DeliveryProducer extends Logging {
-  override protected def log:Log = DeliveryProducer
+trait DeliveryProducer {
+  import DeliveryProducer._
 
   def dispatch_queue:DispatchQueue
 
@@ -115,7 +116,7 @@ trait Message extends Filterable with Retained {
   /**
    * where the message was sent to.
    */
-  def destination: Destination
+  def destination: Array[DestinationDTO]
 
   /**
    * The protocol of the message

@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-
 import javax.xml.bind.annotation.*;
 
 /**
@@ -26,9 +24,31 @@ import javax.xml.bind.annotation.*;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlType(name = "binding")
-@XmlSeeAlso({QueueBindingDTO.class, SubscriptionBindingDTO.class})
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
+@XmlRootElement(name = "p2p_queue_binding")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BindingDTO {
+public class QueueDestinationDTO extends DestinationDTO {
+
+    public QueueDestinationDTO() {
+    }
+
+    public QueueDestinationDTO(String name) {
+        super(name);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        QueueDestinationDTO that = (QueueDestinationDTO) o;
+
+        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return name != null ? name.hashCode() : 0;
+    }
 }

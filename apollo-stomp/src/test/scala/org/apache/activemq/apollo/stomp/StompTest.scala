@@ -633,6 +633,104 @@ class StompDestinationTest extends StompTestSupport {
 
 }
 
+class StompUnifiedQueueTest extends StompTestSupport {
+
+  test("Topic gets copy of message sent to queue") {
+    connect("1.1")
+
+    // Connect to subscribers
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/unified.a\n" +
+      "id:1\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    def put(id:Int) = {
+      client.write(
+        "SEND\n" +
+        "destination:/queue/unified.a\n" +
+        "\n" +
+        "message:"+id+"\n")
+    }
+
+    put(1)
+
+    def get(id:Int) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith regex("\n\nmessage:"+id+"\n")
+    }
+    get(1)
+  }
+
+  test("Queue gets copy of message sent to topic") {
+    connect("1.1")
+
+    // Connect to subscribers
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/unified.b\n" +
+      "id:1\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    def put(id:Int) = {
+      client.write(
+        "SEND\n" +
+        "destination:/topic/unified.b\n" +
+        "\n" +
+        "message:"+id+"\n")
+    }
+
+    put(1)
+
+    def get(id:Int) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith regex("\n\nmessage:"+id+"\n")
+    }
+    get(1)
+
+  }
+
+  test("Queue does not get copies from topic until it's first created") {
+    connect("1.1")
+
+    def put(id:Int) = {
+      client.write(
+        "SEND\n" +
+        "destination:/topic/unified.c\n" +
+        "\n" +
+        "message:"+id+"\n")
+    }
+
+    put(1)
+
+    // Connect to subscribers
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/unified.c\n" +
+      "id:1\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    put(2)
+
+    def get(id:Int) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith regex("\n\nmessage:"+id+"\n")
+    }
+    get(2)
+  }
+
+
+}
+
 class StompSslDestinationTest extends StompDestinationTest {
   override val broker_config_uri: String = "xml:classpath:apollo-stomp-ssl.xml"
 
@@ -982,7 +1080,7 @@ class StompSecurityTest extends StompTestSupport {
 
     val frame = client.receive()
     frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to send to the queue\n")
+    frame should include("message:Not authorized to create the queue\n")
   }
 
   test("Send authorized but not create") {
@@ -1003,24 +1101,22 @@ class StompSecurityTest extends StompTestSupport {
 
   }
 
-//
-//  test("Consume authorized but not create") {
-//    connect("1.1", client,
-//      "login:can_consume_queue\n" +
-//      "passcode:can_consume_queue\n")
-//
-//    client.write(
-//      "SUBSCRIBE\n" +
-//      "destination:/queue/secure\n" +
-//      "id:0\n" +
-//      "receipt:0\n" +
-//      "\n")
-//    wait_for_receipt("0")
-//
-//    val frame = client.receive()
-//    frame should startWith("ERROR\n")
-//    frame should include("message:Not authorized to create the queue\n")
-//  }
+  test("Consume authorized but not create") {
+    connect("1.1", client,
+      "login:can_consume_queue\n" +
+      "passcode:can_consume_queue\n")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/secure\n" +
+      "id:0\n" +
+      "receipt:0\n" +
+      "\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Not authorized to create the queue\n")
+  }
 
   test("Send and create authorized") {
     connect("1.1", client,
@@ -1070,7 +1166,7 @@ class StompSecurityTest extends StompTestSupport {
 
     val frame = client.receive()
     frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to consume from the queue\n")
+    frame should include("message:Not authorized to reveive from the destination.\n")
   }
 
 //  test("Consume authorized and JMSXUserID is set on message") {

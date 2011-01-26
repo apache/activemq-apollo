@@ -20,7 +20,7 @@ BrokerSummaryDTO
 ConnectionStatusDTO
 ConnectorDTO
 ConnectorStatusDTO
-DestinationStatusDTO
+TopicStatusDTO
 EntryStatusDTO
 IntMetricDTO
 LongIdDTO
@@ -42,7 +42,7 @@ KeyStorageDTO
 SimpleStoreStatusDTO
 NullStoreDTO
 QueueDTO
-DestinationDTO
+TopicDTO
 LinkDTO
 QueueConsumerStatusDTO
 StompDTO

@@ -19,7 +19,6 @@ package org.apache.activemq.apollo.dto;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
 import java.util.*;
 
 /**
@@ -29,7 +28,7 @@ import java.util.*;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-public class QueueAclDTO extends DestinationAclDTO {
+public class QueueAclDTO extends TopicAclDTO {
 
     @XmlElement(name="consume")
     public List<PrincipalDTO> consumes = new ArrayList<PrincipalDTO>();

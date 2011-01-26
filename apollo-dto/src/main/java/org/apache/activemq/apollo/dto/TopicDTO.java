@@ -16,24 +16,27 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonTypeInfo;
+
 
 import javax.xml.bind.annotation.*;
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "queue_binding")
+@XmlRootElement(name = "topic")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class QueueBindingDTO extends BindingDTO {
+public class TopicDTO {
 
     /**
-     * A label that describes the binding
+     * The name of the destination.  You can use wild cards.
      */
-    @XmlAttribute
-    public String name;
+	@XmlAttribute
+	public String name;
+
+    @XmlElement(name="slow_consumer_policy")
+    public String slow_consumer_policy;
+
+    @XmlElement(name="acl")
+    public TopicAclDTO acl;
 
 }

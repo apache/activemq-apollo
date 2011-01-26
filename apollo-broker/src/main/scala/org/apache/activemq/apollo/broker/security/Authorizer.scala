@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.broker.security
 import scala.util.continuations._
 import org.apache.activemq.apollo.broker._
 import org.apache.activemq.apollo.util.path.Path
-import org.apache.activemq.apollo.dto.{DestinationDTO, QueueDTO, BindingDTO}
+import org.apache.activemq.apollo.dto.{TopicDTO, QueueDTO, DestinationDTO}
 
 /**
  * <p>
@@ -41,22 +41,22 @@ trait Authorizer {
   /**
    * @returns true if the user is allowed to send to the destination
    */
-  def can_send_to(ctx:SecurityContext, host:VirtualHost, dest:DestinationDTO):Boolean
+  def can_send_to(ctx:SecurityContext, host:VirtualHost, dest:TopicDTO):Boolean
 
   /**
    * @returns true if the user is allowed to receive from the destination
    */
-  def can_receive_from(ctx:SecurityContext, host:VirtualHost, dest:DestinationDTO):Boolean
+  def can_receive_from(ctx:SecurityContext, host:VirtualHost, dest:TopicDTO):Boolean
 
   /**
    * @returns true if the user is allowed to create the destination
    */
-  def can_create(ctx:SecurityContext, host:VirtualHost, dest:DestinationDTO):Boolean
+  def can_create(ctx:SecurityContext, host:VirtualHost, dest:TopicDTO):Boolean
 
   /**
    * @returns true if the user is allowed to destroy the destination
    */
-  def can_destroy(ctx:SecurityContext, host:VirtualHost, dest:DestinationDTO):Boolean
+  def can_destroy(ctx:SecurityContext, host:VirtualHost, dest:TopicDTO):Boolean
 
 
   /**

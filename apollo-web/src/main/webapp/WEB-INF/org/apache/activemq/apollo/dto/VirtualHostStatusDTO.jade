@@ -28,9 +28,14 @@ p state: #{state} #{ uptime(state_since) } ago
   p
     a(href={ path("store") }) store
 
-h2 Destinations
+h2 Queues
 ul
-  - for( x <- destinations )
+  - for( x <- queues )
     li
-      a(href={ path("destinations/"+x.id) }) #{x.label}
+      a(href={ path("queues/"+x.id) }) #{x.label}
 
+h2 Topics
+ul
+  - for( x <- topics )
+    li
+      a(href={ path("topics/"+x.id) }) #{x.label}

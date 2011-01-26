@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import java.util.ArrayList;
 
 import javax.xml.bind.annotation.*;
@@ -36,11 +34,11 @@ public class VirtualHostDTO extends ServiceDTO<String> {
     public StoreDTO store;
 
     /**
-     * Should queues be auto created when they are first accessed
+     * Should destinations be auto created when they are first accessed
      * by clients?
      */
-    @XmlAttribute(name="auto_create_queues")
-    public Boolean auto_create_queues;
+    @XmlAttribute(name="auto_create_destinations")
+    public Boolean auto_create_destinations;
 
     /**
      * Should queues be purged on startup?
@@ -51,14 +49,20 @@ public class VirtualHostDTO extends ServiceDTO<String> {
     /**
      * Holds the configuration for the destinations.
      */
-    @XmlElement(name="destination")
-    public ArrayList<DestinationDTO> destinations = new ArrayList<DestinationDTO>();
+    @XmlElement(name="topic")
+    public ArrayList<TopicDTO> topics = new ArrayList<TopicDTO>();
 
     /**
      * Holds the configuration for the queues.
      */
     @XmlElement(name="queue")
     public ArrayList<QueueDTO> queues = new ArrayList<QueueDTO>();
+
+    /**
+     * Holds the configuration for the queues.
+     */
+    @XmlElement(name="durable_subscription")
+    public ArrayList<DurableSubscriptionDTO> durable_subscriptions = new ArrayList<DurableSubscriptionDTO>();
 
     /**
      * Should connections get regroups so they get serviced by the same thread?

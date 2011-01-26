@@ -19,20 +19,17 @@ package org.apache.activemq.apollo.broker
 import java.util.concurrent.TimeUnit
 
 import org.fusesource.hawtdispatch._
-import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
 import java.util.concurrent.atomic.AtomicInteger
 
-import collection.{SortedMap}
-import org.apache.activemq.apollo.broker.store.{StoreUOW}
 import protocol.ProtocolFactory
 import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.list._
-import org.fusesource.hawtdispatch.{Dispatch, ListEventAggregator, DispatchQueue, BaseRetained}
-import org.apache.activemq.apollo.dto.QueueDTO
+import org.fusesource.hawtdispatch.{ListEventAggregator, DispatchQueue, BaseRetained}
 import OptionSupport._
 import security.SecurityContext
+import org.apache.activemq.apollo.dto.{DestinationDTO, QueueDTO}
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -47,7 +44,9 @@ import Queue._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:QueueDTO) extends BaseRetained with Route with DeliveryConsumer with BaseService {
+class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination {
+
+  def host = router.host
 
   var inbound_sessions = Set[DeliverySession]()
   var all_subscriptions = Map[DeliveryConsumer, Subscription]()
@@ -189,48 +188,27 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
     if( tune_persistent ) {
 
-      if( id == -1 ) {
-        id = host.queue_id_counter.incrementAndGet
+      host.store.list_queue_entry_ranges(id, tune_swap_range_size) { ranges=>
+        dispatch_queue {
+          if( ranges!=null && !ranges.isEmpty ) {
 
-        val record = new QueueRecord
-        record.key = id
-        record.binding_data = binding.binding_data
-        record.binding_kind = binding.binding_kind
+            ranges.foreach { range =>
+              val entry = new QueueEntry(Queue.this, range.first_entry_seq).init(range)
+              entries.addLast(entry)
 
-        host.store.add_queue(record) { rc =>
-          dispatch_queue {
-            completed
-          }
-        }
-
-      } else {
-
-        host.store.list_queue_entry_ranges(id, tune_swap_range_size) { ranges=>
-          dispatch_queue {
-            if( ranges!=null && !ranges.isEmpty ) {
-
-              ranges.foreach { range =>
-                val entry = new QueueEntry(Queue.this, range.first_entry_seq).init(range)
-                entries.addLast(entry)
-
-                message_seq_counter = range.last_entry_seq + 1
-                enqueue_item_counter += range.count
-                enqueue_size_counter += range.size
-                tail_entry = new QueueEntry(Queue.this, next_message_seq)
-              }
-
-              debug("restored: "+enqueue_item_counter)
+              message_seq_counter = range.last_entry_seq + 1
+              enqueue_item_counter += range.count
+              enqueue_size_counter += range.size
+              tail_entry = new QueueEntry(Queue.this, next_message_seq)
             }
-            completed
+
+            debug("restored: "+enqueue_item_counter)
           }
+          completed
         }
-        
       }
 
     } else {
-      if( id == -1 ) {
-        id = host.queue_id_counter.incrementAndGet
-      }
       completed
     }
   }
@@ -562,11 +540,63 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
 
   def disconnected() = throw new RuntimeException("unsupported")
 
+  def can_bind(destination:DestinationDTO, consumer:DeliveryConsumer, security: SecurityContext):Boolean = {
+    if(  host.authorizer!=null && security!=null ) {
+      if( consumer.browser ) {
+        if( !host.authorizer.can_receive_from(security, host, config) ) {
+          return false;
+        }
+      } else {
+        if( !host.authorizer.can_consume_from(security, host, config) ) {
+          return false
+        }
+      }
+    }
+    return true;
+  }
+
+  def bind(destination:DestinationDTO, consumer: DeliveryConsumer) = {
+    bind(consumer::Nil)
+  }
+  def unbind(consumer: DeliveryConsumer, persistent:Boolean) = {
+    unbind(consumer::Nil)
+  }
+
+  def can_connect(destination:DestinationDTO, producer:BindableDeliveryProducer, security:SecurityContext):Boolean = {
+    val authorizer = host.authorizer
+    if( authorizer!=null && security!=null && !authorizer.can_send_to(security, host, config) ) {
+      false
+    } else {
+      true
+    }
+  }
+
+  def connect (destination:DestinationDTO, producer:BindableDeliveryProducer) = {
+    import OptionSupport._
+    if( config.unified.getOrElse(false) ) {
+      // this is a unified queue.. actually have the produce bind to the topic, instead of the
+      val topic = router.topic_domain.get_or_create_destination(binding.destination, null).success
+      topic.connect(destination, producer)
+    } else {
+      producer.bind(this::Nil)
+    }
+  }
+
+  def disconnect (producer:BindableDeliveryProducer) = {
+    producer.unbind(this::Nil)
+  }
+
+  def name: String = binding.label
+
+  override def connection:Option[BrokerConnection] = None
+
+
   /////////////////////////////////////////////////////////////////////
   //
   // Implementation methods.
   //
   /////////////////////////////////////////////////////////////////////
+
 
   private def next_message_seq = {
     val rc = message_seq_counter
@@ -605,12 +635,6 @@ class Queue(val host: VirtualHost, var id:Long, val binding:Binding, var config:
     }
   }
 
-  def collocate(value:DispatchQueue):Unit = {
-    if( value.getTargetQueue ne dispatch_queue.getTargetQueue ) {
-      debug("co-locating %s with %s", dispatch_queue.getLabel, value.getLabel);
-      this.dispatch_queue.setTargetQueue(value.getTargetQueue)
-    }
-  }
 }
 
 object QueueEntry extends Sizer[QueueEntry] {

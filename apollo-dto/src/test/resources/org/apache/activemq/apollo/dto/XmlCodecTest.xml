@@ -27,6 +27,11 @@
     <acl/>
     <host_name>localhost</host_name>
     <host_name>example.com</host_name>
+
+    <queue name="queue1"/>
+    <topic name="topic1"/>
+    <durable_subscription name="durable_subscription1"/>
+
   </virtual_host>
   <connector bind="tcp://0.0.0.0:61616" enabled="true" id="port-61616">
     <stomp add_user_header="JMSXUserID"/>

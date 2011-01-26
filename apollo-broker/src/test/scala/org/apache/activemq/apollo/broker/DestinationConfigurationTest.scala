@@ -43,49 +43,35 @@ class DestinationConfigurationTest extends FunSuiteSupport {
 
     // Let make sure we are reading in the expected config..
     expect(2) {
-      host.destinations.size
+      host.topics.size
     }
     expect(3) {
       host.queues.size
     }
 
-    val router = broker.default_virtual_host.router
+    val router = broker.default_virtual_host.router.asInstanceOf[LocalRouter]
 
-    def check_tune_queue_buffer(expected:Int)(dto:BindingDTO) = {
+    def check_tune_queue_buffer(expected:Int)(dto:DestinationDTO) = {
       var actual=0
       reset {
-        var q = router.get_or_create_queue(dto, null).success
+        var q = router.get_or_create_destination(dto, null).success.asInstanceOf[Queue]
         actual = q.tune_queue_buffer
       }
       expect(expected) {actual}
     }
 
     check_tune_queue_buffer(333) {
-      var p = new QueueBindingDTO()
+      var p = new QueueDestinationDTO()
       p.name = "unified.a"
-      p
-    }
-    check_tune_queue_buffer(444) {
-      val p = new SubscriptionBindingDTO()
-      p.name = "unified.b"
-      p.client_id = "a"
-      p.subscription_id = "b"
       p
     }
 
     check_tune_queue_buffer(111) {
-      var p = new QueueBindingDTO()
+      var p = new QueueDestinationDTO()
       p.name = "notunified.other"
       p
     }
 
-    def dest(v:String) = DestinationParser.decode_path(v)
-    expect(true) {
-      router.destinations.chooseValue(dest("unified.a")).unified
-    }
-    expect(false) {
-      router.destinations.chooseValue(dest("notunified.other")).unified
-    }
     ServiceControl.stop(broker, "broker")
   }
 

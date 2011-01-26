@@ -17,8 +17,6 @@
 package org.apache.activemq.apollo.dto;
 
 import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * <p>
@@ -26,34 +24,33 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="destination_status")
+@XmlRootElement(name = "queue_destination")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationStatusDTO extends LongIdDTO {
+public class TopicDestinationDTO extends DestinationDTO {
 
-    /**
-     * The destination name
-     */
-    @XmlAttribute
-    public String name;
+    public TopicDestinationDTO() {
+    }
 
-    @XmlElement
-    public DestinationDTO config;
+    public TopicDestinationDTO(String name) {
+        super(name);
+    }
 
-    /**
-     * Ids of all connections that are producing to the destination
-     */
-    @XmlElement(name="producer")
-    public List<LinkDTO> producers = new ArrayList<LinkDTO>();
 
-    /**
-     * Ids of all connections that are consuming from the destination
-     */
-    @XmlElement(name="consumer")
-    public List<LinkDTO> consumers = new ArrayList<LinkDTO>();
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
-    /**
-     * Ids of all queues that are associated with the destination
-     */
-    @XmlElement(name="queue")
-    public List<LongIdLabeledDTO> queues = new ArrayList<LongIdLabeledDTO>();
+        TopicDestinationDTO that = (TopicDestinationDTO) o;
+
+        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return name != null ? name.hashCode() : 0;
+    }
+
 }

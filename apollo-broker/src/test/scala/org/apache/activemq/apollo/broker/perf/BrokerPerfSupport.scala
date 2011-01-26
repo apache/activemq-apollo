@@ -25,9 +25,9 @@ import java.io.File
 import org.apache.activemq.apollo.util.metric.{Period, MetricAggregator}
 import org.fusesource.hawtbuf.AsciiBuffer
 import java.net.URL
-import org.apache.activemq.apollo.dto.BrokerDTO
 import org.apache.activemq.apollo.util._
 import collection.mutable.{ArrayBuffer, ListBuffer}
+import org.apache.activemq.apollo.dto.{DestinationDTO, BrokerDTO}
 
 /**
  *
@@ -210,13 +210,13 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
 
   val parser = new DestinationParser
 
-  def createDestinations(destCount: Int): Array[Destination] = {
-    var dests = new Array[Destination](destCount)
+  def createDestinations(destCount: Int): Array[DestinationDTO] = {
+    var dests = new Array[DestinationDTO](destCount)
 
     for (i <- 0 until destCount) {
-      val domain = if (PTP) {Router.QUEUE_DOMAIN} else {Router.TOPIC_DOMAIN}
+      val domain = if (PTP) {LocalRouter.QUEUE_DOMAIN} else {LocalRouter.TOPIC_DOMAIN}
       val name = new AsciiBuffer("dest" + (i + 1))
-      var bean = new SingleDestination(domain, parser.parsePath(name))
+      var bean = DestinationParser.create_destination(domain, name.toString)(0)
       dests(i) = bean
       //        if (PTP) {
       //          sendBroker.defaultVirtualHost.createQueue(dests(i))
@@ -248,7 +248,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     initBrokers
     startBrokers
 
-    val dests: Array[Destination] = createDestinations(destCount)
+    val dests: Array[DestinationDTO] = createDestinations(destCount)
 
     for (i <- 0 until producerCount) {
       var destination = dests(i % destCount)
@@ -273,7 +273,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     // }
   }
 
-  def _createConsumer(i: Int, destination: Destination): RemoteConsumer = {
+  def _createConsumer(i: Int, destination: DestinationDTO): RemoteConsumer = {
 
     var consumer = createConsumer()
     consumer.stopping = stopping
@@ -291,7 +291,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     broker.config.connectors.get(0).advertise
   }
 
-  def _createProducer(id: Int, messageSize: Int, destination: Destination): RemoteProducer = {
+  def _createProducer(id: Int, messageSize: Int, destination: DestinationDTO): RemoteProducer = {
     var producer = createProducer()
     producer.stopping = stopping
 

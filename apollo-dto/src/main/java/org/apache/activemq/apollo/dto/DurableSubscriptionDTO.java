@@ -16,18 +16,27 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
+
+
+import javax.xml.bind.annotation.*;
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "temp_binding")
+@XmlRootElement(name = "durable_subscription")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class TempBindingDTO extends BindingDTO {
+public class DurableSubscriptionDTO extends QueueDTO {
+
+    /**
+     * To narrow down matches to a client id
+     */
+    @XmlAttribute(name="client_id")
+    public String client_id;
+
+    /**
+     * To narrow down matches to a subscription id
+     */
+    @XmlAttribute(name="subscription_id")
+    public String subscription_id;
+
 }

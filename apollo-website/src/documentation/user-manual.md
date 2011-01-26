@@ -145,61 +145,30 @@ A `virtual_host` element may be configured with the following attributes:
 * `purge_on_startup` : if set to true, the persistent state of the broker
    will be purged when the broker is started up.
 
-The `virtual_host` can also define multiple `destination` and `queue` 
-elements to secure or tune how message delivery works for different 
-destinations or queues.  If none are defined, then sensible 
-default settings are used which allow queue and destinations to be
-auto created as they get accessed by applications.
+The `virtual_host` can also define multiple `topic`, `queue`, and
+`durable_subscription` elements to secure or tune how message delivery works
+for different topics or queues. If none are defined, then sensible default
+settings are used which allows destinations to be auto created as they get
+accessed by applications.
 
 Finally `virtual_host` configuration should also include a message store
 configuration element to enable message persistence on the virtual host.
 
-##### Destinations
-
-A destination is a named routing path on the broker. You only need to define
-a `destination` element if you want adjust the default configuration used for
-your destination. When a new destination is first created in the broker, it's
-configuration will be determined by the first `destination` which matches the
-destination being created. The attributes matched against are:
-
-* `name` : The name of the destination, you can use wild cards to match
-  multiple 
-
-A `destination` element may be configured with the following attributes:
-
-* `unified` : If set to true, then routing then there is no difference
-  between sending to a queue or topic of the same name.
-
-* `slow_consumer_policy` : Valid values are `block` and `queue`. Defaults to
-  `block`. This setting defines how topic subscriptions are handled which
-  affects slow consumer scenarios. If set to `queue` then each subscription
-  gets a temporary queue which can swap messages to disk when you have a slow
-  consumer so that produces do not slow down to the speed of the slowest
-  consumer. If set to `block`, the producers block on slow consumers which
-  makes producers only as fast as the slowest consumer on the topic.
-
 ##### Queues
 
-A queue is used to hold messages as they are being routed between
-applications. You only need to define a `queue` element if you want adjust
-the default configuration used for your queue. When a new queue is first
-created in the broker, it's configuration will be determined by the first
-`queue` which matches the queue being created. The attributes matched against
-are:
+When a new queue is first created in the broker, it's configuration will be
+determined by the first `queue` element which matches the queue being
+created. The attributes matched against are:
 
-* `name` : The name of the destination, you can use wild cards to match
+* `name` : The name of the queue, you can use wild cards to match
   multiple.
 
-* `kind` : Valid valuest are `ptp` for standard
-  point to point queues or `ds` for durable subscriptions.
-
-* `client_id` : Valid only if the `kind` is `ds`. This specify which client
-  id this configuration should match.
-
-* `subscription_id` : Valid only if the `kind` is `ds`. This specify which subscription
-  id this configuration should match.
-
 A `queue` element may be configured with the following attributes:
+
+* `unified` : If set to true, then routing then there is no difference
+  between sending to a queue or topic of the same name.  See the
+  [Unified Destinations](#Unified_Destinations) documentation for more 
+  details.
 
 * `queue_buffer` : The amount of memory buffer space allocated for each queue.
 
@@ -220,6 +189,44 @@ memory.
   pointers to the actual messages. When not loaded, the batch is referenced
   as sequence range to conserve memory.
   
+
+##### Topics
+
+When a new topic is first created in the broker, it's configuration will be
+determined by the first `topic` element which matches the topic being
+created. The attributes matched against are:
+
+* `name` : The name of the topic, you can use wild cards to match
+  against multiple
+
+A `topic` element may be configured with the following attributes:
+
+* `slow_consumer_policy` : Valid values are `block` and `queue`. Defaults to
+  `block`. This setting defines how topic subscriptions are handled which
+  affects slow consumer scenarios. If set to `queue` then each subscription
+  gets a temporary queue which can swap messages to disk when you have a slow
+  consumer so that produces do not slow down to the speed of the slowest
+  consumer. If set to `block`, the producers block on slow consumers which
+  makes producers only as fast as the slowest consumer on the topic.
+
+##### Durable Subscriptions
+
+When a new durable subscription is first created in the broker, it's
+configuration will be determined by the first `durable_subscription` element
+which matches the durable subscription being created. The attributes matched
+against are:
+
+* `name` : The name of the topic, you can use wild cards to match
+  multiple.
+
+* `client_id` This specify which client id this configuration should match.
+
+* `subscription_id` : This specify which subscription id this configuration 
+  should match.
+
+A `durable_subscription` element may be configured with all the 
+attributes available on the `queue` element.
+
 ##### Unified Destinations
 
 Unified destinations can be used so that you can mix queue and topic 
@@ -455,11 +462,11 @@ the user principal and the principal used to match against the access control
 lists (ACLs). 
 
 The default user principal classes recognized are
-`org.apache.activemq.jaas.UserPrincipal` and 
-`javax.security.auth.x500.X500Principal`. You can change the default by adding
-`user_principal_kind` elements under the `authentication` element. The first
-principal who's type matches this list will be selected as the user's
-identity for informational purposes.
+`org.apache.activemq.jaas.UserPrincipal` and
+`javax.security.auth.x500.X500Principal`. You can change the default by
+adding `user_principal_kind` elements under the `authentication` element.
+The first principal who's type matches this list will be selected as the
+user's identity for informational purposes.
 
 Similarly, default acl principal class recognized is
 `org.apache.activemq.jaas.GroupPrincipal`. You can configure it by adding
@@ -485,9 +492,9 @@ Example of customizing the principal kinds used:
 
 User authorization to broker resources is accomplished by configuring an
 access control list using an `acl` element on the `broker`, `connector`,
-`virtual_host`, `destination`, or `queue` resources. The acl defines which
-principals are allowed or denied access to perform actions against the
-resources.  An example of `acl` is shown below:
+`virtual_host`, `topic`, `durable_subscription`, or `queue` resources. The
+acl defines which principals are allowed or denied access to perform actions
+against the resources. An example of `acl` is shown below:
 
 {pygmentize:: xml}
 <acl>
@@ -557,12 +564,13 @@ can be secured on which resources:
   * `admin` : use of the administrative web interface
 * `connector` and `virtual_host`
   * `connect` : allows connections to the connector or virtual host
-* `destination` and `queue`
-  * `create` : allows the destination or queue to be created.
-  * `destroy` : allows the destination or queue to be created.
-  * `send` : allows the user to send to the destination or queue
+* `topic` and `queue` and `durable_subscription`
+  * `create` : allows creation
+  * `destroy` : allows destruction
+* `topic` and `queue`
+  * `send` : allows the user to send to the destination
   * `receive` : allows the user to send to do non_destructive read 
-    from the destination or queue
+    from the destination
 * `queue`
   * `consume` : allows the user to do destructive reads against the queue.
 
@@ -682,7 +690,7 @@ machine, just open your web browser to [`http://localhost:61680`](http://localho
 
 The web interface will display the status of the the connectors and show
 attached connections.  It will also allow you to drill into each configured
-virtual host and view the destinations and queues being used. 
+virtual host and view the topics and queues being used. 
 
 ### Exporting/Importing Stores
 

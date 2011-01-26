@@ -16,10 +16,9 @@
  */
 package org.apache.activemq.apollo.dto;
 
-
-
 import javax.xml.bind.annotation.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * <p>
@@ -27,19 +26,34 @@ import java.util.*;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
+@XmlRootElement(name="topic_status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DestinationAclDTO {
+public class TopicStatusDTO extends LongIdDTO {
 
-    @XmlElement(name="create")
-    public List<PrincipalDTO> creates = new ArrayList<PrincipalDTO>();
+    /**
+     * The destination name
+     */
+    @XmlAttribute
+    public String name;
 
-    @XmlElement(name="destroy")
-    public List<PrincipalDTO> destroys = new ArrayList<PrincipalDTO>();
+    @XmlElement
+    public TopicDTO config;
 
-    @XmlElement(name="send")
-    public List<PrincipalDTO> sends = new ArrayList<PrincipalDTO>();
+    /**
+     * Ids of all connections that are producing to the destination
+     */
+    @XmlElement(name="producer")
+    public List<LinkDTO> producers = new ArrayList<LinkDTO>();
 
-    @XmlElement(name="receive")
-    public List<PrincipalDTO> receives = new ArrayList<PrincipalDTO>();
+    /**
+     * Ids of all connections that are consuming from the destination
+     */
+    @XmlElement(name="consumer")
+    public List<LinkDTO> consumers = new ArrayList<LinkDTO>();
 
+    /**
+     * Ids of all queues that are associated with the destination
+     */
+    @XmlElement(name="durable_subscription")
+    public List<LongIdLabeledDTO> durable_subscriptions = new ArrayList<LongIdLabeledDTO>();
 }

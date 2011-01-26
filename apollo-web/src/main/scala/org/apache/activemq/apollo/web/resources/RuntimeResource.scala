@@ -177,7 +177,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
   def get_queue_metrics(virtualHost:VirtualHost):Future[AggregateQueueMetricsDTO] = {
     val metrics = Future.all{
-      virtualHost.router.queues.values.map { queue=>
+      virtualHost.router.asInstanceOf[LocalRouter].queues_by_id.values.map { queue=>
         queue.dispatch_queue.future { get_queue_metrics(queue) }
       }
     }
@@ -194,8 +194,12 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       result.state_since = virtualHost.service_state.since
       result.config = virtualHost.config
 
-      virtualHost.router.routing_nodes.foreach { node=>
-        result.destinations.add(new LongIdLabeledDTO(node.id, node.name.toString))
+      virtualHost.router.asInstanceOf[LocalRouter].topic_domain.destinations.foreach { node=>
+        result.topics.add(new LongIdLabeledDTO(node.id, node.name))
+      }
+
+      virtualHost.router.asInstanceOf[LocalRouter].queue_domain.destinations.foreach { node=>
+        result.queues.add(new LongIdLabeledDTO(node.id, node.binding.label))
       }
 
       get_queue_metrics(virtualHost).onComplete { metrics=>
@@ -240,18 +244,19 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
     link
   }
 
-  @GET @Path("virtual-hosts/{id}/destinations/{dest}")
-  def destination(@PathParam("id") id : Long, @PathParam("dest") dest : Long):DestinationStatusDTO = {
+  @GET @Path("virtual-hosts/{id}/topics/{dest}")
+  def destination(@PathParam("id") id : Long, @PathParam("dest") dest : Long):TopicStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
-      cb(virtualHost.router.routing_nodes.find { _.id == dest } map { node=>
-        val result = new DestinationStatusDTO
+      cb(virtualHost.router.asInstanceOf[LocalRouter].topic_domain.destination_by_id.get(dest) map { node=>
+        val result = new TopicStatusDTO
         result.id = node.id
-        result.name = node.name.toString
+        result.name = node.name
         result.config = node.config
-        node.queues.foreach { q=>
-          result.queues.add(new LongIdLabeledDTO(q.id, q.binding.label))
+
+        node.durable_subscriptions.foreach { q=>
+          result.durable_subscriptions.add(new LongIdLabeledDTO(q.id, q.binding.label))
         }
-        node.broadcast_consumers.foreach { consumer=>
+        node.consumers.foreach { consumer=>
           consumer match {
             case queue:Queue =>
               result.consumers.add(link(queue))
@@ -261,7 +266,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
               }
           }
         }
-        node.broadcast_producers.flatMap( _.producer.connection ).foreach { connection=>
+        node.producers.flatMap( _.connection ).foreach { connection=>
           result.producers.add(link(connection))
         }
 
@@ -270,7 +275,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
     }
   }
 
-  @GET @Path("virtual-hosts/{id}/queues/{queue}")
+  @GET @Path("virtual-hosts/{id}/all-queues/{queue}")
   def queue(@PathParam("id") id : Long, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean):QueueStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
       reset {
@@ -280,11 +285,11 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
     }
   }
 
-  @GET @Path("virtual-hosts/{id}/destinations/{dest}/queues/{queue}")
-  def destination_queue(@PathParam("id") id : Long, @PathParam("dest") dest : Long, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean ):QueueStatusDTO = {
+  @GET @Path("virtual-hosts/{id}/queues/{queue}")
+  def destination_queue(@PathParam("id") id : Long, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean ):QueueStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
       import JavaConversions._
-      val queue = virtualHost.router.routing_nodes.find { _.id == dest } flatMap { node=> node.queues.find  { _.id == qid } }
+      val queue = virtualHost.router.asInstanceOf[LocalRouter].queue_domain.destination_by_id.get(qid)
       status(queue, entries, cb)
     }
   }
@@ -330,7 +335,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
     q.dispatch_queue {
       val rc = new QueueStatusDTO
       rc.id = q.id
-      rc.binding = q.binding.binding_dto
+      rc.destination = q.binding.binding_dto
       rc.config = q.config
       rc.metrics = get_queue_metrics(q)
 
