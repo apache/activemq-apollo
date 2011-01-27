@@ -30,7 +30,9 @@ object Helper {
 
   def ansi= new Ansi()
 
-  class Failure(msg:String) extends RuntimeException(msg)
+  class Failure(msg:String, e:Throwable) extends RuntimeException(msg, e) {
+    def this(msg:String) = this(msg,null)
+  }
 
   def error(value:Any) = throw new Failure(value.toString)
 
