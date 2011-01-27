@@ -39,17 +39,21 @@ trait Log {
   val log = LoggerFactory.getLogger(getClass.getName.stripSuffix("$"))
 
   private def with_throwable(e:Throwable)(func: =>Unit) = {
-    val stack_ref = if( log.isDebugEnabled ) {
-      val id = next_exception_id
-      MDC.put("stack reference", id.toString);
-      Some(id)
+    if( e!=null ) {
+      val stack_ref = if( log.isDebugEnabled ) {
+        val id = next_exception_id
+        MDC.put("stack reference", id.toString);
+        Some(id)
+      } else {
+        None
+      }
+      func
+      stack_ref.foreach { id=>
+        log.debug("stack trace: "+id, e)
+        MDC.remove("stack reference")
+      }
     } else {
-      None
-    }
-    func
-    stack_ref.foreach { id=>
-      log.debug("stack trace: "+id, e)
-      MDC.remove("stack reference")
+      func
     }
   }
 
