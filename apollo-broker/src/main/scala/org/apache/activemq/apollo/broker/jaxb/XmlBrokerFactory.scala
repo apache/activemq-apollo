@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.jaxb
+package org.apache.activemq.apollo.broker.jaxb
 
 import java.io.IOException
 import java.net.{URL, URI}

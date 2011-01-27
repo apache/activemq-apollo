@@ -138,16 +138,27 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4j-version}</version>
       <scope>test</scope>
-      <version>${log4j-version}</version>
     </dependency>
-      
+
+
   </dependencies>
 
   <build>
     <plugins>
+
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <configuration>
+          <instructions>
+            <Bundle-Activator>org.apache.activemq.apollo.osgi.ApolloActivator</Bundle-Activator>
+          </instructions>
+        </configuration>
+      </plugin>
 
       <!-- Generate a test jar for the test cases in this package -->
       <plugin>
