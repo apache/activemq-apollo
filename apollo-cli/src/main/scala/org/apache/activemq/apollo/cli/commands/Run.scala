@@ -120,10 +120,6 @@ class Run extends Action with Logging {
       })
       broker.tmp = tmp
 
-      if(java.lang.Boolean.getBoolean("hawtdispatch.profile")) {
-        monitor_hawtdispatch
-      }
-
       // wait forever...  broker will system exit.
       this.synchronized {
         this.wait
@@ -134,32 +130,6 @@ class Run extends Action with Logging {
         error(x.getMessage)
     }
     null
-  }
-
-
-  def monitor_hawtdispatch = {
-    new Thread("HawtDispatch Monitor") {
-      setDaemon(true);
-      override def run = {
-        while(true) {
-          Thread.sleep(1000);
-          import collection.JavaConversions._
-
-          // Only display is we see some long wait or run times..
-          val m = Dispatch.metrics.toList.flatMap{x=>
-            if( x.totalWaitTimeNS > 1000000 ||  x.totalRunTimeNS > 1000000 ) {
-              Some(x)
-            } else {
-              None
-            }
-          }
-
-          if( !m.isEmpty ) {
-            info("-- hawtdispatch metrics -----------------------\n"+m.mkString("\n"))
-          }
-        }
-      }
-    }.start();
   }
 
 }

@@ -16,24 +16,22 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.java.io.{File}
-import _root_.java.lang.{String}
+import _root_.java.io.File
+import _root_.java.lang.String
 import org.fusesource.hawtdispatch._
-import _root_.org.fusesource.hawtdispatch.ScalaDispatchHelpers._
-import org.fusesource.hawtdispatch.{Dispatch}
+import org.fusesource.hawtdispatch.Dispatch
 import org.fusesource.hawtbuf._
 import AsciiBuffer._
-import collection.{JavaConversions, SortedMap}
+import collection.JavaConversions
 import JavaConversions._
-import org.apache.activemq.apollo.dto.{VirtualHostStatusDTO, ConnectorStatusDTO, BrokerStatusDTO, BrokerDTO}
+import org.apache.activemq.apollo.dto.BrokerDTO
 import java.util.concurrent.atomic.AtomicLong
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
-import collection.mutable.LinkedHashMap
-import java.util.concurrent.{ThreadFactory, Executors, ConcurrentHashMap}
 import security.{AclAuthorizer, Authorizer, JaasAuthenticator, Authenticator}
 import java.net.InetSocketAddress
 import org.apache.activemq.apollo.broker.web._
+import collection.mutable.{HashSet, LinkedHashMap}
 
 /**
  * <p>
@@ -89,18 +87,59 @@ object BufferConversions {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object BrokerRegistry {
+object BrokerRegistry extends Log {
 
-  val brokers = new ConcurrentHashMap[Broker, Broker]()
+  private val brokers = HashSet[Broker]()
 
-  def list():Array[Broker] = {
-    import JavaConversions._
-    brokers.keySet.toSeq.toArray
+  @volatile
+  private var monitor_session = 0
+
+  def list():Array[Broker] = this.synchronized {
+    brokers.toArray
   }
 
-  def add(broker:Broker) = brokers.put(broker, broker)
+  def add(broker:Broker) = this.synchronized {
+    val rc = brokers.add(broker)
+    if(rc && brokers.size==1 && java.lang.Boolean.getBoolean("hawtdispatch.profile")) {
+      // start monitoring when the first broker starts..
+      monitor_session += 1
+      monitor_hawtdispatch(monitor_session)
+    }
+    rc
+  }
 
-  def remove(broker:Broker) = brokers.remove(broker)
+  def remove(broker:Broker) = this.synchronized {
+    val rc = brokers.remove(broker)
+    if(rc && brokers.size==0 && java.lang.Boolean.getBoolean("hawtdispatch.profile")) {
+      // stomp monitoring when the last broker stops..
+      monitor_session += 1
+    }
+    rc
+  }
+
+
+  def monitor_hawtdispatch(session_id:Int):Unit = {
+
+    import collection.JavaConversions._
+    import java.util.concurrent.TimeUnit._
+    getGlobalQueue().after(1, SECONDS) {
+      if( session_id == monitor_session ) {
+        val m = Dispatch.metrics.toList.flatMap{x=>
+          if( x.totalWaitTimeNS > MILLISECONDS.toNanos(10) ||  x.totalRunTimeNS > MILLISECONDS.toNanos(10) ) {
+            Some(x)
+          } else {
+            None
+          }
+        }
+
+        if( !m.isEmpty ) {
+          info("-- hawtdispatch metrics -----------------------\n"+m.mkString("\n"))
+        }
+
+        monitor_hawtdispatch(session_id)
+      }
+    }
+  }
 
 }
 
