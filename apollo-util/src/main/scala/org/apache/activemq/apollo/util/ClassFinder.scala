@@ -19,9 +19,30 @@ package org.apache.activemq.apollo.util
 import java.io.InputStream
 import java.util.Properties
 import scala.collection.mutable.ListBuffer
+import java.net.URL
 
 
-object ClassFinder extends Log
+object ClassFinder extends Log {
+
+  trait Loader {
+    def getResources(path:String):java.util.Enumeration[URL]
+    def loadClass(name:String):Class[_]
+  }
+
+  case class ClassLoaderLoader(cl:ClassLoader) extends Loader {
+    def getResources(path:String) = cl.getResources(path)
+    def loadClass(name:String) = cl.loadClass(name)
+  }
+
+  def standalone_loader():Array[Loader] = {
+    Array(ClassLoaderLoader(Thread.currentThread.getContextClassLoader))
+  }
+
+  var default_loaders = ()=>standalone_loader
+}
+
+import ClassFinder._
+
 
 /**
  * <p>
@@ -30,16 +51,16 @@ object ClassFinder extends Log
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class ClassFinder[T](val path:String, val loaders:Array[ClassLoader]) {
-  import ClassFinder._
+class ClassFinder[T](val path:String, val loaders: ()=>Array[Loader]) {
 
-  def this(path:String) = this(path, Array(Thread.currentThread.getContextClassLoader))
+  def this(path:String) = this(path, default_loaders)
+//  def this(path:String, loaders:Array[ClassLoader]) = this(path, ()=>{loaders.map(ClassLoaderLoader _) })
 
   def findArray(): Array[Class[T]] = find.toArray
 
   def find(): List[Class[T]] = {
     var classes = List[Class[T]]()
-    loaders.foreach { loader=>
+    loaders().foreach { loader=>
 
       val resources = loader.getResources(path)
       var classNames: List[String] = Nil
@@ -53,10 +74,15 @@ class ClassFinder[T](val path:String, val loaders:Array[ClassLoader]) {
       }
       classNames = classNames.distinct
 
-      classes :::= classNames.map { name=>
-        loader.loadClass(name).asInstanceOf[Class[T]]
+      classes :::= classNames.flatMap { name=>
+        try {
+          Some(loader.loadClass(name).asInstanceOf[Class[T]])
+        } catch {
+          case e:Throwable =>
+            debug(e, "Could not load class %s", name)
+            None
+        }
       }
-
     }
 
     return classes.distinct

@@ -103,7 +103,14 @@
       <optional>true</optional>
     </dependency>
     
-    <!-- Testing Dependencies -->    
+    <dependency>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.core</artifactId>
+      <version>4.1.0</version>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- Testing Dependencies -->
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-util</artifactId>
