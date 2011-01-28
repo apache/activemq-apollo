@@ -531,7 +531,7 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
             "Supported protocol versions are %s".format(supported_versions))
     }
 
-    val heart_beat = get(headers, HEART_BEAT).getOrElse(DEFAULT_HEAT_BEAT)
+    val heart_beat = get(headers, HEART_BEAT).getOrElse(DEFAULT_HEART_BEAT)
     heart_beat.split(COMMA).map(_.ascii) match {
       case Array(cx,cy) =>
         try {

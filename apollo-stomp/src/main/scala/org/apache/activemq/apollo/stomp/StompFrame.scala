@@ -434,7 +434,7 @@ object Stomp {
     
   val V1_0 = ascii("1.0")
   val V1_1 = ascii("1.1")
-  val DEFAULT_HEAT_BEAT = ascii("0,0")
+  val DEFAULT_HEART_BEAT = ascii("0,0")
 
   val SUPPORTED_PROTOCOL_VERSIONS = List(V1_1, V1_0)
 
