@@ -123,14 +123,25 @@
     
     <cascal-version>1.3-SNAPSHOT</cascal-version>
     <hawtdb-version>1.6-SNAPSHOT</hawtdb-version>
+    
+    
+    <maven-bundle-plugin-version>2.2.0</maven-bundle-plugin-version>
+    
+    <apollo.osgi.export.pkg>{local-packages}</apollo.osgi.export.pkg>
 
+    <apollo.osgi.name>${project.groupId}.${project.artifactId}</apollo.osgi.name>
+    <apollo.osgi.import>*</apollo.osgi.import>
+    <apollo.osgi.export>${apollo.osgi.export.pkg};version=${project.version};-noimport:=true</apollo.osgi.export>
+    <apollo.osgi.private>!*</apollo.osgi.private>
+    <apollo.osgi.dynamic></apollo.osgi.dynamic>
+    
   </properties>
 
   <prerequisites>
     <maven>2.2.1</maven>
   </prerequisites>
 
-  <url>http://activemq.apache.org/</url>
+  <url>http://activemq.apache.org/apollo</url>
 
   <mailingLists>
     <mailingList>
@@ -293,11 +304,6 @@
           </configuration>
         </plugin>
         
-        <plugin>
-          <groupId>org.apache.felix</groupId>
-          <artifactId>maven-bundle-plugin</artifactId>
-          <version>${felix-version}</version>
-        </plugin>
         <!-- <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>ianal-maven-plugin</artifactId>
@@ -377,37 +383,45 @@
           </execution>
         </executions>
       </plugin>
-      <!-- <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>ianal-maven-plugin</artifactId>
+      
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <version>${maven-bundle-plugin-version}</version>
+        <extensions>true</extensions>
+        <inherited>true</inherited>
+        <configuration>
+          <instructions>
+            <Bundle-Name>${project.artifactId}</Bundle-Name>
+            <Bundle-SymbolicName>${apollo.osgi.name}</Bundle-SymbolicName>
+            <Export-Package>${apollo.osgi.export}</Export-Package>
+            <Import-Package>${apollo.osgi.import}</Import-Package>
+            <Private-Package>${apollo.osgi.private}</Private-Package>
+            <DynamicImport-Package>${apollo.osgi.dynamic}</DynamicImport-Package>
+            <Implementation-Title>Apache ActiveMQ Apollo</Implementation-Title>
+            <Implementation-Version>${project.version}</Implementation-Version>
+            <_versionpolicy-impl>[$(version;==;$(@)),$(version;=+;$(@)))</_versionpolicy-impl>
+            <_versionpolicy-uses>[$(version;==;$(@)),$(version;+;$(@)))</_versionpolicy-uses>
+            <_versionpolicy>[$(version;==;$(@)),$(version;+;$(@)))</_versionpolicy>
+            <_failok>${apollo.osgi.failok}</_failok>
+          </instructions>
+        </configuration>
         <executions>
           <execution>
+            <id>cleanVersions</id>
+            <phase>generate-sources</phase>
             <goals>
-              <goal>verify-legal-files</goal>
+              <goal>cleanVersions</goal>
             </goals>
             <configuration>
-              <strict>true</strict>
+              <versions>
+                <apollo.osgi.version>${project.version}</apollo.osgi.version>
+              </versions>
             </configuration>
           </execution>
         </executions>
-      </plugin> -->
-      <!--<plugin>-->
-        <!--<groupId>org.apache.felix</groupId>-->
-        <!--<artifactId>maven-bundle-plugin</artifactId>-->
-        <!--<version>${felix-version}</version>-->
-        <!--<extensions>true</extensions>-->
-        <!--<configuration>-->
-          <!--<instructions>-->
-            <!--<Bundle-Name>${artifactId}</Bundle-Name>-->
-            <!--<Bundle-SymbolicName>${activemq.osgi.symbolic.name}</Bundle-SymbolicName>-->
-            <!--<Export-Package>${activemq.osgi.export}</Export-Package>-->
-            <!--<Import-Package>${activemq.osgi.import}</Import-Package>-->
-            <!--<Private-Package>${activemq.osgi.private.pkg}</Private-Package>-->
-            <!--<Implementation-Title>Apache ActiveMQ</Implementation-Title>-->
-            <!--<Implementation-Version>${project.version}</Implementation-Version>-->
-          <!--</instructions>-->
-        <!--</configuration>-->
-      <!--</plugin>-->
+      </plugin>
+
     </plugins>
   </build>
   <reporting>

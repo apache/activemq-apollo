@@ -29,8 +29,8 @@
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-util</artifactId>
-  <packaging>jar</packaging>
   <version>1.0-SNAPSHOT</version>
+  <packaging>bundle</packaging>
 
   <name>${project.artifactId}</name>
 
@@ -47,7 +47,13 @@
       <url>http://scala-tools.org/repo-releases</url>
     </repository>
   </repositories>
-  
+
+  <properties>
+    <apollo.osgi.import.pkg>
+      *;resolution:=optional
+    </apollo.osgi.import.pkg>
+  </properties>
+
   <dependencies>
                 
     <dependency>
@@ -101,7 +107,7 @@
         </exclusion>
       </exclusions>
     </dependency>
-                
+
     <!-- Scala Support -->
     <dependency>
       <groupId>org.scala-lang</groupId>
