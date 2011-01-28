@@ -124,17 +124,15 @@
     <cascal-version>1.3-SNAPSHOT</cascal-version>
     <hawtdb-version>1.6-SNAPSHOT</hawtdb-version>
     
-    
-    <maven-bundle-plugin-version>2.2.0</maven-bundle-plugin-version>
-    
+    <maven-bundle-plugin-version>2.3.0-SNAPSHOT</maven-bundle-plugin-version>
     <apollo.osgi.export.pkg>{local-packages}</apollo.osgi.export.pkg>
-
     <apollo.osgi.name>${project.groupId}.${project.artifactId}</apollo.osgi.name>
     <apollo.osgi.import>*</apollo.osgi.import>
     <apollo.osgi.export>${apollo.osgi.export.pkg};version=${project.version};-noimport:=true</apollo.osgi.export>
     <apollo.osgi.private>!*</apollo.osgi.private>
     <apollo.osgi.dynamic></apollo.osgi.dynamic>
-    
+    <apollo.osgi.host>org.apache.activemq.apollo-broker</apollo.osgi.host>
+
   </properties>
 
   <prerequisites>
@@ -392,6 +390,7 @@
         <inherited>true</inherited>
         <configuration>
           <instructions>
+            <Fragment-Host>${apollo.osgi.host}</Fragment-Host>
             <Bundle-Name>${project.artifactId}</Bundle-Name>
             <Bundle-SymbolicName>${apollo.osgi.name}</Bundle-SymbolicName>
             <Export-Package>${apollo.osgi.export}</Export-Package>

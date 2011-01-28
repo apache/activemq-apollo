@@ -32,6 +32,10 @@
   <packaging>bundle</packaging>
 
   <name>${project.artifactId}</name>
+
+  <properties>
+    <apollo.osgi.host></apollo.osgi.host>
+  </properties>
   
   <dependencies>
     <dependency>

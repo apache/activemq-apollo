@@ -35,11 +35,7 @@
   <name>${project.artifactId}</name>
 
   <properties>
-    <apollo.osgi.export.pkg>org.apache.activemq.apollo.broker*</apollo.osgi.export.pkg>
-    <apollo.osgi.import>
-      org.eclipse.jetty*;resolution:=optional,
-      *
-    </apollo.osgi.import>
+    <apollo.osgi.host></apollo.osgi.host>
   </properties>
 
   <dependencies>
