@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ 
+      Licensed to the Apache Software Foundation (ASF) under one or more
+      contributor license agreements.  See the NOTICE file distributed with
+      this work for additional information regarding copyright ownership.
+      The ASF licenses this file to You under the Apache License, Version 2.0
+      (the "License"); you may not use this file except in compliance with
+      the License.  You may obtain a copy of the License at
+ 
+         http://www.apache.org/licenses/LICENSE-2.0
+ 
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+-->
+<features>
+  
+  <!-- the default modules include the jdbm, stomp, and the web admin. -->
+  <feature name='apollo' version='${pom.version}'>
+    <feature version='${pom.version}'>apollo-jdbm</feature>
+    <feature version='${pom.version}'>apollo-stomp</feature>
+    <!-- <feature version='${pom.version}'>apollo-web</feature> -->
+  </feature>
+
+  <feature name='apollo-broker' version='${pom.version}'>
+    <bundle>mvn:org.apache.activemq/apollo-broker/${pom.version}</bundle>
+    <bundle>mvn:org.apache.activemq/apollo-cli/${pom.version}</bundle>
+    <bundle>mvn:org.apache.activemq/apollo-dto/${pom.version}</bundle>
+    <bundle>mvn:org.apache.activemq/apollo-selector/${pom.version}</bundle>
+    <bundle>mvn:org.apache.activemq/apollo-transport/${pom.version}</bundle>
+    <bundle>mvn:org.apache.activemq/apollo-util/${pom.version}</bundle>
+
+    <!-- external dependencies -->
+    <bundle>wrap:mvn:org.scala-lang/scala-library/${scala-version}</bundle>
+    <bundle>mvn:org.fusesource.hawtbuf/hawtbuf/${hawtbuf-version}</bundle>
+    <bundle>wrap:mvn:org.fusesource.hawtbuf/hawtbuf-proto/${hawtbuf-version}</bundle>
+    <bundle>wrap:mvn:org.fusesource.hawtdispatch/hawtdispatch/${hawtdispatch-version}</bundle>
+    <bundle>wrap:mvn:org.fusesource.hawtdispatch/hawtdispatch-scala/${hawtdispatch-version}</bundle>
+    <bundle>mvn:org.codehaus.jackson/jackson-core-asl/${jackson-version}</bundle>
+    <bundle>mvn:org.codehaus.jackson/jackson-mapper-asl/${jackson-version}</bundle>
+    <bundle>wrap:mvn:org.jasypt/jasypt/${jasypt-version}</bundle>
+    <bundle>wrap:mvn:org.apache.activemq/activemq-jaas/${activemq-version}</bundle>
+    <bundle>wrap:mvn:org.yaml/snakeyaml/${snakeyaml-version}</bundle>
+  </feature>
+  
+  <!-- optional stores -->
+  <feature name='apollo-jdbm' version='${pom.version}'>
+    <feature version='${pom.version}'>apollo-broker</feature>
+    <bundle>wrap:mvn:org.apache.activemq/apollo-jdbm2/${pom.version}</bundle>
+  </feature>
+  <feature name='apollo-bdb' version='${pom.version}'>
+    <feature version='${pom.version}'>apollo-broker</feature>
+    <bundle>wrap:mvn:org.apache.activemq/apollo-bdb/${pom.version}</bundle>
+  </feature>
+
+  <!-- optional transports -->
+  <feature name='apollo-tcp' version='${pom.version}'>
+    <feature version='${pom.version}'>apollo-broker</feature>
+    <bundle>mvn:org.apache.activemq/apollo-tcp/${pom.version}</bundle>
+  </feature>
+
+  <!-- optional protocols -->
+  <feature name='apollo-stomp' version='${pom.version}'>
+    <feature version='${pom.version}'>apollo-tcp</feature>
+    <bundle>mvn:org.apache.activemq/apollo-stomp/${pom.version}</bundle>
+  </feature>
+
+  <!-- optional web admin -->
+  <feature name='apollo-web' version='${pom.version}'>
+    <feature version='${pom.version}'>apollo-broker</feature>
+    <bundle>mvn:org.apache.activemq/apollo-web/${pom.version}/slim</bundle>
+    <bundle>mvn:org.apache.activemq/apollo-web/${pom.version}/war/slim</bundle>
+    
+    <bundle>mvn:org.fusesource.scalate/scalate-core/${scalate-version}</bundle>
+    <bundle>mvn:org.codehaus.jackson/jackson-jaxrs/${jackson-version}</bundle>
+    <bundle>wrap:mvn:com.sun.jersey/jersey-core/${jersey-version}</bundle>
+    <bundle>wrap:mvn:com.sun.jersey/jersey-server/${jersey-version}</bundle>
+    <bundle>mvn:org.eclipse.jetty/jetty-all-server/${jetty-version}</bundle>
+  </feature>
+    
+</features>

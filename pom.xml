@@ -110,8 +110,10 @@
     <jackson-version>1.6.1</jackson-version>
     <logback-version>0.9.24</logback-version>
     <jersey-version>1.5-ea03</jersey-version>
-    
-    <karaf-version>2.1.2</karaf-version>
+    <snakeyaml-version>1.7</snakeyaml-version>
+      
+    <karaf-version>2.1.99-SNAPSHOT</karaf-version>
+    <features-maven-plugin-version>2.1.0</features-maven-plugin-version>
     
     <!-- maven plugin versions -->
     <maven-scala-plugin-version>2.15.0</maven-scala-plugin-version>
