@@ -162,6 +162,8 @@ class JDBM2Client(store: JDBM2Store) {
   }
 
   def start() = {
+
+    Thread.currentThread.setContextClassLoader(getClass.getClassLoader)
     import FileSupport._
 
     config.directory.mkdirs
