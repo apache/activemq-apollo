@@ -77,28 +77,27 @@ public class XmlCodec {
     private static final XMLInputFactory factory = XMLInputFactory.newInstance();
     private static final JAXBContext context;
 
+    public static ClassLoader loader = Thread.currentThread().getContextClassLoader();
+
     static {
         try {
             String path = "META-INF/services/org.apache.activemq.apollo/xml-packages.index";
-            ClassLoader[] loaders = new ClassLoader[]{Thread.currentThread().getContextClassLoader()};
 
             HashSet<String> names = new HashSet<String>();
-            for (ClassLoader loader : loaders) {
-                try {
-                    Enumeration<URL> resources = loader.getResources(path);
+            try {
+                Enumeration<URL> resources = loader.getResources(path);
 
-                    while (resources.hasMoreElements()) {
-                        URL url = resources.nextElement();
-                        Properties p = loadProperties(url.openStream());
-                        Enumeration<Object> keys = p.keys();
-                        while (keys.hasMoreElements()) {
-                            names.add((String) keys.nextElement());
-                        }
+                while (resources.hasMoreElements()) {
+                    URL url = resources.nextElement();
+                    Properties p = loadProperties(url.openStream());
+                    Enumeration<Object> keys = p.keys();
+                    while (keys.hasMoreElements()) {
+                        names.add((String) keys.nextElement());
                     }
-
-                } catch (IOException e) {
-                    e.printStackTrace();
                 }
+
+            } catch (IOException e) {
+                e.printStackTrace();
             }
 
             String packages = "";
@@ -147,18 +146,25 @@ public class XmlCodec {
     }
 
     static public BrokerDTO unmarshalBrokerDTO(InputStream is, Properties props) throws IOException, XMLStreamException, JAXBException {
-        if (is == null) {
-            throw new IllegalArgumentException("input stream was null");
-        }
+        ClassLoader original = Thread.currentThread().getContextClassLoader();
         try {
-            XMLStreamReader reader = factory.createXMLStreamReader(is);
-            if (props != null) {
-                reader = new PropertiesFilter(reader, props);
+            Thread.currentThread().setContextClassLoader(loader);
+            if (is == null) {
+                throw new IllegalArgumentException("input stream was null");
             }
-            Unmarshaller unmarshaller = context.createUnmarshaller();
-            return (BrokerDTO) unmarshaller.unmarshal(reader);
+            try {
+                XMLStreamReader reader = factory.createXMLStreamReader(is);
+                if (props != null) {
+                    reader = new PropertiesFilter(reader, props);
+                }
+                Unmarshaller unmarshaller = context.createUnmarshaller();
+                return (BrokerDTO) unmarshaller.unmarshal(reader);
+            } finally {
+                is.close();
+            }
+
         } finally {
-            is.close();
+            Thread.currentThread().setContextClassLoader(original);
         }
     }
 
