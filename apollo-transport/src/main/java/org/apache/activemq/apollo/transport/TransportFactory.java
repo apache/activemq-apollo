@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.transport;
 
-import org.apache.activemq.apollo.util.JavaClassFinder;
+import org.apache.activemq.apollo.util.ClassFinder;
 
 import java.util.List;
 
@@ -31,18 +31,13 @@ public class TransportFactory {
         public Transport connect(String location) throws Exception;
     }
 
-    static public List<Provider> providers;
-
-    static {
-        JavaClassFinder<Provider> finder = new JavaClassFinder<Provider>("META-INF/services/org.apache.activemq.apollo/transport-factory.index");
-        providers = finder.new_instances();
-    }
+    public static final ClassFinder<Provider> providers = new ClassFinder<Provider>("META-INF/services/org.apache.activemq.apollo/transport-factory.index", Provider.class);
 
     /**
      * Creates a client transport.
      */
     public static Transport connect(String location) throws Exception {
-        for( Provider provider : providers) {
+        for( Provider provider : providers.jsingletons()) {
           Transport rc = provider.connect(location);
           if( rc!=null ) {
             return rc;
@@ -55,7 +50,7 @@ public class TransportFactory {
      * Creates a transport server.
      */
     public static TransportServer bind(String location) throws Exception {
-        for( Provider spi : providers) {
+        for( Provider spi : providers.jsingletons()) {
           TransportServer rc = spi.bind(location);
           if( rc!=null ) {
             return rc;

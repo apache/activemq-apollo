@@ -40,6 +40,9 @@ trait WebServer extends Service
 
 object JettyWebServerFactory extends WebServerFactory.Provider {
 
+  // So that the factory class does not load, if we can not load jetty.
+  private val LOAD_JETTY = classOf[LoginService]
+
   def create(broker:Broker): WebServer = new JettyWebServer(broker)
 
   def validate(config: WebAdminDTO, reporter: Reporter): ReporterLevel.ReporterLevel = {
@@ -54,7 +57,6 @@ object JettyWebServerFactory extends WebServerFactory.Provider {
 
 object JettyWebServer extends Log {
 
-  val LOAD_JETTY = classOf[LoginService]
 
   val webapp = {
     import FileSupport._

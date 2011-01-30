@@ -35,7 +35,7 @@ import org.fusesource.hawtdispatch._
  */
 class MultiProtocolFactory extends ProtocolFactory.Provider {
 
-  def all_protocols: Array[Protocol] = ((ProtocolFactory.providers.map(_.create())).filter(_.isIdentifiable)).toArray
+  def all_protocols: Array[Protocol] = ((ProtocolFactory.provider.singletons.map(_.create())).filter(_.isIdentifiable)).toArray
 
   def create() = {
     new MultiProtocol(()=>all_protocols)

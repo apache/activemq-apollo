@@ -19,97 +19,65 @@ package org.apache.activemq.apollo.util
 import java.io.InputStream
 import java.util.Properties
 import scala.collection.mutable.ListBuffer
-import java.net.URL
+import collection.JavaConversions._
 
 
 object ClassFinder extends Log {
 
   trait Loader {
-    def getResources(path:String):java.util.Enumeration[URL]
-    def loadClass(name:String):Class[_]
+    def discover[T](path:String, clazz: Class[T])( callback: List[T]=>Unit )
   }
 
-  case class ClassLoaderLoader(cl:ClassLoader) extends Loader {
-    def getResources(path:String) = cl.getResources(path)
-    def loadClass(name:String) = cl.loadClass(name)
-  }
-
-  def standalone_loader():Array[Loader] = {
-    Array(ClassLoaderLoader(Thread.currentThread.getContextClassLoader))
-  }
-
-  var default_loaders = ()=>standalone_loader
-}
-
-import ClassFinder._
-
-
-/**
- * <p>
- * Used to discover classes using the META-INF discovery trick.
- * </p>
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-class ClassFinder[T](val path:String, val loaders: ()=>Array[Loader]) {
-
-  def this(path:String) = this(path, default_loaders)
-//  def this(path:String, loaders:Array[ClassLoader]) = this(path, ()=>{loaders.map(ClassLoaderLoader _) })
-
-  def findArray(): Array[Class[T]] = find.toArray
-
-  def find(): List[Class[T]] = {
-    var classes = List[Class[T]]()
-    loaders().foreach { loader=>
-
-      val resources = loader.getResources(path)
-      var classNames: List[String] = Nil
-      while(resources.hasMoreElements) {
-        val url = resources.nextElement;
-        val p = loadProperties(url.openStream)
-        val enum = p.keys
-        while (enum.hasMoreElements) {
-          classNames = classNames ::: enum.nextElement.asInstanceOf[String] :: Nil
+  case class ClassLoaderLoader(loaders: Seq[ClassLoader]) extends Loader {
+    def discover[T](path: String, clazz: Class[T])(callback: (List[T]) => Unit) = {
+      val classes = ListBuffer[Class[_]]()
+      loaders.foreach { loader=>
+        val resources = loader.getResources(path)
+        val classNames =  ListBuffer[String]()
+        while(resources.hasMoreElements) {
+          val p = loadProperties(resources.nextElement.openStream)
+          p.keys.foreach { next =>
+            classNames += next.asInstanceOf[String]
+          }
+        }
+        classNames.distinct.foreach { name=>
+          try {
+            classes += loader.loadClass(name)
+          } catch {
+            case e:Throwable =>
+              debug(e, "Could not load class %s", name)
+          }
         }
       }
-      classNames = classNames.distinct
+      val singltons = classes.flatMap(x=> instantiate(clazz, x) ).distinct
+      callback( singltons.toList )
+    }
+  }
 
-      classes :::= classNames.flatMap { name=>
+  def instantiate[T](target:Class[T], clazz:Class[_]) = {
+    try {
+      Some(target.cast(clazz.newInstance))
+    } catch {
+      case e: Throwable =>
+        // It may be a scala object.. check for a module class
         try {
-          Some(loader.loadClass(name).asInstanceOf[Class[T]])
+          val moduleField = clazz.getClassLoader.loadClass(clazz.getName + "$").getDeclaredField("MODULE$")
+          Some(moduleField.get(null).asInstanceOf[T])
         } catch {
-          case e:Throwable =>
-            debug(e, "Could not load class %s", name)
+          case e2: Throwable =>
+            debug(e, "Could create an instance of the class")
             None
         }
-      }
     }
-
-    return classes.distinct
   }
 
-  def new_instances() = {
-    val t = ListBuffer[T]()
-    find.foreach {clazz =>
-      try {
-        t += clazz.newInstance.asInstanceOf[T]
-      } catch {
-        case e: Throwable =>
-          // It may be a scala object.. check for a module class
-          try {
-            val moduleField = clazz.getClassLoader.loadClass(clazz.getName + "$").getDeclaredField("MODULE$")
-            val instance = moduleField.get(null).asInstanceOf[T]
-            t += instance
-          } catch {
-            case e2: Throwable =>
-              debug(e, "Could not load the class")
-          }
-      }
-    }
-    t.toList
+  def standalone_loader() = {
+    ClassLoaderLoader(Array(Thread.currentThread.getContextClassLoader))
   }
 
-  private def loadProperties(is:InputStream):Properties = {
+  var default_loader:Loader = standalone_loader
+
+  def loadProperties(is:InputStream):Properties = {
     if( is==null ) {
       return null;
     }
@@ -128,4 +96,35 @@ class ClassFinder[T](val path:String, val loaders: ()=>Array[Loader]) {
       }
     }
   }
+}
+
+
+
+/**
+ * <p>
+ * Used to discover classes using the META-INF discovery trick.
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+class ClassFinder[T](val path:String, val clazz: Class[T]) {
+
+  import ClassFinder._
+
+  @volatile
+  var singletons = List[T]()
+  var on_change = ()=>{}
+
+  var loader:Loader=default_loader
+
+  loader.discover(path, clazz) { x=>
+    singletons = x
+    on_change()
+  }
+
+  def jsingletons = {
+    import collection.JavaConversions._
+    asJavaList(singletons)
+  }
+
 }

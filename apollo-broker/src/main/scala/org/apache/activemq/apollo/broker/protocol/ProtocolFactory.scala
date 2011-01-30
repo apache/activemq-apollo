@@ -37,15 +37,10 @@ object ProtocolFactory {
     def create(config:String):Protocol
   }
 
-  def discover = {
-    val finder = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/protocol-factory.index")
-    finder.new_instances
-  }
-
-  var providers = discover
+  val provider = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/protocol-factory.index",classOf[Provider])
 
   def get(name:String):Option[Protocol] = {
-    providers.foreach { provider=>
+    provider.singletons.foreach { provider=>
       val rc = provider.create(name)
       if( rc!=null ) {
         return Some(rc)

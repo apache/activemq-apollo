@@ -37,15 +37,10 @@ object QueueBinding {
     def create(binding_dto:DestinationDTO):QueueBinding
   }
 
-  def discover = {
-    val finder = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/binding-factory.index")
-    finder.new_instances
-  }
-
-  var providers = discover
+  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/binding-factory.index",classOf[Provider])
 
   def create(binding_kind:AsciiBuffer, binding_data:Buffer):QueueBinding = {
-    providers.foreach { provider=>
+    providers.singletons.foreach { provider=>
       val rc = provider.create(binding_kind, binding_data)
       if( rc!=null ) {
         return rc
@@ -54,7 +49,7 @@ object QueueBinding {
     throw new IllegalArgumentException("Invalid binding type: "+binding_kind);
   }
   def create(binding_dto:DestinationDTO):QueueBinding = {
-    providers.foreach { provider=>
+    providers.singletons.foreach { provider=>
       val rc = provider.create(binding_dto)
       if( rc!=null ) {
         return rc

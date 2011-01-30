@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.transport;
 
-import org.apache.activemq.apollo.util.JavaClassFinder;
+import org.apache.activemq.apollo.util.ClassFinder;
 
 import java.util.List;
 
@@ -26,18 +26,13 @@ public class DiscoveryAgentFactory {
         public DiscoveryAgent create(String uri) throws Exception;
     }
 
-    static public List<Provider> providers;
-
-    static {
-        JavaClassFinder<Provider> finder = new JavaClassFinder<Provider>("META-INF/services/org.apache.activemq.apollo/discovery-agent-factory.index");
-        providers = finder.new_instances();
-    }
+    public static final ClassFinder<Provider> providers = new ClassFinder<Provider>("META-INF/services/org.apache.activemq.apollo/discovery-agent-factory.index", Provider.class);
 
     /**
      * Creates a DiscoveryAgent
      */
     public static DiscoveryAgent create(String uri) throws Exception {
-        for( Provider provider : providers) {
+        for( Provider provider : providers.jsingletons()) {
           DiscoveryAgent rc = provider.create(uri);
           if( rc!=null ) {
             return rc;

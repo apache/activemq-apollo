@@ -46,19 +46,13 @@ object BrokerFactory {
     def createBroker(brokerURI:String):Broker
   }
 
-  def discover = {
-    val finder = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/broker-factory.index")
-    finder.new_instances
-  }
-
-  var providers = discover
-
+  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/broker-factory.index",classOf[Provider])
 
   def createBroker(uri:String):Broker = {
     if( uri == null ) {
       return null
     }
-    providers.foreach { provider=>
+    providers.singletons.foreach { provider=>
       val broker = provider.createBroker(uri)
       if( broker!=null ) {
         return broker;

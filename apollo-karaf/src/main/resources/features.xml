@@ -17,49 +17,60 @@
       limitations under the License.
 -->
 <features>
-
+  
+  <!-- the default modules include the jdbm, stomp, and the web admin. -->
   <feature name='apollo' version='${pom.version}'>
+    <feature version='${pom.version}'>apollo-jdbm</feature>
+    <feature version='${pom.version}'>apollo-stomp</feature>
+    <!-- <feature version='${pom.version}'>apollo-web</feature> -->
+  </feature>
+
+  <feature name='apollo-broker' version='${pom.version}'>
     <bundle>mvn:org.apache.activemq/apollo-broker/${pom.version}</bundle>
-    <!-- <bundle>mvn:org.apache.activemq/apollo-cli/${pom.version}</bundle> -->
+    <bundle>mvn:org.apache.activemq/apollo-cli/${pom.version}</bundle>
     <bundle>mvn:org.apache.activemq/apollo-dto/${pom.version}</bundle>
     <bundle>mvn:org.apache.activemq/apollo-selector/${pom.version}</bundle>
     <bundle>mvn:org.apache.activemq/apollo-transport/${pom.version}</bundle>
     <bundle>mvn:org.apache.activemq/apollo-util/${pom.version}</bundle>
-    <bundle>mvn:org.apache.activemq/apollo-karaf/${pom.version}</bundle>
 
     <!-- external dependencies -->
     <bundle>wrap:mvn:org.scala-lang/scala-library/${scala-version}</bundle>
     <bundle>mvn:org.fusesource.hawtbuf/hawtbuf/${hawtbuf-version}</bundle>
-    <bundle>mvn:org.fusesource.hawtbuf/hawtbuf-proto/${hawtbuf-version}</bundle>
-    <bundle>mvn:org.fusesource.hawtdispatch/hawtdispatch/${hawtdispatch-version}</bundle>
-    <bundle>mvn:org.fusesource.hawtdispatch/hawtdispatch-scala/${hawtdispatch-version}</bundle>
+    <bundle>wrap:mvn:org.fusesource.hawtbuf/hawtbuf-proto/${hawtbuf-version}</bundle>
+    <bundle>wrap:mvn:org.fusesource.hawtdispatch/hawtdispatch/${hawtdispatch-version}</bundle>
+    <bundle>wrap:mvn:org.fusesource.hawtdispatch/hawtdispatch-scala/${hawtdispatch-version}</bundle>
     <bundle>mvn:org.codehaus.jackson/jackson-core-asl/${jackson-version}</bundle>
     <bundle>mvn:org.codehaus.jackson/jackson-mapper-asl/${jackson-version}</bundle>
-    <bundle>mvn:org.apache.activemq/activemq-jaas/${activemq-version}</bundle>
-
     <bundle>wrap:mvn:org.jasypt/jasypt/${jasypt-version}</bundle>
+    <bundle>wrap:mvn:org.apache.activemq/activemq-jaas/${activemq-version}</bundle>
     <bundle>wrap:mvn:org.yaml/snakeyaml/${snakeyaml-version}</bundle>
-    
-    <!-- These could be optional.. but lets just default it to simplify -->
-    <bundle>mvn:org.apache.activemq/apollo-tcp/${pom.version}</bundle>
-    <bundle>mvn:org.apache.activemq/apollo-stomp/${pom.version}</bundle>
-
   </feature>
   
-  <!-- optional features -->
+  <!-- optional stores -->
   <feature name='apollo-jdbm' version='${pom.version}'>
-    <bundle>mvn:org.apache.activemq/apollo-jdbm2/${pom.version}</bundle>
-    <bundle>mvn:org.fusesource.jdbm/jdbm/${jdbm-version}</bundle>
+    <feature version='${pom.version}'>apollo-broker</feature>
+    <bundle>wrap:mvn:org.apache.activemq/apollo-jdbm2/${pom.version}</bundle>
   </feature>
-  
   <feature name='apollo-bdb' version='${pom.version}'>
-    <feature version='${pom.version}'>apollo</feature>
-    <bundle>mvn:org.apache.activemq/apollo-bdb/${pom.version}</bundle>
-    <bundle>wrap:mvn:com.sleepycat/je/${bdb-version}</bundle>
+    <feature version='${pom.version}'>apollo-broker</feature>
+    <bundle>wrap:mvn:org.apache.activemq/apollo-bdb/${pom.version}</bundle>
   </feature>
 
+  <!-- optional transports -->
+  <feature name='apollo-tcp' version='${pom.version}'>
+    <feature version='${pom.version}'>apollo-broker</feature>
+    <bundle>mvn:org.apache.activemq/apollo-tcp/${pom.version}</bundle>
+  </feature>
+
+  <!-- optional protocols -->
+  <feature name='apollo-stomp' version='${pom.version}'>
+    <feature version='${pom.version}'>apollo-tcp</feature>
+    <bundle>mvn:org.apache.activemq/apollo-stomp/${pom.version}</bundle>
+  </feature>
+
+  <!-- optional web admin -->
   <feature name='apollo-web' version='${pom.version}'>
-    <feature version='${pom.version}'>apollo</feature>
+    <feature version='${pom.version}'>apollo-broker</feature>
     <bundle>mvn:org.apache.activemq/apollo-web/${pom.version}/slim</bundle>
     <bundle>mvn:org.apache.activemq/apollo-web/${pom.version}/war/slim</bundle>
     

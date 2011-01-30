@@ -34,6 +34,10 @@
 
   <name>${project.artifactId}</name>
 
+  <properties>
+    <apollo.osgi.activator>org.apache.activemq.apollo.util.ClassFinderExportingActivator</apollo.osgi.activator>
+  </properties>
+
   <dependencies>
 
     <dependency>
@@ -127,7 +131,7 @@
 
       <plugin>
         <groupId>org.fusesource.hawtbuf</groupId>
-        <artifactId>hawtbuf-proto</artifactId>
+        <artifactId>hawtbuf-protoc</artifactId>
         <version>${hawtbuf-version}</version>
         <configuration>
           <type>alt</type>

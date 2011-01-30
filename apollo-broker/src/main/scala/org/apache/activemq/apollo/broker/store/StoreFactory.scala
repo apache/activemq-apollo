@@ -33,18 +33,13 @@ object StoreFactory {
     def validate(config: StoreDTO, reporter:Reporter):ReporterLevel
   }
 
-  def discover = {
-    val finder = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/store-factory.index")
-    finder.new_instances
-  }
-
-  var providers = discover
+  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/store-factory.index", classOf[Provider])
 
   def create(config:StoreDTO):Store = {
     if( config == null ) {
       return null
     }
-    providers.foreach { provider=>
+    providers.singletons.foreach { provider=>
       val rc = provider.create(config)
       if( rc!=null ) {
         return rc
@@ -58,7 +53,7 @@ object StoreFactory {
     if( config == null ) {
       return INFO
     } else {
-      providers.foreach { provider=>
+      providers.singletons.foreach { provider=>
         val rc = provider.validate(config, reporter)
         if( rc!=null ) {
           return rc

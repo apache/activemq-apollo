@@ -20,18 +20,9 @@ import _root_.org.apache.activemq.apollo.broker.perf._
 import java.io.File
 import org.apache.activemq.apollo.dto.BrokerDTO
 import org.apache.activemq.apollo.broker.store.bdb.dto.BDBStoreDTO
-import org.apache.activemq.apollo.broker.store.hawtdb.dto.HawtDBStoreDTO
 
 class BasicNonPersistentTest extends BasicScenarios with StompScenario {
   override def description = "Using the STOMP protocol over TCP"
-}
-
-class BasicHawtDBTest extends BasicScenarios with PersistentScenario with HawtDBScenario with StompScenario {
-  override def description = "Using the STOMP protocol over TCP persistent to the HawtDB store"
-}
-
-class DeepQueueHawtDBTest extends BasicScenarios with LargeInitialDB with HawtDBScenario with StompScenario {
-  override def description = "Using the STOMP protocol over TCP persisting to the HawtDB store that contains 1M messages in a queue."
 }
 
 class BasicBDBTest extends BasicScenarios with PersistentScenario with BDBScenario with StompScenario {
@@ -48,17 +39,6 @@ trait StompScenario extends BrokerPerfSupport {
   override def createConsumer() = new StompRemoteConsumer()
 
   override def getRemoteProtocolName() = "stomp"
-}
-
-trait HawtDBScenario extends PersistentScenario {
-  override def createBrokerConfig(name: String, bindURI: String, connectUri: String): BrokerDTO = {
-    val rc = super.createBrokerConfig(name, bindURI, connectUri)
-    val store = new HawtDBStoreDTO
-    storeDirectory = new File(new File(test_data_dir, getClass.getName), name)
-    store.directory = storeDirectory
-    rc.virtual_hosts.get(0).store = store
-    rc
-  }
 }
 
 trait BDBScenario extends PersistentScenario {

@@ -35,18 +35,13 @@ object WebServerFactory {
     def validate(config: WebAdminDTO, reporter:Reporter):ReporterLevel
   }
 
-  def discover = {
-    val finder = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/web-server-factory.index")
-    finder.new_instances
-  }
-
-  var providers = discover
+  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/web-server-factory.index",classOf[Provider])
 
   def create(broker:Broker):WebServer = {
     if( broker == null ) {
       return null
     }
-    providers.foreach { provider=>
+    providers.singletons.foreach { provider=>
       val rc = provider.create(broker)
       if( rc!=null ) {
         return rc
@@ -60,7 +55,7 @@ object WebServerFactory {
     if( config == null ) {
       return INFO
     } else {
-      providers.foreach { provider=>
+      providers.singletons.foreach { provider=>
         val rc = provider.validate(config, reporter)
         if( rc!=null ) {
           return rc

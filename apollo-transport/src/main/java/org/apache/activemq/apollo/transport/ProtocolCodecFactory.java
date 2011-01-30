@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.transport;
 
-import org.apache.activemq.apollo.util.JavaClassFinder;
+import org.apache.activemq.apollo.util.ClassFinder;
 import org.fusesource.hawtbuf.Buffer;
 
 import java.util.HashMap;
@@ -57,20 +57,17 @@ public class ProtocolCodecFactory {
 
     }
 
-    static public HashMap<String, Provider> providers = new HashMap<String, Provider>();
-
-    static {
-        JavaClassFinder<Provider> finder = new JavaClassFinder<Provider>("META-INF/services/org.apache.activemq.apollo/protocol-codec-factory.index");
-        for( Provider provider: finder.new_instances() ) {
-            providers.put(provider.protocol(), provider);
-        }
-    }
-
+    public static final ClassFinder<Provider> providers = new ClassFinder<Provider>("META-INF/services/org.apache.activemq.apollo/protocol-codec-factory.index", Provider.class);
     /**
      * Gets the provider.
      */
     public static ProtocolCodecFactory.Provider get(String name) {
-        return providers.get(name);
+        for( Provider provider: providers.jsingletons() ) {
+            if( name.equals(provider.protocol()) ) {
+                return provider;
+            }
+        }
+        return null;
     }
 
 

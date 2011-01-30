@@ -34,7 +34,7 @@
   <name>${project.artifactId}</name>
 
   <properties>
-    <apollo.osgi.host></apollo.osgi.host>
+    <apollo.osgi.activator>org.apache.activemq.apollo.util.ClassFinderExportingActivator</apollo.osgi.activator>
   </properties>
 
   <dependencies>
