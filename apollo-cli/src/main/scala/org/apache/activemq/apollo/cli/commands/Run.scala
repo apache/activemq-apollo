@@ -19,27 +19,11 @@ package org.apache.activemq.apollo.cli.commands
 import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
 import org.osgi.service.command.CommandSession
 import java.io.File
-import org.fusesource.jansi.Ansi
-import org.fusesource.jansi.Ansi.Color._
-import org.fusesource.jansi.Ansi.Attribute._
-
-import org.apache.commons.logging.LogFactory
-import org.apache.activemq.apollo.broker.{BrokerRegistry, Broker, ConfigStore, FileConfigStore}
+import org.apache.activemq.apollo.broker.{Broker, ConfigStore, FileConfigStore}
 import org.fusesource.hawtdispatch._
-import Helper._
 import org.apache.activemq.apollo.util.FileSupport._
-import org.apache.activemq.apollo.util.OptionSupport._
 import org.apache.activemq.apollo.cli.Apollo
-import org.eclipse.jetty.server.{Connector, Handler, Server}
-import org.eclipse.jetty.security._
-import authentication.BasicAuthenticator
-import org.eclipse.jetty.webapp.WebAppContext
-import org.eclipse.jetty.server.nio.SelectChannelConnector
-import org.eclipse.jetty.plus.jaas.JAASLoginService
-import org.eclipse.jetty.server.handler.HandlerCollection
-import org.apache.activemq.apollo.util.{Logging, ServiceControl, LoggingReporter}
-import org.apache.activemq.apollo.dto.{WebAdminDTO, PrincipalDTO}
-
+import org.apache.activemq.apollo.util.{Logging, LoggingReporter}
 /**
  * The apollo run command
  */
@@ -85,18 +69,6 @@ class Run extends Action with Logging {
         }
       }
 
-
-      val webapp = {
-        val x = System.getProperty("apollo.webapp")
-        if( x != null ) {
-          new File(x)
-        } else {
-          val home = system_dir("apollo.home")
-          val lib = home / "lib"
-          lib / lib.list.find( _.matches("""apollo-web-.+-slim.war""")).getOrElse(throw new Failure("war file not found.") )
-        }
-      }
-
       if( tmp == null ) {
         tmp = base / "tmp"
         tmp.mkdirs
@@ -115,10 +87,10 @@ class Run extends Action with Logging {
       debug("Starting broker");
       val broker = new Broker()
       broker.configure(config, LoggingReporter(log))
+      broker.tmp = tmp
       broker.start(^{
         info("Broker started");
       })
-      broker.tmp = tmp
 
       // wait forever...  broker will system exit.
       this.synchronized {
