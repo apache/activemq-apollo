@@ -35,7 +35,6 @@
   <name>${project.artifactId}</name>
 
   <properties>
-    <apollo.osgi.activator>org.apache.activemq.apollo.util.ClassFinderImportingActivator</apollo.osgi.activator>
   </properties>
 
   <repositories>
@@ -85,6 +84,13 @@
       <groupId>net.java.dev.jna</groupId>
       <artifactId>jna</artifactId>
       <version>3.1.0</version>
+      <optional>true</optional>
+    </dependency>
+
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>${snakeyaml-version}</version>
       <optional>true</optional>
     </dependency>
 

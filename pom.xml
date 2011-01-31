@@ -139,7 +139,7 @@
   </properties>
 
   <prerequisites>
-    <maven>2.2.1</maven>
+    <maven>3.0</maven>
   </prerequisites>
 
   <url>http://activemq.apache.org/apollo</url>
@@ -176,7 +176,7 @@
     <module>apollo-cli</module>
     <module>apollo-website</module>
     <module>apollo-distro</module>
-    <module>apollo-karaf</module>
+    <module>apollo-karaf-feature</module>
   </modules>
 
   <scm>
@@ -689,194 +689,101 @@
     <profile>
       <id>download</id>
       <repositories>
-        <repository>
-          <id>repo1.maven</id>
-          <name>Maven Central Repo</name>
-          <url>http://repo1.maven.org/maven2</url>
-          <snapshots>
-            <enabled>false</enabled>
-          </snapshots>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-        </repository>
-        <repository>
-          <id>fusesource.m2</id>
-          <name>FuseSource Community Release Repository</name>
-          <url>http://repo.fusesource.com/maven2</url>
-          <snapshots>
-            <enabled>false</enabled>
-          </snapshots>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-        </repository>
-        <repository>
-          <id>fusesource.m2-snapshot</id>
-          <name>FuseSource Community Snapshot Repository</name>
-          <url>http://repo.fusesource.com/maven2-snapshot</url>
-          <snapshots>
-            <enabled>true</enabled>
-          </snapshots>
-          <releases>
-            <enabled>false</enabled>
-          </releases>
-        </repository>
-
-        <repository>
-          <id>java.net.m2</id>
-          <name>java.net Maven 2 Repo</name>
-          <url>http://download.java.net/maven/2</url>
-        </repository>
-        <repository>
-          <id>openqa-releases</id>
-          <name>OpenQA Releases</name>
-          <url>http://archiva.openqa.org/repository/releases</url>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-          <snapshots>
-            <enabled>false</enabled>
-          </snapshots>
-        </repository>
-
-        <repository>
-          <id>glassfish-repo-archive</id>
-          <name>Nexus repository collection for Glassfish</name>
-          <url>http://maven.glassfish.org/content/groups/glassfish</url>
-          <snapshots>
-            <updatePolicy>never</updatePolicy>
-          </snapshots>
-        </repository>
-
-        <repository>
-          <id>scala</id>
-          <name>Scala Tools</name>
-<!--
-          <url>http://nexus.scala-tools.org/content/repositories/releases</url>
--->
-          <url>http://scala-tools.org/repo-releases</url>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-          <snapshots>
-            <enabled>false</enabled>
-          </snapshots>
-        </repository>
-        
-        <repository>
-          <id>fusesource.snapshots</id>
-          <name>FuseSource Snapshot Repository</name>
-          <url>http://repo.fusesource.com/nexus/content/repositories/snapshots</url>
-          <snapshots><enabled>true</enabled></snapshots>
-          <releases><enabled>true</enabled></releases>
-        </repository>
-        
-        <repository>
-          <id>java.net</id>
-          <url>http://download.java.net/maven/2</url>
-        </repository>
-        
-        <repository>
-          <id>shorrockin</id>
-          <url>http://maven.shorrockin.com</url>
-        </repository>
-        
-        <repository>
-          <id>snapshots.scala-tools.org</id>
-          <url>http://scala-tools.org/repo-snapshots</url>
-          <snapshots><enabled>true</enabled></snapshots>
-          <releases><enabled>true</enabled></releases>
-        </repository>
-        
+    
         <repository>
           <id>apache.snapshots</id>
           <url>https://repository.apache.org/content/repositories/snapshots</url>
           <snapshots><enabled>true</enabled></snapshots>
           <releases><enabled>false</enabled></releases>
         </repository>
-        
+    
+        <repository>
+          <id>fusesource-snapshots</id>
+          <url>http://repo.fusesource.com/nexus/content/groups/public-snapshots</url>
+          <releases><enabled>false</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+
+        <repository>
+          <id>java.net.m2</id>
+          <url>http://download.java.net/maven/2</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+        <repository>
+          <id>glassfish-repo-archive</id>
+          <url>http://maven.glassfish.org/content/groups/glassfish</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+    
+        <repository>
+          <id>scala-tools.org-releases</id>
+          <url>http://scala-tools.org/repo-releases</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+        <repository>
+          <id>scala-tools.org-snapshots</id>
+          <url>http://scala-tools.org/repo-snapshots</url>
+          <snapshots><enabled>true</enabled></snapshots>
+          <releases><enabled>false</enabled></releases>
+        </repository>
+    
+        <repository>
+          <id>shorrockin</id>
+          <url>http://maven.shorrockin.com</url>
+        </repository>
+    
         <repository>
           <id>oracleReleases</id>
           <url>http://download.oracle.com/maven</url>
           <layout>default</layout>
         </repository>
-        
+    
       </repositories>
-      
+
       <pluginRepositories>
 
         <pluginRepository>
-          <id>repo1.maven</id>
-          <name>Maven Central Repo</name>
-          <url>http://repo1.maven.org/maven2</url>
-          <snapshots>
-            <enabled>false</enabled>
-          </snapshots>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-        </pluginRepository>
-
-        <pluginRepository>
-          <id>open.iona.m2</id>
-          <name>IONA Open Source Community Release Repository</name>
-          <url>http://repo.open.iona.com/maven2</url>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-        </pluginRepository>
-        <pluginRepository>
-          <id>maven2-repository.dev.java.net</id>
-          <name>Java.net Maven  Repository </name>
-          <url>http://download.java.net/maven/2</url>
-        </pluginRepository>
-
-        <pluginRepository>
-          <id>scala</id>
-          <name>Scala Tools</name>
-<!--
-          <url>http://nexus.scala-tools.org/content/repositories/releases</url>
--->
-          <url>http://scala-tools.org/repo-releases</url>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-          <snapshots>
-            <enabled>false</enabled>
-          </snapshots>
-        </pluginRepository>
-        <pluginRepository>
-          <id>snapshots.scala-tools.org</id>
-          <name>Scala-Tools Maven2 Snapshot Repository</name>
-          <url>http://scala-tools.org/repo-snapshots</url>
-          <snapshots>
-            <enabled>true</enabled>
-            <checksumPolicy>fail</checksumPolicy>
-          </snapshots>
-          <releases>
-            <enabled>true</enabled>
-            <checksumPolicy>fail</checksumPolicy>
-          </releases>
-        </pluginRepository>
-        
-        <pluginRepository>
-          <id>fusesource.snapshots</id>
-          <name>FuseSource Snapshot Repository</name>
-          <url>http://repo.fusesource.com/nexus/content/repositories/snapshots</url>
-          <snapshots><enabled>true</enabled></snapshots>
-          <releases><enabled>true</enabled></releases>
-        </pluginRepository>
-        
-        <pluginRepository>
-          <id>apache.snapshots</id>
+          <id>apache-snapshots</id>
           <url>https://repository.apache.org/content/repositories/snapshots</url>
           <snapshots><enabled>true</enabled></snapshots>
           <releases><enabled>false</enabled></releases>
         </pluginRepository>
-        
+
+        <pluginRepository>
+          <id>fusesource-snapshots</id>
+          <url>http://repo.fusesource.com/nexus/content/groups/public-snapshots</url>
+          <releases><enabled>false</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </pluginRepository>
+
+        <pluginRepository>
+          <id>scala-tools.org-releases</id>
+          <url>http://scala-tools.org/repo-releases</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>
+    
+        <pluginRepository>
+          <id>scala-tools.org-snapshots</id>
+          <url>http://scala-tools.org/repo-snapshots</url>
+          <snapshots><enabled>true</enabled></snapshots>
+          <releases><enabled>false</enabled></releases>
+        </pluginRepository>
+
+        <pluginRepository>
+          <id>java.net-releases</id>
+          <url>http://download.java.net/maven/2</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>
+
       </pluginRepositories>
     </profile>
+    
   </profiles>
+
 
 </project>

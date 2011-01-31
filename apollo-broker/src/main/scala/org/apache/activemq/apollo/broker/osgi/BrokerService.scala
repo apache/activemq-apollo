@@ -14,48 +14,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.karaf
+package org.apache.activemq.apollo.broker.osgi
 
-import org.osgi.framework._
 import java.net.URL
-import org.apache.activemq.apollo.broker.{Broker, ConfigStore, FileConfigStore}
+import org.apache.activemq.apollo.broker.Broker
 import org.fusesource.hawtdispatch._
-import org.apache.activemq.apollo.util.FileSupport._
-import java.lang.{Class, String}
-import scala.reflect.BeanProperty
+import java.lang.Class
 import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO}
-import java.io.{FileInputStream, File}
 import org.osgi.service.cm.ConfigurationAdmin
-import java.util.{Properties, Enumeration}
-import org.apache.activemq.apollo.broker.security.EncryptionSupport
+import java.util.Enumeration
+import org.osgi.framework._
+import java.lang.String
 import collection.JavaConversions._
-import org.apache.activemq.apollo.util.{ServiceControl, Log, LoggingReporter}
+import java.util.Properties
+import org.apache.activemq.apollo.util._
+import FileSupport._
+import java.io.{FileInputStream, File}
 
-class BrokerService extends Log {
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+object BrokerService extends Log {
 
-  @BeanProperty
   var context: BundleContext = _
-
-  @BeanProperty
   var basedir: File = _
-
-  @BeanProperty
   var config:BrokerDTO = _
-
-  @BeanProperty
   var configAdmin:ConfigurationAdmin = _
-
   var broker:Broker = _
 
   def start(): Unit = this.synchronized {
     try {
+      if(broker!=null) {
+        error("Apollo has allready been started.")
+        return;
+      }
 
       // this makes jaxb happy
       Thread.currentThread().setContextClassLoader(JaxbClassLoader(context))
 
       // in case the config gets injected.
-      if( config == null ) {
-
+      val dto = if( config != null ) {
+        config
+      } else {
         // val base = system_dir("apollo.base")
         val apollo_xml = basedir / "etc" / "apollo.xml"
 
@@ -76,12 +76,12 @@ class BrokerService extends Log {
             props.put(key.asInstanceOf[String], cmProps.get(key).asInstanceOf[String])
           }
         }
-        config = XmlCodec.unmarshalBrokerDTO(new FileInputStream(apollo_xml), props)
+        XmlCodec.unmarshalBrokerDTO(new FileInputStream(apollo_xml), props)
       }
 
       debug("Starting broker");
       broker = new Broker()
-      broker.configure(config, LoggingReporter(this))
+      broker.configure(dto, LoggingReporter(this))
       broker.tmp = basedir / "tmp"
       broker.tmp.mkdirs
       broker.start(^{
@@ -90,6 +90,7 @@ class BrokerService extends Log {
 
     } catch {
       case e: Throwable =>
+        stop
         error(e)
     }
   }
@@ -98,13 +99,37 @@ class BrokerService extends Log {
     if( broker!=null ) {
       ServiceControl.stop(broker, "Apollo shutdown")
       info("Apollo stopped");
+      broker = null;
     }
   }
 
 }
 
-// We need to setup a context class loader because apollo allows
-// optional/plugin modules to dynamically add to the JAXB context.
+import BrokerService._
+
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+class BrokerService {
+
+  //
+  // Setters to allow blueprint injection.
+  //
+  def setContext(value:BundleContext):Unit = context = value
+  def setBasedir(value:File):Unit = basedir = value
+  def setConfig(value:BrokerDTO):Unit = config = value
+  def setConfigAdmin(value:ConfigurationAdmin):Unit = configAdmin = value
+
+  def start() = BrokerService.start
+  def stop() = BrokerService.stop
+}
+
+/**
+ * We need to setup a context class loader because apollo allows
+ * optional/plugin modules to dynamically add to the JAXB context.
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 case class JaxbClassLoader(context: BundleContext) extends ClassLoader(classOf[JaxbClassLoader].getClassLoader) {
 
   def wait_for_start(bundle:Bundle):Option[Bundle] = {
@@ -168,3 +193,4 @@ case class JaxbClassLoader(context: BundleContext) extends ClassLoader(classOf[J
     list.elements
   }
 }
+

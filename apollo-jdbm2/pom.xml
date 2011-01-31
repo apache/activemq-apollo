@@ -34,7 +34,6 @@
 
   <name>${project.artifactId}</name>
   <properties>
-    <apollo.osgi.activator>org.apache.activemq.apollo.util.ClassFinderExportingActivator</apollo.osgi.activator>
   </properties>
 
   <dependencies>
@@ -59,7 +58,9 @@
       <type>jar</type>
       <classifier>slim</classifier>
       <optional>true</optional>
+      <scope>provided</scope>
     </dependency>
+    
     <dependency>
       <groupId>javax.servlet</groupId>
       <artifactId>servlet-api</artifactId>
