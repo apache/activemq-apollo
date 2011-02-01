@@ -152,10 +152,9 @@ object StompCodec extends Log {
 
 }
 
-class StompCodec extends ProtocolCodec with DispatchLogging {
+class StompCodec extends ProtocolCodec {
 
   import StompCodec._
-  override protected def log: Log = StompCodec
 
   var zero_copy_buffer_allocator:ZeroCopyBufferAllocator = null
 

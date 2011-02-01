@@ -67,7 +67,6 @@ object DeliveryProducerRoute extends Log
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-// case class DeliveryProducerRoute(val router:Router, val destination:DestinationDTO, val path:Path, val producer:DeliveryProducer, val security:SecurityContext) extends BaseRetained with Route with Sink[Delivery] with DispatchLogging {
 abstract class DeliveryProducerRoute(val router:Router) extends BaseRetained with BindableDeliveryProducer with Sink[Delivery] {
 
   import DeliveryProducerRoute._

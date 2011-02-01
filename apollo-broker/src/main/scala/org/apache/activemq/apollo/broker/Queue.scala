@@ -637,12 +637,13 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
 
 }
 
-object QueueEntry extends Sizer[QueueEntry] {
+object QueueEntry extends Sizer[QueueEntry] with Log {
   def size(value: QueueEntry): Int = value.size
 }
 
-class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] with Comparable[QueueEntry] with Runnable with DispatchLogging {
-  override protected def log = Queue
+class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] with Comparable[QueueEntry] with Runnable {
+  import QueueEntry._
+
   // Subscriptions waiting to dispatch this entry.
   var parked:List[Subscription] = Nil
 
@@ -1337,14 +1338,16 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
 }
 
+object Subscription extends Log
+
 /**
  * Interfaces a DispatchConsumer with a Queue.  Tracks current position of the consumer
  * on the queue, and the delivery rate so that slow consumers can be detected.  It also
  * tracks the entries which the consumer has acquired.
  *
  */
-class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends DeliveryProducer with DispatchLogging {
-  override protected def log = Queue
+class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends DeliveryProducer {
+  import Subscription._
 
   def dispatch_queue = queue.dispatch_queue
 

@@ -61,11 +61,9 @@ object JDBM2Store extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class JDBM2Store extends DelayingStoreSupport with DispatchLogging {
+class JDBM2Store extends DelayingStoreSupport {
 
   import JDBM2Store._
-
-  override def log: Log = JDBM2Store
 
   var next_queue_key = new AtomicLong(1)
   var next_msg_key = new AtomicLong(1)

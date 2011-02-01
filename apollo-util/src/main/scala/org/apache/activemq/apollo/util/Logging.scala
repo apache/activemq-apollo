@@ -42,15 +42,15 @@ trait Log {
     if( e!=null ) {
       val stack_ref = if( log.isDebugEnabled ) {
         val id = next_exception_id
-        MDC.put("stack reference", id.toString);
+        MDC.put("stackref", id.toString);
         Some(id)
       } else {
         None
       }
       func
       stack_ref.foreach { id=>
-        log.debug("stack trace: "+id, e)
-        MDC.remove("stack reference")
+        log.debug(e.toString, e)
+        MDC.remove("stackref")
       }
     } else {
       func
@@ -205,10 +205,4 @@ trait Logging {
   protected def trace(e: Throwable, message: => String, args:Any*)= log.trace(e, message, args: _*)
   protected def trace(e: Throwable)= log.trace(e)
 
-}
-
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-trait DispatchLogging extends Logging {
 }

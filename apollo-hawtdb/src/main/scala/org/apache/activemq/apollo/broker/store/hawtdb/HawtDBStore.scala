@@ -60,10 +60,9 @@ object HawtDBStore extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBStore extends DelayingStoreSupport with DispatchLogging {
+class HawtDBStore extends DelayingStoreSupport {
 
   import HawtDBStore._
-  override protected def log = HawtDBStore
 
   var next_queue_key = new AtomicLong(1)
   var next_msg_key = new AtomicLong(1)

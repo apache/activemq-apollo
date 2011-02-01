@@ -61,7 +61,8 @@ import StompProtocolHandler._
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
+class StompProtocolHandler extends ProtocolHandler {
+  import StompProtocolHandler._
 
   def protocol = "stomp"
 
@@ -99,8 +100,6 @@ class StompProtocolHandler extends ProtocolHandler with DispatchLogging {
     }
     rc.toBuffer.ascii
   }
-
-  override protected def log = StompProtocolHandler
 
   protected def dispatchQueue:DispatchQueue = connection.dispatch_queue
 

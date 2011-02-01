@@ -60,11 +60,9 @@ object BDBStore extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class BDBStore extends DelayingStoreSupport with DispatchLogging {
+class BDBStore extends DelayingStoreSupport {
 
   import BDBStore._
-
-  override def log: Log = BDBStore
 
   var next_queue_key = new AtomicLong(1)
   var next_msg_key = new AtomicLong(1)

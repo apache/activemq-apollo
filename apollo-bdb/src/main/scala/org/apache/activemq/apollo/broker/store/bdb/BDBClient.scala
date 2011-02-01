@@ -33,11 +33,11 @@ object BDBClient extends Log
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class BDBClient(store: BDBStore) extends DispatchLogging {
+class BDBClient(store: BDBStore) {
 
   import HelperTrait._
 
-  override def log: Log = BDBClient
+  import BDBClient._
 
   def dispatchQueue = store.dispatch_queue
 

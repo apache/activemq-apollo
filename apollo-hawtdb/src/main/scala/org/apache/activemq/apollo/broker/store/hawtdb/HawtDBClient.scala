@@ -54,11 +54,9 @@ object HawtDBClient extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBClient(hawtDBStore: HawtDBStore) extends DispatchLogging {
+class HawtDBClient(hawtDBStore: HawtDBStore) {
   import HawtDBClient._
   import Helpers._
-
-  override def log: Log = HawtDBClient
 
   def dispatchQueue = hawtDBStore.dispatch_queue
 
