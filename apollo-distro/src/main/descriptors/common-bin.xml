@@ -49,6 +49,7 @@
         <include>asm:asm</include>
         <include>org.codehaus.jackson:jackson-jaxrs</include>
         <include>org.fusesource.scalate:scalate-core</include>
+        <include>org.fusesource.scalate:scalate-util</include>
         
         <!-- the logging apis used -->
         <include>org.slf4j:slf4j-api</include>

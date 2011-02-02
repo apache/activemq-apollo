@@ -199,6 +199,7 @@
                 <!-- pre compile some templates that are in the classpath -->
                 <template>/WEB-INF/scalate/errors/500.scaml</template>
               </templates>
+              <bootClassName>org.apache.activemq.apollo.web.Boot</bootClassName>
             </configuration>
           </execution>
         </executions>

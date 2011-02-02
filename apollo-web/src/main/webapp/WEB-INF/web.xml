@@ -74,6 +74,10 @@
   <filter>
     <filter-name>TemplateEngineFilter</filter-name>
     <filter-class>org.fusesource.scalate.servlet.TemplateEngineFilter</filter-class>
+    <init-param>
+      <param-name>boot.class</param-name>
+      <param-value>org.apache.activemq.apollo.web.Boot</param-value>
+    </init-param>
   </filter>
   <filter-mapping>
     <filter-name>TemplateEngineFilter</filter-name>
