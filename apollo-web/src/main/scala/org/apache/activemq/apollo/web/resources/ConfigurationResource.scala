@@ -36,7 +36,7 @@ case class ConfigurationResource(parent:BrokerResource) extends Resource(parent)
 
   lazy val store = {
     val rc = ConfigStore()
-    if( rc.can_write ) {
+    if( rc !=null && rc.can_write ) {
       rc
     } else {
       None

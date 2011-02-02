@@ -132,10 +132,10 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
-      <!--<scope>test</scope>-->
-      <version>${log4j-version}</version>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4j-version}</version>
+      <scope>test</scope>
     </dependency>
     
   </dependencies>
@@ -311,9 +311,9 @@
                   <artifact>org.apache.activemq:apollo-web</artifact>
                   <excludes>
                     <exclude>WEB-INF/lib/**</exclude>
-                    <exclude>**/*.scaml</exclude>
+                    <!-- <exclude>**/*.scaml</exclude>
                     <exclude>**/*.jade</exclude>
-                    <exclude>**/*.ssp</exclude>
+                    <exclude>**/*.ssp</exclude> -->
                   </excludes>
                 </filter>
               </filters>

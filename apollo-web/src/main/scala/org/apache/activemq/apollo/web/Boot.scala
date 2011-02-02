@@ -16,16 +16,17 @@
  */
 package org.apache.activemq.apollo.web
 
-import java.util.concurrent.atomic.AtomicBoolean
 import org.fusesource.scalate.TemplateEngine
 
 class Boot(engine: TemplateEngine) {
-
-  private var initialised = new AtomicBoolean(false)
-
+  
+  // Put some references to the jersey classes in our code so that the osgi 
+  // metadata creates the proper imports.
+  val we_are_using = Array(
+    classOf[com.sun.jersey.spi.container.servlet.ServletContainer]
+  )
+  
   def run: Unit = {
-    if (initialised.compareAndSet(false, true)) {
-      engine.packagePrefix = "org.apache.activemq.apollo.web.templates."
-    }
+    engine.packagePrefix = "org.apache.activemq.apollo.web.templates"
   }
 }

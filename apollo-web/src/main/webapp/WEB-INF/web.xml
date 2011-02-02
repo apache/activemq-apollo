@@ -29,10 +29,6 @@
     The Apollo web application
   </description>
 
-  <listener>
-    <listener-class>org.apache.activemq.apollo.web.ApolloListener</listener-class>
-  </listener>
-
   <filter>
     <filter-name>Jersey Filter</filter-name>
     <filter-class>com.sun.jersey.spi.container.servlet.ServletContainer</filter-class>
@@ -49,12 +45,23 @@
       <param-value>true</param-value>
     </init-param>
     <init-param>
+      <param-name>com.sun.jersey.config.property.resourceConfigClass</param-name>
+      <param-value>com.sun.jersey.api.core.ClassNamesResourceConfig</param-value>
+    </init-param>
+    <init-param>
+      <param-name>com.sun.jersey.config.property.classnames</param-name>
+      <param-value>
+        org.apache.activemq.apollo.web.resources.BrokerResource,
+        org.apache.activemq.apollo.web.resources.JacksonJsonProvider
+      </param-value>
+    </init-param>
+    <!-- <init-param>
       <param-name>com.sun.jersey.config.property.packages</param-name>
       <param-value>
         org.fusesource.scalate.console;
         org.apache.activemq.apollo.web.resources
       </param-value>
-    </init-param>
+    </init-param> -->
     <init-param>
       <param-name>com.sun.jersey.config.feature.FilterForwardOn404</param-name>
       <param-value>true</param-value>

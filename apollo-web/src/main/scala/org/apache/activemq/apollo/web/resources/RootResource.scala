@@ -149,14 +149,17 @@ class ViewHelper {
 @Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
 class BrokerResource extends Resource {
 
-  val cs = ConfigStore()
-  val config = cs.load(false)
-
   @GET
   def get = {
     val rc = new BrokerSummaryDTO
     rc.manageable = BrokerRegistry.list.size > 0
-    rc.configurable = cs.can_write
+    
+    val cs = ConfigStore()
+    if( cs!=null ) {
+      val config = cs.load(false)
+      rc.configurable = cs.can_write
+    }
+    
     rc
   }
 

@@ -47,6 +47,7 @@
   
   <!-- optional features -->
   <feature name='apollo-jdbm' version='${pom.version}'>
+    <feature version='${pom.version}'>apollo</feature>
     <bundle>mvn:org.apache.activemq/apollo-jdbm2/${pom.version}</bundle>
     <bundle>mvn:org.fusesource.jdbm/jdbm/${jdbm-version}</bundle>
   </feature>
@@ -59,14 +60,13 @@
 
   <feature name='apollo-web' version='${pom.version}'>
     <feature version='${pom.version}'>apollo</feature>
-    <bundle>mvn:org.apache.activemq/apollo-web/${pom.version}/slim</bundle>
-    <bundle>mvn:org.apache.activemq/apollo-web/${pom.version}/war/slim</bundle>
+    <bundle>mvn:org.apache.activemq/apollo-web/${pom.version}/war/osgi</bundle>
     
+    <bundle>mvn:org.fusesource.scalate/scalate-util/${scalate-version}</bundle>
     <bundle>mvn:org.fusesource.scalate/scalate-core/${scalate-version}</bundle>
     <bundle>mvn:org.codehaus.jackson/jackson-jaxrs/${jackson-version}</bundle>
-    <bundle>wrap:mvn:com.sun.jersey/jersey-core/${jersey-version}</bundle>
-    <bundle>wrap:mvn:com.sun.jersey/jersey-server/${jersey-version}</bundle>
-    <bundle>mvn:org.eclipse.jetty/jetty-all-server/${jetty-version}</bundle>
+    <bundle>mvn:com.sun.jersey/jersey-core/${jersey-version}</bundle>
+    <bundle>mvn:com.sun.jersey/jersey-server/${jersey-version}</bundle>
   </feature>
     
 </features>
