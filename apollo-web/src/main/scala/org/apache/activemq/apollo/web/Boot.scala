@@ -32,7 +32,6 @@ class Boot(engine: TemplateEngine) {
   )
   
   def run: Unit = {
-    println("scalate boot: "+Thread.currentThread.getContextClassLoader)
     engine.packagePrefix = "org.apache.activemq.apollo.web.templates"
   }
 }
