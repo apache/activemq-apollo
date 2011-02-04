@@ -31,7 +31,7 @@
 
   <filter>
     <filter-name>Jersey Filter</filter-name>
-    <filter-class>org.apache.activemq.apollo.web.JerseyServletContainer</filter-class>
+    <filter-class>com.sun.jersey.spi.container.servlet.ServletContainer</filter-class>
     <init-param>
       <param-name>com.sun.jersey.config.feature.Trace</param-name>
       <param-value>false</param-value>
@@ -55,13 +55,6 @@
         org.apache.activemq.apollo.web.resources.JacksonJsonProvider
       </param-value>
     </init-param>
-    <!-- <init-param>
-      <param-name>com.sun.jersey.config.property.packages</param-name>
-      <param-value>
-        org.fusesource.scalate.console;
-        org.apache.activemq.apollo.web.resources
-      </param-value>
-    </init-param> -->
     <init-param>
       <param-name>com.sun.jersey.config.feature.FilterForwardOn404</param-name>
       <param-value>true</param-value>
