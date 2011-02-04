@@ -18,9 +18,16 @@ package org.apache.activemq.apollo.broker.web
 
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
-import org.apache.activemq.apollo.broker.store.Store
-import org.apache.activemq.apollo.dto.{WebAdminDTO, StoreDTO}
+import org.apache.activemq.apollo.dto.WebAdminDTO
 import org.apache.activemq.apollo.broker.Broker
+
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+trait WebServer extends Service
 
 /**
  * <p>
@@ -47,7 +54,7 @@ object WebServerFactory {
         return rc
       }
     }
-    throw new IllegalArgumentException("Could not find a web server implementation to use.")
+    null
   }
 
 

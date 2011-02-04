@@ -17,7 +17,12 @@
 package org.apache.activemq.apollo.web
 
 import org.fusesource.scalate.TemplateEngine
+import org.apache.activemq.apollo.broker.Broker
 
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ *
+ */
 class Boot(engine: TemplateEngine) {
   
   // Put some references to the jersey classes in our code so that the osgi 
@@ -27,6 +32,8 @@ class Boot(engine: TemplateEngine) {
   )
   
   def run: Unit = {
+    println("scalate boot: "+Thread.currentThread.getContextClassLoader)
+    engine.classLoader = Thread.currentThread.getContextClassLoader
     engine.packagePrefix = "org.apache.activemq.apollo.web.templates"
   }
 }

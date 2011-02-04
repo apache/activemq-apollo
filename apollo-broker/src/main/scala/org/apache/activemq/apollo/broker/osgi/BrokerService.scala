@@ -16,13 +16,10 @@
  */
 package org.apache.activemq.apollo.broker.osgi
 
-import java.net.URL
 import org.apache.activemq.apollo.broker.Broker
 import org.fusesource.hawtdispatch._
-import java.lang.Class
 import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO}
 import org.osgi.service.cm.ConfigurationAdmin
-import java.util.Enumeration
 import org.osgi.framework._
 import java.lang.String
 import collection.JavaConversions._
@@ -30,7 +27,6 @@ import java.util.Properties
 import org.apache.activemq.apollo.util._
 import FileSupport._
 import java.io.{FileInputStream, File}
-
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
@@ -48,9 +44,6 @@ object BrokerService extends Log {
         error("Apollo has allready been started.")
         return;
       }
-
-      // this makes jaxb happy
-      Thread.currentThread().setContextClassLoader(JaxbClassLoader(context))
 
       // in case the config gets injected.
       val dto = if( config != null ) {
@@ -90,6 +83,7 @@ object BrokerService extends Log {
 
     } catch {
       case e: Throwable =>
+        e.printStackTrace
         stop
         error(e)
     }
@@ -122,75 +116,5 @@ class BrokerService {
 
   def start() = BrokerService.start
   def stop() = BrokerService.stop
-}
-
-/**
- * We need to setup a context class loader because apollo allows
- * optional/plugin modules to dynamically add to the JAXB context.
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-case class JaxbClassLoader(context: BundleContext) extends ClassLoader(classOf[JaxbClassLoader].getClassLoader) {
-
-  def wait_for_start(bundle:Bundle):Option[Bundle] = {
-    var i=0
-    while(true) {
-      i+=1
-      bundle.getState match {
-        case Bundle.UNINSTALLED=> return None
-        case Bundle.RESOLVED=> return Some(bundle)
-        case Bundle.ACTIVE=> return Some(bundle)
-        case _ =>
-          Thread.sleep(100)
-          if( (i%50)==0 ) {
-            println("Waiting on bundle: "+bundle.getSymbolicName);
-          }
-      }
-    }
-    None
-  }
-
-  val bundles = context.getBundles.flatMap { bundle =>
-    if (bundle.getEntry("META-INF/services/org.apache.activemq.apollo/xml-packages.index")!=null ) {
-      wait_for_start(bundle)
-    } else {
-      None
-    }
-  }
-
-  override def findClass(name: String): Class[_] = {
-    // try to find the class in one of the bundles.
-    bundles.foreach{ bundle:Bundle =>
-      try {
-        return bundle.loadClass(name)
-      } catch {
-        case e:ClassNotFoundException => // ignore.
-      }
-    }
-    super.findClass(name)
-  }
-
-  override def findResource(name: String): URL = {
-    bundles.foreach{ bundle =>
-      val rc = bundle.getResource(name)
-      if( rc!=null ) {
-        return rc
-      }
-    }
-    null
-  }
-
-  override def findResources(name: String): Enumeration[URL] = {
-    val list = new java.util.Vector[URL]
-    bundles.foreach{ bundle =>
-      val rc = bundle.getResources(name)
-      if( rc!=null ) {
-        rc.foreach{ x=>
-          list.add( x.asInstanceOf[URL] )
-        }
-      }
-    }
-    list.elements
-  }
 }
 

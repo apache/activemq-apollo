@@ -16,24 +16,24 @@
  */
 package org.apache.activemq.apollo.web
 
-import org.junit.runner.RunWith
-import org.scalatest.junit.JUnitRunner
-import org.scalatest.{FunSuite}
-
-import org.fusesource.scalate.test._
+import com.sun.jersey.spi.container.servlet.ServletContainer
+import javax.servlet._
+import org.apache.activemq.apollo.broker.Broker
 
 /**
+ * Sets the broker's extension class loader as the context class loader
+ * and then delegates to the jersey filter.
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@RunWith(classOf[JUnitRunner])
-class ResourcesTest extends FunSuite with WebServerMixin with WebDriverMixin {
-
-  test("home page") {
-    webDriver.get(rootUrl)
-//    pageContains("Bookstore")
+class JerseyServletContainer extends ServletContainer {
+  override def init(filterConfig: FilterConfig): Unit = {
+    println("jersey init: "+Thread.currentThread.getContextClassLoader)
+/*    Thread.currentThread.setContextClassLoader(getClass.getClassLoader)*/
+    super.init(filterConfig)
   }
 
-//  testPageContains("id/item1", "Title1", "Author1", "item1")
-//  testPageContains("id/item2", "Title2", "Author2", "item2")
-
+  override def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain): Unit = {
+    super.doFilter(request, response, chain)
+  }
 }

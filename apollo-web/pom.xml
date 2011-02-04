@@ -83,6 +83,14 @@
       <optional>true</optional>
     </dependency>
 
+    <dependency>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.core</artifactId>
+      <version>${osgi-version}</version>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+    
     <!-- Scala Support -->
     <dependency>
       <groupId>org.scala-lang</groupId>
@@ -223,10 +231,8 @@
                 <supportedProjectType>war</supportedProjectType>
               </supportedProjectTypes>
               <instructions>
-                <!-- <Export-Package>!*</Export-Package> -->
-                <!-- <Import-Package>javax.servlet,javax.servlet.http,org.osgi.framework,org.osgi.service.packageadmin</Import-Package> -->
-                <!-- <Bundle-ClassPath>WEB-INF/classes</Bundle-ClassPath> -->
                 <Webapp-Context>apollo</Webapp-Context>
+                <Webapp-Deploy>false</Webapp-Deploy>
               </instructions>
             </configuration>
           </execution>

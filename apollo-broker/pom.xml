@@ -35,6 +35,7 @@
   <name>${project.artifactId}</name>
 
   <properties>
+    <osgi.fragment.host></osgi.fragment.host>
   </properties>
 
   <dependencies>
@@ -104,6 +105,12 @@
       <artifactId>org.osgi.compendium</artifactId>
       <version>${osgi-version}</version>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.ops4j.pax.web</groupId>
+      <artifactId>pax-web-extender-war</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+      <optional>true</optional>
     </dependency>
 
     <!-- Scala Support -->

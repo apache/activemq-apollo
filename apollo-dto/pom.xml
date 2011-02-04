@@ -55,6 +55,11 @@
       <version>${hawtbuf-version}</version>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-util</artifactId>
+      <version>1.0-SNAPSHOT</version>
+    </dependency>
 
     <!-- Testing Dependencies -->    
     <dependency>

@@ -31,7 +31,7 @@
 
   <filter>
     <filter-name>Jersey Filter</filter-name>
-    <filter-class>com.sun.jersey.spi.container.servlet.ServletContainer</filter-class>
+    <filter-class>org.apache.activemq.apollo.web.JerseyServletContainer</filter-class>
     <init-param>
       <param-name>com.sun.jersey.config.feature.Trace</param-name>
       <param-value>false</param-value>

@@ -38,9 +38,4 @@
     <property name="configAdmin" ref="configAdmin"/>
   </bean>
 
-  <bean id="exporter" class="org.apache.activemq.apollo.util.osgi.ClassFinderServiceExporter"
-        init-method="start" destroy-method="stop">
-    <property name="context" ref="blueprintBundleContext"/>
-  </bean>
-
 </blueprint>

@@ -145,6 +145,7 @@ object Broker extends Log {
 
   val STICK_ON_THREAD_QUEUES = true
 
+  def class_loader:ClassLoader = ClassFinder.class_loader
 
   /**
    * Creates a default a configuration object.
@@ -283,8 +284,13 @@ class Broker() extends BaseService {
     val second_tracker = new LoggingTracker("broker startup", dispatch_queue)
 
     Option(config.web_admin).foreach{ web_admin=>
-      web_server = WebServerFactory.create(this)
-      second_tracker.start(web_server)
+      WebServerFactory.create(this) match {
+        case null =>
+          warn("Could not start admistration interface.")
+        case x =>
+          web_server = x
+          second_tracker.start(web_server)
+      }
     }
 
     virtual_hosts.valuesIterator.foreach( x=>
@@ -316,9 +322,7 @@ class Broker() extends BaseService {
       tracker.stop(x)
     )
 
-    if( web_server!=null ) {
-      tracker.stop(web_server)
-    }
+    Option(web_server).foreach(tracker.stop(_))
 
     BrokerRegistry.remove(this)
     tracker.callback(on_completed)

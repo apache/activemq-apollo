@@ -22,6 +22,9 @@ import org.fusesource.scalate.{Binding, TemplateSource}
 
 /**
  * Defines the template package of reusable imports, attributes and methods across templates
+ *
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class ScalatePackage extends DefaultTemplatePackage {
   override def header(source: TemplateSource, bindings: List[Binding]) = super.header(source,bindings)+"""

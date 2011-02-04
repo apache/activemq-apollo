@@ -16,6 +16,10 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.apache.activemq.apollo.util.ClassFinder;
+import org.apache.activemq.apollo.util.Module;
+import org.apache.activemq.apollo.util.ModuleRegistry;
+
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -26,7 +30,6 @@ import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.util.StreamReaderDelegate;
 import java.io.*;
 import java.net.URL;
-import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.regex.Matcher;
@@ -75,63 +78,33 @@ public class XmlCodec {
     }
 
     private static final XMLInputFactory factory = XMLInputFactory.newInstance();
-    private static final JAXBContext context;
+    volatile public static JAXBContext _context;
 
-    public static ClassLoader loader = Thread.currentThread().getContextClassLoader();
-
-    static {
-        try {
-            String path = "META-INF/services/org.apache.activemq.apollo/xml-packages.index";
-
-            HashSet<String> names = new HashSet<String>();
-            try {
-                Enumeration<URL> resources = loader.getResources(path);
-
-                while (resources.hasMoreElements()) {
-                    URL url = resources.nextElement();
-                    Properties p = loadProperties(url.openStream());
-                    Enumeration<Object> keys = p.keys();
-                    while (keys.hasMoreElements()) {
-                        names.add((String) keys.nextElement());
-                    }
-                }
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            String packages = "";
-            for ( String p : names) {
-                if( packages.length() !=0 ) {
-                    packages += ":";
-                }
-                packages += p;
-            }
-            context = JAXBContext.newInstance(packages);
-
-        } catch (JAXBException e) {
-            throw new RuntimeException(e);
+    private static JAXBContext context() throws JAXBException {
+        JAXBContext rc = _context;
+        if( rc==null ) {
+            rc = _context = createContext();
         }
+        return rc;
     }
 
-    static private Properties loadProperties(InputStream is) {
-        if (is == null) {
-            return null;
-        }
-        try {
-            Properties p = new Properties();
-            p.load(is);
-            return p;
-        } catch (Exception e) {
-            return null;
-        } finally {
-            try {
-                is.close();
-            } catch (Throwable e) {
+    private static JAXBContext createContext() throws JAXBException {
+        HashSet<String> names = new HashSet<String>();
+        for( Module m: ModuleRegistry.jsingletons()) {
+            for( String p:m.xml_packages() ) {
+                names.add(p);
             }
         }
-    }
 
+        String packages = "";
+        for ( String p : names) {
+            if( packages.length() !=0 ) {
+                packages += ":";
+            }
+            packages += p;
+        }
+        return JAXBContext.newInstance(packages);
+    }
 
     static public BrokerDTO unmarshalBrokerDTO(URL url) throws IOException, XMLStreamException, JAXBException {
         return unmarshalBrokerDTO(url, null);
@@ -148,7 +121,7 @@ public class XmlCodec {
     static public BrokerDTO unmarshalBrokerDTO(InputStream is, Properties props) throws IOException, XMLStreamException, JAXBException {
         ClassLoader original = Thread.currentThread().getContextClassLoader();
         try {
-            Thread.currentThread().setContextClassLoader(loader);
+            Thread.currentThread().setContextClassLoader(ClassFinder.class_loader());
             if (is == null) {
                 throw new IllegalArgumentException("input stream was null");
             }
@@ -157,7 +130,7 @@ public class XmlCodec {
                 if (props != null) {
                     reader = new PropertiesFilter(reader, props);
                 }
-                Unmarshaller unmarshaller = context.createUnmarshaller();
+                Unmarshaller unmarshaller = context().createUnmarshaller();
                 return (BrokerDTO) unmarshaller.unmarshal(reader);
             } finally {
                 is.close();
@@ -169,11 +142,17 @@ public class XmlCodec {
     }
 
     static public void marshalBrokerDTO(BrokerDTO in, OutputStream os, boolean format) throws JAXBException {
-        Marshaller marshaller = context.createMarshaller();
-        if( format ) {
-            marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, java.lang.Boolean.TRUE);
+        ClassLoader original = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(ClassFinder.class_loader());
+            Marshaller marshaller = context().createMarshaller();
+            if( format ) {
+                marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, java.lang.Boolean.TRUE);
+            }
+            marshaller.marshal(in, new OutputStreamWriter(os));
+        } finally {
+            Thread.currentThread().setContextClassLoader(original);
         }
-        marshaller.marshal(in, new OutputStreamWriter(os));
     }
 
 

@@ -14,26 +14,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.web
+package org.apache.activemq.apollo.util
 
-import org.junit.runner.RunWith
-import org.scalatest.junit.JUnitRunner
-import org.scalatest.{FunSuite}
+import java.lang.String
+import scala.collection.mutable.ListBuffer
 
-import org.fusesource.scalate.test._
+object Module {
+  val MODULE_INDEX_RESOURCE: String = "META-INF/services/org.apache.activemq.apollo/modules.index"
+}
+import Module._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@RunWith(classOf[JUnitRunner])
-class ResourcesTest extends FunSuite with WebServerMixin with WebDriverMixin {
-
-  test("home page") {
-    webDriver.get(rootUrl)
-//    pageContains("Bookstore")
-  }
-
-//  testPageContains("id/item1", "Title1", "Author1", "item1")
-//  testPageContains("id/item2", "Title2", "Author2", "item2")
-
+abstract class Module {
+  def xml_packages:Array[String] = Array()
 }
+
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+object ModuleRegistry {
+
+  val finder = new ClassFinder[Module](MODULE_INDEX_RESOURCE,classOf[Module])
+
+  def singletons = finder.singletons
+  def jsingletons = finder.jsingletons
+
+  private val listeners = ListBuffer[Runnable]()
+
+  finder.on_change = ()=> {
+    val copy = this.synchronized {
+      listeners.toArray
+    }
+    copy.foreach { listener=>
+      listener.run
+    }
+  }
+}
+

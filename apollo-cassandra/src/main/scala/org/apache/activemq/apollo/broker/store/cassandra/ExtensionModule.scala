@@ -1,3 +1,5 @@
+package org.apache.activemq.apollo.broker.store.cassandra
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,26 +16,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.web
-
-import org.junit.runner.RunWith
-import org.scalatest.junit.JUnitRunner
-import org.scalatest.{FunSuite}
-
-import org.fusesource.scalate.test._
+import org.apache.activemq.apollo.util.Module
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@RunWith(classOf[JUnitRunner])
-class ResourcesTest extends FunSuite with WebServerMixin with WebDriverMixin {
-
-  test("home page") {
-    webDriver.get(rootUrl)
-//    pageContains("Bookstore")
-  }
-
-//  testPageContains("id/item1", "Title1", "Author1", "item1")
-//  testPageContains("id/item2", "Title2", "Author2", "item2")
-
+class ExtensionModule extends Module {
+  override def xml_packages =  Array("org.apache.activemq.apollo.broker.store.cassandra.dto")
 }
