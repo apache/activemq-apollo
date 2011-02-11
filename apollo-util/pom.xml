@@ -168,19 +168,6 @@
         </executions>
       </plugin>
       
-      <!-- <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <version>${bundle-plugin-version}</version>
-        <extensions>true</extensions>
-        <inherited>true</inherited>
-        <configuration>
-          <instructions>
-            <Webapp-Context>apollo</Webapp-Context>
-          </instructions>
-        </configuration>
-      </plugin>
-      -->
     </plugins> 
   </build>  
 
