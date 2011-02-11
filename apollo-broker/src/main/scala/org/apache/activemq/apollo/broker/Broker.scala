@@ -19,7 +19,6 @@ package org.apache.activemq.apollo.broker
 import _root_.java.io.File
 import _root_.java.lang.String
 import org.fusesource.hawtdispatch._
-import org.fusesource.hawtdispatch.Dispatch
 import org.fusesource.hawtbuf._
 import AsciiBuffer._
 import collection.JavaConversions
@@ -32,6 +31,7 @@ import security.{AclAuthorizer, Authorizer, JaasAuthenticator, Authenticator}
 import java.net.InetSocketAddress
 import org.apache.activemq.apollo.broker.web._
 import collection.mutable.{HashSet, LinkedHashMap}
+import scala.util.Random
 
 /**
  * <p>
@@ -143,8 +143,6 @@ object Broker extends Log {
 
   val broker_id_counter = new AtomicLong()
 
-  val STICK_ON_THREAD_QUEUES = true
-
   def class_loader:ClassLoader = ClassFinder.class_loader
 
   /**
@@ -204,9 +202,6 @@ class Broker() extends BaseService {
   var connectors: List[Connector] = Nil
 
   val dispatch_queue = createQueue("broker") // getGlobalQueue(DispatchPriority.HIGH).createQueue("broker")
-  if( STICK_ON_THREAD_QUEUES ) {
-    dispatch_queue.setTargetQueue(Dispatch.getRandomThreadQueue)
-  }
 
   val id = broker_id_counter.incrementAndGet
   
@@ -240,14 +235,26 @@ class Broker() extends BaseService {
   var authenticator:Authenticator = _
   var authorizer:Authorizer = _
 
+  def init_dispatch_queue(dispatch_queue:DispatchQueue) = {
+    import OptionSupport._
+    if( config.sticky_dispatching.getOrElse(true) ) {
+      val queues = getThreadQueues()
+      val queue = queues(Random.nextInt(queues.length));
+      dispatch_queue.setTargetQueue(queue)
+    }
+  }
+
   override def _start(on_completed:Runnable) = {
 
     // create the runtime objects from the config
     {
+      init_dispatch_queue(dispatch_queue)
+
       if( config.key_storage!=null ) {
         key_storage = new KeyStorage
         key_storage.config = config.key_storage
       }
+
 
       import OptionSupport._
       if( config.authentication != null && config.authentication.enabled.getOrElse(true) ) {

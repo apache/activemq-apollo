@@ -63,4 +63,7 @@ public class BrokerDTO {
 
     @XmlElement(name="authentication")
     public AuthenticationDTO authentication;
+
+
+    public Boolean sticky_dispatching;
 }

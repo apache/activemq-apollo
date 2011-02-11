@@ -55,7 +55,8 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
   val filter = binding.message_filter
 
   override val dispatch_queue: DispatchQueue = createQueue(binding.label);
-  dispatch_queue.setTargetQueue(getRandomThreadQueue)
+  host.broker.init_dispatch_queue(dispatch_queue)
+
   dispatch_queue {
     debug("created queue for: " + binding.label)
   }

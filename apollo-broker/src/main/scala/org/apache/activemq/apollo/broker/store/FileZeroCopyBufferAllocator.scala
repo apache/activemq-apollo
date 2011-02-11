@@ -504,25 +504,25 @@ class FileZeroCopyBufferAllocator(val directory:File) extends ZeroCopyBufferAllo
 
   def start() = {
     directory.mkdirs
-    val config = new DispatcherConfig()
-    for( i <- 0 until config.getThreads ) {
+    var i=0;
+    for( queue <- getThreadQueues()) {
       val ctx = new AllocatorContext(i)
+      ctx.queue = queue
       contexts += i->ctx
-      getThreadQueue(i) {
-        ctx.queue = getCurrentThreadQueue
+      queue {
         _current_allocator_context.set(ctx)
       }
+      i += 1
     }
   }
 
   def stop() = {
-    val config = new DispatcherConfig()
-    for( i <- 0 until config.getThreads ) {
-      contexts = Map()
-      getThreadQueue(i) {
+    for( queue <- getThreadQueues() ) {
+      queue {
         _current_allocator_context.remove
       }
     }
+    contexts = Map()
   }
 
   def sync(file: Int) = {
@@ -546,7 +546,7 @@ class FileZeroCopyBufferAllocator(val directory:File) extends ZeroCopyBufferAllo
   }
 
   def context(i:Int)(func: (AllocatorContext)=>Unit):Unit= {
-    getThreadQueue(i) {
+    getThreadQueues()(i) {
       func(current_allocator_context)
     }
   }

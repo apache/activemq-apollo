@@ -35,8 +35,6 @@ import org.apache.activemq.apollo.util.OptionSupport._
  */
 object Connector extends Log {
 
-  val STICK_ON_THREAD_QUEUES = Broker.STICK_ON_THREAD_QUEUES
-
   /**
    * Creates a default a configuration object.
    */
@@ -99,9 +97,7 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
       connection.protocol_handler = protocol.createProtocolHandler
       connection.transport = transport
 
-      if( STICK_ON_THREAD_QUEUES ) {
-        connection.dispatch_queue.setTargetQueue(Dispatch.getRandomThreadQueue)
-      }
+      broker.init_dispatch_queue(connection.dispatch_queue)
 
       // We release when it gets removed form the connections list.
       connection.dispatch_queue.retain
