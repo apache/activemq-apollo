@@ -223,7 +223,6 @@ public class SslTransport extends TcpTransport {
                 int count = super.readChannel().read(readBuffer);
                 if( count == -1 ) {  // peer closed socket.
                     if (rc==0) {
-                        engine.closeInbound();
                         return -1;
                     } else {
                         return rc;
