@@ -242,8 +242,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
     }
 
     def connect(path:Path, destination:DestinationDTO, producer:BindableDeliveryProducer, security:SecurityContext):Unit = {
-      var matches = get_destination_matches(path)
-      matches.foreach { dest=>
+      get_destination_matches(path).foreach { dest=>
         if( dest.can_connect(destination, producer, security) ) {
           dest.connect(destination, producer)
         }
@@ -253,10 +252,10 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
 
     def disconnect(destination:DestinationDTO, producer:BindableDeliveryProducer) = {
       val path = DestinationParser.decode_path(destination.name)
+      producers_by_path.remove(path, new ProducerContext(destination, producer, null))
       get_destination_matches(path).foreach { dest=>
         dest.disconnect(producer)
       }
-      producer.release
     }
 
   }
