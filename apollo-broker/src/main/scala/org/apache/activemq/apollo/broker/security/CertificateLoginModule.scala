@@ -30,7 +30,7 @@ import org.yaml.snakeyaml.Yaml
 import org.apache.activemq.apollo.util.{FileSupport, Log}
 import java.lang.String
 import org.apache.activemq.jaas.{UserPrincipal, CertificateCallback}
-import java.util.{LinkedList, Properties, HashSet}
+import java.util.LinkedList
 
 /**
  * <p>
@@ -98,6 +98,7 @@ class CertificateLoginModule {
     file match {
       case None =>
         for (cert <- certificates) {
+          debug("Adding certificiate principal: '%s'", cert.getSubjectX500Principal.getName)
           principals.add(cert.getSubjectX500Principal)
         }
 
@@ -120,8 +121,12 @@ class CertificateLoginModule {
             val alias = users.get(dn)
             if( alias!=null ) {
               principals.add(new UserPrincipal(alias.toString))
+              debug("Adding user principal: '%s'", alias.toString)
             }
             principals.add(cert.getSubjectX500Principal)
+            debug("Adding certificiate principal: '%s'", dn)
+          } else {
+            debug("Distinguished name: '%s' not found in dn file", dn)
           }
         }
 

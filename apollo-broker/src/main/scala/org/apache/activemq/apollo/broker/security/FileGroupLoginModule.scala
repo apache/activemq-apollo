@@ -121,14 +121,15 @@ class FileGroupLoginModule extends LoginModule {
       val group_name = en.nextElement().asInstanceOf[String]
       val users = groups.getProperty(group_name).split(Pattern.quote(separator)).map(_.trim)
       users.foreach { x =>
+        debug("Searching for groups with member: '%s'", x)
         if ( principles.contains(x) ) {
           principals.add(new GroupPrincipal(group_name))
+          debug("Added group principal: '%s'", group_name)
         }
       }
     }
 
     subject.getPrincipals().addAll(principals)
-    debug("commit")
     return true
   }
 
