@@ -107,6 +107,13 @@
       <scope>provided</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.ops4j.pax.web</groupId>
+      <artifactId>pax-web-spi</artifactId>
+      <version>${pax-web-version}</version>
+      <optional>true</optional>
+    </dependency>
+
     <!-- Scala Support -->
     <dependency>
       <groupId>org.scala-lang</groupId>

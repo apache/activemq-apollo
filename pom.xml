@@ -126,6 +126,8 @@
     <!-- osgi stuff -->
     <osgi-version>4.2.0</osgi-version>
     <karaf-version>2.99.99-SNAPSHOT</karaf-version>
+    <karaf-version>2.1.2</karaf-version>
+    <pax-web-version>1.1.0-SNAPSHOT</pax-web-version>
     <features-maven-plugin-version>2.1.0</features-maven-plugin-version>
     
     <osgi.fragment.host>${project.groupId}.apollo-broker</osgi.fragment.host>
@@ -716,6 +718,14 @@
           <id>oracleReleases</id>
           <url>http://download.oracle.com/maven</url>
           <layout>default</layout>
+        </repository>
+        
+        <repository>
+          <id>ops4j.sonatype.snapshots.deploy</id>
+          <name>OPS4J snapshot repository</name>
+          <url>https://oss.sonatype.org/content/repositories/ops4j-snapshots/</url>
+          <snapshots><enabled>true</enabled></snapshots>
+          <releases><enabled>false</enabled></releases>
         </repository>
     
       </repositories>
