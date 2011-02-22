@@ -70,7 +70,7 @@ class Topic(val router:LocalRouter, val name:String, val config:TopicDTO, val id
           case "queue" =>
 
             // create a temp queue so that it can spool
-            val queue = router._create_queue(-1, new TempQueueBinding(consumer), new QueueDTO)
+            val queue = router._create_queue(new TempQueueBinding(consumer))
             queue.dispatch_queue.setTargetQueue(consumer.dispatch_queue)
             queue.bind(List(consumer))
 

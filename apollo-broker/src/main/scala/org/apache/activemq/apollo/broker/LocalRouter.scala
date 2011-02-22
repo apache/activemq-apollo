@@ -275,7 +275,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
         destination match {
           case destination:DurableSubscriptionDestinationDTO=>
             // So the user can subscribe to the topic.. but can he create durable sub??
-            val qc = ds_config(destination)
+            val qc = DurableSubscriptionQueueBinding.create(destination).config(host).asInstanceOf[DurableSubscriptionDTO]
             if( !can_create_ds(qc, security) ) {
                return Failure("Not authorized to create the durable subscription.")
             }
@@ -286,10 +286,11 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
     }
 
     def get_or_create_durable_subscription(destination:DurableSubscriptionDestinationDTO):Queue = {
-      durable_subscriptions_by_id.get( (destination.client_id, destination.subscription_id) ).getOrElse {
-        val binding = QueueBinding.create(destination)
-        val qc = ds_config(destination)
-        _create_queue(-1, binding, qc)
+      val key = (destination.client_id, destination.subscription_id)
+      durable_subscriptions_by_id.get( key ).getOrElse {
+        val queue = _create_queue(QueueBinding.create(destination))
+        durable_subscriptions_by_id.put(key, queue)
+        queue
       }
     }
 
@@ -319,27 +320,6 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
       }
     }
 
-    def ds_config(destination:DurableSubscriptionDestinationDTO):DurableSubscriptionDTO = {
-      import collection.JavaConversions._
-      import DestinationParser.default._
-      import AsciiBuffer._
-
-      val name = DestinationParser.decode_path(destination.name)
-      def matches(x:DurableSubscriptionDTO):Boolean = {
-        if( x.name != null && !parseFilter(ascii(x.name)).matches(name)) {
-          return false
-        }
-        if( x.client_id != null && x.client_id!=x.client_id ) {
-          return false
-        }
-        if( x.subscription_id != null && x.subscription_id!=x.subscription_id ) {
-          return false
-        }
-        true
-      }
-      host.config.durable_subscriptions.find(matches _).getOrElse(new DurableSubscriptionDTO)
-    }
-
     def bind(queue:Queue) = {
 
       val destination = queue.binding.binding_dto.asInstanceOf[DurableSubscriptionDestinationDTO]
@@ -362,6 +342,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
     def unbind(queue:Queue) = {
       val path = queue.binding.destination
       durable_subscriptions_by_path.remove(path, queue)
+
     }
 
     def create_destination(path:Path, security:SecurityContext):Result[Topic,String] = {
@@ -386,19 +367,6 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
 
   object queue_domain extends Domain[Queue] {
 
-    def config(binding:QueueBinding):QueueDTO = {
-      import collection.JavaConversions._
-      import DestinationParser.default._
-
-      def matches(x:QueueDTO):Boolean = {
-        if( x.name != null && !parseFilter(ascii(x.name)).matches(binding.destination)) {
-          return false
-        }
-        true
-      }
-      host.config.queues.find(matches _).getOrElse(new QueueDTO)
-    }
-
     def can_create_queue(config:QueueDTO, security:SecurityContext) = {
       if( host.authorizer==null || security==null) {
         true
@@ -411,11 +379,25 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
       val path = queue.binding.destination
       assert( !PathParser.containsWildCards(path) )
       add_destination(path, queue)
+
+      import OptionSupport._
+      if( queue.config.unified.getOrElse(false) ) {
+        // hook up the queue to be a subscriber of the topic.
+        val topic = topic_domain.get_or_create_destination(path, null).success
+        topic.bind(null, queue)
+      }
     }
 
     def unbind(queue:Queue) = {
       val path = queue.binding.destination
       remove_destination(path, queue)
+
+      import OptionSupport._
+      if( queue.config.unified.getOrElse(false) ) {
+        // unhook the queue from the topic
+        val topic = topic_domain.get_or_create_destination(path, null).success
+        topic.unbind(queue, false)
+      }
     }
 
     def create_destination(path: Path, security: SecurityContext) = {
@@ -423,16 +405,9 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
       dto.name = DestinationParser.encode_path(path)
 
       val binding = QueueDomainQueueBinding.create(dto)
-      val qc = config(binding)
-      if( can_create_queue(qc, security) ) {
-        val queue = _create_queue(-1, binding, qc)
-        import OptionSupport._
-        if( qc.unified.getOrElse(false) ) {
-          // hook up the queue to be a subscriber of the topic.
-          val topic = topic_domain.get_or_create_destination(path, null).success
-          topic.bind(null, queue)
-        }
-        Success(queue)
+      val config = binding.config(host)
+      if( can_create_queue(config, security) ) {
+        Success(_create_queue(binding))
       } else {
         Failure("Not authorized to create the queue")
       }
@@ -459,9 +434,14 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
             host.store.get_queue(queue_key) { x =>
               x match {
                 case Some(record)=>
-                  dispatch_queue {
-                    _create_queue(record.key, QueueBinding.create(record.binding_kind, record.binding_data), null)
-                    task.run
+                  if( record.binding_kind == TempQueueBinding.TEMP_KIND ) {
+                    // Drop temp queues on restart..
+                    host.store.remove_queue(queue_key){x=> task.run}
+                  } else {
+                    dispatch_queue {
+                      _create_queue(QueueBinding.create(record.binding_kind, record.binding_data), queue_key)
+                      task.run
+                    }
                   }
                 case _ => task.run
               }
@@ -645,12 +625,15 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
     queues_by_id.get(id)
   }
 
-  def _create_queue(id:Long, binding:QueueBinding, config:QueueDTO):Queue = {
+
+  def _create_queue(binding:QueueBinding, id:Long= -1):Queue = {
 
     var qid = id
     if( qid == -1 ) {
       qid = host.queue_id_counter.incrementAndGet
     }
+
+    val config = binding.config(host)
 
     val queue = new Queue(this, qid, binding, config)
     if( queue.tune_persistent && id == -1 ) {

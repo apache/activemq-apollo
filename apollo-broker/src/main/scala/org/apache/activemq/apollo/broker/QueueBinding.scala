@@ -90,6 +90,8 @@ trait QueueBinding {
   def message_filter:BooleanExpression = ConstantExpression.TRUE
 
   def destination:Path
+
+  def config(host:VirtualHost):QueueDTO
 }
 
 object QueueDomainQueueBinding extends QueueBinding.Provider {
@@ -149,6 +151,20 @@ class QueueDomainQueueBinding(val binding_data:Buffer, val binding_dto:QueueDest
     case _ => false
   }
 
+
+  def config(host:VirtualHost):QueueDTO = {
+    import collection.JavaConversions._
+    import DestinationParser.default._
+
+    def matches(x:QueueDTO):Boolean = {
+      if( x.name != null && !parseFilter(ascii(x.name)).matches(destination)) {
+        return false
+      }
+      true
+    }
+    host.config.queues.find(matches _).getOrElse(new QueueDTO)
+  }
+
 }
 
 
@@ -170,8 +186,8 @@ object DurableSubscriptionQueueBinding extends QueueBinding.Provider {
       null
     }
   }
-}
 
+}
 
 /**
  * <p>
@@ -220,6 +236,27 @@ class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:D
       SelectorParser.parse(binding_dto.filter)
     }
   }
+
+  def config(host:VirtualHost):DurableSubscriptionDTO = {
+      import collection.JavaConversions._
+      import DestinationParser.default._
+      import AsciiBuffer._
+
+      def matches(x:DurableSubscriptionDTO):Boolean = {
+        if( x.name != null && !parseFilter(ascii(x.name)).matches(destination)) {
+          return false
+        }
+        if( x.client_id != null && x.client_id!=x.client_id ) {
+          return false
+        }
+        if( x.subscription_id != null && x.subscription_id!=x.subscription_id ) {
+          return false
+        }
+        true
+      }
+      host.config.durable_subscriptions.find(matches _).getOrElse(new DurableSubscriptionDTO)
+  }
+
 }
 
 
@@ -268,4 +305,5 @@ class TempQueueBinding(val key:AnyRef, val label:String) extends QueueBinding {
     case _ => false
   }
 
+  def config(host: VirtualHost) = new QueueDTO
 }
