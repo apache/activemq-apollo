@@ -62,6 +62,8 @@ class SecurityContext {
       kind match {
         case null=>
           return !principles.map(_.kind).intersect(default_kinds.toSet).isEmpty
+        case "+"=>
+          return !principles.isEmpty
         case "*"=>
           return true;
         case kind=>
@@ -78,6 +80,8 @@ class SecurityContext {
             }
           }
           return false;
+        case "+"=>
+          return principles.map(_.allow).contains(p.allow)
         case "*"=>
           return principles.map(_.allow).contains(p.allow)
         case kind=>
@@ -89,6 +93,8 @@ class SecurityContext {
       p.deny match {
         case null =>
         case "*"=>
+          return false;
+        case "+"=>
           return !kind_matches(p.kind)
         case id =>
           if( principal_matches(new PrincipalDTO(id, p.kind)) ) {
@@ -98,6 +104,8 @@ class SecurityContext {
       p.allow match {
         case null =>
         case "*"=>
+          return true;
+        case "+"=>
           return kind_matches(p.kind)
         case id =>
           if( principal_matches(new PrincipalDTO(id, p.kind)) ) {

@@ -523,12 +523,56 @@ definition. Example:
 {pygmentize:: xml}
 <acl>
   <send deny="chirino" kind="org.apache.activemq.jaas.UserPrincipal"/>
-  <send allow="*" kind="*"/>
+  <send allow="*"/>
 </acl>
 {pygmentize}
 
-The special `*` value acts like a wild card and can be used in the `deny`,
-`allow`, and `kind` attributes.
+#### Wildcards
+
+Wild cards can be used in the `deny`, `allow`, and `kind` attributes to match 
+multiple values.  Two types of wildcards are supported:
+
+> `*` : Matches any value on zero or more principles. 
+> `+` : Matches any value on one or more principles.
+
+Examples of using the `*` wild card:
+
+{pygmentize:: xml}
+<acl>
+  <connect allow="*"/>
+</acl>
+{pygmentize}
+
+The previous example allows anyone to connect even if the subject they 
+authenticated with has no principles associated with it.
+
+Examples of using the `+` wild card:
+
+{pygmentize:: xml}
+<acl>
+  <connect allow="+" kind="org.apache.activemq.jaas.UserPrincipal"/>
+</acl>
+{pygmentize}
+
+The previous example allows an `UserPrincipal` principal to connect. It
+would reject the connection if subject that has no `UserPrincipals`.
+
+You can also use the wildcard on the kind attribute.  When the wild
+card is used on the kind attribute, then `*` acts like the `+` wild 
+card and only matches for one or more principles.
+
+For example:
+
+{pygmentize:: xml}
+<acl>
+  <connect allow="Hiram" kind="*"/>
+</acl>
+{pygmentize}
+
+The previous example allows a subject with at least one `hiram` to 
+principal connect.  The principal can be of any type..
+
+#### Ordering
 
 The order in which rule entries are defined are significant when the user
 matches multiple entries. The first entry the user matches determines if he
