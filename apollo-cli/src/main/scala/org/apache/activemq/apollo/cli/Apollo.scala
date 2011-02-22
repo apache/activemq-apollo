@@ -16,15 +16,15 @@
  */
 package org.apache.activemq.apollo.cli
 
-import org.osgi.service.command.CommandSession
 import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
-import org.apache.felix.gogo.runtime.shell.CommandShellImpl
 import org.apache.karaf.shell.console.Main
 import org.apache.karaf.shell.console.jline.Console
 import jline.Terminal
 import org.fusesource.jansi.Ansi
-import java.io.{OutputStream, PrintStream, InputStream}
 import org.apache.activemq.apollo.util.FileSupport._
+import org.apache.felix.service.command.CommandSession
+import org.apache.felix.gogo.runtime.CommandProcessorImpl
+import java.io.{File, PrintStream, InputStream}
 
 /**
  * <p>
@@ -65,9 +65,8 @@ class Apollo extends Main with Action {
 
   override def isMultiScopeMode() = false
 
-
-  protected override def createConsole(commandProcessor: CommandShellImpl, in: InputStream, out: PrintStream, err: PrintStream, terminal: Terminal)  = {
-    new Console(commandProcessor, in, out, err, terminal, null) {
+  protected override def createConsole(impl: CommandProcessorImpl, in: InputStream, out: PrintStream, err: PrintStream, terminal: Terminal)  = {
+    new Console(impl, in, out, err, terminal, null) {
       protected override def getPrompt = BOLD+"apollo> "+RESET
       protected override def isPrintStackTraces = debug
       protected override def welcome = {
@@ -76,10 +75,13 @@ class Apollo extends Main with Action {
       }
 
       protected override def setSessionProperties = {}
+
+      protected override def getHistoryFile: File = {
+        val default = (new File(System.getProperty("user.home"))/".apollo"/"apollo.history").getCanonicalPath
+        new File(System.getProperty("apollo.history",default))
+      }
     }
   }
-  
-  
 
   @argument(name = "args", description = "apollo sub command arguments", multiValued=true)
   var args = Array[String]()

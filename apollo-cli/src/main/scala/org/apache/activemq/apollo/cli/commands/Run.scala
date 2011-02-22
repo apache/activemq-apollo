@@ -17,13 +17,14 @@
 package org.apache.activemq.apollo.cli.commands
 
 import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
-import org.osgi.service.command.CommandSession
 import java.io.File
 import org.apache.activemq.apollo.broker.{Broker, ConfigStore, FileConfigStore}
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.cli.Apollo
 import org.apache.activemq.apollo.util.{Logging, LoggingReporter}
+import org.apache.felix.service.command.CommandSession
+
 /**
  * The apollo run command
  */

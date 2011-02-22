@@ -17,15 +17,13 @@
 package org.apache.activemq.apollo.cli.commands
 
 import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
-import org.osgi.service.command.CommandSession
-import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.Ansi.Color._
 import org.fusesource.jansi.Ansi.Attribute._
 import Helper._
 import java.io._
 import org.apache.activemq.apollo.util.FileSupport._
-import java.nio.charset.Charset
 import java.util.regex.{Pattern, Matcher}
+import org.apache.felix.service.command.CommandSession
 
 object Create {
   val IS_WINDOWS = System.getProperty("os.name").toLowerCase().trim().startsWith("win");

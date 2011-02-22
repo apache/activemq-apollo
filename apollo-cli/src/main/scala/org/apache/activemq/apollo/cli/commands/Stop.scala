@@ -17,15 +17,14 @@ package org.apache.activemq.apollo.cli.commands
  * limitations under the License.
  */
 import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
-import org.osgi.service.command.CommandSession
 import java.io.File
 import org.apache.activemq.apollo.broker.FileConfigStore
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.util.OptionSupport._
 import org.apache.activemq.apollo.util.Logging
-import org.apache.activemq.apollo.dto.WebAdminDTO
 import org.apache.commons.codec.binary.Base64
 import java.net.{HttpURLConnection, URL}
+import org.apache.felix.service.command.CommandSession
 
 /**
  * The apollo stop command

@@ -17,10 +17,9 @@
 
 package org.apache.activemq.apollo.cli.commands
 
-import java.{util => ju, lang => jl}
 import org.apache.felix.gogo.commands.{Action, Command => command}
-import org.osgi.service.command.CommandSession
 import org.apache.karaf.shell.console.CloseShellException
+import org.apache.felix.service.command.CommandSession
 
 /**
  * The 'exit' sub command.
