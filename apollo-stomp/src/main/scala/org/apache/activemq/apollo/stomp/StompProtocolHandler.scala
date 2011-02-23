@@ -719,9 +719,24 @@ class StompProtocolHandler extends ProtocolHandler {
     }
 
     // Do we need to add the user id?
-    if( host.authenticator!=null && config.add_user_header!=null ) {
-      host.authenticator.user_name(security_context).foreach{ name=>
-        rc ::= (encode_header(config.add_user_header), encode_header(name))
+    if( host.authenticator!=null ) {
+      if( config.add_user_header!=null ) {
+        host.authenticator.user_name(security_context).foreach{ name=>
+          rc ::= (encode_header(config.add_user_header), encode_header(name))
+        }
+      }
+      if( !config.add_user_headers.isEmpty ){
+        import collection.JavaConversions._
+        config.add_user_headers.foreach { h =>
+          val matches = security_context.principles(h.kind)
+          if( !matches.isEmpty ) {
+            if( Option(h.pick).getOrElse("first") == "first" ) {
+              rc ::= (encode_header(h.name), encode_header(matches.head.allow))
+            } else {
+              rc ::= (encode_header(h.name), encode_header(matches.map(_.allow).mkString("|")))
+            }
+          }
+        }
       }
     }
 

@@ -39,7 +39,7 @@ class SecurityContext {
 
   var login_context:LoginContext = _
 
-  private var principles = Set[PrincipalDTO]()
+  private var _principles = Set[PrincipalDTO]()
 
   private var _subject:Subject = _
 
@@ -47,12 +47,25 @@ class SecurityContext {
 
   def subject_= (value:Subject) {
     _subject = value
-    principles = Set[PrincipalDTO]()
+    _principles = Set[PrincipalDTO]()
     if( value!=null ) {
       import collection.JavaConversions._
       value.getPrincipals.foreach { x=>
-        principles += new PrincipalDTO(x.getName, x.getClass.getName)
+        _principles += new PrincipalDTO(x.getName, x.getClass.getName)
       }
+    }
+  }
+
+  def principles = _principles
+
+  def principles(kind:String) = {
+    kind match {
+      case "+"=>
+        _principles
+      case "*"=>
+        _principles
+      case kind=>
+        _principles.filter(_.kind == kind)
     }
   }
 
@@ -61,13 +74,13 @@ class SecurityContext {
     def kind_matches(kind:String):Boolean = {
       kind match {
         case null=>
-          return !principles.map(_.kind).intersect(default_kinds.toSet).isEmpty
+          return !_principles.map(_.kind).intersect(default_kinds.toSet).isEmpty
         case "+"=>
-          return !principles.isEmpty
+          return !_principles.isEmpty
         case "*"=>
           return true;
         case kind=>
-          return principles.map(_.kind).contains(kind)
+          return _principles.map(_.kind).contains(kind)
       }
     }
 
@@ -75,17 +88,17 @@ class SecurityContext {
       p.kind match {
         case null=>
           default_kinds.foreach { kind=>
-            if( principles.contains(new PrincipalDTO(p.allow, kind)) ) {
+            if( _principles.contains(new PrincipalDTO(p.allow, kind)) ) {
               return true;
             }
           }
           return false;
         case "+"=>
-          return principles.map(_.allow).contains(p.allow)
+          return _principles.map(_.allow).contains(p.allow)
         case "*"=>
-          return principles.map(_.allow).contains(p.allow)
+          return _principles.map(_.allow).contains(p.allow)
         case kind=>
-          return principles.contains(p)
+          return _principles.contains(p)
       }
     }
 

@@ -16,27 +16,27 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.List;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlValue;
 
 /**
- * Allow you to customize the stomp protocol implementation.
+ * <p>
+ * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="stomp")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class StompDTO extends ProtocolDTO {
+public class AddUserHeaderDTO {
 
-    @XmlAttribute(name="add_user_header")
-    public String add_user_header;
+    @XmlValue
+    public String name;
 
-    /**
-     * A broker accepts connections via it's configured connectors.
-     */
-    @XmlElement(name="add_user_header")
-    public List<AddUserHeaderDTO> add_user_headers = new ArrayList<AddUserHeaderDTO>();
+    @XmlAttribute(name="pick")
+    public String pick;
 
+    @XmlAttribute(name="kind")
+    public String kind;
 
 }

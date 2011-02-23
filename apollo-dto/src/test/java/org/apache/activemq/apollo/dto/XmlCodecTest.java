@@ -19,6 +19,8 @@ package org.apache.activemq.apollo.dto;
 import org.junit.Test;
 
 import java.io.InputStream;
+import java.util.List;
+
 import static junit.framework.Assert.*;
 
 
@@ -44,6 +46,11 @@ public class XmlCodecTest {
         assertTrue(stomp instanceof StompDTO);
         assertEquals("JMSXUserID", ((StompDTO) stomp).add_user_header);
 
+        List<AddUserHeaderDTO> add_user_headers = ((StompDTO) stomp).add_user_headers;
+        assertEquals(2, add_user_headers.size());
+        assertEquals("GroupId", add_user_headers.get(0).name);
+        assertEquals("UserId", add_user_headers.get(1).name);
+        assertEquals("UserPrincipal", add_user_headers.get(1).kind);
 
         VirtualHostDTO host = dto.virtual_hosts.get(0);
         assertNotNull(host.acl);
