@@ -33,8 +33,8 @@ public class AddUserHeaderDTO {
     @XmlValue
     public String name;
 
-    @XmlAttribute(name="pick")
-    public String pick;
+    @XmlAttribute(name="separator")
+    public String separator;
 
     @XmlAttribute(name="kind")
     public String kind;

@@ -730,10 +730,11 @@ class StompProtocolHandler extends ProtocolHandler {
         config.add_user_headers.foreach { h =>
           val matches = security_context.principles(h.kind)
           if( !matches.isEmpty ) {
-            if( Option(h.pick).getOrElse("first") == "first" ) {
-              rc ::= (encode_header(h.name), encode_header(matches.head.allow))
-            } else {
-              rc ::= (encode_header(h.name), encode_header(matches.map(_.allow).mkString("|")))
+            h.separator match {
+              case null=>
+                rc ::= (encode_header(h.name), encode_header(matches.head.allow))
+              case separator =>
+                rc ::= (encode_header(h.name), encode_header(matches.map(_.allow).mkString(separator)))
             }
           }
         }
