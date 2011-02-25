@@ -732,9 +732,9 @@ class StompProtocolHandler extends ProtocolHandler {
           if( !matches.isEmpty ) {
             h.separator match {
               case null=>
-                rc ::= (encode_header(h.name), encode_header(matches.head.allow))
+                rc ::= (encode_header(h.name.trim), encode_header(matches.head.allow))
               case separator =>
-                rc ::= (encode_header(h.name), encode_header(matches.map(_.allow).mkString(separator)))
+                rc ::= (encode_header(h.name.trim), encode_header(matches.map(_.allow).mkString(separator)))
             }
           }
         }
