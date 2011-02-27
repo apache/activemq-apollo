@@ -30,10 +30,15 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
   val broker_config_uri = "xml:classpath:apollo-stomp.xml"
 
   override protected def beforeAll() = {
-    info("Loading broker configuration from the classpath with URI: " + broker_config_uri)
-    broker = BrokerFactory.createBroker(broker_config_uri)
-    ServiceControl.start(broker, "Starting broker")
-    port = broker.connectors.head.transportServer.getSocketAddress.getPort
+    try {
+      info("Loading broker configuration from the classpath with URI: " + broker_config_uri)
+      broker = BrokerFactory.createBroker(broker_config_uri)
+      ServiceControl.start(broker, "Starting broker")
+      port = broker.connectors.head.transportServer.getSocketAddress.getPort
+    }
+    catch {
+      case e:Throwable => e.printStackTrace
+    }
   }
 
   var client = new StompClient
@@ -631,6 +636,90 @@ class StompDestinationTest extends StompTestSupport {
   }
 
 
+}
+
+class DurableSubscriptionTest extends StompTestSupport {
+
+  override val broker_config_uri: String = "xml:classpath:apollo-stomp-bdb.xml"
+
+  test("Two durable subs contain the same messages") {
+    connect("1.1")
+
+    // establish 2 durable subs..
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/sometopic\n" +
+      "id:sub1\n" +
+      "persistent:true\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/sometopic\n" +
+      "id:sub2\n" +
+      "persistent:true\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    client.close
+    connect("1.1")
+
+
+    client.close
+    connect("1.1")
+
+    // Now send a bunch of messages....
+    println("sending")
+    def put(id:Int) = {
+      client.write(
+        "SEND\n" +
+        "destination:/topic/sometopic\n" +
+        "\n" +
+        "message:"+id+"\n")
+    }
+
+    for( i <- 1 to 1000 ) {
+      put(i)
+    }
+
+    // Now try to get all the previously sent messages.
+
+    def get(id:Int) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith regex("\n\nmessage:"+id+"\n")
+    }
+
+    // Empty out the first durable sub
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/sometopic\n" +
+      "id:sub1\n" +
+      "persistent:true\n" +
+      "\n")
+
+    println("getting from sub 1")
+    for( i <- 1 to 1000 ) {
+      get(i)
+    }
+
+    // Empty out the 2nd durable sub
+    println("getting from sub 2")
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/sometopic\n" +
+      "id:sub2\n" +
+      "persistent:true\n" +
+      "\n")
+
+    for( i <- 1 to 1000 ) {
+      get(i)
+    }
+
+  }
 }
 
 class StompUnifiedQueueTest extends StompTestSupport {
