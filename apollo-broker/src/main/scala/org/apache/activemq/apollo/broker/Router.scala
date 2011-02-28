@@ -71,12 +71,6 @@ abstract class DeliveryProducerRoute(val router:Router) extends BaseRetained wit
 
   import DeliveryProducerRoute._
 
-  // Retain the queue while we are retained.
-  dispatch_queue.retain
-  setDisposer(^{
-    dispatch_queue.release
-  })
-
   var targets = List[DeliverySession]()
 
   def connected() = dispatch_queue {
@@ -180,9 +174,9 @@ abstract class DeliveryProducerRoute(val router:Router) extends BaseRetained wit
     if (pendingAck != null) {
       if (delivery.uow != null) {
         val ack = pendingAck
-        delivery.uow.setDisposer(^ {
+        delivery.uow.on_complete {
           ack(true, null)
-        })
+        }
 
       } else {
         pendingAck(true, null)

@@ -99,8 +99,6 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
 
       broker.init_dispatch_queue(connection.dispatch_queue)
 
-      // We release when it gets removed form the connections list.
-      connection.dispatch_queue.retain
       connections.put(connection.id, connection)
       info("Client connected from: %s", connection.transport.getRemoteAddress)
 
@@ -180,7 +178,6 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
     val at_limit = at_connection_limit
     if( connections.remove(connection.id).isDefined ) {
       info("Client disconnected from: %s", connection.transport.getRemoteAddress)
-      connection.dispatch_queue.release
       if( at_limit ) {
         transportServer.resume
       }

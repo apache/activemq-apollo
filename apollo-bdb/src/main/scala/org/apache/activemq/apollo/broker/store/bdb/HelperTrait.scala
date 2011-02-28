@@ -59,7 +59,7 @@ object HelperTrait {
   implicit def to_int(value:DatabaseEntry):Int = to_int(value.getData)
 
 
-
+  @SerialVersionUID(1)
   class LongComparator extends Comparator[Array[Byte]] with Serializable {
 
     def compare(o1: Array[Byte], o2: Array[Byte]) = {

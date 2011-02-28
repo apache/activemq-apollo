@@ -97,8 +97,8 @@ public class PipeTransportServer implements TransportServer {
     }
     public void stop(Runnable onCompleted) throws Exception {
         PipeTransportFactory.unbind(this);
-        acceptSource.setDisposer(onCompleted);
-        acceptSource.release();
+        acceptSource.setCancelHandler(onCompleted);
+        acceptSource.cancel();
     }
 
     public void setConnectURI(URI connectURI) {

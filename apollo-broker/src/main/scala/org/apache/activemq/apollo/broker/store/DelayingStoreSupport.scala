@@ -80,10 +80,22 @@ trait DelayingStoreSupport extends Store with BaseService {
     val uow_id:Int = next_batch_id.getAndIncrement
     var actions = Map[Long, MessageAction]()
 
-    var completeListeners = ListBuffer[Runnable]()
+    var completed = false
+    var completeListeners = ListBuffer[() => Unit]()
     var disableDelay = false
 
-    def on_complete(callback: Runnable) = if( callback!=null ) { this.synchronized { completeListeners += callback } }
+    def on_complete(callback: =>Unit) = {
+      if( this.synchronized {
+        if( completed ) {
+          true
+        } else {
+          completeListeners += ( ()=> callback  )
+          false
+        }
+      }) {
+        callback
+      }
+    }
 
     def complete_asap() = this.synchronized { disableDelay=true }
 
@@ -155,9 +167,7 @@ trait DelayingStoreSupport extends Store with BaseService {
 
     def onPerformed() = this.synchronized {
       commit_latency_counter += System.nanoTime-dispose_start
-      completeListeners.foreach { x=>
-        x.run
-      }
+      completeListeners.foreach(_())
       super.dispose
     }
   }
@@ -170,7 +180,7 @@ trait DelayingStoreSupport extends Store with BaseService {
     } else {
       // TODO: protect against this causing a 2nd flush.
       delayedUOWs.put(action.uow.uow_id, action.uow)
-      action.uow.on_complete(^{ cb })
+      action.uow.on_complete( cb )
       flush(action.uow.uow_id)
     }
   }

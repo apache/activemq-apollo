@@ -139,7 +139,10 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
     }
 
     val tracker = new TaskTracker()
-    tracker.release(batch)
+    val task = tracker.task("uow complete")
+    batch.on_complete(task.run)
+    batch.release
+
     msgKeys.foreach { msg_key =>
       store.flush_message(msg_key) {}
     }
@@ -168,7 +171,8 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
       batch.enqueue(entry(queue, seq, message))
 
       val latch = new CountDownLatch(1)
-      batch.setDisposer(^{latch.countDown} )
+      batch.on_complete(latch.countDown)
+
       batch.release
       store.flush_message(message) {}
 

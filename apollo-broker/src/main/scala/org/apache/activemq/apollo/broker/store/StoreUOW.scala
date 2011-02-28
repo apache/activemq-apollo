@@ -69,6 +69,6 @@ trait StoreUOW extends Retained {
    * The specified callback is executed once the UOW
    * is completed.
    */
-  def on_complete(callback: Runnable)
+  def on_complete(callback: =>Unit)
 
 }

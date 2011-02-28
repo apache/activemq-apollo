@@ -147,7 +147,7 @@ object MapSink {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class SinkMux[T](val downstream:Sink[T], val queue:DispatchQueue, val sizer:Sizer[T]) extends BaseRetained {
+class SinkMux[T](val downstream:Sink[T], val queue:DispatchQueue, val sizer:Sizer[T]) {
 
   var sessions = List[Session[T]]()
   var session_max_credits = 1024*32;
@@ -160,19 +160,12 @@ class SinkMux[T](val downstream:Sink[T], val queue:DispatchQueue, val sizer:Size
       val session = event._1
       val value = event._2
       session.credit_adder.merge(sizer.size(value));
-      session.credit_adder.release
     }
   }
   // As messages are delivered, and we credit the sessions,
   // that triggers the sessions to refill the overflow.  No
   // need to have a refiller action.
   overflow.refiller = NOOP
-
-  queue.retain
-  setDisposer(^{
-    source.release
-    queue.release
-  })
 
   // use a event aggregating source to coalesce multiple events from the same thread.
   // all the sessions send to the same source.
@@ -222,15 +215,11 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[
   private def sizer = mux.sizer
   private def downstream = mux.source
 
-  // retain since the producer will be using this source to send messages
-  // to the consumer
-  downstream.retain
-
   // create a source to coalesce credit events back to the producer side...
   val credit_adder = createSource(EventAggregators.INTEGER_ADD , producer_queue)
-  credit_adder.setEventHandler(^{
+  credit_adder.onEvent{
     add_credits(credit_adder.getData.intValue)
-  });
+  }
   credit_adder.resume
 
   private var closed = false
@@ -266,7 +255,6 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[
     if( _full || closed ) {
       false
     } else {
-      credit_adder.retain
       add_credits(-sizer.size(value))
       downstream.merge((this, value))
       true
@@ -277,8 +265,6 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[
     if( !closed ) {
       closed=true
       assert(getCurrentQueue eq producer_queue)
-      credit_adder.release
-      downstream.release
     }
   }
 

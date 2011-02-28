@@ -166,9 +166,21 @@ public class TcpTransportServer implements TransportServer {
     public void stop() throws Exception {
         stop(null);
     }
-    public void stop(Runnable onCompleted) throws Exception {
-        acceptSource.setDisposer(onCompleted);
-        acceptSource.release();
+    public void stop(final Runnable onCompleted) throws Exception {
+        if( acceptSource.isCanceled() ) {
+            onCompleted.run();
+        } else {
+            acceptSource.setCancelHandler(new Runnable() {
+                public void run() {
+                    try {
+                        channel.close();
+                    } catch (IOException e) {
+                    }
+                    onCompleted.run();
+                }
+            });
+            acceptSource.cancel();
+        }
     }
 
     public URI getBindURI() {

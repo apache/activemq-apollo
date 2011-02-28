@@ -123,7 +123,11 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     }
 
     val tracker = new TaskTracker()
-    tracker.release(batch)
+
+    val task = tracker.task("uow complete")
+    batch.on_complete(task.run)
+    batch.release
+
     msg_keys.foreach { msgKey =>
       store.flush_message(msgKey) {}
     }
@@ -180,7 +184,10 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     batch.enqueue(entry(A, 1, m1))
 
     val tracker = new TaskTracker()
-    tracker.release(batch)
+    val task = tracker.task("uow complete")
+    batch.on_complete(task.run)
+    batch.release
+
     expect(false) {
       tracker.await(3, TimeUnit.SECONDS)
     }
@@ -197,7 +204,9 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     batch.enqueue(entry(A, 1, m1))
 
     val tracker = new TaskTracker()
-    tracker.release(batch)
+    val task = tracker.task("uow complete")
+    batch.on_complete(task.run)
+    batch.release
 
     store.flush_message(m1) {}
 

@@ -352,13 +352,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
     }
 
     public void setDispatchQueue(DispatchQueue queue) {
-        if (dispatchQueue != null) {
-            dispatchQueue.release();
-        }
         this.dispatchQueue = queue;
-        if (dispatchQueue != null) {
-            dispatchQueue.retain();
-        }
     }
 
     public void _start(Runnable onCompleted) {
@@ -376,7 +370,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
                             trace("connected.");
                             channel.finishConnect();
                             readSource.setCancelHandler(null);
-                            readSource.release();
+                            readSource.cancel();
                             readSource=null;
                             socketState = new CONNECTED();
                             onConnected();
@@ -465,18 +459,15 @@ public class TcpTransport extends JavaBaseService implements Transport {
     }
 
     private void dispose() {
-
         if( readSource!=null ) {
-            readSource.release();
+            readSource.cancel();
             readSource=null;
         }
 
         if( writeSource!=null ) {
-            writeSource.release();
+            writeSource.cancel();
             writeSource=null;
         }
-        
-        dispatchQueue.release();
         this.codec = null;
     }
 

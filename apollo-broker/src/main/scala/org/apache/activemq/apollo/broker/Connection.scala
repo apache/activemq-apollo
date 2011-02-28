@@ -98,14 +98,12 @@ class BrokerConnection(val connector: Connector, val id:Long) extends Connection
   override def toString = "id: "+id.toString
 
   protected override  def _start(on_completed:Runnable) = {
-    connector.dispatch_queue.retain
     protocol_handler.set_connection(this);
     super._start(on_completed)
   }
 
   protected override def _stop(on_completed:Runnable) = {
     connector.stopped(this)
-    connector.dispatch_queue.release
     super._stop(on_completed)
   }
 

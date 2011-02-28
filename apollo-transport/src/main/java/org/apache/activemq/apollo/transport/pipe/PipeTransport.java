@@ -59,13 +59,7 @@ public class PipeTransport implements Transport {
         return dispatchQueue;
     }
     public void setDispatchQueue(DispatchQueue queue) {
-        if( dispatchQueue!=null ) {
-            dispatchQueue.release();
-        }
         this.dispatchQueue = queue;
-        if( dispatchQueue!=null ) {
-            dispatchQueue.retain();
-        }
     }
 
     public void start() throws Exception {
@@ -135,9 +129,8 @@ public class PipeTransport implements Transport {
             peer.dispatchSource.merge(EOF_TOKEN);
         }
         if( dispatchSource!=null ) {
-            dispatchSource.setDisposer(onCompleted);
-            dispatchSource.release();
-            dispatchSource = null;
+            dispatchSource.setCancelHandler(onCompleted);
+            dispatchSource.cancel();
         }
         setDispatchQueue(null);
     }

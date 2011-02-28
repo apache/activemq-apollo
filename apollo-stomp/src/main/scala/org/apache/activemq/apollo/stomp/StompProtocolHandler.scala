@@ -1014,9 +1014,9 @@ class StompProtocolHandler extends ProtocolHandler {
 
       queue.foreach{ _(uow) }
       if( uow!=null ) {
-        uow.on_complete(^{
+        uow.on_complete {
           on_complete
-        })
+        }
         uow.release
       } else {
         on_complete

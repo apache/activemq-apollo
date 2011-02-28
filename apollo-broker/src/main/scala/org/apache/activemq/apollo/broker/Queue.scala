@@ -60,12 +60,10 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
   dispatch_queue {
     debug("created queue for: " + binding.label)
   }
-  setDisposer(^ {
-    ack_source.release
-    dispatch_queue.release
-    session_manager.release
-  })
 
+  override def dispose: Unit = {
+    ack_source.cancel
+  }
 
   val ack_source = createSource(new ListEventAggregator[(Subscription#AcquiredQueueEntry, Boolean, StoreUOW)](), dispatch_queue)
   ack_source.setEventHandler(^ {drain_acks});
@@ -946,9 +944,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     def store = {
       delivery.uow.enqueue(toQueueEntryRecord)
-      delivery.uow.on_complete(^{
+      delivery.uow.on_complete {
         queue.swap_out_completes_source.merge(this)
-      })
+      }
     }
 
     override def swap_out(asap:Boolean) = {
