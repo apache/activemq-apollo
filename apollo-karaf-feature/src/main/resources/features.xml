@@ -52,11 +52,16 @@
     <bundle>mvn:org.fusesource.jdbm/jdbm/${jdbm-version}</bundle>
   </feature>
   
+  <!-- BDB's object serialization does NOT use the context class loader
+       so it fails in a OSGi env.  Have to figure out how to load it as
+      a fragment. -->
+  <!--
   <feature name='apollo-bdb' version='${pom.version}'>
     <feature version='${pom.version}'>apollo</feature>
     <bundle>mvn:org.apache.activemq/apollo-bdb/${pom.version}</bundle>
     <bundle>wrap:mvn:com.sleepycat/je/${bdb-version}</bundle>
-  </feature>
+  </feature> 
+  -->
 
   <feature name='apollo-web' version='${pom.version}'>
     <feature version='${pom.version}'>apollo</feature>
