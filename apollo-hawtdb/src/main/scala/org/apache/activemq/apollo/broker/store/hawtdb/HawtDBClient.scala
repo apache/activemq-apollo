@@ -128,7 +128,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) {
         func
       } else {
         info("Database " + lockFileName + " is locked... waiting " + (DATABASE_LOCKED_WAIT_DELAY / 1000) + " seconds for the database to be unlocked.")
-        dispatchQueue.dispatchAfter(DATABASE_LOCKED_WAIT_DELAY, TimeUnit.MILLISECONDS, ^ {
+        dispatchQueue.executeAfter(DATABASE_LOCKED_WAIT_DELAY, TimeUnit.MILLISECONDS, ^ {
           hawtDBStore.executor_pool {
             lock(func _)
           }

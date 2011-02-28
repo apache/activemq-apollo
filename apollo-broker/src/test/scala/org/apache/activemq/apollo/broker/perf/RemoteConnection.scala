@@ -71,7 +71,7 @@ abstract class RemoteConnection extends Connection {
         on_failure(error)
         if (callbackWhenConnected != null) {
           warn("connect attempt failed. will retry connection..")
-          dispatch_queue.dispatchAfter(50, TimeUnit.MILLISECONDS, ^ {
+          dispatch_queue.executeAfter(50, TimeUnit.MILLISECONDS, ^ {
             if (stopping.get()) {
               callbackWhenConnected.run
             } else {

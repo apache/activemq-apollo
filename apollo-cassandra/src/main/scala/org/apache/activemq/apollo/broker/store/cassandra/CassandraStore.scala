@@ -164,7 +164,7 @@ class CassandraStore extends DelayingStoreSupport with Logging {
         schedualDisplayStats
       }
     }
-    dispatch_queue.dispatchAfter(5, TimeUnit.SECONDS, ^{ displayStats })
+    dispatch_queue.executeAfter(5, TimeUnit.SECONDS, ^{ displayStats })
   }
 
   /**

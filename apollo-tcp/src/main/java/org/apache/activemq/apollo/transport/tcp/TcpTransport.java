@@ -383,7 +383,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
                 readSource.resume();
 
             } else if (socketState.is(CONNECTED.class) ) {
-                dispatchQueue.dispatchAsync(new Runnable() {
+                dispatchQueue.execute(new Runnable() {
                     public void run() {
                         try {
                             trace("was connected.");
@@ -447,7 +447,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
     }
 
     private void schedualRateAllowanceReset() {
-        dispatchQueue.dispatchAfter(1, TimeUnit.SECONDS, new Runnable(){
+        dispatchQueue.executeAfter(1, TimeUnit.SECONDS, new Runnable(){
             public void run() {
                 if( !socketState.is(CONNECTED.class) ) {
                     return;

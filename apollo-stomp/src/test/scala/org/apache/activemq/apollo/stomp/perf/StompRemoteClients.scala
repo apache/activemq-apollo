@@ -81,7 +81,7 @@ class StompRemoteConsumer extends RemoteConsumer {
   protected def messageReceived() {
       if (thinkTime > 0) {
         transport.suspendRead
-        dispatch_queue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, ^ {
+        dispatch_queue.executeAfter(thinkTime, TimeUnit.MILLISECONDS, ^ {
           rate.increment();
           if (!stopped) {
             transport.resumeRead
@@ -135,7 +135,7 @@ class StompRemoteProducer extends RemoteProducer with Logging {
           // if we are not going to wait for an ack back from the server,
           // then jut send the next one...
           if (thinkTime > 0) {
-            dispatch_queue.dispatchAfter(thinkTime, TimeUnit.MILLISECONDS, task)
+            dispatch_queue.executeAfter(thinkTime, TimeUnit.MILLISECONDS, task)
           } else {
             dispatch_queue << task
           }
@@ -184,7 +184,7 @@ trait Watchog extends RemoteConsumer {
 
   def watchdog(lastMessageCount: Int): Unit = {
     val seconds = 10
-    dispatch_queue.dispatchAfter(seconds, TimeUnit.SECONDS, ^ {
+    dispatch_queue.executeAfter(seconds, TimeUnit.SECONDS, ^ {
       if (messageCount == lastMessageCount) {
         warn("Messages have stopped arriving after " + seconds + "s, stopping consumer")
         stop

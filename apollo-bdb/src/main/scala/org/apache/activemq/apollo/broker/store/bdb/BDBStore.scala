@@ -246,7 +246,7 @@ class BDBStore extends DelayingStoreSupport {
       }
     }
 
-    dispatch_queue.dispatchAfter(1, TimeUnit.SECONDS, ^{ displayStats })
+    dispatch_queue.executeAfter(1, TimeUnit.SECONDS, ^{ displayStats })
   }
 
   def get_store_status(callback:(StoreStatusDTO)=>Unit) = dispatch_queue {

@@ -69,7 +69,7 @@ public class PipeTransport implements Transport {
         if (dispatchQueue == null) {
             throw new IllegalArgumentException("dispatchQueue is not set");
         }
-        server.dispatchQueue.dispatchAsync(new Runnable(){
+        server.dispatchQueue.execute(new Runnable(){
             public void run() {
                 dispatchSource = Dispatch.createSource(EventAggregators.linkedList(), dispatchQueue);
                 dispatchSource.setEventHandler(new Runnable(){
@@ -86,7 +86,7 @@ public class PipeTransport implements Transport {
                             }
 
                             // let the peer know that they have been processed.
-                            peer.dispatchQueue.dispatchAsync(new Runnable() {
+                            peer.dispatchQueue.execute(new Runnable() {
                                 public void run() {
                                     outbound -= commands.size();
                                     drainInbound();
@@ -111,7 +111,7 @@ public class PipeTransport implements Transport {
     }
 
     private void fireConnected() {
-        dispatchQueue.dispatchAsync(new Runnable() {
+        dispatchQueue.execute(new Runnable() {
             public void run() {
                 connected = true;
                 dispatchSource.resume();

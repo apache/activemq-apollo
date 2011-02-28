@@ -137,7 +137,7 @@ class HawtDBStore extends DelayingStoreSupport {
         }
       }
     }
-    dispatch_queue.dispatchAfter(client.index_flush_interval, TimeUnit.MILLISECONDS, ^ {try_flush})
+    dispatch_queue.executeAfter(client.index_flush_interval, TimeUnit.MILLISECONDS, ^ {try_flush})
   }
 
   def scheduleCleanup(version:Int): Unit = {
@@ -149,7 +149,7 @@ class HawtDBStore extends DelayingStoreSupport {
         }
       }
     }
-    dispatch_queue.dispatchAfter(client.cleanup_interval, TimeUnit.MILLISECONDS, ^ {try_cleanup})
+    dispatch_queue.executeAfter(client.cleanup_interval, TimeUnit.MILLISECONDS, ^ {try_cleanup})
   }
 
   protected def _stop(on_completed: Runnable) = {
@@ -264,7 +264,7 @@ class HawtDBStore extends DelayingStoreSupport {
       }
     }
 
-    dispatch_queue.dispatchAfter(1, TimeUnit.SECONDS, ^{ displayStats })
+    dispatch_queue.executeAfter(1, TimeUnit.SECONDS, ^{ displayStats })
   }
 
   def get_store_status(callback:(StoreStatusDTO)=>Unit) = dispatch_queue {

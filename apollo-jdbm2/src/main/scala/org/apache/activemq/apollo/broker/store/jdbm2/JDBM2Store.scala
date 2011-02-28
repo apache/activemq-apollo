@@ -239,7 +239,7 @@ class JDBM2Store extends DelayingStoreSupport {
     }
     val interval = config.compact_interval.getOrElse(60)
     if( interval>=0 ) {
-      dispatch_queue.dispatchAfter(interval, TimeUnit.SECONDS, ^{ the_meat })
+      dispatch_queue.executeAfter(interval, TimeUnit.SECONDS, ^{ the_meat })
     }
   }
 
@@ -264,7 +264,7 @@ class JDBM2Store extends DelayingStoreSupport {
       }
     }
 
-    dispatch_queue.dispatchAfter(1, TimeUnit.SECONDS, ^{ displayStats })
+    dispatch_queue.executeAfter(1, TimeUnit.SECONDS, ^{ displayStats })
   }
 
   def get_store_status(callback:(StoreStatusDTO)=>Unit) = dispatch_queue {

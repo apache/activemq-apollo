@@ -287,7 +287,7 @@ trait DelayingStoreSupport extends Store with BaseService {
 
       val batch_id = uow.uow_id
       if( uow.delayable ) {
-        dispatch_queue.dispatchAfter(flush_delay, TimeUnit.MILLISECONDS, ^{flush(batch_id)})
+        dispatch_queue.executeAfter(flush_delay, TimeUnit.MILLISECONDS, ^{flush(batch_id)})
       } else {
         flush(batch_id)
       }
