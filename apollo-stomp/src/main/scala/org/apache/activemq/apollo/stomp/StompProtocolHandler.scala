@@ -571,6 +571,8 @@ class StompProtocolHandler extends ProtocolHandler {
 
       var connected_headers = ListBuffer((VERSION, protocol_version))
 
+      connected_headers += SERVER->encode_header("apache-apollo/"+Broker.version)
+
       session_id = encode_header(this.host.config.id + "-"+this.host.session_counter.incrementAndGet)
       connected_headers += SESSION->session_id
 

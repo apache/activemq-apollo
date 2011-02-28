@@ -32,6 +32,7 @@ import java.net.InetSocketAddress
 import org.apache.activemq.apollo.broker.web._
 import collection.mutable.{HashSet, LinkedHashMap}
 import scala.util.Random
+import FileSupport._
 
 /**
  * <p>
@@ -177,6 +178,11 @@ object Broker extends Log {
 
     }.result
   }
+
+  val version = using(getClass().getResourceAsStream("version.txt")) { source=>
+    read_text(source)
+  }
+
 }
 
 /**

@@ -412,6 +412,7 @@ object Stomp {
   val VERSION = ascii("version")
   val SESSION = ascii("session")
   val RESPONSE_ID = ascii("response-id")
+  val SERVER = ascii("server")
 
   val BROWSER = ascii("browser")
   val EXCLUSIVE = ascii("exclusive")

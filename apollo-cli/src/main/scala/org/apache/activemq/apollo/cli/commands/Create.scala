@@ -24,6 +24,7 @@ import java.io._
 import org.apache.activemq.apollo.util.FileSupport._
 import java.util.regex.{Pattern, Matcher}
 import org.apache.felix.service.command.CommandSession
+import org.apache.activemq.apollo.broker.Broker
 
 object Create {
   val IS_WINDOWS = System.getProperty("os.name").toLowerCase().trim().startsWith("win");
@@ -49,10 +50,6 @@ class Create extends Action {
   var version:String = "${version}"
 
   def execute(session: CommandSession) = {
-
-    val version = using(getClass().getResourceAsStream("version.txt")) { source=>
-      read_text(source)
-    }
 
     def println(value:Any) = session.getConsole.println(value)
     try {
@@ -152,7 +149,7 @@ class Create extends Action {
 
       if( filter ) {
         content = content.replaceAll(Pattern.quote("${host}"), Matcher.quoteReplacement(host))
-        content = content.replaceAll(Pattern.quote("${version}"), Matcher.quoteReplacement(version))
+        content = content.replaceAll(Pattern.quote("${version}"), Matcher.quoteReplacement(Broker.version))
       }
 
       // and then writing out in the new target encoding.
