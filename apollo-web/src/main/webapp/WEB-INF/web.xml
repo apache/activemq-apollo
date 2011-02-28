@@ -89,5 +89,24 @@
     <location>/WEB-INF/scalate/errors/500.scaml</location>
   </error-page>
 
-
+  <!-- In case you want to use container based security..
+  <security-constraint>
+    <web-resource-collection>
+      <web-resource-name>everything</web-resource-name>
+      <url-pattern>/*</url-pattern>
+    </web-resource-collection>
+    <auth-constraint>
+      <role-name>admin</role-name>
+    </auth-constraint>
+  </security-constraint>
+  <login-config>
+    <auth-method>BASIC</auth-method>
+    <realm-name>Apollo</realm-name>
+  </login-config>
+  <security-role>
+    <description>Who can login</description>
+    <role-name>admin</role-name>
+  </security-role>
+  -->
+  
 </web-app>
