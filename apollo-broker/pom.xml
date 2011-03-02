@@ -93,7 +93,7 @@
       <optional>true</optional>
     </dependency>
 
-    <!-- for optional osgi itegration -->
+    <!-- for optional osgi integration -->
     <dependency>
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>

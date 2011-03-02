@@ -24,6 +24,7 @@ import org.apache.activemq.apollo.dto._
 import security.SecurityContext
 import store.StoreUOW
 import util.continuations._
+import ReporterLevel._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -43,6 +44,54 @@ trait Router extends Service {
   def disconnect(destinations:Array[DestinationDTO], producer:BindableDeliveryProducer)
 
 }
+
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+object RouterFactory {
+
+  trait Provider {
+    def create(host:VirtualHost):Router
+    def validate(config: RouterDTO, reporter:Reporter):ReporterLevel
+  }
+
+  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/router-factory.index", classOf[Provider])
+
+  def create(host:VirtualHost):Router = {
+    val config = host.config.router;
+    if( config==null ) {
+      return new LocalRouter(host)
+    }
+    providers.singletons.foreach { provider=>
+      val rc = provider.create(host)
+      if( rc!=null ) {
+        return rc
+      }
+    }
+    throw new IllegalArgumentException("Uknonwn store type: "+config.getClass)
+  }
+
+
+  def validate(config: RouterDTO, reporter:Reporter):ReporterLevel = {
+    if( config == null ) {
+      return INFO
+    } else {
+      providers.singletons.foreach { provider=>
+        val rc = provider.validate(config, reporter)
+        if( rc!=null ) {
+          return rc
+        }
+      }
+    }
+    reporter.report(ERROR, "Uknonwn store type: "+config.getClass)
+    ERROR
+  }
+
+}
+
 
 /**
  * An object which produces deliveries to which allows new DeliveryConsumer

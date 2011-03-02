@@ -96,7 +96,7 @@ object LocalRouter extends Log {
 class LocalRouter(val host:VirtualHost) extends BaseService with Router {
   import LocalRouter._
 
-  protected def dispatch_queue:DispatchQueue = host.dispatch_queue
+  def dispatch_queue:DispatchQueue = host.dispatch_queue
 
   def auto_create_destinations = {
     import OptionSupport._
@@ -698,7 +698,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
     queues_by_id.remove(queue.id)
     queue.stop
     if( queue.tune_persistent ) {
-      queue.dispatch_queue ^ {
+      queue.dispatch_queue {
         host.store.remove_queue(queue.id){x=> Unit}
       }
     }

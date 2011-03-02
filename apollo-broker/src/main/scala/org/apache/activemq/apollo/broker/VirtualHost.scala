@@ -76,7 +76,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService {
   override val dispatch_queue:DispatchQueue = createQueue("virtual-host") // getGlobalQueue(DispatchPriority.HIGH).createQueue("virtual-host")
 
   var config:VirtualHostDTO = _
-  val router:Router = new LocalRouter(this)
+  var router:Router = _
 
   var names:List[String] = Nil;
 
@@ -125,6 +125,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService {
       authorizer = broker.authorizer
     }
 
+    router = RouterFactory.create(this)
     store = StoreFactory.create(config.store)
 
     if( store!=null ) {
