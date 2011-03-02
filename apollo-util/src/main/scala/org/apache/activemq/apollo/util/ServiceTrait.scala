@@ -27,11 +27,11 @@ import org.fusesource.hawtdispatch._
 trait ServiceTrait extends Service {
 
   def start(func: =>Unit ):Unit = {
-    start( runnable( func _ ) )
+    start( ^( func ) )
   }
 
   def stop(func: =>Unit ):Unit = {
-    stop( runnable( func _ ) )
+    stop( ^( func ) )
   }
 
 }
