@@ -34,7 +34,7 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
       info("Loading broker configuration from the classpath with URI: " + broker_config_uri)
       broker = BrokerFactory.createBroker(broker_config_uri)
       ServiceControl.start(broker, "Starting broker")
-      port = broker.connectors.head.transportServer.getSocketAddress.getPort
+      port = broker.connectors.head.transport_server.getSocketAddress.getPort
     }
     catch {
       case e:Throwable => e.printStackTrace

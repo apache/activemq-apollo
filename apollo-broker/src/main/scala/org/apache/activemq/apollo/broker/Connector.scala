@@ -73,12 +73,13 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
   override val dispatch_queue = broker.dispatch_queue
 
   var config:ConnectorDTO = defaultConfig
-  var transportServer:TransportServer = _
+  var transport_server:TransportServer = _
   var protocol:Protocol = _
 
   val connections = HashMap[Long, BrokerConnection]()
+  val accept_counter = new LongCounter()
+
   override def toString = "connector: "+config.id
-  val accept_counter = new LongCounter
 
   object BrokerAcceptListener extends TransportAcceptListener {
     def onAcceptError(e: Exception): Unit = {
@@ -111,7 +112,7 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
 
       // We may need to stop acepting connections..
       if(at_connection_limit) {
-        transportServer.suspend
+        transport_server.suspend
       }
     }
   }
@@ -139,19 +140,19 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
   override def _start(on_completed:Runnable) = {
     assert(config!=null, "Connector must be configured before it is started.")
     protocol = ProtocolFactory.get(config.protocol.getOrElse("multi")).get
-    transportServer = TransportFactory.bind( config.bind )
-    transportServer.setDispatchQueue(dispatch_queue)
-    transportServer.setAcceptListener(BrokerAcceptListener)
+    transport_server = TransportFactory.bind( config.bind )
+    transport_server.setDispatchQueue(dispatch_queue)
+    transport_server.setAcceptListener(BrokerAcceptListener)
 
-    if( transportServer.isInstanceOf[KeyAndTrustAware] ) {
+    if( transport_server.isInstanceOf[KeyAndTrustAware] ) {
       if( broker.key_storage!=null ) {
-        transportServer.asInstanceOf[KeyAndTrustAware].setTrustManagers(broker.key_storage.create_trust_managers)
-        transportServer.asInstanceOf[KeyAndTrustAware].setKeyManagers(broker.key_storage.create_key_managers)
+        transport_server.asInstanceOf[KeyAndTrustAware].setTrustManagers(broker.key_storage.create_trust_managers)
+        transport_server.asInstanceOf[KeyAndTrustAware].setKeyManagers(broker.key_storage.create_key_managers)
       } else {
         warn("You are using a transport the expects the broker's key storage to be configured.")
       }
     }
-    transportServer.start(^{
+    transport_server.start(^{
       info("Accepting connections at: "+config.bind)
       on_completed.run
     })
@@ -159,7 +160,7 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
 
 
   override def _stop(on_completed:Runnable): Unit = {
-    transportServer.stop(^{
+    transport_server.stop(^{
       info("Stopped connector at: "+config.bind)
       val tracker = new LoggingTracker(toString, dispatch_queue)
       connections.valuesIterator.foreach { connection=>
@@ -178,7 +179,7 @@ class Connector(val broker:Broker, val id:Long) extends BaseService {
     if( connections.remove(connection.id).isDefined ) {
       info("Client disconnected from: %s", connection.transport.getRemoteAddress)
       if( at_limit ) {
-        transportServer.resume
+        transport_server.resume
       }
     }
   }
