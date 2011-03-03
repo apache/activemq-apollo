@@ -76,7 +76,7 @@ public class VirtualHostDTO extends ServiceDTO<String> {
     @XmlElement(name="authentication")
     public AuthenticationDTO authentication;
 
-    @XmlElement(name="router")
+    @XmlElementRef
     public RouterDTO router;
 
 }
