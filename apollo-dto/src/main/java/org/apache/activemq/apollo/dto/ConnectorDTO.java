@@ -42,12 +42,6 @@ public class ConnectorDTO extends ServiceDTO<String> {
     @XmlAttribute
     public String protocol;
 
-    /**
-     * The uri which will be advertised for remote endpoints to connect to.
-     */
-    @XmlAttribute
-    public String advertise;
-
     @XmlAttribute(name="connection_limit")
     public Integer connection_limit;
 

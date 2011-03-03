@@ -130,7 +130,6 @@ class VMTransportFactory extends PipeTransportFactory with Logging {
         val connector = Connector.defaultConfig
         connector.id = "vm"
         connector.bind = "vm://" + name
-        connector.advertise = connector.bind
 
         // Create the broker on demand.
         var broker: Broker = null

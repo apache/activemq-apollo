@@ -47,7 +47,19 @@ public class BrokerDTO {
     @XmlElement(name="connector")
     public List<ConnectorDTO> connectors = new ArrayList<ConnectorDTO>();
 
-    
+
+    /**
+     * Internal IP address or host names of the broker
+     */
+    @XmlElement(name="internal_address")
+    public List<String> internal_addresses = new ArrayList<String>();
+
+    /**
+     * External IP address or host names of the broker
+     */
+    @XmlElement(name="external_address")
+    public List<String> external_addresses = new ArrayList<String>();
+
     /**
      * The base data directory of the broker.  It will store
      * persistent data under it.

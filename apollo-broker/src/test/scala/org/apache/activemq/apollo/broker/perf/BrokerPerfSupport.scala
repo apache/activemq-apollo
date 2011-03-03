@@ -200,7 +200,6 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     val config = Broker.defaultConfig
     val connector = config.connectors.get(0)
     connector.bind = bindURI
-    connector.advertise = connectUri
     connector.protocol = getBrokerProtocolName
 
     val host = config.virtual_hosts.get(0)
@@ -288,7 +287,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
   }
 
   def connectUri(broker: Broker) = {
-    broker.config.connectors.get(0).advertise
+    broker.connectors.head.transport_server.getConnectURI.toString
   }
 
   def _createProducer(id: Int, messageSize: Int, destination: DestinationDTO): RemoteProducer = {
