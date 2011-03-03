@@ -129,7 +129,7 @@ class BrokerConnection(val connector: Connector, val id:Long) extends Connection
       protocol_handler.create_connection_status
     }
 
-    result.id = id
+    result.id = id.toString
     result.state = service_state.toString
     result.state_since = service_state.since
     result.protocol = protocol_handler.protocol

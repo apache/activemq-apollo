@@ -28,7 +28,7 @@ import java.util.List;
  */
 @XmlRootElement(name = "connector")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ConnectorDTO extends ServiceDTO<String> {
+public class ConnectorDTO extends ServiceDTO {
 
     /**
      * The transport uri which it will accept connections on.

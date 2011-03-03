@@ -31,13 +31,13 @@ h2 Virtual Hosts
 ul
   - for( x <- virtual_hosts )
     li
-      a(href={ path("virtual-hosts/"+ x.id) }) #{x.label}
+      a(href={ path("virtual-hosts/"+ x) }) #{x}
 
 h2 Connectors
 ul
   - for( x <- connectors )
     li
-      a(href={ path("connectors/"+x.id) }) #{x.label}
+      a(href={ path("connectors/"+x) }) #{x}
 
 h2 Connections
 ul

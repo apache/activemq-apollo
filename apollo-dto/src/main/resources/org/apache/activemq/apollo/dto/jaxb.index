@@ -47,3 +47,4 @@ LinkDTO
 QueueConsumerStatusDTO
 StompDTO
 ValueDTO
+StringListDTO

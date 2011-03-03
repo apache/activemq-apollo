@@ -142,8 +142,6 @@ object Broker extends Log {
 
   val BLOCKABLE_THREAD_POOL = ApolloThreadPool.INSTANCE
 
-  val broker_id_counter = new AtomicLong()
-
   def class_loader:ClassLoader = ClassFinder.class_loader
 
   /**
@@ -209,9 +207,8 @@ class Broker() extends BaseService {
 
   val dispatch_queue = createQueue("broker") // getGlobalQueue(DispatchPriority.HIGH).createQueue("broker")
 
-  val id = broker_id_counter.incrementAndGet
+  def id = "default"
   
-  val virtual_host_id_counter = new LongCounter
   val connector_id_counter = new LongCounter
   val connection_id_counter = new LongCounter
 
@@ -270,7 +267,7 @@ class Broker() extends BaseService {
 
       default_virtual_host = null
       for (c <- config.virtual_hosts) {
-        val host = new VirtualHost(this, virtual_host_id_counter.incrementAndGet)
+        val host = new VirtualHost(this, c.host_names.head)
         host.configure(c, LoggingReporter(VirtualHost))
         virtual_hosts += ascii(c.id)-> host
         // first defined host is the default virtual host
@@ -284,7 +281,7 @@ class Broker() extends BaseService {
         }
       }
       for (c <- config.connectors) {
-        val connector = new Connector(this, connector_id_counter.incrementAndGet)
+        val connector = new Connector(this, c.id)
         connector.configure(c, LoggingReporter(VirtualHost))
         connectors ::= connector
       }
@@ -318,8 +315,6 @@ class Broker() extends BaseService {
       second_tracker.callback(on_completed)
     })
 
-
-
   }
 
 
@@ -350,7 +345,7 @@ class Broker() extends BaseService {
   }
 
   //useful for testing
-  def getFirstConnectorAddress() : InetSocketAddress = connectors.head.transportServer.getSocketAddress
+  def getFirstConnectorAddress() : InetSocketAddress = connectors.head.transport_server.getSocketAddress
 
 
 }

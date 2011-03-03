@@ -67,7 +67,7 @@ object Connector extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Connector(val broker:Broker, val id:Long) extends BaseService {
+class Connector(val broker:Broker, val id:String) extends BaseService {
   import Connector._
 
   override val dispatch_queue = broker.dispatch_queue

@@ -72,7 +72,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
     }
   }
 
-  private def with_virtual_host[T](id:Long)(func: (VirtualHost, Option[T]=>Unit)=>Unit):T = {
+  private def with_virtual_host[T](id:String)(func: (VirtualHost, Option[T]=>Unit)=>Unit):T = {
     with_broker { case (broker, cb) =>
       broker.virtual_hosts.valuesIterator.find( _.id == id) match {
         case Some(virtualHost)=>
@@ -98,11 +98,11 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
       broker.virtual_hosts.values.foreach{ host=>
         // TODO: may need to sync /w virtual host's dispatch queue
-        result.virtual_hosts.add( new LongIdLabeledDTO(host.id, host.config.id) )
+        result.virtual_hosts.add( host.id )
       }
 
       broker.connectors.foreach{ c=>
-        result.connectors.add( new LongIdLabeledDTO(c.id, c.config.id) )
+        result.connectors.add( c.id )
       }
 
       broker.connectors.foreach{ connector=>
@@ -122,8 +122,8 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
   @GET @Path("virtual-hosts")
   def virtualHosts = {
-    val rc = new LongIdListDTO
-    rc.items.addAll(get_broker.virtual_hosts)
+    val rc = new StringListDTO
+    rc.items = get_broker.virtual_hosts
     rc
   }
 
@@ -186,7 +186,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
 
   @GET @Path("virtual-hosts/{id}")
-  def virtualHost(@PathParam("id") id : Long):VirtualHostStatusDTO = {
+  def virtualHost(@PathParam("id") id : String):VirtualHostStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
       val result = new VirtualHostStatusDTO
       result.id = virtualHost.id
@@ -220,7 +220,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
   }
 
   @GET @Path("virtual-hosts/{id}/store")
-  def store(@PathParam("id") id : Long):StoreStatusDTO = {
+  def store(@PathParam("id") id : String):StoreStatusDTO = {
     val rc =  virtualHost(id).store
     if( rc == null ) {
       result(NOT_FOUND)
@@ -245,7 +245,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
   }
 
   @GET @Path("virtual-hosts/{id}/topics/{dest}")
-  def destination(@PathParam("id") id : Long, @PathParam("dest") dest : Long):TopicStatusDTO = {
+  def destination(@PathParam("id") id : String, @PathParam("dest") dest : Long):TopicStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
       cb(virtualHost.router.asInstanceOf[LocalRouter].topic_domain.destination_by_id.get(dest) map { node=>
         val result = new TopicStatusDTO
@@ -276,7 +276,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
   }
 
   @GET @Path("virtual-hosts/{id}/all-queues/{queue}")
-  def queue(@PathParam("id") id : Long, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean):QueueStatusDTO = {
+  def queue(@PathParam("id") id : String, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean):QueueStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
       reset {
         val queue = virtualHost.router.get_queue(qid)
@@ -286,7 +286,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
   }
 
   @GET @Path("virtual-hosts/{id}/queues/{queue}")
-  def destination_queue(@PathParam("id") id : Long, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean ):QueueStatusDTO = {
+  def destination_queue(@PathParam("id") id : String, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean ):QueueStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
       import JavaConversions._
       val queue = virtualHost.router.asInstanceOf[LocalRouter].queue_domain.destination_by_id.get(qid)
@@ -394,20 +394,20 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
   @GET @Path("connectors")
   def connectors = {
-    val rc = new LongIdListDTO
-    rc.items.addAll(get_broker.connectors)
+    val rc = new StringListDTO
+    rc.items = get_broker.connectors
     rc
   }
 
   @GET @Path("connectors/{id}")
-  def connector(@PathParam("id") id : Long):ConnectorStatusDTO = {
+  def connector(@PathParam("id") id : String):ConnectorStatusDTO = {
     with_broker { case (broker, cb) =>
       broker.connectors.find(_.id == id) match {
         case None=> cb(None)
         case Some(connector)=>
 
           val result = new ConnectorStatusDTO
-          result.id = connector.id
+          result.id = connector.id.toString
           result.state = connector.service_state.toString
           result.state_since = connector.service_state.since
           result.config = connector.config

@@ -40,13 +40,13 @@ public class BrokerStatusDTO extends ServiceStatusDTO {
      * Ids of all the virtual hosts running on the broker
      */
     @XmlElement(name="virtual_host")
-    public List<LongIdLabeledDTO> virtual_hosts = new ArrayList<LongIdLabeledDTO>();
+    public List<String> virtual_hosts = new ArrayList<String>();
 
     /**
      * Ids of all the connectors running on the broker
      */
     @XmlElement(name="connector")
-    public List<LongIdLabeledDTO> connectors = new ArrayList<LongIdLabeledDTO>();
+    public List<String> connectors = new ArrayList<String>();
 
     /**
      * Ids of all the connections running on the broker

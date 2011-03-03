@@ -16,29 +16,26 @@
  */
 package org.apache.activemq.apollo.dto;
 
+
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="service_status")
+@XmlRootElement(name="sl")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ServiceStatusDTO extends StringIdDTO {
+public class StringListDTO {
 
     /**
-     * The state of the service.
-	 * @XmlAttribute
+     * A list of ids.
      */
-    @XmlAttribute
-	public String state;
-
-    /**
-     * Since when has the broker in in this state?  In milliseconds since the epoch. 
-     */
-	@XmlAttribute(name="state_since")
-	public long state_since;
+    @XmlElement(name="item")
+    public List<String> items = new ArrayList<String>();
 
 }

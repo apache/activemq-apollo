@@ -28,7 +28,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="id")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ServiceDTO<ID> extends StringIdDTO {
+public class ServiceDTO extends StringIdDTO {
 
     /**
      * Should this service be running?

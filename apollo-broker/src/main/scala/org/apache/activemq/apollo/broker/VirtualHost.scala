@@ -70,7 +70,7 @@ object VirtualHost extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class VirtualHost(val broker: Broker, val id:Long) extends BaseService {
+class VirtualHost(val broker: Broker, val id:String) extends BaseService {
   import VirtualHost._
   
   override val dispatch_queue:DispatchQueue = createQueue("virtual-host") // getGlobalQueue(DispatchPriority.HIGH).createQueue("virtual-host")
@@ -81,7 +81,7 @@ class VirtualHost(val broker: Broker, val id:Long) extends BaseService {
   var names:List[String] = Nil;
 
   var store:Store = null
-  val queue_id_counter = new LongCounter
+  val queue_id_counter = new LongCounter()
 
   val session_counter = new AtomicLong(0)
 
