@@ -259,8 +259,8 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
     }
 
   }
-
-  object topic_domain extends Domain[Topic] {
+  val topic_domain = new TopicDomain
+  class TopicDomain extends Domain[Topic] {
 
     val topic_id_counter = new LongCounter
 
@@ -365,7 +365,8 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
 
   }
 
-  object queue_domain extends Domain[Queue] {
+  val queue_domain = new QueueDomain
+  class QueueDomain extends Domain[Queue] {
 
     def can_create_queue(config:QueueDTO, security:SecurityContext) = {
       if( host.authorizer==null || security==null) {
