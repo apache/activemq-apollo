@@ -352,7 +352,7 @@ public interface Hasher<N, K> {
      * Used to convert an object to a byte[] by basically doing:
      * Object.toString().getBytes("UTF-8")
      */
-    public class ToStringCodec extends VariableCodec {
+    public class ToStringCodec extends VariableCodec<Object> {
         public void encode(Object o, DataOutput dataOutput) throws IOException {
             dataOutput.write(o.toString().getBytes("UTF-8"));
         }
@@ -371,7 +371,7 @@ public interface Hasher<N, K> {
      * Object.toString() and uses a checksum to compute the hash of
      * the key and value.
      */
-    public class ToStringHasher extends BinaryHasher {
+    public class ToStringHasher extends BinaryHasher<Object, Object> {
 
         /**
          * Constructs a ToStringChecksumHasher that uses the JENKINS hash algorithim. 
