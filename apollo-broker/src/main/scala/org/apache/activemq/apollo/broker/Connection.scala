@@ -91,18 +91,21 @@ abstract class Connection() extends BaseService  {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class BrokerConnection(val connector: Connector, val id:Long) extends Connection {
+class BrokerConnection(var connector: Connector, val id:Long) extends Connection {
+  import Connection._
 
   var protocol_handler: ProtocolHandler = null;
 
   override def toString = "id: "+id.toString
 
   protected override  def _start(on_completed:Runnable) = {
+    info("Client connected from: %s", transport.getRemoteAddress)
     protocol_handler.set_connection(this);
     super._start(on_completed)
   }
 
   protected override def _stop(on_completed:Runnable) = {
+    info("Client disconnected from: %s", transport.getRemoteAddress)
     connector.stopped(this)
     super._stop(on_completed)
   }

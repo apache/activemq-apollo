@@ -412,7 +412,7 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
           result.state_since = connector.service_state.since
           result.config = connector.config
 
-          result.accepted = connector.accept_counter.get
+          result.accepted = connector.connection_counter.get
           connector.connections.foreach { case (id,connection) =>
             // TODO: may need to sync /w connection's dispatch queue
             result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ) )

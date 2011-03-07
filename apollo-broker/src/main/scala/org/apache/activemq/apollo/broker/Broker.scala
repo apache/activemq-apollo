@@ -281,7 +281,7 @@ class Broker() extends BaseService {
         }
       }
       for (c <- config.connectors) {
-        val connector = new Connector(this, c.id)
+        val connector = new AcceptingConnector(this, c.id)
         connector.configure(c, LoggingReporter(VirtualHost))
         connectors ::= connector
       }
@@ -336,16 +336,22 @@ class Broker() extends BaseService {
     tracker.callback(on_completed)
   }
 
-  def getVirtualHost(name: AsciiBuffer) = dispatch_queue ! {
+  def get_virtual_host(name: AsciiBuffer) = dispatch_queue ! {
     virtual_hosts_by_hostname.getOrElse(name, null)
   }
 
-  def getDefaultVirtualHost = dispatch_queue ! {
+  def get_default_virtual_host = dispatch_queue ! {
     default_virtual_host
   }
 
   //useful for testing
-  def getFirstConnectorAddress() : InetSocketAddress = connectors.head.transport_server.getSocketAddress
+  def get_connect_address = {
+    Option(config.client_address).getOrElse(connectors.head.asInstanceOf[AcceptingConnector].transport_server.getConnectAddress)
+  }
+
+  def get_socket_address = {
+    connectors.head.asInstanceOf[AcceptingConnector].transport_server.getSocketAddress
+  }
 
 
 }

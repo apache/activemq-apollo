@@ -38,7 +38,7 @@ public interface TransportServer extends Service {
      */
     void setAcceptListener(TransportAcceptListener acceptListener);
 
-    URI getConnectURI();
+    String getConnectAddress();
 
     /**
      * @return The socket address that this transport is accepting connections

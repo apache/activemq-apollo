@@ -46,8 +46,8 @@ public class PipeTransportServer implements TransportServer {
     private CustomDispatchSource<PipeTransport,LinkedList<PipeTransport>> acceptSource;
 
 
-    public URI getConnectURI() {
-        return connectURI;
+    public String getConnectAddress() {
+        return connectURI.toString();
     }
 
     public InetSocketAddress getSocketAddress() {

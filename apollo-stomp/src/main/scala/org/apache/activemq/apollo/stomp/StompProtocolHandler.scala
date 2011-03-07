@@ -598,9 +598,9 @@ class StompProtocolHandler extends ProtocolHandler {
       val host_header = get(headers, HOST)
       val host = host_header match {
         case None=>
-          connection.connector.broker.getDefaultVirtualHost
+          connection.connector.broker.get_default_virtual_host
         case Some(host)=>
-          connection.connector.broker.getVirtualHost(host)
+          connection.connector.broker.get_virtual_host(host)
       }
       resumeRead
 

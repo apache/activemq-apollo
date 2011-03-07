@@ -58,8 +58,8 @@ public class TcpTransportServer implements TransportServer {
         this.listener = listener;
     }
 
-    public URI getConnectURI() {
-        return connectURI;
+    public String getConnectAddress() {
+        return connectURI.toString();
     }
 
     public InetSocketAddress getSocketAddress() {

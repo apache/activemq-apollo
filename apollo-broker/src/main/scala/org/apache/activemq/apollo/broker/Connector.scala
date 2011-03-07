@@ -61,13 +61,25 @@ object Connector extends Log {
 
 }
 
+trait Connector extends BaseService {
+
+  def broker:Broker
+  def id:String
+  def stopped(connection:BrokerConnection):Unit
+  def config:ConnectorDTO
+  def connections:HashMap[Long, BrokerConnection]
+  def connection_counter:LongCounter
+
+}
+
 /**
  * <p>
  * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Connector(val broker:Broker, val id:String) extends BaseService {
+class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
+
   import Connector._
 
   override val dispatch_queue = broker.dispatch_queue
@@ -77,7 +89,7 @@ class Connector(val broker:Broker, val id:String) extends BaseService {
   var protocol:Protocol = _
 
   val connections = HashMap[Long, BrokerConnection]()
-  val accept_counter = new LongCounter()
+  val connection_counter = new LongCounter()
 
   override def toString = "connector: "+config.id
 
@@ -91,8 +103,8 @@ class Connector(val broker:Broker, val id:String) extends BaseService {
         transport.setProtocolCodec(protocol.createProtocolCodec)
       }
 
-      accept_counter.incrementAndGet
-      var connection = new BrokerConnection(Connector.this, broker.connection_id_counter.incrementAndGet)
+      connection_counter.incrementAndGet
+      var connection = new BrokerConnection(AcceptingConnector.this, broker.connection_id_counter.incrementAndGet)
       connection.dispatch_queue.setLabel("connection %d to %s".format(connection.id, transport.getRemoteAddress))
       connection.protocol_handler = protocol.createProtocolHandler
       connection.transport = transport
@@ -100,8 +112,6 @@ class Connector(val broker:Broker, val id:String) extends BaseService {
       broker.init_dispatch_queue(connection.dispatch_queue)
 
       connections.put(connection.id, connection)
-      info("Client connected from: %s", connection.transport.getRemoteAddress)
-
       try {
         connection.start()
       } catch {
@@ -177,7 +187,6 @@ class Connector(val broker:Broker, val id:String) extends BaseService {
   def stopped(connection:BrokerConnection) = dispatch_queue {
     val at_limit = at_connection_limit
     if( connections.remove(connection.id).isDefined ) {
-      info("Client disconnected from: %s", connection.transport.getRemoteAddress)
       if( at_limit ) {
         transport_server.resume
       }

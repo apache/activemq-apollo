@@ -286,9 +286,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     return consumer
   }
 
-  def connectUri(broker: Broker) = {
-    broker.connectors.head.transport_server.getConnectURI.toString
-  }
+  def connectUri(broker: Broker) = broker.get_connect_address
 
   def _createProducer(id: Int, messageSize: Int, destination: DestinationDTO): RemoteProducer = {
     var producer = createProducer()
