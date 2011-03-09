@@ -125,7 +125,7 @@
     
     <!-- osgi stuff -->
     <osgi-version>4.2.0</osgi-version>
-    <karaf-version>2.1.99-SNAPSHOT</karaf-version>
+    <karaf-version>2.2.0</karaf-version>
     <features-maven-plugin-version>2.1.0</features-maven-plugin-version>
     
     <osgi.fragment.host>${project.groupId}.apollo-broker</osgi.fragment.host>
