@@ -120,8 +120,9 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
         }
       }
 
-      // We may need to stop acepting connections..
       if(at_connection_limit) {
+        // We stop accepting connections at this point.
+        info("Connection limit reached. Clients connected: %d", connections.size)
         transport_server.suspend
       }
     }
@@ -163,7 +164,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
       }
     }
     transport_server.start(^{
-      info("Accepting connections at: "+config.bind)
+      broker.console_log.info("Accepting connections at: "+config.bind)
       on_completed.run
     })
   }
@@ -171,8 +172,8 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
   override def _stop(on_completed:Runnable): Unit = {
     transport_server.stop(^{
-      info("Stopped connector at: "+config.bind)
-      val tracker = new LoggingTracker(toString, dispatch_queue)
+      broker.console_log.info("Stopped connector at: "+config.bind)
+      val tracker = new LoggingTracker(toString, broker.console_log, dispatch_queue)
       connections.valuesIterator.foreach { connection=>
         tracker.stop(connection)
       }

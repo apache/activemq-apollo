@@ -16,7 +16,9 @@
  */
 package org.apache.activemq.apollo.broker.store.hawtdb
 
+import dto.HawtDBStoreDTO
 import org.apache.activemq.apollo.broker.store.{Store, StoreFunSuiteSupport}
+import org.apache.activemq.apollo.util.FileSupport._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -24,7 +26,11 @@ import org.apache.activemq.apollo.broker.store.{Store, StoreFunSuiteSupport}
 class HawtDBStoreTest extends StoreFunSuiteSupport {
 
   def create_store(flushDelay:Long):Store = {
-    val rc = new HawtDBStore
+    val rc = new HawtDBStore({
+      val rc = new HawtDBStoreDTO
+      rc.directory = basedir / "activemq-data"
+      rc
+    })
     rc.config.flush_delay = flushDelay
     rc
   }

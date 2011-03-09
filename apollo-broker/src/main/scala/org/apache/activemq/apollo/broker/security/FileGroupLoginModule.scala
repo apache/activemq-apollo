@@ -48,11 +48,12 @@ import FileSupport._
 import java.util.regex.Pattern
 import java.util.{LinkedList, Properties}
 
-object FileGroupLoginModule extends Log {
+object FileGroupLoginModule {
   val LOGIN_CONFIG = "java.security.auth.login.config"
   val FILE_OPTION = "file"
   val MATCH_OPTION = "match"
   val SEPARATOR_OPTION = "separator"
+  val DEFAULT_LOG = Log(getClass)
 }
 
 /**
@@ -67,6 +68,8 @@ object FileGroupLoginModule extends Log {
 class FileGroupLoginModule extends LoginModule {
 
   import FileGroupLoginModule._
+  val log = JaasAuthenticator.broker_log.getOrElse(DEFAULT_LOG)
+  import log._
 
   private var separator: String = _
   private var match_kind: String = _

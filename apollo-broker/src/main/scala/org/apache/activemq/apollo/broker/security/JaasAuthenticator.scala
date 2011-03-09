@@ -25,10 +25,11 @@ import javax.security.auth.callback.PasswordCallback
 import javax.security.auth.callback.UnsupportedCallbackException
 
 import org.apache.activemq.jaas._
-import org.apache.activemq.apollo.util.OptionSupport._
 import org.apache.activemq.apollo.broker.Broker.BLOCKABLE_THREAD_POOL
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.dto.{PrincipalDTO, AuthenticationDTO}
+import org.apache.activemq.apollo.util.Log
+import collection.JavaConversions._
 
 /**
  * <p>
@@ -36,10 +37,23 @@ import org.apache.activemq.apollo.dto.{PrincipalDTO, AuthenticationDTO}
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
+object JaasAuthenticator extends Log {
 
-class JaasAuthenticator(val config: AuthenticationDTO) extends Authenticator {
+  val _log = new ThreadLocal[Log]()
+  def broker_log = Option(_log.get())
 
-  val jass_realm = config.domain.getOrElse("apollo")
+}
+
+
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+class JaasAuthenticator(val config: AuthenticationDTO, val log:Log) extends Authenticator {
+
+  val jass_realm = Option(config.domain).getOrElse("apollo")
   val user_principal_kinds = config.user_principal_kinds()
 
   /*
@@ -66,6 +80,7 @@ class JaasAuthenticator(val config: AuthenticationDTO) extends Authenticator {
   def _authenticate(security_ctx: SecurityContext): Boolean = {
     val original = Thread.currentThread().getContextClassLoader()
     Thread.currentThread().setContextClassLoader(getClass.getClassLoader())
+    JaasAuthenticator._log.set(log)
     try {
 
       security_ctx.login_context = new LoginContext(jass_realm, new CallbackHandler {
@@ -74,7 +89,7 @@ class JaasAuthenticator(val config: AuthenticationDTO) extends Authenticator {
             callback =>
               callback match {
                 case x: NameCallback => x.setName(security_ctx.user)
-                case x: PasswordCallback => x.setPassword(security_ctx.password.getOrElse("").toCharArray)
+                case x: PasswordCallback => x.setPassword(Option(security_ctx.password).getOrElse("").toCharArray)
                 case x: CertificateCallback => x.setCertificates(security_ctx.certificates)
                 case _ => throw new UnsupportedCallbackException(callback)
               }
@@ -87,8 +102,10 @@ class JaasAuthenticator(val config: AuthenticationDTO) extends Authenticator {
       true
     } catch {
       case x: Exception =>
+        log.info("authentication failed. address:%s, reason:%s ", security_ctx.remote_address, x.getMessage)
         false
     } finally {
+      JaasAuthenticator._log.remove
       Thread.currentThread().setContextClassLoader(original)
     }
   }

@@ -20,8 +20,6 @@ import org.apache.activemq.apollo.broker.{Connector, VirtualHost, Broker}
 import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.util.Log
 
-object AclAuthorizer extends Log
-
 /**
  * <p>
  * Authorizes based on the acl configuration found in
@@ -30,30 +28,31 @@ object AclAuthorizer extends Log
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class AclAuthorizer(val default_kinds:List[String]) extends Authorizer {
+class AclAuthorizer(val default_kinds:List[String], val log:Log) extends Authorizer {
+
   import collection.JavaConversions._
-  import AclAuthorizer._
+  import log._
 
   def is_in(ctx: SecurityContext, allowed:java.util.List[PrincipalDTO]):Boolean = {
     ctx.is_allowed(allowed.toList, default_kinds)
   }
 
-  def log_on_failure(ctx: SecurityContext, action: String, resource: =>String)(func: =>Boolean):Boolean = {
+  def log_result(ctx: SecurityContext, action: String, resource: =>String)(func: =>Boolean):Boolean = {
     val rc = func
     if( !rc ) {
-      debug("Authorization failed: '%s' does not have %s access on %s", ctx.user, action, resource)
+      info("authorization failed: action:%s, resource:%s, address: %s, principles: %s", action, resource, ctx.remote_address, ctx.principles.map(_.allow).mkString(",  ") )
     }
     rc
   }
 
-  def can_admin(ctx: SecurityContext, broker: Broker) = log_on_failure(ctx, "administration", "broker") {
+  def can_admin(ctx: SecurityContext, broker: Broker) = log_result(ctx, "administration", "broker") {
     broker.config.acl==null  || is_in(ctx, broker.config.acl.admins)
   }
 
   def can_connect_to(ctx: SecurityContext, host: VirtualHost, connector:Connector):Boolean = {
-    log_on_failure(ctx, "connect", "host "+host.names) {
+    log_result(ctx, "connect", "host "+host.names) {
       host.config.acl==null || is_in(ctx, host.config.acl.connects)
-    } && log_on_failure(ctx, "connect", "connector "+connector.config.id) {
+    } && log_result(ctx, "connect", "connector "+connector.config.id) {
       connector.config.acl==null || is_in(ctx, connector.config.acl.connects)
     }
   }
@@ -62,16 +61,19 @@ class AclAuthorizer(val default_kinds:List[String]) extends Authorizer {
     dest.acl==null || is_in(ctx, func(dest.acl))
   }
 
-  def can_send_to(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = log_on_failure(ctx, "send to", "topic "+dest.name) {
+
+  def name(dest: TopicDTO) = Option(dest.name).getOrElse("**")
+
+  def can_send_to(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = log_result(ctx, "send", "topic "+name(dest)) {
     can_dest(ctx, host, dest)(_.sends)
   }
-  def can_receive_from(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = log_on_failure(ctx, "receive from", "topic "+dest.name) {
+  def can_receive_from(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = log_result(ctx, "receive", "topic "+name(dest)) {
     can_dest(ctx, host, dest)(_.receives)
   }
-  def can_destroy(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = log_on_failure(ctx, "destroy", "topic "+dest.name) {
+  def can_destroy(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = log_result(ctx, "destroy", "topic "+name(dest)) {
     can_dest(ctx, host, dest)(_.destroys)
   }
-  def can_create(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = log_on_failure(ctx, "create", "topic "+dest.name) {
+  def can_create(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = log_result(ctx, "create", "topic "+name(dest)) {
     can_dest(ctx, host, dest)(_.creates)
   }
 
@@ -79,23 +81,25 @@ class AclAuthorizer(val default_kinds:List[String]) extends Authorizer {
     queue.acl==null || is_in(ctx, func(queue.acl))
   }
 
-  def can_send_to(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_on_failure(ctx, "send to", "queue "+queue.name) {
+  def name(dest: QueueDTO) = Option(dest.name).getOrElse("**")
+
+  def can_send_to(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "send", "queue "+name(queue)) {
     can_queue(ctx, host, queue)(_.sends)
   }
 
-  def can_receive_from(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_on_failure(ctx, "receive from", "queue "+queue.name) {
+  def can_receive_from(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "receive", "queue "+name(queue)) {
     can_queue(ctx, host, queue)(_.receives)
   }
 
-  def can_destroy(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_on_failure(ctx, "destroy", "queue "+queue.name) {
+  def can_destroy(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "destroy", "queue "+name(queue)) {
     can_queue(ctx, host, queue)(_.destroys)
   }
 
-  def can_create(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_on_failure(ctx, "create", "queue "+queue.name) {
+  def can_create(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "create", "queue "+name(queue)) {
     can_queue(ctx, host, queue)(_.creates)
   }
 
-  def can_consume_from(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_on_failure(ctx, "consume from", "queue "+queue.name) {
+  def can_consume_from(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "consume", "queue "+name(queue)) {
     can_queue(ctx, host, queue)(_.consumes)
   }
 

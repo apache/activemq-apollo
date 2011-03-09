@@ -31,9 +31,10 @@ import java.{util => ju}
 import org.apache.activemq.apollo.util.Log
 import org.apache.activemq.jaas.{GroupPrincipal, UserPrincipal}
 
-object GuestLoginModule extends Log {
+object GuestLoginModule {
   val USER_OPTION = "user"
   val GROUP_OPTION = "group"
+  val DEFAULT_LOG = Log(getClass)
 }
 
 /**
@@ -48,6 +49,8 @@ object GuestLoginModule extends Log {
 class GuestLoginModule extends LoginModule {
 
   import GuestLoginModule._
+  val log = JaasAuthenticator.broker_log.getOrElse(DEFAULT_LOG)
+  import log._
 
   private var subject: Subject = _
   private var callback_handler: CallbackHandler = _

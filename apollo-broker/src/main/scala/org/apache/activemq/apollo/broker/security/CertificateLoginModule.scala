@@ -38,9 +38,10 @@ import java.util.LinkedList
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object CertificateLoginModule extends Log {
+object CertificateLoginModule {
   val LOGIN_CONFIG = "java.security.auth.login.config"
   val FILE_OPTION = "dn_file"
+  val DEFAULT_LOG = Log(getClass)
 }
 
 /**
@@ -52,6 +53,9 @@ object CertificateLoginModule extends Log {
 class CertificateLoginModule {
 
   import CertificateLoginModule._
+
+  val log = JaasAuthenticator.broker_log.getOrElse(DEFAULT_LOG)
+  import log._
 
   var callback_handler: CallbackHandler = _
   var subject: Subject = _

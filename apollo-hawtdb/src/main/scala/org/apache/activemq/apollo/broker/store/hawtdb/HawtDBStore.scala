@@ -37,15 +37,6 @@ object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
 
   /**
-   * Creates a default a configuration object.
-   */
-  def defaultConfig() = {
-    val rc = new HawtDBStoreDTO
-    rc.directory = new File("activemq-data")
-    rc
-  }
-
-  /**
    * Validates a configuration object.
    */
   def validate(config: HawtDBStoreDTO, reporter:Reporter):ReporterLevel = {
@@ -60,7 +51,7 @@ object HawtDBStore extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBStore extends DelayingStoreSupport {
+class HawtDBStore(var config:HawtDBStoreDTO) extends DelayingStoreSupport {
 
   import HawtDBStore._
 
@@ -69,13 +60,12 @@ class HawtDBStore extends DelayingStoreSupport {
 
   var executor_pool:ExecutorService = _
   val schedule_version = new AtomicInteger()
-  var config:HawtDBStoreDTO = defaultConfig
   val client = new HawtDBClient(this)
 
   val load_source = createSource(new ListEventAggregator[(Long, (Option[MessageRecord])=>Unit)](), dispatch_queue)
   load_source.setEventHandler(^{drain_loads});
 
-  override def toString = "hawtdb store"
+  override def toString = "hawtdb store at "+config.directory
 
   def flush_delay = config.flush_delay.getOrElse(100)
   
@@ -105,7 +95,6 @@ class HawtDBStore extends DelayingStoreSupport {
   }
 
   protected def _start(on_completed: Runnable) = {
-    info("Starting hawtdb store at: '%s'", config.directory)
     executor_pool = Executors.newFixedThreadPool(1, new ThreadFactory(){
       def newThread(r: Runnable) = {
         val rc = new Thread(r, "hawtdb store client")
@@ -153,7 +142,6 @@ class HawtDBStore extends DelayingStoreSupport {
   }
 
   protected def _stop(on_completed: Runnable) = {
-    info("Stopping hawtdb store at: '%s'", config.directory)
     schedule_version.incrementAndGet
     new Thread() {
       override def run = {

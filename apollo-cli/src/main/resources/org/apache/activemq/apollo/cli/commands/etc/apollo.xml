@@ -32,6 +32,9 @@
     <admin allow="admins"/>
   </acl>
 
+  <log_category console="console" security="security" connection="connection" audit="audit"/>
+
+
   <web_admin host="127.0.0.1" port="61680"/>
 
   <virtual_host id="${host}">

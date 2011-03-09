@@ -37,18 +37,20 @@ import org.apache.activemq.apollo.dto.StoreDTO
 class CassandraStoreFactory extends StoreFactory.Provider {
 
   def create(config: StoreDTO) = {
-    if( config.isInstanceOf[CassandraStoreDTO]) {
-      new CassandraStore
-    } else {
-      null
+    config match {
+      case config:CassandraStoreDTO =>
+        new CassandraStore(config)
+      case _ =>
+        null
     }
   }
 
    def validate(config: StoreDTO, reporter:Reporter):ReporterLevel = {
-     if( config.isInstanceOf[CassandraStoreDTO]) {
-       CassandraStore.validate(config.asInstanceOf[CassandraStoreDTO], reporter)
-     } else {
-       null
+     config match {
+       case config:CassandraStoreDTO =>
+         CassandraStore.validate(config, reporter)
+       case _ =>
+         null
      }
    }
 }

@@ -24,10 +24,6 @@ import ReporterLevel._
 
 /**
  * <p>
- * Hook to use a HawtDBStore when a HawtDBStoreDTO is
- * used in a broker configuration.
- * </p>
- * <p>
  * This class is discovered using the following resource file:
  * <code>META-INF/services/org.apache.activemq.apollo/stores</code>
  * </p>
@@ -37,18 +33,20 @@ import ReporterLevel._
 class JDBM2StoreFactory extends StoreFactory.Provider {
 
   def create(config: StoreDTO) = {
-    if( config.isInstanceOf[JDBM2StoreDTO]) {
-      new JDBM2Store
-    } else {
-      null
+    config match {
+      case config:JDBM2StoreDTO =>
+        new JDBM2Store(config)
+      case _ =>
+        null
     }
   }
 
    def validate(config: StoreDTO, reporter:Reporter):ReporterLevel = {
-     if( config.isInstanceOf[JDBM2StoreDTO]) {
-       JDBM2Store.validate(config.asInstanceOf[JDBM2StoreDTO], reporter)
-     } else {
-       null
+     config match {
+       case config:JDBM2StoreDTO =>
+         JDBM2Store.validate(config, reporter)
+       case _ =>
+         null
      }
    }
 }

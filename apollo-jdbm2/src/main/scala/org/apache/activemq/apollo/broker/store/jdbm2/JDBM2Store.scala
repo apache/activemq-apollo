@@ -38,15 +38,6 @@ object JDBM2Store extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
 
   /**
-   * Creates a default a configuration object.
-   */
-  def defaultConfig() = {
-    val rc = new JDBM2StoreDTO
-    rc.directory = new File("activemq-data")
-    rc
-  }
-
-  /**
    * Validates a configuration object.
    */
   def validate(config: JDBM2StoreDTO, reporter:Reporter):ReporterLevel = {
@@ -61,7 +52,7 @@ object JDBM2Store extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class JDBM2Store extends DelayingStoreSupport {
+class JDBM2Store(var config:JDBM2StoreDTO) extends DelayingStoreSupport {
 
   import JDBM2Store._
 
@@ -69,10 +60,9 @@ class JDBM2Store extends DelayingStoreSupport {
   var next_msg_key = new AtomicLong(1)
 
   var executor:ExecutorService = _
-  var config:JDBM2StoreDTO = defaultConfig
   val client = new JDBM2Client(this)
 
-  override def toString = "jdbm2 store"
+  override def toString = "jdbm2 store at "+config.directory
 
   def flush_delay = config.flush_delay.getOrElse(100)
   
@@ -104,7 +94,6 @@ class JDBM2Store extends DelayingStoreSupport {
   }
 
   protected def _start(on_completed: Runnable) = {
-    info("Starting jdbm2 store at: '%s'", config.directory)
     executor = Executors.newFixedThreadPool(1, new ThreadFactory(){
       def newThread(r: Runnable) = {
         val rc = new Thread(r, "jdbm2 store io write")
@@ -126,7 +115,6 @@ class JDBM2Store extends DelayingStoreSupport {
   protected def _stop(on_completed: Runnable) = {
     new Thread() {
       override def run = {
-        info("Stopping jdbm2 store at: '%s'", config.directory)
         executor.shutdown
         executor.awaitTermination(60, TimeUnit.SECONDS)
         executor = null

@@ -211,7 +211,7 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
 
       val localPort = connector.getLocalPort
       def url = "http://"+host+":" + localPort + prefix
-      info("Administration interface available at: "+url)
+      broker.console_log.info("Administration interface available at: "+url)
       on_completed.run
     }
   }

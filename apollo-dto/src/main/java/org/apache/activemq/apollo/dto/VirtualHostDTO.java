@@ -79,4 +79,6 @@ public class VirtualHostDTO extends ServiceDTO {
     @XmlElementRef
     public RouterDTO router;
 
+    @XmlElement(name="log_category")
+    public LogCategoryDTO log_category;
 }

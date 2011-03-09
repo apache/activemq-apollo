@@ -79,7 +79,6 @@ class StoreImport extends Action {
         error("Could not create the store.")
       }
 
-      store.configure(vh.store, LoggingReporter(StoreImport))
       ServiceControl.start(store, "store startup")
 
       val zip = new ZipFile(dest)

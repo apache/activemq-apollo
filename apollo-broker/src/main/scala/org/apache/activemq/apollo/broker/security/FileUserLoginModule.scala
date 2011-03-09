@@ -37,9 +37,10 @@ import java.{util => ju}
 import org.apache.activemq.apollo.util.{FileSupport, Log}
 import FileSupport._
 
-object FileUserLoginModule extends Log {
+object FileUserLoginModule {
   val LOGIN_CONFIG = "java.security.auth.login.config"
   val FILE_OPTION = "file"
+  val DEFAULT_LOG = Log(getClass)
 }
 
 /**
@@ -53,6 +54,8 @@ object FileUserLoginModule extends Log {
 class FileUserLoginModule extends LoginModule {
 
   import FileUserLoginModule._
+  val log = JaasAuthenticator.broker_log.getOrElse(DEFAULT_LOG)
+  import log._
 
   private var subject: Subject = _
   private var callback_handler: CallbackHandler = _

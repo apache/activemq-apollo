@@ -38,15 +38,6 @@ import scala.util.continuations._
 object CassandraStore extends Log {
 
   /**
-   * Creates a default a configuration object.
-   */
-  def defaultConfig() = {
-    val rc = new CassandraStoreDTO
-    rc.hosts.add("localhost:9160")
-    rc
-  }
-
-  /**
    * Validates a configuration object.
    */
   def validate(config: CassandraStoreDTO, reporter:Reporter):ReporterLevel = {
@@ -61,7 +52,7 @@ object CassandraStore extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class CassandraStore extends DelayingStoreSupport with Logging {
+class CassandraStore(var config:CassandraStoreDTO) extends DelayingStoreSupport with Logging {
 
   import CassandraStore._
   override protected def log = CassandraStore
@@ -69,12 +60,11 @@ class CassandraStore extends DelayingStoreSupport with Logging {
   var next_msg_key = new AtomicLong(1)
 
   val client = new CassandraClient()
-  var config:CassandraStoreDTO = defaultConfig
   var blocking:ExecutorService = null
 
   def flush_delay = config.flush_delay.getOrElse(100)
 
-  override def toString = "cassandra store"
+  override def toString = "cassandra store at "+config.hosts.toList.mkString(", ")
 
   protected def get_next_msg_key = next_msg_key.getAndIncrement
 
@@ -109,7 +99,6 @@ class CassandraStore extends DelayingStoreSupport with Logging {
   }
 
   protected def _start(on_completed: Runnable) = {
-    info("Starting cassandra store at: '%s'", config.hosts.toList.mkString(", "))
     blocking = Executors.newFixedThreadPool(20, new ThreadFactory(){
       def newThread(r: Runnable) = {
         val rc = new Thread(r, "cassandra client")
@@ -136,7 +125,6 @@ class CassandraStore extends DelayingStoreSupport with Logging {
   }
 
   protected def _stop(on_completed: Runnable) = {
-    info("Stopping cassandra store at: '%s'", config.hosts.toList.mkString(", "))
     blocking.shutdown
     new Thread("casandra client shutdown") {
       override def run = {

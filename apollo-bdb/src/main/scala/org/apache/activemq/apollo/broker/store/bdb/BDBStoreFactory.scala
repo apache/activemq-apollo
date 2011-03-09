@@ -37,18 +37,20 @@ import ReporterLevel._
 class BDBStoreFactory extends StoreFactory.Provider {
 
   def create(config: StoreDTO) = {
-    if( config.isInstanceOf[BDBStoreDTO]) {
-      new BDBStore
-    } else {
-      null
+    config match {
+      case config:BDBStoreDTO =>
+        new BDBStore(config)
+      case _ =>
+        null
     }
   }
 
    def validate(config: StoreDTO, reporter:Reporter):ReporterLevel = {
-     if( config.isInstanceOf[BDBStoreDTO]) {
-       BDBStore.validate(config.asInstanceOf[BDBStoreDTO], reporter)
-     } else {
-       null
+     config match {
+       case config:BDBStoreDTO =>
+         BDBStore.validate(config, reporter)
+       case _ =>
+         null
      }
    }
 }

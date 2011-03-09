@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.broker.store.cassandra
 
+import dto.CassandraStoreDTO
 import org.apache.activemq.apollo.broker.store._
 
 /**
@@ -24,7 +25,11 @@ import org.apache.activemq.apollo.broker.store._
 class CassandraStoreTest extends StoreFunSuiteSupport with CassandraServerMixin {
 
   def create_store(flushDelay:Long):Store = {
-    val rc = new CassandraStore
+    val rc = new CassandraStore({
+      val rc = new CassandraStoreDTO
+      rc.hosts.add("localhost:9160")
+      rc
+    })
     rc.config.flush_delay = flushDelay
     rc
   }

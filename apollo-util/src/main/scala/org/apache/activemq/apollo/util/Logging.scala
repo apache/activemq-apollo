@@ -27,6 +27,13 @@ import java.util.concurrent.atomic.AtomicLong
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object Log {
+
+  def apply(clazz:Class[_]):Log = apply(clazz.getName.stripSuffix("$"))
+
+  def apply(name:String):Log = new Log {
+    override val log = LoggerFactory.getLogger(name)
+  }
+
   val exception_id_generator = new AtomicLong(System.currentTimeMillis)
   def next_exception_id = exception_id_generator.incrementAndGet.toHexString
 }
@@ -171,19 +178,11 @@ trait Log {
 }
 
 /**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-class NamedLog(name:String) extends Log {
-  def this(clazz:Class[_]) = this(clazz.getName.stripSuffix("$"))
-  override val log = LoggerFactory.getLogger(name)
-}
-
-/**
  * A Logging trait you can mix into an implementation class without affecting its public API
  */
 trait Logging {
 
-  protected def log: Log = new NamedLog(getClass)
+  protected def log: Log = Log(getClass)
 
   protected def error(message: => String, args:Any*)= log.error(message, args : _*)
   protected def error(e: Throwable, message: => String, args:Any*)= log.error(e, message, args: _*)

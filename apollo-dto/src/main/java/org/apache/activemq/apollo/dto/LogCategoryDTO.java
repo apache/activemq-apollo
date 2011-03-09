@@ -14,27 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.store.hawtdb
+package org.apache.activemq.apollo.dto;
 
-import dto.HawtDBStoreDTO
-import org.apache.activemq.apollo.broker.store.StoreBenchmarkSupport
-import org.apache.activemq.apollo.broker.store.Store
-import org.apache.activemq.apollo.util.FileSupport._
-
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBStoreBenchmark extends StoreBenchmarkSupport {
+@XmlRootElement(name="log_category")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class LogCategoryDTO {
 
-  def create_store(flushDelay:Long):Store = {
-    val rc = new HawtDBStore({
-      val rc = new HawtDBStoreDTO
-      rc.directory = basedir / "activemq-data"
-      rc
-    })
-    rc.config.flush_delay = flushDelay
-    rc
-  }
+    @XmlAttribute
+    public String console;
+
+    @XmlAttribute
+    public String audit;
+
+    @XmlAttribute
+    public String connection;
+
+    @XmlAttribute
+    public String security;
 
 }

@@ -423,7 +423,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
   /////////////////////////////////////////////////////////////////////////////
 
   protected def _start(on_completed: Runnable) = {
-    val tracker = new LoggingTracker("router startup", dispatch_queue)
+    val tracker = new LoggingTracker("router startup", host.console_log, dispatch_queue)
     if( host.store!=null ) {
       val task = tracker.task("list_queues")
       host.store.list_queues { queue_keys =>
@@ -462,7 +462,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
   }
 
   protected def _stop(on_completed: Runnable) = {
-    val tracker = new LoggingTracker("router shutdown", dispatch_queue)
+    val tracker = new LoggingTracker("router shutdown", host.console_log, dispatch_queue)
     queues_by_id.valuesIterator.foreach { queue=>
       tracker.stop(queue)
     }

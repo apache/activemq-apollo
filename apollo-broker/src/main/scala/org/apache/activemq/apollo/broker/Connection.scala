@@ -99,13 +99,13 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
   override def toString = "id: "+id.toString
 
   protected override  def _start(on_completed:Runnable) = {
-    info("Client connected from: %s", transport.getRemoteAddress)
+    connector.broker.connection_log.info("Client connected from: %s", transport.getRemoteAddress)
     protocol_handler.set_connection(this);
     super._start(on_completed)
   }
 
   protected override def _stop(on_completed:Runnable) = {
-    info("Client disconnected from: %s", transport.getRemoteAddress)
+    connector.broker.connection_log.info("Client disconnected from: %s", transport.getRemoteAddress)
     connector.stopped(this)
     super._stop(on_completed)
   }

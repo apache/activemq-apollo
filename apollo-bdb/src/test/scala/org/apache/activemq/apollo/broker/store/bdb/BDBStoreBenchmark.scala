@@ -16,9 +16,10 @@
  */
 package org.apache.activemq.apollo.broker.store.bdb
 
+import dto.BDBStoreDTO
 import org.apache.activemq.apollo.broker.store.StoreBenchmarkSupport
 import org.apache.activemq.apollo.broker.store.Store
-
+import org.apache.activemq.apollo.util.FileSupport._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -26,7 +27,11 @@ import org.apache.activemq.apollo.broker.store.Store
 class BDBStoreBenchmark extends StoreBenchmarkSupport {
 
   def create_store(flushDelay:Long):Store = {
-    val rc = new BDBStore
+    val rc = new BDBStore({
+      val rc = new BDBStoreDTO
+      rc.directory = basedir / "activemq-data"
+      rc
+    })
     rc.config.flush_delay = flushDelay
     rc
   }

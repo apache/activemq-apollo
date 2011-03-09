@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.util
 
-import java.util.concurrent.{CountDownLatch, TimeUnit}
-import java.util.HashSet
 import org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch.{TaskTracker, DispatchQueue}
 
@@ -29,14 +27,14 @@ import org.fusesource.hawtdispatch.{TaskTracker, DispatchQueue}
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class LoggingTracker(name:String, parent:DispatchQueue=globalQueue) extends TaskTracker(name, parent) with Logging {
+class LoggingTracker(name:String, val log:Log=Log(classOf[LoggingTracker]), parent:DispatchQueue=globalQueue) extends TaskTracker(name, parent) {
+  assert(log!=null)
+  import log._
 
   timeout = 1000;
 
-  override protected def log = LoggingTracker
-
   override protected def onTimeout(duration:Long, tasks: List[String]):Long = {
-    info("%s is taking a long time (%d seconds). Waiting on %s", name, (duration/1000), tasks)
+    info("%s is taking a long time (%d seconds). Waiting on %s", name, (duration/1000), tasks.mkString(", "))
     timeout
   }
 
@@ -48,12 +46,4 @@ class LoggingTracker(name:String, parent:DispatchQueue=globalQueue) extends Task
     service.stop(task(service.toString))
   }
 
-}
-
-object LoggingTracker extends Log {
-  def apply[R](name:String, parent:DispatchQueue=globalQueue)(func: (LoggingTracker)=>Unit ) = {
-    val t = new LoggingTracker(name, parent)
-    func(t)
-    t.await
-  }
 }

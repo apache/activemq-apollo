@@ -37,15 +37,6 @@ object BDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
 
   /**
-   * Creates a default a configuration object.
-   */
-  def defaultConfig() = {
-    val rc = new BDBStoreDTO
-    rc.directory = new File("activemq-data")
-    rc
-  }
-
-  /**
    * Validates a configuration object.
    */
   def validate(config: BDBStoreDTO, reporter:Reporter):ReporterLevel = {
@@ -60,7 +51,7 @@ object BDBStore extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class BDBStore extends DelayingStoreSupport {
+class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
 
   import BDBStore._
 
@@ -69,10 +60,9 @@ class BDBStore extends DelayingStoreSupport {
 
   var write_executor:ExecutorService = _
   var read_executor:ExecutorService = _
-  var config:BDBStoreDTO = defaultConfig
   val client = new BDBClient(this)
 
-  override def toString = "bdb store"
+  override def toString = "bdb store at "+config.directory
 
   def flush_delay = config.flush_delay.getOrElse(100)
   
@@ -104,7 +94,6 @@ class BDBStore extends DelayingStoreSupport {
   }
 
   protected def _start(on_completed: Runnable) = {
-    info("Starting bdb store at: '%s'", config.directory)
     write_executor = Executors.newFixedThreadPool(1, new ThreadFactory(){
       def newThread(r: Runnable) = {
         val rc = new Thread(r, "bdb store io write")
@@ -132,7 +121,6 @@ class BDBStore extends DelayingStoreSupport {
   protected def _stop(on_completed: Runnable) = {
     new Thread() {
       override def run = {
-        info("Stopping BDB store at: '%s'", config.directory)
         write_executor.shutdown
         write_executor.awaitTermination(60, TimeUnit.SECONDS)
         write_executor = null

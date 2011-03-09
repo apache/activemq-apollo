@@ -37,18 +37,20 @@ import ReporterLevel._
 class HawtDBStoreFactory extends StoreFactory.Provider {
 
   def create(config: StoreDTO) = {
-    if( config.isInstanceOf[HawtDBStoreDTO]) {
-      new HawtDBStore
-    } else {
-      null
+    config match {
+      case config:HawtDBStoreDTO =>
+        new HawtDBStore(config)
+      case _ =>
+        null
     }
   }
 
    def validate(config: StoreDTO, reporter:Reporter):ReporterLevel = {
-     if( config.isInstanceOf[HawtDBStoreDTO]) {
-       HawtDBStore.validate(config.asInstanceOf[HawtDBStoreDTO], reporter)
-     } else {
-       null
+     config match {
+       case config:HawtDBStoreDTO =>
+         HawtDBStore.validate(config, reporter)
+       case _ =>
+         null
      }
    }
 }

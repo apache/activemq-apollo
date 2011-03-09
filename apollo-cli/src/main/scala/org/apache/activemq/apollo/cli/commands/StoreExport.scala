@@ -78,10 +78,7 @@ class StoreExport extends Action {
         error("Could not create the store.")
       }
 
-      store.configure(vh.store, LoggingReporter(StoreExport))
       ServiceControl.start(store, "store startup")
-
-
       using( new ZipOutputStream(new FileOutputStream(dest))) { out=>
         out.setMethod(ZipEntry.DEFLATED)
         out.setLevel(9)

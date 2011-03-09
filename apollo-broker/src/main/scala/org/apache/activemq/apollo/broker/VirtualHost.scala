@@ -30,9 +30,9 @@ import collection.JavaConversions
 import java.util.concurrent.atomic.AtomicLong
 import org.apache.activemq.apollo.util.OptionSupport._
 import org.apache.activemq.apollo.util.path.{Path, PathParser}
-import org.apache.activemq.apollo.dto.{TopicDTO, QueueDTO, DestinationDTO, VirtualHostDTO}
 import security.{AclAuthorizer, JaasAuthenticator, Authenticator, Authorizer}
 import org.apache.activemq.apollo.broker.store.{ZeroCopyBufferAllocator, Store, StoreFactory}
+import org.apache.activemq.apollo.dto._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -88,6 +88,11 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
   var authenticator:Authenticator = _
   var authorizer:Authorizer = _
 
+  var audit_log:Log = _
+  var security_log:Log  = _
+  var connection_log:Log = _
+  var console_log:Log = _
+
   override def toString = if (config==null) "virtual-host" else "virtual-host: "+config.id
 
   /**
@@ -107,13 +112,20 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
 
   override protected def _start(on_completed:Runnable):Unit = {
 
-    val tracker = new LoggingTracker("virtual host startup", dispatch_queue)
+    // Configure the logging categories...
+    val log_category = config.log_category.getOrElse(new LogCategoryDTO)
+    security_log = Option(log_category.security).map(Log(_)).getOrElse(broker.security_log)
+    audit_log = Option(log_category.audit).map(Log(_)).getOrElse(broker.audit_log)
+    connection_log = Option(log_category.connection).map(Log(_)).getOrElse(broker.connection_log)
+    console_log = Option(log_category.console).map(Log(_)).getOrElse(broker.console_log)
+
+    val tracker = new LoggingTracker("virtual host startup", console_log, dispatch_queue)
 
     if( config.authentication != null ) {
       if( config.authentication.enabled.getOrElse(true) ) {
         // Virtual host has it's own settings.
-        authenticator = new JaasAuthenticator(config.authentication)
-        authorizer = new AclAuthorizer(config.authentication.acl_principal_kinds().toList)
+        authenticator = new JaasAuthenticator(config.authentication, security_log)
+        authorizer = new AclAuthorizer(config.authentication.acl_principal_kinds().toList, security_log)
       } else {
         // Don't use security on this host.
         authenticator = null
@@ -129,8 +141,8 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
     store = StoreFactory.create(config.store)
 
     if( store!=null ) {
-      store.configure(config.store, LoggingReporter(VirtualHost))
       val task = tracker.task("store startup")
+      console_log.info("Starting store: "+store)
       store.start {
         {
           val task = tracker.task("store get last queue key")
@@ -151,12 +163,13 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
             }
           }
         }
+        console_log.info("Store started")
         task.run
       }
     }
 
     tracker.callback {
-      val tracker = new LoggingTracker("virtual host startup", dispatch_queue)
+      val tracker = new LoggingTracker("virtual host startup", console_log, dispatch_queue)
       tracker.start(router)
       tracker.callback(on_completed)
     }
@@ -166,7 +179,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
 
   override protected def _stop(on_completed:Runnable):Unit = {
 
-    val tracker = new LoggingTracker("virtual host shutdown", dispatch_queue)
+    val tracker = new LoggingTracker("virtual host shutdown", console_log, dispatch_queue)
     tracker.stop(router);
     if( store!=null ) {
       tracker.stop(store);

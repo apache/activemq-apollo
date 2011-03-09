@@ -23,7 +23,6 @@ import org.fusesource.hawtbuf._
 import AsciiBuffer._
 import collection.JavaConversions
 import JavaConversions._
-import org.apache.activemq.apollo.dto.BrokerDTO
 import java.util.concurrent.atomic.AtomicLong
 import org.apache.activemq.apollo.util._
 import ReporterLevel._
@@ -33,6 +32,7 @@ import org.apache.activemq.apollo.broker.web._
 import collection.mutable.{HashSet, LinkedHashMap}
 import scala.util.Random
 import FileSupport._
+import org.apache.activemq.apollo.dto.{LogCategoryDTO, BrokerDTO}
 
 /**
  * <p>
@@ -216,6 +216,11 @@ class Broker() extends BaseService {
 
   var web_server:WebServer = _
 
+  var audit_log:Log = _
+  var security_log:Log  = _
+  var connection_log:Log = _
+  var console_log:Log = _
+
   override def toString() = "broker: "+id
 
 
@@ -251,7 +256,16 @@ class Broker() extends BaseService {
 
     // create the runtime objects from the config
     {
+      import OptionSupport._
       init_dispatch_queue(dispatch_queue)
+
+      // Configure the logging categories...
+      val log_category = config.log_category.getOrElse(new LogCategoryDTO)
+      val base_category = "org.apache.activemq.apollo.log."
+      security_log = Log(log_category.security.getOrElse(base_category+"security"))
+      audit_log = Log(log_category.audit.getOrElse(base_category+"audit"))
+      connection_log = Log(log_category.connection.getOrElse(base_category+"connection"))
+      console_log = Log(log_category.console.getOrElse(base_category+"console"))
 
       if( config.key_storage!=null ) {
         key_storage = new KeyStorage
@@ -259,10 +273,9 @@ class Broker() extends BaseService {
       }
 
 
-      import OptionSupport._
       if( config.authentication != null && config.authentication.enabled.getOrElse(true) ) {
-        authenticator = new JaasAuthenticator(config.authentication)
-        authorizer = new AclAuthorizer(config.authentication.acl_principal_kinds().toList)
+        authenticator = new JaasAuthenticator(config.authentication, security_log)
+        authorizer = new AclAuthorizer(config.authentication.acl_principal_kinds().toList, security_log)
       }
 
       default_virtual_host = null
@@ -280,18 +293,20 @@ class Broker() extends BaseService {
           virtual_hosts_by_hostname += ascii(name)->host
         }
       }
+
       for (c <- config.connectors) {
         val connector = new AcceptingConnector(this, c.id)
         connector.configure(c, LoggingReporter(VirtualHost))
         connectors ::= connector
       }
+
     }
 
     BrokerRegistry.add(this)
 
     // Start up the virtual hosts
-    val first_tracker = new LoggingTracker("broker startup", dispatch_queue)
-    val second_tracker = new LoggingTracker("broker startup", dispatch_queue)
+    val first_tracker = new LoggingTracker("broker startup", console_log, dispatch_queue)
+    val second_tracker = new LoggingTracker("broker startup", console_log, dispatch_queue)
 
     Option(config.web_admin).foreach{ web_admin=>
       WebServerFactory.create(this) match {
@@ -319,7 +334,7 @@ class Broker() extends BaseService {
 
 
   def _stop(on_completed:Runnable): Unit = {
-    val tracker = new LoggingTracker("broker shutdown", dispatch_queue)
+    val tracker = new LoggingTracker("broker shutdown", console_log, dispatch_queue)
 
     // Stop accepting connections..
     connectors.foreach( x=>

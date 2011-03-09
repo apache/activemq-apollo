@@ -22,15 +22,15 @@ import org.apache.activemq.apollo.broker.{Broker, ConfigStore, FileConfigStore}
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.cli.Apollo
-import org.apache.activemq.apollo.util.{Logging, LoggingReporter}
+import org.apache.activemq.apollo.util.{Log, LoggingReporter}
 import org.apache.felix.service.command.CommandSession
 
 /**
  * The apollo run command
  */
 @command(scope="apollo", name = "run", description = "runs the broker instance")
-class Run extends Action with Logging {
-
+class Run extends Action {
+  
   @option(name = "--conf", description = "The Apollo configuration file.")
   var conf: File = _
 
@@ -78,20 +78,17 @@ class Run extends Action with Logging {
       Apollo.print_banner(session.getConsole)
 
       // Load the configs and start the brokers up.
-      info("Loading configuration file '%s'.", conf);
+      session.getConsole.print("Loading configuration file '%s'.", conf);
+
       val store = new FileConfigStore
       store.file = conf
       ConfigStore() = store
       store.start
-      val config = store.load(true)
 
-      debug("Starting broker");
       val broker = new Broker()
-      broker.configure(config, LoggingReporter(log))
+      broker.config = store.load(true)
       broker.tmp = tmp
-      broker.start(^{
-        info("Broker started");
-      })
+      broker.start()
 
       // wait forever...  broker will system exit.
       this.synchronized {

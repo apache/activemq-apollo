@@ -16,8 +16,10 @@
  */
 package org.apache.activemq.apollo.broker.store.jdbm2
 
+import dto.JDBM2StoreDTO
 import org.apache.activemq.apollo.broker.store.StoreBenchmarkSupport
 import org.apache.activemq.apollo.broker.store.Store
+import org.apache.activemq.apollo.util.FileSupport._
 
 
 /**
@@ -26,7 +28,11 @@ import org.apache.activemq.apollo.broker.store.Store
 class JDBM2StoreBenchmark extends StoreBenchmarkSupport {
 
   def create_store(flushDelay:Long):Store = {
-    val rc = new JDBM2Store
+    val rc = new JDBM2Store({
+      val rc = new JDBM2StoreDTO
+      rc.directory = basedir / "activemq-data"
+      rc
+    })
     rc.config.flush_delay = flushDelay
     rc
   }
