@@ -26,16 +26,13 @@
     The default configuration.
   </notes>
 
+  <log_category console="console" security="security" connection="connection" audit="audit"/>
+
   <!-- used to secure the web admin interface -->
   <authentication domain="apollo"/>
   <acl>
     <admin allow="admins"/>
   </acl>
-
-  <log_category console="console" security="security" connection="connection" audit="audit"/>
-
-
-  <web_admin host="127.0.0.1" port="61680"/>
 
   <virtual_host id="${host}">
     <!--
@@ -58,6 +55,7 @@
 
   </virtual_host>
 
+  <web_admin host="127.0.0.1" port="61680"/>
   <connector id="tcp" bind="tcp://0.0.0.0:61613" connection_limit="2000"/>
 
 </broker>

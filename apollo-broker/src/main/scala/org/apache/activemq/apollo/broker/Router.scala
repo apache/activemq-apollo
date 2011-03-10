@@ -71,7 +71,7 @@ object RouterFactory {
         return rc
       }
     }
-    throw new IllegalArgumentException("Uknonwn store type: "+config.getClass)
+    throw new IllegalArgumentException("Uknonwn router type: "+config.getClass)
   }
 
 
@@ -86,7 +86,7 @@ object RouterFactory {
         }
       }
     }
-    reporter.report(ERROR, "Uknonwn store type: "+config.getClass)
+    reporter.report(ERROR, "Uknonwn router type: "+config.getClass)
     ERROR
   }
 
