@@ -16,9 +16,8 @@
  */
 package org.apache.activemq.apollo.cli
 
-import org.junit.Test
 import java.io.File
-;
+import org.apache.activemq.apollo.util.FileSupport._
 
 /**
  * <p>
@@ -29,27 +28,15 @@ import java.io.File
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object ApolloIDERunner  {
-  def main(args:Array[String]) = new ApolloIDERunner().run
-}
 
-/**
- * The broker can be launchedas a Junit test case, that way IDE's can auto configure
- * the proper classpath.
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-class ApolloIDERunner  {
+  // We use this to figure out where the source code is in the files system.
+  def project_base = new File(getClass.getResource("banner.txt").toURI.resolve("../../../../../../../..").toURL.getFile)
 
-  import org.apache.activemq.apollo.util.FileSupport._
-
-  @Test
-  def run:Unit = {
+  def main(args:Array[String]):Unit = {
 
     // Let the user know where he configure logging at.
     println("Logging was configured using '%s'.".format(getClass.getClassLoader.getResource("log4j.properties")));
 
-    // We use this to figure out where the source code is in the files system.
-    def project_base = new File(getClass.getResource("banner.txt").toURI.resolve("../../../../../../../..").toURL.getFile)
 
     // Setups where the broker base directory is...
     if( System.getProperty("apollo.base") == null ) {
