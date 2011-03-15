@@ -16,26 +16,30 @@
  */
 package org.apache.activemq.apollo.util;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.*;
 
 /**
  * <p>
  * Holds a singleton instance to a cached thread pool that can be used
- * to execute blocking tasks.
+ * to execute blocking tasks.  The tasks must be independent of each other
  * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class ApolloThreadPool {
 
-    public static final ExecutorService INSTANCE = Executors.newCachedThreadPool(new ThreadFactory() {
+    public static final int POOL_SIZE = Integer.parseInt(System.getProperty("apollo.thread.pool", "128"));
+
+    public static final ThreadPoolExecutor INSTANCE = new ThreadPoolExecutor(POOL_SIZE, POOL_SIZE, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
         public Thread newThread(Runnable r) {
-            Thread rc = new Thread(r, "Apollo Worker");
+            Thread rc = new Thread(r, "Apollo Blocking Task");
             rc.setDaemon(true);
             return rc;
         }
     });
+
+    static {
+        INSTANCE.allowCoreThreadTimeOut(true);
+    }
 
 }
