@@ -38,6 +38,8 @@ public interface TransportServer extends Service {
      */
     void setAcceptListener(TransportAcceptListener acceptListener);
 
+    String getBoundAddress();
+
     String getConnectAddress();
 
     /**

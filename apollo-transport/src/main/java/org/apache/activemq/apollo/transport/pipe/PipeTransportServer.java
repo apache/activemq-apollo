@@ -46,6 +46,10 @@ public class PipeTransportServer implements TransportServer {
     private CustomDispatchSource<PipeTransport,LinkedList<PipeTransport>> acceptSource;
 
 
+    public String getBoundAddress() {
+        return connectURI.toString();
+    }
+
     public String getConnectAddress() {
         return connectURI.toString();
     }

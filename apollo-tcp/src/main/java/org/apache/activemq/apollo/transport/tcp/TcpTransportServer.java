@@ -41,25 +41,29 @@ import java.util.Map;
 
 public class TcpTransportServer implements TransportServer {
 
-    private ServerSocketChannel channel;
-    private TransportAcceptListener listener;
-    private URI bindURI;
-    private URI connectURI;
-    private DispatchQueue dispatchQueue;
-    private DispatchSource acceptSource;
+    private final String bindScheme;
+    private final InetSocketAddress bindAddress;
+
     private int backlog = 100;
     private Map<String, Object> transportOptions;
 
-    public TcpTransportServer(URI location) {
-        this.bindURI = location;
+    private ServerSocketChannel channel;
+    private TransportAcceptListener listener;
+    private DispatchQueue dispatchQueue;
+    private DispatchSource acceptSource;
+
+    public TcpTransportServer(URI location) throws UnknownHostException {
+        bindScheme = location.getScheme();
+        String host = location.getHost();
+        host = (host == null || host.length() == 0) ? "localhost" : host;
+        if (host.equals("localhost")) {
+            host = "0.0.0.0";
+        }
+        bindAddress = new InetSocketAddress(InetAddress.getByName(host), location.getPort());
     }
 
     public void setAcceptListener(TransportAcceptListener listener) {
         this.listener = listener;
-    }
-
-    public String getConnectAddress() {
-        return connectURI.toString();
     }
 
     public InetSocketAddress getSocketAddress() {
@@ -86,36 +90,15 @@ public class TcpTransportServer implements TransportServer {
         start(null);
     }
     public void start(Runnable onCompleted) throws Exception {
-        URI bind = bindURI;
 
-        String host = bind.getHost();
-        host = (host == null || host.length() == 0) ? "localhost" : host;
-        if (host.equals("localhost")) {
-            host = "0.0.0.0";
-        }
-
-        InetAddress addr = InetAddress.getByName(host);
         try {
             channel = ServerSocketChannel.open();
             channel.configureBlocking(false);
-            channel.socket().bind(new InetSocketAddress(addr, bind.getPort()), backlog);
+            channel.socket().bind(bindAddress, backlog);
         } catch (IOException e) {
-            throw IOExceptionSupport.create("Failed to bind to server socket: " + bind + " due to: " + e, e);
+            throw IOExceptionSupport.create("Failed to bind to server socket: " + bindAddress + " due to: " + e, e);
         }
 
-        try {
-            connectURI = connectURI(resolveHostName(channel.socket(), addr));
-        } catch (URISyntaxException e) {
-            // it could be that the host name contains invalid characters such
-            // as _ on unix platforms
-            // so lets try use the IP address instead
-            try {
-                connectURI = connectURI(addr.getHostAddress());
-            } catch (URISyntaxException e2) {
-                throw IOExceptionSupport.create(e2);
-            }
-        }
-        
         acceptSource = Dispatch.createSource(channel, SelectionKey.OP_ACCEPT, dispatchQueue);
         acceptSource.setEventHandler(new Runnable() {
             public void run() {
@@ -144,21 +127,26 @@ public class TcpTransportServer implements TransportServer {
         }
     }
 
-    private URI connectURI(String hostname) throws URISyntaxException {
-        return new URI(bindURI.getScheme(), bindURI.getUserInfo(), hostname, channel.socket().getLocalPort(), bindURI.getPath(), bindURI.getQuery(), bindURI.getFragment());
+    public String getBoundAddress() {
+        return bindScheme+"://"+bindAddress.getAddress()+":"+channel.socket().getLocalPort();
     }
 
-    protected String resolveHostName(ServerSocket socket, InetAddress bindAddress) throws UnknownHostException {
-        String result = null;
-        if (socket.isBound()) {
-            if (socket.getInetAddress().isAnyLocalAddress()) {
-                // make it more human readable and useful, an alternative to 0.0.0.0
-                result = InetAddress.getLocalHost().getHostName();
-            } else {
-                result = socket.getInetAddress().getCanonicalHostName();
+    public String getConnectAddress() {
+        return bindScheme+"://"+resolveHostName()+":"+channel.socket().getLocalPort();
+    }
+
+
+    protected String resolveHostName() {
+        String result;
+        if (bindAddress.getAddress().isAnyLocalAddress()) {
+            // make it more human readable and useful, an alternative to 0.0.0.0
+            try {
+                result = InetAddress.getLocalHost().getCanonicalHostName();
+            } catch (UnknownHostException e) {
+                result = "localhost";
             }
         } else {
-            result = bindAddress.getCanonicalHostName();
+            result = bindAddress.getAddress().getCanonicalHostName();
         }
         return result;
     }
@@ -181,14 +169,6 @@ public class TcpTransportServer implements TransportServer {
             });
             acceptSource.cancel();
         }
-    }
-
-    public URI getBindURI() {
-        return bindURI;
-    }
-
-    public void setBindURI(URI bindURI) {
-        this.bindURI = bindURI;
     }
 
     public int getBacklog() {
@@ -238,7 +218,7 @@ public class TcpTransportServer implements TransportServer {
      * @return pretty print of this
      */
     public String toString() {
-        return "" + bindURI;
+        return getBoundAddress();
     }
 
 }

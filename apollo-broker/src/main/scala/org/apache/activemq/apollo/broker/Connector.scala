@@ -164,7 +164,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
       }
     }
     transport_server.start(^{
-      broker.console_log.info("Accepting connections at: "+config.bind)
+      broker.console_log.info("Accepting connections at: "+transport_server.getBoundAddress)
       on_completed.run
     })
   }

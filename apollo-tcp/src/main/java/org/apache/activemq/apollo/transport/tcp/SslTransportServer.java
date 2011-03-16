@@ -22,6 +22,7 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import java.net.URI;
+import java.net.UnknownHostException;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -34,7 +35,7 @@ public class SslTransportServer extends TcpTransportServer implements KeyAndTrus
     protected String protocol = "TLS";
     protected SSLContext sslContext;
 
-    public SslTransportServer(URI location) {
+    public SslTransportServer(URI location) throws UnknownHostException {
         super(location);
     }
 
