@@ -146,7 +146,8 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
       case report_parser(report_header, _, report_mid, _, report_footer) =>
         var notes = System.getProperty("notes")
         if (notes == null) {
-          val version = new String(ProcessSupport.system("git", "rev-list", "--max-count=1", "HEAD").toByteArray).trim
+          import ProcessSupport._
+          val version = new String(system("git", "rev-list", "--max-count=1", "HEAD")._2).trim
           notes = "commit " + version
         }
 

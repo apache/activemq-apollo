@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.util
 
 import java.io._
+import org.fusesource.hawtdispatch._
 
 object FileSupport {
 
@@ -102,6 +103,97 @@ object FileSupport {
     val out = new ByteArrayOutputStream()
     copy(in, out)
     new String(out.toByteArray, charset)
+  }
+
+}
+
+object ProcessSupport {
+  import FileSupport._
+
+  implicit def to_rich_process_builder(self:ProcessBuilder):RichProcessBuilder = new RichProcessBuilder(self)
+
+  case class RichProcessBuilder(self:ProcessBuilder) {
+
+    def start(out:OutputStream=null, err:OutputStream=null, in:InputStream=null) = {
+      self.redirectErrorStream(out == err)
+      val process = self.start
+      if( in!=null ) {
+        ApolloThreadPool.INSTANCE {
+          try {
+            using(process.getOutputStream) { out =>
+              FileSupport.copy(in, out)
+            }
+          } catch {
+            case _ =>
+          }
+        }
+      } else {
+        process.getOutputStream.close
+      }
+
+      if( out!=null ) {
+        ApolloThreadPool.INSTANCE {
+          try {
+            using(process.getInputStream) { in =>
+              FileSupport.copy(in, out)
+            }
+          } catch {
+            case _ =>
+          }
+        }
+      } else {
+        process.getInputStream.close
+      }
+
+      if( err!=null && err!=out ) {
+        ApolloThreadPool.INSTANCE {
+          try {
+            using(process.getErrorStream) { in =>
+              FileSupport.copy(in, err)
+            }
+          } catch {
+            case _ =>
+          }
+        }
+      } else {
+        process.getErrorStream.close
+      }
+      process
+    }
+
+  }
+
+  implicit def to_rich_process(self:Process):RichProcess = new RichProcess(self)
+
+  case class RichProcess(self:Process) {
+    def on_exit(func: (Int)=>Unit) = ApolloThreadPool.INSTANCE {
+      self.waitFor
+      func(self.exitValue)
+    }
+  }
+
+  implicit def to_process_builder(args:Seq[String]):ProcessBuilder = new ProcessBuilder().command(args : _*)
+
+  def launch(command:String*)(func: (Int, Array[Byte], Array[Byte])=>Unit ):Unit = {
+    val p:ProcessBuilder = command
+    println("launching: "+p)
+    launch(p)(func)
+  }
+  def launch(p:ProcessBuilder, in:InputStream=null)(func: (Int, Array[Byte], Array[Byte]) => Unit):Unit = {
+    val out = new ByteArrayOutputStream
+    val err = new ByteArrayOutputStream
+    p.start(out, err, in).on_exit { code=>
+      func(code, out.toByteArray, err.toByteArray)
+    }
+  }
+
+  def system(command:String*):(Int, Array[Byte], Array[Byte]) = system(command)
+  def system(p:ProcessBuilder, in:InputStream=null):(Int, Array[Byte], Array[Byte]) = {
+    val out = new ByteArrayOutputStream
+    val err = new ByteArrayOutputStream
+    val process = p.start(out, err, in)
+    process.waitFor
+    (process.exitValue, out.toByteArray, err.toByteArray)
   }
 
 }

@@ -267,6 +267,8 @@ class Broker() extends BaseService {
       connection_log = Log(log_category.connection.getOrElse(base_category+"connection"))
       console_log = Log(log_category.console.getOrElse(base_category+"console"))
 
+      log_ulimit
+
       if( config.key_storage!=null ) {
         key_storage = new KeyStorage
         key_storage.config = config.key_storage
@@ -349,6 +351,34 @@ class Broker() extends BaseService {
 
     BrokerRegistry.remove(this)
     tracker.callback(on_completed)
+  }
+
+  private def log_ulimit = {
+    import ProcessSupport._
+    launch("ulimit", "-n") { case (rc, out, err) =>
+      if( rc==0 ) {
+        try {
+          val limit = new String(out).trim
+          console_log.info("OS is restricting our open file limit to: %s", limit)
+          if( limit!="unlimited" ) {
+            val l = limit.toInt
+
+            var min_limit = 500 // estimate.. perhaps could we do better?
+            config.connectors.foreach { connector=>
+              import OptionSupport._
+              min_limit += connector.connection_limit.getOrElse(10000)
+            }
+
+            if( l < min_limit ) {
+              console_log.warn("Please increase the process file limit using 'ulimit -n %d' or configure lower the connection limits on the broker connectors.", min_limit)
+            }
+          }
+        } catch {
+          case _ =>
+        }
+      }
+    }
+
   }
 
   def get_virtual_host(name: AsciiBuffer) = dispatch_queue ! {
