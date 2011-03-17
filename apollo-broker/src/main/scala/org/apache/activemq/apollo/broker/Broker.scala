@@ -178,7 +178,7 @@ object Broker extends Log {
   }
 
   val version = using(getClass().getResourceAsStream("version.txt")) { source=>
-    read_text(source)
+    read_text(source).trim
   }
 
 }
@@ -375,7 +375,7 @@ class Broker() extends BaseService {
       // Try to get a better version from the OS itself..
       val los = os.toLowerCase()
       if( los.startsWith("linux") ) {
-        capture("lsb_release -sd").map("%s (%s)".format(_, rc)).getOrElse(rc)
+        capture("lsb_release", "-sd").map("%s (%s)".format(_, rc)).getOrElse(rc)
       } else {
         rc
       }
@@ -386,7 +386,7 @@ class Broker() extends BaseService {
       val vendor = System.getProperty("java.vendor")
       val version =System.getProperty("java.version")
       val vm =System.getProperty("java.vm.name")
-      "%s %s %s".format(vendor, version, vm)
+      "%s %s (%s)".format(vm, version, vendor)
     }
 
     console_log.info("OS     : %s", os)
