@@ -267,6 +267,7 @@ class Broker() extends BaseService {
       connection_log = Log(log_category.connection.getOrElse(base_category+"connection"))
       console_log = Log(log_category.console.getOrElse(base_category+"console"))
 
+      log_versions
       check_file_limit
 
       if( config.key_storage!=null ) {
@@ -353,6 +354,46 @@ class Broker() extends BaseService {
     tracker.callback(on_completed)
   }
 
+  private def log_versions = {
+
+    def capture(command:String*) = {
+      import ProcessSupport._
+      try {
+        system(command:_*) match {
+          case(0, out, _) => Some(new String(out).trim)
+          case _ => None
+        }
+      } catch {
+        case _ => None
+      }
+    }
+
+    val os = {
+      val os = System.getProperty("os.name")
+      val rc = os +" "+System.getProperty("os.version")
+
+      // Try to get a better version from the OS itself..
+      val los = os.toLowerCase()
+      if( los.startsWith("linux") ) {
+        capture("lsb_release -sd").map("%s (%s)".format(_, rc)).getOrElse(rc)
+      } else {
+        rc
+      }
+
+    }
+
+    val jvm = {
+      val vendor = System.getProperty("java.vendor")
+      val version =System.getProperty("java.version")
+      val vm =System.getProperty("java.vm.name")
+      "%s %s %s".format(vendor, version, vm)
+    }
+
+    console_log.info("OS     : %s", os)
+    console_log.info("JVM    : %s", jvm)
+    console_log.info("Apollo : %s", Broker.version)
+
+  }
   private def check_file_limit = {
     import ProcessSupport._
 
