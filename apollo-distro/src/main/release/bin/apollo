@@ -138,5 +138,8 @@ if [ -z "$JMX_OPTS" ] ; then
 fi
 JVM_FLAGS="${JVM_FLAGS} ${JMX_OPTS}"
 
+# Attempt to bump up the ulimit 
+ulimit -n 100000 > /dev/null 2> /dev/null
+
 exec "$JAVACMD" ${JVM_FLAGS} -Djava.util.logging.config.file="${JUL_CONFIG_FILE}" -Dapollo.home="${APOLLO_HOME}" -Dapollo.base="${APOLLO_BASE}" -classpath "${CLASSPATH}" org.apache.activemq.apollo.cli.Apollo $@
 
