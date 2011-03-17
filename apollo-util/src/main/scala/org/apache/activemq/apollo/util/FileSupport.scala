@@ -174,11 +174,7 @@ object ProcessSupport {
 
   implicit def to_process_builder(args:Seq[String]):ProcessBuilder = new ProcessBuilder().command(args : _*)
 
-  def launch(command:String*)(func: (Int, Array[Byte], Array[Byte])=>Unit ):Unit = {
-    val p:ProcessBuilder = command
-    println("launching: "+p)
-    launch(p)(func)
-  }
+  def launch(command:String*)(func: (Int, Array[Byte], Array[Byte])=>Unit ):Unit = launch(command)(func)
   def launch(p:ProcessBuilder, in:InputStream=null)(func: (Int, Array[Byte], Array[Byte]) => Unit):Unit = {
     val out = new ByteArrayOutputStream
     val err = new ByteArrayOutputStream

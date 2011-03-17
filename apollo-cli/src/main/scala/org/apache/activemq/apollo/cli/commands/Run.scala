@@ -78,7 +78,7 @@ class Run extends Action {
       Apollo.print_banner(session.getConsole)
 
       // Load the configs and start the brokers up.
-      session.getConsole.print("Loading configuration file '%s'.".format(conf))
+      session.getConsole.println("Loading configuration file '%s'.".format(conf))
 
       val store = new FileConfigStore
       store.file = conf
