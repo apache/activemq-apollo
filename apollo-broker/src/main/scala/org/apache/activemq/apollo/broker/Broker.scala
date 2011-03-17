@@ -267,7 +267,7 @@ class Broker() extends BaseService {
       connection_log = Log(log_category.connection.getOrElse(base_category+"connection"))
       console_log = Log(log_category.console.getOrElse(base_category+"console"))
 
-      log_ulimit
+      check_file_limit
 
       if( config.key_storage!=null ) {
         key_storage = new KeyStorage
@@ -353,30 +353,42 @@ class Broker() extends BaseService {
     tracker.callback(on_completed)
   }
 
-  private def log_ulimit = {
+  private def check_file_limit = {
     import ProcessSupport._
-    launch("ulimit", "-n") { case (rc, out, err) =>
-      if( rc==0 ) {
-        try {
-          val limit = new String(out).trim
-          console_log.info("OS is restricting our open file limit to: %s", limit)
-          if( limit!="unlimited" ) {
-            val l = limit.toInt
 
-            var min_limit = 500 // estimate.. perhaps could we do better?
-            config.connectors.foreach { connector=>
-              import OptionSupport._
-              min_limit += connector.connection_limit.getOrElse(10000)
-            }
+    def process(out:Array[Byte]) = try {
+      val limit = new String(out).trim
+      console_log.info("OS is restricting the open file limit to: %s", limit)
+      if( limit!="unlimited" ) {
+        val l = limit.toInt
 
-            if( l < min_limit ) {
-              console_log.warn("Please increase the process file limit using 'ulimit -n %d' or configure lower the connection limits on the broker connectors.", min_limit)
-            }
-          }
-        } catch {
-          case _ =>
+        var min_limit = 500 // estimate.. perhaps could we do better?
+        config.connectors.foreach { connector=>
+          import OptionSupport._
+          min_limit += connector.connection_limit.getOrElse(10000)
+        }
+
+        if( l < min_limit ) {
+          console_log.warn("Please increase the process file limit using 'ulimit -n %d' or configure lower the connection limits on the broker connectors.", min_limit)
         }
       }
+    } catch {
+      case _ =>
+    }
+
+    try {
+      launch("ulimit","-n") { case (rc, out, err) =>
+        if( rc==0 ) {
+          process(out)
+        }
+      }
+    } catch {
+      case _ =>
+        launch("sh", "-c", "ulimit -n") { case (rc, out, err) =>
+          if( rc==0 ) {
+            process(out)
+          }
+        }
     }
 
   }
