@@ -539,35 +539,11 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
 
   def disconnected() = throw new RuntimeException("unsupported")
 
-  def can_bind(destination:DestinationDTO, consumer:DeliveryConsumer, security: SecurityContext):Boolean = {
-    if(  host.authorizer!=null && security!=null ) {
-      if( consumer.browser ) {
-        if( !host.authorizer.can_receive_from(security, host, config) ) {
-          return false;
-        }
-      } else {
-        if( !host.authorizer.can_consume_from(security, host, config) ) {
-          return false
-        }
-      }
-    }
-    return true;
-  }
-
   def bind(destination:DestinationDTO, consumer: DeliveryConsumer) = {
     bind(consumer::Nil)
   }
   def unbind(consumer: DeliveryConsumer, persistent:Boolean) = {
     unbind(consumer::Nil)
-  }
-
-  def can_connect(destination:DestinationDTO, producer:BindableDeliveryProducer, security:SecurityContext):Boolean = {
-    val authorizer = host.authorizer
-    if( authorizer!=null && security!=null && !authorizer.can_send_to(security, host, config) ) {
-      false
-    } else {
-      true
-    }
   }
 
   def connect (destination:DestinationDTO, producer:BindableDeliveryProducer) = {

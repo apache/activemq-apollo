@@ -1255,7 +1255,7 @@ class StompSecurityTest extends StompTestSupport {
 
     val frame = client.receive()
     frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to reveive from the destination.\n")
+    frame should include("message:Not authorized to receive from the destination.\n")
   }
 
 //  test("Consume authorized and JMSXUserID is set on message") {

@@ -41,15 +41,6 @@ class Topic(val router:LocalRouter, val name:String, val config:TopicDTO, val id
 
   def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")
 
-  def can_bind(destination: DestinationDTO, consumer:DeliveryConsumer, security:SecurityContext) = {
-    val authorizer = router.host.authorizer
-    if( authorizer!=null && security!=null && !authorizer.can_receive_from(security, router.host, config) ) {
-      false
-    } else {
-      true
-    }
-  }
-
   def is_same_ds(sub1:DurableSubscriptionDestinationDTO, sub2:DurableSubscriptionDestinationDTO) = {
     (sub1.client_id, sub1.subscription_id) == (sub2.client_id, sub2.subscription_id)
   }
@@ -170,15 +161,6 @@ class Topic(val router:LocalRouter, val name:String, val config:TopicDTO, val id
           unbind(consumer, false)
         }
       }
-    }
-  }
-
-  def can_connect(destination:DestinationDTO, producer:BindableDeliveryProducer, security:SecurityContext):Boolean = {
-    val authorizer = router.host.authorizer
-    if( authorizer!=null && security!=null && !authorizer.can_send_to(security, router.host, config) ) {
-      false
-    } else {
-      true
     }
   }
 
