@@ -125,12 +125,12 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
       asScalaIterable(destination_by_path.get( path ))
     }
 
-    def create_destination(path:Path, security:SecurityContext):Result[D,String]
+    def create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Result[D,String]
 
-    def get_or_create_destination(path:Path, security:SecurityContext):Result[D,String] = {
+    def get_or_create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Result[D,String] = {
       Option(destination_by_path.chooseValue(path)).
       map(Success(_)).
-      getOrElse( create_destination(path, security))
+      getOrElse( create_destination(path, destination, security))
     }
 
     def add_destination(path:Path, dest:D) = {
@@ -164,7 +164,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
       // Should we attempt to auto create the destination?
       if( !wildcard ) {
         if ( matches.isEmpty && auto_create_destinations ) {
-          val rc = create_destination(path, security)
+          val rc = create_destination(path, destination, security)
           if( rc.failed ) {
             return rc.map_success(_=> Zilch);
           }
@@ -228,7 +228,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
 
         // Should we attempt to auto create the destination?
         if ( matches.isEmpty && auto_create_destinations ) {
-          val rc = create_destination(path, security)
+          val rc = create_destination(path, destination, security)
           if( rc.failed ) {
             return rc.map_success(_=> Zilch);
           }
@@ -320,7 +320,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
 
       // We may need to create the topic...
       if( !wildcard && matches.isEmpty ) {
-        create_destination(path, null)
+        create_destination(path, destination, null)
         matches = get_destination_matches(path)
       }
 
@@ -336,7 +336,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
 
     }
 
-    def create_destination(path:Path, security:SecurityContext):Result[Topic,String] = {
+    def create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Result[Topic,String] = {
 
       // We can't create a wild card destination.. only wild card subscriptions.
       assert( !PathParser.containsWildCards(path) )
@@ -400,7 +400,8 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
       import OptionSupport._
       if( queue.config.unified.getOrElse(false) ) {
         // hook up the queue to be a subscriber of the topic.
-        val topic = topic_domain.get_or_create_destination(path, null).success
+
+        val topic = topic_domain.get_or_create_destination(path, new TopicDestinationDTO(queue.binding.binding_dto.name), null).success
         topic.bind(null, queue)
       }
     }
@@ -412,12 +413,12 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
       import OptionSupport._
       if( queue.config.unified.getOrElse(false) ) {
         // unhook the queue from the topic
-        val topic = topic_domain.get_or_create_destination(path, null).success
+        val topic = topic_domain.get_or_create_destination(path, new TopicDestinationDTO(queue.binding.binding_dto.name), null).success
         topic.unbind(queue, false)
       }
     }
 
-    def create_destination(path: Path, security: SecurityContext) = {
+    def create_destination(path: Path, destination:DestinationDTO, security: SecurityContext) = {
       val dto = new QueueDestinationDTO
       dto.name = DestinationParser.encode_path(path)
 
@@ -639,7 +640,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
    */
   def _get_or_create_destination(dto: DestinationDTO, security:SecurityContext): Result[DomainDestination, String] = {
     val path = DestinationParser.decode_path(dto.name)
-    domain(dto).get_or_create_destination(path, security)
+    domain(dto).get_or_create_destination(path, dto, security)
   }
 
 

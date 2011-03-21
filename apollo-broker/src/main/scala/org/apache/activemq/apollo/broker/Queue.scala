@@ -550,7 +550,7 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
     import OptionSupport._
     if( config.unified.getOrElse(false) ) {
       // this is a unified queue.. actually have the produce bind to the topic, instead of the
-      val topic = router.topic_domain.get_or_create_destination(binding.destination, null).success
+      val topic = router.topic_domain.get_or_create_destination(binding.destination, binding.binding_dto, null).success
       topic.connect(destination, producer)
     } else {
       producer.bind(this::Nil)
