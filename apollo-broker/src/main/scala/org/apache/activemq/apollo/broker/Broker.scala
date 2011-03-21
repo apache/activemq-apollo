@@ -205,7 +205,7 @@ class Broker() extends BaseService {
 
   var connectors: List[Connector] = Nil
 
-  val dispatch_queue = createQueue("broker") // getGlobalQueue(DispatchPriority.HIGH).createQueue("broker")
+  val dispatch_queue = createQueue("broker")
 
   def id = "default"
   
