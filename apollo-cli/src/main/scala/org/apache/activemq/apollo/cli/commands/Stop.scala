@@ -23,8 +23,8 @@ import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.util.OptionSupport._
 import org.apache.activemq.apollo.util.Logging
 import org.apache.commons.codec.binary.Base64
-import java.net.{HttpURLConnection, URL}
 import org.apache.felix.service.command.CommandSession
+import java.net.{URI, HttpURLConnection, URL}
 
 /**
  * The apollo stop command
@@ -62,9 +62,12 @@ class Stop extends Action with Logging {
           error("Web admin not enabled for that configuration, sorry can't shut the broker down");
 
         case Some(web_admin)=>
-          val prefix = web_admin.prefix.getOrElse("/").stripSuffix("/")
-          val port = web_admin.port.getOrElse(8080)
-          val host = web_admin.host.getOrElse("127.0.0.1")
+        
+          val bind = web_admin.bind.getOrElse("http://localhost:61680")
+          val bind_uri = new URI(bind)
+          val prefix = bind_uri.getPath.stripSuffix("/")
+          val host = "localhost"
+          val port = bind_uri.getPort
 
           val auth = (user, password) match {
             case (null,null)=> None

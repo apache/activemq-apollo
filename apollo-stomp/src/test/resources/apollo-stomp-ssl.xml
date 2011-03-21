@@ -23,6 +23,6 @@
     </virtual_host>
 
     <key_storage file="${basedir}/src/test/resources/apollo.ks" password="password" key_password="password"/>
-    <connector id="ssl" protocol="stomp" bind="ssl://0.0.0.0:0" />
+    <connector id="ssl" protocol="stomp" bind="ssl://[::]:0" />
 
 </broker>

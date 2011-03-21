@@ -55,10 +55,7 @@ public class TcpTransportServer implements TransportServer {
     public TcpTransportServer(URI location) throws UnknownHostException {
         bindScheme = location.getScheme();
         String host = location.getHost();
-        host = (host == null || host.length() == 0) ? "localhost" : host;
-        if (host.equals("localhost")) {
-            host = "0.0.0.0";
-        }
+        host = (host == null || host.length() == 0) ? "::" : host;
         bindAddress = new InetSocketAddress(InetAddress.getByName(host), location.getPort());
     }
 
@@ -128,11 +125,19 @@ public class TcpTransportServer implements TransportServer {
     }
 
     public String getBoundAddress() {
-        return bindScheme+"://"+bindAddress.getAddress()+":"+channel.socket().getLocalPort();
+        try {
+            return new URI(bindScheme, null, bindAddress.getAddress().getHostAddress(), channel.socket().getLocalPort(), null, null, null).toString();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public String getConnectAddress() {
-        return bindScheme+"://"+resolveHostName()+":"+channel.socket().getLocalPort();
+        try {
+            return new URI(bindScheme, null, resolveHostName(), channel.socket().getLocalPort(), null, null, null).toString();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 

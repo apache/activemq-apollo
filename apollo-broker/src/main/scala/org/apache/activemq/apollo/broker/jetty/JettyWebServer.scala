@@ -29,6 +29,7 @@ import org.fusesource.hawtdispatch._
 import java.io.File
 import java.lang.String
 import org.apache.activemq.apollo.broker.web.{WebServer, WebServerFactory}
+import java.net.URI
 
 /**
  * <p>
@@ -149,9 +150,11 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
       val config = broker.config
       val web_admin = config.web_admin
 
-      val prefix = web_admin.prefix.getOrElse("/")
-      val port = web_admin.port.getOrElse(61680)
-      val host = web_admin.host.getOrElse("127.0.0.1")
+      val bind = web_admin.bind.getOrElse("http://127.0.0.1:61680")
+      val bind_uri = new URI(bind)
+      val prefix = "/"+bind_uri.getPath.stripPrefix("/")
+      val host = bind_uri.getHost
+      val port = bind_uri.getPort
 
       // Start up the admin interface...
       debug("Starting administration interface");
@@ -210,7 +213,7 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
       server.start
 
       val localPort = connector.getLocalPort
-      def url = "http://"+host+":" + localPort + prefix
+      def url = new URI("http", null, host, localPort, prefix, null, null).toString
       broker.console_log.info("Administration interface available at: "+url)
       on_completed.run
     }

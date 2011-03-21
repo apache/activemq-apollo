@@ -33,12 +33,6 @@ import java.util.Set;
 public class WebAdminDTO {
 
     @XmlAttribute
-    public String host;
-
-    @XmlAttribute
-    public Integer port;
-
-    @XmlAttribute
-    public String prefix;
+    public String bind;
 
 }

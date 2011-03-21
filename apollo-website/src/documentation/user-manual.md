@@ -82,7 +82,7 @@ single connector.
     <host_name>localhost</host_name>
   </virtual_host>
 
-  <connector id="tcp" bind="tcp://0.0.0.0:61613"/>
+  <connector id="tcp" bind="tcp://[::]:61613"/>
   
 </broker>
 {pygmentize}
@@ -118,7 +118,7 @@ header of messages to the id of user that sent the message, you would
 use the following configuration:
 
 {pygmentize:: xml}
-<connector id="tcp" bind="tcp://0.0.0.0:61613">
+<connector id="tcp" bind="tcp://[::]:61613">
   <stomp add_user_header="user_id"/>
 </connector>
 {pygmentize}
@@ -391,7 +391,7 @@ Example:
      file="${apollo.base}/etc/keystore" 
      password="password" 
      key_password="password"/>
-  <connector id="tls" bind="tls://0.0.0.0:61614"/>
+  <connector id="tls" bind="tls://[::]:61614"/>
   ...
 {pygmentize}
 
@@ -438,7 +438,7 @@ to `false`.
     <host_name>cheeze.com</host_name>
   </virtual_host>
 
-  <connector id="tcp" bind="tcp://0.0.0.0:61613"/>
+  <connector id="tcp" bind="tcp://[::]:61613"/>
 </broker>
 {pygmentize}
 
@@ -694,17 +694,14 @@ For example:
 {pygmentize:: xml}
 <broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
   ...
-  <web_admin host="127.0.0.1" port="8001"/>
+  <web_admin bind="http://127.0.0.1:61680"/>
   ...
 </broker>
 {pygmentize}
 
 A `web_admin` element may be configured with the following attributes:
 
-* `host` : The amount of memory buffer space allocated for each queue.
-* `port` : The amount of memory buffer space allocated to each
-* `prefix` : The prefix path to the web administration application
-* `enabled` : If set to false then web administration is disabled. 
+* `bind` : The address and port to bind the web interface on in URL syntax.
 
 ## Managing Brokers
 
