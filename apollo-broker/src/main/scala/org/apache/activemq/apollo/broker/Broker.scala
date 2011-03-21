@@ -375,7 +375,7 @@ class Broker() extends BaseService {
       // Try to get a better version from the OS itself..
       val los = os.toLowerCase()
       if( los.startsWith("linux") ) {
-        capture("lsb_release", "-sd").map("%s (%s)".format(_, rc)).getOrElse(rc)
+        capture("lsb_release", "-sd").map("%s (%s)".format(rc, _)).getOrElse(rc)
       } else {
         rc
       }
@@ -394,9 +394,12 @@ class Broker() extends BaseService {
     console_log.info("Apollo : %s", Broker.version)
 
   }
-  private def check_file_limit = {
-    import ProcessSupport._
+  private def check_file_limit:Unit = {
+    if( System.getProperty("os.name").toLowerCase().startsWith("windows") ) {
+      return
+    }
 
+    import ProcessSupport._
     def process(out:Array[Byte]) = try {
       val limit = new String(out).trim
       console_log.info("OS is restricting the open file limit to: %s", limit)
@@ -425,10 +428,14 @@ class Broker() extends BaseService {
       }
     } catch {
       case _ =>
-        launch("sh", "-c", "ulimit -n") { case (rc, out, err) =>
-          if( rc==0 ) {
-            process(out)
+        try {
+          launch("sh", "-c", "ulimit -n") { case (rc, out, err) =>
+            if( rc==0 ) {
+              process(out)
+            }
           }
+        } catch {
+          case _ =>
         }
     }
 
