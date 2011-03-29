@@ -190,15 +190,15 @@ class FileConfigStore(var file:File = new File("activemq.xml")) extends ConfigSt
         }
       }
 
-      unmarshalBrokerDTO(new ByteArrayInputStream(in), props)
+      decode(classOf[BrokerDTO], new ByteArrayInputStream(in), props)
     } else {
-      unmarshalBrokerDTO(new ByteArrayInputStream(in))
+      decode(classOf[BrokerDTO], new ByteArrayInputStream(in))
     }
   }
 
   def marshall(in:BrokerDTO) = {
     val baos = new ByteArrayOutputStream
-    marshalBrokerDTO(in, baos, true)
+    encode(in, baos, true)
     baos.toByteArray
   }
 }

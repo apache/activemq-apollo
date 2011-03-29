@@ -106,19 +106,19 @@ public class XmlCodec {
         return JAXBContext.newInstance(packages);
     }
 
-    static public BrokerDTO unmarshalBrokerDTO(URL url) throws IOException, XMLStreamException, JAXBException {
-        return unmarshalBrokerDTO(url, null);
+    static public <T> T decode(Class<T> clazz, URL url) throws IOException, XMLStreamException, JAXBException {
+        return decode(clazz, url, null);
     }
 
-    static public BrokerDTO unmarshalBrokerDTO(URL url, Properties props) throws IOException, XMLStreamException, JAXBException {
-        return unmarshalBrokerDTO(url.openStream(), props);
+    static public <T> T decode(Class<T> clazz, URL url, Properties props) throws IOException, XMLStreamException, JAXBException {
+        return decode(clazz, url.openStream(), props);
     }
 
-    static public BrokerDTO unmarshalBrokerDTO(InputStream is) throws IOException, XMLStreamException, JAXBException {
-        return unmarshalBrokerDTO(is, null);
+    static public <T> T decode(Class<T> clazz, InputStream is) throws IOException, XMLStreamException, JAXBException {
+        return decode(clazz, is, null);
     }
 
-    static public BrokerDTO unmarshalBrokerDTO(InputStream is, Properties props) throws IOException, XMLStreamException, JAXBException {
+    static public <T> T decode(Class<T> clazz, InputStream is, Properties props) throws IOException, XMLStreamException, JAXBException {
         ClassLoader original = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(ClassFinder.class_loader());
@@ -131,7 +131,7 @@ public class XmlCodec {
                     reader = new PropertiesFilter(reader, props);
                 }
                 Unmarshaller unmarshaller = context().createUnmarshaller();
-                return (BrokerDTO) unmarshaller.unmarshal(reader);
+                return clazz.cast(unmarshaller.unmarshal(reader));
             } finally {
                 is.close();
             }
@@ -141,7 +141,7 @@ public class XmlCodec {
         }
     }
 
-    static public void marshalBrokerDTO(BrokerDTO in, OutputStream os, boolean format) throws JAXBException {
+    static public void encode(Object in, OutputStream os, boolean format) throws JAXBException {
         ClassLoader original = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(ClassFinder.class_loader());

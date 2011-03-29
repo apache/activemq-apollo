@@ -37,7 +37,7 @@ public class XmlCodecTest {
 
     @Test
     public void unmarshalling() throws Exception {
-        BrokerDTO dto = XmlCodec.unmarshalBrokerDTO(resource("XmlCodecTest.xml"));
+        BrokerDTO dto = XmlCodec.decode(BrokerDTO.class, resource("XmlCodecTest.xml"));
         assertNotNull(dto);
         assertEquals(1, dto.connectors.size());
         ConnectorDTO connector = dto.connectors.get(0);
@@ -84,7 +84,7 @@ public class XmlCodecTest {
         connector.bind = "tcp://[::]:61616";
         broker.connectors.add(connector);
 
-        XmlCodec.marshalBrokerDTO(broker, System.out, true);
+        XmlCodec.encode(broker, System.out, true);
 
     }
 

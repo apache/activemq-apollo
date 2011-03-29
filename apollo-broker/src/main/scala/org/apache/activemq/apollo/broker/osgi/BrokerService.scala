@@ -69,7 +69,7 @@ object BrokerService extends Log {
             props.put(key.asInstanceOf[String], cmProps.get(key).asInstanceOf[String])
           }
         }
-        XmlCodec.unmarshalBrokerDTO(new FileInputStream(apollo_xml), props)
+        XmlCodec.decode(classOf[BrokerDTO], new FileInputStream(apollo_xml), props)
       }
 
       debug("Starting broker");

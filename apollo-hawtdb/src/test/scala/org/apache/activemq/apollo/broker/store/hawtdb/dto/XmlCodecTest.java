@@ -38,7 +38,7 @@ public class XmlCodecTest {
 
     @Test
     public void unmarshalling() throws Exception {
-        BrokerDTO dto = XmlCodec.unmarshalBrokerDTO(resource("simple.xml"));
+        BrokerDTO dto = XmlCodec.decode(BrokerDTO.class, resource("simple.xml"));
         assertNotNull(dto);
         VirtualHostDTO host = dto.virtual_hosts.get(0);
         assertEquals("vh-local", host.id);

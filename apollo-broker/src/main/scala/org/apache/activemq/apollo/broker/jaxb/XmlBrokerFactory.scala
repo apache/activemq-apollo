@@ -46,7 +46,7 @@ class XmlBrokerFactory extends BrokerFactory.Provider {
         throw new IOException("Cannot create broker from non-existent URI: " + brokerURI)
       }
 
-      val xml = unmarshalBrokerDTO(configURL, System.getProperties)
+      val xml = decode(classOf[BrokerDTO], configURL, System.getProperties)
       return createMessageBroker(xml)
     } catch {
       case e: Exception =>
