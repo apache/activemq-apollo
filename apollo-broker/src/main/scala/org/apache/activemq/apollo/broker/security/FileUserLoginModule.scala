@@ -105,6 +105,9 @@ class FileUserLoginModule extends LoginModule {
     }
 
     val user = callbacks(0).asInstanceOf[NameCallback].getName()
+    if( user == null ) {
+      throw new FailedLoginException("User id not provided")
+    }
     var tmpPassword = callbacks(1).asInstanceOf[PasswordCallback].getPassword()
     if (tmpPassword == null) {
       tmpPassword = new Array[Char](0)
