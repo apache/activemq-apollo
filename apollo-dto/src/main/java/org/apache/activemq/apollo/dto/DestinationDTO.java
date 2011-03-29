@@ -26,7 +26,7 @@ import javax.xml.bind.annotation.*;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlType(name = "queue_binding")
+@XmlType(name = "destination")
 @XmlSeeAlso({QueueDestinationDTO.class, DurableSubscriptionDestinationDTO.class})
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 @XmlAccessorType(XmlAccessType.FIELD)

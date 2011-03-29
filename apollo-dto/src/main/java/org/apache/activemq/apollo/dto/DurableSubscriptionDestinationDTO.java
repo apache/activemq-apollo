@@ -29,7 +29,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name = "durable_subscription_destination")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DurableSubscriptionDestinationDTO extends DestinationDTO {
+public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
 
     @XmlAttribute
     public String filter;

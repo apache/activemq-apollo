@@ -24,7 +24,7 @@ import javax.xml.bind.annotation.*;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "p2p_queue_binding")
+@XmlRootElement(name = "queue_destination")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class QueueDestinationDTO extends DestinationDTO {
 

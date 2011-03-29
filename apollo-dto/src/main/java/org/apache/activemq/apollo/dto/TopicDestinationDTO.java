@@ -24,7 +24,7 @@ import javax.xml.bind.annotation.*;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "queue_destination")
+@XmlRootElement(name = "topic_destination")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class TopicDestinationDTO extends DestinationDTO {
 
