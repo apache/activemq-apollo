@@ -23,100 +23,108 @@ import _root_.org.fusesource.hawtbuf.{ByteArrayOutputStream => BAOS}
 import java.io._
 import org.apache.activemq.apollo.broker.{KeyStorage, ProtocolException}
 import javax.net.ssl.{SSLSocket, SSLContext}
+import org.scalatest.matchers.ShouldMatchers
 
 /**
  * A simple Stomp client used for testing purposes
  */
-  class StompClient {
+class StompClient extends ShouldMatchers {
 
-    var socket:Socket = new Socket
-    var out:OutputStream = null
-    var in:InputStream = null
-    val bufferSize = 64*1204
-    var key_storeage:KeyStorage=null
+  var socket:Socket = new Socket
+  var out:OutputStream = null
+  var in:InputStream = null
+  val bufferSize = 64*1204
+  var key_storeage:KeyStorage=null
 
-    def open(host: String, port: Int) = {
+  def open(host: String, port: Int) = {
 
-      socket = if( key_storeage!=null ) {
-        val context = SSLContext.getInstance("TLS")
-        context.init(key_storeage.create_key_managers, key_storeage.create_trust_managers, null)
-        context.getSocketFactory().createSocket()
-        // socket.asInstanceOf[SSLSocket].setEnabledCipherSuites(Array("SSL_RSA_WITH_RC4_128_MD5"))
-        // socket
-      } else {
-        new Socket
-      }
-      socket.connect(new InetSocketAddress(host, port))
-      socket.setSoLinger(true, 0)
-      out = new BufferedOutputStream(socket.getOutputStream, bufferSize)
-      in = new BufferedInputStream(socket.getInputStream, bufferSize)
+    socket = if( key_storeage!=null ) {
+      val context = SSLContext.getInstance("TLS")
+      context.init(key_storeage.create_key_managers, key_storeage.create_trust_managers, null)
+      context.getSocketFactory().createSocket()
+      // socket.asInstanceOf[SSLSocket].setEnabledCipherSuites(Array("SSL_RSA_WITH_RC4_128_MD5"))
+      // socket
+    } else {
+      new Socket
     }
-
-    def close() = {
-      socket.close
-    }
-
-    def write(frame:String) = {
-      out.write(frame.getBytes("UTF-8"))
-      out.write(0)
-      out.write('\n')
-      out.flush
-    }
-
-    def write(frame:Array[Byte]) = {
-      out.write(frame)
-      out.write(0)
-      out.write('\n')
-      out.flush
-    }
-
-    def skip():Unit = {
-      var c = in.read
-      while( c >= 0 ) {
-        if( c==0 ) {
-          return
-        }
-        c = in.read()
-      }
-      throw new EOFException()
-    }
-
-    def receive():String = {
-      var start = true;
-      val buffer = new BAOS()
-      var c = in.read
-      while( c >= 0 ) {
-        if( c==0 ) {
-          return new String(buffer.toByteArray, "UTF-8")
-        }
-        if( !start || c!= Stomp.NEWLINE) {
-          start = false
-          buffer.write(c)
-        }
-        c = in.read()
-      }
-      throw new EOFException()
-    }
-
-    def receiveAscii():AsciiBuffer = {
-      val buffer = new BAOS()
-      var c = in.read
-      while( c >= 0 ) {
-        if( c==0 ) {
-          return buffer.toBuffer.ascii
-        }
-        buffer.write(c)
-        c = in.read()
-      }
-      throw new EOFException()
-    }
-
-    def receive(expect:String):String = {
-      val rc = receive()
-      if( !rc.startsWith(expect) ) {
-        throw new ProtocolException("Expected "+expect)
-      }
-      rc
-    }
-
+    socket.connect(new InetSocketAddress(host, port))
+    socket.setSoLinger(true, 0)
+    out = new BufferedOutputStream(socket.getOutputStream, bufferSize)
+    in = new BufferedInputStream(socket.getInputStream, bufferSize)
   }
+
+  def close() = {
+    socket.close
+  }
+
+  def write(frame:String) = {
+    out.write(frame.getBytes("UTF-8"))
+    out.write(0)
+    out.write('\n')
+    out.flush
+  }
+
+  def write(frame:Array[Byte]) = {
+    out.write(frame)
+    out.write(0)
+    out.write('\n')
+    out.flush
+  }
+
+  def skip():Unit = {
+    var c = in.read
+    while( c >= 0 ) {
+      if( c==0 ) {
+        return
+      }
+      c = in.read()
+    }
+    throw new EOFException()
+  }
+
+  def receive():String = {
+    var start = true;
+    val buffer = new BAOS()
+    var c = in.read
+    while( c >= 0 ) {
+      if( c==0 ) {
+        return new String(buffer.toByteArray, "UTF-8")
+      }
+      if( !start || c!= Stomp.NEWLINE) {
+        start = false
+        buffer.write(c)
+      }
+      c = in.read()
+    }
+    throw new EOFException()
+  }
+
+  def wait_for_receipt(id:String): Unit = {
+    val frame = receive()
+    frame should startWith("RECEIPT\n")
+    frame should include("receipt-id:"+id+"\n")
+  }
+
+
+  def receiveAscii():AsciiBuffer = {
+    val buffer = new BAOS()
+    var c = in.read
+    while( c >= 0 ) {
+      if( c==0 ) {
+        return buffer.toBuffer.ascii
+      }
+      buffer.write(c)
+      c = in.read()
+    }
+    throw new EOFException()
+  }
+
+  def receive(expect:String):String = {
+    val rc = receive()
+    if( !rc.startsWith(expect) ) {
+      throw new ProtocolException("Expected "+expect)
+    }
+    rc
+  }
+
+}

@@ -35,7 +35,7 @@ class StompRemoteConsumer extends RemoteConsumer {
   var outboundSink: OverflowSink[StompFrame] = null
 
   def onConnected() = {
-    outboundSink = new OverflowSink[StompFrame](MapSink(transport_sink) {x => x})
+    outboundSink = new OverflowSink[StompFrame](transport_sink.map(x=>x))
     outboundSink.refiller = ^ {}
 
     val stompDestination = destination match {
@@ -145,7 +145,7 @@ class StompRemoteProducer extends RemoteProducer with Logging {
   }
 
   override def onConnected() = {
-    outboundSink = new OverflowSink[StompFrame](MapSink(transport_sink) {x => x})
+    outboundSink = new OverflowSink[StompFrame](transport_sink.map(x=>x))
     outboundSink.refiller = ^ {drain}
 
     stompDestination = destination match {

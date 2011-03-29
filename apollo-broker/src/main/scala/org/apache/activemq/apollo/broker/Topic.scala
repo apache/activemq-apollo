@@ -30,7 +30,7 @@ import collection.mutable.{HashMap, ListBuffer}
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Topic(val router:LocalRouter, val name:String, val config:TopicDTO, val id:Long) extends DomainDestination {
+class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, val config:TopicDTO, val id:Long) extends DomainDestination {
 
   var producers = ListBuffer[BindableDeliveryProducer]()
   var consumers = ListBuffer[DeliveryConsumer]()
@@ -38,6 +38,8 @@ class Topic(val router:LocalRouter, val name:String, val config:TopicDTO, val id
   var consumer_queues = HashMap[DeliveryConsumer, Queue]()
 
   import OptionSupport._
+
+  def virtual_host: VirtualHost = router.virtual_host
 
   def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")
 
@@ -54,6 +56,23 @@ class Topic(val router:LocalRouter, val name:String, val config:TopicDTO, val id
         producers.foreach({ r=>
           r.bind(list)
         })
+
+      case destination:DurableSubscriptionDestinationDTO=>
+
+        val queue = router.topic_domain.get_or_create_durable_subscription(destination)
+        if( !durable_subscriptions.contains(queue) ) {
+          durable_subscriptions += queue
+          val list = List(queue)
+          producers.foreach({ r=>
+            r.bind(list)
+          })
+        }
+
+        // Typically durable subs are only consumed by on connection at a time. So collocate the
+        // queue onto the consumer's dispatch queue.
+        queue.dispatch_queue.setTargetQueue(consumer.dispatch_queue)
+        queue.bind(destination, consumer)
+        consumer_queues += consumer->queue
 
       case destination:TopicDestinationDTO=>
         var target = consumer
@@ -78,22 +97,6 @@ class Topic(val router:LocalRouter, val name:String, val config:TopicDTO, val id
           r.bind(list)
         })
 
-      case destination:DurableSubscriptionDestinationDTO=>
-
-        val queue = router.topic_domain.get_or_create_durable_subscription(destination)
-        if( !durable_subscriptions.contains(queue) ) {
-          durable_subscriptions += queue
-          val list = List(queue)
-          producers.foreach({ r=>
-            r.bind(list)
-          })
-        }
-
-        // Typically durable subs are only consumed by on connection at a time. So collocate the
-        // queue onto the consumer's dispatch queue.
-        queue.dispatch_queue.setTargetQueue(consumer.dispatch_queue)
-        queue.bind(destination, consumer)
-        consumer_queues += consumer->queue
     }
   }
 

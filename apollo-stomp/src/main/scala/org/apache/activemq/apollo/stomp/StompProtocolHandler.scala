@@ -400,7 +400,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   override def on_transport_connected() = {
 
-    session_manager = new SinkMux[StompFrame]( MapSink(connection.transport_sink){x=>
+    session_manager = new SinkMux[StompFrame]( connection.transport_sink.map {x=>
       trace("sending frame: %s", x)
       x
     }, dispatchQueue, StompFrame)

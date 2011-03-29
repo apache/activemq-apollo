@@ -44,9 +44,9 @@ import Queue._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination {
+class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched {
 
-  def host = router.host
+  def virtual_host = router.virtual_host
 
   var inbound_sessions = Set[DeliverySession]()
   var all_subscriptions = Map[DeliveryConsumer, Subscription]()
@@ -55,11 +55,14 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
   val filter = binding.message_filter
 
   override val dispatch_queue: DispatchQueue = createQueue(binding.label);
-  host.broker.init_dispatch_queue(dispatch_queue)
+  virtual_host.broker.init_dispatch_queue(dispatch_queue)
+
+  def destination_dto: DestinationDTO = binding.binding_dto
 
   dispatch_queue {
     debug("created queue for: " + binding.label)
   }
+
 
   override def dispose: Unit = {
     ack_source.cancel
@@ -123,7 +126,7 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
 
   def configure(c:QueueDTO) = {
     config = c
-    tune_persistent = host.store !=null && config.persistent.getOrElse(true)
+    tune_persistent = virtual_host.store !=null && config.persistent.getOrElse(true)
     tune_swap = tune_persistent && config.swap.getOrElse(true)
     tune_swap_range_size = config.swap_range_size.getOrElse(10000)
     tune_consumer_buffer = config.consumer_buffer.getOrElse(32*1024)
@@ -187,7 +190,7 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
 
     if( tune_persistent ) {
 
-      host.store.list_queue_entry_ranges(id, tune_swap_range_size) { ranges=>
+      virtual_host.store.list_queue_entry_ranges(id, tune_swap_range_size) { ranges=>
         dispatch_queue {
           if( ranges!=null && !ranges.isEmpty ) {
 
@@ -502,13 +505,13 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
   def connected() = {}
 
   def bind(value: DeliveryConsumer, security:SecurityContext): Result[Zilch, String] = {
-    if(  host.authorizer!=null && security!=null ) {
+    if(  virtual_host.authorizer!=null && security!=null ) {
       if( value.browser ) {
-        if( !host.authorizer.can_receive_from(security, host, config) ) {
+        if( !virtual_host.authorizer.can_receive_from(security, virtual_host, config) ) {
           return new Failure("Not authorized to browse the queue")
         }
       } else {
-        if( !host.authorizer.can_consume_from(security, host, config) ) {
+        if( !virtual_host.authorizer.can_consume_from(security, virtual_host, config) ) {
           return new Failure("Not authorized to consume from the queue")
         }
       }
@@ -560,8 +563,6 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
   def disconnect (producer:BindableDeliveryProducer) = {
     producer.unbind(this::Nil)
   }
-
-  def name: String = binding.label
 
   override def connection:Option[BrokerConnection] = None
 
@@ -946,7 +947,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
               // Are swapping out a non-persistent message?
               if( delivery.storeKey == -1 ) {
                 
-                delivery.uow = queue.host.store.create_uow
+                delivery.uow = queue.virtual_host.store.create_uow
                 val uow = delivery.uow
                 delivery.storeKey = uow.store(delivery.createMessageRecord)
                 store
@@ -959,7 +960,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
               } else {
                   
                 if( asap ) {
-                  queue.host.store.flush_message(message_key) {
+                  queue.virtual_host.store.flush_message(message_key) {
                     queue.swap_out_completes_source.merge(this)
                   }
                 }
@@ -1138,7 +1139,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         // start swapping in...
         swapping_in = true
         queue.swapping_in_size += size
-        queue.host.store.load_message(message_key) { delivery =>
+        queue.virtual_host.store.load_message(message_key) { delivery =>
           // pass off to a source so it can aggregate multiple
           // loads to reduce cross thread synchronization
           if( delivery.isDefined ) {
@@ -1242,7 +1243,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     override def swap_in() = {
       if( !swapping_in ) {
         swapping_in = true
-        queue.host.store.list_queue_entries(queue.id, seq, last) { records =>
+        queue.virtual_host.store.list_queue_entries(queue.id, seq, last) { records =>
           if( !records.isEmpty ) {
             queue.dispatch_queue {
 
@@ -1501,7 +1502,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       total_ack_count += 1
       if (entry.messageKey != -1) {
         val storeBatch = if( sb == null ) {
-          queue.host.store.create_uow
+          queue.virtual_host.store.create_uow
         } else {
           sb
         }

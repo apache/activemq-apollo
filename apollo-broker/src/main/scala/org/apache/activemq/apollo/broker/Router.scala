@@ -31,7 +31,7 @@ import ReporterLevel._
  */
 trait Router extends Service {
 
-  def host:VirtualHost
+  def virtual_host:VirtualHost
 
   def get_queue(dto:Long):Option[Queue] @suspendable
 
@@ -197,7 +197,7 @@ abstract class DeliveryProducerRoute(val router:Router) extends BaseRetained wit
 
           if( copy.storeKey == -1L && target.consumer.is_persistent && copy.message.persistent ) {
             if( copy.uow==null ) {
-              copy.uow = router.host.store.create_uow
+              copy.uow = router.virtual_host.store.create_uow
             } else {
               copy.uow.retain
             }

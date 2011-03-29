@@ -32,7 +32,10 @@ import java.util.concurrent.TimeUnit
 trait DomainDestination {
 
   def id:Long
-  def name:String
+  def virtual_host:VirtualHost
+
+  def destination_dto:DestinationDTO
+  def name:String = destination_dto.name
 
   def bind (destination:DestinationDTO, consumer:DeliveryConsumer)
   def unbind (consumer:DeliveryConsumer, persistent:Boolean)
@@ -91,14 +94,14 @@ object LocalRouter extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class LocalRouter(val host:VirtualHost) extends BaseService with Router {
+class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router with Dispatched {
   import LocalRouter._
 
-  def dispatch_queue:DispatchQueue = host.dispatch_queue
+  def dispatch_queue:DispatchQueue = virtual_host.dispatch_queue
 
   def auto_create_destinations = {
     import OptionSupport._
-    host.config.auto_create_destinations.getOrElse(true)
+    virtual_host.config.auto_create_destinations.getOrElse(true)
   }
 
   private val ALL = new Path({
@@ -300,14 +303,14 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
       import collection.JavaConversions._
       import DestinationParser.default._
       import AsciiBuffer._
-      host.config.topics.find( x=> parseFilter(ascii(x.name)).matches(name) ).getOrElse(new TopicDTO)
+      virtual_host.config.topics.find( x=> parseFilter(ascii(x.name)).matches(name) ).getOrElse(new TopicDTO)
     }
 
     def can_create_ds(config:DurableSubscriptionDTO, security:SecurityContext) = {
-      if( host.authorizer==null || security==null) {
+      if( virtual_host.authorizer==null || security==null) {
         true
       } else {
-        host.authorizer.can_create(security, host, config)
+        virtual_host.authorizer.can_create(security, virtual_host, config)
       }
     }
 
@@ -344,27 +347,27 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
       // A new destination is being created...
       val dto = topic_config(path)
 
-      if(  host.authorizer!=null && security!=null && !host.authorizer.can_create(security, host, dto)) {
+      if(  virtual_host.authorizer!=null && security!=null && !virtual_host.authorizer.can_create(security, virtual_host, dto)) {
         return new Failure("Not authorized to create the destination")
       }
 
       val id = topic_id_counter.incrementAndGet
-      val topic = new Topic(LocalRouter.this, DestinationParser.encode_path(path), dto, id)
+      val topic = new Topic(LocalRouter.this, destination.asInstanceOf[TopicDestinationDTO], dto, id)
       add_destination(path, topic)
       Success(topic)
     }
 
     def can_bind_one(path:Path, destination:DestinationDTO, consumer:DeliveryConsumer, security:SecurityContext):Boolean = {
       val config = topic_config(path)
-      val authorizer = host.authorizer
-      if( authorizer!=null && security!=null && !authorizer.can_receive_from(security, host, config) ) {
+      val authorizer = virtual_host.authorizer
+      if( authorizer!=null && security!=null && !authorizer.can_receive_from(security, virtual_host, config) ) {
         return false;
       }
 
       destination match {
         case destination:DurableSubscriptionDestinationDTO=>
           // So the user can subscribe to the topic.. but can he create durable sub??
-          val qc = DurableSubscriptionQueueBinding.create(destination).config(host).asInstanceOf[DurableSubscriptionDTO]
+          val qc = DurableSubscriptionQueueBinding.create(destination).config(virtual_host).asInstanceOf[DurableSubscriptionDTO]
           if( !can_create_ds(qc, security) ) {
              return false;
           }
@@ -375,8 +378,8 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
 
     def can_connect_one(path:Path, destination:DestinationDTO, producer:BindableDeliveryProducer, security:SecurityContext):Boolean = {
       val config = topic_config(path)
-      val authorizer = host.authorizer
-      !(authorizer!=null && security!=null && !authorizer.can_send_to(security, host, config) )
+      val authorizer = virtual_host.authorizer
+      !(authorizer!=null && security!=null && !authorizer.can_send_to(security, virtual_host, config) )
     }
 
   }
@@ -385,10 +388,10 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
   class QueueDomain extends Domain[Queue] {
 
     def can_create_queue(config:QueueDTO, security:SecurityContext) = {
-      if( host.authorizer==null || security==null) {
+      if( virtual_host.authorizer==null || security==null) {
         true
       } else {
-        host.authorizer.can_create(security, host, config)
+        virtual_host.authorizer.can_create(security, virtual_host, config)
       }
     }
 
@@ -423,7 +426,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
       dto.name = DestinationParser.encode_path(path)
 
       val binding = QueueDomainQueueBinding.create(dto)
-      val config = binding.config(host)
+      val config = binding.config(virtual_host)
       if( can_create_queue(config, security) ) {
         Success(_create_queue(binding))
       } else {
@@ -434,14 +437,14 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
 
     def can_bind_one(path:Path, dto:DestinationDTO, consumer:DeliveryConsumer, security: SecurityContext):Boolean = {
       val binding = QueueDomainQueueBinding.create(dto)
-      val config = binding.config(host)
-      if(  host.authorizer!=null && security!=null ) {
+      val config = binding.config(virtual_host)
+      if(  virtual_host.authorizer!=null && security!=null ) {
         if( consumer.browser ) {
-          if( !host.authorizer.can_receive_from(security, host, config) ) {
+          if( !virtual_host.authorizer.can_receive_from(security, virtual_host, config) ) {
             return false;
           }
         } else {
-          if( !host.authorizer.can_consume_from(security, host, config) ) {
+          if( !virtual_host.authorizer.can_consume_from(security, virtual_host, config) ) {
             return false
           }
         }
@@ -451,9 +454,9 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
 
     def can_connect_one(path:Path, dto:DestinationDTO, producer:BindableDeliveryProducer, security:SecurityContext):Boolean = {
       val binding = QueueDomainQueueBinding.create(dto)
-      val config = binding.config(host)
-      val authorizer = host.authorizer
-      !( authorizer!=null && security!=null && !authorizer.can_send_to(security, host, config) )
+      val config = binding.config(virtual_host)
+      val authorizer = virtual_host.authorizer
+      !( authorizer!=null && security!=null && !authorizer.can_send_to(security, virtual_host, config) )
     }
 
   }
@@ -465,21 +468,21 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
   /////////////////////////////////////////////////////////////////////////////
 
   protected def _start(on_completed: Runnable) = {
-    val tracker = new LoggingTracker("router startup", host.console_log, dispatch_queue)
-    if( host.store!=null ) {
+    val tracker = new LoggingTracker("router startup", virtual_host.console_log, dispatch_queue)
+    if( virtual_host.store!=null ) {
       val task = tracker.task("list_queues")
-      host.store.list_queues { queue_keys =>
+      virtual_host.store.list_queues { queue_keys =>
         for( queue_key <- queue_keys) {
           val task = tracker.task("load queue: "+queue_key)
           // Use a global queue to so we concurrently restore
           // the queues.
           globalQueue {
-            host.store.get_queue(queue_key) { x =>
+            virtual_host.store.get_queue(queue_key) { x =>
               x match {
                 case Some(record)=>
                   if( record.binding_kind == TempQueueBinding.TEMP_KIND ) {
                     // Drop temp queues on restart..
-                    host.store.remove_queue(queue_key){x=> task.run}
+                    virtual_host.store.remove_queue(queue_key){x=> task.run}
                   } else {
                     dispatch_queue {
                       _create_queue(QueueBinding.create(record.binding_kind, record.binding_data), queue_key)
@@ -496,7 +499,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
     }
 
     import OptionSupport._
-    if(host.config.regroup_connections.getOrElse(false)) {
+    if(virtual_host.config.regroup_connections.getOrElse(false)) {
       schedule_connection_regroup
     }
 
@@ -504,7 +507,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
   }
 
   protected def _stop(on_completed: Runnable) = {
-    val tracker = new LoggingTracker("router shutdown", host.console_log, dispatch_queue)
+    val tracker = new LoggingTracker("router shutdown", virtual_host.console_log, dispatch_queue)
     queues_by_id.valuesIterator.foreach { queue=>
       tracker.stop(queue)
     }
@@ -568,7 +571,6 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
 
   def domain(destination: DestinationDTO):Domain[_ <: DomainDestination] = destination match {
     case x:TopicDestinationDTO => topic_domain
-    case x:DurableSubscriptionDestinationDTO => topic_domain
     case x:QueueDestinationDTO => queue_domain
     case _ => throw new RuntimeException("Unknown domain type: "+destination.getClass)
   }
@@ -673,10 +675,10 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
 
     var qid = id
     if( qid == -1 ) {
-      qid = host.queue_id_counter.incrementAndGet
+      qid = virtual_host.queue_id_counter.incrementAndGet
     }
 
-    val config = binding.config(host)
+    val config = binding.config(virtual_host)
 
     val queue = new Queue(this, qid, binding, config)
     if( queue.tune_persistent && id == -1 ) {
@@ -686,7 +688,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
       record.binding_data = binding.binding_data
       record.binding_kind = binding.binding_kind
 
-      host.store.add_queue(record) { rc => Unit }
+      virtual_host.store.add_queue(record) { rc => Unit }
 
     }
 
@@ -731,7 +733,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
   def _destroy_queue(queue:Queue, security:SecurityContext):Result[Zilch, String] = {
 
     if( security!=null && queue.config.acl!=null ) {
-      if( !host.authorizer.can_destroy(security, host, queue.config) ) {
+      if( !virtual_host.authorizer.can_destroy(security, virtual_host, queue.config) ) {
         return Failure("Not authorized to destroy")
       }
     }
@@ -742,7 +744,7 @@ class LocalRouter(val host:VirtualHost) extends BaseService with Router {
     queue.stop
     if( queue.tune_persistent ) {
       queue.dispatch_queue {
-        host.store.remove_queue(queue.id){x=> Unit}
+        virtual_host.store.remove_queue(queue.id){x=> Unit}
       }
     }
     Success(Zilch)

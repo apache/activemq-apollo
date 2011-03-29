@@ -49,24 +49,44 @@ trait Sink[T] {
    * Sets a refiller on the sink.  The refiller is executed
    * when the sink is interested in receiving more deliveries.
    */
-  var refiller:Runnable
+  def refiller:Runnable
+  def refiller_=(value:Runnable)
 
+  def map[Y](func: Y=>T ):Sink[Y] = {
+    def outer = Sink.this
+    new Sink[Y]() with SinkFilter {
+      def downstream = outer
+      def offer(value:Y) = {
+        if( full ) {
+          false
+        } else {
+          outer.offer(func(value))
+        }
+      }
+    }
+  }
 
 }
 
+trait SinkFilter {
+  def downstream:Sink[_]
+  def refiller:Runnable = downstream.refiller
+  def refiller_=(value:Runnable) { downstream.refiller=value }
+  def full: Boolean = downstream.full
+}
 
 /**
  * <p>
  * A delivery sink which is connected to a transport. It expects the caller's dispatch
- * queue to be the same as the transport's/
+ * queue to be the same as the transport's
  * <p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class TransportSink(val transport:Transport) extends Sink[AnyRef] {
+  var refiller:Runnable = NOOP
   def full:Boolean = transport.full
   def offer(value:AnyRef) =  transport.offer(value)
-  var refiller:Runnable = null
 }
 
 /**
@@ -78,23 +98,24 @@ class TransportSink(val transport:Transport) extends Sink[AnyRef] {
  */
 class OverflowSink[T](val downstream:Sink[T]) extends Sink[T] {
 
-  private var overflow = new LinkedList[T]()
-  var refiller: Runnable = null
+  var refiller:Runnable = NOOP
+
+  private var overflow = collection.mutable.Queue[T]()
 
   def overflowed = !overflow.isEmpty
 
   def full = overflowed || downstream.full
 
+  def clear = overflow.clear
+
   downstream.refiller = ^{ drain }
 
   protected def drain:Unit = {
     while( overflowed ) {
-      val delivery = overflow.removeFirst
-      if( !downstream.offer(delivery) ) {
-        overflow.addFirst(delivery)
+      if( !downstream.offer(overflow.front) ) {
         return
       } else {
-        onDelivered(delivery)
+        onDelivered(overflow.dequeue)
       }
     }
     // request a refill once the overflow is empty...
@@ -107,7 +128,7 @@ class OverflowSink[T](val downstream:Sink[T]) extends Sink[T] {
    */
   def offer(value:T) = {
     if( overflowed || !downstream.offer(value)) {
-      overflow.addLast(value)
+      overflow.enqueue(value)
     } else {
       onDelivered(value)
     }
@@ -122,23 +143,36 @@ class OverflowSink[T](val downstream:Sink[T]) extends Sink[T] {
 
 }
 
-object MapSink {
-  def apply[X,Y](downstream:Sink[X])(func: Y=>X ) = {
-    new Sink[Y] {
-      def refiller = downstream.refiller
-      def refiller_=(value:Runnable) = downstream.refiller=value
 
-      def full = downstream.full
-      def offer(value:Y) = {
-        if( full ) {
-          false
-        } else {
-          downstream.offer(func(value))
-        }
-      }
+/**
+ * A sink that allows the downstream sink to set to an
+ * optional sink.
+ */
+class MutableSink[T] extends Sink[T] {
+
+  var refiller:Runnable = NOOP
+  private var _downstream:Option[Sink[T]] =_
+
+  def downstream_=(value: Option[Sink[T]]) {
+    _downstream.foreach(d => d.refiller = NOOP )
+    _downstream = value
+    _downstream.foreach{d =>
+      d.refiller = refiller
+      refiller.run
     }
   }
+
+  def downstream = _downstream
+
+  def full = _downstream.map(_.full).getOrElse(true)
+
+  /**
+   * @return true always even when full since those messages just get stored in a
+   *         overflow list
+   */
+  def offer(value:T) = ! _downstream.map(_.offer(value)).getOrElse(false)
 }
+
 
 /**
  *  <p>
@@ -156,8 +190,7 @@ class SinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue, val s
   var sessions = HashSet[Session[T]]()
   var session_max_credits = 1024*32;
 
-  val overflow = new OverflowSink[(Session[T],T)](MapSink(downstream){_._2}) {
-
+  val overflow = new OverflowSink[(Session[T],T)](downstream.map(_._2)) {
     // Once a value leaves the overflow, then we can credit the
     // session so that more messages can be accepted.
     override protected def onDelivered(event:(Session[T],T)) = {
@@ -223,6 +256,8 @@ class SinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue, val s
  */
 class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[T]) extends Sink[T] {
 
+  var refiller:Runnable = NOOP
+
   private def session_max_credits = mux.session_max_credits
   private def sizer = mux.sizer
   private def downstream = mux.source
@@ -255,7 +290,6 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[
   // producer serial dispatch queue
   ///////////////////////////////////////////////////
 
-  var refiller:Runnable = ^{}
 
   override def full = {
     assert(getCurrentQueue eq producer_queue)
@@ -311,11 +345,12 @@ trait Sizer[T] {
  */
 class QueueSink[T](val sizer:Sizer[T], var maxSize:Int=1024*32) extends Sink[T] {
 
+  var refiller:Runnable = NOOP
+
   var buffer = new LinkedList[T]()
   private var size = 0
 
   var drainer: Runnable = null
-  var refiller: Runnable = null
 
   def full = size >= maxSize
   def poll = buffer.poll
