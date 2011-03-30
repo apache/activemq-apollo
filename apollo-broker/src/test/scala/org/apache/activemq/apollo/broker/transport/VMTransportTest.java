@@ -36,7 +36,7 @@ public class VMTransportTest {
 	
 	@Test()
 	public void autoCreateBroker() throws Exception {
-		Transport connect = TransportFactory.connect("vm://test1?protocol=null");
+		Transport connect = TransportFactory.connect("vm://test1");
         connect.setDispatchQueue(Dispatch.createQueue());
 		connect.start();
 		assertNotNull(connect);
@@ -45,12 +45,12 @@ public class VMTransportTest {
 	
 	@Test(expected=IOException.class)
 	public void noAutoCreateBroker() throws Exception {
-		TransportFactory.connect("vm://test2?create=false&protocol=null");
+		TransportFactory.connect("vm://test2?create=false");
 	}
 	
 	@Test(expected=IllegalArgumentException.class)
 	public void badOptions() throws Exception {
-		TransportFactory.connect("vm://test3?crazy-option=false&protocol=null");
+		TransportFactory.connect("vm://test3?crazy-option=false");
 	}
 	
 }
