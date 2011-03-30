@@ -136,7 +136,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       getOrElse( create_destination(path, destination, security))
     }
 
-    def add_destination(path:Path, dest:D) = {
+    var add_destination = (path:Path, dest:D) => {
       destination_by_path.put(path, dest)
       destination_by_id.put(dest.id, dest)
 
@@ -154,10 +154,11 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       }
     }
 
-    def remove_destination(path:Path, dest:D) = {
+    var remove_destination = (path:Path, dest:D) => {
       destination_by_path.remove(path, dest)
       destination_by_id.remove(dest.id)
     }
+
     def can_bind_one(path:Path, destination:DestinationDTO, consumer:DeliveryConsumer, security:SecurityContext):Boolean
     def can_bind_all(path:Path, destination:DestinationDTO, consumer:DeliveryConsumer, security:SecurityContext):Result[Zilch, String] = {
 
@@ -609,7 +610,6 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     dispatch_queue ! {
 
       val failures = paths.map(x=> domain(x._2).can_connect_all(x._1, x._2, producer, security) ).flatMap( _.failure_option )
-
       if( !failures.isEmpty ) {
         producer.release
         Failure(failures.mkString("; "))
