@@ -261,7 +261,7 @@ class StompProtocolHandler extends ProtocolHandler {
       val session = session_manager.open(producer.dispatch_queue)
 
       def close = {
-        assert(getCurrentQueue == producer.dispatch_queue)
+        assert(producer.dispatch_queue.isExecuting)
         if( !closed ) {
           closed = true
           if( browser ) {

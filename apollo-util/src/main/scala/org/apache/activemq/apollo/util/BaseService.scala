@@ -28,7 +28,7 @@ object BaseService extends Log
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait BaseService extends Service {
+trait BaseService extends Service with Dispatched {
 
   import BaseService._
 
@@ -57,8 +57,6 @@ trait BaseService extends Service {
   protected class STARTED extends State { override def is_started = true  }
   protected class STOPPING extends State with CallbackSupport { override def is_stopping = true  }
   protected class STOPPED extends State { override def is_stopped = true  }
-
-  protected def dispatch_queue:DispatchQueue
 
   final def start() = start(null)
   final def stop() = stop(null)

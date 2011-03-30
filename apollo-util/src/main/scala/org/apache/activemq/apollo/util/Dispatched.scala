@@ -28,5 +28,10 @@ import org.fusesource.hawtdispatch._
 trait Dispatched {
   def dispatch_queue:DispatchQueue
 
-  protected def assert_dispatched = assert( getCurrentQueue == dispatch_queue )
+  protected def assert_executing = assert( dispatch_queue.isExecuting,
+    "Dispatch queue '%s' was not executing, (currently executing: %s)".format(
+      Option(dispatch_queue.getLabel).getOrElse(""),
+      Option(getCurrentThreadQueue).map(_.getLabel).getOrElse("None") )
+  )
+
 }

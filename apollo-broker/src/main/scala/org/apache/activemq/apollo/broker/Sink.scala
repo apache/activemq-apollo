@@ -151,7 +151,7 @@ class OverflowSink[T](val downstream:Sink[T]) extends Sink[T] {
 class MutableSink[T] extends Sink[T] {
 
   var refiller:Runnable = NOOP
-  private var _downstream:Option[Sink[T]] =_
+  private var _downstream:Option[Sink[T]] = None
 
   def downstream_=(value: Option[Sink[T]]) {
     _downstream.foreach(d => d.refiller = NOOP )
@@ -292,7 +292,7 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[
 
 
   override def full = {
-    assert(getCurrentQueue eq producer_queue)
+    assert(producer_queue.isExecuting)
     _full
   }
 
@@ -310,7 +310,7 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[
   def close = {
     if( !closed ) {
       closed=true
-      assert(getCurrentQueue eq producer_queue)
+      assert(producer_queue.isExecuting)
     }
   }
 

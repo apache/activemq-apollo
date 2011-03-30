@@ -18,11 +18,11 @@ package org.apache.activemq.apollo.broker.protocol
 
 import java.io.{IOException}
 import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
-import org.apache.activemq.apollo.util.ClassFinder
 import org.apache.activemq.apollo.broker.store.MessageRecord
 import org.apache.activemq.apollo.transport._
 import org.apache.activemq.apollo.broker.{Delivery, Message, BrokerConnection}
 import org.apache.activemq.apollo.dto.ConnectionStatusDTO
+import org.apache.activemq.apollo.util.{Log, ClassFinder}
 
 /**
  * <p>
@@ -58,11 +58,13 @@ trait Protocol extends ProtocolCodecFactory.Provider {
 
 }
 
+object ProtocolHandler extends Log
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait ProtocolHandler {
+  import ProtocolHandler._
 
   def protocol:String
 
@@ -75,6 +77,7 @@ trait ProtocolHandler {
   def create_connection_status = new ConnectionStatusDTO
 
   def on_transport_failure(error:IOException) = {
+    trace(error)
     connection.stop()
   }
 

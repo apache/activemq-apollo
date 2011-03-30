@@ -136,10 +136,9 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
 
   var server:Server = _
 
-
   override def toString: String = "jetty webserver"
 
-  protected val dispatch_queue = createQueue()
+  val dispatch_queue = createQueue()
 
   protected def _start(on_completed: Runnable) = Broker.BLOCKABLE_THREAD_POOL {
     this.synchronized {

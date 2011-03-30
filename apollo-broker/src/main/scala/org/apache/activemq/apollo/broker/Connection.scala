@@ -20,10 +20,10 @@ import _root_.java.io.{IOException}
 import _root_.java.lang.{String}
 import org.fusesource.hawtdispatch._
 import protocol.{ProtocolHandler}
-import org.apache.activemq.apollo.util.{Log, BaseService}
 import org.apache.activemq.apollo.filter.BooleanExpression
 import org.apache.activemq.apollo.transport.{TransportListener, DefaultTransportListener, Transport}
 import org.apache.activemq.apollo.dto.{DestinationDTO, ConnectionStatusDTO}
+import org.apache.activemq.apollo.util.{Dispatched, Log, BaseService}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -32,7 +32,7 @@ object Connection extends Log
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract class Connection() extends BaseService  {
+abstract class Connection() extends BaseService with Dispatched {
   import Connection._
 
   val dispatch_queue = createQueue()
@@ -99,20 +99,24 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
   override def toString = "id: "+id.toString
 
   protected override  def _start(on_completed:Runnable) = {
-    connector.broker.connection_log.info("Client connected from: %s", transport.getRemoteAddress)
     protocol_handler.set_connection(this);
     super._start(on_completed)
   }
 
   protected override def _stop(on_completed:Runnable) = {
-    connector.broker.connection_log.info("Client disconnected from: %s", transport.getRemoteAddress)
     connector.stopped(this)
     super._stop(on_completed)
   }
 
-  protected override def on_transport_connected() = protocol_handler.on_transport_connected
+  protected override def on_transport_connected() = {
+    connector.broker.connection_log.info("connected: %s", transport.getRemoteAddress)
+    protocol_handler.on_transport_connected
+  }
 
-  protected override def on_transport_disconnected() = protocol_handler.on_transport_disconnected
+  protected override def on_transport_disconnected() = {
+    connector.broker.connection_log.info("disconnected: %s", transport.getRemoteAddress)
+    protocol_handler.on_transport_disconnected
+  }
 
   protected override def on_transport_command(command: Object) = {
     try {
