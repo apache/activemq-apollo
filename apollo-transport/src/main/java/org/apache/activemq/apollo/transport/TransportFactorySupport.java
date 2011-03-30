@@ -33,8 +33,6 @@ public class  TransportFactorySupport {
 
 
     static public Transport configure(Transport transport, Map<String, String> options) throws IOException {
-        ProtocolCodec wf = createProtocolCodec(options);
-        transport.setProtocolCodec(wf);
         IntrospectionSupport.setProperties(transport, options);
         return transport;
     }
@@ -49,51 +47,6 @@ public class  TransportFactorySupport {
             throw new IllegalArgumentException("Invalid connect parameters: " + options);
         }
         return transport;
-    }
-
-    static public ProtocolCodec createProtocolCodec(Map<String, String> options) throws IOException {
-        ProtocolCodecFactory.Provider factory = createProtocolCodecFactory(options);
-        if( factory == null ) {
-            return null;
-        }
-        ProtocolCodec protocolCodec = factory.createProtocolCodec();
-        return protocolCodec;
-    }
-
-    static public ProtocolCodecFactory.Provider createProtocolCodecFactory(Map<String, String> options) throws IOException {
-        String protocolName = (String)options.remove("protocol");
-        if (protocolName == null) {
-            protocolName = getDefaultProtocolName();
-        }
-        if( "null".equals(protocolName) ) {
-            return null;
-        }
-        ProtocolCodecFactory.Provider provider = ProtocolCodecFactory.get(protocolName);
-        if( provider==null ) {
-            throw new IOException("Could not create protocol codec for: " + protocolName );
-        }
-        
-        return provider;
-    }
-
-    static public ProtocolCodecFactory.Provider createProtocolCodecFactory(String location) throws IOException, URISyntaxException {
-        URI uri = new URI(location);
-        Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
-
-        String protocolName = uri.getPath();
-        if( "null".equals(protocolName) ) {
-            return null;
-        }
-
-        ProtocolCodecFactory.Provider provider = ProtocolCodecFactory.get(protocolName);
-        if( provider==null ) {
-            throw new IOException("Could not create protocol codec for: " + protocolName);
-        }
-        return provider;
-    }
-
-    static protected String getDefaultProtocolName() {
-        return "stomp";
     }
 
     @Override
