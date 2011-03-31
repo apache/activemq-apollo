@@ -31,7 +31,7 @@ trait Dispatched {
   protected def assert_executing = assert( dispatch_queue.isExecuting,
     "Dispatch queue '%s' was not executing, (currently executing: %s)".format(
       Option(dispatch_queue.getLabel).getOrElse(""),
-      Option(getCurrentThreadQueue).map(_.getLabel).getOrElse("None") )
+      Option(getCurrentQueue).map(_.getLabel).getOrElse("None") )
   )
 
 }
