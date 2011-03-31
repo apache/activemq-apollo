@@ -15,26 +15,27 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-scala</artifactId>
-    <version>1.0-beta1</version>
+    <version>1.0-SNAPSHOT</version>
     <relativePath>../apollo-scala</relativePath>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-broker</artifactId>
-  <version>1.0-beta1</version>
+  <version>1.0-SNAPSHOT</version>
   <packaging>bundle</packaging>
 
   <name>${project.artifactId}</name>
 
   <properties>
-    <osgi.fragment.host />
+    <osgi.fragment.host></osgi.fragment.host>
   </properties>
 
   <dependencies>
@@ -42,17 +43,17 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-dto</artifactId>
-      <version>1.0-beta1</version>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-transport</artifactId>
-      <version>1.0-beta1</version>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-selector</artifactId>
-      <version>1.0-beta1</version>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
@@ -125,14 +126,14 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-util</artifactId>
-      <version>1.0-beta1</version>
+      <version>1.0-SNAPSHOT</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-transport</artifactId>
-      <version>1.0-beta1</version>
+      <version>1.0-SNAPSHOT</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
