@@ -173,9 +173,9 @@
   </modules>
 
   <scm>
-    <connection>scm:svn:https://svn.apache.org/repos/asf/activemq/sandbox/apollo-flow</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/activemq/sandbox/apollo-flow</developerConnection>
-    <url>http://svn.apache.org/viewvc/activemq/sandbox/apollo-flow/</url>
+    <connection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-apollo/trunk</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-apollo/trunk</developerConnection>
+    <url>http://svn.apache.org/viewvc/activemq/activemq-apollo/trunk/</url>
   </scm>
 
   <dependencyManagement>
