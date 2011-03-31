@@ -164,13 +164,18 @@ class MutableSink[T] extends Sink[T] {
 
   def downstream = _downstream
 
+  /**
+   * When the downstream sink is not set, then the sink
+   * is considered full otherwise it's full if the downstream
+   * sink is full.
+   */
   def full = _downstream.map(_.full).getOrElse(true)
 
   /**
-   * @return true always even when full since those messages just get stored in a
-   *         overflow list
+   * If the downstream is not set, then this returns false, otherwise
+   * it true.
    */
-  def offer(value:T) = ! _downstream.map(_.offer(value)).getOrElse(false)
+  def offer(value:T) = _downstream.map(x=> x.offer(value)).getOrElse(false)
 }
 
 
