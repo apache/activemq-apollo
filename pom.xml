@@ -531,6 +531,7 @@
                 <exclude>src/main/filtered-resources/org/apache/activemq/apollo/cli/banner.txt</exclude>
                 <exclude>src/main/filtered-resources/org/apache/activemq/apollo/cli/commands/version.txt</exclude>
                 <exclude>src/main/filtered-resources/org/apache/activemq/apollo/cli/tips.txt</exclude>
+                <exclude>src/main/filtered-resources/org/apache/activemq/apollo/broker/version.txt</exclude>
 
               </excludes>
               <useDefaultExcludes>false</useDefaultExcludes>
