@@ -57,8 +57,8 @@
 
   <web_admin bind="http://127.0.0.1:61680"/>
 
-  <connector id="tcp" bind="tcp://[::]:61613" connection_limit="2000"/>
-  <connector id="tls" bind="tls://[::]:61614" connection_limit="2000"/>
+  <connector id="tcp" bind="tcp://0.0.0.0:61613" connection_limit="2000"/>
+  <connector id="tls" bind="tls://0.0.0.0:61614" connection_limit="2000"/>
 
   <key_storage file="${apollo.base}/etc/keystore" password="password" key_password="password"/>
 

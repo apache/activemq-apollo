@@ -27,6 +27,6 @@
   </virtual_host>
 
   <web_admin bind="http://127.0.0.1:61680"/>
-  <connector id="tcp" protocol="stomp" bind="tcp://[::]:0"/>
+  <connector id="tcp" protocol="stomp" bind="tcp://0.0.0.0:0"/>
 
 </broker>

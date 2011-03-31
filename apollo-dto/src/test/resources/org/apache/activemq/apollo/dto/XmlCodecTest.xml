@@ -33,7 +33,7 @@
     <durable_subscription name="durable_subscription1"/>
 
   </virtual_host>
-  <connector bind="tcp://[::]:61616" enabled="true" id="port-61616">
+  <connector bind="tcp://0.0.0.0:61616" enabled="true" id="port-61616">
     <stomp add_user_header="JMSXUserID">
       <add_user_header>GroupId</add_user_header>
       <add_user_header kind="UserPrincipal">UserId</add_user_header>

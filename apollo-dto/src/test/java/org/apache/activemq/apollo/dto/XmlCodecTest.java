@@ -81,7 +81,7 @@ public class XmlCodecTest {
 
         ConnectorDTO connector = new ConnectorDTO();
         connector.id = "port-61616";
-        connector.bind = "tcp://[::]:61616";
+        connector.bind = "tcp://0.0.0.0:61616";
         broker.connectors.add(connector);
 
         XmlCodec.encode(broker, System.out, true);

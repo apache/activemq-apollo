@@ -82,7 +82,7 @@ single connector.
     <host_name>localhost</host_name>
   </virtual_host>
 
-  <connector id="tcp" bind="tcp://[::]:61613"/>
+  <connector id="tcp" bind="tcp://0.0.0.0:61613"/>
   
 </broker>
 {pygmentize}
@@ -118,7 +118,7 @@ header of messages to the id of user that sent the message, you would
 use the following configuration:
 
 {pygmentize:: xml}
-<connector id="tcp" bind="tcp://[::]:61613">
+<connector id="tcp" bind="tcp://0.0.0.0:61613">
   <stomp add_user_header="user_id"/>
 </connector>
 {pygmentize}
@@ -391,7 +391,7 @@ Example:
      file="${apollo.base}/etc/keystore" 
      password="password" 
      key_password="password"/>
-  <connector id="tls" bind="tls://[::]:61614"/>
+  <connector id="tls" bind="tls://0.0.0.0:61614"/>
   ...
 {pygmentize}
 
@@ -438,7 +438,7 @@ to `false`.
     <host_name>cheeze.com</host_name>
   </virtual_host>
 
-  <connector id="tcp" bind="tcp://[::]:61613"/>
+  <connector id="tcp" bind="tcp://0.0.0.0:61613"/>
 </broker>
 {pygmentize}
 

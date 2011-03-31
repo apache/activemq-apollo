@@ -21,5 +21,5 @@
         <host_name>localhost</host_name>
         <bdb_store directory="${apollo.base}/data" flush_delay="100"/>
     </virtual_host>
-    <connector protocol="multi" bind="tcp://[::]:61613" id="default"/>
+    <connector protocol="multi" bind="tcp://0.0.0.0:61613" id="default"/>
 </broker>

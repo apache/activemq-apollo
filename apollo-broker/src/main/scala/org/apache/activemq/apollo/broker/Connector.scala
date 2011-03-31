@@ -41,7 +41,7 @@ object Connector extends Log {
   def defaultConfig() = {
     val rc = new ConnectorDTO
     rc.id = "default"
-    rc.bind = "tcp://[::]:61613"
+    rc.bind = "tcp://0.0.0.0:61613"
     rc.protocol = "multi"
     rc.connection_limit = 1000
     rc

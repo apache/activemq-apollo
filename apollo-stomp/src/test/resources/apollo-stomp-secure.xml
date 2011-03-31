@@ -57,7 +57,7 @@
     </queue>
   </virtual_host>
 
-  <connector id="tcp" protocol="stomp" bind="tcp://[::]:0">
+  <connector id="tcp" protocol="stomp" bind="tcp://0.0.0.0:0">
     <stomp add_user_header="JMSXUserID"/>
   </connector>
 
