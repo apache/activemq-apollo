@@ -74,6 +74,30 @@ object FileSupport {
       }
     }
 
+    def read_text(charset:String="UTF-8"): String = {
+      using(new FileInputStream(self)) { in =>
+        FileSupport.read_text(in, charset)
+      }
+    }
+
+    def read_bytes: Array[Byte] = {
+      using(new FileInputStream(self)) { in =>
+        FileSupport.read_bytes(in)
+      }
+    }
+
+    def write_bytes(data:Array[Byte]):Unit = {
+      using(new FileOutputStream(self)) { out =>
+        FileSupport.write_bytes(out, data)
+      }
+    }
+
+    def write_text(data:String, charset:String="UTF-8"):Unit = {
+      using(new FileOutputStream(self)) { out =>
+        FileSupport.write_text(out, data, charset)
+      }
+    }
+
   }
 
   /**
@@ -100,9 +124,21 @@ object FileSupport {
   }
 
   def read_text(in: InputStream, charset:String="UTF-8"): String = {
+    new String(read_bytes(in), charset)
+  }
+
+  def read_bytes(in: InputStream): Array[Byte] = {
     val out = new ByteArrayOutputStream()
     copy(in, out)
-    new String(out.toByteArray, charset)
+    out.toByteArray
+  }
+
+  def write_text(out: OutputStream, value: String, charset:String="UTF-8"): Unit = {
+    write_bytes(out, value.getBytes(charset))
+  }
+
+  def write_bytes(out: OutputStream, data: Array[Byte]): Unit = {
+    copy(new ByteArrayInputStream(data), out)
   }
 
 }

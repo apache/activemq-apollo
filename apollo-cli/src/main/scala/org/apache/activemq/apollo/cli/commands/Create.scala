@@ -118,6 +118,18 @@ class Create extends Action {
       val tmp = directory / "tmp"
       log.mkdirs
 
+      val home = new File(System.getProperty("apollo.home"))
+
+      println("Make sure the following directory is on your path: ")
+      println("")
+      println("   %s/bin".format((home / "bin").getCanonicalPath))
+      println("")
+      println("Then run the broker by executing:  ")
+      println("")
+      println("   %s run".format((bin/"apollo-broker").getCanonicalPath))
+      println("")
+
+
     } catch {
       case x:Helper.Failure=>
         println(ansi.a(INTENSITY_BOLD).fg(RED).a("ERROR: ").reset.a(x.getMessage))

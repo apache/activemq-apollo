@@ -1,4 +1,0 @@
-Hit '[1m<tab>[0m' for a list of available commands
-   and '[1m[cmd] --help[0m' for help on a specific command.
-Run '[1mexit[0m' to exit the shell.
-
