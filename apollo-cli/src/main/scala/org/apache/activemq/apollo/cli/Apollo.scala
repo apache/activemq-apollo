@@ -42,10 +42,18 @@ object Apollo {
   def ANSI(value:Any) =  "\u001B["+value+"m"
   val BOLD =  ANSI(1)
   val RESET = ANSI(0)
-  
-  def print_banner(out: PrintStream) = using(getClass().getResourceAsStream("banner.txt")) { source=>
-    copy(source, out)
+
+  var banner_displayed = false
+
+  def print_banner(out: PrintStream) = {
+    if( !banner_displayed ) {
+      using(getClass().getResourceAsStream("banner.txt")) { source=>
+        copy(source, out)
+      }
+      banner_displayed = true
+    }
   }
+
   def print_tips(out: PrintStream) = using(getClass().getResourceAsStream("tips.txt")) { source=>
     copy(source, out)
   }
@@ -61,13 +69,26 @@ class Apollo extends Main with Action {
 
   var debug = false
 
-  override def getDiscoveryResource = "META-INF/services/org.apache.activemq.apollo/commands.index"
+  val is_apollo_broker = System.getProperty("apollo.base")!=null
+
+  override def getDiscoveryResource = {
+    if( is_apollo_broker ) {
+      "META-INF/services/org.apache.activemq.apollo/apollo-broker-commands.index"
+    } else {
+      "META-INF/services/org.apache.activemq.apollo/apollo-commands.index"
+    }
+
+  }
 
   override def isMultiScopeMode() = false
 
   protected override def createConsole(impl: CommandProcessorImpl, in: InputStream, out: PrintStream, err: PrintStream, terminal: Terminal)  = {
     new Console(impl, in, out, err, terminal, null) {
-      protected override def getPrompt = BOLD+"apollo> "+RESET
+      protected override def getPrompt = if (is_apollo_broker) {
+        BOLD+"apollo-broker> "+RESET
+      } else {
+        BOLD+"apollo> "+RESET
+      }
       protected override def isPrintStackTraces = debug
       protected override def welcome = {
         print_banner(session.getConsole)

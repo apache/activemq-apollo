@@ -41,9 +41,8 @@ echo.
 
 :RUN_JAVA
 
-if "%APOLLO_BASE%" == "" set APOLLO_BASE=%APOLLO_HOME%
-
-set CLASSPATH=%APOLLO_BASE%\etc
+set CLASSPATH=
+if NOT "x%APOLLO_BASE%" == "x" set CLASSPATH=%APOLLO_BASE%\etc
 
 rem if not exist "%APOLLO_HOME%\lib\patches" goto NO_LIB_PATCHES
 rem for %%i in ("%APOLLO_HOME%\lib\patches\*.jar") do call :ADD_CLASSPATH %%i
@@ -69,14 +68,14 @@ if "%JMX_OPTS%" == "" set JMX_OPTS=-Dcom.sun.management.jmxremote
 rem set JMX_OPTS=-Dcom.sun.management.jmxremote.port=1099 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false
 set JVM_FLAGS=%JVM_FLAGS% %JMX_OPTS%
 
-set JUL_CONFIG_FILE=%APOLLO_BASE%\etc\jul.properties
+set JUL_CONFIG_FILE=%APOLLO_HOME%\etc\jul.properties
+
 
 set JVM_FLAGS=%JVM_FLAGS% -Dapollo.home="%APOLLO_HOME%" 
-set JVM_FLAGS=%JVM_FLAGS% -Dapollo.base="%APOLLO_BASE%"
+if NOT "x%APOLLO_BASE%" == "x" set JVM_FLAGS=%JVM_FLAGS% -Dapollo.base="%APOLLO_BASE%"
 set JVM_FLAGS=%JVM_FLAGS% -Djava.util.logging.config.file="%JUL_CONFIG_FILE%"
 set JVM_FLAGS=%JVM_FLAGS% -classpath "%CLASSPATH%"
 
-rem echo "%_JAVACMD%" %JVM_FLAGS%  org.apache.activemq.apollo.cli.Apollo %*
 "%_JAVACMD%" %JVM_FLAGS%  org.apache.activemq.apollo.cli.Apollo %*
 
 :END
