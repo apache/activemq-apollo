@@ -16,6 +16,19 @@
 # limitations under the License.
 # ------------------------------------------------------------------------
 
+# Not all shells support the 'exec -a newname' syntax..
+`exec -a test echo test 2> /dev/null`
+if [ "$?" -eq "1" ] ; then
+  EXEC="exec -a apollo"
+else
+  # Lets switch to bash if you have it installed...
+  if [ -f "/bin/bash" ] ; then
+    exec "/bin/bash" $0 $@ 
+  else
+    EXEC="exec"
+  fi
+fi
+
 # OS specific support.
 cygwin=false;
 darwin=false;
@@ -148,4 +161,4 @@ fi
 # Attempt to bump up the ulimit 
 ulimit -n 100000 > /dev/null 2> /dev/null
 
-exec -a apollo "$JAVACMD" ${JVM_FLAGS} ${SYSTEM_PROPS} -classpath "${CLASSPATH}" org.apache.activemq.apollo.cli.Apollo $@
+${EXEC} "$JAVACMD" ${JVM_FLAGS} ${SYSTEM_PROPS} -classpath "${CLASSPATH}" org.apache.activemq.apollo.cli.Apollo $@
