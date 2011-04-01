@@ -33,7 +33,7 @@ dependencies between modules.
 *Required:*
 
 * Java 1.6
-* Download and [install Maven](http://maven.apache.org/download.html)
+* Download and [install Maven 3](http://maven.apache.org/download.html)
 * Get the latest [source](source.html)
 
 ### Maven options
@@ -44,11 +44,7 @@ To build ${project_name} maven has to be configured to use more memory
 
 ### A normal build
 
-    mvn install -P download
-
-The last argument, **-P download**, is optional and typically only used on
-the first build as it adds some extra repos to the project just in case
-our dependencies have not quite reached the central Maven repository yet.
+    mvn -P download install
 
 Once the build completes, you will find the binary distribution of 
 ${project_name} located in the `apollo-distro/target` directory.
@@ -59,18 +55,18 @@ ${project_name} located in the `apollo-distro/target` directory.
 The following avoids running all the unit test cases, we just skip the
 test running phase and not the building part
 
-    mvn -Dtest=false clean install
+    mvn -P download -Dtest=false install
 
 ### Using an IDE
 
 If you prefer to use an IDE then you can auto-generate the IDE's project
 files using maven plugins. e.g.
 
-    mvn eclipse:eclipse
+    mvn -P download eclipse:eclipse
   
 or
 
-    mvn idea:idea
+    mvn -P download idea:idea
 
 ### Importing into Eclipse
 
@@ -83,7 +79,7 @@ on Windows).
 
 You can also get Maven to do this for you:
 
-    mvn eclipse:add-maven-repo -Declipse.workspace=/path/to/the/workspace/ 
+    mvn -P download eclipse:add-maven-repo -Declipse.workspace=/path/to/the/workspace/ 
 
 ### See Also
 
