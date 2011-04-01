@@ -1,0 +1,82 @@
+---
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+title: Download
+in_menu: true
+sort_info: 5
+--- name:overview
+
+# ${project_name}
+Download it today!
+
+--- name:content pipeline:jade
+
+
+.left
+  :markdown
+    # Binary Distributions
+.right
+  :&markdown
+    These are the officially supported prebuilt binary versions of #{project_name}.  You just need a JVM installed on your OS to run these distributions.
+  - for( version <- project_versions )
+    :&markdown
+      ## [#{project_name} #{version}](blog/releases/release-#{version.replace('.','-')}.html)
+      
+      * [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html)
+      * [apache-apollo-#{version}-unix-distro.tar.gz](https://repository.apache.org/content/groups/public/org/apache/activemq/apache-apollo/#{version}/apache-apollo-#{version}-unix-distro.tar.gz) for Unix/Linux/OS X users.
+      * [apache-apollo-#{version}-windows-distro.zip](https://repository.apache.org/content/groups/public/org/apache/activemq/apache-apollo/#{version}/apache-apollo-#{version}-windows-distro.zip) for Windows users.
+
+.left
+  :markdown
+    # Nighty Snapshots
+.right
+  :&markdown
+
+    Want to help stablize the latest and greatest nightly development
+    build?  **Warnning**: These builds are extremely bleeding edge!
+
+    ### #{project_name} #{project_snapshot_version}
+    
+    * [Installation Instructions](${website_base_url}/versions/#{project_snapshot_version}/website/documentation/getting-started.html)
+    * [apache-apollo-#{project_snapshot_version}-unix-distro.tar.gz](http://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=tar.gz&c=unix-distro) for Unix/Linux/OS X users.
+    * [apache-apollo-#{project_snapshot_version}-windows-distro.zip](https://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=zip&c=windows-distro) for Windows users.
+      
+.left
+  :markdown
+    # Source Code Distributions
+
+.right
+  :&markdown
+  
+    Some hard core folks prefer to build the binary distributions directly from the source code:
+
+  - for( version <- project_versions )
+    :&markdown
+      ### [#{project_name} #{version}](blog/releases/release-#{version.replace('.','-')}.html)
+      
+      * [Build Instructions](${website_base_url}/versions/${version}/website/community/building.html)
+      * [apollo-project-#{version}-source-release.tar.gz](https://repository.apache.org/content/groups/public/org/apache/activemq/apollo-project/#{version}/apollo-project-#{version}-source-release.tar.gz) for Unix/Linux/OS X users.
+      * [apollo-project-#{version}source-release.zip](https://repository.apache.org/content/groups/public/org/apache/activemq/apollo-project/#{version}/apollo-project-#{version}-source-release.zip) for Windows users.
+
+.left
+  :markdown
+    # Latest Source Code
+
+.right
+  :&markdown
+  
+    The latest source coe should be directly checked out from our [source code repository](community/source.html)
+

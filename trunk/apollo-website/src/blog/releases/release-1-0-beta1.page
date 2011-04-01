@@ -1,0 +1,54 @@
+---
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+blog_post: true
+title: Apollo 1.0 Beta 1 Released
+author: Hiram Chirino
+author_url: http://hiramchirino.com
+created_at: 2010-04-06 12:06:40 -0000
+--- 
+
+The [Apache ActiveMQ Project](http://activemq.apache.org) is pleased to announce the 
+availability of Apollo 1.0 Beta 1. ActiveMQ Apollo is a faster, more reliable, easier 
+to maintain messaging broker built from the foundations of the original ActiveMQ. It is
+focused on being the fastest most reliable STOMP 1.1 server available.
+
+This Beta release features:
+
+* [Stomp 1.0](http://stomp.github.com/stomp-specification-1.0.html) Protocol
+  Support
+* [Stomp 1.1](http://stomp.github.com/stomp-specification-1.1.html) Protocol
+  Support
+* [Topics and Queues](${website_base_url}/documentation/user-manual.html#Destination_Types)
+* [Queue Browsers](${website_base_url}/documentation/user-manual.html#Browsing_Subscriptions)
+* [Durable Subscriptions on Topics](${website_base_url}/documentation/user-manual.html#Topic_Durable_Subscriptions)
+* [Reliable Messaging](${website_base_url}/documentation/user-manual.html#Reliable_Messaging)
+* Message swapping
+* [Message Selectors](${website_base_url}/documentation/user-manual.html#Message_Selectors)
+* [JAAS Authentication](${website_base_url}/documentation/user-manual.html#Authentication)
+* [ACL Authorization](${website_base_url}/documentation/user-manual.html#Authorization)
+* [SSL/TLS Support](${website_base_url}/documentation/user-manual.html#Using_SSL_TLS)
+* REST based management
+
+Further information:
+
+* [Download](http://activemq.apache.org/apollo/download.html)
+* [Documentation](http://activemq.apache.org/apollo/documentation)
+
+[Feedback](http://activemq.apache.org/community/index.html) is always welcome! 
+
+
+
