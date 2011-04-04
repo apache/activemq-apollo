@@ -23,6 +23,7 @@ import Buffer._
 import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.util.{OptionSupport, ClassFinder}
 import org.apache.activemq.apollo.util.path.Path
+import java.lang.String
 
 /**
  * <p>
@@ -92,6 +93,8 @@ trait QueueBinding {
   def destination:Path
 
   def config(host:VirtualHost):QueueDTO
+
+  override def toString: String = label
 }
 
 object QueueDomainQueueBinding extends QueueBinding.Provider {

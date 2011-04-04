@@ -30,6 +30,7 @@ import org.fusesource.hawtdispatch.{ListEventAggregator, DispatchQueue, BaseReta
 import OptionSupport._
 import security.SecurityContext
 import org.apache.activemq.apollo.dto.{DestinationDTO, QueueDTO}
+import java.lang.String
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -45,6 +46,11 @@ import Queue._
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched {
+
+  override def toString: String =  {
+    "Queue(id:%d, binding:%s)".format(id, binding)
+  }
+
 
   def virtual_host = router.virtual_host
 
