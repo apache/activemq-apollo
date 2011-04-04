@@ -22,8 +22,8 @@ import org.apache.activemq.apollo.broker.{Broker, ConfigStore, FileConfigStore}
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.cli.Apollo
-import org.apache.activemq.apollo.util.{Log, LoggingReporter}
 import org.apache.felix.service.command.CommandSession
+import org.apache.activemq.apollo.util.{ServiceControl, Log, LoggingReporter}
 
 /**
  * The apollo run command
@@ -89,6 +89,12 @@ class Run extends Action {
       broker.config = store.load(true)
       broker.tmp = tmp
       broker.start()
+
+      Runtime.getRuntime.addShutdownHook(new Thread(){
+        override def run: Unit = {
+          ServiceControl.stop(broker, "stopping broker")
+        }
+      })
 
       // wait forever...  broker will system exit.
       this.synchronized {
