@@ -30,6 +30,7 @@ count = 0
 
 conn.subscribe destination, { :ack =>"auto" }
 start = Time.now
+$stdout.print "Waiting for messages...\n"
 while true 
 	msg = conn.receive
 	if msg.command == "MESSAGE" 

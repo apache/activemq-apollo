@@ -54,7 +54,7 @@ $Conn->subscribe(
     id          => 0,
     ack         => "auto",
 );
-printf("subscribed to %s\n", $Option{destination});
+printf("Waiting for messages...\n");
 $Count = 0;
 $Run = 1;
 $Conn->wait_for_frames() while $Run;

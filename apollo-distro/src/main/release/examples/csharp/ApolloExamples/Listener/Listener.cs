@@ -46,6 +46,7 @@ namespace Apollo.Example
 	        DateTime start = DateTime.Now;
 	        long count = 0;
 	        
+			Console.WriteLine("Waiting for messages...");
 			while (true) 
 			{
 	            IMessage msg = consumer.Receive();

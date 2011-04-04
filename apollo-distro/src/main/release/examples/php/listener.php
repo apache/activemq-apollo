@@ -43,6 +43,7 @@ try {
   
   $start = now();
   $count = 0;
+  echo "Waiting for messages...\n";
   while(true) {
     $frame = $stomp->readFrame();
     if( $frame ) {
