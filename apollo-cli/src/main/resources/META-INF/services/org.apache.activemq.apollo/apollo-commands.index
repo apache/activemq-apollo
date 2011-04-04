@@ -15,5 +15,6 @@
 ## limitations under the License.
 ## ---------------------------------------------------------------------------
 org.apache.activemq.apollo.cli.commands.Exit
+org.apache.activemq.apollo.cli.commands.DashHelp
 org.apache.activemq.apollo.cli.commands.Help
 org.apache.activemq.apollo.cli.commands.Create
