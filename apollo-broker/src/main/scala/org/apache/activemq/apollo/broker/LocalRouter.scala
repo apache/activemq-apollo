@@ -508,11 +508,13 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   }
 
   protected def _stop(on_completed: Runnable) = {
-    val tracker = new LoggingTracker("router shutdown", virtual_host.console_log, dispatch_queue)
+//    val tracker = new LoggingTracker("router shutdown", virtual_host.console_log, dispatch_queue)
     queues_by_id.valuesIterator.foreach { queue=>
-      tracker.stop(queue)
+      queue.stop
+//      tracker.stop(queue)
     }
-    tracker.callback(on_completed)
+//    tracker.callback(on_completed)
+    on_completed.run
   }
 
 
