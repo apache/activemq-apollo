@@ -255,6 +255,8 @@ class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
     rc.flushed_message_counter = metric_flushed_message_counter
     rc.flushed_enqueue_counter = metric_flushed_enqueue_counter
 
+    rc.pending_stores = pendingStores.size
+
     callback(rc)
   }
 
