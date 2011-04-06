@@ -102,10 +102,10 @@ class Create extends Action {
 
       if( IS_WINDOWS ) {
         target = bin / "apollo-broker.cmd"
-        write("bin/apollo-broker.cmd", target)
+        write("bin/apollo-broker.cmd", target, true)
       } else {
         target = bin / "apollo-broker"
-        write("bin/apollo-broker", target)
+        write("bin/apollo-broker", target, true)
         setExecutable(target)
       }
 
@@ -162,6 +162,7 @@ class Create extends Action {
       if( filter ) {
         content = content.replaceAll(Pattern.quote("${host}"), Matcher.quoteReplacement(host))
         content = content.replaceAll(Pattern.quote("${version}"), Matcher.quoteReplacement(Broker.version))
+        content = content.replaceAll(Pattern.quote("${home}"), Matcher.quoteReplacement(System.getProperty("apollo.home")))
       }
 
       // and then writing out in the new target encoding.

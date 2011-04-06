@@ -46,6 +46,9 @@ if [ -z "$APOLLO_BASE" ] ; then
     
 fi
 
+if [ -z "$APOLLO_HOME" ] ; then
+  APOLLO_HOME=${home}
+fi
 
-exec apollo $@
+exec $APOLLO_HOME/bin/apollo $@
 
