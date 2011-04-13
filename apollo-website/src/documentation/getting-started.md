@@ -17,6 +17,8 @@
 -->
 # Getting Started Guide
 
+{:toc:2-5}
+
 This guide will help you install, setup and run an Apollo broker and validate
 that the broker is operating correctly.
 
@@ -37,37 +39,21 @@ text: Windows
 jar -xvf apache-apollo-${project_version}-windows-distro.zip
 {pygmentize_and_compare}
 
-3. Set your shell's `APOLLO_HOME` environment variable to
-   where the extracted `apache-apollo-${project_version}` directory 
-   is located.
-   
-4. Add the extracted `apache-apollo-${project_version}/bin` directory
-   to your shell's `PATH` environment variable.
+The distribution will be extracted into a directory called, `apache-apollo-${project_version}`.
+The rest of dis document will refer the full path to this directory as `${APOLLO_HOME}`.
 
-## Install the BDB library
-
-Apollo's most robust message store implementation is the BDB based message store.  
-Unfortunately, BDB cannot be redistributed by Apache.  It is highly recommended
-that you add it to your apollo installation. You can download it from Oracle at
-[je-4.1.6.jar](http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar) and
-then copy it into the `${APOLLO_HOME}/lib` directory.
-
-For those of you with curl installed, you can just run:
-
-    curl http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar > ${APOLLO_HOME}/lib/je-4.1.6.jar
-
-## Creating a Broker Instance
+### Creating a Broker Instance
 
 A broker instance is the directory containing all the configuration and runtime
 data such as logs and data files associated with a broker process.  It is recommended that
-you do *not* create the instance directory under the directory where the ${project_name} 
-distribution is installed.
+you do *not* create the instance directory under `${APOLLO_HOME}`.  This separation is
+encouraged so that you can more easily upgrade when the next version of Apollo is released.
 
 On unix systems, it is a common convention to store this kind of runtime data under 
 the `/var/lib` directory.  For example, to create an instance at '/var/lib/mybroker', run:
 
     cd /var/lib
-    apollo create mybroker
+    ${APOLLO_HOME}/bin/apollo create mybroker
 
 A broker instance directory will contain the following sub directories:
 
@@ -78,74 +64,20 @@ A broker instance directory will contain the following sub directories:
  * `tmp`: holds temporary files that are safe to delete between broker runs
 
 At this point you may want to adjust the default configuration located in
-etc directory.
+the `etc` directory.
 
-## Updating the Configuration to use BDB
 
-The default configuration used a jdbm2 based store.  It has known performance issues so
-it is recommend you change the configuration to use the BDB store instead.  To do that,
-just update the generated configuration by editing the `etc/apollo.xml` file and then
-replace `jdbm2_store` with `bdb_store`
-
-## Running a Broker Instance
+### Running a Broker Instance
 
 Assuming you created the broker instance under `/var/lib/mybroker` all you need
 to do start running the broker instance is execute:
 
     /var/lib/mybroker/bin/apollo-broker run
 
-## Verification
+Now that the broker is running, you can optionally run some of the included 
+examples to [verify](verification.html) the the broker is running properly.
 
-You can use the ruby examples included in the distribution to verify that the 
-broker is operating correctly.
-
-If you have not already done so, install the `stomp` Ruby gem.
-
-    gem install stomp
-
-Change to the `examples/ruby` directory that was included in the ${project_name} 
-distribution.  Then in a terminal window, run:
-
-{pygmentize_and_compare::}
------------------------------
-text: Unix/Linux/OS X
------------------------------
-cd ${APOLLO_HOME}/examples/ruby
-ruby listener.rb
------------------------------
-text: Windows
------------------------------
-cd %APOLLO_HOME%\examples\ruby
-ruby listener.rb
-{pygmentize_and_compare}
-
-Then in a separate terminal window, run:
-{pygmentize_and_compare::}
------------------------------
-text: Unix/Linux/OS X
------------------------------
-cd ${APOLLO_HOME}/examples/ruby
-ruby publisher.rb
------------------------------
-text: Windows
------------------------------
-cd %APOLLO_HOME%\examples\ruby
-ruby publisher.rb
-{pygmentize_and_compare}
-
-If everything is working well, the publisher should produce output similar to:
-
-    Sent 1000 messages
-    Sent 1000 messages
-    ...
-
-The consumer's output should look like:
-    
-    Received 1000 messages.
-    Received 2000 messages.
-    ...
-
-## Web Administration
+### Web Administration
 
 Apollo provides a simple web interface to monitor the status of the broker.  Once
 the admin interface will be accessible at:
@@ -153,3 +85,20 @@ the admin interface will be accessible at:
 * [http://127.0.0.1:61680/](http://127.0.0.1:61680/)
 
 The default login id and password is `admin` and `password`.
+
+## Installing Recommended Optional Features
+
+### Switching to the BDB Store
+
+Apollo's most fastest message store implementation is the BDB based message store.  
+Unfortunately, BDB cannot be redistributed by Apache.  It is highly recommended
+that you add it to your apollo installation. You can download it from Oracle at
+[je-4.1.6.jar](http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar) and
+then copy it into the `${APOLLO_HOME}/lib` directory.
+
+For those of you with curl installed, you can just run:
+
+    curl http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar > ${APOLLO_HOME}/lib/je-4.1.6.jar
+    
+Next, you need to update the configuration by editing the `etc/apollo.xml` file and
+replace `jdbm2_store` with `bdb_store`.
