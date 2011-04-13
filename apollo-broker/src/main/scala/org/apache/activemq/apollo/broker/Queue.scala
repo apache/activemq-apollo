@@ -674,7 +674,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * Dispatches this entry to the consumers and continues dispatching subsequent
    * entries as long as the dispatch results in advancing in their dispatch position.
    */
-  def run() = {
+  def run() = queue.dispatch_queue {
     var next = this;
     while( next!=null && next.dispatch) {
       next = next.getNext
@@ -1018,6 +1018,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     override def dispatch():Boolean = {
 
+      queue.assert_executing
+
       // Nothing to dispatch if we don't have subs..
       if( parked.isEmpty ) {
         return false
@@ -1328,7 +1330,7 @@ object Subscription extends Log
  * tracks the entries which the consumer has acquired.
  *
  */
-class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends DeliveryProducer {
+class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends DeliveryProducer with Dispatched {
   import Subscription._
 
   def dispatch_queue = queue.dispatch_queue
@@ -1501,6 +1503,11 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     acquired_size += entry.size
 
     def ack(sb:StoreUOW):Unit = {
+      assert_executing
+      if(!isLinked) {
+        warn("Internal protocol error: message delivery acked/nacked multiple times: "+entry.seq)
+        return
+      }
       // The session may have already been closed..
       if( session == null ) {
         return;
@@ -1539,6 +1546,11 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     }
 
     def nack:Unit = {
+      assert_executing
+      if(!isLinked) {
+        warn("Internal protocol error: message delivery acked/nacked multiple times: "+entry.seq)
+        return
+      }
       // The session may have already been closed..
       if( session == null ) {
         return;
