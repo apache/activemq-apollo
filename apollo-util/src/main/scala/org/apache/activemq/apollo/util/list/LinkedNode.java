@@ -60,11 +60,17 @@ public class LinkedNode<T extends LinkedNode<T>> {
         return prev;
     }
 
+    final private void assertLinked() {
+        assert  list!=null && !list.isEmpty() : "Node is not linked";
+    }
+
     final public boolean isHeadNode() {
+        assertLinked();
         return list.head == this;
     }
 
     final public boolean isTailNode() {
+        assertLinked();
         return list.head.prev == this;
     }
 
