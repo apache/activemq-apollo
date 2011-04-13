@@ -389,9 +389,13 @@ class Broker() extends BaseService {
       "%s %s (%s)".format(vm, version, vendor)
     }
 
+    val location_info = Option(System.getProperty("apollo.home")).map { home=>
+      " (at: "+new File(home).getCanonicalPath+")"
+    }.getOrElse("")
+
     console_log.info("OS     : %s", os)
     console_log.info("JVM    : %s", jvm)
-    console_log.info("Apollo : %s", Broker.version)
+    console_log.info("Apollo : %s%s", Broker.version, location_info)
 
   }
   private def check_file_limit:Unit = {
