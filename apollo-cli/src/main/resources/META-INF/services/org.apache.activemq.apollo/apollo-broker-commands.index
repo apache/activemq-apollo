@@ -15,7 +15,6 @@
 ## limitations under the License.
 ## ---------------------------------------------------------------------------
 org.apache.activemq.apollo.cli.commands.Exit
-org.apache.activemq.apollo.cli.commands.DashHelp
 org.apache.activemq.apollo.cli.commands.Help
 org.apache.activemq.apollo.cli.commands.Stop
 org.apache.activemq.apollo.cli.commands.Run
@@ -23,3 +22,5 @@ org.apache.activemq.apollo.cli.commands.Encrypt
 org.apache.activemq.apollo.cli.commands.Decrypt
 org.apache.activemq.apollo.cli.commands.StoreExport
 org.apache.activemq.apollo.cli.commands.StoreImport
+org.apache.activemq.apollo.cli.commands.DashHelp
+org.apache.activemq.apollo.cli.commands.Version

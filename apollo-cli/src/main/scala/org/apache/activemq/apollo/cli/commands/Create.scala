@@ -120,7 +120,7 @@ class Create extends Action {
 
       val home = new File(System.getProperty("apollo.home"))
 
-      println("Tou can now start the broker by executing:  ")
+      println("You can now start the broker by executing:  ")
       println("")
       println("   %s run".format((bin/"apollo-broker").getCanonicalPath))
       println("")
