@@ -120,11 +120,7 @@ class Create extends Action {
 
       val home = new File(System.getProperty("apollo.home"))
 
-      println("Make sure the following directory is on your path: ")
-      println("")
-      println("   %s/bin".format((home / "bin").getCanonicalPath))
-      println("")
-      println("Then run the broker by executing:  ")
+      println("Tou can now start the broker by executing:  ")
       println("")
       println("   %s run".format((bin/"apollo-broker").getCanonicalPath))
       println("")
@@ -162,7 +158,8 @@ class Create extends Action {
       if( filter ) {
         content = content.replaceAll(Pattern.quote("${host}"), Matcher.quoteReplacement(host))
         content = content.replaceAll(Pattern.quote("${version}"), Matcher.quoteReplacement(Broker.version))
-        content = content.replaceAll(Pattern.quote("${home}"), Matcher.quoteReplacement(System.getProperty("apollo.home")))
+        val home = new File(System.getProperty("apollo.home"))
+        content = content.replaceAll(Pattern.quote("${home}"), Matcher.quoteReplacement(home.getCanonicalPath))
       }
 
       // and then writing out in the new target encoding.
