@@ -674,7 +674,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * Dispatches this entry to the consumers and continues dispatching subsequent
    * entries as long as the dispatch results in advancing in their dispatch position.
    */
-  def run() = queue.dispatch_queue {
+  def run() = {
+    queue.assert_executing
     var next = this;
     while( next!=null && next.dispatch) {
       next = next.getNext
@@ -1371,7 +1372,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     assert(pos!=null)
 
     session = consumer.connect(this)
-    session.refiller = pos
+    session.refiller = dispatch_queue.runnable { pos.run }
     queue.head_entry ::= this
 
     queue.all_subscriptions += consumer -> this
@@ -1431,7 +1432,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     advanced_size += pos.size
 
     pos = value
-    session.refiller = pos
 
     if( tail_parked ) {
       tail_parkings += 0
@@ -1450,7 +1450,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     pos -= this
     value ::= this
     pos = value
-    session.refiller = value
     queue.dispatch_queue << value // queue up the entry to get dispatched..
   }
 
