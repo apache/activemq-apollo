@@ -43,6 +43,8 @@ object ApolloIDERunner  {
       val apollo_base = project_base / "apollo-cli" / "target" / "test-classes" / "example-broker"
       System.setProperty("apollo.base", apollo_base.getCanonicalPath)
     }
+    println("apollo.base=%s".format(System.getProperty("apollo.base")));
+
 
     // Setup where the web app resources are...
     if( System.getProperty("apollo.webapp") == null ) {
