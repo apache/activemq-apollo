@@ -183,8 +183,8 @@ class StompCodec extends ProtocolCodec {
   var write_direct:ZeroCopyBuffer = null
   var write_direct_pos = 0
 
-  def is_full = next_write_direct!=null || next_write_buffer.size() >= (write_buffer_size >> 2)
-  def is_empty = write_buffer.remaining() == 0 && write_direct==null
+  def full = next_write_direct!=null || next_write_buffer.size >= (write_buffer_size >> 1)
+  def is_empty = write_buffer.remaining == 0 && write_direct==null
 
   def setWritableByteChannel(channel: WritableByteChannel) = {
     this.write_channel = channel
@@ -197,7 +197,7 @@ class StompCodec extends ProtocolCodec {
 
 
   def write(command: Any):ProtocolCodec.BufferState =  {
-    if ( is_full) {
+    if ( full) {
       ProtocolCodec.BufferState.FULL
     } else {
       val was_empty = is_empty

@@ -177,7 +177,6 @@ public class TcpTransport extends JavaBaseService implements Transport {
     private DispatchSource writeSource;
 
     protected boolean useLocalHost = true;
-    protected boolean full = false;
 
     int max_read_rate;
     int max_write_rate;
@@ -478,7 +477,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
 
     public boolean full() {
-        return full;
+        return codec.full();
     }
 
     public boolean offer(Object command) {

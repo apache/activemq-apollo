@@ -26,6 +26,7 @@ import java.io.IOException
 import java.lang.String
 import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch._
+import org.apache.activemq.apollo.transport.ProtocolCodec.BufferState
 
 /**
  * <p>
@@ -122,9 +123,11 @@ class MultiProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec {
 
   def setWritableByteChannel(channel: WritableByteChannel) = {}
 
-  def write(value: Any) = throw new UnsupportedOperationException()
+  def write(value: Any) = ProtocolCodec.BufferState.FULL
 
-  def flush = ProtocolCodec.BufferState.EMPTY
+  def full: Boolean = true
+
+  def flush = ProtocolCodec.BufferState.FULL
 
   def getWriteCounter = 0L
 

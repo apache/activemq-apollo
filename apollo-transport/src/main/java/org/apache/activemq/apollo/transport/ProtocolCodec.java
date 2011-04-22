@@ -100,6 +100,12 @@ public interface ProtocolCodec {
     BufferState flush() throws IOException;
 
     /**
+     * Is the codec's buffer full?
+     * @return
+     */
+    boolean full();
+
+    /**
      * @return The number of bytes written.
      */
     public long getWriteCounter();
