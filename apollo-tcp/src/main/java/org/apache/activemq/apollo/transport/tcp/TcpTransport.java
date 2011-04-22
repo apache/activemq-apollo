@@ -477,7 +477,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
 
     public boolean full() {
-        return codec.full();
+        return codec==null || codec.full();
     }
 
     public boolean offer(Object command) {
