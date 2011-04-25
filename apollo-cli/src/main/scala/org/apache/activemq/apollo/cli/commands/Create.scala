@@ -130,10 +130,24 @@ class Create extends Action {
       if( !IS_WINDOWS ) {
         val service = bin / "apollo-broker-service"
         println("")
-        println("Or you can setup the broker as system service and run it using:")
-        println("")
-        println("   sudo ln -s %s /etc/init.d/".format(service.getCanonicalPath))
-        println("   /etc/init.d/apollo-broker-service start")
+
+        // Does it look like we are on a System V init system?
+        if( new File("/etc/init.d/").isDirectory ) {
+
+
+          println("Or you can setup the broker as system service and run it in the background:")
+          println("")
+          println("   sudo ln -s %s /etc/init.d/".format(service.getCanonicalPath))
+          println("   /etc/init.d/apollo-broker-service start")
+
+        } else {
+
+          println("Or you can run the broker in the background using:")
+          println("")
+          println("   %s start".format(service.getCanonicalPath))
+
+        }
+
       }
       println("")
 
