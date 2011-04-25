@@ -53,77 +53,94 @@ fi
 
 PID_FILE="${APOLLO_BASE}/data/apollo.pid"
 
-stop() {
-    if [ -f ${PID_FILE} ] ; then
+status() {
+  if [ -f "${PID_FILE}" ] ; then
     pid=`cat "${PID_FILE}"`
-    kill $@ ${pid}
-
     # check to see if it's gone...
-    for i in 1 2 3 4 5 ; do
-      ps -p ${pid} > /dev/null
-      if [ $? -ne 0 ] ; then
-        rm "${PID_FILE}"
-        exit 0
-      fi
-      sleep 1
-    done
-
-    echo Could not stop process ${pid}
-    exit 1
+    ps -p ${pid} > /dev/null
+    if [ $? -eq 0 ] ; then
+      return 1
+    else
+      rm ${PID_FILE}
+    fi
   fi
+  return 0
+}
+
+stop() {
+  if [ -f "${PID_FILE}" ] ; then
+    pid=`cat "${PID_FILE}"`
+    kill $@ ${pid} > /dev/null
+  fi
+  for i in 1 2 3 4 5 ; do
+    status
+    if [ $? -eq 0 ] ; then
+      return 0
+    fi
+    sleep 1
+  done
+  echo Could not stop process ${pid}
+  return 1
 }
 
 start() {
+
+  status
+  if [ $? -eq 1 ] ; then
+    echo "Allready running."
+    return 1
+  fi
+
   if [ -z "$APOLLO_USER" ] ; then
     nohup ${APOLLO_BASE}/bin/apollo-broker run > /dev/null 2> /dev/null &
   else
-    sudo -u ${APOLLO_USER} nohup ${APOLLO_BASE}/bin/apollo-broker run > /dev/null 2> /dev/null &
+    sudo -n -u ${APOLLO_USER} nohup ${APOLLO_BASE}/bin/apollo-broker run > /dev/null 2> /dev/null &
   fi
-  rc=$?
-  if [ $rc -eq 0 ] ; then
-    echo $! > "${PID_FILE}"
-  else
-    exit $rc
+
+  echo $! > "${PID_FILE}"
+
+  # check to see if stays up...
+  sleep 1
+  status
+  if [ $? -eq 0 ] ; then
+    echo "Could not start ${service}"
+    return 1
   fi
+  return 0
 }
 
 case $1 in
   start)
     echo "Starting ${service}"
     start
+    exit $?
   ;;
 
   force-stop)
     echo "Forcibly Stopping ${service}"
     stop -9
-    exit 0
+    exit $?
   ;;
 
   stop)
     echo "Gracefully Stopping ${service}"
     stop
-    exit 0
+    exit $?
   ;;
 
   restart)
     echo "Restarting ${service}"
     stop
     start
-    exit 0
+    exit $?
   ;;
 
   status)
-    if [ -f ${PID_FILE} ] ; then
-      pid=`cat "${PID_FILE}"`
-      # check to see if it's gone...
-      ps -p ${pid} > /dev/null
-      if [[ $? -ne 0 ]] ; then
-        echo "${service} is stopped"
-      else
-        echo  "${service} is running"
-      fi
-    else
+    status
+    if [ $? -eq 0 ] ; then
       echo "${service} is stopped"
+    else
+      echo  "${service} is running"
     fi
     exit 0
   ;;
