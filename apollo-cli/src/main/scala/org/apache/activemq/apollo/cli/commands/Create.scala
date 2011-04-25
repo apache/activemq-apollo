@@ -107,6 +107,10 @@ class Create extends Action {
         target = bin / "apollo-broker"
         write("bin/apollo-broker", target, true)
         setExecutable(target)
+
+        target = bin / "apollo-broker-service"
+        write("bin/apollo-broker-service", target, true)
+        setExecutable(target)
       }
 
       val data = directory / "data"
@@ -123,6 +127,14 @@ class Create extends Action {
       println("You can now start the broker by executing:  ")
       println("")
       println("   %s run".format((bin/"apollo-broker").getCanonicalPath))
+      if( !IS_WINDOWS ) {
+        val service = bin / "apollo-broker-service"
+        println("")
+        println("Or you can setup the broker as system service and run it using:")
+        println("")
+        println("   sudo ln -s %s /etc/init.d/".format(service.getCanonicalPath))
+        println("   /etc/init.d/apollo-broker-service start")
+      }
       println("")
 
 
@@ -156,6 +168,7 @@ class Create extends Action {
       var content = new String(out.toByteArray, "UTF-8")
 
       if( filter ) {
+        content = content.replaceAll(Pattern.quote("${user}"), System.getProperty("user.name",""))
         content = content.replaceAll(Pattern.quote("${host}"), Matcher.quoteReplacement(host))
         content = content.replaceAll(Pattern.quote("${version}"), Matcher.quoteReplacement(Broker.version))
         val home = new File(System.getProperty("apollo.home"))
