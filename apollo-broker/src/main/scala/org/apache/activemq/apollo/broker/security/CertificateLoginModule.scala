@@ -31,6 +31,7 @@ import org.apache.activemq.apollo.util.{FileSupport, Log}
 import java.lang.String
 import org.apache.activemq.jaas.{UserPrincipal, CertificateCallback}
 import java.util.LinkedList
+import javax.security.auth.spi.LoginModule
 
 /**
  * <p>
@@ -50,7 +51,7 @@ object CertificateLoginModule {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class CertificateLoginModule {
+class CertificateLoginModule extends LoginModule {
 
   import CertificateLoginModule._
 
@@ -90,11 +91,15 @@ class CertificateLoginModule {
       case ioe: IOException =>
         throw new LoginException(ioe.getMessage())
       case uce: UnsupportedCallbackException =>
-        throw new LoginException(uce.getMessage() + " Unable to obtain client certificates.")
+        return false;
     }
 
     certificates = cert_callback.getCertificates()
-    if (certificates == null || certificates.isEmpty) {
+    if( certificates==null ) {
+      return false;
+    }
+
+    if (certificates.isEmpty) {
       throw new FailedLoginException("No associated certificates")
     }
 

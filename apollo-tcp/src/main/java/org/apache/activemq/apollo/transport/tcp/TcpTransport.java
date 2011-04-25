@@ -77,6 +77,12 @@ public class TcpTransport extends JavaBaseService implements Transport {
     }
 
     class CONNECTED extends SocketState {
+
+        public CONNECTED() {
+            localAddress = channel.socket().getLocalSocketAddress().toString();
+            remoteAddress = channel.socket().getRemoteSocketAddress().toString();
+        }
+
         void onStop(Runnable onCompleted) {
             trace("CONNECTED.onStop");
             CANCELING state = new CANCELING();
@@ -165,7 +171,6 @@ public class TcpTransport extends JavaBaseService implements Transport {
     protected URI remoteLocation;
     protected URI localLocation;
     protected TransportListener listener;
-    protected String remoteAddress;
     protected ProtocolCodec codec;
 
     protected SocketChannel channel;
@@ -181,6 +186,8 @@ public class TcpTransport extends JavaBaseService implements Transport {
     int max_read_rate;
     int max_write_rate;
     protected RateLimitingChannel rateLimitingChannel;
+    String localAddress;
+    String remoteAddress;
 
     class RateLimitingChannel implements ReadableByteChannel, WritableByteChannel {
 
@@ -316,7 +323,6 @@ public class TcpTransport extends JavaBaseService implements Transport {
         }
 
         this.channel.configureBlocking(false);
-        this.remoteAddress = channel.socket().getRemoteSocketAddress().toString();
         channel.socket().setSoLinger(true, 0);
         channel.socket().setTcpNoDelay(true);
 
@@ -440,8 +446,6 @@ public class TcpTransport extends JavaBaseService implements Transport {
             rateLimitingChannel = new RateLimitingChannel();
             schedualRateAllowanceReset();
         }
-
-        remoteAddress = channel.socket().getRemoteSocketAddress().toString();
         listener.onTransportConnected();
     }
 
@@ -566,6 +570,9 @@ public class TcpTransport extends JavaBaseService implements Transport {
         }
     }
 
+    public String getLocalAddress() {
+        return localAddress;
+    }
 
     public String getRemoteAddress() {
         return remoteAddress;

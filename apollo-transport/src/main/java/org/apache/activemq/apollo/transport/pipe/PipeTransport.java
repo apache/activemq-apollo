@@ -190,6 +190,10 @@ public class PipeTransport implements Transport {
         return readCounter;
     }
 
+    public String getLocalAddress() {
+        return remoteAddress;
+    }
+
     public String getRemoteAddress() {
         return remoteAddress;
     }

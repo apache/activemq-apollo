@@ -40,7 +40,7 @@ class AclAuthorizer(val default_kinds:List[String], val log:Log) extends Authori
   def log_result(ctx: SecurityContext, action: String, resource: =>String)(func: =>Boolean):Boolean = {
     val rc = func
     if( !rc ) {
-      info("authorization failed: action:%s, resource:%s, address: %s, principles: %s", action, resource, ctx.remote_address, ctx.principles.map(_.allow).mkString(",  ") )
+      info("authorization failed: local:%s, remote:%s, action:%s, resource:%s, principles:%s", ctx.local_address, ctx.remote_address, action, resource, ctx.principles.map(_.allow).mkString(",  ") )
     }
     rc
   }

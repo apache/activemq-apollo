@@ -90,6 +90,11 @@ public interface Transport extends Service {
     String getRemoteAddress();
 
     /**
+     * @return the remote address for this connection
+     */
+    String getLocalAddress();
+
+    /**
      * Indicates if the transport can handle faults
      * 
      * @return true if fault tolerant

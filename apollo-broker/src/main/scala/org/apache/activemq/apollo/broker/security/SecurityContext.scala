@@ -35,7 +35,8 @@ class SecurityContext {
 
   var user:String = _
   var password:String = _
-  var certificates = Array[X509Certificate]()
+  var certificates:Array[X509Certificate] = _
+  var local_address:String = _
   var remote_address:String = _
 
   var login_context:LoginContext = _

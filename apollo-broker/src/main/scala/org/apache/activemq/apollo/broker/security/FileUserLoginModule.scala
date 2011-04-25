@@ -101,7 +101,7 @@ class FileUserLoginModule extends LoginModule {
       case ioe: IOException =>
         throw new LoginException(ioe.getMessage())
       case uce: UnsupportedCallbackException =>
-        throw new LoginException(uce.getMessage() + " not available to obtain information from user")
+        return false;
     }
 
     val user = callbacks(0).asInstanceOf[NameCallback].getName()
@@ -115,7 +115,7 @@ class FileUserLoginModule extends LoginModule {
     val password = users.getProperty(user)
 
     if (password == null || !password.equals(new String(tmpPassword))) {
-      throw new FailedLoginException("Invalid user id or password")
+      throw new FailedLoginException("Invalid user id or password for user: "+user)
     }
 
     principals.add(new UserPrincipal(user))

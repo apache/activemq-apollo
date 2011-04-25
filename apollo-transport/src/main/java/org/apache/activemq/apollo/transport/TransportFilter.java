@@ -147,6 +147,10 @@ public class TransportFilter implements TransportListener, Transport {
         return next.getRemoteAddress();
     }
 
+    public String getLocalAddress() {
+        return next.getLocalAddress();
+    }
+
     /**
      * @return
      * @see Transport#isFaultTolerant()

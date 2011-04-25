@@ -109,12 +109,12 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
   }
 
   protected override def on_transport_connected() = {
-    connector.broker.connection_log.info("connected: %s", transport.getRemoteAddress)
+    connector.broker.connection_log.info("connected: local:%s, remote:%s", transport.getLocalAddress, transport.getRemoteAddress)
     protocol_handler.on_transport_connected
   }
 
   protected override def on_transport_disconnected() = {
-    connector.broker.connection_log.info("disconnected: %s", transport.getRemoteAddress)
+    connector.broker.connection_log.info("disconnected: local:%s, remote:%s", transport.getLocalAddress, transport.getRemoteAddress)
     protocol_handler.on_transport_disconnected
   }
 

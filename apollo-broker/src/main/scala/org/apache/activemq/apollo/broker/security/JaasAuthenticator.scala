@@ -102,7 +102,7 @@ class JaasAuthenticator(val config: AuthenticationDTO, val log:Log) extends Auth
       true
     } catch {
       case x: Exception =>
-        log.info("authentication failed. address:%s, reason:%s ", security_ctx.remote_address, x.getMessage)
+        log.info("authentication failed: local:%s, remote:%s, reason:%s ", security_ctx.local_address, security_ctx.remote_address, x.getMessage)
         false
     } finally {
       JaasAuthenticator._log.remove
