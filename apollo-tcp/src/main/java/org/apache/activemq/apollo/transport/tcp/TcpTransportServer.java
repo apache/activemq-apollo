@@ -30,7 +30,6 @@ import java.net.*;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -45,7 +44,7 @@ public class TcpTransportServer implements TransportServer {
     private final InetSocketAddress bindAddress;
 
     private int backlog = 100;
-    private Map<String, Object> transportOptions;
+    private Map<String, String> transportOptions;
 
     private ServerSocketChannel channel;
     private TransportAcceptListener listener;
@@ -185,37 +184,19 @@ public class TcpTransportServer implements TransportServer {
     }
 
     protected final void handleSocket(SocketChannel socket) throws Exception {
-        HashMap<String, Object> options = new HashMap<String, Object>();
-//      options.put("maxInactivityDuration", Long.valueOf(maxInactivityDuration));
-//      options.put("maxInactivityDurationInitalDelay", Long.valueOf(maxInactivityDurationInitalDelay));
-//      options.put("trace", Boolean.valueOf(trace));
-//      options.put("soTimeout", Integer.valueOf(soTimeout));
-//      options.put("socketBufferSize", Integer.valueOf(socketBufferSize));
-//      options.put("connectionTimeout", Integer.valueOf(connectionTimeout));
-//      options.put("dynamicManagement", Boolean.valueOf(dynamicManagement));
-//      options.put("startLogging", Boolean.valueOf(startLogging));
-
-        Transport transport = createTransport(socket, options);
-        listener.onAccept(transport);
-    }
-
-    protected Transport createTransport(SocketChannel socketChannel, HashMap<String, Object> options) throws Exception {
         TcpTransport transport = createTransport();
-        transport.connected(socketChannel);
-        if( options!=null ) {
-            IntrospectionSupport.setProperties(transport, options);
-        }
         if (transportOptions != null) {
             IntrospectionSupport.setProperties(transport, transportOptions);
         }
-        return transport;
+        transport.connected(socket);
+        listener.onAccept(transport);
     }
 
     protected TcpTransport createTransport() {
         return new TcpTransport();
     }
 
-    public void setTransportOption(Map<String, Object> transportOptions) {
+    public void setTransportOption(Map<String, String> transportOptions) {
         this.transportOptions = transportOptions;
     }
 

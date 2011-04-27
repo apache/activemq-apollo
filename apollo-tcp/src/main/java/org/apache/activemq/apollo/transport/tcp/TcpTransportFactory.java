@@ -50,8 +50,7 @@ public class TcpTransportFactory implements TransportFactory.Provider {
 
         Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
         IntrospectionSupport.setProperties(server, options);
-        Map<String, Object> transportOptions = IntrospectionSupport.extractProperties(options, "transport.");
-        server.setTransportOption(transportOptions);
+        server.setTransportOption(options);
         return server;
     }
 
