@@ -315,7 +315,6 @@ class StompCodec extends ProtocolCodec {
     this.read_channel = channel
     if( this.read_channel.isInstanceOf[SocketChannel] ) {
       read_buffer_size = this.read_channel.asInstanceOf[SocketChannel].socket().getReceiveBufferSize
-      read_buffer = ByteBuffer.allocate(read_buffer_size)
     }
   }
 
