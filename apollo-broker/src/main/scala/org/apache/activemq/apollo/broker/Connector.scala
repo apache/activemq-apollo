@@ -42,7 +42,7 @@ object Connector extends Log {
     val rc = new ConnectorDTO
     rc.id = "default"
     rc.bind = "tcp://0.0.0.0:61613"
-    rc.protocol = "multi"
+    rc.protocol = "any"
     rc.connection_limit = 1000
     rc
   }
@@ -150,7 +150,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
   override def _start(on_completed:Runnable) = {
     assert(config!=null, "Connector must be configured before it is started.")
-    protocol = ProtocolFactory.get(config.protocol.getOrElse("multi")).get
+    protocol = ProtocolFactory.get(config.protocol.getOrElse("any")).get
     transport_server = TransportFactory.bind( config.bind )
     transport_server.setDispatchQueue(dispatch_queue)
     transport_server.setAcceptListener(BrokerAcceptListener)

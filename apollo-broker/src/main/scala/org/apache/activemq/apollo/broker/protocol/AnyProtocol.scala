@@ -34,24 +34,24 @@ import org.apache.activemq.apollo.transport.ProtocolCodec.BufferState
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class MultiProtocolFactory extends ProtocolFactory.Provider {
+class AnyProtocolFactory extends ProtocolFactory.Provider {
 
   def all_protocols: Array[Protocol] = ((ProtocolFactory.provider.singletons.map(_.create())).filter(_.isIdentifiable)).toArray
 
   def create() = {
-    new MultiProtocol(()=>all_protocols)
+    new AnyProtocol(()=>all_protocols)
   }
 
   def create(config: String): Protocol = {
-    val MULTI = "multi"
-    val MULTI_PREFIXED = "multi:"
+    val MULTI = "any"
+    val MULTI_PREFIXED = "any:"
 
     if (config == MULTI) {
-      return new MultiProtocol(()=>all_protocols)
+      return new AnyProtocol(()=>all_protocols)
     } else if (config.startsWith(MULTI_PREFIXED)) {
       var names: Array[String] = config.substring(MULTI_PREFIXED.length).split(',')
       var protocols: Array[Protocol] = (names.flatMap {x => ProtocolFactory.get(x.trim)}).toArray
-      return new MultiProtocol(()=>protocols)
+      return new AnyProtocol(()=>protocols)
     }
     return null
   }
@@ -64,15 +64,15 @@ class MultiProtocolFactory extends ProtocolFactory.Provider {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class MultiProtocol(val func: ()=>Array[Protocol]) extends Protocol {
+class AnyProtocol(val func: ()=>Array[Protocol]) extends Protocol {
 
   lazy val protocols: Array[Protocol] = func()
 
-  def protocol = "multi"
+  def protocol = "any"
 
-  def createProtocolCodec = new MultiProtocolCodec(protocols)
+  def createProtocolCodec = new AnyProtocolCodec(protocols)
 
-  def createProtocolHandler = new MultiProtocolHandler
+  def createProtocolHandler = new AnyProtocolHandler
 
   def encode(message: Message) = throw new UnsupportedOperationException
 
@@ -86,7 +86,7 @@ class MultiProtocol(val func: ()=>Array[Protocol]) extends Protocol {
 
 }
 
-class MultiProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec {
+class AnyProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec {
 
   if (protocols.isEmpty) {
     throw new IllegalArgumentException("No protocol configured for identification.")
@@ -131,16 +131,16 @@ class MultiProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec {
 
   def getWriteCounter = 0L
 
-  def protocol = "multi"
+  def protocol = "any"
 
 }
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class MultiProtocolHandler extends ProtocolHandler {
+class AnyProtocolHandler extends ProtocolHandler {
 
-  def protocol = "multi"
+  def protocol = "any"
 
   var discriminated = false
 
@@ -160,13 +160,12 @@ class MultiProtocolHandler extends ProtocolHandler {
         throw new ProtocolException("No protocol handler available for protocol: " + protocol);
     }
 
-    protocol_handler.set_connection(connection);
-
-    // replace the current handler with the new one.
+     // replace the current handler with the new one.
     connection.protocol_handler = protocol_handler
     connection.transport.setProtocolCodec(codec)
-
     connection.transport.suspendRead
+
+    protocol_handler.set_connection(connection);
     protocol_handler.on_transport_connected
   }
 

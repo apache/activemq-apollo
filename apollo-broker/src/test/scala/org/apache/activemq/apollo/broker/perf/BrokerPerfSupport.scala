@@ -193,7 +193,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
 
   protected def createProducer(): RemoteProducer
 
-  def getBrokerProtocolName() = "multi"
+  def getBrokerProtocolName() = "any"
 
   def getRemoteProtocolName(): String
 
