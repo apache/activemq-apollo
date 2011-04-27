@@ -538,6 +538,11 @@ class StompProtocolHandler extends ProtocolHandler {
             "Supported protocol versions are %s".format(supported_versions))
     }
 
+    if( protocol_version != V1_0 ) {
+      // disable trimming...
+      connection.transport.getProtocolCodec.asInstanceOf[StompCodec].trim = false
+    }
+
     val heart_beat = get(headers, HEART_BEAT).getOrElse(DEFAULT_HEART_BEAT)
     heart_beat.split(COMMA).map(_.ascii) match {
       case Array(cx,cy) =>

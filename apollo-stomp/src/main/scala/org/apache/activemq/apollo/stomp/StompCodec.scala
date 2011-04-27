@@ -38,7 +38,6 @@ object StompCodec extends Log {
     val MAX_HEADER_LENGTH = 1024 * 10;
     val MAX_HEADERS = 1000;
     val MAX_DATA_LENGTH = 1024 * 1024 * 100;
-    val TRIM=true
     val SIZE_CHECK=false
 
 
@@ -111,11 +110,7 @@ object StompCodec extends Log {
     }
 
 
-    val action = if( TRIM ) {
-        read_line.trim()
-      } else {
-        read_line
-      }
+    val action = read_line
 
     val headers = new HeaderMapBuffer()
 
@@ -127,13 +122,7 @@ object StompCodec extends Log {
               throw new IOException("Header line missing seperator.")
           }
           var name = line.slice(0, seperatorIndex)
-          if( TRIM ) {
-              name = name.trim()
-          }
-          var value = line.slice(seperatorIndex + 1, line.length())
-          if( TRIM ) {
-              value = value.trim()
-          }
+          var value = line.slice(seperatorIndex + 1, line.length)
           headers.add((name, value))
       } catch {
           case e:Exception=>
@@ -322,6 +311,7 @@ class StompCodec extends ProtocolCodec {
   var read_direct_pos = 0
 
   var next_action:FrameReader = read_action
+  var trim = true
 
   def setReadableByteChannel(channel: ReadableByteChannel) = {
     this.read_channel = channel
@@ -422,7 +412,7 @@ class StompCodec extends ProtocolCodec {
     val line = read_line(buffer, MAX_COMMAND_LENGTH, "The maximum command length was exceeded")
     if( line !=null ) {
       var action = line
-      if( TRIM ) {
+      if( trim ) {
           action = action.trim()
       }
       if (action.length() > 0) {
@@ -436,7 +426,7 @@ class StompCodec extends ProtocolCodec {
     var rc:StompFrame = null
     val line = read_line(buffer, MAX_HEADER_LENGTH, "The maximum header length was exceeded")
     if( line !=null ) {
-      if( line.trim().length() > 0 ) {
+      if( line.trim().length > 0 ) {
 
         if (SIZE_CHECK && headers.size > MAX_HEADERS) {
             throw new IOException("The maximum number of headers was exceeded")
@@ -448,11 +438,11 @@ class StompCodec extends ProtocolCodec {
                 throw new IOException("Header line missing seperator [" + ascii(line) + "]")
             }
             var name = line.slice(0, seperatorIndex)
-            if( TRIM ) {
+            if( trim ) {
                 name = name.trim()
             }
             var value = line.slice(seperatorIndex + 1, line.length())
-            if( TRIM ) {
+            if( trim ) {
                 value = value.trim()
             }
             headers.add((ascii(name), ascii(value)))
