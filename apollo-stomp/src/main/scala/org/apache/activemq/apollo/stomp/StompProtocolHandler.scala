@@ -347,7 +347,16 @@ class StompProtocolHandler extends ProtocolHandler {
   override def set_connection(connection: BrokerConnection) = {
     super.set_connection(connection)
     import collection.JavaConversions._
+
+    val codec = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
     config = connection.connector.config.protocols.find( _.isInstanceOf[StompDTO]).map(_.asInstanceOf[StompDTO]).getOrElse(new StompDTO)
+
+    import OptionSupport._
+    config.max_command_length.foreach( codec.max_command_length = _ )
+    config.max_data_length.foreach( codec.max_data_length = _ )
+    config.max_header_length.foreach( codec.max_header_length = _ )
+    config.max_headers.foreach( codec.max_headers = _ )
+
   }
 
   override def create_connection_status = {

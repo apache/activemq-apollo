@@ -33,13 +33,6 @@ import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.broker.store.{ZeroCopyBuffer, ZeroCopyBufferAllocator, MessageRecord}
 
 object StompCodec extends Log {
-    val READ_BUFFFER_SIZE = 1024*64;
-    val MAX_COMMAND_LENGTH = 1024;
-    val MAX_HEADER_LENGTH = 1024 * 10;
-    val MAX_HEADERS = 1000;
-    val MAX_DATA_LENGTH = 1024 * 1024 * 100;
-    val SIZE_CHECK=false
-
 
   def encode(message: StompFrameMessage):MessageRecord = {
     val frame = message.frame
@@ -144,6 +137,11 @@ object StompCodec extends Log {
 class StompCodec extends ProtocolCodec {
 
   import StompCodec._
+
+  var max_command_length = 1024
+  var max_header_length = 1024*10
+  var max_headers = 1000
+  var max_data_length = 1024 * 1024 * 100
 
   var zero_copy_buffer_allocator:ZeroCopyBufferAllocator = null
 
@@ -316,7 +314,8 @@ class StompCodec extends ProtocolCodec {
   def setReadableByteChannel(channel: ReadableByteChannel) = {
     this.read_channel = channel
     if( this.read_channel.isInstanceOf[SocketChannel] ) {
-      this.read_channel.asInstanceOf[SocketChannel].socket().setReceiveBufferSize(read_buffer_size);
+      read_buffer_size = this.read_channel.asInstanceOf[SocketChannel].socket().getReceiveBufferSize
+      read_buffer = ByteBuffer.allocate(read_buffer_size)
     }
   }
 
@@ -391,7 +390,7 @@ class StompCodec extends ProtocolCodec {
     return command
   }
 
-  def read_line(buffer:ByteBuffer, maxLength:Int, errorMessage:String):Buffer = {
+  def read_line(buffer:ByteBuffer, max:Int, errorMessage:String):Buffer = {
       val read_limit = buffer.position
       while( read_end < read_limit ) {
         if( buffer.array()(read_end) =='\n') {
@@ -400,7 +399,7 @@ class StompCodec extends ProtocolCodec {
           read_start = read_end
           return rc
         }
-        if (SIZE_CHECK && read_end-read_start > maxLength) {
+        if (max != -1 && read_end-read_start > max) {
             throw new IOException(errorMessage)
         }
         read_end += 1
@@ -409,7 +408,7 @@ class StompCodec extends ProtocolCodec {
   }
 
   def read_action:FrameReader = (buffer)=> {
-    val line = read_line(buffer, MAX_COMMAND_LENGTH, "The maximum command length was exceeded")
+    val line = read_line(buffer, max_command_length, "The maximum command length was exceeded")
     if( line !=null ) {
       var action = line
       if( trim ) {
@@ -424,11 +423,11 @@ class StompCodec extends ProtocolCodec {
 
   def read_headers(action:AsciiBuffer, headers:HeaderMapBuffer=new HeaderMapBuffer()):FrameReader = (buffer)=> {
     var rc:StompFrame = null
-    val line = read_line(buffer, MAX_HEADER_LENGTH, "The maximum header length was exceeded")
+    val line = read_line(buffer, max_header_length, "The maximum header length was exceeded")
     if( line !=null ) {
       if( line.trim().length > 0 ) {
 
-        if (SIZE_CHECK && headers.size > MAX_HEADERS) {
+        if (max_headers != -1 && headers.size > max_headers) {
             throw new IOException("The maximum number of headers was exceeded")
         }
 
@@ -464,7 +463,7 @@ class StompCodec extends ProtocolCodec {
               throw new IOException("Specified content-length is not a valid integer")
           }
 
-          if (SIZE_CHECK && length > MAX_DATA_LENGTH) {
+          if (max_data_length != -1 && length > max_data_length) {
               throw new IOException("The maximum data length was exceeded")
           }
 
