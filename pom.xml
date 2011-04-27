@@ -498,6 +498,7 @@
       <modules>
         <module>apollo-cassandra</module>
         <module>apollo-hawtdb</module>
+        <module>apollo-openwire</module>
       </modules>
     </profile>
     
