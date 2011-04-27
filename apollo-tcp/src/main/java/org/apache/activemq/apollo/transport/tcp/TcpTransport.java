@@ -185,6 +185,16 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
     int max_read_rate;
     int max_write_rate;
+    int receive_buffer_size = 1024*64;
+
+
+    public static final int IPTOS_LOWCOST = 0x02;
+    public static final int IPTOS_RELIABILITY = 0x04;
+    public static final int IPTOS_THROUGHPUT = 0x08;
+    public static final int IPTOS_LOWDELAY = 0x10;
+
+    int traffic_class = IPTOS_THROUGHPUT;
+
     protected RateLimitingChannel rateLimitingChannel;
     String localAddress;
     String remoteAddress;
@@ -317,16 +327,37 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
     public void connected(SocketChannel channel) throws IOException, Exception {
         this.channel = channel;
+        initializeChannel();
 
         if( codec !=null ) {
             initializeCodec();
         }
-
-        this.channel.configureBlocking(false);
-        channel.socket().setSoLinger(true, 0);
-        channel.socket().setTcpNoDelay(true);
-
         this.socketState = new CONNECTED();
+    }
+
+    private void initializeChannel() throws IOException {
+        this.channel.configureBlocking(false);
+        Socket socket = channel.socket();
+        try {
+            socket.setReuseAddress(true);
+        } catch (SocketException e) {
+        }
+        try {
+            socket.setSoLinger(true, 0);
+        } catch (SocketException e) {
+        }
+        try {
+            socket.setTrafficClass(traffic_class);
+        } catch (SocketException e) {
+        }
+        try {
+            socket.setTcpNoDelay(true);
+        } catch (SocketException e) {
+        }
+        try {
+            socket.setReceiveBufferSize(receive_buffer_size);
+        } catch (SocketException e) {
+        }
     }
 
     protected void initializeCodec() {
@@ -336,7 +367,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
     public void connecting(URI remoteLocation, URI localLocation) throws IOException, Exception {
         this.channel = SocketChannel.open();
-        this.channel.configureBlocking(false);
+        initializeChannel();
         this.remoteLocation = remoteLocation;
         this.localLocation = localLocation;
 
@@ -742,4 +773,19 @@ public class TcpTransport extends JavaBaseService implements Transport {
         this.max_write_rate = max_write_rate;
     }
 
+    public int getTraffic_class() {
+        return traffic_class;
+    }
+
+    public void setTraffic_class(int traffic_class) {
+        this.traffic_class = traffic_class;
+    }
+
+    public int getReceive_buffer_size() {
+        return receive_buffer_size;
+    }
+
+    public void setReceive_buffer_size(int receive_buffer_size) {
+        this.receive_buffer_size = receive_buffer_size;
+    }
 }
