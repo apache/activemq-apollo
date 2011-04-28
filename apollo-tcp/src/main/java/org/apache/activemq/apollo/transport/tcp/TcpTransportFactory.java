@@ -49,8 +49,9 @@ public class TcpTransportFactory implements TransportFactory.Provider {
         if (server == null) return null;
 
         Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
+        Map<String, String> copy = new HashMap<String, String>(options);
         IntrospectionSupport.setProperties(server, options);
-        server.setTransportOption(options);
+        server.setTransportOption(copy);
         return server;
     }
 

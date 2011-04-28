@@ -24,6 +24,7 @@ import org.apache.activemq.apollo.util.IntrospectionSupport;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.DispatchSource;
+import sun.util.LocaleServiceProviderPool;
 
 import java.io.IOException;
 import java.net.*;
@@ -50,6 +51,7 @@ public class TcpTransportServer implements TransportServer {
     private TransportAcceptListener listener;
     private DispatchQueue dispatchQueue;
     private DispatchSource acceptSource;
+    private int receive_buffer_size = 64*1024;
 
     public TcpTransportServer(URI location) throws UnknownHostException {
         bindScheme = location.getScheme();
@@ -90,6 +92,10 @@ public class TcpTransportServer implements TransportServer {
         try {
             channel = ServerSocketChannel.open();
             channel.configureBlocking(false);
+            try {
+                channel.socket().setReceiveBufferSize(receive_buffer_size);
+            } catch (SocketException ignore) {
+            }
             channel.socket().bind(bindAddress, backlog);
         } catch (IOException e) {
             throw IOExceptionSupport.create("Failed to bind to server socket: " + bindAddress + " due to: " + e, e);
@@ -205,6 +211,15 @@ public class TcpTransportServer implements TransportServer {
      */
     public String toString() {
         return getBoundAddress();
+    }
+
+
+    public int getReceive_buffer_size() {
+        return receive_buffer_size;
+    }
+
+    public void setReceive_buffer_size(int receive_buffer_size) {
+        this.receive_buffer_size = receive_buffer_size;
     }
 
 }

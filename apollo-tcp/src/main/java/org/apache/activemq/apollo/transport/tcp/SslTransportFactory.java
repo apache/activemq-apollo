@@ -57,7 +57,7 @@ public class SslTransportFactory extends TcpTransportFactory {
         return null;
     }
 
-        /**
+    /**
      * Maps uri schemes to a protocol algorithm names.
      * Valid algorithm names listed at:
      * http://download.oracle.com/javase/6/docs/technotes/guides/security/StandardNames.html#SSLContext
