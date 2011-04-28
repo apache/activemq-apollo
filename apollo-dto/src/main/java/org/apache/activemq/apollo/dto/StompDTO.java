@@ -38,9 +38,6 @@ public class StompDTO extends ProtocolDTO {
     @XmlElement(name="add_user_header")
     public List<AddUserHeaderDTO> add_user_headers = new ArrayList<AddUserHeaderDTO>();
 
-    @XmlAttribute(name="max_command_length")
-    public Integer max_command_length;
-
     @XmlAttribute(name="max_header_length")
     public Integer max_header_length;
 

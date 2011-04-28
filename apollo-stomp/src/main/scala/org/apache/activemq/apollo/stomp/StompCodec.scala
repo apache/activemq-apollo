@@ -34,6 +34,8 @@ import org.apache.activemq.apollo.broker.store.{ZeroCopyBuffer, ZeroCopyBufferAl
 
 object StompCodec extends Log {
 
+  var max_command_length = 20
+
   def encode(message: StompFrameMessage):MessageRecord = {
     val frame = message.frame
 
@@ -137,8 +139,6 @@ object StompCodec extends Log {
 class StompCodec extends ProtocolCodec {
 
   import StompCodec._
-
-  var max_command_length = 1024
   var max_header_length = 1024*10
   var max_headers = 1000
   var max_data_length = 1024 * 1024 * 100

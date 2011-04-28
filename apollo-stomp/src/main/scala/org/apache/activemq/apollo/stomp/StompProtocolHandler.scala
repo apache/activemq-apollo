@@ -352,7 +352,6 @@ class StompProtocolHandler extends ProtocolHandler {
     config = connection.connector.config.protocols.find( _.isInstanceOf[StompDTO]).map(_.asInstanceOf[StompDTO]).getOrElse(new StompDTO)
 
     import OptionSupport._
-    config.max_command_length.foreach( codec.max_command_length = _ )
     config.max_data_length.foreach( codec.max_data_length = _ )
     config.max_header_length.foreach( codec.max_header_length = _ )
     config.max_headers.foreach( codec.max_headers = _ )
@@ -752,7 +751,7 @@ class StompProtocolHandler extends ProtocolHandler {
       if( !config.add_user_headers.isEmpty ){
         import collection.JavaConversions._
         config.add_user_headers.foreach { h =>
-          val matches = security_context.principles(h.kind)
+          val matches = security_context.principles(Option(h.kind).getOrElse("*"))
           if( !matches.isEmpty ) {
             h.separator match {
               case null=>
