@@ -1372,7 +1372,11 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     assert(pos!=null)
 
     session = consumer.connect(this)
-    session.refiller = dispatch_queue.runnable { pos.run }
+    session.refiller = dispatch_queue.runnable {
+      if( pos!=null ) {
+        pos.run
+      }
+    }
     queue.head_entry ::= this
 
     queue.all_subscriptions += consumer -> this
