@@ -21,62 +21,102 @@ sort_info: 5
 
 # ${project_name}
 Download it today!
+--- name:head pipeline:plain
+<style type='text/css'>
+/*<![CDATA[ */
 
+.download {
+  font-size: 80%;
+}
+table.download { width: 100%;}
+table.download tr td {
+  border: 1px solid #ccc;
+  padding: .5em;
+}
+ 
+/*]]>*/
+</style> 
+  
 --- name:content pipeline:jade
 
-
-.left
-  :markdown
-    # Binary Distributions
-.right
+:&markdown
+  ## Get the latest official version
+  
+- for( version <- project_versions.headOption )
   :&markdown
-    These are the officially supported prebuilt binary versions of #{project_name}.  You just need a JVM installed on your OS to run these distributions.
-  - for( version <- project_versions )
-    :&markdown
-      ## [#{project_name} #{version}](blog/releases/release-#{version.replace('.','-')}.html)
-      
-      * [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html)
-      * [apache-apollo-#{version}-unix-distro.tar.gz](https://repository.apache.org/content/groups/public/org/apache/activemq/apache-apollo/#{version}/apache-apollo-#{version}-unix-distro.tar.gz) for Unix/Linux/OS X users.
-      * [apache-apollo-#{version}-windows-distro.zip](https://repository.apache.org/content/groups/public/org/apache/activemq/apache-apollo/#{version}/apache-apollo-#{version}-windows-distro.zip) for Windows users.
-
-.left
-  :markdown
-    # Nighty Snapshots
-.right
-  :&markdown
-
-    Want to help stablize the latest and greatest nightly development
-    build?  **Warnning**: These builds are extremely bleeding edge!
-
-    ### #{project_name} #{project_snapshot_version}
+    ### #{project_name} #{version} 
+    [Release Notes](blog/releases/release-#{version.replace('.','-')}.html) | [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html)
     
-    * [Installation Instructions](${website_base_url}/versions/#{project_snapshot_version}/website/documentation/getting-started.html)
-    * [apache-apollo-#{project_snapshot_version}-unix-distro.tar.gz](http://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=tar.gz&c=unix-distro) for Unix/Linux/OS X users.
-    * [apache-apollo-#{project_snapshot_version}-windows-distro.zip](https://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=zip&c=windows-distro) for Windows users.
-      
-.left
-  :markdown
-    # Source Code Distributions
-
-.right
+  table.download
+    tr 
+      td Binaries for Unix/Linux/OS X:
+      td 
+        a(href="http://www.apache.org/dyn/closer.cgi?path=activemq/activemq-apollo/#{version}/apache-apollo-#{version}-unix-distro.tar.gz") apache-apollo-#{version}-unix-distro.tar.gz
+      td
+        a(href="http://apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-unix-distro.tar.gz.asc") GPG Signature
+    tr 
+      td Binaries for Windows:
+      td 
+        a(href="http://www.apache.org/dyn/closer.cgi?path=activemq/activemq-apollo/#{version}/apache-apollo-#{version}-windows-distro.zip") apache-apollo-#{version}-windows-distro.zip
+      td
+        a(href="http://apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-windows-distro.zip.asc") GPG Signature
+    tr 
+      td  Source Code Distribution:
+      td 
+        a(href="http://www.apache.org/dyn/closer.cgi?path=activemq/activemq-apollo/#{version}/apollo-project-#{version}-source-release.tar.gz") apollo-project-#{version}-source-release.tar.gz
+      td
+        a(href="http://apache.org/dist/activemq/activemq-apollo/#{version}/apollo-project-#{version}-source-release.tar.gz.asc") GPG Signature
+    
+    
+- if( !project_versions.drop(1).isEmpty )
   :&markdown
-  
-    Some hard core folks prefer to build the binary distributions directly from the source code:
+    ## Older Versions
 
-  - for( version <- project_versions )
+  - for( version <- project_versions.drop(1) )
     :&markdown
-      ### [#{project_name} #{version}](blog/releases/release-#{version.replace('.','-')}.html)
-      
-      * [Build Instructions](${website_base_url}/versions/${version}/website/community/building.html)
-      * [apollo-project-#{version}-source-release.tar.gz](https://repository.apache.org/content/groups/public/org/apache/activemq/apollo-project/#{version}/apollo-project-#{version}-source-release.tar.gz) for Unix/Linux/OS X users.
-      * [apollo-project-#{version}source-release.zip](https://repository.apache.org/content/groups/public/org/apache/activemq/apollo-project/#{version}/apollo-project-#{version}-source-release.zip) for Windows users.
+      ### #{project_name} #{version} 
+      [Release Notes](blog/releases/release-#{version.replace('.','-')}.html) | [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html)
 
-.left
-  :markdown
-    # Latest Source Code
+    table.download
+      tr 
+        td Binaries for Unix/Linux/OS X:
+        td 
+          a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-unix-distro.tar.gz") apache-apollo-#{version}-unix-distro.tar.gz
+        td
+          a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-unix-distro.tar.gz.asc") GPG Signature
+      tr 
+        td Binaries for Windows:
+        td 
+          a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-windows-distro.zip") apache-apollo-#{version}-windows-distro.zip
+        td
+          a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-windows-distro.zip.asc") GPG Signature
+      tr 
+        td  Source Code Distribution:
+        td 
+          a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apollo-project-#{version}-source-release.tar.gz") apollo-project-#{version}-source-release.tar.gz
+        td
+          a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apollo-project-#{version}-source-release.tar.gz.asc") GPG Signature
 
-.right
-  :&markdown
+
+:&markdown
+
+  ## Development Snapshot
+
+  Want to help stablize the latest and greatest nightly development
+  build?  **Warnning**: These builds are extremely bleeding edge!
+
+  ### #{project_name} #{project_snapshot_version} 
+  [Installation Instructions](${website_base_url}/versions/#{project_snapshot_version}/website/documentation/getting-started.html)
+
+table.download
+  tr 
+    td Binaries for Unix/Linux/OS X:
+    td 
+      a(href="http://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=tar.gz&c=unix-distro") apache-apollo-#{project_snapshot_version}-unix-distro.tar.gz
+  tr 
+    td Binaries for Windows:
+    td 
+      a(href="https://repository.apache.org/service/local/artifact/maven/redirect?r=snapshots&g=org.apache.activemq&a=apache-apollo&v=#{project_snapshot_version}&e=zip&c=windows-distro") apache-apollo-#{project_snapshot_version}-windows-distro.zip
   
-    The latest source coe should be directly checked out from our [source code repository](community/source.html)
-
+:&markdown
+  The development build source code should be directly checked out from our [source code repository](community/source.html)
