@@ -103,7 +103,8 @@ A `connector` element can be configured with the following attributes
 * `enabled` : if set to false, then the connector host will be disabled.
 
 * `bind` : The transport that the connector will listen on, it includes the
-  ip address and port that it will bind to.
+  ip address and port that it will bind to.  Transports are specified using 
+  a URI syntax.
 
 * `connection_limit` : The maximum number of concurrently open connections
   this connector will accept before it stops accepting additional
@@ -122,6 +123,43 @@ use the following configuration:
   <stomp add_user_header="user_id"/>
 </connector>
 {pygmentize}
+
+##### TCP Transports
+
+The TCP transport uses the `tcp://` URI scheme.  It uses the URI host
+and port to determine to which local interfaces to bind.  For example:
+
+* `tcp://0.0.0.0:61613` binds to all IPv4 interfaces on port 61613
+* `tcp://[::]:61613` binds to all IPv4 and IPv6 interfaces on port 61613
+* `tcp://127.0.0.1:0` binds to the loopback interface on a dynamic port
+
+The TCP URI also supports several query parameters to fine tune the
+settings used on the socket.  The supported parameters are:
+
+* `receive_buffer_size` : Sets the size of the internal socket receive buffer 
+   and the size of the TCP receive window that is advertised to the remote 
+   peer.  Defaults to 65536 (64k)
+
+* `traffic_class` : Sets traffic class or type-of-service octet in the IP 
+  header for packets sent from the transport.  Defaults to `8` which
+  means the traffic should be optimized for throughput.
+
+* `max_read_rate` : Sets the maximum bytes per second that this transport will
+  receive data at.  This setting throttles reads so that the rate is not exceeded.
+  Defaults to 0 which disabled throttling.
+
+* `max_write_rate` : Sets the maximum bytes per second that this transport will
+  send data at.  This setting throttles writes so that the rate is not exceeded.
+  Defaults to 0 which disabled throttling.
+  
+Example which uses a couple of options:
+
+{pygmentize:: xml}
+<connector id="tcp" bind="tcp://0.0.0.0:61613?receive_buffer_size=1024&amp;max_read_rate=65536"/>
+{pygmentize}
+
+Note that `&amp;` was used to separate the option values instead of just `&` since the 
+URI being written within an XML file.
 
 #### Virtual Hosts
 
@@ -375,14 +413,14 @@ A `hawtdb_store` element may be configured with the following attributes:
 
 ### Security
 
-#### Using SSL/TLS
+#### The SSL/TLS Transport
 
 ${project_name} supports SSL/TLS for transport level security to avoid 3rd
 parties listening in on the communications between the broker and it's
-clients. To enable it, you just need to add a connector which uses the `ssl`
-or `tls` transport and add a `key_storage` configuration element under the
-`broker` to configure the where the encryption keys and certificates are
-stored.
+clients. To enable it, you just need to add a connector which binds using
+on of the secure transports such as `ssl://`.  It also requires having a 
+`key_storage` configuration element under the `broker` to configure the where 
+the encryption keys and certificates are stored.
 
 Example:
 {pygmentize:: xml}
@@ -391,9 +429,20 @@ Example:
      file="${apollo.base}/etc/keystore" 
      password="password" 
      key_password="password"/>
-  <connector id="tls" bind="tls://0.0.0.0:61614"/>
+  
+  <connector id="stomp-secure" bind="ssl://0.0.0.0:61614"/>
   ...
 {pygmentize}
+
+The `connector` element's `bind` attribute controls which secure transport 
+algorithm gets used by the sever.  Supported values are:
+
+* `ssl://`    - Supports some version of SSL
+* `sslv2://`  - Supports SSL version 2 or higher
+* `sslv3://`  - Supports SSL version 3
+* `tls://`    - Supports some version of TLS
+* `tlsv://`   - Supports RFC 2246: TLS version 1.0 
+* `tls1.1://` - Supports RFC 4346: TLS version 1.1 
 
 The attributes that you can configure on the `key_storage` element are:
 
@@ -403,6 +452,9 @@ The attributes that you can configure on the `key_storage` element are:
 * `store_type` : The type of key store, defaults to `JKS`.
 * `trust_algorithm` : The trust management algorithm, defaults to `SunX509`.
 * `key_algorithm` : The key management algorithm, defaults to `SunX509`.
+
+The SSL/TLS transport is an extension of the TCP transport and as such it supports
+all the same URI options which the TCP transport supports.
 
 #### Authentication
 
@@ -780,10 +832,49 @@ messaging interoperability among many languages, platforms and brokers.
 ${project_name} supports the following versions of the STOMP specification: 
 
 * [STOMP 1.0](http://stomp.github.com/stomp-specification-1.0.html)
-* [STOMP 1.1](http://stomp.github.com/stomp-specification-1.1.html) *Not final*
+* [STOMP 1.1](http://stomp.github.com/stomp-specification-1.1.html)
 
 The specification is short and simple to read, it is highly recommend that users
 to get familiar with it before using one of the many available client libraries.
+
+### Stomp Protocol Options
+
+You can use the `stomp` configuration element within the `connector` element
+in the `apollo.xml` configuration file to change the default settings used
+in the STOMP protocol implementation.  The `stomp` element supports the 
+following configuration attributes:
+
+* `add_user_header` :  Name of the header which will be added to every received 
+  message received.  The value of the header will be set to the id of user that 
+  sent the message.  Not set by default.
+* `max_header_length` : The maximum allowed length of a STOMP header. Defaults 
+  to 10240 (10k).
+* `max_headers` : The maximum number of allowed headers in a frame.  Defaults 
+  to 1000.
+* `max_data_length` : The maximum size of the body portion of a STOMP frame.  
+  Defaults to 104857600 (100 megs).
+
+It also supports nested `add_user_header` elements to more finely control how
+user headers are added to received STOMP messages.  The `add_user_header` element
+supports the following attributes:
+
+* `name` : The name of the header to set on the STOMP message
+* `separator` : If user has multiple principles which match, this separator
+  will be used to delimit them in the header.  If not set, then only the first
+  matching principle will be set in the header.
+* `kind` : The principle kind to look for.  Defaults to `*` (matches all 
+  principle kinds)
+
+Example:
+
+{pygmentize:: xml}
+<connector id="tcp" bind="tcp://0.0.0.0:61613">
+  <stomp max_header_length="10000">
+    <add_user_header name="user" separator=","
+      kind="org.apache.activemq.jaas.UserPrincipal" />
+  </stomp>
+</connector>
+{pygmentize}
 
 ### Client Libraries
 
