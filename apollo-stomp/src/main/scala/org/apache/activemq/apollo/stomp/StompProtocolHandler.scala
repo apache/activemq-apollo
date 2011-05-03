@@ -260,6 +260,8 @@ class StompProtocolHandler extends ProtocolHandler {
 
       val session = session_manager.open(producer.dispatch_queue)
 
+      def remaining_capacity = session.remaining_capacity
+
       def close = {
         assert(producer.dispatch_queue.isExecuting)
         if( !closed ) {

@@ -532,6 +532,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         release
       }
 
+      def remaining_capacity = outbound_session.remaining_capacity
+
       // Delegate all the flow control stuff to the session
       def offer(delivery:Delivery) = {
         if( outbound_session.full ) {

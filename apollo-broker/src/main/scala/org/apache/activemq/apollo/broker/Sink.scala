@@ -179,6 +179,10 @@ class MutableSink[T] extends Sink[T] {
 }
 
 
+trait SessionSink[T] extends Sink[T] {
+  def remaining_capacity:Int
+}
+
 /**
  *  <p>
  * A SinkMux multiplexes access to a target sink so that multiple
@@ -230,7 +234,7 @@ class SinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue, val s
     sessions.foreach(_.credit_adder.resume)
   }
 
-  def open(producer_queue:DispatchQueue):Sink[T] = {
+  def open(producer_queue:DispatchQueue):SessionSink[T] = {
     val session = new Session[T](producer_queue, 0, this)
     consumer_queue <<| ^{
       if( overflow.full ) {
@@ -259,7 +263,7 @@ class SinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue, val s
 /**
  * tracks one producer to consumer session / credit window.
  */
-class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[T]) extends Sink[T] {
+class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[T]) extends SessionSink[T] {
 
   var refiller:Runnable = NOOP
 
@@ -295,6 +299,7 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[
   // producer serial dispatch queue
   ///////////////////////////////////////////////////
 
+  def remaining_capacity = credits
 
   override def full = {
     assert(producer_queue.isExecuting)

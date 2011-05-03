@@ -75,6 +75,7 @@ trait DeliveryConsumer extends Retained {
 trait DeliverySession extends Sink[Delivery] {
   def producer:DeliveryProducer
   def consumer:DeliveryConsumer
+  def remaining_capacity:Int
   def close:Unit
 }
 

@@ -95,7 +95,7 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
   /**
    *  The amount of memory buffer space for receiving messages.
    */
-  def tune_producer_buffer = config.producer_buffer.getOrElse(32*1024)
+  def tune_producer_buffer = config.producer_buffer.getOrElse(256*1024)
 
   /**
    *  The amount of memory buffer space for the queue..
@@ -135,7 +135,7 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
     tune_persistent = virtual_host.store !=null && config.persistent.getOrElse(true)
     tune_swap = tune_persistent && config.swap.getOrElse(true)
     tune_swap_range_size = config.swap_range_size.getOrElse(10000)
-    tune_consumer_buffer = config.consumer_buffer.getOrElse(32*1024)
+    tune_consumer_buffer = config.consumer_buffer.getOrElse(256*1024)
   }
   configure(config)
 
@@ -469,6 +469,7 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
       addCapacity( tune_producer_buffer )
     }
 
+    def remaining_capacity = session.remaining_capacity
 
     def close = {
       session_manager.close(session)
