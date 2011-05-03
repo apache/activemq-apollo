@@ -1509,7 +1509,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     def ack(sb:StoreUOW):Unit = {
       assert_executing
       if(!isLinked) {
-        warn("Internal protocol error: message delivery acked/nacked multiple times: "+entry.seq)
+        debug("Internal protocol error: message delivery acked/nacked multiple times: "+entry.seq)
         return
       }
       // The session may have already been closed..
