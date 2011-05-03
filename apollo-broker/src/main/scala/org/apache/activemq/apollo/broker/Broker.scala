@@ -33,6 +33,7 @@ import collection.mutable.{HashSet, LinkedHashMap}
 import scala.util.Random
 import FileSupport._
 import org.apache.activemq.apollo.dto.{LogCategoryDTO, BrokerDTO}
+import org.apache.activemq.apollo.broker.AcceptingConnector
 
 /**
  * <p>
@@ -209,7 +210,6 @@ class Broker() extends BaseService {
 
   def id = "default"
   
-  val connector_id_counter = new LongCounter
   val connection_id_counter = new LongCounter
 
   var key_storage:KeyStorage = _
@@ -455,12 +455,13 @@ class Broker() extends BaseService {
 
   //useful for testing
   def get_connect_address = {
-    Option(config.client_address).getOrElse(connectors.head.asInstanceOf[AcceptingConnector].transport_server.getConnectAddress)
+    Option(config.client_address).getOrElse(first_accepting_connector.get.transport_server.getConnectAddress)
   }
 
   def get_socket_address = {
-    connectors.head.asInstanceOf[AcceptingConnector].transport_server.getSocketAddress
+    first_accepting_connector.get.transport_server.getSocketAddress
   }
 
+  def first_accepting_connector = connectors.find(_.isInstanceOf[AcceptingConnector]).map(_.asInstanceOf[AcceptingConnector])
 
 }
