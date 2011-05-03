@@ -97,6 +97,11 @@
                   <artifactId>continuations</artifactId>
                   <version>${scala-version}</version>
                 </compilerPlugin>
+                <compilerPlugin>
+                  <groupId>org.fusesource.jvmassert</groupId>
+                  <artifactId>jvmassert</artifactId>
+                  <version>1.0</version>
+                </compilerPlugin>
               </compilerPlugins>
             </configuration>
           </execution>
@@ -150,6 +155,11 @@
                   <groupId>org.scala-lang.plugins</groupId>
                   <artifactId>continuations</artifactId>
                   <version>${scala-version}</version>
+                </compilerPlugin>
+                <compilerPlugin>
+                  <groupId>org.fusesource.jvmassert</groupId>
+                  <artifactId>jvmassert</artifactId>
+                  <version>1.0</version>
                 </compilerPlugin>
               </compilerPlugins>
             </configuration>
