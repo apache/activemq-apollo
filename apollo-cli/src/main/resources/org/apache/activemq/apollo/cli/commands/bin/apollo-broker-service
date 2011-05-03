@@ -87,7 +87,7 @@ start() {
 
   status
   if [ $? -eq 1 ] ; then
-    echo "Allready running."
+    echo "Already running."
     return 1
   fi
 
