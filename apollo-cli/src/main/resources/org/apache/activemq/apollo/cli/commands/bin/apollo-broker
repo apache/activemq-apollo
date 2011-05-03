@@ -16,6 +16,18 @@
 # limitations under the License.
 # ------------------------------------------------------------------------
 
+#
+# The following are common variables which control the JVM settings that the
+# broker uses.  Feel free to uncomment and edit as needed or place them
+# in an ${APOLLO_BASE}/etc/apollo.profile file.
+#
+
+#export JVM_FLAGS="-server -Xmx1G"
+#export APOLLO_OPTS="-ea"
+#export APOLLO_DEBUG="true"
+#export APOLLO_PROFILE="true"
+#export JMX_OPTS="-Djava.rmi.server.hostname=127.0.0.1 -Dcom.sun.management.jmxremote.port=1099 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
+
 if [ -z "$APOLLO_BASE" ] ; then
 
   ## resolve links - $0 may be a link to apollo's home
@@ -48,6 +60,10 @@ fi
 
 if [ -z "$APOLLO_HOME" ] ; then
   APOLLO_HOME=${home}
+fi
+
+if [ -f "${APOLLO_BASE}/etc/apollo.profile" ] ; then
+  . "${APOLLO_BASE}/etc/apollo.profile"
 fi
 
 exec $APOLLO_HOME/bin/apollo $@

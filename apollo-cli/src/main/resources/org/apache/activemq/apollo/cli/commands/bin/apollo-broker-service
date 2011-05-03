@@ -53,6 +53,10 @@ fi
 
 PID_FILE="${APOLLO_BASE}/data/apollo.pid"
 
+if [ -f "${APOLLO_BASE}/etc/apollo.profile" ] ; then
+  . "${APOLLO_BASE}/etc/apollo.profile"
+fi
+
 status() {
   if [ -f "${PID_FILE}" ] ; then
     pid=`cat "${PID_FILE}"`
