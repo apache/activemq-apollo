@@ -48,7 +48,7 @@ public class OpenwireConnectionStatusDTO extends ConnectionStatusDTO {
     /**
      * What the connection is currently waiting on
      */
-    @XmlAttribute(name="waiting-on")
+    @XmlAttribute(name="waiting_on")
 	public String waiting_on;
 
 }
