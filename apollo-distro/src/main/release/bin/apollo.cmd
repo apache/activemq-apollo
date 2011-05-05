@@ -18,7 +18,13 @@
 
 setlocal
 
-if "%APOLLO_HOME%"=="" set APOLLO_HOME=%~dp0..
+if NOT "%APOLLO_HOME%"=="" goto CHECK_APOLLO_HOME
+PUSHD
+CD %~dp0..
+set APOLLO_HOME=%CD%
+POPD
+
+:CHECK_APOLLO_HOME
 if exist "%APOLLO_HOME%\bin\apollo.cmd" goto CHECK_JAVA
 
 :NO_HOME
@@ -44,10 +50,6 @@ echo.
 set CLASSPATH=
 if NOT "x%APOLLO_BASE%" == "x" set CLASSPATH=%APOLLO_BASE%\etc
 
-rem if not exist "%APOLLO_HOME%\lib\patches" goto NO_LIB_PATCHES
-rem for %%i in ("%APOLLO_HOME%\lib\patches\*.jar") do call :ADD_CLASSPATH %%i
-rem :NO_LIB_PATCHES
-
 for %%i in ("%APOLLO_HOME%\lib\*.jar") do call :ADD_CLASSPATH %%i
 
 if "%JVM_FLAGS%" == "" set JVM_FLAGS=-server -Xmx1G
@@ -71,7 +73,7 @@ set JVM_FLAGS=%JVM_FLAGS% %JMX_OPTS%
 set JUL_CONFIG_FILE=%APOLLO_HOME%\etc\jul.properties
 
 
-set JVM_FLAGS=%JVM_FLAGS% -Dapollo.home="%APOLLO_HOME%" 
+set JVM_FLAGS=%JVM_FLAGS% -Dapollo.home="%APOLLO_HOME%"
 if NOT "x%APOLLO_BASE%" == "x" set JVM_FLAGS=%JVM_FLAGS% -Dapollo.base="%APOLLO_BASE%"
 set JVM_FLAGS=%JVM_FLAGS% -Djava.util.logging.config.file="%JUL_CONFIG_FILE%"
 set JVM_FLAGS=%JVM_FLAGS% -classpath "%CLASSPATH%"
@@ -83,7 +85,7 @@ endlocal
 GOTO :EOF
 
 :ADD_CLASSPATH
- set CLASSPATH=%CLASSPATH%;%1
+ set CLASSPATH=%CLASSPATH%;%*
  GOTO :EOF
 
 :EOF
