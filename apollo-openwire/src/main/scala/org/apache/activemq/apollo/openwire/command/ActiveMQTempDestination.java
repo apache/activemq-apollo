@@ -66,7 +66,13 @@ public abstract class ActiveMQTempDestination extends ActiveMQDestination {
 //            }
 //        }
     }
-
+//
+//    public void delete() throws JMSException {
+//        if (connection != null) {
+//            connection.deleteTempDestination(this);
+//        }
+//    }
+//
 //    public String getConnectionId() {
 //        return connectionId;
 //    }

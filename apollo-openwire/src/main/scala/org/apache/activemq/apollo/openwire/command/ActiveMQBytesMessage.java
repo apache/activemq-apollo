@@ -400,7 +400,7 @@ public class ActiveMQBytesMessage extends ActiveMQMessage {
                 }
                 length = 0;
                 compressed = true;
-                Deflater deflater = new Deflater(Deflater.BEST_SPEED);
+                final Deflater deflater = new Deflater(Deflater.BEST_SPEED);
                 os = new FilterOutputStream(new DeflaterOutputStream(os, deflater)) {
                     public void write(byte[] arg0) throws IOException {
                         length += arg0.length;
@@ -415,6 +415,12 @@ public class ActiveMQBytesMessage extends ActiveMQMessage {
                     public void write(int arg0) throws IOException {
                         length++;
                         out.write(arg0);
+                    }
+
+                    @Override
+                    public void close() throws IOException {
+                        super.close();
+                        deflater.end();
                     }
                 };
             }

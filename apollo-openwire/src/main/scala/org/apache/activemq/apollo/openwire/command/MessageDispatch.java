@@ -34,6 +34,7 @@ public class MessageDispatch extends BaseCommand {
     protected transient long deliverySequenceId;
     protected transient Object consumer;
     protected transient Runnable transmitCallback;
+    protected transient Throwable rollbackCause;
 
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
@@ -115,4 +116,11 @@ public class MessageDispatch extends BaseCommand {
         this.transmitCallback = transmitCallback;
     }
 
+    public Throwable getRollbackCause() {
+        return rollbackCause;
+    }
+
+    public void setRollbackCause(Throwable rollbackCause) {
+        this.rollbackCause = rollbackCause;
+    }
 }

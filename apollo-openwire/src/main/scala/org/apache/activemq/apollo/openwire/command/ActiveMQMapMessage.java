@@ -41,6 +41,13 @@ public class ActiveMQMapMessage extends ActiveMQMessage {
 
     protected transient Map<String, Object> map = new HashMap<String, Object>();
 
+    private Object readResolve() throws ObjectStreamException {
+        if(this.map == null) {
+            this.map = new HashMap<String, Object>();
+        }
+        return this;
+    }
+
     public Message copy() {
         ActiveMQMapMessage copy = new ActiveMQMapMessage();
         copy(copy);
@@ -56,6 +63,11 @@ public class ActiveMQMapMessage extends ActiveMQMessage {
     public void beforeMarshall(OpenWireFormat wireFormat) throws IOException {
         super.beforeMarshall(wireFormat);
         storeContent();
+    }
+
+    public void clearMarshalledState() {
+        super.clearMarshalledState();
+        map.clear();
     }
 
     private void storeContent() {

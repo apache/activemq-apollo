@@ -77,6 +77,7 @@ public class ActiveMQTextMessage extends ActiveMQMessage {
                     text = MarshallingSupport.readUTF8(dataIn);
                     dataIn.close();
                     setContent(null);
+                    setCompressed(false);
                 }
             } catch (IOException ioe) {
                 throw new OpenwireException(ioe);
@@ -108,9 +109,18 @@ public class ActiveMQTextMessage extends ActiveMQMessage {
             MarshallingSupport.writeUTF8(dataOut, this.text);
             dataOut.close();
             setContent(bytesOut.toBuffer());
-            //see https://issues.apache.org/activemq/browse/AMQ-2103
-            this.text=null;
         }
+    }
+
+    @Override
+    public void afterMarshall(OpenWireFormat wireFormat) throws IOException {
+        super.afterMarshall(wireFormat);
+        this.text=null;
+    }
+
+    public void clearMarshalledState() {
+        super.clearMarshalledState();
+        this.text = null;
     }
 
     public void clearBody() throws OpenwireException {
@@ -132,12 +142,12 @@ public class ActiveMQTextMessage extends ActiveMQMessage {
     public String toString() {
         try {
             String text = getText();
-        	if (text != null && text.length() > 63) {
-        		text = text.substring(0, 45) + "..." + text.substring(text.length() - 12);
-        		HashMap<String, Object> overrideFields = new HashMap<String, Object>();
-        		overrideFields.put("text", text);
-        		return super.toString(overrideFields);
-        	}
+            if (text != null) {
+                text = MarshallingSupport.truncate64(text);
+                HashMap<String, Object> overrideFields = new HashMap<String, Object>();
+                overrideFields.put("text", text);
+                return super.toString(overrideFields);
+            }
         } catch (OpenwireException e) {
         }
         return super.toString();

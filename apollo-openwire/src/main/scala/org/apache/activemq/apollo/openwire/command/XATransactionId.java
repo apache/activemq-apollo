@@ -22,6 +22,7 @@ import org.fusesource.hawtbuf.HexSupport;
 
 import javax.transaction.xa.Xid;
 import java.util.Arrays;
+import java.util.ArrayList;
 
 /**
  * @openwire:marshaller code="112"
@@ -37,6 +38,7 @@ public class XATransactionId extends TransactionId implements Xid, Comparable {
 
     private transient int hash;
     private transient String transactionKey;
+    private transient ArrayList<MessageAck> preparedAcks;
 
     public XATransactionId() {
     }
@@ -53,8 +55,17 @@ public class XATransactionId extends TransactionId implements Xid, Comparable {
 
     public synchronized String getTransactionKey() {
         if (transactionKey == null) {
-            transactionKey = "XID:" + formatId + ":" + HexSupport.toHexFromBuffer(new Buffer(globalTransactionId)) + ":"
-                             + HexSupport.toHexFromBuffer(new Buffer(branchQualifier));
+            StringBuffer s = new StringBuffer();
+            s.append("XID:[globalId=");
+            for (int i = 0; i < globalTransactionId.length; i++) {
+                s.append(Integer.toHexString(globalTransactionId[i]));
+            }
+            s.append(",branchId=");
+            for (int i = 0; i < branchQualifier.length; i++) {
+                s.append(Integer.toHexString(branchQualifier[i]));
+            }
+            s.append("]");
+            transactionKey = s.toString();
         }
         return transactionKey;
     }
@@ -144,4 +155,11 @@ public class XATransactionId extends TransactionId implements Xid, Comparable {
         return getTransactionKey().compareTo(xid.getTransactionKey());
     }
 
+    public void setPreparedAcks(ArrayList<MessageAck> preparedAcks) {
+        this.preparedAcks = preparedAcks;
+    }
+
+    public ArrayList<MessageAck> getPreparedAcks() {
+        return preparedAcks;
+    }
 }

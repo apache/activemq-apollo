@@ -30,6 +30,8 @@ import java.util.zip.InflaterInputStream;
 import org.apache.activemq.apollo.util.ClassLoadingAwareObjectInputStream;
 import org.apache.activemq.apollo.openwire.support.OpenwireException;
 import org.apache.activemq.apollo.openwire.support.Settings;
+import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
+
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.ByteArrayInputStream;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
@@ -54,6 +56,13 @@ public class ActiveMQObjectMessage extends ActiveMQMessage {
         storeContent();
         super.copy(copy);
         copy.object = null;
+    }
+
+    @Override
+    public void beforeMarshall(OpenWireFormat wireFormat) throws IOException {
+        super.beforeMarshall(wireFormat);
+        // may have initiated on vm transport with deferred marshalling
+        storeContent();
     }
 
     public void storeContent() {
@@ -130,6 +139,11 @@ public class ActiveMQObjectMessage extends ActiveMQMessage {
             }
         }
         return this.object;
+    }
+
+    public void clearMarshalledState() {
+        super.clearMarshalledState();
+        object = null;
     }
 
     public void onMessageRolledBack() {

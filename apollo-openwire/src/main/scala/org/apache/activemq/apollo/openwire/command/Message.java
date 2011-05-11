@@ -90,6 +90,11 @@ public abstract class Message extends BaseCommand implements MarshallAware, Mess
     public abstract org.apache.activemq.apollo.openwire.command.Message copy();
     public abstract void clearBody() throws OpenwireException;
 
+    // useful to reduce the memory footprint of a persisted message
+    public void clearMarshalledState() {
+        properties = null;
+    }
+
     protected void copy(org.apache.activemq.apollo.openwire.command.Message copy) {
         super.copy(copy);
         copy.producerId = producerId;
@@ -113,6 +118,9 @@ public abstract class Message extends BaseCommand implements MarshallAware, Mess
 
         if (properties != null) {
             copy.properties = new HashMap<String, Object>(properties);
+
+            // The new message hasn't expired, so remove this feild.
+            //copy.properties.remove(RegionBroker.ORIGINAL_EXPIRATION);
         } else {
             copy.properties = properties;
         }

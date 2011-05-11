@@ -53,6 +53,7 @@ public class ActiveMQBlobMessage extends ActiveMQMessage {
         copy.setMimeType(getMimeType());
         copy.setDeletedByBroker(isDeletedByBroker());
         copy.setBlobUploader(getBlobUploader());
+        copy.setName(getName());
     }
 
     public byte getDataStructureType() {

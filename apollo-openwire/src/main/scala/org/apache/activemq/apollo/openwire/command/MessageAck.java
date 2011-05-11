@@ -58,7 +58,12 @@ public class MessageAck extends BaseCommand {
      * The  ack case where a client wants only an individual message to be discarded.
      */
     public static final byte INDIVIDUAL_ACK_TYPE = 4;
-    
+
+    /**
+     * The ack case where a durable topic subscription does not match a selector.
+     */
+    public static final byte UNMATCHED_ACK_TYPE = 5;
+
     protected byte ackType;
     protected ConsumerId consumerId;
     protected MessageId firstMessageId;
@@ -66,6 +71,7 @@ public class MessageAck extends BaseCommand {
     protected ActiveMQDestination destination;
     protected TransactionId transactionId;
     protected int messageCount;
+    protected Throwable poisonCause;
 
     protected transient String consumerKey;
 
@@ -116,6 +122,10 @@ public class MessageAck extends BaseCommand {
     
     public boolean isIndividualAck() {
         return ackType == INDIVIDUAL_ACK_TYPE;
+    }
+
+    public boolean isUnmatchedAck() {
+        return ackType == UNMATCHED_ACK_TYPE;
     }
 
     /**
@@ -203,6 +213,20 @@ public class MessageAck extends BaseCommand {
 
     public Response visit(CommandVisitor visitor) throws Exception {
         return visitor.processMessageAck(this);
+    }
+
+    /**
+     * The cause of a poison ack, if a message listener
+     * throws an exception it will be recorded here
+     *
+     * @openwire:property version=7
+     */
+    public Throwable getPoisonCause() {
+        return poisonCause;
+    }
+
+    public void setPoisonCause(Throwable poisonCause) {
+        this.poisonCause = poisonCause;
     }
 
     /**
