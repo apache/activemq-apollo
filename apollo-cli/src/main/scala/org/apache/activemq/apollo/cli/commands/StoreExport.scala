@@ -61,7 +61,7 @@ class StoreExport extends Action {
 
       val config = new FileConfigStore(conf).load(true)
 
-      val hosts = collection.JavaConversions.asScalaIterable(config.virtual_hosts).toArray
+      val hosts = collection.JavaConversions.collectionAsScalaIterable(config.virtual_hosts).toArray
       val vho:Option[VirtualHostDTO] = if( host==null ) {
         hosts.headOption
       } else {

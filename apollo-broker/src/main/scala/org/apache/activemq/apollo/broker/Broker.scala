@@ -33,7 +33,6 @@ import collection.mutable.{HashSet, LinkedHashMap}
 import scala.util.Random
 import FileSupport._
 import org.apache.activemq.apollo.dto.{LogCategoryDTO, BrokerDTO}
-import org.apache.activemq.apollo.broker.AcceptingConnector
 
 /**
  * <p>

@@ -27,11 +27,11 @@ object FileSupport {
   def system_dir(name:String) = {
     val base_value = System.getProperty(name)
     if( base_value==null ) {
-      error("The the %s system property is not set.".format(name))
+      sys.error("The the %s system property is not set.".format(name))
     }
     val file = new File(base_value)
     if( !file.isDirectory  ) {
-      error("The the %s system property is not set to valid directory path %s".format(name, base_value))
+      sys.error("The the %s system property is not set to valid directory path %s".format(name, base_value))
     }
     file
   }

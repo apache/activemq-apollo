@@ -70,7 +70,7 @@ trait BasicScenarios extends BrokerPerfSupport {
        * benchmark( increasing partitioned load.
        */
       for( count <- partitionedLoad ) {
-        benchmark(format("%s%d->%d->%d%s", prefix, count, count, count, suffix)) {
+        benchmark("%s%d->%d->%d%s".format(prefix, count, count, count, suffix)) {
           println(testName)
           producerCount = count;
           destCount = count;
@@ -92,7 +92,7 @@ trait BasicScenarios extends BrokerPerfSupport {
        * destination.
        */
       for( (producers, consumers) <- List((highContention, 1), (1, highContention), (highContention, highContention)) ) {
-        benchmark(format("%s%d->1->%d%s", prefix, producers, consumers, suffix)) {
+        benchmark("%s%d->1->%d%s".format(prefix, producers, consumers, suffix)) {
           producerCount = producers;
           consumerCount = consumers;
           destCount = 1;

@@ -43,7 +43,7 @@ trait DeepQueueScenarios extends PersistentScenario {
     val prefix = "queue " + (if ((messageSize % 1024) == 0) (messageSize / 1024) + "k" else messageSize + "b") + " "
     val suffix = "" //(if( durable ) " durable" else "")
 
-    benchmark(format("%s%d%s", prefix, count, suffix)) {
+    benchmark("%s%d%s".format(prefix, count, suffix)) {
       producerCount = count;
       createConnections();
 

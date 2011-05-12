@@ -25,42 +25,42 @@ import java.{lang=>jl}
  */
 object OptionSupport {
 
-  implicit def o(value:jl.Boolean):Option[Boolean] = value match {
+  implicit def boxed_boolean_to_option(value:jl.Boolean):Option[Boolean] = value match {
     case null => None
     case x => Some(x.booleanValue)
   }
 
-  implicit def o(value:jl.Character):Option[Char] = value match {
+  implicit def boxed_character_to_option(value:jl.Character):Option[Char] = value match {
     case null => None
     case x => Some(x.charValue)
   }
 
-  implicit def o(value:jl.Short):Option[Short] = value match {
+  implicit def boxed_short_to_option(value:jl.Short):Option[Short] = value match {
     case null => None
     case x => Some(x.shortValue)
   }
 
-  implicit def o(value:jl.Integer):Option[Int] = value match {
+  implicit def boxed_integer_to_option(value:jl.Integer):Option[Int] = value match {
     case null => None
     case x => Some(x.intValue)
   }
 
-  implicit def o(value:jl.Long):Option[Long] = value match {
+  implicit def boxed_long_to_option(value:jl.Long):Option[Long] = value match {
     case null => None
     case x => Some(x.longValue)
   }
 
-  implicit def o(value:jl.Double):Option[Double] = value match {
+  implicit def boxed_double_to_option(value:jl.Double):Option[Double] = value match {
     case null => None
     case x => Some(x.doubleValue)
   }
 
-  implicit def o(value:jl.Float):Option[Float] = value match {
+  implicit def boxed_float_to_option(value:jl.Float):Option[Float] = value match {
     case null => None
     case x => Some(x.floatValue)
   }
 
-  implicit def o[T](value:T):Option[T] = value match {
+  implicit def any_to_option[T](value:T):Option[T] = value match {
     case null => None
     case x => Some(x)
   }

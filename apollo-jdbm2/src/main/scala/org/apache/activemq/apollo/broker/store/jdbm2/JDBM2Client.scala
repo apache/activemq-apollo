@@ -104,7 +104,7 @@ object JDBM2Client extends Log {
 
   }
 
-  implicit def to_rich_btree[K,V](x: BTree[K,V]) = new RichBTree[K,V](x)
+  implicit def btree_to_rich_btree[K,V](x: BTree[K,V]) = new RichBTree[K,V](x)
 
   final class RichHTree[K,V](val self: HTree[K,V]) {
 
@@ -120,7 +120,7 @@ object JDBM2Client extends Log {
 
   }
 
-  implicit def to_rich_btree[K,V](x: HTree[K,V]) = new RichHTree[K,V](x)
+  implicit def htree_to_rich_btree[K,V](x: HTree[K,V]) = new RichHTree[K,V](x)
 
 }
 

@@ -121,11 +121,11 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     val consumers_by_path = new PathMap[ConsumerContext]()
     val producers_by_path = new PathMap[ProducerContext]()
 
-    def destinations:Iterable[D] = JavaConversions.asScalaIterable(destination_by_path.get(ALL))
+    def destinations:Iterable[D] = JavaConversions.collectionAsScalaIterable(destination_by_path.get(ALL))
 
     def get_destination_matches(path:Path) = {
       import JavaConversions._
-      asScalaIterable(destination_by_path.get( path ))
+      collectionAsScalaIterable(destination_by_path.get( path ))
     }
 
     def create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Result[D,String]

@@ -40,11 +40,11 @@ class Run extends Action {
   def system_dir(name:String) = {
     val base_value = System.getProperty(name)
     if( base_value==null ) {
-      error("The the %s system property is not set.".format(name))
+      sys.error("The the %s system property is not set.".format(name))
     }
     val file = new File(base_value)
     if( !file.isDirectory  ) {
-      error("The the %s system property is not set to valid directory path %s".format(name, base_value))
+      sys.error("The the %s system property is not set to valid directory path %s".format(name, base_value))
     }
     file
   }
@@ -60,7 +60,7 @@ class Run extends Action {
       }
 
       if( !conf.exists ) {
-        error("Configuration file'%s' does not exist.\n\nTry creating a broker instance using the 'apollo create' command.".format(conf));
+        sys.error("Configuration file'%s' does not exist.\n\nTry creating a broker instance using the 'apollo create' command.".format(conf));
       }
 
       if( System.getProperty("java.security.auth.login.config")==null ) {
@@ -103,7 +103,7 @@ class Run extends Action {
 
     } catch {
       case x:Helper.Failure=>
-        error(x.getMessage)
+        sys.error(x.getMessage)
     }
     null
   }

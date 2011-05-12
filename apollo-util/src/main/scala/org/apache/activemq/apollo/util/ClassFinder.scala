@@ -122,7 +122,7 @@ class ClassFinder[T](val path:String, val clazz: Class[T]) {
 
   def jsingletons = {
     import collection.JavaConversions._
-    asJavaList(singletons)
+    seqAsJavaList(singletons)
   }
 
 }
