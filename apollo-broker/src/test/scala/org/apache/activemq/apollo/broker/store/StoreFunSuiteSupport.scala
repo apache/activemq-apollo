@@ -150,7 +150,8 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     val B = add_queue("B")
     val C = add_queue("C")
 
-    expectCB(List(A,B,C).toSeq) { cb=>
+    val seq:Seq[Long] = List(A,B,C).toSeq
+    expectCB(seq) { cb=>
       store.list_queues(cb)
     }
   }

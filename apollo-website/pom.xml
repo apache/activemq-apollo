@@ -117,7 +117,7 @@
         <version>${scalate-version}</version>
         
         <configuration>
-          <warSourceDirectory>${basedir}/src</warSourceDirectory>
+          <webappDirectory>${basedir}/src</webappDirectory>
           <remoteServerId>apollo-website</remoteServerId>
           <remoteServerUrl>${website-base-url}/versions/${project.version}/website/</remoteServerUrl>
         </configuration>
