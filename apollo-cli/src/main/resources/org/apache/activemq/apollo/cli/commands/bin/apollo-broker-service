@@ -95,7 +95,7 @@ start() {
     return 1
   fi
 
-  if [ -z "$APOLLO_USER" ] ; then
+  if [ -z "$APOLLO_USER" -o `id -un` == "$APOLLO_USER" ] ; then
     nohup ${APOLLO_BASE}/bin/apollo-broker run > /dev/null 2> /dev/null &
   else
     sudo -n -u ${APOLLO_USER} nohup ${APOLLO_BASE}/bin/apollo-broker run > /dev/null 2> /dev/null &
