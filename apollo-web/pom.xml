@@ -135,7 +135,7 @@
     </dependency>
     <dependency>
       <groupId>org.scalatest</groupId>
-      <artifactId>${scalatest-artifact}</artifactId>
+      <artifactId>scalatest_2.9.0</artifactId>
       <version>${scalatest-version}</version>
       <scope>test</scope>
     </dependency>
@@ -271,7 +271,7 @@
       <plugin>
         <groupId>org.fusesource.mvnplugins</groupId>
         <artifactId>maven-uberize-plugin</artifactId>
-        <version>1.11</version>
+        <version>${mvnplugins-version}</version>
         <executions>
           <execution>
             <id>slim</id>

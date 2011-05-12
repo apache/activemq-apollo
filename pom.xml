@@ -41,7 +41,6 @@
 
     <!-- dependencies that track scala version changes -->
     <scala-version>2.9.0</scala-version>
-    <scalatest-artifact>scalatest_2.9.0</scalatest-artifact>
     <scalatest-version>1.4.1</scalatest-version>
     
     <activemq-version>5.4.1</activemq-version>
@@ -130,6 +129,7 @@
     <features-maven-plugin-version>2.1.0</features-maven-plugin-version>
     
     <osgi.fragment.host>${project.groupId}.apollo-broker</osgi.fragment.host>
+    <mvnplugins-version>1.14</mvnplugins-version>
   </properties>
 
   <prerequisites>
@@ -602,7 +602,7 @@
           <plugin>
             <groupId>org.fusesource.mvnplugins</groupId>
             <artifactId>maven-graph-plugin</artifactId>
-            <version>1.11</version>
+            <version>${mvnplugins-version}</version>
           </plugin>
         </plugins>
       </build>
