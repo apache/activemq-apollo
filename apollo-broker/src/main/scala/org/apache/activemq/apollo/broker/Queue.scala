@@ -1080,7 +1080,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
                     queue.ack_source.merge((acquiredQueueEntry, consumed, tx))
                   }
 
-                  assert(sub.offer(acquiredDelivery), "sub should have accepted, it had reported not full earlier.")
+                  val accepted = sub.offer(acquiredDelivery)
+                  assert(accepted, "sub should have accepted, it had reported not full earlier.")
                 }
               }
             }
