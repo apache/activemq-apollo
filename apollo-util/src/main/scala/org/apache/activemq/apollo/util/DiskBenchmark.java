@@ -22,7 +22,7 @@ import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import org.apache.activemq.util.cli.CommandLineSupport;
+import org.apache.activemq.apollo.util.cli.CommandLineSupport;
 
 
 /**
@@ -32,11 +32,11 @@ public class DiskBenchmark {
 
     boolean verbose;
     // reads and writes work with 4k of data at a time.
-    int bs=1024*4; 
+    int bs=1024*4;
     // Work with 100 meg file.
-    long size=1024*1024*500; 
-    long sampleInterval = 10*1000; 
-    
+    long size=1024*1024*500;
+    long sampleInterval = 10*1000;
+
     public static void main(String[] args) {
 
         DiskBenchmark benchmark = new DiskBenchmark();
@@ -70,23 +70,23 @@ public class DiskBenchmark {
         }
 
     }
-    
+
     public static class Report {
 
         public int size;
-        
+
         public int writes;
         public long writeDuration;
-        
+
         public int syncWrites;
         public long syncWriteDuration;
-        
+
         public int reads;
         public long readDuration;
 
         @Override
         public String toString() {
-            return 
+            return
             "Writes: \n" +
             "  "+writes+" writes of size "+size+" written in "+(writeDuration/1000.0)+" seconds.\n"+
             "  "+getWriteRate()+" writes/second.\n"+
@@ -109,40 +109,40 @@ public class DiskBenchmark {
             float rc = writes;
             rc *= size;
             rc /= (1024*1024); // put it in megs
-            rc /= (writeDuration/1000.0); // get rate. 
+            rc /= (writeDuration/1000.0); // get rate.
             return rc;
         }
 
         private float getWriteRate() {
             float rc = writes;
-            rc /= (writeDuration/1000.0); // get rate. 
+            rc /= (writeDuration/1000.0); // get rate.
             return rc;
         }
-        
+
         private float getSyncWriteSizeRate() {
             float rc = syncWrites;
             rc *= size;
             rc /= (1024*1024); // put it in megs
-            rc /= (syncWriteDuration/1000.0); // get rate. 
+            rc /= (syncWriteDuration/1000.0); // get rate.
             return rc;
         }
 
         private float getSyncWriteRate() {
             float rc = syncWrites;
-            rc /= (syncWriteDuration/1000.0); // get rate. 
+            rc /= (syncWriteDuration/1000.0); // get rate.
             return rc;
         }
         private float getReadSizeRate() {
             float rc = reads;
             rc *= size;
             rc /= (1024*1024); // put it in megs
-            rc /= (readDuration/1000.0); // get rate. 
+            rc /= (readDuration/1000.0); // get rate.
             return rc;
         }
 
         private float getReadRate() {
             float rc = reads;
-            rc /= (readDuration/1000.0); // get rate. 
+            rc /= (readDuration/1000.0); // get rate.
             return rc;
         }
 
@@ -206,17 +206,17 @@ public class DiskBenchmark {
 
     public Report benchmark(File file) throws IOException {
         Report rc = new Report();
-        
+
         // Initialize the block we will be writing to disk.
         byte []data = new byte[bs];
         for (int i = 0; i < data.length; i++) {
             data[i] = (byte)('a'+(i%26));
         }
-        
+
         rc.size = data.length;
         RandomAccessFile raf = new RandomAccessFile(file, "rw");
         raf.setLength(size);
-        
+
         // Figure out how many writes we can do in the sample interval.
         long start = System.currentTimeMillis();
         long now = System.currentTimeMillis();
@@ -234,14 +234,14 @@ public class DiskBenchmark {
                     break;
                 }
             }
-            // Sync to disk so that the we actually write the data to disk.. otherwise 
+            // Sync to disk so that the we actually write the data to disk.. otherwise
             // OS buffering might not really do the write.
             IOHelper.sync(raf.getFD());
         }
         IOHelper.sync(raf.getFD());
         raf.close();
         now = System.currentTimeMillis();
-        
+
         rc.size = data.length;
         rc.writes = ioCount;
         rc.writeDuration = (now-start);
@@ -290,7 +290,7 @@ public class DiskBenchmark {
             }
         }
         raf.close();
-        
+
         rc.reads = ioCount;
         rc.readDuration = (now-start);
         return rc;

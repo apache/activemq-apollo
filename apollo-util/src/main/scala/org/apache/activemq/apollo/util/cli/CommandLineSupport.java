@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.util.cli;
+package org.apache.activemq.apollo.util.cli;
 
 import java.util.ArrayList;
 
@@ -24,66 +24,66 @@ import org.apache.activemq.apollo.util.IntrospectionSupport;
 /**
  * Support utility that can be used to set the properties on any object
  * using command line arguments.
- * 
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class CommandLineSupport {
-	
+
 	/**
 	 * Sets the properties of an object given the command line args.
-	 * 
-	 * if args contains: --ack-mode=AUTO --url=tcp://localhost:61616 --persistent 
-	 * 
+	 *
+	 * if args contains: --ack-mode=AUTO --url=tcp://localhost:61616 --persistent
+	 *
 	 * then it will try to call the following setters on the target object.
-	 * 
+	 *
 	 * target.setAckMode("AUTO");
 	 * target.setURL(new URI("tcp://localhost:61616") );
 	 * target.setPersistent(true);
-	 * 
-	 * Notice the the proper conversion for the argument is determined by examining the 
-	 * setter argument type.  
-	 * 
+	 *
+	 * Notice the the proper conversion for the argument is determined by examining the
+	 * setter argument type.
+	 *
 	 * @param target the object that will have it's properties set
 	 * @param args the command line options
 	 * @return any arguments that are not valid options for the target
 	 */
 	static public String[] setOptions(Object target, String []args) {
 		ArrayList<String> rc = new ArrayList<String>();
-		
+
 		for (int i = 0; i < args.length; i++) {
 			if( args[i] == null )
 				continue;
-			
+
 			if( args[i].startsWith("--") ) {
-				
+
 				// --options without a specified value are considered boolean flags that are enabled.
 				String value="true";
 				String name = args[i].substring(2);
-				
+
 				// if --option=value case
 				int p = name.indexOf("=");
 				if( p > 0 ) {
 					value = name.substring(p+1);
 					name = name.substring(0,p);
 				}
-				
+
 				// name not set, then it's an unrecognized option
 				if( name.length()==0 ) {
 					rc.add(args[i]);
 					continue;
 				}
-				
+
 				String propName = convertOptionToPropertyName(name);
-				if( !IntrospectionSupport.setProperty(target, propName, value) ) {					
+				if( !IntrospectionSupport.setProperty(target, propName, value) ) {
 					rc.add(args[i]);
 					continue;
 				}
 			} else {
                             rc.add(args[i]);
 			}
-			
+
 		}
-		
+
 		String r[] = new String[rc.size()];
 		rc.toArray(r);
 		return r;
@@ -96,20 +96,20 @@ public class CommandLineSupport {
 	 */
 	private static String convertOptionToPropertyName(String name) {
 		String rc="";
-		
+
 		// Look for '-' and strip and then convert the subsequent char to uppercase
 		int p = name.indexOf("-");
 		while( p > 0 ) {
 			// strip
 			rc += name.substring(0, p);
 			name = name.substring(p+1);
-			
+
 			// can I convert the next char to upper?
 			if( name.length() >0 ) {
 				rc += name.substring(0,1).toUpperCase();
 				name = name.substring(1);
 			}
-			
+
 			p = name.indexOf("-");
 		}
 		return rc+name;

@@ -14,14 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.util.cli;
+package org.apache.activemq.apollo.util.cli;
 
 import org.apache.commons.cli.Option;
 
 /**
  * a better version of org.apache.commons.cli.OptionBuilder
  * IDE provides nicer auto complete and less compiler warnings.
- * 
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class OptionBuilder {
