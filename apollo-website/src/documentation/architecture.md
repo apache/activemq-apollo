@@ -51,7 +51,7 @@ means that the previous ActiveMQ broker architecture had to go through a
 major overhaul. All synchronous broker interfaces had to be changed
 so that they would instead return results via asynchronous callbacks.
 
-### Scala 2.8 Implementation
+### Scala 2.9 Implementation
 
 Even though Apollo started as a fork of ActiveMQ 5.x, the new reactor design
 restrictions required major changes from the network IO handling, to the
@@ -88,11 +88,14 @@ serious limitations:
 * Rich data types are hard to expose
 
 Apollo exposes a rich and detailed state of the sever using REST based JSON
-or XML services.
+services.
 
 * A management client can easily be implemented in any language.
 * There is very little management overhead since there is no special
-  registration with the management system. The JAX-RS based management web
+  registration with the management system. The REST based management web
   application knows how to navigate the internal structure of a broker to
   access all the need status and statistics.
+  
+See the [Management API](management-api.html) documentation for
+details.
 

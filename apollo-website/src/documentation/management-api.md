@@ -1,4 +1,4 @@
-# Apollo ${project_version} Management REST API
+# Apollo ${project_version} Management API
 
 {:toc:2-5}
 
@@ -54,7 +54,7 @@ Example:
     $ curl -H "Accept: application/json" -u "admin:password" \
     http://localhost:61680/
 
-Results in:
+Results in a [Broker Status](./api/apollo-dto/org/apache/activemq/apollo/dto/BrokerStatusDTO.html) :
 
 {pygmentize:: js}
 {
@@ -86,7 +86,7 @@ Example:
     $ curl -H "Accept: application/json" -u "admin:password" \
     http://localhost:61680/connectors/stomp
 
-Results in:
+Results in a [Connector Status](./api/apollo-dto/org/apache/activemq/apollo/dto/ConnectorStatusDTO.html):
 
 {pygmentize:: js}
 {
@@ -112,7 +112,7 @@ Example:
     $ curl -H "Accept: application/json" -u "admin:password" \
     http://localhost:61680/connections/5
 
-Results in:
+Results in a [Connection Status](./api/apollo-dto/org/apache/activemq/apollo/dto/ConnectionStatusDTO.html):
 
 {pygmentize:: js}
 {
@@ -153,7 +153,7 @@ Example:
     $ curl -H "Accept: application/json" -u "admin:password" \
     http://localhost:61680/virtual-hosts/localhost
 
-Results in:
+Results in a [Virtual Host Status](./api/apollo-dto/org/apache/activemq/apollo/dto/VirtualHostStatusDTO.html):
 
 {pygmentize:: js}
 {
@@ -185,7 +185,7 @@ Example:
     $ curl -H "Accept: application/json" -u "admin:password" \
     http://localhost:61680/virtual-hosts/localhost/store
 
-Results in:
+Results in a [Store Status](./api/apollo-dto/org/apache/activemq/apollo/dto/StoreStatusDTO.html):
 
 {pygmentize:: js}
 {
@@ -234,7 +234,7 @@ Example:
     $ curl -H "Accept: application/json" -u "admin:password" \
     http://localhost:61680/virtual-hosts/localhost/queues/1
 
-Results in:
+Results in a [Queue Status](./api/apollo-dto/org/apache/activemq/apollo/dto/QueueStatusDTO.html):
 
 {pygmentize:: js}
 {
@@ -318,7 +318,7 @@ Example:
     $ curl -H "Accept: application/json" -u "admin:password" \
     http://localhost:61680/virtual-hosts/localhost/topics/1
 
-Results in:
+Results in a [Topic Status](./api/apollo-dto/org/apache/activemq/apollo/dto/TopicStatusDTO.html):
 
 {pygmentize:: js}
 {
@@ -359,7 +359,7 @@ Example:
     $ curl -H "Accept: application/json" -u "admin:password" \
     http://localhost:61680/config/runtime
 
-Results in:
+Results in a [Broker Configuration](./api/apollo-dto/org/apache/activemq/apollo/dto/BrokerDTO.html):
 
 {pygmentize:: js}
 {
@@ -459,7 +459,7 @@ Example:
     $ curl -H "Accept: application/json" -u "admin:password" \
     http://localhost:61680/queue-metrics
 
-Results in:
+Results in an [Aggregate of Queue Metrics](./api/apollo-dto/org/apache/activemq/apollo/dto/AggregateQueueMetricsDTO.html):
 
 {pygmentize:: js}
 {

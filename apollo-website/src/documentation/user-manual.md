@@ -785,6 +785,9 @@ The web interface will display the status of the the connectors and show
 attached connections.  It will also allow you to drill into each configured
 virtual host and view the topics and queues being used. 
 
+Please see the [Management API](management-api.html) documentation for more 
+information on how to use the web based interface as a RESTful API.
+
 ### Exporting/Importing Stores
 
 Exporting compresses all the data in a virtual host's message store in a zip

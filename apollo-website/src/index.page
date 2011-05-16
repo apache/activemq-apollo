@@ -48,11 +48,12 @@ ActiveMQ 5.x JMS clients.
 * [JAAS Authentication](documentation/user-manual.html#Authentication)
 * [ACL Authorization](documentation/user-manual.html#Authorization)
 * [SSL/TLS Support](documentation/user-manual.html#Using_SSL_TLS)
-* REST based management
+* [REST Based Management](documentation/architecture.html#REST_Based_Management)
 
 ## Documentation
 
  * [Getting Started Guide](documentation/getting-started.html)
  * [User Manual](documentation/user-manual.html)
+ * [Management API](documentation/management-api.html)
  
 

@@ -37,4 +37,12 @@ Ready to start hacking on ${project_name}?
 * [Architecture](../documentation/architecture.html)
 * [Module Organization](../documentation/module-organization.html)
 
+# API Reference
+
+* [`apollo-broker` API](../documentation/api/apollo-broker/index.html)
+* [`apollo-dto` API](../documentation/api/apollo-dto/index.html)
+* [`apollo-store` API](../documentation/api/apollo-store/index.html)
+* [`apollo-transport` API](../documentation/api/apollo-transport/index.html)
+* [`apollo-util` API](../documentation/api/apollo-util/index.html)
+
 Looking for the website documentation of a different ${project_name} [version](${website_base_url}/versions/index.html)?

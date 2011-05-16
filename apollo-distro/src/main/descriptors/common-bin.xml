@@ -76,28 +76,6 @@
       <outputDirectory>/docs/site</outputDirectory>
     </fileSet>
 
-    <!-- api doco -->
-    <fileSet>
-      <directory>${basedir}/../apollo-broker/target/apidocs</directory>
-      <outputDirectory>/docs/apidocs/apollo-broker</outputDirectory>
-    </fileSet> 
-    <fileSet>
-      <directory>${basedir}/../apollo-store/target/apidocs</directory>
-      <outputDirectory>/docs/apidocs/apollo-store</outputDirectory>
-    </fileSet> 
-    <fileSet>
-      <directory>${basedir}/../apollo-transport/target/apidocs</directory>
-      <outputDirectory>/docs/apidocs/apollo-transport</outputDirectory>
-    </fileSet> 
-    <fileSet>
-      <directory>${basedir}/../apollo-util/target/apidocs</directory>
-      <outputDirectory>/docs/apidocs/apollo-util</outputDirectory>
-    </fileSet> 
-    <fileSet>
-      <directory>${basedir}/../apollo-dto/target/apidocs</directory>
-      <outputDirectory>/docs/apidocs/apollo-dto</outputDirectory>
-    </fileSet> 
-
   </fileSets>
 
 </component>

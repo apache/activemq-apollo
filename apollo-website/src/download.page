@@ -45,7 +45,7 @@ table.download tr td {
 - for( version <- project_versions.headOption )
   :&markdown
     ### #{project_name} #{version} 
-    [Release Notes](blog/releases/release-#{version.replace('.','-')}.html) | [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html)
+    [Release Notes](blog/releases/release-#{version.replace('.','-')}.html) | [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html) | [Documentation](${website_base_url}/versions/#{version}/website/documentation/index.html)
     
   table.download
     tr 
@@ -75,7 +75,7 @@ table.download tr td {
   - for( version <- project_versions.drop(1) )
     :&markdown
       ### #{project_name} #{version} 
-      [Release Notes](blog/releases/release-#{version.replace('.','-')}.html) | [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html)
+      [Release Notes](blog/releases/release-#{version.replace('.','-')}.html) | [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html) | [Documentation](${website_base_url}/versions/#{version}/website/documentation/index.html)
 
     table.download
       tr 
@@ -106,7 +106,7 @@ table.download tr td {
   build?  **Warnning**: These builds are extremely bleeding edge!
 
   ### #{project_name} #{project_snapshot_version} 
-  [Installation Instructions](${website_base_url}/versions/#{project_snapshot_version}/website/documentation/getting-started.html)
+  [Installation Instructions](${website_base_url}/versions/#{project_snapshot_version}/website/documentation/getting-started.html) | [Documentation](${website_base_url}/versions/#{project_snapshot_version}/website/documentation/index.html)
 
 table.download
   tr 
