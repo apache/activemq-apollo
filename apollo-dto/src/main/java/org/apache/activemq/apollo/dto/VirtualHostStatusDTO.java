@@ -33,12 +33,6 @@ import java.util.List;
 public class VirtualHostStatusDTO extends ServiceStatusDTO {
 
     /**
-     * The status of the store
-     */
-    @XmlElementRef
-    public StoreStatusDTO store;
-
-    /**
      * Ids of all the topics running on the broker
      */
     @XmlElement(name="topics")
@@ -50,14 +44,10 @@ public class VirtualHostStatusDTO extends ServiceStatusDTO {
     @XmlElement(name="queues")
     public List<LongIdLabeledDTO> queues = new ArrayList<LongIdLabeledDTO>();
 
-
     /**
-     * The current running configuration of the object
+     * Is the virtual host using a store.
      */
-    @XmlElement
-    public VirtualHostDTO config = null;
-
-    @XmlElement
-    public AggregateQueueMetricsDTO aggregate_queue_metrics = new AggregateQueueMetricsDTO();
+    @XmlElement(name="store")
+    public boolean store;
 
 }

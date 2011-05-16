@@ -17,14 +17,11 @@
 package org.apache.activemq.apollo.web.resources
 
 import javax.ws.rs._
-import core.{UriInfo, Response, Context}
-import org.fusesource.hawtdispatch._
+import core.Response
 import Response.Status._
-import Response._
-import java.net.URI
-import java.io.ByteArrayInputStream
 import org.apache.activemq.apollo.broker.ConfigStore
-import org.apache.activemq.apollo.dto.{ValueDTO, XmlCodec, BrokerDTO}
+import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO, ValueDTO}
+import org.fusesource.hawtbuf._
 
 case class EditConfig(config:String)
 
@@ -32,7 +29,7 @@ case class EditConfig(config:String)
  * A broker resource is used to represent the configuration of a broker.
  */
 @Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
-case class ConfigurationResource(parent:BrokerResource) extends Resource(parent) {
+case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends Resource(parent) {
 
   lazy val store = {
     val rc = ConfigStore()
@@ -45,6 +42,25 @@ case class ConfigurationResource(parent:BrokerResource) extends Resource(parent)
 
   @GET
   def get() = store.load(false)
+
+  @GET
+  @Path("runtime")
+  def runtime = {
+
+    // Encode/Decode the runtime config so that we can get a copy that
+    // we can modify..
+    val baos = new ByteArrayOutputStream
+    XmlCodec.encode(dto, baos, false)
+    val copy = XmlCodec.decode(classOf[BrokerDTO], new ByteArrayInputStream(baos.toBuffer))
+
+    // Scrub out the passwords to avoid a security leak.
+    if( copy.key_storage !=null ) {
+      copy.key_storage.password = null
+      copy.key_storage.key_password = null
+    }
+
+    copy
+  }
 
   @Produces(Array("text/html"))
   @GET

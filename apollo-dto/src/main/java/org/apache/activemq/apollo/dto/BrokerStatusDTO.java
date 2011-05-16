@@ -31,6 +31,12 @@ import java.util.List;
 public class BrokerStatusDTO extends ServiceStatusDTO {
 
     /**
+     * Version of the broker
+     */
+	@XmlAttribute
+	public String version;
+
+    /**
      * The current time on the broker machine.  In milliseconds since the epoch.
      */
 	@XmlAttribute(name="current_time")
@@ -54,12 +60,4 @@ public class BrokerStatusDTO extends ServiceStatusDTO {
     @XmlElement(name="connection")
     public List<LongIdLabeledDTO> connections = new ArrayList<LongIdLabeledDTO>();
 
-    /**
-     * The current running configuration of the object
-     */
-    @XmlElement
-    public BrokerDTO config = null;
-
-    @XmlElement
-    public AggregateQueueMetricsDTO aggregate_queue_metrics = new AggregateQueueMetricsDTO();
 }

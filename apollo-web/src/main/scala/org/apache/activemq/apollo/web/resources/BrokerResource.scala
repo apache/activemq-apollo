@@ -16,19 +16,16 @@
  */
 package org.apache.activemq.apollo.web.resources;
 
-import javax.ws.rs.Path
 import javax.ws.rs._
 import core.Response
 import Response.Status._
-import java.util.List
 import org.apache.activemq.apollo.dto._
 import java.{lang => jl}
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker._
-import collection.mutable.ListBuffer
 import scala.util.continuations._
-import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
-import scala.collection.{Iterable, JavaConversions}
+import scala.collection.Iterable
+import javax.xml.soap.SOAPMessage
 
 /**
  * <p>
@@ -38,52 +35,16 @@ import scala.collection.{Iterable, JavaConversions}
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
+@Path("/")
 @Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
-case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
+case class BrokerResource() extends Resource() {
 
-  @POST
-  @Path("action/shutdown")
-  def command_shutdown:Unit = {
-    info("JVM shutdown requested via web interface")
-
-    // do the the exit async so that we don't
-    // kill the current request.
-    Broker.BLOCKABLE_THREAD_POOL {
-      Thread.sleep(200);
-      System.exit(0)
-    }
-  }
-
-  def concurrent_map[T,R](values:Iterable[T])(dqf:(T)=>DispatchQueue)(func:T=>R) = {
-    Future.all( values.map { t=>
-      dqf(t).future { func(t) }
-    })
-  }
-
-  private def with_broker[T](func: (org.apache.activemq.apollo.broker.Broker, Option[T]=>Unit)=>Unit):T = {
-    BrokerRegistry.list.headOption match {
-      case None=> result(NOT_FOUND)
-      case Some(broker)=>
-        val f = Future[Option[T]]()
-        broker.dispatch_queue {
-          func(broker, f)
-        }
-        f().getOrElse(result(NOT_FOUND))
-    }
-  }
-
-  private def with_virtual_host[T](id:String)(func: (VirtualHost, Option[T]=>Unit)=>Unit):T = {
+  @Path("config")
+  def config_resource:ConfigurationResource = {
     with_broker { case (broker, cb) =>
-      broker.virtual_hosts.valuesIterator.find( _.id == id) match {
-        case Some(virtualHost)=>
-          virtualHost.dispatch_queue {
-            func(virtualHost, cb)
-          }
-        case None=> cb(None)
-      }
+      cb(Some(ConfigurationResource(this, broker.config)))
     }
   }
-
 
   @GET
   def get_broker():BrokerStatusDTO = {
@@ -94,7 +55,6 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
       result.current_time = System.currentTimeMillis
       result.state = broker.service_state.toString
       result.state_since = broker.service_state.since
-      result.config = broker.config
 
       broker.virtual_hosts.values.foreach{ host=>
         // TODO: may need to sync /w virtual host's dispatch queue
@@ -111,14 +71,19 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
           result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ) )
         }
       }
-
-      get_queue_metrics(broker).onComplete{ metrics=>
-        result.aggregate_queue_metrics = metrics
-        cb(Some(result))
-      }
+      cb(Some(result))
     }
   }
 
+  @GET
+  @Path("queue-metrics")
+  def get_queue_metrics(): AggregateQueueMetricsDTO = {
+    with_broker { case (broker, cb) =>
+      get_queue_metrics(broker).onComplete{ metrics=>
+        cb(Some(metrics))
+      }
+    }
+  }
 
   @GET @Path("virtual-hosts")
   def virtualHosts = {
@@ -186,46 +151,46 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
 
 
   @GET @Path("virtual-hosts/{id}")
-  def virtualHost(@PathParam("id") id : String):VirtualHostStatusDTO = {
-    with_virtual_host(id) { case (virtualHost,cb) =>
+  def virtual_host(@PathParam("id") id : String):VirtualHostStatusDTO = {
+    with_virtual_host(id) { case (virtual_host,cb) =>
       val result = new VirtualHostStatusDTO
-      result.id = virtualHost.id
-      result.state = virtualHost.service_state.toString
-      result.state_since = virtualHost.service_state.since
-      result.config = virtualHost.config
+      result.id = virtual_host.id
+      result.state = virtual_host.service_state.toString
+      result.state_since = virtual_host.service_state.since
+      result.store = virtual_host.store!=null
 
-      virtualHost.router.asInstanceOf[LocalRouter].topic_domain.destinations.foreach { node=>
+      virtual_host.router.asInstanceOf[LocalRouter].topic_domain.destinations.foreach { node=>
         result.topics.add(new LongIdLabeledDTO(node.id, node.name))
       }
 
-      virtualHost.router.asInstanceOf[LocalRouter].queue_domain.destinations.foreach { node=>
+      virtual_host.router.asInstanceOf[LocalRouter].queue_domain.destinations.foreach { node=>
         result.queues.add(new LongIdLabeledDTO(node.id, node.binding.label))
       }
 
+      cb(Some(result))
+    }
+  }
+
+  @GET @Path("virtual-hosts/{id}/queue-metrics")
+  def virtual_host_queue_metrics(@PathParam("id") id : String): AggregateQueueMetricsDTO = {
+    with_virtual_host(id) { case (virtualHost,cb) =>
       get_queue_metrics(virtualHost).onComplete { metrics=>
-
-        result.aggregate_queue_metrics = metrics
-
-        if( virtualHost.store != null ) {
-          virtualHost.store.get_store_status { x=>
-            result.store = x
-            cb(Some(result))
-          }
-        } else {
-          cb(Some(result))
-        }
+        cb(Some(metrics))
       }
-
     }
   }
 
   @GET @Path("virtual-hosts/{id}/store")
   def store(@PathParam("id") id : String):StoreStatusDTO = {
-    val rc =  virtualHost(id).store
-    if( rc == null ) {
-      result(NOT_FOUND)
+    with_virtual_host(id) { case (virtualHost,cb) =>
+      if(virtualHost.store!=null) {
+        virtualHost.store.get_store_status { status =>
+          cb(Some(status))
+        }
+      } else {
+        cb(None)
+      }
     }
-    rc
   }
 
   def link(connection:BrokerConnection) = {
@@ -288,7 +253,6 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
   @GET @Path("virtual-hosts/{id}/queues/{queue}")
   def destination_queue(@PathParam("id") id : String, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean ):QueueStatusDTO = {
     with_virtual_host(id) { case (virtualHost,cb) =>
-      import JavaConversions._
       val queue = virtualHost.router.asInstanceOf[LocalRouter].queue_domain.destination_by_id.get(qid)
       status(queue, entries, cb)
     }
@@ -410,7 +374,6 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
           result.id = connector.id.toString
           result.state = connector.service_state.toString
           result.state_since = connector.service_state.since
-          result.config = connector.config
 
           result.accepted = connector.connection_counter.get
           connector.connections.foreach { case (id,connection) =>
@@ -475,4 +438,46 @@ case class RuntimeResource(parent:BrokerResource) extends Resource(parent) {
     result(strip_resolve("../../.."))
   }
 
+  @POST
+  @Path("action/shutdown")
+  def command_shutdown:Unit = {
+    info("JVM shutdown requested via web interface")
+
+    // do the the exit async so that we don't
+    // kill the current request.
+    Broker.BLOCKABLE_THREAD_POOL {
+      Thread.sleep(200);
+      System.exit(0)
+    }
+  }
+
+  def concurrent_map[T,R](values:Iterable[T])(dqf:(T)=>DispatchQueue)(func:T=>R) = {
+    Future.all( values.map { t=>
+      dqf(t).future { func(t) }
+    })
+  }
+
+  private def with_broker[T](func: (org.apache.activemq.apollo.broker.Broker, Option[T]=>Unit)=>Unit):T = {
+    BrokerRegistry.list.headOption match {
+      case None=> result(NOT_FOUND)
+      case Some(broker)=>
+        val f = Future[Option[T]]()
+        broker.dispatch_queue {
+          func(broker, f)
+        }
+        f().getOrElse(result(NOT_FOUND))
+    }
+  }
+
+  private def with_virtual_host[T](id:String)(func: (VirtualHost, Option[T]=>Unit)=>Unit):T = {
+    with_broker { case (broker, cb) =>
+      broker.virtual_hosts.valuesIterator.find( _.id == id) match {
+        case Some(virtualHost)=>
+          virtualHost.dispatch_queue {
+            func(virtualHost, cb)
+          }
+        case None=> cb(None)
+      }
+    }
+  }
 }

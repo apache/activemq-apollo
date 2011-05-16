@@ -44,10 +44,4 @@ public class ConnectorStatusDTO extends ServiceStatusDTO {
     @XmlElement(name="connection")
     public List<LongIdLabeledDTO> connections = new ArrayList<LongIdLabeledDTO>();
 
-    /**
-     * The current running configuration of the object
-     */
-    @XmlElement
-    public ConnectorDTO config = null;
-
 }

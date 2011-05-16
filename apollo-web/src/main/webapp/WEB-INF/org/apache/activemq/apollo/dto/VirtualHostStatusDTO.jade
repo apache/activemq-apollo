@@ -20,11 +20,11 @@
 .breadcumbs
   a(href={strip_resolve("..")}) Back
 
-h1 Virtual Host: #{config.id}
+h1 Virtual Host: #{id}
 
 p state: #{state} #{ uptime(state_since) } ago
 
-- if ( store !=null )
+- if ( store )
   p
     a(href={ path("store") }) store
 

@@ -142,33 +142,3 @@ class ViewHelper {
   }
 }
 
-/**
- * Manages a collection of broker resources.
- */
-@Path("/")
-@Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
-class BrokerResource extends Resource {
-
-  @GET
-  def get = {
-    val rc = new BrokerSummaryDTO
-    rc.manageable = BrokerRegistry.list.size > 0
-    
-    val cs = ConfigStore()
-    if( cs!=null ) {
-      val config = cs.load(false)
-      rc.configurable = cs.can_write
-    }
-    
-    rc
-  }
-
-  @Path("config")
-  def config_resource = ConfigurationResource(this)
-
-  @Path("runtime")
-  def runtime = RuntimeResource(this)
-}
-
-
-

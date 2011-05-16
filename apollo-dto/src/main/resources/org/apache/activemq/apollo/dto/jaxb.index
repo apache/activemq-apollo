@@ -16,7 +16,6 @@
 # ------------------------------------------------------------------------
 BrokerDTO
 BrokerStatusDTO
-BrokerSummaryDTO
 ConnectionStatusDTO
 ConnectorDTO
 ConnectorStatusDTO
