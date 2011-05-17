@@ -92,13 +92,6 @@
     </dependency>    
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-store</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <classifier>javadoc</classifier>
-      <scope>test</scope>
-    </dependency>    
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-transport</artifactId>
       <version>1.0-SNAPSHOT</version>
       <classifier>javadoc</classifier>
@@ -155,12 +148,6 @@
                   <artifactId>apollo-broker</artifactId>
                   <classifier>javadoc</classifier> 
                   <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-broker</outputDirectory>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.apache.activemq</groupId>
-                  <artifactId>apollo-store</artifactId>
-                  <classifier>javadoc</classifier> 
-                  <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-store</outputDirectory>
                 </artifactItem>
                 <artifactItem>
                   <groupId>org.apache.activemq</groupId>
