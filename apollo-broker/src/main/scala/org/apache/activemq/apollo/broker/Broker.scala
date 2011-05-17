@@ -193,7 +193,7 @@ object Broker extends Log {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class Broker() extends BaseService {
-  
+
   import Broker._
 
   var tmp: File = _
@@ -208,7 +208,7 @@ class Broker() extends BaseService {
   val dispatch_queue = createQueue("broker")
 
   def id = "default"
-  
+
   val connection_id_counter = new LongCounter
 
   var key_storage:KeyStorage = _
@@ -416,7 +416,7 @@ class Broker() extends BaseService {
         }
 
         if( l < min_limit ) {
-          console_log.warn("Please increase the process file limit using 'ulimit -n %d' or configure lower the connection limits on the broker connectors.", min_limit)
+          console_log.warn("Please increase the process file limit using 'ulimit -n %d' or configure lower connection limits on the broker connectors.", min_limit)
         }
       }
     } catch {
