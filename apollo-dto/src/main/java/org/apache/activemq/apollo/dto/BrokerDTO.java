@@ -65,7 +65,7 @@ public class BrokerDTO {
     public BrokerAclDTO acl;
 
     @XmlElement(name="web_admin")
-    public WebAdminDTO web_admin;
+    public List<WebAdminDTO> web_admins = new ArrayList<WebAdminDTO>();
 
     @XmlElement(name="authentication")
     public AuthenticationDTO authentication;

@@ -39,7 +39,7 @@ object WebServerFactory {
 
   trait Provider {
     def create(broker:Broker):WebServer
-    def validate(config: WebAdminDTO, reporter:Reporter):ReporterLevel
+    def validate(config: List[WebAdminDTO], reporter:Reporter):ReporterLevel
   }
 
   val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/web-server-factory.index",classOf[Provider])
@@ -58,7 +58,7 @@ object WebServerFactory {
   }
 
 
-  def validate(config: WebAdminDTO, reporter:Reporter):ReporterLevel = {
+  def validate(config: List[WebAdminDTO], reporter:Reporter):ReporterLevel = {
     if( config == null ) {
       return INFO
     } else {

@@ -82,7 +82,7 @@ examples to [verify](verification.html) the the broker is running properly.
 Apollo provides a simple web interface to monitor the status of the broker.  Once
 the admin interface will be accessible at:
 
-* [http://127.0.0.1:61680/](http://127.0.0.1:61680/)
+* [http://127.0.0.1:61680/](http://127.0.0.1:61680/) or [https://127.0.0.1:61681/](https://127.0.0.1:61681/)
 
 The default login id and password is `admin` and `password`.
 

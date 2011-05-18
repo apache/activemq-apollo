@@ -170,8 +170,8 @@ object Broker extends Log {
       for (connector <- config.connectors ) {
         result |= Connector.validate(connector, reporter)
       }
-      if( config.web_admin != null ) {
-        WebServerFactory.validate(config.web_admin, reporter)
+      if( !config.web_admins.isEmpty ) {
+        WebServerFactory.validate(config.web_admins.toList, reporter)
       }
 
     }.result
@@ -310,7 +310,7 @@ class Broker() extends BaseService {
     val first_tracker = new LoggingTracker("broker startup", console_log, dispatch_queue)
     val second_tracker = new LoggingTracker("broker startup", console_log, dispatch_queue)
 
-    Option(config.web_admin).foreach{ web_admin=>
+    if( !config.web_admins.isEmpty ) {
       WebServerFactory.create(this) match {
         case null =>
           warn("Could not start admistration interface.")

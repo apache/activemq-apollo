@@ -54,7 +54,7 @@ class OsgiWebServerFactory  extends WebServerFactory.Provider {
 
   }
 
-  def validate(config: WebAdminDTO, reporter: Reporter): ReporterLevel.ReporterLevel = {
+  def validate(config: List[WebAdminDTO], reporter: Reporter): ReporterLevel.ReporterLevel = {
     if( broker_service.context == null ) {
       return null
     }

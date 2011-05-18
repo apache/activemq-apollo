@@ -4,11 +4,12 @@
 
 ## Overview
 
-Apollo's REST API runs on port 61680 by default.   If your running 
-an Apollo broker on your local machine, you  would access the 
-API at the following HTTP URL:
+Apollo's REST API runs on port 61680 or via SSL on port 61681. If your
+running an Apollo broker on your local machine, you could access the
+API at the following HTTP URLs:
 
     http://localhost:61680
+    https://localhost:61681
 
 For all of the rest of this document, we will be leaving off that part,
 since it is the same for every API call.
@@ -429,9 +430,9 @@ Results in a [Broker Configuration](./api/apollo-dto/org/apache/activemq/apollo/
       "kind":null
     }]
   },
-  "web_admin":{
+  "web_admins":[{
     "bind":"http://127.0.0.1:61680"
-  },
+  }],
   "authentication":{
     "enabled":null,
     "domain":"apollo",

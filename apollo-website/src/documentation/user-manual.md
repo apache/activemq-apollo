@@ -728,8 +728,9 @@ to the proper value before starting the broker.
 
 ### Web Based Administration
 
-${project_name} start a web based administration interface on 
-[`http://127.0.0.1:61680`](http://127.0.0.1:61680) by default.  Note
+${project_name} starts a web based administration interface on 
+[`http://127.0.0.1:61680`](http://127.0.0.1:61680) and 
+[`https://127.0.0.1:61681`](https://127.0.0.1:61681) by default.  Note
 that it binds to the loopback interface so that only local web 
 browsers can access the interface.
 
@@ -739,14 +740,17 @@ perform basic authentication and will only grant access to those users
 which are in the admin ACL.
 
 If you want to disable the web the interface then you should remove
-the `web_admin` configuration element. 
+the `web_admin` configuration elements.  If you want to allow 
+remote administration, you should update the configuration so
+it bind either the `0.0.0.0` or `[::]` address.  
 
 For example:
 
 {pygmentize:: xml}
 <broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
   ...
-  <web_admin bind="http://127.0.0.1:61680"/>
+  <web_admin bind="http://0.0.0.0:61680"/>
+  <web_admin bind="https://0.0.0.0:61681"/>
   ...
 </broker>
 {pygmentize}

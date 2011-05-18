@@ -30,6 +30,13 @@ import java.io.File
 import java.lang.String
 import org.apache.activemq.apollo.broker.web.{WebServer, WebServerFactory}
 import java.net.URI
+import org.eclipse.jetty.server.handler.HandlerList
+import collection.mutable.{HashMap, ListBuffer}
+import org.eclipse.jetty.server.ssl.SslSelectChannelConnector
+import javax.net.ssl.KeyManager
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import org.eclipse.jetty.util.thread.ExecutorThreadPool
 
 /**
  * <p>
@@ -55,7 +62,7 @@ object JettyWebServerFactory extends WebServerFactory.Provider {
     new JettyWebServer(broker)
   }
 
-  def validate(config: WebAdminDTO, reporter: Reporter): ReporterLevel.ReporterLevel = {
+  def validate(config: List[WebAdminDTO], reporter: Reporter): ReporterLevel.ReporterLevel = {
     if( !enabled ) {
       return null
     }
@@ -147,13 +154,6 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
       import collection.JavaConversions._
 
       val config = broker.config
-      val web_admin = config.web_admin
-
-      val bind = web_admin.bind.getOrElse("http://127.0.0.1:61680")
-      val bind_uri = new URI(bind)
-      val prefix = "/"+bind_uri.getPath.stripPrefix("/")
-      val host = bind_uri.getHost
-      val port = bind_uri.getPort
 
       // Start up the admin interface...
       debug("Starting administration interface");
@@ -162,20 +162,71 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
         System.setProperty("scalate.workdir", (broker.tmp / "scalate").getCanonicalPath )
       }
 
-      var connector = new SelectChannelConnector
-      connector.setHost(host)
-      connector.setPort(port)
+      val contexts = HashMap[String, Handler]()
+      val connectors = HashMap[String, Connector]()
 
+      config.web_admins.foreach { web_admin =>
 
-      def admin_app = {
-        var app_context = new WebAppContext
-        app_context.setContextPath(prefix)
-        app_context.setWar(webapp.getCanonicalPath)
-        if( broker.tmp !=null ) {
-          app_context.setTempDirectory(broker.tmp)
+        val bind = web_admin.bind.getOrElse("http://127.0.0.1:61680")
+        val bind_uri = new URI(bind)
+        val prefix = "/"+bind_uri.getPath.stripPrefix("/")
+
+        val scheme = bind_uri.getScheme
+        val host = bind_uri.getHost
+        var port = bind_uri.getPort
+
+        scheme match {
+          case "http" =>
+            if (port == -1) {
+              port = 80
+            }
+          case "https" =>
+            if (port == -1) {
+              port = 443
+            }
+          case _ => throw new Exception("Invalid 'web_admin' bind setting.  The protocol scheme must be http or https.")
         }
-        app_context
+
+        // Only add the connector if not yet added..
+        val connector_id = scheme+"://"+bind_uri+":"+port
+        if ( !connectors.containsKey(connector_id) ) {
+
+          val connector = scheme match {
+            case "http" => new SelectChannelConnector
+            case "https" =>
+              val sslContext = if( broker.key_storage!=null ) {
+                val protocol = "TLS"
+                val sslContext = SSLContext.getInstance (protocol)
+                sslContext.init(broker.key_storage.create_key_managers, broker.key_storage.create_trust_managers, null)
+                sslContext
+              } else {
+                SSLContext.getDefault
+              }
+
+              val connector = new SslSelectChannelConnector
+              connector.setSslContext(sslContext)
+              connector
+          }
+
+
+          connector.setThreadPool(new ExecutorThreadPool(Broker.BLOCKABLE_THREAD_POOL))
+          connector.setHost(host)
+          connector.setPort(port)
+          connectors.put(connector_id, connector)
+        }
+
+        // Only add the app context if not yet added..
+        if ( !contexts.containsKey(prefix) ) {
+          var context = new WebAppContext
+          context.setContextPath(prefix)
+          context.setWar(webapp.getCanonicalPath)
+          if( broker.tmp !=null ) {
+            context.setTempDirectory(broker.tmp)
+          }
+          contexts.put(prefix, context)
+        }
       }
+
 
       def secured(handler:Handler) = {
         if( config.authentication!=null && config.acl!=null ) {
@@ -206,14 +257,24 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
         }
       }
 
+      val context_list = new HandlerList
+      contexts.values.foreach(context_list.addHandler(_))
+
       server = new Server
-      server.setHandler(secured(admin_app))
-      server.setConnectors(Array[Connector](connector))
+      server.setHandler(secured(context_list))
+      server.setConnectors(connectors.values.toArray)
       server.start
 
-      val localPort = connector.getLocalPort
-      def url = new URI("http", null, host, localPort, prefix, null, null).toString
-      broker.console_log.info("Administration interface available at: "+url)
+      for( connector <- connectors.values ; prefix <- contexts.keys ) {
+        val localPort = connector.getLocalPort
+        val scheme = connector match {
+          case x:SslSelectChannelConnector => "https"
+          case _ => "http"
+        }
+
+        def url = new URI(scheme, null, connector.getHost, localPort, prefix, null, null).toString
+        broker.console_log.info("Administration interface available at: "+url)
+      }
       on_completed.run
     }
   }

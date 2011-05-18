@@ -56,6 +56,7 @@
   </virtual_host>
 
   <web_admin bind="http://127.0.0.1:61680"/>
+  <web_admin bind="https://127.0.0.1:61681"/>
 
   <connector id="tcp" bind="tcp://0.0.0.0:61613" connection_limit="2000"/>
   <connector id="tls" bind="tls://0.0.0.0:61614" connection_limit="2000"/>

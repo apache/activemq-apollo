@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.util;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.*;
 
 /**
@@ -30,13 +32,25 @@ public class ApolloThreadPool {
 
     public static final int POOL_SIZE = Integer.parseInt(System.getProperty("apollo.thread.pool", "128"));
 
-    public static final ThreadPoolExecutor INSTANCE = new ThreadPoolExecutor(POOL_SIZE, POOL_SIZE, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
+    public static final ThreadPoolExecutor INSTANCE = new ThreadPoolExecutor(POOL_SIZE, POOL_SIZE, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
         public Thread newThread(Runnable r) {
             Thread rc = new Thread(r, "Apollo Blocking Task");
             rc.setDaemon(true);
             return rc;
         }
-    });
+    }) {
+
+        @Override
+        public void shutdown() {
+            // we don't ever shutdown since we are shared..
+        }
+
+        @Override
+        public List<Runnable> shutdownNow() {
+            // we don't ever shutdown since we are shared..
+            return Collections.emptyList();
+        }
+    };
 
     static {
         INSTANCE.allowCoreThreadTimeOut(true);

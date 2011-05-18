@@ -57,31 +57,29 @@ class Stop extends Action with Logging {
 
       val config = new FileConfigStore(conf).load(true)
 
-      Option(config.web_admin) match {
-        case None=>
-          error("Web admin not enabled for that configuration, sorry can't shut the broker down");
+      if(config.web_admins.isEmpty) {
+        error("Web admin not enabled for that configuration, sorry can't shut the broker down");
+      } else {
 
-        case Some(web_admin)=>
-        
-          val bind = web_admin.bind.getOrElse("http://localhost:61680")
-          val bind_uri = new URI(bind)
-          val prefix = bind_uri.getPath.stripSuffix("/")
-          val host = "localhost"
-          val port = bind_uri.getPort
+        val bind = config.web_admins.get(0).bind.getOrElse("http://localhost:61680")
+        val bind_uri = new URI(bind)
+        val prefix = bind_uri.getPath.stripSuffix("/")
+        val host = "localhost"
+        val port = bind_uri.getPort
 
-          val auth = (user, password) match {
-            case (null,null)=> None
-            case (null,p)=> Some(":"+p)
-            case (u,null)=> Some(u+":")
-            case (u,p)=> Some(u+":"+p)
-          }
+        val auth = (user, password) match {
+          case (null,null)=> None
+          case (null,p)=> Some(":"+p)
+          case (u,null)=> Some(u+":")
+          case (u,p)=> Some(u+":"+p)
+        }
 
-          val connection = new URL(
-            "http://%s:%s%s/runtime/action/shutdown".format(host, port, prefix)
-          ).openConnection.asInstanceOf[HttpURLConnection]
-          connection.setRequestMethod("POST");
-          auth.foreach{x=> connection.setRequestProperty("Authorization", "Basic "+new String(Base64.encodeBase64(x.getBytes("UTF-8")), "UTF-8")) }
-          connection.getContent
+        val connection = new URL(
+          "http://%s:%s%s/action/shutdown".format(host, port, prefix)
+        ).openConnection.asInstanceOf[HttpURLConnection]
+        connection.setRequestMethod("POST");
+        auth.foreach{x=> connection.setRequestProperty("Authorization", "Basic "+new String(Base64.encodeBase64(x.getBytes("UTF-8")), "UTF-8")) }
+        connection.getContent
       }
 
     } catch {
