@@ -83,7 +83,7 @@
       <classifier>javadoc</classifier>
       <scope>test</scope>
     </dependency>
-    <dependency>
+    <!-- <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-broker</artifactId>
       <version>1.0-SNAPSHOT</version>
@@ -103,7 +103,7 @@
       <version>1.0-SNAPSHOT</version>
       <classifier>javadoc</classifier>
       <scope>test</scope>
-    </dependency>    
+    </dependency>   -->  
 
   </dependencies>
 
@@ -143,7 +143,7 @@
                   <classifier>javadoc</classifier> 
                   <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-dto</outputDirectory>
                 </artifactItem>
-                <artifactItem>
+                <!-- <artifactItem>
                   <groupId>org.apache.activemq</groupId>
                   <artifactId>apollo-broker</artifactId>
                   <classifier>javadoc</classifier> 
@@ -161,7 +161,7 @@
                   <classifier>javadoc</classifier> 
                   <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-util</outputDirectory>
                 </artifactItem>
-                
+                 -->
               </artifactItems>
               <!-- other configurations here -->
             </configuration>
