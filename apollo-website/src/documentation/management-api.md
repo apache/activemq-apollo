@@ -8,7 +8,7 @@ Apollo's REST API runs on port 61680 by default.   If your running
 an Apollo broker on your local machine, you  would access the 
 API at the following HTTP URL:
 
-    https://localhost:61680
+    http://localhost:61680
 
 For all of the rest of this document, we will be leaving off that part,
 since it is the same for every API call.
@@ -21,7 +21,7 @@ user credentials which have administration privileges.
 The user credentials should be supplied using via HTTP basic
 authentication. Example:
 
-    $ curl -u "admin:password" http://localhost:61680
+    $ curl -u "admin:password" http://localhost:61680/
 
 ### JSON Representation
 
@@ -29,11 +29,14 @@ The API routes are intended to be access programmatically as JSON
 services but they also provide an HTML representation so that the API
 services can easily be browsed using a standard web browser.
 
-You must set the HTTP `Accept` header to `application/json` to get the
-json representation of the data. Example:
+You must either set the HTTP `Accept` header to `application/json` or
+append `.json` to the URL to get the JSON representation of the data. 
+Example:
 
     $ curl -H "Accept: application/json" -u "admin:password" \
-    http://localhost:61680
+    http://localhost:61680/
+
+    $ curl -u "admin:password" http://localhost:61680/.json
 
 ### Broker Management
 
@@ -51,8 +54,7 @@ Doing a GET against it will provide information about the broker's
   
 Example:
 
-    $ curl -H "Accept: application/json" -u "admin:password" \
-    http://localhost:61680/
+    $ curl -u "admin:password" http://localhost:61680/.json
 
 Results in a [Broker Status](./api/apollo-dto/org/apache/activemq/apollo/dto/BrokerStatusDTO.html) :
 
@@ -83,8 +85,8 @@ The route for managing a connector is:
 
 Example:
 
-    $ curl -H "Accept: application/json" -u "admin:password" \
-    http://localhost:61680/connectors/stomp
+    $ curl -u "admin:password"
+    http://localhost:61680/connectors/stomp.json
 
 Results in a [Connector Status](./api/apollo-dto/org/apache/activemq/apollo/dto/ConnectorStatusDTO.html):
 
@@ -109,8 +111,8 @@ The route for managing a connection is:
 
 Example:
 
-    $ curl -H "Accept: application/json" -u "admin:password" \
-    http://localhost:61680/connections/5
+    $ curl -u "admin:password" \
+    http://localhost:61680/connections/5.json
 
 Results in a [Connection Status](./api/apollo-dto/org/apache/activemq/apollo/dto/ConnectionStatusDTO.html):
 
@@ -137,8 +139,8 @@ To shutdown a connection send a POST to:
 
 Example:
 
-    curl -X POST -H "Accept: application/json" -u "admin:password" \
-    http://localhost:61680/connections/5/action/shutdown
+    curl -X POST -u "admin:password" \
+    http://localhost:61680/connections/5/action/shutdown.json
 
 
 ### Virtual Host Management
@@ -150,8 +152,8 @@ The route for managing a virtual host is:
 Where `:name` is the id of a virtual host configured in the broker.
 Example:
 
-    $ curl -H "Accept: application/json" -u "admin:password" \
-    http://localhost:61680/virtual-hosts/localhost
+    $ curl -u "admin:password" \
+    http://localhost:61680/virtual-hosts/localhost.json
 
 Results in a [Virtual Host Status](./api/apollo-dto/org/apache/activemq/apollo/dto/VirtualHostStatusDTO.html):
 
@@ -182,8 +184,8 @@ Where `:name` is the id of a virtual host configured in the broker.
 
 Example:
 
-    $ curl -H "Accept: application/json" -u "admin:password" \
-    http://localhost:61680/virtual-hosts/localhost/store
+    $ curl -u "admin:password" \
+    http://localhost:61680/virtual-hosts/localhost/store.json
 
 Results in a [Store Status](./api/apollo-dto/org/apache/activemq/apollo/dto/StoreStatusDTO.html):
 
@@ -231,8 +233,8 @@ of the queue.
 
 Example:
 
-    $ curl -H "Accept: application/json" -u "admin:password" \
-    http://localhost:61680/virtual-hosts/localhost/queues/1
+    $ curl -u "admin:password" \
+    http://localhost:61680/virtual-hosts/localhost/queues/1.json
 
 Results in a [Queue Status](./api/apollo-dto/org/apache/activemq/apollo/dto/QueueStatusDTO.html):
 
@@ -315,8 +317,8 @@ of the topic.
 
 Example:
 
-    $ curl -H "Accept: application/json" -u "admin:password" \
-    http://localhost:61680/virtual-hosts/localhost/topics/1
+    $ curl -u "admin:password" \
+    http://localhost:61680/virtual-hosts/localhost/topics/1.json
 
 Results in a [Topic Status](./api/apollo-dto/org/apache/activemq/apollo/dto/TopicStatusDTO.html):
 
@@ -356,8 +358,8 @@ To get current runtime configuration of the broker GET:
 
 Example:
 
-    $ curl -H "Accept: application/json" -u "admin:password" \
-    http://localhost:61680/config/runtime
+    $ curl -u "admin:password" \
+    http://localhost:61680/config/runtime.json
 
 Results in a [Broker Configuration](./api/apollo-dto/org/apache/activemq/apollo/dto/BrokerDTO.html):
 
@@ -456,8 +458,8 @@ using one of the following URL routes:
 
 Example:
 
-    $ curl -H "Accept: application/json" -u "admin:password" \
-    http://localhost:61680/queue-metrics
+    $ curl -u "admin:password" \
+    http://localhost:61680/queue-metrics.json
 
 Results in an [Aggregate of Queue Metrics](./api/apollo-dto/org/apache/activemq/apollo/dto/AggregateQueueMetricsDTO.html):
 
