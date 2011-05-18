@@ -280,14 +280,14 @@ Results in a [Queue Status](./api/apollo-dto/org/apache/activemq/apollo/dto/Queu
   "producers":[
     {
       "kind":"connection",
-      "ref":"1",
+      "id":"1",
       "label":"/127.0.0.1:52690"
     }
   ],"consumers":[
     {
       "link":{
         "kind":"connection",
-        "ref":"2",
+        "id":"2",
         "label":"/127.0.0.1:52691"
       },
       "position":37828414,
@@ -332,14 +332,14 @@ Results in a [Topic Status](./api/apollo-dto/org/apache/activemq/apollo/dto/Topi
   "producers":[
     {
       "kind":"connection",
-      "ref":"3",
+      "id":"3",
       "label":"/127.0.0.1:52772"
     }
   ],
   "consumers":[
     {
       "kind":"connection",
-      "ref":"4",
+      "id":"4",
       "label":"/127.0.0.1:52773"
     }
   ],

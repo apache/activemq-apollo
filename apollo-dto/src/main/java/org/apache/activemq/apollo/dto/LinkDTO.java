@@ -31,7 +31,7 @@ public class LinkDTO {
     public String kind;
 
     @XmlAttribute
-    public String ref;
+    public String id;
 
     @XmlAttribute
     public String label;

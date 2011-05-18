@@ -30,7 +30,7 @@ ul
     - x.kind match
       - case "connection" =>
         li
-          a(href={ path("../../../../connections/"+x.ref) }) #{x.label}
+          a(href={ path("../../../../connections/"+x.id) }) #{x.label}
       - case _ =>
 
 h4 Subscribers
@@ -39,10 +39,10 @@ ul
     - x.kind match
       - case "queue" =>
         li
-          a(href={ path("../../queues/"+x.ref) }) #{x.label}
+          a(href={ path("../../queues/"+x.id) }) #{x.label}
       - case "connection" =>
         li
-          a(href={ path("../../../../connections/"+x.ref) }) #{x.label}
+          a(href={ path("../../../../connections/"+x.id) }) #{x.label}
       - case _ =>
 
 h4 Durable Subscribers

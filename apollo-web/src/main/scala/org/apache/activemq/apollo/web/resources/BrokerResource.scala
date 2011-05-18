@@ -196,7 +196,7 @@ case class BrokerResource() extends Resource() {
   def link(connection:BrokerConnection) = {
     val link = new LinkDTO()
     link.kind = "connection"
-    link.ref = connection.id.toString
+    link.id = connection.id.toString
     link.label = connection.transport.getRemoteAddress
     link
   }
@@ -204,7 +204,7 @@ case class BrokerResource() extends Resource() {
   def link(queue:Queue) = {
     val link = new LinkDTO()
     link.kind = "queue"
-    link.ref = queue.id.toString
+    link.id = queue.id.toString
     link.label = queue.binding.label
     link
   }
