@@ -65,7 +65,7 @@ status() {
     if [ $? -eq 0 ] ; then
       return 1
     else
-      rm ${PID_FILE}
+      rm "${PID_FILE}"
     fi
   fi
   return 0
@@ -83,7 +83,7 @@ stop() {
     fi
     sleep 1
   done
-  echo Could not stop process ${pid}
+  echo "Could not stop process ${pid}"
   return 1
 }
 
@@ -95,7 +95,7 @@ start() {
     return 1
   fi
 
-  if [ -z "$APOLLO_USER" -o `id -un` == "$APOLLO_USER" ] ; then
+  if [ -z "$APOLLO_USER" -o `id -un` = "$APOLLO_USER" ] ; then
     nohup ${APOLLO_BASE}/bin/apollo-broker run > /dev/null 2> /dev/null &
   else
     sudo -n -u ${APOLLO_USER} nohup ${APOLLO_BASE}/bin/apollo-broker run > /dev/null 2> /dev/null &
@@ -110,6 +110,7 @@ start() {
     echo "Could not start ${service}"
     return 1
   fi
+  echo "${service} is now running (${pid})"
   return 0
 }
 
@@ -144,7 +145,7 @@ case $1 in
     if [ $? -eq 0 ] ; then
       echo "${service} is stopped"
     else
-      echo  "${service} is running"
+      echo "${service} is running (${pid})"
     fi
     exit 0
   ;;
@@ -152,4 +153,5 @@ case $1 in
   *)
     echo "Usage: $0 {start|stop|restart|force-stop|status}" >&2
     exit 2
+  ;;
 esac
