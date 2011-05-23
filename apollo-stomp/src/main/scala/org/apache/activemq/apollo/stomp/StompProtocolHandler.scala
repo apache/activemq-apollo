@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.stomp
 
 import _root_.org.fusesource.hawtbuf._
+import dto.{StompConnectionStatusDTO, StompDTO}
 import org.fusesource.hawtdispatch._
 
 import Buffer._

@@ -39,18 +39,6 @@ public class XmlCodecTest {
     public void unmarshalling() throws Exception {
         BrokerDTO dto = XmlCodec.decode(BrokerDTO.class, resource("XmlCodecTest.xml"));
         assertNotNull(dto);
-        assertEquals(1, dto.connectors.size());
-        ConnectorDTO connector = dto.connectors.get(0);
-        assertEquals(1, connector.protocols.size());
-        ProtocolDTO stomp = connector.protocols.get(0);
-        assertTrue(stomp instanceof StompDTO);
-        assertEquals("JMSXUserID", ((StompDTO) stomp).add_user_header);
-
-        List<AddUserHeaderDTO> add_user_headers = ((StompDTO) stomp).add_user_headers;
-        assertEquals(2, add_user_headers.size());
-        assertEquals("GroupId", add_user_headers.get(0).name);
-        assertEquals("UserId", add_user_headers.get(1).name);
-        assertEquals("UserPrincipal", add_user_headers.get(1).kind);
 
         VirtualHostDTO host = dto.virtual_hosts.get(0);
         assertNotNull(host.acl);

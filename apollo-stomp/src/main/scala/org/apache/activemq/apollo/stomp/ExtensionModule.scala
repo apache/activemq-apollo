@@ -1,3 +1,5 @@
+package org.apache.activemq.apollo.stomp
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,37 +16,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.dto;
-
-import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.List;
+import org.apache.activemq.apollo.util.Module
 
 /**
- * Allow you to customize the stomp protocol implementation.
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="stomp")
-@XmlAccessorType(XmlAccessType.FIELD)
-public class StompDTO extends ProtocolDTO {
-
-    @XmlAttribute(name="add_user_header")
-    public String add_user_header;
-
-    /**
-     * A broker accepts connections via it's configured connectors.
-     */
-    @XmlElement(name="add_user_header")
-    public List<AddUserHeaderDTO> add_user_headers = new ArrayList<AddUserHeaderDTO>();
-
-    @XmlAttribute(name="max_header_length")
-    public Integer max_header_length;
-
-    @XmlAttribute(name="max_headers")
-    public Integer max_headers;
-
-    @XmlAttribute(name="max_data_length")
-    public Integer max_data_length;
-
+class ExtensionModule extends Module {
+  override def xml_packages = Array("org.apache.activemq.apollo.stomp.dto")
 }

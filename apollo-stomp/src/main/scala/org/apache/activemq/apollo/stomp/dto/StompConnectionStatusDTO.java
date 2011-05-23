@@ -14,18 +14,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.dto;
+package org.apache.activemq.apollo.stomp.dto;
 
-import org.codehaus.jackson.annotate.JsonTypeInfo;
+import org.apache.activemq.apollo.dto.ConnectionStatusDTO;
 
-import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
+ * <p>
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlType (name = "protocol_type")
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
-@XmlRootElement(name="protocol")
+@XmlRootElement(name="stomp_connection_status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ProtocolDTO {
+public class StompConnectionStatusDTO extends ConnectionStatusDTO {
+
+    /**
+     * The version of the STOMP protocol being used.
+     */
+	@XmlAttribute
+	public String protocol_version;
+
+    /**
+     * The connected user
+     */
+	@XmlAttribute
+	public String user;
+
+    /**
+     * What the connection is currently waiting on
+     */
+    @XmlAttribute(name="waiting_on")
+	public String waiting_on;
+
+    /**
+     * Opens subscriptions that the connection has created.
+     */
+    @XmlAttribute(name="subscription_count")
+	public int subscription_count;
+
+
 }

@@ -14,46 +14,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.dto;
+package org.apache.activemq.apollo.stomp.dto;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
+import org.apache.activemq.apollo.dto.AddUserHeaderDTO;
+import org.apache.activemq.apollo.dto.ProtocolDTO;
+
+import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * <p>
- * </p>
+ * Allow you to customize the stomp protocol implementation.
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="stomp_connection_status")
+@XmlRootElement(name="stomp")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class StompConnectionStatusDTO extends ConnectionStatusDTO {
+public class StompDTO extends ProtocolDTO {
+
+    @XmlAttribute(name="add_user_header")
+    public String add_user_header;
 
     /**
-     * The version of the STOMP protocol being used.
+     * A broker accepts connections via it's configured connectors.
      */
-	@XmlAttribute
-	public String protocol_version;
+    @XmlElement(name="add_user_header")
+    public List<AddUserHeaderDTO> add_user_headers = new ArrayList<AddUserHeaderDTO>();
 
-    /**
-     * The connected user
-     */
-	@XmlAttribute
-	public String user;
+    @XmlAttribute(name="max_header_length")
+    public Integer max_header_length;
 
-    /**
-     * What the connection is currently waiting on
-     */
-    @XmlAttribute(name="waiting_on")
-	public String waiting_on;
+    @XmlAttribute(name="max_headers")
+    public Integer max_headers;
 
-    /**
-     * Opens subscriptions that the connection has created.
-     */
-    @XmlAttribute(name="subscription_count")
-	public int subscription_count;
-
+    @XmlAttribute(name="max_data_length")
+    public Integer max_data_length;
 
 }

@@ -41,6 +41,7 @@ import security.SecurityContext
 import tcp.TcpTransport
 import codec.OpenWireFormat
 import command._
+import org.apache.activemq.apollo.stomp.dto.StompConnectionStatusDTO
 import org.apache.activemq.apollo.dto.{TopicDestinationDTO, DurableSubscriptionDestinationDTO, DestinationDTO, StompConnectionStatusDTO}
 
 object OpenwireProtocolHandler extends Log {
