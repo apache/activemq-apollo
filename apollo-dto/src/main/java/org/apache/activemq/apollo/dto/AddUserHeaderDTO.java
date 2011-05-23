@@ -30,12 +30,27 @@ import javax.xml.bind.annotation.XmlValue;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class AddUserHeaderDTO {
 
+    /**
+     * The name of the header to set
+     */
     @XmlValue
     public String name;
 
+    /**
+     * If the user has multiple principals which match
+     * then they will all be listed in the value of the header
+     * entry separated by the configured separator value.  If the
+     * separator is not set, then only the first matching principal
+     * will be used in the value of the header entry.
+     */
     @XmlAttribute(name="separator")
     public String separator;
 
+    /**
+     * The user sending the message may have many principals,
+     * setting the kind will only select those principals who's
+     * class name matches the kind.
+     */
     @XmlAttribute(name="kind")
     public String kind;
 
