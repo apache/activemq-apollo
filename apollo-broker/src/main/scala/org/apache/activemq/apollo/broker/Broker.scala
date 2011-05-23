@@ -305,7 +305,16 @@ class Broker() extends BaseService {
 
 
       services = (config.services.map { clazz =>
-        Broker.class_loader.loadClass(clazz).newInstance().asInstanceOf[Service]
+        val service = Broker.class_loader.loadClass(clazz).newInstance().asInstanceOf[Service]
+
+        // Try to inject the broker via reflection..
+        type BrokerAware = { var broker:Broker }
+        try {
+          service.asInstanceOf[BrokerAware].broker = this
+        } catch { case _ => }
+
+        service
+
       }).toList
     }
 

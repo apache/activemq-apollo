@@ -92,13 +92,17 @@ object ProtocolFilter {
   def create_filters(clazzes:List[String], handler:ProtocolHandler) = {
     clazzes.map { clazz =>
       val filter = Broker.class_loader.loadClass(clazz).newInstance().asInstanceOf[ProtocolFilter]
-      filter.protocol_handler = handler
+
+      type ProtocolHandlerAware = { var protocol_handler:ProtocolHandler }
+      try {
+        filter.asInstanceOf[ProtocolHandlerAware].protocol_handler = handler
+      } catch { case _ => }
+
       filter
     }
   }
 }
 
 trait ProtocolFilter {
-  var protocol_handler:ProtocolHandler = _
   def filter[T](command: T):T
 }
