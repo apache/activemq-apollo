@@ -73,5 +73,13 @@ public class BrokerDTO {
     @XmlElement(name="log_category")
     public LogCategoryDTO log_category;
 
+    /**
+     * Opaque service class names which gets started/stopped when the broker
+     * starts/stops.
+     */
+    @XmlElement(name="service")
+    public List<String> services = new ArrayList<String>();
+
+
     public Boolean sticky_dispatching;
 }

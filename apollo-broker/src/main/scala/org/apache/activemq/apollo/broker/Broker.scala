@@ -219,6 +219,7 @@ class Broker() extends BaseService {
   var security_log:Log  = _
   var connection_log:Log = _
   var console_log:Log = _
+  var services = List[Service]()
 
   override def toString() = "broker: "+id
 
@@ -302,6 +303,10 @@ class Broker() extends BaseService {
         connectors ::= connector
       }
 
+
+      services = (config.services.map { clazz =>
+        Broker.class_loader.loadClass(clazz).newInstance().asInstanceOf[Service]
+      }).toList
     }
 
     BrokerRegistry.add(this)
@@ -325,18 +330,28 @@ class Broker() extends BaseService {
     )
 
     // Once virtual hosts are up.. start up the connectors.
-    first_tracker.callback(^{
-      connectors.foreach( x=>
-        second_tracker.start(x)
-      )
-      second_tracker.callback(on_completed)
-    })
+    first_tracker.callback{
+      connectors.foreach(second_tracker.start(_))
+      second_tracker.callback {
+        // Once the connectors are up, start the services.
+        val services_tracker = new LoggingTracker("broker startup", console_log, dispatch_queue)
+        services.foreach( x=>
+          first_tracker.start(x)
+        )
+        services_tracker.callback(on_completed)
+      }
+    }
 
   }
 
 
   def _stop(on_completed:Runnable): Unit = {
     val tracker = new LoggingTracker("broker shutdown", console_log, dispatch_queue)
+
+    // Stop the services...
+    services.foreach( x=>
+      tracker.stop(x)
+    )
 
     // Stop accepting connections..
     connectors.foreach( x=>
