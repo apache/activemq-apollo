@@ -50,4 +50,10 @@ public class StompDTO extends ProtocolDTO {
     @XmlAttribute(name="max_data_length")
     public Integer max_data_length;
 
+    /**
+     * A broker accepts connections via it's configured connectors.
+     */
+    @XmlElement(name="protocol_filter")
+    public List<String> protocol_filters = new ArrayList<String>();
+
 }

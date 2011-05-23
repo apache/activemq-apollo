@@ -23,7 +23,7 @@ import org.fusesource.hawtdispatch._
 import Buffer._
 import org.apache.activemq.apollo.broker._
 import java.lang.String
-import protocol.{HeartBeatMonitor, ProtocolHandler}
+import protocol.{ProtocolFilter, HeartBeatMonitor, ProtocolHandler}
 import security.SecurityContext
 import Stomp._
 import org.apache.activemq.apollo.selector.SelectorParser
@@ -36,8 +36,8 @@ import scala.util.continuations._
 import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.transport.tcp.SslTransport
 import java.security.cert.X509Certificate
-import collection.mutable.{ArrayBuffer, ListBuffer, HashMap}
-import java.io.{File, IOException}
+import collection.mutable.{ListBuffer, HashMap}
+import java.io.IOException
 
 
 case class RichBuffer(self:Buffer) extends Proxy {
@@ -71,9 +71,6 @@ object StompProtocolHandler extends Log {
   var inbound_heartbeat = DEFAULT_INBOUND_HEARTBEAT
 
 }
-
-import StompProtocolHandler._
-
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -369,6 +366,8 @@ class StompProtocolHandler extends ProtocolHandler {
   var config:StompDTO = _
   var session_id:AsciiBuffer = _
 
+  var protocol_filters = List[ProtocolFilter]()
+
   override def set_connection(connection: BrokerConnection) = {
     super.set_connection(connection)
     import collection.JavaConversions._
@@ -376,11 +375,12 @@ class StompProtocolHandler extends ProtocolHandler {
     val codec = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
     config = connection.connector.config.protocols.find( _.isInstanceOf[StompDTO]).map(_.asInstanceOf[StompDTO]).getOrElse(new StompDTO)
 
+    protocol_filters = ProtocolFilter.create_filters(config.protocol_filters.toList, this)
+
     import OptionSupport._
     config.max_data_length.foreach( codec.max_data_length = _ )
     config.max_header_length.foreach( codec.max_header_length = _ )
     config.max_headers.foreach( codec.max_headers = _ )
-
   }
 
   override def create_connection_status = {
@@ -473,9 +473,14 @@ class StompProtocolHandler extends ProtocolHandler {
         case s:StompCodec =>
           // this is passed on to us by the protocol discriminator
           // so we know which wire format is being used.
-        case frame:StompFrame=>
+        case f:StompFrame=>
 
-          trace("received frame: %s", frame)
+          trace("received frame: %s", f)
+
+          var frame = f
+          protocol_filters.foreach { filter =>
+            frame = filter.filter(frame)
+          }
 
           if( protocol_version == null ) {
 

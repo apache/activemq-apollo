@@ -16,13 +16,12 @@
  */
 package org.apache.activemq.apollo.broker.protocol
 
-import java.io.{IOException}
-import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
+import java.io.IOException
 import org.apache.activemq.apollo.broker.store.MessageRecord
 import org.apache.activemq.apollo.transport._
-import org.apache.activemq.apollo.broker.{Delivery, Message, BrokerConnection}
 import org.apache.activemq.apollo.dto.ConnectionStatusDTO
 import org.apache.activemq.apollo.util.{Log, ClassFinder}
+import org.apache.activemq.apollo.broker.{Broker, Message, BrokerConnection}
 
 /**
  * <p>
@@ -87,4 +86,19 @@ trait ProtocolHandler {
 
   def on_transport_command(command: AnyRef) = {}
 
+}
+
+object ProtocolFilter {
+  def create_filters(clazzes:List[String], handler:ProtocolHandler) = {
+    clazzes.map { clazz =>
+      val filter = Broker.class_loader.loadClass(clazz).newInstance().asInstanceOf[ProtocolFilter]
+      filter.protocol_handler = handler
+      filter
+    }
+  }
+}
+
+trait ProtocolFilter {
+  var protocol_handler:ProtocolHandler = _
+  def filter[T](command: T):T
 }
