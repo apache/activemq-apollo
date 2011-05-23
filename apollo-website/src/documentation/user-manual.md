@@ -883,6 +883,22 @@ Example:
 </connector>
 {pygmentize}
 
+You can also configure how the destinations are parsed to interpret the 
+logical destination setting System properties.  The supported system 
+properties are:
+  
+* `apollo.stomp.path_separator` : Defaults to `.`
+* `apollo.stomp.queue_prefix` : Defaults to `/queue/`
+* `apollo.stomp.topic_prefix` : Defaults to `/topic/`
+* `apollo.stomp.any_child_wildcard` : Defaults to `*`
+* `apollo.stomp.any_descendant_wildcard` : Defaults to `**`
+* `apollo.stomp.destination_separator` : Defaults to `,`
+
+The recommended way to set the system properties is by updating
+the `APOLLO_OPTS` shell script variable.  See more details
+in the [Adjusting JVM Settings](#Adjusting_JVM_Settings) section
+of this manual.
+
 ### Client Libraries
 
 There are many open source STOMP clients for different platforms and
