@@ -41,8 +41,8 @@ import security.SecurityContext
 import tcp.TcpTransport
 import codec.OpenWireFormat
 import command._
-import org.apache.activemq.apollo.stomp.dto.StompConnectionStatusDTO
-import org.apache.activemq.apollo.dto.{TopicDestinationDTO, DurableSubscriptionDestinationDTO, DestinationDTO, StompConnectionStatusDTO}
+import org.apache.activemq.apollo.openwire.dto.OpenwireConnectionStatusDTO
+import org.apache.activemq.apollo.dto.{TopicDestinationDTO, DurableSubscriptionDestinationDTO, DestinationDTO}
 
 object OpenwireProtocolHandler extends Log {
 
@@ -202,7 +202,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       //          }
       //      }
       //      consumers = Map()
-      trace("stomp protocol resources released")
+      trace("openwire protocol resources released")
     }
   }
 
@@ -862,7 +862,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       assert( !route.full )
       route.offer(delivery)
       if( route.full ) {
-        // but once it gets full.. suspend, so that we get more stomp messages
+        // but once it gets full.. suspend, so that we get more messages
         // until it's not full anymore.
         suspendRead("blocked destination: "+route.overflowSessions.mkString(", "))
       }
