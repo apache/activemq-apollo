@@ -214,9 +214,6 @@ class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:D
     if( binding_dto.filter!=null ) {
       rc += " filtering '"+binding_dto.filter+"'"
     }
-    if( binding_dto.client_id!=null ) {
-      rc += " for client '"+binding_dto.client_id+"'"
-    }
     rc
   }
 
@@ -244,10 +241,7 @@ class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:D
         if( x.name != null && !decode_filter(x.name).matches(destination)) {
           return false
         }
-        if( x.client_id != null && x.client_id!=x.client_id ) {
-          return false
-        }
-        if( x.subscription_id != null && x.subscription_id!=x.subscription_id ) {
+        if( x.subscription_id != null && x.subscription_id!=binding_dto.subscription_id ) {
           return false
         }
         true

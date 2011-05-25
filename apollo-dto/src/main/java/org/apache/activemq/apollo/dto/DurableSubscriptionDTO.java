@@ -28,12 +28,6 @@ import javax.xml.bind.annotation.*;
 public class DurableSubscriptionDTO extends QueueDTO {
 
     /**
-     * To narrow down matches to a client id
-     */
-    @XmlAttribute(name="client_id")
-    public String client_id;
-
-    /**
      * To narrow down matches to a subscription id
      */
     @XmlAttribute(name="subscription_id")

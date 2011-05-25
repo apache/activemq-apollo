@@ -43,10 +43,6 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, val
 
   def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")
 
-  def is_same_ds(sub1:DurableSubscriptionDestinationDTO, sub2:DurableSubscriptionDestinationDTO) = {
-    (sub1.client_id, sub1.subscription_id) == (sub2.client_id, sub2.subscription_id)
-  }
-
   def bind (destination: DestinationDTO, consumer:DeliveryConsumer) = {
     destination match {
       case null=> // unified queue case

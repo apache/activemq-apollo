@@ -468,8 +468,13 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         destination = destination.map { _ match {
           case x:TopicDestinationDTO=>
             val rc = new DurableSubscriptionDestinationDTO(x.parts)
-            rc.client_id = parent.parent.info.getClientId
-            rc.subscription_id = if( is_durable_sub ) info.getSubscriptionName else null
+            if( is_durable_sub ) {
+              rc.subscription_id = ""
+              if( parent.parent.info.getClientId != null ) {
+                rc.subscription_id += parent.parent.info.getClientId + ":"
+              }
+              rc.subscription_id += info.getSubscriptionName
+            }
             rc.filter = info.getSelector
             rc
           case _ => die("A durable subscription can only be used on a topic destination")

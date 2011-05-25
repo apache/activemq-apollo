@@ -277,10 +277,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
     // Stores durable subscription queues.
     val durable_subscriptions_by_path = new PathMap[Queue]()
-    val durable_subscriptions_by_id = HashMap[(String,String), Queue]()
+    val durable_subscriptions_by_id = HashMap[String, Queue]()
 
     def get_or_create_durable_subscription(destination:DurableSubscriptionDestinationDTO):Queue = {
-      val key = (destination.client_id, destination.subscription_id)
+      val key = destination.subscription_id
       durable_subscriptions_by_id.get( key ).getOrElse {
         val queue = _create_queue(QueueBinding.create(destination))
         durable_subscriptions_by_id.put(key, queue)
@@ -290,7 +290,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
     def destroy_durable_subscription(queue:Queue):Unit = {
       val destination = queue.binding.binding_dto.asInstanceOf[DurableSubscriptionDestinationDTO]
-      if( durable_subscriptions_by_id.remove( (destination.client_id, destination.subscription_id) ).isDefined ) {
+      if( durable_subscriptions_by_id.remove( destination.subscription_id ).isDefined ) {
         val path = queue.binding.destination
         durable_subscriptions_by_path.remove(path, queue)
         var matches = get_destination_matches(path)
@@ -327,7 +327,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       }
 
       durable_subscriptions_by_path.put(path, queue)
-      durable_subscriptions_by_id.put((destination.client_id, destination.subscription_id), queue)
+      durable_subscriptions_by_id.put(destination.subscription_id, queue)
 
       matches.foreach( _.bind_durable_subscription(destination, queue) )
     }

@@ -35,9 +35,6 @@ public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
     @XmlAttribute
     public String filter;
 
-    @XmlAttribute(name="client_id")
-    public String client_id;
-
     @XmlAttribute(name="subscription_id")
     public String subscription_id;
 
@@ -54,12 +51,11 @@ public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
 
         DurableSubscriptionDestinationDTO that = (DurableSubscriptionDestinationDTO) o;
 
-        if (client_id != null ? !client_id.equals(that.client_id) : that.client_id != null) return false;
         if (filter != null ? !filter.equals(that.filter) : that.filter != null) return false;
-        if (parts != null ? !parts.equals(that.parts) : that.parts != null) return false;
         if (subscription_id != null ? !subscription_id.equals(that.subscription_id) : that.subscription_id != null)
             return false;
 
@@ -68,9 +64,8 @@ public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
 
     @Override
     public int hashCode() {
-        int result = parts != null ? parts.hashCode() : 0;
+        int result = super.hashCode();
         result = 31 * result + (filter != null ? filter.hashCode() : 0);
-        result = 31 * result + (client_id != null ? client_id.hashCode() : 0);
         result = 31 * result + (subscription_id != null ? subscription_id.hashCode() : 0);
         return result;
     }
