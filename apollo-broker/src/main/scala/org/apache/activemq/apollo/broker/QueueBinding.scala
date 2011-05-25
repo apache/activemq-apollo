@@ -16,14 +16,14 @@
  */
 package org.apache.activemq.apollo.broker
 
-import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
 import org.apache.activemq.apollo.selector.SelectorParser
 import org.apache.activemq.apollo.filter.{ConstantExpression, BooleanExpression}
-import Buffer._
 import org.apache.activemq.apollo.dto._
-import org.apache.activemq.apollo.util.{OptionSupport, ClassFinder}
+import org.apache.activemq.apollo.util.ClassFinder
 import org.apache.activemq.apollo.util.path.Path
 import java.lang.String
+import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
+import Buffer._
 
 /**
  * <p>
@@ -104,22 +104,17 @@ object QueueDomainQueueBinding extends QueueBinding.Provider {
 
   def create(binding_kind:AsciiBuffer, binding_data:Buffer) = {
     if( binding_kind == POINT_TO_POINT_KIND ) {
-      val dto = new QueueDestinationDTO
-      dto.name = binding_data.ascii.toString
+      val dto = JsonCodec.decode(binding_data, classOf[QueueDestinationDTO])
       new QueueDomainQueueBinding(binding_data, dto)
     } else {
       null
     }
   }
 
-  def create(binding_dto:DestinationDTO) = {
-    if( binding_dto.isInstanceOf[QueueDestinationDTO] ) {
-      val ptp_dto = binding_dto.asInstanceOf[QueueDestinationDTO]
-      val data = new AsciiBuffer(ptp_dto.name).buffer
-      new QueueDomainQueueBinding(data, ptp_dto)
-    } else {
-      null
-    }
+  def create(binding_dto:DestinationDTO) = binding_dto match {
+    case ptp_dto:QueueDestinationDTO =>
+      new QueueDomainQueueBinding(JsonCodec.encode(ptp_dto), ptp_dto)
+    case _ => null
   }
 }
 
@@ -134,7 +129,7 @@ class QueueDomainQueueBinding(val binding_data:Buffer, val binding_dto:QueueDest
 
   import QueueDomainQueueBinding._
 
-  val destination = DestinationParser.decode_path(binding_dto.name)
+  val destination = LocalRouter.destination_parser.decode_path(binding_dto.parts)
   def binding_kind = POINT_TO_POINT_KIND
 
   def unbind(node: LocalRouter, queue: Queue) = {
@@ -145,7 +140,7 @@ class QueueDomainQueueBinding(val binding_data:Buffer, val binding_dto:QueueDest
     node.queue_domain.bind(queue)
   }
 
-  def label = binding_dto.name
+  def label = binding_dto.name(".")
 
   override def hashCode = binding_kind.hashCode ^ binding_data.hashCode
 
@@ -157,10 +152,10 @@ class QueueDomainQueueBinding(val binding_data:Buffer, val binding_dto:QueueDest
 
   def config(host:VirtualHost):QueueDTO = {
     import collection.JavaConversions._
-    import DestinationParser.default._
+    import LocalRouter.destination_parser._
 
     def matches(x:QueueDTO):Boolean = {
-      if( x.name != null && !parseFilter(ascii(x.name)).matches(destination)) {
+      if( x.name != null && !decode_filter(x.name).matches(destination)) {
         return false
       }
       true
@@ -201,7 +196,7 @@ object DurableSubscriptionQueueBinding extends QueueBinding.Provider {
 class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:DurableSubscriptionDestinationDTO) extends QueueBinding {
   import DurableSubscriptionQueueBinding._
 
-  val destination = DestinationParser.decode_path(binding_dto.name)
+  val destination = LocalRouter.destination_parser.decode_path(binding_dto.parts)
 
   def binding_kind = DURABLE_SUB_KIND
 
@@ -242,11 +237,11 @@ class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:D
 
   def config(host:VirtualHost):DurableSubscriptionDTO = {
       import collection.JavaConversions._
-      import DestinationParser.default._
+      import LocalRouter.destination_parser._
       import AsciiBuffer._
 
       def matches(x:DurableSubscriptionDTO):Boolean = {
-        if( x.name != null && !parseFilter(ascii(x.name)).matches(destination)) {
+        if( x.name != null && !decode_filter(x.name).matches(destination)) {
           return false
         }
         if( x.client_id != null && x.client_id!=x.client_id ) {

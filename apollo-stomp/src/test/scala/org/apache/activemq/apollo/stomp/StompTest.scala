@@ -1303,3 +1303,49 @@ class StompSslSecurityTest extends StompTestSupport {
   }
 
 }
+
+class StompWildcardTest extends StompTestSupport {
+
+  def path_separator = "."
+
+  test("Wildcard subscription") {
+    connect("1.1")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/foo"+path_separator+"*\n" +
+      "id:1\n" +
+      "receipt:0\n"+
+      "\n")
+
+    wait_for_receipt("0")
+
+    def put(dest:String) = {
+      client.write(
+        "SEND\n" +
+        "destination:/queue/"+dest+"\n" +
+        "\n" +
+        "message:"+dest+"\n")
+    }
+
+    def get(dest:String) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith("\n\nmessage:%s\n".format(dest))
+    }
+
+    // We should not get this one..
+    put("bar"+path_separator+"a")
+
+    put("foo"+path_separator+"a")
+    get("foo"+path_separator+"a")
+
+    put("foo"+path_separator+"b")
+    get("foo"+path_separator+"b")
+  }
+}
+
+class CustomStompWildcardTest extends StompWildcardTest {
+  override val broker_config_uri: String = "xml:classpath:apollo-stomp-custom-dest-delimiters.xml"
+  override def path_separator = "/"
+}

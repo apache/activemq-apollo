@@ -56,4 +56,22 @@ public class StompDTO extends ProtocolDTO {
     @XmlElement(name="protocol_filter")
     public List<String> protocol_filters = new ArrayList<String>();
 
+    @XmlAttribute(name="queue_prefix")
+    public String queue_prefix;
+
+    @XmlAttribute(name="topic_prefix")
+    public String topic_prefix;
+
+    @XmlAttribute(name="destination_separator")
+    public String destination_separator;
+
+    @XmlAttribute(name="path_separator")
+    public String path_separator;
+
+    @XmlAttribute(name="any_child_wildcard")
+    public String any_child_wildcard;
+
+    @XmlAttribute(name="any_descendant_wildcard")
+    public String any_descendant_wildcard;
+
 }

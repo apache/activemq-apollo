@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.dto;
 
 import javax.xml.bind.annotation.*;
+import java.util.List;
 
 /**
  * <p>
@@ -31,7 +32,10 @@ public class QueueDestinationDTO extends DestinationDTO {
     public QueueDestinationDTO() {
     }
 
-    public QueueDestinationDTO(String name) {
+    public QueueDestinationDTO(List<String> name) {
+        super(name);
+    }
+    public QueueDestinationDTO(String[] name) {
         super(name);
     }
 
@@ -42,13 +46,13 @@ public class QueueDestinationDTO extends DestinationDTO {
 
         QueueDestinationDTO that = (QueueDestinationDTO) o;
 
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+        if (parts != null ? !parts.equals(that.parts) : that.parts != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        return name != null ? name.hashCode() : 0;
+        return parts != null ? parts.hashCode() : 0;
     }
 }

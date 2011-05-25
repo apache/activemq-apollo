@@ -19,6 +19,9 @@ package org.apache.activemq.apollo.dto;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 
 import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * <p>
@@ -32,12 +35,28 @@ import javax.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 abstract public class DestinationDTO {
 
-    @XmlAttribute
-    public String name;
+    @XmlElement(name = "part")
+    public List<String> parts = new ArrayList<String>();
 
     public DestinationDTO() {
     }
-    public DestinationDTO(String name) {
-        this.name = name;
+
+    public DestinationDTO(List<String> parts) {
+        this.parts = parts;
+    }
+
+    public DestinationDTO(String parts[]) {
+        this(Arrays.asList(parts));
+    }
+
+    public String name(String separator) {
+        StringBuilder sb  = new StringBuilder();
+        for( String p : parts ) {
+            if( sb.length() != 0 ) {
+                sb.append(separator);
+            }
+            sb.append(p);
+        }
+        return sb.toString();
     }
 }

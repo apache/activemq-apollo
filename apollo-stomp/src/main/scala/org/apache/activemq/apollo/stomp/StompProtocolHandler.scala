@@ -368,6 +368,16 @@ class StompProtocolHandler extends ProtocolHandler {
 
   var protocol_filters = List[ProtocolFilter]()
 
+  var destination_parser = Stomp.destination_parser
+
+  implicit def toDestinationDTO(value:AsciiBuffer):Array[DestinationDTO] = {
+    val rc = destination_parser.decode_destination(value.toString)
+    if( rc==null ) {
+      throw new ProtocolException("Invalid stomp destiantion name: "+value);
+    }
+    rc
+  }
+
   override def set_connection(connection: BrokerConnection) = {
     super.set_connection(connection)
     import collection.JavaConversions._
@@ -381,6 +391,24 @@ class StompProtocolHandler extends ProtocolHandler {
     config.max_data_length.foreach( codec.max_data_length = _ )
     config.max_header_length.foreach( codec.max_header_length = _ )
     config.max_headers.foreach( codec.max_headers = _ )
+
+    if( config.queue_prefix!=null ||
+        config.topic_prefix!=null ||
+        config.destination_separator!=null ||
+        config.path_separator!= null ||
+        config.any_child_wildcard != null ||
+        config.any_descendant_wildcard!= null ) {
+
+      destination_parser = new DestinationParser().copy(Stomp.destination_parser)
+      if( config.queue_prefix!=null ) { destination_parser.queue_prefix = config.queue_prefix }
+      if( config.topic_prefix!=null ) { destination_parser.topic_prefix = config.topic_prefix }
+      if( config.destination_separator!=null ) { destination_parser.destination_separator = config.destination_separator }
+      if( config.path_separator!=null ) { destination_parser.path_separator = config.path_separator }
+      if( config.any_child_wildcard!=null ) { destination_parser.any_child_wildcard = config.any_child_wildcard }
+      if( config.any_descendant_wildcard!=null ) { destination_parser.any_descendant_wildcard = config.any_descendant_wildcard }
+
+    }
+
   }
 
   override def create_connection_status = {
@@ -895,7 +923,7 @@ class StompProtocolHandler extends ProtocolHandler {
     if( persistent ) {
       destination = destination.map { _ match {
         case x:TopicDestinationDTO=>
-          val rc = new DurableSubscriptionDestinationDTO(x.name)
+          val rc = new DurableSubscriptionDestinationDTO(x.parts)
           rc.subscription_id = decode_header(id)
           rc.filter = if (selector == null) null else selector._1
           rc

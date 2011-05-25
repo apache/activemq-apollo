@@ -467,7 +467,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       if( is_durable_sub ) {
         destination = destination.map { _ match {
           case x:TopicDestinationDTO=>
-            val rc = new DurableSubscriptionDestinationDTO(x.name)
+            val rc = new DurableSubscriptionDestinationDTO(x.parts)
             rc.client_id = parent.parent.info.getClientId
             rc.subscription_id = if( is_durable_sub ) info.getSubscriptionName else null
             rc.filter = info.getSelector

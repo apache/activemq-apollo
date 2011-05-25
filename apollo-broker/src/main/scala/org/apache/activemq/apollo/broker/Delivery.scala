@@ -115,11 +115,6 @@ trait Message extends Filterable with Retained {
   def persistent: Boolean
 
   /**
-   * where the message was sent to.
-   */
-  def destination: Array[DestinationDTO]
-
-  /**
    * The protocol of the message
    */
   def protocol:Protocol

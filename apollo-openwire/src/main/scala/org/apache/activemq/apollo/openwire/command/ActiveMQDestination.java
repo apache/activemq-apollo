@@ -34,12 +34,7 @@ abstract public class ActiveMQDestination implements DataStructure, Comparable {
     public static final char COMPOSITE_SEPERATOR = ',';
 
 
-    public static final DestinationParser PARSER = new DestinationParser();
-    static {
-        PARSER.path_seperator = new AsciiBuffer(".");
-        PARSER.any_child_wildcard = new AsciiBuffer("*");
-        PARSER.any_descendant_wildcard = new AsciiBuffer(">");
-    }
+    public static final DestinationParser PARSER = DestinationParser.OPENWIRE_PARSER();
 
     public static final byte QUEUE_TYPE = 0x01;
     public static final byte TOPIC_TYPE = 0x02;
@@ -138,15 +133,15 @@ abstract public class ActiveMQDestination implements DataStructure, Comparable {
         return physicalName;
     }
 
-    DestinationDTO[] create_destination(AsciiBuffer domain, Path path) {
-        return DestinationParser.create_destination(domain, DestinationParser.encode_path(path));
+    DestinationDTO[] create_destination(String domain, Path path) {
+        return new DestinationDTO[] { PARSER.create_destination(domain, PARSER.path_parts(path)) };
     }
 
     public void setPhysicalName(String value) {
         physicalName = value;
         String[] composites = value.split(",");
         if(composites.length == 1) {
-            Path path = PARSER.parsePath(new AsciiBuffer(composites[0]));
+            Path path = PARSER.decode_path(composites[0]);
             switch(getDestinationType()) {
                 case QUEUE_TYPE:
                     destination = create_destination(LocalRouter.QUEUE_DOMAIN(), path);

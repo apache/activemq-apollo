@@ -39,8 +39,8 @@ class StompRemoteConsumer extends RemoteConsumer {
     outboundSink.refiller = ^ {}
 
     val stompDestination = destination match {
-      case x:QueueDestinationDTO => ascii("/queue/" + x.name);
-      case x:TopicDestinationDTO => ascii("/topic/" + x.name);
+      case x:QueueDestinationDTO => ascii("/queue/" + x.parts);
+      case x:TopicDestinationDTO => ascii("/topic/" + x.parts);
     }
 
     var frame = StompFrame(CONNECT);
@@ -149,8 +149,8 @@ class StompRemoteProducer extends RemoteProducer with Logging {
     outboundSink.refiller = ^ {drain}
 
     stompDestination = destination match {
-      case x:QueueDestinationDTO => ascii("/queue/" + x.name);
-      case x:TopicDestinationDTO => ascii("/topic/" + x.name);
+      case x:QueueDestinationDTO => ascii("/queue/" + x.parts);
+      case x:TopicDestinationDTO => ascii("/topic/" + x.parts);
     }
 
     outboundSink.offer(StompFrame(CONNECT));

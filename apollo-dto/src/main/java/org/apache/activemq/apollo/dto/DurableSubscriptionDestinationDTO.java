@@ -20,6 +20,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.List;
 
 /**
  * <p>
@@ -42,8 +43,10 @@ public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
 
     public DurableSubscriptionDestinationDTO() {
     }
-
-    public DurableSubscriptionDestinationDTO(String name) {
+    public DurableSubscriptionDestinationDTO(List<String> name) {
+        super(name);
+    }
+    public DurableSubscriptionDestinationDTO(String[] name) {
         super(name);
     }
 
@@ -56,7 +59,7 @@ public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
 
         if (client_id != null ? !client_id.equals(that.client_id) : that.client_id != null) return false;
         if (filter != null ? !filter.equals(that.filter) : that.filter != null) return false;
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+        if (parts != null ? !parts.equals(that.parts) : that.parts != null) return false;
         if (subscription_id != null ? !subscription_id.equals(that.subscription_id) : that.subscription_id != null)
             return false;
 
@@ -65,7 +68,7 @@ public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
 
     @Override
     public int hashCode() {
-        int result = name != null ? name.hashCode() : 0;
+        int result = parts != null ? parts.hashCode() : 0;
         result = 31 * result + (filter != null ? filter.hashCode() : 0);
         result = 31 * result + (client_id != null ? client_id.hashCode() : 0);
         result = 31 * result + (subscription_id != null ? subscription_id.hashCode() : 0);

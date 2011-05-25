@@ -65,19 +65,12 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
    */
   var persistent = false
 
-  /**
-   * where the message was sent to.
-   */
-  var destination: Array[DestinationDTO] = null
-
   for( header <- (frame.updated_headers ::: frame.headers).reverse ) {
     header match {
       case (MESSAGE_ID, value) =>
         id = value
       case (PRIORITY, value) =>
         priority = java.lang.Integer.parseInt(value).toByte
-      case (DESTINATION, value) =>
-        destination = value
       case (EXPIRATION_TIME, value) =>
         expiration = java.lang.Long.parseLong(value)
       case (PERSISTENT, value) =>
@@ -302,24 +295,15 @@ object Stomp {
   val DURABLE_PREFIX = ascii("durable:")
   val DURABLE_QUEUE_KIND = ascii("stomp:sub")
 
-
   val destination_parser = new DestinationParser
-  destination_parser.queue_prefix = ascii(System.getProperty("apollo.stomp.queue_prefix", "/queue/"))
-  destination_parser.topic_prefix = ascii(System.getProperty("apollo.stomp.topic_prefix","/topic/"))
-  destination_parser.destination_separator = Some(System.getProperty("apollo.stomp.destination_separator",",").charAt(0).toByte)
-  destination_parser.path_seperator = ascii(System.getProperty("apollo.stomp.path_seperator","."))
-  destination_parser.any_child_wildcard = ascii(System.getProperty("apollo.stomp.any_child_wildcard","*"))
-  destination_parser.any_descendant_wildcard = ascii(System.getProperty("apollo.stomp.any_descendant_wildcard","**"))
+  destination_parser.queue_prefix = "/queue/"
+  destination_parser.topic_prefix = "/topic/"
+  destination_parser.destination_separator = ","
+  destination_parser.path_separator = "."
+  destination_parser.any_child_wildcard = "*"
+  destination_parser.any_descendant_wildcard = "**"
 
   destination_parser.default_domain = LocalRouter.QUEUE_DOMAIN
-
-  implicit def toDestinationDTO(value:AsciiBuffer):Array[DestinationDTO] = {
-    val d = destination_parser.parse(value)
-    if( d==null ) {
-      throw new ProtocolException("Invalid stomp destiantion name: "+value);
-    }
-    d
-  }
 
   type HeaderMap = List[(AsciiBuffer, AsciiBuffer)]
   type HeaderMapBuffer = ListBuffer[(AsciiBuffer, AsciiBuffer)]

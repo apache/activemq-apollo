@@ -23,9 +23,9 @@ import org.apache.activemq.apollo.util._
 import collection.mutable.HashMap
 import org.apache.activemq.apollo.broker.store.QueueRecord
 import Buffer._
-import org.apache.activemq.apollo.util.path.{Path, Part, PathMap, PathParser}
 import java.util.ArrayList
 import org.apache.activemq.apollo.dto._
+import path._
 import security.SecurityContext
 import java.util.concurrent.TimeUnit
 
@@ -35,7 +35,7 @@ trait DomainDestination {
   def virtual_host:VirtualHost
 
   def destination_dto:DestinationDTO
-  def name:String = destination_dto.name
+  def name:String = destination_dto.name(".")
 
   def bind (destination:DestinationDTO, consumer:DeliveryConsumer)
   def unbind (consumer:DeliveryConsumer, persistent:Boolean)
@@ -49,13 +49,16 @@ trait DomainDestination {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object LocalRouter extends Log {
-  val TOPIC_DOMAIN = ascii("topic");
-  val QUEUE_DOMAIN = ascii("queue");
-  val TEMP_TOPIC_DOMAIN = ascii("temp-topic");
-  val TEMP_QUEUE_DOMAIN = ascii("temp-queue");
 
-  val QUEUE_KIND = ascii("queue");
-  val DEFAULT_QUEUE_PATH = ascii("default");
+  val destination_parser = new DestinationParser
+
+  val TOPIC_DOMAIN = "topic"
+  val QUEUE_DOMAIN = "queue"
+  val TEMP_TOPIC_DOMAIN = "temp-topic"
+  val TEMP_QUEUE_DOMAIN = "temp-queue"
+
+  val QUEUE_KIND = "queue"
+  val DEFAULT_QUEUE_PATH = "default"
 
   class ConsumerContext(val destination:DestinationDTO, val consumer:DeliveryConsumer, val security:SecurityContext) {
     override def hashCode: Int = consumer.hashCode
@@ -104,11 +107,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     virtual_host.config.auto_create_destinations.getOrElse(true)
   }
 
-  private val ALL = new Path({
-    val rc = new ArrayList[Part](1)
-    rc.add(Part.ANY_DESCENDANT)
-    rc
-  })
+  private val ALL = new Path(List(AnyDescendantPart))
 
   trait Domain[D <: DomainDestination] {
 
@@ -199,7 +198,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     def unbind(destination:DestinationDTO, consumer:DeliveryConsumer, persistent:Boolean) = {
-      val path = DestinationParser.decode_path(destination.name)
+      val path = destination_parser.decode_path(destination.parts)
       if( consumers_by_path.remove(path, new ConsumerContext(destination, consumer, null) ) ) {
         get_destination_matches(path).foreach{ dest=>
           dest.unbind(consumer, persistent)
@@ -263,7 +262,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     def disconnect(destination:DestinationDTO, producer:BindableDeliveryProducer) = {
-      val path = DestinationParser.decode_path(destination.name)
+      val path = destination_parser.decode_path(destination.parts)
       producers_by_path.remove(path, new ProducerContext(destination, producer, null))
       get_destination_matches(path).foreach { dest=>
         dest.disconnect(producer)
@@ -302,9 +301,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
     def topic_config(name:Path):TopicDTO = {
       import collection.JavaConversions._
-      import DestinationParser.default._
-      import AsciiBuffer._
-      virtual_host.config.topics.find( x=> parseFilter(ascii(x.name)).matches(name) ).getOrElse(new TopicDTO)
+      import destination_parser._
+      virtual_host.config.topics.find( x=> decode_filter(x.name).matches(name) ).getOrElse(new TopicDTO)
     }
 
     def can_create_ds(config:DurableSubscriptionDTO, security:SecurityContext) = {
@@ -405,7 +403,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       if( queue.config.unified.getOrElse(false) ) {
         // hook up the queue to be a subscriber of the topic.
 
-        val topic = topic_domain.get_or_create_destination(path, new TopicDestinationDTO(queue.binding.binding_dto.name), null).success
+        val topic = topic_domain.get_or_create_destination(path, new TopicDestinationDTO(queue.binding.binding_dto.parts), null).success
         topic.bind(null, queue)
       }
     }
@@ -417,14 +415,14 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       import OptionSupport._
       if( queue.config.unified.getOrElse(false) ) {
         // unhook the queue from the topic
-        val topic = topic_domain.get_or_create_destination(path, new TopicDestinationDTO(queue.binding.binding_dto.name), null).success
+        val topic = topic_domain.get_or_create_destination(path, new TopicDestinationDTO(queue.binding.binding_dto.parts), null).success
         topic.unbind(queue, false)
       }
     }
 
     def create_destination(path: Path, destination:DestinationDTO, security: SecurityContext) = {
       val dto = new QueueDestinationDTO
-      dto.name = DestinationParser.encode_path(path)
+      dto.parts.addAll(destination.parts)
 
       val binding = QueueDomainQueueBinding.create(dto)
       val config = binding.config(virtual_host)
@@ -580,7 +578,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
   def bind(destination: Array[DestinationDTO], consumer: DeliveryConsumer, security: SecurityContext) = {
     consumer.retain
-    val paths = destination.map(x=> (DestinationParser.decode_path(x.name), x) )
+    val paths = destination.map(x=> (destination_parser.decode_path(x.parts), x) )
     dispatch_queue ! {
       val failures = paths.map(x=> domain(x._2).can_bind_all(x._1, x._2, consumer, security) ).flatMap( _.failure_option )
       val rc = if( !failures.isEmpty ) {
@@ -608,7 +606,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
   def connect(destinations: Array[DestinationDTO], producer: BindableDeliveryProducer, security: SecurityContext) = {
     producer.retain
-    val paths = destinations.map(x=> (DestinationParser.decode_path(x.name), x) )
+    val paths = destinations.map(x=> (destination_parser.decode_path(x.parts), x) )
     dispatch_queue ! {
 
       val failures = paths.map(x=> domain(x._2).can_connect_all(x._1, x._2, producer, security) ).flatMap( _.failure_option )
@@ -643,7 +641,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
    * Returns the previously created queue if it already existed.
    */
   def _get_or_create_destination(dto: DestinationDTO, security:SecurityContext): Result[DomainDestination, String] = {
-    val path = DestinationParser.decode_path(dto.name)
+    val path = destination_parser.decode_path(dto.parts)
     domain(dto).get_or_create_destination(path, dto, security)
   }
 

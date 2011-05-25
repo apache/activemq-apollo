@@ -19,7 +19,6 @@ package org.apache.activemq.apollo.dto;
 import org.junit.Test;
 
 import java.io.InputStream;
-import java.util.List;
 
 import static junit.framework.Assert.*;
 

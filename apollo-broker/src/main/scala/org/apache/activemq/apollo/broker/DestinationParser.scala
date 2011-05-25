@@ -22,23 +22,21 @@ import Buffer._
 import org.apache.activemq.apollo.util.path.{Path, PathParser}
 import scala.collection.mutable.ListBuffer
 import org.apache.activemq.apollo.dto.{TopicDestinationDTO, QueueDestinationDTO, DestinationDTO}
+import collection.JavaConversions._
+import java.lang.StringBuilder
+import java.util.regex.Pattern
 
 object DestinationParser {
 
-  val default = new DestinationParser
+  val OPENWIRE_PARSER = new DestinationParser();
+  OPENWIRE_PARSER.path_separator = "."
+  OPENWIRE_PARSER.any_child_wildcard = "*"
+  OPENWIRE_PARSER.any_descendant_wildcard = ">"
 
-  def encode_path(value:Path) = default.toString(value)
-  def decode_path(value:String) = default.parsePath(ascii(value))
-
-  def encode_destination(value:Array[DestinationDTO]) = default.toString(value)
-  def decode_destination(value:String) = default.parse(ascii(value))
-
-  def create_destination(domain:AsciiBuffer, name:String) = {
-    Array(domain match {
-      case LocalRouter.QUEUE_DOMAIN => new QueueDestinationDTO(name)
-      case LocalRouter.TOPIC_DOMAIN => new TopicDestinationDTO(name)
-      case _ => throw new Exception("Uknown destination domain: "+domain);
-    })
+  def create_destination(domain:String, parts:Array[String]):DestinationDTO = domain match {
+    case LocalRouter.QUEUE_DOMAIN => new QueueDestinationDTO(parts)
+    case LocalRouter.TOPIC_DOMAIN => new TopicDestinationDTO(parts)
+    case _ => throw new Exception("Uknown destination domain: "+domain);
   }
 
 }
@@ -49,43 +47,52 @@ object DestinationParser {
 class DestinationParser extends PathParser {
   import DestinationParser._
 
-  var default_domain: AsciiBuffer = null
-  var queue_prefix: AsciiBuffer = ascii("queue:")
-  var topic_prefix: AsciiBuffer = ascii("topic:")
-  var temp_queue_prefix: AsciiBuffer = ascii("temp-queue:")
-  var temp_topic_prefix: AsciiBuffer = ascii("temp-topic:")
-  var destination_separator: Option[Byte] = Some(','.toByte)
+  var default_domain:String = null
+  var queue_prefix = "queue:"
+  var topic_prefix = "topic:"
+  var temp_queue_prefix = "temp-queue:"
+  var temp_topic_prefix = "temp-topic:"
+  var destination_separator = ","
 
-  def toBuffer(value: Array[DestinationDTO]): AsciiBuffer = {
+  def copy(other:DestinationParser) = {
+    super.copy(other)
+    default_domain = other.default_domain
+    queue_prefix = other.queue_prefix
+    topic_prefix = other.topic_prefix
+    temp_queue_prefix = other.temp_queue_prefix
+    temp_topic_prefix = other.temp_topic_prefix
+    destination_separator = other.destination_separator
+    this
+  }
+
+  def encode_destination(value: Array[DestinationDTO]): String = {
     if (value == null) {
       null
     } else {
-      val baos = new ByteArrayOutputStream
-      val first = true
-      value.foreach { d =>
-        if (!first) {
-          assert( destination_separator.isDefined )
-          baos.write(destination_separator.get)
+      val rc = new StringBuilder
+      value.foreach { dest =>
+        if (rc.length() != 0 ) {
+          assert( destination_separator!=null )
+          rc.append(destination_separator)
         }
-        d match {
+        dest match {
           case d:QueueDestinationDTO =>
-            baos.write(queue_prefix)
+            rc.append(queue_prefix)
           case d:TopicDestinationDTO =>
-            baos.write(topic_prefix)
+            rc.append(topic_prefix)
 //          case Router.TEMP_QUEUE_DOMAIN =>
 //            baos.write(temp_queue_prefix)
 //          case Router.TEMP_TOPIC_DOMAIN =>
 //            baos.write(temp_topic_prefix)
           case _ =>
-            throw new Exception("Uknown destination type: "+d.getClass);
+            throw new Exception("Uknown destination type: "+dest.getClass);
         }
-        ascii(d.name).writeTo(baos)
+        rc.append(encode_path(dest.parts.toIterable))
+
       }
-      baos.toBuffer.ascii
+      rc.toString
     }
   }
-
-  def toString(value:Array[DestinationDTO]) = toBuffer(value).toString
 
   /**
    * Parses a destination which may or may not be a composite.
@@ -94,16 +101,16 @@ class DestinationParser extends PathParser {
    * @param compositeSeparator
    * @return
    */
-  def parse(value: AsciiBuffer): Array[DestinationDTO] = {
+  def decode_destination(value: String): Array[DestinationDTO] = {
     if (value == null) {
       return null;
     }
 
-    if (destination_separator.isDefined && value.contains(destination_separator.get)) {
-      var rc = value.split(destination_separator.get);
+    if (destination_separator!=null && value.contains(destination_separator)) {
+      var rc = value.split(Pattern.quote(destination_separator));
       var dl = ListBuffer[DestinationDTO]()
       for (buffer <- rc) {
-        val d = parse(buffer)
+        val d = decode_destination(buffer)
         if (d == null) {
           return null;
         }
@@ -113,11 +120,11 @@ class DestinationParser extends PathParser {
     } else {
 
       if (queue_prefix != null && value.startsWith(queue_prefix)) {
-        var name = value.slice(queue_prefix.length, value.length).ascii()
-        return create_destination(LocalRouter.QUEUE_DOMAIN, name.toString)
+        var name = value.substring(queue_prefix.length)
+        return Array( create_destination(LocalRouter.QUEUE_DOMAIN, parts(name)) )
       } else if (topic_prefix != null && value.startsWith(topic_prefix)) {
-        var name = value.slice(topic_prefix.length, value.length).ascii()
-        return create_destination(LocalRouter.TOPIC_DOMAIN, name.toString)
+        var name = value.substring(topic_prefix.length)
+        return Array(create_destination(LocalRouter.TOPIC_DOMAIN, parts(name)))
 //      } else if (temp_queue_prefix != null && value.startsWith(temp_queue_prefix)) {
 //        var name = value.slice(temp_queue_prefix.length, value.length).ascii()
 //        return new DestinationDTO(LocalRouter.TEMP_QUEUE_DOMAIN, name.toString)
@@ -128,7 +135,7 @@ class DestinationParser extends PathParser {
         if (default_domain == null) {
           return null;
         }
-        return create_destination(default_domain, value.toString)
+        return Array(create_destination(default_domain, parts(value)))
       }
     }
   }
