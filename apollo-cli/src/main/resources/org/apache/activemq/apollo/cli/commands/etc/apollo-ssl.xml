@@ -47,6 +47,7 @@
     <!-- <authentication enabled="false"/> -->
 
     <acl>
+      <admin allow="admins"/>
       <connect allow="admins"/>
     </acl>
 
