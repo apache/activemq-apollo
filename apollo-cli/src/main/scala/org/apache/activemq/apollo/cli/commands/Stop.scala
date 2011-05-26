@@ -75,7 +75,7 @@ class Stop extends Action with Logging {
         }
 
         val connection = new URL(
-          "http://%s:%s%s/action/shutdown".format(host, port, prefix)
+          "http://%s:%s%s/broker/action/shutdown".format(host, port, prefix)
         ).openConnection.asInstanceOf[HttpURLConnection]
         connection.setRequestMethod("POST");
         auth.foreach{x=> connection.setRequestProperty("Authorization", "Basic "+new String(Base64.encodeBase64(x.getBytes("UTF-8")), "UTF-8")) }
