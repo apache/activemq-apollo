@@ -37,7 +37,7 @@ import security.{SecurityContext, Authorizer}
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
-case class BrokerResource(parent:Resource) extends Resource(parent) {
+case class BrokerResource extends Resource {
 
   @Path("config")
   def config_resource:ConfigurationResource = {

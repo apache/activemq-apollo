@@ -1,9 +1,3 @@
-package org.apache.activemq.apollo.web.resources
-
-import javax.ws.rs._
-import core.Response.Status._
-import com.sun.jersey.api.view.ImplicitProduces
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -20,12 +14,38 @@ import com.sun.jersey.api.view.ImplicitProduces
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.activemq.apollo.web.resources
+
+import javax.ws.rs._
+import core.Response.Status._
+import core.{UriInfo, Context}
+import org.apache.activemq.apollo.util.ModuleRegistry
+import collection.mutable.HashMap
+import javax.servlet.http.HttpServletRequest
+import com.sun.jersey.server.impl.ThreadLocalInvoker
+
+object RootResource {
+
+  // Load up all extension module web resources..
+  val web_resources:Map[String, ()=>AnyRef] = {
+    val rc = HashMap[String, ()=>AnyRef]()
+    for (m <- ModuleRegistry.singletons ) {
+      m.web_resources.foreach { case (key,value) =>
+        rc.put(key, value)
+      }
+    }
+    rc.toMap
+  }
+
+}
 /**
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @Path("/")
 case class RootResource() extends Resource() {
+
+  import RootResource._
 
   @GET
   @Path("/")
@@ -36,12 +56,26 @@ case class RootResource() extends Resource() {
 
   @Path("{name}")
   def path(@PathParam("name") name:String):AnyRef = {
-    name match {
-      case "broker" => new BrokerResource(this)
-      case _ =>
-        result(NOT_FOUND)
+
+    // Jersey's thread local wrapping messes /w us since we may use the http_request
+    // in a different thread.  Lets try to unwrap it..
+    try {
+      val invoker = java.lang.reflect.Proxy.getInvocationHandler(http_request).asInstanceOf[ThreadLocalInvoker[HttpServletRequest]]
+      http_request = invoker.get()
+    } catch {
+      case e:Throwable => e.printStackTrace()
     }
 
+    web_resources.get(name).map{func =>
+      val resource = func()
+      resource match {
+        case resource:Resource=>
+          // Wishing jersey would just re-inject the sub resources
+          resource.copy(this)
+        case _ =>
+      }
+      resource
+    }.getOrElse(result(NOT_FOUND))
   }
 
 }

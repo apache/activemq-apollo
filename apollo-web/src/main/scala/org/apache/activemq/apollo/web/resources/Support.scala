@@ -70,7 +70,7 @@ object Resource {
  */
 @ImplicitProduces(Array("text/html;qs=5"))
 @Produces(Array("application/json", "application/xml","text/xml"))
-abstract class Resource(private val parent:Resource=null) extends Logging {
+abstract class Resource(parent:Resource=null) extends Logging {
   import Resource._
 
   @Context
@@ -79,15 +79,12 @@ abstract class Resource(private val parent:Resource=null) extends Logging {
   var http_request: HttpServletRequest = null
 
   if( parent!=null ) {
-    this.uri_info = parent.uri_info
-    this.http_request = parent.http_request
+    copy(parent)
+  }
 
-    try {
-      val invoker = Proxy.getInvocationHandler(http_request).asInstanceOf[ThreadLocalInvoker[HttpServletRequest]]
-      http_request = invoker.get()
-    } catch {
-      case e:Throwable => e.printStackTrace()
-    }
+  def copy(other:Resource) = {
+    this.uri_info = other.uri_info
+    this.http_request = other.http_request
   }
 
   def result(value:Status, message:Any=null):Nothing = {
