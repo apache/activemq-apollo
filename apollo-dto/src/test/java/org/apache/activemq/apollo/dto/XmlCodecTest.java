@@ -47,7 +47,7 @@ public class XmlCodecTest {
 
         assertEquals("queue1", host.queues.get(0).id);
         assertEquals("topic1", host.topics.get(0).id);
-        assertEquals("durable_subscription1", host.durable_subscriptions.get(0).id);
+        assertEquals("durable_subscription1", host.dsubs.get(0).id);
 
         assertNotNull(dto.acl);
         assertTrue(dto.acl.admins.contains(new PrincipalDTO("hiram")));

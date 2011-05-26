@@ -48,6 +48,6 @@ public class TopicStatusDTO extends StringIdDTO {
     /**
      * Ids of all queues that are associated with the destination
      */
-    @XmlElement(name="durable_subscription")
-    public List<String> durable_subscriptions = new ArrayList<String>();
+    @XmlElement(name="dsub")
+    public List<String> dsubs = new ArrayList<String>();
 }

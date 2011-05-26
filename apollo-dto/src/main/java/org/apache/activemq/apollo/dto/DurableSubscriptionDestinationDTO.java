@@ -28,7 +28,7 @@ import java.util.List;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "durable_subscription_destination")
+@XmlRootElement(name = "dsub_destination")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
 

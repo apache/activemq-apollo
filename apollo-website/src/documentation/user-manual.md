@@ -184,7 +184,7 @@ A `virtual_host` element may be configured with the following attributes:
    will be purged when the broker is started up.
 
 The `virtual_host` can also define multiple `topic`, `queue`, and
-`durable_subscription` elements to secure or tune how message delivery works
+`dsub` elements to secure or tune how message delivery works
 for different topics or queues. If none are defined, then sensible default
 settings are used which allows destinations to be auto created as they get
 accessed by applications.
@@ -250,7 +250,7 @@ A `topic` element may be configured with the following attributes:
 ##### Durable Subscriptions
 
 When a new durable subscription is first created in the broker, it's
-configuration will be determined by the first `durable_subscription` element
+configuration will be determined by the first `dsub` element
 which matches the durable subscription being created. The attributes matched
 against are:
 
@@ -260,7 +260,7 @@ against are:
 * `subscription_id` : This specify which subscription id this configuration 
   should match.
 
-A `durable_subscription` element may be configured with all the 
+A `dsub` element may be configured with all the 
 attributes available on the `queue` element.
 
 ##### Unified Destinations
@@ -542,7 +542,7 @@ Example of customizing the principal kinds used:
 
 User authorization to broker resources is accomplished by configuring an
 access control list using an `acl` element on the `broker`, `connector`,
-`virtual_host`, `topic`, `durable_subscription`, or `queue` resources. The
+`virtual_host`, `topic`, `dsub`, or `queue` resources. The
 acl defines which principals are allowed or denied access to perform actions
 against the resources. An example of `acl` is shown below:
 
@@ -656,19 +656,18 @@ The type of resource being secured determines the types of actions that
 can be secured by the acl rule entries. Here is listing of which actions
 can be secured on which resources:
 
-* `broker`, `virtual_host`, `topic`, and `queue`
+* `broker`, `virtual_host`, `topic`, `queue`, and `dsub`
   * `admin` : use of the administrative web interface
   * `monitor` : read only use of the administrative web interface
 * `connector` and `virtual_host`
   * `connect` : allows connections to the connector or virtual host
-* `topic` and `queue` and `durable_subscription`
+* `topic`, `queue` and `dsub`
   * `create` : allows creation
   * `destroy` : allows destruction
-* `topic` and `queue`
   * `send` : allows the user to send to the destination
   * `receive` : allows the user to send to do non_destructive read 
     from the destination
-* `queue`
+* `queue` and `dsub`
   * `consume` : allows the user to do destructive reads against the queue.
 
 #### Encrypting Passwords in the Configuration

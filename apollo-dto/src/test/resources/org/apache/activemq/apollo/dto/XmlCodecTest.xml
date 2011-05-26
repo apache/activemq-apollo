@@ -30,7 +30,7 @@
 
     <queue id="queue1"/>
     <topic id="topic1"/>
-    <ds id="durable_subscription1"/>
+    <dsub id="durable_subscription1"/>
 
   </virtual_host>
 

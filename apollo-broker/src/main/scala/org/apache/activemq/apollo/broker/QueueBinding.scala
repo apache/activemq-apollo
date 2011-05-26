@@ -240,7 +240,7 @@ class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:D
         }
         true
       }
-      host.config.durable_subscriptions.find(matches _).getOrElse(new DurableSubscriptionDTO)
+      host.config.dsubs.find(matches _).getOrElse(new DurableSubscriptionDTO)
   }
 
 }

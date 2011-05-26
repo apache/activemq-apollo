@@ -17,7 +17,10 @@
 - val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
 - import helper._
 
+h1 Apache ActiveMQ Apollo #{version}
+
 p state: #{state} #{ uptime(state_since) } ago
+
 
 - if( state == "STARTED" )
   form(method="post" action={path("action/shutdown")})

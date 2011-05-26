@@ -61,8 +61,8 @@ public class VirtualHostDTO extends ServiceDTO {
     /**
      * Holds the configuration for the queues.
      */
-    @XmlElement(name="ds")
-    public ArrayList<DurableSubscriptionDTO> durable_subscriptions = new ArrayList<DurableSubscriptionDTO>();
+    @XmlElement(name="dsub")
+    public ArrayList<DurableSubscriptionDTO> dsubs = new ArrayList<DurableSubscriptionDTO>();
 
     /**
      * Should connections get regroups so they get serviced by the same thread?

@@ -59,6 +59,7 @@ case class BrokerResource() extends Resource {
         result.current_time = System.currentTimeMillis
         result.state = broker.service_state.toString
         result.state_since = broker.service_state.since
+        result.version = Broker.version
 
         broker.virtual_hosts.values.foreach{ host=>
           // TODO: may need to sync /w virtual host's dispatch queue
@@ -239,7 +240,7 @@ case class BrokerResource() extends Resource {
     }
   }
 
-  @GET @Path("virtual-hosts/{id}/ds/{name:.*}")
+  @GET @Path("virtual-hosts/{id}/dsubs/{name:.*}")
   def durable_subscription(@PathParam("id") id : String, @PathParam("name") name : String, @QueryParam("entries") entries:Boolean):QueueStatusDTO = {
     with_virtual_host(id) { host =>
       val router:LocalRouter = host
@@ -264,7 +265,7 @@ case class BrokerResource() extends Resource {
 
       node.durable_subscriptions.foreach {
         q =>
-          rc.durable_subscriptions.add(q.id)
+          rc.dsubs.add(q.id)
       }
       node.consumers.foreach {
         consumer =>

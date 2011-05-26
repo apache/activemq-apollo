@@ -331,7 +331,7 @@ Results in a [Topic Status](./api/apollo-dto/org/apache/activemq/apollo/dto/Topi
       "label":"/127.0.0.1:52773"
     }
   ],
-  "durable_subscriptions":[
+  "dsubs":[
      "mysubname"
   ]
 }
@@ -368,7 +368,7 @@ Results in a [Broker Configuration](./api/apollo-dto/org/apache/activemq/apollo/
     "purge_on_startup":null,
     "topics":[],
     "queues":[],
-    "durable_subscriptions":[],
+    "dsubs":[],
     "regroup_connections":null,
     "acl":{
       "connects":[
