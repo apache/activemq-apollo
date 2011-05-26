@@ -87,7 +87,7 @@ class DestinationParser extends PathParser {
           case _ =>
             throw new Exception("Uknown destination type: "+dest.getClass);
         }
-        rc.append(encode_path(dest.parts.toIterable))
+        rc.append(encode_path(dest.path.toIterable))
 
       }
       rc.toString

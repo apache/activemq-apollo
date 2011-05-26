@@ -20,7 +20,7 @@
 .breadcumbs
   a(href={strip_resolve("..")}) Back
 
-h1 Virtual Host: #{id}
+h1 Virtual Host X: #{id}
 
 p state: #{state} #{ uptime(state_since) } ago
 
@@ -32,10 +32,10 @@ h2 Queues
 ul
   - for( x <- queues )
     li
-      a(href={ path("queues/"+x.id) }) #{x.label}
+      a(href={ path("queues/"+x) }) #{x}
 
 h2 Topics
 ul
   - for( x <- topics )
     li
-      a(href={ path("topics/"+x.id) }) #{x.label}
+      a(href={ path("topics/"+x) }) #{x}

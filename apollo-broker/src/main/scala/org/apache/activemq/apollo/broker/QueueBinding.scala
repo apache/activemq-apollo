@@ -70,9 +70,9 @@ object QueueBinding {
 trait QueueBinding {
 
   /**
-   * A user friendly description of the binding.
+   * The name of the queue (could be the queue name or a subscription id etc)
    */
-  def label:String
+  def id:String
 
   /**
    * Wires a queue into the a virtual host based on the binding information contained
@@ -94,7 +94,7 @@ trait QueueBinding {
 
   def config(host:VirtualHost):QueueDTO
 
-  override def toString: String = label
+  override def toString: String = id
 }
 
 object QueueDomainQueueBinding extends QueueBinding.Provider {
@@ -129,7 +129,7 @@ class QueueDomainQueueBinding(val binding_data:Buffer, val binding_dto:QueueDest
 
   import QueueDomainQueueBinding._
 
-  val destination = LocalRouter.destination_parser.decode_path(binding_dto.parts)
+  val destination = LocalRouter.destination_parser.decode_path(binding_dto.path)
   def binding_kind = POINT_TO_POINT_KIND
 
   def unbind(node: LocalRouter, queue: Queue) = {
@@ -140,7 +140,7 @@ class QueueDomainQueueBinding(val binding_data:Buffer, val binding_dto:QueueDest
     node.queue_domain.bind(queue)
   }
 
-  def label = binding_dto.name(".")
+  val id = binding_dto.name(LocalRouter.destination_parser.path_separator)
 
   override def hashCode = binding_kind.hashCode ^ binding_data.hashCode
 
@@ -155,7 +155,7 @@ class QueueDomainQueueBinding(val binding_data:Buffer, val binding_dto:QueueDest
     import LocalRouter.destination_parser._
 
     def matches(x:QueueDTO):Boolean = {
-      if( x.name != null && !decode_filter(x.name).matches(destination)) {
+      if( x.id != null && !decode_filter(x.id).matches(destination)) {
         return false
       }
       true
@@ -196,7 +196,7 @@ object DurableSubscriptionQueueBinding extends QueueBinding.Provider {
 class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:DurableSubscriptionDestinationDTO) extends QueueBinding {
   import DurableSubscriptionQueueBinding._
 
-  val destination = LocalRouter.destination_parser.decode_path(binding_dto.parts)
+  val destination = LocalRouter.destination_parser.decode_path(binding_dto.path)
 
   def binding_kind = DURABLE_SUB_KIND
 
@@ -209,13 +209,7 @@ class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:D
     router.topic_domain.bind(queue)
   }
 
-  def label = {
-    var rc = "sub: '"+binding_dto.subscription_id+"'"
-    if( binding_dto.filter!=null ) {
-      rc += " filtering '"+binding_dto.filter+"'"
-    }
-    rc
-  }
+  def id = binding_dto.subscription_id
 
   override def hashCode = binding_kind.hashCode ^ binding_data.hashCode
 
@@ -238,7 +232,7 @@ class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:D
       import AsciiBuffer._
 
       def matches(x:DurableSubscriptionDTO):Boolean = {
-        if( x.name != null && !decode_filter(x.name).matches(destination)) {
+        if( x.id != null && !decode_filter(x.id).matches(destination)) {
           return false
         }
         if( x.subscription_id != null && x.subscription_id!=binding_dto.subscription_id ) {
@@ -274,7 +268,7 @@ object TempQueueBinding extends QueueBinding.Provider {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class TempQueueBinding(val key:AnyRef, val label:String) extends QueueBinding {
+class TempQueueBinding(val key:AnyRef, val id:String) extends QueueBinding {
   import TempQueueBinding._
 
   def this(c:DeliveryConsumer) = this(c, c.connection.map(_.transport.getRemoteAddress).getOrElse("known") )

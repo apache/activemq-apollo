@@ -20,7 +20,7 @@
 .breadcumbs
   a(href={strip_resolve("..")}) Back
 
-h1 Destination: #{name}
+h1 Destination: #{id}
 
 h3 Topic Domain
 
@@ -49,4 +49,4 @@ h4 Durable Subscribers
 ul
   - for( x <- durable_subscriptions )
     li
-      a(href={ path("../../all-queues/"+x.id) }) #{x.label}
+      a(href={ path("../../ds/"+x) }) #{x}

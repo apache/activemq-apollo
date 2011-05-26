@@ -14,6 +14,7 @@
 -# limitations under the License.
 
 - import it._
+- import org.apache.activemq.apollo.dto._
 - val helper = new org.apache.activemq.apollo.web.resources.ViewHelper
 - import helper._
 - def percent(n:Long, d:Long) =
@@ -25,22 +26,15 @@
 .breadcumbs
   a(href={strip_resolve("..")}) Back
 
--#
-  - binding match
-    - case x:QueueBindingDTO =>
-      h1 Queue #{x.name}
-
-    - case x:SubscriptionBindingDTO =>
-      h1 Durable Subscription on #{x.name}
-      p client id: ${x.client_id}
-      p subscription id: ${x.subscription_id}
+- binding match
+  - case x:QueueDestinationDTO =>
+    h1 Queue #{id}
+  - case x:DurableSubscriptionDestinationDTO =>
+    h1 Durable Subscription on #{id}
+    - if( x.filter != null )
       p filter: ${x.filter}
-
-    - case x:TempBindingDTO =>
-      h1 Temporary Queue
-
-    - case x =>  x
-      h1 Unknown Queue Type: #{x.getClass.getName}
+  - case _ =>
+    h1 Temporary Queue
 
 h2 Current Size
 

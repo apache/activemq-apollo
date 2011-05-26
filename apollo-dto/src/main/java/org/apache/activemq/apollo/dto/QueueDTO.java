@@ -25,13 +25,7 @@ import javax.xml.bind.annotation.*;
  */
 @XmlRootElement(name = "queue")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class QueueDTO {
-
-    /*
-     * The destination name this queue is associated with.  You can use wild cards.
-     */
-    @XmlAttribute
-    public String name;
+public class QueueDTO extends StringIdDTO {
 
     /**
      * If set to true, then routing then there is no difference between

@@ -25,13 +25,7 @@ import javax.xml.bind.annotation.*;
  */
 @XmlRootElement(name = "topic")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class TopicDTO {
-
-    /**
-     * The name of the destination.  You can use wild cards.
-     */
-	@XmlAttribute
-	public String name;
+public class TopicDTO extends StringIdDTO {
 
     @XmlElement(name="slow_consumer_policy")
     public String slow_consumer_policy;

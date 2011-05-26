@@ -23,7 +23,7 @@ import javax.xml.bind.annotation.*;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name = "durable_subscription")
+@XmlRootElement(name = "ds")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class DurableSubscriptionDTO extends QueueDTO {
 

@@ -31,11 +31,10 @@ import java.util.concurrent.TimeUnit
 
 trait DomainDestination {
 
-  def id:Long
+  def id:String
   def virtual_host:VirtualHost
 
   def destination_dto:DestinationDTO
-  def name:String = destination_dto.name(".")
 
   def bind (destination:DestinationDTO, consumer:DeliveryConsumer)
   def unbind (consumer:DeliveryConsumer, persistent:Boolean)
@@ -112,7 +111,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   trait Domain[D <: DomainDestination] {
 
     // holds all the destinations in the domain by id
-    var destination_by_id = HashMap[Long, D]()
+    var destination_by_id = HashMap[String, D]()
     // holds all the destinations in the domain by path
     var destination_by_path = new PathMap[D]()
     // Can store consumers on wild cards paths
@@ -198,7 +197,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     def unbind(destination:DestinationDTO, consumer:DeliveryConsumer, persistent:Boolean) = {
-      val path = destination_parser.decode_path(destination.parts)
+      val path = destination_parser.decode_path(destination.path)
       if( consumers_by_path.remove(path, new ConsumerContext(destination, consumer, null) ) ) {
         get_destination_matches(path).foreach{ dest=>
           dest.unbind(consumer, persistent)
@@ -262,7 +261,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     def disconnect(destination:DestinationDTO, producer:BindableDeliveryProducer) = {
-      val path = destination_parser.decode_path(destination.parts)
+      val path = destination_parser.decode_path(destination.path)
       producers_by_path.remove(path, new ProducerContext(destination, producer, null))
       get_destination_matches(path).foreach { dest=>
         dest.disconnect(producer)
@@ -272,8 +271,6 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   }
   val topic_domain = new TopicDomain
   class TopicDomain extends Domain[Topic] {
-
-    val topic_id_counter = new LongCounter()
 
     // Stores durable subscription queues.
     val durable_subscriptions_by_path = new PathMap[Queue]()
@@ -302,7 +299,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     def topic_config(name:Path):TopicDTO = {
       import collection.JavaConversions._
       import destination_parser._
-      virtual_host.config.topics.find( x=> decode_filter(x.name).matches(name) ).getOrElse(new TopicDTO)
+      virtual_host.config.topics.find( x=> decode_filter(x.id).matches(name) ).getOrElse(new TopicDTO)
     }
 
     def can_create_ds(config:DurableSubscriptionDTO, security:SecurityContext) = {
@@ -350,8 +347,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         return new Failure("Not authorized to create the destination")
       }
 
-      val id = topic_id_counter.incrementAndGet
-      val topic = new Topic(LocalRouter.this, destination.asInstanceOf[TopicDestinationDTO], dto, id)
+      val topic = new Topic(LocalRouter.this, destination.asInstanceOf[TopicDestinationDTO], dto, path.toString(destination_parser))
       add_destination(path, topic)
       Success(topic)
     }
@@ -403,7 +399,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       if( queue.config.unified.getOrElse(false) ) {
         // hook up the queue to be a subscriber of the topic.
 
-        val topic = topic_domain.get_or_create_destination(path, new TopicDestinationDTO(queue.binding.binding_dto.parts), null).success
+        val topic = topic_domain.get_or_create_destination(path, new TopicDestinationDTO(queue.binding.binding_dto.path), null).success
         topic.bind(null, queue)
       }
     }
@@ -415,14 +411,14 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       import OptionSupport._
       if( queue.config.unified.getOrElse(false) ) {
         // unhook the queue from the topic
-        val topic = topic_domain.get_or_create_destination(path, new TopicDestinationDTO(queue.binding.binding_dto.parts), null).success
+        val topic = topic_domain.get_or_create_destination(path, new TopicDestinationDTO(queue.binding.binding_dto.path), null).success
         topic.unbind(queue, false)
       }
     }
 
     def create_destination(path: Path, destination:DestinationDTO, security: SecurityContext) = {
       val dto = new QueueDestinationDTO
-      dto.parts.addAll(destination.parts)
+      dto.path.addAll(destination.path)
 
       val binding = QueueDomainQueueBinding.create(dto)
       val config = binding.config(virtual_host)
@@ -578,7 +574,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
   def bind(destination: Array[DestinationDTO], consumer: DeliveryConsumer, security: SecurityContext) = {
     consumer.retain
-    val paths = destination.map(x=> (destination_parser.decode_path(x.parts), x) )
+    val paths = destination.map(x=> (destination_parser.decode_path(x.path), x) )
     dispatch_queue ! {
       val failures = paths.map(x=> domain(x._2).can_bind_all(x._1, x._2, consumer, security) ).flatMap( _.failure_option )
       val rc = if( !failures.isEmpty ) {
@@ -606,7 +602,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
   def connect(destinations: Array[DestinationDTO], producer: BindableDeliveryProducer, security: SecurityContext) = {
     producer.retain
-    val paths = destinations.map(x=> (destination_parser.decode_path(x.parts), x) )
+    val paths = destinations.map(x=> (destination_parser.decode_path(x.path), x) )
     dispatch_queue ! {
 
       val failures = paths.map(x=> domain(x._2).can_connect_all(x._1, x._2, producer, security) ).flatMap( _.failure_option )
@@ -641,7 +637,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
    * Returns the previously created queue if it already existed.
    */
   def _get_or_create_destination(dto: DestinationDTO, security:SecurityContext): Result[DomainDestination, String] = {
-    val path = destination_parser.decode_path(dto.parts)
+    val path = destination_parser.decode_path(dto.path)
     domain(dto).get_or_create_destination(path, dto, security)
   }
 
@@ -654,7 +650,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   /////////////////////////////////////////////////////////////////////////////
 
   var queues_by_binding = HashMap[QueueBinding, Queue]()
-  var queues_by_id = HashMap[Long, Queue]()
+  var queues_by_id = HashMap[String, Queue]()
 
   /**
    * Gets an existing queue.
@@ -666,7 +662,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   /**
    * Gets an existing queue.
    */
-  def get_queue(id:Long) = dispatch_queue ! {
+  def get_queue(id:String) = dispatch_queue ! {
     queues_by_id.get(id)
   }
 
@@ -705,9 +701,9 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   /**
    * Returns true if the queue no longer exists.
    */
-  def destroy_queue(id:Long, security:SecurityContext) = dispatch_queue ! { _destroy_queue(id,security) }
+  def destroy_queue(id:String, security:SecurityContext) = dispatch_queue ! { _destroy_queue(id,security) }
 
-  def _destroy_queue(id:Long, security:SecurityContext):Result[Zilch, String] = {
+  def _destroy_queue(id:String, security:SecurityContext):Result[Zilch, String] = {
     queues_by_id.get(id) match {
       case Some(queue) =>
         _destroy_queue(queue,security)
@@ -744,7 +740,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     queue.stop
     if( queue.tune_persistent ) {
       queue.dispatch_queue {
-        virtual_host.store.remove_queue(queue.id){x=> Unit}
+        virtual_host.store.remove_queue(queue.store_id){x=> Unit}
       }
     }
     Success(Zilch)

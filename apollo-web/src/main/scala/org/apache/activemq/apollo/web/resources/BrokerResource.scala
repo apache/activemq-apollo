@@ -27,6 +27,7 @@ import scala.collection.Iterable
 import org.apache.activemq.apollo.util.{Failure, Success, Dispatched, Result}
 import scala.Some
 import security.{SecurityContext, Authorizer}
+import org.apache.activemq.apollo.util.path.PathParser
 
 /**
  * <p>
@@ -37,7 +38,7 @@ import security.{SecurityContext, Authorizer}
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
-case class BrokerResource extends Resource {
+case class BrokerResource() extends Resource {
 
   @Path("config")
   def config_resource:ConfigurationResource = {
@@ -166,11 +167,11 @@ case class BrokerResource extends Resource {
         val router:LocalRouter = host
 
         router.topic_domain.destinations.foreach { node=>
-          result.topics.add(new LongIdLabeledDTO(node.id, node.name))
+          result.topics.add(node.id)
         }
 
         router.queue_domain.destinations.foreach { node=>
-          result.queues.add(new LongIdLabeledDTO(node.id, node.binding.label))
+          result.queues.add(node.id)
         }
 
         result
@@ -215,159 +216,131 @@ case class BrokerResource extends Resource {
   def link(queue:Queue) = {
     val link = new LinkDTO()
     link.kind = "queue"
-    link.id = queue.id.toString
-    link.label = queue.binding.label
+    link.id = queue.id
+    link.label = queue.id
     link
   }
 
-  @GET @Path("virtual-hosts/{id}/topics/{dest}")
-  def destination(@PathParam("id") id : String, @PathParam("dest") dest : Long):TopicStatusDTO = {
+  @GET @Path("virtual-hosts/{id}/topics/{name:.*}")
+  def topic(@PathParam("id") id : String, @PathParam("name") name : String):TopicStatusDTO = {
     with_virtual_host(id) { host =>
-
       val router:LocalRouter = host
-      val node = router.topic_domain.destination_by_id.get(dest).getOrElse(result(NOT_FOUND))
+      val node = router.topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
+      status(node)
+    }
+  }
 
-      monitoring(node) {
-        val rc = new TopicStatusDTO
-        rc.id = node.id
-        rc.name = node.name
-        rc.config = node.config
+  @GET @Path("virtual-hosts/{id}/queues/{name:.*}")
+  def queue(@PathParam("id") id : String, @PathParam("name") name : String, @QueryParam("entries") entries:Boolean ):QueueStatusDTO = {
+    with_virtual_host(id) { host =>
+      val router: LocalRouter = host
+      val node = router.queue_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
+      status(node, entries)
+    }
+  }
 
-        node.durable_subscriptions.foreach { q=>
-          rc.durable_subscriptions.add(new LongIdLabeledDTO(q.id, q.binding.label))
-        }
-        node.consumers.foreach { consumer=>
+  @GET @Path("virtual-hosts/{id}/ds/{name:.*}")
+  def durable_subscription(@PathParam("id") id : String, @PathParam("name") name : String, @QueryParam("entries") entries:Boolean):QueueStatusDTO = {
+    with_virtual_host(id) { host =>
+      val router:LocalRouter = host
+      val node = router.topic_domain.durable_subscriptions_by_id.get(name).getOrElse(result(NOT_FOUND))
+      status(node, entries)
+    }
+  }
+
+  private def decode_path(name:String) = {
+    try {
+      LocalRouter.destination_parser.decode_path(name)
+    } catch {
+      case x:PathParser.PathException => result(NOT_FOUND)
+    }
+  }
+
+  def status(node: Topic): FutureResult[TopicStatusDTO] = {
+    monitoring(node) {
+      val rc = new TopicStatusDTO
+      rc.id = node.id
+      rc.config = node.config
+
+      node.durable_subscriptions.foreach {
+        q =>
+          rc.durable_subscriptions.add(q.id)
+      }
+      node.consumers.foreach {
+        consumer =>
           consumer match {
-            case queue:Queue =>
+            case queue: Queue =>
               rc.consumers.add(link(queue))
             case _ =>
-              consumer.connection.foreach{c=>
-                rc.consumers.add(link(c))
+              consumer.connection.foreach {
+                c =>
+                  rc.consumers.add(link(c))
               }
           }
-        }
-        node.producers.flatMap( _.connection ).foreach { connection=>
-          rc.producers.add(link(connection))
-        }
-
-        rc
       }
+      node.producers.flatMap(_.connection).foreach {
+        connection =>
+          rc.producers.add(link(connection))
+      }
+
+      rc
     }
   }
 
-  @GET @Path("virtual-hosts/{id}/all-queues/{queue}")
-  def queue(@PathParam("id") id : String, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean):QueueStatusDTO = {
-    with_virtual_host(id) { host =>
-      val router:LocalRouter = host
-      val queue = router.queues_by_id.get(qid)
-      status(queue, entries)
-    }
-  }
+  def status(q:Queue, entries:Boolean=false) = monitoring(q) {
+    val rc = new QueueStatusDTO
+    rc.id = q.id
+    rc.binding = q.binding.binding_dto
+    rc.config = q.config
+    rc.metrics = get_queue_metrics(q)
 
-  @GET @Path("virtual-hosts/{id}/queues/{queue}")
-  def destination_queue(@PathParam("id") id : String, @PathParam("queue") qid : Long, @QueryParam("entries") entries:Boolean ):QueueStatusDTO = {
-    with_virtual_host(id) { host =>
-      val router:LocalRouter = host
-      val queue = router.queue_domain.destination_by_id.get(qid)
-      status(queue, entries)
-    }
-  }
+    if( entries ) {
+      var cur = q.head_entry
+      while( cur!=null ) {
 
-  def get_queue_metrics(q:Queue):QueueMetricsDTO = {
-    val rc = new QueueMetricsDTO
+        val e = new EntryStatusDTO
+        e.seq = cur.seq
+        e.count = cur.count
+        e.size = cur.size
+        e.consumer_count = cur.parked.size
+        e.is_prefetched = cur.is_prefetched
+        e.state = cur.label
 
-    rc.enqueue_item_counter = q.enqueue_item_counter
-    rc.enqueue_size_counter = q.enqueue_size_counter
-    rc.enqueue_ts = q.enqueue_ts
+        rc.entries.add(e)
 
-    rc.dequeue_item_counter = q.dequeue_item_counter
-    rc.dequeue_size_counter = q.dequeue_size_counter
-    rc.dequeue_ts = q.dequeue_ts
-
-    rc.nack_item_counter = q.nack_item_counter
-    rc.nack_size_counter = q.nack_size_counter
-    rc.nack_ts = q.nack_ts
-
-    rc.queue_size = q.queue_size
-    rc.queue_items = q.queue_items
-
-    rc.swap_out_item_counter = q.swap_out_item_counter
-    rc.swap_out_size_counter = q.swap_out_size_counter
-    rc.swap_in_item_counter = q.swap_in_item_counter
-    rc.swap_in_size_counter = q.swap_in_size_counter
-
-    rc.swapping_in_size = q.swapping_in_size
-    rc.swapping_out_size = q.swapping_out_size
-
-    rc.swapped_in_items = q.swapped_in_items
-    rc.swapped_in_size = q.swapped_in_size
-
-    rc.swapped_in_size_max = q.swapped_in_size_max
-
-    rc
-  }
-
-  def status(qo:Option[Queue], entries:Boolean=false) = qo match {
-    case None=> result(NOT_FOUND)
-    case Some(q)=> sync(q) {
-      monitoring(q) {
-        val rc = new QueueStatusDTO
-        rc.id = q.id
-        rc.destination = q.binding.binding_dto
-        rc.config = q.config
-        rc.metrics = get_queue_metrics(q)
-
-        if( entries ) {
-          var cur = q.head_entry
-          while( cur!=null ) {
-
-            val e = new EntryStatusDTO
-            e.seq = cur.seq
-            e.count = cur.count
-            e.size = cur.size
-            e.consumer_count = cur.parked.size
-            e.is_prefetched = cur.is_prefetched
-            e.state = cur.label
-
-            rc.entries.add(e)
-
-            cur = if( cur == q.tail_entry ) {
-              null
-            } else {
-              cur.nextOrTail
-            }
-          }
+        cur = if( cur == q.tail_entry ) {
+          null
         } else {
-//        rc.entries = null
+          cur.nextOrTail
         }
-
-        q.inbound_sessions.flatMap( _.producer.connection ).foreach { connection=>
-          rc.producers.add(link(connection))
-        }
-        q.all_subscriptions.valuesIterator.toSeq.foreach{ sub =>
-          val status = new QueueConsumerStatusDTO
-          sub.consumer.connection.foreach(x=> status.link = link(x))
-          status.position = sub.pos.seq
-          status.total_dispatched_count = sub.total_dispatched_count
-          status.total_dispatched_size = sub.total_dispatched_size
-          status.total_ack_count = sub.total_ack_count
-          status.total_nack_count = sub.total_nack_count
-          status.acquired_size = sub.acquired_size
-          status.acquired_count = sub.acquired_count
-          status.waiting_on = if( sub.full ) {
-            "ack"
-          } else if( sub.pos.is_tail ) {
-            "producer"
-          } else if( !sub.pos.is_loaded ) {
-            "load"
-          } else {
-            "dispatch"
-          }
-          rc.consumers.add(status)
-        }
-        rc
       }
     }
+
+    q.inbound_sessions.flatMap( _.producer.connection ).foreach { connection=>
+      rc.producers.add(link(connection))
+    }
+    q.all_subscriptions.valuesIterator.toSeq.foreach{ sub =>
+      val status = new QueueConsumerStatusDTO
+      sub.consumer.connection.foreach(x=> status.link = link(x))
+      status.position = sub.pos.seq
+      status.total_dispatched_count = sub.total_dispatched_count
+      status.total_dispatched_size = sub.total_dispatched_size
+      status.total_ack_count = sub.total_ack_count
+      status.total_nack_count = sub.total_nack_count
+      status.acquired_size = sub.acquired_size
+      status.acquired_count = sub.acquired_count
+      status.waiting_on = if( sub.full ) {
+        "ack"
+      } else if( sub.pos.is_tail ) {
+        "producer"
+      } else if( !sub.pos.is_loaded ) {
+        "load"
+      } else {
+        "dispatch"
+      }
+      rc.consumers.add(status)
+    }
+    rc
   }
 
 
@@ -464,5 +437,41 @@ case class BrokerResource extends Resource {
       }
     }
   }
+
+  def get_queue_metrics(q:Queue):QueueMetricsDTO = {
+    val rc = new QueueMetricsDTO
+
+    rc.enqueue_item_counter = q.enqueue_item_counter
+    rc.enqueue_size_counter = q.enqueue_size_counter
+    rc.enqueue_ts = q.enqueue_ts
+
+    rc.dequeue_item_counter = q.dequeue_item_counter
+    rc.dequeue_size_counter = q.dequeue_size_counter
+    rc.dequeue_ts = q.dequeue_ts
+
+    rc.nack_item_counter = q.nack_item_counter
+    rc.nack_size_counter = q.nack_size_counter
+    rc.nack_ts = q.nack_ts
+
+    rc.queue_size = q.queue_size
+    rc.queue_items = q.queue_items
+
+    rc.swap_out_item_counter = q.swap_out_item_counter
+    rc.swap_out_size_counter = q.swap_out_size_counter
+    rc.swap_in_item_counter = q.swap_in_item_counter
+    rc.swap_in_size_counter = q.swap_in_size_counter
+
+    rc.swapping_in_size = q.swapping_in_size
+    rc.swapping_out_size = q.swapping_out_size
+
+    rc.swapped_in_items = q.swapped_in_items
+    rc.swapped_in_size = q.swapped_in_size
+
+    rc.swapped_in_size_max = q.swapped_in_size_max
+
+    rc
+  }
+
+
 
 }

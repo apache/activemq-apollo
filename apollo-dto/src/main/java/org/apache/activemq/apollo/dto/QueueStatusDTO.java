@@ -28,13 +28,13 @@ import java.util.List;
  */
 @XmlRootElement(name="queue_status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class QueueStatusDTO extends LongIdDTO {
+public class QueueStatusDTO extends StringIdDTO {
 
     @XmlElement
     public QueueDTO config;
 
     @XmlElement
-    public DestinationDTO destination;
+    public DestinationDTO binding;
 
     @XmlElement
     public QueueMetricsDTO metrics = new QueueMetricsDTO();

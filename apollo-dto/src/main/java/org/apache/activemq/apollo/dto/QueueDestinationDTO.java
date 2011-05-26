@@ -46,13 +46,13 @@ public class QueueDestinationDTO extends DestinationDTO {
 
         QueueDestinationDTO that = (QueueDestinationDTO) o;
 
-        if (parts != null ? !parts.equals(that.parts) : that.parts != null) return false;
+        if (path != null ? !path.equals(that.path) : that.path != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        return parts != null ? parts.hashCode() : 0;
+        return path != null ? path.hashCode() : 0;
     }
 }

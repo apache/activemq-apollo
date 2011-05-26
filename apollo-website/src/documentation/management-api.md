@@ -55,7 +55,8 @@ Doing a GET against it will provide information about the broker's
   
 Example:
 
-    $ curl -u "admin:password" http://localhost:61680/broker.json
+    $ curl -u "admin:password" \
+    http://localhost:61680/broker.json
 
 Results in a [Broker Status](./api/apollo-dto/org/apache/activemq/apollo/dto/BrokerStatusDTO.html) :
 
@@ -164,12 +165,12 @@ Results in a [Virtual Host Status](./api/apollo-dto/org/apache/activemq/apollo/d
   "state":"STARTED",
   "state_since":1305390871786,
   "topics":[
-    {"id":6,"label":"item.prices"},
-    {"id":3,"label":"inventory.level"}
+    "item.prices",
+    "inventory.level"
   ],
   "queues":[
-    {"id":10,"label":"orders.req"},
-    {"id":8,"label":"orders.res"},
+    "orders.req",
+    "orders.res",
   ],
   "store":true
 }
@@ -235,74 +236,59 @@ of the queue.
 Example:
 
     $ curl -u "admin:password" \
-    http://localhost:61680/broker/virtual-hosts/localhost/queues/1.json
+    http://localhost:61680/broker/virtual-hosts/localhost/queues/orders.req.json
 
 Results in a [Queue Status](./api/apollo-dto/org/apache/activemq/apollo/dto/QueueStatusDTO.html):
 
 {pygmentize:: js}
 {
-  "id":1,
-  "config":{
-    "name":null,
-    "unified":null,
-    "producer_buffer":null,
-    "queue_buffer":null,
-    "consumer_buffer":null,
-    "persistent":null,
-    "swap":null,
-    "swap_range_size":null,
-    "acl":null
-  },
-  "destination":{
-    "@class":"org.apache.activemq.apollo.dto.QueueDestinationDTO",
-    "name":"load-0"
-  },
-  "metrics":{
-    "enqueue_item_counter":37828413,
-    "enqueue_size_counter":41713628436,
-    "enqueue_ts":1305554574681,
-    "dequeue_item_counter":37828413,
-    "dequeue_size_counter":41713628436,
-    "dequeue_ts":1305554574681,
-    "nack_item_counter":0,
-    "nack_size_counter":0,
-    "nack_ts":1305554121093,
-    "queue_size":0,
-    "queue_items":0,
-    "swapped_in_size":0,
-    "swapped_in_items":0,
-    "swapping_in_size":0,
-    "swapping_out_size":0,
-    "swapped_in_size_max":557056,
-    "swap_out_item_counter":16,
-    "swap_out_size_counter":17634,
-    "swap_in_item_counter":16,
-    "swap_in_size_counter":17634
-  },
-  "entries":[],
-  "producers":[
-    {
-      "kind":"connection",
-      "id":"1",
-      "label":"/127.0.0.1:52690"
-    }
-  ],"consumers":[
-    {
-      "link":{
-        "kind":"connection",
-        "id":"2",
-        "label":"/127.0.0.1:52691"
-      },
-      "position":37828414,
-      "acquired_count":0,
-      "acquired_size":0,
-      "total_dispatched_count":37828413,
-      "total_dispatched_size":41713628436,
-      "total_ack_count":37828413,
-      "total_nack_count":0,
-      "waiting_on":"producer"
-    }
-  ]
+   "id":"orders.req",
+   "config":{
+      "id":null,
+      "unified":null,
+      "producer_buffer":null,
+      "queue_buffer":null,
+      "consumer_buffer":null,
+      "persistent":null,
+      "swap":null,
+      "swap_range_size":null,
+      "acl":null
+   },
+   "binding":{
+      "@class":"org.apache.activemq.apollo.dto.QueueDestinationDTO",
+      "path":[
+         "orders",
+         "req"
+      ]
+   },
+   "metrics":{
+      "enqueue_item_counter":72292,
+      "enqueue_size_counter":79943846,
+      "enqueue_ts":1306433477839,
+      "dequeue_item_counter":72144,
+      "dequeue_size_counter":79780158,
+      "dequeue_ts":1306433477839,
+      "nack_item_counter":0,
+      "nack_size_counter":0,
+      "nack_ts":1306433476813,
+      "queue_size":163688,
+      "queue_items":148,
+      "swapped_in_size":0,
+      "swapped_in_items":0,
+      "swapping_in_size":0,
+      "swapping_out_size":0,
+      "swapped_in_size_max":32768,
+      "swap_out_item_counter":148,
+      "swap_out_size_counter":163688,
+      "swap_in_item_counter":0,
+      "swap_in_size_counter":0
+   },
+   "entries":[
+   ],
+   "producers":[
+   ],
+   "consumers":[
+   ]
 }
 {pygmentize}
 
@@ -319,16 +305,15 @@ of the topic.
 Example:
 
     $ curl -u "admin:password" \
-    http://localhost:61680/broker/virtual-hosts/localhost/topics/1.json
+    http://localhost:61680/broker/virtual-hosts/localhost/topics/item.prices.json
 
 Results in a [Topic Status](./api/apollo-dto/org/apache/activemq/apollo/dto/TopicStatusDTO.html):
 
 {pygmentize:: js}
 {
-  "id":1,
-  "name":"load-0",
+  "id":"item.prices",
   "config":{
-    "name":null,
+    "id":null,
     "slow_consumer_policy":null,
     "acl":null
   },
@@ -347,6 +332,7 @@ Results in a [Topic Status](./api/apollo-dto/org/apache/activemq/apollo/dto/Topi
     }
   ],
   "durable_subscriptions":[
+     "mysubname"
   ]
 }
 {pygmentize}

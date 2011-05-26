@@ -33,7 +33,7 @@ trait Router extends Service {
 
   def virtual_host:VirtualHost
 
-  def get_queue(dto:Long):Option[Queue] @suspendable
+  def get_queue(dto:String):Option[Queue] @suspendable
 
   def bind(destinations:Array[DestinationDTO], consumer:DeliveryConsumer, security:SecurityContext) : Result[Zilch,String] @suspendable
 

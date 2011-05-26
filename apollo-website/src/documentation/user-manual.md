@@ -198,7 +198,7 @@ When a new queue is first created in the broker, it's configuration will be
 determined by the first `queue` element which matches the queue being
 created. The attributes matched against are:
 
-* `name` : The name of the queue, you can use wild cards to match
+* `id` : The name of the queue, you can use wild cards to match
   multiple.
 
 A `queue` element may be configured with the following attributes:
@@ -234,7 +234,7 @@ When a new topic is first created in the broker, it's configuration will be
 determined by the first `topic` element which matches the topic being
 created. The attributes matched against are:
 
-* `name` : The name of the topic, you can use wild cards to match
+* `id` : The name of the topic, you can use wild cards to match
   against multiple
 
 A `topic` element may be configured with the following attributes:
@@ -254,10 +254,8 @@ configuration will be determined by the first `durable_subscription` element
 which matches the durable subscription being created. The attributes matched
 against are:
 
-* `name` : The name of the topic, you can use wild cards to match
+* `id` : The name of the topic, you can use wild cards to match
   multiple.
-
-* `client_id` This specify which client id this configuration should match.
 
 * `subscription_id` : This specify which subscription id this configuration 
   should match.

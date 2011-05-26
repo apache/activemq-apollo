@@ -35,23 +35,23 @@ import java.util.List;
 @XmlAccessorType(XmlAccessType.FIELD)
 abstract public class DestinationDTO {
 
-    @XmlElement(name = "part")
-    public List<String> parts = new ArrayList<String>();
+    @XmlElement(name = "path")
+    public List<String> path = new ArrayList<String>();
 
     public DestinationDTO() {
     }
 
-    public DestinationDTO(List<String> parts) {
-        this.parts = parts;
+    public DestinationDTO(List<String> path) {
+        this.path = path;
     }
 
-    public DestinationDTO(String parts[]) {
-        this(Arrays.asList(parts));
+    public DestinationDTO(String path[]) {
+        this(Arrays.asList(path));
     }
 
     public String name(String separator) {
         StringBuilder sb  = new StringBuilder();
-        for( String p : parts ) {
+        for( String p : path) {
             if( sb.length() != 0 ) {
                 sb.append(separator);
             }

@@ -104,7 +104,7 @@ class AclAuthorizer(val default_kinds:List[String], val log:Log) extends Authori
   }
 
 
-  def name(topic: TopicDTO) = Option(topic.name).getOrElse("**")
+  def name(topic: TopicDTO) = Option(topic.id).getOrElse("**")
 
   def can_send_to(ctx: SecurityContext, host: VirtualHost, topic: TopicDTO) = log_result(ctx, "send", "topic "+name(topic)) {
     can_topic(ctx, topic)(_.sends)
@@ -141,7 +141,7 @@ class AclAuthorizer(val default_kinds:List[String], val log:Log) extends Authori
     queue.acl==null || is_in(ctx, func(queue.acl))
   }
 
-  def name(queue: QueueDTO) = Option(queue.name).getOrElse("**")
+  def name(queue: QueueDTO) = Option(queue.id).getOrElse("**")
 
   def can_send_to(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "send", "queue "+name(queue)) {
     can_queue(ctx, queue)(_.sends)

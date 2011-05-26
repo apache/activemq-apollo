@@ -28,13 +28,7 @@ import java.util.List;
  */
 @XmlRootElement(name="topic_status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class TopicStatusDTO extends LongIdDTO {
-
-    /**
-     * The destination name
-     */
-    @XmlAttribute
-    public String name;
+public class TopicStatusDTO extends StringIdDTO {
 
     @XmlElement
     public TopicDTO config;
@@ -55,5 +49,5 @@ public class TopicStatusDTO extends LongIdDTO {
      * Ids of all queues that are associated with the destination
      */
     @XmlElement(name="durable_subscription")
-    public List<LongIdLabeledDTO> durable_subscriptions = new ArrayList<LongIdLabeledDTO>();
+    public List<String> durable_subscriptions = new ArrayList<String>();
 }

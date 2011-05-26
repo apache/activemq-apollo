@@ -61,7 +61,7 @@ public class VirtualHostDTO extends ServiceDTO {
     /**
      * Holds the configuration for the queues.
      */
-    @XmlElement(name="durable_subscription")
+    @XmlElement(name="ds")
     public ArrayList<DurableSubscriptionDTO> durable_subscriptions = new ArrayList<DurableSubscriptionDTO>();
 
     /**

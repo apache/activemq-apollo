@@ -45,12 +45,13 @@ import Queue._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched {
+class Queue(val router: LocalRouter, val store_id:Long, val binding:QueueBinding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched {
 
   override def toString: String =  {
     "Queue(id:%d, binding:%s)".format(id, binding)
   }
 
+  def id = binding.id
 
   def virtual_host = router.virtual_host
 
@@ -60,13 +61,13 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
 
   val filter = binding.message_filter
 
-  override val dispatch_queue: DispatchQueue = createQueue(binding.label);
+  override val dispatch_queue: DispatchQueue = createQueue(binding.id);
   virtual_host.broker.init_dispatch_queue(dispatch_queue)
 
   def destination_dto: DestinationDTO = binding.binding_dto
 
   dispatch_queue {
-    debug("created queue for: " + binding.label)
+    debug("created queue for: " + binding.id)
   }
 
 
@@ -196,7 +197,7 @@ class Queue(val router: LocalRouter, val id:Long, val binding:QueueBinding, var 
 
     if( tune_persistent ) {
 
-      virtual_host.store.list_queue_entry_ranges(id, tune_swap_range_size) { ranges=>
+      virtual_host.store.list_queue_entry_ranges(store_id, tune_swap_range_size) { ranges=>
         dispatch_queue {
           if( ranges!=null && !ranges.isEmpty ) {
 
@@ -711,7 +712,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
   def toQueueEntryRecord = {
     val qer = new QueueEntryRecord
-    qer.queue_key = queue.id
+    qer.queue_key = queue.store_id
     qer.entry_seq = seq
     qer.message_key = state.message_key
     qer.size = state.size
@@ -1254,7 +1255,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     override def swap_in() = {
       if( !swapping_in ) {
         swapping_in = true
-        queue.virtual_host.store.list_queue_entries(queue.id, seq, last) { records =>
+        queue.virtual_host.store.list_queue_entries(queue.store_id, seq, last) { records =>
           if( !records.isEmpty ) {
             queue.dispatch_queue {
 

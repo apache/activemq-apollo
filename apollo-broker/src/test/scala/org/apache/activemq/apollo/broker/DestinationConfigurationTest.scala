@@ -62,15 +62,15 @@ class DestinationConfigurationTest extends FunSuiteSupport {
 
     check_tune_queue_buffer(333) {
       var p = new QueueDestinationDTO()
-      p.parts.add("unified")
-      p.parts.add("a")
+      p.path.add("unified")
+      p.path.add("a")
       p
     }
 
     check_tune_queue_buffer(111) {
       var p = new QueueDestinationDTO()
-      p.parts.add("notunified")
-      p.parts.add("other")
+      p.path.add("notunified")
+      p.path.add("other")
       p
     }
 
