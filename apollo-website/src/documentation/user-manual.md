@@ -762,23 +762,40 @@ A `web_admin` element may be configured with the following attributes:
 
 ## Managing Brokers
 
-### Starting a Broker Instance
+The rest of this section's example assume that you have created a broker 
+instance under the `/var/lib/mybroker` directory.
 
-Assuming you created the broker instance under `/var/lib/mybroker` all you
-need to do start running the broker instance in the foreground is execute:
+### Running a Broker Instance in the Foreground
+
+To start the broker instance in the foreground is execute 
+`bin/apollo-broker run`. Example:
 
     /var/lib/mybroker/bin/apollo-broker run
 
-### Stopping a Broker Instance
+To stop it, press `Ctrl-C` to send the termination signal
+to the process.
 
-You can stop a running broker by executing: 
+### Managing a Background Broker Instance
 
-    /var/lib/mybroker/bin/apollo-broker stop --user admin --password password
+If you are on Unix, you can use `bin/apollo-broker-service` script
+to start the broker in the background.  Example:
 
-This command uses the web administration interface to signal the broker
-to shutdown.  If the that interface has been disabled you should just kill
-the the broker process by killing it's process id using your operating
-system's tools.
+    /var/lib/mybroker/bin/apollo-broker-service start
+
+You can use the same script to check to see  if the broker is still 
+running.  Example:
+
+    /var/lib/mybroker/bin/apollo-broker-service status
+    
+You can stop the background broker by running:
+
+    /var/lib/mybroker/bin/apollo-broker-service stop
+
+When the broker is started in the background, it creates
+a `data/apollo.pid` file which contains the process id of
+the process executing the broker.  This file is typically 
+used to integrated with external watch dog process
+such as [Monit](http://mmonit.com/monit/).
 
 ### Viewing Broker State
 
