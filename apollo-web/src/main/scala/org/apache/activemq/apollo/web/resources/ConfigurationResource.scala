@@ -22,13 +22,13 @@ import Response.Status._
 import org.apache.activemq.apollo.broker.ConfigStore
 import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO, ValueDTO}
 import org.fusesource.hawtbuf._
+import com.sun.jersey.api.view.ImplicitProduces
 
 case class EditConfig(config:String)
 
 /**
  * A broker resource is used to represent the configuration of a broker.
  */
-@Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
 case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends Resource(parent) {
 
   lazy val store = {
@@ -41,10 +41,29 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
   }
 
   @GET
-  def get() = store.load(false)
+  @Produces(Array("text/plain"))
+  def get() = store.read
+
+  @PUT
+  def put( config:String):Unit = {
+    store.write(config)
+  }
+
+  @POST
+  def edit_post(@FormParam("config") config:String) = {
+    put(config)
+    result(uri_info.getAbsolutePathBuilder().build())
+  }
+
+  @GET
+  @Produces(Array("text/html"))
+  def edit_html() = {
+    EditConfig(store.read)
+  }
 
   @GET
   @Path("runtime")
+  @Produces(Array("application/json", "application/xml","text/xml"))
   def runtime = {
 
     // Encode/Decode the runtime config so that we can get a copy that
@@ -60,37 +79,6 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
     }
 
     copy
-  }
-
-  @Produces(Array("text/html"))
-  @GET
-  @Path("edit")
-  def edit_html() = {
-    EditConfig(store.read)
-  }
-
-  @POST
-  @Path("edit")
-  def edit_post(@FormParam("config") config:String) = {
-    val rc = new ValueDTO
-    rc.value = config
-    edit_put(rc)
-    result(path("../.."))
-  }
-
-  @Produces(Array("application/json", "application/xml","text/xml"))
-  @GET
-  @Path("edit")
-  def edit() = {
-    val rc = new ValueDTO
-    rc.value = store.read
-    rc
-  }
-
-  @PUT
-  @Path("edit")
-  def edit_put(config:ValueDTO) = {
-    store.write(config.value)
   }
 
 }
