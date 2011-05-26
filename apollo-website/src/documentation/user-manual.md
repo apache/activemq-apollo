@@ -557,7 +557,9 @@ against the resources. An example of `acl` is shown below:
 {pygmentize}
 
 If a configuration resource does not have an `acl` element defined within
-it, then the resource allows anyone to access all it's actions. The `acl`
+it, then the resource allows access if the containing resource would allow
+access to the action.  If the action is not defined in the containing
+resource then it allows anyone to access. The `acl`
 is made up of a list of authorization rule entries. Each entry defines
 that action the rule applies to and if the rule is allowing or denying
 access to a user principal. 
@@ -656,8 +658,9 @@ The type of resource being secured determines the types of actions that
 can be secured by the acl rule entries. Here is listing of which actions
 can be secured on which resources:
 
-* `broker`
+* `broker`, `virtual_host`, `topic`, and `queue`
   * `admin` : use of the administrative web interface
+  * `monitor` : read only use of the administrative web interface
 * `connector` and `virtual_host`
   * `connect` : allows connections to the connector or virtual host
 * `topic` and `queue` and `durable_subscription`
