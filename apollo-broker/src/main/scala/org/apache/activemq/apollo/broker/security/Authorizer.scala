@@ -15,14 +15,12 @@
  * limitations under the License.
  */
 package org.apache.activemq.apollo.broker.security
-import scala.util.continuations._
 import org.apache.activemq.apollo.broker._
-import org.apache.activemq.apollo.util.path.Path
-import org.apache.activemq.apollo.dto.{TopicDTO, QueueDTO, DestinationDTO}
+import org.apache.activemq.apollo.dto.{TopicDTO, QueueDTO}
 
 /**
- * <p>
- * </p>
+ * <p>This interface allows the authorization information to come
+  * from other sources besides the configuration model.</p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
@@ -33,6 +31,12 @@ trait Authorizer {
    */
   def can_admin(ctx:SecurityContext, broker:Broker):Boolean
 
+  def can_monitor(ctx:SecurityContext, broker:Broker):Boolean
+
+  def can_admin(ctx:SecurityContext, host:VirtualHost):Boolean
+
+  def can_monitor(ctx:SecurityContext, host:VirtualHost):Boolean
+
   /**
    * @returns true if the user is allowed to connect to the virtual host
    */
@@ -42,6 +46,11 @@ trait Authorizer {
    * @returns true if the user is allowed to send to the destination
    */
   def can_send_to(ctx:SecurityContext, host:VirtualHost, dest:TopicDTO):Boolean
+
+
+  def can_admin(ctx:SecurityContext, host:VirtualHost, dest:TopicDTO):Boolean
+
+  def can_monitor(ctx:SecurityContext, host:VirtualHost, dest:TopicDTO):Boolean
 
   /**
    * @returns true if the user is allowed to receive from the destination
@@ -58,6 +67,10 @@ trait Authorizer {
    */
   def can_destroy(ctx:SecurityContext, host:VirtualHost, dest:TopicDTO):Boolean
 
+
+  def can_admin(ctx:SecurityContext, host:VirtualHost, dest:QueueDTO):Boolean
+
+  def can_monitor(ctx:SecurityContext, host:VirtualHost, dest:QueueDTO):Boolean
 
   /**
    * @returns true if the user is allowed to send to the queue

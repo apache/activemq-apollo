@@ -1,3 +1,9 @@
+package org.apache.activemq.apollo.web.resources
+
+import javax.ws.rs._
+import core.Response.Status._
+import com.sun.jersey.api.view.ImplicitProduces
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,37 +20,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.dto;
-
-
-
-import javax.xml.bind.annotation.*;
-import java.util.*;
-
 /**
- * <p>
- * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlAccessorType(XmlAccessType.FIELD)
-public class TopicAclDTO {
+@Path("/")
+case class RootResource() extends Resource() {
 
-    @XmlElement(name="create")
-    public List<PrincipalDTO> creates = new ArrayList<PrincipalDTO>();
+  @GET
+  @Path("/")
+  @Produces(Array("application/json", "application/xml","text/xml","text/html"))
+  def post_connection_shutdown_and_redirect():Unit = {
+    result(strip_resolve("broker"))
+  }
 
-    @XmlElement(name="destroy")
-    public List<PrincipalDTO> destroys = new ArrayList<PrincipalDTO>();
+  @Path("{name}")
+  def path(@PathParam("name") name:String):AnyRef = {
+    name match {
+      case "broker" => new BrokerResource(this)
+      case _ =>
+        result(NOT_FOUND)
+    }
 
-    @XmlElement(name="send")
-    public List<PrincipalDTO> sends = new ArrayList<PrincipalDTO>();
+  }
 
-    @XmlElement(name="receive")
-    public List<PrincipalDTO> receives = new ArrayList<PrincipalDTO>();
-
-    @XmlElement(name="admin")
-    public List<PrincipalDTO> admins = new ArrayList<PrincipalDTO>();
-
-    @XmlElement(name="monitor")
-    public List<PrincipalDTO> monitors = new ArrayList<PrincipalDTO>();
 }

@@ -31,6 +31,12 @@ import java.util.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class VirtualHostAclDTO {
 
+    @XmlElement(name="admin")
+    public List<PrincipalDTO> admins = new ArrayList<PrincipalDTO>();
+
+    @XmlElement(name="monitor")
+    public List<PrincipalDTO> monitors = new ArrayList<PrincipalDTO>();
+
     @XmlElement(name="connect")
     public List<PrincipalDTO> connects = new ArrayList<PrincipalDTO>();
 

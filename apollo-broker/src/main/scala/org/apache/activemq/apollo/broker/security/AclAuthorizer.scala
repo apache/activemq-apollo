@@ -45,8 +45,50 @@ class AclAuthorizer(val default_kinds:List[String], val log:Log) extends Authori
     rc
   }
 
-  def can_admin(ctx: SecurityContext, broker: Broker) = log_result(ctx, "administration", "broker") {
-    broker.config.acl==null  || is_in(ctx, broker.config.acl.admins)
+  private def can_broker(ctx: SecurityContext, broker: Broker)(func: BrokerAclDTO=>java.util.List[PrincipalDTO]) = {
+    broker.config.acl==null || is_in(ctx, func(broker.config.acl))
+  }
+
+  def _can_admin(ctx: SecurityContext, broker: Broker): Boolean = {
+    can_broker(ctx, broker)(_.admins)
+  }
+
+  def can_admin(ctx: SecurityContext, broker: Broker):Boolean = log_result(ctx, "administration", "broker") {
+    _can_admin(ctx, broker)
+  }
+
+  def _can_monitor(ctx: SecurityContext, broker: Broker): Boolean = {
+    can_broker(ctx, broker)(_.monitors) || can_broker(ctx, broker)(_.admins)
+  }
+
+  def can_monitor(ctx: SecurityContext, broker: Broker):Boolean = log_result(ctx, "monitor", "broker") {
+    _can_monitor(ctx, broker)
+  }
+
+  def _can_admin(ctx: SecurityContext, host: VirtualHost): Boolean = {
+    val acl = host.config.acl
+    if (acl != null) {
+      is_in(ctx, acl.admins)
+    } else {
+      _can_admin(ctx, host.broker)
+    }
+  }
+
+  def can_admin(ctx: SecurityContext, host: VirtualHost):Boolean = log_result(ctx, "administration", "virtual host "+host.id) {
+    _can_admin(ctx, host)
+  }
+
+  def _can_monitor(ctx: SecurityContext, host: VirtualHost): Boolean = {
+    val acl = host.config.acl
+    if (acl != null) {
+      is_in(ctx, acl.monitors) || is_in(ctx, acl.admins)
+    } else {
+      _can_monitor(ctx, host.broker)
+    }
+  }
+
+  def can_monitor(ctx: SecurityContext, host: VirtualHost):Boolean = log_result(ctx, "monitor", "virtual host "+host.id) {
+    _can_monitor(ctx, host)
   }
 
   def can_connect_to(ctx: SecurityContext, host: VirtualHost, connector:Connector):Boolean = {
@@ -57,50 +99,86 @@ class AclAuthorizer(val default_kinds:List[String], val log:Log) extends Authori
     }
   }
 
-  private def can_dest(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO)(func: TopicAclDTO=>java.util.List[PrincipalDTO]) = {
-    dest.acl==null || is_in(ctx, func(dest.acl))
+  private def can_topic(ctx: SecurityContext, topic: TopicDTO)(func: TopicAclDTO=>java.util.List[PrincipalDTO]) = {
+    topic.acl==null || is_in(ctx, func(topic.acl))
   }
 
 
-  def name(dest: TopicDTO) = Option(dest.name).getOrElse("**")
+  def name(topic: TopicDTO) = Option(topic.name).getOrElse("**")
 
-  def can_send_to(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = log_result(ctx, "send", "topic "+name(dest)) {
-    can_dest(ctx, host, dest)(_.sends)
+  def can_send_to(ctx: SecurityContext, host: VirtualHost, topic: TopicDTO) = log_result(ctx, "send", "topic "+name(topic)) {
+    can_topic(ctx, topic)(_.sends)
   }
-  def can_receive_from(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = log_result(ctx, "receive", "topic "+name(dest)) {
-    can_dest(ctx, host, dest)(_.receives)
+  def can_receive_from(ctx: SecurityContext, host: VirtualHost, topic: TopicDTO) = log_result(ctx, "receive", "topic "+name(topic)) {
+    can_topic(ctx, topic)(_.receives)
   }
-  def can_destroy(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = log_result(ctx, "destroy", "topic "+name(dest)) {
-    can_dest(ctx, host, dest)(_.destroys)
+  def can_destroy(ctx: SecurityContext, host: VirtualHost, topic: TopicDTO) = log_result(ctx, "destroy", "topic "+name(topic)) {
+    can_topic(ctx, topic)(_.destroys)
   }
-  def can_create(ctx: SecurityContext, host: VirtualHost, dest: TopicDTO) = log_result(ctx, "create", "topic "+name(dest)) {
-    can_dest(ctx, host, dest)(_.creates)
+  def can_create(ctx: SecurityContext, host: VirtualHost, topic: TopicDTO) = log_result(ctx, "create", "topic "+name(topic)) {
+    can_topic(ctx, topic)(_.creates)
+  }
+  
+  def can_admin(ctx: SecurityContext, host: VirtualHost, topic: TopicDTO) = log_result(ctx, "administration", "topic") {
+    val acl = topic.acl
+    if (acl != null) {
+      is_in(ctx, acl.admins)
+    } else {
+      _can_admin(ctx, host)
+    }
   }
 
-  private def can_queue(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO)(func: QueueAclDTO=>java.util.List[PrincipalDTO]) = {
+  def can_monitor(ctx: SecurityContext, host: VirtualHost, topic: TopicDTO) = log_result(ctx, "monitor", "topic") {
+    val acl = topic.acl
+    if (acl != null) {
+      is_in(ctx, acl.monitors) || is_in(ctx, acl.admins)
+    } else {
+      _can_admin(ctx, host)
+    }
+  }
+
+  private def can_queue(ctx: SecurityContext, queue: QueueDTO)(func: QueueAclDTO=>java.util.List[PrincipalDTO]) = {
     queue.acl==null || is_in(ctx, func(queue.acl))
   }
 
-  def name(dest: QueueDTO) = Option(dest.name).getOrElse("**")
+  def name(queue: QueueDTO) = Option(queue.name).getOrElse("**")
 
   def can_send_to(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "send", "queue "+name(queue)) {
-    can_queue(ctx, host, queue)(_.sends)
+    can_queue(ctx, queue)(_.sends)
   }
 
   def can_receive_from(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "receive", "queue "+name(queue)) {
-    can_queue(ctx, host, queue)(_.receives)
+    can_queue(ctx, queue)(_.receives)
   }
 
   def can_destroy(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "destroy", "queue "+name(queue)) {
-    can_queue(ctx, host, queue)(_.destroys)
+    can_queue(ctx, queue)(_.destroys)
   }
 
   def can_create(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "create", "queue "+name(queue)) {
-    can_queue(ctx, host, queue)(_.creates)
+    can_queue(ctx, queue)(_.creates)
   }
 
   def can_consume_from(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "consume", "queue "+name(queue)) {
-    can_queue(ctx, host, queue)(_.consumes)
+    can_queue(ctx, queue)(_.consumes)
+  }
+
+  def can_admin(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "administration", "queue") {
+    val acl = queue.acl
+    if (acl != null) {
+      is_in(ctx, acl.admins)
+    } else {
+      _can_admin(ctx, host)
+    }
+  }
+
+  def can_monitor(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "monitor", "queue") {
+    val acl = queue.acl
+    if (acl != null) {
+      is_in(ctx, acl.monitors) || is_in(ctx, acl.admins)
+    } else {
+      _can_admin(ctx, host)
+    }
   }
 
 }

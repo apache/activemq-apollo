@@ -26,6 +26,7 @@ import org.apache.activemq.apollo.broker._
 import scala.collection.Iterable
 import org.apache.activemq.apollo.util.{Failure, Success, Dispatched, Result}
 import scala.Some
+import security.{SecurityContext, Authorizer}
 
 /**
  * <p>
@@ -35,125 +36,47 @@ import scala.Some
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@Path("/")
 @Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
-case class BrokerResource() extends Resource() {
-
-  type FutureResult[T] = Future[Result[T, Throwable]]
-
-  def FutureResult[T]() = Future[Result[T, Throwable]]()
-
-  private def sync[T](dispached:Dispatched)(func: =>FutureResult[T]):FutureResult[T] = {
-    val rc = Future[Result[T, Throwable]]()
-    dispached.dispatch_queue.apply {
-      try {
-        func.onComplete(x=> rc.apply(x))
-      } catch {
-        case e:Throwable => rc.apply(Failure(e))
-      }
-    }
-    rc
-  }
-
-
-  def sync_all[T,D<:Dispatched](values:Iterable[D])(func: (D)=>FutureResult[T]) = {
-    Future.all {
-      values.map { value=>
-        sync(value) {
-          func(value)
-        }
-      }
-    }
-  }
-
-  private implicit def to_local_router(host:VirtualHost):LocalRouter = {
-    host.router.asInstanceOf[LocalRouter]
-  }
-
-  private implicit def wrap_future_result[T](value:T):FutureResult[T] = {
-    val rc = FutureResult[T]()
-    rc.apply(Success(value))
-    rc
-  }
-
-  private implicit def unwrap_future_result[T](value:FutureResult[T]):T = {
-    value.await() match {
-      case Success(value) => value
-      case Failure(value) => throw value
-    }
-  }
-
-  private def with_broker[T](func: (org.apache.activemq.apollo.broker.Broker)=>FutureResult[T]):FutureResult[T] = {
-    BrokerRegistry.list.headOption match {
-      case Some(broker)=>
-        sync(broker) {
-          func(broker)
-        }
-      case None=>
-        result(NOT_FOUND)
-    }
-  }
-
-  private def with_virtual_host[T](id:String)(func: (VirtualHost)=>FutureResult[T]):FutureResult[T] = {
-    with_broker { broker =>
-      broker.virtual_hosts.valuesIterator.find( _.id == id) match {
-        case Some(virtualHost)=>
-          sync(virtualHost) {
-            func(virtualHost)
-          }
-        case None=>
-          result(NOT_FOUND)
-      }
-    }
-  }
-
-  private def with_connection[T](id:Long)(func: BrokerConnection=>FutureResult[T]):FutureResult[T] = {
-    with_broker { broker =>
-      broker.connectors.flatMap{ _.connections.get(id) }.headOption match {
-        case Some(connection:BrokerConnection) =>
-          sync(connection) {
-            func(connection)
-          }
-        case None=>
-          result(NOT_FOUND)
-      }
-    }
-  }
-
+case class BrokerResource(parent:Resource) extends Resource(parent) {
 
   @Path("config")
   def config_resource:ConfigurationResource = {
     with_broker { broker =>
-      ConfigurationResource(this, broker.config)
+      admining(broker) {
+        ConfigurationResource(this, broker.config)
+      }
     }
   }
 
   @GET
   def get_broker():BrokerStatusDTO = {
     with_broker { broker =>
-      val result = new BrokerStatusDTO
+      monitoring(broker) {
+        val result = new BrokerStatusDTO
 
-      result.id = broker.id
-      result.current_time = System.currentTimeMillis
-      result.state = broker.service_state.toString
-      result.state_since = broker.service_state.since
+        result.id = broker.id
+        result.current_time = System.currentTimeMillis
+        result.state = broker.service_state.toString
+        result.state_since = broker.service_state.since
 
-      broker.virtual_hosts.values.foreach{ host=>
-        // TODO: may need to sync /w virtual host's dispatch queue
-        result.virtual_hosts.add( host.id )
-      }
-
-      broker.connectors.foreach{ c=>
-        result.connectors.add( c.id )
-      }
-
-      broker.connectors.foreach{ connector=>
-        connector.connections.foreach { case (id,connection) =>
-          // TODO: may need to sync /w connection's dispatch queue
-          result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ) )
+        broker.virtual_hosts.values.foreach{ host=>
+          // TODO: may need to sync /w virtual host's dispatch queue
+          result.virtual_hosts.add( host.id )
         }
+
+        broker.connectors.foreach{ c=>
+          result.connectors.add( c.id )
+        }
+
+        broker.connectors.foreach{ connector=>
+          connector.connections.foreach { case (id,connection) =>
+            // TODO: may need to sync /w connection's dispatch queue
+            result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ) )
+          }
+        }
+        result
+
       }
-      result
     }
   }
 
@@ -161,7 +84,9 @@ case class BrokerResource() extends Resource() {
   @Path("queue-metrics")
   def get_queue_metrics(): AggregateQueueMetricsDTO = {
     with_broker { broker =>
-      get_queue_metrics(broker)
+      monitoring(broker) {
+        get_queue_metrics(broker)
+      }
     }
   }
 
@@ -231,44 +156,50 @@ case class BrokerResource() extends Resource() {
   @GET @Path("virtual-hosts/{id}")
   def virtual_host(@PathParam("id") id : String):VirtualHostStatusDTO = {
     with_virtual_host(id) { host =>
-      val result = new VirtualHostStatusDTO
-      result.id = host.id
-      result.state = host.service_state.toString
-      result.state_since = host.service_state.since
-      result.store = host.store!=null
+      monitoring(host) {
+        val result = new VirtualHostStatusDTO
+        result.id = host.id
+        result.state = host.service_state.toString
+        result.state_since = host.service_state.since
+        result.store = host.store!=null
 
-      val router:LocalRouter = host
+        val router:LocalRouter = host
 
-      router.topic_domain.destinations.foreach { node=>
-        result.topics.add(new LongIdLabeledDTO(node.id, node.name))
+        router.topic_domain.destinations.foreach { node=>
+          result.topics.add(new LongIdLabeledDTO(node.id, node.name))
+        }
+
+        router.queue_domain.destinations.foreach { node=>
+          result.queues.add(new LongIdLabeledDTO(node.id, node.binding.label))
+        }
+
+        result
       }
-
-      router.queue_domain.destinations.foreach { node=>
-        result.queues.add(new LongIdLabeledDTO(node.id, node.binding.label))
-      }
-
-      result
     }
   }
 
   @GET @Path("virtual-hosts/{id}/queue-metrics")
   def virtual_host_queue_metrics(@PathParam("id") id : String): AggregateQueueMetricsDTO = {
-    with_virtual_host(id) { virtualHost =>
-      get_queue_metrics(virtualHost)
+    with_virtual_host(id) { host =>
+      monitoring(host) {
+        get_queue_metrics(host)
+      }
     }
   }
 
   @GET @Path("virtual-hosts/{id}/store")
   def store(@PathParam("id") id : String):StoreStatusDTO = {
-    with_virtual_host(id) { virtualHost =>
-      if(virtualHost.store!=null) {
-        val rc = FutureResult[StoreStatusDTO]()
-        virtualHost.store.get_store_status { status =>
-          rc(Success(status))
+    with_virtual_host(id) { host =>
+      monitoring(host) {
+        if(host.store!=null) {
+          val rc = FutureResult[StoreStatusDTO]()
+          host.store.get_store_status { status =>
+            rc(Success(status))
+          }
+          rc
+        } else {
+          result(NOT_FOUND)
         }
-        rc
-      } else {
-        result(NOT_FOUND)
       }
     }
   }
@@ -295,29 +226,32 @@ case class BrokerResource() extends Resource() {
 
       val router:LocalRouter = host
       val node = router.topic_domain.destination_by_id.get(dest).getOrElse(result(NOT_FOUND))
-      val rc = new TopicStatusDTO
-      rc.id = node.id
-      rc.name = node.name
-      rc.config = node.config
 
-      node.durable_subscriptions.foreach { q=>
-        rc.durable_subscriptions.add(new LongIdLabeledDTO(q.id, q.binding.label))
-      }
-      node.consumers.foreach { consumer=>
-        consumer match {
-          case queue:Queue =>
-            rc.consumers.add(link(queue))
-          case _ =>
-            consumer.connection.foreach{c=>
-              rc.consumers.add(link(c))
-            }
+      monitoring(node) {
+        val rc = new TopicStatusDTO
+        rc.id = node.id
+        rc.name = node.name
+        rc.config = node.config
+
+        node.durable_subscriptions.foreach { q=>
+          rc.durable_subscriptions.add(new LongIdLabeledDTO(q.id, q.binding.label))
         }
-      }
-      node.producers.flatMap( _.connection ).foreach { connection=>
-        rc.producers.add(link(connection))
-      }
+        node.consumers.foreach { consumer=>
+          consumer match {
+            case queue:Queue =>
+              rc.consumers.add(link(queue))
+            case _ =>
+              consumer.connection.foreach{c=>
+                rc.consumers.add(link(c))
+              }
+          }
+        }
+        node.producers.flatMap( _.connection ).foreach { connection=>
+          rc.producers.add(link(connection))
+        }
 
-      rc
+        rc
+      }
     }
   }
 
@@ -376,62 +310,63 @@ case class BrokerResource() extends Resource() {
   def status(qo:Option[Queue], entries:Boolean=false) = qo match {
     case None=> result(NOT_FOUND)
     case Some(q)=> sync(q) {
+      monitoring(q) {
+        val rc = new QueueStatusDTO
+        rc.id = q.id
+        rc.destination = q.binding.binding_dto
+        rc.config = q.config
+        rc.metrics = get_queue_metrics(q)
 
-      val rc = new QueueStatusDTO
-      rc.id = q.id
-      rc.destination = q.binding.binding_dto
-      rc.config = q.config
-      rc.metrics = get_queue_metrics(q)
+        if( entries ) {
+          var cur = q.head_entry
+          while( cur!=null ) {
 
-      if( entries ) {
-        var cur = q.head_entry
-        while( cur!=null ) {
+            val e = new EntryStatusDTO
+            e.seq = cur.seq
+            e.count = cur.count
+            e.size = cur.size
+            e.consumer_count = cur.parked.size
+            e.is_prefetched = cur.is_prefetched
+            e.state = cur.label
 
-          val e = new EntryStatusDTO
-          e.seq = cur.seq
-          e.count = cur.count
-          e.size = cur.size
-          e.consumer_count = cur.parked.size
-          e.is_prefetched = cur.is_prefetched
-          e.state = cur.label
+            rc.entries.add(e)
 
-          rc.entries.add(e)
-
-          cur = if( cur == q.tail_entry ) {
-            null
-          } else {
-            cur.nextOrTail
+            cur = if( cur == q.tail_entry ) {
+              null
+            } else {
+              cur.nextOrTail
+            }
           }
-        }
-      } else {
-//        rc.entries = null
-      }
-
-      q.inbound_sessions.flatMap( _.producer.connection ).foreach { connection=>
-        rc.producers.add(link(connection))
-      }
-      q.all_subscriptions.valuesIterator.toSeq.foreach{ sub =>
-        val status = new QueueConsumerStatusDTO
-        sub.consumer.connection.foreach(x=> status.link = link(x))
-        status.position = sub.pos.seq
-        status.total_dispatched_count = sub.total_dispatched_count
-        status.total_dispatched_size = sub.total_dispatched_size
-        status.total_ack_count = sub.total_ack_count
-        status.total_nack_count = sub.total_nack_count
-        status.acquired_size = sub.acquired_size
-        status.acquired_count = sub.acquired_count
-        status.waiting_on = if( sub.full ) {
-          "ack"
-        } else if( sub.pos.is_tail ) {
-          "producer"
-        } else if( !sub.pos.is_loaded ) {
-          "load"
         } else {
-          "dispatch"
+//        rc.entries = null
         }
-        rc.consumers.add(status)
+
+        q.inbound_sessions.flatMap( _.producer.connection ).foreach { connection=>
+          rc.producers.add(link(connection))
+        }
+        q.all_subscriptions.valuesIterator.toSeq.foreach{ sub =>
+          val status = new QueueConsumerStatusDTO
+          sub.consumer.connection.foreach(x=> status.link = link(x))
+          status.position = sub.pos.seq
+          status.total_dispatched_count = sub.total_dispatched_count
+          status.total_dispatched_size = sub.total_dispatched_size
+          status.total_ack_count = sub.total_ack_count
+          status.total_nack_count = sub.total_nack_count
+          status.acquired_size = sub.acquired_size
+          status.acquired_count = sub.acquired_count
+          status.waiting_on = if( sub.full ) {
+            "ack"
+          } else if( sub.pos.is_tail ) {
+            "producer"
+          } else if( !sub.pos.is_loaded ) {
+            "load"
+          } else {
+            "dispatch"
+          }
+          rc.consumers.add(status)
+        }
+        rc
       }
-      rc
     }
   }
 
@@ -446,22 +381,24 @@ case class BrokerResource() extends Resource() {
   @GET @Path("connectors/{id}")
   def connector(@PathParam("id") id : String):ConnectorStatusDTO = {
     with_broker { broker =>
-      broker.connectors.find(_.id == id) match {
-        case None=> result(NOT_FOUND)
-        case Some(connector)=>
+      monitoring(broker) {
+        broker.connectors.find(_.id == id) match {
+          case None=> result(NOT_FOUND)
+          case Some(connector)=>
 
-          val result = new ConnectorStatusDTO
-          result.id = connector.id.toString
-          result.state = connector.service_state.toString
-          result.state_since = connector.service_state.since
+            val result = new ConnectorStatusDTO
+            result.id = connector.id.toString
+            result.state = connector.service_state.toString
+            result.state_since = connector.service_state.since
 
-          result.accepted = connector.connection_counter.get
-          connector.connections.foreach { case (id,connection) =>
-            // TODO: may need to sync /w connection's dispatch queue
-            result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ) )
-          }
+            result.accepted = connector.connection_counter.get
+            connector.connections.foreach { case (id,connection) =>
+              // TODO: may need to sync /w connection's dispatch queue
+              result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ) )
+            }
 
-          result
+            result
+        }
       }
     }
   }
@@ -470,23 +407,27 @@ case class BrokerResource() extends Resource() {
   @GET @Path("connections")
   def connections:LongIdListDTO = {
     with_broker { broker =>
-      val rc = new LongIdListDTO
+      monitoring(broker) {
+        val rc = new LongIdListDTO
 
-      broker.connectors.foreach { connector=>
-        connector.connections.foreach { case (id,connection) =>
-          // TODO: may need to sync /w connection's dispatch queue
-          rc.items.add(new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ))
+        broker.connectors.foreach { connector=>
+          connector.connections.foreach { case (id,connection) =>
+            // TODO: may need to sync /w connection's dispatch queue
+            rc.items.add(new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ))
+          }
         }
+
+        rc
       }
-      
-      rc
     }
   }
 
   @GET @Path("connections/{id}")
   def connections(@PathParam("id") id : Long):ConnectionStatusDTO = {
     with_connection(id){ connection=>
-      connection.get_connection_status
+      monitoring(connection.connector.broker) {
+        connection.get_connection_status
+      }
     }
   }
 
@@ -494,7 +435,9 @@ case class BrokerResource() extends Resource() {
   @Produces(Array("application/json", "application/xml","text/xml"))
   def post_connection_shutdown(@PathParam("id") id : Long):Unit = {
     with_connection(id){ connection=>
-      connection.stop
+      admining(connection.connector.broker) {
+        connection.stop
+      }
     }
   }
 
@@ -510,12 +453,15 @@ case class BrokerResource() extends Resource() {
   @Path("action/shutdown")
   def command_shutdown:Unit = {
     info("JVM shutdown requested via web interface")
-
-    // do the the exit async so that we don't
-    // kill the current request.
-    Broker.BLOCKABLE_THREAD_POOL.apply {
-      Thread.sleep(200)
-      System.exit(0)
+    with_broker { broker =>
+      admining(broker) {
+        // do the the exit async so that we don't
+        // kill the current request.
+        Broker.BLOCKABLE_THREAD_POOL.apply {
+          Thread.sleep(200)
+          System.exit(0)
+        }
+      }
     }
   }
 
