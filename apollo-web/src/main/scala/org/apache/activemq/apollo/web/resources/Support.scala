@@ -49,7 +49,7 @@ abstract class Resource(private val parent:Resource=null) extends Logging {
     this.uri_info = parent.uri_info
   }
 
-  def result[T](value:Status, message:Any=null):T = {
+  def result(value:Status, message:Any=null):Nothing = {
     val response = Response.status(value)
     if( message!=null ) {
       response.entity(message)
