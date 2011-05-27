@@ -224,31 +224,30 @@ class StompProtocolHandler extends ProtocolHandler {
     val selector:(String, BooleanExpression),
     override val browser:Boolean,
     override val exclusive:Boolean
-  ) extends Retained with DeliveryConsumer {
-//  ) extends BaseRetained with DeliveryConsumer {
+  ) extends BaseRetained with DeliveryConsumer {
 
 ////  The following comes in handy if we need to debug the
 ////  reference counts of the consumers.
 //
-    val r = new BaseRetained
-
-    def setDisposer(p1: Runnable): Unit = r.setDisposer(p1)
-    def retained: Int =r.retained
-
-    def printST(name:String) = {
-      val e = new Exception
-      println(name+": ")
-      println("  "+e.getStackTrace.drop(1).take(4).mkString("\n  "))
-    }
-
-    def retain: Unit = {
-      printST("retain")
-      r.retain
-    }
-    def release: Unit = {
-      printST("release")
-      r.release
-    }
+//    val r = new BaseRetained
+//
+//    def setDisposer(p1: Runnable): Unit = r.setDisposer(p1)
+//    def retained: Int =r.retained
+//
+//    def printST(name:String) = {
+//      val e = new Exception
+//      println(name+": ")
+//      println("  "+e.getStackTrace.drop(1).take(4).mkString("\n  "))
+//    }
+//
+//    def retain: Unit = {
+//      printST("retain")
+//      r.retain
+//    }
+//    def release: Unit = {
+//      printST("release")
+//      r.release
+//    }
 
     val dispatch_queue = StompProtocolHandler.this.dispatchQueue
 
