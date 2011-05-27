@@ -193,7 +193,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
       tracker.await(3, TimeUnit.SECONDS)
     }
     expect(true) {
-      tracker.await(3, TimeUnit.SECONDS)
+      tracker.await(5, TimeUnit.SECONDS)
     }
   }
 
