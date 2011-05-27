@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.web.resources
 
 import javax.ws.rs._
 import core.Response.Status._
-import core.{UriInfo, Context}
+import core.{Response, UriInfo, Context}
 import org.apache.activemq.apollo.util.ModuleRegistry
 import collection.mutable.HashMap
 import javax.servlet.http.HttpServletRequest
@@ -48,10 +48,9 @@ case class RootResource() extends Resource() {
   import RootResource._
 
   @GET
-  @Path("/")
   @Produces(Array("application/json", "application/xml","text/xml","text/html"))
-  def post_connection_shutdown_and_redirect():Unit = {
-    result(strip_resolve("broker"))
+  def post_connection_shutdown_and_redirect() = {
+    Response.seeOther(strip_resolve("broker")).build
   }
 
   @Path("{name}")
