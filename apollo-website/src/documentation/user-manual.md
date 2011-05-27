@@ -1074,6 +1074,16 @@ Similarly, you can also subscribe to the subscription in the same way:
     
     ^@
 
+Unlike typical STOMP subscriptions id's which are local to the STOMP 
+client's connection, the durable subscription id's are global across
+a virtual host.  If two different connections use the same durable
+subscription id, then messages from the subscription will get load
+balanced across the two connections.  If the second connection uses
+a different `destination` or `selector` header, then updates 
+the original subscription, and the original connection will
+subsequently only receive messages matching the updated
+destination or selector.
+
 ### Browsing Subscriptions
 
 A normal subscription on a queue will consume messages so that no other

@@ -363,7 +363,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     def bind_dsub(queue:Queue) = {
-
+      assert_executing
       val destination = queue.binding.binding_dto.asInstanceOf[DurableSubscriptionDestinationDTO]
       val path = queue.binding.destination
       val wildcard = PathParser.containsWildCards(path)
@@ -382,23 +382,15 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     def unbind_dsub(queue:Queue) = {
-
-      val destination = queue.binding.binding_dto.asInstanceOf[DurableSubscriptionDestinationDTO]
+      assert_executing
+      val destination = queue.destination_dto.asInstanceOf[DurableSubscriptionDestinationDTO]
       val path = queue.binding.destination
-      val wildcard = PathParser.containsWildCards(path)
       var matches = get_destination_matches(path)
-
-      // We may need to create the topic...
-      if( !wildcard && matches.isEmpty ) {
-        create_destination(path, destination, null)
-        matches = get_destination_matches(path)
-      }
 
       durable_subscriptions_by_path.remove(path, queue)
       durable_subscriptions_by_id.remove(destination.subscription_id)
 
       matches.foreach( _.unbind_durable_subscription(destination, queue) )
-
     }
 
     override def bind(path: Path, destination: DestinationDTO, consumer: DeliveryConsumer, security: SecurityContext) {
@@ -406,9 +398,38 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         case destination:DurableSubscriptionDestinationDTO =>
 
           val key = destination.subscription_id
-          val queue = durable_subscriptions_by_id.get( key ).getOrElse {
-            _create_queue(QueueBinding.create(destination))
+          val queue = durable_subscriptions_by_id.get( key ) match {
+            case Some(queue) =>
+              // We may need to update the bindings...
+              if( queue.destination_dto != destination) {
+
+                val binding = QueueBinding.create(destination)
+                if( queue.tune_persistent && queue.store_id == -1 ) {
+
+                  val record = new QueueRecord
+                  record.key = queue.store_id
+                  record.binding_data = binding.binding_data
+                  record.binding_kind = binding.binding_kind
+
+                  // Update the bindings
+                  virtual_host.store.add_queue(record) { rc => Unit }
+                }
+
+                // and then rebind the queue in the router.
+                unbind_dsub(queue)
+                queue.binding = binding
+                bind_dsub(queue)
+
+                // Make sure the update is visible in the queue's thread context..
+                queue.dispatch_queue {
+                  queue.binding = binding
+                }
+              }
+              queue
+            case None =>
+              _create_queue(QueueBinding.create(destination))
           }
+
 
           // Typically durable subs are only consumed by one connection at a time. So collocate the
           // queue onto the consumer's dispatch queue.

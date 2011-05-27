@@ -45,13 +45,11 @@ import Queue._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val router: LocalRouter, val store_id:Long, val binding:QueueBinding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched {
-
-  override def toString: String =  {
-    "Queue(id:%d, binding:%s)".format(id, binding)
-  }
+class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched {
 
   def id = binding.id
+
+  override def toString: String =  id
 
   def virtual_host = router.virtual_host
 
@@ -59,17 +57,14 @@ class Queue(val router: LocalRouter, val store_id:Long, val binding:QueueBinding
   var all_subscriptions = Map[DeliveryConsumer, Subscription]()
   var exclusive_subscriptions = ListBuffer[Subscription]()
 
-  val filter = binding.message_filter
+  def filter = binding.message_filter
 
-  override val dispatch_queue: DispatchQueue = createQueue(binding.id);
+  override val dispatch_queue: DispatchQueue = createQueue(id);
   virtual_host.broker.init_dispatch_queue(dispatch_queue)
 
   def destination_dto: DestinationDTO = binding.binding_dto
 
-  dispatch_queue {
-    debug("created queue for: " + binding.id)
-  }
-
+  debug("created queue: " + id)
 
   override def dispose: Unit = {
     ack_source.cancel
@@ -534,6 +529,7 @@ class Queue(val router: LocalRouter, val store_id:Long, val binding:QueueBinding
       for (consumer <- values) {
         val sub = new Subscription(this, consumer)
         sub.open
+        consumer.release()
       }
     }
   }

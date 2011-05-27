@@ -642,6 +642,68 @@ class DurableSubscriptionTest extends StompTestSupport {
 
   override val broker_config_uri: String = "xml:classpath:apollo-stomp-bdb.xml"
 
+  test("Duplicate SUBSCRIBE updates durable subscription bindings") {
+    connect("1.1")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/a\n" +
+      "id:sub1\n" +
+      "persistent:true\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    def get(expected:String) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith("\n\n"+expected)
+    }
+
+    // Validate that the durable sub is bound to /topic/a
+    client.write(
+      "SEND\n" +
+      "destination:/topic/a\n" +
+      "\n" +
+      "1\n")
+    get("1\n")
+
+    client.write(
+      "UNSUBSCRIBE\n" +
+      "id:sub1\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    // Switch the durable sub to /topic/b
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/b\n" +
+      "id:sub1\n" +
+      "persistent:true\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    // all these should get dropped
+    for ( i <- 1 to 500 ) {
+      client.write(
+        "SEND\n" +
+        "destination:/topic/a\n" +
+        "\n" +
+        "DROPPED\n")
+    }
+
+    // Not this one.. it's on the updated topic
+    client.write(
+      "SEND\n" +
+      "destination:/topic/b\n" +
+      "\n" +
+      "2\n")
+    get("2\n")
+
+  }
+
   test("Two durable subs contain the same messages") {
     connect("1.1")
 
