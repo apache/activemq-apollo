@@ -28,9 +28,10 @@ import javax.xml.bind.annotation.*;
 public class DurableSubscriptionDTO extends QueueDTO {
 
     /**
-     * To narrow down matches to a subscription id
+     *  A regular expression used to match the subsciption id.
      */
-    @XmlAttribute(name="subscription_id")
-    public String subscription_id;
+    @XmlAttribute(name="id_regex")
+    public String id_regex;
+
 
 }

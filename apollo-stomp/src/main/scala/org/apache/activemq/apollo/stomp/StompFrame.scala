@@ -298,12 +298,11 @@ object Stomp {
   val destination_parser = new DestinationParser
   destination_parser.queue_prefix = "/queue/"
   destination_parser.topic_prefix = "/topic/"
+  destination_parser.dsub_prefix = "/dsub/"
   destination_parser.destination_separator = ","
   destination_parser.path_separator = "."
   destination_parser.any_child_wildcard = "*"
   destination_parser.any_descendant_wildcard = "**"
-
-  destination_parser.default_domain = LocalRouter.QUEUE_DOMAIN
 
   type HeaderMap = List[(AsciiBuffer, AsciiBuffer)]
   type HeaderMapBuffer = ListBuffer[(AsciiBuffer, AsciiBuffer)]

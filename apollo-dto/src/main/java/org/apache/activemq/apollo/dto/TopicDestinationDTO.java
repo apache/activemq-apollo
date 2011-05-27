@@ -39,23 +39,4 @@ public class TopicDestinationDTO extends DestinationDTO {
         super(name);
     }
 
-
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        TopicDestinationDTO that = (TopicDestinationDTO) o;
-
-        if (path != null ? !path.equals(that.path) : that.path != null) return false;
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        return path != null ? path.hashCode() : 0;
-    }
-
 }

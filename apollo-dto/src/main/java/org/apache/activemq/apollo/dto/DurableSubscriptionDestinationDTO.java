@@ -40,11 +40,10 @@ public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
 
     public DurableSubscriptionDestinationDTO() {
     }
-    public DurableSubscriptionDestinationDTO(List<String> name) {
-        super(name);
-    }
-    public DurableSubscriptionDestinationDTO(String[] name) {
-        super(name);
+
+    public DurableSubscriptionDestinationDTO(String subscription_id) {
+        super();
+        this.subscription_id = subscription_id;
     }
 
     @Override

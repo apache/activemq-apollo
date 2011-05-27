@@ -483,7 +483,7 @@ class StompProtocolHandler extends ProtocolHandler {
       producerRoutes.clear
       consumers.foreach {
         case (_,consumer)=>
-          host.router.unbind(consumer.destination, consumer)
+          host.router.unbind(consumer.destination, consumer, false , security_context)
       }
       consumers = Map()
       trace("stomp protocol resources released")
@@ -767,16 +767,16 @@ class StompProtocolHandler extends ProtocolHandler {
         connection.transport.suspendRead
         reset {
           val rc = host.router.connect(destiantion, route, security_context)
-          if( rc.failed ) {
-            async_die(rc.failure)
-          } else {
-            if (!connection.stopped) {
-              resumeRead
-              producerRoutes.put(key, route)
-              send_via_route(route, frame, uow)
-            }
+          rc match {
+            case Some(failure) =>
+              async_die(failure)
+            case None =>
+              if (!connection.stopped) {
+                resumeRead
+                producerRoutes.put(key, route)
+                send_via_route(route, frame, uow)
+              }
           }
-
         }
 
       case route =>
@@ -922,8 +922,11 @@ class StompProtocolHandler extends ProtocolHandler {
 
     if( persistent ) {
       destination = destination.map { _ match {
+        case x:DurableSubscriptionDestinationDTO=>
+          x
         case x:TopicDestinationDTO=>
-          val rc = new DurableSubscriptionDestinationDTO(x.path)
+          val rc = new DurableSubscriptionDestinationDTO()
+          rc.path = x.path
           rc.subscription_id = decode_header(id)
           rc.filter = if (selector == null) null else selector._1
           rc
@@ -941,10 +944,10 @@ class StompProtocolHandler extends ProtocolHandler {
       val rc = host.router.bind(destination, consumer, security_context)
       consumer.release
       rc match {
-        case Failure(reason)=>
+        case Some(reason)=>
           consumers -= id
           async_die(reason)
-        case _=>
+        case None =>
           send_receipt(headers)
           unit
       }
@@ -997,7 +1000,7 @@ class StompProtocolHandler extends ProtocolHandler {
         // consumer gets disposed after all producer stop sending to it...
         consumer.setDisposer(^{ send_receipt(headers) })
         consumers -= id
-        host.router.unbind(consumer.destination, consumer, persistent)
+        host.router.unbind(consumer.destination, consumer, persistent, security_context)
     }
   }
 

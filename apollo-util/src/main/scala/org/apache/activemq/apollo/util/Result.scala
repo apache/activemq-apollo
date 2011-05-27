@@ -1,5 +1,3 @@
-package org.apache.activemq.apollo.util
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -16,6 +14,22 @@ package org.apache.activemq.apollo.util
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.activemq.apollo.util
+
+object ResultSupport {
+
+  case class RichResult[A,F](self: Result[A,F]) {
+    def then[B](r2: =>Result[B,F]):Result[B,F] = {
+      if( self.failed ) {
+        Failure(self.failure)
+      } else {
+        r2
+      }
+    }
+  }
+
+  implicit def to_rich_result[A,F](value:Result[A,F]) = new RichResult[A,F](value)
+}
 
 /**
  * <p>A Result can either be a Success or a Failure</p>

@@ -667,12 +667,7 @@ class DurableSubscriptionTest extends StompTestSupport {
     client.close
     connect("1.1")
 
-
-    client.close
-    connect("1.1")
-
     // Now send a bunch of messages....
-    println("sending")
     def put(id:Int) = {
       client.write(
         "SEND\n" +
@@ -701,13 +696,11 @@ class DurableSubscriptionTest extends StompTestSupport {
       "persistent:true\n" +
       "\n")
 
-    println("getting from sub 1")
     for( i <- 1 to 1000 ) {
       get(i)
     }
 
     // Empty out the 2nd durable sub
-    println("getting from sub 2")
     client.write(
       "SUBSCRIBE\n" +
       "destination:/topic/sometopic\n" +
@@ -718,6 +711,105 @@ class DurableSubscriptionTest extends StompTestSupport {
     for( i <- 1 to 1000 ) {
       get(i)
     }
+
+  }
+
+  test("Can directly send an recieve from a durable sub") {
+    connect("1.1")
+
+    // establish 2 durable subs..
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/sometopic\n" +
+      "id:sub1\n" +
+      "persistent:true\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/sometopic\n" +
+      "id:sub2\n" +
+      "persistent:true\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    client.close
+    connect("1.1")
+
+    // Now send a bunch of messages....
+    // Send only to sub 1
+    client.write(
+      "SEND\n" +
+      "destination:/dsub/sub1\n" +
+      "\n" +
+      "sub1 msg\n")
+
+    // Send to all subs
+    client.write(
+      "SEND\n" +
+      "destination:/topic/sometopic\n" +
+      "\n" +
+      "LAST\n")
+
+
+    // Now try to get all the previously sent messages.
+    def get(expected:String) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith("\n\n"+expected)
+    }
+
+    // Empty out the first durable sub
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/dsub/sub1\n" +
+      "id:1\n" +
+      "\n")
+
+    get("sub1 msg\n")
+    get("LAST\n")
+
+    // Empty out the 2nd durable sub
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/dsub/sub2\n" +
+      "id:2\n" +
+      "\n")
+
+    get("LAST\n")
+  }
+
+  test("Direct send to a non-existant a durable sub fails") {
+    connect("1.1")
+
+    client.write(
+      "SEND\n" +
+      "destination:/dsub/doesnotexist\n" +
+      "receipt:0\n" +
+      "\n" +
+      "content\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Durable subscription does not exist")
+  }
+
+  test("Direct subscribe to a non-existant a durable sub fails") {
+    connect("1.1")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/dsub/doesnotexist\n" +
+      "id:1\n" +
+      "receipt:0\n" +
+      "\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Durable subscription does not exist")
 
   }
 }

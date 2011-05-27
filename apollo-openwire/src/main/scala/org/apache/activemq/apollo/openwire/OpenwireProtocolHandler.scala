@@ -467,7 +467,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       if( is_durable_sub ) {
         destination = destination.map { _ match {
           case x:TopicDestinationDTO=>
-            val rc = new DurableSubscriptionDestinationDTO(x.path)
+            val rc = new DurableSubscriptionDestinationDTO()
+            rc.path = x.path
             if( is_durable_sub ) {
               rc.subscription_id = ""
               if( parent.parent.info.getClientId != null ) {
@@ -485,10 +486,10 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       reset {
         val rc = host.router.bind(destination, this, security_context)
         rc match {
-          case Success(_) =>
+          case None =>
             ack(info)
             noop
-          case Failure(reason) =>
+          case Some(reason) =>
             fail(reason, info)
             noop
         }
@@ -497,7 +498,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     }
 
     def dettach = {
-      host.router.unbind(destination, this)
+      host.router.unbind(destination, this, false , security_context)
       parent.consumers.remove(info.getConsumerId)
       all_consumers.remove(info.getConsumerId)
     }
@@ -828,14 +829,15 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         connection.transport.suspendRead
         reset {
           val rc = host.router.connect(destiantion, route, security_context)
-          if( rc.failed ) {
-            async_fail(rc.failure, msg)
-          } else {
-            if (!connection.stopped) {
-              resumeRead
-              producerRoutes.put(key, route)
-              send_via_route(route, msg, uow)
-            }
+          rc match {
+            case Some(failure) =>
+              async_fail(failure, msg)
+            case None =>
+              if (!connection.stopped) {
+                resumeRead
+                producerRoutes.put(key, route)
+                send_via_route(route, msg, uow)
+              }
           }
         }
 

@@ -53,23 +53,6 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, val
           r.bind(list)
         })
 
-      case destination:DurableSubscriptionDestinationDTO=>
-
-        val queue = router.topic_domain.get_or_create_durable_subscription(destination)
-        if( !durable_subscriptions.contains(queue) ) {
-          durable_subscriptions += queue
-          val list = List(queue)
-          producers.foreach({ r=>
-            r.bind(list)
-          })
-        }
-
-        // Typically durable subs are only consumed by on connection at a time. So collocate the
-        // queue onto the consumer's dispatch queue.
-        queue.dispatch_queue.setTargetQueue(consumer.dispatch_queue)
-        queue.bind(destination, consumer)
-        consumer_queues += consumer->queue
-
       case destination:TopicDestinationDTO=>
         var target = consumer
         slow_consumer_policy match {
@@ -112,10 +95,6 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, val
             })
             router._destroy_queue(queue.id, null)
 
-          case x:DurableSubscriptionQueueBinding =>
-            if( persistent ) {
-              router.topic_domain.destroy_durable_subscription(queue)
-            }
         }
 
       case None=>

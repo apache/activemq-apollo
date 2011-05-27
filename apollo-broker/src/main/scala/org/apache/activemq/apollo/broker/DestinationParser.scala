@@ -21,10 +21,10 @@ import BufferConversions._
 import Buffer._
 import org.apache.activemq.apollo.util.path.{Path, PathParser}
 import scala.collection.mutable.ListBuffer
-import org.apache.activemq.apollo.dto.{TopicDestinationDTO, QueueDestinationDTO, DestinationDTO}
 import collection.JavaConversions._
 import java.lang.StringBuilder
 import java.util.regex.Pattern
+import org.apache.activemq.apollo.dto.{DurableSubscriptionDestinationDTO, TopicDestinationDTO, QueueDestinationDTO, DestinationDTO}
 
 object DestinationParser {
 
@@ -47,21 +47,21 @@ object DestinationParser {
 class DestinationParser extends PathParser {
   import DestinationParser._
 
-  var default_domain:String = null
   var queue_prefix = "queue:"
   var topic_prefix = "topic:"
-  var temp_queue_prefix = "temp-queue:"
-  var temp_topic_prefix = "temp-topic:"
+  var dsub_prefix = "dsub:"
   var destination_separator = ","
+//  var temp_queue_prefix = "temp-queue:"
+//  var temp_topic_prefix = "temp-topic:"
 
   def copy(other:DestinationParser) = {
     super.copy(other)
-    default_domain = other.default_domain
     queue_prefix = other.queue_prefix
     topic_prefix = other.topic_prefix
-    temp_queue_prefix = other.temp_queue_prefix
-    temp_topic_prefix = other.temp_topic_prefix
+    dsub_prefix = other.dsub_prefix
     destination_separator = other.destination_separator
+//    temp_queue_prefix = other.temp_queue_prefix
+//    temp_topic_prefix = other.temp_topic_prefix
     this
   }
 
@@ -78,8 +78,13 @@ class DestinationParser extends PathParser {
         dest match {
           case d:QueueDestinationDTO =>
             rc.append(queue_prefix)
+            rc.append(encode_path(dest.path.toIterable))
+          case d:DurableSubscriptionDestinationDTO =>
+            rc.append(dsub_prefix)
+            rc.append(d.subscription_id)
           case d:TopicDestinationDTO =>
             rc.append(topic_prefix)
+            rc.append(encode_path(dest.path.toIterable))
 //          case Router.TEMP_QUEUE_DOMAIN =>
 //            baos.write(temp_queue_prefix)
 //          case Router.TEMP_TOPIC_DOMAIN =>
@@ -87,7 +92,6 @@ class DestinationParser extends PathParser {
           case _ =>
             throw new Exception("Uknown destination type: "+dest.getClass);
         }
-        rc.append(encode_path(dest.path.toIterable))
 
       }
       rc.toString
@@ -121,10 +125,13 @@ class DestinationParser extends PathParser {
 
       if (queue_prefix != null && value.startsWith(queue_prefix)) {
         var name = value.substring(queue_prefix.length)
-        return Array( create_destination(LocalRouter.QUEUE_DOMAIN, parts(name)) )
+        return Array( new QueueDestinationDTO(parts(name)) )
       } else if (topic_prefix != null && value.startsWith(topic_prefix)) {
         var name = value.substring(topic_prefix.length)
-        return Array(create_destination(LocalRouter.TOPIC_DOMAIN, parts(name)))
+        return Array( new TopicDestinationDTO(parts(name)) )
+      } else if (dsub_prefix != null && value.startsWith(dsub_prefix)) {
+        var name = value.substring(dsub_prefix.length)
+        return Array( new DurableSubscriptionDestinationDTO(name) )
 //      } else if (temp_queue_prefix != null && value.startsWith(temp_queue_prefix)) {
 //        var name = value.slice(temp_queue_prefix.length, value.length).ascii()
 //        return new DestinationDTO(LocalRouter.TEMP_QUEUE_DOMAIN, name.toString)
@@ -132,10 +139,7 @@ class DestinationParser extends PathParser {
 //        var name = value.slice(temp_topic_prefix.length, value.length).ascii()
 //        return new DestinationDTO(LocalRouter.TEMP_TOPIC_DOMAIN, name.toString)
       } else {
-        if (default_domain == null) {
-          return null;
-        }
-        return Array(create_destination(default_domain, parts(value)))
+        return null;
       }
     }
   }

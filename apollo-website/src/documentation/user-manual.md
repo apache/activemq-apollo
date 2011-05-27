@@ -943,7 +943,7 @@ Example STOMP frame to connect to the broker:
 
 STOMP 1.0 clients do specify which virtual host they are connecting to so
 the broker connects those clients to the first virtual host defined in
-it's configuration.  STOMP 1.1 clients do specify a virtual host when they 
+it's configuration.  STOMP 1.1 clients do specify a virtual host when they
 connect.  If no configured virtual host `host_name` matches the client's 
 requested host, the connection is terminated with an ERROR.  Therefore,
 it is critical that the virtual hosts configuration define all the 
@@ -951,15 +951,24 @@ possible host names that clients may connect to host with.
 
 ### Destination Types
 
-${project_name} supports two main types of destinations, queues and topics.
-The most striking difference between queues and topics is how messages are 
-delivered to consumers.  A queue will load it's messages over the connected
-subscribers so that only one subscriber gets a message.  A topic follows the
-publish/subscribe patterns and it's subscribers each get a copy of every
-message sent.
+${project_name} supports three types of destinations, queues, topics, and
+durable subscriptions.
 
-If you want to send or subscribe to a queue or topic, the STOMP destination
-should be prefixed with `/queue/` or `/topic/` respectively.
+The difference between queues and topics is how messages are delivered to
+consumers. A queue will load balance it's messages over the connected
+subscribers so that only one subscriber gets a message. Topics replicate
+every message sent to it to all the connected subscribers.  Queues hold 
+on to unconsumed messages even when there are no subscriptions attached,
+while a topic will drop messages when there are no connected subscriptions.
+
+A durable subscription allows you to create a subscription against a topic
+which will queue messages even after the client disconnects.  Clients
+can reconnect and consume the queued message originating from the topic
+at a later time.
+
+If you want to send or subscribe to a queue, topic, or durable
+subscription the STOMP destination should be prefixed with `/queue/`,
+`/topic/` or `/dsub/` respectively.
 
 Example STOMP frame sending to a queue:
 
@@ -969,13 +978,6 @@ Example STOMP frame sending to a queue:
     hello queue a
     ^@
 
-Another major difference between queues and topics is that queues hold 
-on to unconsumed messages even when there are no subscriptions attached,
-while a topic will drop messages when there are no connected subscriptions.
-${project_name} allows you to create Durable Subscriptions against topics
-so that a subscription can "out live" the connection that created the 
-subscription.  This allows you consume all the messages sent to the 
-topic without messages getting dropped.
 
 ### Reliable Messaging
 
@@ -1049,6 +1051,26 @@ to the `UNSUBSCRIBE` frame.  Example:
     UNSUBSCRIBE
     id:mysub
     persistent:true
+    
+    ^@
+
+If the durable subscription already exists you can address it directly 
+using `/dsub/` prefix on the `destination` header.  For example,
+send a message to the previously created `mysub` durable subscription,
+you send the following STOMP frame:
+
+
+    SEND
+    destination:/dsub/mysub
+
+    hello durable sub!
+    ^@
+
+Similarly, you can also subscribe to the subscription in the same way:
+
+    SUBSCRIBE
+    id:0
+    destination:/dsub/mysub
     
     ^@
 

@@ -185,6 +185,25 @@ object DurableSubscriptionQueueBinding extends QueueBinding.Provider {
     }
   }
 
+
+  def dsub_config(host:VirtualHost, id:String) = {
+    import collection.JavaConversions._
+    def matches(x:DurableSubscriptionDTO):Boolean = {
+      if( x.id != null && x.id!=id ) {
+        return false
+      }
+
+      if( x.id_regex != null ) {
+        // May need to cache the regex...
+        val regex = x.id_regex.r
+        if( !regex.findFirstIn(id).isDefined ) {
+          return false
+        }
+      }
+      true
+    }
+    host.config.dsubs.find(matches _).getOrElse(new DurableSubscriptionDTO)
+  }
 }
 
 /**
@@ -202,11 +221,11 @@ class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:D
 
 
   def unbind(router: LocalRouter, queue: Queue) = {
-    router.topic_domain.unbind(queue)
+    router.topic_domain.unbind_dsub(queue)
   }
 
   def bind(router: LocalRouter, queue: Queue) = {
-    router.topic_domain.bind(queue)
+    router.topic_domain.bind_dsub(queue)
   }
 
   def id = binding_dto.subscription_id
@@ -226,22 +245,7 @@ class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:D
     }
   }
 
-  def config(host:VirtualHost):DurableSubscriptionDTO = {
-      import collection.JavaConversions._
-      import LocalRouter.destination_parser._
-      import AsciiBuffer._
-
-      def matches(x:DurableSubscriptionDTO):Boolean = {
-        if( x.id != null && !decode_filter(x.id).matches(destination)) {
-          return false
-        }
-        if( x.subscription_id != null && x.subscription_id!=binding_dto.subscription_id ) {
-          return false
-        }
-        true
-      }
-      host.config.dsubs.find(matches _).getOrElse(new DurableSubscriptionDTO)
-  }
+  def config(host:VirtualHost):DurableSubscriptionDTO = dsub_config(host, binding_dto.subscription_id)
 
 }
 

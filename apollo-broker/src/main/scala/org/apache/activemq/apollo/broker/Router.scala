@@ -35,11 +35,11 @@ trait Router extends Service {
 
   def get_queue(dto:String):Option[Queue] @suspendable
 
-  def bind(destinations:Array[DestinationDTO], consumer:DeliveryConsumer, security:SecurityContext) : Result[Zilch,String] @suspendable
+  def bind(destinations:Array[DestinationDTO], consumer:DeliveryConsumer, security:SecurityContext) : Option[String] @suspendable
 
-  def unbind(destinations:Array[DestinationDTO], consumer:DeliveryConsumer, persistent:Boolean=false)
+  def unbind(destinations:Array[DestinationDTO], consumer:DeliveryConsumer, persistent:Boolean, security:SecurityContext)
 
-  def connect(destinations:Array[DestinationDTO], producer:BindableDeliveryProducer, security:SecurityContext): Result[Zilch,String] @suspendable
+  def connect(destinations:Array[DestinationDTO], producer:BindableDeliveryProducer, security:SecurityContext): Option[String] @suspendable
 
   def disconnect(destinations:Array[DestinationDTO], producer:BindableDeliveryProducer)
 
