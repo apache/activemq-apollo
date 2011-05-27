@@ -229,7 +229,7 @@ class SinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue, val s
   }
 
   overflow.refiller = ^{
-    assert(getCurrentQueue eq consumer_queue)
+    consumer_queue.assertExecuting()
     // overflow is not full anymore.. lets release those credits so we can get more messages.
     sessions.foreach(_.credit_adder.resume)
   }
@@ -302,12 +302,12 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[
   def remaining_capacity = credits
 
   override def full = {
-    assert(producer_queue.isExecuting)
+    producer_queue.assertExecuting()
     _full
   }
 
   override def offer(value: T) = {
-    assert(getCurrentQueue eq producer_queue)
+    producer_queue.assertExecuting()
     if( _full || closed ) {
       false
     } else {
@@ -318,9 +318,9 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[
   }
 
   def close = {
+    producer_queue.assertExecuting()
     if( !closed ) {
       closed=true
-      assert(producer_queue.isExecuting)
     }
   }
 
