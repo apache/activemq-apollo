@@ -36,6 +36,11 @@
   - case _ =>
     h1 Temporary Queue
 
+p state: #{state} #{ uptime(state_since) } ago
+- if( state == "STARTED" )
+  form(method="post" action={path("action/delete")})
+    input(type="submit" value="delete")
+
 h2 Current Size
 
 p queue size: #{metrics.queue_items} messages #{memory(metrics.queue_size)}

@@ -28,7 +28,7 @@ import java.util.List;
  */
 @XmlRootElement(name="topic_status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class TopicStatusDTO extends StringIdDTO {
+public class TopicStatusDTO extends ServiceStatusDTO {
 
     @XmlElement
     public TopicDTO config;

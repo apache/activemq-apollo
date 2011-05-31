@@ -38,6 +38,7 @@ import org.apache.activemq.apollo.transport.tcp.SslTransport
 import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
 import java.io.IOException
+import javax.management.remote.rmi._RMIConnection_Stub
 
 
 case class RichBuffer(self:Buffer) extends Proxy {
@@ -273,6 +274,8 @@ class StompProtocolHandler extends ProtocolHandler {
       // of the producer.
 
       retain
+
+      override def toString = "connection to "+StompProtocolHandler.this.connection.transport.getRemoteAddress
 
       def producer = p
       def consumer = StompConsumer.this

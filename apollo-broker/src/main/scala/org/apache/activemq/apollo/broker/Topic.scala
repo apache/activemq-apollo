@@ -36,6 +36,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, val
   var consumers = ListBuffer[DeliveryConsumer]()
   var durable_subscriptions = ListBuffer[Queue]()
   var consumer_queues = HashMap[DeliveryConsumer, Queue]()
+  val created_at = System.currentTimeMillis()
 
   import OptionSupport._
 

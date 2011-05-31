@@ -53,6 +53,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
 
   def virtual_host = router.virtual_host
 
+  var producers = ListBuffer[BindableDeliveryProducer]()
   var inbound_sessions = Set[DeliverySession]()
   var all_subscriptions = Map[DeliveryConsumer, Subscription]()
   var exclusive_subscriptions = ListBuffer[Subscription]()
@@ -218,7 +219,14 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   }
 
   protected def _stop(on_completed: Runnable) = {
-    // TODO: perhaps we should remove all the entries
+    // Disconnect the producers..
+    producers.foreach { producer =>
+      disconnect(producer)
+    }
+    // Close all the subscriptions..
+    all_subscriptions.values.toArray.foreach { sub:Subscription =>
+      sub.close()
+    }
     on_completed.run
   }
 
@@ -454,6 +462,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   def connect(p: DeliveryProducer) = new DeliverySession {
     retain
 
+    override def toString = Queue.this.toString
+
     override def consumer = Queue.this
 
     override def producer = p
@@ -560,12 +570,24 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
       val topic = router.topic_domain.get_or_create_destination(binding.destination, binding.binding_dto, null).success
       topic.connect(destination, producer)
     } else {
+      dispatch_queue {
+        producers += producer
+      }
       producer.bind(this::Nil)
     }
   }
 
   def disconnect (producer:BindableDeliveryProducer) = {
-    producer.unbind(this::Nil)
+    import OptionSupport._
+    if( config.unified.getOrElse(false) ) {
+      val topic = router.topic_domain.get_or_create_destination(binding.destination, binding.binding_dto, null).success
+      topic.disconnect(producer)
+    } else {
+      dispatch_queue {
+        producers -= producer
+      }
+      producer.unbind(this::Nil)
+    }
   }
 
   override def connection:Option[BrokerConnection] = None

@@ -28,7 +28,7 @@ import java.util.List;
  */
 @XmlRootElement(name="queue_status")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class QueueStatusDTO extends StringIdDTO {
+public class QueueStatusDTO extends ServiceStatusDTO {
 
     @XmlElement
     public QueueDTO config;

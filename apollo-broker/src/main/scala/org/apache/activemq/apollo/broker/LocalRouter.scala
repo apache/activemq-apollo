@@ -894,17 +894,24 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         return Some("Not authorized to destroy")
       }
     }
-
-    queue.binding.unbind(this, queue)
-    queues_by_binding.remove(queue.binding)
-    queues_by_id.remove(queue.id)
-    queue.stop
-    if( queue.tune_persistent ) {
-      queue.dispatch_queue {
-        virtual_host.store.remove_queue(queue.store_id){x=> Unit}
-      }
-    }
+    _destroy_queue(queue)
     None
+  }
+
+
+  def _destroy_queue(queue: Queue) {
+    queue.stop(^{
+      queue.binding.unbind(this, queue)
+      queues_by_binding.remove(queue.binding)
+      queues_by_id.remove(queue.id)
+      if (queue.tune_persistent) {
+        queue.dispatch_queue {
+          virtual_host.store.remove_queue(queue.store_id) {
+            x => Unit
+          }
+        }
+      }
+    })
   }
 
 }

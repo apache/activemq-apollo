@@ -245,14 +245,18 @@ Results in a [Connection Status](./api/apollo-dto/org/apache/activemq/apollo/dto
 }
 {pygmentize}
 
-To shutdown a connection send a POST to:
+To shutdown a connection, send a DELETE  to
 
-    /broker/connections/:id/action/shutdown
+    /broker/connections/:id
+    
+or send a POST to:
+
+    /broker/connections/:id/action/delete
 
 Example:
 
-    curl -X POST -u "admin:password" \
-    http://localhost:61680/broker/connections/5/action/shutdown.json
+    curl -X DELETE -u "admin:password" \
+    http://localhost:61680/broker/connections/5.json
 
 
 ### Virtual Host Management
@@ -406,6 +410,19 @@ Results in a [Queue Status](./api/apollo-dto/org/apache/activemq/apollo/dto/Queu
 }
 {pygmentize}
 
+To delete a queue, send a DELETE  to
+
+    /broker/virtual-hosts/:name/queues/:qid
+    
+or send a POST to:
+
+    /broker/virtual-hosts/:name/queues/:qid/action/delete
+
+Example:
+
+    curl -X DELETE -u "admin:password" \
+    http://localhost:61680/broker/virtual-hosts/localhost/queues/orders.req.json
+
 
 #### Topic Management
 
@@ -475,6 +492,19 @@ Example:
     http://localhost:61680/broker/virtual-hosts/localhost/dsubs/mysub.json
 
 Results in a [Queue Status](./api/apollo-dto/org/apache/activemq/apollo/dto/QueueStatusDTO.html):
+
+To delete a durable subscription, send a DELETE  to
+
+    /broker/virtual-hosts/:name/dsubs/:sub
+    
+or send a POST to:
+
+    /broker/virtual-hosts/:name/dsubs/:sub/action/delete
+
+Example:
+
+    curl -X DELETE -u "admin:password" \
+    http://localhost:61680/broker/virtual-hosts/localhost/dsubs/mysub.json
 
 
 ### Getting the Broker's Configuration

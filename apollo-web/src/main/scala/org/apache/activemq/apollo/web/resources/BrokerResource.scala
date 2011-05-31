@@ -32,6 +32,7 @@ import javax.ws.rs._
 import core.Response
 import Response.Status._
 import org.josql.expressions.SelectItemExpression
+import org.apache.activemq.apollo.util.BaseService._
 
 /**
  * <p>
@@ -169,12 +170,14 @@ case class BrokerResource() extends Resource {
 
         val router:LocalRouter = host
 
+        router.queue_domain.destinations.foreach { node=>
+          result.queues.add(node.id)
+        }
         router.topic_domain.destinations.foreach { node=>
           result.topics.add(node.id)
         }
-
-        router.queue_domain.destinations.foreach { node=>
-          result.queues.add(node.id)
+        router.topic_domain.durable_subscriptions_by_id.keys.foreach { id=>
+          result.dsubs.add(id)
         }
 
         result
@@ -294,8 +297,29 @@ case class BrokerResource() extends Resource {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
       val node = router.queue_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
-      status(node, entries)
+      sync(node) {
+        status(node, entries)
+      }
     }
+  }
+
+  @DELETE @Path("virtual-hosts/{id}/queues/{name:.*}")
+  @Produces(Array("application/json", "application/xml","text/xml"))
+  def queue_delete(@PathParam("id") id : String, @PathParam("name") name : String):Unit = {
+    with_virtual_host(id) { host =>
+      val router: LocalRouter = host
+      val node = router.queue_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
+      admining(node) {
+        router._destroy_queue(node)
+      }
+    }
+  }
+
+  @POST @Path("virtual-hosts/{id}/queues/{name:.*}/action/delete")
+  @Produces(Array("text/html;qs=5"))
+  def post_queue_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String):Unit = {
+    queue_delete(id, name)
+    result(strip_resolve("../../.."))
   }
 
   @GET @Path("virtual-hosts/{id}/dsubs")
@@ -319,9 +343,32 @@ case class BrokerResource() extends Resource {
     with_virtual_host(id) { host =>
       val router:LocalRouter = host
       val node = router.topic_domain.durable_subscriptions_by_id.get(name).getOrElse(result(NOT_FOUND))
-      status(node, entries)
+      sync(node) {
+        status(node, entries)
+      }
     }
   }
+
+
+  @DELETE @Path("virtual-hosts/{id}/dsubs/{name:.*}")
+  @Produces(Array("application/json", "application/xml","text/xml"))
+  def dsub_delete(@PathParam("id") id : String, @PathParam("name") name : String):Unit = {
+    with_virtual_host(id) { host =>
+      val router: LocalRouter = host
+      val node = router.topic_domain.durable_subscriptions_by_id.get(name).getOrElse(result(NOT_FOUND))
+      admining(node) {
+        router._destroy_queue(node)
+      }
+    }
+  }
+
+  @POST @Path("virtual-hosts/{id}/dsubs/{name:.*}/action/delete")
+  @Produces(Array("text/html;qs=5"))
+  def post_dsub_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String):Unit = {
+    dsub_delete(id, name)
+    result(strip_resolve("../../.."))
+  }
+
 
   private def decode_path(name:String) = {
     try {
@@ -335,6 +382,8 @@ case class BrokerResource() extends Resource {
     monitoring(node) {
       val rc = new TopicStatusDTO
       rc.id = node.id
+      rc.state = "STARTED"
+      rc.state_since = node.created_at
       rc.config = node.config
 
       node.durable_subscriptions.foreach {
@@ -365,6 +414,8 @@ case class BrokerResource() extends Resource {
   def status(q:Queue, entries:Boolean=false) = monitoring(q) {
     val rc = new QueueStatusDTO
     rc.id = q.id
+    rc.state = q.service_state.toString
+    rc.state_since = q.service_state.since
     rc.binding = q.binding.binding_dto
     rc.config = q.config
     rc.metrics = get_queue_metrics(q)
@@ -514,9 +565,9 @@ case class BrokerResource() extends Resource {
     }
   }
 
-  @POST @Path("connections/{id}/action/shutdown")
+  @DELETE @Path("connections/{id}")
   @Produces(Array("application/json", "application/xml","text/xml"))
-  def post_connection_shutdown(@PathParam("id") id : Long):Unit = {
+  def connection_delete(@PathParam("id") id : Long):Unit = {
     with_connection(id){ connection=>
       admining(connection.connector.broker) {
         connection.stop
@@ -525,10 +576,10 @@ case class BrokerResource() extends Resource {
   }
 
 
-  @POST @Path("connections/{id}/action/shutdown")
+  @POST @Path("connections/{id}/action/delete")
   @Produces(Array("text/html;qs=5"))
-  def post_connection_shutdown_and_redirect(@PathParam("id") id : Long):Unit = {
-    post_connection_shutdown(id)
+  def post_connection_delete_and_redirect(@PathParam("id") id : Long):Unit = {
+    connection_delete(id)
     result(strip_resolve("../../.."))
   }
 

@@ -33,16 +33,22 @@ import java.util.List;
 public class VirtualHostStatusDTO extends ServiceStatusDTO {
 
     /**
-     * Ids of all the topics running on the broker
+     * Ids of all the topics that exist on the broker
      */
-    @XmlElement(name="topics")
+    @XmlElement(name="topic")
     public List<String> topics = new ArrayList<String>();
 
     /**
-     * Ids of all the queues running on the broker
+     * Ids of all the queues that exist on the broker
      */
-    @XmlElement(name="queues")
+    @XmlElement(name="queue")
     public List<String> queues = new ArrayList<String>();
+
+    /**
+     * Ids of all the durable subscriptions that exist on the broker
+     */
+    @XmlElement(name="dsub")
+    public List<String> dsubs = new ArrayList<String>();
 
     /**
      * Is the virtual host using a store.
