@@ -168,6 +168,10 @@ Results in a [Broker Status](./api/apollo-dto/org/apache/activemq/apollo/dto/Bro
 
 ### Connector Management
 
+The route for getting a tabular list of connectors is:
+
+    /broker/connectors
+
 The route for managing a connector is:
 
     /broker/connectors/:id
@@ -188,6 +192,24 @@ Results in a [Connector Status](./api/apollo-dto/org/apache/activemq/apollo/dto/
   "connected":2
 }
 {pygmentize}
+
+To stop a connector send a POST to:
+
+    /broker/connectors/:id/action/stop
+
+Example:
+
+    curl -X POST -u "admin:password" \
+    http://localhost:61680/broker/connectors/stomp/action/stop.json
+
+To start a stopped a connector send a POST to:
+
+    /broker/connectors/:id/action/start
+
+Example:
+
+    curl -X POST -u "admin:password" \
+    http://localhost:61680/broker/connectors/stomp/action/start.json
 
 ### Connection Management
 
