@@ -33,6 +33,8 @@ trait Authorizer {
 
   def can_monitor(ctx:SecurityContext, broker:Broker):Boolean
 
+  def can_config(ctx:SecurityContext, broker:Broker):Boolean
+
   def can_admin(ctx:SecurityContext, host:VirtualHost):Boolean
 
   def can_monitor(ctx:SecurityContext, host:VirtualHost):Boolean

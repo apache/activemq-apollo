@@ -91,6 +91,7 @@ fields were selected. To narrow down the selected fields you can add
 multiple `f` query parameters to pick the fields you want to retrieve.
 
 Example:
+
     $ curl -u "admin:password" \
     'http://localhost:61680/broker/connections.json?f=id&f=read_counter'
     [

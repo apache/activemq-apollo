@@ -36,4 +36,6 @@ public class BrokerAclDTO {
     @XmlElement(name="monitor")
     public List<PrincipalDTO> monitors = new ArrayList<PrincipalDTO>();
 
+    @XmlElement(name="config")
+    public List<PrincipalDTO> configs = new ArrayList<PrincipalDTO>();
 }

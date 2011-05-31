@@ -32,6 +32,7 @@
   <authentication domain="apollo"/>
   <acl>
     <admin allow="admins"/>
+    <config allow="admins"/>
   </acl>
 
   <virtual_host id="${host}">

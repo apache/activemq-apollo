@@ -47,7 +47,7 @@ case class BrokerResource() extends Resource {
   @Path("config")
   def config_resource:ConfigurationResource = {
     with_broker { broker =>
-      admining(broker) {
+      configing(broker) {
         ConfigurationResource(this, broker.config)
       }
     }

@@ -659,6 +659,8 @@ can be secured on which resources:
 * `broker`, `virtual_host`, `topic`, `queue`, and `dsub`
   * `admin` : use of the administrative web interface
   * `monitor` : read only use of the administrative web interface
+  * `config` : use of the administrative web interface to access and change the broker
+     configuration.
 * `connector` and `virtual_host`
   * `connect` : allows connections to the connector or virtual host
 * `topic`, `queue` and `dsub`

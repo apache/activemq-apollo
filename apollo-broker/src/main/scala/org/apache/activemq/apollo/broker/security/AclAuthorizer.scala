@@ -53,7 +53,7 @@ class AclAuthorizer(val default_kinds:List[String], val log:Log) extends Authori
     can_broker(ctx, broker)(_.admins)
   }
 
-  def can_admin(ctx: SecurityContext, broker: Broker):Boolean = log_result(ctx, "administration", "broker") {
+  def can_admin(ctx: SecurityContext, broker: Broker):Boolean = log_result(ctx, "admin", "broker") {
     _can_admin(ctx, broker)
   }
 
@@ -65,6 +65,10 @@ class AclAuthorizer(val default_kinds:List[String], val log:Log) extends Authori
     _can_monitor(ctx, broker)
   }
 
+  def can_config(ctx: SecurityContext, broker: Broker):Boolean = log_result(ctx, "config", "broker") {
+    can_broker(ctx, broker)(_.configs)
+  }
+
   def _can_admin(ctx: SecurityContext, host: VirtualHost): Boolean = {
     val acl = host.config.acl
     if (acl != null) {
@@ -74,7 +78,7 @@ class AclAuthorizer(val default_kinds:List[String], val log:Log) extends Authori
     }
   }
 
-  def can_admin(ctx: SecurityContext, host: VirtualHost):Boolean = log_result(ctx, "administration", "virtual host "+host.id) {
+  def can_admin(ctx: SecurityContext, host: VirtualHost):Boolean = log_result(ctx, "admin", "virtual host "+host.id) {
     _can_admin(ctx, host)
   }
 
@@ -119,7 +123,7 @@ class AclAuthorizer(val default_kinds:List[String], val log:Log) extends Authori
     can_topic(ctx, topic)(_.creates)
   }
   
-  def can_admin(ctx: SecurityContext, host: VirtualHost, topic: TopicDTO) = log_result(ctx, "administration", "topic") {
+  def can_admin(ctx: SecurityContext, host: VirtualHost, topic: TopicDTO) = log_result(ctx, "admin", "topic") {
     val acl = topic.acl
     if (acl != null) {
       is_in(ctx, acl.admins)
@@ -163,7 +167,7 @@ class AclAuthorizer(val default_kinds:List[String], val log:Log) extends Authori
     can_queue(ctx, queue)(_.consumes)
   }
 
-  def can_admin(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "administration", "queue") {
+  def can_admin(ctx: SecurityContext, host: VirtualHost, queue: QueueDTO) = log_result(ctx, "admin", "queue") {
     val acl = queue.acl
     if (acl != null) {
       is_in(ctx, acl.admins)

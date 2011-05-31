@@ -143,6 +143,10 @@ abstract class Resource(parent:Resource=null) extends Logging {
     authorize(broker.authenticator, broker.authorizer, func) {  _.can_admin(_, broker) }
   }
 
+  protected def configing[T](broker:Broker)(func: =>FutureResult[T]):FutureResult[T] = {
+    authorize(broker.authenticator, broker.authorizer, func) {  _.can_config(_, broker) }
+  }
+
   protected def admining[T](host:VirtualHost)(func: =>FutureResult[T]):FutureResult[T] = {
     authorize(host.authenticator, host.authorizer, func) {  _.can_admin(_, host) }
   }
