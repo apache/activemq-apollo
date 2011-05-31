@@ -420,31 +420,71 @@ case class BrokerResource() extends Resource {
 
 
   @GET @Path("connectors")
-  def connectors = {
-    val rc = new StringListDTO
-    rc.items = get_broker.connectors
-    rc
+  @Produces(Array("application/json"))
+  def connectors(@QueryParam("f") f:java.util.List[String], @QueryParam("q") q:String,
+                  @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):java.util.List[_] = {
+
+    with_broker { broker =>
+      monitoring(broker) {
+        val records = broker.connectors.map { value =>
+          Success(status(value))
+        }
+        FutureResult(narrow(classOf[ConnectorStatusDTO], records, f, q, p, ps))
+      }
+    }
   }
 
   @GET @Path("connectors/{id}")
   def connector(@PathParam("id") id : String):ConnectorStatusDTO = {
-    with_broker { broker =>
-      monitoring(broker) {
-        broker.connectors.find(_.id == id) match {
-          case None=> result(NOT_FOUND)
-          case Some(connector)=>
-
-            val result = new ConnectorStatusDTO
-            result.id = connector.id.toString
-            result.state = connector.service_state.toString
-            result.state_since = connector.service_state.since
-            result.accepted = connector.accepted.get
-            result.connected = connector.connected.get
-
-            result
-        }
+    with_connector(id) { connector =>
+      monitoring(connector.broker) {
+        status(connector)
       }
     }
+  }
+
+  def status(connector: Connector): ConnectorStatusDTO = {
+    val result = new ConnectorStatusDTO
+    result.id = connector.id.toString
+    result.state = connector.service_state.toString
+    result.state_since = connector.service_state.since
+    result.accepted = connector.accepted.get
+    result.connected = connector.connected.get
+    result
+  }
+
+  @POST @Path("connectors/{id}/action/stop")
+  @Produces(Array("application/json", "application/xml","text/xml"))
+  def post_connector_stop(@PathParam("id") id : String):Unit = {
+    with_connector(id) { connector =>
+      admining(connector.broker) {
+        connector.stop
+      }
+    }
+  }
+
+  @POST @Path("connectors/{id}/action/stop")
+  @Produces(Array("text/html;qs=5"))
+  def post_connector_stop_and_redirect(@PathParam("id") id : String):Unit = {
+    post_connector_stop(id)
+    result(strip_resolve(".."))
+  }
+
+  @POST @Path("connectors/{id}/action/start")
+  @Produces(Array("application/json", "application/xml","text/xml"))
+  def post_connector_start(@PathParam("id") id : String):Unit = {
+    with_connector(id) { connector =>
+      admining(connector.broker) {
+        connector.start
+      }
+    }
+  }
+
+  @POST @Path("connectors/{id}/action/start")
+  @Produces(Array("text/html;qs=5"))
+  def post_connector_start_and_redirect(@PathParam("id") id : String):Unit = {
+    post_connector_start(id)
+    result(strip_resolve(".."))
   }
 
   @GET @Path("connections")

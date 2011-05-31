@@ -232,6 +232,12 @@ abstract class Resource(parent:Resource=null) extends Logging {
 
   protected def FutureResult[T]() = Future[Result[T, Throwable]]()
 
+  protected def FutureResult[T](value:Result[T, Throwable]) = {
+    val rc = Future[Result[T, Throwable]]()
+    rc.set(value)
+    rc
+  }
+
   protected def sync[T](dispached:Dispatched)(func: =>FutureResult[T]):FutureResult[T] = {
     val rc = Future[Result[T, Throwable]]()
     dispached.dispatch_queue.apply {
@@ -280,6 +286,16 @@ abstract class Resource(parent:Resource=null) extends Logging {
         }
       case None=>
         result(NOT_FOUND)
+    }
+  }
+
+  protected def with_connector[T](id:String)(func: (org.apache.activemq.apollo.broker.Connector)=>FutureResult[T]):FutureResult[T] = {
+    with_broker { broker =>
+      broker.connectors.find(_.id == id) match {
+        case Some(connector)=>
+          func(connector)
+        case None=> result(NOT_FOUND)
+      }
     }
   }
 
