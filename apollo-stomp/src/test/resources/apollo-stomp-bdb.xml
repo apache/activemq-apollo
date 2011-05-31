@@ -23,10 +23,10 @@
 
     <queue name="unified.**" unified="true"/>
 
-    <bdb_store directory="${apollo.base}/data"/>
+    <bdb_store directory="${basedir}/target/test-data"/>
   </virtual_host>
 
-  <web_admin bind="http://127.0.0.1:61680"/>
+  <web_admin bind="http://127.0.0.1:0"/>
   <connector id="tcp" protocol="stomp" bind="tcp://0.0.0.0:0"/>
 
 </broker>
