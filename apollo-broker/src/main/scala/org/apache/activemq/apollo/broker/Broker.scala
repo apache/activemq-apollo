@@ -29,7 +29,7 @@ import ReporterLevel._
 import security.{AclAuthorizer, Authorizer, JaasAuthenticator, Authenticator}
 import java.net.InetSocketAddress
 import org.apache.activemq.apollo.broker.web._
-import collection.mutable.{HashSet, LinkedHashMap}
+import collection.mutable.{HashSet, LinkedHashMap, HashMap}
 import scala.util.Random
 import FileSupport._
 import org.apache.activemq.apollo.dto.{LogCategoryDTO, BrokerDTO}
@@ -204,6 +204,7 @@ class Broker() extends BaseService {
   val virtual_hosts_by_hostname = new LinkedHashMap[AsciiBuffer, VirtualHost]()
 
   var connectors: List[Connector] = Nil
+  val connections = HashMap[Long, BrokerConnection]()
 
   val dispatch_queue = createQueue("broker")
 
@@ -366,6 +367,12 @@ class Broker() extends BaseService {
     connectors.foreach( x=>
       tracker.stop(x)
     )
+
+    // stop the connections..
+    connections.valuesIterator.foreach { connection=>
+      tracker.stop(connection)
+    }
+
     // Shutdown the virtual host services
     virtual_hosts.valuesIterator.foreach( x=>
       tracker.stop(x)

@@ -22,12 +22,8 @@ h1 Connector: #{id}
 
 p state: #{state} #{ uptime(state_since) } ago
 
-p accepted connections: #{accepted}
+p total accepted: #{accepted}
 
-h2 Connections
-ul
-  - for( x <- connections )
-    li
-      a(href={ path("../../connections/"+x.id) }) #{x.label}
+p currently connected: #{connected}
 
 

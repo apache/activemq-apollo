@@ -74,11 +74,9 @@ case class BrokerResource() extends Resource {
           result.connectors.add( c.id )
         }
 
-        broker.connectors.foreach{ connector=>
-          connector.connections.foreach { case (id,connection) =>
-            // TODO: may need to sync /w connection's dispatch queue
-            result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ) )
-          }
+        broker.connections.foreach { case (id,connection) =>
+          // TODO: may need to sync /w connection's dispatch queue
+          result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ) )
         }
         result
 
@@ -440,12 +438,8 @@ case class BrokerResource() extends Resource {
             result.id = connector.id.toString
             result.state = connector.service_state.toString
             result.state_since = connector.service_state.since
-
-            result.accepted = connector.connection_counter.get
-            connector.connections.foreach { case (id,connection) =>
-              // TODO: may need to sync /w connection's dispatch queue
-              result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ) )
-            }
+            result.accepted = connector.accepted.get
+            result.connected = connector.connected.get
 
             result
         }
@@ -461,11 +455,7 @@ case class BrokerResource() extends Resource {
     with_broker { broker =>
       monitoring(broker) {
 
-        val values = ListBuffer[BrokerConnection]()
-        broker.connectors.foreach { connector=>
-          values ++= connector.connections.values
-        }
-        val records = sync_all(values) { value =>
+        val records = sync_all(broker.connections.values) { value =>
           value.get_connection_status
         }
 

@@ -185,10 +185,7 @@ Results in a [Connector Status](./api/apollo-dto/org/apache/activemq/apollo/dto/
   "state":"STARTED",
   "state_since":1305553109899,
   "accepted":6,
-  "connections":[
-    {"id":5,"label":"/127.0.0.1:52638"},
-    {"id":6,"label":"/127.0.0.1:52639"}
-  ]
+  "connected":2
 }
 {pygmentize}
 

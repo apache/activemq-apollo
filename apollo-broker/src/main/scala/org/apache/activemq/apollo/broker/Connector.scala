@@ -67,8 +67,8 @@ trait Connector extends BaseService {
   def id:String
   def stopped(connection:BrokerConnection):Unit
   def config:ConnectorDTO
-  def connections:HashMap[Long, BrokerConnection]
-  def connection_counter:LongCounter
+  def accepted:LongCounter
+  def connected:LongCounter
 
 }
 
@@ -87,9 +87,8 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
   var config:ConnectorDTO = defaultConfig
   var transport_server:TransportServer = _
   var protocol:Protocol = _
-
-  val connections = HashMap[Long, BrokerConnection]()
-  val connection_counter = new LongCounter()
+  val accepted = new LongCounter()
+  val connected = new LongCounter()
 
   override def toString = "connector: "+config.id
 
@@ -103,7 +102,8 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
         transport.setProtocolCodec(protocol.createProtocolCodec)
       }
 
-      connection_counter.incrementAndGet
+      accepted.incrementAndGet
+      connected.incrementAndGet()
       var connection = new BrokerConnection(AcceptingConnector.this, broker.connection_id_counter.incrementAndGet)
       connection.dispatch_queue.setLabel("connection %d to %s".format(connection.id, transport.getRemoteAddress))
       connection.protocol_handler = protocol.createProtocolHandler
@@ -111,7 +111,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
       broker.init_dispatch_queue(connection.dispatch_queue)
 
-      connections.put(connection.id, connection)
+      broker.connections.put(connection.id, connection)
       try {
         connection.start()
       } catch {
@@ -122,14 +122,14 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
       if(at_connection_limit) {
         // We stop accepting connections at this point.
-        info("Connection limit reached. Clients connected: %d", connections.size)
+        info("Connection limit reached. Clients connected: %d", connected.get)
         transport_server.suspend
       }
     }
   }
 
   def at_connection_limit = {
-    connections.size >= config.connection_limit.getOrElse(Integer.MAX_VALUE)
+    connected.get >= config.connection_limit.getOrElse(Integer.MAX_VALUE)
   }
 
   /**
@@ -173,11 +173,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
   override def _stop(on_completed:Runnable): Unit = {
     transport_server.stop(^{
       broker.console_log.info("Stopped connector at: "+config.bind)
-      val tracker = new LoggingTracker(toString, broker.console_log, dispatch_queue)
-      connections.valuesIterator.foreach { connection=>
-        tracker.stop(connection)
-      }
-      tracker.callback(on_completed)
+      on_completed.run
     })
   }
 
@@ -187,7 +183,8 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
    */
   def stopped(connection:BrokerConnection) = dispatch_queue {
     val at_limit = at_connection_limit
-    if( connections.remove(connection.id).isDefined ) {
+    if( broker.connections.remove(connection.id).isDefined ) {
+      connected.decrementAndGet()
       if( at_limit ) {
         transport_server.resume
       }

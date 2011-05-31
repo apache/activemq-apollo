@@ -39,9 +39,9 @@ public class ConnectorStatusDTO extends ServiceStatusDTO {
     public long accepted;
 
     /**
-     * Ids of all open connections that the connector is managing.
+     * The number of connections that this connector has currently connected.
      */
-    @XmlElement(name="connection")
-    public List<LongIdLabeledDTO> connections = new ArrayList<LongIdLabeledDTO>();
+    @XmlAttribute
+    public long connected;
 
 }

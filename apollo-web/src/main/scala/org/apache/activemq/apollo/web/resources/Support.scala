@@ -298,7 +298,7 @@ abstract class Resource(parent:Resource=null) extends Logging {
 
   protected def with_connection[T](id:Long)(func: BrokerConnection=>FutureResult[T]):FutureResult[T] = {
     with_broker { broker =>
-      broker.connectors.flatMap{ _.connections.get(id) }.headOption match {
+      broker.connections.get(id) match {
         case Some(connection:BrokerConnection) =>
           sync(connection) {
             func(connection)
