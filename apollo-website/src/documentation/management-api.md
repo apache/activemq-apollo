@@ -39,6 +39,92 @@ Example:
 
     $ curl -u "admin:password" http://localhost:61680/broker.json
 
+### Working with Tabular Results
+
+Many of the resource routes provided by the broker implement
+a selectable paged tabular interface.  A good example of such
+a resource route is the connections list.  It's route is:
+
+    /broker/connections
+
+Example:
+
+    $ curl -u "admin:password" \
+    'http://localhost:61680/broker/connections.json'
+    [
+      [
+        "*"
+      ],
+      {
+        "id":"4",
+        "state":"STARTED",
+        "state_since":1306848325102,
+        "read_counter":103,
+        "write_counter":239110628,
+        "transport":"tcp",
+        "protocol":"stomp",
+        "remote_address":"/127.0.0.1:61775",
+        "protocol_version":"1.0",
+        "user":"admin",
+        "waiting_on":"client request",
+        "subscription_count":1
+      },
+      {
+        "id":"5",
+        "state":"STARTED",
+        "state_since":1306848325102,
+        "read_counter":227739229,
+        "write_counter":113,
+        "transport":"tcp",
+        "protocol":"stomp",
+        "remote_address":"/127.0.0.1:61776",
+        "protocol_version":"1.0",
+        "user":"admin",
+        "waiting_on":"blocked sending to: org.apache.activemq.apollo.broker.Queue$$anon$1@13765e9b",
+        "subscription_count":0
+      }
+    ]
+
+The results are an array of records with the first record acting as a header
+records describing the fields selected. The `*` field means all the record's
+fields were selected. To narrow down the selected fields you can add
+multiple `f` query parameters to pick the fields you want to retrieve.
+
+Example:
+    $ curl -u "admin:password" \
+    'http://localhost:61680/broker/connections.json?f=id&f=read_counter'
+    [
+      [
+        "id",
+        "read_counter"
+      ],
+      [
+        "7",
+        110733109
+      ],
+      [
+        "6",
+        103
+      ]
+    ]
+
+If you want to narrow down the records which get selected, you can set a `q`
+query parameter to SQL 92 style where clause which uses the record's fields
+to filter down the selected records.
+
+For example to only view local connection, you would want to use a where
+clause like `remote_address LIKE "/127.0.0.01:%"` which to execute with
+`curl` you would run:
+
+    curl -u "admin:password" \
+    'http://localhost:61680/broker/connections.json?q=remote_address%20LIKE%20"/127.0.0.1:%"'
+
+The records are paged. The default page size is 100, so only the first 100
+records will be displayed. If you want to view subsequent results, you must
+set the `p` query parameter to the page you wish to access. You can change
+the page size by setting the `ps` query parameter.
+
+
 ### Broker Management
 
 The route for managing the broker is:
@@ -107,7 +193,11 @@ Results in a [Connector Status](./api/apollo-dto/org/apache/activemq/apollo/dto/
 
 ### Connection Management
 
-The route for managing a connection is:
+The route for getting a tabular list of connections is:
+
+    /broker/connections
+
+The route for managing a single connection is:
 
     /broker/connections/:id
 
@@ -226,6 +316,10 @@ Results in a [Store Status](./api/apollo-dto/org/apache/activemq/apollo/dto/Stor
 
 #### Queue Management
 
+The route for getting a tabular list of queues is:
+
+    /broker/virtual-hosts/:name/queues
+
 The route for managing a virtual host's Queue is:
 
     /broker/virtual-hosts/:name/queues/:qid
@@ -295,6 +389,10 @@ Results in a [Queue Status](./api/apollo-dto/org/apache/activemq/apollo/dto/Queu
 
 #### Topic Management
 
+The route for getting a tabular list of queues is:
+
+    /broker/virtual-hosts/:name/topics
+
 The route for managing a virtual host's Topic is:
 
     /broker/virtual-hosts/:name/topics/:tid
@@ -336,6 +434,28 @@ Results in a [Topic Status](./api/apollo-dto/org/apache/activemq/apollo/dto/Topi
   ]
 }
 {pygmentize}
+
+
+#### Durable Subscription Management
+
+The route for getting a tabular list of durable subscriptions is:
+
+    /broker/virtual-hosts/:name/dsubs
+
+The route for managing a virtual host's durable subscription is:
+
+    /broker/virtual-hosts/:name/dsubs/:sub
+
+Where `:name` is the id of a virtual host configured in the broker and `:sub` is the id
+of the durable subscription.
+
+Example:
+
+    $ curl -u "admin:password" \
+    http://localhost:61680/broker/virtual-hosts/localhost/dsubs/mysub.json
+
+Results in a [Queue Status](./api/apollo-dto/org/apache/activemq/apollo/dto/QueueStatusDTO.html):
+
 
 ### Getting the Broker's Configuration
 

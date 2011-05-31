@@ -90,7 +90,19 @@
       <scope>provided</scope>
       <optional>true</optional>
     </dependency>
-    
+
+    <dependency>
+      <groupId>net.sf.josql</groupId>
+      <artifactId>josql</artifactId>
+      <version>${josql-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>net.sf.josql</groupId>
+      <artifactId>gentlyweb-utils</artifactId>
+      <version>${josql-version}</version>
+    </dependency>
+
+
     <!-- Scala Support -->
     <dependency>
       <groupId>org.scala-lang</groupId>

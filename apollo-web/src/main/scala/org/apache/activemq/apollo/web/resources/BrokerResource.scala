@@ -16,18 +16,22 @@
  */
 package org.apache.activemq.apollo.web.resources;
 
-import javax.ws.rs._
-import core.Response
-import Response.Status._
 import org.apache.activemq.apollo.dto._
 import java.{lang => jl}
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker._
 import scala.collection.Iterable
-import org.apache.activemq.apollo.util.{Failure, Success, Dispatched, Result}
 import scala.Some
 import security.{SecurityContext, Authorizer}
 import org.apache.activemq.apollo.util.path.PathParser
+import org.apache.activemq.apollo.web.resources.Resource._
+import org.josql.Query
+import org.apache.activemq.apollo.util._
+import collection.mutable.ListBuffer
+import javax.ws.rs._
+import core.Response
+import Response.Status._
+import org.josql.expressions.SelectItemExpression
 
 /**
  * <p>
@@ -222,12 +226,68 @@ case class BrokerResource() extends Resource {
     link
   }
 
+  def narrow[T](kind:Class[T], x:Iterable[Result[T, Throwable]], f:java.util.List[String], q:String, p:java.lang.Integer, ps:java.lang.Integer) = {
+    import collection.JavaConversions._
+    try {
+      var records = x.toSeq.flatMap(_.success_option)
+
+      val page_size = if( ps !=null ) ps.intValue() else 100
+      val page = if( p !=null ) p.intValue() else 0
+
+      val query = new Query
+      val fields = if (f.isEmpty) "*" else f.toList.mkString(",")
+      val where_clause = if (q != null) q else "1=1"
+
+      query.parse("SELECT " + fields + " FROM " + kind.getName + " WHERE "+ where_clause+" LIMIT "+((page_size*page)+1)+", "+page_size)
+      val headers = if (f.isEmpty) seqAsJavaList(List("*")) else f
+
+      val list = query.execute(records).getResults
+
+      Success(seqAsJavaList( headers :: list.toList) )
+    } catch {
+      case e:Throwable => Failure(e)
+    }
+  }
+
+  @GET @Path("virtual-hosts/{id}/topics")
+  @Produces(Array("application/json"))
+  def topics(@PathParam("id") id : String, @QueryParam("f") f:java.util.List[String],
+            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):java.util.List[_] = {
+    with_virtual_host(id) { host =>
+      val router: LocalRouter = host
+      val records = Future.all {
+        router.topic_domain.destination_by_id.values.map { value  =>
+          status(value)
+        }
+      }
+      val rc:FutureResult[java.util.List[_]] = records.map(narrow(classOf[TopicStatusDTO], _, f, q, p, ps))
+      rc
+    }
+  }
+
   @GET @Path("virtual-hosts/{id}/topics/{name:.*}")
   def topic(@PathParam("id") id : String, @PathParam("name") name : String):TopicStatusDTO = {
     with_virtual_host(id) { host =>
       val router:LocalRouter = host
       val node = router.topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       status(node)
+    }
+  }
+
+  @GET @Path("virtual-hosts/{id}/queues")
+  @Produces(Array("application/json"))
+  def queues(@PathParam("id") id : String, @QueryParam("f") f:java.util.List[String],
+            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):java.util.List[_] = {
+    with_virtual_host(id) { host =>
+      val router: LocalRouter = host
+      val values: Iterable[Queue] = router.queue_domain.destination_by_id.values
+
+      val records = sync_all(values) { value =>
+        status(value, false)
+      }
+
+      val rc:FutureResult[java.util.List[_]] = records.map(narrow(classOf[QueueStatusDTO], _, f, q, p, ps))
+      rc
     }
   }
 
@@ -240,6 +300,22 @@ case class BrokerResource() extends Resource {
     }
   }
 
+  @GET @Path("virtual-hosts/{id}/dsubs")
+  @Produces(Array("application/json"))
+  def durable_subscriptions(@PathParam("id") id : String, @QueryParam("f") f:java.util.List[String],
+            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):java.util.List[_] = {
+    with_virtual_host(id) { host =>
+      val router: LocalRouter = host
+      val values: Iterable[Queue] = router.topic_domain.durable_subscriptions_by_id.values
+
+      val records = sync_all(values) { value =>
+        status(value, false)
+      }
+
+      val rc:FutureResult[java.util.List[_]] = records.map(narrow(classOf[QueueStatusDTO], _, f, q, p, ps))
+      rc
+    }
+  }
   @GET @Path("virtual-hosts/{id}/dsubs/{name:.*}")
   def durable_subscription(@PathParam("id") id : String, @PathParam("name") name : String, @QueryParam("entries") entries:Boolean):QueueStatusDTO = {
     with_virtual_host(id) { host =>
@@ -377,27 +453,30 @@ case class BrokerResource() extends Resource {
     }
   }
 
-
   @GET @Path("connections")
-  def connections:LongIdListDTO = {
+  @Produces(Array("application/json"))
+  def connections(@QueryParam("f") f:java.util.List[String], @QueryParam("q") q:String,
+                  @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):java.util.List[_] = {
+
     with_broker { broker =>
       monitoring(broker) {
-        val rc = new LongIdListDTO
 
+        val values = ListBuffer[BrokerConnection]()
         broker.connectors.foreach { connector=>
-          connector.connections.foreach { case (id,connection) =>
-            // TODO: may need to sync /w connection's dispatch queue
-            rc.items.add(new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ))
-          }
+          values ++= connector.connections.values
+        }
+        val records = sync_all(values) { value =>
+          value.get_connection_status
         }
 
+        val rc:FutureResult[java.util.List[_]] = records.map(narrow(classOf[ConnectionStatusDTO], _, f, q, p, ps))
         rc
       }
     }
   }
 
   @GET @Path("connections/{id}")
-  def connections(@PathParam("id") id : Long):ConnectionStatusDTO = {
+  def connection(@PathParam("id") id : Long):ConnectionStatusDTO = {
     with_connection(id){ connection=>
       monitoring(connection.connector.broker) {
         connection.get_connection_status
