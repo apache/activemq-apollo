@@ -97,7 +97,7 @@
     <felix-version>1.0.0</felix-version>
 
     <hawtdispatch-version>1.3-SNAPSHOT</hawtdispatch-version>
-    <hawtbuf-version>1.4</hawtbuf-version>
+    <hawtbuf-version>1.5-SNAPSHOT</hawtbuf-version>
     
     <jdbm-version>2.0.1</jdbm-version>
     <bdb-version>4.1.6</bdb-version>

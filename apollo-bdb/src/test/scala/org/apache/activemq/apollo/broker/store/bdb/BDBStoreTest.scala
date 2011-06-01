@@ -28,7 +28,7 @@ class BDBStoreTest extends StoreFunSuiteSupport {
   def create_store(flushDelay:Long):Store = {
     val rc = new BDBStore({
       val rc = new BDBStoreDTO
-      rc.directory = basedir / "activemq-data"
+      rc.directory = basedir / "target" / "apollo-data"
       rc
     })
     rc.config.flush_delay = flushDelay

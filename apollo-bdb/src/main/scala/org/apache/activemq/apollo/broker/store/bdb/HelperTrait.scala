@@ -20,9 +20,9 @@ import java.util.Comparator
 import java.nio.ByteBuffer
 import com.sleepycat.je._
 import java.io.Serializable
-import org.fusesource.hawtbuf.Buffer
 import org.apache.activemq.apollo.broker.store._
 import PBSupport._
+import org.fusesource.hawtbuf._
 
 object HelperTrait {
 
@@ -35,26 +35,64 @@ object HelperTrait {
   implicit def to_queue_record(entry: DatabaseEntry): QueueRecord = entry.getData
   implicit def to_database_entry(v: QueueRecord): DatabaseEntry = new DatabaseEntry(v)
 
-  implicit def encode_zcp_value(entry: DatabaseEntry): (Int,Long,Int) = {
-    val e = new Buffer(entry.getData).bigEndianEditor()
-    (e.readInt, e.readLong, e.readInt)
+  implicit def decode_zcp_value(entry: DatabaseEntry): (Int,Long,Int) = {
+    val in = new DataByteArrayInputStream(entry.getData)
+    (in.readVarInt(), in.readVarLong(), in.readVarInt())
   }
-  implicit def decode_zcp_value(v: (Int,Long,Int)): DatabaseEntry = {
-    val buf = new Buffer(16)
-    val e = buf.bigEndianEditor()
-    e.writeInt(v._1)
-    e.writeLong(v._2)
-    e.writeInt(v._1)
-    new DatabaseEntry(buf.data)
+  implicit def encode_zcp_value(v: (Int,Long,Int)): DatabaseEntry = {
+    val out = new DataByteArrayOutputStream(
+      AbstractVarIntSupport.computeVarIntSize(v._1) +
+      AbstractVarIntSupport.computeVarLongSize(v._2) +
+      AbstractVarIntSupport.computeVarIntSize(v._3)
+    )
+    out.writeVarInt(v._1)
+    out.writeVarLong(v._2)
+    out.writeVarInt(v._3)
+    new DatabaseEntry(out.toBuffer.data)
   }
 
-  implicit def to_bytes(l:Long):Array[Byte] = ByteBuffer.wrap(new Array[Byte](8)).putLong(l).array()
-  implicit def to_long(bytes:Array[Byte]):Long = ByteBuffer.wrap(bytes).getLong()
+  implicit def to_bytes(l:Long):Array[Byte] = {
+    val out = new DataByteArrayOutputStream(AbstractVarIntSupport.computeVarLongSize(l))
+    out.writeVarLong(l)
+    out.toBuffer.data
+  }
+  implicit def to_long(bytes:Array[Byte]):Long = {
+    val in = new DataByteArrayInputStream(bytes)
+    in.readVarLong()
+  }
+
   implicit def to_database_entry(l:Long):DatabaseEntry = new DatabaseEntry(to_bytes(l))
   implicit def to_long(value:DatabaseEntry):Long = to_long(value.getData)
 
-  implicit def to_bytes(l:Int):Array[Byte] = ByteBuffer.wrap(new Array[Byte](4)).putInt(l).array()
-  implicit def to_int(bytes:Array[Byte]):Int = ByteBuffer.wrap(bytes).getInt()
+  implicit def to_bytes(l:(Long, Long)):Array[Byte] = {
+    val out = new DataByteArrayOutputStream(
+      AbstractVarIntSupport.computeVarLongSize(l._1)+
+      AbstractVarIntSupport.computeVarLongSize(l._2)
+    )
+    out.writeVarLong(l._1)
+    out.writeVarLong(l._2)
+    out.toBuffer.data
+  }
+
+  implicit def to_long_long(bytes:Array[Byte]):(Long,Long) = {
+    val in = new DataByteArrayInputStream(bytes)
+    (in.readVarLong(), in.readVarLong())
+  }
+
+  implicit def to_database_entry(l:(Long,Long)):DatabaseEntry = new DatabaseEntry(to_bytes(l))
+  implicit def to_long_long(value:DatabaseEntry):(Long,Long) = to_long_long(value.getData)
+
+  implicit def to_bytes(l:Int):Array[Byte] = {
+    val out = new DataByteArrayOutputStream(AbstractVarIntSupport.computeVarIntSize(l))
+    out.writeVarInt(l)
+    out.toBuffer.data
+  }
+
+  implicit def to_int(bytes:Array[Byte]):Int = {
+    val in = new DataByteArrayInputStream(bytes)
+    in.readVarInt()
+  }
+
   implicit def to_database_entry(l:Int):DatabaseEntry = new DatabaseEntry(to_bytes(l))
   implicit def to_int(value:DatabaseEntry):Int = to_int(value.getData)
 
@@ -63,17 +101,38 @@ object HelperTrait {
   class LongComparator extends Comparator[Array[Byte]] with Serializable {
 
     def compare(o1: Array[Byte], o2: Array[Byte]) = {
-        val v1:java.lang.Long = to_long(o1)
-        val v2:java.lang.Long = to_long(o2)
+        val v1 = to_long(o1)
+        val v2 = to_long(o2)
         v1.compareTo(v2)
     }
     
+  }
+
+  @SerialVersionUID(2)
+  class LongLongComparator extends Comparator[Array[Byte]] with Serializable {
+
+    def compare(o1: Array[Byte], o2: Array[Byte]) = {
+      val v1 = to_long_long(o1)
+      val v2 = to_long_long(o2)
+      val rc = v1._1.compareTo(v2._1)
+      if (rc==0) {
+        v1._2.compareTo(v2._2)
+      } else {
+        rc
+      }
+    }
+
   }
 
   val long_key_conf = new DatabaseConfig();
   long_key_conf.setAllowCreate(true)
   long_key_conf.setTransactional(true);
   long_key_conf.setBtreeComparator(new LongComparator)
+
+  val long_long_key_conf = new DatabaseConfig();
+  long_long_key_conf.setAllowCreate(true)
+  long_long_key_conf.setTransactional(true);
+  long_long_key_conf.setBtreeComparator(new LongLongComparator)
 
   final class RichDatabase(val db: Database) extends Proxy {
     def self: Any = db

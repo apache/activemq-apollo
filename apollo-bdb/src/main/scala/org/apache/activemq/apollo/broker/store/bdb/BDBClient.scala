@@ -27,6 +27,9 @@ import org.apache.activemq.apollo.util._
 import com.sleepycat.je._
 import java.io.{EOFException, InputStream, OutputStream}
 import org.fusesource.hawtbuf.proto.{MessageBuffer, PBMessageFactory}
+import org.apache.activemq.apollo.util.Log._
+import scala.Some
+import java.sql.ClientInfoStatus
 
 object BDBClient extends Log
 /**
@@ -89,7 +92,7 @@ class BDBClient(store: BDBStore) {
 
       if( zero_copy_buffer_allocator!=null ) {
         zerocp_db.cursor(tx) { (_,value)=>
-          val v = encode_zcp_value(value)
+          val v = decode_zcp_value(value)
           zero_copy_buffer_allocator.alloc_at(v._1, v._2, v._3)
           true
         }
@@ -116,6 +119,13 @@ class BDBClient(store: BDBStore) {
       }
     }
 
+    private var _entries_db:Database = _
+    def entries_db:Database = {
+      if( _entries_db==null ) {
+        _entries_db = environment.openDatabase(tx, "entries", long_long_key_conf)
+      }
+      _entries_db
+    }
 
     private var _messages_db:Database = _
     def messages_db:Database = {
@@ -159,6 +169,9 @@ class BDBClient(store: BDBStore) {
       if( _queues_db!=null ) {
         _queues_db.close
       }
+      if( _entries_db!=null ) {
+        _entries_db.close
+      }
 
       if(ok){
         tx.commit
@@ -171,17 +184,41 @@ class BDBClient(store: BDBStore) {
 
 
   def with_ctx[T](func: (TxContext) => T): T = {
-    val ctx = TxContext(environment.beginTransaction(null, null));
-    var ok = false
-    try {
-      val rc = func(ctx)
-      ok = true
-      rc
-    } finally {
-      ctx.close(ok)
-    }
-  }
+    var error:Throwable = null
+    var rc:Option[T] = None
 
+    // We will loop until the tx succeeds.  Perhaps it's
+    // failing due to a temporary condition like low disk space.
+    while(!rc.isDefined) {
+
+
+      val ctx = TxContext(environment.beginTransaction(null, null));
+      try {
+        rc = Some(func(ctx))
+      } catch {
+        case e:Throwable =>
+          if( error==null ) {
+            warn(e, "Message store transaction failed. Will keep retrying after every second.")
+          }
+          error = e
+      } finally {
+        ctx.close(rc.isDefined)
+      }
+
+      if (!rc.isDefined) {
+        // We may need to give up if the store is being stopped.
+        if ( !store.service_state.is_started ) {
+          throw error
+        }
+        Thread.sleep(1000)
+      }
+    }
+
+    if( error!=null ) {
+      info("Store recovered from inital failure.")
+    }
+    rc.get
+  }
 
   def purge() = {
 
@@ -236,8 +273,6 @@ class BDBClient(store: BDBStore) {
     with_ctx { ctx=>
       import ctx._
       queues_db.put(tx, record.key, record)
-      with_entries_db(record.key) { entriesdb=> 
-      }
     }
     callback.run
   }
@@ -261,17 +296,17 @@ class BDBClient(store: BDBStore) {
       import ctx._
 
       queues_db.delete(tx, queue_key)
-      with_entries_db(queue_key) { entries_db=>
 
-        entries_db.cursor(tx) { (key,value)=>
+      entries_db.cursor_from(tx, (queue_key, 0L)) { (key,value)=>
+        val current_key:(Long,Long)=key
+        if( current_key._1 == queue_key ) {
           val queueEntry:QueueEntryRecord = value
           decrement_message_reference(ctx, queueEntry.message_key)
           true // keep cursoring..
+        } else {
+          false
         }
-
       }
-
-      environment.removeDatabase(tx, entries_db_name(queue_key))
     }
     callback.run
   }
@@ -305,17 +340,13 @@ class BDBClient(store: BDBStore) {
               }
 
               action.enqueues.foreach { queueEntry =>
-                with_entries_db(queueEntry.queue_key) { entries_db=>
-                  entries_db.put(tx, queueEntry.entry_seq, queueEntry)
-                  add_and_get(message_refs_db, queueEntry.message_key, 1, tx)
-                }
+                entries_db.put(tx, (queueEntry.queue_key, queueEntry.entry_seq), queueEntry)
+                add_and_get(message_refs_db, queueEntry.message_key, 1, tx)
               }
 
               action.dequeues.foreach { queueEntry =>
-                with_entries_db(queueEntry.queue_key) { entries_db=>
-                  entries_db.delete(tx, queueEntry.entry_seq)
-                  decrement_message_reference(ctx, queueEntry.message_key)
-                }
+                entries_db.delete(tx, (queueEntry.queue_key, queueEntry.entry_seq))
+                decrement_message_reference(ctx, queueEntry.message_key)
               }
           }
       }
@@ -351,21 +382,19 @@ class BDBClient(store: BDBStore) {
     var rc = ListBuffer[QueueEntryRange]()
     with_ctx { ctx=>
       import ctx._
+      var group:QueueEntryRange = null
 
-      with_entries_db(queue_key) { entries_db=>
-
-        var group:QueueEntryRange = null
-
-        entries_db.cursor(tx) { (key, value) =>
-
+      entries_db.cursor_from(tx, (queue_key, 0L)) { (key, value) =>
+        val current_key:(Long,Long)= key
+        if( current_key._1 == queue_key ) {
           if( group == null ) {
             group = new QueueEntryRange
-            group.first_entry_seq = key
+            group.first_entry_seq = current_key._2
           }
 
           val entry:QueueEntryRecord = value
 
-          group.last_entry_seq = key
+          group.last_entry_seq = current_key._2
           group.count += 1
           group.size += entry.size
 
@@ -375,13 +404,16 @@ class BDBClient(store: BDBStore) {
           }
 
           true // to continue cursoring.
-        }
 
-        if( group!=null ) {
-          rc += group
+        } else {
+          false
         }
-
       }
+
+      if( group!=null ) {
+        rc += group
+      }
+
     }
     rc
   }
@@ -390,13 +422,17 @@ class BDBClient(store: BDBStore) {
     var rc = ListBuffer[QueueEntryRecord]()
     with_ctx { ctx=>
       import ctx._
+      entries_db.cursor_from(tx, (queue_key, firstSeq)) { (key, value) =>
+        val current_key:(Long,Long) = key
+        if( current_key._1 == queue_key ) {
 
-      with_entries_db(queue_key) { entries_db=>
-        entries_db.cursor_from(tx, to_database_entry(firstSeq)) { (key, value) =>
-          val entry_seq:Long = key
+          val entry_seq = current_key._2
           val entry:QueueEntryRecord = value
           rc += entry
           entry_seq < lastSeq
+
+        } else {
+          false
         }
       }
     }
@@ -406,11 +442,41 @@ class BDBClient(store: BDBStore) {
   val metric_load_from_index_counter = new TimeCounter
   var metric_load_from_index = metric_load_from_index_counter(false)
 
-  def loadMessages(requests: ListBuffer[(Long, (Option[MessageRecord])=>Unit)]) = {
+  def loadMessages(requests: ListBuffer[(Long, (Option[MessageRecord])=>Unit)]):Unit = {
 
+    val missing = with_ctx { ctx=>
+      import ctx._
+      requests.flatMap { x =>
+        val (message_key, callback) = x
+        val record = metric_load_from_index_counter.time {
+          messages_db.get(tx, to_database_entry(message_key)).map{ data=>
+            import PBSupport._
+            val pb:MessagePB.Buffer = data
+            val rc = from_pb(pb)
+            if( pb.hasZcpFile ) {
+              rc.zero_copy_buffer = zero_copy_buffer_allocator.view_buffer(pb.getZcpFile, pb.getZcpOffset, pb.getZcpSize)
+            }
+            rc
+          }
+        }
+        if( record.isDefined ) {
+          callback(record)
+          None
+        } else {
+          Some(x)
+        }
+      }
+    }
+
+    if (missing.isEmpty)
+      return
+
+    // There's a small chance that a message was missing, perhaps we started a read tx, before the
+    // write tx completed.  Lets try again..
     with_ctx { ctx=>
       import ctx._
-      requests.foreach { case (message_key, callback)=>
+      missing.foreach { x =>
+        val (message_key, callback) = x
         val record = metric_load_from_index_counter.time {
           messages_db.get(tx, to_database_entry(message_key)).map{ data=>
             import PBSupport._
@@ -478,15 +544,9 @@ class BDBClient(store: BDBStore) {
         }
 
         streams.using_queue_entry_stream { queue_entry_stream=>
-          queues_db.cursor(tx) { (_, value) =>
-            val record:QueueRecord = value
-            with_entries_db(record.key) { entries_db=>
-              entries_db.cursor(tx) { (key, value) =>
-                val record:QueueEntryRecord = value
-                record.writeFramed(queue_entry_stream)
-                true
-              }
-            }
+          entries_db.cursor(tx) { (key, value) =>
+            val record:QueueEntryRecord = value
+            record.writeFramed(queue_entry_stream)
             true
           }
         }
@@ -523,8 +583,6 @@ class BDBClient(store: BDBStore) {
           foreach[QueuePB.Buffer](queue_stream, QueuePB.FACTORY) { pb=>
             val record:QueueRecord = pb
             queues_db.put(tx, record.key, record)
-            with_entries_db(record.key) { entriesdb=>
-            }
           }
         }
 
@@ -557,10 +615,8 @@ class BDBClient(store: BDBStore) {
           foreach[QueueEntryPB.Buffer](queue_entry_stream, QueueEntryPB.FACTORY) { pb=>
             val record:QueueEntryRecord = pb
 
-            with_entries_db(record.queue_key) { entries_db=>
-              entries_db.put(tx, record.entry_seq, record)
-              add_and_get(message_refs_db, record.message_key, 1, tx)
-            }
+            entries_db.put(tx, (record.queue_key, record.entry_seq), record)
+            add_and_get(message_refs_db, record.message_key, 1, tx)
           }
         }
       }
