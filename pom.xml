@@ -113,7 +113,7 @@
     <snakeyaml-version>1.7</snakeyaml-version>
       
     <!-- maven plugin versions -->
-    <maven-scala-plugin-version>2.15.0</maven-scala-plugin-version>
+    <maven-scala-plugin-version>2.15.2</maven-scala-plugin-version>
     <maven-surefire-plugin-version>2.4.3</maven-surefire-plugin-version>
     <jetty-plugin-version>7.0.1.v20091125</jetty-plugin-version>
     
@@ -663,6 +663,7 @@
               </dependency>
             </dependencies>
           </plugin>
+          
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
@@ -671,10 +672,51 @@
               <test>false</test>
             </configuration>
           </plugin>
-        </plugins>
+          
+          <!-- Generate the Scala Docs so that they can be included in the javadoc artifact -->
+          <plugin>
+            <groupId>org.scala-tools</groupId>
+            <artifactId>maven-scala-plugin</artifactId>
+            <version>${maven-scala-plugin-version}</version>
+            <executions>
+              <execution>
+                <id>doc</id>
+                <phase>process-classes</phase>
+                <goals>
+                  <goal>doc</goal>
+                </goals>
+                <configuration>
+                  <jvmArgs>
+                    <jvmArg>-Xmx1024m</jvmArg>
+                    <jvmArg>-Xss8m</jvmArg>
+                  </jvmArgs>
+                  <scalaVersion>${scala-version}</scalaVersion>
+                </configuration>                
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>2.3.1</version>
+            <executions>
+              <execution>
+                <id>scaladoc</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+                <configuration>
+                  <classesDirectory>${project.build.directory}/site/scaladocs</classesDirectory>
+                  <classifier>scaladoc</classifier>
+                </configuration>                
+              </execution>
+            </executions>
+          </plugin>
+          
+        </plugins> 
       </build>
     </profile>
-
 
     <!-- enables extra repositories which may have some
          goodies that have not reached central yet -->
