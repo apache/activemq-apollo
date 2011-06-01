@@ -2,125 +2,52 @@
 
 ## Synopsis
 
-[Apollo][] is a forked and stripped down Apache [ActiveMQ][] message
-broker. It is focused on simplicity, stability and scalability.
+[ActiveMQ Apollo](http://activemq.apache.org/apollo/) is a faster, more
+reliable, easier to maintain messaging broker built from the foundations of
+the original [ActiveMQ]((http://activemq.apache.org). It accomplishes this
+using a radically different threading and message dispatching 
+[architecture](documentation/architecture.html). 
 
-[Apollo]:http://github.com/chirino/activemq-apollo
-[ActiveMQ]:http://activemq.apache.org/
+In it’s current incarnation, Apollo only supports the STOMP protocol but just
+like the original ActiveMQ, it’s been designed to be a multi protocol broker.
+In future versions it should get OpenWire support so it can be compatible with
+ActiveMQ 5.x JMS clients.
 
-## Implemented Features
+## Features
 
-* Topic style message routing
-* Queue style message routing
-* Persistent Messages
-* Message swapping: moves message out of memory to support unlimited
-  queue sizes
-* Message Selectors
-* Queue Browsers
-* REST based management
-* [Stomp](http://stomp.github.com/) Protocol Support
+* [Stomp 1.0](http://stomp.github.com/stomp-specification-1.0.html) Protocol
+  Support
+* [Stomp 1.1](http://stomp.github.com/stomp-specification-1.1.html) Protocol
+  Support
+* [Topics and Queues](http://activemq.apache.org/apollo/documentation/user-manual.html#Destination_Types)
+* [Queue Browsers](http://activemq.apache.org/apollo/documentation/user-manual.html#Browsing_Subscriptions)
+* [Durable Subscriptions on Topics](http://activemq.apache.org/apollo/documentation/user-manual.html#Topic_Durable_Subscriptions)
+* [Reliable Messaging](http://activemq.apache.org/apollo/documentation/user-manual.html#Reliable_Messaging)
+* Message swapping
+* [Message Selectors](http://activemq.apache.org/apollo/documentation/user-manual.html#Message_Selectors)
+* [JAAS Authentication](http://activemq.apache.org/apollo/documentation/user-manual.html#Authentication)
+* [ACL Authorization](http://activemq.apache.org/apollo/documentation/user-manual.html#Authorization)
+* [SSL/TLS Support](http://activemq.apache.org/apollo/documentation/user-manual.html#Using_SSL_TLS)
+* [REST Based Management](http://activemq.apache.org/apollo/documentation/architecture.html#REST_Based_Management)
 
-## What makes Apollo Different?
+## Documentation
 
-* [Architecture](apollo-website/src/architecture.md)
-* [Performance and Scalability](apollo-website/src/performance-scaling.md)
-
+ * [Getting Started Guide](http://activemq.apache.org/apollo/documentation/getting-started.html)
+ * [User Manual](http://activemq.apache.org/apollo/documentation/user-manual.html)
+ * [Management API](http://activemq.apache.org/apollo/documentation/management-api.html)
+ 
 ## Building the Source Code
 
 Prerequisites:
 
-* [Maven >= 2.2.1](http://maven.apache.org/download.html)
+* [Maven >= 3.0.2](http://maven.apache.org/download.html)
 * [Java JDK >= 1.6](http://java.sun.com/javase/downloads/widget/jdk6.jsp)
 
 Then run:
 
-    mvn install -Pdownload
-
-if you're building it for the first time, or just
-
-    mvn install
-
-if you already initialized the repo
-
-## Quick Start 
-
-We are still working on creating a binary distribution. Once that's created
-we will update these instructions to work off that distribution. Until then,
-they will be based on a built source distribution.
-
-### Running an Apollo Broker
-
-A broker with a web based admin interface will be started by using the the
-Scala REPL console.
-
-    $ cd apollo-web
-    $ mvn -o scala:console 
-    ... [output ommitted for brevity]
-    scala> val main = org.apache.activemq.apollo.web.Main
-    ... [output ommitted for brevity]
-    scala> main run
-    ... [output ommitted for brevity]
-    Web interface available at: http://localhost:8080/
-
-You can point your web browser at http://localhost:8080/ to explore the
-management structure of the broker. Additional status objects will become
-visible once there are connected client which cause connections and
-destination management objects to be created.
-
-### Running Examples
-
-A stomp client will be started by using the the Scala 
-repl console.
-
-    $ cd apollo-stomp
-    $ mvn -o scala:console 
-    ... [output ommitted for brevity]
-    scala> val client = org.apache.activemq.apollo.stomp.perf.StompLoadClient                 
-    client: org.apache.activemq.apollo.stomp.perf.StompLoadClient.type = 
-    --------------------------------------
-    StompLoadClient Properties
-    --------------------------------------
-    uri              = stomp://127.0.0.1:61613
-    destinationType  = queue
-    destinationCount = 1
-    sampleInterval   = 5000
-
-    --- Producer Properties ---
-    producers        = 1
-    messageSize      = 1024
-    persistent       = false
-    syncSend         = false
-    useContentLength = true
-    producerSleep    = 0
-    headers          = List()
-
-    --- Consumer Properties ---
-    consumers        = 1
-    consumerSleep    = 0
-    ack              = auto
-    selector         = null
-
-The above creates a client variable which allows you to customize all the
-displayed properties. Those properties control how the client applies load
-to the STOMP broker.  You could change the client configuration so that
-it uses messages with 20 byte contents and send and receive on topics instead
-of queues:
-
-    scala> client.messageSize = 20
-    scala> client.destinationType = "topic"
-
-
-Once you are happy with the client configuration, you just run it and wait
-for it to report back the producer and consumer throughput rates.
-
-    scala> client.run                                                        
-    =======================
-    Press ENTER to shutdown
-    =======================
-
-    Producer rate: 155,783.906 per second, total: 778,960
-    Consumer rate: 154,345.969 per second, total: 771,770
-    Producer rate: 165,831.141 per second, total: 1,608,210
-    Consumer rate: 165,798.734 per second, total: 1,600,858
+    mvn install -P download
+    
+This will build the binary distribution and place them in the
+`apollo-distro/target` directory.
 
 
