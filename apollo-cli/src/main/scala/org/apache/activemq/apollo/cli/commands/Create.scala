@@ -103,6 +103,13 @@ class Create extends Action {
       if( IS_WINDOWS ) {
         target = bin / "apollo-broker.cmd"
         write("bin/apollo-broker.cmd", target, true)
+
+        target = bin / "apollo-broker-service.exe"
+        write("bin/apollo-broker-service.exe", target)
+
+        target = bin / "apollo-broker-service.xml"
+        write("bin/apollo-broker-service.xml", target, true)
+
       } else {
         target = bin / "apollo-broker"
         write("bin/apollo-broker", target, true)
@@ -124,16 +131,18 @@ class Create extends Action {
 
       val home = new File(System.getProperty("apollo.home"))
 
+      println("")
       println("You can now start the broker by executing:  ")
       println("")
       println("   %s run".format((bin/"apollo-broker").getCanonicalPath))
+
+      val service = bin / "apollo-broker-service"
+      println("")
+      
       if( !IS_WINDOWS ) {
-        val service = bin / "apollo-broker-service"
-        println("")
 
         // Does it look like we are on a System V init system?
         if( new File("/etc/init.d/").isDirectory ) {
-
 
           println("Or you can setup the broker as system service and run it in the background:")
           println("")
@@ -147,6 +156,13 @@ class Create extends Action {
           println("   %s start".format(service.getCanonicalPath))
 
         }
+
+      } else {
+      
+        println("Or you can setup the broker as system service and run it in the background:")
+        println("")
+        println("   %s install".format(service.getCanonicalPath))
+        println("   %s start".format(service.getCanonicalPath))
 
       }
       println("")
@@ -187,6 +203,7 @@ class Create extends Action {
         content = content.replaceAll(Pattern.quote("${version}"), Matcher.quoteReplacement(Broker.version))
         val home = new File(System.getProperty("apollo.home"))
         content = content.replaceAll(Pattern.quote("${home}"), Matcher.quoteReplacement(home.getCanonicalPath))
+        content = content.replaceAll(Pattern.quote("${base}"), Matcher.quoteReplacement(directory.getCanonicalPath))
       }
 
       // and then writing out in the new target encoding.
