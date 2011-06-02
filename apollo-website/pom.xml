@@ -41,11 +41,7 @@
   </properties>
 
   <dependencies>
-    <!-- <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
-      <scope>provided</scope>
-    </dependency> -->
+
     <dependency>
       <groupId>org.fusesource.scalate</groupId>
       <artifactId>scalate-wikitext</artifactId>
@@ -74,36 +70,6 @@
       <version>${scalate-version}</version>
       <scope>test</scope>
     </dependency>
-    
-    <!-- To make sure the scaladocs get built before this module -->
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-dto</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <classifier>javadoc</classifier>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-broker</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <classifier>scaladoc</classifier>
-      <scope>test</scope>
-    </dependency>    
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-transport</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <classifier>scaladoc</classifier>
-      <scope>test</scope>
-    </dependency>    
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-util</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <classifier>scaladoc</classifier>
-      <scope>test</scope>
-    </dependency>    
 
   </dependencies>
 
@@ -120,51 +86,6 @@
             <goals>
               <goal>jar</goal>
             </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>2.2</version>
-        <executions>
-          <execution>
-            <id>unpack</id>
-            <phase>package</phase>
-            <goals>
-              <goal>unpack</goal>
-            </goals>
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>org.apache.activemq</groupId>
-                  <artifactId>apollo-dto</artifactId>
-                  <classifier>javadoc</classifier> 
-                  <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-dto</outputDirectory>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.apache.activemq</groupId>
-                  <artifactId>apollo-broker</artifactId>
-                  <classifier>scaladoc</classifier> 
-                  <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-broker</outputDirectory>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.apache.activemq</groupId>
-                  <artifactId>apollo-transport</artifactId>
-                  <classifier>scaladoc</classifier> 
-                  <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-transport</outputDirectory>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.apache.activemq</groupId>
-                  <artifactId>apollo-util</artifactId>
-                  <classifier>scaladoc</classifier> 
-                  <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-util</outputDirectory>
-                </artifactItem>
-                
-              </artifactItems>
-              <!-- other configurations here -->
-            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -262,5 +183,94 @@
       </plugin>
     </plugins>
   </reporting>
+  
+  <profiles>
+    
+    <!-- We only include the java doc when doing a release build since
+         that's when the javadoc actually gets generated -->
+    <profile>
+      <id>apache-release</id>
+
+      <dependencies>        
+        <dependency>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>apollo-dto</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <classifier>javadoc</classifier>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>apollo-broker</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <classifier>scaladoc</classifier>
+          <scope>test</scope>
+        </dependency>    
+        <dependency>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>apollo-transport</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <classifier>scaladoc</classifier>
+          <scope>test</scope>
+        </dependency>    
+        <dependency>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>apollo-util</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <classifier>scaladoc</classifier>
+          <scope>test</scope>
+        </dependency>    
+
+      </dependencies>        
+      <build>
+        
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>2.2</version>
+            <executions>
+              <execution>
+                <id>unpack</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>unpack</goal>
+                </goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>org.apache.activemq</groupId>
+                      <artifactId>apollo-dto</artifactId>
+                      <classifier>javadoc</classifier> 
+                      <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-dto</outputDirectory>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>org.apache.activemq</groupId>
+                      <artifactId>apollo-broker</artifactId>
+                      <classifier>scaladoc</classifier> 
+                      <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-broker</outputDirectory>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>org.apache.activemq</groupId>
+                      <artifactId>apollo-transport</artifactId>
+                      <classifier>scaladoc</classifier> 
+                      <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-transport</outputDirectory>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>org.apache.activemq</groupId>
+                      <artifactId>apollo-util</artifactId>
+                      <classifier>scaladoc</classifier> 
+                      <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-util</outputDirectory>
+                    </artifactItem>
+                  </artifactItems>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+            
 </project>
 

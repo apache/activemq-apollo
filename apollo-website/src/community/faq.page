@@ -46,20 +46,10 @@ License](http://www.apache.org/licenses/LICENSE-2.0)
 
 See the [support guide](support.html) for more details.
 
-### How do I build Scalate?
+### How do I build ${project_name}?
 
 First [get the source](source.html) then see the [building
 guide](building.html)
-
-### Why does the Maven build not download jars?
-
-The default profile in maven does not include remote repos, so make sure
-you add the download profile when building for the first time. First [get
-the source](source.html) then see the [building guide](building.html).
-
-e.g.
-
-    mvn install -P download
 
 ### How do I contribute or become a committer?
 
