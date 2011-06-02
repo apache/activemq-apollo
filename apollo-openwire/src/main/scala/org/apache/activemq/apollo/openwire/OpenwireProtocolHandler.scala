@@ -157,7 +157,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     outbound_sessions = new SinkMux[Command](connection.transport_sink.map {
       x:Command =>
         x.setCommandId(next_command_id)
-        info("sending frame: %s", x)
+        debug("sending frame: %s", x.toString)
         x
     }, dispatchQueue, OpenwireCodec)
     connection_session = new OverflowSink(outbound_sessions.open(dispatchQueue));
@@ -214,7 +214,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     }
     try {
       current_command = command
-      println("received: %s", command)
+      trace("received: %s", command)
       if (wire_format == null) {
         command match {
           case codec: OpenwireCodec =>
@@ -443,6 +443,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
     var selector_expression:BooleanExpression = _
     var destination:Array[DestinationDTO] = _
+
+    override def exclusive = info.isExclusive
+    override def browser = info.isBrowser
 
     def attach = {
 
