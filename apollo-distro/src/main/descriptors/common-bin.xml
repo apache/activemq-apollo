@@ -66,8 +66,20 @@
       </includes>
       <excludes>
         <exclude>org.apache.activemq:apollo-web:pom</exclude>
+        <exclude>org.apache.activemq:apollo-boot</exclude>
       </excludes>
     </dependencySet>
+    
+    <dependencySet>
+      <outputDirectory>/lib</outputDirectory>
+      <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
+      <unpack>false</unpack>
+      <useTransitiveDependencies>false</useTransitiveDependencies>
+      <includes>
+        <include>org.apache.activemq:apollo-boot</include>
+      </includes>
+    </dependencySet>
+    
   </dependencySets>
 
   <fileSets>

@@ -101,21 +101,18 @@ if [ ! -x "$JAVACMD" ] ; then
   exit 1
 fi
 
-CLASSPATH=""
+CLASSPATH="${APOLLO_HOME}/lib/apollo-boot.jar"
 if [ ! -z "$APOLLO_BASE" ] ; then
-  CLASSPATH="${APOLLO_BASE}/etc"
+  CLASSPATH="${APOLLO_BASE}/etc:${CLASSPATH}"
 fi
-if [ -d "${APOLLO_HOME}/lib/patches" ] ; then
-  for f in "${APOLLO_HOME}/lib/patches"/*.jar; do
-    CLASSPATH="$CLASSPATH:$f"
-  done
+
+BOOTDIRS="${APOLLO_HOME}/lib"
+if [ ! -z "$APOLLO_BASE" ] ; then
+  BOOTDIRS="${APOLLO_BASE}/lib:${BOOTDIRS}"
 fi
-for f in "${APOLLO_HOME}/lib"/*.jar; do
-  CLASSPATH="$CLASSPATH:$f"
-done
 
 JUL_CONFIG_FILE="${APOLLO_HOME}/etc/jul.properties"
-    
+
 # For Cygwin, switch paths to Windows format before running java
 if $cygwin; then
   APOLLO_HOME=`cygpath --windows "$APOLLO_HOME"`
@@ -155,4 +152,4 @@ fi
 # Attempt to bump up the ulimit 
 ulimit -n 100000 > /dev/null 2> /dev/null
 
-${EXEC} "$JAVACMD" ${JVM_FLAGS} ${SYSTEM_PROPS} -classpath "${CLASSPATH}" org.apache.activemq.apollo.cli.Apollo $@
+${EXEC} "$JAVACMD" ${JVM_FLAGS} ${SYSTEM_PROPS} -classpath "${CLASSPATH}" org.apache.activemq.apollo.boot.Boot ${BOOTDIRS} org.apache.activemq.apollo.cli.Apollo $@

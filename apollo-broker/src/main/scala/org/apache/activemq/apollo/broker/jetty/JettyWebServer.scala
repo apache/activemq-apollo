@@ -220,6 +220,7 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
           var context = new WebAppContext
           context.setContextPath(prefix)
           context.setWar(webapp.getCanonicalPath)
+          context.setClassLoader(Broker.class_loader)
           if( broker.tmp !=null ) {
             context.setTempDirectory(broker.tmp)
           }
@@ -228,41 +229,11 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
       }
 
 
-      def secured(handler:Handler) = {
-        handler
-//        if( config.authentication!=null && config.acl!=null ) {
-//          val security_handler = new ConstraintSecurityHandler
-//          val login_service = new JAASLoginService(config.authentication.domain)
-//          val role_class_names:List[String] = config.authentication.acl_principal_kinds().toList
-//
-//          login_service.setRoleClassNames(role_class_names.toArray)
-//          security_handler.setLoginService(login_service)
-//          security_handler.setIdentityService(new DefaultIdentityService)
-//          security_handler.setAuthenticator(new BasicAuthenticator)
-//
-//          val cm = new ConstraintMapping
-//          val c = new org.eclipse.jetty.http.security.Constraint()
-//          c.setName("BASIC")
-//          val admins:Set[PrincipalDTO] = config.acl.admins.toSet ++ config.acl.monitors.toSet
-//          c.setRoles(admins.map(_.allow).toArray)
-//          c.setAuthenticate(true)
-//          cm.setConstraint(c)
-//          cm.setPathSpec("/*")
-//          cm.setMethod("GET")
-//          security_handler.addConstraintMapping(cm)
-//
-//          security_handler.setHandler(handler)
-//          security_handler
-//        } else {
-//          handler
-//        }
-      }
-
       val context_list = new HandlerList
       contexts.values.foreach(context_list.addHandler(_))
 
       server = new Server
-      server.setHandler(secured(context_list))
+      server.setHandler(context_list)
       server.setConnectors(connectors.values.toArray)
       server.start
 

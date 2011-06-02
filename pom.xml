@@ -157,6 +157,7 @@
   </distributionManagement>
 
   <modules>
+    <module>apollo-boot</module>
     <module>apollo-scala</module>
     <module>apollo-util</module>
     <module>apollo-transport</module>
