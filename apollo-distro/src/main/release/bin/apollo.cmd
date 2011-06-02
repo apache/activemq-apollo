@@ -19,7 +19,7 @@
 setlocal
 
 if NOT "%APOLLO_HOME%"=="" goto CHECK_APOLLO_HOME
-PUSHD
+PUSHD .
 CD %~dp0..
 set APOLLO_HOME=%CD%
 POPD
