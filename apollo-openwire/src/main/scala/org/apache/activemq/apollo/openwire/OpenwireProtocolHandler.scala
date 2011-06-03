@@ -17,14 +17,12 @@
 
 package org.apache.activemq.apollo.openwire
 
-import dto.OpenwireConnectionStatusDTO
 import OpenwireConstants._
 
 import org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
 import collection.mutable.{ListBuffer, HashMap}
 
-import AsciiBuffer._
 import org.apache.activemq.apollo.broker._
 import BufferConversions._
 import java.io.IOException
@@ -533,14 +531,43 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
       def producer = p
       def consumer = ConsumerContext.this
+      var closed = false
 
       val outbound_session = outbound_sessions.open(producer.dispatch_queue)
 
       def downstream = outbound_session
 
       def close = {
-        outbound_sessions.close(outbound_session)
-        release
+
+        assert(producer.dispatch_queue.isExecuting)
+        if( !closed ) {
+          closed = true
+          if( browser ) {
+            // Then send the end of browse message.
+            var dispatch = new MessageDispatch
+            dispatch.setConsumerId(this.consumer.info.getConsumerId)
+            dispatch.setMessage(null)
+            dispatch.setDestination(null)
+
+            if( outbound_session.full ) {
+              // session is full so use an overflow sink so to hold the message,
+              // and then trigger closing the session once it empties out.
+              val sink = new OverflowSink(outbound_session)
+              sink.refiller = ^{
+                outbound_sessions.close(outbound_session)
+                release
+              }
+              sink.offer(dispatch)
+            } else {
+              outbound_session.offer(dispatch)
+              outbound_sessions.close(outbound_session)
+              release
+            }
+          } else {
+            outbound_sessions.close(outbound_session)
+            release
+          }
+        }
       }
 
       def remaining_capacity = outbound_session.remaining_capacity
