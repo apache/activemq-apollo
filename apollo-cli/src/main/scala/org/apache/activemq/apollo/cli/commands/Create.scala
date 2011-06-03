@@ -198,12 +198,17 @@ class Create extends Action {
       var content = new String(out.toByteArray, "UTF-8")
 
       if( filter ) {
-        content = content.replaceAll(Pattern.quote("${user}"), System.getProperty("user.name",""))
-        content = content.replaceAll(Pattern.quote("${host}"), Matcher.quoteReplacement(host))
-        content = content.replaceAll(Pattern.quote("${version}"), Matcher.quoteReplacement(Broker.version))
-        val home = new File(System.getProperty("apollo.home"))
-        content = content.replaceAll(Pattern.quote("${home}"), Matcher.quoteReplacement(home.getCanonicalPath))
-        content = content.replaceAll(Pattern.quote("${base}"), Matcher.quoteReplacement(directory.getCanonicalPath))
+        def replace(key:String, value:String) = {
+          content = content.replaceAll(Pattern.quote(key), Matcher.quoteReplacement(value))
+        }
+        def cp(value:String) = new File(value).getCanonicalPath
+
+        replace("${user}", System.getProperty("user.name",""))
+        replace("${host}", host)
+        replace("${version}", Broker.version)
+        replace("${home}", cp(System.getProperty("apollo.home")))
+        replace("${base}", directory.getCanonicalPath)
+        replace("${java.home}", cp(System.getProperty("java.home")))
       }
 
       // and then writing out in the new target encoding.
