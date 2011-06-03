@@ -15,13 +15,17 @@
 @REM limitations under the License.
 @REM
 @echo off
-
 setlocal
 
 if "%APOLLO_HOME%"=="" set APOLLO_HOME=${home}
 
-if "%APOLLO_BASE%"=="" set APOLLO_BASE=%~dp0..
+if NOT "%APOLLO_BASE%"=="" goto RUN
+PUSHD .
+CD %~dp0..
+set APOLLO_BASE=%CD%
+POPD
 
+:RUN
 "%APOLLO_HOME%\bin\apollo" %*
 
 :END

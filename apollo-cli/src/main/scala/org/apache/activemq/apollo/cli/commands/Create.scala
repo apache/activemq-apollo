@@ -134,7 +134,7 @@ class Create extends Action {
       println("")
       println("You can now start the broker by executing:  ")
       println("")
-      println("   %s run".format((bin/"apollo-broker").getCanonicalPath))
+      println("   \"%s\" run".format((bin/"apollo-broker").getCanonicalPath))
 
       val service = bin / "apollo-broker-service"
       println("")
@@ -146,14 +146,14 @@ class Create extends Action {
 
           println("Or you can setup the broker as system service and run it in the background:")
           println("")
-          println("   sudo ln -s %s /etc/init.d/".format(service.getCanonicalPath))
+          println("   sudo ln -s \"%s\" /etc/init.d/".format(service.getCanonicalPath))
           println("   /etc/init.d/apollo-broker-service start")
 
         } else {
 
           println("Or you can run the broker in the background using:")
           println("")
-          println("   %s start".format(service.getCanonicalPath))
+          println("   \"%s\" start".format(service.getCanonicalPath))
 
         }
 
@@ -161,8 +161,8 @@ class Create extends Action {
       
         println("Or you can setup the broker as system service and run it in the background:")
         println("")
-        println("   %s install".format(service.getCanonicalPath))
-        println("   %s start".format(service.getCanonicalPath))
+        println("   \"%s\" install".format(service.getCanonicalPath))
+        println("   \"%s\" start".format(service.getCanonicalPath))
 
       }
       println("")

@@ -79,7 +79,7 @@ if NOT "x%APOLLO_BASE%" == "x" set JVM_FLAGS=%JVM_FLAGS% -Dapollo.base="%APOLLO_
 set JVM_FLAGS=%JVM_FLAGS% -Djava.util.logging.config.file="%JUL_CONFIG_FILE%"
 set JVM_FLAGS=%JVM_FLAGS% -classpath "%CLASSPATH%"
 
-"%_JAVACMD%" %JVM_FLAGS% org.apache.activemq.apollo.boot.Boot %BOOTDIRS% org.apache.activemq.apollo.cli.Apollo %*
+"%_JAVACMD%" %JVM_FLAGS% org.apache.activemq.apollo.boot.Boot "%BOOTDIRS%" org.apache.activemq.apollo.cli.Apollo %*
 
 :END
 endlocal
