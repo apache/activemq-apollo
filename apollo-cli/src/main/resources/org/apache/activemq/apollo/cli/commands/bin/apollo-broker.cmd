@@ -22,7 +22,7 @@ if "%APOLLO_HOME%"=="" set APOLLO_HOME=${home}
 
 if "%APOLLO_BASE%"=="" set APOLLO_BASE=%~dp0..
 
-%APOLLO_HOME%\bin\apollo %*
+"%APOLLO_HOME%\bin\apollo" %*
 
 :END
 endlocal
