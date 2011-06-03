@@ -47,10 +47,11 @@ echo.
 
 :RUN_JAVA
 
-set CLASSPATH=
-if NOT "x%APOLLO_BASE%" == "x" set CLASSPATH=%APOLLO_BASE%\etc
+set CLASSPATH=%APOLLO_HOME%\lib\apollo-boot.jar
+if NOT "x%APOLLO_BASE%" == "x" set CLASSPATH=%APOLLO_BASE%\etc;%CLASSPATH%
 
-for %%i in ("%APOLLO_HOME%\lib\*.jar") do call :ADD_CLASSPATH %%i
+set BOOTDIRS=%APOLLO_HOME%\lib
+if NOT "x%APOLLO_BASE%" == "x" set BOOTDIRS=%APOLLO_BASE%\lib:%BOOTDIRS%
 
 if "%JVM_FLAGS%" == "" set JVM_FLAGS=-server -Xmx1G
 
@@ -59,7 +60,7 @@ if "x%APOLLO_OPTS%" == "x" goto noAPOLLO_OPTS
 :noAPOLLO_OPTS
 
 if "x%APOLLO_DEBUG%" == "x" goto noDEBUG
-  set JVM_FLAGS=%JVM_FLAGS% -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspEND=n,address=5005
+  set JVM_FLAGS=%JVM_FLAGS% -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005
 :noDEBUG
 
 if "x%APOLLO_PROFILE%" == "x" goto noPROFILE
@@ -78,7 +79,7 @@ if NOT "x%APOLLO_BASE%" == "x" set JVM_FLAGS=%JVM_FLAGS% -Dapollo.base="%APOLLO_
 set JVM_FLAGS=%JVM_FLAGS% -Djava.util.logging.config.file="%JUL_CONFIG_FILE%"
 set JVM_FLAGS=%JVM_FLAGS% -classpath "%CLASSPATH%"
 
-"%_JAVACMD%" %JVM_FLAGS%  org.apache.activemq.apollo.cli.Apollo %*
+"%_JAVACMD%" %JVM_FLAGS% org.apache.activemq.apollo.boot.Boot "%BOOTDIRS%" org.apache.activemq.apollo.cli.Apollo %*
 
 :END
 endlocal

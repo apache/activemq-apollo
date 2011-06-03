@@ -764,7 +764,8 @@ A `web_admin` element may be configured with the following attributes:
 ## Managing Brokers
 
 The rest of this section's example assume that you have created a broker 
-instance under the `/var/lib/mybroker` directory.
+instance under the `/var/lib/mybroker` directory or `c:\mybroker` directory
+if your on windows.
 
 ### Running a Broker Instance in the Foreground
 
@@ -778,19 +779,41 @@ to the process.
 
 ### Managing a Background Broker Instance
 
-If you are on Unix, you can use `bin/apollo-broker-service` script
-to start the broker in the background.  Example:
+#### On Linux/Unix
 
-    /var/lib/mybroker/bin/apollo-broker-service start
+If you are on Unix, you can use the `bin/apollo-broker-service` script
+to manage the broker service.  This script is compatible with the
+`/etc/init.d` style scripts most Unix/Linux systems use to control
+background services.
 
-You can use the same script to check to see  if the broker is still 
-running.  Example:
+On a Ubuntu OS, you install the service and have it run on start 
+up by running:
 
-    /var/lib/mybroker/bin/apollo-broker-service status
-    
-You can stop the background broker by running:
+    sudo ln -s /var/lib/mybroker/bin/apollo-broker-service /etc/init.d/apollo
+    sudo update-rc.d apollo defaults
 
-    /var/lib/mybroker/bin/apollo-broker-service stop
+On a Redhat OS, you install the service and have it run on start 
+up by running:
+
+    sudo ln -s /var/lib/mybroker/bin/apollo-broker-service /etc/init.d/apollo
+    sudo chkconfig apollo --add
+
+On other Unixes, you install the service and have it run on start 
+up by running:
+
+    sudo ln -s /var/lib/mybroker/bin/apollo-broker-service /etc/init.d/apollo
+    sudo ln -s /etc/init.d/apollo /etc/rc0.d/K80apollo
+    sudo ln -s /etc/init.d/apollo /etc/rc1.d/K80apollo
+    sudo ln -s /etc/init.d/apollo /etc/rc3.d/S20apollo
+    sudo ln -s /etc/init.d/apollo /etc/rc5.d/S20apollo
+    sudo ln -s /etc/init.d/apollo /etc/rc6.d/K80apollo
+
+You can directly use the script to perform the following functions:
+
+* starting: `apollo-broker-service start`
+* stopping: `apollo-broker-service stop`
+* restarting: `apollo-broker-service restart`
+* checking the status: `apollo-broker-service status`
 
 When the broker is started in the background, it creates
 a `data/apollo.pid` file which contains the process id of
@@ -798,11 +821,38 @@ the process executing the broker.  This file is typically
 used to integrated with external watch dog process
 such as [Monit](http://mmonit.com/monit/).
 
+#### On Windows
+
+Windows users can install the broker as background service using the
+`bin\apollo-broker-service` executable.
+
+To install as a background service you would execute:
+
+    c:\mybroker\bin\apollo-broker-service install
+
+Uninstalling the service is done using:
+
+    c:\mybroker\bin\apollo-broker-service uninstall
+    
+You can now use the standard Windows service tools to control
+starting and stopping the broker or you can also use the
+same executable to:
+
+* start the service: `apollo-broker-service start`
+* stop the service: `apollo-broker-service stop`
+* check the status: `apollo-broker-service restart`
+
+If you want to customize the JVM options use to start the background
+service, you will need to edit the `bin\apollo-broker-service.xml`
+file.  All service console and event logging perform by the background
+service are stored under `log\apollo-broker-service.*`.
+
 ### Viewing Broker State
 
 ${project_name} provides a web based interface for administrators to inspect
 the runtime state of the Broker.  If your running the broker on your local
-machine, just open your web browser to [`http://localhost:61680`](http://localhost:61680).
+machine, just open your web browser to [`http://localhost:61680`](http://localhost:61680)
+or [`https://localhost:61681`](httsp://localhost:61681).
 
 The web interface will display the status of the the connectors and show
 attached connections.  It will also allow you to drill into each configured

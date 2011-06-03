@@ -17,14 +17,12 @@
 
 package org.apache.activemq.apollo.openwire
 
-import dto.OpenwireConnectionStatusDTO
 import OpenwireConstants._
 
 import org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
 import collection.mutable.{ListBuffer, HashMap}
 
-import AsciiBuffer._
 import org.apache.activemq.apollo.broker._
 import BufferConversions._
 import java.io.IOException
@@ -157,7 +155,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     outbound_sessions = new SinkMux[Command](connection.transport_sink.map {
       x:Command =>
         x.setCommandId(next_command_id)
-        info("sending frame: %s", x)
+        debug("sending frame: %s", x.toString)
         x
     }, dispatchQueue, OpenwireCodec)
     connection_session = new OverflowSink(outbound_sessions.open(dispatchQueue));
@@ -214,7 +212,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     }
     try {
       current_command = command
-      println("received: %s", command)
+      trace("received: %s", command)
       if (wire_format == null) {
         command match {
           case codec: OpenwireCodec =>
@@ -444,6 +442,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     var selector_expression:BooleanExpression = _
     var destination:Array[DestinationDTO] = _
 
+    override def exclusive = info.isExclusive
+    override def browser = info.isBrowser
+
     def attach = {
 
       if( info.getDestination == null ) fail("destination was not set")
@@ -530,14 +531,43 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
       def producer = p
       def consumer = ConsumerContext.this
+      var closed = false
 
       val outbound_session = outbound_sessions.open(producer.dispatch_queue)
 
       def downstream = outbound_session
 
       def close = {
-        outbound_sessions.close(outbound_session)
-        release
+
+        assert(producer.dispatch_queue.isExecuting)
+        if( !closed ) {
+          closed = true
+          if( browser ) {
+            // Then send the end of browse message.
+            var dispatch = new MessageDispatch
+            dispatch.setConsumerId(this.consumer.info.getConsumerId)
+            dispatch.setMessage(null)
+            dispatch.setDestination(null)
+
+            if( outbound_session.full ) {
+              // session is full so use an overflow sink so to hold the message,
+              // and then trigger closing the session once it empties out.
+              val sink = new OverflowSink(outbound_session)
+              sink.refiller = ^{
+                outbound_sessions.close(outbound_session)
+                release
+              }
+              sink.offer(dispatch)
+            } else {
+              outbound_session.offer(dispatch)
+              outbound_sessions.close(outbound_session)
+              release
+            }
+          } else {
+            outbound_sessions.close(outbound_session)
+            release
+          }
+        }
       }
 
       def remaining_capacity = outbound_session.remaining_capacity

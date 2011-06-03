@@ -44,7 +44,7 @@ To build ${project_name} maven has to be configured to use more memory
 
 ### A normal build
 
-    mvn -P download install
+    mvn install
 
 Once the build completes, you will find the binary distribution of 
 ${project_name} located in the `apollo-distro/target` directory.
@@ -55,18 +55,18 @@ ${project_name} located in the `apollo-distro/target` directory.
 The following avoids running all the unit test cases, we just skip the
 test running phase and not the building part
 
-    mvn -P download -Dtest=false install
+    mvn -Dtest=false install
 
 ### Using an IDE
 
 If you prefer to use an IDE then you can auto-generate the IDE's project
 files using maven plugins. e.g.
 
-    mvn -P download eclipse:eclipse
-  
-or
-
-    mvn -P download idea:idea
+    mvn eclipse:eclipse
+        
+or      
+        
+    mvn idea:idea
 
 ### Importing into Eclipse
 
@@ -79,7 +79,7 @@ on Windows).
 
 You can also get Maven to do this for you:
 
-    mvn -P download eclipse:add-maven-repo -Declipse.workspace=/path/to/the/workspace/ 
+    mvn eclipse:add-maven-repo -Declipse.workspace=/path/to/the/workspace/ 
 
 ### See Also
 

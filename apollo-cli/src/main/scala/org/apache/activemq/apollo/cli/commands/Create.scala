@@ -103,6 +103,13 @@ class Create extends Action {
       if( IS_WINDOWS ) {
         target = bin / "apollo-broker.cmd"
         write("bin/apollo-broker.cmd", target, true)
+
+        target = bin / "apollo-broker-service.exe"
+        write("bin/apollo-broker-service.exe", target)
+
+        target = bin / "apollo-broker-service.xml"
+        write("bin/apollo-broker-service.xml", target, true)
+
       } else {
         target = bin / "apollo-broker"
         write("bin/apollo-broker", target, true)
@@ -124,29 +131,38 @@ class Create extends Action {
 
       val home = new File(System.getProperty("apollo.home"))
 
+      println("")
       println("You can now start the broker by executing:  ")
       println("")
-      println("   %s run".format((bin/"apollo-broker").getCanonicalPath))
+      println("   \"%s\" run".format((bin/"apollo-broker").getCanonicalPath))
+
+      val service = bin / "apollo-broker-service"
+      println("")
+      
       if( !IS_WINDOWS ) {
-        val service = bin / "apollo-broker-service"
-        println("")
 
         // Does it look like we are on a System V init system?
         if( new File("/etc/init.d/").isDirectory ) {
 
-
           println("Or you can setup the broker as system service and run it in the background:")
           println("")
-          println("   sudo ln -s %s /etc/init.d/".format(service.getCanonicalPath))
+          println("   sudo ln -s \"%s\" /etc/init.d/".format(service.getCanonicalPath))
           println("   /etc/init.d/apollo-broker-service start")
 
         } else {
 
           println("Or you can run the broker in the background using:")
           println("")
-          println("   %s start".format(service.getCanonicalPath))
+          println("   \"%s\" start".format(service.getCanonicalPath))
 
         }
+
+      } else {
+      
+        println("Or you can setup the broker as system service and run it in the background:")
+        println("")
+        println("   \"%s\" install".format(service.getCanonicalPath))
+        println("   \"%s\" start".format(service.getCanonicalPath))
 
       }
       println("")
@@ -182,11 +198,17 @@ class Create extends Action {
       var content = new String(out.toByteArray, "UTF-8")
 
       if( filter ) {
-        content = content.replaceAll(Pattern.quote("${user}"), System.getProperty("user.name",""))
-        content = content.replaceAll(Pattern.quote("${host}"), Matcher.quoteReplacement(host))
-        content = content.replaceAll(Pattern.quote("${version}"), Matcher.quoteReplacement(Broker.version))
-        val home = new File(System.getProperty("apollo.home"))
-        content = content.replaceAll(Pattern.quote("${home}"), Matcher.quoteReplacement(home.getCanonicalPath))
+        def replace(key:String, value:String) = {
+          content = content.replaceAll(Pattern.quote(key), Matcher.quoteReplacement(value))
+        }
+        def cp(value:String) = new File(value).getCanonicalPath
+
+        replace("${user}", System.getProperty("user.name",""))
+        replace("${host}", host)
+        replace("${version}", Broker.version)
+        replace("${home}", cp(System.getProperty("apollo.home")))
+        replace("${base}", directory.getCanonicalPath)
+        replace("${java.home}", cp(System.getProperty("java.home")))
       }
 
       // and then writing out in the new target encoding.

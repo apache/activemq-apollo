@@ -128,11 +128,13 @@ object HelperTrait {
   long_key_conf.setAllowCreate(true)
   long_key_conf.setTransactional(true);
   long_key_conf.setBtreeComparator(new LongComparator)
+  long_key_conf.setSortedDuplicates(false);
 
   val long_long_key_conf = new DatabaseConfig();
   long_long_key_conf.setAllowCreate(true)
   long_long_key_conf.setTransactional(true);
   long_long_key_conf.setBtreeComparator(new LongLongComparator)
+  long_long_key_conf.setSortedDuplicates(false);
 
   final class RichDatabase(val db: Database) extends Proxy {
     def self: Any = db

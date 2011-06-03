@@ -55,7 +55,6 @@
         
         <!-- the logging apis used -->
         <include>org.slf4j:slf4j-api</include>
-        <include>org.slf4j:jul-to-slf4j</include>
         <include>commons-logging:commons-logging</include>
         <include>org.slf4j:slf4j-log4j12</include>
         <include>log4j:log4j</include>
@@ -66,8 +65,20 @@
       </includes>
       <excludes>
         <exclude>org.apache.activemq:apollo-web:pom</exclude>
+        <exclude>org.apache.activemq:apollo-boot</exclude>
       </excludes>
     </dependencySet>
+    
+    <dependencySet>
+      <outputDirectory>/lib</outputDirectory>
+      <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
+      <unpack>false</unpack>
+      <useTransitiveDependencies>false</useTransitiveDependencies>
+      <includes>
+        <include>org.apache.activemq:apollo-boot</include>
+      </includes>
+    </dependencySet>
+    
   </dependencySets>
 
   <fileSets>

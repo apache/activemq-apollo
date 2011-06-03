@@ -23,11 +23,7 @@
 	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 	version="2.5">
 
-  <display-name>Scalate Sample Local Wiki</display-name>
-
-  <description>
-    Scalate Sample Local Wiki
-  </description>
+  <display-name>Website</display-name>
 
   <filter>
     <filter-name>TemplateEngineFilter</filter-name>
