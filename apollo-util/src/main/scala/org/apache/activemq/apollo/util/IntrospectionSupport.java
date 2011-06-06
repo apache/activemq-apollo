@@ -280,7 +280,7 @@ public final class IntrospectionSupport {
             	}
             }
             
-            if( fields!=null ) {
+            if (fields!=null && fields.length > 0) {
                 map.keySet().retainAll(Arrays.asList(fields));
             }
            
