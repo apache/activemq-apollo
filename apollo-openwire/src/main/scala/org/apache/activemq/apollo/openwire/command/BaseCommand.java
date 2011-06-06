@@ -66,7 +66,8 @@ public abstract class BaseCommand implements Command {
     }
     
     public String toString(Map<String, Object>overrideFields) {
-    	return IntrospectionSupport.toString(this, BaseCommand.class, overrideFields);
+    	return IntrospectionSupport.simpleName(this.getClass()) + " " +
+               IntrospectionSupport.toString(this, BaseCommand.class, overrideFields);
     }
     
     public boolean isWireFormatInfo() {
