@@ -301,6 +301,7 @@ class BDBClient(store: BDBStore) {
         val current_key:(Long,Long)=key
         if( current_key._1 == queue_key ) {
           val queueEntry:QueueEntryRecord = value
+          entries_db.delete(tx, key)
           decrement_message_reference(ctx, queueEntry.message_key)
           true // keep cursoring..
         } else {
