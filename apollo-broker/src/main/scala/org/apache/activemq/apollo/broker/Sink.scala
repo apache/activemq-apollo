@@ -183,6 +183,10 @@ trait SessionSink[T] extends Sink[T] {
   def remaining_capacity:Int
 }
 
+object SinkMux {
+  val default_session_max_credits = System.getProperty("apollo.default_session_max_credits", ""+(1024*32)).toInt
+}
+
 /**
  *  <p>
  * A SinkMux multiplexes access to a target sink so that multiple
@@ -197,7 +201,6 @@ trait SessionSink[T] extends Sink[T] {
 class SinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue, val sizer:Sizer[T]) {
 
   var sessions = HashSet[Session[T]]()
-  var session_max_credits = 1024*32;
 
   val overflow = new OverflowSink[(Session[T],T)](downstream.map(_._2)) {
     // Once a value leaves the overflow, then we can credit the
@@ -234,13 +237,13 @@ class SinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue, val s
     sessions.foreach(_.credit_adder.resume)
   }
 
-  def open(producer_queue:DispatchQueue):SessionSink[T] = {
+  def open(producer_queue:DispatchQueue, credits:Int=SinkMux.default_session_max_credits):SessionSink[T] = {
     val session = new Session[T](producer_queue, 0, this)
     consumer_queue <<| ^{
       if( overflow.full ) {
         session.credit_adder.suspend
       }
-      session.credit_adder.merge(session_max_credits);
+      session.credit_adder.merge(credits);
       sessions += session
     }
     session
@@ -267,7 +270,6 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[
 
   var refiller:Runnable = NOOP
 
-  private def session_max_credits = mux.session_max_credits
   private def sizer = mux.sizer
   private def downstream = mux.source
 
@@ -285,8 +287,7 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[
     credits += value;
     if( closed || credits <= 0 ) {
       _full = true
-    } else if( credits==session_max_credits ) {
-      // refill once we are empty.
+    } else if( credits >= 0 ) {
       if( _full ) {
         _full  = false
         refiller.run

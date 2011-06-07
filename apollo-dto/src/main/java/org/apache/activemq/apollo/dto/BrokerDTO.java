@@ -80,6 +80,6 @@ public class BrokerDTO {
     @XmlElement(name="service")
     public List<String> services = new ArrayList<String>();
 
-
+    @XmlAttribute(name="sticky_dispatching")
     public Boolean sticky_dispatching;
 }
