@@ -16,17 +16,11 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
 
-import javax.xml.bind.JAXBException;
-import javax.xml.stream.XMLStreamException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.Properties;
 
 /**
  *
@@ -37,7 +31,13 @@ public class JsonCodec {
     private static ObjectMapper mapper = new ObjectMapper();
 
     static public <T> T decode(Buffer buffer, Class<T> type) throws IOException {
-        return mapper.readValue(buffer.in(), type);
+        ClassLoader original = Thread.currentThread().getContextClassLoader();
+        Thread.currentThread().setContextClassLoader(JsonCodec.class.getClassLoader());
+        try {
+            return mapper.readValue(buffer.in(), type);
+        } finally {
+            Thread.currentThread().setContextClassLoader(original);
+        }
     }
 
     static public Buffer encode(Object value) throws IOException {
