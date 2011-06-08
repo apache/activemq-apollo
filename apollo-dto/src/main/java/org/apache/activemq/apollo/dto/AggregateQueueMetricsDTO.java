@@ -30,6 +30,9 @@ import javax.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class AggregateQueueMetricsDTO extends QueueMetricsDTO {
 
+    /**
+     * The number of queues which where aggregated.
+     */
     @XmlAttribute(name="queues")
     public int queues;
 
