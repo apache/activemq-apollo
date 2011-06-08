@@ -78,4 +78,7 @@ public abstract class StoreStatusDTO {
     @XmlElement(name="flush_latency")
     public TimeMetricDTO flush_latency;
 
+    @XmlElement(name="pending_stores")
+    public int pending_stores;
+
 }

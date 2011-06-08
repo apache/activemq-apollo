@@ -257,22 +257,8 @@ class JDBM2Store(var config:JDBM2StoreDTO) extends DelayingStoreSupport {
 
   def get_store_status(callback:(StoreStatusDTO)=>Unit) = dispatch_queue {
     val rc = new JDBM2StoreStatusDTO
-
-    rc.state = service_state.toString
-    rc.state_since = service_state.since
-
-    rc.flush_latency = flush_latency
-    rc.message_load_latency = message_load_latency
+    fill_store_status(rc)
     rc.message_load_batch_size = message_load_batch_size
-
-//    rc.journal_append_latency = client.metric_journal_append
-//    rc.index_update_latency = client.metric_index_update
-
-    rc.canceled_message_counter = metric_canceled_message_counter
-    rc.canceled_enqueue_counter = metric_canceled_enqueue_counter
-    rc.flushed_message_counter = metric_flushed_message_counter
-    rc.flushed_enqueue_counter = metric_flushed_enqueue_counter
-
     callback(rc)
   }
 

@@ -23,7 +23,7 @@ import org.fusesource.hawtdispatch._
 import java.util.concurrent._
 import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch.{BaseRetained, ListEventAggregator}
-import org.apache.activemq.apollo.dto.{TimeMetricDTO, IntMetricDTO}
+import org.apache.activemq.apollo.dto.{StoreStatusDTO, TimeMetricDTO, IntMetricDTO}
 
 /**
  * <p>
@@ -224,6 +224,19 @@ trait DelayingStoreSupport extends Store with BaseService {
   var canceled_add_message:Long = 0
   var canceled_enqueue:Long = 0
 
+  protected def fill_store_status(rc: StoreStatusDTO) {
+    rc.state = service_state.toString
+    rc.state_since = service_state.since
+
+    rc.flush_latency = flush_latency
+    rc.message_load_latency = message_load_latency
+
+    rc.canceled_message_counter = metric_canceled_message_counter
+    rc.canceled_enqueue_counter = metric_canceled_enqueue_counter
+    rc.flushed_message_counter = metric_flushed_message_counter
+    rc.flushed_enqueue_counter = metric_flushed_enqueue_counter
+    rc.pending_stores = pendingStores.size
+  }
 
   def key(x:QueueEntryRecord) = (x.queue_key, x.entry_seq)
 
@@ -238,6 +251,7 @@ trait DelayingStoreSupport extends Store with BaseService {
   var next_batch_id = new IntCounter(1)
 
   def drain_uows = {
+    dispatch_queue.assertExecuting()
     uow_source.getData.foreach { uow =>
 
       delayedUOWs.put(uow.uow_id, uow)
@@ -307,6 +321,7 @@ trait DelayingStoreSupport extends Store with BaseService {
   var flush_latency = flush_latency_counter(false)
 
   def drain_flushes:Unit = {
+    dispatch_queue.assertExecuting()
 
     if( !service_state.is_started ) {
       return
@@ -329,10 +344,10 @@ trait DelayingStoreSupport extends Store with BaseService {
       flush_latency_counter.start { end=>
         flush_source.suspend
         store(uows) {
+          dispatch_queue.assertExecuting()
           flush_source.resume
           end()
           uows.foreach { uow=>
-
             uow.actions.foreach { case (msg, action) =>
               if( action.messageRecord !=null ) {
                 metric_flushed_message_counter += 1

@@ -41,6 +41,4 @@ public class BDBStoreStatusDTO extends StoreStatusDTO {
     @XmlElement(name="message_load_batch_size")
     public IntMetricDTO message_load_batch_size;
 
-    @XmlElement(name="pending_stores")
-    public int pending_stores;
 }
