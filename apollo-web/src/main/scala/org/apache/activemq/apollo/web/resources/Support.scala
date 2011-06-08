@@ -30,7 +30,6 @@ import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.dto._
 import java.util.{Arrays, Collections}
 import org.fusesource.hawtdispatch._
-import java.net.URI
 import org.fusesource.scalate.{NoValueSetException, RenderContext}
 import com.sun.jersey.core.util.Base64
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
@@ -44,6 +43,7 @@ import org.apache.activemq.apollo.util.Success._
 import org.apache.activemq.apollo.util.Failure._
 import org.apache.activemq.apollo.util._
 import javax.management.remote.rmi._RMIConnection_Stub
+import java.net.{InetSocketAddress, URI}
 
 object Resource {
 
@@ -175,8 +175,8 @@ abstract class Resource(parent:Resource=null) extends Logging {
       func(security_context)
     } else {
       security_context = new SecurityContext
-      security_context.local_address = http_request.getLocalAddr+":"+http_request.getLocalPort
-      security_context.remote_address = http_request.getRemoteAddr+":"+http_request.getRemotePort
+      security_context.local_address = new InetSocketAddress(http_request.getLocalAddr, http_request.getLocalPort)
+      security_context.remote_address = new InetSocketAddress(http_request.getRemoteAddr, http_request.getRemotePort)
 
       var auth_header = http_request.getHeader(HEADER_AUTHORIZATION)
       if (auth_header != null && auth_header.length > 0) {

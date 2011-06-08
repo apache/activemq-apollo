@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.transport;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.net.URI;
 
 import org.apache.activemq.apollo.util.Service;
@@ -87,12 +88,12 @@ public interface Transport extends Service {
     /**
      * @return the remote address for this connection
      */
-    String getRemoteAddress();
+    SocketAddress getRemoteAddress();
 
     /**
      * @return the remote address for this connection
      */
-    String getLocalAddress();
+    SocketAddress getLocalAddress();
 
     /**
      * Indicates if the transport can handle faults

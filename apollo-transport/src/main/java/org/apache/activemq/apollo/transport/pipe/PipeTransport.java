@@ -23,6 +23,7 @@ import org.fusesource.hawtdispatch.*;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.net.URI;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,7 +38,7 @@ public class PipeTransport implements Transport {
     final private PipeTransportServer server;
     PipeTransport peer;
     private TransportListener listener;
-    private String remoteAddress;
+    private SocketAddress remoteAddress;
     private AtomicBoolean stopping = new AtomicBoolean();
     private String name;
     private boolean marshal;
@@ -72,16 +73,16 @@ public class PipeTransport implements Transport {
         server.dispatchQueue.execute(new Runnable(){
             public void run() {
                 dispatchSource = Dispatch.createSource(EventAggregators.linkedList(), dispatchQueue);
-                dispatchSource.setEventHandler(new Runnable(){
+                dispatchSource.setEventHandler(new Runnable() {
                     public void run() {
                         try {
                             final LinkedList<Object> commands = dispatchSource.getData();
                             for (Object o : commands) {
 
-                                if(o == EOF_TOKEN) {
+                                if (o == EOF_TOKEN) {
                                     throw new EOFException();
                                 }
-                                readCounter ++;
+                                readCounter++;
                                 listener.onTransportCommand(o);
                             }
 
@@ -190,11 +191,11 @@ public class PipeTransport implements Transport {
         return readCounter;
     }
 
-    public String getLocalAddress() {
+    public SocketAddress getLocalAddress() {
         return remoteAddress;
     }
 
-    public String getRemoteAddress() {
+    public SocketAddress getRemoteAddress() {
         return remoteAddress;
     }
 
@@ -220,8 +221,13 @@ public class PipeTransport implements Transport {
         return "pipe";
     }
 
-    public void setRemoteAddress(String remoteAddress) {
-        this.remoteAddress = remoteAddress;
+    public void setRemoteAddress(final String remoteAddress) {
+        this.remoteAddress = new SocketAddress() {
+            @Override
+            public String toString() {
+                return remoteAddress;
+            }
+        };
         if (name == null) {
             name = remoteAddress;
         }

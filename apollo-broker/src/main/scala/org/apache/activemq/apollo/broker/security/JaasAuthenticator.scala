@@ -91,6 +91,9 @@ class JaasAuthenticator(val config: AuthenticationDTO, val log:Log) extends Auth
                 case x: NameCallback => x.setName(security_ctx.user)
                 case x: PasswordCallback => x.setPassword(Option(security_ctx.password).getOrElse("").toCharArray)
                 case x: CertificateCallback => x.setCertificates(security_ctx.certificates)
+                case x: SocketAddressCallback =>
+                  x.local = security_ctx.local_address
+                  x.remote = security_ctx.remote_address
                 case _ => throw new UnsupportedCallbackException(callback)
               }
           }

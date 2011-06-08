@@ -77,8 +77,8 @@ public class TcpTransport extends JavaBaseService implements Transport {
     class CONNECTED extends SocketState {
 
         public CONNECTED() {
-            localAddress = channel.socket().getLocalSocketAddress().toString();
-            remoteAddress = channel.socket().getRemoteSocketAddress().toString();
+            localAddress = channel.socket().getLocalSocketAddress();
+            remoteAddress = channel.socket().getRemoteSocketAddress();
         }
 
         void onStop(Runnable onCompleted) {
@@ -195,8 +195,8 @@ public class TcpTransport extends JavaBaseService implements Transport {
     int traffic_class = IPTOS_THROUGHPUT;
 
     protected RateLimitingChannel rateLimitingChannel;
-    String localAddress;
-    String remoteAddress;
+    SocketAddress localAddress;
+    SocketAddress remoteAddress;
 
     class RateLimitingChannel implements ReadableByteChannel, WritableByteChannel {
 
@@ -606,11 +606,11 @@ public class TcpTransport extends JavaBaseService implements Transport {
         }
     }
 
-    public String getLocalAddress() {
+    public SocketAddress getLocalAddress() {
         return localAddress;
     }
 
-    public String getRemoteAddress() {
+    public SocketAddress getRemoteAddress() {
         return remoteAddress;
     }
 

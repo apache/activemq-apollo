@@ -77,6 +77,9 @@ class Create extends Action {
       target = etc / "login.config"
       write("etc/login.config", target)
 
+      target = etc / "black-list.txt"
+      write("etc/black-list.txt", target)
+
       // Generate a keystore with a new key
       println("Generating ssl keystore...")
       val ssl = system(etc, Array(

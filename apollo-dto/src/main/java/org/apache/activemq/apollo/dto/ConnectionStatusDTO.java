@@ -75,4 +75,9 @@ public class ConnectionStatusDTO extends ServiceStatusDTO {
 	@XmlAttribute(name="remote_address")
 	public String remote_address;
 
+    /**
+     * The local address of the connection
+     */
+	@XmlAttribute(name="local_address")
+	public String local_address;
 }

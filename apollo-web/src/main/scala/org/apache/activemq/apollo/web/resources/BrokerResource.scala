@@ -77,7 +77,7 @@ case class BrokerResource() extends Resource {
 
         broker.connections.foreach { case (id,connection) =>
           // TODO: may need to sync /w connection's dispatch queue
-          result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress ) )
+          result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress.toString ) )
         }
         result
 
@@ -215,7 +215,7 @@ case class BrokerResource() extends Resource {
     val link = new LinkDTO()
     link.kind = "connection"
     link.id = connection.id.toString
-    link.label = connection.transport.getRemoteAddress
+    link.label = connection.transport.getRemoteAddress.toString
     link
   }
 

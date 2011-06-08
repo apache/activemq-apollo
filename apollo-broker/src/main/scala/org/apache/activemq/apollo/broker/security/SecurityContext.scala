@@ -24,6 +24,7 @@ import org.apache.activemq.apollo.util.OptionSupport._
 import org.apache.activemq.jaas.{GroupPrincipal, UserPrincipal}
 import org.apache.activemq.apollo.dto.PrincipalDTO
 import javax.security.auth.login.LoginContext
+import java.net.SocketAddress
 
 /**
  * <p>
@@ -36,8 +37,8 @@ class SecurityContext {
   var user:String = _
   var password:String = _
   var certificates:Array[X509Certificate] = _
-  var local_address:String = _
-  var remote_address:String = _
+  var local_address:SocketAddress = _
+  var remote_address:SocketAddress = _
 
   var login_context:LoginContext = _
 

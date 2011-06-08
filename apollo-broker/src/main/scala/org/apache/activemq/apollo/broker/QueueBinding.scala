@@ -24,6 +24,7 @@ import org.apache.activemq.apollo.util.path.Path
 import java.lang.String
 import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
 import Buffer._
+import javax.management.remote.rmi._RMIConnection_Stub
 
 /**
  * <p>
@@ -275,7 +276,7 @@ object TempQueueBinding extends QueueBinding.Provider {
 class TempQueueBinding(val key:AnyRef, val id:String) extends QueueBinding {
   import TempQueueBinding._
 
-  def this(c:DeliveryConsumer) = this(c, c.connection.map(_.transport.getRemoteAddress).getOrElse("known") )
+  def this(c:DeliveryConsumer) = this(c, c.connection.map(_.transport.getRemoteAddress.toString).getOrElse("known") )
 
   val destination = null
   def binding_kind = TEMP_KIND

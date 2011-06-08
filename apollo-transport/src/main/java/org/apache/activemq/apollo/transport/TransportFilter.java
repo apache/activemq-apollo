@@ -19,6 +19,7 @@ package org.apache.activemq.apollo.transport;
 import org.fusesource.hawtdispatch.DispatchQueue;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.net.URI;
 
 /**
@@ -143,11 +144,11 @@ public class TransportFilter implements TransportListener, Transport {
         return next.narrow(target);
     }
 
-    public String getRemoteAddress() {
+    public SocketAddress getRemoteAddress() {
         return next.getRemoteAddress();
     }
 
-    public String getLocalAddress() {
+    public SocketAddress getLocalAddress() {
         return next.getLocalAddress();
     }
 
