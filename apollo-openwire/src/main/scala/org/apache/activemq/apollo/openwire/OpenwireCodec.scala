@@ -202,4 +202,7 @@ class OpenwireCodec extends ProtocolCodec {
     rc.asInstanceOf[Command]
   }
 
+  def getLastWriteSize = 0
+
+  def getLastReadSize = 0
 }
