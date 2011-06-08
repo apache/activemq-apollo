@@ -133,6 +133,9 @@ class AnyProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec {
 
   def protocol = "any"
 
+  def getLastWriteSize = 0
+
+  def getLastReadSize = 0
 }
 
 /**

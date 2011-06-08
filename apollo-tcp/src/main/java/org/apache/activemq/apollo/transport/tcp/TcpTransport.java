@@ -47,8 +47,6 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
     private static final Logger LOG = LoggerFactory.getLogger(TcpTransport.class);
 
-    protected Map<String, Object> socketOptions;
-
     abstract static class SocketState {
         void onStop(Runnable onCompleted) {
         }
@@ -186,6 +184,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
     int max_read_rate;
     int max_write_rate;
     int receive_buffer_size = 1024*64;
+    int send_buffer_size = 1024*64;
 
 
     public static final int IPTOS_LOWCOST = 0x02;
@@ -357,6 +356,12 @@ public class TcpTransport extends JavaBaseService implements Transport {
         try {
             socket.setReceiveBufferSize(receive_buffer_size);
         } catch (SocketException e) {
+            e.printStackTrace();
+        }
+        try {
+            socket.setSendBufferSize(send_buffer_size);
+        } catch (SocketException e) {
+            e.printStackTrace();
         }
     }
 
@@ -708,10 +713,6 @@ public class TcpTransport extends JavaBaseService implements Transport {
         return false;
     }
 
-    public void setSocketOptions(Map<String, Object> socketOptions) {
-        this.socketOptions = socketOptions;
-    }
-
     public boolean isUseLocalHost() {
         return useLocalHost;
     }
@@ -787,5 +788,13 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
     public void setReceive_buffer_size(int receive_buffer_size) {
         this.receive_buffer_size = receive_buffer_size;
+    }
+
+    public int getSend_buffer_size() {
+        return send_buffer_size;
+    }
+
+    public void setSend_buffer_size(int send_buffer_size) {
+        this.send_buffer_size = send_buffer_size;
     }
 }

@@ -36,6 +36,18 @@ public class ConnectionStatusDTO extends ServiceStatusDTO {
     /**
      * The number of bytes that have been read from the connection.
      */
+	@XmlAttribute(name="last_read_size")
+	public long last_read_size;
+
+    /**
+     * The number of bytes that have been written to the connection.
+     */
+	@XmlAttribute(name="last_write_size")
+	public long last_write_size;
+
+    /**
+     * The number of bytes that have been read from the connection.
+     */
 	@XmlAttribute(name="read_counter")
 	public long read_counter;
 

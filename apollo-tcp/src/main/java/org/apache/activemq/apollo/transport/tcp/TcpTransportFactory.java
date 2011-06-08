@@ -63,14 +63,12 @@ public class TcpTransportFactory implements TransportFactory.Provider {
 
         Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
         URI localLocation = getLocalLocation(uri);
+        configure(transport, options);
+        verify(transport, options);
 
         transport.connecting(uri, localLocation);
 
-        Map<String, Object> socketOptions = IntrospectionSupport.extractProperties(options, "socket.");
-        transport.setSocketOptions(socketOptions);
-
-        configure(transport, options);
-        return verify(transport, options);
+        return transport;
     }
 
     /**

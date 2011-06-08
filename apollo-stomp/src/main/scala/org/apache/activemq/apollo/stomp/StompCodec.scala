@@ -169,6 +169,7 @@ class StompCodec extends ProtocolCodec {
   var write_buffer = ByteBuffer.allocate(0)
   var write_direct:ZeroCopyBuffer = null
   var write_direct_pos = 0
+  var last_write_io_size = 0
 
   def full = next_write_direct!=null || next_write_buffer.size >= (write_buffer_size >> 1)
   def is_empty = write_buffer.remaining == 0 && write_direct==null
@@ -176,12 +177,13 @@ class StompCodec extends ProtocolCodec {
   def setWritableByteChannel(channel: WritableByteChannel) = {
     this.write_channel = channel
     if( this.write_channel.isInstanceOf[SocketChannel] ) {
-      this.write_channel.asInstanceOf[SocketChannel].socket().setSendBufferSize(write_buffer_size);
+      write_buffer_size = this.write_channel.asInstanceOf[SocketChannel].socket().getSendBufferSize
     }
   }
 
   def getWriteCounter = write_counter
 
+  def getLastWriteSize = last_write_io_size
 
   def write(command: Any):ProtocolCodec.BufferState =  {
     if ( full) {
@@ -253,7 +255,8 @@ class StompCodec extends ProtocolCodec {
 
     // if we have a pending write that is being sent over the socket...
     if ( write_buffer.remaining() != 0 ) {
-      write_counter += write_channel.write(write_buffer)
+      last_write_io_size = write_channel.write(write_buffer)
+      write_counter += last_write_io_size
     }
     if ( write_buffer.remaining() == 0 && write_direct!=null ) {
       val count = write_direct.read(write_direct_pos, write_channel)
@@ -305,6 +308,8 @@ class StompCodec extends ProtocolCodec {
   var read_end = 0
   var read_start = 0
 
+  var last_read_io_size = 0
+
   var read_direct:ZeroCopyBuffer = null
   var read_direct_pos = 0
 
@@ -325,6 +330,8 @@ class StompCodec extends ProtocolCodec {
   }
 
   def getReadCounter = read_counter
+
+  def getLastReadSize = last_read_io_size
 
   override def read():Object = {
 
@@ -371,13 +378,13 @@ class StompCodec extends ProtocolCodec {
 
           // Try to fill the buffer with data from the socket..
           var p = read_buffer.position()
-          var count = read_channel.read(read_buffer)
-          if (count == -1) {
+          last_read_io_size = read_channel.read(read_buffer)
+          if (last_read_io_size == -1) {
               throw new EOFException("Peer disconnected")
-          } else if (count == 0) {
+          } else if (last_read_io_size == 0) {
               return null
           }
-          read_counter += count
+          read_counter += last_read_io_size
       }
 
       command = next_action(read_buffer)

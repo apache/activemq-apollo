@@ -31,6 +31,7 @@ import java.net.*;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -192,7 +193,7 @@ public class TcpTransportServer implements TransportServer {
     protected final void handleSocket(SocketChannel socket) throws Exception {
         TcpTransport transport = createTransport();
         if (transportOptions != null) {
-            IntrospectionSupport.setProperties(transport, transportOptions);
+            IntrospectionSupport.setProperties(transport, new HashMap<String,String>(transportOptions) );
         }
         transport.connected(socket);
         listener.onAccept(transport);

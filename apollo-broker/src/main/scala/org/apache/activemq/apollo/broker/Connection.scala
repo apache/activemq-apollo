@@ -146,6 +146,8 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
     if( wf!=null ) {
       result.write_counter = wf.getWriteCounter
       result.read_counter = wf.getReadCounter
+      result.last_read_size = wf.getLastReadSize
+      result.last_write_size = wf.getLastWriteSize
     }
     result
   }
