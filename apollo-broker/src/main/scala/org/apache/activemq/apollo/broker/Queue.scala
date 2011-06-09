@@ -90,11 +90,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   //
 
   /**
-   *  The amount of memory buffer space for receiving messages.
-   */
-  def tune_producer_buffer = config.producer_buffer.getOrElse(256*1024)
-
-  /**
    *  The amount of memory buffer space for the queue..
    */
   def tune_queue_buffer = config.queue_buffer.getOrElse(32*1024)
@@ -468,11 +463,12 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
 
     override def producer = p
 
-    val session = session_manager.open(producer.dispatch_queue)
+    val session_max = producer.send_buffer_size
+    val session = session_manager.open(producer.dispatch_queue, session_max)
 
     dispatch_queue {
       inbound_sessions += this
-      addCapacity( tune_producer_buffer )
+      addCapacity( session_max )
     }
 
     def remaining_capacity = session.remaining_capacity
@@ -480,7 +476,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
     def close = {
       session_manager.close(session)
       dispatch_queue {
-        addCapacity( -tune_producer_buffer )
+        addCapacity( -session_max )
         inbound_sessions -= this
       }
       release
@@ -592,6 +588,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
 
   override def connection:Option[BrokerConnection] = None
 
+  override def send_buffer_size = tune_queue_buffer
 
   /////////////////////////////////////////////////////////////////////
   //

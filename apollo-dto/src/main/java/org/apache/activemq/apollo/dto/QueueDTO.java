@@ -37,12 +37,6 @@ public class QueueDTO extends StringIdDTO {
     public Boolean unified;
 
     /**
-     *  The amount of memory buffer space for receiving messages.
-     */
-    @XmlAttribute(name="producer_buffer")
-    public Integer producer_buffer;
-
-    /**
      *  The amount of memory buffer space for the queue..
      */
     @XmlAttribute(name="queue_buffer")

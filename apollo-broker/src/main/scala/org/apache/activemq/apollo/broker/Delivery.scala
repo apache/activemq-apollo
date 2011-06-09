@@ -39,6 +39,8 @@ trait DeliveryProducer {
 
   def connection:Option[BrokerConnection] = None
 
+  def send_buffer_size = 64*1024
+
   def collocate(value:DispatchQueue):Unit = {
     if( value.getTargetQueue ne dispatch_queue.getTargetQueue ) {
       debug("co-locating %s with %s", dispatch_queue.getLabel, value.getLabel);
@@ -56,6 +58,8 @@ trait DeliveryProducer {
 trait DeliveryConsumer extends Retained {
 
   def connection:Option[BrokerConnection] = None
+
+  def receive_buffer_size = 64*1024
 
   def browser = false
   def exclusive = false

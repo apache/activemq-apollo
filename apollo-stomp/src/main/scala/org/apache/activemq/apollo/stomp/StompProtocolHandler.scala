@@ -253,6 +253,7 @@ class StompProtocolHandler extends ProtocolHandler {
     val dispatch_queue = StompProtocolHandler.this.dispatchQueue
 
     override def connection = Some(StompProtocolHandler.this.connection)
+    override def receive_buffer_size = codec.write_buffer_size
 
     def is_persistent = false
 
@@ -281,7 +282,7 @@ class StompProtocolHandler extends ProtocolHandler {
       def consumer = StompConsumer.this
       var closed = false
 
-      val session = session_manager.open(producer.dispatch_queue)
+      val session = session_manager.open(producer.dispatch_queue, codec.write_buffer_size)
 
       def remaining_capacity = session.remaining_capacity
 
@@ -373,6 +374,8 @@ class StompProtocolHandler extends ProtocolHandler {
 
   var destination_parser = Stomp.destination_parser
 
+  var codec:StompCodec = _
+
   implicit def toDestinationDTO(value:AsciiBuffer):Array[DestinationDTO] = {
     val rc = destination_parser.decode_destination(value.toString)
     if( rc==null ) {
@@ -385,7 +388,7 @@ class StompProtocolHandler extends ProtocolHandler {
     super.set_connection(connection)
     import collection.JavaConversions._
 
-    val codec = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
+    codec = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
     config = connection.connector.config.protocols.find( _.isInstanceOf[StompDTO]).map(_.asInstanceOf[StompDTO]).getOrElse(new StompDTO)
 
     protocol_filters = ProtocolFilter.create_filters(config.protocol_filters.toList, this)
@@ -758,6 +761,7 @@ class StompProtocolHandler extends ProtocolHandler {
         // create the producer route...
 
         val route = new DeliveryProducerRoute(host.router) {
+          override def send_buffer_size = codec.read_buffer_size
           override def connection = Some(StompProtocolHandler.this.connection)
           override def dispatch_queue = queue
 
