@@ -33,22 +33,4 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class OpenwireConnectionStatusDTO extends ConnectionStatusDTO {
 
-    /**
-     * The version of the STOMP protocol being used.
-     */
-	@XmlAttribute
-	public int protocol_version;
-
-    /**
-     * The connected user
-     */
-	@XmlAttribute
-	public String user;
-
-    /**
-     * What the connection is currently waiting on
-     */
-    @XmlAttribute(name="waiting_on")
-	public String waiting_on;
-
 }

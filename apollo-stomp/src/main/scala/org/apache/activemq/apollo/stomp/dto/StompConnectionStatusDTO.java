@@ -33,29 +33,4 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class StompConnectionStatusDTO extends ConnectionStatusDTO {
 
-    /**
-     * The version of the STOMP protocol being used.
-     */
-	@XmlAttribute
-	public String protocol_version;
-
-    /**
-     * The connected user
-     */
-	@XmlAttribute
-	public String user;
-
-    /**
-     * What the connection is currently waiting on
-     */
-    @XmlAttribute(name="waiting_on")
-	public String waiting_on;
-
-    /**
-     * Opens subscriptions that the connection has created.
-     */
-    @XmlAttribute(name="subscription_count")
-	public int subscription_count;
-
-
 }

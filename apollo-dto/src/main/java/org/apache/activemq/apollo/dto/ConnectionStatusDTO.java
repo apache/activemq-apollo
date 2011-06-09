@@ -70,6 +70,12 @@ public class ConnectionStatusDTO extends ServiceStatusDTO {
 	public String protocol;
 
     /**
+     * The version of the protocol being used.
+     */
+	@XmlAttribute
+	public String protocol_version;
+
+    /**
      * The remote address of the connection
      */
 	@XmlAttribute(name="remote_address")
@@ -80,4 +86,22 @@ public class ConnectionStatusDTO extends ServiceStatusDTO {
      */
 	@XmlAttribute(name="local_address")
 	public String local_address;
+
+    /**
+     * The connected user
+     */
+	@XmlAttribute
+	public String user;
+
+    /**
+     * What the connection is currently waiting on
+     */
+    @XmlAttribute(name="waiting_on")
+	public String waiting_on;
+
+    /**
+     * Opens subscriptions that the connection has created.
+     */
+    @XmlAttribute(name="subscription_count")
+	public int subscription_count;
 }

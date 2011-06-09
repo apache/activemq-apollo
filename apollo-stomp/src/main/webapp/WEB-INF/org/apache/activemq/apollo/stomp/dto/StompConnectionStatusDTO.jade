@@ -26,13 +26,15 @@ p state: #{state} #{ uptime(state_since) } ago
   form(method="post" action={path("action/shutdown")})
     input(type="submit" value="shutdown")
 
+p local address: #{local_address}
 p remote address: #{remote_address}
 p protocol: #{protocol}
+p protocol version: #{protocol_version}
 p transport: #{transport}
 p read counter: #{memory(read_counter)}
 p write counter: #{memory(write_counter)}
-
-p protocol version: #{protocol_version}
+p last read size: #{memory(last_read_size)}
+p last write size: #{memory(last_write_size)}
 p user: #{user}
 p waiting on: #{waiting_on}
 p subscription count: #{subscription_count}
