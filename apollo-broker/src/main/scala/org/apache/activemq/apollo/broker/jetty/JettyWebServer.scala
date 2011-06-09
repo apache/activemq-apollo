@@ -208,8 +208,6 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
               connector
           }
 
-
-          connector.setThreadPool(new ExecutorThreadPool(Broker.BLOCKABLE_THREAD_POOL))
           connector.setHost(host)
           connector.setPort(port)
           connectors.put(connector_id, connector)
@@ -235,6 +233,7 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
       server = new Server
       server.setHandler(context_list)
       server.setConnectors(connectors.values.toArray)
+      server.setThreadPool(new ExecutorThreadPool(Broker.BLOCKABLE_THREAD_POOL))
       server.start
 
       for( connector <- connectors.values ; prefix <- contexts.keys ) {
