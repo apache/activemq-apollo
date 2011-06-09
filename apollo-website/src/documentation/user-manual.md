@@ -942,9 +942,9 @@ headers are parsed and interpreted.  The supported attributes are:
 
 It also supports nested `add_user_header` elements to more finely control how
 user headers are added to received STOMP messages.  The `add_user_header` element
+should contain the name of the header to set on the STOMP message.  It also 
 supports the following attributes:
 
-* `name` : The name of the header to set on the STOMP message
 * `separator` : If user has multiple principles which match, this separator
   will be used to delimit them in the header.  If not set, then only the first
   matching principle will be set in the header.
@@ -956,8 +956,7 @@ Example:
 {pygmentize:: xml}
 <connector id="tcp" bind="tcp://0.0.0.0:61613">
   <stomp max_header_length="10000">
-    <add_user_header name="user" separator=","
-      kind="org.apache.activemq.jaas.UserPrincipal" />
+    <add_user_header separator=",">user</add_user_header>
   </stomp>
 </connector>
 {pygmentize}
