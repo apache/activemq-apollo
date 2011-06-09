@@ -34,13 +34,30 @@ import javax.security.auth.spi.LoginModule
 
 import org.apache.activemq.jaas.UserPrincipal
 import java.{util => ju}
-import org.apache.activemq.apollo.util.{FileSupport, Log}
+import org.apache.activemq.apollo.util.{FileCache, Log, FileSupport}
 import FileSupport._
 
 object FileUserLoginModule {
   val LOGIN_CONFIG = "java.security.auth.login.config"
   val FILE_OPTION = "file"
   val DEFAULT_LOG = Log(getClass)
+
+  def load_properties(file:File):Option[Properties] = {
+    try {
+      val rc = new Properties()
+      using( new FileInputStream(file) ) { in=>
+        rc.load(in)
+      }
+      EncryptionSupport.decrypt(rc)
+      Some(rc)
+    } catch {
+      case e: Throwable =>
+        DEFAULT_LOG.warn(e, "Unable to load properties file: " + file)
+        None
+    }
+  }
+
+  val file_cache = new FileCache[Properties](load_properties)
 }
 
 /**
@@ -80,16 +97,9 @@ class FileUserLoginModule extends LoginModule {
   }
 
   def login: Boolean = {
-    val users = new Properties()
-    try {
-      using( new FileInputStream(file) ) { in=>
-        users.load(in)
-      }
-      EncryptionSupport.decrypt(users)
-    } catch {
-      case e: Throwable =>
-        warn(e, "Unable to load user properties file: " + file)
-        return false
+    val users = file_cache.get(file) match {
+      case None => return false
+      case Some(x) => x
     }
 
     val callbacks = new Array[Callback](2)

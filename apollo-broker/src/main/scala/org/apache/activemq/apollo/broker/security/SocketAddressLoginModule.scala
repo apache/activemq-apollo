@@ -22,11 +22,11 @@ import javax.security.auth.callback.CallbackHandler
 import javax.security.auth.callback.UnsupportedCallbackException
 import javax.security.auth.login.LoginException
 import java.{util => ju}
-import java.io.{File, IOException}
-import org.apache.activemq.apollo.util.{FileSupport, Log}
 import java.lang.String
 import javax.security.auth.spi.LoginModule
-import java.net.{InetSocketAddress, SocketAddress, InetAddress}
+import java.net.{InetSocketAddress, SocketAddress}
+import java.io.{File, IOException}
+import org.apache.activemq.apollo.util.{FileCache, FileSupport, Log}
 
 /**
  * <p>
@@ -39,6 +39,26 @@ object SocketAddressLoginModule {
   val WHITE_LIST_OPTION = "white_list_file"
   val BLACK_LIST_OPTION = "black_list_file"
   val DEFAULT_LOG = Log(getClass)
+
+  def load_line_set(file:File):Option[Set[String]] = {
+    try {
+      import FileSupport._
+      val rc: Set[String] = file.read_text().split("\n").map(_.trim()).toSet
+      Some(rc.flatMap { line =>
+        if(line.isEmpty || line.startsWith("#")) {
+          None
+        } else {
+          Some(line)
+        }
+      })
+    } catch {
+      case e: Throwable =>
+        DEFAULT_LOG.warn(e, "Unable to load file: " + file)
+        None
+    }
+  }
+
+  val file_cache = new FileCache[Set[String]](load_line_set)
 }
 
 /**
@@ -112,15 +132,17 @@ class SocketAddressLoginModule extends LoginModule {
   }
 
   def matches(file:File, address:SocketAddress):Boolean = {
-
     val needle = address match {
       case address:InetSocketAddress =>
         address.getAddress.getHostAddress
       case _ => return false
     }
 
-    import FileSupport._
-    file.read_text().split("\n").find( _.trim() == needle ).isDefined
+    file_cache.get(file) match {
+      case None => false
+      case Some(haystack) =>
+        haystack.contains(needle)
+    }
   }
 
   def commit: Boolean = {

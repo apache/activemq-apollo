@@ -34,7 +34,6 @@ package org.apache.activemq.apollo.broker.security
  * limitations under the License.
  */
 import java.io.File
-import java.io.FileInputStream
 import java.security.Principal
 import javax.security.auth.Subject
 import javax.security.auth.callback.CallbackHandler
@@ -43,10 +42,9 @@ import javax.security.auth.spi.LoginModule
 import org.apache.activemq.jaas.GroupPrincipal
 import org.apache.activemq.jaas.UserPrincipal
 import java.{util => ju}
-import org.apache.activemq.apollo.util.{FileSupport, Log}
-import FileSupport._
 import java.util.regex.Pattern
-import java.util.{LinkedList, Properties}
+import java.util.LinkedList
+import org.apache.activemq.apollo.util.Log
 
 object FileGroupLoginModule {
   val LOGIN_CONFIG = "java.security.auth.login.config"
@@ -104,16 +102,9 @@ class FileGroupLoginModule extends LoginModule {
 
   def commit: Boolean = {
 
-    val groups = try {
-      using( new FileInputStream(file) ) { in=>
-        val groups = new Properties()
-        groups.load(in)
-        groups
-      }
-    } catch {
-      case e: Throwable =>
-        warn(e, "Unable to load group properties file " + file)
-        return false;
+    val groups = FileUserLoginModule.file_cache.get(file) match {
+      case None => return false
+      case Some(x) => x
     }
 
     import collection.JavaConversions._

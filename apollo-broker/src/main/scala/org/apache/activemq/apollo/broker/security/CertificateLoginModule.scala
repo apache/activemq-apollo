@@ -27,11 +27,13 @@ import java.security.cert.X509Certificate
 import java.{util => ju}
 import java.io.{FileInputStream, File, IOException}
 import org.yaml.snakeyaml.Yaml
-import org.apache.activemq.apollo.util.{FileSupport, Log}
 import java.lang.String
 import org.apache.activemq.jaas.{UserPrincipal, CertificateCallback}
-import java.util.LinkedList
 import javax.security.auth.spi.LoginModule
+import java.util.{Properties, LinkedList}
+import org.apache.activemq.apollo.util.FileSupport._
+import org.apache.activemq.apollo.util.{FileCache, FileSupport, Log}
+import org.apache.activemq.apollo.util.Log._
 
 /**
  * <p>
@@ -43,6 +45,21 @@ object CertificateLoginModule {
   val LOGIN_CONFIG = "java.security.auth.login.config"
   val FILE_OPTION = "dn_file"
   val DEFAULT_LOG = Log(getClass)
+
+  def load_dns(file:File):Option[java.util.Map[String, AnyRef]] = {
+    try {
+      import FileSupport._
+      using( new FileInputStream(file) ) { in=>
+        Some((new Yaml().load(in)).asInstanceOf[java.util.Map[String, AnyRef]])
+      }
+    } catch {
+      case e: Throwable =>
+        DEFAULT_LOG.warn(e, "Unable to load the distinguished name file: " + file)
+        None
+    }
+  }
+
+  val file_cache = new FileCache[java.util.Map[String, AnyRef]](load_dns)
 }
 
 /**
@@ -112,16 +129,10 @@ class CertificateLoginModule extends LoginModule {
         }
 
       case Some(file)=>
-        val users = try {
-          import FileSupport._
-          using( new FileInputStream(file) ) { in=>
-            (new Yaml().load(in)).asInstanceOf[java.util.Map[String, AnyRef]]
-          }
-        } catch {
-          case e: Throwable =>
-            warn(e, "Unable to load the distinguished name file: " + file)
-            e.printStackTrace
-            throw new LoginException("Invalid login module configuration")
+
+        val users = file_cache.get(file) match {
+          case None => throw new LoginException("Invalid login module configuration")
+          case Some(x) => x
         }
 
         for (cert <- certificates) {
