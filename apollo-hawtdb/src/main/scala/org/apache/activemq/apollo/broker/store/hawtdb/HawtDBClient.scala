@@ -234,8 +234,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) {
       tx =>
         tx.actions.foreach {
           case (msg, action) =>
-            if (action.messageRecord != null) {
-              val update: AddMessage.Bean = action.messageRecord
+            if (action.message_record != null) {
+              val update: AddMessage.Bean = action.message_record
               batch += update
             }
             action.enqueues.foreach {

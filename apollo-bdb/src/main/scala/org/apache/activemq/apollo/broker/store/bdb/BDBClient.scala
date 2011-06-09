@@ -320,12 +320,12 @@ class BDBClient(store: BDBStore) {
           uow.actions.foreach {
             case (msg, action) =>
 
-              val message_record = action.messageRecord
+              val message_record = action.message_record
               if (message_record != null) {
                 import PBSupport._
 
                 val pb = if( message_record.zero_copy_buffer != null ) {
-                  val r = to_pb(action.messageRecord).copy
+                  val r = to_pb(action.message_record).copy
                   val buffer = zero_copy_buffer_allocator.to_alloc_buffer(message_record.zero_copy_buffer)
                   r.setZcpFile(buffer.file)
                   r.setZcpOffset(buffer.offset)
@@ -334,10 +334,10 @@ class BDBClient(store: BDBStore) {
                   zcp_files_to_sync += buffer.file
                   r.freeze
                 } else {
-                  to_pb(action.messageRecord)
+                  to_pb(action.message_record)
                 }
 
-                messages_db.put(tx, action.messageRecord.key, pb)
+                messages_db.put(tx, action.message_record.key, pb)
               }
 
               action.enqueues.foreach { queueEntry =>

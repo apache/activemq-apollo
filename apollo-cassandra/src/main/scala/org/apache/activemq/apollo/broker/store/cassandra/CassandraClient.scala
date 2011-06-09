@@ -116,8 +116,8 @@ class CassandraClient() {
             tx.actions.foreach {
               case (msg, action) =>
                 var rc =
-                if (action.messageRecord != null) {
-                  operations ::= Insert( schema.message_data \ (msg, action.messageRecord ) )
+                if (action.message_record != null) {
+                  operations ::= Insert( schema.message_data \ (msg, action.message_record ) )
                 }
                 action.enqueues.foreach {
                   queueEntry =>

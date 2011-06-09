@@ -355,11 +355,11 @@ class JDBM2Client(store: JDBM2Store) {
       uows.foreach { uow =>
         uow.actions.foreach { case (msg, action) =>
 
-          val message_record = action.messageRecord
+          val message_record = action.message_record
           if (message_record != null) {
 
             val pb = if( message_record.zero_copy_buffer != null ) {
-              val r = to_pb(action.messageRecord).copy
+              val r = to_pb(action.message_record).copy
               val buffer = zero_copy_buffer_allocator.to_alloc_buffer(message_record.zero_copy_buffer)
               r.setZcpFile(buffer.file)
               r.setZcpOffset(buffer.offset)
@@ -368,12 +368,12 @@ class JDBM2Client(store: JDBM2Store) {
               zcp_files_to_sync += buffer.file
               r.freeze
             } else {
-              to_pb(action.messageRecord)
+              to_pb(action.message_record)
             }
 
-            messages_db.put(action.messageRecord.key, pb)
-            if( action.messageRecord.key > last_message_key ) {
-              last_message_key = action.messageRecord.key
+            messages_db.put(action.message_record.key, pb)
+            if( action.message_record.key > last_message_key ) {
+              last_message_key = action.message_record.key
               recman.setNamedObject("last_message_key", last_message_key)
             }
           }
