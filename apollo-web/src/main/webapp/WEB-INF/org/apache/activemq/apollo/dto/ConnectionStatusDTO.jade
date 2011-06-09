@@ -22,7 +22,7 @@
 
 p state: #{state} #{ uptime(state_since) } ago
 - if( state == "STARTED" )
-  form(method="post" action={path("action/shutdown")})
+  form(method="post" action={path("action/delete")})
     input(type="submit" value="shutdown")
 
 p local address: #{local_address}

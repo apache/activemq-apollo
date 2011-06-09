@@ -356,12 +356,10 @@ public class TcpTransport extends JavaBaseService implements Transport {
         try {
             socket.setReceiveBufferSize(receive_buffer_size);
         } catch (SocketException e) {
-            e.printStackTrace();
         }
         try {
             socket.setSendBufferSize(send_buffer_size);
         } catch (SocketException e) {
-            e.printStackTrace();
         }
     }
 
