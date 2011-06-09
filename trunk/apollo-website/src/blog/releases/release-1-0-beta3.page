@@ -1,0 +1,80 @@
+---
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+blog_post: true
+title: Apollo 1.0 Beta 3 Released
+author: Hiram Chirino
+author_url: http://fusesource.com
+created_at: 2010-06-01 12:06:40 -0000
+--- 
+
+The [Apache ActiveMQ Project](http://activemq.apache.org) is pleased to announce the 
+availability of Apollo 1.0 Beta 3. ActiveMQ Apollo is a faster, more reliable, easier 
+to maintain messaging broker built from the foundations of the original ActiveMQ. It is
+focused on being the fastest most reliable STOMP 1.1 and 1.0 server available.
+
+Apollo Features:
+
+* [Stomp 1.0](http://stomp.github.com/stomp-specification-1.0.html) Protocol
+  Support
+* [Stomp 1.1](http://stomp.github.com/stomp-specification-1.1.html) Protocol
+  Support
+* [Topics and Queues](${website_base_url}/documentation/user-manual.html#Destination_Types)
+* [Queue Browsers](${website_base_url}/documentation/user-manual.html#Browsing_Subscriptions)
+* [Durable Subscriptions on Topics](${website_base_url}/documentation/user-manual.html#Topic_Durable_Subscriptions)
+* [Reliable Messaging](${website_base_url}/documentation/user-manual.html#Reliable_Messaging)
+* Message swapping
+* [Message Selectors](${website_base_url}/documentation/user-manual.html#Message_Selectors)
+* [JAAS Authentication](${website_base_url}/documentation/user-manual.html#Authentication)
+* [ACL Authorization](${website_base_url}/documentation/user-manual.html#Authorization)
+* [SSL/TLS Support](${website_base_url}/documentation/user-manual.html#Using_SSL_TLS)
+* [REST Based Management](${website_base_url}/documentation/architecture.html#REST_Based_Management)
+  
+Noteworthy changes since the last beta include:
+
+ * APLO-6 - Alternative topic separators should be supported in Apollo, as in ActiveMQ
+ * APLO-11 - Support HTTPS access to the REST management API
+ * APLO-12 - Support finer grained security in the REST based admin API
+ * APLO-21 - Support a protocol interceptor plugins to allow policy enforcement
+ * APLO-22 - Support generic service plugins to on a broker so that admins can start/stop additional opaque services along /w the broker.
+ * APLO-26 - Support directly addressing durable subscription queues
+ * APLO-27 - Support finer grained selection of record and fields in the REST interface
+ * APLO-29 - Add a new broker security roll to control access to viewing the broker configuration.
+ * APLO-32 - Support Connector start/stop actions in the management interface
+ * APLO-33 - Support deleting queues from the management interface.
+ * APLO-35- - Support installing as a background windows service
+ * APLO-37- Update BDB store to use a single BTree for all queue entries and use variable encoding for the keys
+
+Migration Notes:
+
+It is recommended to you generate a new broker instance for this release.  The 1.0 beta3 release uses a slightly 
+different default configuration (to create a https port for administration).  If your were using the BDB store,
+this new release uses a totally different storage layout so you should export the data from the previous
+versions, wipe the data directory and then import it into the broker on the new release.
+
+Further information:
+
+* [Download](http://activemq.apache.org/apollo/download.html)
+* [Issues Fixed](https://issues.apache.org/jira/secure/ConfigureReleaseNote.jspa?projectId=12311310&version=12316436)
+* [Documentation](http://activemq.apache.org/apollo/documentation)
+
+[Feedback](http://activemq.apache.org/community/index.html) is always welcome! 
+
+
+
+
+
+

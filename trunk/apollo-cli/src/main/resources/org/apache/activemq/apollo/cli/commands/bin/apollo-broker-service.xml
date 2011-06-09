@@ -1,0 +1,24 @@
+<service>
+  <id>org.apache.activemq.apollo.${host}</id>
+  <name>Apollo: ${host}</name>
+  <description>Apache Apollo is a reliable messaging broker</description>
+
+  <logpath>${base}\log</logpath>
+  <logmode>roll</logmode>
+
+  <executable>"${java.home}\bin\java.exe"</executable>
+  <argument>-server</argument>
+  <argument>-Xrs</argument>
+  <argument>-Xmx1G</argument>
+  <argument>-Dcom.sun.management.jmxremote</argument>
+  <argument>"-Djava.util.logging.config.file=${home}\etc\jul.properties"</argument>
+  <argument>"-Dapollo.base=${base}"</argument>
+  <argument>"-Dapollo.home=${home}"</argument>
+  <argument>-classpath</argument>
+  <argument>"${base}\etc;${home}\lib\apollo-boot.jar"</argument>
+  <argument>org.apache.activemq.apollo.boot.Boot</argument>
+  <argument>"${base}\lib:${home}\lib"</argument>
+  <argument>org.apache.activemq.apollo.cli.Apollo</argument>
+  <argument>run</argument>
+
+</service>

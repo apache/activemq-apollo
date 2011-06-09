@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+  
+  http://www.apache.org/licenses/LICENSE-2.0
+  
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<component>
+
+  <dependencySets>
+    <dependencySet>
+      <outputDirectory>/lib</outputDirectory>
+      <unpack>false</unpack>
+      <useTransitiveDependencies>true</useTransitiveDependencies>
+      <includes>
+        <include>org.apache.activemq:apollo-*</include>
+        
+        <!-- main apollo dependencies -->
+        <include>org.scala-lang:scala-library</include>
+        <include>org.fusesource.hawtbuf:*</include>
+        <include>org.fusesource.hawtdispatch:*</include>
+        <include>org.fusesource.hawtdb:*</include>
+        <include>org.fusesource.jdbm:*</include>
+        <include>org.codehaus.jackson:jackson-mapper-asl</include>
+        <include>org.codehaus.jackson:jackson-core-asl</include>
+        
+        <!-- security stuff -->
+        <include>org.jasypt:jasypt</include>
+        <include>commons-lang:commons-lang</include>
+        <include>commons-codec:commons-codec</include>
+        <include>org.apache.activemq:activemq-jaas</include>
+        <include>org.yaml:snakeyaml</include>
+        
+        <!-- for the webapp -->
+        <include>org.eclipse.jetty.aggregate:jetty-all-server</include>
+        <include>javax.servlet:servlet-api</include>
+        <include>com.sun.jersey:jersey-server</include>
+        <include>com.sun.jersey:jersey-core</include>
+        <include>asm:asm</include>
+        <include>org.codehaus.jackson:jackson-jaxrs</include>
+        <include>org.fusesource.scalate:scalate-core</include>
+        <include>org.fusesource.scalate:scalate-util</include>
+        <include>net.sf.josql:josql</include>
+        <include>net.sf.josql:gentlyweb-utils</include>
+        
+        <!-- the logging apis used -->
+        <include>org.slf4j:slf4j-api</include>
+        <include>commons-logging:commons-logging</include>
+        <include>org.slf4j:slf4j-log4j12</include>
+        <include>log4j:log4j</include>
+        
+        <!-- Implements the cli shell -->
+        <include>org.apache.karaf.shell:org.apache.karaf.shell.console</include>
+        
+      </includes>
+      <excludes>
+        <exclude>org.apache.activemq:apollo-web:pom</exclude>
+        <exclude>org.apache.activemq:apollo-boot</exclude>
+      </excludes>
+    </dependencySet>
+    
+    <dependencySet>
+      <outputDirectory>/lib</outputDirectory>
+      <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
+      <unpack>false</unpack>
+      <useTransitiveDependencies>false</useTransitiveDependencies>
+      <includes>
+        <include>org.apache.activemq:apollo-boot</include>
+      </includes>
+    </dependencySet>
+    
+  </dependencySets>
+
+  <fileSets>
+
+    <!-- copy the website docs -->
+    <fileSet>
+      <directory>${basedir}/../apollo-website/target/sitegen/</directory>
+      <outputDirectory>/docs/site</outputDirectory>
+    </fileSet>
+
+  </fileSets>
+
+</component>

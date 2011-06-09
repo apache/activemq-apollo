@@ -1,0 +1,70 @@
+#!/bin/sh
+# ------------------------------------------------------------------------
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+# 
+# http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------
+
+#
+# The following are common variables which control the JVM settings that the
+# broker uses.  Feel free to uncomment and edit as needed or place them
+# in an ${APOLLO_BASE}/etc/apollo.profile file.
+#
+
+#export JVM_FLAGS="-server -Xmx1G"
+#export APOLLO_OPTS="-ea"
+#export APOLLO_DEBUG="true"
+#export APOLLO_PROFILE="true"
+#export JMX_OPTS="-Djava.rmi.server.hostname=127.0.0.1 -Dcom.sun.management.jmxremote.port=1099 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
+
+if [ -z "$APOLLO_BASE" ] ; then
+
+  ## resolve links - $0 may be a link to apollo's home
+  PRG="$0"
+  progname=`basename "$0"`
+  saveddir=`pwd`
+
+  # need this for relative symlinks
+  dirname_prg=`dirname "$PRG"`
+  cd "$dirname_prg"
+
+  while [ -h "$PRG" ] ; do
+    ls=`ls -ld "$PRG"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '.*/.*' > /dev/null; then
+    PRG="$link"
+    else
+    PRG=`dirname "$PRG"`"/$link"
+    fi
+  done
+
+  APOLLO_BASE=`dirname "$PRG"`
+  cd "$saveddir"
+
+  # make it fully qualified
+  APOLLO_BASE=`cd "$APOLLO_BASE/.." && pwd`
+  export APOLLO_BASE
+    
+fi
+
+if [ -z "$APOLLO_HOME" ] ; then
+  APOLLO_HOME=${home}
+fi
+
+if [ -f "${APOLLO_BASE}/etc/apollo.profile" ] ; then
+  . "${APOLLO_BASE}/etc/apollo.profile"
+fi
+
+exec $APOLLO_HOME/bin/apollo $@
+

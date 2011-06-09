@@ -1,0 +1,352 @@
+<!--
+
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+
+<html>
+  <head>
+    <style type='text/css'>
+      body { font-family:Verdana; font-size:12px; color:#666666; }
+      #header {
+        margin: 0; padding: 2em; text-align:center; background: #baccd8;
+      }
+      #header h1 {
+        margin: 0; padding: 0; font-size: 180%; line-height: 1em; color: #333;
+      }
+      #wrap {
+        width: 60em; margin: 0 auto; padding: 2em;
+        background: #dae3e9;
+      }
+      #content {
+        width: 60em;
+        padding: 2em 0;
+      }
+      .chart-graph {
+        float:right; width: 66%; height: 20em;  margin: 1em 0 1em 1em;
+      }
+      .med-chart {
+        height: 30em;
+      }
+      .big-chart {
+        height: 40em;
+      }
+      .chart-section { clear:both; margin-top: 1em; padding-left:2em; }
+      .clear { clear:both; }
+    </style>
+    <script type='text/javascript' src='http://www.google.com/jsapi'></script>
+    <script type='text/javascript'>
+      var cols_index_map = {}
+      var data = null;
+      var data_funcs = null;
+      google.load('visualization', '1', {'packages':['linechart']});
+      google.setOnLoadCallback(function() {
+        data = new google.visualization.DataTable();
+        data.addColumn('string', 'version');
+        data.addColumn('number', 'queue 20b 1->1->1 producer')
+        data.addColumn('number', 'queue 20b 1->1->1 consumer')
+        data.addColumn('number', 'queue 20b 10->1->1 producer')
+        data.addColumn('number', 'queue 20b 10->1->1 producer sd')
+        data.addColumn('number', 'queue 20b 10->1->1 consumer')
+        data.addColumn('number', 'queue 20b 1->1->10 producer')
+        data.addColumn('number', 'queue 20b 1->1->10 consumer')
+        data.addColumn('number', 'queue 20b 1->1->10 consumer sd')
+        data.addColumn('number', 'queue 20b 10->1->10 producer')
+        data.addColumn('number', 'queue 20b 10->1->10 producer sd')
+        data.addColumn('number', 'queue 20b 10->1->10 consumer')
+        data.addColumn('number', 'queue 20b 10->1->10 consumer sd')
+        data.addColumn('number', 'queue 1k 1->1->1 producer')
+        data.addColumn('number', 'queue 1k 1->1->1 consumer')
+        data.addColumn('number', 'queue 1k 10->1->1 producer')
+        data.addColumn('number', 'queue 1k 10->1->1 producer sd')
+        data.addColumn('number', 'queue 1k 10->1->1 consumer')
+        data.addColumn('number', 'queue 1k 1->1->10 producer')
+        data.addColumn('number', 'queue 1k 1->1->10 consumer')
+        data.addColumn('number', 'queue 1k 1->1->10 consumer sd')
+        data.addColumn('number', 'queue 1k 10->1->10 producer')
+        data.addColumn('number', 'queue 1k 10->1->10 producer sd')
+        data.addColumn('number', 'queue 1k 10->1->10 consumer')
+        data.addColumn('number', 'queue 1k 10->1->10 consumer sd')
+        data.addColumn('number', 'queue 256k 1->1->1 producer')
+        data.addColumn('number', 'queue 256k 1->1->1 consumer')
+        data.addColumn('number', 'queue 256k 10->1->1 producer')
+        data.addColumn('number', 'queue 256k 10->1->1 producer sd')
+        data.addColumn('number', 'queue 256k 10->1->1 consumer')
+        data.addColumn('number', 'queue 256k 1->1->10 producer')
+        data.addColumn('number', 'queue 256k 1->1->10 consumer')
+        data.addColumn('number', 'queue 256k 1->1->10 consumer sd')
+        data.addColumn('number', 'queue 256k 10->1->10 producer')
+        data.addColumn('number', 'queue 256k 10->1->10 producer sd')
+        data.addColumn('number', 'queue 256k 10->1->10 consumer')
+        data.addColumn('number', 'queue 256k 10->1->10 consumer sd')
+        data.addColumn('number', 'topic 20b 1->1->0 producer')
+        data.addColumn('number', 'topic 20b 1->1->1 producer')
+        data.addColumn('number', 'topic 20b 1->1->1 consumer')
+        data.addColumn('number', 'topic 20b 10->1->1 producer')
+        data.addColumn('number', 'topic 20b 10->1->1 producer sd')
+        data.addColumn('number', 'topic 20b 10->1->1 consumer')
+        data.addColumn('number', 'topic 20b 1->1->10 producer')
+        data.addColumn('number', 'topic 20b 1->1->10 consumer')
+        data.addColumn('number', 'topic 20b 1->1->10 consumer sd')
+        data.addColumn('number', 'topic 20b 10->1->10 producer')
+        data.addColumn('number', 'topic 20b 10->1->10 producer sd')
+        data.addColumn('number', 'topic 20b 10->1->10 consumer')
+        data.addColumn('number', 'topic 20b 10->1->10 consumer sd')
+        data.addColumn('number', 'topic 1k 1->1->0 producer')
+        data.addColumn('number', 'topic 1k 1->1->1 producer')
+        data.addColumn('number', 'topic 1k 1->1->1 consumer')
+        data.addColumn('number', 'topic 1k 10->1->1 producer')
+        data.addColumn('number', 'topic 1k 10->1->1 producer sd')
+        data.addColumn('number', 'topic 1k 10->1->1 consumer')
+        data.addColumn('number', 'topic 1k 1->1->10 producer')
+        data.addColumn('number', 'topic 1k 1->1->10 consumer')
+        data.addColumn('number', 'topic 1k 1->1->10 consumer sd')
+        data.addColumn('number', 'topic 1k 10->1->10 producer')
+        data.addColumn('number', 'topic 1k 10->1->10 producer sd')
+        data.addColumn('number', 'topic 1k 10->1->10 consumer')
+        data.addColumn('number', 'topic 1k 10->1->10 consumer sd')
+        data.addColumn('number', 'topic 256k 1->1->0 producer')
+        data.addColumn('number', 'topic 256k 1->1->1 producer')
+        data.addColumn('number', 'topic 256k 1->1->1 consumer')
+        data.addColumn('number', 'topic 256k 10->1->1 producer')
+        data.addColumn('number', 'topic 256k 10->1->1 producer sd')
+        data.addColumn('number', 'topic 256k 10->1->1 consumer')
+        data.addColumn('number', 'topic 256k 1->1->10 producer')
+        data.addColumn('number', 'topic 256k 1->1->10 consumer')
+        data.addColumn('number', 'topic 256k 1->1->10 consumer sd')
+        data.addColumn('number', 'topic 256k 10->1->10 producer')
+        data.addColumn('number', 'topic 256k 10->1->10 producer sd')
+        data.addColumn('number', 'topic 256k 10->1->10 consumer')
+        data.addColumn('number', 'topic 256k 10->1->10 consumer sd')
+        
+        data_funcs = new Array(data.getNumberOfColumns());
+        for( var i=0; i <  data.getNumberOfColumns(); i ++) {
+          cols_index_map[data.getColumnLabel(i)] = i;
+          eval("function lookup(dt, row) { return dt.getValue(row, "+i+"); }; data_funcs[i]=lookup;");
+        }
+
+        var data_array = [
+// DATA-START
+// DATA-END
+        ];
+        try {
+          data.addRows(data_array);
+        } catch (er) {
+          alert(er);
+        }
+
+      });
+      // Helpers
+      function chart(id, cols, options) {
+        var c = new google.visualization.LineChart(document.getElementById(id));
+        var view = new google.visualization.DataView(data);
+        var col_indexes = new Array(cols.length);
+        for (var i = 0; i < cols.length; i++) {
+          if( typeof(cols[i]) == "string" ) {
+            col_indexes[i] = cols_index_map[cols[i]];
+          } else {
+            var col = cols_index_map[cols[i][0]];
+            if( col> 0 ) {
+              col_indexes[i] = {type:'number', label:cols[i][1], calc:data_funcs[col]};
+            } else {
+              col_indexes[i] = col;
+            }
+          }
+        }
+        view.setColumns(col_indexes);
+        c.draw(view, options);
+      }
+      function chart_opts() {
+        return {tooltipWidth:300, tooltipHeight:120, showCategories:false, legend: 'bottom', smoothLine:true, titleX:'changes over time', titleY:'messages/sec', enableTooltip:true }
+      }
+    </script>
+  </head>
+  <body>
+    <div id='wrap'>
+      <div id='header'>
+        <h1>Broker Performance Evolution</h1>
+      </div>
+
+      <div id='content' >
+        <p>
+          This report is used to visualize the how the performance of the broker
+          is changed over time as new code changes are introduced. Click on any data
+          point in the charts to get the data point's exact value and git
+          commit version.
+        </p>
+
+        <p>
+          Producers are sending persistent messages and synchronously wait for a
+          broker ack before sending the next message.  Consumers client ack
+          each message.  
+        </p>
+        <p><!-- DESCRIPTION-START --><!-- DESCRIPTION-END --></p>
+
+        <h2>General</h2>
+
+        <div class='chart-section'>
+          <div id='raw_producer_rate' class='chart-graph'></div>
+          <script type='text/javascript'>
+            google.setOnLoadCallback(function() {
+              var opts = chart_opts();
+              opts.logScale = true;
+              chart('raw_producer_rate',
+                ['version',
+                  ['topic 20b 1->1->0 producer', '20 bytes'],
+                  ['topic 1k 1->1->0 producer', '1 k'],
+                  ['topic 256k 1->1->0 producer', '256 k']
+                ],
+                opts
+              );
+            });
+          </script>
+          <h3>Max Producer Rate</h3>
+          The maximum rate that a single producer can send to a broker.  The producer is setup
+          on a topic with no consumers.  This rate is has a close correlation to your processor
+          speed.  The Rate is show at 3 different message sizes.
+        </div>
+
+        <div class="clear"></div>
+        <h2>Queue Performance</h2>
+        <p>
+          This section examines the performance of queues also known as the point to point messaging domain. 
+        </p>
+
+        <div class='chart-section'>
+          <div id='queue_contention' class='chart-graph big-chart'></div>
+          <script type='text/javascript'>
+            google.setOnLoadCallback(function() {
+              chart('queue_contention',
+                ['version',
+                  ['queue 20b 10->1->1 consumer',  '20 byte 10->1->1'],
+                  ['queue 20b 1->1->10 consumer',  '20 byte 1->1->10'],
+                  ['queue 20b 10->1->10 consumer', '20 byte 10->1->10'],
+                  ['queue 1k 10->1->1 consumer',   '1k byte 10->1->1'],
+                  ['queue 1k 1->1->10 consumer',   '1k byte 1->1->10'],
+                  ['queue 1k 10->1->10 consumer',  '1k byte 10->1->10'],
+                  ['queue 256k 10->1->1 consumer',   '256k byte 10->1->1'],
+                  ['queue 256k 1->1->10 consumer',   '256k byte 1->1->10'],
+                  ['queue 256k 10->1->10 consumer',  '256k byte 10->1->10']
+                ],
+                chart_opts()
+              );
+            });
+          </script>
+          <h3>Destination Contention</h3>
+          When there are many consumer or/and producers on one destination, it can become a bottleneck.  Shown data points are the total consumer
+          rate for scenario.
+        </div>
+
+
+        <div class='chart-section'>
+          <div id='queue_contention_sd' class='chart-graph big-chart'></div>
+          <script type='text/javascript'>
+            google.setOnLoadCallback(function() {
+              chart('queue_contention_sd',
+                ['version',
+                  ['queue 20b 10->1->1 producer sd',  '20 byte 10->1->1'],
+                  ['queue 20b 1->1->10 consumer sd',  '20 byte 1->1->10'],
+                  ['queue 20b 10->1->10 producer sd', '20 byte 10->1->10 p'],
+                  ['queue 20b 10->1->10 consumer sd', '20 byte 10->1->10 c'],
+                  ['queue 1k 10->1->1 producer sd',   '1k byte 10->1->1'],
+                  ['queue 1k 1->1->10 consumer sd',   '1k byte 1->1->10'],
+                  ['queue 1k 10->1->10 producer sd',  '1k byte 10->1->10 p'],
+                  ['queue 1k 10->1->10 consumer sd',  '1k byte 10->1->10 c'],
+                  ['queue 256k 10->1->1 producer sd',   '256k byte 10->1->1'],
+                  ['queue 256k 1->1->10 consumer sd',   '256k byte 1->1->10'],
+                  ['queue 256k 10->1->10 producer sd',  '256k byte 10->1->10 p'],
+                  ['queue 256k 10->1->10 consumer sd',  '256k byte 10->1->10 c']
+                ],
+                chart_opts()
+              );
+            });
+          </script>
+          <h3>Fairness</h3>
+          When you have multiple homogenous consumers or producers, it's ideal if the the broker treats them all fairly
+          and sends or accepts the same number of messages from them.  This chart shows the standard deviation of the number
+          of messages produced or consumed.  The lower the number the better.
+        </div>
+
+
+        <div class="clear"></div>
+        <h2>Topic Performance</h2>
+        <p>
+          This section examines the performance of topics also known as the publish/subscribe messaging domain.
+        </p>
+
+        <div class='chart-section'>
+          <div id='topic_contention' class='chart-graph big-chart'></div>
+          <script type='text/javascript'>
+            google.setOnLoadCallback(function() {
+              chart('topic_contention',
+                ['version',
+                  ['topic 20b 10->1->1 consumer',  '20 byte 10->1->1'],
+                  ['topic 20b 1->1->10 consumer',  '20 byte 1->1->10'],
+                  ['topic 20b 10->1->10 consumer', '20 byte 10->1->10'],
+                  ['topic 1k 10->1->1 consumer',   '1k byte 10->1->1'],
+                  ['topic 1k 1->1->10 consumer',   '1k byte 1->1->10'],
+                  ['topic 1k 10->1->10 consumer',  '1k byte 10->1->10'],
+                  ['topic 256k 10->1->1 consumer',   '256k byte 10->1->1'],
+                  ['topic 256k 1->1->10 consumer',   '256k byte 1->1->10'],
+                  ['topic 256k 10->1->10 consumer',  '256k byte 10->1->10']
+                ],
+                chart_opts()
+              );
+            });
+          </script>
+          <h3>Destination Contention</h3>
+          When there are many consumer or/and producers on one destination, it can become a bottleneck.  Shown data points are the total consumer
+          rate for scenario.  When looking at the numbers, keep in mind that topics replicate/broadcast every messages to every consumer so there is much
+          much higher message load when you have many consumers attached.
+        </div>
+
+
+        <div class='chart-section'>
+          <div id='topic_contention_sd' class='chart-graph big-chart'></div>
+          <script type='text/javascript'>
+            google.setOnLoadCallback(function() {
+              chart('topic_contention_sd',
+                ['version',
+                  ['topic 20b 10->1->1 producer sd',  '20 byte 10->1->1'],
+                  ['topic 20b 1->1->10 consumer sd',  '20 byte 1->1->10'],
+                  ['topic 20b 10->1->10 producer sd', '20 byte 10->1->10 p'],
+                  ['topic 20b 10->1->10 consumer sd', '20 byte 10->1->10 c'],
+                  ['topic 1k 10->1->1 producer sd',   '1k byte 10->1->1'],
+                  ['topic 1k 1->1->10 consumer sd',   '1k byte 1->1->10'],
+                  ['topic 1k 10->1->10 producer sd',  '1k byte 10->1->10 p'],
+                  ['topic 1k 10->1->10 consumer sd',  '1k byte 10->1->10 c'],
+                  ['topic 256k 10->1->1 producer sd',   '256k byte 10->1->1'],
+                  ['topic 256k 1->1->10 consumer sd',   '256k byte 1->1->10'],
+                  ['topic 256k 10->1->10 producer sd',  '256k byte 10->1->10 p'],
+                  ['topic 256k 10->1->10 consumer sd',  '256k byte 10->1->10 c']
+                ],
+                chart_opts()
+              );
+            });
+          </script>
+          <h3>Fairness</h3>
+          When you have multiple homogenous consumers or producers, it's ideal if the the broker treats them all fairly
+          and sends or accepts the same number of messages from them.  This chart shows the standard deviation of the number
+          of messages produced or consumed.  The lower the number the better.
+        </div>
+
+
+        <div class="clear"></div>
+      </div>
+    </div>
+  </body>
+</html>
+

@@ -1,0 +1,45 @@
+---
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+title: Module Organization
+--- name:overview
+
+${project_slogan}
+
+--- name:content pipeline:markdown
+
+# Module Organization
+
+Apollo is composed of many loosely coupled jar files.  This helps
+maintain a clear separations of concerns between the modules and allows
+end users to end up with smaller footprint configurations if they don't
+need all the optional features of the project.
+
+## Dependency Diagram
+
+<img style="width: 70%; height: auto; display: block; margin-left: auto;  margin-right: auto" 
+    src="../images/module-deps-graph.png" alt="dependencies graph">
+
+## Updating
+
+You can regenerate the above graph by running the following commands at the
+project root:
+
+    mvn -P graph graph:reactor -Dhide-scope=test -Dhide-transitive=true -Dhide-external=true -Dgraph.label= -Dhide-version=true -Dhide-group-id=true -Dhide-type=true
+    cp target/reactor-graph.png apollo-website/src/images/module-deps-graph.png 
+
+
+

@@ -1,0 +1,125 @@
+---
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+title: Source
+in_menu: true
+sort_info: 40
+--- name:overview
+# ${project_name}
+
+Get the latest source code
+
+--- name:content pipeline:jade
+
+
+.left
+  :markdown
+    # SVN
+    
+.right
+  :&markdown
+  
+    #{project_name} stores its source code in a SVN repository at this location:
+
+    * [#{project_svn_url}](#{project_svn_url})
+
+    If you are new to SVN you might have a look at the 
+    [Version Control with Subversion](http://svnbook.red-bean.com/en/1.5/index.html) book.
+
+.left
+  :markdown
+    # Browsing Source
+.right
+  :&markdown
+
+    You can browse the source code online by using any of the following
+    interfaces web interfaces:
+    
+    <!-- * [FishEye](http://fisheye6.cenqua.com/browse/activemq/activemq-apollo/trunk/) -->
+    * [ViewVC](http://svn.apache.org/viewvc/activemq/activemq-apollo/trunk/)
+    * [Raw HTTP](#{project_svn_url})
+
+.left
+  h1 How to Checkout
+.right
+  :&markdown
+
+    You must first install a [SVN client](http://subversion.apache.org/packages.html). Then 
+    you check out the project using the following:
+
+        svn co #{project_svn_trunk_url} #{project_id}
+        cd #{project_id}
+
+    Now you probably want to try [build the #{project_name} code](building.html) 
+
+.left
+  :markdown
+    # Committer Access
+    
+.right
+  :&markdown
+    
+    Committers should check out the the source code using the HTTPS url.
+    
+    * [#{project_svn_commiter_url}](#{project_svn_commiter_url})
+
+    Only project developers can commit to the SVN tree via this method.  
+
+
+.left
+  :markdown
+    # Contributing patches
+.right
+  :markdown
+    If you are not yet a committer but want to contribute some 
+    patch (we love [contributions!](contributing.html)) here's 
+    how you can submit patches
+    
+  - include("/community/_creating_patches.ssp.md")
+
+.left
+  :markdown
+    # Next steps
+.right
+  :&markdown
+    Once you have checked out the code try following 
+
+    * [instructions to build #{project_name}](building.html) 
+    * read the [documentation](../documentation/index.html)
+    * browse the [developer links and maven reports](developers.html)
+    
+.left
+  :markdown
+    # Git Clone
+    
+.right
+  :&markdown
+    You can get a git clone of the svn repository using the following script:
+    
+          mkdir activemq-apollo
+        cd activemq-apollo
+        git init
+        echo "Updating .git/authors.txt"
+        cd ".git"
+        curl "http://git.apache.org/authors.txt" > authors.txt
+        cd ".."
+        git config svn.authorsfile ".git/authors.txt"
+        git svn init --prefix=asf/ --tags=tags --trunk=trunk --branches=branches https://svn.apache.org/repos/asf/activemq/activemq-apollo
+        git svn fetch --log-window-size 10000
+        git svn rebase
+  
+
+

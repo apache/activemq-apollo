@@ -1,0 +1,59 @@
+---
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+title: Apollo
+--- name:overview pipeline:jade
+
+h1 Apollo #{project_version}
+
+| #{project_slogan}
+
+--- name:content pipeline:markdown 
+
+[ActiveMQ Apollo](http://activemq.apache.org/apollo/) is a faster, more
+reliable, easier to maintain messaging broker built from the foundations of
+the original [ActiveMQ]((http://activemq.apache.org). It accomplishes this
+using a radically different threading and message dispatching 
+[architecture](documentation/architecture.html). 
+
+In it’s current incarnation, Apollo only supports the STOMP protocol but just
+like the original ActiveMQ, it’s been designed to be a multi protocol broker.
+In future versions it should get OpenWire support so it can be compatible with
+ActiveMQ 5.x JMS clients.
+
+## Features
+
+* [Stomp 1.0](http://stomp.github.com/stomp-specification-1.0.html) Protocol
+  Support
+* [Stomp 1.1](http://stomp.github.com/stomp-specification-1.1.html) Protocol
+  Support
+* [Topics and Queues](documentation/user-manual.html#Destination_Types)
+* [Queue Browsers](documentation/user-manual.html#Browsing_Subscriptions)
+* [Durable Subscriptions on Topics](documentation/user-manual.html#Topic_Durable_Subscriptions)
+* [Reliable Messaging](documentation/user-manual.html#Reliable_Messaging)
+* Message swapping
+* [Message Selectors](documentation/user-manual.html#Message_Selectors)
+* [JAAS Authentication](documentation/user-manual.html#Authentication)
+* [ACL Authorization](documentation/user-manual.html#Authorization)
+* [SSL/TLS Support](documentation/user-manual.html#Using_SSL_TLS)
+* [REST Based Management](documentation/architecture.html#REST_Based_Management)
+
+## Documentation
+
+ * [Getting Started Guide](documentation/getting-started.html)
+ * [User Manual](documentation/user-manual.html)
+ * [Management API](documentation/management-api.html)
+ 
+
