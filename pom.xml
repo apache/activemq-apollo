@@ -499,7 +499,7 @@
     <profile>
       <id>unstable</id>
       <modules>
-        <module>apollo-cassandra</module>
+        <!-- <module>apollo-cassandra</module> -->
         <module>apollo-hawtdb</module>
         <module>apollo-openwire</module>
       </modules>
@@ -761,10 +761,10 @@
       <releases><enabled>false</enabled></releases>
     </repository>
 
-    <repository>
+    <!-- <repository>
       <id>shorrockin</id>
       <url>http://maven.shorrockin.com</url>
-    </repository>
+    </repository> -->
 
     <repository>
       <id>oracleReleases</id>
