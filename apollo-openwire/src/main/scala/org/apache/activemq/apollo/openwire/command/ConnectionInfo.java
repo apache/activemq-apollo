@@ -29,6 +29,7 @@ public class ConnectionInfo extends BaseCommand {
 
     protected ConnectionId connectionId;
     protected String clientId;
+    protected String clientIp;
     protected String userName;
     protected String password;
     protected BrokerId[] brokerPath;
@@ -67,6 +68,7 @@ public class ConnectionInfo extends BaseCommand {
         copy.manageable = manageable;
         copy.clientMaster = clientMaster;
         copy.transportContext = transportContext;
+        copy.clientIp = clientIp;
     }
 
     /**
@@ -226,5 +228,16 @@ public class ConnectionInfo extends BaseCommand {
 
     public void setFailoverReconnect(boolean failoverReconnect) {
         this.failoverReconnect = failoverReconnect;
+    }
+
+    /**
+     * @openwire:property version=8
+     */
+    public String getClientIp() {
+        return clientIp;
+    }
+
+    public void setClientIp(String clientIp) {
+        this.clientIp = clientIp;
     }
 }

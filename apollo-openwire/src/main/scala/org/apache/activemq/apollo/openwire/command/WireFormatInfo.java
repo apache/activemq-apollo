@@ -270,7 +270,14 @@ public class WireFormatInfo implements Command, MarshallAware {
         setProperty("MaxInactivityDurationInitalDelay", new Long(maxInactivityDurationInitalDelay));
     }
     
-   
+    public long getMaxFrameSize() throws IOException {
+        Long l = (Long)getProperty("MaxFrameSize");
+        return l == null ? 0 : l.longValue();
+    }
+
+    public void setMaxFrameSize(long maxFrameSize) throws IOException {
+        setProperty("MaxFrameSize", new Long(maxFrameSize));
+    }
 
     /**
      * @throws IOException
