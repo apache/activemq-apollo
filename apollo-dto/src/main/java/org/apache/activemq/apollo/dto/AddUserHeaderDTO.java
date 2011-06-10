@@ -54,4 +54,25 @@ public class AddUserHeaderDTO {
     @XmlAttribute(name="kind")
     public String kind;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof AddUserHeaderDTO)) return false;
+
+        AddUserHeaderDTO that = (AddUserHeaderDTO) o;
+
+        if (kind != null ? !kind.equals(that.kind) : that.kind != null) return false;
+        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+        if (separator != null ? !separator.equals(that.separator) : that.separator != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = name != null ? name.hashCode() : 0;
+        result = 31 * result + (separator != null ? separator.hashCode() : 0);
+        result = 31 * result + (kind != null ? kind.hashCode() : 0);
+        return result;
+    }
 }

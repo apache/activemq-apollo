@@ -36,4 +36,20 @@ public class ConnectorAclDTO {
     @XmlElement(name="connect")
     public List<PrincipalDTO> connects = new ArrayList<PrincipalDTO>();
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ConnectorAclDTO)) return false;
+
+        ConnectorAclDTO that = (ConnectorAclDTO) o;
+
+        if (connects != null ? !connects.equals(that.connects) : that.connects != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return connects != null ? connects.hashCode() : 0;
+    }
 }

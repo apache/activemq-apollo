@@ -74,4 +74,56 @@ public class StompDTO extends ProtocolDTO {
     @XmlAttribute(name="any_descendant_wildcard")
     public String any_descendant_wildcard;
 
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof StompDTO)) return false;
+
+        StompDTO stompDTO = (StompDTO) o;
+
+        if (add_user_header != null ? !add_user_header.equals(stompDTO.add_user_header) : stompDTO.add_user_header != null)
+            return false;
+        if (add_user_headers != null ? !add_user_headers.equals(stompDTO.add_user_headers) : stompDTO.add_user_headers != null)
+            return false;
+        if (any_child_wildcard != null ? !any_child_wildcard.equals(stompDTO.any_child_wildcard) : stompDTO.any_child_wildcard != null)
+            return false;
+        if (any_descendant_wildcard != null ? !any_descendant_wildcard.equals(stompDTO.any_descendant_wildcard) : stompDTO.any_descendant_wildcard != null)
+            return false;
+        if (destination_separator != null ? !destination_separator.equals(stompDTO.destination_separator) : stompDTO.destination_separator != null)
+            return false;
+        if (max_data_length != null ? !max_data_length.equals(stompDTO.max_data_length) : stompDTO.max_data_length != null)
+            return false;
+        if (max_header_length != null ? !max_header_length.equals(stompDTO.max_header_length) : stompDTO.max_header_length != null)
+            return false;
+        if (max_headers != null ? !max_headers.equals(stompDTO.max_headers) : stompDTO.max_headers != null)
+            return false;
+        if (path_separator != null ? !path_separator.equals(stompDTO.path_separator) : stompDTO.path_separator != null)
+            return false;
+        if (protocol_filters != null ? !protocol_filters.equals(stompDTO.protocol_filters) : stompDTO.protocol_filters != null)
+            return false;
+        if (queue_prefix != null ? !queue_prefix.equals(stompDTO.queue_prefix) : stompDTO.queue_prefix != null)
+            return false;
+        if (topic_prefix != null ? !topic_prefix.equals(stompDTO.topic_prefix) : stompDTO.topic_prefix != null)
+            return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = add_user_header != null ? add_user_header.hashCode() : 0;
+        result = 31 * result + (add_user_headers != null ? add_user_headers.hashCode() : 0);
+        result = 31 * result + (max_header_length != null ? max_header_length.hashCode() : 0);
+        result = 31 * result + (max_headers != null ? max_headers.hashCode() : 0);
+        result = 31 * result + (max_data_length != null ? max_data_length.hashCode() : 0);
+        result = 31 * result + (protocol_filters != null ? protocol_filters.hashCode() : 0);
+        result = 31 * result + (queue_prefix != null ? queue_prefix.hashCode() : 0);
+        result = 31 * result + (topic_prefix != null ? topic_prefix.hashCode() : 0);
+        result = 31 * result + (destination_separator != null ? destination_separator.hashCode() : 0);
+        result = 31 * result + (path_separator != null ? path_separator.hashCode() : 0);
+        result = 31 * result + (any_child_wildcard != null ? any_child_wildcard.hashCode() : 0);
+        result = 31 * result + (any_descendant_wildcard != null ? any_descendant_wildcard.hashCode() : 0);
+        return result;
+    }
 }

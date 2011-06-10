@@ -70,15 +70,27 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
   /**
    * Validates and then applies the configuration.
    */
-  def update(config: VirtualHostDTO, on_completed:Runnable) = dispatch_queue{
-    this.config = config
+  def update(config: VirtualHostDTO, on_completed:Runnable) = dispatch_queue {
+    if ( !service_state.is_started ) {
+      this.config = config
+      on_completed.run
+    } else {
 
-    if( service_state.is_started ) {
+      // in some cases we have to restart the virtual host..
+      if( config.store != this.config.store || config.router != this.config.router) {
+        stop(^{
+          this.config = config
+          start(on_completed)
+        })
+      } else {
+        this.config = config
+        apply_update
+        this.router.apply_update(on_completed)
+      }
     }
   }
 
-  override protected def _start(on_completed:Runnable):Unit = {
-
+  def apply_update:Unit = {
     // Configure the logging categories...
     val log_category = config.log_category.getOrElse(new LogCategoryDTO)
     security_log = Option(log_category.security).map(Log(_)).getOrElse(broker.security_log)
@@ -86,10 +98,8 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
     connection_log = Option(log_category.connection).map(Log(_)).getOrElse(broker.connection_log)
     console_log = Option(log_category.console).map(Log(_)).getOrElse(broker.console_log)
 
-    val tracker = new LoggingTracker("virtual host startup", console_log, dispatch_queue)
-
-    if( config.authentication != null ) {
-      if( config.authentication.enabled.getOrElse(true) ) {
+    if (config.authentication != null) {
+      if (config.authentication.enabled.getOrElse(true)) {
         // Virtual host has it's own settings.
         authenticator = new JaasAuthenticator(config.authentication, security_log)
         authorizer = new AclAuthorizer(config.authentication.acl_principal_kinds().toList, security_log)
@@ -104,9 +114,16 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
       authorizer = broker.authorizer
     }
 
+  }
+
+  override protected def _start(on_completed:Runnable):Unit = {
+
+    apply_update
+
     router = RouterFactory.create(this)
     store = StoreFactory.create(config.store)
 
+    val tracker = new LoggingTracker("virtual host startup", console_log, dispatch_queue)
     if( store!=null ) {
       val task = tracker.task("store startup")
       console_log.info("Starting store: "+store)

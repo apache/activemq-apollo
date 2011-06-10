@@ -29,5 +29,19 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="null_store")
 @XmlAccessorType(XmlAccessType.FIELD)
+
 public class NullStoreDTO extends StoreDTO {
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof NullStoreDTO)) return false;
+        if (!super.equals(o)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return 32;
+    }
 }

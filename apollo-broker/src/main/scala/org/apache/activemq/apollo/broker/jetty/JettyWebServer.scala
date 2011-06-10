@@ -31,6 +31,7 @@ import collection.mutable.HashMap
 import org.eclipse.jetty.server.ssl.SslSelectChannelConnector
 import javax.net.ssl.SSLContext
 import org.eclipse.jetty.util.thread.ExecutorThreadPool
+import org.apache.activemq.apollo.dto.WebAdminDTO
 
 /**
  * <p>
@@ -133,6 +134,7 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
   override def toString: String = "jetty webserver"
 
   val dispatch_queue = createQueue()
+  var web_admins = List[WebAdminDTO]()
 
   protected def _start(on_completed: Runnable) = Broker.BLOCKABLE_THREAD_POOL {
     this.synchronized {
@@ -152,7 +154,8 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
       val contexts = HashMap[String, Handler]()
       val connectors = HashMap[String, Connector]()
 
-      config.web_admins.foreach { web_admin =>
+      web_admins = config.web_admins.toList
+      web_admins.foreach { web_admin =>
 
         val bind = web_admin.bind.getOrElse("http://127.0.0.1:61680")
         val bind_uri = new URI(bind)
@@ -245,4 +248,16 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
     }
   }
 
+  def update(on_complete: Runnable) = dispatch_queue {
+    import collection.JavaConversions._
+    val new_list = broker.config.web_admins.toList
+    if( new_list != web_admins ) {
+      // restart to pickup the changes.
+      stop(^{
+        start(on_complete)
+      })
+    } else {
+      on_complete.run()
+    }
+  }
 }

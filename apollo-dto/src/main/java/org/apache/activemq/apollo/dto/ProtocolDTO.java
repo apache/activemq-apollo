@@ -28,4 +28,16 @@ import javax.xml.bind.annotation.*;
 @XmlRootElement(name="protocol")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ProtocolDTO {
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ProtocolDTO)) return false;
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return 31;
+    }
 }

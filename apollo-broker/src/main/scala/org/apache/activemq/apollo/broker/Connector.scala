@@ -111,18 +111,26 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
   /**
    */
-  def update(config: ConnectorDTO, on_completed:Runnable) = {
-    dispatch_queue.assertExecuting()
-    this.config = config
-    if( service_state.is_started ) {
-
+  def update(config: ConnectorDTO, on_completed:Runnable) = dispatch_queue {
+    if ( !service_state.is_started || this.config == config ) {
+      this.config = config
+      on_completed.run
+    } else {
+      // if the connector config is updated.. lets stop, apply config, then restart
+      // the connector.
+      stop(^{
+        this.config = config
+        start(on_completed)
+      })
     }
-    on_completed.run
   }
 
 
   override def _start(on_completed:Runnable) = {
     assert(config!=null, "Connector must be configured before it is started.")
+
+    accepted.set(0)
+    connected.set(0)
     protocol = ProtocolFactory.get(config.protocol.getOrElse("any")).get
     transport_server = TransportFactory.bind( config.bind )
     transport_server.setDispatchQueue(dispatch_queue)
@@ -146,6 +154,8 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
   override def _stop(on_completed:Runnable): Unit = {
     transport_server.stop(^{
       broker.console_log.info("Stopped connector at: "+config.bind)
+      transport_server = null
+      protocol = null
       on_completed.run
     })
   }

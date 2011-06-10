@@ -25,7 +25,9 @@ import org.apache.activemq.apollo.broker.Broker
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait WebServer extends Service
+trait WebServer extends Service {
+  def update(on_complete:Runnable):Unit
+}
 
 /**
  * <p>

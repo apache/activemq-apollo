@@ -914,4 +914,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     })
   }
 
+  def apply_update(on_completed:Runnable) = {
+    // TODO: check to see if any of the destination configs need updating.
+    on_completed.run()
+  }
 }

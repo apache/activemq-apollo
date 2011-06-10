@@ -422,10 +422,7 @@ class Broker() extends BaseService {
 
     if( !config.web_admins.isEmpty ) {
       if ( web_server!=null ) {
-        val task = tracker.task("restart: "+web_server)
-        web_server.stop(^{
-          web_server.start(task)
-        })
+        web_server.update(tracker.task("update: "+web_server))
       } else {
         web_server = WebServerFactory.create(this)
         if (web_server==null) {

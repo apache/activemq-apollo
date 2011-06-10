@@ -53,6 +53,10 @@ class OsgiWebServerFactory  extends WebServerFactory.Provider {
         onComplete.run
       }
 
+      def update(on_complete: Runnable) = {
+        on_complete.run()
+      }
+
     }
   }
 }

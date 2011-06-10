@@ -35,4 +35,20 @@ public class WebAdminDTO {
     @XmlAttribute
     public String bind;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof WebAdminDTO)) return false;
+
+        WebAdminDTO that = (WebAdminDTO) o;
+
+        if (bind != null ? !bind.equals(that.bind) : that.bind != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return bind != null ? bind.hashCode() : 0;
+    }
 }

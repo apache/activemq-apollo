@@ -38,5 +38,21 @@ public abstract class StoreDTO {
     @XmlAttribute(name="flush_delay", required=false)
     public Long flush_delay;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof StoreDTO)) return false;
 
+        StoreDTO storeDTO = (StoreDTO) o;
+
+        if (flush_delay != null ? !flush_delay.equals(storeDTO.flush_delay) : storeDTO.flush_delay != null)
+            return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return flush_delay != null ? flush_delay.hashCode() : 0;
+    }
 }
