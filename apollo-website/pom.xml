@@ -63,6 +63,17 @@
       <version>${slf4j-version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-core-asl</artifactId>
+      <version>${jackson-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-mapper-asl</artifactId>
+      <version>${jackson-version}</version>
+    </dependency>
+    
     <!-- testing -->
     <dependency>
       <groupId>org.fusesource.scalate</groupId>
@@ -161,6 +172,60 @@
           </configuration>
         
       </plugin>
+      
+      <plugin>
+        <groupId>com.sun.tools.jxc.maven2</groupId>
+        <artifactId>maven-jaxb-schemagen-plugin</artifactId>
+        <version>1.3-dev</version>
+        <dependencies>
+           <dependency>
+              <groupId>javax.xml.bind</groupId>
+              <artifactId>jaxb-api</artifactId>
+              <version>${jaxb-api-version}</version>
+           </dependency>
+           <dependency>
+              <groupId>com.sun.xml.bind</groupId>
+              <artifactId>jaxb-impl</artifactId>
+              <version>${jaxb-version}</version>
+           </dependency>
+           <dependency>
+              <groupId>com.sun.xml.bind</groupId>
+              <artifactId>jaxb-xjc</artifactId>
+              <version>${jaxb-version}</version>
+           </dependency>
+        </dependencies>
+        
+        <executions>
+          <execution>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <destdir>${basedir}/target/sitegen/documentation/schema</destdir>
+              <srcdir>${basedir}/..</srcdir>
+              <includes>
+                <include>**/package-info.java</include>
+                <include>**/*DTO.java</include>
+              </includes>
+              <excludes>
+                <exclude>apollo-hawtdb/**</exclude>
+                <exclude>apollo-cassandra/**</exclude>
+                <exclude>apollo-openwire/**</exclude>
+                <exclude>**/.git/**</exclude>
+                <exclude>**/.svn/**</exclude>
+              </excludes>
+              <schemas>
+                <schema>
+                  <namespace>http://activemq.apache.org/schema/activemq/apollo</namespace>
+                  <file>apollo.xsd</file>
+                </schema>
+              </schemas>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      
     </plugins>
   </build>
 
