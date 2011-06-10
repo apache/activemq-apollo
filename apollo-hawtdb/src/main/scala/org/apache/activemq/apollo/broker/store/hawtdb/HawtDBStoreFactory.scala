@@ -20,7 +20,6 @@ import dto.HawtDBStoreDTO
 import org.apache.activemq.apollo.broker.store.StoreFactory
 import org.apache.activemq.apollo.dto.StoreDTO
 import org.apache.activemq.apollo.util._
-import ReporterLevel._
 
 /**
  * <p>
@@ -36,21 +35,9 @@ import ReporterLevel._
  */
 class HawtDBStoreFactory extends StoreFactory.Provider {
 
-  def create(config: StoreDTO) = {
-    config match {
-      case config:HawtDBStoreDTO =>
-        new HawtDBStore(config)
-      case _ =>
-        null
-    }
+  def create(config: StoreDTO) = config match {
+    case config:HawtDBStoreDTO => new HawtDBStore(config)
+    case _ => null
   }
 
-   def validate(config: StoreDTO, reporter:Reporter):ReporterLevel = {
-     config match {
-       case config:HawtDBStoreDTO =>
-         HawtDBStore.validate(config, reporter)
-       case _ =>
-         null
-     }
-   }
 }

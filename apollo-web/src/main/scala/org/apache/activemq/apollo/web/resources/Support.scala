@@ -291,7 +291,7 @@ abstract class Resource(parent:Resource=null) extends Logging {
 
   protected def with_connector[T](id:String)(func: (org.apache.activemq.apollo.broker.Connector)=>FutureResult[T]):FutureResult[T] = {
     with_broker { broker =>
-      broker.connectors.find(_.id == id) match {
+      broker.connectors.get(id) match {
         case Some(connector)=>
           func(connector)
         case None=> result(NOT_FOUND)

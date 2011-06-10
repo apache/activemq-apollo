@@ -20,7 +20,6 @@ import dto.BDBStoreDTO
 import org.apache.activemq.apollo.broker.store.StoreFactory
 import org.apache.activemq.apollo.dto.StoreDTO
 import org.apache.activemq.apollo.util._
-import ReporterLevel._
 
 /**
  * <p>
@@ -36,21 +35,9 @@ import ReporterLevel._
  */
 class BDBStoreFactory extends StoreFactory.Provider {
 
-  def create(config: StoreDTO) = {
-    config match {
-      case config:BDBStoreDTO =>
-        new BDBStore(config)
-      case _ =>
-        null
-    }
+  def create(config: StoreDTO) =  config match {
+    case config:BDBStoreDTO => new BDBStore(config)
+    case _ => null
   }
 
-   def validate(config: StoreDTO, reporter:Reporter):ReporterLevel = {
-     config match {
-       case config:BDBStoreDTO =>
-         BDBStore.validate(config, reporter)
-       case _ =>
-         null
-     }
-   }
 }

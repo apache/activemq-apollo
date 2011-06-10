@@ -198,7 +198,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
   def getRemoteProtocolName(): String
 
   def createBrokerConfig(name: String, bindURI: String, connectUri: String): BrokerDTO = {
-    val config = Broker.defaultConfig
+    val config = (new Broker).config
     val connector = config.connectors.get(0)
     connector.bind = bindURI
     connector.protocol = getBrokerProtocolName

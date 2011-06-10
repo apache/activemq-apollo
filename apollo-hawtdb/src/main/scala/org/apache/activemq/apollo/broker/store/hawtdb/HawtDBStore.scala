@@ -16,44 +16,27 @@
  */
 package org.apache.activemq.apollo.broker.store.hawtdb
 
-import collection.mutable.ListBuffer
 import dto.{HawtDBStoreStatusDTO, HawtDBStoreDTO}
-import java.util.HashMap
-import collection.{Seq}
+import collection.Seq
 import org.fusesource.hawtdispatch._
-import java.io.File
 import java.util.concurrent._
 import atomic.{AtomicInteger, AtomicLong}
 import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
-import ReporterLevel._
-import org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained, ListEventAggregator}
+import org.fusesource.hawtdispatch.ListEventAggregator
 import org.apache.activemq.apollo.util.OptionSupport._
 import java.io.{InputStream, OutputStream}
 import scala.util.continuations._
 
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
-
-  /**
-   * Validates a configuration object.
-   */
-  def validate(config: HawtDBStoreDTO, reporter:Reporter):ReporterLevel = {
-    new Reporting(reporter) {
-      if( config.directory==null ) {
-        error("The HawtDB Store directory property must be configured.")
-      }
-    }.result
-  }
 }
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class HawtDBStore(var config:HawtDBStoreDTO) extends DelayingStoreSupport {
-
-  import HawtDBStore._
 
   var next_queue_key = new AtomicLong(1)
   var next_msg_key = new AtomicLong(1)
@@ -78,19 +61,6 @@ class HawtDBStore(var config:HawtDBStoreDTO) extends DelayingStoreSupport {
           callback
         }
       })
-    }
-  }
-
-  def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[HawtDBStoreDTO], reporter)
-
-  def configure(config: HawtDBStoreDTO, reporter: Reporter) = {
-    if ( HawtDBStore.validate(config, reporter) < ERROR ) {
-      if( service_state.is_started ) {
-        // TODO: apply changes while he broker is running.
-        reporter.report(WARN, "Updating hawtdb store configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
-      } else {
-        this.config = config
-      }
     }
   }
 

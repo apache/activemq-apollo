@@ -52,13 +52,6 @@ trait Store extends ServiceTrait {
   def create_uow():StoreUOW
 
   /**
-   * Supplies configuration data to the Store.  This will be called
-   * before the store is started, but may also occur after the the Store
-   * is started.
-   */
-  def configure(config: StoreDTO, reporter:Reporter):Unit
-
-  /**
    * Removes all previously stored data.
    */
   def purge(callback: =>Unit):Unit

@@ -23,7 +23,6 @@ import org.fusesource.hawtdispatch._
 import java.util.concurrent._
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
-import ReporterLevel._
 import org.fusesource.hawtdispatch.ListEventAggregator
 import org.apache.activemq.apollo.dto.{StoreStatusDTO, IntMetricDTO, TimeMetricDTO, StoreDTO}
 import org.apache.activemq.apollo.util.OptionSupport._
@@ -35,17 +34,6 @@ import scala.util.continuations._
  */
 object BDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
-
-  /**
-   * Validates a configuration object.
-   */
-  def validate(config: BDBStoreDTO, reporter:Reporter):ReporterLevel = {
-    new Reporting(reporter) {
-      if( config.directory==null ) {
-        error("The BDB Store directory property must be configured.")
-      }
-    }.result
-  }
 }
 
 /**
@@ -77,19 +65,6 @@ class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
           callback
         }
       })
-    }
-  }
-
-  def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[BDBStoreDTO], reporter)
-
-  def configure(config: BDBStoreDTO, reporter: Reporter) = {
-    if ( BDBStore.validate(config, reporter) < ERROR ) {
-      if( service_state.is_started ) {
-        // TODO: apply changes while he broker is running.
-        reporter.report(WARN, "Updating bdb store configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
-      } else {
-        this.config = config
-      }
     }
   }
 

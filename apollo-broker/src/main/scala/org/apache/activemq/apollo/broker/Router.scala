@@ -24,7 +24,6 @@ import org.apache.activemq.apollo.dto._
 import security.SecurityContext
 import store.StoreUOW
 import util.continuations._
-import ReporterLevel._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -55,7 +54,6 @@ object RouterFactory {
 
   trait Provider {
     def create(host:VirtualHost):Router
-    def validate(config: RouterDTO, reporter:Reporter):ReporterLevel
   }
 
   val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/router-factory.index", classOf[Provider])
@@ -72,22 +70,6 @@ object RouterFactory {
       }
     }
     throw new IllegalArgumentException("Uknonwn router type: "+config.getClass)
-  }
-
-
-  def validate(config: RouterDTO, reporter:Reporter):ReporterLevel = {
-    if( config == null ) {
-      return INFO
-    } else {
-      providers.singletons.foreach { provider=>
-        val rc = provider.validate(config, reporter)
-        if( rc!=null ) {
-          return rc
-        }
-      }
-    }
-    reporter.report(ERROR, "Uknonwn router type: "+config.getClass)
-    ERROR
   }
 
 }

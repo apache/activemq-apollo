@@ -19,11 +19,11 @@ package org.apache.activemq.apollo.cli.commands
 import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
 import java.io.File
 import org.apache.activemq.apollo.broker.{Broker, ConfigStore, FileConfigStore}
-import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.cli.Apollo
 import org.apache.felix.service.command.CommandSession
-import org.apache.activemq.apollo.util.{ServiceControl, Log, LoggingReporter}
+import org.apache.activemq.apollo.util.ServiceControl
+import org.fusesource.hawtdispatch._
 
 /**
  * The apollo run command
@@ -80,12 +80,21 @@ class Run extends Action {
       // Load the configs and start the brokers up.
       session.getConsole.println("Loading configuration file '%s'.".format(conf))
 
+      val broker = new Broker()
       val store = new FileConfigStore
-      store.file = conf
+
       ConfigStore() = store
+      store.file = conf
+      store.on_update = { config =>
+        broker.dispatch_queue {
+          broker.console_log.info("Reloading configuration file '%s'.".format(conf))
+          broker.update(config, ^{
+            broker.console_log.info("Reload completed.")
+          })
+        }
+      }
       store.start
 
-      val broker = new Broker()
       broker.config = store.load(true)
       broker.tmp = tmp
       broker.start()

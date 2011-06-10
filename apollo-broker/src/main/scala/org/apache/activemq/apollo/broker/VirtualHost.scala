@@ -24,7 +24,6 @@ import org.fusesource.hawtdispatch._
 import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.util._
 import path.PathFilter
-import ReporterLevel._
 import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
 import collection.JavaConversions
 import java.util.concurrent.atomic.AtomicLong
@@ -38,33 +37,6 @@ import org.apache.activemq.apollo.dto._
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object VirtualHost extends Log {
-
-  /**
-   * Creates a default a configuration object.
-   */
-  def default_config() = {
-    val rc = new VirtualHostDTO
-    rc.id = "default"
-    rc.host_names.add("localhost")
-    rc.store = null
-    rc
-  }
-
-  /**
-   * Validates a configuration object.
-   */
-  def validate(config: VirtualHostDTO, reporter:Reporter):ReporterLevel = {
-     new Reporting(reporter) {
-
-      if( config.host_names.isEmpty ) {
-        error("Virtual host must be configured with at least one host name.")
-      }
-
-      result |= StoreFactory.validate(config.store, reporter)
-       
-    }.result
-  }
-  
 }
 
 /**
@@ -98,17 +70,12 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
   /**
    * Validates and then applies the configuration.
    */
-  def configure(config: VirtualHostDTO, reporter:Reporter) = ^{
-    if ( validate(config, reporter) < ERROR ) {
-      this.config = config
+  def update(config: VirtualHostDTO, on_completed:Runnable) = dispatch_queue{
+    this.config = config
 
-      if( service_state.is_started ) {
-        // TODO: apply changes while he broker is running.
-        reporter.report(WARN, "Updating virtual host configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
-
-      }
+    if( service_state.is_started ) {
     }
-  } |>>: dispatch_queue
+  }
 
   override protected def _start(on_completed:Runnable):Unit = {
 
@@ -163,7 +130,6 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
             }
           }
         }
-        console_log.info("Store started")
         task.run
       }
     }

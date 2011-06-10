@@ -39,11 +39,11 @@ class LoggingTracker(name:String, val log:Log=Log(classOf[LoggingTracker]), pare
   }
 
   def start(service:Service) = {
-    service.start(task(service.toString))
+    service.start(task("start "+service))
   }
 
   def stop(service:Service) = {
-    service.stop(task(service.toString))
+    service.stop(task("stop "+service))
   }
 
 }

@@ -27,6 +27,7 @@ import FileSupport._
 import java.util.Properties
 import java.io.{FileOutputStream, FileInputStream, File}
 import java.util.concurrent.{ThreadFactory, TimeUnit, ExecutorService, Executors}
+import org.springframework.core.style.DefaultToStringStyler
 
 object ConfigStore {
 
@@ -60,6 +61,8 @@ trait ConfigStore {
 
   def stop:Unit
 
+  var on_update: (BrokerDTO)=>Unit = { dto => }
+
 }
 
 object FileConfigStore extends Log
@@ -92,7 +95,7 @@ class FileConfigStore(var file:File = new File("activemq.xml")) extends ConfigSt
     if( !file.exists ) {
       try {
         // try to create a default version of the file.
-        store(Broker.defaultConfig)
+        store((new Broker).config)
       } catch {
         case e:Throwable =>
       }
@@ -139,7 +142,7 @@ class FileConfigStore(var file:File = new File("activemq.xml")) extends ConfigSt
           if( l != last_modified ) {
             val config = read(file)
             if ( !Arrays.equals(latestData, config.data) ) {
-              // TODO: trigger reloading the config file.
+              on_update(unmarshall(config.data, true))
             }
             latest = config
           }

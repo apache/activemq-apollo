@@ -17,13 +17,9 @@
 package org.apache.activemq.apollo.broker.jetty
 
 import org.eclipse.jetty.server.{Connector, Handler, Server}
-import org.eclipse.jetty.security._
-import org.apache.activemq.apollo.dto.{WebAdminDTO, PrincipalDTO}
 import org.apache.activemq.apollo.broker.Broker
-import authentication.BasicAuthenticator
 import org.eclipse.jetty.webapp.WebAppContext
 import org.eclipse.jetty.server.nio.SelectChannelConnector
-import org.eclipse.jetty.plus.jaas.JAASLoginService
 import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch._
 import java.io.File
@@ -31,11 +27,9 @@ import java.lang.String
 import org.apache.activemq.apollo.broker.web.{WebServer, WebServerFactory}
 import java.net.URI
 import org.eclipse.jetty.server.handler.HandlerList
-import collection.mutable.{HashMap, ListBuffer}
+import collection.mutable.HashMap
 import org.eclipse.jetty.server.ssl.SslSelectChannelConnector
-import javax.net.ssl.KeyManager
 import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManager
 import org.eclipse.jetty.util.thread.ExecutorThreadPool
 
 /**
@@ -59,20 +53,13 @@ object JettyWebServerFactory extends WebServerFactory.Provider {
     if( !enabled ) {
       return null
     }
+    if( JettyWebServer.webapp==null ) {
+      JettyWebServer.warn("The apollo.home or apollo.webapp system property must be set so that the webconsole can be started.")
+      return null
+    }
     new JettyWebServer(broker)
   }
 
-  def validate(config: List[WebAdminDTO], reporter: Reporter): ReporterLevel.ReporterLevel = {
-    if( !enabled ) {
-      return null
-    }
-    import ReporterLevel._
-    if( JettyWebServer.webapp==null ) {
-      reporter.report(ERROR, "The apollo.home or apollo.webapp system property must be set so that the webconsole can be started.")
-      return ERROR
-    }
-    return INFO
-  }
 }
 
 /**

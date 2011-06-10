@@ -20,10 +20,8 @@ import org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch.{Dispatch}
 import org.apache.activemq.apollo.dto.{ConnectorDTO}
 import protocol.{ProtocolFactory, Protocol}
-import collection.mutable.HashMap
 import org.apache.activemq.apollo.transport._
 import org.apache.activemq.apollo.util._
-import ReporterLevel._
 import org.apache.activemq.apollo.util.OptionSupport._
 
 
@@ -34,31 +32,6 @@ import org.apache.activemq.apollo.util.OptionSupport._
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object Connector extends Log {
-
-  /**
-   * Creates a default a configuration object.
-   */
-  def defaultConfig() = {
-    val rc = new ConnectorDTO
-    rc.id = "default"
-    rc.bind = "tcp://0.0.0.0:61613"
-    rc.protocol = "any"
-    rc.connection_limit = 1000
-    rc
-  }
-
-  /**
-   * Validates a configuration object.
-   */
-  def validate(config: ConnectorDTO, reporter:Reporter):ReporterLevel = {
-    new Reporting(reporter) {
-      if( empty(config.id) ) {
-        error("Connector id must be specified")
-      }
-    }.result
-  }
-
-
 }
 
 trait Connector extends BaseService {
@@ -69,6 +42,7 @@ trait Connector extends BaseService {
   def config:ConnectorDTO
   def accepted:LongCounter
   def connected:LongCounter
+  def update(config: ConnectorDTO, on_complete:Runnable):Unit
 
 }
 
@@ -84,7 +58,10 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
   override val dispatch_queue = broker.dispatch_queue
 
-  var config:ConnectorDTO = defaultConfig
+  var config:ConnectorDTO = new ConnectorDTO
+  config.id = id
+  config.bind = "tcp://0.0.0.:0"
+
   var transport_server:TransportServer = _
   var protocol:Protocol = _
   val accepted = new LongCounter()
@@ -133,19 +110,15 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
   }
 
   /**
-   * Validates and then applies the configuration.
    */
-  def configure(config: ConnectorDTO, reporter:Reporter) = ^{
-    if ( validate(config, reporter) < ERROR ) {
-      this.config = config
+  def update(config: ConnectorDTO, on_completed:Runnable) = {
+    dispatch_queue.assertExecuting()
+    this.config = config
+    if( service_state.is_started ) {
 
-      if( service_state.is_started ) {
-        // TODO: apply changes while running
-        reporter.report(WARN, "Updating connector configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
-
-      }
     }
-  } |>>: dispatch_queue
+    on_completed.run
+  }
 
 
   override def _start(on_completed:Runnable) = {

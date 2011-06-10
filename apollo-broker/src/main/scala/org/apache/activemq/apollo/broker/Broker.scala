@@ -20,19 +20,17 @@ import _root_.java.io.File
 import _root_.java.lang.String
 import org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
-import AsciiBuffer._
 import collection.JavaConversions
 import JavaConversions._
-import java.util.concurrent.atomic.AtomicLong
-import org.apache.activemq.apollo.util._
-import ReporterLevel._
 import security.{AclAuthorizer, Authorizer, JaasAuthenticator, Authenticator}
-import java.net.InetSocketAddress
 import org.apache.activemq.apollo.broker.web._
 import collection.mutable.{HashSet, LinkedHashMap, HashMap}
 import scala.util.Random
+import org.apache.activemq.apollo.util._
+import org.fusesource.hawtbuf.AsciiBuffer._
+import CollectionsSupport._
 import FileSupport._
-import org.apache.activemq.apollo.dto.{LogCategoryDTO, BrokerDTO}
+import org.apache.activemq.apollo.dto.{ConnectorDTO, VirtualHostDTO, LogCategoryDTO, BrokerDTO}
 
 /**
  * <p>
@@ -144,39 +142,6 @@ object Broker extends Log {
 
   def class_loader:ClassLoader = ClassFinder.class_loader
 
-  /**
-   * Creates a default a configuration object.
-   */
-  def defaultConfig() = {
-    val rc = new BrokerDTO
-    rc.notes = "A default configuration"
-    rc.virtual_hosts.add(VirtualHost.default_config)
-    rc.connectors.add(Connector.defaultConfig)
-    rc
-  }
-
-  /**
-   * Validates a configuration object.
-   */
-  def validate(config: BrokerDTO, reporter:Reporter):ReporterLevel = {
-    new Reporting(reporter) {
-      if( config.virtual_hosts.isEmpty ) {
-        error("Broker must define at least one virtual host.")
-      }
-
-      for (host <- config.virtual_hosts ) {
-        result |= VirtualHost.validate(host, reporter)
-      }
-      for (connector <- config.connectors ) {
-        result |= Connector.validate(connector, reporter)
-      }
-      if( !config.web_admins.isEmpty ) {
-        WebServerFactory.validate(config.web_admins.toList, reporter)
-      }
-
-    }.result
-  }
-
   val version = using(getClass().getResourceAsStream("version.txt")) { source=>
     read_text(source).trim
   }
@@ -197,13 +162,26 @@ class Broker() extends BaseService {
   import Broker._
 
   var tmp: File = _
-  var config: BrokerDTO = defaultConfig
+
+  var config: BrokerDTO = new BrokerDTO
+  config.virtual_hosts.add({
+    val rc = new VirtualHostDTO
+    rc.id = "default"
+    rc.host_names.add("localhost")
+    rc
+  })
+  config.connectors.add({
+    val rc = new ConnectorDTO
+    rc.id = "default"
+    rc.bind = "tcp://0.0.0.0:0"
+    rc
+  })
 
   var default_virtual_host: VirtualHost = null
   val virtual_hosts = LinkedHashMap[AsciiBuffer, VirtualHost]()
   val virtual_hosts_by_hostname = new LinkedHashMap[AsciiBuffer, VirtualHost]()
 
-  var connectors: List[Connector] = Nil
+  val connectors = LinkedHashMap[String, Connector]()
   val connections = HashMap[Long, BrokerConnection]()
 
   val dispatch_queue = createQueue("broker")
@@ -216,6 +194,7 @@ class Broker() extends BaseService {
 
   var web_server:WebServer = _
 
+  var config_log:Log = Log(new MemoryLogger(Broker.log))
   var audit_log:Log = _
   var security_log:Log  = _
   var connection_log:Log = _
@@ -223,23 +202,6 @@ class Broker() extends BaseService {
   var services = List[Service]()
 
   override def toString() = "broker: "+id
-
-
-  /**
-   * Validates and then applies the configuration.
-   */
-  def configure(config: BrokerDTO, reporter:Reporter) = {
-    if ( validate(config, reporter) < ERROR ) {
-      dispatch_queue {
-        this.config = config
-      }
-      if( service_state.is_started ) {
-        // TODO: apply changes while he broker is running.
-        reporter.report(WARN, "Updating broker configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
-
-      }
-    }
-  }
 
   var authenticator:Authenticator = _
   var authorizer:Authorizer = _
@@ -253,107 +215,34 @@ class Broker() extends BaseService {
     }
   }
 
+  /**
+   * Validates and then applies the configuration.
+   */
+  def update(config: BrokerDTO, on_completed:Runnable) = dispatch_queue {
+    dispatch_queue.assertExecuting()
+    this.config = config
+
+    val tracker = new LoggingTracker("broker reconfiguration", console_log, dispatch_queue)
+    if( service_state.is_started ) {
+      apply_update(tracker)
+    }
+    tracker.callback(on_completed)
+  }
+
   override def _start(on_completed:Runnable) = {
 
     // create the runtime objects from the config
-    {
-      import OptionSupport._
-      init_dispatch_queue(dispatch_queue)
-
-      // Configure the logging categories...
-      val log_category = config.log_category.getOrElse(new LogCategoryDTO)
-      val base_category = "org.apache.activemq.apollo.log."
-      security_log = Log(log_category.security.getOrElse(base_category+"security"))
-      audit_log = Log(log_category.audit.getOrElse(base_category+"audit"))
-      connection_log = Log(log_category.connection.getOrElse(base_category+"connection"))
-      console_log = Log(log_category.console.getOrElse(base_category+"console"))
-
-      log_versions
-      check_file_limit
-
-      if( config.key_storage!=null ) {
-        key_storage = new KeyStorage
-        key_storage.config = config.key_storage
-      }
-
-
-      if( config.authentication != null && config.authentication.enabled.getOrElse(true) ) {
-        authenticator = new JaasAuthenticator(config.authentication, security_log)
-        authorizer = new AclAuthorizer(config.authentication.acl_principal_kinds().toList, security_log)
-      }
-
-      default_virtual_host = null
-      for (c <- config.virtual_hosts) {
-        val host = new VirtualHost(this, c.host_names.head)
-        host.configure(c, LoggingReporter(VirtualHost))
-        virtual_hosts += ascii(c.id)-> host
-        // first defined host is the default virtual host
-        if( default_virtual_host == null ) {
-          default_virtual_host = host
-        }
-
-        // add all the host names of the virtual host to the virtual_hosts_by_hostname map..
-        c.host_names.foreach { name=>
-          virtual_hosts_by_hostname += ascii(name)->host
-        }
-      }
-
-      for (c <- config.connectors) {
-        val connector = new AcceptingConnector(this, c.id)
-        connector.configure(c, LoggingReporter(VirtualHost))
-        connectors ::= connector
-      }
-
-
-      services = (config.services.map { clazz =>
-        val service = Broker.class_loader.loadClass(clazz).newInstance().asInstanceOf[Service]
-
-        // Try to inject the broker via reflection..
-        type BrokerAware = { var broker:Broker }
-        try {
-          service.asInstanceOf[BrokerAware].broker = this
-        } catch { case _ => }
-
-        service
-
-      }).toList
-    }
-
+    init_logs
+    log_versions
+    check_file_limit
+    init_dispatch_queue(dispatch_queue)
     BrokerRegistry.add(this)
 
-    // Start up the virtual hosts
-    val first_tracker = new LoggingTracker("broker startup", console_log, dispatch_queue)
-    val second_tracker = new LoggingTracker("broker startup", console_log, dispatch_queue)
-
-    if( !config.web_admins.isEmpty ) {
-      WebServerFactory.create(this) match {
-        case null =>
-          warn("Could not start admistration interface.")
-        case x =>
-          web_server = x
-          second_tracker.start(web_server)
-      }
-    }
-
-    virtual_hosts.valuesIterator.foreach( x=>
-      first_tracker.start(x)
-    )
-
-    // Once virtual hosts are up.. start up the connectors.
-    first_tracker.callback{
-      connectors.foreach(second_tracker.start(_))
-      second_tracker.callback {
-        // Once the connectors are up, start the services.
-        val services_tracker = new LoggingTracker("broker startup", console_log, dispatch_queue)
-        services.foreach( x=>
-          first_tracker.start(x)
-        )
-        services_tracker.callback(on_completed)
-      }
-    }
+    val tracker = new LoggingTracker("broker startup", console_log, dispatch_queue)
+    apply_update(tracker)
+    tracker.callback(on_completed)
 
   }
-
 
   def _stop(on_completed:Runnable): Unit = {
     val tracker = new LoggingTracker("broker shutdown", console_log, dispatch_queue)
@@ -362,26 +251,197 @@ class Broker() extends BaseService {
     services.foreach( x=>
       tracker.stop(x)
     )
+    services = Nil
 
     // Stop accepting connections..
-    connectors.foreach( x=>
+    connectors.values.foreach( x=>
       tracker.stop(x)
     )
+    connectors.clear()
 
     // stop the connections..
     connections.valuesIterator.foreach { connection=>
       tracker.stop(connection)
     }
+    connections.clear()
 
     // Shutdown the virtual host services
     virtual_hosts.valuesIterator.foreach( x=>
       tracker.stop(x)
     )
+    virtual_hosts.clear()
+    virtual_hosts_by_hostname.clear()
 
     Option(web_server).foreach(tracker.stop(_))
+    web_server = null
 
     BrokerRegistry.remove(this)
     tracker.callback(on_completed)
+  }
+
+  protected def init_logs = {
+    import OptionSupport._
+    // Configure the logging categories...
+    val log_category = config.log_category.getOrElse(new LogCategoryDTO)
+    val base_category = "org.apache.activemq.apollo.log."
+    security_log = Log(log_category.security.getOrElse(base_category + "security"))
+    audit_log = Log(log_category.audit.getOrElse(base_category + "audit"))
+    connection_log = Log(log_category.connection.getOrElse(base_category + "connection"))
+    console_log = Log(log_category.console.getOrElse(base_category + "console"))
+  }
+
+  protected def apply_update(tracker:LoggingTracker) {
+
+    import OptionSupport._
+    init_logs
+
+    key_storage = if (config.key_storage != null) {
+      new KeyStorage(config.key_storage)
+    } else {
+      null
+    }
+
+    if (config.authentication != null && config.authentication.enabled.getOrElse(true)) {
+      authenticator = new JaasAuthenticator(config.authentication, security_log)
+      authorizer = new AclAuthorizer(config.authentication.acl_principal_kinds().toList, security_log)
+    } else {
+      authenticator = null
+      authorizer = null
+    }
+
+    val host_config_by_id = HashMap[AsciiBuffer, VirtualHostDTO]()
+    config.virtual_hosts.foreach{ value =>
+      host_config_by_id += ascii(value.id) -> value
+    }
+
+    diff(virtual_hosts.keySet.toSet, host_config_by_id.keySet.toSet) match { case (added, updated, removed) =>
+      removed.foreach { id =>
+        for( host <- virtual_hosts.remove(id) ) {
+          host.config.host_names.foreach { name =>
+            virtual_hosts_by_hostname.remove(ascii(name))
+          }
+          tracker.stop(host)
+        }
+      }
+
+      updated.foreach { id=>
+        for( host <- virtual_hosts.get(id); config <- host_config_by_id.get(id) ) {
+
+          host.config.host_names.foreach { name =>
+            virtual_hosts_by_hostname.remove(ascii(name))
+          }
+
+          host.update(config, tracker.task("update: "+host))
+
+          config.host_names.foreach { name =>
+            virtual_hosts_by_hostname += ascii(name) -> host
+          }
+
+        }
+      }
+
+      added.foreach { id=>
+        for( config <- host_config_by_id.get(id) ) {
+
+          val host = new VirtualHost(this, config.id)
+          host.config = config
+          virtual_hosts += ascii(config.id) -> host
+
+          // add all the host names of the virtual host to the virtual_hosts_by_hostname map..
+          config.host_names.foreach { name =>
+            virtual_hosts_by_hostname += ascii(name) -> host
+          }
+
+          tracker.start(host)
+        }
+      }
+    }
+
+    // first defined host is the default virtual host
+    config.virtual_hosts.headOption.map(x=>ascii(x.id)).foreach { id =>
+      default_virtual_host = virtual_hosts.get(id).getOrElse(null)
+    }
+
+
+    val connector_config_by_id = HashMap[String, ConnectorDTO]()
+    config.connectors.foreach{ value =>
+      connector_config_by_id += value.id -> value
+    }
+
+    diff(connectors.keySet.toSet, connector_config_by_id.keySet.toSet) match { case (added, updated, removed) =>
+      removed.foreach { id =>
+        for( connector <- connectors.remove(id) ) {
+          tracker.stop(connector)
+        }
+      }
+
+      updated.foreach { id=>
+        for( connector <- connectors.get(id); config <- connector_config_by_id.get(id) ) {
+          connector.update(config,  tracker.task("update: "+connector))
+        }
+      }
+
+      added.foreach { id=>
+        for( config <- connector_config_by_id.get(id) ) {
+          val connector = new AcceptingConnector(this, config.id)
+          connector.config = config
+          connectors += config.id -> connector
+          tracker.start(connector)
+        }
+      }
+    }
+
+    val set1 = (services.map{x => x.getClass.getName}).toSet
+    diff(set1, config.services.toSet) match { case (added, updated, removed) =>
+      removed.foreach { id =>
+        for( service <- services.find(_.getClass.getName == id) ) {
+          services = services.filterNot( _ == service )
+          tracker.stop(service)
+        }
+      }
+
+      // Not much to do on updates..
+
+      added.foreach { clazz=>
+
+        val service = Broker.class_loader.loadClass(clazz).newInstance().asInstanceOf[Service]
+
+        // Try to inject the broker via reflection..
+        type BrokerAware = {var broker: Broker}
+        try {
+          service.asInstanceOf[BrokerAware].broker = this
+        } catch {
+          case _ =>
+        }
+
+        services ::= service
+
+        tracker.start(service)
+      }
+    }
+
+    if( !config.web_admins.isEmpty ) {
+      if ( web_server!=null ) {
+        val task = tracker.task("restart: "+web_server)
+        web_server.stop(^{
+          web_server.start(task)
+        })
+      } else {
+        web_server = WebServerFactory.create(this)
+        if (web_server==null) {
+          warn("Could not start admistration interface.")
+        } else {
+          tracker.start(web_server)
+        }
+      }
+    } else {
+      if( web_server!=null ) {
+        tracker.stop(web_server)
+        web_server = null
+      }
+    }
+
+
   }
 
   private def log_versions = {
@@ -492,6 +552,6 @@ class Broker() extends BaseService {
     first_accepting_connector.get.transport_server.getSocketAddress
   }
 
-  def first_accepting_connector = connectors.find(_.isInstanceOf[AcceptingConnector]).map(_.asInstanceOf[AcceptingConnector])
+  def first_accepting_connector = connectors.values.find(_.isInstanceOf[AcceptingConnector]).map(_.asInstanceOf[AcceptingConnector])
 
 }

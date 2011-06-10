@@ -74,7 +74,7 @@ object BrokerService extends Log {
 
       debug("Starting broker");
       broker = new Broker()
-      broker.configure(dto, LoggingReporter(this))
+      broker.update(dto, NOOP)
       broker.tmp = basedir / "tmp"
       broker.tmp.mkdirs
       broker.start(^{

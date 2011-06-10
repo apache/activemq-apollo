@@ -46,32 +46,14 @@ class XmlBrokerFactory extends BrokerFactory.Provider {
         throw new IOException("Cannot create broker from non-existent URI: " + brokerURI)
       }
 
-      val xml = decode(classOf[BrokerDTO], configURL, System.getProperties)
-      return createMessageBroker(xml)
+      val broker = new Broker()
+      broker.config = decode(classOf[BrokerDTO], configURL, System.getProperties)
+      return broker;
+
     } catch {
       case e: Exception =>
         throw new RuntimeException("Cannot create broker from URI: " + value, e)
     }
   }
 
-  def createMessageBroker(config: BrokerDTO): Broker = {
-    import ReporterLevel._
-    val broker = new Broker()
-
-    var error_message = "";
-    broker.configure(config, new Reporter(){
-      override def report(level: ReporterLevel, message: String) = {
-        level match {
-          case ERROR=> error_message+=message+"\n"
-          case _=>
-        }
-      }
-    })
-
-    if( !error_message.isEmpty ) {
-      throw new Exception("Invalid Broker Configuration:\n"+error_message)
-    }
-    
-    broker
-  }
 }

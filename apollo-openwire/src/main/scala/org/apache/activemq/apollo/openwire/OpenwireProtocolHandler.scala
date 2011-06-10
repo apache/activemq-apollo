@@ -114,7 +114,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   override def create_connection_status = {
     var rc = new OpenwireConnectionStatusDTO
-    rc.protocol_version = if (wire_format == null) null else wire_format.getVersion.toString
+    rc.protocol_version = ""+(if (wire_format == null) 0 else wire_format.getVersion)
     rc.user = login.map(_.toString).getOrElse(null)
     //    rc.subscription_count = consumers.size
     rc.waiting_on = waiting_on

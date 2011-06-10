@@ -17,8 +17,6 @@
 package org.apache.activemq.apollo.web.osgi
 
 import org.apache.activemq.apollo.broker.web.{WebServerFactory, WebServer}
-import org.apache.activemq.apollo.util.{Reporter, ReporterLevel}
-import org.apache.activemq.apollo.dto.WebAdminDTO
 import org.apache.activemq.apollo.broker.Broker
 import org.apache.activemq.apollo.broker.osgi.BrokerService
 
@@ -33,31 +31,28 @@ class OsgiWebServerFactory  extends WebServerFactory.Provider {
   // So that the factory class does not load, if we cannot load OSGi
   private val broker_service = BrokerService
 
-  def create(broker:Broker): WebServer = new WebServer {
-
-    def start: Unit = {
-      // TODO: see if we can poke around and get the endpoint address
-      // of our deployment to pax web
-    }
-
-    def stop: Unit = {
-    }
-
-    def start(onComplete: Runnable): Unit = {
-      start
-      onComplete.run
-    }
-    def stop(onComplete: Runnable): Unit = {
-      stop
-      onComplete.run
-    }
-
-  }
-
-  def validate(config: List[WebAdminDTO], reporter: Reporter): ReporterLevel.ReporterLevel = {
-    if( broker_service.context == null ) {
+  def create(broker:Broker): WebServer = if( broker_service.context == null ) {
       return null
+  } else {
+    new WebServer {
+
+      def start: Unit = {
+        // TODO: see if we can poke around and get the endpoint address
+        // of our deployment to pax web
+      }
+
+      def stop: Unit = {
+      }
+
+      def start(onComplete: Runnable): Unit = {
+        start
+        onComplete.run
+      }
+      def stop(onComplete: Runnable): Unit = {
+        stop
+        onComplete.run
+      }
+
     }
-    return ReporterLevel.INFO
   }
 }

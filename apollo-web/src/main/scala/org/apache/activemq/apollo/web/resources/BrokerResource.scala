@@ -71,7 +71,7 @@ case class BrokerResource() extends Resource {
           result.virtual_hosts.add( host.id )
         }
 
-        broker.connectors.foreach{ c=>
+        broker.connectors.values.foreach{ c=>
           result.connectors.add( c.id )
         }
 
@@ -477,7 +477,7 @@ case class BrokerResource() extends Resource {
 
     with_broker { broker =>
       monitoring(broker) {
-        val records = broker.connectors.map { value =>
+        val records = broker.connectors.values.map { value =>
           Success(status(value))
         }
         FutureResult(narrow(classOf[ConnectorStatusDTO], records, f, q, p, ps))

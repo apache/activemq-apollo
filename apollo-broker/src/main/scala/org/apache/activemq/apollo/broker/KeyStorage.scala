@@ -25,9 +25,7 @@ import java.io.FileInputStream
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class KeyStorage {
-
-  var config = new KeyStorageDTO
+class KeyStorage(val config:KeyStorageDTO) {
 
   var key_store:KeyStore = _
   var trust_managers:Array[TrustManager] = _

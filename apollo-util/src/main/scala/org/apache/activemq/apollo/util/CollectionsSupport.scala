@@ -1,5 +1,3 @@
-package org.apache.activemq.apollo.broker.store
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -16,8 +14,7 @@ package org.apache.activemq.apollo.broker.store
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.apache.activemq.apollo.dto.StoreDTO
-import org.apache.activemq.apollo.util._
+package org.apache.activemq.apollo.util
 
 /**
  * <p>
@@ -25,25 +22,12 @@ import org.apache.activemq.apollo.util._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object StoreFactory {
+object CollectionsSupport {
 
-  trait Provider {
-    def create(config:StoreDTO):Store
+  def diff[T](prev:Set[T], next:Set[T]):(Set[T],Set[T],Set[T]) = {
+    val updating = prev.intersect(next)
+    val adding = next -- updating
+    val removing = prev -- next
+    (adding, updating, removing)
   }
-
-  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/store-factory.index", classOf[Provider])
-
-  def create(config:StoreDTO):Store = {
-    if( config == null ) {
-      return null
-    }
-    providers.singletons.foreach { provider=>
-      val rc = provider.create(config)
-      if( rc!=null ) {
-        return rc
-      }
-    }
-    throw new IllegalArgumentException("Uknonwn store type: "+config.getClass)
-  }
-
 }

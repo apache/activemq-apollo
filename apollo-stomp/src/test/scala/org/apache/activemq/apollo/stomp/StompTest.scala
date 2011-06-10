@@ -22,6 +22,7 @@ import java.lang.String
 import org.apache.activemq.apollo.broker.{KeyStorage, Broker, BrokerFactory}
 import org.apache.activemq.apollo.util.{FileSupport, Logging, FunSuiteSupport, ServiceControl}
 import FileSupport._
+import org.apache.activemq.apollo.dto.KeyStorageDTO
 
 class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAndAfterEach with Logging {
   var broker: Broker = null
@@ -977,10 +978,12 @@ class StompUnifiedQueueTest extends StompTestSupport {
 class StompSslDestinationTest extends StompDestinationTest {
   override val broker_config_uri: String = "xml:classpath:apollo-stomp-ssl.xml"
 
-  client.key_storeage = new KeyStorage
-  client.key_storeage.config.file = basedir/"src"/"test"/"resources"/"client.ks"
-  client.key_storeage.config.password = "password"
-  client.key_storeage.config.key_password = "password"
+  val config = new KeyStorageDTO
+  config.file = basedir/"src"/"test"/"resources"/"client.ks"
+  config.password = "password"
+  config.key_password = "password"
+
+  client.key_storeage = new KeyStorage(config)
 
 }
 
@@ -1445,10 +1448,11 @@ class StompSslSecurityTest extends StompTestSupport {
   }
 
   def use_client_cert = {
-    client.key_storeage = new KeyStorage
-    client.key_storeage.config.file = basedir/"src"/"test"/"resources"/"client.ks"
-    client.key_storeage.config.password = "password"
-    client.key_storeage.config.key_password = "password"
+    val config = new KeyStorageDTO
+    config.file = basedir/"src"/"test"/"resources"/"client.ks"
+    config.password = "password"
+    config.key_password = "password"
+    client.key_storeage = new KeyStorage(config)
   }
 
   test("Connect with cert and no id password") {

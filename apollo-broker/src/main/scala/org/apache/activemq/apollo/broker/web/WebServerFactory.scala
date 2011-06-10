@@ -17,8 +17,6 @@
 package org.apache.activemq.apollo.broker.web
 
 import org.apache.activemq.apollo.util._
-import ReporterLevel._
-import org.apache.activemq.apollo.dto.WebAdminDTO
 import org.apache.activemq.apollo.broker.Broker
 
 /**
@@ -39,7 +37,6 @@ object WebServerFactory {
 
   trait Provider {
     def create(broker:Broker):WebServer
-    def validate(config: List[WebAdminDTO], reporter:Reporter):ReporterLevel
   }
 
   val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/web-server-factory.index",classOf[Provider])
@@ -55,22 +52,6 @@ object WebServerFactory {
       }
     }
     null
-  }
-
-
-  def validate(config: List[WebAdminDTO], reporter:Reporter):ReporterLevel = {
-    if( config == null ) {
-      return INFO
-    } else {
-      providers.singletons.foreach { provider=>
-        val rc = provider.validate(config, reporter)
-        if( rc!=null ) {
-          return rc
-        }
-      }
-    }
-    reporter.report(ERROR, "Could not find a web server implementation to use.")
-    ERROR
   }
 
 }

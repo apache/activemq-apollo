@@ -20,13 +20,11 @@ import dto.{JDBM2StoreDTO, JDBM2StoreStatusDTO}
 import java.util.concurrent.atomic.AtomicLong
 import collection.Seq
 import org.fusesource.hawtdispatch._
-import java.io.File
 import java.util.concurrent._
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
-import ReporterLevel._
 import org.fusesource.hawtdispatch.ListEventAggregator
-import org.apache.activemq.apollo.dto.{StoreStatusDTO, IntMetricDTO, TimeMetricDTO, StoreDTO}
+import org.apache.activemq.apollo.dto.StoreStatusDTO
 import org.apache.activemq.apollo.util.OptionSupport._
 import java.io.{InputStream, OutputStream}
 import scala.util.continuations._
@@ -36,25 +34,12 @@ import scala.util.continuations._
  */
 object JDBM2Store extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
-
-  /**
-   * Validates a configuration object.
-   */
-  def validate(config: JDBM2StoreDTO, reporter:Reporter):ReporterLevel = {
-    new Reporting(reporter) {
-      if( config.directory==null ) {
-        error("The jdbm2 store directory property must be configured.")
-      }
-    }.result
-  }
 }
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class JDBM2Store(var config:JDBM2StoreDTO) extends DelayingStoreSupport {
-
-  import JDBM2Store._
 
   var next_queue_key = new AtomicLong(1)
   var next_msg_key = new AtomicLong(1)
@@ -77,19 +62,6 @@ class JDBM2Store(var config:JDBM2StoreDTO) extends DelayingStoreSupport {
           callback
         }
       })
-    }
-  }
-
-  def configure(config: StoreDTO, reporter: Reporter) = configure(config.asInstanceOf[JDBM2StoreDTO], reporter)
-
-  def configure(config: JDBM2StoreDTO, reporter: Reporter) = {
-    if ( JDBM2Store.validate(config, reporter) < ERROR ) {
-      if( service_state.is_started ) {
-        // TODO: apply changes while he broker is running.
-        reporter.report(WARN, "Updating jdbm2 store configuration at runtime is not yet supported.  You must restart the broker for the change to take effect.")
-      } else {
-        this.config = config
-      }
     }
   }
 

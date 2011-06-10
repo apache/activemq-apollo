@@ -45,7 +45,7 @@ class ApolloListener extends ServletContextListener {
         // Only start the broker up if it's enabled..
         info("starting broker");
         broker = new Broker()
-        broker.configure(config, LoggingReporter(ApolloListener))
+        broker.config = config
         broker.start()
       }
     } catch {

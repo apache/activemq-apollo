@@ -40,6 +40,9 @@ trait BaseService extends Service with Dispatched {
     def is_created = false
     def is_starting = false
     def is_started = false
+
+    def is_starting_or_started = is_starting | is_started
+
     def is_stopping = false
     def is_stopped= false
     def is_failed= false
