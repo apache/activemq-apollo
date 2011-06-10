@@ -254,22 +254,26 @@ public final class IntrospectionSupport {
     }
 
     public static String toString(Object target) {
-        return toString(target, Object.class, null, (String[])null);
+        return toString(target, Object.class, true, null, (String[])null);
     }
-    
+
     public static String toString(Object target, String...fields) {
-        return toString(target, Object.class, null, fields);
+        return toString(target, Object.class, true, null, fields);
     }
-    
+
     public static String toString(Object target, Class<?> stopClass) {
-    	return toString(target, stopClass, null, (String[])null);
+    	return toString(target, stopClass, true, null, (String[])null);
     }
 
     public static String toString(Object target, Map<String, Object> overrideFields, String...fields) {
-        return toString(target, Object.class, overrideFields, fields);
+        return toString(target, Object.class, true, overrideFields, fields);
     }
 
     public static String toString(Object target, Class<?> stopClass, Map<String, Object> overrideFields, String ... fields) {
+        return toString(target, stopClass, true, overrideFields, fields);
+    }
+
+    public static String toString(Object target, Class<?> stopClass, boolean allowMultiLine, Map<String, Object> overrideFields, String ... fields) {
         try {
             LinkedHashMap<String, Object> map = new LinkedHashMap<String, Object>();
             addFields(target, target.getClass(), stopClass, map);
@@ -291,7 +295,7 @@ public final class IntrospectionSupport {
                 String value = null;
                 if( entry.getValue() !=null ) {
                     value = entry.getValue().toString();
-                    if( value!=null && ( value.indexOf('\n')>=0 || (key.length()+value.length())>70 ) ) {
+                    if( allowMultiLine && value!=null && ( value.indexOf('\n')>=0 || (key.length()+value.length())>70 ) ) {
                         useMultiLine=true;
                     }
                 }
@@ -336,7 +340,6 @@ public final class IntrospectionSupport {
             return "Could not toString: "+e.toString();
         }
     }
-
 
     public static String simpleName(Class<?> clazz) {
         String name = clazz.getName();
