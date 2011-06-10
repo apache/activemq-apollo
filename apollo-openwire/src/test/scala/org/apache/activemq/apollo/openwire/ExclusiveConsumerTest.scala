@@ -17,56 +17,64 @@
 package org.apache.activemq.apollo.openwire
 
 import javax.jms.{TextMessage, Session}
-import org.apache.activemq.apollo.openwire.command.ActiveMQQueue
 
 class ExclusiveConsumerTest extends OpenwireTestSupport {
 
+}
+
+class ExclusiveConsumerSelectedWhenCreatedFirst extends ExclusiveConsumerTest {
+
   test("Exclusive Consumer Selected when created first") {
 
-    connect();
+    connect()
 
     val exclusiveSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val fallbackSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val senderSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
 
     val exclusiveConsumer = exclusiveSession.createConsumer(queue("TEST.QUEUE1?consumer.exclusive=true"))
-    val fallbackConsumer = fallbackSession.createConsumer(queue("TEST.QUEUE1"));
-    val producer = senderSession.createProducer(queue("TEST.QUEUE1"));
+    val fallbackConsumer = fallbackSession.createConsumer(queue("TEST.QUEUE1"))
+    val producer = senderSession.createProducer(queue("TEST.QUEUE1"))
 
-    val msg = senderSession.createTextMessage("test");
-    producer.send(msg);
+    producer.send(senderSession.createTextMessage("Exclusive Consumer Selected when created first - 1"))
 
-    Thread.sleep(100);
+    Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
     exclusiveConsumer.receive(100) should not be(null)
     fallbackConsumer.receive(100) should be(null)
   }
+}
+
+class ExclusiveConsumerSelectedWhenCreatedAfterNonExclusive extends ExclusiveConsumerTest {
 
   test("Exclusive Consumer Selected when Created After Non-Exclusive Consumer") {
-
-    connect();
+    connect()
 
     val exclusiveSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val fallbackSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val senderSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
 
-    val fallbackConsumer = fallbackSession.createConsumer(queue("TEST.QUEUE1"));
+    val fallbackConsumer = fallbackSession.createConsumer(queue("TEST.QUEUE1"))
     val exclusiveConsumer = exclusiveSession.createConsumer(queue("TEST.QUEUE1?consumer.exclusive=true"))
-    val producer = senderSession.createProducer(queue("TEST.QUEUE1"));
+    val producer = senderSession.createProducer(queue("TEST.QUEUE1"))
 
-    val msg = senderSession.createTextMessage("test");
+    val msg = senderSession.createTextMessage("test")
     producer.send(msg);
 
-    Thread.sleep(100);
+    Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
     exclusiveConsumer.receive(100) should not be(null)
     fallbackConsumer.receive(100) should be(null)
   }
+}
+
+class FailoverToAnotherExclusiveConsumerCreateFirst extends ExclusiveConsumerTest {
 
   test("Failover To Another Exclusive Consumer Created First") {
-    connect();
+
+    connect()
 
     val exclusiveSession1 = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val exclusiveSession2 = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
@@ -75,13 +83,12 @@ class ExclusiveConsumerTest extends OpenwireTestSupport {
 
     val exclusiveConsumer1 = exclusiveSession1.createConsumer(queue("TEST.QUEUE1?consumer.exclusive=true"))
     val exclusiveConsumer2 = exclusiveSession2.createConsumer(queue("TEST.QUEUE1?consumer.exclusive=true"))
-    val fallbackConsumer = fallbackSession.createConsumer(queue("TEST.QUEUE1"));
-    val producer = senderSession.createProducer(queue("TEST.QUEUE1"));
+    val fallbackConsumer = fallbackSession.createConsumer(queue("TEST.QUEUE1"))
+    val producer = senderSession.createProducer(queue("TEST.QUEUE1"))
 
-    val msg = senderSession.createTextMessage("test");
-    producer.send(msg);
+    producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created First - 1"))
 
-    Thread.sleep(100);
+    Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
     exclusiveConsumer1.receive(100) should not be(null)
@@ -92,16 +99,19 @@ class ExclusiveConsumerTest extends OpenwireTestSupport {
     // takes over
     exclusiveConsumer1.close()
 
-    producer.send(msg);
-    producer.send(msg);
+    producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created First - 2"))
+    producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created First - 3"))
 
     exclusiveConsumer2.receive(100) should not be(null)
     fallbackConsumer.receive(100) should be(null)
   }
+}
+
+class FailoverToAnotherExclusiveConsumerCreateAfterNonExclusive extends ExclusiveConsumerTest {
 
   test("Failover To Another Exclusive Consumer Created After a non-exclusive Consumer") {
 
-    connect();
+    connect()
 
     val exclusiveSession1 = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val exclusiveSession2 = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
@@ -109,14 +119,13 @@ class ExclusiveConsumerTest extends OpenwireTestSupport {
     val senderSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
 
     val exclusiveConsumer1 = exclusiveSession1.createConsumer(queue("TEST.QUEUE1?consumer.exclusive=true"))
-    val fallbackConsumer = fallbackSession.createConsumer(queue("TEST.QUEUE1"));
+    val fallbackConsumer = fallbackSession.createConsumer(queue("TEST.QUEUE1"))
     val exclusiveConsumer2 = exclusiveSession2.createConsumer(queue("TEST.QUEUE1?consumer.exclusive=true"))
-    val producer = senderSession.createProducer(queue("TEST.QUEUE1"));
+    val producer = senderSession.createProducer(queue("TEST.QUEUE1"))
 
-    val msg = senderSession.createTextMessage("test");
-    producer.send(msg);
+    producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created After - 1"));
 
-    Thread.sleep(100);
+    Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
     exclusiveConsumer1.receive(100) should not be(null)
@@ -127,29 +136,33 @@ class ExclusiveConsumerTest extends OpenwireTestSupport {
     // takes over
     exclusiveConsumer1.close()
 
-    producer.send(msg);
-    producer.send(msg);
+    producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created After - 2"))
+    producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created After - 3"))
 
     exclusiveConsumer2.receive(100) should not be(null)
     fallbackConsumer.receive(100) should be(null)
   }
+}
+
+class FailoverToNonExclusiveConsumer extends ExclusiveConsumerTest {
 
   test("Failover To NonExclusive Consumer") {
 
-    connect();
+    info("*** Running Test: Failover To NonExclusive Consumer")
+
+    connect()
 
     val exclusiveSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val fallbackSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val senderSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
 
     val exclusiveConsumer = exclusiveSession.createConsumer(queue("TEST.QUEUE1?consumer.exclusive=true"))
-    val fallbackConsumer = fallbackSession.createConsumer(queue("TEST.QUEUE1"));
-    val producer = senderSession.createProducer(queue("TEST.QUEUE1"));
+    val fallbackConsumer = fallbackSession.createConsumer(queue("TEST.QUEUE1"))
+    val producer = senderSession.createProducer(queue("TEST.QUEUE1"))
 
-    val msg = senderSession.createTextMessage("test");
-    producer.send(msg);
+    producer.send(senderSession.createTextMessage("Failover To NonExclusive Consumer - 1"))
 
-    Thread.sleep(100);
+    Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
     exclusiveConsumer.receive(100) should not be(null)
@@ -159,46 +172,51 @@ class ExclusiveConsumerTest extends OpenwireTestSupport {
     // takes over
     exclusiveConsumer.close()
 
-    producer.send(msg);
+    producer.send(senderSession.createTextMessage("Failover To NonExclusive Consumer - 2"))
     fallbackConsumer.receive(100) should not be(null)
+    fallbackConsumer.close()
   }
+}
+
+class FallbackToAnotherExclusiveConsumer extends ExclusiveConsumerTest {
 
   test("Fallback To Exclusive Consumer") {
-    connect();
+    connect()
 
     val exclusiveSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val fallbackSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val senderSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
 
     var exclusiveConsumer = exclusiveSession.createConsumer(queue("TEST.QUEUE1?consumer.exclusive=true"))
-    val fallbackConsumer = fallbackSession.createConsumer(queue("TEST.QUEUE1"));
-    val producer = senderSession.createProducer(queue("TEST.QUEUE1"));
+    val fallbackConsumer = fallbackSession.createConsumer(queue("TEST.QUEUE1"))
+    val producer = senderSession.createProducer(queue("TEST.QUEUE1"))
 
-    val msg = senderSession.createTextMessage("test");
-    producer.send(msg);
+    producer.send(senderSession.createTextMessage("Fallback To Exclusive Consumer - 1"))
 
-    Thread.sleep(100);
+    Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
-    assert(exclusiveConsumer.receive(100) != null, "The exclusive consumer should have got a Message");
-    assert(fallbackConsumer.receive(100) == null, "The non-exclusive consumer shouldn't have a message");
+    exclusiveConsumer.receive(200) should not be(null)
+    fallbackConsumer.receive(200) should be(null)
+
+    Thread.sleep(100)
 
     // Close the exclusive consumer to verify the non-exclusive consumer
     // takes over
     exclusiveConsumer.close()
 
-    producer.send(msg)
-    assert(fallbackConsumer.receive(100) != null, "The non-exclusive consumer should have a message");
+    producer.send(senderSession.createTextMessage("Fallback To Exclusive Consumer - 2"))
+    fallbackConsumer.receive(100) should not be(null)
 
     // Create exclusive consumer to determine if it will start receiving
     // the messages.
     exclusiveConsumer = exclusiveSession.createConsumer(queue("TEST.QUEUE1?consumer.exclusive=true"))
 
-    producer.send(msg)
+    producer.send(senderSession.createTextMessage("Fallback To Exclusive Consumer - 3"))
 
     // Verify exclusive consumer receives the message.
     exclusiveConsumer.receive(100) should not be(null)
-//    fallbackConsumer.receive(100) should be(null)
+    fallbackConsumer.receive(100) should be(null)
   }
 
 }
