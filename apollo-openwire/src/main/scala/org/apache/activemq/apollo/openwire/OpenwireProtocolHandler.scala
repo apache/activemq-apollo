@@ -114,7 +114,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   override def create_connection_status = {
     var rc = new OpenwireConnectionStatusDTO
-    rc.protocol_version = if (wire_format == null) 0 else wire_format.getVersion
+    rc.protocol_version = if (wire_format == null) null else wire_format.getVersion.toString
     rc.user = login.map(_.toString).getOrElse(null)
     //    rc.subscription_count = consumers.size
     rc.waiting_on = waiting_on
@@ -155,7 +155,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     outbound_sessions = new SinkMux[Command](connection.transport_sink.map {
       x:Command =>
         x.setCommandId(next_command_id)
-        debug("sending frame: %s", x.toString)
+        debug("sending openwire command: %s", x.toString())
         x
     }, dispatchQueue, OpenwireCodec)
     connection_session = new OverflowSink(outbound_sessions.open(dispatchQueue));
