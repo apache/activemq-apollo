@@ -179,10 +179,14 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   var restored_from_store = false
 
   def update(on_completed:Runnable) = dispatch_queue {
-    val was_persistent = tune_persistent
-    val prev_size = tune_consumer_buffer
+
+    val prev_persistent = tune_persistent
+    val prev_consumer_size = tune_consumer_buffer
+    val prev_queue_buffer = tune_queue_buffer
+
     configure(binding.config(virtual_host))
-    val consumer_buffer_change = tune_consumer_buffer-prev_size
+
+    val consumer_buffer_change = tune_consumer_buffer-prev_consumer_size
     if( consumer_buffer_change!=0 ) {
       // for each
       all_subscriptions.values.foreach { sub =>
@@ -193,7 +197,11 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
         }
       }
     }
+
+    swapped_in_size_max += (tune_queue_buffer-prev_queue_buffer)
+
     restore_from_store {
+      trigger_swap
       on_completed.run
     }
   }
@@ -229,7 +237,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
 
   protected def _start(on_completed: Runnable) = {
 
-    swapped_in_size_max = tune_queue_buffer;
+    swapped_in_size_max += tune_queue_buffer;
 
     restore_from_store {
 
@@ -257,6 +265,10 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
     all_subscriptions.values.toArray.foreach { sub:Subscription =>
       sub.close()
     }
+
+    swapped_in_size_max -= tune_queue_buffer;
+    trigger_swap
+
     on_completed.run
   }
 
