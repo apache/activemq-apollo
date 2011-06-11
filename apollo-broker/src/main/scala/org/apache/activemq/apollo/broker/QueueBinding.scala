@@ -117,6 +117,20 @@ object QueueDomainQueueBinding extends QueueBinding.Provider {
       new QueueDomainQueueBinding(JsonCodec.encode(ptp_dto), ptp_dto)
     case _ => null
   }
+
+  def queue_config(virtual_host:VirtualHost, path:Path):QueueDTO = {
+    import collection.JavaConversions._
+    import LocalRouter.destination_parser._
+
+    def matches(x:QueueDTO):Boolean = {
+      if( x.id != null && !decode_filter(x.id).matches(path)) {
+        return false
+      }
+      true
+    }
+    virtual_host.config.queues.find(matches _).getOrElse(new QueueDTO)
+  }
+
 }
 
 
@@ -151,18 +165,7 @@ class QueueDomainQueueBinding(val binding_data:Buffer, val binding_dto:QueueDest
   }
 
 
-  def config(host:VirtualHost):QueueDTO = {
-    import collection.JavaConversions._
-    import LocalRouter.destination_parser._
-
-    def matches(x:QueueDTO):Boolean = {
-      if( x.id != null && !decode_filter(x.id).matches(destination)) {
-        return false
-      }
-      true
-    }
-    host.config.queues.find(matches _).getOrElse(new QueueDTO)
-  }
+  def config(host:VirtualHost):QueueDTO = queue_config(host, destination)
 
 }
 

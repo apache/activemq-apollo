@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.broker
 
 import org.apache.activemq.apollo.util._
+import path.PathParser._
 import scala.collection.immutable.List
 import org.apache.activemq.apollo.util.path.Path
 import org.apache.activemq.apollo.dto._
@@ -30,19 +31,25 @@ import collection.mutable.{HashMap, ListBuffer}
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, val config:TopicDTO, val id:String) extends DomainDestination {
+class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var config_updater: ()=>TopicDTO, val id:String) extends DomainDestination {
 
   var producers = ListBuffer[BindableDeliveryProducer]()
   var consumers = ListBuffer[DeliveryConsumer]()
   var durable_subscriptions = ListBuffer[Queue]()
   var consumer_queues = HashMap[DeliveryConsumer, Queue]()
   val created_at = System.currentTimeMillis()
+  var config = config_updater()
 
   import OptionSupport._
 
   def virtual_host: VirtualHost = router.virtual_host
 
   def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")
+
+  def update(on_completed:Runnable) = {
+    config = config_updater()
+    on_completed.run
+  }
 
   def bind (destination: DestinationDTO, consumer:DeliveryConsumer) = {
     destination match {

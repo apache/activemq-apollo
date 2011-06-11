@@ -44,6 +44,7 @@ trait DomainDestination {
   def connect (destination:DestinationDTO, producer:BindableDeliveryProducer)
   def disconnect (producer:BindableDeliveryProducer)
 
+  def update(on_completed:Runnable):Unit
 }
 
 /**
@@ -128,6 +129,12 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     def get_destination_matches(path:Path) = {
       import JavaConversions._
       collectionAsScalaIterable(destination_by_path.get( path ))
+    }
+
+    def apply_update(traker:LoggingTracker) = {
+      destinations.foreach { dest=>
+        dest.update(traker.task("update "+dest))
+      }
     }
 
     def create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Result[D,String]
@@ -342,7 +349,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         return new Failure("Not authorized to create the destination")
       }
 
-      val topic = new Topic(LocalRouter.this, destination.asInstanceOf[TopicDestinationDTO], dto, path.toString(destination_parser))
+      val topic = new Topic(LocalRouter.this, destination.asInstanceOf[TopicDestinationDTO], ()=>topic_config(path), path.toString(destination_parser))
       add_destination(path, topic)
       Success(topic)
     }
@@ -838,16 +845,6 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     val config = binding.config(virtual_host)
 
     val queue = new Queue(this, qid, binding, config)
-    if( queue.tune_persistent && id == -1 ) {
-
-      val record = new QueueRecord
-      record.key = qid
-      record.binding_data = binding.binding_data
-      record.binding_kind = binding.binding_kind
-
-      virtual_host.store.add_queue(record) { rc => Unit }
-
-    }
 
     queue.start
     queues_by_binding.put(binding, queue)
@@ -915,7 +912,9 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   }
 
   def apply_update(on_completed:Runnable) = {
-    // TODO: check to see if any of the destination configs need updating.
-    on_completed.run()
+    val tracker = new LoggingTracker("domain update", virtual_host.broker.console_log, dispatch_queue)
+    topic_domain.apply_update(tracker)
+    queue_domain.apply_update(tracker)
+    tracker.callback(on_completed)
   }
 }

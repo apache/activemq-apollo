@@ -128,6 +128,14 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
     tune_swap = tune_persistent && config.swap.getOrElse(true)
     tune_swap_range_size = config.swap_range_size.getOrElse(10000)
     tune_consumer_buffer = config.consumer_buffer.getOrElse(256*1024)
+
+    if( tune_persistent ) {
+      val record = new QueueRecord
+      record.key = store_id
+      record.binding_data = binding.binding_data
+      record.binding_kind = binding.binding_kind
+      virtual_host.store.add_queue(record) { rc => Unit }
+    }
   }
   configure(config)
 
@@ -168,11 +176,63 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   swap_source.setEventHandler(^{ swap_messages });
   swap_source.resume
 
+  var restored_from_store = false
+
+  def update(on_completed:Runnable) = dispatch_queue {
+    val was_persistent = tune_persistent
+    val prev_size = tune_consumer_buffer
+    configure(binding.config(virtual_host))
+    val consumer_buffer_change = tune_consumer_buffer-prev_size
+    if( consumer_buffer_change!=0 ) {
+      // for each
+      all_subscriptions.values.foreach { sub =>
+        // open session
+        if( sub.session!=null ) {
+          // change the queue capacity, by the change in consumer buffer change.
+          addCapacity(consumer_buffer_change)
+        }
+      }
+    }
+    restore_from_store {
+      on_completed.run
+    }
+  }
+
+
+  def restore_from_store(on_completed: => Unit) {
+    if (!restored_from_store && tune_persistent) {
+      restored_from_store = true
+      virtual_host.store.list_queue_entry_ranges(store_id, tune_swap_range_size) { ranges =>
+        dispatch_queue {
+          if (ranges != null && !ranges.isEmpty) {
+
+            ranges.foreach {
+              range =>
+                val entry = new QueueEntry(Queue.this, range.first_entry_seq).init(range)
+                entries.addLast(entry)
+
+                message_seq_counter = range.last_entry_seq + 1
+                enqueue_item_counter += range.count
+                enqueue_size_counter += range.size
+                tail_entry = new QueueEntry(Queue.this, next_message_seq)
+            }
+
+            debug("restored: " + enqueue_item_counter)
+          }
+          on_completed
+        }
+      }
+    } else {
+      on_completed
+    }
+  }
+
   protected def _start(on_completed: Runnable) = {
 
     swapped_in_size_max = tune_queue_buffer;
 
-    def completed: Unit = {
+    restore_from_store {
+
       // by the time this is run, consumers and producers may have already joined.
       on_completed.run
       schedule_periodic_maintenance
@@ -184,32 +244,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
       // kick off dispatching to the consumers.
       trigger_swap
       dispatch_queue << head_entry
-    }
 
-    if( tune_persistent ) {
-
-      virtual_host.store.list_queue_entry_ranges(store_id, tune_swap_range_size) { ranges=>
-        dispatch_queue {
-          if( ranges!=null && !ranges.isEmpty ) {
-
-            ranges.foreach { range =>
-              val entry = new QueueEntry(Queue.this, range.first_entry_seq).init(range)
-              entries.addLast(entry)
-
-              message_seq_counter = range.last_entry_seq + 1
-              enqueue_item_counter += range.count
-              enqueue_size_counter += range.size
-              tail_entry = new QueueEntry(Queue.this, next_message_seq)
-            }
-
-            debug("restored: "+enqueue_item_counter)
-          }
-          completed
-        }
-      }
-
-    } else {
-      completed
     }
   }
 
