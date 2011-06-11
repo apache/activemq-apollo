@@ -30,6 +30,8 @@ import security.SecurityContext
 import java.util.concurrent.TimeUnit
 import collection.mutable.ListBuffer._
 import collection.mutable.HashMap._
+import scala.Array
+import tools.nsc.doc.model.ProtectedInInstance
 
 trait DomainDestination {
 
@@ -630,6 +632,24 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   //
   /////////////////////////////////////////////////////////////////////////////
 
+  protected def create_configure_destinations {
+    def create_configured_dests(list: ArrayList[_ <: StringIdDTO], d: Domain[_], f: (Array[String]) => DestinationDTO) = {
+      import collection.JavaConversions._
+      list.foreach {
+        dto =>
+          if (dto.id != null) {
+            val parts = destination_parser.parts(dto.id)
+            val path = destination_parser.decode_path(parts)
+            if (!PathParser.containsWildCards(path)) {
+              d.get_or_create_destination(path, f(parts), null)
+            }
+          }
+      }
+    }
+    create_configured_dests(virtual_host.config.queues, queue_domain, (parts) => new QueueDestinationDTO(parts))
+    create_configured_dests(virtual_host.config.topics, topic_domain, (parts) => new TopicDestinationDTO(parts))
+  }
+
   protected def _start(on_completed: Runnable) = {
     val tracker = new LoggingTracker("router startup", virtual_host.console_log, dispatch_queue)
     if( virtual_host.store!=null ) {
@@ -666,7 +686,14 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       schedule_connection_regroup
     }
 
-    tracker.callback(on_completed)
+    tracker.callback {
+      // Now that we have restored persistent destinations,
+      // make sure we create any NON-wildcard destinations
+      // explicitly listed in the config.
+
+      create_configure_destinations
+      on_completed.run()
+    }
   }
 
   protected def _stop(on_completed: Runnable) = {
@@ -915,6 +942,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     val tracker = new LoggingTracker("domain update", virtual_host.broker.console_log, dispatch_queue)
     topic_domain.apply_update(tracker)
     queue_domain.apply_update(tracker)
+    // we may need to create some more destinations.
+    create_configure_destinations
     tracker.callback(on_completed)
   }
 }
