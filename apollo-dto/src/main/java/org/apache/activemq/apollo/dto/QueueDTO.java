@@ -28,6 +28,17 @@ import javax.xml.bind.annotation.*;
 public class QueueDTO extends StringIdDTO {
 
     /**
+     * Controls when the queue will auto delete.
+     * If set to zero, then the queue will NOT auto
+     * delete, otherwise the queue will auto delete
+     * after it has been unused for the number
+     * of seconds configured in this field.  If unset,
+     * it defaults to 5 minutes.
+     */
+    @XmlAttribute(name="auto_delete_after")
+    public Integer auto_delete_after;
+
+    /**
      * If set to true, then routing then there is no difference between
      * sending to a queue or topic of the same name.  The first time
      * a queue is created, it will act like if a durable

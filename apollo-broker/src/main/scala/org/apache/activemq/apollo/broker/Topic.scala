@@ -17,12 +17,12 @@
 package org.apache.activemq.apollo.broker
 
 import org.apache.activemq.apollo.util._
-import path.PathParser._
+import path.Path
 import scala.collection.immutable.List
-import org.apache.activemq.apollo.util.path.Path
 import org.apache.activemq.apollo.dto._
-import security.SecurityContext
 import collection.mutable.{HashMap, ListBuffer}
+import java.util.concurrent.TimeUnit
+import org.fusesource.hawtdispatch._
 
 /**
  * <p>
@@ -31,14 +31,19 @@ import collection.mutable.{HashMap, ListBuffer}
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var config_updater: ()=>TopicDTO, val id:String) extends DomainDestination {
+class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var config_updater: ()=>TopicDTO, val id:String, path:Path) extends DomainDestination {
 
   var producers = ListBuffer[BindableDeliveryProducer]()
   var consumers = ListBuffer[DeliveryConsumer]()
   var durable_subscriptions = ListBuffer[Queue]()
   var consumer_queues = HashMap[DeliveryConsumer, Queue]()
+  var idled_at = 0L
   val created_at = System.currentTimeMillis()
-  var config = config_updater()
+  var auto_delete_after = 0
+
+  var config:TopicDTO = _
+
+  refresh_config
 
   import OptionSupport._
 
@@ -47,8 +52,40 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
   def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")
 
   def update(on_completed:Runnable) = {
-    config = config_updater()
+    refresh_config
     on_completed.run
+  }
+
+  def refresh_config = {
+    import OptionSupport._
+
+    config = config_updater()
+    auto_delete_after = config.auto_delete_after.getOrElse(60*5)
+    if( auto_delete_after!= 0 ) {
+      // we don't auto delete explicitly configured destinations.
+      if( !LocalRouter.is_wildcard_config(config) ) {
+        auto_delete_after = 0
+      }
+    }
+    check_idle
+  }
+
+  def check_idle {
+    if (producers.isEmpty && consumers.isEmpty && durable_subscriptions.isEmpty) {
+      if (idled_at==0) {
+        val now = System.currentTimeMillis()
+        idled_at = now
+        if( auto_delete_after!=0 ) {
+          virtual_host.dispatch_queue.after(auto_delete_after, TimeUnit.SECONDS) {
+            if( now == idled_at ) {
+              router.topic_domain.remove_destination(path, this)
+            }
+          }
+        }
+      }
+    } else {
+      idled_at = 0
+    }
   }
 
   def bind (destination: DestinationDTO, consumer:DeliveryConsumer) = {
@@ -85,6 +122,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
         })
 
     }
+    check_idle
   }
 
   def unbind (consumer:DeliveryConsumer, persistent:Boolean) = {
@@ -117,6 +155,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
           })
         }
     }
+    check_idle
 
   }
 
@@ -133,6 +172,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
         }
       }
     }
+    check_idle
   }
 
   def unbind_durable_subscription(destination: DurableSubscriptionDestinationDTO, queue:Queue)  = {
@@ -148,16 +188,19 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
         }
       }
     }
+    check_idle
   }
 
   def connect (destination:DestinationDTO, producer:BindableDeliveryProducer) = {
     producers += producer
     producer.bind(consumers.toList ::: durable_subscriptions.toList)
+    check_idle
   }
 
   def disconnect (producer:BindableDeliveryProducer) = {
     producers = producers.filterNot( _ == producer )
     producer.unbind(consumers.toList ::: durable_subscriptions.toList)
+    check_idle
   }
 
 }

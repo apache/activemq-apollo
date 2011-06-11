@@ -66,6 +66,16 @@ object LocalRouter extends Log {
   val QUEUE_KIND = "queue"
   val DEFAULT_QUEUE_PATH = "default"
 
+  def is_wildcard_config(dto:StringIdDTO) = {
+    if( dto.id == null ) {
+      true
+    } else {
+      val parts = destination_parser.parts(dto.id)
+      val path = destination_parser.decode_path(parts)
+      PathParser.containsWildCards(path)
+    }
+  }
+
   class ConsumerContext(val destination:DestinationDTO, val consumer:DeliveryConsumer, val security:SecurityContext) {
     override def hashCode: Int = consumer.hashCode
 
@@ -314,7 +324,9 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     def topic_config(name:Path):TopicDTO = {
       import collection.JavaConversions._
       import destination_parser._
-      virtual_host.config.topics.find( x=> decode_filter(x.id).matches(name) ).getOrElse(new TopicDTO)
+      virtual_host.config.topics.find{ x=>
+        x.id==null || decode_filter(x.id).matches(name)
+      }.getOrElse(new TopicDTO)
     }
 
     override def connect(path:Path, destination:DestinationDTO, producer:BindableDeliveryProducer, security:SecurityContext):Unit = {
@@ -351,7 +363,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         return new Failure("Not authorized to create the destination")
       }
 
-      val topic = new Topic(LocalRouter.this, destination.asInstanceOf[TopicDestinationDTO], ()=>topic_config(path), path.toString(destination_parser))
+      val topic = new Topic(LocalRouter.this, destination.asInstanceOf[TopicDestinationDTO], ()=>topic_config(path), path.toString(destination_parser), path)
       add_destination(path, topic)
       Success(topic)
     }

@@ -123,10 +123,7 @@ object QueueDomainQueueBinding extends QueueBinding.Provider {
     import LocalRouter.destination_parser._
 
     def matches(x:QueueDTO):Boolean = {
-      if( x.id != null && !decode_filter(x.id).matches(path)) {
-        return false
-      }
-      true
+      x.id==null || decode_filter(x.id).matches(path)
     }
     virtual_host.config.queues.find(matches _).getOrElse(new QueueDTO)
   }

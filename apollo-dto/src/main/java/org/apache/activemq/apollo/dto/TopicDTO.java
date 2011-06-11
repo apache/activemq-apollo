@@ -27,7 +27,18 @@ import javax.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class TopicDTO extends StringIdDTO {
 
-    @XmlElement(name="slow_consumer_policy")
+    /**
+     * Controls when the topic will auto delete.
+     * If set to zero, then the topic will NOT auto
+     * delete, otherwise the topic will auto delete
+     * after it has been unused for the number
+     * of seconds configured in this field.  If unset,
+     * it defaults to 5 minutes
+     */
+    @XmlAttribute(name="auto_delete_after")
+    public Integer auto_delete_after;
+
+    @XmlAttribute(name="slow_consumer_policy")
     public String slow_consumer_policy;
 
     @XmlElement(name="acl")

@@ -136,8 +136,22 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
       record.binding_kind = binding.binding_kind
       virtual_host.store.add_queue(record) { rc => Unit }
     }
+
+    auto_delete_after = config.auto_delete_after.getOrElse(60*5)
+    if( auto_delete_after!= 0 ) {
+      // we don't auto delete explicitly configured queues,
+      // non destination queues, or unified queues.
+      if( config.unified.getOrElse(false) || !binding.isInstanceOf[QueueDomainQueueBinding] || !LocalRouter.is_wildcard_config(config) ) {
+        auto_delete_after = 0
+      }
+    }
+
+    println("auto_delete_after: "+this+": "+auto_delete_after)
+
   }
-  configure(config)
+  dispatch_queue {
+    configure(config)
+  }
 
   var last_maintenance_ts = System.currentTimeMillis
 
@@ -178,6 +192,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
 
   var restored_from_store = false
 
+  var auto_delete_after = 0
+  var idled_at = 0L
+
   def update(on_completed:Runnable) = dispatch_queue {
 
     val prev_persistent = tune_persistent
@@ -201,11 +218,30 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
     swapped_in_size_max += (tune_queue_buffer-prev_queue_buffer)
 
     restore_from_store {
+      check_idle
       trigger_swap
       on_completed.run
     }
   }
 
+  def check_idle {
+    println("check_idle auto_delete_after: "+this+": "+auto_delete_after)
+    if (producers.isEmpty && all_subscriptions.isEmpty && queue_items==0 ) {
+      if (idled_at==0) {
+        val now = System.currentTimeMillis()
+        idled_at = now
+        if( auto_delete_after!=0 ) {
+          dispatch_queue.after(auto_delete_after, TimeUnit.SECONDS) {
+            if( now == idled_at ) {
+              router._destroy_queue(this)
+            }
+          }
+        }
+      }
+    } else {
+      idled_at = 0
+    }
+  }
 
   def restore_from_store(on_completed: => Unit) {
     if (!restored_from_store && tune_persistent) {
@@ -236,10 +272,12 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   }
 
   protected def _start(on_completed: Runnable) = {
+    println("_start auto_delete_after: "+this+": "+auto_delete_after)
 
     swapped_in_size_max += tune_queue_buffer;
 
     restore_from_store {
+
 
       // by the time this is run, consumers and producers may have already joined.
       on_completed.run
@@ -250,6 +288,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
       }
 
       // kick off dispatching to the consumers.
+      check_idle
       trigger_swap
       dispatch_queue << head_entry
 
@@ -504,6 +543,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   def connect(p: DeliveryProducer) = new DeliverySession {
     retain
 
+
     override def toString = Queue.this.toString
 
     override def consumer = Queue.this
@@ -615,6 +655,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
     } else {
       dispatch_queue {
         producers += producer
+        check_idle
       }
       producer.bind(this::Nil)
     }
@@ -628,6 +669,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
     } else {
       dispatch_queue {
         producers -= producer
+        check_idle
       }
       producer.unbind(this::Nil)
     }
@@ -1467,6 +1509,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       refill_prefetch
       queue.dispatch_queue << queue.head_entry
     }
+    queue.check_idle
   }
 
   def close() = {
@@ -1497,6 +1540,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       session = null
       consumer.release
 
+      queue.check_idle
       queue.trigger_swap
     } else {}
   }
