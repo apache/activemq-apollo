@@ -37,6 +37,12 @@ public class BrokerStatusDTO extends ServiceStatusDTO {
 	public String version;
 
     /**
+     * Metrics about the JVM
+     */
+	@XmlElement(name="jvm_metrics")
+    public JvmMetricsDTO jvm_metrics;
+
+    /**
      * The current time on the broker machine.  In milliseconds since the epoch.
      */
 	@XmlAttribute(name="current_time")

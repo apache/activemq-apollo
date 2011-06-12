@@ -49,7 +49,6 @@ class Run extends Action {
 
     try {
 
-      val home = system_dir("apollo.home")
       val base = system_dir("apollo.base")
       val etc: File = base / "etc"
 
@@ -94,7 +93,6 @@ class Run extends Action {
       var jul_config = etc / "jul.properties"
       val jul_config_monitor = if ( jul_config.exists()) {
         new FileMonitor(jul_config, {
-          broker.console_log.
           using(new FileInputStream(jul_config)) { is =>
             LogManager.getLogManager.readConfiguration(is)
           }

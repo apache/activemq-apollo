@@ -33,6 +33,9 @@ import core.Response
 import Response.Status._
 import org.josql.expressions.SelectItemExpression
 import org.apache.activemq.apollo.util.BaseService._
+import management.ManagementFactory
+import javax.management.ObjectName
+import javax.management.openmbean.CompositeData
 
 /**
  * <p>
@@ -61,6 +64,7 @@ case class BrokerResource() extends Resource {
         val result = new BrokerStatusDTO
 
         result.id = broker.id
+        result.jvm_metrics = create_jvm_metrics
         result.current_time = System.currentTimeMillis
         result.state = broker.service_state.toString
         result.state_since = broker.service_state.since
@@ -83,6 +87,66 @@ case class BrokerResource() extends Resource {
 
       }
     }
+  }
+
+
+  private def create_jvm_metrics = {
+    val rc = new JvmMetricsDTO
+    rc.jvm_name = Broker.jvm
+
+    implicit def to_object_name(value:String):ObjectName = new ObjectName(value)
+    implicit def to_long(value:AnyRef):Long = value.asInstanceOf[java.lang.Long].longValue()
+    implicit def to_int(value:AnyRef):Int = value.asInstanceOf[java.lang.Integer].intValue()
+    implicit def to_double(value:AnyRef):Double = value.asInstanceOf[java.lang.Double].doubleValue()
+
+    def attempt(func: => Unit) = {
+      try {
+        func
+      } catch {
+        case _ => // ignore
+      }
+    }
+
+    val mbean_server = ManagementFactory.getPlatformMBeanServer()
+
+    attempt( rc.uptime = mbean_server.getAttribute("java.lang:type=Runtime", "Uptime") )
+    attempt( rc.start_time = mbean_server.getAttribute("java.lang:type=Runtime", "StartTime") )
+    attempt( rc.runtime_name = mbean_server.getAttribute("java.lang:type=Runtime", "Name").toString )
+
+    rc.os_name = Broker.os
+    attempt( rc.os_arch = mbean_server.getAttribute("java.lang:type=OperatingSystem", "Arch").toString )
+
+    attempt( rc.os_fd_open = mbean_server.getAttribute("java.lang:type=OperatingSystem", "OpenFileDescriptorCount"))
+    rc.os_fd_max = Broker.max_fd_limit.getOrElse(0)
+
+    attempt( rc.os_memory_total = mbean_server.getAttribute("java.lang:type=OperatingSystem", "TotalPhysicalMemorySize") )
+    attempt( rc.os_memory_free = mbean_server.getAttribute("java.lang:type=OperatingSystem", "FreePhysicalMemorySize") )
+
+    attempt( rc.os_swap_free = mbean_server.getAttribute("java.lang:type=OperatingSystem", "FreeSwapSpaceSize") )
+    attempt( rc.os_swap_free = mbean_server.getAttribute("java.lang:type=OperatingSystem", "TotalSwapSpaceSize") )
+
+    attempt( rc.os_load_average = mbean_server.getAttribute("java.lang:type=OperatingSystem", "SystemLoadAverage") )
+    attempt( rc.os_cpu_time = mbean_server.getAttribute("java.lang:type=OperatingSystem", "ProcessCpuTime") )
+    attempt( rc.os_processors = mbean_server.getAttribute("java.lang:type=OperatingSystem", "AvailableProcessors") )
+
+    attempt( rc.classes_loaded = mbean_server.getAttribute("java.lang:type=ClassLoading", "LoadedClassCount") )
+    attempt( rc.classes_unloaded = mbean_server.getAttribute("java.lang:type=ClassLoading", "UnloadedClassCount") )
+
+    attempt( rc.threads_peak = mbean_server.getAttribute("java.lang:type=Threading", "PeakThreadCount") )
+    attempt( rc.threads_current = mbean_server.getAttribute("java.lang:type=Threading", "ThreadCount") )
+
+    def memory_metrics(data:CompositeData) = {
+      val rc = new MemoryMetricsDTO
+      rc.alloc =  data.get("committed").asInstanceOf[java.lang.Long].longValue()
+      rc.used =  data.get("used").asInstanceOf[java.lang.Long].longValue()
+      rc.max =  data.get("max").asInstanceOf[java.lang.Long].longValue()
+      rc
+    }
+
+    attempt( rc.heap_memory = memory_metrics(mbean_server.getAttribute("java.lang:type=Memory", "HeapMemoryUsage").asInstanceOf[CompositeData]) )
+    attempt( rc.non_heap_memory = memory_metrics(mbean_server.getAttribute("java.lang:type=Memory", "NonHeapMemoryUsage").asInstanceOf[CompositeData]) )
+
+    rc
   }
 
   @GET

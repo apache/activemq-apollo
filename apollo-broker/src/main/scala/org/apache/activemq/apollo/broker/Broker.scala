@@ -30,7 +30,9 @@ import org.apache.activemq.apollo.util._
 import org.fusesource.hawtbuf.AsciiBuffer._
 import CollectionsSupport._
 import FileSupport._
-import org.apache.activemq.apollo.dto.{ConnectorDTO, VirtualHostDTO, LogCategoryDTO, BrokerDTO}
+import management.ManagementFactory
+import org.apache.activemq.apollo.dto._
+import javax.management.ObjectName
 
 /**
  * <p>
@@ -146,6 +148,51 @@ object Broker extends Log {
     read_text(source).trim
   }
 
+  def capture(command:String*) = {
+    import ProcessSupport._
+    try {
+      system(command:_*) match {
+        case(0, out, _) => Some(new String(out).trim)
+        case _ => None
+      }
+    } catch {
+      case _ => None
+    }
+  }
+
+  val os = {
+    val os = System.getProperty("os.name")
+    val rc = os +" "+System.getProperty("os.version")
+
+    // Try to get a better version from the OS itself..
+    val los = os.toLowerCase()
+    if( los.startsWith("linux") ) {
+      capture("lsb_release", "-sd").map("%s (%s)".format(rc, _)).getOrElse(rc)
+    } else {
+      rc
+    }
+
+  }
+
+  val jvm = {
+    val vendor = System.getProperty("java.vendor")
+    val version =System.getProperty("java.version")
+    val vm =System.getProperty("java.vm.name")
+    "%s %s (%s)".format(vm, version, vendor)
+  }
+
+  val max_fd_limit = {
+    if( System.getProperty("os.name").toLowerCase().startsWith("windows") ) {
+      None
+    } else {
+      val mbean_server = ManagementFactory.getPlatformMBeanServer()
+      mbean_server.getAttribute(new ObjectName("java.lang:type=OperatingSystem"), "MaxFileDescriptorCount") match {
+        case x:java.lang.Long=> Some(x.longValue)
+        case _ => None
+      }
+    }
+  }
+
 }
 
 /**
@@ -195,10 +242,10 @@ class Broker() extends BaseService {
   var web_server:WebServer = _
 
   var config_log:Log = Log(new MemoryLogger(Broker.log))
-  var audit_log:Log = Broker.log
-  var security_log:Log  = Broker.log
-  var connection_log:Log = Broker.log
-  var console_log:Log = Broker.log
+  var audit_log:Log = Broker
+  var security_log:Log  = Broker
+  var connection_log:Log = Broker
+  var console_log:Log = Broker
   var services = List[Service]()
 
   override def toString() = "broker: "+id
@@ -442,40 +489,6 @@ class Broker() extends BaseService {
   }
 
   private def log_versions = {
-
-    def capture(command:String*) = {
-      import ProcessSupport._
-      try {
-        system(command:_*) match {
-          case(0, out, _) => Some(new String(out).trim)
-          case _ => None
-        }
-      } catch {
-        case _ => None
-      }
-    }
-
-    val os = {
-      val os = System.getProperty("os.name")
-      val rc = os +" "+System.getProperty("os.version")
-
-      // Try to get a better version from the OS itself..
-      val los = os.toLowerCase()
-      if( los.startsWith("linux") ) {
-        capture("lsb_release", "-sd").map("%s (%s)".format(rc, _)).getOrElse(rc)
-      } else {
-        rc
-      }
-
-    }
-
-    val jvm = {
-      val vendor = System.getProperty("java.vendor")
-      val version =System.getProperty("java.version")
-      val vm =System.getProperty("java.vm.name")
-      "%s %s (%s)".format(vm, version, vendor)
-    }
-
     val location_info = Option(System.getProperty("apollo.home")).map { home=>
       " (at: "+new File(home).getCanonicalPath+")"
     }.getOrElse("")
@@ -483,53 +496,22 @@ class Broker() extends BaseService {
     console_log.info("OS     : %s", os)
     console_log.info("JVM    : %s", jvm)
     console_log.info("Apollo : %s%s", Broker.version, location_info)
-
   }
+
   private def check_file_limit:Unit = {
-    if( System.getProperty("os.name").toLowerCase().startsWith("windows") ) {
-      return
-    }
-
-    import ProcessSupport._
-    def process(out:Array[Byte]) = try {
-      val limit = new String(out).trim
-      console_log.info("OS is restricting the open file limit to: %s", limit)
-      if( limit!="unlimited" ) {
-        val l = limit.toInt
-
+    max_fd_limit match {
+      case Some(limit) =>
+        console_log.info("OS is restricting the open file limit to: %s", limit)
         var min_limit = 500 // estimate.. perhaps could we do better?
         config.connectors.foreach { connector=>
           import OptionSupport._
           min_limit += connector.connection_limit.getOrElse(10000)
         }
-
-        if( l < min_limit ) {
+        if( limit < min_limit ) {
           console_log.warn("Please increase the process file limit using 'ulimit -n %d' or configure lower connection limits on the broker connectors.", min_limit)
         }
-      }
-    } catch {
-      case _ =>
+      case None =>
     }
-
-    try {
-      launch("ulimit","-n") { case (rc, out, err) =>
-        if( rc==0 ) {
-          process(out)
-        }
-      }
-    } catch {
-      case _ =>
-        try {
-          launch("sh", "-c", "ulimit -n") { case (rc, out, err) =>
-            if( rc==0 ) {
-              process(out)
-            }
-          }
-        } catch {
-          case _ =>
-        }
-    }
-
   }
 
   def get_virtual_host(name: AsciiBuffer) = dispatch_queue ! {
