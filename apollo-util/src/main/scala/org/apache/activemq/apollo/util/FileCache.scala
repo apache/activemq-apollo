@@ -21,7 +21,57 @@ import java.lang.Long
 import org.fusesource.hawtdispatch._
 import scala.Some
 import java.util.concurrent.{TimeUnit, ConcurrentHashMap}
+import java.util.Arrays
+import org.apache.activemq.apollo.util.FileSupport._
 
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+class FileMonitor(file:File, change_listener: =>Unit) extends BaseService {
+
+  val dispatch_queue = createQueue("monitor: "+file)
+
+  var last_data = Array[Byte]()
+  var last_modified = 0L
+  var state_ver = 0
+
+  protected def _stop(on_completed: Runnable) = {
+    state_ver+=1
+  }
+
+  protected def _start(on_completed: Runnable) = {
+    last_data = file.read_bytes
+    last_modified = file.lastModified()
+    state_ver+=1
+    update_check(state_ver)
+  }
+
+  private def update_check(ver:Int):Unit = {
+    if( ver == state_ver ) {
+      try {
+        val modified = file.lastModified
+        if( modified != last_modified ) {
+          val new_data = file.read_bytes
+          if ( !Arrays.equals(last_data, new_data) ) {
+            change_listener
+          }
+          last_modified = modified
+          last_data = new_data
+        }
+      } catch {
+        case e:Exception =>
+        // error reading the file..  could be that someone is
+        // in the middle of updating the file.
+      }
+      dispatch_queue.after(1, TimeUnit.SECONDS) {
+        update_check(ver)
+      }
+    }
+  }
+}
 
 /**
  * <p>

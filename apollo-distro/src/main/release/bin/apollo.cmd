@@ -48,7 +48,6 @@ echo.
 :RUN_JAVA
 
 set CLASSPATH=%APOLLO_HOME%\lib\apollo-boot.jar
-if NOT "x%APOLLO_BASE%" == "x" set CLASSPATH=%APOLLO_BASE%\etc;%CLASSPATH%
 
 set BOOTDIRS=%APOLLO_HOME%\lib
 if NOT "x%APOLLO_BASE%" == "x" set BOOTDIRS=%APOLLO_BASE%\lib:%BOOTDIRS%
@@ -71,12 +70,8 @@ if "%JMX_OPTS%" == "" set JMX_OPTS=-Dcom.sun.management.jmxremote
 rem set JMX_OPTS=-Dcom.sun.management.jmxremote.port=1099 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false
 set JVM_FLAGS=%JVM_FLAGS% %JMX_OPTS%
 
-set JUL_CONFIG_FILE=%APOLLO_HOME%\etc\jul.properties
-
-
 set JVM_FLAGS=%JVM_FLAGS% -Dapollo.home="%APOLLO_HOME%"
 if NOT "x%APOLLO_BASE%" == "x" set JVM_FLAGS=%JVM_FLAGS% -Dapollo.base="%APOLLO_BASE%"
-set JVM_FLAGS=%JVM_FLAGS% -Djava.util.logging.config.file="%JUL_CONFIG_FILE%"
 set JVM_FLAGS=%JVM_FLAGS% -classpath "%CLASSPATH%"
 
 "%_JAVACMD%" %JVM_FLAGS% org.apache.activemq.apollo.boot.Boot "%BOOTDIRS%" org.apache.activemq.apollo.cli.Apollo %*

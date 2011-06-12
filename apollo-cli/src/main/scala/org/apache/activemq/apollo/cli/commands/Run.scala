@@ -17,25 +17,21 @@
 package org.apache.activemq.apollo.cli.commands
 
 import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
-import java.io.File
-import org.apache.activemq.apollo.broker.{Broker, ConfigStore, FileConfigStore}
+import org.apache.activemq.apollo.broker.{Broker, ConfigStore}
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.cli.Apollo
 import org.apache.felix.service.command.CommandSession
-import org.apache.activemq.apollo.util.ServiceControl
 import org.fusesource.hawtdispatch._
+import org.apache.activemq.apollo.util.{FileMonitor, ServiceControl}
+import org.apache.log4j.PropertyConfigurator
+import java.io.{FileInputStream, File}
+import java.util.logging.LogManager
 
 /**
  * The apollo run command
  */
 @command(scope="apollo", name = "run", description = "runs the broker instance")
 class Run extends Action {
-  
-  @option(name = "--conf", description = "The Apollo configuration file.")
-  var conf: File = _
-
-  @option(name = "--tmp", description = "A temp directory.")
-  var tmp: File = _
 
   def system_dir(name:String) = {
     val base_value = System.getProperty(name)
@@ -53,27 +49,28 @@ class Run extends Action {
 
     try {
 
+      val home = system_dir("apollo.home")
       val base = system_dir("apollo.base")
+      val etc: File = base / "etc"
 
-      if( conf == null ) {
-        conf = base / "etc" / "apollo.xml"
-      }
+      val log4j_config = etc / "log4j.properties"
+      PropertyConfigurator.configure(log4j_config.getCanonicalPath)
+
+      val conf = etc / "apollo.xml"
 
       if( !conf.exists ) {
         sys.error("Configuration file'%s' does not exist.\n\nTry creating a broker instance using the 'apollo create' command.".format(conf));
       }
 
       if( System.getProperty("java.security.auth.login.config")==null ) {
-        val login_config = conf.getParentFile / "login.config"
+        val login_config = etc / "login.config"
         if( login_config.exists ) {
           System.setProperty("java.security.auth.login.config", login_config.getCanonicalPath)
         }
       }
 
-      if( tmp == null ) {
-        tmp = base / "tmp"
-        tmp.mkdirs
-      }
+      val tmp = base / "tmp"
+      tmp.mkdirs
 
       Apollo.print_banner(session.getConsole)
 
@@ -81,26 +78,40 @@ class Run extends Action {
       session.getConsole.println("Loading configuration file '%s'.".format(conf))
 
       val broker = new Broker()
-      val store = new FileConfigStore
-
-      ConfigStore() = store
-      store.file = conf
-      store.on_update = { config =>
-        broker.dispatch_queue {
-          broker.console_log.info("Reloading configuration file '%s'.".format(conf))
-          broker.update(config, ^{
-            broker.console_log.info("Reload completed.")
-          })
-        }
-      }
-      store.start
-
-      broker.config = store.load(true)
+      broker.config = ConfigStore.load(conf)
       broker.tmp = tmp
       broker.start()
 
+      val broker_config_monitor = new FileMonitor(conf,broker.dispatch_queue {
+        broker.console_log.info("Reloading configuration file '%s'.".format(conf))
+        broker.update(ConfigStore.load(conf), ^{
+        })
+      })
+      val log4j_config_monitor = new FileMonitor(log4j_config, {
+        PropertyConfigurator.configure(log4j_config.getCanonicalPath)
+      })
+
+      var jul_config = etc / "jul.properties"
+      val jul_config_monitor = if ( jul_config.exists()) {
+        new FileMonitor(jul_config, {
+          broker.console_log.
+          using(new FileInputStream(jul_config)) { is =>
+            LogManager.getLogManager.readConfiguration(is)
+          }
+        })
+      } else {
+        null
+      }
+
+      if(jul_config_monitor!=null) jul_config_monitor.start
+      log4j_config_monitor.start
+      broker_config_monitor.start
+
       Runtime.getRuntime.addShutdownHook(new Thread(){
         override def run: Unit = {
+          if(jul_config_monitor!=null) ServiceControl.stop(jul_config_monitor, "stopping config monitor")
+          ServiceControl.stop(log4j_config_monitor, "stopping config monitor")
+          ServiceControl.stop(broker_config_monitor, "stopping config monitor")
           ServiceControl.stop(broker, "stopping broker")
         }
       })

@@ -195,10 +195,10 @@ class Broker() extends BaseService {
   var web_server:WebServer = _
 
   var config_log:Log = Log(new MemoryLogger(Broker.log))
-  var audit_log:Log = _
-  var security_log:Log  = _
-  var connection_log:Log = _
-  var console_log:Log = _
+  var audit_log:Log = Broker.log
+  var security_log:Log  = Broker.log
+  var connection_log:Log = Broker.log
+  var console_log:Log = Broker.log
   var services = List[Service]()
 
   override def toString() = "broker: "+id

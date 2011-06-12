@@ -102,16 +102,11 @@ if [ ! -x "$JAVACMD" ] ; then
 fi
 
 CLASSPATH="${APOLLO_HOME}/lib/apollo-boot.jar"
-if [ ! -z "$APOLLO_BASE" ] ; then
-  CLASSPATH="${APOLLO_BASE}/etc:${CLASSPATH}"
-fi
 
 BOOTDIRS="${APOLLO_HOME}/lib"
 if [ ! -z "$APOLLO_BASE" ] ; then
   BOOTDIRS="${APOLLO_BASE}/lib:${BOOTDIRS}"
 fi
-
-JUL_CONFIG_FILE="${APOLLO_HOME}/etc/jul.properties"
 
 # For Cygwin, switch paths to Windows format before running java
 if $cygwin; then
@@ -122,7 +117,6 @@ if $cygwin; then
   JAVA_HOME=`cygpath --windows "$JAVA_HOME"`
   CLASSPATH=`cygpath --path --windows "$CLASSPATH"`
   CYGHOME=`cygpath --windows "$HOME"`
-  JUL_CONFIG_FILE=`cygpath --windows "$JUL_CONFIG_FILE"`
 fi
 
 JVM_FLAGS="${JVM_FLAGS--server -Xmx1G}"
@@ -143,7 +137,6 @@ fi
 
 JVM_FLAGS="${JVM_FLAGS} ${JMX_OPTS--Dcom.sun.management.jmxremote}"
 
-SYSTEM_PROPS="-Djava.util.logging.config.file=${JUL_CONFIG_FILE}"
 SYSTEM_PROPS="${SYSTEM_PROPS} -Dapollo.home=${APOLLO_HOME}"
 if [ ! -z "$APOLLO_BASE" ] ; then
   SYSTEM_PROPS="${SYSTEM_PROPS} -Dapollo.base=${APOLLO_BASE}"

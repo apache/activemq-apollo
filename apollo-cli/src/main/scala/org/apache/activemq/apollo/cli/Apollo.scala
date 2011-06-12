@@ -24,7 +24,9 @@ import org.fusesource.jansi.Ansi
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.felix.service.command.CommandSession
 import org.apache.felix.gogo.runtime.CommandProcessorImpl
-import java.io.{File, PrintStream, InputStream}
+import org.apache.activemq.apollo.util.FileSupport.RichFile._
+import java.util.logging.LogManager
+import java.io.{FileInputStream, File, PrintStream, InputStream}
 
 /**
  * <p>
@@ -34,6 +36,24 @@ import java.io.{File, PrintStream, InputStream}
  */
 object Apollo {
   def main(args: Array[String]) = {
+
+    if( System.getProperty("java.util.logging.config.file") == null ) {
+      val home = System.getProperty("apollo.home")
+      var jul_config = new File(home) / "etc" / "jul.properties"
+
+      val base = System.getProperty("apollo.base")
+      if ( base !=null ) {
+        val file = new File(base) / "etc" / "jul.properties"
+        if  ( file.exists()  ) {
+          jul_config = file
+        }
+      }
+
+      using(new FileInputStream(jul_config)) { is =>
+        LogManager.getLogManager.readConfiguration(is)
+      }
+    }
+
     Ansi.ansi()
     new Apollo().run(args)
   }
