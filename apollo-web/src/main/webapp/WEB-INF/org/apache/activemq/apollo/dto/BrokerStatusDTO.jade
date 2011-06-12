@@ -21,10 +21,11 @@ h1 Apache ActiveMQ Apollo #{version}
 
 p state: #{state} #{ uptime(state_since) } ago
 
-
 - if( state == "STARTED" )
   form(method="post" action={path("action/shutdown")})
     input(type="submit" value="shutdown")
+
+a(href={path("config/files")}) Edit Configuration
 
 h2 Virtual Hosts
 ul

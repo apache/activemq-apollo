@@ -18,13 +18,15 @@
 - import helper._
 
 .breadcumbs
-  a(href={strip_resolve("../..")}) Back
+  a(href={strip_resolve(".")}) Back
 
-form(method="post" action="config")
-  div
-    input(type="submit" value="Update")
+form(method="post" action={file+".html"})
+  - if( can_write )
+    div
+      input(type="submit" value="Update")
   div
     textarea(rows="40" cols="80" name="config")<
       ~~ config
-  div
-    input(type="submit" value="Update")
+  - if( can_write )
+    div
+      input(type="submit" value="Update")

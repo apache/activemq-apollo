@@ -145,9 +145,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
         auto_delete_after = 0
       }
     }
-
-    println("auto_delete_after: "+this+": "+auto_delete_after)
-
   }
   dispatch_queue {
     configure(config)
@@ -225,7 +222,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   }
 
   def check_idle {
-    println("check_idle auto_delete_after: "+this+": "+auto_delete_after)
     if (producers.isEmpty && all_subscriptions.isEmpty && queue_items==0 ) {
       if (idled_at==0) {
         val now = System.currentTimeMillis()
@@ -272,8 +268,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   }
 
   protected def _start(on_completed: Runnable) = {
-    println("_start auto_delete_after: "+this+": "+auto_delete_after)
-
     swapped_in_size_max += tune_queue_buffer;
 
     restore_from_store {

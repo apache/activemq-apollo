@@ -16,49 +16,29 @@
  */
 package org.apache.activemq.apollo.web.resources
 
-import javax.ws.rs._
-import core.Response
-import Response.Status._
-import org.apache.activemq.apollo.broker.ConfigStore
-import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO, ValueDTO}
+import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO}
 import org.fusesource.hawtbuf._
+import java.io.File
+import org.apache.activemq.apollo.util.FileSupport._
+import javax.ws.rs._
+import javax.ws.rs.core.Response.Status._
 import com.sun.jersey.api.view.ImplicitProduces
 
-case class EditConfig(config:String)
+case class EditConfig(file:String, config:String, can_write:Boolean)
+case class ListConfigs(files:Array[String])
 
 /**
  * A broker resource is used to represent the configuration of a broker.
  */
 case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends Resource(parent) {
 
-  lazy val store = {
-    val rc = ConfigStore()
-    if( rc !=null && rc.can_write ) {
-      rc
-    } else {
-      None
-    }.getOrElse(result(NOT_FOUND))
-  }
-
-  @GET
-  @Produces(Array("text/plain"))
-  def get() = store.read
-
-  @PUT
-  def put( config:String):Unit = {
-    store.write(config)
-  }
-
-  @POST
-  def edit_post(@FormParam("config") config:String) = {
-    put(config)
-    result(uri_info.getAbsolutePathBuilder().build())
-  }
-
-  @GET
-  @Produces(Array("text/html"))
-  def edit_html() = {
-    EditConfig(store.read)
+  lazy val etc_directory = {
+    val apollo_base = Option(System.getProperty("apollo.base")).getOrElse(result(NOT_FOUND))
+    val rc = new File(apollo_base) / "etc"
+    if ( !rc.exists() || !rc.isDirectory ) {
+      result(NOT_FOUND)
+    }
+    rc
   }
 
   @GET
@@ -80,6 +60,68 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
 
     copy
   }
+
+  @GET
+  @Produces(Array("application/json"))
+  @Path("files")
+  def list() = {
+    etc_directory.listFiles().flatMap { file =>
+      if( file.canRead ) {
+        Some(file.getName)
+      } else {
+        None
+      }
+    }
+  }
+
+  @GET
+  @Produces(Array("text/html"))
+  @Path("files")
+  def list_html() = {
+    ListConfigs(list())
+  }
+
+  @GET
+  @Produces(Array("text/plain"))
+  @Path("files/{name}")
+  def get(@PathParam("name") name:String) = {
+    val file = etc_directory / name
+    if( !file.exists() || !file.canRead || file.getParentFile != etc_directory ) {
+      result(NOT_FOUND)
+    }
+    file.read_bytes
+  }
+
+  @GET
+  @Produces(Array("text/html"))
+  @Path("files/{name}")
+  def edit_html(@PathParam("name") name:String) = {
+    val file = etc_directory / name
+    if( !file.exists() || !file.canRead || file.getParentFile != etc_directory ) {
+      result(NOT_FOUND)
+    }
+    EditConfig(name, file.read_text(), file.canWrite)
+  }
+
+  @PUT
+  @Path("files/{name}")
+  def put(@PathParam("name") name:String, config:Array[Byte]):Unit = {
+    val file = etc_directory / name
+    if( !file.exists() || !file.canWrite || file.getParentFile != etc_directory ) {
+      result(NOT_FOUND)
+    }
+    file.write_bytes(config)
+  }
+
+  @POST
+  @Path("files/{name}")
+  @Produces(Array("application/json", "application/xml","text/xml", "text/html"))
+  def edit_post(@PathParam("name") name:String, @FormParam("config") config:String):Unit = {
+    put(name, config.getBytes("UTF-8"))
+    result(strip_resolve("."))
+  }
+
+
 
 }
 
