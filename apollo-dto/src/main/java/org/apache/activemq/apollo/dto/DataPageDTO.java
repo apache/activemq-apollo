@@ -37,8 +37,8 @@ public class DataPageDTO {
 
     /**
      */
-    @XmlAttribute(name="row_max")
-    public int row_max;
+    @XmlAttribute(name="page_size")
+    public int page_size;
 
     /**
      */
@@ -64,7 +64,7 @@ public class DataPageDTO {
         DataPageDTO that = (DataPageDTO) o;
 
         if (page != that.page) return false;
-        if (row_max != that.row_max) return false;
+        if (page_size != that.page_size) return false;
         if (total_pages != that.total_pages) return false;
         if (total_rows != that.total_rows) return false;
         if (headers != null ? !headers.equals(that.headers) : that.headers != null) return false;
@@ -76,7 +76,7 @@ public class DataPageDTO {
     @Override
     public int hashCode() {
         int result = page;
-        result = 31 * result + row_max;
+        result = 31 * result + page_size;
         result = 31 * result + total_pages;
         result = 31 * result + (int) (total_rows ^ (total_rows >>> 32));
         result = 31 * result + (headers != null ? headers.hashCode() : 0);

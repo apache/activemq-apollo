@@ -310,10 +310,10 @@ case class BrokerResource() extends Resource {
 
       val rc = new DataPageDTO
       rc.page = page
-      rc.row_max = page_size
+      rc.page_size = page_size
 
       def total_pages(x:Int,y:Int) = if(x==0) 1 else { x/y + (if ( x%y == 0 ) 0 else 1) }
-      rc.total_pages = total_pages(records.length, rc.row_max)
+      rc.total_pages = total_pages(records.length, rc.page_size)
 
       rc.total_rows =  records.length
       rc.headers = headers

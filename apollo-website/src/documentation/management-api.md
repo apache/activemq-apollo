@@ -51,63 +51,84 @@ Example:
 
     $ curl -u "admin:password" \
     'http://localhost:61680/broker/connections.json'
-    [
-      [
-        "*"
-      ],
-      {
-        "id":"4",
-        "state":"STARTED",
-        "state_since":1306848325102,
-        "read_counter":103,
-        "write_counter":239110628,
-        "transport":"tcp",
-        "protocol":"stomp",
-        "remote_address":"/127.0.0.1:61775",
-        "protocol_version":"1.0",
-        "user":"admin",
-        "waiting_on":"client request",
-        "subscription_count":1
-      },
-      {
-        "id":"5",
-        "state":"STARTED",
-        "state_since":1306848325102,
-        "read_counter":227739229,
-        "write_counter":113,
-        "transport":"tcp",
-        "protocol":"stomp",
-        "remote_address":"/127.0.0.1:61776",
-        "protocol_version":"1.0",
-        "user":"admin",
-        "waiting_on":"blocked sending to: org.apache.activemq.apollo.broker.Queue$$anon$1@13765e9b",
-        "subscription_count":0
-      }
-    ]
+    
+Results in a [Data Page](./api/apollo-dto/org/apache/activemq/apollo/dto/DataPageDTO.html) :
 
-The results are an array of records with the first record acting as a header
-records describing the fields selected. The `*` field means all the record's
-fields were selected. To narrow down the selected fields you can add
+{pygmentize:: js}
+{
+  "page":0,
+  "page_size":100,
+  "total_pages":1,
+  "total_rows":2,
+  "headers":[
+    "*"
+  ],
+  "rows":[
+    {
+      "id":"4",
+      "state":"STARTED",
+      "state_since":1306848325102,
+      "read_counter":103,
+      "write_counter":239110628,
+      "transport":"tcp",
+      "protocol":"stomp",
+      "remote_address":"/127.0.0.1:61775",
+      "protocol_version":"1.0",
+      "user":"admin",
+      "waiting_on":"client request",
+      "subscription_count":1
+    },
+    {
+      "id":"5",
+      "state":"STARTED",
+      "state_since":1306848325102,
+      "read_counter":227739229,
+      "write_counter":113,
+      "transport":"tcp",
+      "protocol":"stomp",
+      "remote_address":"/127.0.0.1:61776",
+      "protocol_version":"1.0",
+      "user":"admin",
+      "waiting_on":"blocked sending to: org.apache.activemq.apollo.broker.Queue$$anon$1@13765e9b",
+      "subscription_count":0
+    }
+  ]
+}
+{pygmentiz}
+
+The `*` header field means the record was selected. To narrow down the selected fields you can add
 multiple `f` query parameters to pick the fields you want to retrieve.
 
 Example:
 
     $ curl -u "admin:password" \
     'http://localhost:61680/broker/connections.json?f=id&f=read_counter'
+    
+Results in :
+
+{pygmentize:: js}
+{
+  "page":0,
+  "page_size":100,
+  "total_pages":1,
+  "total_rows":2,
+  "headers":[
+    "id",
+    "read_counter"
+  ],
+  "rows":[
     [
-      [
-        "id",
-        "read_counter"
-      ],
-      [
-        "7",
-        110733109
-      ],
-      [
-        "6",
-        103
-      ]
+      "7",
+      110733109
+    ],
+    [
+      "6",
+      103
     ]
+  ]
+}
+{pygmentiz}
+    
 
 If you want to narrow down the records which get selected, you can set a `q`
 query parameter to SQL 92 style where clause which uses the record's fields
