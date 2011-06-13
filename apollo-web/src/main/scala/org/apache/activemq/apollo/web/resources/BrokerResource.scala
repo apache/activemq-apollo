@@ -308,7 +308,18 @@ case class BrokerResource() extends Resource {
 
       val list = query.execute(records).getResults
 
-      Success(seqAsJavaList( headers :: list.toList) )
+      val rc = new DataPageDTO
+      rc.page = page
+      rc.row_max = page_size
+
+      def total_pages(x:Int,y:Int) = if(x==0) 1 else { x/y + (if ( x%y == 0 ) 0 else 1) }
+      rc.total_pages = total_pages(records.length, rc.row_max)
+
+      rc.total_rows =  records.length
+      rc.headers = headers
+      rc.rows = list
+
+      Success(rc)
     } catch {
       case e:Throwable => Failure(e)
     }
@@ -317,7 +328,7 @@ case class BrokerResource() extends Resource {
   @GET @Path("virtual-hosts/{id}/topics")
   @Produces(Array("application/json"))
   def topics(@PathParam("id") id : String, @QueryParam("f") f:java.util.List[String],
-            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):java.util.List[_] = {
+            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):DataPageDTO = {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
       val records = Future.all {
@@ -325,7 +336,7 @@ case class BrokerResource() extends Resource {
           status(value)
         }
       }
-      val rc:FutureResult[java.util.List[_]] = records.map(narrow(classOf[TopicStatusDTO], _, f, q, p, ps))
+      val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[TopicStatusDTO], _, f, q, p, ps))
       rc
     }
   }
@@ -342,7 +353,7 @@ case class BrokerResource() extends Resource {
   @GET @Path("virtual-hosts/{id}/queues")
   @Produces(Array("application/json"))
   def queues(@PathParam("id") id : String, @QueryParam("f") f:java.util.List[String],
-            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):java.util.List[_] = {
+            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):DataPageDTO = {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
       val values: Iterable[Queue] = router.queue_domain.destination_by_id.values
@@ -351,7 +362,7 @@ case class BrokerResource() extends Resource {
         status(value, false)
       }
 
-      val rc:FutureResult[java.util.List[_]] = records.map(narrow(classOf[QueueStatusDTO], _, f, q, p, ps))
+      val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[QueueStatusDTO], _, f, q, p, ps))
       rc
     }
   }
@@ -389,7 +400,7 @@ case class BrokerResource() extends Resource {
   @GET @Path("virtual-hosts/{id}/dsubs")
   @Produces(Array("application/json"))
   def durable_subscriptions(@PathParam("id") id : String, @QueryParam("f") f:java.util.List[String],
-            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):java.util.List[_] = {
+            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):DataPageDTO = {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
       val values: Iterable[Queue] = router.topic_domain.durable_subscriptions_by_id.values
@@ -398,7 +409,7 @@ case class BrokerResource() extends Resource {
         status(value, false)
       }
 
-      val rc:FutureResult[java.util.List[_]] = records.map(narrow(classOf[QueueStatusDTO], _, f, q, p, ps))
+      val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[QueueStatusDTO], _, f, q, p, ps))
       rc
     }
   }
@@ -537,7 +548,7 @@ case class BrokerResource() extends Resource {
   @GET @Path("connectors")
   @Produces(Array("application/json"))
   def connectors(@QueryParam("f") f:java.util.List[String], @QueryParam("q") q:String,
-                  @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):java.util.List[_] = {
+                  @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):DataPageDTO = {
 
     with_broker { broker =>
       monitoring(broker) {
@@ -605,7 +616,7 @@ case class BrokerResource() extends Resource {
   @GET @Path("connections")
   @Produces(Array("application/json"))
   def connections(@QueryParam("f") f:java.util.List[String], @QueryParam("q") q:String,
-                  @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):java.util.List[_] = {
+                  @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):DataPageDTO = {
 
     with_broker { broker =>
       monitoring(broker) {
@@ -614,7 +625,7 @@ case class BrokerResource() extends Resource {
           value.get_connection_status
         }
 
-        val rc:FutureResult[java.util.List[_]] = records.map(narrow(classOf[ConnectionStatusDTO], _, f, q, p, ps))
+        val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[ConnectionStatusDTO], _, f, q, p, ps))
         rc
       }
     }
