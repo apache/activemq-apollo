@@ -30,7 +30,7 @@ object Website {
   val project_slogan= "AcitveMQ's next generation of messaging"
   val project_id= "apollo"
   val project_jira_key= "APLO"
-  val project_issue_url= "https://issues.apache.org/activemq/browse/"+project_jira_key
+  val project_issue_url= "https://issues.apache.org/jira/browse/APLO"
   val project_forums_url= "http://activemq.2283324.n4.nabble.com/ActiveMQ-Dev-f2368404.html"
   val project_wiki_url= "https://cwiki.apache.org/confluence/display/ACTIVEMQ/Index"
   val project_logo= "/images/project-logo.png"
