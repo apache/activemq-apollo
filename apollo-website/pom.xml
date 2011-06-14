@@ -125,7 +125,7 @@
         
         <configuration>
           <webappDirectory>${basedir}/src</webappDirectory>
-          <remoteServerId>apollo-website</remoteServerId>
+          <remoteServerId>apache.releases.https</remoteServerId>
           <remoteServerUrl>${website-base-url}/versions/${project.version}/website/</remoteServerUrl>
         </configuration>
         
