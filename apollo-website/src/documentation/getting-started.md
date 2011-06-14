@@ -93,12 +93,12 @@ The default login id and password is `admin` and `password`.
 Apollo's fastest message store implementation is the BDB based message store.  
 Unfortunately, BDB cannot be redistributed by Apache.  It is highly recommended
 that you add it to your apollo installation. You can download it from Oracle at
-[je-4.1.6.jar](http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar) and
+[je-4.1.10.jar](http://download.oracle.com/maven/com/sleepycat/je/4.1.10/je-4.1.10.jar) and
 then copy it into the `${APOLLO_HOME}/lib` directory.
 
 For those of you with curl installed, you can just run:
 
-    curl http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar > ${APOLLO_HOME}/lib/je-4.1.6.jar
+    curl http://download.oracle.com/maven/com/sleepycat/je/4.1.10/je-4.1.10.jar > ${APOLLO_HOME}/lib/je-4.1.10.jar
     
 Once installed, you then need to update the configuration by editing the `etc/apollo.xml` file and
 replace `jdbm2_store` with `bdb_store`.

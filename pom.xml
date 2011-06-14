@@ -100,7 +100,7 @@
     <hawtbuf-version>1.5</hawtbuf-version>
     
     <jdbm-version>2.0.1</jdbm-version>
-    <bdb-version>4.1.6</bdb-version>
+    <bdb-version>4.1.10</bdb-version>
     <jasypt-version>1.6</jasypt-version>
 
     <scalate-version>1.5.0</scalate-version>

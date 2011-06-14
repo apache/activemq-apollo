@@ -307,12 +307,12 @@ implementations currently supported are:
 Apache cannot redistribute the BDB library due to the terms of it's
 license, but you can easily get a free copy directly from Oracle. Before
 you can start using the BDB Store you must first download it from Oracle
-at [je-4.1.6.jar](http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar)
+at [je-4.1.10.jar](http://download.oracle.com/maven/com/sleepycat/je/4.1.10/je-4.1.10.jar)
 and then copy it into the `${APOLLO_HOME}/lib` directory.
 
 For those of you with curl installed, you can just run:
 
-    curl http://download.oracle.com/maven/com/sleepycat/je/4.1.6/je-4.1.6.jar > ${APOLLO_HOME}/lib/je-4.1.6.jar
+    curl http://download.oracle.com/maven/com/sleepycat/je/4.1.10/je-4.1.10.jar > ${APOLLO_HOME}/lib/je-4.1.10.jar
 
 Once that is done, you can enable the store by adding a `bdb_store` element
 inside your `virtual_host`.  Example:
