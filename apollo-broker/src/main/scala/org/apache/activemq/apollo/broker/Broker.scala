@@ -528,7 +528,7 @@ class Broker() extends BaseService {
   }
 
   def get_socket_address = {
-    first_accepting_connector.get.transport_server.getSocketAddress
+    first_accepting_connector.get.socket_address
   }
 
   def first_accepting_connector = connectors.values.find(_.isInstanceOf[AcceptingConnector]).map(_.asInstanceOf[AcceptingConnector])

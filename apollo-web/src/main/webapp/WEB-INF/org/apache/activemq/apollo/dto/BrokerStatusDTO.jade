@@ -18,14 +18,12 @@
 - import helper._
 
 h1 Apache ActiveMQ Apollo #{version}
-
 p state: #{state} #{ uptime(state_since) } ago
 
+a(href={path("config/files")}) Edit Configuration
 - if( state == "STARTED" )
   form(method="post" action={path("action/shutdown")})
     input(type="submit" value="shutdown")
-
-a(href={path("config/files")}) Edit Configuration
 
 h2 Virtual Hosts
 ul
@@ -40,7 +38,39 @@ ul
       a(href={ path("connectors/"+x) }) #{x}
 
 h2 Connections
+p total connections ever : #{connection_counter}
 ul
   - for( x <- connections )
     li
       a(href={ path("connections/"+x.id) }) #{x.label}
+
+h2 Operating System
+p Name : #{jvm_metrics.os_name}
+p Architecture : #{jvm_metrics.os_arch}
+p Memory total : #{memory(jvm_metrics.os_memory_total)}
+p Memory free : #{memory(jvm_metrics.os_memory_free)}
+p Swap total : #{memory(jvm_metrics.os_swap_total)}
+p Swap free : #{memory(jvm_metrics.os_swap_free)}
+p File descriptors open: #{jvm_metrics.os_fd_open}
+p File descriptors max: #{jvm_metrics.os_fd_max}
+
+h2 Java Virtual Machine
+p Name: #{jvm_metrics.jvm_name}
+p Runtime : #{jvm_metrics.runtime_name}
+p Start time : #{ new java.util.Date(jvm_metrics.start_time) }
+p Up time : #{ uptime(jvm_metrics.start_time) }
+
+h2 Memory
+p Heap memory used : #{memory(jvm_metrics.heap_memory.used)}
+p Heap memory allocated : #{memory(jvm_metrics.heap_memory.alloc)}
+p Heap memory max : #{memory(jvm_metrics.heap_memory.max)}
+p Non-heap memory allocated : #{memory(jvm_metrics.non_heap_memory.alloc)}
+
+h2 Classes
+p Classes loaded : #{jvm_metrics.classes_loaded}
+p Classes unloaded : #{jvm_metrics.classes_unloaded}
+
+h2 Threads
+p Threads current : #{jvm_metrics.threads_current}
+p Threads peak : #{jvm_metrics.threads_peak}
+

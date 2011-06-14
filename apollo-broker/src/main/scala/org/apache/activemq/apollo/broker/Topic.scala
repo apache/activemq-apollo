@@ -40,6 +40,8 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
   var idled_at = 0L
   val created_at = System.currentTimeMillis()
   var auto_delete_after = 0
+  var producer_counter = 0L
+  var consumer_counter = 0L
 
   var config:TopicDTO = _
 
@@ -116,6 +118,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
         }
 
         consumers += target
+        consumer_counter += 1
         val list = target :: Nil
         producers.foreach({ r=>
           r.bind(list)
@@ -193,6 +196,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
 
   def connect (destination:DestinationDTO, producer:BindableDeliveryProducer) = {
     producers += producer
+    producer_counter += 1
     producer.bind(consumers.toList ::: durable_subscriptions.toList)
     check_idle
   }

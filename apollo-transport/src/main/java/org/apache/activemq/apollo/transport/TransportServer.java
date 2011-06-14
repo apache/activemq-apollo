@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.transport;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.URI;
 
 import org.apache.activemq.apollo.util.Service;
@@ -47,7 +48,7 @@ public interface TransportServer extends Service {
      *         on or null if this does not or is not currently accepting
      *         connections on a socket.
      */
-    InetSocketAddress getSocketAddress();
+    SocketAddress getSocketAddress();
 
     /**
      * Returns the dispatch queue used by the transport

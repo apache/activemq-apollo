@@ -69,6 +69,7 @@ p total swap outs : #{metrics.swap_out_item_counter} messages (#{memory(metrics.
 p total swap ins : #{metrics.swap_in_item_counter} messages (#{memory(metrics.swap_in_size_counter)})
 
 h3 Producers
+p total producers ever : #{metrics.producer_counter}
 ul
   - for( x <- producers )
     - x.kind match
@@ -79,6 +80,7 @@ ul
 
 
 h3 Consumers
+p total consumers ever : #{metrics.consumer_counter}
 ul
   - for( consumer <- consumers )
     - import consumer._

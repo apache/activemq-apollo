@@ -28,7 +28,7 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlType(name = "store_status_type")
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
-public abstract class StoreStatusDTO {
+public abstract class StoreStatusDTO extends StringIdDTO {
 
     /**
      * The state of the service.

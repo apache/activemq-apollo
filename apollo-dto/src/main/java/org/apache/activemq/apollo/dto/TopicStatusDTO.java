@@ -50,4 +50,18 @@ public class TopicStatusDTO extends ServiceStatusDTO {
      */
     @XmlElement(name="dsub")
     public List<String> dsubs = new ArrayList<String>();
+
+    /**
+     * The total number of producers that have sent to
+     * the topic.
+     */
+    @XmlAttribute(name="producer_counter")
+    public long producer_counter;
+
+    /**
+     * The total number of consumers that have ever subscribed to
+     * the topic.
+     */
+    @XmlAttribute(name="consumer_counter")
+    public long consumer_counter;
 }

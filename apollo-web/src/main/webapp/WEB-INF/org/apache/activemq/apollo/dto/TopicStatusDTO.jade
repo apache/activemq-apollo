@@ -25,7 +25,8 @@ h1 Topic: #{id}
 p state: #{state} #{ uptime(state_since) } ago
 h3 Topic Domain
 
-h4 Publishers
+h4 Producers
+p total producers ever : #{producer_counter}
 ul
   - for( x <- producers )
     - x.kind match
@@ -34,7 +35,8 @@ ul
           a(href={ path("../../../../connections/"+x.id) }) #{x.label}
       - case _ =>
 
-h4 Subscribers
+h4 Consumers
+p total consumers ever : #{consumer_counter}
 ul
   - for( x <- consumers )
     - x.kind match

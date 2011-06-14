@@ -33,10 +33,19 @@ import java.util.List;
 public class ConnectorStatusDTO extends ServiceStatusDTO {
 
     /**
+     * The local address the connector has bound
+     */
+    @XmlAttribute(name="local_address")
+    public String local_address;
+
+    @XmlAttribute(name="protocol")
+    public String protocol;
+
+    /**
      * The number of connections that this connector has accepted.
      */
-    @XmlAttribute
-    public long accepted;
+    @XmlAttribute(name="connection_counter")
+    public long connection_counter;
 
     /**
      * The number of connections that this connector has currently connected.

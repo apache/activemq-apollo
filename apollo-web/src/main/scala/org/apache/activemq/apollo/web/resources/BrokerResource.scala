@@ -36,6 +36,7 @@ import org.apache.activemq.apollo.util.BaseService._
 import management.ManagementFactory
 import javax.management.ObjectName
 import javax.management.openmbean.CompositeData
+import javax.management.remote.rmi._RMIConnection_Stub
 
 /**
  * <p>
@@ -69,7 +70,7 @@ case class BrokerResource() extends Resource {
         result.state = broker.service_state.toString
         result.state_since = broker.service_state.since
         result.version = Broker.version
-
+        result.connection_counter = broker.connection_id_counter.get()
         broker.virtual_hosts.values.foreach{ host=>
           // TODO: may need to sync /w virtual host's dispatch queue
           result.virtual_hosts.add( host.id )
@@ -195,6 +196,8 @@ case class BrokerResource() extends Resource {
       rc.swapped_in_size += q.swapped_in_size
 
       rc.swapped_in_size_max += q.swapped_in_size_max
+      rc.producer_counter += q.producer_counter
+      rc.consumer_counter += q.consumer_counter
 
       if( q.isInstanceOf[AggregateQueueMetricsDTO] ) {
         rc.queues += q.asInstanceOf[AggregateQueueMetricsDTO].queues
@@ -460,6 +463,8 @@ case class BrokerResource() extends Resource {
       rc.state = "STARTED"
       rc.state_since = node.created_at
       rc.config = node.config
+      rc.producer_counter = node.producer_counter
+      rc.consumer_counter = node.consumer_counter
 
       node.durable_subscriptions.foreach {
         q =>
@@ -574,8 +579,10 @@ case class BrokerResource() extends Resource {
     result.id = connector.id.toString
     result.state = connector.service_state.toString
     result.state_since = connector.service_state.since
-    result.accepted = connector.accepted.get
+    result.connection_counter = connector.accepted.get
     result.connected = connector.connected.get
+    result.protocol = Option(connector.config.protocol).getOrElse("any")
+    result.local_address = Option(connector.socket_address).map(_.toString).getOrElse("any")
     result
   }
 
@@ -704,6 +711,9 @@ case class BrokerResource() extends Resource {
     rc.swapped_in_size = q.swapped_in_size
 
     rc.swapped_in_size_max = q.swapped_in_size_max
+
+    rc.producer_counter = q.producer_counter
+    rc.consumer_counter = q.consumer_counter
 
     rc
   }

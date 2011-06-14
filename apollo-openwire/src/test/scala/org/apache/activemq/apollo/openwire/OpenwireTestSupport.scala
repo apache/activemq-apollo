@@ -26,6 +26,7 @@ import FileSupport._
 import javax.jms.Connection
 import org.apache.activemq.ActiveMQConnectionFactory
 import org.apache.activemq.command.{ActiveMQTopic, ActiveMQQueue}
+import java.net.InetSocketAddress
 
 class OpenwireTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAndAfterEach with Logging {
   var broker: Broker = null
@@ -37,7 +38,7 @@ class OpenwireTestSupport extends FunSuiteSupport with ShouldMatchers with Befor
     info("Loading broker configuration from the classpath with URI: " + broker_config_uri)
     broker = BrokerFactory.createBroker(broker_config_uri)
     ServiceControl.start(broker, "Starting broker")
-    port = broker.get_socket_address.getPort
+    port = broker.get_socket_address.asInstanceOf[InetSocketAddress].getPort
   }
 
   var default_connection:Connection = _

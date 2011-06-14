@@ -181,6 +181,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   var swap_in_item_counter = 0L
   var swap_in_size_counter = 0L
 
+  var producer_counter = 0L
+  var consumer_counter = 0L
+
   var individual_swapped_items = 0
 
   val swap_source = createSource(EventAggregators.INTEGER_ADD, dispatch_queue)
@@ -649,6 +652,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
     } else {
       dispatch_queue {
         producers += producer
+        producer_counter += 1
         check_idle
       }
       producer.bind(this::Nil)
@@ -1492,6 +1496,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     queue.head_entry ::= this
 
     queue.all_subscriptions += consumer -> this
+    queue.consumer_counter += 1
     queue.addCapacity( queue.tune_consumer_buffer )
 
     if( exclusive ) {

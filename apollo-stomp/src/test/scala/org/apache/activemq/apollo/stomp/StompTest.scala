@@ -23,6 +23,7 @@ import org.apache.activemq.apollo.broker.{KeyStorage, Broker, BrokerFactory}
 import org.apache.activemq.apollo.util.{FileSupport, Logging, FunSuiteSupport, ServiceControl}
 import FileSupport._
 import org.apache.activemq.apollo.dto.KeyStorageDTO
+import java.net.InetSocketAddress
 
 class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAndAfterEach with Logging {
   var broker: Broker = null
@@ -35,7 +36,7 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
       info("Loading broker configuration from the classpath with URI: " + broker_config_uri)
       broker = BrokerFactory.createBroker(broker_config_uri)
       ServiceControl.start(broker, "Starting broker")
-      port = broker.get_socket_address.getPort
+      port = broker.get_socket_address.asInstanceOf[InetSocketAddress].getPort
     }
     catch {
       case e:Throwable => e.printStackTrace

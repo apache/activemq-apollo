@@ -179,4 +179,18 @@ public class QueueMetricsDTO {
     @XmlAttribute(name="swap_in_size_counter")
     public long swap_in_size_counter;
 
+    /**
+     * The total number of producers that have sent to
+     * the queue.
+     */
+    @XmlAttribute(name="producer_counter")
+    public long producer_counter;
+
+    /**
+     * The total number of consumers that have ever subscribed to
+     * the queue.
+     */
+    @XmlAttribute(name="consumer_counter")
+    public long consumer_counter;
+
 }

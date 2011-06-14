@@ -23,6 +23,7 @@ import protocol.{ProtocolFactory, Protocol}
 import org.apache.activemq.apollo.transport._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.OptionSupport._
+import java.net.SocketAddress
 
 
 /**
@@ -43,6 +44,7 @@ trait Connector extends BaseService {
   def accepted:LongCounter
   def connected:LongCounter
   def update(config: ConnectorDTO, on_complete:Runnable):Unit
+  def socket_address:SocketAddress
 
 }
 
@@ -68,6 +70,8 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
   val connected = new LongCounter()
 
   override def toString = "connector: "+config.id
+
+  def socket_address = Option(transport_server).map(_.getSocketAddress).getOrElse(null)
 
   object BrokerAcceptListener extends TransportAcceptListener {
     def onAcceptError(e: Exception): Unit = {

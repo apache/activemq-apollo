@@ -29,8 +29,10 @@ p state: #{state} #{ uptime(state_since) } ago
   form(method="post" action={path("action/start")})
     input(type="submit" value="start")
 
-p total accepted: #{accepted}
 
+p local address: #{local_address}
+p protocol: #{protocol}
 p currently connected: #{connected}
+p total ever connected: #{connection_counter}
 
 
