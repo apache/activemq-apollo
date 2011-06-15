@@ -17,33 +17,23 @@
 package org.apache.activemq.apollo.web.resources
 
 import java.lang.String
-import com.sun.jersey.api.NotFoundException
 import javax.ws.rs._
 import core.{UriInfo, Response, Context}
-import reflect.{BeanProperty}
 import com.sun.jersey.api.view.ImplicitProduces
 import Response._
 import Response.Status._
-import collection.JavaConversions._
-import com.sun.jersey.api.core.ResourceContext
 import java.util.concurrent.TimeUnit
-import org.apache.activemq.apollo.dto._
-import java.util.{Arrays, Collections}
 import org.fusesource.hawtdispatch._
 import org.fusesource.scalate.{NoValueSetException, RenderContext}
 import com.sun.jersey.core.util.Base64
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
-import java.io.{IOException, UnsupportedEncodingException}
+import java.io.UnsupportedEncodingException
 import org.apache.activemq.apollo.broker.security.{Authorizer, SecurityContext, Authenticator}
 import org.apache.activemq.apollo.broker._
-import java.lang.reflect.Proxy
-import com.sun.jersey.server.impl.ThreadLocalInvoker
 import util.continuations._
-import org.apache.activemq.apollo.util.Success._
-import org.apache.activemq.apollo.util.Failure._
 import org.apache.activemq.apollo.util._
-import javax.management.remote.rmi._RMIConnection_Stub
 import java.net.{InetSocketAddress, URI}
+import java.security.cert.X509Certificate
 
 object Resource {
 
@@ -177,6 +167,7 @@ abstract class Resource(parent:Resource=null) extends Logging {
       security_context = new SecurityContext
       security_context.local_address = new InetSocketAddress(http_request.getLocalAddr, http_request.getLocalPort)
       security_context.remote_address = new InetSocketAddress(http_request.getRemoteAddr, http_request.getRemotePort)
+      security_context.certificates = http_request.getAttribute("javax.servlet.request.X509Certificate").asInstanceOf[Array[X509Certificate]]
 
       var auth_header = http_request.getHeader(HEADER_AUTHORIZATION)
       if (auth_header != null && auth_header.length > 0) {
