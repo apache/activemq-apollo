@@ -195,6 +195,7 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
 
               val connector = new SslSelectChannelConnector
               connector.setSslContext(sslContext)
+              connector.setWantClientAuth(true)
               connector
           }
 
