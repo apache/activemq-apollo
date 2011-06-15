@@ -225,7 +225,29 @@
           </execution>
         </executions>
       </plugin>
-      
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.6</version>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <configuration>
+              <tasks>
+                <replace token='&lt;xs:sequence&gt;' value='&lt;xs:choice minOccurs="0" maxOccurs="unbounded"&gt;&lt;xs:choice&gt;' dir="${basedir}/target/sitegen/documentation/schema">
+                  <include name="**/*.xsd"/>
+                </replace>
+                <replace token= "&lt;/xs:sequence&gt;" value="&lt;/xs:choice&gt;&lt;/xs:choice&gt;" dir="${basedir}/target/sitegen/documentation/schema">
+                  <include name="**/*.xsd"/>
+                </replace>
+              </tasks>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+        
     </plugins>
   </build>
 
