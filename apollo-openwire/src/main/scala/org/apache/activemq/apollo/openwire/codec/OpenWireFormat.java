@@ -40,6 +40,7 @@ public final class OpenWireFormat {
 
     public static final int DEFAULT_VERSION = CommandTypes.PROTOCOL_VERSION;
     public static final String WIREFORMAT_NAME = "openwire"; 
+    public static final int DEFAULT_MAX_FRAME_SIZE = 100 * 1024 * 1024; //100 MB
 
     static final byte NULL_TYPE = CommandTypes.NULL;
     private static final int MARSHAL_CACHE_SIZE = Short.MAX_VALUE / 2;
@@ -52,6 +53,7 @@ public final class OpenWireFormat {
     private boolean cacheEnabled;
     private boolean tightEncodingEnabled;
     private boolean sizePrefixDisabled;
+    private long maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
 
     // The following fields are used for value caching
     private short nextMarshallCacheIndex;
@@ -99,7 +101,7 @@ public final class OpenWireFormat {
 
     public String toString() {
         return "OpenWireFormat{version=" + version + ", cacheEnabled=" + cacheEnabled + ", stackTraceEnabled=" + stackTraceEnabled + ", tightEncodingEnabled=" + tightEncodingEnabled
-                + ", sizePrefixDisabled=" + sizePrefixDisabled + "}";
+                + ", sizePrefixDisabled=" + sizePrefixDisabled + ", maxFrameSize=" + maxFrameSize + "}";
         // return "OpenWireFormat{id="+id+",
         // tightEncodingEnabled="+tightEncodingEnabled+"}";
     }
@@ -201,6 +203,13 @@ public final class OpenWireFormat {
                 // throw new IOException("Packet size does not match marshaled
                 // size");
             }
+
+            if (size > maxFrameSize) {
+                throw new IOException(
+                        "Frame size of " + (size / (1024 * 1024)) +
+                        " MB larger than max allowed " +
+                                (maxFrameSize / (1024 * 1024)) + " MB");
+            }
         }
 
         Object command = doUnmarshal(bytesIn);
@@ -268,12 +277,13 @@ public final class OpenWireFormat {
     public Object unmarshal(DataInput dis) throws IOException {
         DataInput dataIn = dis;
         if (!sizePrefixDisabled) {
-            dis.readInt();
-            // int size = dis.readInt();
-            // byte[] data = new byte[size];
-            // dis.readFully(data);
-            // bytesIn.restart(data);
-            // dataIn = bytesIn;
+            int size = dis.readInt();
+            if (size > maxFrameSize) {
+                throw new IOException(
+                        "Frame size of " + (size / (1024 * 1024)) +
+                        " MB larger than max allowed " +
+                                (maxFrameSize / (1024 * 1024)) + " MB");
+            }
         }
         return doUnmarshal(dataIn);
     }
@@ -576,6 +586,13 @@ public final class OpenWireFormat {
         this.sizePrefixDisabled = prefixPacketSize;
     }
 
+    public long getMaxFrameSize() {
+        return maxFrameSize;
+    }
+
+    public void setMaxFrameSize(long maxFrameSize) {
+        this.maxFrameSize = maxFrameSize;
+    }
 
     public void renegotiateWireFormat(WireFormatInfo info, WireFormatInfo preferedWireFormatInfo) throws IOException {
 
@@ -585,6 +602,9 @@ public final class OpenWireFormat {
 
         this.setVersion(min(preferedWireFormatInfo.getVersion(), info.getVersion()));
         info.setVersion(this.getVersion());
+
+        this.setMaxFrameSize(min(preferedWireFormatInfo.getMaxFrameSize(), info.getMaxFrameSize()));
+        info.setMaxFrameSize(this.getMaxFrameSize());
 
         this.stackTraceEnabled = info.isStackTraceEnabled() && preferedWireFormatInfo.isStackTraceEnabled();
         info.setStackTraceEnabled(this.stackTraceEnabled);
@@ -631,5 +651,11 @@ public final class OpenWireFormat {
         }
         return version2;
     }
-
+    
+    protected long min(long version1, long version2) {
+        if (version1 < version2 && version1 > 0 || version2 <= 0) {
+            return version1;
+        }
+        return version2;
+    }
 }

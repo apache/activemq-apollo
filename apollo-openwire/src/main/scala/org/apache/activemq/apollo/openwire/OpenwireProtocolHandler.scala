@@ -57,7 +57,7 @@ object OpenwireProtocolHandler extends Log {
   preferred_wireformat_settings.setMaxInactivityDuration(30 * 1000 * 1000);
   preferred_wireformat_settings.setMaxInactivityDurationInitalDelay(10 * 1000 * 1000);
   preferred_wireformat_settings.setCacheSize(1024);
-
+  preferred_wireformat_settings.setMaxFrameSize(OpenWireFormat.DEFAULT_MAX_FRAME_SIZE);
 }
 
 
@@ -589,8 +589,6 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           true
         }
       }
-
-
     }
 
     object ack_handler {
@@ -658,7 +656,6 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       parent.transactions.remove(id)
       all_transactions.remove(id)
     }
-
 
     def apply(proc:(StoreUOW)=>Unit) = {
       actions += proc
