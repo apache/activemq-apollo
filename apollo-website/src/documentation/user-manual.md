@@ -151,8 +151,11 @@ and port to determine to which local interfaces to bind.  For example:
 The TCP URI also supports several query parameters to fine tune the
 settings used on the socket.  The supported parameters are:
 
-* `buffer_size` : Sets the size of the internal socket send and 
-   receive buffers.  Defaults to 65536 (64k)
+* `receive_buffer_size` : Sets the size of the internal socket receive 
+   buffer.  Defaults to 65536 (64k)
+
+* `send_buffer_size` : Sets the size of the internal socket send buffer.  
+   Defaults to 65536 (64k)
 
 * `traffic_class` : Sets traffic class or type-of-service octet in the IP 
   header for packets sent from the transport.  Defaults to `8` which
@@ -169,7 +172,7 @@ settings used on the socket.  The supported parameters are:
 Example which uses a couple of options:
 
 {pygmentize:: xml}
-<connector id="tcp" bind="tcp://0.0.0.0:61613?buffer_size=1024&amp;max_read_rate=65536"/>
+<connector id="tcp" bind="tcp://0.0.0.0:61613?receive_buffer_size=1024&amp;max_read_rate=65536"/>
 {pygmentize}
 
 Note that `&amp;` was used to separate the option values instead of just `&` since the 
@@ -213,7 +216,10 @@ determined by the first `queue` element which matches the queue being
 created. The attributes matched against are:
 
 * `id` : The name of the queue, you can use wild cards to match
-  multiple.
+  multiple or don't set to match all queues.
+
+If the queue definition is not using a wild card in the id, then the
+queue will be created when the broker first starts up.
 
 A `queue` element may be configured with the following attributes:
 
@@ -240,7 +246,6 @@ memory.
   from the store at a time. Note that Flushed entires are just reference
   pointers to the actual messages. When not loaded, the batch is referenced
   as sequence range to conserve memory.
-  
 
 ##### Topics
 
@@ -249,7 +254,10 @@ determined by the first `topic` element which matches the topic being
 created. The attributes matched against are:
 
 * `id` : The name of the topic, you can use wild cards to match
-  against multiple
+  against multiple or don't set to match all topics.
+
+If the topic definition is not using a wild card in the id, then the
+topic will be created when the broker first starts up.
 
 A `topic` element may be configured with the following attributes:
 
@@ -268,11 +276,14 @@ configuration will be determined by the first `dsub` element
 which matches the durable subscription being created. The attributes matched
 against are:
 
-* `id` : The name of the topic, you can use wild cards to match
-  multiple.
+* `id` : The name of the subscription.
+* `id_regex` : A regular expression used to match against the subscription id
 
-* `subscription_id` : This specify which subscription id this configuration 
-  should match.
+If you want to create the durable subscription when the broker first starts up,
+then you must set the `topic` attribute and optionally the `selector` attribute.
+
+* `topic` : The topic which the durable subscription will subscribe to.
+* `selector` : A selector expression which filters out messages
 
 A `dsub` element may be configured with all the 
 attributes available on the `queue` element.
