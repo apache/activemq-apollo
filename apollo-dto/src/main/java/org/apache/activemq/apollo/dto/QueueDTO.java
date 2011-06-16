@@ -54,7 +54,7 @@ public class QueueDTO extends StringIdDTO {
     public Integer queue_buffer;
 
     /**
-     *  The amount of memory buffer space to use per subscription.
+     *  The amount of memory buffer space to use per consumer.
      */
     @XmlAttribute(name="consumer_buffer")
     public Integer consumer_buffer;
@@ -74,7 +74,7 @@ public class QueueDTO extends StringIdDTO {
 
     /**
      * The number max number of swapped queue entries to load
-     * from the store at a time.  Not that swapped entries are just
+     * from the store at a time.  Note that swapped entries are just
      * reference pointers to the actual messages.  When not loaded,
      * the batch is referenced as sequence range to conserve memory.
      */

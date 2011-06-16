@@ -99,3 +99,37 @@ services.
 See the [Management API](management-api.html) documentation for
 details.
 
+### Message Swapping
+
+Apollo can very efficiently work with both large and small queues due to
+the way it implements message swapping. If you have a large queue with
+millions of messages, and are slowly processing them, then it makes no
+sense to keep all those messages in memory. They just need to be loaded
+when the consumers are ready to receive them.
+
+A queue in apollo has a configuration entry called `consumer_buffer` which
+is the amount of memory dedicated to that consumer for prefetching into
+memory the next set of messages that consumer will need. The queue will
+asynchronously load messages from the message store so that they will be
+in memory by the time the consumer is ready to receive the the message.
+
+The rate of consumption/position of the consumers in the queue will also
+affect how newly enqueued messages are handled. If no consumers are near
+the tail of the queue where new messages are placed, then the message gets
+swapped out of memory asap. If they consumers are near the tail of the
+queue, then the message is retained in memory for as long as possible in
+hopes that you can avoid a swap out and then back in.
+
+When a message is swapped out of memory, it can be in one of 2 swapped out
+states: 'swapped' or 'swapped range'. A message in 'swapped' state still
+has a small reference node in the list of messages the queue maintains.
+This small reference holds onto some accounting information about the
+message and how to quickly retrieve the message from the message store.
+Once a queue builds up many adjacent messages (defaults to 10,000) that
+are in the 'swapped' state, it will replace all those individual reference
+node entires in memory with a single range reference node. Once that
+happens, the message is in a 'swapped range'.  
+
+
+
+

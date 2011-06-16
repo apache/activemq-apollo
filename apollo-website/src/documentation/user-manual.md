@@ -49,8 +49,19 @@ following files.
 * `etc/groups.properties` : Holds groups to users mappings so that you can
   simplify access control lists (ACL) by using group instead listing individual
   users.
- 
+* `black-list.txt` : A list of IP address which are banned from connecting 
+  to the broker.
+
 [login.conf]: http://download.oracle.com/javase/1.5.0/docs/guide/security/jaas/tutorials/LoginConfigFile.html
+
+### Automatic Configuration Reloading
+
+Once a broker is started, you can edit any of the configuration files in
+the `etc` directory and your changes will be automatically be reloaded.  The
+configuration update will be applied in the least non-disruptive way possible.
+For example, if you removed a connector, the port that connector was listening
+on will be released an no new connections will be accepted.  But connections
+that were previously accepted by that connector will continue to operate normally.
 
 ### Adjusting JVM Settings
 
@@ -71,6 +82,10 @@ executes `apollo` and that the variables get exported in the case of the
 unix script.
 
 ### Understanding the `apollo.xml` File
+
+There are many XSD aware XML editors which make editing XML configuration
+file less error prone.  If your using one of these editors, you can 
+configure it to use this [apollo.xsd](schema/apollo.xsd) file.
 
 The simplest valid `apollo.xml` defines a single virtual host and a
 single connector.
@@ -136,9 +151,8 @@ and port to determine to which local interfaces to bind.  For example:
 The TCP URI also supports several query parameters to fine tune the
 settings used on the socket.  The supported parameters are:
 
-* `receive_buffer_size` : Sets the size of the internal socket receive buffer 
-   and the size of the TCP receive window that is advertised to the remote 
-   peer.  Defaults to 65536 (64k)
+* `buffer_size` : Sets the size of the internal socket send and 
+   receive buffers.  Defaults to 65536 (64k)
 
 * `traffic_class` : Sets traffic class or type-of-service octet in the IP 
   header for packets sent from the transport.  Defaults to `8` which
@@ -155,7 +169,7 @@ settings used on the socket.  The supported parameters are:
 Example which uses a couple of options:
 
 {pygmentize:: xml}
-<connector id="tcp" bind="tcp://0.0.0.0:61613?receive_buffer_size=1024&amp;max_read_rate=65536"/>
+<connector id="tcp" bind="tcp://0.0.0.0:61613?buffer_size=1024&amp;max_read_rate=65536"/>
 {pygmentize}
 
 Note that `&amp;` was used to separate the option values instead of just `&` since the 
