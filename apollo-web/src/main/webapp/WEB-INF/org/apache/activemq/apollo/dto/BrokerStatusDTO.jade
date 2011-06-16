@@ -20,7 +20,7 @@
 h1 Apache ActiveMQ Apollo #{version}
 p state: #{state} #{ uptime(state_since) } ago
 
-a(href={path("config/files")}) Edit Configuration
+a(href={path("config/files.html")}) Edit Configuration
 - if( state == "STARTED" )
   form(method="post" action={path("action/shutdown")})
     input(type="submit" value="shutdown")
@@ -29,20 +29,20 @@ h2 Virtual Hosts
 ul
   - for( x <- virtual_hosts )
     li
-      a(href={ path("virtual-hosts/"+ x) }) #{x}
+      a(href={ path("virtual-hosts/"+x+".html") }) #{x}
 
 h2 Connectors
 ul
   - for( x <- connectors )
     li
-      a(href={ path("connectors/"+x) }) #{x}
+      a(href={ path("connectors/"+x+".html") }) #{x}
 
 h2 Connections
 p total connections ever : #{connection_counter}
 ul
   - for( x <- connections )
     li
-      a(href={ path("connections/"+x.id) }) #{x.label}
+      a(href={ path("connections/"+x.id+".html") }) #{x.label}
 
 h2 Operating System
 p Name : #{jvm_metrics.os_name}

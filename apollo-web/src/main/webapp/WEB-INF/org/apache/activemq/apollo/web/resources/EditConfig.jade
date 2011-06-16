@@ -18,7 +18,7 @@
 - import helper._
 
 .breadcumbs
-  a(href={strip_resolve(".")}) Back
+  a(href={strip_resolve(".")+".html"}) Back
 
 form(method="post" action={file+".html"})
   - if( can_write )

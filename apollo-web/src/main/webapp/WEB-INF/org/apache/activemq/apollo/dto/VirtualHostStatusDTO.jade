@@ -18,7 +18,7 @@
 - import helper._
 
 .breadcumbs
-  a(href={strip_resolve("..")}) Back
+  a(href={strip_resolve("..")+".html"}) Back
 
 h1 Virtual Host: #{id}
 
@@ -32,16 +32,16 @@ h2 Queues
 ul
   - for( x <- queues )
     li
-      a(href={ path("queues/"+x) }) #{x}
+      a(href={ path("queues/"+x+".html") }) #{x}
 
 h2 Topics
 ul
   - for( x <- topics )
     li
-      a(href={ path("topics/"+x) }) #{x}
+      a(href={ path("topics/"+x+".html") }) #{x}
 
 h2 Durable Subscriptions
 ul
   - for( x <- dsubs )
     li
-      a(href={ path("dsubs/"+x) }) #{x}
+      a(href={ path("dsubs/"+x+".html") }) #{x}

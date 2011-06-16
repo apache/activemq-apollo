@@ -18,7 +18,7 @@
 - import helper._
 
 .breadcumbs
-  a(href={strip_resolve("..")}) Back
+  a(href={strip_resolve("..")+".html"}) Back
 
 h1 Topic: #{id}
 
@@ -32,7 +32,7 @@ ul
     - x.kind match
       - case "connection" =>
         li
-          a(href={ path("../../../../connections/"+x.id) }) #{x.label}
+          a(href={ path("../../../../connections/"+x.id+".html") }) #{x.label}
       - case _ =>
 
 h4 Consumers
@@ -42,14 +42,14 @@ ul
     - x.kind match
       - case "queue" =>
         li
-          a(href={ path("../../queues/"+x.id) }) #{x.label}
+          a(href={ path("../../queues/"+x.id+".html") }) #{x.label}
       - case "connection" =>
         li
-          a(href={ path("../../../../connections/"+x.id) }) #{x.label}
+          a(href={ path("../../../../connections/"+x.id+".html") }) #{x.label}
       - case _ =>
 
 h4 Durable Subscribers
 ul
   - for( x <- dsubs )
     li
-      a(href={ path("../../ds/"+x) }) #{x}
+      a(href={ path("../../dsubs/"+x+".html") }) #{x}

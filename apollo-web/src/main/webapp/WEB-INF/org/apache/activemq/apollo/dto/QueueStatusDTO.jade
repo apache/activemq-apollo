@@ -24,7 +24,7 @@
     - "%,.2f %%".format(n.toFloat*100.0/d)
 
 .breadcumbs
-  a(href={strip_resolve("..")}) Back
+  a(href={strip_resolve("..")+".html"}) Back
 
 - binding match
   - case x:QueueDestinationDTO =>
@@ -75,7 +75,7 @@ ul
     - x.kind match
       - case "connection" =>
         li.producer
-          a(href={ path("../../../../connections/"+x.id) }) #{x.label}
+          a(href={ path("../../../../connections/"+x.id+".html") }) #{x.label}
       - case _ =>
 
 
@@ -86,7 +86,7 @@ ul
     - import consumer._
     li.consumer
       - if( link !=null )
-        a(href={ path("../../../../connections/"+link.id ) }) #{link.label}
+        a(href={ path("../../../../connections/"+link.id+".html") }) #{link.label}
 
       p next message seq: #{position}
       p acquired: #{acquired_count} messages (#{memory(acquired_size)})
@@ -98,11 +98,11 @@ ul
 - if ( entries.isEmpty )
   h2
     Entries Dump
-    a(href={ id+"?entries=true" }) (Show)
+    a(href={ id+".html?entries=true" }) (Show)
 - else
   h2
     Entries Dump
-    a(href={ id })  (Hide)
+    a(href={ id+".html" })  (Hide)
   table.queue-entries
     tr
       th State
