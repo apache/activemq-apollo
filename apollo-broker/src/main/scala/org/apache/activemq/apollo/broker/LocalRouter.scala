@@ -23,8 +23,6 @@ import org.apache.activemq.apollo.util._
 import collection.mutable.HashMap
 import org.apache.activemq.apollo.broker.store.QueueRecord
 import Buffer._
-import java.util.ArrayList
-import org.apache.activemq.apollo.dto._
 import path._
 import security.SecurityContext
 import java.util.concurrent.TimeUnit
@@ -32,6 +30,8 @@ import collection.mutable.ListBuffer._
 import collection.mutable.HashMap._
 import scala.Array
 import tools.nsc.doc.model.ProtectedInInstance
+import org.apache.activemq.apollo.dto._
+import java.util.{Arrays, ArrayList}
 
 trait DomainDestination {
 
@@ -645,21 +645,35 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   /////////////////////////////////////////////////////////////////////////////
 
   protected def create_configure_destinations {
+    import collection.JavaConversions._
     def create_configured_dests(list: ArrayList[_ <: StringIdDTO], d: Domain[_], f: (Array[String]) => DestinationDTO) = {
-      import collection.JavaConversions._
-      list.foreach {
-        dto =>
-          if (dto.id != null) {
-            val parts = destination_parser.parts(dto.id)
-            val path = destination_parser.decode_path(parts)
-            if (!PathParser.containsWildCards(path)) {
-              d.get_or_create_destination(path, f(parts), null)
-            }
+      list.foreach { dto =>
+        if (dto.id != null) {
+          val parts = destination_parser.parts(dto.id)
+          val path = destination_parser.decode_path(parts)
+          if (!PathParser.containsWildCards(path)) {
+            d.get_or_create_destination(path, f(parts), null)
           }
+        }
       }
     }
     create_configured_dests(virtual_host.config.queues, queue_domain, (parts) => new QueueDestinationDTO(parts))
     create_configured_dests(virtual_host.config.topics, topic_domain, (parts) => new TopicDestinationDTO(parts))
+
+    virtual_host.config.dsubs.foreach { dto =>
+      if (dto.id != null && dto.topic!=null ) {
+
+        // We will create the durable sub if it does not exist yet..
+        if( !topic_domain.durable_subscriptions_by_id.contains(dto.id) ) {
+          val destination = new DurableSubscriptionDestinationDTO()
+          destination.subscription_id = dto.id
+          destination.path = Arrays.asList(destination_parser.parts(dto.topic) : _ *)
+          destination.selector = dto.selector
+          _create_queue(QueueBinding.create(destination))
+        }
+
+      }
+    }
   }
 
   protected def _start(on_completed: Runnable) = {

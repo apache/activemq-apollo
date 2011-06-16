@@ -31,8 +31,8 @@
     h1 Queue #{id}
   - case x:DurableSubscriptionDestinationDTO =>
     h1 Durable Subscription on #{id}
-    - if( x.filter != null )
-      p filter: ${x.filter}
+    - if( x.selector != null )
+      p selector: ${x.selector}
   - case _ =>
     h1 Temporary Queue
 

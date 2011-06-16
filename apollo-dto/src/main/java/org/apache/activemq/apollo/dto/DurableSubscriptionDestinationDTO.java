@@ -20,7 +20,6 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.List;
 
 /**
  * <p>
@@ -33,7 +32,7 @@ import java.util.List;
 public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
 
     @XmlAttribute
-    public String filter;
+    public String selector;
 
     @XmlAttribute(name="subscription_id")
     public String subscription_id;
@@ -54,7 +53,7 @@ public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
 
         DurableSubscriptionDestinationDTO that = (DurableSubscriptionDestinationDTO) o;
 
-        if (filter != null ? !filter.equals(that.filter) : that.filter != null) return false;
+        if (selector != null ? !selector.equals(that.selector) : that.selector != null) return false;
         if (subscription_id != null ? !subscription_id.equals(that.subscription_id) : that.subscription_id != null)
             return false;
 
@@ -64,7 +63,7 @@ public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
     @Override
     public int hashCode() {
         int result = super.hashCode();
-        result = 31 * result + (filter != null ? filter.hashCode() : 0);
+        result = 31 * result + (selector != null ? selector.hashCode() : 0);
         result = 31 * result + (subscription_id != null ? subscription_id.hashCode() : 0);
         return result;
     }

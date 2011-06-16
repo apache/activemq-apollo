@@ -935,7 +935,7 @@ class StompProtocolHandler extends ProtocolHandler {
           val rc = new DurableSubscriptionDestinationDTO()
           rc.path = x.path
           rc.subscription_id = decode_header(id)
-          rc.filter = if (selector == null) null else selector._1
+          rc.selector = if (selector == null) null else selector._1
           rc
         case _ => die("A persistent subscription can only be used on a topic destination")
         }

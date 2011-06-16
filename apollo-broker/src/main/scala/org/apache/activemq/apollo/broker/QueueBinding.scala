@@ -239,10 +239,10 @@ class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:D
   }
 
   override def message_filter = {
-    if ( binding_dto.filter==null ) {
+    if ( binding_dto.selector==null ) {
       ConstantExpression.TRUE
     } else {
-      SelectorParser.parse(binding_dto.filter)
+      SelectorParser.parse(binding_dto.selector)
     }
   }
 

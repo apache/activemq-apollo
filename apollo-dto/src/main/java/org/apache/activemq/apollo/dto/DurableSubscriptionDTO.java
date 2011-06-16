@@ -33,5 +33,19 @@ public class DurableSubscriptionDTO extends QueueDTO {
     @XmlAttribute(name="id_regex")
     public String id_regex;
 
+    /**
+     * If the topic and id are specified, then the durable subscription
+     * can be eagerly created.
+     */
+    @XmlAttribute
+    public String topic;
+
+    /**
+     * An optional selector that the durable subscription will be created
+     * with when it's first eagerly created.
+     */
+    @XmlAttribute
+    public String selector;
+
 
 }
