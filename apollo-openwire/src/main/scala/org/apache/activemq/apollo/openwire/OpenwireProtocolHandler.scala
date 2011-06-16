@@ -304,27 +304,41 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   def fail[T](msg: String, actual:Command=null):T = {
     def respond(command:Command) = {
       if(command.isResponseRequired()) {
-        val e = new ProtocolException(msg);
+        val e = new ProtocolException(msg)
         e.fillInStackTrace
 
-        val rc = new ExceptionResponse();
-        rc.setCorrelationId(command.getCommandId());
+        val rc = new ExceptionResponse()
+        rc.setCorrelationId(command.getCommandId())
         rc.setException(e)
-        connection_session.offer(rc);
+        connection_session.offer(rc)
+      } else {
+        connection_error()
       }
+    }
+    def connection_error() = {
+      val e = new ProtocolException(msg)
+      e.fillInStackTrace()
+
+      val err = new ConnectionError()
+      err.setException(e)
+
+      connection_session.offer(err)
     }
     (current_command,actual) match {
        case (null, null)=>
+         connection_error()
        case (null, command:Command)=>
+         respond(command)
        case (command:Command, null)=>
+         connection_error()
        case (command:Command, command2:Command)=>
          respond(command)
     }
     throw new Break()
   }
 
-  def async_die(msg: String):Unit = try {
-    die(msg)
+  def async_die(msg: String, actual:Command=null):Unit = try {
+    die(msg, actual)
   } catch {
     case x:Break=>
   }
@@ -332,7 +346,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   /**
    * A protocol error that cannot be recovered from. It results in the connections being terminated.
    */
-  def die[T](msg: String):T = {
+  def die[T](msg: String, actual:Command=null):T = {
     if (!dead) {
       dead = true
       debug("Shutting connection down due to: " + msg)
@@ -341,7 +355,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       queue.after(die_delay, TimeUnit.MILLISECONDS) {
         connection.stop()
       }
-      fail(msg)
+      fail(msg, actual)
     }
     throw new Break()
   }
@@ -414,10 +428,10 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         if( host.authenticator!=null &&  host.authorizer!=null ) {
           suspendRead("authenticating and authorizing connect")
           if( !host.authenticator.authenticate(security_context) ) {
-            async_die("Authentication failed.")
+            async_die("Authentication failed.", info)
             noop
           } else if( !host.authorizer.can_connect_to(security_context, host, connection.connector) ) {
-            async_die("Connect not authorized.")
+            async_die("Connect not authorized.", info)
             noop
           } else {
             resumeRead
@@ -550,7 +564,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           val rc = host.router.connect(destiantion, route, security_context)
           rc match {
             case Some(failure) =>
-              async_fail(failure, msg)
+              async_die(failure, msg)
             case None =>
               if (!connection.stopped) {
                 resumeRead

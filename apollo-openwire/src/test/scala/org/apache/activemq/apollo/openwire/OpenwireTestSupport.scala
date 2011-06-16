@@ -55,7 +55,8 @@ class OpenwireTestSupport extends FunSuiteSupport with ShouldMatchers with Befor
     default_connection = null
   }
 
-  def create_connection_factory = new ActiveMQConnectionFactory("tcp://localhost:%d?wireFormat.maxInactivityDuration=1000000&wireFormat.maxInactivityDurationInitalDelay=1000000".format(port))
+  def connection_uri = "tcp://localhost:%d?wireFormat.maxInactivityDuration=1000000&wireFormat.maxInactivityDurationInitalDelay=1000000".format(port)
+  def create_connection_factory = new ActiveMQConnectionFactory(connection_uri)
   def create_connection: Connection = create_connection_factory.createConnection
   def queue(value:String) = new ActiveMQQueue(value);
   def topic(value:String) = new ActiveMQTopic(value);

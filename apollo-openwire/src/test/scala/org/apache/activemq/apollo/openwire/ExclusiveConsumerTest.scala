@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.openwire
 
 import javax.jms.{TextMessage, Session}
 
-class ExclusiveConsumerTest extends OpenwireTestSupport {
+abstract class ExclusiveConsumerTest extends OpenwireTestSupport {
 
 }
 
