@@ -736,7 +736,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
               }
               rc.subscription_id += info.getSubscriptionName
             }
-            rc.filter = info.getSelector
+            rc.selector = info.getSelector
             rc
           case _ => die("A durable subscription can only be used on a topic destination")
           }
