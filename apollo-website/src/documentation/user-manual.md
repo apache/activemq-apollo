@@ -57,11 +57,11 @@ following files.
 ### Automatic Configuration Reloading
 
 Once a broker is started, you can edit any of the configuration files in
-the `etc` directory and your changes will be automatically be reloaded.  The
+the `etc` directory and your changes will be automatically reloaded.  The
 configuration update will be applied in the least non-disruptive way possible.
 For example, if you removed a connector, the port that connector was listening
-on will be released an no new connections will be accepted.  But connections
-that were previously accepted by that connector will continue to operate normally.
+on will be released and no new connections will be accepted. Connections that
+were previously accepted by that connector will continue to operate normally.
 
 ### Adjusting JVM Settings
 
@@ -84,7 +84,7 @@ unix script.
 ### Understanding the `apollo.xml` File
 
 There are many XSD aware XML editors which make editing XML configuration
-file less error prone.  If your using one of these editors, you can 
+files less error prone.  If your using one of these editors, you can
 configure it to use this [apollo.xsd](schema/apollo.xsd) file.
 
 The simplest valid `apollo.xml` defines a single virtual host and a
@@ -102,7 +102,7 @@ single connector.
 </broker>
 {pygmentize}
 
-The broker, virtual host, and connector are assigned a id which which
+The broker, virtual host, and connector are assigned an id which which
 is used to by the REST based administration console to identify 
 the corresponding runtime resource.  The virtual host will not persist
 any messages sent to it since it does not have a configured messages 
@@ -129,7 +129,7 @@ A `connector` element can be configured with the following attributes
    supported protocols can connect via this transport.
 
 Furthermore, the connector element may contain protocol specific
-configuration elements. For example, to add have the broker set the `user_id`
+configuration elements. For example, to have the broker set the `user_id`
 header of messages to the id of user that sent the message, you would
 use the following configuration:
 
@@ -794,7 +794,7 @@ if your on windows.
 
 ### Running a Broker Instance in the Foreground
 
-To start the broker instance in the foreground is execute 
+To start the broker instance in the foreground simply execute
 `bin/apollo-broker run`. Example:
 
     /var/lib/mybroker/bin/apollo-broker run
@@ -843,7 +843,7 @@ You can directly use the script to perform the following functions:
 When the broker is started in the background, it creates
 a `data/apollo.pid` file which contains the process id of
 the process executing the broker.  This file is typically 
-used to integrated with external watch dog process
+used to integrate with an external watch dog process
 such as [Monit](http://mmonit.com/monit/).
 
 #### On Windows
