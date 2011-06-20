@@ -55,7 +55,7 @@ class QueueTest extends OpenwireTestSupport {
     // Consume the message...
     var consumer = session.createConsumer(queue)
     var msg = consumer.receive(1000)
-    assert(msg != null)
+    msg should not be(null)
 
     Thread.sleep(1000)
 
@@ -63,7 +63,7 @@ class QueueTest extends OpenwireTestSupport {
     // Attempt to Consume the message...check if message was acknowledge
     consumer = session.createConsumer(queue)
     msg = consumer.receive(1000)
-    assert(msg == null)
+    msg should be(null)
 
     session.close()
   }
