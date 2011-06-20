@@ -25,7 +25,6 @@ import scala.Some
 import security.{SecurityContext, Authorizer}
 import org.apache.activemq.apollo.util.path.PathParser
 import org.apache.activemq.apollo.web.resources.Resource._
-import org.josql.Query
 import org.apache.activemq.apollo.util._
 import collection.mutable.ListBuffer
 import javax.ws.rs._
@@ -37,6 +36,8 @@ import management.ManagementFactory
 import javax.management.ObjectName
 import javax.management.openmbean.CompositeData
 import javax.management.remote.rmi._RMIConnection_Stub
+import org.josql.{QueryResults, Query}
+import java.util.Collections
 
 /**
  * <p>
@@ -294,7 +295,7 @@ case class BrokerResource() extends Resource {
     link
   }
 
-  def narrow[T](kind:Class[T], x:Iterable[Result[T, Throwable]], f:java.util.List[String], q:String, p:java.lang.Integer, ps:java.lang.Integer) = {
+  def narrow[T](kind:Class[T], x:Iterable[Result[T, Throwable]], f:java.util.List[String], q:String, p:java.lang.Integer, ps:java.lang.Integer, o:java.util.List[String]) = {
     import collection.JavaConversions._
     try {
       var records = x.toSeq.flatMap(_.success_option)
@@ -306,19 +307,21 @@ case class BrokerResource() extends Resource {
       val fields = if (f.isEmpty) "*" else f.toList.mkString(",")
       val where_clause = if (q != null) q else "1=1"
 
-      query.parse("SELECT " + fields + " FROM " + kind.getName + " WHERE "+ where_clause+" LIMIT "+((page_size*page)+1)+", "+page_size)
+      val orderby_clause = if (o.isEmpty) "" else " ORDER BY "+o.toList.mkString(",")
+
+      query.parse("SELECT " + fields + " FROM " + kind.getName + " WHERE "+ where_clause+orderby_clause+" LIMIT "+((page_size*page)+1)+", "+page_size)
       val headers = if (f.isEmpty) seqAsJavaList(List("*")) else f
 
-      val list = query.execute(records).getResults
+      val query_result: QueryResults = query.execute(records)
+      val list = query_result.getResults
 
       val rc = new DataPageDTO
       rc.page = page
       rc.page_size = page_size
 
       def total_pages(x:Int,y:Int) = if(x==0) 1 else { x/y + (if ( x%y == 0 ) 0 else 1) }
-      rc.total_pages = total_pages(records.length, rc.page_size)
-
-      rc.total_rows =  records.length
+      rc.total_pages = total_pages(query_result.getWhereResults.length, rc.page_size)
+      rc.total_rows = query_result.getWhereResults.length
       rc.headers = headers
       rc.rows = list
 
@@ -331,7 +334,7 @@ case class BrokerResource() extends Resource {
   @GET @Path("virtual-hosts/{id}/topics")
   @Produces(Array("application/json"))
   def topics(@PathParam("id") id : String, @QueryParam("f") f:java.util.List[String],
-            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):DataPageDTO = {
+            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
       val records = Future.all {
@@ -339,7 +342,7 @@ case class BrokerResource() extends Resource {
           status(value)
         }
       }
-      val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[TopicStatusDTO], _, f, q, p, ps))
+      val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[TopicStatusDTO], _, f, q, p, ps, o))
       rc
     }
   }
@@ -356,7 +359,7 @@ case class BrokerResource() extends Resource {
   @GET @Path("virtual-hosts/{id}/queues")
   @Produces(Array("application/json"))
   def queues(@PathParam("id") id : String, @QueryParam("f") f:java.util.List[String],
-            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):DataPageDTO = {
+            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
       val values: Iterable[Queue] = router.queue_domain.destination_by_id.values
@@ -365,7 +368,7 @@ case class BrokerResource() extends Resource {
         status(value, false)
       }
 
-      val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[QueueStatusDTO], _, f, q, p, ps))
+      val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[QueueStatusDTO], _, f, q, p, ps, o))
       rc
     }
   }
@@ -403,7 +406,7 @@ case class BrokerResource() extends Resource {
   @GET @Path("virtual-hosts/{id}/dsubs")
   @Produces(Array("application/json"))
   def durable_subscriptions(@PathParam("id") id : String, @QueryParam("f") f:java.util.List[String],
-            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):DataPageDTO = {
+            @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
       val values: Iterable[Queue] = router.topic_domain.durable_subscriptions_by_id.values
@@ -412,7 +415,7 @@ case class BrokerResource() extends Resource {
         status(value, false)
       }
 
-      val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[QueueStatusDTO], _, f, q, p, ps))
+      val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[QueueStatusDTO], _, f, q, p, ps, o))
       rc
     }
   }
@@ -553,14 +556,14 @@ case class BrokerResource() extends Resource {
   @GET @Path("connectors")
   @Produces(Array("application/json"))
   def connectors(@QueryParam("f") f:java.util.List[String], @QueryParam("q") q:String,
-                  @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):DataPageDTO = {
+                  @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
 
     with_broker { broker =>
       monitoring(broker) {
         val records = broker.connectors.values.map { value =>
           Success(status(value))
         }
-        FutureResult(narrow(classOf[ConnectorStatusDTO], records, f, q, p, ps))
+        FutureResult(narrow(classOf[ConnectorStatusDTO], records, f, q, p, ps, o))
       }
     }
   }
@@ -623,7 +626,7 @@ case class BrokerResource() extends Resource {
   @GET @Path("connections")
   @Produces(Array("application/json"))
   def connections(@QueryParam("f") f:java.util.List[String], @QueryParam("q") q:String,
-                  @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer ):DataPageDTO = {
+                  @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
 
     with_broker { broker =>
       monitoring(broker) {
@@ -632,7 +635,7 @@ case class BrokerResource() extends Resource {
           value.get_connection_status
         }
 
-        val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[ConnectionStatusDTO], _, f, q, p, ps))
+        val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[ConnectionStatusDTO], _, f, q, p, ps, o))
         rc
       }
     }

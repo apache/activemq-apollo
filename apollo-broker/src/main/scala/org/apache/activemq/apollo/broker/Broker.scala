@@ -229,7 +229,7 @@ class Broker() extends BaseService {
   val virtual_hosts_by_hostname = new LinkedHashMap[AsciiBuffer, VirtualHost]()
 
   val connectors = LinkedHashMap[String, Connector]()
-  val connections = HashMap[Long, BrokerConnection]()
+  val connections = LinkedHashMap[Long, BrokerConnection]()
 
   val dispatch_queue = createQueue("broker")
 

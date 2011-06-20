@@ -16,22 +16,17 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.org.fusesource.hawtbuf._
 import org.fusesource.hawtdispatch._
 import collection.JavaConversions
 import org.apache.activemq.apollo.util._
-import collection.mutable.HashMap
 import org.apache.activemq.apollo.broker.store.QueueRecord
-import Buffer._
 import path._
 import security.SecurityContext
 import java.util.concurrent.TimeUnit
-import collection.mutable.ListBuffer._
-import collection.mutable.HashMap._
 import scala.Array
-import tools.nsc.doc.model.ProtectedInInstance
 import org.apache.activemq.apollo.dto._
 import java.util.{Arrays, ArrayList}
+import collection.mutable.{LinkedHashMap, HashMap}
 
 trait DomainDestination {
 
@@ -128,7 +123,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   trait Domain[D <: DomainDestination] {
 
     // holds all the destinations in the domain by id
-    var destination_by_id = HashMap[String, D]()
+    var destination_by_id = LinkedHashMap[String, D]()
     // holds all the destinations in the domain by path
     var destination_by_path = new PathMap[D]()
     // Can store consumers on wild cards paths
@@ -870,8 +865,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   //
   /////////////////////////////////////////////////////////////////////////////
 
-  var queues_by_binding = HashMap[QueueBinding, Queue]()
-  var queues_by_id = HashMap[String, Queue]()
+  var queues_by_binding = LinkedHashMap[QueueBinding, Queue]()
+  var queues_by_id = LinkedHashMap[String, Queue]()
 
   /**
    * Gets an existing queue.

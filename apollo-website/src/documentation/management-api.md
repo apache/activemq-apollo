@@ -146,6 +146,13 @@ records will be displayed. If you want to view subsequent results, you must
 set the `p` query parameter to the page you wish to access. You can change
 the page size by setting the `ps` query parameter.
 
+The results are typically return in the order in which the records were original
+created.  If you want to retrieve them in a different order, use the `o` query
+parameter to define the order in which they are returned.  Example:
+
+    curl -u "admin:password" \
+    'http://localhost:61680/broker/connections.json?o=write_counter%20DESC&o=id'
+
 
 ### Broker Management
 
