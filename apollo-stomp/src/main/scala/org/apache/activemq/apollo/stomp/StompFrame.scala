@@ -58,7 +58,7 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
    * a positive value indicates that the delivery has an expiration
    * time.
    */
-  var expiration: Long = -1;
+  var expiration: Long = 0;
 
   /**
    * true if the delivery is persistent
@@ -71,7 +71,7 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
         id = value
       case (PRIORITY, value) =>
         priority = java.lang.Integer.parseInt(value).toByte
-      case (EXPIRATION_TIME, value) =>
+      case (EXPIRES, value) =>
         expiration = java.lang.Long.parseLong(value)
       case (PERSISTENT, value) =>
         persistent = java.lang.Boolean.parseBoolean(value)
@@ -370,7 +370,7 @@ object Stomp {
   val DESTINATION = ascii("destination")
   val CORRELATION_ID = ascii("correlation-id")
   val REPLY_TO = ascii("reply-to")
-  val EXPIRATION_TIME = ascii("expires")
+  val EXPIRES = ascii("expires")
   val PRIORITY = ascii("priority")
   val TYPE = ascii("type")
   val PERSISTENT = ascii("persistent")

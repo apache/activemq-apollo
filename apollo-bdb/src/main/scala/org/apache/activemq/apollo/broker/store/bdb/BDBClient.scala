@@ -399,6 +399,14 @@ class BDBClient(store: BDBStore) {
           group.count += 1
           group.size += entry.size
 
+          if(group.expiration == 0){
+            group.expiration = entry.expiration
+          } else {
+            if( entry.expiration != 0 ) {
+              group.expiration = entry.expiration.min(group.expiration)
+            }
+          }
+
           if( group.count == limit) {
             rc += group
             group = null

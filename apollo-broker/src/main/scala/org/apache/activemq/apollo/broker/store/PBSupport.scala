@@ -32,7 +32,8 @@ object PBSupport {
     pb.setProtocol(v.protocol)
     pb.setSize(v.size)
     pb.setValue(v.buffer)
-    pb.setExpiration(v.expiration)
+    if(v.expiration!=0)
+      pb.setExpiration(v.expiration)
     pb.freeze
   }
 
@@ -84,7 +85,10 @@ object PBSupport {
     pb.setMessageKey(v.message_key)
     pb.setAttachment(v.attachment)
     pb.setSize(v.size)
-    pb.setRedeliveries(v.redeliveries)
+    if(v.expiration!=0)
+      pb.setExpiration(v.expiration)
+    if(v.redeliveries!=0)
+      pb.setRedeliveries(v.redeliveries)
     pb.freeze
   }
 
@@ -95,6 +99,7 @@ object PBSupport {
     rc.message_key = pb.getMessageKey
     rc.attachment = pb.getAttachment
     rc.size = pb.getSize
+    rc.expiration = pb.getExpiration
     rc.redeliveries = pb.getRedeliveries.toShort
     rc
   }

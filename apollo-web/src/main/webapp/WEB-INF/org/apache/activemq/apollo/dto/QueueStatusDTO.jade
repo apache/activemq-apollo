@@ -54,6 +54,8 @@ p dequeued: #{metrics.dequeue_item_counter} messages (#{memory(metrics.dequeue_s
 
 p nacked: #{metrics.nack_item_counter} messages (#{memory(metrics.nack_size_counter)}), #{uptime(metrics.nack_ts)} ago
 
+p expired: #{metrics.expired_item_counter} messages (#{memory(metrics.expired_size_counter)}), #{uptime(metrics.expired_ts)} ago
+
 h2 Swap Metrics
 
 p swapped in: #{metrics.swapped_in_items} messages #{memory(metrics.swapped_in_size)}

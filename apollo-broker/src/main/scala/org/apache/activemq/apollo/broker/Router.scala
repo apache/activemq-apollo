@@ -156,7 +156,7 @@ abstract class DeliveryProducerRoute(val router:Router) extends BaseRetained wit
   // Dispatch.
   //
 
-  var pendingAck: (Boolean, StoreUOW)=>Unit = null
+  var pendingAck: (DeliveryResult, StoreUOW)=>Unit = null
   var overflow:Delivery=null
   var overflowSessions = List[DeliverySession]()
   var refiller:Runnable=null
@@ -207,11 +207,11 @@ abstract class DeliveryProducerRoute(val router:Router) extends BaseRetained wit
       if (delivery.uow != null) {
         val ack = pendingAck
         delivery.uow.on_complete {
-          ack(true, null)
+          ack(Delivered, null)
         }
 
       } else {
-        pendingAck(true, null)
+        pendingAck(Delivered, null)
       }
       pendingAck==null
     }

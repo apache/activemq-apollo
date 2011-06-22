@@ -853,9 +853,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     object ack_handler {
 
       // TODO: Need to validate all the range ack cases...
-      var consumer_acks = ListBuffer[(MessageId, (Boolean, StoreUOW)=>Unit)]()
+      var consumer_acks = ListBuffer[(MessageId, (DeliveryResult, StoreUOW)=>Unit)]()
 
-      def track(id:MessageId, callback:(Boolean, StoreUOW)=>Unit) = {
+      def track(id:MessageId, callback:(DeliveryResult, StoreUOW)=>Unit) = {
         queue {
           consumer_acks += (( id, callback ))
         }
@@ -881,7 +881,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           consumer_acks = not_acked
           acked.foreach{case (_, callback)=>
             if( callback!=null ) {
-              callback(true, uow)
+              callback(Delivered, uow)
             }
           }
         }

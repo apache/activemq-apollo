@@ -1508,3 +1508,46 @@ class CustomStompWildcardTest extends StompWildcardTest {
   override val broker_config_uri: String = "xml:classpath:apollo-stomp-custom-dest-delimiters.xml"
   override def path_separator = "/"
 }
+
+class StompExpirationTest extends StompTestSupport {
+
+  def path_separator = "."
+
+  test("Messages Expire") {
+    connect("1.1")
+
+    def put(msg:String, ttl:Option[Long]=None) = {
+      val expires_header = ttl.map("expires:"+System.currentTimeMillis()+_+"\n").getOrElse("")
+      client.write(
+        "SEND\n" +
+        expires_header +
+        "destination:/queue/exp\n" +
+        "\n" +
+        "message:"+msg+"\n")
+    }
+
+    put("1")
+    put("2", Some(1000L))
+    put("3")
+
+    Thread.sleep(2000)
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/exp\n" +
+      "id:1\n" +
+      "receipt:0\n"+
+      "\n")
+    wait_for_receipt("0")
+
+
+    def get(dest:String) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith("\n\nmessage:%s\n".format(dest))
+    }
+
+    get("1")
+    get("3")
+  }
+}

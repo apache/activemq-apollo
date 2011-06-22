@@ -30,7 +30,6 @@ import org.fusesource.hawtdispatch.{ListEventAggregator, DispatchQueue, BaseReta
 import OptionSupport._
 import security.SecurityContext
 import org.apache.activemq.apollo.dto.{DestinationDTO, QueueDTO}
-import java.lang.String
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -71,7 +70,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
     ack_source.cancel
   }
 
-  val ack_source = createSource(new ListEventAggregator[(Subscription#AcquiredQueueEntry, Boolean, StoreUOW)](), dispatch_queue)
+  val ack_source = createSource(new ListEventAggregator[(Subscription#AcquiredQueueEntry, DeliveryResult, StoreUOW)](), dispatch_queue)
   ack_source.setEventHandler(^ {drain_acks});
   ack_source.resume
 
@@ -150,19 +149,23 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
     configure(config)
   }
 
-  var last_maintenance_ts = System.currentTimeMillis
+  var now = System.currentTimeMillis
 
   var enqueue_item_counter = 0L
   var enqueue_size_counter = 0L
-  var enqueue_ts = last_maintenance_ts;
+  var enqueue_ts = now;
 
   var dequeue_item_counter = 0L
   var dequeue_size_counter = 0L
-  var dequeue_ts = last_maintenance_ts;
+  var dequeue_ts = now;
 
   var nack_item_counter = 0L
   var nack_size_counter = 0L
-  var nack_ts = last_maintenance_ts;
+  var nack_ts = now;
+
+  var expired_item_counter = 0L
+  var expired_size_counter = 0L
+  var expired_ts = now;
 
   def queue_size = enqueue_size_counter - dequeue_size_counter
   def queue_items = enqueue_item_counter - dequeue_item_counter
@@ -227,7 +230,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   def check_idle {
     if (producers.isEmpty && all_subscriptions.isEmpty && queue_items==0 ) {
       if (idled_at==0) {
-        val now = System.currentTimeMillis()
+        now = System.currentTimeMillis()
         idled_at = now
         if( auto_delete_after!=0 ) {
           dispatch_queue.after(auto_delete_after, TimeUnit.SECONDS) {
@@ -327,6 +330,13 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
         false
       } else {
 
+        // Don't even enqueue if the message has expired.
+        val expiration = delivery.message.expiration
+        if( expiration != 0 && expiration <= now ) {
+          expired(delivery)
+          return true
+        }
+
         val entry = tail_entry
         tail_entry = new QueueEntry(Queue.this, next_message_seq)
         val queueDelivery = delivery.copy
@@ -339,7 +349,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
         entries.addLast(entry)
         enqueue_item_counter += 1
         enqueue_size_counter += entry.size
-        enqueue_ts = last_maintenance_ts;
+        enqueue_ts = now;
 
 
         // Do we need to do a persistent enqueue???
@@ -372,6 +382,24 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
     }
   }
 
+  def expired(delivery:Delivery):Unit = {
+    expired_ts = now
+    expired_item_counter += 1
+    expired_size_counter += delivery.size
+  }
+
+  def expired(entry:QueueEntry, dequeue:Boolean=true):Unit = {
+    if(dequeue) {
+      dequeue_item_counter += 1
+      dequeue_size_counter += entry.size
+      dequeue_ts = now
+      messages.refiller.run
+    }
+
+    expired_ts = now
+    expired_item_counter += 1
+    expired_size_counter += entry.size
+  }
 
   def display_stats: Unit = {
     info("contains: %d messages worth %,.2f MB of data, producers are %s, %d/%d buffer space used.", queue_items, (queue_size.toFloat / (1024 * 1024)), {if (messages.full) "being throttled" else "not being throttled"}, swapped_in_size, swapped_in_size_max)
@@ -416,11 +444,36 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
 
   def swap_messages = {
 
-    // reset the prefetch flags...
+    now = System.currentTimeMillis()
+
     var cur = entries.getHead
     while( cur!=null ) {
+
+      // reset the prefetch flags and handle expiration...
       cur.prefetch_flags = 0
-      cur = cur.getNext
+      val next = cur.getNext
+
+      // handle expiration...
+      if( cur.expiration != 0 && cur.expiration <= now ) {
+        cur.state match {
+          case x:QueueEntry#SwappedRange =>
+            // load the range to expire the messages in it.
+            cur.load
+          case x:QueueEntry#Swapped =>
+            // remove the expired swapped message.
+            expired(cur)
+            x.remove
+          case x:QueueEntry#Loaded =>
+            // remove the expired message if it has not been
+            // acquired.
+            if( !x.acquired ) {
+              expired(cur)
+              x.remove
+            }
+          case _ =>
+        }
+      }
+      cur = next
     }
 
     // Set the prefetch flags
@@ -482,7 +535,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
 
   def schedule_periodic_maintenance:Unit = dispatch_queue.after(1, TimeUnit.SECONDS) {
     if( service_state.is_started ) {
-      last_maintenance_ts = System.currentTimeMillis
+      now = System.currentTimeMillis
 
       // target tune_min_subscription_rate / sec
       all_subscriptions.foreach{ case (consumer, sub)=>
@@ -514,10 +567,13 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   def drain_acks = {
     ack_source.getData.foreach {
       case (entry, consumed, tx) =>
-        if( consumed ) {
-          entry.ack(tx)
-        } else {
-          entry.nack
+        consumed match {
+          case Delivered   => entry.ack(tx)
+          case Expired     =>
+            entry.entry.queue.expired(entry.entry, false)
+            entry.ack(tx)
+          case Poisoned    => entry.nack
+          case Undelivered => entry.nack
         }
     }
     messages.refiller.run
@@ -624,7 +680,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
     }
   }
 
-  def unbind(values: List[DeliveryConsumer]) = dispatch_queue {
+  def unbind(values: List[DeliveryConsumer]):Unit = dispatch_queue {
     for (consumer <- values) {
       all_subscriptions.get(consumer) match {
         case Some(subscription) =>
@@ -639,7 +695,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   def bind(destination:DestinationDTO, consumer: DeliveryConsumer) = {
     bind(consumer::Nil)
   }
-  def unbind(consumer: DeliveryConsumer, persistent:Boolean) = {
+  def unbind(consumer: DeliveryConsumer, persistent:Boolean):Unit = {
     unbind(consumer::Nil)
   }
 
@@ -763,12 +819,12 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   }
 
   def init(qer:QueueEntryRecord):QueueEntry = {
-    state = new Swapped(qer.message_key, qer.size)
+    state = new Swapped(qer.message_key, qer.size, qer.expiration)
     this
   }
 
   def init(range:QueueEntryRange):QueueEntry = {
-    state = new SwappedRange(range.last_entry_seq, range.count, range.size)
+    state = new SwappedRange(range.last_entry_seq, range.count, range.size, range.expiration)
     this
   }
 
@@ -780,9 +836,14 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    */
   def run() = {
     queue.assert_executing
-    var next = this;
-    while( next!=null && next.dispatch) {
-      next = next.getNext
+    var cur = this;
+    while( cur!=null && cur.isLinked ) {
+      val next = cur.getNext
+      cur = if( cur.dispatch ) {
+        next
+      } else {
+        null
+      }
     }
   }
 
@@ -818,6 +879,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     qer.entry_seq = seq
     qer.message_key = state.message_key
     qer.size = state.size
+    qer.expiration = expiration
     qer
   }
 
@@ -851,6 +913,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   // These should not change the current state.
   def count = state.count
   def size = state.size
+  def expiration = state.expiration
   def messageKey = state.message_key
   def is_swapped_or_swapping_out = state.is_swapped_or_swapping_out
   def dispatch() = state.dispatch
@@ -883,6 +946,11 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
      * Gets the size of this entry in bytes.  The head and tail entries always return 0.
      */
     def size = 0
+
+    /**
+     * When the entry expires or 0 if it does not expire.
+     */
+    def expiration = 0L
 
     /**
      * Gets number of messages that this entry represents
@@ -1023,6 +1091,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     override def count = 1
     override def size = delivery.size
+    override def expiration = delivery.message.expiration
     override def message_key = delivery.storeKey
     var remove_pending = false
 
@@ -1097,7 +1166,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         queue.swap_out_size_counter += size
         queue.swap_out_item_counter += 1
 
-        state = new Swapped(delivery.storeKey, size)
+        state = new Swapped(delivery.storeKey, size, expiration)
         if( can_combine_with_prev ) {
           getPrevious.as_swapped_range.combineNext
         }
@@ -1135,6 +1204,12 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     override def dispatch():Boolean = {
 
       queue.assert_executing
+
+      if( !acquired && expiration != 0 && expiration <= queue.now ) {
+        queue.expired(entry)
+        remove
+        return true
+      }
 
       // Nothing to dispatch if we don't have subs..
       if( parked.isEmpty ) {
@@ -1236,7 +1311,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * entry is persisted, it can move into this state.  This state only holds onto the
    * the massage key so that it can reload the message from the store quickly when needed.
    */
-  class Swapped(override val message_key:Long, override val size:Int) extends EntryState {
+  class Swapped(override val message_key:Long, override val size:Int, override val expiration:Long) extends EntryState {
 
     queue.individual_swapped_items += 1
 
@@ -1325,7 +1400,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         queue.swapping_in_size -= size
       }
       queue.individual_swapped_items -= 1
-      state = new SwappedRange(seq, 1, size)
+      state = new SwappedRange(seq, 1, size, expiration)
     }
   }
 
@@ -1345,10 +1420,13 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     /** the number of items in the range */
     var _count:Int,
     /** size in bytes of the range */
-    var _size:Int) extends EntryState {
+    var _size:Int,
+    var _expiration:Long) extends EntryState {
+
 
     override def count = _count
     override def size = _size
+    override def expiration = _expiration
 
     var swapping_in = false
 
@@ -1424,15 +1502,20 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         assert(last < value.seq )
         last = value.seq
         _count += 1
-        _size += value.size
-        value.remove
       } else if( value.is_swapped_range ) {
         assert(last < value.seq )
         last = value.as_swapped_range.last
         _count += value.as_swapped_range.count
-        _size += value.size
-        value.remove
       }
+      if(_expiration == 0){
+        _expiration = value.expiration
+      } else {
+        if( value.expiration != 0 ) {
+          _expiration = value.expiration.min(_expiration)
+        }
+      }
+      _size += value.size
+      value.remove
     }
 
   }
@@ -1652,7 +1735,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
       queue.dequeue_item_counter += 1
       queue.dequeue_size_counter += entry.size
-      queue.dequeue_ts = queue.last_maintenance_ts
+      queue.dequeue_ts = queue.now
 
       // removes this entry from the acquired list.
       unlink()
@@ -1685,7 +1768,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       // track for stats
       queue.nack_item_counter += 1
       queue.nack_size_counter += entry.size
-      queue.nack_ts = queue.last_maintenance_ts
+      queue.nack_ts = queue.now
 
       // The following does not need to get done for exclusive subs because
       // they end up rewinding all the sub of the head of the queue.

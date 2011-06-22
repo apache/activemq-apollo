@@ -84,6 +84,25 @@ public class QueueMetricsDTO {
     public long dequeue_ts;
 
     /**
+     * The number of messages which expired before they could be processed.
+     */
+    @XmlAttribute(name="expired_item_counter")
+    public long expired_item_counter;
+
+    /**
+     * The total size in bytes of messages which expired before
+     * they could be processed.
+     */
+    @XmlAttribute(name="expired_size_counter")
+    public long expired_size_counter;
+
+    /**
+     * The time stamp of when the last message expiration occurred.
+     */
+    @XmlAttribute(name="expired_ts")
+    public long expired_ts;
+
+    /**
      * The number of messages that were delivered to
      * a consumer but which the consumer did not successfully process.
      */

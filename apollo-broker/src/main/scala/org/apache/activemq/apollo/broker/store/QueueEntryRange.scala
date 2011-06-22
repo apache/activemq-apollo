@@ -25,4 +25,5 @@ class QueueEntryRange {
   var last_entry_seq = 0L
   var count = 0
   var size = 0
+  var expiration = 0L
 }

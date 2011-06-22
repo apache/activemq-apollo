@@ -48,4 +48,5 @@ message QueueEntryPB {
   optional int32 size=4;
   optional bytes attachment=5;
   optional int32 redeliveries = 6;
+  optional sint64 expiration=7;
 }

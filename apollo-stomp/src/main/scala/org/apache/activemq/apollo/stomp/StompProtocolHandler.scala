@@ -126,24 +126,24 @@ class StompProtocolHandler extends ProtocolHandler {
 
   trait AckHandler {
     def track(delivery:Delivery):Unit
-    def perform_ack(consumed:Boolean, msgid: AsciiBuffer, uow:StoreUOW=null):Unit
+    def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null):Unit
   }
 
   class AutoAckHandler extends AckHandler {
     def track(delivery:Delivery) = {
       if( delivery.ack!=null ) {
-        delivery.ack(true, null)
+        delivery.ack(Delivered, null)
       }
     }
 
-    def perform_ack(consumed:Boolean, msgid: AsciiBuffer, uow:StoreUOW=null) = {
+    def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
       async_die("The subscription ack mode does not expect ACK or NACK frames")
     }
 
   }
 
   class SessionAckHandler extends AckHandler{
-    var consumer_acks = ListBuffer[(AsciiBuffer, (Boolean, StoreUOW)=>Unit)]()
+    var consumer_acks = ListBuffer[(AsciiBuffer, (DeliveryResult, StoreUOW)=>Unit)]()
 
     def track(delivery:Delivery) = {
       queue.apply {
@@ -157,7 +157,7 @@ class StompProtocolHandler extends ProtocolHandler {
     }
 
 
-    def perform_ack(consumed:Boolean, msgid: AsciiBuffer, uow:StoreUOW=null) = {
+    def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
 
       // session acks ack all previously recieved messages..
       var found = false
@@ -190,7 +190,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   }
   class MessageAckHandler extends AckHandler {
-    var consumer_acks = HashMap[AsciiBuffer, (Boolean, StoreUOW)=>Unit]()
+    var consumer_acks = HashMap[AsciiBuffer, (DeliveryResult, StoreUOW)=>Unit]()
 
     def track(delivery:Delivery) = {
       queue.apply {
@@ -202,7 +202,7 @@ class StompProtocolHandler extends ProtocolHandler {
       }
     }
 
-    def perform_ack(consumed:Boolean, msgid: AsciiBuffer, uow:StoreUOW=null) = {
+    def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
       consumer_acks.remove(msgid) match {
         case Some(ack) =>
           if( ack!=null ) {
@@ -1012,14 +1012,14 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 
   def on_stomp_ack(frame:StompFrame):Unit = {
-    on_stomp_ack(frame.headers, true)
+    on_stomp_ack(frame.headers, Delivered)
   }
 
   def on_stomp_nack(frame:StompFrame):Unit = {
-    on_stomp_ack(frame.headers, false)
+    on_stomp_ack(frame.headers, Undelivered)
   }
 
-  def on_stomp_ack(headers:HeaderMap, consumed:Boolean):Unit = {
+  def on_stomp_ack(headers:HeaderMap, consumed:DeliveryResult):Unit = {
     val messageId = get(headers, MESSAGE_ID).getOrElse(die("message id header not set"))
 
     val subscription_id = get(headers, SUBSCRIPTION);

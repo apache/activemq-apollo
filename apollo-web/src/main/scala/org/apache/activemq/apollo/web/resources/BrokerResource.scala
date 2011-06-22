@@ -182,6 +182,10 @@ case class BrokerResource() extends Resource {
       rc.nack_size_counter += q.nack_size_counter
       rc.nack_ts = rc.nack_ts max q.nack_ts
 
+      rc.expired_item_counter += q.expired_item_counter
+      rc.expired_size_counter += q.expired_size_counter
+      rc.expired_ts = rc.expired_ts max q.expired_ts
+
       rc.queue_size += q.queue_size
       rc.queue_items += q.queue_items
 
@@ -698,6 +702,10 @@ case class BrokerResource() extends Resource {
     rc.nack_item_counter = q.nack_item_counter
     rc.nack_size_counter = q.nack_size_counter
     rc.nack_ts = q.nack_ts
+
+    rc.expired_item_counter = q.expired_item_counter
+    rc.expired_size_counter = q.expired_size_counter
+    rc.expired_ts = q.expired_ts
 
     rc.queue_size = q.queue_size
     rc.queue_items = q.queue_items

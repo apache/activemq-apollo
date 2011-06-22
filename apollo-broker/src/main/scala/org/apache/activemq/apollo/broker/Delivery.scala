@@ -140,6 +140,21 @@ object Delivery extends Sizer[Delivery] {
   def size(value:Delivery):Int = value.size
 }
 
+sealed trait DeliveryResult
+/** message was processed, does not need redelivery */
+object Delivered extends DeliveryResult
+/** message expired before it could be processed, does not need redelivery */
+object Expired extends DeliveryResult
+/**
+  * The receiver thinks the message was poison message, it was not successfully
+  * processed and it should not get redelivered..
+  */
+object Poisoned extends DeliveryResult
+/**
+  * The message was not consumed, it should be redelivered to another consumer ASAP.
+  */
+object Undelivered extends DeliveryResult
+
 class Delivery {
 
   /**
@@ -166,7 +181,7 @@ class Delivery {
    * Set if the producer requires an ack to be sent back.  Consumer
    * should execute once the message is processed.
    */
-  var ack:(Boolean, StoreUOW)=>Unit = null
+  var ack:(DeliveryResult, StoreUOW)=>Unit = null
 
   def copy() = (new Delivery).set(this)
 

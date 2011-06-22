@@ -1098,6 +1098,22 @@ ack mode to consume reliable messages. Any messages on a queue delivered to a
 client which have not been acked when the client disconnects will get
 redelivered to another subscribed client.
 
+### Message Expiration
+
+${project_name} supports expiring old messages.  Unconsumed expired messages 
+are automatically removed from the queue.  You just need to specify when
+the message expires by setting the `expires` message header.  The expiration
+time must be specified as the number of milliseconds since the Unix epoch.
+
+Example:
+
+    SEND
+    destination:/queue/a
+    expires:1308690148000
+
+    this message will expire on Tue Jun 21 17:02:28 EDT 2011
+    ^@
+
 ### Topic Durable Subscriptions
 
 A durable subscription is a queue which is subscribed to a topic so that

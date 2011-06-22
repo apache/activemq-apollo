@@ -311,6 +311,16 @@ class HawtDBClient(hawtDBStore: HawtDBStore) {
             group.last_entry_seq = entry.getKey.longValue
             group.count += 1
             group.size += entry.getValue.getSize
+
+// TODO:
+//            if(group.expiration == 0){
+//              group.expiration = entry.expiration
+//            } else {
+//              if( entry.expiration != 0 ) {
+//                group.expiration = entry.expiration.min(group.expiration)
+//              }
+//            }
+
             if( group.count == limit) {
               rc += group
               group = null

@@ -31,6 +31,7 @@ class QueueEntryRecord {
   var message_key = 0L
   var attachment:Buffer = _
   var size = 0
+  var expiration = 0L
   var redeliveries:Short = 0
 
 }
