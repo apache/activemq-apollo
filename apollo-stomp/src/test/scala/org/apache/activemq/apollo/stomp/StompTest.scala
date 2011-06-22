@@ -1517,7 +1517,7 @@ class StompExpirationTest extends StompTestSupport {
     connect("1.1")
 
     def put(msg:String, ttl:Option[Long]=None) = {
-      val expires_header = ttl.map("expires:"+System.currentTimeMillis()+_+"\n").getOrElse("")
+      val expires_header = ttl.map(t=> "expires:"+(System.currentTimeMillis()+t)+"\n").getOrElse("")
       client.write(
         "SEND\n" +
         expires_header +
