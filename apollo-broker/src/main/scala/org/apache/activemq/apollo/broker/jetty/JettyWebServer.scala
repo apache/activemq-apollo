@@ -178,7 +178,7 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
         }
 
         // Only add the connector if not yet added..
-        val connector_id = scheme+"://"+bind_uri+":"+port
+        val connector_id = scheme+"://"+host+":"+port
         if ( !connectors.containsKey(connector_id) ) {
 
           val connector = scheme match {
