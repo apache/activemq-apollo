@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.util
 
 import org.fusesource.hawtdispatch.DispatchQueue
 import org.fusesource.hawtdispatch._
+import collection.mutable.ListBuffer
 
 object BaseService extends Log
 
@@ -73,10 +74,10 @@ trait BaseService extends Service with Dispatched {
   protected var _serviceFailure:Exception = null
   def serviceFailure = _serviceFailure
 
-  private var pending_actions = List[Runnable]()
+  private val pending_actions = ListBuffer[Runnable]()
 
   final def start(on_completed:Runnable) = {
-    val start_task = ^{
+    def start_task:Runnable = ^{
       def do_start = {
         val state = new STARTING()
         state << on_completed
@@ -97,7 +98,7 @@ trait BaseService extends Service with Dispatched {
       }
       def done = {
         pending_actions.foreach(dispatch_queue.execute _)
-        pending_actions = Nil
+        pending_actions.clear()
         if( on_completed!=null ) {
           on_completed.run
         }
@@ -118,14 +119,14 @@ trait BaseService extends Service with Dispatched {
           error("Start should not be called from state: %s", state);
       }
     }
-    start_task |>>: dispatch_queue
+    start_task >>: dispatch_queue
   }
 
   final def stop(on_completed:Runnable) = {
-    val stop_task = ^{
+    def stop_task:Runnable = ^{
       def done = {
         pending_actions.foreach(dispatch_queue.execute _)
-        pending_actions = Nil
+        pending_actions.clear
         if( on_completed!=null ) {
           on_completed.run
         }
@@ -159,7 +160,7 @@ trait BaseService extends Service with Dispatched {
           error("Stop should not be called from state: %s", state);
       }
     }
-    stop_task |>>: dispatch_queue
+    stop_task >>: dispatch_queue
   }
 
   protected def _start(on_completed:Runnable)
