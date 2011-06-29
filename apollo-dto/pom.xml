@@ -22,12 +22,12 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-project</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0-beta4</version>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-dto</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0-beta4</version>
   <packaging>bundle</packaging>
 
   <name>${project.artifactId}</name>
@@ -57,7 +57,7 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-util</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta4</version>
     </dependency>
 
     <!-- Testing Dependencies -->    
@@ -119,17 +119,11 @@
                   <exclude name="**/.svn/**" />
                 </schemagen>
                 
-                <replace 
-                  token='&lt;xs:sequence&gt;' 
-                  value='&lt;xs:choice minOccurs="0" maxOccurs="unbounded"&gt;&lt;xs:choice&gt;' 
-                  dir="${basedir}/target/schema/org/apache/activemq/apollo/dto">
-                  <include name="**/*.xsd"/>
+                <replace token="&lt;xs:sequence&gt;" value="&lt;xs:choice minOccurs=&quot;0&quot; maxOccurs=&quot;unbounded&quot;&gt;&lt;xs:choice&gt;" dir="${basedir}/target/schema/org/apache/activemq/apollo/dto">
+                  <include name="**/*.xsd" />
                 </replace>
-                <replace 
-                  token= "&lt;/xs:sequence&gt;" 
-                  value="&lt;/xs:choice&gt;&lt;/xs:choice&gt;" 
-                  dir="${basedir}/target/schema/org/apache/activemq/apollo/dto">
-                  <include name="**/*.xsd"/>
+                <replace token="&lt;/xs:sequence&gt;" value="&lt;/xs:choice&gt;&lt;/xs:choice&gt;" dir="${basedir}/target/schema/org/apache/activemq/apollo/dto">
+                  <include name="**/*.xsd" />
                 </replace>
               </tasks>
             </configuration>
