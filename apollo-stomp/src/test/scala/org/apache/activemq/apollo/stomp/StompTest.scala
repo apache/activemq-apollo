@@ -277,6 +277,7 @@ class StompDestinationTest extends StompTestSupport {
     }
 
     test_selector("color = 'red'", List("color:blue", "not:set", "color:red"), List(3))
+    test_selector("hyphen-field = 'red'", List("hyphen-field:blue", "not:set", "hyphen-field:red"), List(3))
     test_selector("age >= 21", List("age:3", "not:set", "age:21", "age:30"), List(3,4))
 
   }
