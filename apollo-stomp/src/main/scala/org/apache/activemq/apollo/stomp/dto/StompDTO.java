@@ -74,11 +74,17 @@ public class StompDTO extends ProtocolDTO {
     @XmlAttribute(name="any_descendant_wildcard")
     public String any_descendant_wildcard;
 
+    @XmlAttribute(name="regex_wildcard_start")
+    public String regex_wildcard_start;
+
+    @XmlAttribute(name="regex_wildcard_end")
+    public String regex_wildcard_end;
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof StompDTO)) return false;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
 
         StompDTO stompDTO = (StompDTO) o;
 
@@ -104,6 +110,10 @@ public class StompDTO extends ProtocolDTO {
             return false;
         if (queue_prefix != null ? !queue_prefix.equals(stompDTO.queue_prefix) : stompDTO.queue_prefix != null)
             return false;
+        if (regex_wildcard_end != null ? !regex_wildcard_end.equals(stompDTO.regex_wildcard_end) : stompDTO.regex_wildcard_end != null)
+            return false;
+        if (regex_wildcard_start != null ? !regex_wildcard_start.equals(stompDTO.regex_wildcard_start) : stompDTO.regex_wildcard_start != null)
+            return false;
         if (topic_prefix != null ? !topic_prefix.equals(stompDTO.topic_prefix) : stompDTO.topic_prefix != null)
             return false;
 
@@ -112,7 +122,8 @@ public class StompDTO extends ProtocolDTO {
 
     @Override
     public int hashCode() {
-        int result = add_user_header != null ? add_user_header.hashCode() : 0;
+        int result = super.hashCode();
+        result = 31 * result + (add_user_header != null ? add_user_header.hashCode() : 0);
         result = 31 * result + (add_user_headers != null ? add_user_headers.hashCode() : 0);
         result = 31 * result + (max_header_length != null ? max_header_length.hashCode() : 0);
         result = 31 * result + (max_headers != null ? max_headers.hashCode() : 0);
@@ -124,6 +135,8 @@ public class StompDTO extends ProtocolDTO {
         result = 31 * result + (path_separator != null ? path_separator.hashCode() : 0);
         result = 31 * result + (any_child_wildcard != null ? any_child_wildcard.hashCode() : 0);
         result = 31 * result + (any_descendant_wildcard != null ? any_descendant_wildcard.hashCode() : 0);
+        result = 31 * result + (regex_wildcard_start != null ? regex_wildcard_start.hashCode() : 0);
+        result = 31 * result + (regex_wildcard_end != null ? regex_wildcard_end.hashCode() : 0);
         return result;
     }
 }

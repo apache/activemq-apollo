@@ -1,3 +1,5 @@
+package org.apache.activemq.apollo.util.path
+
 /**
   * Licensed to the Apache Software Foundation (ASF) under one or more
   * contributor license agreements.  See the NOTICE file distributed with
@@ -14,34 +16,30 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package org.apache.activemq.apollo.util.path
-
+import java.util.Collection
 import java.util.regex.Pattern
+import collection.JavaConversions._
 
 /**
-  * Holds the delimiters used to parse paths.
+  * An implementation of {@link PathNode} which navigates all the children of the given node
+  * ignoring the name of the current path (so for navigating using * in a wildcard).
   *
-  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
   */
-sealed trait Part {
-  def matches(p: Part) = true
-}
+class RegexChildPathNode[Value](node: PathNode[Value], val regex:Pattern) extends AnyChildPathNode[Value](node) {
 
-object RootPart extends Part {
-  override def matches(p: Part) = p match {
-    case RootPart => true
-    case _ => false
+  override protected def getChildNodes: Collection[PathNode[Value]] = {
+    super.getChildNodes.filter { child =>
+      child match {
+        case child:PathMapNode[Value] =>
+          child.getPart match {
+            case LiteralPart(name)=>
+              regex.matcher(name).matches()
+            case _ =>
+              false
+          }
+        case _ => false
+      }
+    }
   }
-}
 
-object AnyChildPart extends Part
-object AnyDescendantPart extends Part
-
-case class RegexChildPart(regex:Pattern, original:String) extends Part
-
-case class LiteralPart(value: String) extends Part {
-  override def matches(p: Part) = p match {
-    case LiteralPart(v) => v == value
-    case _ => true
-  }
 }

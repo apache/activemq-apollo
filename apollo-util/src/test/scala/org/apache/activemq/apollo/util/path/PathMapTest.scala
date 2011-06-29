@@ -134,6 +134,30 @@ class PathMapTest {
     assertMapValue(map, "TEST.BAR.*", v2, v5, v6)
   }
 
+  @Test def testCustomRegexWildcardPaths: Unit = {
+    var map: PathMap[String] = new PathMap[String]
+    put(map, "TEST.a{[0-9]+}a", v1)
+    put(map, "TEST.BAR.aa", v2)
+    put(map, "TEST.BAR.a123a", v3)
+    put(map, "TEST.BAR.a2ca", v4)
+    put(map, "TEST.BAR.aba", v5)
+
+    assertMapValue(map, "TEST.a99a", v1)
+    assertMapValue(map, "TEST.BAR.a{[0-9]+}a", v3)
+  }
+
+  @Test def testRegexWildcardPaths: Unit = {
+    var map: PathMap[String] = new PathMap[String]
+    put(map, "TEST.a*a", v1)
+    put(map, "TEST.BAR.aa", v2)
+    put(map, "TEST.BAR.aba", v3)
+    put(map, "TEST.BAR.cat", v4)
+    put(map, "TEST.BAR.a", v5)
+
+    assertMapValue(map, "TEST.aba", v1)
+    assertMapValue(map, "TEST.BAR.a*a", v2, v3)
+  }
+
   @Test def testDoubleWildcardDoesNotMatchLongerPattern: Unit = {
     var map: PathMap[String] = new PathMap[String]
     put(map, "TEST.*", v1)

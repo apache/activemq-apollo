@@ -20,6 +20,9 @@ import java.util.LinkedList
 import java.util.regex._
 import collection.JavaConversions._
 import org.apache.activemq.apollo.util.path.PathParser.PartFilter
+import util.matching.Regex
+import collection.mutable.ListBuffer
+
 /**
   * Holds the delimiters used to parse paths.
   *
@@ -32,6 +35,8 @@ object PathParser {
         case AnyDescendantPart =>
           return true
         case AnyChildPart =>
+          return true
+        case x:RegexChildPart =>
           return true
         case _ =>
       }
@@ -66,6 +71,31 @@ object PathParser {
 
   }
 
+  class RegexChildPathFilter(val regex:Pattern,  next: PartFilter) extends PartFilter {
+
+    def matches(remaining: LinkedList[Part]): Boolean = {
+      if (!remaining.isEmpty) {
+        var p: Part = remaining.removeFirst
+        p match {
+          case LiteralPart(v)=>
+            if ( regex.matcher(v).matches ) {
+              if (next != null) {
+                return next.matches(remaining)
+              } else {
+                return remaining.isEmpty
+              }
+            } else {
+              false
+            }
+          case _ => false
+        }
+      } else {
+        return false
+      }
+    }
+
+  }
+
   class AnyDecendentPathFilter(val next: PartFilter) extends PartFilter {
     def matches(remaining: LinkedList[Part]): Boolean = {
       if (!remaining.isEmpty) {
@@ -84,6 +114,8 @@ class PathParser {
 
   var any_descendant_wildcard = "**"
   var any_child_wildcard = "*"
+  var regex_wildcard_start = "{"
+  var regex_wildcard_end = "}"
   var path_separator = "."
   var part_pattern = Pattern.compile("[a-zA-Z0-9\\_\\-\\%\\~]+")
 
@@ -109,6 +141,19 @@ class PathParser {
     return decode_path(parts(subject))
   }
 
+  def regex_map[T](text:String, pattern: Pattern)(func: Either[CharSequence, Matcher] => T) = {
+    var lastIndex = 0;
+    val m = pattern.matcher(text);
+    val rc = new ListBuffer[T]();
+    while (m.find()) {
+      rc += func(Left(text.subSequence(lastIndex, m.start)))
+      rc += func(Right(m))
+      lastIndex = m.end
+    }
+    rc += func(Left(text.subSequence(lastIndex,  text.length)))
+    rc.toList
+  }
+
   private def decode_part(value: String): Part = {
     if (value == any_child_wildcard) {
       return AnyChildPart
@@ -118,7 +163,33 @@ class PathParser {
       if (part_pattern == null || part_pattern.matcher(value.toString).matches) {
         return LiteralPart(value)
       } else {
-        throw new PathParser.PathException(String.format("Invalid destination path part: '%s', it does not match regex: %s", value, part_pattern))
+
+        val pattern = (
+            (Pattern.quote(regex_wildcard_start)+"(.*?)"+Pattern.quote(regex_wildcard_end)) +
+            "|" +
+            Pattern.quote(any_child_wildcard)
+          ).r.pattern
+
+        val regex = regex_map(value, pattern) { _ match {
+          case Left(x) =>
+            if (x=="") {
+              ""
+            } else {
+              if( part_pattern.matcher(x).matches ) {
+                Pattern.quote(x.toString)
+              } else {
+                throw new PathParser.PathException(String.format("Invalid destination: '%s', it does not match regex: %s", value, part_pattern))
+              }
+            }
+          case Right(wildcard) =>
+            if ( wildcard.group() == any_child_wildcard ) {
+              ".*?"
+            } else {
+              wildcard.group(1)
+            }
+        } }.mkString("")
+
+        return RegexChildPart(("^"+regex+"$").r.pattern, value)
       }
     }
   }
@@ -134,6 +205,7 @@ class PathParser {
       case RootPart => ""
       case AnyChildPart => any_child_wildcard
       case AnyDescendantPart => any_descendant_wildcard
+      case RegexChildPart(_, original) => original
       case LiteralPart(value) => value
     })).toArray
   }
@@ -157,6 +229,8 @@ class PathParser {
           last = new LitteralPathFilter(last, p)
         case AnyChildPart =>
           last = new PathParser.AnyChildPathFilter(last)
+        case RegexChildPart(r, _) =>
+          last = new PathParser.RegexChildPathFilter(r, last)
         case AnyDescendantPart =>
           last = new PathParser.AnyDecendentPathFilter(last)
         case _ =>

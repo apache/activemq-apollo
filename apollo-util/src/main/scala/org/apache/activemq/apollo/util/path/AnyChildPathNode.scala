@@ -26,11 +26,7 @@ import collection.JavaConversions._
   * ignoring the name of the current path (so for navigating using * in a wildcard).
   *
   */
-class AnyChildPathNode[Value] extends PathNode[Value] {
-  def this(node: PathNode[Value]) {
-    this ()
-    this.node = node
-  }
+class AnyChildPathNode[Value](val node: PathNode[Value]) extends PathNode[Value] {
 
   def appendMatchingValues(answer: Set[Value], path: Path, startIndex: Int): Unit = {
     for (child <- getChildNodes) {
@@ -112,5 +108,4 @@ class AnyChildPathNode[Value] extends PathNode[Value] {
     return node.getChildren
   }
 
-  private var node: PathNode[Value] = null
 }

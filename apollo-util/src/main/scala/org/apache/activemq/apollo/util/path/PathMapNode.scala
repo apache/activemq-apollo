@@ -30,16 +30,16 @@ import collection.JavaConversions._
   *
   * @version $Revision: 1.2 $
   */
-class PathMapNode[Value] extends PathNode[Value] {
-  def this(parent: PathMapNode[Value]) {
-    this ()
-    this.parent = parent
-    if (parent == null) {
-      pathLength = 0
-    }
-    else {
-      pathLength = parent.pathLength + 1
-    }
+class PathMapNode[Value](val parent: PathMapNode[Value]) extends PathNode[Value] {
+
+  val childNodes: Map[Part, PathNode[Value]] = new HashMap[Part, PathNode[Value]]
+  val values: List[Value] = new ArrayList[Value]
+  var part: Part = RootPart
+
+  var pathLength:Int = if (parent == null) {
+    0
+  } else {
+    parent.pathLength + 1
   }
 
   /**
@@ -144,6 +144,10 @@ class PathMapNode[Value] extends PathNode[Value] {
           node.appendMatchingWildcards(answer, path, i)
           node = new AnyChildPathNode[Value](node)
           i += 1;
+        case RegexChildPart(r, _) =>
+          node.appendMatchingWildcards(answer, path, i)
+          node = new RegexChildPathNode[Value](node, r)
+          i += 1;
         case part =>
           node.appendMatchingWildcards(answer, path, i)
           node = node.getChild(part)
@@ -176,13 +180,15 @@ class PathMapNode[Value] extends PathNode[Value] {
     if (idx - 1 > pathLength) {
       return
     }
-    var wildCardNode: PathMapNode[Value] = getChild(AnyChildPart)
-    if (wildCardNode != null) {
-      wildCardNode.appendMatchingValues(answer, parts, idx + 1)
-    }
-    wildCardNode = getChild(AnyDescendantPart)
-    if (wildCardNode != null) {
-      answer.addAll(wildCardNode.getDesendentValues)
+
+    childNodes.foreach { case (path,node) =>
+      path match {
+        case AnyChildPart => node.appendMatchingValues(answer, parts, idx + 1)
+        case x:RegexChildPart => node.appendMatchingValues(answer, parts, idx + 1)
+        case AnyDescendantPart => answer.addAll(node.getDesendentValues)
+        case x:LiteralPart =>
+        case RootPart =>
+      }
     }
   }
 
@@ -193,19 +199,24 @@ class PathMapNode[Value] extends PathNode[Value] {
     var i: Int = startIndex
     while (i < size && node != null) {
       var part: Part = path.parts.get(i)
-      if (part == AnyDescendantPart) {
-        answer.addAll(node.getDesendentValues)
-        couldMatchAny = false
-        i = size
-      } else {
-        node.appendMatchingWildcards(answer, path, i)
-        if (part == AnyChildPart) {
+      part match {
+        case AnyDescendantPart =>
+          answer.addAll(node.getDesendentValues)
+          i += size
+          couldMatchAny = false
+        case AnyChildPart =>
+          node.appendMatchingWildcards(answer, path, i)
+          i += 1
           node = new AnyChildPathNode[Value](node)
-        }
-        else {
+        case RegexChildPart(r, _) =>
+          node.appendMatchingWildcards(answer, path, i)
+          i += 1
+          node = new RegexChildPathNode[Value](node, r)
+        case x:LiteralPart =>
+          node.appendMatchingWildcards(answer, path, i)
+          i += 1;
           node = node.getChild(part)
-        }
-        i += 1;
+        case RootPart =>
       }
     }
     if (node != null) {
@@ -234,9 +245,4 @@ class PathMapNode[Value] extends PathNode[Value] {
     pruneIfEmpty
   }
 
-  private var parent: PathMapNode[Value] = null
-  private var values: List[Value] = new ArrayList[Value]
-  private var childNodes: Map[Part, PathNode[Value]] = new HashMap[Part, PathNode[Value]]
-  private var part: Part = RootPart
-  private var pathLength: Int = 0
 }

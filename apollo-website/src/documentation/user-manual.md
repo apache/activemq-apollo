@@ -963,6 +963,8 @@ headers are parsed and interpreted.  The supported attributes are:
 * `path_separator` : Defaults to `.`
 * `destination_separator` : Defaults to `,`
 * `any_child_wildcard` : Defaults to `*`
+* `regex_wildcard_start` : Defaults to `{`
+* `regex_wildcard_end` : Defaults to `}`
 * `any_descendant_wildcard` : Defaults to `**`
 
 It also supports nested `add_user_header` elements to more finely control how
@@ -1248,6 +1250,7 @@ information you're interested in.
 
 * `.` is used to separate names in a path
 * `*` is used to match any name in a path
+* `{regex}` is used to match a path name against a regular expression.
 * `**` is used to recursively match path names
 
 For example imagine you are sending price messages from a stock exchange feed.
@@ -1266,6 +1269,8 @@ For example using the example above, these subscriptions are possible
 * `/topic/PRICE.STOCK.**` : Any price for a stock on any exchange
 * `/topic/PRICE.STOCK.NASDAQ.*` : Any stock price on NASDAQ
 * `/topic/PRICE.STOCK.*.IBM` : Any IBM stock price on any exchange
+* `/topic/PRICE.STOCK.*.I*` : Any stock price starting with 'I' on any exchange
+* `/topic/PRICE.STOCK.*.*{[0-9]}` : Any stock price that ends in a digit on any exchange
 
 Destination wildcards can only be used in a SUBSCRIBE frame.
 

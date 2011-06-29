@@ -404,7 +404,10 @@ class StompProtocolHandler extends ProtocolHandler {
         config.destination_separator!=null ||
         config.path_separator!= null ||
         config.any_child_wildcard != null ||
-        config.any_descendant_wildcard!= null ) {
+        config.any_descendant_wildcard!= null ||
+        config.regex_wildcard_start!= null ||
+        config.regex_wildcard_end!= null
+    ) {
 
       destination_parser = new DestinationParser().copy(Stomp.destination_parser)
       if( config.queue_prefix!=null ) { destination_parser.queue_prefix = config.queue_prefix }
@@ -413,6 +416,8 @@ class StompProtocolHandler extends ProtocolHandler {
       if( config.path_separator!=null ) { destination_parser.path_separator = config.path_separator }
       if( config.any_child_wildcard!=null ) { destination_parser.any_child_wildcard = config.any_child_wildcard }
       if( config.any_descendant_wildcard!=null ) { destination_parser.any_descendant_wildcard = config.any_descendant_wildcard }
+      if( config.regex_wildcard_start!=null ) { destination_parser.regex_wildcard_start = config.regex_wildcard_start }
+      if( config.regex_wildcard_end!=null ) { destination_parser.regex_wildcard_end = config.regex_wildcard_end }
 
     }
 
