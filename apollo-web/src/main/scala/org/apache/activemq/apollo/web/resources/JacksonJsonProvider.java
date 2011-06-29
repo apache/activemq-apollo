@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.web.resources;
 
+import org.apache.activemq.apollo.dto.JsonCodec;
+
 /**
  * <p>
  * </p>
@@ -26,5 +28,7 @@ package org.apache.activemq.apollo.web.resources;
 @javax.ws.rs.Consumes({"application/json", "text/json"})
 @javax.ws.rs.Produces({"application/json", "text/json"})
 public class JacksonJsonProvider extends org.codehaus.jackson.jaxrs.JacksonJsonProvider {
-
+    public JacksonJsonProvider() {
+        super(JsonCodec.mapper);
+    }
 }

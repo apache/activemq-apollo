@@ -80,6 +80,14 @@ public class BrokerDTO {
     @XmlElement(name="service")
     public List<String> services = new ArrayList<String>();
 
+    @Deprecated
     @XmlAttribute(name="sticky_dispatching")
     public Boolean sticky_dispatching;
+
+    /**
+     * If set to strict, then the broker will not start up if there
+     * are any validation errors in the configuration file.
+     */
+    @XmlAttribute(name="validation")
+    public String validation;
 }

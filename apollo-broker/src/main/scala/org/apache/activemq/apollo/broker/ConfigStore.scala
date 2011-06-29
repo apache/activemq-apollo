@@ -21,8 +21,9 @@ import security.EncryptionSupport
 import org.apache.activemq.apollo.util._
 import FileSupport._
 import java.util.Properties
-import java.io.{FileInputStream, File}
 import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO}
+import java.io.{InputStream, FileInputStream, File}
+import javax.xml.bind.{ValidationEvent, ValidationEventHandler}
 
 /**
  * <p>
@@ -32,12 +33,26 @@ import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO}
  */
 object ConfigStore {
 
-  def load(file:File) = {
-    XmlCodec.decode(classOf[BrokerDTO], new FileInputStream(file), config_properties(file))
+  def load(file:File, func: (String)=>Unit):BrokerDTO = {
+    load(new FileInputStream(file), config_properties(file), func)
   }
 
-  def load_xml(in:Array[Byte]) = {
-    XmlCodec.decode(classOf[BrokerDTO], new ByteArrayInputStream(in), config_properties(null))
+  def load_xml(in:Array[Byte], func: (String)=>Unit):BrokerDTO = {
+    load(new ByteArrayInputStream(in), config_properties(null), func)
+  }
+
+  def load(is: => InputStream, prop:Properties, func: (String)=>Unit):BrokerDTO = {
+    XmlCodec.decode(classOf[BrokerDTO], is, prop, new ValidationEventHandler(){
+        def handleEvent(event: ValidationEvent): Boolean = {
+          val level = event.getSeverity match {
+            case 0=> "warning"
+            case 1=> "error"
+            case 2=> "fatal error"
+          }
+          func("% at (%d:%d): %s ".format(level, event.getLocator().getLineNumber(), event.getLocator().getColumnNumber(), event.getMessage()))
+          true
+        }
+    })
   }
 
   def config_properties(file:File): Properties = {

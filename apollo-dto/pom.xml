@@ -95,92 +95,66 @@
     </resources>
       
     <plugins>
-
-<!--
-
-    jaxb schemagen plugin does not work quite well for our use case (classpath problems),
-    so we're using it as an ant task (see below)
-    try to switch back to this in some future version
-
--->
-<!--
-       <plugin>
-        <groupId>com.sun.tools.jxc.maven2</groupId>
-        <artifactId>maven-jaxb-schemagen-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>process-sources</phase>
-            <configuration>
-              <destdir>${project.build.directory}/schema</destdir>
-              <includes>
-                <include>**/jaxb/package-info.java</include>
-                <include>**/jaxb/*Xml.java</include>
-              </includes>
-              <schemas>
-                <schema>
-                  <namespace>http://activemq.apache.org/schema/activemq/apollo</namespace>
-                  <file>apollo-apollo.xsd</file>
-                </schema>
-              </schemas>
-            </configuration>
-            <goals>
-              <goal>generate</goal>
-            </goals> 
-          </execution>
-        </executions>
-      </plugin>  
--->
-       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
+      
+      <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.6</version>
         <executions>
           <execution>
-            <id>generate schema</id>
-            <phase>process-sources</phase>
+            <phase>generate-resources</phase>
             <configuration>
-                <tasks>        
+              <tasks>
                 <taskdef name="schemagen" classname="com.sun.tools.jxc.SchemaGenTask">
-                    <classpath refid="maven.compile.classpath" />
+                  <classpath refid="maven.compile.classpath" />
                 </taskdef>
-                <mkdir dir="${project.build.directory}/schema" />
-                <schemagen srcdir="${project.build.sourceDirectory}" destdir="${project.build.directory}/schema">
-                    <schema namespace="http://activemq.apache.org/schema/activemq/apollo" file="apollo-apollo.xsd" />
-                    <classpath refid="maven.compile.classpath" />
-                    <include name="**/jaxb/package-info.java" />
-                    <include name="**/jaxb/*Xml.java" />
+                <mkdir dir="${project.build.directory}/schema/org/apache/activemq/apollo/dto" />
+                <schemagen srcdir="${basedir}/.." destdir="${project.build.directory}/schema/org/apache/activemq/apollo/dto">
+                  <schema namespace="http://activemq.apache.org/schema/activemq/apollo" file="apollo.xsd" />
+                  <classpath refid="maven.compile.classpath" />
+                  <include name="**/package-info.java" />
+                  <include name="**/*DTO.java" />
+                  <exclude name="apollo-hawtdb/**" />
+                  <exclude name="apollo-cassandra/**" />
+                  <exclude name="**/.git/**" />
+                  <exclude name="**/.svn/**" />
                 </schemagen>
-                </tasks>
+                
+                <replace 
+                  token='&lt;xs:sequence&gt;' 
+                  value='&lt;xs:choice minOccurs="0" maxOccurs="unbounded"&gt;&lt;xs:choice&gt;' 
+                  dir="${basedir}/target/schema/org/apache/activemq/apollo/dto">
+                  <include name="**/*.xsd"/>
+                </replace>
+                <replace 
+                  token= "&lt;/xs:sequence&gt;" 
+                  value="&lt;/xs:choice&gt;&lt;/xs:choice&gt;" 
+                  dir="${basedir}/target/schema/org/apache/activemq/apollo/dto">
+                  <include name="**/*.xsd"/>
+                </replace>
+              </tasks>
             </configuration>
             <goals>
               <goal>run</goal>
             </goals>
           </execution>
         </executions>
-        
         <dependencies>
-          <dependency>
-            <groupId>com.sun.xml.bind</groupId>
-            <artifactId>jaxb-xjc</artifactId>
-            <version>${xjc-version}</version>
-            <exclusions>
-              <exclusion>
-                <groupId>com.sun.xml.bind</groupId>
-                <artifactId>jaxb-impl</artifactId>
-              </exclusion>
-            </exclusions>            
-          </dependency>  
-          <dependency>
-            <groupId>com.sun.xml.bind</groupId>
-            <artifactId>jaxb-impl</artifactId>
-            <version>${jaxb-version}</version>
-            <exclusions>
-              <exclusion>
-                <groupId>javax.jws</groupId>
-                <artifactId>jsr181-api</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-        </dependencies>
+           <dependency>
+              <groupId>javax.xml.bind</groupId>
+              <artifactId>jaxb-api</artifactId>
+              <version>${jaxb-api-version}</version>
+           </dependency>
+           <dependency>
+              <groupId>com.sun.xml.bind</groupId>
+              <artifactId>jaxb-impl</artifactId>
+              <version>${jaxb-version}</version>
+           </dependency>
+           <dependency>
+              <groupId>com.sun.xml.bind</groupId>
+              <artifactId>jaxb-xjc</artifactId>
+              <version>${jaxb-version}</version>
+           </dependency>
+        </dependencies>      
       </plugin>
 
     </plugins>

@@ -17,6 +17,8 @@
 package org.apache.activemq.apollo.dto;
 
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.SerializationConfig;
+import org.codehaus.jackson.map.annotate.JsonSerialize;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
 
@@ -28,7 +30,10 @@ import java.io.IOException;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class JsonCodec {
-    private static ObjectMapper mapper = new ObjectMapper();
+    final public static ObjectMapper mapper = new ObjectMapper();
+    static {
+        mapper.getSerializationConfig().setSerializationInclusion(JsonSerialize.Inclusion.NON_NULL);
+    }
 
     static public <T> T decode(Buffer buffer, Class<T> type) throws IOException {
         ClassLoader original = Thread.currentThread().getContextClassLoader();

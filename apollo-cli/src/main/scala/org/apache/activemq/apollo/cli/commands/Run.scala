@@ -26,6 +26,8 @@ import org.apache.activemq.apollo.util.{FileMonitor, ServiceControl}
 import org.apache.log4j.PropertyConfigurator
 import java.io.{FileInputStream, File}
 import java.util.logging.LogManager
+import org.apache.activemq.apollo.dto.BrokerDTO
+import collection.mutable.ListBuffer
 
 /**
  * The apollo run command
@@ -73,17 +75,39 @@ class Run extends Action {
 
       Apollo.print_banner(session.getConsole)
 
+      def println(value:String) = session.getConsole.println(value)
+
       // Load the configs and start the brokers up.
-      session.getConsole.println("Loading configuration file '%s'.".format(conf))
+      println("Loading configuration file '%s'.".format(conf))
 
       val broker = new Broker()
-      broker.config = ConfigStore.load(conf)
+
+      val validation_messages = ListBuffer[String]()
+      try {
+        broker.config = ConfigStore.load(conf, validation_messages += _)
+      } finally {
+        if( !validation_messages.isEmpty) {
+          println("")
+          println("Broker configuration file failed the following validations:")
+          validation_messages.foreach{ v =>
+            println("")
+            println("  "+v)
+          }
+          println("")
+        }
+      }
+
+      if( broker.config.validation == "strict" && !validation_messages.isEmpty) {
+        session.getConsole.println("Strict validation was configured, shutting down")
+        return null
+      }
+
       broker.tmp = tmp
       broker.start()
 
       val broker_config_monitor = new FileMonitor(conf,broker.dispatch_queue {
         broker.console_log.info("Reloading configuration file '%s'.".format(conf))
-        broker.update(ConfigStore.load(conf), ^{
+        broker.update(ConfigStore.load(conf, x=> broker.console_log.info(x) ), ^{
         })
       })
       val log4j_config_monitor = new FileMonitor(log4j_config, {

@@ -19,11 +19,10 @@ package org.apache.activemq.apollo.dto;
 import org.apache.activemq.apollo.util.ClassFinder;
 import org.apache.activemq.apollo.util.Module;
 import org.apache.activemq.apollo.util.ModuleRegistry;
+import org.xml.sax.SAXException;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
+import javax.xml.XMLConstants;
+import javax.xml.bind.*;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
@@ -34,6 +33,8 @@ import java.util.HashSet;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -106,19 +107,23 @@ public class XmlCodec {
         return JAXBContext.newInstance(packages);
     }
 
-    static public <T> T decode(Class<T> clazz, URL url) throws IOException, XMLStreamException, JAXBException {
+    static public <T> T decode(Class<T> clazz, URL url) throws IOException, XMLStreamException, JAXBException, SAXException {
         return decode(clazz, url, null);
     }
 
-    static public <T> T decode(Class<T> clazz, URL url, Properties props) throws IOException, XMLStreamException, JAXBException {
+    static public <T> T decode(Class<T> clazz, URL url, Properties props) throws IOException, XMLStreamException, JAXBException, SAXException {
         return decode(clazz, url.openStream(), props);
     }
 
-    static public <T> T decode(Class<T> clazz, InputStream is) throws IOException, XMLStreamException, JAXBException {
+    static public <T> T decode(Class<T> clazz, InputStream is) throws IOException, XMLStreamException, JAXBException, SAXException {
         return decode(clazz, is, null);
     }
 
-    static public <T> T decode(Class<T> clazz, InputStream is, Properties props) throws IOException, XMLStreamException, JAXBException {
+    static public <T> T decode(Class<T> clazz, InputStream is, Properties props) throws IOException, XMLStreamException, JAXBException, SAXException {
+        return decode(clazz, is, props, null);
+    }
+
+    static public <T> T decode(Class<T> clazz, InputStream is, Properties props, ValidationEventHandler validationHandler) throws IOException, XMLStreamException, JAXBException, SAXException {
         ClassLoader original = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(ClassFinder.class_loader());
@@ -131,6 +136,17 @@ public class XmlCodec {
                     reader = new PropertiesFilter(reader, props);
                 }
                 Unmarshaller unmarshaller = context().createUnmarshaller();
+                if( validationHandler !=null ) {
+                    try {
+                        SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+                        sf.setFeature("http://apache.org/xml/features/validation/schema-full-checking", false);
+                        Schema schema = sf.newSchema(XmlCodec.class.getResource("apollo.xsd"));
+                        unmarshaller.setSchema(schema);
+                        unmarshaller.setEventHandler(validationHandler);
+                    } catch (Exception e) {
+                        System.err.println("Could not load schema: "+e.getMessage());
+                    }
+                }
                 return clazz.cast(unmarshaller.unmarshal(reader));
             } finally {
                 is.close();
@@ -140,6 +156,8 @@ public class XmlCodec {
             Thread.currentThread().setContextClassLoader(original);
         }
     }
+
+
 
     static public void encode(Object in, OutputStream os, boolean format) throws JAXBException {
         ClassLoader original = Thread.currentThread().getContextClassLoader();

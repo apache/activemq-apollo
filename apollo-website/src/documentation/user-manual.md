@@ -110,6 +110,20 @@ store.
 
 Brokers can be configured with multiple virtual hosts and connectors.
 
+When a broker is first started up, it will validate the configuration
+file against the the [XSD Schema](schema/apollo.xsd) and report any 
+errors/warnings it finds but it will continue to start the broker even 
+it finds problems.  You would want to the broker to abort starting up
+if any issues are found with the schema validation you should set
+the `broker` element's `validation` attribute to `strict`.  Example:
+
+{pygmentize:: xml}
+<broker validation="strict" 
+   xmlns="http://activemq.apache.org/schema/activemq/apollo">
+  ...
+</broker>
+{pygmentize}
+
 #### Connectors
 
 A broker connector is used to accept new connections to the broker.

@@ -59,7 +59,7 @@ class StoreExport extends Action {
         error("Configuration file'%s' does not exist.\n\nTry creating a broker instance using the 'apollo create' command.".format(conf));
       }
 
-      val config = ConfigStore.load(conf)
+      val config = ConfigStore.load(conf, session.getConsole.println _)
 
       val hosts = collection.JavaConversions.collectionAsScalaIterable(config.virtual_hosts).toArray
       val vho:Option[VirtualHostDTO] = if( host==null ) {

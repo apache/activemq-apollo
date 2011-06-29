@@ -73,48 +73,59 @@ trait BaseService extends Service with Dispatched {
   protected var _serviceFailure:Exception = null
   def serviceFailure = _serviceFailure
 
-  final def start(on_completed:Runnable) = ^{
-    def do_start = {
-      val state = new STARTING()
-      state << on_completed
-      _service_state = state
-      try {
-        _start(^ {
-          _service_state = new STARTED
-          state.done
-        })
-      }
-      catch {
-        case e:Exception =>
-          error(e, "Start failed due to %s", e)
-          _serviceFailure = e
-          _service_state = new FAILED
-          state.done
-      }
-    }
-    def done = {
-      if( on_completed!=null ) {
-        on_completed.run
-      }
-    }
-    _service_state match {
-      case state:CREATED =>
-        do_start
-      case state:STOPPED =>
-        do_start
-      case state:STARTING =>
+  private var pending_actions = List[Runnable]()
+
+  final def start(on_completed:Runnable) = {
+    val start_task = ^{
+      def do_start = {
+        val state = new STARTING()
         state << on_completed
-      case state:STARTED =>
-        done
-      case state =>
-        done
-        error("Start should not be called from state: %s", state);
+        _service_state = state
+        try {
+          _start(^ {
+            _service_state = new STARTED
+            state.done
+          })
+        }
+        catch {
+          case e:Exception =>
+            error(e, "Start failed due to %s", e)
+            _serviceFailure = e
+            _service_state = new FAILED
+            state.done
+        }
+      }
+      def done = {
+        pending_actions.foreach(dispatch_queue.execute _)
+        pending_actions = Nil
+        if( on_completed!=null ) {
+          on_completed.run
+        }
+      }
+      _service_state match {
+        case state:CREATED =>
+          do_start
+        case state:STOPPED =>
+          do_start
+        case state:STOPPING =>
+          pending_actions += start_task
+        case state:STARTING =>
+          pending_actions += start_task
+        case state:STARTED =>
+          done
+        case state =>
+          done
+          error("Start should not be called from state: %s", state);
+      }
     }
-  } |>>: dispatch_queue
+    start_task |>>: dispatch_queue
+  }
 
   final def stop(on_completed:Runnable) = {
-    def stop_task = {
+    val stop_task = ^{
       def done = {
+        pending_actions.foreach(dispatch_queue.execute _)
+        pending_actions = Nil
         if( on_completed!=null ) {
           on_completed.run
         }
@@ -137,16 +148,18 @@ trait BaseService extends Service with Dispatched {
               _service_state = new FAILED
               state.done
           }
-        case state:STOPPING =>
-          state << on_completed
         case state:STOPPED =>
           done
+        case state:STOPPING =>
+          pending_actions += stop_task
+        case state:STARTING =>
+          pending_actions += stop_task
         case state =>
           done
           error("Stop should not be called from state: %s", state);
       }
     }
-    ^{ stop_task } |>>: dispatch_queue
+    stop_task |>>: dispatch_queue
   }
 
   protected def _start(on_completed:Runnable)
