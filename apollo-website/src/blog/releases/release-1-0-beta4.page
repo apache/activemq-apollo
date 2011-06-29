@@ -45,6 +45,7 @@ Apollo Features:
   
 Noteworthy changes since the last beta include:
 
+ * APLO-17 - Support message expiration
  * APLO-39 - Apply configuration updates to a broker without needing a restart
  * APLO-40 - Web interface should support editing all the apollo configuration files (log4j, jaas, etc.)
  * APLO-41 - Expose JVM Status/Metrics via REST API
