@@ -422,6 +422,8 @@ object Stomp {
   val V1_1 = ascii("1.1")
   val DEFAULT_HEART_BEAT = ascii("0,0")
 
+  val EMPTY = EMPTY_BUFFER.ascii()
+
   val SUPPORTED_PROTOCOL_VERSIONS = List(V1_1, V1_0)
 
   val TEXT_PLAIN = ascii("text/plain")

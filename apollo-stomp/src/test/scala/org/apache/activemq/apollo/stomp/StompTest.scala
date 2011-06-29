@@ -444,6 +444,8 @@ class StompDestinationTest extends StompTestSupport {
     frame should startWith("MESSAGE\n")
     frame should include ("subscription:0\n")
     frame should include ("browser:end\n")
+    frame should include ("\nmessage-id:")
+    frame should include ("\ndestination:")
 
     // create a regular subscription.
     client.write(

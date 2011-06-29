@@ -292,7 +292,8 @@ class StompProtocolHandler extends ProtocolHandler {
           closed = true
           if( browser ) {
             // Then send the end of browse message.
-            var frame = StompFrame(MESSAGE, (BROWSER, END)::Nil, BufferContent(EMPTY_BUFFER))
+            val headers:HeaderMap = List(DESTINATION->EMPTY, MESSAGE_ID->EMPTY, BROWSER->END)
+            var frame = StompFrame(MESSAGE, headers, BufferContent(EMPTY_BUFFER))
             if( subscription_id != None ) {
               frame = frame.append_headers((SUBSCRIPTION, subscription_id.get)::Nil)
             }
