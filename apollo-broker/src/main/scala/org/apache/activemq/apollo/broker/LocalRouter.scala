@@ -21,6 +21,7 @@ import collection.JavaConversions
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.broker.store.QueueRecord
 import path._
+import path.PathParser.PathException
 import security.SecurityContext
 import java.util.concurrent.TimeUnit
 import scala.Array
@@ -644,10 +645,14 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     def create_configured_dests(list: ArrayList[_ <: StringIdDTO], d: Domain[_], f: (Array[String]) => DestinationDTO) = {
       list.foreach { dto =>
         if (dto.id != null) {
-          val parts = destination_parser.parts(dto.id)
-          val path = destination_parser.decode_path(parts)
-          if (!PathParser.containsWildCards(path)) {
-            d.get_or_create_destination(path, f(parts), null)
+          try {
+            val parts = destination_parser.parts(dto.id)
+            val path = destination_parser.decode_path(parts)
+            if (!PathParser.containsWildCards(path)) {
+              d.get_or_create_destination(path, f(parts), null)
+            }
+          } catch {
+            case x:PathException => warn(x, "Invalid destination id '%s'", dto.id)
           }
         }
       }
