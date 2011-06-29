@@ -34,10 +34,7 @@
 
   <properties>
     <netbeans.hint.deploy.server>Tomcat60</netbeans.hint.deploy.server>
-    
-    <scalate.editor>${env.SCALATE_EDITOR}</scalate.editor>
-    <scalate.mode>development</scalate.mode>
-    <scalate.workdir>${basedir}/target/_scalate</scalate.workdir>
+    <website-server-id>apollo-website</website-server-id>
   </properties>
 
   <dependencies>
@@ -125,7 +122,7 @@
         
         <configuration>
           <webappDirectory>${basedir}/src</webappDirectory>
-          <remoteServerId>apache.releases.https</remoteServerId>
+          <remoteServerId>${website-server-id}</remoteServerId>
           <remoteServerUrl>${website-base-url}/versions/${project.version}/website/</remoteServerUrl>
         </configuration>
         
@@ -157,15 +154,15 @@
             <systemProperties>
               <systemProperty>
                 <name>scalate.editor</name>
-                <value>${scalate.editor}</value>
+                <value>${env.SCALATE_EDITOR}</value>
               </systemProperty>
               <systemProperty>
                 <name>scalate.workdir</name>
-                <value>${scalate.workdir}</value>
+                <value>${basedir}/target/_scalate</value>
               </systemProperty>
               <systemProperty>
                 <name>scalate.mode</name>
-                <value>${scalate.mode}</value>
+                <value>development</value>
               </systemProperty>
             </systemProperties>
             <scanIntervalSeconds>0</scanIntervalSeconds>
