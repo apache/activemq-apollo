@@ -176,7 +176,7 @@ case class BrokerResource() extends Resource {
 
       rc.dequeue_item_counter += q.dequeue_item_counter
       rc.dequeue_size_counter += q.dequeue_size_counter
-      rc.dequeue_ts += rc.dequeue_ts max q.dequeue_ts
+      rc.dequeue_ts = rc.dequeue_ts max q.dequeue_ts
 
       rc.nack_item_counter += q.nack_item_counter
       rc.nack_size_counter += q.nack_size_counter
