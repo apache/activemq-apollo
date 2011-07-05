@@ -94,7 +94,7 @@ Results in a [Data Page](./api/apollo-dto/org/apache/activemq/apollo/dto/DataPag
     }
   ]
 }
-{pygmentiz}
+{pygmentize}
 
 The `*` header field means the record was selected. To narrow down the selected fields you can add
 multiple `f` query parameters to pick the fields you want to retrieve.
@@ -127,7 +127,7 @@ Results in :
     ]
   ]
 }
-{pygmentiz}
+{pygmentize}
     
 
 If you want to narrow down the records which get selected, you can set a `q`
