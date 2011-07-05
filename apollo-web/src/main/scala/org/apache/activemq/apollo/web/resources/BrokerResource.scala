@@ -390,7 +390,7 @@ case class BrokerResource() extends Resource {
 
   @DELETE @Path("virtual-hosts/{id}/queues/{name:.*}")
   @Produces(Array("application/json", "application/xml","text/xml"))
-  def queue_delete(@PathParam("id") id : String, @PathParam("name") name : String):Unit = {
+  def queue_delete(@PathParam("id") id : String, @PathParam("name") name : String):Unit = unwrap_future_result {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
       val node = router.queue_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
@@ -402,7 +402,7 @@ case class BrokerResource() extends Resource {
 
   @POST @Path("virtual-hosts/{id}/queues/{name:.*}/action/delete")
   @Produces(Array("text/html;qs=5"))
-  def post_queue_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String):Unit = {
+  def post_queue_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String):Unit = unwrap_future_result {
     queue_delete(id, name)
     result(strip_resolve("../../.."))
   }
@@ -437,7 +437,7 @@ case class BrokerResource() extends Resource {
 
   @DELETE @Path("virtual-hosts/{id}/dsubs/{name:.*}")
   @Produces(Array("application/json", "application/xml","text/xml"))
-  def dsub_delete(@PathParam("id") id : String, @PathParam("name") name : String):Unit = {
+  def dsub_delete(@PathParam("id") id : String, @PathParam("name") name : String):Unit = unwrap_future_result {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
       val node = router.topic_domain.durable_subscriptions_by_id.get(name).getOrElse(result(NOT_FOUND))
@@ -449,7 +449,7 @@ case class BrokerResource() extends Resource {
 
   @POST @Path("virtual-hosts/{id}/dsubs/{name:.*}/action/delete")
   @Produces(Array("text/html;qs=5"))
-  def post_dsub_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String):Unit = {
+  def post_dsub_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String):Unit = unwrap_future_result {
     dsub_delete(id, name)
     result(strip_resolve("../../.."))
   }
@@ -595,7 +595,7 @@ case class BrokerResource() extends Resource {
 
   @POST @Path("connectors/{id}/action/stop")
   @Produces(Array("application/json", "application/xml","text/xml"))
-  def post_connector_stop(@PathParam("id") id : String):Unit = {
+  def post_connector_stop(@PathParam("id") id : String):Unit = unwrap_future_result {
     with_connector(id) { connector =>
       admining(connector.broker) {
         connector.stop
@@ -605,14 +605,14 @@ case class BrokerResource() extends Resource {
 
   @POST @Path("connectors/{id}/action/stop")
   @Produces(Array("text/html;qs=5"))
-  def post_connector_stop_and_redirect(@PathParam("id") id : String):Unit = {
+  def post_connector_stop_and_redirect(@PathParam("id") id : String):Unit = unwrap_future_result {
     post_connector_stop(id)
     result(strip_resolve(".."))
   }
 
   @POST @Path("connectors/{id}/action/start")
   @Produces(Array("application/json", "application/xml","text/xml"))
-  def post_connector_start(@PathParam("id") id : String):Unit = {
+  def post_connector_start(@PathParam("id") id : String):Unit = unwrap_future_result {
     with_connector(id) { connector =>
       admining(connector.broker) {
         connector.start
@@ -622,7 +622,7 @@ case class BrokerResource() extends Resource {
 
   @POST @Path("connectors/{id}/action/start")
   @Produces(Array("text/html;qs=5"))
-  def post_connector_start_and_redirect(@PathParam("id") id : String):Unit = {
+  def post_connector_start_and_redirect(@PathParam("id") id : String):Unit = unwrap_future_result {
     post_connector_start(id)
     result(strip_resolve(".."))
   }
@@ -656,7 +656,7 @@ case class BrokerResource() extends Resource {
 
   @DELETE @Path("connections/{id}")
   @Produces(Array("application/json", "application/xml","text/xml"))
-  def connection_delete(@PathParam("id") id : Long):Unit = {
+  def connection_delete(@PathParam("id") id : Long):Unit = unwrap_future_result {
     with_connection(id){ connection=>
       admining(connection.connector.broker) {
         connection.stop
@@ -667,14 +667,14 @@ case class BrokerResource() extends Resource {
 
   @POST @Path("connections/{id}/action/delete")
   @Produces(Array("text/html;qs=5"))
-  def post_connection_delete_and_redirect(@PathParam("id") id : Long):Unit = {
+  def post_connection_delete_and_redirect(@PathParam("id") id : Long):Unit = unwrap_future_result {
     connection_delete(id)
     result(strip_resolve("../../.."))
   }
 
   @POST
   @Path("action/shutdown")
-  def command_shutdown:Unit = {
+  def command_shutdown:Unit = unwrap_future_result {
     info("JVM shutdown requested via web interface")
     with_broker { broker =>
       admining(broker) {
