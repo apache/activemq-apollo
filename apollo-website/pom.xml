@@ -34,7 +34,6 @@
 
   <properties>
     <netbeans.hint.deploy.server>Tomcat60</netbeans.hint.deploy.server>
-    <website-server-id>apollo-website</website-server-id>
   </properties>
 
   <dependencies>
@@ -122,7 +121,7 @@
         
         <configuration>
           <webappDirectory>${basedir}/src</webappDirectory>
-          <remoteServerId>${website-server-id}</remoteServerId>
+          <remoteServerId>apollo-website</remoteServerId>
           <remoteServerUrl>${website-base-url}/versions/${project.version}/website/</remoteServerUrl>
         </configuration>
         
@@ -134,13 +133,6 @@
             </goals>
             <phase>package</phase>
           </execution>
-          <execution>
-            <id>deploy</id>
-            <goals>
-              <goal>deploy</goal>
-            </goals>
-            <phase>deploy</phase>
-          </execution> 
         </executions>
         
       </plugin>
@@ -354,6 +346,35 @@
         </plugins>
       </build>
     </profile>
+    
+    <profile>
+      <id>deploy-website</id>
+      <activation>
+        <property>
+          <name>java.vm.name</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.fusesource.scalate</groupId>
+            <artifactId>maven-scalate-plugin</artifactId>
+            <version>${scalate-version}</version>
+        
+            <executions>
+              <execution>
+                <id>deploy</id>
+                <goals>
+                  <goal>deploy</goal>
+                </goals>
+                <phase>deploy</phase>
+              </execution> 
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+          
   </profiles>
             
 </project>
