@@ -19,11 +19,13 @@ package org.apache.activemq.apollo.stomp
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfterEach
 import java.lang.String
-import org.apache.activemq.apollo.broker.{KeyStorage, Broker, BrokerFactory}
 import org.apache.activemq.apollo.util.{FileSupport, Logging, FunSuiteSupport, ServiceControl}
 import FileSupport._
 import org.apache.activemq.apollo.dto.KeyStorageDTO
 import java.net.InetSocketAddress
+import org.fusesource.hawtdispatch._
+import org.apache.activemq.apollo.broker.{LocalRouter, KeyStorage, Broker, BrokerFactory}
+import org.fusesource.hawtbuf.Buffer._
 
 class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAndAfterEach with Logging {
   var broker: Broker = null
@@ -1552,5 +1554,64 @@ class StompExpirationTest extends StompTestSupport {
 
     get("1")
     get("3")
+  }
+}
+
+class StompAutoDeleteTest extends StompTestSupport {
+
+  def path_separator = "."
+
+  test("Messages Expire") {
+    connect("1.1")
+
+    def put(msg:String) = {
+      client.write(
+        "SEND\n" +
+        "destination:/queue/autodel\n" +
+        "\n" +
+        "message:"+msg+"\n")
+    }
+
+    put("1")
+
+    Thread.sleep(2000)
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/autodel\n" +
+      "auto-delete:true\n" +
+      "id:1\n" +
+      "\n")
+
+    def get(dest:String) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith("\n\nmessage:%s\n".format(dest))
+    }
+    get("1")
+
+    def queue_exists:Boolean = {
+      val host = broker.virtual_hosts.get(ascii("default")).get
+      host.dispatch_queue.future {
+        val router = host.router.asInstanceOf[LocalRouter]
+        router.queue_domain.destination_by_id.get("autodel").isDefined
+      }.await()
+    }
+
+    // The queue should still exist..
+    expect(true)(queue_exists)
+
+    client.write(
+      "UNSUBSCRIBE\n" +
+      "id:1\n" +
+      "receipt:0\n"+
+      "\n")
+    wait_for_receipt("0")
+
+    Thread.sleep(1000);
+
+    // Now that we unsubscribe, it should not exist any more.
+    expect(false)(queue_exists)
+
   }
 }

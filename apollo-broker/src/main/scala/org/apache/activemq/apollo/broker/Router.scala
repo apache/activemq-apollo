@@ -42,6 +42,10 @@ trait Router extends Service {
 
   def disconnect(destinations:Array[DestinationDTO], producer:BindableDeliveryProducer)
 
+  def delete(destinations:Array[DestinationDTO], security:SecurityContext): Option[String] @suspendable
+
+  def create(destinations:Array[DestinationDTO], security:SecurityContext): Option[String] @suspendable
+
   def apply_update(on_completed:Runnable):Unit
 }
 

@@ -1254,6 +1254,33 @@ to the `SUBSCRIBE` frame.  Example:
     
     ^@
 
+### Queue Auto Delete on `UNSUBSCRIBE`
+
+When you subscribe to a queue, you can add the `auto-delete:true` header
+to have the queue automatically deleted when the subscription ends. This
+is typically used when implementing the request/reply messaging pattern.
+The requesting client creates a temporary dynamically named queue which it
+will use to receive responses for requests which sends out. Once the
+client unsubscribes or his connection terminates, then the queue is
+automatically deleted.
+
+Example:
+
+    SUBSCRIBE
+    id:mysub
+    destination:/queue/temp.myclientid.1308690148000
+    auto-delete:true
+    exclusive:true
+    
+    ^@
+
+If the client does not have sufficient authority to delete the queue, when
+the subscription ends, then the STOMP connection will be terminated with
+an error message.
+
+The auto-delete feature does not work with composite or wildcard destinations.
+it also does not work with topics or durable subscriptions.
+
 ### Destination Wildcards
 
 We support destination wildcards to easily subscribe to multiple destinations

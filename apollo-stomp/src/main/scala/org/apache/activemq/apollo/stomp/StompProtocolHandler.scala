@@ -32,6 +32,7 @@ import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
+import path.PathParser
 import scala.util.continuations._
 import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.transport.tcp.SslTransport
@@ -71,6 +72,9 @@ object StompProtocolHandler extends Log {
   val DEFAULT_INBOUND_HEARTBEAT = 10*1000L
   var inbound_heartbeat = DEFAULT_INBOUND_HEARTBEAT
 
+
+  def noop = shift {  k: (Unit=>Unit) => k() }
+  def unit:Unit = {}
 }
 
 /**
@@ -224,7 +228,8 @@ class StompProtocolHandler extends ProtocolHandler {
     val ack_handler:AckHandler,
     val selector:(String, BooleanExpression),
     override val browser:Boolean,
-    override val exclusive:Boolean
+    override val exclusive:Boolean,
+    val auto_delete:Boolean
   ) extends BaseRetained with DeliveryConsumer {
 
 ////  The following comes in handy if we need to debug the
@@ -303,20 +308,33 @@ class StompProtocolHandler extends ProtocolHandler {
               // and then trigger closing the session once it empties out.
               val sink = new OverflowSink(session)
               sink.refiller = ^{
-                session_manager.close(session)
-                release
+                dispose
               }
               sink.offer(frame)
             } else {
               session.offer(frame)
-              session_manager.close(session)
-              release
+              dispose
             }
           } else {
-            session_manager.close(session)
-            release
+            dispose
           }
         }
+      }
+
+      def dispose = {
+        session_manager.close(session)
+        if( auto_delete ) {
+          reset {
+            val rc = host.router.delete(destination, security_context)
+            rc match {
+              case Some(error) =>
+                async_die(error)
+              case None =>
+                unit
+            }
+          }
+        }
+        release
       }
 
       // Delegate all the flow control stuff to the session
@@ -656,8 +674,6 @@ class StompProtocolHandler extends ProtocolHandler {
         die("Invalid heart-beat header: "+heart_beat)
     }
 
-    def noop = shift {  k: (Unit=>Unit) => k() }
-
     def send_connected = {
 
       var connected_headers = ListBuffer((VERSION, protocol_version))
@@ -903,6 +919,17 @@ class StompProtocolHandler extends ProtocolHandler {
     var persistent = get(headers, PERSISTENT).map( _ == TRUE ).getOrElse(false)
     var browser = get(headers, BROWSER).map( _ == TRUE ).getOrElse(false)
     var exclusive = get(headers, EXCLUSIVE).map( _ == TRUE ).getOrElse(false)
+    var auto_delete = get(headers, AUTO_DELETE).map( _ == TRUE ).getOrElse(false)
+
+    if(auto_delete) {
+      if( destination.length != 1 ) {
+        die("The auto-delete subscription header cannot be used in conjunction with composite destinations");
+      }
+      val path = destination_parser.decode_path(destination.head.path)
+      if( PathParser.containsWildCards(path) ) {
+        die("The auto-delete subscription header cannot be used in conjunction with wildcard destinations");
+      }
+    }
 
     val ack = get(headers, ACK_MODE) match {
       case None=> new AutoAckHandler
@@ -948,10 +975,8 @@ class StompProtocolHandler extends ProtocolHandler {
       }
     }
 
-    val consumer = new StompConsumer(subscription_id, destination, ack, selector, browser, exclusive);
+    val consumer = new StompConsumer(subscription_id, destination, ack, selector, browser, exclusive, auto_delete);
     consumers += (id -> consumer)
-
-    def unit:Unit = {}
 
     reset {
       val rc = host.router.bind(destination, consumer, security_context)

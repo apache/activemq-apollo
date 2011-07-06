@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo.broker
 
 import org.fusesource.hawtdispatch._
-import collection.JavaConversions
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.broker.store.QueueRecord
 import path._
@@ -28,6 +27,7 @@ import scala.Array
 import org.apache.activemq.apollo.dto._
 import java.util.{Arrays, ArrayList}
 import collection.mutable.{LinkedHashMap, HashMap}
+import collection.{Iterable, JavaConversions}
 
 trait DomainDestination {
 
@@ -145,6 +145,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       }
     }
 
+    def can_destroy_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Option[String]
+    def destroy_destination(path:Path, destination:DestinationDTO):Unit
+
+    def can_create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Option[String]
     def create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Result[D,String]
 
     def get_or_create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Result[D,String] = {
@@ -345,6 +349,43 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
             dest.disconnect(producer)
           }
         case _ => super.disconnect(destination, producer)
+      }
+    }
+
+    def can_destroy_destination(path:Path, destination: DestinationDTO, security: SecurityContext): Option[String] = {
+      val matches = get_destination_matches(path)
+      val rc = matches.foldLeft(None:Option[String]) { case (rc,dest) =>
+        rc.orElse {
+          if( virtual_host.authorizer!=null && security!=null && !virtual_host.authorizer.can_destroy(security, virtual_host, dest.config)) {
+            Some("Not authorized to destroy topic: %s".format(dest.id))
+          } else {
+            None
+          }
+        }
+      }
+
+      // TODO: destroy not yet supported on topics..  Need to disconnect all
+      // clients and destroy remove any durable subs on the topic.
+      Some("Topic destroy not yet implemented.")
+    }
+
+    def destroy_destination(path:Path, destination: DestinationDTO): Unit = {
+      val matches = get_destination_matches(path)
+//        matches.foreach { dest =>
+//          remove_destination(dest.path, dest)
+//        }
+    }
+
+    def can_create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Option[String] = {
+      // We can't create a wild card destination.. only wild card subscriptions.
+      assert( !PathParser.containsWildCards(path) )
+      // A new destination is being created...
+      val dto = topic_config(path)
+
+      if(  virtual_host.authorizer!=null && security!=null && !virtual_host.authorizer.can_create(security, virtual_host, dto)) {
+        Some("Not authorized to create the destination")
+      } else {
+        None
       }
     }
 
@@ -568,6 +609,14 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       }
     }
 
+    def can_destroy_queue(config:QueueDTO, security:SecurityContext) = {
+      if( virtual_host.authorizer==null || security==null) {
+        true
+      } else {
+        virtual_host.authorizer.can_destroy(security, virtual_host, config)
+      }
+    }
+
     def bind(queue:Queue) = {
       val path = queue.binding.destination
       assert( !PathParser.containsWildCards(path) )
@@ -591,6 +640,38 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         // unhook the queue from the topic
         val topic = topic_domain.get_or_create_destination(path, new TopicDestinationDTO(queue.binding.binding_dto.path), null).success
         topic.unbind(queue, false)
+      }
+    }
+
+    def can_destroy_destination(path:Path, destination: DestinationDTO, security: SecurityContext): Option[String] = {
+      val matches = get_destination_matches(path)
+      matches.foldLeft(None:Option[String]) { case (rc,dest) =>
+        rc.orElse {
+          if( can_destroy_queue(dest.config, security) ) {
+            None
+          } else {
+            Some("Not authorized to destroy queue: %s".format(dest.id))
+          }
+        }
+      }
+    }
+
+    def destroy_destination(path:Path, destination: DestinationDTO): Unit = {
+      val matches = get_destination_matches(path)
+      matches.foreach { dest =>
+        _destroy_queue(dest)
+      }
+    }
+
+    def can_create_destination(path: Path, destination:DestinationDTO, security: SecurityContext):Option[String] = {
+      val dto = new QueueDestinationDTO
+      dto.path.addAll(destination.path)
+      val binding = QueueDomainQueueBinding.create(dto)
+      val config = binding.config(virtual_host)
+      if( can_create_queue(config, security) ) {
+        None
+      } else {
+        Some("Not authorized to create the queue")
       }
     }
 
@@ -849,6 +930,33 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       producer.release()
     }
   }
+
+  def create(destinations:Array[DestinationDTO], security: SecurityContext) = dispatch_queue ! {
+    val paths = destinations.map(x=> (destination_parser.decode_path(x.path), x) )
+    val failures = paths.flatMap(x=> domain(x._2).can_create_destination(x._1, x._2, security) )
+    if( !failures.isEmpty ) {
+      Some(failures.mkString("; "))
+    } else {
+      paths.foreach { x=>
+        domain(x._2).create_destination(x._1, x._2, security)
+      }
+      None
+    }
+  }
+
+  def delete(destinations:Array[DestinationDTO], security: SecurityContext) = dispatch_queue ! {
+    val paths = destinations.map(x=> (destination_parser.decode_path(x.path), x) )
+    val failures = paths.flatMap(x=> domain(x._2).can_destroy_destination(x._1, x._2, security) )
+    if( !failures.isEmpty ) {
+      Some(failures.mkString("; "))
+    } else {
+      paths.foreach { x=>
+        domain(x._2).destroy_destination(x._1, x._2)
+      }
+      None
+    }
+  }
+
 
   def get_or_create_destination(id: DestinationDTO, security: SecurityContext) = dispatch_queue ! {
     _get_or_create_destination(id, security)
