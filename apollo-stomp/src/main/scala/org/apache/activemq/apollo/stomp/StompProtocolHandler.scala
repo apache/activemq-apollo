@@ -1131,23 +1131,19 @@ class StompProtocolHandler extends ProtocolHandler {
     }
 
     def commit(on_complete: => Unit) = {
-
-      val uow = if( host.store!=null ) {
-        host.store.create_uow
-      } else {
-        null
-      }
-
-      queue.foreach{ _(uow) }
-      if( uow!=null ) {
+      if( host.store!=null ) {
+        val uow = host.store.create_uow
+//        println("UOW starting: "+uow.asInstanceOf[DelayingStoreSupport#DelayableUOW].uow_id)
         uow.on_complete {
+//          println("UOW completed: "+uow.asInstanceOf[DelayingStoreSupport#DelayableUOW].uow_id)
           on_complete
         }
+        queue.foreach{ _(uow) }
         uow.release
       } else {
+        queue.foreach{ _(null) }
         on_complete
       }
-
     }
 
     def rollback = {
