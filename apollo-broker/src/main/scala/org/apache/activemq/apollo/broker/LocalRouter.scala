@@ -1058,7 +1058,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
 
   def _destroy_queue(queue: Queue) {
-    queue.stop(^{
+    queue.stop(dispatch_queue.runnable{
+
       queue.binding.unbind(this, queue)
       queues_by_binding.remove(queue.binding)
       queues_by_id.remove(queue.id)
