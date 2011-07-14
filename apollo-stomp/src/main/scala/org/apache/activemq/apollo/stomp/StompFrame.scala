@@ -384,6 +384,7 @@ object Stomp {
   val ACK_MODE = ascii("ack")
   val ID = ascii("id")
   val SELECTOR = ascii("selector")
+  val CREDIT = ascii("credit")
 
   val LOGIN = ascii("login")
   val PASSCODE = ascii("passcode")

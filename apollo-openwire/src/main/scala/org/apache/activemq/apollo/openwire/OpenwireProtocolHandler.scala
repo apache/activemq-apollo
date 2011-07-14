@@ -73,7 +73,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   def protocol = PROTOCOL
 
-  var outbound_sessions: SinkMux[Command] = null
+  var outbound_sessions: SessionSinkMux[Command] = null
   var connection_session: Sink[Command] = null
   var closed = false
 
@@ -176,7 +176,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   override def on_transport_connected():Unit = {
     security_context.local_address = connection.transport.getLocalAddress
     security_context.remote_address = connection.transport.getRemoteAddress
-    outbound_sessions = new SinkMux[Command](connection.transport_sink.map {
+    outbound_sessions = new SessionSinkMux[Command](connection.transport_sink.map {
       x:Command =>
         x.setCommandId(next_command_id)
         debug("sending openwire command: %s", x.toString())
@@ -785,7 +785,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       }
     }
 
-    def connect(p:DeliveryProducer) = new DeliverySession with SinkFilter {
+    def connect(p:DeliveryProducer) = new DeliverySession with SinkFilter[Command] {
       retain
 
       def producer = p

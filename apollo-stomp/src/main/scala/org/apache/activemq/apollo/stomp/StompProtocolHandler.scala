@@ -39,7 +39,6 @@ import org.apache.activemq.apollo.transport.tcp.SslTransport
 import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
 import java.io.IOException
-import javax.management.remote.rmi._RMIConnection_Stub
 
 
 case class RichBuffer(self:Buffer) extends Proxy {
@@ -128,108 +127,16 @@ class StompProtocolHandler extends ProtocolHandler {
 
   protected def dispatchQueue:DispatchQueue = connection.dispatch_queue
 
-  trait AckHandler {
-    def track(delivery:Delivery):Unit
-    def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null):Unit
-  }
-
-  class AutoAckHandler extends AckHandler {
-    def track(delivery:Delivery) = {
-      if( delivery.ack!=null ) {
-        delivery.ack(Delivered, null)
-      }
-    }
-
-    def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
-      async_die("The subscription ack mode does not expect ACK or NACK frames")
-    }
-
-  }
-
-  class SessionAckHandler extends AckHandler{
-    var consumer_acks = ListBuffer[(AsciiBuffer, (DeliveryResult, StoreUOW)=>Unit)]()
-
-    def track(delivery:Delivery) = {
-      queue.apply {
-        if( protocol_version eq V1_0 ) {
-          // register on the connection since 1.0 acks may not include the subscription id
-          connection_ack_handlers += ( delivery.message.id-> this )
-        }
-        consumer_acks += (( delivery.message.id, delivery.ack ))
-      }
-
-    }
-
-
-    def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
-
-      // session acks ack all previously recieved messages..
-      var found = false
-      val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
-        if( found ) {
-          false
-        } else {
-          if( id == msgid ) {
-            found = true
-          }
-          true
-        }
-      }
-
-      if( acked.isEmpty ) {
-        async_die("ACK failed, invalid message id: %s".format(msgid))
-      } else {
-        consumer_acks = not_acked
-        acked.foreach{case (id, ack)=>
-          if( ack!=null ) {
-            ack(consumed, uow)
-          }
-        }
-      }
-
-      if( protocol_version eq V1_0 ) {
-        connection_ack_handlers.remove(msgid)
-      }
-    }
-
-  }
-  class MessageAckHandler extends AckHandler {
-    var consumer_acks = HashMap[AsciiBuffer, (DeliveryResult, StoreUOW)=>Unit]()
-
-    def track(delivery:Delivery) = {
-      queue.apply {
-        if( protocol_version eq V1_0 ) {
-          // register on the connection since 1.0 acks may not include the subscription id
-          connection_ack_handlers += ( delivery.message.id-> this )
-        }
-        consumer_acks += ( delivery.message.id -> delivery.ack )
-      }
-    }
-
-    def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
-      consumer_acks.remove(msgid) match {
-        case Some(ack) =>
-          if( ack!=null ) {
-            ack(consumed, uow)
-          }
-        case None => async_die("ACK failed, invalid message id: %s".format(msgid))
-      }
-
-      if( protocol_version eq V1_0 ) {
-        connection_ack_handlers.remove(msgid)
-      }
-    }
-  }
-
   class StompConsumer(
 
     val subscription_id:Option[AsciiBuffer],
     val destination:Array[DestinationDTO],
-    val ack_handler:AckHandler,
+    ack_mode:AsciiBuffer,
     val selector:(String, BooleanExpression),
     override val browser:Boolean,
     override val exclusive:Boolean,
-    val auto_delete:Boolean
+    val auto_delete:Boolean,
+    val initial_credit_window:(Int,Int, Boolean)
   ) extends BaseRetained with DeliveryConsumer {
 
 ////  The following comes in handy if we need to debug the
@@ -255,6 +162,179 @@ class StompProtocolHandler extends ProtocolHandler {
 //      r.release
 //    }
 
+    trait AckHandler {
+      def track(delivery:Delivery):Unit
+      def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit
+      def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null):Unit
+    }
+
+    class AutoAckHandler extends AckHandler {
+      def track(delivery:Delivery) = {
+        if( delivery.ack!=null ) {
+          delivery.ack(Delivered, null)
+        }
+        credit_window_filter.credit(delivery.size, 1)
+      }
+
+      def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit = {
+      }
+
+      def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
+        async_die("The subscription ack mode does not expect ACK or NACK frames")
+      }
+
+    }
+
+    class TrackedAck(var credit:Option[Int], val ack:(DeliveryResult, StoreUOW)=>Unit)
+
+    class SessionAckHandler extends AckHandler{
+      var consumer_acks = ListBuffer[(AsciiBuffer, TrackedAck)]()
+
+      def track(delivery:Delivery) = {
+        queue.apply {
+          if( protocol_version eq V1_0 ) {
+            // register on the connection since 1.0 acks may not include the subscription id
+            connection_ack_handlers += ( delivery.message.id-> this )
+          }
+          consumer_acks += delivery.message.id -> new TrackedAck(Some(delivery.size), delivery.ack )
+        }
+      }
+
+      def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit = {
+        if( initial_credit_window._3 ) {
+          var found = false
+          val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
+            if( found ) {
+              false
+            } else {
+              if( id == msgid ) {
+                found = true
+              }
+              true
+            }
+          }
+
+          for( (id, delivery) <- acked ) {
+            for( credit <- delivery.credit ) {
+              credit_window_filter.credit(credit, 1)
+              delivery.credit = None
+            }
+          }
+        } else {
+          if( credit_value!=null ) {
+            credit_window_filter.credit(credit_value._1, credit_value._2)
+          }
+        }
+      }
+
+      def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
+
+        // session acks ack all previously recieved messages..
+        var found = false
+        val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
+          if( found ) {
+            false
+          } else {
+            if( id == msgid ) {
+              found = true
+            }
+            true
+          }
+        }
+
+        if( acked.isEmpty ) {
+          println("ACK failed, invalid message id: %s".format(msgid))
+        } else {
+          consumer_acks = not_acked
+          if( acked.size != 1 ) {
+            println("ACKS: %s".format(acked.map(_._1))+" uow "+uow)
+          }
+          acked.foreach{case (id, delivery)=>
+            if( delivery.ack!=null ) {
+              delivery.ack(consumed, uow)
+            }
+          }
+        }
+
+        if( protocol_version eq V1_0 ) {
+          connection_ack_handlers.remove(msgid)
+        }
+      }
+
+    }
+
+    class MessageAckHandler extends AckHandler {
+      var consumer_acks = HashMap[AsciiBuffer, TrackedAck]()
+
+      def track(delivery:Delivery) = {
+        queue.apply {
+          if( protocol_version eq V1_0 ) {
+            // register on the connection since 1.0 acks may not include the subscription id
+            connection_ack_handlers += ( delivery.message.id-> this )
+          }
+          consumer_acks += delivery.message.id -> new TrackedAck(Some(delivery.size), delivery.ack)
+        }
+      }
+
+      def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit = {
+        if( initial_credit_window._3 ) {
+          for( delivery <- consumer_acks.get(msgid)) {
+            for( credit <- delivery.credit ) {
+              credit_window_filter.credit(credit, 1)
+              delivery.credit = None
+            }
+          }
+        } else {
+          if( credit_value!=null ) {
+            credit_window_filter.credit(credit_value._1, credit_value._2)
+          }
+        }
+      }
+
+      def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
+        consumer_acks.remove(msgid) match {
+          case Some(delivery) =>
+            if( delivery.ack!=null ) {
+              delivery.ack(consumed, uow)
+            }
+          case None => async_die("ACK failed, invalid message id: %s".format(msgid))
+        }
+
+        if( protocol_version eq V1_0 ) {
+          connection_ack_handlers.remove(msgid)
+        }
+      }
+    }
+
+    val ack_handler = ack_mode match {
+      case ACK_MODE_AUTO=>new AutoAckHandler
+      case ACK_MODE_NONE=>new AutoAckHandler
+      case ACK_MODE_CLIENT=> new SessionAckHandler
+      case ACK_MODE_SESSION=> new SessionAckHandler
+      case ACK_MODE_MESSAGE=> new MessageAckHandler
+      case ack:AsciiBuffer =>
+        die("Unsuported ack mode: "+ack);
+    }
+
+    val consumer_sink = sink_manager.open()
+    val credit_window_filter = new CreditWindowFilter[Delivery](consumer_sink.map { delivery =>
+      ack_handler.track(delivery)
+      var frame = delivery.message.asInstanceOf[StompFrameMessage].frame
+      if( subscription_id != None ) {
+        frame = frame.append_headers((SUBSCRIPTION, subscription_id.get)::Nil)
+      }
+      frame
+    }, Delivery)
+
+    credit_window_filter.credit(initial_credit_window._1, initial_credit_window._2)
+
+    val session_manager = new SessionSinkMux[Delivery](credit_window_filter, dispatchQueue, Delivery)
+
+    override def dispose() = dispatchQueue {
+      super.dispose()
+      sink_manager.close(consumer_sink)
+    }
+
     val dispatch_queue = StompProtocolHandler.this.dispatchQueue
 
     override def connection = Some(StompProtocolHandler.this.connection)
@@ -274,7 +354,7 @@ class StompProtocolHandler extends ProtocolHandler {
       }
     }
 
-    def connect(p:DeliveryProducer) = new DeliverySession {
+    def connect(p:DeliveryProducer) = new DeliverySession with SinkFilter[Delivery] {
 
       // This session object should only be used from the dispatch queue context
       // of the producer.
@@ -287,9 +367,9 @@ class StompProtocolHandler extends ProtocolHandler {
       def consumer = StompConsumer.this
       var closed = false
 
-      val session = session_manager.open(producer.dispatch_queue, codec.write_buffer_size)
+      val downstream = session_manager.open(producer.dispatch_queue, receive_buffer_size)
 
-      def remaining_capacity = session.remaining_capacity
+      def remaining_capacity = downstream.remaining_capacity
 
       def close = {
         assert(producer.dispatch_queue.isExecuting)
@@ -303,16 +383,20 @@ class StompProtocolHandler extends ProtocolHandler {
               frame = frame.append_headers((SUBSCRIPTION, subscription_id.get)::Nil)
             }
 
-            if( session.full ) {
+            val delivery = new Delivery()
+            delivery.message = StompFrameMessage(frame)
+            delivery.size = frame.size
+
+            if( downstream.full ) {
               // session is full so use an overflow sink so to hold the message,
               // and then trigger closing the session once it empties out.
-              val sink = new OverflowSink(session)
+              val sink = new OverflowSink(downstream)
               sink.refiller = ^{
                 dispose
               }
-              sink.offer(frame)
+              sink.offer(delivery)
             } else {
-              session.offer(frame)
+              downstream.offer(delivery)
               dispose
             }
           } else {
@@ -322,7 +406,7 @@ class StompProtocolHandler extends ProtocolHandler {
       }
 
       def dispose = {
-        session_manager.close(session)
+        session_manager.close(downstream)
         if( auto_delete ) {
           reset {
             val rc = host.router.delete(destination, security_context)
@@ -338,30 +422,22 @@ class StompProtocolHandler extends ProtocolHandler {
       }
 
       // Delegate all the flow control stuff to the session
-      def full = session.full
       def offer(delivery:Delivery) = {
-        if( session.full ) {
+        if( full ) {
           false
         } else {
-          ack_handler.track(delivery)
-          var frame = delivery.message.asInstanceOf[StompFrameMessage].frame
-          if( subscription_id != None ) {
-            frame = frame.append_headers((SUBSCRIPTION, subscription_id.get)::Nil)
-          }
-          frame.retain
-          val rc = session.offer(frame)
+          delivery.message.retain()
+          val rc = downstream.offer(delivery)
           assert(rc, "offer should be accepted since it was not full")
           true
         }
       }
 
-      def refiller = session.refiller
-      def refiller_=(value:Runnable) = { session.refiller=value }
-
     }
   }
 
-  var session_manager:SinkMux[StompFrame] = null
+//  var session_manager:SessionSinkMux[StompFrame] = null
+  var sink_manager:SinkMux[StompFrame] = null
   var connection_sink:Sink[StompFrame] = null
 
   var dead = false
@@ -379,7 +455,7 @@ class StompProtocolHandler extends ProtocolHandler {
   private def queue = connection.dispatch_queue
 
   // uses by STOMP 1.0 clients
-  var connection_ack_handlers = HashMap[AsciiBuffer, AckHandler]()
+  var connection_ack_handlers = HashMap[AsciiBuffer, StompConsumer#AckHandler]()
 
   var protocol_version:AsciiBuffer = _
 
@@ -490,13 +566,11 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 
   override def on_transport_connected() = {
-
-    session_manager = new SinkMux[StompFrame]( connection.transport_sink.map {x=>
+    sink_manager = new SinkMux[StompFrame]( connection.transport_sink.map {x=>
       trace("sending frame: %s", x)
       x
-    }, dispatchQueue, StompFrame)
-    connection_sink = new OverflowSink(session_manager.open(dispatchQueue));
-    connection_sink.refiller = NOOP
+    })
+    connection_sink = new OverflowSink(sink_manager.open());
     resumeRead
   }
 
@@ -920,6 +994,20 @@ class StompProtocolHandler extends ProtocolHandler {
     var browser = get(headers, BROWSER).map( _ == TRUE ).getOrElse(false)
     var exclusive = get(headers, EXCLUSIVE).map( _ == TRUE ).getOrElse(false)
     var auto_delete = get(headers, AUTO_DELETE).map( _ == TRUE ).getOrElse(false)
+    val ack_mode = get(headers, ACK_MODE).getOrElse(ACK_MODE_AUTO)
+    val credit_window = get(headers, CREDIT) match {
+      case Some(value) =>
+        value.toString.split(",").toList match {
+          case x :: Nil =>
+            (codec.write_buffer_size, x.toInt, true)
+          case x :: y :: Nil =>
+            (y.toInt, x.toInt, true)
+          case x :: y :: z :: _ =>
+            (y.toInt, x.toInt, z.toBoolean)
+        }
+      case None =>
+        (codec.write_buffer_size, 1, true)
+    }
 
     if(auto_delete) {
       if( destination.length != 1 ) {
@@ -928,19 +1016,6 @@ class StompProtocolHandler extends ProtocolHandler {
       val path = destination_parser.decode_path(destination.head.path)
       if( PathParser.containsWildCards(path) ) {
         die("The auto-delete subscription header cannot be used in conjunction with wildcard destinations");
-      }
-    }
-
-    val ack = get(headers, ACK_MODE) match {
-      case None=> new AutoAckHandler
-      case Some(x)=> x match {
-        case ACK_MODE_AUTO=>new AutoAckHandler
-        case ACK_MODE_NONE=>new AutoAckHandler
-        case ACK_MODE_CLIENT=> new SessionAckHandler
-        case ACK_MODE_SESSION=> new SessionAckHandler
-        case ACK_MODE_MESSAGE=> new MessageAckHandler
-        case ack:AsciiBuffer =>
-          die("Unsuported ack mode: "+ack);
       }
     }
 
@@ -975,7 +1050,7 @@ class StompProtocolHandler extends ProtocolHandler {
       }
     }
 
-    val consumer = new StompConsumer(subscription_id, destination, ack, selector, browser, exclusive, auto_delete);
+    val consumer = new StompConsumer(subscription_id, destination, ack_mode, selector, browser, exclusive, auto_delete, credit_window);
     consumers += (id -> consumer)
 
     reset {
@@ -1051,7 +1126,22 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 
   def on_stomp_ack(headers:HeaderMap, consumed:DeliveryResult):Unit = {
-    val messageId = get(headers, MESSAGE_ID).getOrElse(die("message id header not set"))
+    val credit = get(headers, CREDIT) match {
+      case None => null
+      case Some(value) =>
+        value.toString.split(",").toList match {
+          case x :: Nil =>
+            (0, x.toInt)
+          case x :: y :: _ =>
+            (y.toInt, x.toInt)
+        }
+
+    }
+    val messageId = get(headers, MESSAGE_ID).getOrElse(null)
+
+    if( credit==null && messageId==null) {
+      die("message id header not set")
+    }
 
     val subscription_id = get(headers, SUBSCRIPTION);
     val handler = subscription_id match {
@@ -1065,13 +1155,16 @@ class StompProtocolHandler extends ProtocolHandler {
     }
 
     handler.foreach{ handler=>
-      get(headers, TRANSACTION) match {
-        case None=>
-          handler.perform_ack(consumed, messageId, null)
-        case Some(txid)=>
-          get_or_create_tx_queue(txid).add{ uow=>
-            handler.perform_ack(consumed, messageId, uow)
-          }
+      handler.credit(messageId, credit)
+      if( messageId!=null ) {
+        get(headers, TRANSACTION) match {
+          case None=>
+            handler.perform_ack(consumed, messageId, null)
+          case Some(txid)=>
+            get_or_create_tx_queue(txid).add{ uow=>
+              handler.perform_ack(consumed, messageId, uow)
+            }
+        }
       }
       send_receipt(headers)
     }

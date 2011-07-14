@@ -187,7 +187,7 @@ trait Watchog extends RemoteConsumer {
     dispatch_queue.executeAfter(seconds, TimeUnit.SECONDS, ^ {
       if (messageCount == lastMessageCount) {
         warn("Messages have stopped arriving after " + seconds + "s, stopping consumer")
-        stop
+        stop()
       } else {
         watchdog(messageCount)
       }

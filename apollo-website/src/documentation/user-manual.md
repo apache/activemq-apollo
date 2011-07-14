@@ -1130,6 +1130,82 @@ Example:
     this message will expire on Tue Jun 21 17:02:28 EDT 2011
     ^@
 
+### Subscription Flow Control
+
+You can add a `credit` header to the `SUBSCRIBE` frame to control the
+flow of messages delivered to the client. Each subscription maintains 2
+credit windows which allows you to control the flow of messages either based
+on number of messages sent or total number of content bytes delivered to the
+client. The content bytes are the body of the frame which is usually also
+set on the `content-length` header. If either of the two credit windows have
+a positive value, the server will deliver messages to the client.
+
+The `credit` header value is expected to use the
+`count[,size[,auto]]` syntax where:
+
+ * count: initial setting of the credit window tracking the remaining number 
+   of messages that can be sent.
+ * size: initial setting of the credit window tracking the remaining number 
+   of content bytes that can be sent.
+ * auto: `true` or `false` controls if the credit windows will be 
+   automatically incremented.
+
+The `credit` header defaults to `1,65536,true`. The `size`, and
+`auto` parts are optional, and if not specified the default values are used.
+This default setting allows you to receive both the case of:
+
+ * many small messages before needing an ack
+ * at least 1 big (larger than 65536 bytes) message before needing.
+
+
+As messages are sent from the server to the client, the credit windows are
+reduced by the corresponding amount. If the `auto` option is true, then when
+the client send `ACK` frames to the server, the credit windows are
+incremented by the number of messages and content sizes corresponding to the
+messages that were acknowledged.
+
+Example:
+
+    SUBSCRIBE
+    id:mysub
+    destination:/queue/foo
+    credit:5,0
+    
+    ^@
+
+The above example would cause the subscription to only receive at most 5
+messages if the client is not sending any `ACK` messages back to the server.
+
+If the `auto` option is set to `false`, then the credit windows are only
+increased when the server receives `ACK` frames which contain a `credit`
+header. The header value is expected to use the `count[,size]` syntax. If
+`size` is specified, it defaults to 0.
+
+Example:
+
+    SUBSCRIBE
+    id:mysub
+    destination:/queue/foo
+    credit:1,0,false
+    
+    ^@
+    ACK
+    id:mysub
+    message-id:id-52321
+    credit:1,1204
+    
+    ^@
+
+You can also use the `ACK` frame to increase the credit windows sizes
+without needing to acknowledge as message. To do this, don't include the
+`message-id` header in the `ACK` frame. Example:
+
+    ACK
+    id:mysub
+    credit:3
+    
+    ^@
+
 ### Topic Durable Subscriptions
 
 A durable subscription is a queue which is subscribed to a topic so that

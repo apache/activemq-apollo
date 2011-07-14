@@ -74,7 +74,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
   ack_source.setEventHandler(^ {drain_acks});
   ack_source.resume
 
-  val session_manager = new SinkMux[Delivery](messages, dispatch_queue, Delivery)
+  val session_manager = new SessionSinkMux[Delivery](messages, dispatch_queue, Delivery)
 
   // sequence numbers.. used to track what's in the store.
   var message_seq_counter = 1L

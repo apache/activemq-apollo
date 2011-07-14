@@ -18,9 +18,9 @@ package org.apache.activemq.apollo.broker
 
 import _root_.org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch._
-import java.util.{LinkedList}
+import java.util.LinkedList
 import org.apache.activemq.apollo.transport.Transport
-import collection.mutable.{HashSet, ListBuffer}
+import collection.mutable.HashSet
 
 /**
  * <p>
@@ -52,27 +52,29 @@ trait Sink[T] {
   def refiller:Runnable
   def refiller_=(value:Runnable)
 
-  def map[Y](func: Y=>T ):Sink[Y] = {
-    def outer = Sink.this
-    new Sink[Y]() with SinkFilter {
-      def downstream = outer
-      def offer(value:Y) = {
-        if( full ) {
-          false
-        } else {
-          outer.offer(func(value))
-        }
-      }
-    }
+  def map[Y](func: Y=>T ):Sink[Y] = new SinkMapper[Y,T] {
+    def passing(value: Y) = func(value)
+    def downstream = Sink.this
   }
 
 }
 
-trait SinkFilter {
-  def downstream:Sink[_]
+trait SinkFilter[T] {
+  def downstream:Sink[T]
   def refiller:Runnable = downstream.refiller
   def refiller_=(value:Runnable) { downstream.refiller=value }
   def full: Boolean = downstream.full
+}
+
+trait SinkMapper[T,X] extends Sink[T] with SinkFilter[X] {
+  def offer(value:T) = {
+    if( full ) {
+      false
+    } else {
+      downstream.offer(passing(value))
+    }
+  }
+  def passing(value:T):X
 }
 
 /**
@@ -179,11 +181,58 @@ class MutableSink[T] extends Sink[T] {
 }
 
 
+class SinkMux[T](val downstream:Sink[T]) {
+  var sinks = HashSet[Sink[T]]()
+
+  downstream.refiller = ^{
+    sinks.foreach { sink =>
+      sink.refiller.run()
+    }
+  }
+
+  def open():Sink[T] = {
+    val sink = new Sink[T] {
+      var refiller:Runnable = NOOP
+      def offer(value: T) = downstream.offer(value)
+      def full = downstream.full
+    }
+    sinks += sink
+    sink
+  }
+
+  def close(sink:Sink[T]):Unit = {
+    sinks -= sink
+  }
+}
+
+class CreditWindowFilter[T](val downstream:Sink[T], val sizer:Sizer[T]) extends SinkMapper[T,T] {
+
+  var byte_credits = 0
+  var delivery_credits = 0
+
+  override def full: Boolean = downstream.full || ( byte_credits <= 0 && delivery_credits <= 0 )
+
+  def passing(value: T) = {
+    byte_credits -= sizer.size(value)
+    delivery_credits -= 1
+    value
+  }
+
+  def credit(byte_credits:Int, delivery_credits:Int) = {
+    val was_full = full
+    this.byte_credits += byte_credits
+    this.delivery_credits += delivery_credits
+    if( was_full && !full ) {
+      refiller.run()
+    }
+  }
+}
+
 trait SessionSink[T] extends Sink[T] {
   def remaining_capacity:Int
 }
 
-object SinkMux {
+object SessionSinkMux {
   val default_session_max_credits = System.getProperty("apollo.default_session_max_credits", ""+(1024*32)).toInt
 }
 
@@ -198,7 +247,7 @@ object SinkMux {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class SinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue, val sizer:Sizer[T]) {
+class SessionSinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue, val sizer:Sizer[T]) {
 
   var sessions = HashSet[Session[T]]()
 
@@ -237,7 +286,7 @@ class SinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue, val s
     sessions.foreach(_.credit_adder.resume)
   }
 
-  def open(producer_queue:DispatchQueue, credits:Int=SinkMux.default_session_max_credits):SessionSink[T] = {
+  def open(producer_queue:DispatchQueue, credits:Int=SessionSinkMux.default_session_max_credits):SessionSink[T] = {
     val session = new Session[T](producer_queue, 0, this)
     consumer_queue <<| ^{
       if( overflow.full ) {
@@ -266,7 +315,7 @@ class SinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue, val s
 /**
  * tracks one producer to consumer session / credit window.
  */
-class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SinkMux[T]) extends SessionSink[T] {
+class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionSinkMux[T]) extends SessionSink[T] {
 
   var refiller:Runnable = NOOP
 
