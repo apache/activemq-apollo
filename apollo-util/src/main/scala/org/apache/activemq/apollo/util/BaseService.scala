@@ -49,17 +49,11 @@ trait BaseService extends Service with Dispatched {
     def is_failed= false
   }
 
-  trait CallbackSupport {
-    var callbacks:List[Runnable] = Nil
-    def << (r:Runnable) = if(r!=null) { callbacks ::= r }
-    def done = { callbacks.foreach(_.run); callbacks=Nil }
-  }
-
   protected class CREATED extends State { override def is_created = true  }
-  protected class STARTING extends State with CallbackSupport { override def is_starting = true  }
+  protected class STARTING extends State { override def is_starting = true  }
   protected class FAILED extends State { override def is_failed = true  }
   protected class STARTED extends State { override def is_started = true  }
-  protected class STOPPING extends State with CallbackSupport { override def is_stopping = true  }
+  protected class STOPPING extends State { override def is_stopping = true  }
   protected class STOPPED extends State { override def is_stopped = true  }
 
   final def start() = start(null)
@@ -78,24 +72,6 @@ trait BaseService extends Service with Dispatched {
 
   final def start(on_completed:Runnable) = {
     def start_task:Runnable = ^{
-      def do_start = {
-        val state = new STARTING()
-        state << on_completed
-        _service_state = state
-        try {
-          _start(^ {
-            _service_state = new STARTED
-            state.done
-          })
-        }
-        catch {
-          case e:Exception =>
-            error(e, "Start failed due to %s", e)
-            _serviceFailure = e
-            _service_state = new FAILED
-            state.done
-        }
-      }
       def done = {
         pending_actions.foreach(dispatch_queue.execute _)
         pending_actions.clear()
@@ -103,6 +79,25 @@ trait BaseService extends Service with Dispatched {
           on_completed.run
         }
       }
+
+      def do_start = {
+        val state = new STARTING()
+        _service_state = state
+        try {
+          _start(^ {
+            _service_state = new STARTED
+            done
+          })
+        }
+        catch {
+          case e:Exception =>
+            error(e, "Start failed due to %s", e)
+            _serviceFailure = e
+            _service_state = new FAILED
+            done
+        }
+      }
+
       _service_state match {
         case state:CREATED =>
           do_start
@@ -125,8 +120,9 @@ trait BaseService extends Service with Dispatched {
   final def stop(on_completed:Runnable) = {
     def stop_task:Runnable = ^{
       def done = {
-        pending_actions.foreach(dispatch_queue.execute _)
+        val tmp = pending_actions.toArray
         pending_actions.clear
+        tmp.foreach(dispatch_queue.execute _)
         if( on_completed!=null ) {
           on_completed.run
         }
@@ -134,12 +130,11 @@ trait BaseService extends Service with Dispatched {
       _service_state match {
         case state:STARTED =>
           val state = new STOPPING
-          state << on_completed
           _service_state = state
           try {
             _stop(^ {
               _service_state = new STOPPED
-              state.done
+              done
             })
           }
           catch {
@@ -147,7 +142,7 @@ trait BaseService extends Service with Dispatched {
               error(e, "Stop failed due to: %s", e)
               _serviceFailure = e
               _service_state = new FAILED
-              state.done
+              done
           }
         case state:STOPPED =>
           done
