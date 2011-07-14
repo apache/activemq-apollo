@@ -38,7 +38,7 @@
     <dependency>
       <groupId>org.fusesource.stompjms</groupId>
       <artifactId>stompjms-client</artifactId>
-      <version>1.0</version>
+      <version>1.1</version>
     </dependency>
 
   </dependencies>
