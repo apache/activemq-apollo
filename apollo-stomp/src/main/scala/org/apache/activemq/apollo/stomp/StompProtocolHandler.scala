@@ -234,7 +234,6 @@ class StompProtocolHandler extends ProtocolHandler {
 
           for( (id, delivery) <- acked ) {
             for( credit <- delivery.credit ) {
-              credit_window_filter.credit(credit, 1)
               ack_source.merge((credit, 1))
               delivery.credit = None
             }
@@ -262,12 +261,9 @@ class StompProtocolHandler extends ProtocolHandler {
         }
 
         if( acked.isEmpty ) {
-          println("ACK failed, invalid message id: %s".format(msgid))
+//          println("ACK failed, invalid message id: %s".format(msgid))
         } else {
           consumer_acks = not_acked
-          if( acked.size != 1 ) {
-            println("ACKS: %s".format(acked.map(_._1))+" uow "+uow)
-          }
           acked.foreach{case (id, delivery)=>
             if( delivery.ack!=null ) {
               delivery.ack(consumed, uow)
