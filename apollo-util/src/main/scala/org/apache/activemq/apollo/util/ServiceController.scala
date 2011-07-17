@@ -33,17 +33,17 @@ object ServiceControl {
   }
 
   // start or stop a bunch of services in one go
-  private def controlServices(start: Boolean, services: ListBuffer[Service], action: String) = {
+  private def controlServices(start: Boolean, services: Seq[Service], action: String) = {
     val tracker = new LoggingTracker(action)
     services.foreach(service => {if (start) tracker.start(service) else tracker.stop(service)})
     tracker.await
   }
 
-  def start(services: ListBuffer[Service], action: String) = {
+  def start(services: Seq[Service], action: String) = {
     controlServices(true, services, action)
   }
 
-  def stop(services: ListBuffer[Service], action: String) = {
+  def stop(services: Seq[Service], action: String) = {
     controlServices(false, services, action)
   }
 

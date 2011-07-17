@@ -40,6 +40,7 @@ class FileMonitor(file:File, change_listener: =>Unit) extends BaseService {
 
   protected def _stop(on_completed: Runnable) = {
     state_ver+=1
+    on_completed.run()
   }
 
   protected def _start(on_completed: Runnable) = {
@@ -47,6 +48,7 @@ class FileMonitor(file:File, change_listener: =>Unit) extends BaseService {
     last_modified = file.lastModified()
     state_ver+=1
     update_check(state_ver)
+    on_completed.run()
   }
 
   private def update_check(ver:Int):Unit = {

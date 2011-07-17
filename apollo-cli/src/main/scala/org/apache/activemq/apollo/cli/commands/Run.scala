@@ -131,10 +131,10 @@ class Run extends Action {
 
       Runtime.getRuntime.addShutdownHook(new Thread(){
         override def run: Unit = {
-          if(jul_config_monitor!=null) ServiceControl.stop(jul_config_monitor, "stopping config monitor")
-          ServiceControl.stop(log4j_config_monitor, "stopping config monitor")
-          ServiceControl.stop(broker_config_monitor, "stopping config monitor")
-          ServiceControl.stop(broker, "stopping broker")
+          var services = List(log4j_config_monitor, broker_config_monitor, broker)
+          if(jul_config_monitor!=null)
+            services ::= jul_config_monitor
+          ServiceControl.stop(services, "stopping broker")
         }
       })
 
