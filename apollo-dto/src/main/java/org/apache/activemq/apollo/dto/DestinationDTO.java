@@ -76,4 +76,11 @@ abstract public class DestinationDTO {
     public int hashCode() {
         return path != null ? path.hashCode() : 0;
     }
+
+    @Override
+    public String toString() {
+        return "DestinationDTO{" +
+                "path=" + path +
+                '}';
+    }
 }

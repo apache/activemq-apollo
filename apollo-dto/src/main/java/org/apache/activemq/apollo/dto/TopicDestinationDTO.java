@@ -39,4 +39,10 @@ public class TopicDestinationDTO extends DestinationDTO {
         super(name);
     }
 
+    @Override
+    public String toString() {
+        return "TopicDestinationDTO{" +
+                "path=" + path +
+                '}';
+    }
 }

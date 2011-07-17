@@ -67,4 +67,13 @@ public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
         result = 31 * result + (subscription_id != null ? subscription_id.hashCode() : 0);
         return result;
     }
+
+    @Override
+    public String toString() {
+        return "DurableSubscriptionDestinationDTO{" +
+                "path=" + path +
+                ", selector='" + selector + '\'' +
+                ", subscription_id='" + subscription_id + '\'' +
+                '}';
+    }
 }
