@@ -31,6 +31,7 @@ import _root_.org.fusesource.hawtbuf._
 import Buffer._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.broker.store.{ZeroCopyBuffer, ZeroCopyBufferAllocator, MessageRecord}
+import org.apache.activemq.apollo.util.Log._
 
 object StompCodec extends Log {
 
@@ -252,43 +253,46 @@ class StompCodec extends ProtocolCodec {
 
 
   def flush():ProtocolCodec.BufferState = {
+    while(true) {
+      // if we have a pending write that is being sent over the socket...
+      if ( write_buffer.remaining() != 0 ) {
+        last_write_io_size = write_channel.write(write_buffer)
+        if ( last_write_io_size==0 )
+          return ProtocolCodec.BufferState.NOT_EMPTY
+        else
+          write_counter += last_write_io_size
+      } else {
+        if ( write_direct!=null ) {
+          last_write_io_size = write_direct.read(write_direct_pos, write_channel)
+          if ( last_write_io_size==0 )
+            return ProtocolCodec.BufferState.NOT_EMPTY
+          else {
+            write_direct_pos += last_write_io_size
+            write_counter += last_write_io_size
 
-    // if we have a pending write that is being sent over the socket...
-    if ( write_buffer.remaining() != 0 ) {
-      last_write_io_size = write_channel.write(write_buffer)
-      write_counter += last_write_io_size
-    }
-    if ( write_buffer.remaining() == 0 && write_direct!=null ) {
-      val count = write_direct.read(write_direct_pos, write_channel)
-      write_direct_pos += count
-      write_counter += count
+            if( write_direct.remaining(write_direct_pos) == 0 ) {
+              write_direct.release
+              write_direct = null
+              write_direct_pos = 0
+              write_buffer = ByteBuffer.wrap(END_OF_FRAME_BUFFER.data)
+            }
+          }
+        } else {
+          if( next_write_buffer.size()==0 ) {
+            return ProtocolCodec.BufferState.EMPTY
+          } else {
+            // size of next buffer is based on how much was used in the previous buffer.
+            val prev_size = (write_buffer.position()+512).max(512).min(write_buffer_size)
+            write_buffer = next_write_buffer.toBuffer().toByteBuffer()
+            write_direct = next_write_direct
 
-      if( write_direct.remaining(write_direct_pos) == 0 ) {
-        write_direct.release
-        write_direct = null
-        write_direct_pos = 0
-
-        write_buffer = ByteBuffer.wrap(END_OF_FRAME_BUFFER.data)
+            next_write_buffer = new DataByteArrayOutputStream(prev_size)
+            next_write_direct = null
+          }
+        }
       }
     }
-
-    // if it is now empty try to refill...
-    if ( is_empty && write_direct==null ) {
-        // size of next buffer is based on how much was used in the previous buffer.
-        val prev_size = (write_buffer.position()+512).max(512).min(write_buffer_size)
-        write_buffer = next_write_buffer.toBuffer().toByteBuffer()
-        write_direct = next_write_direct
-
-        next_write_buffer = new DataByteArrayOutputStream(prev_size)
-        next_write_direct = null
-    }
-
-    if ( is_empty ) {
-      ProtocolCodec.BufferState.EMPTY
-    } else {
-      ProtocolCodec.BufferState.NOT_EMPTY
-    }
-
+    ProtocolCodec.BufferState.NOT_EMPTY
   }
 
 
@@ -339,13 +343,15 @@ class StompCodec extends ProtocolCodec {
     while( command==null ) {
       // do we need to read in more data???
       if( read_direct!=null && read_direct.remaining(read_direct_pos) > 0) {
-        val count = read_direct.write(read_channel, read_direct_pos)
-        if (count == -1) {
+        last_read_io_size = read_direct.write(read_channel, read_direct_pos)
+
+        if (last_read_io_size == -1) {
             throw new EOFException("Peer disconnected")
-        } else if (count == 0) {
+        } else if (last_read_io_size == 0) {
             return null
         }
-        read_direct_pos += count
+        read_direct_pos += last_read_io_size
+        read_counter += last_read_io_size
       } else if (read_end == read_buffer.position() ) {
 
           // do we need a new data buffer to read data into??

@@ -179,6 +179,7 @@ object NilContent extends StompContent {
   def length = 0
   def writeTo(os:OutputStream) = {}
   val utf8 = new UTF8Buffer("")
+  override def toString = "NilContent"
 }
 
 /**

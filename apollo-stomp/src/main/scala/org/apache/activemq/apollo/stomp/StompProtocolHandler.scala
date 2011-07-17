@@ -247,7 +247,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
       def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
 
-        // session acks ack all previously recieved messages..
+        // session acks ack all previously received messages..
         var found = false
         val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
           if( found ) {
@@ -261,7 +261,7 @@ class StompProtocolHandler extends ProtocolHandler {
         }
 
         if( acked.isEmpty ) {
-//          println("ACK failed, invalid message id: %s".format(msgid))
+          println("%s: ACK failed, invalid message id: %s, dest: %s".format(security_context.remote_address, msgid, destination.mkString(",")))
         } else {
           consumer_acks = not_acked
           acked.foreach{case (id, delivery)=>
@@ -661,7 +661,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
               case DISCONNECT =>
 
-                val delay = send_receipt(frame.headers)
+                val delay = send_receipt(frame.headers)!=null
                 on_transport_disconnected
                 if( delay ) {
                   queue.after(die_delay, TimeUnit.MILLISECONDS) {
@@ -1218,15 +1218,16 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 
 
-  def send_receipt(headers:HeaderMap):Boolean = {
+  def send_receipt(headers:HeaderMap) = {
     get(headers, RECEIPT_REQUESTED) match {
       case Some(receipt)=>
+        val frame = StompFrame(RECEIPT, List((RECEIPT_ID, receipt)))
         dispatchQueue <<| ^{
-          connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+          connection_sink.offer(frame)
         }
-        true
+        frame
       case None=>
-        false
+        null
     }
   }
 
