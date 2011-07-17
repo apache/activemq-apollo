@@ -136,6 +136,11 @@ class AnyProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec {
   def getLastWriteSize = 0
 
   def getLastReadSize = 0
+
+  def getWriteBufferSize = 0
+
+  def getReadBufferSize = buffer.capacity()
+
 }
 
 /**

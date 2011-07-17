@@ -600,4 +600,8 @@ class StompCodec extends ProtocolCodec {
     }
   }
 
+  def getWriteBufferSize = write_buffer_size
+
+  def getReadBufferSize = read_buffer_size
+
 }

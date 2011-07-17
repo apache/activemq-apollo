@@ -205,4 +205,8 @@ class OpenwireCodec extends ProtocolCodec {
   def getLastWriteSize = 0
 
   def getLastReadSize = 0
+
+  def getWriteBufferSize = write_buffer_size
+
+  def getReadBufferSize = read_buffer_size
 }
