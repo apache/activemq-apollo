@@ -91,16 +91,16 @@ class StompProtocolHandler extends ProtocolHandler {
     while( pos.offset < max ) {
       if( pos.startsWith(ESCAPE_ESCAPE_SEQ) ) {
         rc.write(ESCAPE)
-        pos.offset += 2
+        pos.moveHead(2)
       } else if( pos.startsWith(COLON_ESCAPE_SEQ) ) {
         rc.write(COLON)
-        pos.offset += 2
+        pos.moveHead(2)
       } else if( pos.startsWith(NEWLINE_ESCAPE_SEQ) ) {
         rc.write(NEWLINE)
-        pos.offset += 2
+        pos.moveHead(2)
       } else {
         rc.write(pos.data(pos.offset))
-        pos.offset += 1
+        pos.moveHead(1)
       }
     }
     new String(rc.toByteArray, "UTF-8")
@@ -209,27 +209,23 @@ class StompProtocolHandler extends ProtocolHandler {
       var consumer_acks = ListBuffer[(AsciiBuffer, TrackedAck)]()
 
       def track(delivery:Delivery) = {
-        queue.apply {
-          if( protocol_version eq V1_0 ) {
-            // register on the connection since 1.0 acks may not include the subscription id
-            connection_ack_handlers += ( delivery.message.id-> this )
-          }
-          consumer_acks += delivery.message.id -> new TrackedAck(Some(delivery.size), delivery.ack )
+        queue.assertExecuting()
+        if( protocol_version eq V1_0 ) {
+          // register on the connection since 1.0 acks may not include the subscription id
+          connection_ack_handlers += ( delivery.message.id-> this )
         }
+        consumer_acks += delivery.message.id -> new TrackedAck(Some(delivery.size), delivery.ack )
       }
 
       def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit = {
+        queue.assertExecuting()
         if( initial_credit_window._3 ) {
           var found = false
           val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
-            if( found ) {
-              false
-            } else {
-              if( id == msgid ) {
-                found = true
-              }
-              true
+            if( id == msgid ) {
+              found = true
             }
+            found
           }
 
           for( (id, delivery) <- acked ) {
@@ -246,18 +242,15 @@ class StompProtocolHandler extends ProtocolHandler {
       }
 
       def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
+        queue.assertExecuting()
 
         // session acks ack all previously received messages..
         var found = false
         val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
-          if( found ) {
-            false
-          } else {
-            if( id == msgid ) {
-              found = true
-            }
-            true
+          if( id == msgid ) {
+            found = true
           }
+          found
         }
 
         if( acked.isEmpty ) {
@@ -282,16 +275,16 @@ class StompProtocolHandler extends ProtocolHandler {
       var consumer_acks = HashMap[AsciiBuffer, TrackedAck]()
 
       def track(delivery:Delivery) = {
-        queue.apply {
-          if( protocol_version eq V1_0 ) {
-            // register on the connection since 1.0 acks may not include the subscription id
-            connection_ack_handlers += ( delivery.message.id-> this )
-          }
-          consumer_acks += delivery.message.id -> new TrackedAck(Some(delivery.size), delivery.ack)
+        queue.assertExecuting();
+        if( protocol_version eq V1_0 ) {
+          // register on the connection since 1.0 acks may not include the subscription id
+          connection_ack_handlers += ( delivery.message.id-> this )
         }
+        consumer_acks += delivery.message.id -> new TrackedAck(Some(delivery.size), delivery.ack)
       }
 
       def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit = {
+        queue.assertExecuting()
         if( initial_credit_window._3 ) {
           for( delivery <- consumer_acks.get(msgid)) {
             for( credit <- delivery.credit ) {
@@ -307,6 +300,7 @@ class StompProtocolHandler extends ProtocolHandler {
       }
 
       def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
+        queue.assertExecuting()
         consumer_acks.remove(msgid) match {
           case Some(delivery) =>
             if( delivery.ack!=null ) {

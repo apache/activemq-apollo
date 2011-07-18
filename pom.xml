@@ -96,8 +96,8 @@
     <xbean-version>3.4</xbean-version>
     <felix-version>1.0.0</felix-version>
 
-    <hawtbuf-version>1.5</hawtbuf-version>
     <hawtdispatch-version>1.4-SNAPSHOT</hawtdispatch-version>
+    <hawtbuf-version>1.6-SNAPSHOT</hawtbuf-version>
     
     <jdbm-version>2.0.1</jdbm-version>
     <bdb-version>4.1.10</bdb-version>
