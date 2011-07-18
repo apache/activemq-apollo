@@ -224,8 +224,10 @@ class StompProtocolHandler extends ProtocolHandler {
           val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
             if( id == msgid ) {
               found = true
+              true
+            } else {
+              !found
             }
-            found
           }
 
           for( (id, delivery) <- acked ) {
@@ -249,12 +251,14 @@ class StompProtocolHandler extends ProtocolHandler {
         val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
           if( id == msgid ) {
             found = true
+            true
+          } else {
+            !found
           }
-          found
         }
 
-        if( acked.isEmpty ) {
-          println("%s: ACK failed, invalid message id: %s, dest: %s".format(security_context.remote_address, msgid, destination.mkString(",")))
+        if( !found ) {
+          trace("%s: ACK failed, invalid message id: %s, dest: %s".format(security_context.remote_address, msgid, destination.mkString(",")))
         } else {
           consumer_acks = not_acked
           acked.foreach{case (id, delivery)=>

@@ -53,7 +53,7 @@ class LoggingTracker(name:String, val log:Log=Log(classOf[LoggingTracker]), time
       status match {
         case None =>
         case Some(data)=>
-          info("%s is no longer waiting.  It waited a total of %d seconds.", ((System.currentTimeMillis()-data._1)/1000))
+          info("%s is no longer waiting.  It waited a total of %d seconds.", name, ((System.currentTimeMillis()-data._1)/1000))
           status = None
       }
       handler.run();
