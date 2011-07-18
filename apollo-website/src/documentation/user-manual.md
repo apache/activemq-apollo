@@ -1141,28 +1141,23 @@ set on the `content-length` header. If either of the two credit windows have
 a positive value, the server will deliver messages to the client.
 
 The `credit` header value is expected to use the
-`count[,size[,auto]]` syntax where:
+`count[,size]` syntax where:
 
  * count: initial setting of the credit window tracking the remaining number 
-   of messages that can be sent.
+   of messages that can be sent.  Must be specified.
  * size: initial setting of the credit window tracking the remaining number 
-   of content bytes that can be sent.
- * auto: `true` or `false` controls if the credit windows will be 
-   automatically incremented.
+   of content bytes that can be sent.  Defaults to the receive buffer size of 
+   the TCP socket which is typically 65536 bytes.
 
-The `credit` header defaults to `1,65536,true`. The `size`, and
-`auto` parts are optional, and if not specified the default values are used.
-This default setting allows you to receive both the case of:
-
- * many small messages before needing an ack
- * at least 1 big (larger than 65536 bytes) message before needing.
-
+If the `credit` header is not specified it has the same effect
+as if it had been set to `credit:1,65536`.  This setting allows the broker
+to optimally stream many small messages to the client or without overloading
+the clients processing buffers.
 
 As messages are sent from the server to the client, the credit windows are
-reduced by the corresponding amount. If the `auto` option is true, then when
-the client send `ACK` frames to the server, the credit windows are
-incremented by the number of messages and content sizes corresponding to the
-messages that were acknowledged.
+reduced by the corresponding amount. When the client send `ACK` frames to the 
+server, the credit windows are incremented by the number of messages and content 
+sizes corresponding to the messages that were acknowledged.
 
 Example:
 
@@ -1175,6 +1170,17 @@ Example:
 
 The above example would cause the subscription to only receive at most 5
 messages if the client is not sending any `ACK` messages back to the server.
+
+If you need to receive more messages without acknowledging them than the
+size of the credit window, you should use transactions and transactionally
+`ACK` messages as they are received.  A transactional ACK increases the 
+credit window without actually consuming the messages.  If the transaction
+is aborted subsequent acknowledgements of a previously acknowledged message 
+does not increase the credit window.
+
+<!-- The following feature seems complicated and not really that useful.-->
+<!-- Commenting out as it may get removed. -->
+<!--
 
 If the `auto` option is set to `false`, then the credit windows are only
 increased when the server receives `ACK` frames which contain a `credit`
@@ -1205,6 +1211,7 @@ without needing to acknowledge as message. To do this, don't include the
     credit:3
     
     ^@
+-->
 
 ### Topic Durable Subscriptions
 
