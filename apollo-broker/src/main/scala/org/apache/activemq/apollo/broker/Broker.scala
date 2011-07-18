@@ -141,6 +141,7 @@ object BrokerRegistry extends Log {
 object Broker extends Log {
 
   val BLOCKABLE_THREAD_POOL = ApolloThreadPool.INSTANCE
+  private val SERVICE_TIMEOUT = 1000*5;
 
   def class_loader:ClassLoader = ClassFinder.class_loader
 
@@ -269,7 +270,7 @@ class Broker() extends BaseService {
     dispatch_queue.assertExecuting()
     this.config = config
 
-    val tracker = new LoggingTracker("broker reconfiguration", console_log, dispatch_queue)
+    val tracker = new LoggingTracker("broker reconfiguration", console_log, SERVICE_TIMEOUT)
     if( service_state.is_started ) {
       apply_update(tracker)
     }
@@ -285,14 +286,14 @@ class Broker() extends BaseService {
     init_dispatch_queue(dispatch_queue)
     BrokerRegistry.add(this)
 
-    val tracker = new LoggingTracker("broker startup", console_log, dispatch_queue)
+    val tracker = new LoggingTracker("broker startup", console_log, SERVICE_TIMEOUT)
     apply_update(tracker)
     tracker.callback(on_completed)
 
   }
 
   def _stop(on_completed:Runnable): Unit = {
-    val tracker = new LoggingTracker("broker shutdown", console_log, dispatch_queue)
+    val tracker = new LoggingTracker("broker shutdown", console_log, SERVICE_TIMEOUT)
 
     // Stop the services...
     services.foreach( x=>

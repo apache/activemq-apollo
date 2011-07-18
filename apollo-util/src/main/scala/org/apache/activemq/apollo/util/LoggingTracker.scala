@@ -27,15 +27,37 @@ import org.fusesource.hawtdispatch.{TaskTracker, DispatchQueue}
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class LoggingTracker(name:String, val log:Log=Log(classOf[LoggingTracker]), parent:DispatchQueue=globalQueue) extends TaskTracker(name, parent) {
+class LoggingTracker(name:String, val log:Log=Log(classOf[LoggingTracker]), timeout:Long=1000) extends TaskTracker(name, timeout) {
   assert(log!=null)
   import log._
 
-  timeout = 1000;
+  var status:Option[(Long, List[String])] = None
 
-  override protected def onTimeout(duration:Long, tasks: List[String]):Long = {
-    info("%s is taking a long time (%d seconds). Waiting on %s", name, (duration/1000), tasks.mkString(", "))
+  override protected def onTimeout(startedAt:Long, tasks: List[String]):Long = {
+    status match {
+      case None =>
+        info("%s is waiting on %s", name, tasks.mkString(", "))
+        status = Some((startedAt, tasks))
+      case Some(data)=>
+        if( data._2 != tasks ) {
+          info("%s is now waiting on %s", name, tasks.mkString(", "))
+          status = Some((startedAt, tasks))
+        }
+    }
     timeout
+  }
+
+
+  override def callback(handler: Runnable) {
+    super.callback(^{
+      status match {
+        case None =>
+        case Some(data)=>
+          info("%s is no longer waiting.  It waited a total of %d seconds.", ((System.currentTimeMillis()-data._1)/1000))
+          status = None
+      }
+      handler.run();
+    })
   }
 
   def start(service:Service) = {

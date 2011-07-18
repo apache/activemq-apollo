@@ -123,7 +123,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
     router = RouterFactory.create(this)
     store = StoreFactory.create(config.store)
 
-    val tracker = new LoggingTracker("virtual host startup", console_log, dispatch_queue)
+    val tracker = new LoggingTracker("virtual host startup", console_log)
     if( store!=null ) {
       val task = tracker.task("store startup")
       console_log.info("Starting store: "+store)
@@ -152,7 +152,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
     }
 
     tracker.callback {
-      val tracker = new LoggingTracker("virtual host startup", console_log, dispatch_queue)
+      val tracker = new LoggingTracker("virtual host startup", console_log)
       tracker.start(router)
       tracker.callback(on_completed)
     }
@@ -162,7 +162,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
 
   override protected def _stop(on_completed:Runnable):Unit = {
 
-    val tracker = new LoggingTracker("virtual host shutdown", console_log, dispatch_queue)
+    val tracker = new LoggingTracker("virtual host shutdown", console_log)
     tracker.stop(router);
     if( store!=null ) {
       tracker.stop(store);

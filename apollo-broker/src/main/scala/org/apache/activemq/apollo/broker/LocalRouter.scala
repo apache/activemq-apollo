@@ -758,7 +758,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   }
 
   protected def _start(on_completed: Runnable) = {
-    val tracker = new LoggingTracker("router startup", virtual_host.console_log, dispatch_queue)
+    val tracker = new LoggingTracker("router startup", virtual_host.console_log)
     if( virtual_host.store!=null ) {
       val task = tracker.task("list_queues")
       virtual_host.store.list_queues { queue_keys =>
@@ -1074,7 +1074,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   }
 
   def apply_update(on_completed:Runnable) = {
-    val tracker = new LoggingTracker("domain update", virtual_host.broker.console_log, dispatch_queue)
+    val tracker = new LoggingTracker("domain update", virtual_host.broker.console_log)
     topic_domain.apply_update(tracker)
     queue_domain.apply_update(tracker)
     // we may need to create some more destinations.
