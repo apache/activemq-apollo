@@ -103,7 +103,7 @@
     <bdb-version>4.1.10</bdb-version>
     <jasypt-version>1.6</jasypt-version>
 
-    <scalate-version>1.5.0</scalate-version>
+    <scalate-version>1.6.0-SNAPSHOT</scalate-version>
     <scalamd-version>1.5</scalamd-version>
 
     <servlet-api-version>2.5</servlet-api-version>
