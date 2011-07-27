@@ -28,12 +28,7 @@
 
   <log_category console="console" security="security" connection="connection" audit="audit"/>
 
-  <!-- used to secure the web admin interface -->
-  <authentication domain="apollo"/>
-  <acl>
-    <admin allow="admins"/>
-    <config allow="admins"/>
-  </acl>
+  ${broker_security_config}
 
   <virtual_host id="${host}">
     <!--
@@ -47,13 +42,9 @@
     <!-- Uncomment to disable security for the virtual host -->
     <!-- <authentication enabled="false"/> -->
 
-    <acl>
-      <admin allow="admins"/>
-      <connect allow="admins"/>
-    </acl>
+    ${host_security_config}
 
-    <!-- You can delete this element if you want to disable persistence for this virtual host -->
-    <jdbm2_store directory="${apollo.base}/data"/>
+    ${store_config}
 
   </virtual_host>
 

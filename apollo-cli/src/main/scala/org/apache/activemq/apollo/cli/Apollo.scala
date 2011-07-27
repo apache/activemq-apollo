@@ -109,7 +109,6 @@ class Apollo extends Main with Action {
       } else {
         BOLD+"apollo> "+RESET
       }
-      protected override def isPrintStackTraces = debug
       protected override def welcome = {
         print_banner(session.getConsole)
         print_tips(session.getConsole)

@@ -47,11 +47,33 @@ class Create extends Action {
   @option(name = "--force", description = "Overwrite configuration at destination directory")
   var force = false
 
-  var version:String = "${version}"
+  @option(name = "--home", description = "Directory where apollo is installed")
+  val home: String = System.getProperty("apollo.home")
+
+  var broker_security_config =
+  """<!-- used to secure the web admin interface -->
+  <authentication domain="apollo"/>
+  <acl>
+    <admin allow="admins"/>
+    <config allow="admins"/>
+  </acl>
+  """
+  var host_security_config =
+    """<!-- Uncomment to disable security for the virtual host -->
+    <!-- <authentication enabled="false"/> -->
+    <acl>
+      <admin allow="admins"/>
+      <connect allow="admins"/>
+    </acl>
+    """
+
+  var create_login_config = true
+  var create_log_config = true
 
   def execute(session: CommandSession) = {
 
     def println(value:Any) = session.getConsole.println(value)
+
     try {
       println("Creating apollo instance at: %s".format(directory))
 
@@ -59,26 +81,19 @@ class Create extends Action {
         host = directory.getName
       }
 
-      val bin = directory / "bin"
-      bin.mkdirs
-
       val etc = directory / "etc"
       etc.mkdirs
 
-      var target = etc / "log4j.properties"
-      write("etc/log4j.properties", target)
+      if (create_log_config) {
+        write("etc/log4j.properties", etc/"log4j.properties")
+      }
 
-      target = etc / "users.properties"
-      write("etc/users.properties", target)
-
-      target = etc / "groups.properties"
-      write("etc/groups.properties", target)
-
-      target = etc / "login.config"
-      write("etc/login.config", target)
-
-      target = etc / "black-list.txt"
-      write("etc/black-list.txt", target)
+      if ( create_login_config ) {
+        write("etc/users.properties", etc/"users.properties")
+        write("etc/groups.properties", etc/"groups.properties")
+        write("etc/login.config", etc/"login.config")
+        write("etc/black-list.txt", etc/"black-list.txt")
+      }
 
       // Generate a keystore with a new key
       println("Generating ssl keystore...")
@@ -94,88 +109,82 @@ class Create extends Action {
         "-dname", "cn=%s".format(host),
         "-validity", "3650"))==0
 
-      target = etc / "apollo.xml"
       if( ssl ) {
-        write("etc/apollo-ssl.xml", target, true)
+        write("etc/apollo-ssl.xml", etc/"apollo.xml", true)
       } else {
         println("WARNNIG: Could not generate the keystore, make sure the keytool command is in your PATH")
-        write("etc/apollo.xml", target, true)
-      }
-
-
-      if( IS_WINDOWS ) {
-        target = bin / "apollo-broker.cmd"
-        write("bin/apollo-broker.cmd", target, true)
-
-        target = bin / "apollo-broker-service.exe"
-        write("bin/apollo-broker-service.exe", target)
-
-        target = bin / "apollo-broker-service.xml"
-        write("bin/apollo-broker-service.xml", target, true)
-
-      } else {
-        target = bin / "apollo-broker"
-        write("bin/apollo-broker", target, true)
-        setExecutable(target)
-
-        target = bin / "apollo-broker-service"
-        write("bin/apollo-broker-service", target, true)
-        setExecutable(target)
+        write("etc/apollo.xml", etc/"apollo.xml", true)
       }
 
       val data = directory / "data"
       data.mkdirs
-      
-      val log = directory / "log"
-      log.mkdirs
 
       val tmp = directory / "tmp"
-      log.mkdirs
+      tmp.mkdirs
 
-      val home = new File(System.getProperty("apollo.home"))
+      // home is set to null if executing within an OSGi env,
+      // it's a hint to not generate startup scripts.
+      if ( home!=null ) {
+        val log = directory / "log"
+        log.mkdirs
 
-      println("")
-      println("You can now start the broker by executing:  ")
-      println("")
-      println("   \"%s\" run".format((bin/"apollo-broker").getCanonicalPath))
+        val bin = directory / "bin"
+        bin.mkdirs
 
-      val service = bin / "apollo-broker-service"
-      println("")
-      
-      if( !IS_WINDOWS ) {
+        if( IS_WINDOWS ) {
+          write("bin/apollo-broker.cmd", bin/"apollo-broker.cmd", true)
+          write("bin/apollo-broker-service.exe", bin/"apollo-broker-service.exe")
+          write("bin/apollo-broker-service.xml", bin/"apollo-broker-service.xml", true)
+        } else {
+          write("bin/apollo-broker", bin/"apollo-broker", true)
+          setExecutable(bin/"apollo-broker")
 
-        // Does it look like we are on a System V init system?
-        if( new File("/etc/init.d/").isDirectory ) {
+          write("bin/apollo-broker-service", bin/"apollo-broker-service", true)
+          setExecutable(bin/"apollo-broker-service")
+        }
 
-          println("Or you can setup the broker as system service and run it in the background:")
-          println("")
-          println("   sudo ln -s \"%s\" /etc/init.d/".format(service.getCanonicalPath))
-          println("   /etc/init.d/apollo-broker-service start")
+        println("")
+        println("You can now start the broker by executing:  ")
+        println("")
+        println("   \"%s\" run".format((bin/"apollo-broker").getCanonicalPath))
+
+        val service = bin / "apollo-broker-service"
+        println("")
+
+        if( !IS_WINDOWS ) {
+
+          // Does it look like we are on a System V init system?
+          if( new File("/etc/init.d/").isDirectory ) {
+
+            println("Or you can setup the broker as system service and run it in the background:")
+            println("")
+            println("   sudo ln -s \"%s\" /etc/init.d/".format(service.getCanonicalPath))
+            println("   /etc/init.d/apollo-broker-service start")
+
+          } else {
+
+            println("Or you can run the broker in the background using:")
+            println("")
+            println("   \"%s\" start".format(service.getCanonicalPath))
+
+          }
 
         } else {
 
-          println("Or you can run the broker in the background using:")
+          println("Or you can setup the broker as system service and run it in the background:")
           println("")
+          println("   \"%s\" install".format(service.getCanonicalPath))
           println("   \"%s\" start".format(service.getCanonicalPath))
 
         }
-
-      } else {
-      
-        println("Or you can setup the broker as system service and run it in the background:")
         println("")
-        println("   \"%s\" install".format(service.getCanonicalPath))
-        println("   \"%s\" start".format(service.getCanonicalPath))
-
       }
-      println("")
 
 
     } catch {
       case x:Helper.Failure=>
         println(ansi.a(INTENSITY_BOLD).fg(RED).a("ERROR: ").reset.a(x.getMessage))
     }
-
 
     null
   }
@@ -209,11 +218,16 @@ class Create extends Action {
         replace("${user}", System.getProperty("user.name",""))
         replace("${host}", host)
         replace("${version}", Broker.version)
-        replace("${home}", cp(System.getProperty("apollo.home")))
+        if( home !=null ) {
+          replace("${home}", cp(home))
+        }
         replace("${base}", directory.getCanonicalPath)
         replace("${java.home}", cp(System.getProperty("java.home")))
-      }
+        replace("${store_config}", store_config)
 
+        replace("${broker_security_config}", broker_security_config)
+        replace("${host_security_config}", host_security_config)
+      }
       // and then writing out in the new target encoding.
       val in = new ByteArrayInputStream(content.getBytes(encoding))
 
@@ -230,7 +244,30 @@ class Create extends Action {
     }
   }
 
+  def can_load(name:String) = {
+    try {
+      getClass.getClassLoader.loadClass(name)
+      true
+    } catch {
+      case _ => false
+    }
+  }
 
+  def store_config = {
+    if( can_load("com.sleepycat.je.Environment") ) {
+      """<!-- You can delete this element if you want to disable persistence for this virtual host -->
+      <bdb_store directory="${apollo.base}/data"/>
+      """
+    } else if( can_load("jdbm.RecordManagerFactory") ) {
+      """<!-- You can delete this element if you want to disable persistence for this virtual host -->
+      <jdbm2_store directory="${apollo.base}/data"/>
+      """
+    } else {
+      """<!-- Perisistence disabled because no store implementations were found on the classpath -->
+      <!-- <bdb_store directory="${apollo.base}/data"/> -->
+      """
+    }
+  }
   def setExecutable(path:File) = if( !IS_WINDOWS ) {
     try {
         system(path.getParentFile(), Array("chmod", "a+x", path.getName))

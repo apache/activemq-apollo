@@ -30,6 +30,7 @@
   <packaging>jar</packaging>
 
   <name>${project.artifactId}</name>
+  <description>A reliable messaging server.</description>
 
   <properties>
   </properties>
@@ -78,6 +79,20 @@
       <version>${jasypt-version}</version>
     </dependency>
 
+    <!-- for optional osgi integration -->
+    <dependency>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.core</artifactId>
+      <version>${osgi-version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.compendium</artifactId>
+      <version>${osgi-version}</version>
+      <scope>provided</scope>
+    </dependency>
+
     <dependency>
       <groupId>com.sun.winsw</groupId>
       <artifactId>winsw</artifactId>
@@ -91,6 +106,7 @@
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
       <version>1.2.16</version>
+      <optional>true</optional>
     </dependency>
 
     <!-- Testing Dependencies -->
@@ -169,6 +185,61 @@
 
     <plugins>
       
+      <!-- Generate a test jar for the test cases in this package -->
+      <plugin>
+        <groupId>org.fusesource.mvnplugins</groupId>
+        <artifactId>maven-fab-plugin</artifactId>
+        <version>1.16-SNAPSHOT</version>
+        <configuration>
+          <descriptor>
+            <Name>apollo</Name>
+            <Long-Description>
+              ActiveMQ Apollo is a faster, more reliable, easier to maintain messaging 
+              broker built from the foundations of the original ActiveMQ. It accomplishes 
+              this using a radically different threading and message dispatching architecture.
+      
+              In it’s current incarnation, Apollo only supports the STOMP protocol but just 
+              like the original ActiveMQ, it’s been designed to be a multi protocol broker.
+               In future versions it should get OpenWire support so it can be compatible 
+               with ActiveMQ 5.x JMS clients.
+            </Long-Description>
+            <Endorsed-Extensions>
+              ${project.groupId}:apollo-jdbm2:${project.version}
+              ${project.groupId}:apollo-bdb:${project.version}
+              ${project.groupId}:apollo-stomp:${project.version}
+              ${project.groupId}:apollo-web:${project.version}
+            </Endorsed-Extensions>
+            <Default-Extensions>bdb stomp web</Default-Extensions>
+          </descriptor>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Fabric-Provided-Dependency>
+                org.slf4j:slf4j-api
+                org.apache.karaf.shell:org.apache.karaf.shell.console
+              </Fabric-Provided-Dependency>
+              <Fabric-Exclude-Dependency>
+                org.fusesource.jansi:jansi
+                org.sonatype.jline:jline
+              </Fabric-Exclude-Dependency>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>

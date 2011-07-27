@@ -27,15 +27,14 @@
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-web</artifactId>
-  <packaging>war</packaging>
+  <packaging>jar</packaging>
   <version>1.0-SNAPSHOT</version>
 
   <name>${project.artifactId}</name>
+  <description>Adds web administration support.</description>
 
   <properties>
     <jetty-port>8080</jetty-port>
-    <scalate.editor>${env.SCALATE_EDITOR}</scalate.editor>
-    <scalate.workdir>${basedir}/target/_scalate</scalate.workdir>
     <netbeans.hint.deploy.server>Tomcat60</netbeans.hint.deploy.server>
   </properties>
 
@@ -80,14 +79,6 @@
       <groupId>org.eclipse.jetty.aggregate</groupId>
       <artifactId>jetty-all-server</artifactId>
       <version>${jetty-version}</version>
-      <optional>true</optional>
-    </dependency>
-
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.core</artifactId>
-      <version>${osgi-version}</version>
-      <scope>provided</scope>
       <optional>true</optional>
     </dependency>
 
@@ -165,6 +156,26 @@
     <plugins>
 
       <plugin>
+        <groupId>org.fusesource.mvnplugins</groupId>
+        <artifactId>maven-fab-plugin</artifactId>
+        <version>1.16-SNAPSHOT</version>
+        <configuration>
+          <descriptor>
+            <Name>web</Name>
+            <Long-Description></Long-Description>
+            <Extends>${project.groupId}:apollo-cli:${project.version}</Extends>
+          </descriptor>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven-surefire-plugin-version}</version>
@@ -194,11 +205,11 @@
           <systemProperties>
             <systemProperty>
               <name>scalate.editor</name>
-              <value>${scalate.editor}</value>
+              <value>${env.SCALATE_EDITOR}</value>
             </systemProperty>
             <systemProperty>
               <name>scalate.workdir</name>
-              <value>${scalate.workdir}</value>
+              <value>${basedir}/target/_scalate</value>
             </systemProperty>
           </systemProperties>
           <scanIntervalSeconds>0</scanIntervalSeconds>
@@ -216,35 +227,9 @@
             </goals>
             <configuration>
               <templates>
-                <!-- pre compile some templates that are in the classpath -->
                 <template>/WEB-INF/scalate/errors/500.scaml</template>
               </templates>
               <bootClassName>org.apache.activemq.apollo.web.Boot</bootClassName>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <extensions>true</extensions>
-        <inherited>true</inherited>
-        <executions>
-          <execution>
-            <id>bundle-manifest</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>manifest</goal>
-            </goals>
-            <configuration>
-              <supportedProjectTypes>
-                <supportedProjectType>war</supportedProjectType>
-              </supportedProjectTypes>
-              <instructions>
-                <Webapp-Context>apollo</Webapp-Context>
-                <Webapp-Deploy>false</Webapp-Deploy>
-              </instructions>
             </configuration>
           </execution>
         </executions>
@@ -255,125 +240,41 @@
         <artifactId>maven-jar-plugin</artifactId>
         <version>2.3.1</version>
         <executions>
+          <!-- embed the wabapp resources in jar as resource -->
           <execution>
+            <id>webapp.war</id>
+            <phase>process-resources</phase>
             <goals>
               <goal>jar</goal>
             </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <classifier>slim</classifier>
-          <archive>
-            <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
-          </archive>
-        </configuration>
-      </plugin>
-      
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-war-plugin</artifactId>
-        <version>2.1</version>
-        <configuration>
-          <archive>
-            <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
-          </archive>
-        </configuration>
-      </plugin>
-            
-      <plugin>
-        <groupId>org.fusesource.mvnplugins</groupId>
-        <artifactId>maven-uberize-plugin</artifactId>
-        <version>${mvnplugins-version}</version>
-        <executions>
-          <execution>
-            <id>slim</id>
-            <phase>package</phase>
-            <goals><goal>uberize</goal></goals>
             <configuration>
-              <uberArtifactAttached>true</uberArtifactAttached>
-              <uberClassifierName>slim</uberClassifierName>
-              <artifactSet>
-                <includes>
-                  <include>org.apache.activemq:apollo-web</include>
-                </includes>
-              </artifactSet>            
-              <filters>
-                <filter>
-                  <artifact>org.apache.activemq:apollo-web</artifact>
-                  <excludes>
-                    <exclude>WEB-INF/classes/**</exclude>
-                    <exclude>WEB-INF/lib/**</exclude>
-                    <exclude>**/*.scaml</exclude>
-                    <exclude>**/*.jade</exclude>
-                    <exclude>**/*.ssp</exclude>
-                  </excludes>
-                </filter>
-              </filters>            
-            </configuration>
-          </execution>
-          <execution>
-            <id>osgi</id>
-            <phase>package</phase>
-            <goals><goal>uberize</goal></goals>
-            <configuration>
-              <uberArtifactAttached>true</uberArtifactAttached>
-              <uberClassifierName>osgi</uberClassifierName>
-              <artifactSet>
-                <includes>
-                  <include>org.apache.activemq:apollo-web</include>
-                </includes>
-              </artifactSet>            
-              <filters>
-                <filter>
-                  <artifact>org.apache.activemq:apollo-web</artifact>
-                  <excludes>
-                    <exclude>WEB-INF/lib/**</exclude>
-                    <!-- <exclude>**/*.scaml</exclude>
-                    <exclude>**/*.jade</exclude>
-                    <exclude>**/*.ssp</exclude> -->
-                  </excludes>
-                </filter>
-              </filters>
-              <transformers>
-                <transformer implementation="org.fusesource.mvnplugins.uberize.transformer.ManifestEditor">
-                  <manifestEntries>
-                    <Bundle-ClassPath>WEB-INF/classes</Bundle-ClassPath>
-                  </manifestEntries>
-                </transformer>
-              </transformers>
+              <outputDirectory>${basedir}/target/classes/META-INF/services/org.apache.activemq.apollo</outputDirectory>
+              <finalName>webapp-resources</finalName>
+              <classesDirectory>${basedir}/src/main/webapp</classesDirectory>
+              <excludes>
+                <exclude>META-INF/**</exclude>
+                <exclude>**/*.scaml</exclude>
+                <exclude>**/*.jade</exclude>
+                <exclude>**/*.ssp</exclude>
+              </excludes>
             </configuration>
           </execution>
         </executions>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Fabric-Include-Optional-Dependency>
+                org.eclipse.jetty.aggregate:jetty-all-server
+              </Fabric-Include-Optional-Dependency>
+            </manifestEntries>
+          </archive>
+        </configuration>
       </plugin>
       
     </plugins>
   </build>
   
   <profiles>
-
-    <profile>
-      <id>dev</id>
-      <!--<activation>-->
-        <!--<activeByDefault>true</activeByDefault>-->
-      <!--</activation>-->
-      <dependencies>
-        <!-- include the scalate overlay during development =-->
-        <dependency>
-          <groupId>org.fusesource.scalate</groupId>
-          <artifactId>scalate-war</artifactId>
-          <version>${scalate-version}</version>
-          <type>war</type>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>release</id>
-      <build>
-        <plugins>
-        </plugins>
-      </build>
-    </profile>
   </profiles> 
    
 </project>

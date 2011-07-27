@@ -22,20 +22,24 @@
   xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.0.0"
   xmlns:ext="http://aries.apache.org/blueprint/xmlns/blueprint-ext/v1.0.0">
 
-  <cm:property-placeholder persistent-id="org.apache.activemq.apollo">
-  <!-- <cm:property-placeholder persistent-id="org.apache.activemq.apollo" update-strategy="reload"> -->
-    <cm:default-properties>
-      <cm:property name="apollo.base" value="."/>
-    </cm:default-properties>
-  </cm:property-placeholder>
-
   <reference id="configAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
 
-  <bean id="broker" class="org.apache.activemq.apollo.broker.osgi.BrokerService"
+  <bean id="broker" class="org.apache.activemq.apollo.cli.osgi.BrokerService"
         init-method="start" destroy-method="stop">
     <property name="context" ref="blueprintBundleContext"/>
-    <property name="basedir" value="${apollo.base}"/>
     <property name="configAdmin" ref="configAdmin"/>
   </bean>
+
+  <command-bundle xmlns="http://karaf.apache.org/xmlns/shell/v1.0.0">
+    <command name="apollo/encrypt">
+        <action class="org.apache.activemq.apollo.cli.commands.Encrypt"/>
+    </command>
+    <command name="apollo/decrypt">
+        <action class="org.apache.activemq.apollo.cli.commands.Decrypt"/>
+    </command>
+    <command name="apollo/version">
+        <action class="org.apache.activemq.apollo.cli.commands.Version"/>
+    </command>
+  </command-bundle>
 
 </blueprint>

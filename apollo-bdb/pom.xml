@@ -29,12 +29,9 @@
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-bdb</artifactId>
   <version>1.0-SNAPSHOT</version>
-  <packaging>bundle</packaging>
-
+  <!-- <packaging>bundle</packaging> -->
   <name>${project.artifactId}</name>
-
-  <properties>
-  </properties>
+  <description>BDB based message storage</description>
 
   <dependencies>
 
@@ -121,6 +118,26 @@
 
   <build>
     <plugins>
+      <!-- Generate a test jar for the test cases in this package -->
+      <plugin>
+        <groupId>org.fusesource.mvnplugins</groupId>
+        <artifactId>maven-fab-plugin</artifactId>
+        <version>1.16-SNAPSHOT</version>
+        <configuration>
+          <descriptor>
+            <Name>bdb</Name>
+            <Long-Description></Long-Description>
+            <Extends>${project.groupId}:apollo-cli:${project.version}</Extends>
+          </descriptor>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
 
       <plugin>
         <groupId>org.fusesource.scalate</groupId>
