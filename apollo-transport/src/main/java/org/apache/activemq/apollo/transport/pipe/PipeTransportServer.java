@@ -91,6 +91,7 @@ public class PipeTransportServer implements TransportServer {
                 }
             }
         });
+        acceptSource.resume();
         if( onCompleted!=null ) {
             dispatchQueue.execute(onCompleted);
         }
