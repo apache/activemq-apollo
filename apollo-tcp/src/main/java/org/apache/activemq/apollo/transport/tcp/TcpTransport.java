@@ -182,6 +182,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
     int max_write_rate;
     int receive_buffer_size = 1024*64;
     int send_buffer_size = 1024*64;
+    boolean keep_alive = true;
 
 
     public static final int IPTOS_LOWCOST = 0x02;
@@ -344,6 +345,10 @@ public class TcpTransport extends JavaBaseService implements Transport {
         }
         try {
             socket.setTrafficClass(traffic_class);
+        } catch (SocketException e) {
+        }
+        try {
+            socket.setKeepAlive(keep_alive);
         } catch (SocketException e) {
         }
         try {
@@ -800,5 +805,13 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
     public void setSend_buffer_size(int send_buffer_size) {
         this.send_buffer_size = send_buffer_size;
+    }
+
+    public boolean isKeep_alive() {
+        return keep_alive;
+    }
+
+    public void setKeep_alive(boolean keep_alive) {
+        this.keep_alive = keep_alive;
     }
 }

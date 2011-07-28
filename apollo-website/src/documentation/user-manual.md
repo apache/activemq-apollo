@@ -171,6 +171,9 @@ settings used on the socket.  The supported parameters are:
 * `send_buffer_size` : Sets the size of the internal socket send buffer.  
    Defaults to 65536 (64k)
 
+* `keep_alive` : Enable or disable the SO_KEEPALIVE socket option.  
+   Defaults to true.
+
 * `traffic_class` : Sets traffic class or type-of-service octet in the IP 
   header for packets sent from the transport.  Defaults to `8` which
   means the traffic should be optimized for throughput.
