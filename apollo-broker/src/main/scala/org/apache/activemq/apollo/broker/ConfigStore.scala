@@ -49,7 +49,7 @@ object ConfigStore {
             case 1=> "error"
             case 2=> "fatal error"
           }
-          func("% at (%d:%d): %s ".format(level, event.getLocator().getLineNumber(), event.getLocator().getColumnNumber(), event.getMessage()))
+          func("%s at (%d:%d): %s ".format(level, event.getLocator().getLineNumber(), event.getLocator().getColumnNumber(), event.getMessage()))
           true
         }
     })
