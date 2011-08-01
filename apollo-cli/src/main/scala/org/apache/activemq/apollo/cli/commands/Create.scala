@@ -255,17 +255,17 @@ class Create extends Action {
 
   def store_config = {
     if( can_load("com.sleepycat.je.Environment") ) {
-      """<!-- You can delete this element if you want to disable persistence for this virtual host -->
-      <bdb_store directory="${apollo.base}/data"/>
-      """
+    """<!-- You can delete this element if you want to disable persistence for this virtual host -->
+    <bdb_store directory="${apollo.base}/data"/>
+    """
     } else if( can_load("jdbm.RecordManagerFactory") ) {
-      """<!-- You can delete this element if you want to disable persistence for this virtual host -->
-      <jdbm2_store directory="${apollo.base}/data"/>
-      """
+    """<!-- You can delete this element if you want to disable persistence for this virtual host -->
+    <jdbm2_store directory="${apollo.base}/data"/>
+    """
     } else {
-      """<!-- Perisistence disabled because no store implementations were found on the classpath -->
-      <!-- <bdb_store directory="${apollo.base}/data"/> -->
-      """
+    """<!-- Perisistence disabled because no store implementations were found on the classpath -->
+    <!-- <bdb_store directory="${apollo.base}/data"/> -->
+    """
     }
   }
   def setExecutable(path:File) = if( !IS_WINDOWS ) {
