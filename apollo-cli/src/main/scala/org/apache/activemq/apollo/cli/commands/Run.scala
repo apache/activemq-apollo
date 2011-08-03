@@ -86,7 +86,7 @@ class Run extends Action {
       try {
         broker.config = ConfigStore.load(conf, validation_messages += _)
       } finally {
-        if( !validation_messages.isEmpty) {
+        if( !validation_messages.isEmpty && broker.config.validation != "hide") {
           println("")
           println("Broker configuration file failed the following validations:")
           validation_messages.foreach{ v =>
