@@ -22,8 +22,8 @@ import org.fusesource.hawtdispatch.TaskTracker
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import org.scalatest.{BeforeAndAfterEach, BeforeAndAfterAll}
 import collection.mutable.ListBuffer
-import java.util.concurrent.atomic.{AtomicLong, AtomicInteger, AtomicBoolean}
 import org.apache.activemq.apollo.util.{LoggingTracker, FunSuiteSupport, LongCounter}
+import java.util.concurrent.atomic._
 
 /**
  * <p>Implements generic testing of Store implementations.</p>
@@ -99,6 +99,7 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
     message.protocol = ascii("test-protocol")
     message.buffer = ascii(content).buffer
     message.size = message.buffer.length
+    message.locator = new AtomicLong()
     batch.store(message)
   }
 
@@ -190,7 +191,7 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
     var keys = message_keys.toList
     val metric = benchmarkCount(keys.size) {
       val latch = new CountDownLatch(1)
-      store.load_message(keys.head) { msg=>
+      store.load_message(keys.head, new AtomicLong(0)) { msg=>
         assert(msg.isDefined, "message key not found: "+keys.head)
         latch.countDown
       }

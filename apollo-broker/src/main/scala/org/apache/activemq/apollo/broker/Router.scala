@@ -18,12 +18,12 @@ package org.apache.activemq.apollo.broker
 
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util._
-import path.Path
 import scala.collection.immutable.List
 import org.apache.activemq.apollo.dto._
 import security.SecurityContext
 import store.StoreUOW
 import util.continuations._
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -188,6 +188,7 @@ abstract class DeliveryProducerRoute(val router:Router) extends BaseRetained wit
             } else {
               copy.uow.retain
             }
+            copy.storeLocator = new AtomicLong()
             copy.storeKey = copy.uow.store(copy.createMessageRecord)
           }
 

@@ -20,7 +20,7 @@ import dto.{HawtDBStoreStatusDTO, HawtDBStoreDTO}
 import collection.Seq
 import org.fusesource.hawtdispatch._
 import java.util.concurrent._
-import atomic.{AtomicInteger, AtomicLong}
+import atomic.{AtomicReference, AtomicInteger, AtomicLong}
 import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
@@ -178,7 +178,7 @@ class HawtDBStore(var config:HawtDBStoreDTO) extends DelayingStoreSupport {
     }
   }
 
-  def load_message(messageKey: Long)(callback: (Option[MessageRecord]) => Unit) = {
+  def load_message(messageKey: Long, locator:AtomicLong)(callback: (Option[MessageRecord]) => Unit) = {
     message_load_latency_counter.start { end=>
       load_source.merge((messageKey, { (result)=>
         end()

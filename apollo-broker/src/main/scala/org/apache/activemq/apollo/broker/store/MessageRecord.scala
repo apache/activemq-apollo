@@ -19,6 +19,7 @@ package org.apache.activemq.apollo.broker.store
 
 import org.fusesource.hawtbuf.AsciiBuffer
 import org.fusesource.hawtbuf.Buffer
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -31,5 +32,6 @@ class MessageRecord {
   var buffer: Buffer = _
   var zero_copy_buffer: ZeroCopyBuffer = _
   var expiration = 0L
+  var locator:AtomicLong = _
 
 }

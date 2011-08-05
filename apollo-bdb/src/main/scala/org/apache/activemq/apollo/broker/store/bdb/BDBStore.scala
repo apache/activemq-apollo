@@ -17,10 +17,10 @@
 package org.apache.activemq.apollo.broker.store.bdb
 
 import dto.{BDBStoreDTO, BDBStoreStatusDTO}
-import java.util.concurrent.atomic.AtomicLong
 import collection.Seq
 import org.fusesource.hawtdispatch._
 import java.util.concurrent._
+import atomic.{AtomicReference, AtomicLong}
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch.ListEventAggregator
@@ -165,7 +165,7 @@ class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
   load_source.resume
 
 
-  def load_message(messageKey: Long)(callback: (Option[MessageRecord]) => Unit) = {
+  def load_message(messageKey: Long, locator:AtomicLong)(callback: (Option[MessageRecord]) => Unit) = {
     message_load_latency_counter.start { end=>
       load_source.merge((messageKey, { (result)=>
         end()

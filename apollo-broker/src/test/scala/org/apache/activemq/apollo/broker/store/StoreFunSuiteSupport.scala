@@ -17,12 +17,12 @@ package org.apache.activemq.apollo.broker.store
  * limitations under the License.
  */
 import org.fusesource.hawtbuf.AsciiBuffer._
-import org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch.TaskTracker
 import java.util.concurrent.{TimeUnit, CountDownLatch}
-import org.scalatest.{BeforeAndAfterEach, BeforeAndAfterAll}
+import org.scalatest.BeforeAndAfterEach
 import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.util.{LoggingTracker, FunSuiteSupport, LongCounter}
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * <p>Implements generic testing of Store implementations.</p>
@@ -139,7 +139,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     val A = add_queue("A")
     val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
 
-    val rc:Option[MessageRecord] = CB( cb=> store.load_message(msg_keys.head)(cb) )
+    val rc:Option[MessageRecord] = CB( cb=> store.load_message(msg_keys.head, new AtomicLong())(cb) )
     expect(ascii("message 1").buffer) {
       rc.get.buffer
     }

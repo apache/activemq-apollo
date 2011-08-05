@@ -17,10 +17,10 @@
 package org.apache.activemq.apollo.broker.store.jdbm2
 
 import dto.{JDBM2StoreDTO, JDBM2StoreStatusDTO}
-import java.util.concurrent.atomic.AtomicLong
 import collection.Seq
 import org.fusesource.hawtdispatch._
 import java.util.concurrent._
+import atomic.{AtomicReference, AtomicLong}
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch.ListEventAggregator
@@ -153,7 +153,7 @@ class JDBM2Store(var config:JDBM2StoreDTO) extends DelayingStoreSupport {
   load_source.resume
 
 
-  def load_message(messageKey: Long)(callback: (Option[MessageRecord]) => Unit) = {
+  def load_message(messageKey: Long, locator:AtomicLong)(callback: (Option[MessageRecord]) => Unit) = {
     message_load_latency_counter.start { end=>
       load_source.merge((messageKey, { (result)=>
         end()

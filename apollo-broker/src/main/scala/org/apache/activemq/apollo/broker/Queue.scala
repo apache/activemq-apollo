@@ -19,8 +19,6 @@ package org.apache.activemq.apollo.broker
 import java.util.concurrent.TimeUnit
 
 import org.fusesource.hawtdispatch._
-import java.util.concurrent.atomic.AtomicInteger
-
 import protocol.ProtocolFactory
 import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.broker.store._
@@ -30,6 +28,7 @@ import org.fusesource.hawtdispatch.{ListEventAggregator, DispatchQueue, BaseReta
 import OptionSupport._
 import security.SecurityContext
 import org.apache.activemq.apollo.dto.{DestinationDTO, QueueDTO}
+import java.util.concurrent.atomic.{AtomicLong, AtomicReference, AtomicInteger}
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -823,7 +822,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   }
 
   def init(qer:QueueEntryRecord):QueueEntry = {
-    state = new Swapped(qer.message_key, qer.size, qer.expiration)
+    state = new Swapped(qer.message_key, new AtomicLong(qer.message_locator), qer.size, qer.expiration)
     this
   }
 
@@ -882,6 +881,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     qer.queue_key = queue.store_id
     qer.entry_seq = seq
     qer.message_key = state.message_key
+    qer.message_locator = state.message_locator.get()
     qer.size = state.size
     qer.expiration = expiration
     qer
@@ -971,6 +971,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
      * @returns -1 if it is not known.
      */
     def message_key = -1L
+
+    def message_locator: AtomicLong = null
 
     /**
      * Attempts to dispatch the current entry to the subscriptions position at the entry.
@@ -1097,6 +1099,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     override def size = delivery.size
     override def expiration = delivery.message.expiration
     override def message_key = delivery.storeKey
+    override def message_locator = delivery.storeLocator
+
     var remove_pending = false
 
     override def is_swapped_or_swapping_out = {
@@ -1137,7 +1141,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
               delivery.uow = queue.virtual_host.store.create_uow
               val uow = delivery.uow
-              delivery.storeKey = uow.store(delivery.createMessageRecord)
+              delivery.storeLocator = new AtomicLong()
+              delivery.storeKey = uow.store(delivery.createMessageRecord )
               store
               if( asap ) {
                 uow.complete_asap
@@ -1170,7 +1175,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         queue.swap_out_size_counter += size
         queue.swap_out_item_counter += 1
 
-        state = new Swapped(delivery.storeKey, size, expiration)
+        state = new Swapped(delivery.storeKey, delivery.storeLocator, size, expiration)
         if( can_combine_with_prev ) {
           getPrevious.as_swapped_range.combineNext
         }
@@ -1318,7 +1323,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * entry is persisted, it can move into this state.  This state only holds onto the
    * the massage key so that it can reload the message from the store quickly when needed.
    */
-  class Swapped(override val message_key:Long, override val size:Int, override val expiration:Long) extends EntryState {
+  class Swapped(override val message_key:Long, override val message_locator:AtomicLong, override val size:Int, override val expiration:Long) extends EntryState {
 
     queue.individual_swapped_items += 1
 
@@ -1346,7 +1351,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         // start swapping in...
         swapping_in = true
         queue.swapping_in_size += size
-        queue.virtual_host.store.load_message(message_key) { delivery =>
+        queue.virtual_host.store.load_message(message_key, message_locator) { delivery =>
           // pass off to a source so it can aggregate multiple
           // loads to reduce cross thread synchronization
           if( delivery.isDefined ) {
@@ -1375,6 +1380,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         delivery.message = ProtocolFactory.get(messageRecord.protocol.toString).get.decode(messageRecord)
         delivery.size = messageRecord.size
         delivery.storeKey = messageRecord.key
+        delivery.storeLocator = messageRecord.locator
 
         queue.swapped_in_size += delivery.size
         queue.swapped_in_items += 1

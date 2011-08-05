@@ -85,6 +85,8 @@ object PBSupport {
     pb.setMessageKey(v.message_key)
     pb.setAttachment(v.attachment)
     pb.setSize(v.size)
+    if(v.message_locator!=0)
+      pb.setMessageLocator(v.message_locator)
     if(v.expiration!=0)
       pb.setExpiration(v.expiration)
     if(v.redeliveries!=0)
@@ -97,6 +99,7 @@ object PBSupport {
     rc.queue_key = pb.getQueueKey
     rc.entry_seq = pb.getQueueSeq
     rc.message_key = pb.getMessageKey
+    rc.message_locator = pb.getMessageLocator
     rc.attachment = pb.getAttachment
     rc.size = pb.getSize
     rc.expiration = pb.getExpiration

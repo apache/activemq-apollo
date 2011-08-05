@@ -16,14 +16,13 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.java.lang.{String}
 import _root_.org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
 import protocol.Protocol
 import org.apache.activemq.apollo.filter.Filterable
-import org.apache.activemq.apollo.broker.store.{StoreUOW, MessageRecord}
-import org.apache.activemq.apollo.util.{Log, Logging}
-import org.apache.activemq.apollo.dto.DestinationDTO
+import org.apache.activemq.apollo.broker.store.StoreUOW
+import org.apache.activemq.apollo.util.Log
+import java.util.concurrent.atomic.AtomicLong
 
 object DeliveryProducer extends Log
 
@@ -168,9 +167,15 @@ class Delivery {
   var message: Message = null
 
   /**
-   * A reference to the stored version of the message.
+   * The id the store assigned the message
    */
   var storeKey:Long = -1
+
+  /**
+   * After the store persists the message he may be able to supply us with  locator handle
+   * which will load the message faster than looking it up via the store key.
+   */
+  var storeLocator:AtomicLong = null
 
   /**
    * The transaction the delivery is participating in.
@@ -189,12 +194,14 @@ class Delivery {
     size = other.size
     message = other.message
     storeKey = other.storeKey
+    storeLocator = other.storeLocator
     this
   }
 
   def createMessageRecord() = {
     val record = message.protocol.encode(message)
     assert( record.size == size )
+    record.locator = storeLocator
     record
   }
 

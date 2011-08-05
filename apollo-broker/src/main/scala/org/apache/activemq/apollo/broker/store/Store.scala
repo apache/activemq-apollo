@@ -16,10 +16,11 @@ package org.apache.activemq.apollo.broker.store
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.apache.activemq.apollo.dto.{StoreStatusDTO, StoreDTO}
+import org.apache.activemq.apollo.dto.StoreStatusDTO
 import org.apache.activemq.apollo.util._
 import java.io.{InputStream, OutputStream}
 import scala.util.continuations._
+import java.util.concurrent.atomic.AtomicLong
 
 trait StreamManager[A] {
   def using_queue_stream(func: (A)=>Unit)
@@ -108,7 +109,7 @@ trait Store extends ServiceTrait {
   /**
    * Loads a delivery with the associated id from persistent storage.
    */
-  def load_message(messageKey:Long)(callback:(Option[MessageRecord])=>Unit )
+  def load_message(messageKey:Long, locator:AtomicLong)(callback:(Option[MessageRecord])=>Unit )
 
   /**
    * Exports the contents of the store to the provided streams.  Each stream should contain
