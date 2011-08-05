@@ -881,7 +881,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     qer.queue_key = queue.store_id
     qer.entry_seq = seq
     qer.message_key = state.message_key
-    qer.message_locator = state.message_locator.get()
+    qer.message_locator = Option(state.message_locator).map(_.get).getOrElse(0)
     qer.size = state.size
     qer.expiration = expiration
     qer
