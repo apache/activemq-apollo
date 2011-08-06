@@ -48,6 +48,10 @@ object FileSupport {
       }
     }
 
+    def list_files:Array[File] = {
+      Option(self.listFiles()).getOrElse(Array())
+    }
+
     def recursive_list:List[File] = {
       if( self.isDirectory ) {
         self :: self.listFiles.toList.flatten( _.recursive_list )
