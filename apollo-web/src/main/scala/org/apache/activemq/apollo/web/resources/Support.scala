@@ -318,7 +318,7 @@ abstract class Resource(parent:Resource=null) extends Logging {
 
 }
 
-object ViewHelper {
+object ViewHelper extends ViewHelper {
 
   val KB: Long = 1024
   val MB: Long = KB * 1024
@@ -370,23 +370,24 @@ class ViewHelper {
     }
   }
 
-  def uptime(value:Long):String = {
-    def friendly(duration:Long):String = {
-      if( duration < SECONDS ) {
-        "%d ms".format(duration)
-      } else if (duration < MINUTES) {
-        "%d seconds".format(duration / SECONDS)
-      } else if (duration < HOURS) {
-        "%d minutes".format(duration / MINUTES)
-      } else if (duration < DAYS) {
-        "%d hours %s".format(duration / HOURS, friendly(duration%HOURS))
-      } else if (duration < YEARS) {
-        "%d days %s".format(duration / DAYS, friendly(duration%DAYS))
-      } else {
-        "%,d years %s".format(duration / YEARS, friendly(duration%YEARS))
-      }
+  def friendly_duration(duration:Long):String = {
+    if( duration < SECONDS ) {
+      "%d ms".format(duration)
+    } else if (duration < MINUTES) {
+      "%d seconds".format(duration / SECONDS)
+    } else if (duration < HOURS) {
+      "%d minutes".format(duration / MINUTES)
+    } else if (duration < DAYS) {
+      "%d hours %s".format(duration / HOURS, friendly_duration(duration%HOURS))
+    } else if (duration < YEARS) {
+      "%d days %s".format(duration / DAYS, friendly_duration(duration%DAYS))
+    } else {
+      "%,d years %s".format(duration / YEARS, friendly_duration(duration%YEARS))
     }
-    friendly(System.currentTimeMillis - value)
+  }
+
+  def uptime(value:Long):String = {
+    friendly_duration(System.currentTimeMillis - value)
   }
 }
 

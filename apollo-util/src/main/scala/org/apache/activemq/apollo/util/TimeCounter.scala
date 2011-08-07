@@ -25,10 +25,10 @@ import java.util.concurrent.TimeUnit
  */
 class TimeCounter extends MetricProducer[TimeMetric] {
 
-  private var max = Long.MinValue
-  private var min = Long.MaxValue
-  private var total = 0L
-  private var count = 0
+  var max = Long.MinValue
+  var min = Long.MaxValue
+  var total = 0L
+  var count = 0
 
   def apply(reset: Boolean):TimeMetric = {
     val rc = if(count==0) {
@@ -83,6 +83,10 @@ class TimeCounter extends MetricProducer[TimeMetric] {
       this += System.nanoTime - startTime
     }
     func(endFunc)
+  }
+
+  def total(unit:TimeUnit):Long = {
+    TimeUnit.NANOSECONDS.convert(total, unit)
   }
 }
 
