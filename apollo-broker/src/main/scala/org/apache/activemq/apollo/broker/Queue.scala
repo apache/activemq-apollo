@@ -1113,7 +1113,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       if(!storing) {
         storing = true
         delivery.uow.enqueue(toQueueEntryRecord)
-        delivery.uow.on_complete {
+        delivery.uow.on_flush {
           queue.swap_out_completes_source.merge(this)
         }
       }

@@ -67,7 +67,15 @@ trait StoreUOW extends Retained {
 
   /**
    * The specified callback is executed once the UOW
-   * is completed.
+   * has written to disk and flushed of the application
+   * buffers.
+   */
+  def on_flush(callback: =>Unit)
+
+  /**
+   * The specified callback is executed once the UOW
+   * has fully completed, that is it's been flushed and
+   * and synced to disk.
    */
   def on_complete(callback: =>Unit)
 

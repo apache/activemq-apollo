@@ -62,7 +62,6 @@ trait DelayingStoreSupport extends Store with BaseService {
 
     var dispose_start:Long = 0
     var flushing = false;
-    var status = "init"
 
     class MessageAction {
 
@@ -84,7 +83,22 @@ trait DelayingStoreSupport extends Store with BaseService {
 
     var completed = false
     var complete_listeners = ListBuffer[() => Unit]()
+    var flushed = false
+    var flush_listeners = ListBuffer[() => Unit]()
     var disable_delay = false
+
+    def on_flush(callback: =>Unit) = {
+      if( this.synchronized {
+        if( flushed ) {
+          true
+        } else {
+          flush_listeners += ( ()=> callback  )
+          false
+        }
+      }) {
+        callback
+      }
+    }
 
     def on_complete(callback: =>Unit) = {
       if( this.synchronized {
@@ -113,10 +127,10 @@ trait DelayingStoreSupport extends Store with BaseService {
     }
 
     def cancel = {
-      status += "|cancel"
+      dispatch_queue.assertExecuting()
       flushing = true
       delayed_uows.remove(uow_id)
-      on_performed
+      on_completed
     }
 
     def store(record: MessageRecord):Long = {
@@ -165,16 +179,25 @@ trait DelayingStoreSupport extends Store with BaseService {
     }
 
     override def dispose = {
-      status += "|commited"
       dispose_start = System.nanoTime
       uow_source.merge(this)
     }
 
-    def on_performed() = this.synchronized {
-      status += "|performed"
-      commit_latency_counter += System.nanoTime-dispose_start
-      complete_listeners.foreach(_())
-      super.dispose
+    def on_flushed() = this.synchronized {
+      if( !flushed ) {
+        flushed = true
+        flush_listeners.foreach(_())
+      }
+    }
+
+    def on_completed() = this.synchronized {
+      if ( !completed ) {
+        on_flushed
+        completed = true
+        commit_latency_counter += System.nanoTime-dispose_start
+        complete_listeners.foreach(_())
+        super.dispose
+      }
     }
   }
 
@@ -189,7 +212,6 @@ trait DelayingStoreSupport extends Store with BaseService {
       pending_stores.get(message_key) match {
         case null => cb()
         case action =>
-          action.uow.status += "|flush_message"
           action.uow.on_complete( cb() )
           flush(action.uow)
       }
@@ -279,7 +301,6 @@ trait DelayingStoreSupport extends Store with BaseService {
     dispatch_queue.assertExecuting()
     uow_source.getData.foreach { uow =>
 
-      uow.status += "|delayed"
       delayed_uows.put(uow.uow_id, uow)
 
       uow.actions.foreach { case (msg, action) =>
@@ -341,7 +362,6 @@ trait DelayingStoreSupport extends Store with BaseService {
     if( uow!=null && !uow.flushing ) {
       uow.flushing = true
       delayed_uows.remove(uow.uow_id)
-      uow.status += "|flushing"
       flush_source.merge(uow)
     }
   }
@@ -365,11 +385,11 @@ trait DelayingStoreSupport extends Store with BaseService {
       flush_latency_counter.start { end=>
         flush_source.suspend
         store(uows) {
-          dispatch_queue.assertExecuting()
+          store_completed(uows)
+
           flush_source.resume
-          end()
+          dispatch_queue.assertExecuting()
           uows.foreach { uow=>
-            uow.status += "|flushed"
             uow.actions.foreach { case (msg, action) =>
               if( action.message_record !=null ) {
                 metric_flushed_message_counter += 1
@@ -377,16 +397,21 @@ trait DelayingStoreSupport extends Store with BaseService {
               }
               action.enqueues.foreach { queue_entry=>
                 metric_flushed_enqueue_counter += 1
-                val k = key(queue_entry)
-                pending_enqueues.remove(k)
+                pending_enqueues.remove(key(queue_entry))
               }
             }
-            uow.on_performed
-
           }
+          end()
         }
       }
     }
   }
+
+  def store_completed(uows: ListBuffer[DelayingStoreSupport.this.type#DelayableUOW]) {
+    uows.foreach { uow =>
+        uow.on_completed
+    }
+  }
+
 
 }

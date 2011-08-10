@@ -24,12 +24,13 @@ import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
-import com.sleepycat.je._
 import java.io.{EOFException, InputStream, OutputStream}
 import org.fusesource.hawtbuf.proto.{MessageBuffer, PBMessageFactory}
 import org.apache.activemq.apollo.util.Log._
 import scala.Some
 import java.sql.ClientInfoStatus
+import com.sleepycat.je._
+import javax.management.remote.rmi._RMIConnection_Stub
 
 object BDBClient extends Log
 /**
@@ -84,7 +85,7 @@ class BDBClient(store: BDBStore) {
 
     environment = new Environment(directory, env_config);
 
-    with_ctx { ctx=>
+    with_ctx() { ctx=>
       import ctx._
       messages_db
       message_refs_db
@@ -183,7 +184,7 @@ class BDBClient(store: BDBStore) {
   }
 
 
-  def with_ctx[T](func: (TxContext) => T): T = {
+  def with_ctx[T](sync:Boolean=true)(func: (TxContext) => T): T = {
     var error:Throwable = null
     var rc:Option[T] = None
 
@@ -192,7 +193,12 @@ class BDBClient(store: BDBStore) {
     while(!rc.isDefined) {
 
 
-      val ctx = TxContext(environment.beginTransaction(null, null));
+      val ctx = if(sync) {
+        TxContext(environment.beginTransaction(null, null));
+      } else {
+        TxContext(environment.beginTransaction(null, new TransactionConfig().setDurability(Durability.COMMIT_NO_SYNC)))
+      }
+
       try {
         rc = Some(func(ctx))
       } catch {
@@ -222,7 +228,7 @@ class BDBClient(store: BDBStore) {
 
   def purge() = {
 
-    with_ctx { ctx=>
+    with_ctx() { ctx=>
       import ctx._
 
 
@@ -270,7 +276,7 @@ class BDBClient(store: BDBStore) {
   }
 
   def addQueue(record: QueueRecord, callback:Runnable) = {
-    with_ctx { ctx=>
+    with_ctx() { ctx=>
       import ctx._
       queues_db.put(tx, record.key, record)
     }
@@ -292,7 +298,7 @@ class BDBClient(store: BDBStore) {
   }
 
   def removeQueue(queue_key: Long, callback:Runnable) = {
-    with_ctx { ctx=>
+    with_ctx() { ctx=>
       import ctx._
 
       queues_db.delete(tx, queue_key)
@@ -313,7 +319,8 @@ class BDBClient(store: BDBStore) {
   }
 
   def store(uows: Seq[BDBStore#DelayableUOW], callback:Runnable) {
-    with_ctx { ctx=>
+    val sync = uows.find( ! _.complete_listeners.isEmpty ).isDefined
+    with_ctx(sync) { ctx=>
       import ctx._
       var zcp_files_to_sync = Set[Int]()
       uows.foreach { uow =>
@@ -360,7 +367,7 @@ class BDBClient(store: BDBStore) {
 
   def listQueues: Seq[Long] = {
     val rc = ListBuffer[Long]()
-    with_ctx { ctx=>
+    with_ctx() { ctx=>
       import ctx._
 
       queues_db.cursor(tx) { (key, _) =>
@@ -373,7 +380,7 @@ class BDBClient(store: BDBStore) {
   }
 
   def getQueue(queue_key: Long): Option[QueueRecord] = {
-    with_ctx { ctx=>
+    with_ctx() { ctx=>
       import ctx._
       queues_db.get(tx, to_database_entry(queue_key)).map( x=> to_queue_record(x)  )
     }
@@ -381,7 +388,7 @@ class BDBClient(store: BDBStore) {
 
   def listQueueEntryGroups(queue_key: Long, limit: Int) : Seq[QueueEntryRange] = {
     var rc = ListBuffer[QueueEntryRange]()
-    with_ctx { ctx=>
+    with_ctx() { ctx=>
       import ctx._
       var group:QueueEntryRange = null
 
@@ -429,7 +436,7 @@ class BDBClient(store: BDBStore) {
 
   def getQueueEntries(queue_key: Long, firstSeq:Long, lastSeq:Long): Seq[QueueEntryRecord] = {
     var rc = ListBuffer[QueueEntryRecord]()
-    with_ctx { ctx=>
+    with_ctx() { ctx=>
       import ctx._
       entries_db.cursor_from(tx, (queue_key, firstSeq)) { (key, value) =>
         val current_key:(Long,Long) = key
@@ -453,7 +460,7 @@ class BDBClient(store: BDBStore) {
 
   def loadMessages(requests: ListBuffer[(Long, (Option[MessageRecord])=>Unit)]):Unit = {
 
-    val missing = with_ctx { ctx=>
+    val missing = with_ctx() { ctx=>
       import ctx._
       requests.flatMap { x =>
         val (message_key, callback) = x
@@ -482,7 +489,7 @@ class BDBClient(store: BDBStore) {
 
     // There's a small chance that a message was missing, perhaps we started a read tx, before the
     // write tx completed.  Lets try again..
-    with_ctx { ctx=>
+    with_ctx() { ctx=>
       import ctx._
       missing.foreach { x =>
         val (message_key, callback) = x
@@ -504,7 +511,7 @@ class BDBClient(store: BDBStore) {
 
 
   def getLastMessageKey:Long = {
-    with_ctx { ctx=>
+    with_ctx() { ctx=>
       import ctx._
 
       messages_db.last_key(tx).map(to_long _).getOrElse(0)
@@ -512,7 +519,7 @@ class BDBClient(store: BDBStore) {
   }
 
   def getLastQueueKey:Long = {
-    with_ctx { ctx=>
+    with_ctx() { ctx=>
       import ctx._
 
       queues_db.last_key(tx).map(to_long _).getOrElse(0)
@@ -521,7 +528,7 @@ class BDBClient(store: BDBStore) {
 
   def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] = {
     try {
-      with_ctx { ctx=>
+      with_ctx() { ctx=>
         import ctx._
         import PBSupport._
 
@@ -584,7 +591,7 @@ class BDBClient(store: BDBStore) {
         } while( !done )
       }
 
-      with_ctx { ctx=>
+      with_ctx() { ctx=>
         import ctx._
         import PBSupport._
 
