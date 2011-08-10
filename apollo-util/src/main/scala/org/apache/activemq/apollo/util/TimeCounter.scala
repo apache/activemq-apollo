@@ -86,7 +86,7 @@ class TimeCounter extends MetricProducer[TimeMetric] {
   }
 
   def total(unit:TimeUnit):Long = {
-    TimeUnit.NANOSECONDS.convert(total, unit)
+    unit.convert(total, TimeUnit.NANOSECONDS)
   }
 }
 
