@@ -323,10 +323,9 @@ class StompProtocolHandler extends ProtocolHandler {
       case ACK_MODE_AUTO=>new AutoAckHandler
       case ACK_MODE_NONE=>new AutoAckHandler
       case ACK_MODE_CLIENT=> new SessionAckHandler
-      case ACK_MODE_SESSION=> new SessionAckHandler
-      case ACK_MODE_MESSAGE=> new MessageAckHandler
+      case ACK_MODE_CLIENT_INDIVIDUAL=> new MessageAckHandler
       case ack:AsciiBuffer =>
-        die("Unsuported ack mode: "+ack);
+        die("Unsupported ack mode: "+ack);
     }
 
     val consumer_sink = sink_manager.open()

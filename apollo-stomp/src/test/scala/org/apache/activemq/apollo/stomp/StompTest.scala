@@ -1142,13 +1142,13 @@ class StompTransactionTest extends StompTestSupport {
 
 class StompAckModeTest extends StompTestSupport {
 
-  test("ack:session redelivers on client disconnect") {
+  test("ack:client redelivers on client disconnect") {
     connect("1.1")
 
     def put(id:Int) = {
       client.write(
         "SEND\n" +
-        "destination:/queue/ackmode-session\n" +
+        "destination:/queue/ackmode-client\n" +
         "\n" +
         "message:"+id+"\n")
     }
@@ -1158,8 +1158,8 @@ class StompAckModeTest extends StompTestSupport {
 
     client.write(
       "SUBSCRIBE\n" +
-      "destination:/queue/ackmode-session\n" +
-      "ack:session\n" +
+      "destination:/queue/ackmode-client\n" +
+      "ack:client\n" +
       "id:0\n" +
       "\n")
 
@@ -1196,8 +1196,8 @@ class StompAckModeTest extends StompTestSupport {
 
     client.write(
       "SUBSCRIBE\n" +
-      "destination:/queue/ackmode-session\n" +
-      "ack:session\n" +
+      "destination:/queue/ackmode-client\n" +
+      "ack:client\n" +
       "id:0\n" +
       "\n")
     get(3)
@@ -1206,7 +1206,7 @@ class StompAckModeTest extends StompTestSupport {
   }
 
 
-  test("ack:message redelivers on client disconnect") {
+  test("ack:client-individual redelivers on client disconnect") {
     connect("1.1")
 
     def put(id:Int) = {
@@ -1223,7 +1223,7 @@ class StompAckModeTest extends StompTestSupport {
     client.write(
       "SUBSCRIBE\n" +
       "destination:/queue/ackmode-message\n" +
-      "ack:message\n" +
+      "ack:client-individual\n" +
       "id:0\n" +
       "\n")
 
@@ -1261,7 +1261,7 @@ class StompAckModeTest extends StompTestSupport {
     client.write(
       "SUBSCRIBE\n" +
       "destination:/queue/ackmode-message\n" +
-      "ack:session\n" +
+      "ack:client-individual\n" +
       "id:0\n" +
       "\n")
     get(1)

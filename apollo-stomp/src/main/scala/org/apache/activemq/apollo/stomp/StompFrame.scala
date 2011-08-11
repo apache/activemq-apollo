@@ -415,12 +415,9 @@ object Stomp {
 
   val ACK_MODE_AUTO = ascii("auto")
   val ACK_MODE_NONE = ascii("none")
-  
   val ACK_MODE_CLIENT = ascii("client")
-  val ACK_MODE_SESSION = ascii("session")
-  
-  val ACK_MODE_MESSAGE = ascii("message")
-    
+  val ACK_MODE_CLIENT_INDIVIDUAL = ascii("client-individual")
+
   val V1_0 = ascii("1.0")
   val V1_1 = ascii("1.1")
   val DEFAULT_HEART_BEAT = ascii("0,0")

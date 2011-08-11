@@ -51,7 +51,7 @@ class StompRemoteConsumer extends RemoteConsumer {
     headers ::= (ID, ascii("stomp-sub-" + name))
 
     if( persistent ) {
-      headers ::= (ACK_MODE, ACK_MODE_CLIENT)
+      headers ::= (ACK_MODE, ACK_MODE_CLIENT_INDIVIDUAL)
     }
 
     frame = StompFrame(SUBSCRIBE, headers);
