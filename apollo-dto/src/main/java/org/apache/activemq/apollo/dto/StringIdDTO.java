@@ -26,7 +26,7 @@ import java.util.List;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-public class StringIdDTO {
+abstract public class StringIdDTO {
 
     /**
      * A unique id of the object within it's container
@@ -40,4 +40,20 @@ public class StringIdDTO {
         this.id = id;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof StringIdDTO)) return false;
+
+        StringIdDTO that = (StringIdDTO) o;
+
+        if (id != null ? !id.equals(that.id) : that.id != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
+    }
 }

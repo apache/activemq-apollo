@@ -34,4 +34,6 @@
 
   </virtual_host>
 
+  <topic id="topic1"/>
+
 </broker>

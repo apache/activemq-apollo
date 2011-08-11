@@ -19,6 +19,8 @@ package org.apache.activemq.apollo.dto;
 
 
 import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -84,4 +86,49 @@ public class QueueDTO extends StringIdDTO {
     @XmlElement(name="acl")
     public QueueAclDTO acl;
 
+    /**
+     * To hold any other non-matching XML elements
+     */
+    @XmlAnyElement(lax=true)
+    public List<Object> other = new ArrayList<Object>();
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof QueueDTO)) return false;
+        if (!super.equals(o)) return false;
+
+        QueueDTO queueDTO = (QueueDTO) o;
+
+        if (acl != null ? !acl.equals(queueDTO.acl) : queueDTO.acl != null) return false;
+        if (auto_delete_after != null ? !auto_delete_after.equals(queueDTO.auto_delete_after) : queueDTO.auto_delete_after != null)
+            return false;
+        if (consumer_buffer != null ? !consumer_buffer.equals(queueDTO.consumer_buffer) : queueDTO.consumer_buffer != null)
+            return false;
+        if (other != null ? !other.equals(queueDTO.other) : queueDTO.other != null) return false;
+        if (persistent != null ? !persistent.equals(queueDTO.persistent) : queueDTO.persistent != null) return false;
+        if (queue_buffer != null ? !queue_buffer.equals(queueDTO.queue_buffer) : queueDTO.queue_buffer != null)
+            return false;
+        if (swap != null ? !swap.equals(queueDTO.swap) : queueDTO.swap != null) return false;
+        if (swap_range_size != null ? !swap_range_size.equals(queueDTO.swap_range_size) : queueDTO.swap_range_size != null)
+            return false;
+        if (unified != null ? !unified.equals(queueDTO.unified) : queueDTO.unified != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + (auto_delete_after != null ? auto_delete_after.hashCode() : 0);
+        result = 31 * result + (unified != null ? unified.hashCode() : 0);
+        result = 31 * result + (queue_buffer != null ? queue_buffer.hashCode() : 0);
+        result = 31 * result + (consumer_buffer != null ? consumer_buffer.hashCode() : 0);
+        result = 31 * result + (persistent != null ? persistent.hashCode() : 0);
+        result = 31 * result + (swap != null ? swap.hashCode() : 0);
+        result = 31 * result + (swap_range_size != null ? swap_range_size.hashCode() : 0);
+        result = 31 * result + (acl != null ? acl.hashCode() : 0);
+        result = 31 * result + (other != null ? other.hashCode() : 0);
+        return result;
+    }
 }

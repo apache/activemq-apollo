@@ -78,7 +78,7 @@ public class BrokerDTO {
      * starts/stops.
      */
     @XmlElement(name="service")
-    public List<String> services = new ArrayList<String>();
+    public List<CustomServiceDTO> services = new ArrayList<CustomServiceDTO>();
 
     @Deprecated
     @XmlAttribute(name="sticky_dispatching")
@@ -90,4 +90,58 @@ public class BrokerDTO {
      */
     @XmlAttribute(name="validation")
     public String validation;
+
+    /**
+     * To hold any other non-matching XML elements
+     */
+    @XmlAnyElement(lax=true)
+    public List<Object> other = new ArrayList<Object>();
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof BrokerDTO)) return false;
+
+        BrokerDTO brokerDTO = (BrokerDTO) o;
+
+        if (acl != null ? !acl.equals(brokerDTO.acl) : brokerDTO.acl != null) return false;
+        if (authentication != null ? !authentication.equals(brokerDTO.authentication) : brokerDTO.authentication != null)
+            return false;
+        if (client_address != null ? !client_address.equals(brokerDTO.client_address) : brokerDTO.client_address != null)
+            return false;
+        if (connectors != null ? !connectors.equals(brokerDTO.connectors) : brokerDTO.connectors != null) return false;
+        if (key_storage != null ? !key_storage.equals(brokerDTO.key_storage) : brokerDTO.key_storage != null)
+            return false;
+        if (log_category != null ? !log_category.equals(brokerDTO.log_category) : brokerDTO.log_category != null)
+            return false;
+        if (notes != null ? !notes.equals(brokerDTO.notes) : brokerDTO.notes != null) return false;
+        if (other != null ? !other.equals(brokerDTO.other) : brokerDTO.other != null) return false;
+        if (services != null ? !services.equals(brokerDTO.services) : brokerDTO.services != null) return false;
+        if (sticky_dispatching != null ? !sticky_dispatching.equals(brokerDTO.sticky_dispatching) : brokerDTO.sticky_dispatching != null)
+            return false;
+        if (validation != null ? !validation.equals(brokerDTO.validation) : brokerDTO.validation != null) return false;
+        if (virtual_hosts != null ? !virtual_hosts.equals(brokerDTO.virtual_hosts) : brokerDTO.virtual_hosts != null)
+            return false;
+        if (web_admins != null ? !web_admins.equals(brokerDTO.web_admins) : brokerDTO.web_admins != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = notes != null ? notes.hashCode() : 0;
+        result = 31 * result + (virtual_hosts != null ? virtual_hosts.hashCode() : 0);
+        result = 31 * result + (connectors != null ? connectors.hashCode() : 0);
+        result = 31 * result + (client_address != null ? client_address.hashCode() : 0);
+        result = 31 * result + (key_storage != null ? key_storage.hashCode() : 0);
+        result = 31 * result + (acl != null ? acl.hashCode() : 0);
+        result = 31 * result + (web_admins != null ? web_admins.hashCode() : 0);
+        result = 31 * result + (authentication != null ? authentication.hashCode() : 0);
+        result = 31 * result + (log_category != null ? log_category.hashCode() : 0);
+        result = 31 * result + (services != null ? services.hashCode() : 0);
+        result = 31 * result + (sticky_dispatching != null ? sticky_dispatching.hashCode() : 0);
+        result = 31 * result + (validation != null ? validation.hashCode() : 0);
+        result = 31 * result + (other != null ? other.hashCode() : 0);
+        return result;
+    }
 }

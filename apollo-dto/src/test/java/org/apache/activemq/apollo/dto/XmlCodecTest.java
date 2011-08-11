@@ -39,6 +39,8 @@ public class XmlCodecTest {
         BrokerDTO dto = XmlCodec.decode(BrokerDTO.class, resource("XmlCodecTest.xml"));
         assertNotNull(dto);
 
+        assertEquals(1, dto.other.size());
+
         VirtualHostDTO host = dto.virtual_hosts.get(0);
         assertNotNull(host.acl);
         assertEquals("vh-local", host.id);

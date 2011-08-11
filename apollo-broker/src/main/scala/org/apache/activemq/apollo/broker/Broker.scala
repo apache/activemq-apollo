@@ -33,6 +33,7 @@ import FileSupport._
 import management.ManagementFactory
 import org.apache.activemq.apollo.dto._
 import javax.management.ObjectName
+import org.fusesource.hawtdispatch.TaskTracker._
 
 /**
  * <p>
@@ -247,7 +248,7 @@ class Broker() extends BaseService {
   var security_log:Log  = Broker
   var connection_log:Log = Broker
   var console_log:Log = Broker
-  var services = List[Service]()
+  var services = Map[String, (CustomServiceDTO, Service)]()
 
   override def toString() = "broker: "+id
 
@@ -296,10 +297,10 @@ class Broker() extends BaseService {
     val tracker = new LoggingTracker("broker shutdown", console_log, SERVICE_TIMEOUT)
 
     // Stop the services...
-    services.foreach( x=>
-      tracker.stop(x)
+    services.values.foreach( x=>
+      tracker.stop(x._2)
     )
-    services = Nil
+    services = Map()
 
     // Stop accepting connections..
     connectors.values.foreach( x=>
@@ -439,32 +440,50 @@ class Broker() extends BaseService {
       }
     }
 
-    val set1 = (services.map{x => x.getClass.getName}).toSet
-    diff(set1, config.services.toSet) match { case (added, updated, removed) =>
+    val t:Seq[(String, CustomServiceDTO)] = asScalaBuffer(config.services).map(x => (x.id ->x) )
+    val services_config = Map(t: _*)
+    diff(services.keySet, services_config.keySet) match { case (added, updated, removed) =>
       removed.foreach { id =>
-        for( service <- services.find(_.getClass.getName == id) ) {
-          services = services.filterNot( _ == service )
-          tracker.stop(service)
+        for( service <- services.get(id) ) {
+          services -= id
+          tracker.stop(service._2)
         }
       }
 
-      // Not much to do on updates..
+      // Handle the updates.
+      added.foreach { id=>
+        for( new_dto <- services_config.get(id); (old_dto, service) <- services.get(id) ) {
+          if( new_dto != old_dto ) {
 
-      added.foreach { clazz=>
+            // restart.. needed.
+            val task = tracker.task("restart "+service)
+            service.stop(dispatch_queue.runnable {
 
-        val service = Broker.class_loader.loadClass(clazz).newInstance().asInstanceOf[Service]
-
-        // Try to inject the broker via reflection..
-        type BrokerAware = {var broker: Broker}
-        try {
-          service.asInstanceOf[BrokerAware].broker = this
-        } catch {
-          case _ =>
+              // create with the new config..
+              val service = CustomServiceFactory.create(this, new_dto)
+              if( service == null ) {
+                console_log.warn("Could not create service: "+new_dto.id);
+              } else {
+                // start it again..
+                services += new_dto.id -> (new_dto, service)
+                service.start(task)
+              }
+            })
+          }
         }
+      }
 
-        services ::= service
-
-        tracker.start(service)
+      // Create the new services..
+      added.foreach { id=>
+        for( dto <- services_config.get(id) ) {
+          val service = CustomServiceFactory.create(this, dto)
+          if( service == null ) {
+            console_log.warn("Could not create service: "+dto.id);
+          } else {
+            services += dto.id -> (dto, service)
+            tracker.start(service)
+          }
+        }
       }
     }
 

@@ -19,6 +19,8 @@ package org.apache.activemq.apollo.dto;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 
 import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -29,15 +31,26 @@ import javax.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ProtocolDTO {
 
+    /**
+     * To hold any other non-matching XML elements
+     */
+    @XmlAnyElement(lax=true)
+    public List<Object> other = new ArrayList<Object>();
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof ProtocolDTO)) return false;
+
+        ProtocolDTO that = (ProtocolDTO) o;
+
+        if (other != null ? !other.equals(that.other) : that.other != null) return false;
+
         return true;
     }
 
     @Override
     public int hashCode() {
-        return 31;
+        return other != null ? other.hashCode() : 0;
     }
 }

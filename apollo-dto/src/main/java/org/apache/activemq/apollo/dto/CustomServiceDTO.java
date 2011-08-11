@@ -18,32 +18,40 @@ package org.apache.activemq.apollo.dto;
 
 
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
+@XmlRootElement(name="service")
 @XmlAccessorType(XmlAccessType.FIELD)
-abstract public class ServiceDTO extends StringIdDTO {
+public class CustomServiceDTO extends ServiceDTO {
 
     /**
-     * Should this service be running?
+     * The class name of the service.
      */
     @XmlAttribute
-    public Boolean enabled;
+    public String kind;
+
+    /**
+     * To hold any other non-matching XML elements
+     */
+    @XmlAnyElement(lax=true)
+    public List<Object> other = new ArrayList<Object>();
+
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof ServiceDTO)) return false;
+        if (!(o instanceof CustomServiceDTO)) return false;
         if (!super.equals(o)) return false;
 
-        ServiceDTO that = (ServiceDTO) o;
+        CustomServiceDTO that = (CustomServiceDTO) o;
 
-        if (enabled != null ? !enabled.equals(that.enabled) : that.enabled != null) return false;
+        if (kind != null ? !kind.equals(that.kind) : that.kind != null) return false;
+        if (other != null ? !other.equals(that.other) : that.other != null) return false;
 
         return true;
     }
@@ -51,7 +59,8 @@ abstract public class ServiceDTO extends StringIdDTO {
     @Override
     public int hashCode() {
         int result = super.hashCode();
-        result = 31 * result + (enabled != null ? enabled.hashCode() : 0);
+        result = 31 * result + (kind != null ? kind.hashCode() : 0);
+        result = 31 * result + (other != null ? other.hashCode() : 0);
         return result;
     }
 }

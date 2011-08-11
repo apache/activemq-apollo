@@ -54,6 +54,12 @@ public class ConnectorDTO extends ServiceDTO {
     @XmlElement(name="acl")
     public ConnectorAclDTO acl;
 
+    /**
+     * To hold any other non-matching XML elements
+     */
+    @XmlAnyElement(lax=true)
+    public List<Object> other = new ArrayList<Object>();
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -65,6 +71,7 @@ public class ConnectorDTO extends ServiceDTO {
         if (bind != null ? !bind.equals(that.bind) : that.bind != null) return false;
         if (connection_limit != null ? !connection_limit.equals(that.connection_limit) : that.connection_limit != null)
             return false;
+        if (other != null ? !other.equals(that.other) : that.other != null) return false;
         if (protocol != null ? !protocol.equals(that.protocol) : that.protocol != null) return false;
         if (protocols != null ? !protocols.equals(that.protocols) : that.protocols != null) return false;
 
@@ -78,6 +85,7 @@ public class ConnectorDTO extends ServiceDTO {
         result = 31 * result + (connection_limit != null ? connection_limit.hashCode() : 0);
         result = 31 * result + (protocols != null ? protocols.hashCode() : 0);
         result = 31 * result + (acl != null ? acl.hashCode() : 0);
+        result = 31 * result + (other != null ? other.hashCode() : 0);
         return result;
     }
 }
