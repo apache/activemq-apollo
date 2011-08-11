@@ -120,12 +120,19 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
    */
   var tune_consumer_buffer = 0
 
+  /**
+   *  The max memory to allow this queue to grow to.
+   */
+  var tune_quota = -1L
+
   def configure(c:QueueDTO) = {
     config = c
     tune_persistent = virtual_host.store !=null && config.persistent.getOrElse(true)
     tune_swap = tune_persistent && config.swap.getOrElse(true)
     tune_swap_range_size = config.swap_range_size.getOrElse(10000)
     tune_consumer_buffer = config.consumer_buffer.getOrElse(256*1024)
+
+    tune_quota = Option(config.quota).map(MemoryPropertyEditor.parse(_)).getOrElse(-1)
 
     if( tune_persistent ) {
       val record = new QueueRecord
@@ -322,7 +329,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
 
     var refiller: Runnable = null
 
-    def full = (swapped_in_size >= swapped_in_size_max) || !service_state.is_started
+    def full = (swapped_in_size >= swapped_in_size_max) || !service_state.is_started || (tune_quota >=0 && queue_size > tune_quota)
 
     def offer(delivery: Delivery): Boolean = {
       if (full) {

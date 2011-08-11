@@ -87,6 +87,14 @@ public class QueueDTO extends StringIdDTO {
     public QueueAclDTO acl;
 
     /**
+     * The maximum amount of disk space the queue is allowed
+     * to grow to.  If not set then there is no limit.  You can
+     * use settings values like: 500mb or 1g just plain 1024000
+     */
+    @XmlAttribute(name="quota")
+    public String quota;
+
+    /**
      * To hold any other non-matching XML elements
      */
     @XmlAnyElement(lax=true)

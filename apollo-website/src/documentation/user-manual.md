@@ -264,6 +264,11 @@ memory.
   pointers to the actual messages. When not loaded, the batch is referenced
   as sequence range to conserve memory.
 
+* `quota` : The maximum amount of disk space the queue is allowed
+  to grow to.  If not set then there is no limit.  You can
+  use settings values like: `500mb` or `1g` just plain byte count
+  like `1024000`.
+
 ##### Topics
 
 When a new topic is first created in the broker, it's configuration will be

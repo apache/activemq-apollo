@@ -63,4 +63,9 @@ public class MemoryPropertyEditor extends PropertyEditorSupport {
         return value != null ? value.toString() : "";
     }
 
+    public static long parse(String value) {
+        MemoryPropertyEditor pe = new MemoryPropertyEditor();
+        pe.setAsText(value);
+        return (Long)pe.getValue();
+    }
 }
